@@ -47,12 +47,102 @@ class Clientes(models.Model):
         return f"{self.nombres} {self.apellidos}"
 
     @property
+    def credito_utilizado(self):
+        """
+        Calcula el crédito utilizado (suma de saldos pendientes de todas las ventas).
+        
+        Returns:
+            Decimal: Monto total de ventas pendientes de pago
+        """
+        from apps.ventas.models import Ventas
+        from django.db.models import Sum
+        
+        total = Ventas.objects.filter(
+            id_cliente=self.id_cliente,
+            saldo_pendiente__gt=0
+        ).aggregate(total=Sum('saldo_pendiente'))['total']
+        
+        return total or Decimal('0.00')
+    
+    @property
     def credito_disponible(self):
-        """Calcula el crédito disponible del cliente"""
+        """
+        Calcula el crédito disponible del cliente.
+        
+        Formula: credito_disponible = limite_credito - credito_utilizado
+        
+        Returns:
+            Decimal: Crédito disponible para nuevas ventas
+        """
         if self.limite_credito:
-            # Aquí se puede calcular el crédito usado consultando ventas pendientes
-            return self.limite_credito
+            return self.limite_credito - self.credito_utilizado
         return Decimal('0.00')
+    
+    @property
+    def tiene_credito_disponible(self):
+        """
+        Verifica si el cliente tiene crédito disponible.
+        
+        Returns:
+            bool: True si tiene crédito > 0
+        """
+        return self.credito_disponible > 0
+    
+    @property
+    def porcentaje_credito_usado(self):
+        """
+        Calcula el porcentaje de crédito utilizado.
+        
+        Returns:
+            Decimal: Porcentaje de uso (0-100)
+        """
+        if self.limite_credito and self.limite_credito > 0:
+            return (self.credito_utilizado / self.limite_credito) * 100
+        return Decimal('0.00')
+    
+    @property
+    def cuenta_corriente(self):
+        """
+        Obtiene el estado de cuenta corriente del cliente.
+        
+        Returns:
+            dict: Resumen de cuenta corriente con saldos y límites
+        """
+        from apps.ventas.models import Ventas, NotasCreditoCliente
+        from django.db.models import Sum
+        
+        # Total de ventas pendientes
+        ventas_pendientes = Ventas.objects.filter(
+            id_cliente=self.id_cliente,
+            saldo_pendiente__gt=0
+        )
+        
+        total_debe = ventas_pendientes.aggregate(
+            total=Sum('saldo_pendiente')
+        )['total'] or Decimal('0.00')
+        
+        # Notas de crédito emitidas sin aplicar
+        notas_credito = NotasCreditoCliente.objects.filter(
+            id_cliente=self.id_cliente,
+            estado='Emitida'
+        )
+        
+        total_haber = notas_credito.aggregate(
+            total=Sum('monto_total')
+        )['total'] or Decimal('0.00')
+        
+        saldo_neto = total_debe - total_haber
+        
+        return {
+            'total_debe': total_debe,
+            'total_haber': total_haber,
+            'saldo_neto': saldo_neto,
+            'limite_credito': self.limite_credito or Decimal('0.00'),
+            'credito_disponible': self.credito_disponible,
+            'porcentaje_usado': self.porcentaje_credito_usado,
+            'cantidad_facturas_pendientes': ventas_pendientes.count(),
+            'cantidad_notas_credito': notas_credito.count()
+        }
 
     @property
     def esta_activo(self):

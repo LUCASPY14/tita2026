@@ -144,20 +144,71 @@ class VentasViewSet(viewsets.ModelViewSet):
         """
         Valida saldo de tarjeta antes de crear venta.
         Calcula y registra comisión según medio de pago.
+        Valida límite de crédito para ventas a crédito.
         
         Aplica las reglas de negocio:
-        - NO permite saldo negativo sin autorización
+        - NO permite saldo negativo sin autorización (tarjetas)
         - Descuenta el saldo de la tarjeta del hijo
         - Registra el consumo en ConsumosTarjeta
         - Calcula comisión POS Bancard (si aplica)
         - Separa monto facturado vs recargo POS
+        - Valida límite de crédito para ventas a crédito
         """
         venta_data = serializer.validated_data
         id_hijo = venta_data.get('id_hijo')
+        id_cliente = venta_data.get('id_cliente')
         monto_total = venta_data.get('monto_total')
         id_medio_pago = venta_data.get('id_medio_pago')
+        tipo_venta = venta_data.get('tipo_venta', 'Contado')
+        autorizado_por = venta_data.get('autorizado_por')
         
-        # Solo validar si la venta está asociada a un hijo (compra con tarjeta)
+        # VALIDACIÓN 1: Límite de crédito para ventas a crédito
+        if tipo_venta and tipo_venta.lower() == 'crédito':
+            from apps.clientes.models import Clientes
+            
+            try:
+                cliente = Clientes.objects.get(id_cliente=id_cliente.id_cliente)
+                
+                # Verificar si tiene límite de crédito configurado
+                if not cliente.limite_credito or cliente.limite_credito == 0:
+                    raise ValidationError({
+                        'error': 'Cliente no tiene límite de crédito configurado',
+                        'cliente': cliente.nombre_completo,
+                        'ruc_ci': cliente.ruc_ci,
+                        'mensaje': 'Este cliente no puede realizar compras a crédito. Configure un límite de crédito primero.'
+                    })
+                
+                # Calcular crédito disponible
+                credito_usado = cliente.credito_utilizado
+                credito_disponible = cliente.credito_disponible
+                
+                # Validar si hay crédito suficiente
+                if monto_total > credito_disponible:
+                    # Si tiene autorización de supervisor, permitir
+                    if not autorizado_por:
+                        raise ValidationError({
+                            'error': 'Excede el límite de crédito del cliente',
+                            'cliente': cliente.nombre_completo,
+                            'limite_credito': str(cliente.limite_credito),
+                            'credito_usado': str(credito_usado),
+                            'credito_disponible': str(credito_disponible),
+                            'monto_solicitado': str(monto_total),
+                            'excedente': str(monto_total - credito_disponible),
+                            'requiere_autorizacion': True,
+                            'mensaje': 'Se requiere autorización de supervisor para exceder el límite de crédito'
+                        })
+                
+                # Si está autorizado, inicializar saldo_pendiente
+                venta_data['saldo_pendiente'] = monto_total
+                venta_data['estado_pago'] = 'Pendiente'
+                
+            except Clientes.DoesNotExist:
+                raise ValidationError({
+                    'error': 'Cliente no encontrado',
+                    'id_cliente': id_cliente
+                })
+        
+        # VALIDACIÓN 2: Saldo de tarjeta (para compras con tarjeta de hijo)
         if id_hijo:
             from apps.core.models import Tarjetas
             
