@@ -86,7 +86,9 @@ class IndependenciaAlmuerzoCantinaTest(TestCase):
         # Crear empleado
         rol = Roles.objects.create(nombre_rol='Encargado Cocina', activo=True)
         self.empleado = Empleados.objects.create(
-            nombres='Carmen', apellidos='López', ruc_ci='66666666',
+            nombre='Carmen', apellido='López',
+            usuario='empleado_test', contrasena_hash='hash456',
+            fecha_ingreso=timezone.now(),
             activo=True, id_rol=rol
         )
     

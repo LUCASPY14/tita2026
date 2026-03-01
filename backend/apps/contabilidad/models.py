@@ -143,8 +143,7 @@ class DocumentosTributarios(models.Model):
         unique_together = (('nro_timbrado', 'nro_secuencial'),)
 
 class DocumentoImpuestos(models.Model):
-    pk = models.CompositePrimaryKey('id_documento', 'id_impuesto')
-    id_documento = models.ForeignKey('DocumentosTributarios', models.DO_NOTHING, db_column='id_documento')
+    id_documento = models.ForeignKey('DocumentosTributarios', models.DO_NOTHING, db_column='id_documento', primary_key=True)
     id_impuesto = models.ForeignKey('Impuestos', models.DO_NOTHING, db_column='id_impuesto')
     base_imponible = models.DecimalField(max_digits=12, decimal_places=2)
     monto_impuesto = models.DecimalField(max_digits=10, decimal_places=2)
@@ -152,11 +151,12 @@ class DocumentoImpuestos(models.Model):
     
 
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+        return f"{self.__class__.__name__} - Doc:{self.id_documento_id} Imp:{self.id_impuesto_id}"
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'documento_impuestos'
+        unique_together = [['id_documento', 'id_impuesto']]
 
 class Timbrados(models.Model):
     nro_timbrado = models.IntegerField(primary_key=True)

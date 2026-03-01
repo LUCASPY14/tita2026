@@ -73,7 +73,9 @@ class VentasConTarjetaTest(TestCase):
         # Crear rol y empleado cajero
         self.rol = Roles.objects.create(nombre_rol='Cajero', activo=True)
         self.cajero = Empleados.objects.create(
-            nombres='Pedro', apellidos='Ramírez', ruc_ci='11223344',
+            nombre='Pedro', apellido='Ramírez', 
+            usuario='cajero_test', contrasena_hash='hash123',
+            fecha_ingreso=timezone.now(),
             activo=True, id_rol=self.rol
         )
         
