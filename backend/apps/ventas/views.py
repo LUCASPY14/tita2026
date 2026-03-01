@@ -4,6 +4,9 @@ from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db import transaction
+from django.db import models
+from django.utils import timezone
+from decimal import Decimal
 from apps.common.permissions import CanManageVentas, IsAdminOrReadOnly
 from apps.common.throttling import VentasRateThrottle, BurstRateThrottle
 from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones
@@ -28,17 +31,131 @@ class VentasViewSet(viewsets.ModelViewSet):
     ordering_fields = ['fecha', 'monto_total']
     ordering = ['-fecha']
 
+    def _calcular_comision(self, medio_pago, monto_base):
+        """
+        Calcula la comisión según el medio de pago y tarifa vigente.
+        
+        Args:
+            medio_pago: Instancia de MediosPago
+            monto_base: Monto de la venta (sin comisión)
+        
+        Returns:
+            tuple: (monto_comision, tarifa_aplicada)
+            
+        Ejemplo:
+            >>> medio_pago = MediosPago('Tarjeta Débito Bancard')
+            >>> comision, tarifa = _calcular_comision(medio_pago, Decimal('10000'))
+            >>> print(comision)  # 340.00 (3.4%)
+        """
+        from apps.contabilidad.models import TarifasComision
+        
+        # Si no genera comisión, retornar 0
+        if not medio_pago.genera_comision:
+            return Decimal('0.00'), None
+        
+        # Buscar tarifa vigente
+        now = timezone.now()
+        tarifa = TarifasComision.objects.filter(
+            id_medio_pago=medio_pago,
+            activo=True,
+            fecha_inicio_vigencia__lte=now
+        ).filter(
+            models.Q(fecha_fin_vigencia__isnull=True) | 
+            models.Q(fecha_fin_vigencia__gte=now)
+        ).order_by('-fecha_inicio_vigencia').first()
+        
+        if not tarifa:
+            # No hay tarifa configurada
+            return Decimal('0.00'), None
+        
+        # Calcular comisión porcentual
+        comision = monto_base * tarifa.porcentaje_comision
+        
+        # Agregar monto fijo si existe
+        if tarifa.monto_fijo_comision:
+            comision += tarifa.monto_fijo_comision
+        
+        # Redondear a 2 decimales
+        return comision.quantize(Decimal('0.01')), tarifa
+    
+    def _registrar_pago_con_comision(self, venta, medio_pago, monto_base):
+        """
+        Registra el pago con comisión separada.
+        
+        Reglas Bancard:
+        - La factura solo incluye el monto base (productos)
+        - La comisión es un recargo aparte (trasladado al cliente)
+        - No afecta la base imponible para IVA
+        - Se registra en MovimientosCaja como conceptos separados
+        
+        Args:
+            venta: Instancia de Ventas
+            medio_pago: Instancia de MediosPago
+            monto_base: Monto de productos (sin comisión)
+            
+        Returns:
+            PagosVenta: Instancia del pago creado
+        """
+        from apps.contabilidad.models import MovimientosCaja
+        
+        # Calcular comisión
+        monto_comision, tarifa = self._calcular_comision(medio_pago, monto_base)
+        
+        # Crear registro de pago
+        pago = PagosVenta.objects.create(
+            monto=monto_base,
+            monto_comision=monto_comision,
+            fecha_pago=timezone.now(),
+            estado='confirmado',
+            id_medio_pago=medio_pago,
+            id_venta=venta,
+            referencia_transaccion=f"POS-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        )
+        
+        # Registrar en MovimientosCaja
+        # Movimiento 1: Ingreso por venta de productos
+        MovimientosCaja.objects.create(
+            tipo_movimiento='ingreso',
+            monto=monto_base,
+            monto_comision=Decimal('0.00'),
+            fecha_movimiento=timezone.now(),
+            descripcion=f"Venta #{venta.id_venta} - Productos",
+            id_medio_pago=medio_pago,
+            id_venta=venta,
+            id_cierre=None  # Se asigna al cerrar caja
+        )
+        
+        # Movimiento 2: Ingreso por recargo POS (si aplica)
+        if monto_comision > 0 and tarifa:
+            MovimientosCaja.objects.create(
+                tipo_movimiento='ingreso',
+                monto=Decimal('0.00'),
+                monto_comision=monto_comision,
+                fecha_movimiento=timezone.now(),
+                descripcion=f"Venta #{venta.id_venta} - Recargo POS ({tarifa.porcentaje_comision * 100}%)",
+                id_medio_pago=medio_pago,
+                id_venta=venta,
+                id_cierre=None
+            )
+        
+        return pago
+
     def perform_create(self, serializer):
         """
         Valida saldo de tarjeta antes de crear venta.
+        Calcula y registra comisión según medio de pago.
+        
         Aplica las reglas de negocio:
         - NO permite saldo negativo sin autorización
         - Descuenta el saldo de la tarjeta del hijo
         - Registra el consumo en ConsumosTarjeta
+        - Calcula comisión POS Bancard (si aplica)
+        - Separa monto facturado vs recargo POS
         """
         venta_data = serializer.validated_data
         id_hijo = venta_data.get('id_hijo')
         monto_total = venta_data.get('monto_total')
+        id_medio_pago = venta_data.get('id_medio_pago')
         
         # Solo validar si la venta está asociada a un hijo (compra con tarjeta)
         if id_hijo:
@@ -73,6 +190,10 @@ class VentasViewSet(viewsets.ModelViewSet):
                 with transaction.atomic():
                     venta_obj = serializer.save()
                     self._descontar_saldo_tarjeta(tarjeta, monto_total, venta_obj)
+                    
+                    # Registrar pago con comisión (si tiene medio de pago)
+                    if id_medio_pago:
+                        self._registrar_pago_con_comision(venta_obj, id_medio_pago, monto_total)
                 
             except Tarjetas.DoesNotExist:
                 raise ValidationError({
@@ -81,7 +202,12 @@ class VentasViewSet(viewsets.ModelViewSet):
                 })
         else:
             # Venta sin tarjeta (pago directo)
-            venta_obj = serializer.save()
+            with transaction.atomic():
+                venta_obj = serializer.save()
+                
+                # Registrar pago con comisión (si tiene medio de pago)
+                if id_medio_pago:
+                    self._registrar_pago_con_comision(venta_obj, id_medio_pago, monto_total)
 
     def _descontar_saldo_tarjeta(self, tarjeta, monto, venta):
         """

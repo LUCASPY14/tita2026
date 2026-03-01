@@ -78,7 +78,17 @@ class DetallesVenta(models.Model):
 
 class PagosVenta(models.Model):
     id_pago_venta = models.BigAutoField(primary_key=True)
-    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    monto = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2,
+        help_text="Monto de productos (base facturada, sin comisión)"
+    )
+    monto_comision = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Recargo por uso de POS (NO facturado, trasladado al cliente)"
+    )
     referencia_transaccion = models.CharField(max_length=100, blank=True, null=True)
     fecha_pago = models.DateTimeField()
     estado = models.CharField(max_length=10)
@@ -87,16 +97,24 @@ class PagosVenta(models.Model):
     nro_tarjeta_usada = models.ForeignKey('core.Tarjetas', models.DO_NOTHING, db_column='nro_tarjeta_usada', blank=True, null=True)
     id_venta = models.ForeignKey('Ventas', models.DO_NOTHING, db_column='id_venta')
 
+    @property
+    def total_cobrado(self):
+        """Total cobrado al cliente (monto + comisión)"""
+        return self.monto + self.monto_comision
     
+    @property
+    def porcentaje_comision_aplicado(self):
+        """Calcula el % de comisión aplicado"""
+        if self.monto > 0:
+            return (self.monto_comision / self.monto) * 100
+        return Decimal('0.00')
 
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+        return f"Pago #{self.id_pago_venta} - Gs. {self.total_cobrado:,.0f} ({self.id_medio_pago})"
 
     class Meta:
         managed = True
         db_table = 'pagos_venta'
-        verbose_name = 'Pago de Venta'
-        verbose_name_plural = 'Pagos de Venta'
         verbose_name = 'Pago de Venta'
         verbose_name_plural = 'Pagos de Venta'
 

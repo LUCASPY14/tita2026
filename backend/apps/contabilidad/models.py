@@ -47,7 +47,7 @@ class MovimientosCaja(models.Model):
     monto_comision = models.DecimalField(max_digits=12, decimal_places=2)
     fecha_movimiento = models.DateTimeField()
     descripcion = models.CharField(max_length=200, blank=True, null=True)
-    id_cierre = models.ForeignKey('CierresCaja', models.DO_NOTHING, db_column='id_cierre')
+    id_cierre = models.ForeignKey('CierresCaja', models.DO_NOTHING, db_column='id_cierre', blank=True, null=True)
     id_medio_pago = models.ForeignKey('core.MediosPago', models.DO_NOTHING, db_column='id_medio_pago')
     id_venta = models.ForeignKey('ventas.Ventas', models.DO_NOTHING, db_column='id_venta', blank=True, null=True)
 
