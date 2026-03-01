@@ -28,9 +28,9 @@ class TiposAlmuerzo(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True, null=True)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    incluye_plato_principal = models.IntegerField()
-    incluye_postre = models.IntegerField()
-    incluye_bebida = models.IntegerField()
+    incluye_plato_principal = models.BooleanField(default=True, help_text="Incluye plato principal")
+    incluye_postre = models.BooleanField(default=False, help_text="Incluye postre")
+    incluye_bebida = models.BooleanField(default=False, help_text="Incluye bebida")
     fecha_creacion = models.DateTimeField()
     activo = models.BooleanField(default=True)
 
@@ -66,7 +66,7 @@ class RegistrosConsumoAlmuerzo(models.Model):
     fecha_consumo = models.DateField()
     hora_registro = models.TimeField()
     costo_almuerzo = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    marcado_en_cuenta = models.IntegerField()
+    marcado_en_cuenta = models.BooleanField(default=False, help_text="Indica si el consumo se agregó a la cuenta mensual de almuerzo (NO relacionado con saldo de cantina)")
     estado = models.CharField(max_length=20)
     motivo_rechazo = models.CharField(max_length=255, blank=True, null=True)
     id_hijo = models.ForeignKey('clientes.Hijos', models.DO_NOTHING, db_column='id_hijo')
@@ -168,7 +168,7 @@ class Alergenos(models.Model):
 
 class ProductosAlergenos(models.Model):
     id_producto_alergeno = models.AutoField(primary_key=True)
-    contiene = models.IntegerField()
+    contiene = models.BooleanField(default=True, help_text="True=Contiene el alérgeno, False=Puede contener trazas")
     observaciones = models.TextField(blank=True, null=True)
     fecha_registro = models.DateTimeField()
     usuario_registro = models.CharField(max_length=100, blank=True, null=True)

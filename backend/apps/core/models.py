@@ -12,17 +12,49 @@ class Tarjetas(models.Model):
     fecha_vencimiento = models.DateField(blank=True, null=True)
     saldo_alerta = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     fecha_creacion = models.DateTimeField()
-    permite_saldo_negativo = models.IntegerField()
+    permite_saldo_negativo = models.BooleanField(default=False, help_text="Permite realizar compras con saldo negativo (requiere autorización)")
     limite_credito = models.DecimalField(max_digits=12, decimal_places=2)
-    notificar_saldo_bajo = models.IntegerField()
+    notificar_saldo_bajo = models.BooleanField(default=True, help_text="Enviar notificación cuando el saldo esté bajo")
     ultima_notificacion_saldo = models.DateTimeField(blank=True, null=True)
     id_hijo = models.OneToOneField('clientes.Hijos', models.DO_NOTHING, db_column='id_hijo')
     codigo_barras = models.CharField(unique=True, max_length=50, blank=True, null=True)
 
-    
-
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+        return f"Tarjeta {self.nro_tarjeta} - {self.id_hijo}"
+
+    @property
+    def saldo_disponible(self):
+        """Calcula el saldo disponible considerando límite de crédito"""
+        if self.permite_saldo_negativo:
+            return self.saldo_actual + self.limite_credito
+        return max(self.saldo_actual, 0)
+
+    @property
+    def esta_en_alerta(self):
+        """Verifica si el saldo está por debajo del nivel de alerta"""
+        if self.saldo_alerta:
+            return self.saldo_actual <= self.saldo_alerta
+        return False
+
+    @property
+    def requiere_notificacion(self):
+        """Determina si debe enviarse notificación de saldo bajo"""
+        return self.notificar_saldo_bajo and self.esta_en_alerta
+
+    def clean(self):
+        """Validar que el hijo no tenga otra tarjeta activa"""
+        from django.core.exceptions import ValidationError
+        
+        if self.id_hijo:
+            # Verificar si ya existe otra tarjeta para este hijo
+            tarjetas_existentes = Tarjetas.objects.filter(
+                id_hijo=self.id_hijo
+            ).exclude(nro_tarjeta=self.nro_tarjeta)
+            
+            if tarjetas_existentes.exists():
+                raise ValidationError({
+                    'id_hijo': 'Este hijo ya tiene una tarjeta asociada. Solo se permite una tarjeta por hijo.'
+                })
 
     class Meta:
         managed = True
@@ -34,20 +66,18 @@ class TarjetasAutorizacion(models.Model):
     id_tarjeta_autorizacion = models.AutoField(primary_key=True)
     codigo_barra = models.CharField(unique=True, max_length=50)
     tipo_autorizacion = models.CharField(max_length=15)
-    puede_anular_almuerzos = models.IntegerField()
-    puede_anular_ventas = models.IntegerField()
-    puede_anular_recargas = models.IntegerField()
-    puede_modificar_precios = models.IntegerField()
+    puede_anular_almuerzos = models.BooleanField(default=False, help_text="Permite anular registros de almuerzo")
+    puede_anular_ventas = models.BooleanField(default=False, help_text="Permite anular ventas")
+    puede_anular_recargas = models.BooleanField(default=False, help_text="Permite anular recargas de saldo")
+    puede_modificar_precios = models.BooleanField(default=False, help_text="Permite modificar precios en punto de venta")
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField()
     fecha_vencimiento = models.DateField(blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
     id_empleado = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado', blank=True, null=True)
 
-    
-
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+        return f"Tarjeta Autorización {self.codigo_barra} - {self.tipo_autorizacion}"
 
     class Meta:
         managed = True
@@ -123,14 +153,12 @@ class TransaccionesOnline(models.Model):
 class MediosPago(models.Model):
     id_medio_pago = models.AutoField(primary_key=True)
     descripcion = models.CharField(unique=True, max_length=50)
-    genera_comision = models.IntegerField()
-    requiere_validacion = models.IntegerField()
+    genera_comision = models.BooleanField(default=False, help_text="Si este medio de pago cobra comisión")
+    requiere_validacion = models.BooleanField(default=False, help_text="Requiere validación externa (ej: tarjeta crédito)")
     activo = models.BooleanField(default=True)
 
-    
-
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+        return self.descripcion
 
     class Meta:
         managed = True
@@ -146,13 +174,13 @@ class ConfiguracionSistema(models.Model):
     categoria = models.CharField(max_length=50)
     descripcion = models.TextField()
     valor_defecto = models.TextField()
-    requerido = models.IntegerField()
+    requerido = models.BooleanField(default=False, help_text="Configuración obligatoria")
     validacion = models.CharField(max_length=500)
     valores_permitidos = models.JSONField()
     valor_min = models.CharField(max_length=100)
     valor_max = models.CharField(max_length=100)
-    requiere_reinicio = models.IntegerField()
-    solo_superuser = models.IntegerField()
+    requiere_reinicio = models.BooleanField(default=False, help_text="Requiere reiniciar el sistema al cambiar")
+    solo_superuser = models.BooleanField(default=False, help_text="Solo superusuarios pueden modificar")
     activo = models.BooleanField(default=True)
     updated_at = models.DateTimeField()
     updated_by = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='updated_by', blank=True, null=True)
@@ -173,7 +201,7 @@ class CacheConfiguracion(models.Model):
     ttl_segundos = models.IntegerField()
     max_size_mb = models.IntegerField()
     tipo_cache = models.CharField(max_length=20)
-    auto_invalidate = models.IntegerField()
+    auto_invalidate = models.BooleanField(default=True, help_text="Invalidar automáticamente el caché")
     eventos_invalid = models.JSONField()
     activo = models.BooleanField(default=True)
     hits = models.BigIntegerField()
