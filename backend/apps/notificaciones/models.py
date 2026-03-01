@@ -16,6 +16,11 @@ class NotificacionesPortal(models.Model):
     creado_en = models.DateTimeField()
     id_usuario_portal = models.ForeignKey('usuarios.UsuariosPortal', models.DO_NOTHING, db_column='id_usuario_portal')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'notificaciones_portal'
@@ -33,6 +38,11 @@ class NotificacionesSaldo(models.Model):
     fecha_envio = models.DateTimeField(blank=True, null=True)
     nro_tarjeta = models.ForeignKey('core.Tarjetas', models.DO_NOTHING, db_column='nro_tarjeta')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'notificaciones_saldo'
@@ -48,6 +58,11 @@ class SolicitudesNotificacion(models.Model):
     id_cliente = models.ForeignKey('clientes.Clientes', models.DO_NOTHING, db_column='id_cliente')
     nro_tarjeta = models.ForeignKey('core.Tarjetas', models.DO_NOTHING, db_column='nro_tarjeta')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'solicitudes_notificacion'
@@ -61,9 +76,16 @@ class PreferenciasNotificacion(models.Model):
     actualizado_en = models.DateTimeField()
     id_usuario_portal = models.ForeignKey('usuarios.UsuariosPortal', models.DO_NOTHING, db_column='id_usuario_portal')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'preferencias_notificacion'
+        verbose_name = 'Preferencia de Notificación'
+        verbose_name_plural = 'Preferencias de Notificaciones'
         unique_together = (('id_usuario_portal', 'tipo_notificacion'),)
 
 class EmailsEnviados(models.Model):
@@ -82,9 +104,16 @@ class EmailsEnviados(models.Model):
     enviado_por = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='enviado_por', blank=True, null=True)
     id_template = models.ForeignKey('PlantillasEmail', models.DO_NOTHING, db_column='id_template', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'emails_enviados'
+        verbose_name = 'Email Enviado'
+        verbose_name_plural = 'Emails Enviados'
 
 class SmsEnviados(models.Model):
     id_sms = models.AutoField(primary_key=True)
@@ -97,6 +126,11 @@ class SmsEnviados(models.Model):
     id_cliente = models.ForeignKey('clientes.Clientes', models.DO_NOTHING, db_column='id_cliente', blank=True, null=True)
     enviado_por = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='enviado_por', blank=True, null=True)
     id_template = models.ForeignKey('PlantillasSms', models.DO_NOTHING, db_column='id_template', blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -112,14 +146,21 @@ class PlantillasEmail(models.Model):
     cuerpo_texto = models.TextField(blank=True, null=True)
     variables = models.JSONField()
     categoria = models.CharField(max_length=30)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     created_by = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='created_by', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'plantillas_email'
+        verbose_name = 'Plantilla de Email'
+        verbose_name_plural = 'Plantillas de Emails'
 
 class PlantillasSms(models.Model):
     id_template = models.AutoField(primary_key=True)
@@ -128,8 +169,13 @@ class PlantillasSms(models.Model):
     mensaje = models.CharField(max_length=160)
     variables = models.JSONField()
     categoria = models.CharField(max_length=30)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -152,6 +198,11 @@ class CampanasComunicacion(models.Model):
     id_email_template = models.ForeignKey('PlantillasEmail', models.DO_NOTHING, db_column='id_email_template', blank=True, null=True)
     id_sms_template = models.ForeignKey('PlantillasSms', models.DO_NOTHING, db_column='id_sms_template', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'campanas_comunicacion'
@@ -164,8 +215,13 @@ class AlertasAutomaticas(models.Model):
     tipo_alerta = models.CharField(max_length=20)
     criticidad = models.CharField(max_length=10)
     frecuencia_min = models.IntegerField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     ultima_verificacion = models.DateTimeField(blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -175,9 +231,14 @@ class AlertaDestinatarios(models.Model):
     id_destinatario = models.AutoField(primary_key=True)
     via_email = models.IntegerField()
     via_sistema = models.IntegerField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     id_alerta = models.ForeignKey('AlertasAutomaticas', models.DO_NOTHING, db_column='id_alerta')
     id_empleado = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -195,6 +256,11 @@ class AlertasSistema(models.Model):
     fecha_resolucion = models.DateTimeField(blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'alertas_sistema'
@@ -208,6 +274,11 @@ class HistorialAlertas(models.Model):
     fecha_resolucion = models.DateTimeField(blank=True, null=True)
     id_alerta = models.ForeignKey('AlertasAutomaticas', models.DO_NOTHING, db_column='id_alerta')
     resuelto_por = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='resuelto_por', blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -223,6 +294,11 @@ class AnomaliasDetectadas(models.Model):
     nivel_riesgo = models.CharField(max_length=10)
     notificado = models.IntegerField()
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'anomalias_detectadas'
@@ -234,8 +310,13 @@ class RestriccionesHorarias(models.Model):
     dia_semana = models.CharField(max_length=20)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField()
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True

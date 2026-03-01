@@ -19,9 +19,16 @@ class Tarjetas(models.Model):
     id_hijo = models.OneToOneField('clientes.Hijos', models.DO_NOTHING, db_column='id_hijo')
     codigo_barras = models.CharField(unique=True, max_length=50, blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'tarjetas'
+        verbose_name = 'Tarjeta'
+        verbose_name_plural = 'Tarjetas'
 
 class TarjetasAutorizacion(models.Model):
     id_tarjeta_autorizacion = models.AutoField(primary_key=True)
@@ -31,15 +38,22 @@ class TarjetasAutorizacion(models.Model):
     puede_anular_ventas = models.IntegerField()
     puede_anular_recargas = models.IntegerField()
     puede_modificar_precios = models.IntegerField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField()
     fecha_vencimiento = models.DateField(blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
     id_empleado = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'tarjetas_autorizacion'
+        verbose_name = 'Tarjeta de Autorización'
+        verbose_name_plural = 'Tarjetas de Autorización'
 
 class CargasSaldo(models.Model):
     id_carga = models.BigAutoField(primary_key=True)
@@ -55,6 +69,11 @@ class CargasSaldo(models.Model):
     id_nota = models.BigIntegerField(blank=True, null=True)
     nro_tarjeta = models.ForeignKey('Tarjetas', models.DO_NOTHING, db_column='nro_tarjeta')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'cargas_saldo'
@@ -68,6 +87,11 @@ class ConsumosTarjeta(models.Model):
     saldo_posterior = models.DecimalField(max_digits=12, decimal_places=2)
     id_empleado_registro = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado_registro', blank=True, null=True)
     nro_tarjeta = models.ForeignKey('Tarjetas', models.DO_NOTHING, db_column='nro_tarjeta')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -87,6 +111,11 @@ class TransaccionesOnline(models.Model):
     nro_tarjeta = models.ForeignKey('Tarjetas', models.DO_NOTHING, db_column='nro_tarjeta', blank=True, null=True)
     id_usuario_portal = models.ForeignKey('usuarios.UsuariosPortal', models.DO_NOTHING, db_column='id_usuario_portal', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'transacciones_online'
@@ -96,11 +125,18 @@ class MediosPago(models.Model):
     descripcion = models.CharField(unique=True, max_length=50)
     genera_comision = models.IntegerField()
     requiere_validacion = models.IntegerField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
         db_table = 'medios_pago'
+        verbose_name = 'Medio de Pago'
+        verbose_name_plural = 'Medios de Pago'
 
 class ConfiguracionSistema(models.Model):
     id_config = models.AutoField(primary_key=True)
@@ -117,9 +153,14 @@ class ConfiguracionSistema(models.Model):
     valor_max = models.CharField(max_length=100)
     requiere_reinicio = models.IntegerField()
     solo_superuser = models.IntegerField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     updated_at = models.DateTimeField()
     updated_by = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='updated_by', blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -134,10 +175,15 @@ class CacheConfiguracion(models.Model):
     tipo_cache = models.CharField(max_length=20)
     auto_invalidate = models.IntegerField()
     eventos_invalid = models.JSONField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     hits = models.BigIntegerField()
     misses = models.BigIntegerField()
     ultima_limpieza = models.DateTimeField(blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True

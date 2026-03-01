@@ -17,23 +17,37 @@ class Empleados(models.Model):
     pais = models.CharField(max_length=100, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.CharField(max_length=254, blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     fecha_baja = models.DateTimeField(blank=True, null=True)
     id_rol = models.ForeignKey('Roles', models.DO_NOTHING, db_column='id_rol')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
         db_table = 'empleados'
+        verbose_name = 'Empleado'
+        verbose_name_plural = 'Empleados'
 
 class Roles(models.Model):
     id_rol = models.AutoField(primary_key=True)
     nombre_rol = models.CharField(unique=True, max_length=50)
     descripcion = models.CharField(max_length=100, blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
         db_table = 'roles'
+        verbose_name = 'Rol'
+        verbose_name_plural = 'Roles'
 
 class PerfilesUsuario(models.Model):
     id_perfil = models.AutoField(primary_key=True)
@@ -52,6 +66,11 @@ class PerfilesUsuario(models.Model):
     updated_at = models.DateTimeField()
     id_empleado = models.OneToOneField('Empleados', models.DO_NOTHING, db_column='id_empleado')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'perfiles_usuario'
@@ -62,10 +81,15 @@ class Autenticacion2Fa(models.Model):
     tipo_usuario = models.CharField(max_length=20)
     secret_key = models.CharField(max_length=32)
     backup_codes = models.TextField(blank=True, null=True)
-    habilitado = models.IntegerField()
+    habilitado = models.BooleanField(default=True)
     fecha_activacion = models.DateTimeField(blank=True, null=True)
     ultima_verificacion = models.DateTimeField(blank=True, null=True)
     fecha_creacion = models.DateTimeField()
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -84,6 +108,11 @@ class Intentos2Fa(models.Model):
     tipo_codigo = models.CharField(max_length=10, blank=True, null=True)
     fecha_intento = models.DateTimeField()
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'intentos_2fa'
@@ -98,6 +127,11 @@ class IntentosLogin(models.Model):
     exitoso = models.IntegerField()
     motivo_fallo = models.CharField(max_length=100, blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'intentos_login'
@@ -111,7 +145,12 @@ class SesionesActivas(models.Model):
     user_agent = models.TextField(blank=True, null=True)
     fecha_inicio = models.DateTimeField()
     ultima_actividad = models.DateTimeField()
-    activa = models.IntegerField()
+    activa = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -125,6 +164,11 @@ class RenovacionesSesion(models.Model):
     ip_address = models.CharField(max_length=45, blank=True, null=True)
     user_agent = models.TextField(blank=True, null=True)
     fecha_renovacion = models.DateTimeField()
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -140,6 +184,11 @@ class TokensRecuperacion(models.Model):
     ip_solicitud = models.CharField(max_length=45, blank=True, null=True)
     id_cliente = models.ForeignKey('clientes.Clientes', models.DO_NOTHING, db_column='id_cliente')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'tokens_recuperacion'
@@ -153,6 +202,11 @@ class TokensVerificacion(models.Model):
     fecha_creacion = models.DateTimeField()
     fecha_uso = models.DateTimeField(blank=True, null=True)
     id_usuario_portal = models.ForeignKey('UsuariosPortal', models.DO_NOTHING, db_column='id_usuario_portal')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -171,6 +225,11 @@ class PatronesAcceso(models.Model):
     frecuencia_accesos = models.IntegerField()
     es_habitual = models.IntegerField()
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'patrones_acceso'
@@ -184,7 +243,12 @@ class BloqueosCuenta(models.Model):
     fecha_desbloqueo = models.DateTimeField(blank=True, null=True)
     bloqueado_por = models.CharField(max_length=100, blank=True, null=True)
     ip_address = models.CharField(max_length=45, blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -197,8 +261,13 @@ class UsuariosPortal(models.Model):
     email_verificado = models.IntegerField()
     fecha_registro = models.DateTimeField()
     ultimo_acceso = models.DateTimeField(blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     id_cliente = models.OneToOneField('clientes.Clientes', models.DO_NOTHING, db_column='id_cliente')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -209,7 +278,12 @@ class UsuariosWebClientes(models.Model):
     usuario = models.CharField(unique=True, max_length=50)
     contrasena_hash = models.CharField(max_length=128)
     ultimo_acceso = models.DateTimeField(blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -223,6 +297,11 @@ class AuditoriaEmpleados(models.Model):
     valor_nuevo = models.TextField(blank=True, null=True)
     ip_origen = models.CharField(max_length=45, blank=True, null=True)
     id_empleado = models.ForeignKey('Empleados', models.DO_NOTHING, db_column='id_empleado', blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -247,6 +326,11 @@ class AuditoriaOperaciones(models.Model):
     resultado = models.CharField(max_length=20)
     mensaje_error = models.TextField(blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'auditoria_operaciones'
@@ -259,6 +343,11 @@ class AuditoriaUsuariosWeb(models.Model):
     valor_nuevo = models.TextField(blank=True, null=True)
     ip_origen = models.CharField(max_length=45, blank=True, null=True)
     id_cliente = models.ForeignKey('clientes.Clientes', models.DO_NOTHING, db_column='id_cliente', blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True

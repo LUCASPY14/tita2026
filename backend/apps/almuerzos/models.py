@@ -12,7 +12,12 @@ class PlanesAlmuerzo(models.Model):
     precio_mensual = models.DecimalField(max_digits=10, decimal_places=2)
     dias_semana_incluidos = models.CharField(max_length=60)
     fecha_creacion = models.DateTimeField(blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -27,7 +32,12 @@ class TiposAlmuerzo(models.Model):
     incluye_postre = models.IntegerField()
     incluye_bebida = models.IntegerField()
     fecha_creacion = models.DateTimeField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -40,6 +50,11 @@ class SuscripcionesAlmuerzo(models.Model):
     estado = models.CharField(max_length=10, blank=True, null=True)
     id_hijo = models.ForeignKey('clientes.Hijos', models.DO_NOTHING, db_column='id_hijo')
     id_plan_almuerzo = models.ForeignKey('PlanesAlmuerzo', models.DO_NOTHING, db_column='id_plan_almuerzo')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -60,6 +75,11 @@ class RegistrosConsumoAlmuerzo(models.Model):
     nro_tarjeta = models.ForeignKey('core.Tarjetas', models.DO_NOTHING, db_column='nro_tarjeta', blank=True, null=True)
     id_empleado_registro = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado_registro', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'registros_consumo_almuerzo'
@@ -78,6 +98,11 @@ class CuentasAlmuerzoMensual(models.Model):
     observaciones = models.TextField(blank=True, null=True)
     id_hijo = models.ForeignKey('clientes.Hijos', models.DO_NOTHING, db_column='id_hijo')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'cuentas_almuerzo_mensual'
@@ -91,6 +116,11 @@ class PagosAlmuerzoMensual(models.Model):
     estado = models.CharField(max_length=9, blank=True, null=True)
     id_suscripcion = models.ForeignKey('SuscripcionesAlmuerzo', models.DO_NOTHING, db_column='id_suscripcion')
     id_venta = models.OneToOneField('ventas.Ventas', models.DO_NOTHING, db_column='id_venta', blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -107,6 +137,11 @@ class PagosCuentasAlmuerzo(models.Model):
     id_cuenta = models.ForeignKey('CuentasAlmuerzoMensual', models.DO_NOTHING, db_column='id_cuenta')
     id_empleado_registro = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado_registro', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'pagos_cuentas_almuerzo'
@@ -118,9 +153,14 @@ class Alergenos(models.Model):
     palabras_clave = models.JSONField()
     nivel_severidad = models.CharField(max_length=10)
     icono = models.CharField(max_length=10, blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField()
     usuario_creacion = models.CharField(max_length=100, blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -134,6 +174,11 @@ class ProductosAlergenos(models.Model):
     usuario_registro = models.CharField(max_length=100, blank=True, null=True)
     id_alergeno = models.ForeignKey('Alergenos', models.DO_NOTHING, db_column='id_alergeno')
     id_producto = models.ForeignKey('productos.Productos', models.DO_NOTHING, db_column='id_producto')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True

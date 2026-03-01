@@ -9,7 +9,12 @@ class Cajas(models.Model):
     id_caja = models.AutoField(primary_key=True)
     nombre_caja = models.CharField(max_length=50)
     ubicacion = models.CharField(max_length=100, blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -26,6 +31,11 @@ class CierresCaja(models.Model):
     id_caja = models.ForeignKey('Cajas', models.DO_NOTHING, db_column='id_caja')
     id_empleado = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'cierres_caja'
@@ -41,6 +51,11 @@ class MovimientosCaja(models.Model):
     id_medio_pago = models.ForeignKey('core.MediosPago', models.DO_NOTHING, db_column='id_medio_pago')
     id_venta = models.ForeignKey('ventas.Ventas', models.DO_NOTHING, db_column='id_venta', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'movimientos_caja'
@@ -51,8 +66,13 @@ class TarifasComision(models.Model):
     fecha_fin_vigencia = models.DateTimeField(blank=True, null=True)
     porcentaje_comision = models.DecimalField(max_digits=5, decimal_places=4)
     monto_fijo_comision = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     id_medio_pago = models.ForeignKey('core.MediosPago', models.DO_NOTHING, db_column='id_medio_pago')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -66,6 +86,11 @@ class AuditoriaComisiones(models.Model):
     valor_nuevo = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True)
     id_empleado_modifico = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado_modifico', blank=True, null=True)
     id_tarifa = models.ForeignKey('TarifasComision', models.DO_NOTHING, db_column='id_tarifa', blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -81,6 +106,11 @@ class ConciliacionPagos(models.Model):
     fecha_creacion = models.DateTimeField()
     fecha_actualizacion = models.DateTimeField()
     id_pago_venta = models.OneToOneField('ventas.PagosVenta', models.DO_NOTHING, db_column='id_pago_venta')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -100,9 +130,16 @@ class DocumentosTributarios(models.Model):
     fecha_respuesta = models.DateTimeField(blank=True, null=True)
     nro_preimpreso_interno = models.CharField(max_length=20, blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'documentos_tributarios'
+        verbose_name = 'Documento Tributario'
+        verbose_name_plural = 'Documentos Tributarios'
         unique_together = (('nro_timbrado', 'nro_secuencial'),)
 
 class DocumentoImpuestos(models.Model):
@@ -111,6 +148,11 @@ class DocumentoImpuestos(models.Model):
     id_impuesto = models.ForeignKey('Impuestos', models.DO_NOTHING, db_column='id_impuesto')
     base_imponible = models.DecimalField(max_digits=12, decimal_places=2)
     monto_impuesto = models.DecimalField(max_digits=10, decimal_places=2)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -124,19 +166,31 @@ class Timbrados(models.Model):
     nro_inicial = models.IntegerField()
     nro_final = models.IntegerField()
     es_electronico = models.IntegerField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     id_punto = models.ForeignKey('PuntosExpedicion', models.DO_NOTHING, db_column='id_punto')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
         db_table = 'timbrados'
+        verbose_name = 'Timbrado'
+        verbose_name_plural = 'Timbrados'
 
 class PuntosExpedicion(models.Model):
     id_punto = models.AutoField(primary_key=True)
     codigo_establecimiento = models.CharField(max_length=3)
     codigo_punto_expedicion = models.CharField(max_length=3)
     descripcion_ubicacion = models.CharField(max_length=100, blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -152,7 +206,12 @@ class DatosEmpresa(models.Model):
     pais = models.CharField(max_length=100, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.CharField(max_length=100, blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -164,8 +223,15 @@ class Impuestos(models.Model):
     porcentaje = models.DecimalField(max_digits=4, decimal_places=2)
     vigente_desde = models.DateField()
     vigente_hasta = models.DateField(blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
         db_table = 'impuestos'
+        verbose_name = 'Impuesto'
+        verbose_name_plural = 'Impuestos'

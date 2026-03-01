@@ -11,6 +11,11 @@ class StockUnico(models.Model):
     fecha_ultima_actualizacion = models.DateTimeField()
     id_producto = models.OneToOneField('productos.Productos', models.DO_NOTHING, db_column='id_producto')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'stock_unico'
@@ -27,6 +32,11 @@ class MovimientosStock(models.Model):
     id_empleado_autoriza = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado_autoriza')
     id_producto = models.ForeignKey('productos.Productos', models.DO_NOTHING, db_column='id_producto')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'movimientos_stock'
@@ -38,9 +48,16 @@ class AjustesInventario(models.Model):
     motivo = models.CharField(max_length=255)
     estado = models.CharField(max_length=10)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'ajustes_inventario'
+        verbose_name = 'Ajuste de Inventario'
+        verbose_name_plural = 'Ajustes de Inventario'
 
 class DetallesAjuste(models.Model):
     id_detalle = models.BigAutoField(primary_key=True)
@@ -48,6 +65,11 @@ class DetallesAjuste(models.Model):
     id_ajuste = models.ForeignKey('AjustesInventario', models.DO_NOTHING, db_column='id_ajuste')
     id_movimiento_stock = models.OneToOneField('MovimientosStock', models.DO_NOTHING, db_column='id_movimiento_stock')
     id_producto = models.ForeignKey('productos.Productos', models.DO_NOTHING, db_column='id_producto')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -60,6 +82,11 @@ class CostosHistoricos(models.Model):
     fecha_compra = models.DateTimeField()
     id_compra = models.ForeignKey('compras.Compras', models.DO_NOTHING, db_column='id_compra', blank=True, null=True)
     id_producto = models.ForeignKey('productos.Productos', models.DO_NOTHING, db_column='id_producto')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True

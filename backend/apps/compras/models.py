@@ -13,12 +13,21 @@ class Proveedores(models.Model):
     email = models.CharField(max_length=254, blank=True, null=True)
     direccion = models.CharField(max_length=255, blank=True, null=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     fecha_registro = models.DateTimeField()
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
         db_table = 'proveedores'
+        verbose_name = 'Proveedor'
+        verbose_name_plural = 'Proveedores'
+        verbose_name = 'Proveedor'
+        verbose_name_plural = 'Proveedores'
 
 class Compras(models.Model):
     id_compra = models.BigAutoField(primary_key=True)
@@ -31,9 +40,18 @@ class Compras(models.Model):
     id_proveedor = models.ForeignKey('Proveedores', models.DO_NOTHING, db_column='id_proveedor')
     id_documento = models.ForeignKey('contabilidad.DocumentosTributarios', models.DO_NOTHING, db_column='id_documento', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'compras'
+        verbose_name = 'Compra'
+        verbose_name_plural = 'Compras'
+        verbose_name = 'Compra'
+        verbose_name_plural = 'Compras'
 
 class DetallesCompra(models.Model):
     id_detalle = models.BigAutoField(primary_key=True)
@@ -44,9 +62,18 @@ class DetallesCompra(models.Model):
     id_compra = models.ForeignKey('Compras', models.DO_NOTHING, db_column='id_compra')
     id_producto = models.ForeignKey('productos.Productos', models.DO_NOTHING, db_column='id_producto')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'detalles_compra'
+        verbose_name = 'Detalle de Compra'
+        verbose_name_plural = 'Detalles de Compra'
+        verbose_name = 'Detalle de Compra'
+        verbose_name_plural = 'Detalles de Compra'
         unique_together = (('id_compra', 'id_producto'),)
 
 class PagosProveedores(models.Model):
@@ -54,9 +81,18 @@ class PagosProveedores(models.Model):
     fecha_creacion = models.DateTimeField()
     id_medio_pago = models.ForeignKey('core.MediosPago', models.DO_NOTHING, db_column='id_medio_pago')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'pagos_proveedores'
+        verbose_name = 'Pago a Proveedor'
+        verbose_name_plural = 'Pagos a Proveedores'
+        verbose_name = 'Pago a Proveedor'
+        verbose_name_plural = 'Pagos a Proveedores'
 
 class AplicacionPagosCompras(models.Model):
     id_aplicacion = models.BigAutoField(primary_key=True)
@@ -64,9 +100,18 @@ class AplicacionPagosCompras(models.Model):
     id_compra = models.ForeignKey('Compras', models.DO_NOTHING, db_column='id_compra')
     id_pago_proveedor = models.ForeignKey('PagosProveedores', models.DO_NOTHING, db_column='id_pago_proveedor')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'aplicacion_pagos_compras'
+        verbose_name = 'Aplicación de Pago de Compra'
+        verbose_name_plural = 'Aplicaciones de Pagos de Compras'
+        verbose_name = 'Aplicación de Pago de Compra'
+        verbose_name_plural = 'Aplicaciones de Pagos de Compras'
 
 class NotasCreditoProveedor(models.Model):
     id_nota_proveedor = models.BigAutoField(primary_key=True)
@@ -79,9 +124,18 @@ class NotasCreditoProveedor(models.Model):
     id_compra_original = models.ForeignKey('Compras', models.DO_NOTHING, db_column='id_compra_original', blank=True, null=True)
     id_proveedor = models.ForeignKey('Proveedores', models.DO_NOTHING, db_column='id_proveedor')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'notas_credito_proveedor'
+        verbose_name = 'Nota de Crédito de Proveedor'
+        verbose_name_plural = 'Notas de Crédito de Proveedores'
+        verbose_name = 'Nota de Crédito de Proveedor'
+        verbose_name_plural = 'Notas de Crédito de Proveedores'
 
 class DetallesNotaCreditoProveedor(models.Model):
     id_detalle_nc_proveedor = models.BigAutoField(primary_key=True)
@@ -91,6 +145,15 @@ class DetallesNotaCreditoProveedor(models.Model):
     id_nota_proveedor = models.ForeignKey('NotasCreditoProveedor', models.DO_NOTHING, db_column='id_nota_proveedor')
     id_producto = models.ForeignKey('productos.Productos', models.DO_NOTHING, db_column='id_producto')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'detalles_nota_credito_proveedor'
+        verbose_name = 'Detalle de NC de Proveedor'
+        verbose_name_plural = 'Detalles de NC de Proveedores'
+        verbose_name = 'Detalle de NC de Proveedor'
+        verbose_name_plural = 'Detalles de NC de Proveedores'

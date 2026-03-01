@@ -13,13 +13,20 @@ class PlantillasReporte(models.Model):
     parametros = models.JSONField()
     tipo_reporte = models.CharField(max_length=20)
     frecuencia = models.CharField(max_length=20)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     created_by = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='created_by', blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
         db_table = 'plantillas_reporte'
+        verbose_name = 'Plantilla de Reporte'
+        verbose_name_plural = 'Plantillas de Reportes'
 
 class Dashboards(models.Model):
     id_dashboard = models.AutoField(primary_key=True)
@@ -28,10 +35,15 @@ class Dashboards(models.Model):
     configuracion = models.JSONField()
     es_publico = models.IntegerField()
     predeterminado = models.IntegerField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     id_empleado = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -46,7 +58,12 @@ class KpiMetricas(models.Model):
     valor_objetivo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     categoria = models.CharField(max_length=30)
     frecuencia = models.CharField(max_length=20)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -60,6 +77,11 @@ class ValoresKpi(models.Model):
     auto_calc = models.IntegerField()
     created_at = models.DateTimeField()
     id_kpi = models.ForeignKey('KpiMetricas', models.DO_NOTHING, db_column='id_kpi')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -79,9 +101,14 @@ class PlantillasTarea(models.Model):
     max_reintentos = models.IntegerField()
     notif_exito = models.IntegerField()
     notif_error = models.IntegerField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     created_by = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='created_by', blank=True, null=True)
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -102,6 +129,11 @@ class EjecucionesTarea(models.Model):
     ejecutado_por = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='ejecutado_por', blank=True, null=True)
     id_plantilla = models.ForeignKey('PlantillasTarea', models.DO_NOTHING, db_column='id_plantilla')
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'ejecuciones_tarea'
@@ -113,6 +145,11 @@ class DestinatariosTarea(models.Model):
     notif_error = models.IntegerField()
     id_empleado = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado')
     id_plantilla = models.ForeignKey('PlantillasTarea', models.DO_NOTHING, db_column='id_plantilla')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True

@@ -17,8 +17,13 @@ class ProveedoresApi(models.Model):
     config_auth = models.JSONField()
     timeout = models.IntegerField()
     max_reintentos = models.IntegerField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -36,8 +41,13 @@ class EndpointsApi(models.Model):
     schema_response = models.JSONField()
     cache_segundos = models.IntegerField()
     requiere_auth = models.IntegerField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     id_proveedor = models.ForeignKey('ProveedoresApi', models.DO_NOTHING, db_column='id_proveedor')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -64,6 +74,11 @@ class LogsLlamadasApi(models.Model):
     id_endpoint = models.ForeignKey('EndpointsApi', models.DO_NOTHING, db_column='id_endpoint', blank=True, null=True)
     id_empleado = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'logs_llamadas_api'
@@ -77,8 +92,13 @@ class CredencialesApi(models.Model):
     configuracion = models.JSONField()
     fecha_expiracion = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField()
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     id_proveedor = models.ForeignKey('ProveedoresApi', models.DO_NOTHING, db_column='id_proveedor')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
@@ -99,6 +119,11 @@ class LogsWebhooks(models.Model):
     user_agent = models.TextField(blank=True, null=True)
     id_webhook = models.ForeignKey('WebhookEndpoints', models.DO_NOTHING, db_column='id_webhook', blank=True, null=True)
 
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
+
     class Meta:
         managed = True
         db_table = 'logs_webhooks'
@@ -113,9 +138,14 @@ class WebhookEndpoints(models.Model):
     header_verificacion = models.CharField(max_length=100)
     eventos = models.JSONField()
     handler_func = models.CharField(max_length=200)
-    activo = models.IntegerField()
+    activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     id_proveedor = models.ForeignKey('ProveedoresApi', models.DO_NOTHING, db_column='id_proveedor')
+
+    
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
