@@ -1,6 +1,8 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db import transaction
@@ -11,6 +13,7 @@ from apps.common.permissions import CanManageVentas, IsAdminOrReadOnly
 from apps.common.throttling import VentasRateThrottle, BurstRateThrottle
 from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones
 from .serializers import VentasSerializer, DetallesVentaSerializer, PagosVentaSerializer, NotasCreditoClienteSerializer, PromocionesSerializer
+from .services import PromocionService, DevolucionService
 
 
 class VentasViewSet(viewsets.ModelViewSet):
@@ -142,11 +145,21 @@ class VentasViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Valida saldo de tarjeta antes de crear venta.
-        Calcula y registra comisión según medio de pago.
-        Valida límite de crédito para ventas a crédito.
+        Valida stock y saldo antes de crear venta.
+        Aplica todas las reglas de negocio críticas.
         
-        Aplica las reglas de negocio:
+        Flujo de validaciones:
+        0. VALIDAR LÍMITES POR ROL (nuevo)
+        1. VALIDAR STOCK DISPONIBLE
+        2. Validar límite de crédito (ventas a crédito)
+        3. Validar saldo de tarjeta (compras con tarjeta)
+        4. Descontar stock
+        5. Registrar pago y comisiones
+        6. Registrar autorización (si aplica)
+        
+        Reglas de negocio aplicadas:
+        - Valida límites de transacción por rol
+        - Valida disponibilidad de stock ANTES de vender
         - NO permite saldo negativo sin autorización (tarjetas)
         - Descuenta el saldo de la tarjeta del hijo
         - Registra el consumo en ConsumosTarjeta
@@ -154,6 +167,9 @@ class VentasViewSet(viewsets.ModelViewSet):
         - Separa monto facturado vs recargo POS
         - Valida límite de crédito para ventas a crédito
         """
+        from apps.inventario.services import StockService
+        from apps.core.services import AutorizacionService
+        
         venta_data = serializer.validated_data
         id_hijo = venta_data.get('id_hijo')
         id_cliente = venta_data.get('id_cliente')
@@ -161,6 +177,97 @@ class VentasViewSet(viewsets.ModelViewSet):
         id_medio_pago = venta_data.get('id_medio_pago')
         tipo_venta = venta_data.get('tipo_venta', 'Contado')
         autorizado_por = venta_data.get('autorizado_por')
+        
+        # VALIDACIÓN -1: LÍMITES POR ROL (NUEVO - Control de autorización)
+        empleado_cajero = self.request.user.empleado if hasattr(self.request.user, 'empleado') else None
+        
+        if empleado_cajero:
+            validacion_limite = AutorizacionService.validar_operacion(
+                empleado=empleado_cajero,
+                tipo_operacion='venta',
+                monto=monto_total,
+                autorizador=autorizado_por,
+                motivo=self.request.data.get('motivo_autorizacion', 'Venta estándar')
+            )
+            
+            if not validacion_limite['puede_ejecutar']:
+                raise ValidationError({
+                    'error': 'Requiere autorización de supervisor',
+                    'limite_rol': str(validacion_limite['limite']),
+                    'monto_operacion': str(monto_total),
+                    'excedente': str(validacion_limite.get('excedente', 0)),
+                    'requiere_autorizacion': True,
+                    'doble_autorizacion': validacion_limite.get('doble_autorizacion', False),
+                    'mensaje': validacion_limite['mensaje'],
+                    'errores': validacion_limite['errores']
+                })
+        
+        # VALIDACIÓN 0: STOCK DISPONIBLE (CRÍTICO - Nuevo)
+        # Obtener detalles de la venta desde el request
+        detalles = self.request.data.get('detalles', [])
+        codigo_promocion = self.request.data.get('codigo_promocion')
+        aplicar_promociones = self.request.data.get('aplicar_promociones', True)
+        
+        if detalles:
+            # Preparar items para validación
+            items_validacion = []
+            for detalle in detalles:
+                items_validacion.append({
+                    'id_producto': detalle.get('id_producto'),
+                    'cantidad': Decimal(str(detalle.get('cantidad', 0))),
+                    'precio': Decimal(str(detalle.get('precio_unitario', 0)))
+                })
+            
+            # Validar disponibilidad de TODOS los productos
+            validacion_stock = StockService.validar_disponibilidad_multiple(items_validacion)
+            
+            if not validacion_stock['todo_disponible']:
+                # Construir mensaje detallado
+                productos_faltantes = []
+                for item in validacion_stock['productos_faltantes']:
+                    productos_faltantes.append({
+                        'producto': item['producto']['descripcion'],
+                        'codigo': item['producto']['codigo_barra'],
+                        'stock_actual': str(item['stock_actual']),
+                        'cantidad_solicitada': str(item['faltante'] + item['stock_actual']),
+                        'faltante': str(item['faltante'])
+                    })
+                
+                raise ValidationError({
+                    'error': 'Stock insuficiente para uno o más productos',
+                    'productos_faltantes': productos_faltantes,
+                    'mensaje': 'No se puede completar la venta. Verifique el stock disponible.'
+                })
+        
+        # NUEVO: APLICAR PROMOCIONES (si aplica)
+        total_descuentos = Decimal('0.00')
+        promociones_a_aplicar = []
+        
+        if aplicar_promociones and detalles:
+            # Obtener promociones aplicables
+            promociones_disponibles = PromocionService.obtener_promociones_aplicables(
+                items=items_validacion,
+                monto_total=monto_total,
+                cliente_id=id_cliente.id_cliente if id_cliente else None,
+                codigo_promocion=codigo_promocion
+            )
+            
+            # Calcular descuentos
+            for promo_dict in promociones_disponibles:
+                promo = promo_dict['promocion']
+                descuento = PromocionService.calcular_descuento(
+                    promocion=promo,
+                    items=items_validacion,
+                    monto_total=monto_total
+                )
+                
+                promociones_a_aplicar.append((promo, descuento))
+                total_descuentos += descuento['monto_descuento']
+            
+            # Ajustar monto total con descuentos
+            if total_descuentos > 0:
+                monto_total_con_descuento = monto_total - total_descuentos
+                venta_data['monto_total'] = monto_total_con_descuento
         
         # VALIDACIÓN 1: Límite de crédito para ventas a crédito
         if tipo_venta and tipo_venta.lower() == 'crédito':
@@ -242,9 +349,32 @@ class VentasViewSet(viewsets.ModelViewSet):
                     venta_obj = serializer.save()
                     self._descontar_saldo_tarjeta(tarjeta, monto_total, venta_obj)
                     
+                    # NUEVO: Descontar stock usando StockService (ACID)
+                    self._descontar_stock_venta(venta_obj, detalles)
+                    
+                    # NUEVO: Aplicar promociones si hay
+                    if promociones_a_aplicar:
+                        PromocionService.aplicar_promociones_a_venta(
+                            venta=venta_obj,
+                            promociones_seleccionadas=promociones_a_aplicar,
+                            empleado=empleado_cajero
+                        )
+                    
                     # Registrar pago con comisión (si tiene medio de pago)
                     if id_medio_pago:
-                        self._registrar_pago_con_comision(venta_obj, id_medio_pago, monto_total)
+                        self._registrar_pago_con_comision(venta_obj, id_medio_pago, venta_data['monto_total'])
+                    
+                    # Registrar autorización si hubo (auditoría)
+                    if autorizado_por and validacion_limite.get('requiere_autorizacion'):
+                        AutorizacionService.registrar_autorizacion(
+                            tipo_operacion='venta',
+                            monto=monto_total,
+                            solicitante=empleado_cajero,
+                            autorizador=autorizado_por,
+                            motivo=self.request.data.get('motivo_autorizacion', 'Excede límite del rol'),
+                            ip_address=self.request.META.get('REMOTE_ADDR'),
+                            id_venta=venta_obj
+                        )
                 
             except Tarjetas.DoesNotExist:
                 raise ValidationError({
@@ -256,9 +386,32 @@ class VentasViewSet(viewsets.ModelViewSet):
             with transaction.atomic():
                 venta_obj = serializer.save()
                 
+                # NUEVO: Descontar stock usando StockService (ACID)
+                self._descontar_stock_venta(venta_obj, detalles)
+                
+                # NUEVO: Aplicar promociones si hay
+                if promociones_a_aplicar:
+                    PromocionService.aplicar_promociones_a_venta(
+                        venta=venta_obj,
+                        promociones_seleccionadas=promociones_a_aplicar,
+                        empleado=empleado_cajero
+                    )
+                
                 # Registrar pago con comisión (si tiene medio de pago)
                 if id_medio_pago:
-                    self._registrar_pago_con_comision(venta_obj, id_medio_pago, monto_total)
+                    self._registrar_pago_con_comision(venta_obj, id_medio_pago, venta_data['monto_total'])
+                
+                # Registrar autorización si hubo (auditoría)
+                if autorizado_por and validacion_limite.get('requiere_autorizacion'):
+                    AutorizacionService.registrar_autorizacion(
+                        tipo_operacion='venta',
+                        monto=monto_total,
+                        solicitante=empleado_cajero,
+                        autorizador=autorizado_por,
+                        motivo=self.request.data.get('motivo_autorizacion', 'Excede límite del rol'),
+                        ip_address=self.request.META.get('REMOTE_ADDR'),
+                        id_venta=venta_obj
+                    )
 
     def _descontar_saldo_tarjeta(self, tarjeta, monto, venta):
         """
@@ -285,6 +438,40 @@ class VentasViewSet(viewsets.ModelViewSet):
             saldo_posterior=tarjeta.saldo_actual,
             id_empleado_registro=venta.id_empleado_cajero
         )
+
+    def _descontar_stock_venta(self, venta, detalles):
+        """
+        Descuenta stock usando StockService (centralizado y ACID).
+        
+        Este método garantiza:
+        - Concurrencia segura con select_for_update()
+        - Registro en MovimientosStock
+        - Validaciones centralizadas
+        - Auditoría completa
+        
+        Args:
+            venta: Instancia de Ventas
+            detalles: Lista de detalles de venta con {id_producto, cantidad}
+        """
+        from apps.inventario.services import StockService
+        
+        # Descontar stock de cada producto
+        for detalle in detalles:
+            try:
+                StockService.reservar_stock(
+                    producto_id=detalle.get('id_producto'),
+                    cantidad=Decimal(str(detalle.get('cantidad', 0))),
+                    empleado=venta.id_empleado_cajero,
+                    motivo='venta'
+                )
+            except ValidationError as e:
+                # Si falla el descuento (no debería pasar porque ya validamos)
+                # El transaction.atomic() hará rollback automático
+                raise ValidationError({
+                    'error': 'Error al descontar stock',
+                    'detalle': str(e),
+                    'producto_id': detalle.get('id_producto')
+                })
 
 
 class DetallesVentaViewSet(viewsets.ModelViewSet):
@@ -316,6 +503,11 @@ class PagosVentaViewSet(viewsets.ModelViewSet):
 class NotasCreditoClienteViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gestionar notas de crédito.
+    
+    Endpoints adicionales:
+    - POST /crear_devolucion/ : Crea una nota de crédito por devolución
+    - POST /validar_devolucion/ : Valida si una devolución es posible
+    - POST /{id}/anular/ : Anula una nota de crédito
     """
     queryset = NotasCreditoCliente.objects.all()
     serializer_class = NotasCreditoClienteSerializer
@@ -324,6 +516,131 @@ class NotasCreditoClienteViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['estado', 'id_cliente']
     ordering = ['-fecha_emision']
+    
+    @action(detail=False, methods=['post'])
+    def crear_devolucion(self, request):
+        """
+        Crea una nota de crédito por devolución de productos.
+        
+        POST /api/v1/notas-credito/crear_devolucion/
+        
+        Body:
+        {
+            "id_venta": 123,
+            "productos": [
+                {
+                    "id_producto": 1,
+                    "cantidad": 2,
+                    "motivo_item": "Producto defectuoso"
+                }
+            ],
+            "motivo": "Cliente insatisfecho con calidad",
+            "tipo_devolucion": "parcial"
+        }
+        """
+        id_venta = request.data.get('id_venta')
+        productos = request.data.get('productos', [])
+        motivo = request.data.get('motivo', '')
+        tipo_devolucion = request.data.get('tipo_devolucion', 'parcial')
+        
+        if not id_venta or not productos:
+            return Response(
+                {'error': 'Faltan campos requeridos: id_venta, productos'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        empleado = getattr(request.user, 'empleado', None)
+        if not empleado:
+            return Response(
+                {'error': 'Usuario no tiene empleado asociado'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            resultado = DevolucionService.crear_nota_credito(
+                id_venta=id_venta,
+                productos_devolucion=productos,
+                motivo=motivo,
+                empleado_autoriza=empleado,
+                tipo_devolucion=tipo_devolucion
+            )
+            
+            serializer = self.get_serializer(resultado['nota_credito'])
+            
+            return Response({
+                'exito': True,
+                'nota_credito': serializer.data,
+                'monto_devuelto': str(resultado['monto_devuelto']),
+                'mensaje': resultado['mensaje']
+            }, status=status.HTTP_201_CREATED)
+            
+        except ValidationError as e:
+            return Response(
+                e.detail if hasattr(e, 'detail') else {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=False, methods=['post'])
+    def validar_devolucion(self, request):
+        """
+        Valida si una devolución es posible antes de crearla.
+        
+        POST /api/v1/notas-credito/validar_devolucion/
+        
+        Body:
+        {
+            "id_venta": 123,
+            "productos": [
+                {"id_producto": 1, "cantidad": 2}
+            ]
+        }
+        """
+        id_venta = request.data.get('id_venta')
+        productos = request.data.get('productos', [])
+        
+        validacion = DevolucionService.validar_productos_devolucion(
+            id_venta=id_venta,
+            productos=productos
+        )
+        
+        return Response(validacion)
+    
+    @action(detail=True, methods=['post'])
+    def anular(self, request, pk=None):
+        """
+        Anula una nota de crédito.
+        
+        POST /api/v1/notas-credito/{id}/anular/
+        
+        Body:
+        {
+            "motivo_anulacion": "Error en registro"
+        }
+        """
+        motivo = request.data.get('motivo_anulacion', '')
+        
+        if not motivo:
+            return Response(
+                {'error': 'Se requiere motivo de anulación'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        empleado = getattr(request.user, 'empleado', None)
+        
+        try:
+            resultado = DevolucionService.anular_nota_credito(
+                id_nota=pk,
+                empleado_autoriza=empleado,
+                motivo_anulacion=motivo
+            )
+            
+            return Response(resultado)
+            
+        except ValidationError as e:
+            return Response(
+                e.detail if hasattr(e, 'detail') else {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class PromocionesViewSet(viewsets.ModelViewSet):
@@ -333,6 +650,10 @@ class PromocionesViewSet(viewsets.ModelViewSet):
     Permisos:
     - Admin: CRUD completo
     - Otros autenticados: Solo lectura
+    
+    Endpoints adicionales:
+    - POST /validar_codigo/ : Valida si un código de promoción es válido
+    - GET /activas/ : Lista promociones activas actualmente
     """
     queryset = Promociones.objects.all()
     serializer_class = PromocionesSerializer
@@ -341,3 +662,327 @@ class PromocionesViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['activo', 'tipo_promocion']
     search_fields = ['nombre', 'codigo_promocion']
+    
+    @action(detail=False, methods=['post'])
+    def validar_codigo(self, request):
+        """
+        Valida si un código de promoción es válido.
+        
+        POST /api/v1/promociones/validar_codigo/
+        
+        Body:
+        {
+            "codigo_promocion": "VERANO2026",
+            "monto_total": 50000,
+            "productos": [
+                {"id_producto": 1, "cantidad": 2, "precio": 25000}
+            ],
+            "id_cliente": 5
+        }
+        
+        Returns:
+        {
+            "valido": true,
+            "promocion": {...},
+            "descuento_calculado": 5000,
+            "mensaje": "Promoción aplicable"
+        }
+        """
+        codigo = request.data.get('codigo_promocion')
+        monto_total = Decimal(str(request.data.get('monto_total', 0)))
+        productos = request.data.get('productos', [])
+        id_cliente = request.data.get('id_cliente')
+        
+        if not codigo:
+            return Response(
+                {'error': 'Se requiere código de promoción'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Buscar promociones aplicables con este código
+        promociones = PromocionService.obtener_promociones_aplicables(
+            items=productos,
+            monto_total=monto_total,
+            cliente_id=id_cliente,
+            codigo_promocion=codigo
+        )
+        
+        if not promociones:
+            return Response({
+                'valido': False,
+                'mensaje': 'Código de promoción no válido o no aplicable'
+            })
+        
+        # Tomar la primera promoción (mayor prioridad)
+        promo_dict = promociones[0]
+        promo = promo_dict['promocion']
+        
+        # Calcular descuento
+        descuento = PromocionService.calcular_descuento(
+            promocion=promo,
+            items=productos,
+            monto_total=monto_total
+        )
+        
+        serializer = self.get_serializer(promo)
+        
+        return Response({
+            'valido': True,
+            'promocion': serializer.data,
+            'descuento_calculado': str(descuento['monto_descuento']),
+            'tipo_descuento': descuento['tipo_descuento'],
+            'descripcion': descuento['descripcion'],
+            'productos_afectados': descuento['productos_afectados'],
+            'mensaje': f'Promoción "{promo.nombre}" aplicable'
+        })
+    
+    @action(detail=False, methods=['get'])
+    def activas(self, request):
+        """
+        Lista promociones activas en este momento.
+        
+        GET /api/v1/promociones/activas/
+        """
+        ahora = timezone.now()
+        
+        promociones = Promociones.objects.filter(
+            activo=True,
+            fecha_inicio__lte=ahora.date()
+        ).filter(
+            models.Q(fecha_fin__isnull=True) | models.Q(fecha_fin__gte=ahora.date())
+        ).order_by('prioridad')
+        
+        serializer = self.get_serializer(promociones, many=True)
+        
+        return Response({
+            'count': promociones.count(),
+            'promociones': serializer.data
+        })
+    
+    @action(detail=False, methods=['get'])
+    def reporte_efectividad(self, request):
+        """
+        Reporte de efectividad de promociones.
+        
+        GET /api/v1/promociones/reporte_efectividad/?fecha_inicio=2026-01-01&fecha_fin=2026-03-01
+        
+        Returns:
+            {
+                "periodo": {"inicio": "2026-01-01", "fin": "2026-03-01"},
+                "resumen": {
+                    "total_promociones_activas": 10,
+                    "total_usos": 150,
+                    "total_descuentos": 450000,
+                    "promedio_descuento_por_uso": 3000
+                },
+                "por_promocion": [
+                    {
+                        "id_promocion": 1,
+                        "nombre": "2x1 Coca Cola",
+                        "tipo": "2x1",
+                        "usos": 45,
+                        "monto_total_descuentos": 135000,
+                        "promedio_por_uso": 3000,
+                        "efectividad": "Alta"
+                    }
+                ]
+            }
+        """
+        from apps.ventas.models import PromocionesAplicadas
+        from django.db.models import Sum, Count, Avg
+        
+        # Parámetros de fecha
+        fecha_inicio = request.query_params.get('fecha_inicio')
+        fecha_fin = request.query_params.get('fecha_fin')
+        
+        if not fecha_inicio or not fecha_fin:
+            return Response(
+                {'error': 'Se requieren fecha_inicio y fecha_fin'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Query base
+        aplicaciones = PromocionesAplicadas.objects.filter(
+            fecha_aplicacion__date__gte=fecha_inicio,
+            fecha_aplicacion__date__lte=fecha_fin
+        )
+        
+        # Resumen general
+        resumen = aplicaciones.aggregate(
+            total_usos=Count('id_aplicacion'),
+            total_descuentos=Sum('monto_descontado'),
+            promedio_descuento=Avg('monto_descontado')
+        )
+        
+        # Por promoción
+        por_promocion = aplicaciones.values(
+            'id_promocion',
+            'id_promocion__nombre',
+            'id_promocion__tipo_promocion'
+        ).annotate(
+            usos=Count('id_aplicacion'),
+            total_descuentos=Sum('monto_descontado'),
+            promedio_por_uso=Avg('monto_descontado')
+        ).order_by('-usos')
+        
+        # Determinar efectividad
+        for promo in por_promocion:
+            if promo['usos'] >= 50:
+                promo['efectividad'] = 'Alta'
+            elif promo['usos'] >= 20:
+                promo['efectividad'] = 'Media'
+            else:
+                promo['efectividad'] = 'Baja'
+        
+        return Response({
+            'periodo': {
+                'inicio': fecha_inicio,
+                'fin': fecha_fin
+            },
+            'resumen': {
+                'total_promociones_activas': Promociones.objects.filter(activo=True).count(),
+                'total_usos': resumen['total_usos'] or 0,
+                'total_descuentos': str(resumen['total_descuentos'] or 0),
+                'promedio_descuento_por_uso': str(resumen['promedio_descuento'] or 0)
+            },
+            'por_promocion': [
+                {
+                    'id_promocion': p['id_promocion'],
+                    'nombre': p['id_promocion__nombre'],
+                    'tipo': p['id_promocion__tipo_promocion'],
+                    'usos': p['usos'],
+                    'monto_total_descuentos': str(p['total_descuentos']),
+                    'promedio_por_uso': str(p['promedio_por_uso']),
+                    'efectividad': p['efectividad']
+                }
+                for p in por_promocion
+            ]
+        })
+    
+    @action(detail=False, methods=['get'])
+    def mas_usadas(self, request):
+        """
+        Ranking de promociones más usadas.
+        
+        GET /api/v1/promociones/mas_usadas/?limite=10
+        
+        Returns:
+            {
+                "ranking": [
+                    {
+                        "posicion": 1,
+                        "id_promocion": 5,
+                        "nombre": "DESCUENTO10",
+                        "tipo": "porcentaje",
+                        "total_usos": 127,
+                        "total_descuentos": 380000,
+                        "estado": "activa"
+                    }
+                ]
+            }
+        """
+        from apps.ventas.models import PromocionesAplicadas
+        from django.db.models import Count, Sum
+        
+        limite = int(request.query_params.get('limite', 10))
+        
+        # Query de promociones con sus usos
+        ranking = Promociones.objects.annotate(
+            total_usos=Count('promocionesaplicadas'),
+            total_descuentos=Sum('promocionesaplicadas__monto_descontado')
+        ).filter(
+            total_usos__gt=0
+        ).order_by('-total_usos')[:limite]
+        
+        resultado = []
+        for idx, promo in enumerate(ranking, start=1):
+            resultado.append({
+                'posicion': idx,
+                'id_promocion': promo.id_promocion,
+                'nombre': promo.nombre,
+                'tipo': promo.tipo_promocion,
+                'total_usos': promo.total_usos,
+                'total_descuentos': str(promo.total_descuentos or 0),
+                'estado': 'activa' if promo.activo else 'inactiva'
+            })
+        
+        return Response({'ranking': resultado})
+    
+    @action(detail=False, methods=['get'])
+    def historico_uso(self, request):
+        """
+        Histórico de uso de promociones por período.
+        
+        GET /api/v1/promociones/historico_uso/?periodo=mensual&fecha_inicio=2026-01-01&fecha_fin=2026-03-01
+        
+        Returns:
+            {
+                "periodo": "mensual",
+                "datos": [
+                    {
+                        "periodo": "2026-01",
+                        "usos": 45,
+                        "monto_descuentos": 135000
+                    },
+                    {
+                        "periodo": "2026-02",
+                        "usos": 52,
+                        "monto_descuentos": 158000
+                    }
+                ]
+            }
+        """
+        from apps.ventas.models import PromocionesAplicadas
+        from django.db.models import Count, Sum
+        from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
+        
+        periodo = request.query_params.get('periodo', 'mensual')  # mensual, semanal, diario
+        fecha_inicio = request.query_params.get('fecha_inicio')
+        fecha_fin = request.query_params.get('fecha_fin')
+        
+        if not fecha_inicio or not fecha_fin:
+            return Response(
+                {'error': 'Se requieren fecha_inicio y fecha_fin'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Query base
+        aplicaciones = PromocionesAplicadas.objects.filter(
+            fecha_aplicacion__date__gte=fecha_inicio,
+            fecha_aplicacion__date__lte=fecha_fin
+        )
+        
+        # Agrupar según período
+        if periodo == 'mensual':
+            agrupado = aplicaciones.annotate(
+                periodo=TruncMonth('fecha_aplicacion')
+            ).values('periodo').annotate(
+                usos=Count('id_aplicacion'),
+                monto_descuentos=Sum('monto_descontado')
+            ).order_by('periodo')
+        elif periodo == 'semanal':
+            agrupado = aplicaciones.annotate(
+                periodo=TruncWeek('fecha_aplicacion')
+            ).values('periodo').annotate(
+                usos=Count('id_aplicacion'),
+                monto_descuentos=Sum('monto_descontado')
+            ).order_by('periodo')
+        else:  # diario
+            agrupado = aplicaciones.annotate(
+                periodo=TruncDay('fecha_aplicacion')
+            ).values('periodo').annotate(
+                usos=Count('id_aplicacion'),
+                monto_descuentos=Sum('monto_descontado')
+            ).order_by('periodo')
+        
+        return Response({
+            'periodo': periodo,
+            'datos': [
+                {
+                    'periodo': str(item['periodo'].date()),
+                    'usos': item['usos'],
+                    'monto_descuentos': str(item['monto_descuentos'])
+                }
+                for item in agrupado
+            ]
+        })

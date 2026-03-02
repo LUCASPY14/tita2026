@@ -355,3 +355,567 @@ class SaldoDisponibleTest(TestCase):
         
         # -20 + 100 = 80 disponible
         self.assertEqual(tarjeta.saldo_disponible, Decimal('80.00'))
+
+
+class PromocionServiceTest(TestCase):
+    """Tests para PromocionService - Sistema de Promociones y Descuentos"""
+    
+    def setUp(self):
+        """Configuración inicial para tests de promociones"""
+        # Crear impuesto
+        from apps.contabilidad.models import Impuestos
+        self.impuesto = Impuestos.objects.create(
+            nombre_impuesto='IVA 10%',
+            porcentaje=Decimal('10.00'),
+            vigente_desde=timezone.now().date(),
+            activo=True
+        )
+        
+        # Crear categoría
+        self.categoria = Categorias.objects.create(
+            nombre='Bebidas',
+            activo=True
+        )
+        
+        # Crear unidad de medida
+        self.unidad = UnidadesMedida.objects.create(
+            nombre='Unidad',
+            abreviatura='UN',
+            activo=True
+        )
+        
+        # Crear productos
+        self.producto1 = Productos.objects.create(
+            descripcion='Coca Cola 500ml',
+            codigo_barra='7890123456789',
+            stock_minimo=Decimal('10.000'),
+            activo=True,
+            id_categoria=self.categoria,
+            id_impuesto=self.impuesto,
+            id_unidad_medida=self.unidad
+        )
+        
+        self.producto2 = Productos.objects.create(
+            descripcion='Pepsi 500ml',
+            codigo_barra='7890987654321',
+            stock_minimo=Decimal('10.000'),
+            activo=True,
+            id_categoria=self.categoria,
+            id_impuesto=self.impuesto,
+            id_unidad_medida=self.unidad
+        )
+        
+        # Crear promoción 2x1 en producto específico
+        from apps.ventas.models import Promociones, ProductosPromocion
+        
+        self.promo_2x1 = Promociones.objects.create(
+            nombre='2x1 en Coca Cola',
+            descripcion='Compra 2 coca colas y paga 1',
+            tipo_promocion='2x1',
+            valor_descuento=Decimal('0.00'),
+            fecha_inicio=timezone.now().date(),
+            fecha_fin=None,
+            aplica_a='producto',
+            min_cantidad=2,
+            monto_minimo=Decimal('0.00'),
+            max_usos_cliente=None,
+            max_usos_total=None,
+            usos_actuales=0,
+            requiere_codigo=False,
+            prioridad=1,
+            activo=True,
+            fecha_creacion=timezone.now()
+        )
+        
+        ProductosPromocion.objects.create(
+            id_promocion=self.promo_2x1,
+            id_producto=self.producto1
+        )
+        
+        # Crear promoción porcentual
+        self.promo_porcentaje = Promociones.objects.create(
+            nombre='10% en toda la compra',
+            descripcion='Obtén 10% de descuento',
+            tipo_promocion='porcentaje',
+            valor_descuento=Decimal('10.00'),
+            fecha_inicio=timezone.now().date(),
+            fecha_fin=None,
+            aplica_a='total',
+            min_cantidad=1,
+            monto_minimo=Decimal('20000.00'),
+            max_usos_cliente=None,
+            max_usos_total=100,
+            usos_actuales=0,
+            requiere_codigo=True,
+            codigo_promocion='DESCUENTO10',
+            prioridad=2,
+            activo=True,
+            fecha_creacion=timezone.now()
+        )
+        
+        # Crear tipo de cliente y cliente
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Regular', activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista='Minorista', activo=True)
+        
+        self.cliente = Clientes.objects.create(
+            nombres='Juan',
+            apellidos='Pérez',
+            ruc_ci='12345678',
+            limite_credito=Decimal('500.00'),
+            activo=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cliente
+        )
+    
+    def test_obtener_promociones_aplicables_2x1(self):
+        """Test: Debe detectar promoción 2x1 cuando se compran 2 o más unidades"""
+        from apps.ventas.services import PromocionService
+        
+        items = [
+            {
+                'id_producto': self.producto1.id_producto,
+                'cantidad': Decimal('2'),
+                'precio': Decimal('5000.00')
+            }
+        ]
+        
+        promociones = PromocionService.obtener_promociones_aplicables(
+            items=items,
+            monto_total=Decimal('10000.00')
+        )
+        
+        self.assertEqual(len(promociones), 1)
+        self.assertEqual(promociones[0]['promocion'].id_promocion, self.promo_2x1.id_promocion)
+    
+    def test_calcular_descuento_2x1(self):
+        """Test: Debe calcular correctamente descuento 2x1 (4 unidades = 2 gratis)"""
+        from apps.ventas.services import PromocionService
+        
+        items = [
+            {
+                'id_producto': self.producto1.id_producto,
+                'cantidad': Decimal('4'),
+                'precio': Decimal('5000.00')
+            }
+        ]
+        
+        descuento = PromocionService.calcular_descuento(
+            promocion=self.promo_2x1,
+            items=items,
+            monto_total=Decimal('20000.00')
+        )
+        
+        # 4 unidades / 2 = 2 gratis → descuento de Gs. 10,000
+        self.assertEqual(descuento['monto_descuento'], Decimal('10000.00'))
+        self.assertEqual(descuento['tipo_descuento'], '2x1')
+    
+    def test_promocion_requiere_codigo(self):
+        """Test: Promoción con código solo aplica si se proporciona el código"""
+        from apps.ventas.services import PromocionService
+        
+        items = [
+            {'id_producto': self.producto1.id_producto, 'cantidad': Decimal('1'), 'precio': Decimal('25000.00')}
+        ]
+        
+        # Sin código, no debe aplicar
+        promociones_sin_codigo = PromocionService.obtener_promociones_aplicables(
+            items=items,
+            monto_total=Decimal('25000.00')
+        )
+        
+        # No debe incluir la promoción que requiere código
+        codigos_encontrados = [p['promocion'].codigo_promocion for p in promociones_sin_codigo if p['promocion'].codigo_promocion]
+        self.assertNotIn('DESCUENTO10', codigos_encontrados)
+        
+        # Con código correcto, debe aplicar
+        promociones_con_codigo = PromocionService.obtener_promociones_aplicables(
+            items=items,
+            monto_total=Decimal('25000.00'),
+            codigo_promocion='DESCUENTO10'
+        )
+        
+        self.assertTrue(any(p['promocion'].codigo_promocion == 'DESCUENTO10' for p in promociones_con_codigo))
+    
+    def test_calcular_descuento_porcentual(self):
+        """Test: Debe calcular correctamente descuento porcentual"""
+        from apps.ventas.services import PromocionService
+        
+        items = [
+            {'id_producto': self.producto1.id_producto, 'cantidad': Decimal('5'), 'precio': Decimal('5000.00')}
+        ]
+        
+        monto = Decimal('25000.00')
+        
+        descuento = PromocionService.calcular_descuento(
+            promocion=self.promo_porcentaje,
+            items=items,
+            monto_total=monto
+        )
+        
+        # 10% de 25,000 = 2,500
+        self.assertEqual(descuento['monto_descuento'], Decimal('2500.00'))
+        self.assertEqual(descuento['tipo_descuento'], 'porcentaje')
+    
+    def test_validar_monto_minimo(self):
+        """Test: Promoción no debe aplicar si no alcanza monto mínimo"""
+        from apps.ventas.services import PromocionService
+        
+        items = [
+            {'id_producto': self.producto1.id_producto, 'cantidad': Decimal('1'), 'precio': Decimal('5000.00')}
+        ]
+        
+        # Monto 5,000 no alcanza el mínimo de 20,000
+        promociones = PromocionService.obtener_promociones_aplicables(
+            items=items,
+            monto_total=Decimal('5000.00'),
+            codigo_promocion='DESCUENTO10'
+        )
+        
+        self.assertEqual(len(promociones), 0)
+    
+    def test_limite_usos_total(self):
+        """Test: Promoción no debe aplicar si alcanzó límite de usos totales"""
+        from apps.ventas.services import PromocionService
+        
+        # Marcar promoción como agotada
+        self.promo_porcentaje.usos_actuales = 100
+        self.promo_porcentaje.save()
+        
+        items = [
+            {'id_producto': self.producto1.id_producto, 'cantidad': Decimal('5'), 'precio': Decimal('5000.00')}
+        ]
+        
+        promociones = PromocionService.obtener_promociones_aplicables(
+            items=items,
+            monto_total=Decimal('25000.00'),
+            codigo_promocion='DESCUENTO10'
+        )
+        
+        self.assertEqual(len(promociones), 0)
+    
+    def test_aplicar_promociones_a_venta(self):
+        """Test: Debe registrar promoción aplicada y actualizar contador de usos"""
+        from apps.ventas.services import PromocionService
+        from apps.ventas.models import PromocionesAplicadas
+        
+        # Crear empleado
+        rol = Roles.objects.create(nombre_rol='Cajero', activo=True)
+        empleado = Empleados.objects.create(
+            nombre='Ana',
+            apellido='López',
+            usuario='ana_test',
+            contrasena_hash='hash',
+            fecha_ingreso=timezone.now(),
+            activo=True,
+            id_rol=rol
+        )
+        
+        # Crear venta
+        medio_pago = MediosPago.objects.create(
+            descripcion='Efectivo',
+            genera_comision=False,
+            requiere_validacion=False,
+            activo=True
+        )
+        
+        venta = Ventas.objects.create(
+            fecha=timezone.now(),
+            monto_total=Decimal('10000.00'),
+            saldo_pendiente=Decimal('0.00'),
+            estado_pago='Pagada',
+            estado='Activa',
+            tipo_venta='Contado',
+            genera_factura_legal=False,
+            id_cliente=self.cliente,
+            id_empleado_cajero=empleado,
+            id_medio_pago=medio_pago
+        )
+        
+        # Aplicar promoción
+        descuento_info = {
+            'monto_descuento': Decimal('5000.00'),
+            'tipo_descuento': '2x1'
+        }
+        
+        usos_iniciales = self.promo_2x1.usos_actuales
+        
+        resultado = PromocionService.aplicar_promociones_a_venta(
+            venta=venta,
+            promociones_seleccionadas=[(self.promo_2x1, descuento_info)],
+            empleado=empleado
+        )
+        
+        # Verificar que se registró la aplicación
+        self.assertEqual(len(resultado['promociones_aplicadas']), 1)
+        self.assertEqual(resultado['monto_total_descuentos'], Decimal('5000.00'))
+        
+        # Verificar que aumentó el contador de usos
+        self.promo_2x1.refresh_from_db()
+        self.assertEqual(self.promo_2x1.usos_actuales, usos_iniciales + 1)
+        
+        # Verificar registro en PromocionesAplicadas
+        aplicacion = PromocionesAplicadas.objects.filter(id_venta=venta).first()
+        self.assertIsNotNone(aplicacion)
+        self.assertEqual(aplicacion.monto_descontado, Decimal('5000.00'))
+
+
+class DevolucionServiceTest(TestCase):
+    """Tests para DevolucionService - Devoluciones de Clientes"""
+    
+    def setUp(self):
+        """Configuración inicial para tests de devoluciones"""
+        # Crear impuesto
+        from apps.contabilidad.models import Impuestos
+        self.impuesto = Impuestos.objects.create(
+            nombre_impuesto='IVA 10%',
+            porcentaje=Decimal('10.00'),
+            vigente_desde=timezone.now().date(),
+            activo=True
+        )
+        
+        # Crear categoría y unidad
+        self.categoria = Categorias.objects.create(nombre='Snacks', activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre='Unidad', abreviatura='UN', activo=True)
+        
+        # Crear producto
+        self.producto = Productos.objects.create(
+            descripcion='Papas Fritas',
+            codigo_barra='1234567890123',
+            stock_minimo=Decimal('10.000'),
+            activo=True,
+            id_categoria=self.categoria,
+            id_impuesto=self.impuesto,
+            id_unidad_medida=self.unidad
+        )
+        
+        # Crear stock inicial
+        from apps.inventario.models import StockUnico
+        self.stock = StockUnico.objects.create(
+            id_producto=self.producto,
+            cantidad=Decimal('50.000')
+        )
+        
+        # Crear cliente
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo='Regular', activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista='Minorista', activo=True)
+        
+        self.cliente = Clientes.objects.create(
+            nombres='Carlos',
+            apellidos='Ramírez',
+            ruc_ci='98765432',
+            limite_credito=Decimal('500.00'),
+            activo=True,
+            id_lista=lista,
+            id_tipo_cliente=tipo_cliente
+        )
+        
+        # Crear empleado
+        rol = Roles.objects.create(nombre_rol='Gerente', activo=True)
+        self.empleado = Empleados.objects.create(
+            nombre='Laura',
+            apellido='Fernández',
+            usuario='laura_test',
+            contrasena_hash='hash',
+            fecha_ingreso=timezone.now(),
+            activo=True,
+            id_rol=rol
+        )
+        
+        # Crear venta
+        medio_pago = MediosPago.objects.create(
+            descripcion='Efectivo',
+            genera_comision=False,
+            requiere_validacion=False,
+            activo=True
+        )
+        
+        self.venta = Ventas.objects.create(
+            fecha=timezone.now(),
+            monto_total=Decimal('9000.00'),
+            saldo_pendiente=Decimal('0.00'),
+            estado_pago='Pagada',
+            estado='Activa',
+            tipo_venta='Contado',
+            genera_factura_legal=False,
+            id_cliente=self.cliente,
+            id_empleado_cajero=self.empleado,
+            id_medio_pago=medio_pago
+        )
+        
+        # Crear detalle de venta
+        from apps.ventas.models import DetallesVenta
+        DetallesVenta.objects.create(
+            cantidad=Decimal('3.000'),
+            precio_unitario=Decimal('3000.00'),
+            subtotal=Decimal('9000.00'),
+            id_producto=self.producto,
+            id_venta=self.venta
+        )
+    
+    def test_validar_productos_devolucion_exitosa(self):
+        """Test: Debe validar correctamente productos que pueden devolverse"""
+        from apps.ventas.services import DevolucionService
+        
+        productos = [
+            {'id_producto': self.producto.id_producto, 'cantidad': Decimal('2.000')}
+        ]
+        
+        validacion = DevolucionService.validar_productos_devolucion(
+            id_venta=self.venta.id_venta,
+            productos=productos
+        )
+        
+        self.assertTrue(validacion['valido'])
+        self.assertEqual(len(validacion['errores']), 0)
+    
+    def test_validar_cantidad_excede_compra(self):
+        """Test: No debe permitir devolver más de lo comprado"""
+        from apps.ventas.services import DevolucionService
+        
+        productos = [
+            {'id_producto': self.producto.id_producto, 'cantidad': Decimal('5.000')}  # Compró 3, intenta devolver 5
+        ]
+        
+        validacion = DevolucionService.validar_productos_devolucion(
+            id_venta=self.venta.id_venta,
+            productos=productos
+        )
+        
+        self.assertFalse(validacion['valido'])
+        self.assertTrue(len(validacion['errores']) > 0)
+    
+    def test_crear_nota_credito_exitosa(self):
+        """Test: Debe crear nota de crédito y reintegrar stock"""
+        from apps.ventas.services import DevolucionService
+        from apps.ventas.models import NotasCreditoCliente, DetallesNotaCredito
+        
+        self.stock.refresh_from_db()  # Actualizar después de descuento por venta
+        stock_inicial = self.stock.cantidad
+        
+        productos_devolucion = [
+            {
+                'id_producto': self.producto.id_producto,
+                'cantidad': Decimal('2.000'),
+                'motivo_item': 'Productos defectuosos'
+            }
+        ]
+        
+        resultado = DevolucionService.crear_nota_credito(
+            id_venta=self.venta.id_venta,
+            productos_devolucion=productos_devolucion,
+            motivo='Cliente insatisfecho',
+            empleado_autoriza=self.empleado,
+            tipo_devolucion='parcial'
+        )
+        
+        # Verificar éxito
+        self.assertTrue(resultado['exito'])
+        self.assertIsNotNone(resultado['nota_credito'])
+        
+        # Verificar monto devuelto (2 unidades * 3,000 = 6,000)
+        self.assertEqual(resultado['monto_devuelto'], Decimal('6000.00'))
+        
+        # Verificar que se creó la nota de crédito
+        nota = NotasCreditoCliente.objects.filter(id_venta_origen=self.venta).first()
+        self.assertIsNotNone(nota)
+        self.assertEqual(nota.estado, 'Emitida')
+        self.assertEqual(nota.monto_total, Decimal('6000.00'))
+        
+        # Verificar detalles de nota
+        detalles = DetallesNotaCredito.objects.filter(id_nota=nota)
+        self.assertEqual(detalles.count(), 1)
+        
+        # Verificar que se reintegró el stock
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.cantidad, stock_inicial + Decimal('2.000'))
+    
+    def test_devolucion_fuera_de_plazo(self):
+        """Test: No debe permitir devolución después del plazo límite"""
+        from apps.ventas.services import DevolucionService
+        from datetime import timedelta
+        
+        # Modificar fecha de venta a hace 10 días (límite es 7)
+        self.venta.fecha = timezone.now() - timedelta(days=10)
+        self.venta.save()
+        
+        productos_devolucion = [
+            {'id_producto': self.producto.id_producto, 'cantidad': Decimal('1.000')}
+        ]
+        
+        with self.assertRaises(ValidationError) as context:
+            DevolucionService.crear_nota_credito(
+                id_venta=self.venta.id_venta,
+                productos_devolucion=productos_devolucion,
+                motivo='Devolviendo tarde',
+                empleado_autoriza=self.empleado
+            )
+        
+        # Verificar mensaje de error
+        self.assertIn('fuera de plazo', str(context.exception))
+    
+    def test_anular_nota_credito(self):
+        """Test: Debe anular nota de crédito y revertir stock"""
+        from apps.ventas.services import DevolucionService
+        
+        # Primero crear una devolución
+        productos_devolucion = [
+            {'id_producto': self.producto.id_producto, 'cantidad': Decimal('1.000')}
+        ]
+        
+        resultado = DevolucionService.crear_nota_credito(
+            id_venta=self.venta.id_venta,
+            productos_devolucion=productos_devolucion,
+            motivo='Producto defectuoso',
+            empleado_autoriza=self.empleado
+        )
+        
+        nota = resultado['nota_credito']
+        self.stock.refresh_from_db()  # Actualizar después de reintegro
+        stock_despues_devolucion = self.stock.cantidad
+        
+        # Ahora anular
+        resultado_anulacion = DevolucionService.anular_nota_credito(
+            id_nota=nota.id_nota,
+            empleado_autoriza=self.empleado,
+            motivo_anulacion='Error en registro'
+        )
+        
+        self.assertTrue(resultado_anulacion['exito'])
+        
+        # Verificar que la nota está anulada
+        nota.refresh_from_db()
+        self.assertEqual(nota.estado, 'Anulada')
+        
+        # Verificar que se revirtió el stock (se descontó lo que se había sumado)
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.cantidad, stock_despues_devolucion - Decimal('1.000'))
+    
+    def test_producto_no_en_venta(self):
+        """Test: No debe permitir devolver producto que no está en la venta"""
+        from apps.ventas.services import DevolucionService
+        
+        # Crear otro producto
+        otro_producto = Productos.objects.create(
+            descripcion='Galletas',
+            codigo_barra='9999999999999',
+            stock_minimo=Decimal('10.000'),
+            activo=True,
+            id_categoria=self.categoria,
+            id_impuesto=self.impuesto,
+            id_unidad_medida=self.unidad
+        )
+        
+        productos_devolucion = [
+            {'id_producto': otro_producto.id_producto, 'cantidad': Decimal('1.000')}
+        ]
+        
+        with self.assertRaises(ValidationError) as context:
+            DevolucionService.crear_nota_credito(
+                id_venta=self.venta.id_venta,
+                productos_devolucion=productos_devolucion,
+                motivo='Intento de fraude',
+                empleado_autoriza=self.empleado
+            )
+        
+        self.assertIn('no está en la venta original', str(context.exception))
+
