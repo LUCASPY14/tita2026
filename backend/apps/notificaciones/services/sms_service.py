@@ -123,7 +123,7 @@ class SMSService:
         try:
             # Intentar importar Twilio
             try:
-                from twilio.rest import Client
+                from twilio.rest import Client  # type: ignore
             except ImportError:
                 logger.error("Paquete 'twilio' no instalado. Run: pip install twilio")
                 return {
@@ -292,7 +292,7 @@ class SMSService:
         try:
             # Intentar importar boto3
             try:
-                import boto3
+                import boto3  # type: ignore
             except ImportError:
                 logger.error("Paquete 'boto3' no instalado. Run: pip install boto3")
                 return {

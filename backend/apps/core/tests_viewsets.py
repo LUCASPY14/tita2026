@@ -14,7 +14,7 @@ from rest_framework.test import APIClient, APIRequestFactory
 from rest_framework import status
 from decimal import Decimal
 from unittest.mock import patch, MagicMock
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from apps.core.models import (
     Tarjetas, CargasSaldo, ConsumosTarjeta, 
@@ -37,7 +37,6 @@ class RecargaCajaActionTest(TransactionTestCase):
         from apps.productos.models import ListasPrecios
         from apps.clientes.models import TiposCliente
         from apps.usuarios.models import Roles
-        from datetime import datetime
         
         self.client = APIClient()
         self.factory = APIRequestFactory()
@@ -338,7 +337,6 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
         )
         
         # Crear empleado
-        from datetime import datetime
         from apps.usuarios.models import Roles
         
         self.rol_supervisor = Roles.objects.create(
@@ -536,7 +534,6 @@ class AprobarSupervisorActionTest(TransactionTestCase):
         )
         
         # Crear supervisor
-        from datetime import datetime
         from apps.usuarios.models import Roles
         
         self.rol_supervisor = Roles.objects.create(
