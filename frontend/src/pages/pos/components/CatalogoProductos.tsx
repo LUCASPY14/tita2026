@@ -1,0 +1,165 @@
+import React, {useState, useEffect } from 'react';
+import { Search, Plus, Package } from 'lucide-react';
+import { Input, Button, Select, Spinner, Badge } from '../../../components/common';
+import { posService } from '../../../services/pos.service';
+import type { Producto, Categoria } from '../../../types';
+import toast from 'react-hot-toast';
+
+interface CatalogoProductosProps {
+  onAgregarProducto: (producto: Producto, cantidad: number) => void;
+}
+
+const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto }) => {
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [busqueda, setBusqueda] = useState('');
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>('');
+  const [cargando, setCargando] = useState(true);
+  const [cargandoCategorias, setCargandoCategorias] = useState(true);
+
+  useEffect(() => {
+    cargarCategorias();
+  }, []);
+
+  useEffect(() => {
+    cargarProductos();
+  }, [busqueda, categoriaSeleccionada]);
+
+  const cargarCategorias = async () => {
+    try {
+      const response = await posService.getCategorias({
+        activo: true,
+        page_size: 100,
+      });
+      setCategorias(response.results || []);
+    } catch (error) {
+      console.error('Error al cargar categorías:', error);
+    } finally {
+      setCargandoCategorias(false);
+    }
+  };
+
+  const cargarProductos = async () => {
+    setCargando(true);
+    try {
+      const params: any = {
+        activo: true,
+        page_size: 50,
+      };
+
+      if (busqueda) {
+        params.search = busqueda;
+      }
+
+      if (categoriaSeleccionada) {
+        params.id_categoria = parseInt(categoriaSeleccionada);
+      }
+
+      const response = await posService.getProductos(params);
+      setProductos(response.results || []);
+    } catch (error) {
+      console.error('Error al cargar productos:', error);
+      toast.error('Error al cargar productos');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const handleAgregar = (producto: Producto) => {
+    onAgregarProducto(producto, 1);
+    toast.success(`${producto.descripcion} agregado al carrito`);
+  };
+
+  const formatearPrecio = (precio?: number): string => {
+    if (!precio) return 'Gs. 0';
+    return `Gs. ${precio.toLocaleString('es-PY')}`;
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Filtros */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <Input
+          type="text"
+          placeholder="Buscar por nombre o código..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          leftIcon={<Search className="h-5 w-5 text-gray-400" />}
+        />
+
+        <Select
+          value={categoriaSeleccionada}
+          onChange={(e) => setCategoriaSeleccionada(e.target.value)}
+          disabled={cargandoCategorias}
+          placeholder="Todas las categorías"
+          options={[
+            { value: '', label: 'Todas las categorías' },
+            ...categorias.map((categoria) => ({
+              value: categoria.id_categoria.toString(),
+              label: categoria.nombre,
+            })),
+          ]}
+        />
+      </div>
+
+      {/* Grid de Productos */}
+      {cargando ? (
+        <div className="flex items-center justify-center py-12">
+          <Spinner />
+          <span className="ml-2 text-gray-600">Cargando productos...</span>
+        </div>
+      ) : productos.length === 0 ? (
+        <div className="py-12 text-center">
+          <Package className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-4 text-lg font-medium text-gray-900">
+            No se encontraron productos
+          </h3>
+          <p className="mt-2 text-sm text-gray-500">
+            {busqueda || categoriaSeleccionada
+              ? 'Intenta con otros filtros'
+              : 'No hay productos disponibles'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {productos.map((producto) => (
+            <div
+              key={producto.id_producto}
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md"
+            >
+              <div className="flex-1">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{producto.descripcion}</h4>
+                    {producto.codigo_barra && (
+                      <p className="mt-1 text-xs text-gray-500">Código: {producto.codigo_barra}</p>
+                    )}
+                  </div>
+                  {producto.activo && (
+                    <Badge variant="success" size="sm">
+                      Activo
+                    </Badge>
+                  )}
+                </div>
+                <p className="mt-2 text-lg font-bold text-amber-600">
+                  {formatearPrecio(producto.precio)}
+                </p>
+              </div>
+
+              <Button
+                variant="primary"
+                onClick={() => handleAgregar(producto)}
+                leftIcon={<Plus className="h-4 w-4" />}
+                className="ml-4"
+              >
+                Agregar
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CatalogoProductos;

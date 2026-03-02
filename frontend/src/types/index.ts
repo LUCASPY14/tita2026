@@ -20,43 +20,6 @@ export interface Cliente {
   updated_at: string;
 }
 
-export interface Producto {
-  id: number;
-  codigo: string;
-  nombre: string;
-  descripcion?: string;
-  precio: number;
-  stock: number;
-  stock_minimo: number;
-  categoria?: Categoria;
-  imagen?: string;
-}
-
-export interface Categoria {
-  id: number;
-  nombre: string;
-  descripcion?: string;
-}
-
-export interface Venta {
-  id: number;
-  numero: string;
-  fecha: string;
-  cliente: Cliente;
-  total: number;
-  estado: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA';
-  metodo_pago: 'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA' | 'CREDITO';
-  items: DetalleVenta[];
-}
-
-export interface DetalleVenta {
-  id: number;
-  producto: Producto;
-  cantidad: number;
-  precio_unitario: number;
-  subtotal: number;
-}
-
 export interface PaginatedResponse<T> {
   count: number;
   next: string | null;
@@ -118,4 +81,68 @@ export interface CargaSaldo {
   metodo_pago?: 'efectivo' | 'tarjeta_pos' | 'transferencia' | 'bancard';
   numero_comprobante?: string;
 }
+
+// Tipos para módulo de POS
+export interface Producto {
+  id_producto: number;
+  codigo_barra?: string;
+  descripcion: string;
+  stock_minimo: number;
+  permite_stock_negativo: boolean;
+  activo: boolean;
+  id_categoria: number;
+  categoria_nombre?: string;
+  precio?: number; // Precio según lista del cliente
+}
+
+export interface Categoria {
+  id_categoria: number;
+  nombre: string;
+  activo: boolean;
+  id_categoria_padre?: number;
+}
+
+export interface ItemCarrito {
+  producto: Producto;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+}
+
+export interface MedioPago {
+  id_medio_pago: number;
+  nombre: string;
+  genera_comision: boolean;
+  activo: boolean;
+}
+
+export interface VentaData {
+  id_cliente?: number;
+  id_hijo?: number;
+  nro_tarjeta?: string;
+  tipo_venta: 'Contado' | 'Credito';
+  id_medio_pago?: number;
+  numero_comprobante?: string;
+  detalles: {
+    id_producto: number;
+    cantidad: number;
+    precio_unitario: number;
+  }[];
+}
+
+export interface Venta {
+  id_venta: number;
+  nro_factura_venta?: number;
+  fecha: string;
+  monto_total: number;
+  saldo_pendiente: number;
+  estado_pago: string;
+  estado: string;
+  tipo_venta: string;
+  id_cliente?: number;
+  id_hijo?: number;
+  cliente_nombre?: string;
+  hijo_nombre?: string;
+}
+
 
