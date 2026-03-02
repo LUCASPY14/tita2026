@@ -34,18 +34,39 @@ class RecargaCajaActionTest(TransactionTestCase):
     
     def setUp(self):
         """Setup común para todos los tests"""
+        from apps.productos.models import ListasPrecios
+        from apps.clientes.models import TiposCliente
+        from apps.usuarios.models import Roles
+        from datetime import datetime
+        
         self.client = APIClient()
         self.factory = APIRequestFactory()
         self.viewset = CargasSaldoViewSet.as_view({'post': 'recarga_caja'})
         
+        # Crear dependencias (TiposCliente, ListasPrecios)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", activo=True)
+        
+        self.lista_precios = ListasPrecios.objects.create(
+            nombre_lista="Lista Estándar",
+            activo=True
+        )
+        
+        # Crear rol para empleado
+        self.rol_cajero = Roles.objects.create(
+            nombre_rol="Cajero",
+            descripcion="Empleado de caja",
+            activo=True
+        )
+        
         # Crear cliente de prueba
         self.cliente = Clientes.objects.create(
-            nombre="Juan",
-            apellido="Pérez",
-            ci="12345678",
+            nombres="Juan",
+            apellidos="Pérez",
+            ruc_ci="12345678",
             email="juan@test.com",
             telefono="0981234567",
-            fecha_registro=date.today()
+            id_lista=self.lista_precios,
+            id_tipo_cliente=self.tipo_cliente
         )
         
         # Crear hijo de prueba
@@ -53,16 +74,16 @@ class RecargaCajaActionTest(TransactionTestCase):
             nombre="Pedro",
             apellido="Pérez",
             fecha_nacimiento=date(2015, 1, 1),
-            id_cliente=self.cliente,
-            fecha_registro=date.today()
+            id_cliente_responsable=self.cliente
         )
         
         # Crear tarjeta de prueba
         self.tarjeta = Tarjetas.objects.create(
-            numero_tarjeta="TAR-001-TEST",
+            nro_tarjeta="TAR-001-TEST",
             saldo_actual=Decimal('50000.00'),
             estado='Activa',
-            fecha_emision=date.today(),
+            fecha_creacion=datetime.now(),
+            limite_credito=Decimal('10000000.00'),
             id_hijo=self.hijo
         )
         
@@ -70,10 +91,13 @@ class RecargaCajaActionTest(TransactionTestCase):
         self.empleado = Empleados.objects.create(
             nombre="Ana",
             apellido="Gómez",
-            ci="87654321",
-            email="ana@cantina.com",
+            usuario="ana.gomez",
+            contrasena_hash="test_hash",
+            fecha_ingreso=datetime.now(),
             telefono="0987654321",
-            estado='activo'
+            email="ana@cantina.com",
+            activo=True,
+            id_rol=self.rol_cajero
         )
     
     def test_recarga_caja_efectivo_exitosa(self):
@@ -161,31 +185,42 @@ class GenerarReferenciaTransferenciaActionTest(TestCase):
     
     def setUp(self):
         """Setup común"""
+        from apps.productos.models import ListasPrecios
+        from apps.clientes.models import TiposCliente
+        
         self.client = APIClient()
+        
+        # Crear dependencias
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", activo=True)
+        
+        self.lista_precios = ListasPrecios.objects.create(
+            nombre_lista="Lista Estándar",
+            activo=True
+        )
         
         # Crear cliente y hijo
         self.cliente = Clientes.objects.create(
-            nombre="María",
-            apellido="López",
-            ci="11122233",
+            nombres="María",
+            apellidos="López",
+            ruc_ci="11122233",
             email="maria@test.com",
             telefono="0991234567",
-            fecha_registro=date.today()
+            id_lista=self.lista_precios,
+            id_tipo_cliente=self.tipo_cliente
         )
         
         self.hijo = Hijos.objects.create(
             nombre="Luis",
             apellido="López",
             fecha_nacimiento=date(2016, 5, 10),
-            id_cliente=self.cliente,
-            fecha_registro=date.today()
+            id_cliente_responsable=self.cliente
         )
         
         self.tarjeta = Tarjetas.objects.create(
-            numero_tarjeta="TAR-002-TEST",
+            nro_tarjeta="TAR-002-TEST",
             saldo_actual=Decimal('30000.00'),
             estado='Activa',
-            fecha_emision=date.today(),
+            fecha_creacion=datetime.now(),            limite_credito=Decimal('10000000.00'),
             id_hijo=self.hijo
         )
     
@@ -251,31 +286,42 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
     
     def setUp(self):
         """Setup común"""
+        from apps.productos.models import ListasPrecios
+        from apps.clientes.models import TiposCliente
+        
         self.client = APIClient()
+        
+        # Crear dependencias
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", activo=True)
+        
+        self.lista_precios = ListasPrecios.objects.create(
+            nombre_lista="Lista Estándar",
+            activo=True
+        )
         
         # Crear cliente y hijo
         self.cliente = Clientes.objects.create(
-            nombre="Carlos",
-            apellido="Ramírez",
-            ci="33344455",
+            nombres="Carlos",
+            apellidos="Ramírez",
+            ruc_ci="33344455",
             email="carlos@test.com",
             telefono="0971234567",
-            fecha_registro=date.today()
+            id_lista=self.lista_precios,
+            id_tipo_cliente=self.tipo_cliente
         )
         
         self.hijo = Hijos.objects.create(
             nombre="Ana",
             apellido="Ramírez",
             fecha_nacimiento=date(2017, 3, 15),
-            id_cliente=self.cliente,
-            fecha_registro=date.today()
+            id_cliente_responsable=self.cliente
         )
         
         self.tarjeta = Tarjetas.objects.create(
-            numero_tarjeta="TAR-003-TEST",
+            nro_tarjeta="TAR-003-TEST",
             saldo_actual=Decimal('20000.00'),
             estado='Activa',
-            fecha_emision=date.today(),
+            fecha_creacion=datetime.now(),            limite_credito=Decimal('10000000.00'),
             id_hijo=self.hijo
         )
         
@@ -292,13 +338,25 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
         )
         
         # Crear empleado
+        from datetime import datetime
+        from apps.usuarios.models import Roles
+        
+        self.rol_supervisor = Roles.objects.create(
+            nombre_rol="Supervisor",
+            descripcion="Supervisor de caja",
+            activo=True
+        )
+        
         self.empleado = Empleados.objects.create(
             nombre="Supervisor",
             apellido="Test",
-            ci="99988877",
+            usuario="supervisor.test",
+            contrasena_hash="test_hash",
+            fecha_ingreso=datetime.now(),
             email="supervisor@cantina.com",
             telefono="0999999999",
-            estado='activo'
+            activo=True,
+            id_rol=self.rol_supervisor
         )
     
     def test_validar_transferencia_con_codigo_monto_bajo_auto_aprueba(self):
@@ -426,31 +484,42 @@ class AprobarSupervisorActionTest(TransactionTestCase):
     
     def setUp(self):
         """Setup común"""
+        from apps.productos.models import ListasPrecios
+        from apps.clientes.models import TiposCliente
+        
         self.client = APIClient()
+        
+        # Crear dependencias
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", activo=True)
+        
+        self.lista_precios = ListasPrecios.objects.create(
+            nombre_lista="Lista Estándar",
+            activo=True
+        )
         
         # Crear cliente y hijo
         self.cliente = Clientes.objects.create(
-            nombre="Laura",
-            apellido="Benítez",
-            ci="55566677",
+            nombres="Laura",
+            apellidos="Benítez",
+            ruc_ci="55566677",
             email="laura@test.com",
             telefono="0961234567",
-            fecha_registro=date.today()
+            id_lista=self.lista_precios,
+            id_tipo_cliente=self.tipo_cliente
         )
         
         self.hijo = Hijos.objects.create(
             nombre="Diego",
             apellido="Benítez",
             fecha_nacimiento=date(2018, 7, 20),
-            id_cliente=self.cliente,
-            fecha_registro=date.today()
+            id_cliente_responsable=self.cliente
         )
         
         self.tarjeta = Tarjetas.objects.create(
-            numero_tarjeta="TAR-004-TEST",
+            nro_tarjeta="TAR-004-TEST",
             saldo_actual=Decimal('10000.00'),
             estado='Activa',
-            fecha_emision=date.today(),
+            fecha_creacion=datetime.now(),            limite_credito=Decimal('10000000.00'),
             id_hijo=self.hijo
         )
         
@@ -467,13 +536,25 @@ class AprobarSupervisorActionTest(TransactionTestCase):
         )
         
         # Crear supervisor
+        from datetime import datetime
+        from apps.usuarios.models import Roles
+        
+        self.rol_supervisor = Roles.objects.create(
+            nombre_rol="Supervisor",
+            descripcion="Supervisor de operaciones",
+            activo=True
+        )
+        
         self.supervisor = Empleados.objects.create(
             nombre="Supervisor",
             apellido="Principal",
-            ci="11111111",
+            usuario="supervisor.principal",
+            contrasena_hash="test_hash",
+            fecha_ingreso=datetime.now(),
             email="supervisor@cantina.com",
             telefono="0911111111",
-            estado='activo'
+            activo=True,
+            id_rol=self.rol_supervisor
         )
     
     def test_aprobar_supervisor_exitosa(self):
@@ -534,31 +615,42 @@ class IniciarRecargaBancardActionTest(TestCase):
     
     def setUp(self):
         """Setup común"""
+        from apps.productos.models import ListasPrecios
+        from apps.clientes.models import TiposCliente
+        
         self.client = APIClient()
+        
+        # Crear dependencias
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", activo=True)
+        
+        self.lista_precios = ListasPrecios.objects.create(
+            nombre_lista="Lista Estándar",
+            activo=True
+        )
         
         # Crear cliente y hijo
         self.cliente = Clientes.objects.create(
-            nombre="Roberto",
-            apellido="Sosa",
-            ci="77788899",
+            nombres="Roberto",
+            apellidos="Sosa",
+            ruc_ci="77788899",
             email="roberto@test.com",
             telefono="0951234567",
-            fecha_registro=date.today()
+            id_lista=self.lista_precios,
+            id_tipo_cliente=self.tipo_cliente
         )
         
         self.hijo = Hijos.objects.create(
             nombre="Sofía",
             apellido="Sosa",
             fecha_nacimiento=date(2019, 11, 25),
-            id_cliente=self.cliente,
-            fecha_registro=date.today()
+            id_cliente_responsable=self.cliente
         )
         
         self.tarjeta = Tarjetas.objects.create(
-            numero_tarjeta="TAR-005-TEST",
+            nro_tarjeta="TAR-005-TEST",
             saldo_actual=Decimal('5000.00'),
             estado='Activa',
-            fecha_emision=date.today(),
+            fecha_creacion=datetime.now(),            limite_credito=Decimal('10000000.00'),
             id_hijo=self.hijo
         )
     
@@ -644,8 +736,7 @@ class IniciarRecargaBancardActionTest(TestCase):
             nombre="Sin",
             apellido="Tarjeta",
             fecha_nacimiento=date(2020, 1, 1),
-            id_cliente=self.cliente,
-            fecha_registro=date.today()
+            id_cliente_responsable=self.cliente
         )
         
         url = '/api/v1/cargas-saldo/init/'
