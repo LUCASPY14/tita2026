@@ -510,3 +510,229 @@ class AlertasStock(models.Model):
     def __str__(self):
         estado = "Activa" if self.activa else "Resuelta"
         return f"{self.id_producto.descripcion}: {self.get_tipo_alerta_display()} - {estado}"
+
+class LotesProducto(models.Model):
+    """
+    Gestión de lotes de productos con fecha de vencimiento.
+    
+    Permite:
+    - Control FIFO (First In, First Out) automático
+    - Trazabilidad producto → compra → lote
+    - Alertas de vencimiento próximo
+    - Bloqueo de productos vencidos
+    
+    Casos de uso:
+    - Productos perecederos (lácteos, embutidos, etc.)
+    - Control de calidad
+    - Cumplimiento normativas sanitarias
+    """
+    id_lote = models.AutoField(primary_key=True)
+    numero_lote = models.CharField(
+        max_length=100,
+        help_text="Número de lote del proveedor"
+    )
+    fecha_fabricacion = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Fecha de fabricación (opcional)"
+    )
+    fecha_vencimiento = models.DateField(
+        help_text="Fecha de vencimiento del producto"
+    )
+    cantidad_inicial = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        help_text="Cantidad original comprada"
+    )
+    cantidad_disponible = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        help_text="Cantidad actual disponible en el lote"
+    )
+    bloqueado = models.BooleanField(
+        default=False,
+        help_text="True si está vencido o retirado del inventario"
+    )
+    motivo_bloqueo = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        choices=[
+            ('vencido', 'Producto vencido'),
+            ('defectuoso', 'Lote defectuoso'),
+            ('retirado', 'Retiro preventivo'),
+            ('otro', 'Otro motivo')
+        ]
+    )
+    fecha_bloqueo = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Cuándo se bloqueó el lote"
+    )
+    observaciones = models.TextField(
+        blank=True,
+        null=True
+    )
+    id_producto = models.ForeignKey(
+        'productos.Productos',
+        models.DO_NOTHING,
+        db_column='id_producto',
+        related_name='lotes'
+    )
+    id_compra = models.ForeignKey(
+        'compras.Compras',
+        models.DO_NOTHING,
+        db_column='id_compra',
+        blank=True,
+        null=True,
+        help_text="Compra origen del lote (trazabilidad)"
+    )
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True
+    )
+    
+    class Meta:
+        managed = True
+        db_table = 'lotes_producto'
+        verbose_name = 'Lote de Producto'
+        verbose_name_plural = 'Lotes de Productos'
+        ordering = ['fecha_vencimiento', '-id_lote']  # FIFO: primero los que vencen antes
+        indexes = [
+            models.Index(fields=['id_producto', 'fecha_vencimiento']),
+            models.Index(fields=['fecha_vencimiento', 'bloqueado']),
+            models.Index(fields=['numero_lote']),
+        ]
+    
+    def __str__(self):
+        estado = "Bloqueado" if self.bloqueado else "Disponible"
+        return f"Lote {self.numero_lote} - {self.id_producto.descripcion} ({estado})"
+    
+    @property
+    def dias_hasta_vencimiento(self):
+        """Calcula días restantes hasta vencimiento"""
+        from django.utils import timezone
+        if not self.fecha_vencimiento:
+            return None
+        delta = self.fecha_vencimiento - timezone.now().date()
+        return delta.days
+    
+    @property
+    def esta_vencido(self):
+        """True si ya pasó la fecha de vencimiento"""
+        return self.dias_hasta_vencimiento is not None and self.dias_hasta_vencimiento < 0
+    
+    @property
+    def proximo_a_vencer(self):
+        """True si vence en menos de 30 días"""
+        return self.dias_hasta_vencimiento is not None and 0 <= self.dias_hasta_vencimiento <= 30
+    
+    def clean(self):
+        """Validaciones de modelo"""
+        super().clean()
+        
+        # Validar fecha de vencimiento > fecha de fabricación
+        if self.fecha_fabricacion and self.fecha_vencimiento:
+            if self.fecha_vencimiento <= self.fecha_fabricacion:
+                raise ValidationError({
+                    'fecha_vencimiento': 'La fecha de vencimiento debe ser posterior a la fecha de fabricación'
+                })
+        
+        # Validar cantidad disponible <= cantidad inicial
+        if self.cantidad_disponible > self.cantidad_inicial:
+            raise ValidationError({
+                'cantidad_disponible': 'La cantidad disponible no puede ser mayor a la cantidad inicial'
+            })
+        
+        # Si está bloqueado, debe tener motivo
+        if self.bloqueado and not self.motivo_bloqueo:
+            raise ValidationError({
+                'motivo_bloqueo': 'Debe especificar el motivo del bloqueo'
+            })
+
+
+class AlertasVencimiento(models.Model):
+    """
+    Alertas automáticas de productos próximos a vencer.
+    
+    Se generan automáticamente cuando:
+    - Faltan 30 días para vencimiento
+    - Faltan 15 días
+    - Faltan 7 días
+    - Faltan 3 días
+    - Producto vencido
+    """
+    id_alerta = models.AutoField(primary_key=True)
+    tipo_alerta = models.CharField(
+        max_length=20,
+        choices=[
+            ('30_dias', '30 días para vencer'),
+            ('15_dias', '15 días para vencer'),
+            ('7_dias', '7 días para vencer'),
+            ('3_dias', '3 días para vencer'),
+            ('vencido', 'Producto vencido')
+        ]
+    )
+    dias_restantes = models.IntegerField(
+        help_text="Días hasta vencimiento (negativo si ya venció)"
+    )
+    fecha_generada = models.DateTimeField(
+        auto_now_add=True
+    )
+    fecha_vencimiento = models.DateField(
+        help_text="Fecha de vencimiento del lote"
+    )
+    cantidad_lote = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        help_text="Cantidad en el lote cuando se generó la alerta"
+    )
+    accion_tomada = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        choices=[
+            ('pendiente', 'Pendiente'),
+            ('descuento_aplicado', 'Descuento aplicado'),
+            ('devuelto', 'Devuelto a proveedor'),
+            ('donado', 'Donado'),
+            ('descartado', 'Descartado'),
+            ('vendido', 'Vendido a tiempo')
+        ],
+        default='pendiente'
+    )
+    fecha_accion = models.DateTimeField(
+        blank=True,
+        null=True
+    )
+    id_lote = models.ForeignKey(
+        LotesProducto,
+        models.CASCADE,
+        db_column='id_lote',
+        related_name='alertas'
+    )
+    id_empleado_responsable = models.ForeignKey(
+        'usuarios.Empleados',
+        models.DO_NOTHING,
+        db_column='id_empleado_responsable',
+        blank=True,
+        null=True,
+        help_text="Empleado que tomó acción sobre la alerta"
+    )
+    notificacion_enviada = models.BooleanField(
+        default=False
+    )
+    
+    class Meta:
+        managed = True
+        db_table = 'alertas_vencimiento'
+        verbose_name = 'Alerta de Vencimiento'
+        verbose_name_plural = 'Alertas de Vencimiento'
+        ordering = ['fecha_vencimiento', '-fecha_generada']
+        indexes = [
+            models.Index(fields=['id_lote', 'tipo_alerta']),
+            models.Index(fields=['fecha_vencimiento']),
+            models.Index(fields=['accion_tomada']),
+        ]
+    
+    def __str__(self):
+        return f"{self.id_lote} - {self.get_tipo_alerta_display()}"

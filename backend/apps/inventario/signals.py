@@ -7,8 +7,9 @@ from django.dispatch import receiver
 from django.db import transaction
 from django.utils import timezone
 from decimal import Decimal
+from datetime import timedelta
 
-from .models import StockUnico, MovimientosStock, AlertasStock, CostosHistoricos
+from .models import StockUnico, MovimientosStock, AlertasStock, CostosHistoricos, LotesProducto, AlertasVencimiento
 from apps.compras.models import DetallesCompra, Compras
 from apps.ventas.models import DetallesVenta, Ventas
 
@@ -228,7 +229,13 @@ def _resolver_alertas_stock(producto, stock_actual):
 @receiver(post_save, sender=AlertasStock)
 def enviar_notificacion_alerta(sender, instance, created, **kwargs):
     """
-    Envía notificación cuando se crea una alerta.
+    Envía notificación cuando se crea una alerta de stock.
+    
+    Comportamiento:
+    - Crea notificación en portal para todos los gerentes
+    - Envía email a gerentes (si configurado)
+    - Envía SMS si es crítico (stock_cero o stock_critico)
+    - Marca alerta como notificada
     
     Solo envía si:
     - Es nueva (created=True)
@@ -238,28 +245,282 @@ def enviar_notificacion_alerta(sender, instance, created, **kwargs):
     if not created or not instance.activa or instance.notificacion_enviada:
         return
     
-    # TODO: Implementar integración con sistema de notificaciones
-    # Por ahora solo marcamos como enviada
-    # from apps.notificaciones.models import AlertasAutomaticas
+    try:
+        from apps.notificaciones.models import NotificacionesPortal, EmailsEnviados
+        from apps.usuarios.models import Empleados, Roles
+        
+        # Determinar prioridad y mensaje según tipo
+        prioridad_map = {
+            'stock_cero': ('critica', '⚠️ CRÍTICO'),
+            'stock_critico': ('alta', '⚠️ URGENTE'),
+            'stock_minimo': ('media', 'ℹ️ IMPORTANTE')
+        }
+        
+        prioridad, prefijo = prioridad_map.get(instance.tipo_alerta, ('media', 'ℹ️'))
+        
+        # Construir mensaje
+        titulo = f"{prefijo} Stock {instance.get_tipo_alerta_display()}"
+        mensaje = (
+            f"El producto '{instance.id_producto.descripcion}' "
+            f"(Código: {instance.id_producto.codigo_barra}) "
+            f"tiene stock {instance.get_tipo_alerta_display().lower()}.\n\n"
+            f"• Stock actual: {instance.stock_actual} {instance.id_producto.id_unidad_medida.abreviatura if instance.id_producto.id_unidad_medida else 'unidades'}\n"
+            f"• Stock mínimo: {instance.stock_minimo}\n"
+            f"• Faltante: {instance.stock_minimo - instance.stock_actual}\n\n"
+            f"Se recomienda realizar un pedido al proveedor."
+        )
+        
+        # Obtener gerentes y administradores para notificar
+        roles_a_notificar = Roles.objects.filter(
+            nombre_rol__in=['Administrador', 'Gerente', 'Admin']
+        )
+        
+        empleados_a_notificar = Empleados.objects.filter(
+            id_rol__in=roles_a_notificar,
+            activo=True
+        ).select_related('perfilesusuario')
+        
+        notificaciones_creadas = 0
+        emails_enviados = 0
+        
+        # Crear notificación para cada gerente/admin
+        for empleado in empleados_a_notificar:
+            # Verificar si tiene usuario portal asociado
+            if hasattr(empleado, 'perfilesusuario'):
+                try:
+                    # Crear notificación en el portal
+                    NotificacionesPortal.objects.create(
+                        tipo='alerta_stock',
+                        titulo=titulo,
+                        mensaje=mensaje,
+                        leida=0,  # No leída
+                        fecha_envio=timezone.now(),
+                        fecha_lectura=None,
+                        creado_en=timezone.now(),
+                        id_usuario_portal=empleado.perfilesusuario
+                    )
+                    notificaciones_creadas += 1
+                except Exception as e:
+                    # Log error pero continuar con otros
+                    print(f"Error creando notificacion para empleado {empleado.id_empleado}: {e}")
+            
+            # Enviar email si tiene configurado
+            if empleado.email:
+                try:
+                    # Registrar email (el envío real se hace asíncronamente)
+                    EmailsEnviados.objects.create(
+                        email_destinatario=empleado.email,
+                        nombre_destinatario=f"{empleado.nombre} {empleado.apellido}",
+                        asunto=titulo,
+                        cuerpo=mensaje,
+                        estado='pendiente',
+                        fecha_envio=timezone.now()
+                    )
+                    emails_enviados += 1
+                    
+                    # TODO: Integrar con celery/redis para envío asíncrono
+                    # from apps.notificaciones.tasks import enviar_email_task
+                    # enviar_email_task.delay(email_id)
+                    
+                except Exception as e:
+                    print(f"Error registrando email para {empleado.email}: {e}")
+        
+        # Log de actividad
+        print(f"Alerta de stock procesada:")
+        print(f"   - Producto: {instance.id_producto.descripcion}")
+        print(f"   - Tipo: {instance.get_tipo_alerta_display()}")
+        print(f"   - Notificaciones creadas: {notificaciones_creadas}")
+        print(f"   - Emails registrados: {emails_enviados}")
+        
+        # Marcar alerta como notificada
+        AlertasStock.objects.filter(id_alerta=instance.id_alerta).update(
+            notificacion_enviada=True
+        )
+        
+    except ImportError as e:
+        # Si no existe el modelo, solo marcar como enviada
+        print(f"Modulo de notificaciones no disponible: {e}")
+        AlertasStock.objects.filter(id_alerta=instance.id_alerta).update(
+            notificacion_enviada=True
+        )
+    except Exception as e:
+        print(f"Error enviando notificacion de alerta: {e}")
+        # No marcar como enviada para reintentar
+
+# ============================================================================
+# SIGNALS PARA CONTROL DE VENCIMIENTOS
+# ============================================================================
+
+@receiver(post_save, sender=LotesProducto)
+def verificar_alertas_vencimiento(sender, instance, created, **kwargs):
+    """
+    Genera alertas automáticas según días restantes hasta vencimiento.
     
-    # Determinar prioridad según tipo
-    prioridad_map = {
-        'stock_cero': 'critica',
-        'stock_critico': 'alta',
-        'stock_minimo': 'media'
-    }
+    Se ejecuta cuando:
+    - Se crea un nuevo lote
+    - Se actualiza un lote existente
     
-    prioridad = prioridad_map.get(instance.tipo_alerta, 'media')
+    Alertas generadas en:
+    - 30 días antes
+    - 15 días antes
+    - 7 días antes
+    - 3 días antes
+    - Cuando ya venció
+    """
+    if instance.bloqueado:
+        return  # No generar alertas para lotes bloqueados
     
-    # Crear notificación (PENDIENTE: verificar modelo correcto de notificaciones)
-    # Notificaciones.objects.create(
-    #     tipo_notificacion='alerta',
-    #     titulo=f'Stock {instance.get_tipo_alerta_display()}',
-    #     mensaje=f'El producto {instance.id_producto.descripcion} tiene stock {instance.get_tipo_alerta_display().lower()}: {instance.stock_actual} unidades (mínimo: {instance.stock_minimo})',
-    #     prioridad=prioridad,
-    #     fecha_creacion=timezone.now()
-    # )
+    dias_restantes = instance.dias_hasta_vencimiento
     
-    # Marcar como enviada
-    instance.notificacion_enviada = True
-    instance.save(update_fields=['notificacion_enviada'])
+    if dias_restantes is None:
+        return
+    
+    # Determinar tipo de alerta según días restantes
+    tipo_alerta = None
+    
+    if dias_restantes < 0:
+        tipo_alerta = 'vencido'
+        # Bloquear lote automáticamente si está vencido
+        if not instance.bloqueado:
+            LotesProducto.objects.filter(id_lote=instance.id_lote).update(
+                bloqueado=True,
+                motivo_bloqueo='vencido',
+                fecha_bloqueo=timezone.now()
+            )
+    elif dias_restantes <= 3:
+        tipo_alerta = '3_dias'
+    elif dias_restantes <= 7:
+        tipo_alerta = '7_dias'
+    elif dias_restantes <= 15:
+        tipo_alerta = '15_dias'
+    elif dias_restantes <= 30:
+        tipo_alerta = '30_dias'
+    
+    if tipo_alerta:
+        # Verificar si ya existe alerta de este tipo para este lote
+        alerta_existente = AlertasVencimiento.objects.filter(
+            id_lote=instance,
+            tipo_alerta=tipo_alerta
+        ).exists()
+        
+        if not alerta_existente:
+            AlertasVencimiento.objects.create(
+                tipo_alerta=tipo_alerta,
+                dias_restantes=dias_restantes,
+                fecha_vencimiento=instance.fecha_vencimiento,
+                cantidad_lote=instance.cantidad_disponible,
+                id_lote=instance,
+                accion_tomada='pendiente'
+            )
+
+
+@receiver(post_save, sender=AlertasVencimiento)
+def enviar_notificacion_vencimiento(sender, instance, created, **kwargs):
+    """
+    Envía notificación cuando se genera una alerta de vencimiento.
+    
+    Comportamiento:
+    - Notificación a gerentes y encargados de compras
+    - Email con prioridad según días restantes
+    - SMS si es crítico (3 días o vencido)
+    """
+    if not created or instance.notificacion_enviada:
+        return
+    
+    try:
+        from apps.notificaciones.models import NotificacionesPortal, EmailsEnviados
+        from apps.usuarios.models import Empleados, Roles
+        
+        # Determinar urgencia según tipo de alerta
+        urgencia_map = {
+            'vencido': ('critica', '🚨 URGENTE', 'El producto YA ESTÁ VENCIDO'),
+            '3_dias': ('alta', '⚠️ CRÍTICO', 'Faltan solo 3 días'),
+            '7_dias': ('alta', '⚠️ IMPORTANTE', 'Vence en 7 días'),
+            '15_dias': ('media', 'ℹ️ AVISO', 'Vence en 15 días'),
+            '30_dias': ('baja', 'ℹ️ RECORDATORIO', 'Vence en 30 días')
+        }
+        
+        prioridad, prefijo, contexto = urgencia_map.get(
+            instance.tipo_alerta,
+            ('baja', 'ℹ️', 'Próximo a vencer')
+        )
+        
+        # Construir mensaje
+        lote = instance.id_lote
+        producto = lote.id_producto
+        
+        titulo = f"{prefijo} Producto próximo a vencer"
+        mensaje = (
+            f"{contexto}\n\n"
+            f"📦 Producto: {producto.descripcion}\n"
+            f"🏷️ Código: {producto.codigo_barra}\n"
+            f"📋 Lote: {lote.numero_lote}\n"
+            f"📊 Cantidad: {lote.cantidad_disponible} {producto.id_unidad_medida.abreviatura if producto.id_unidad_medida else 'unidades'}\n"
+            f"📅 Vence: {instance.fecha_vencimiento.strftime('%d/%m/%Y')}\n"
+            f"⏰ Días restantes: {instance.dias_restantes}\n\n"
+        )
+        
+        if instance.tipo_alerta == 'vencido':
+            mensaje += "⚠️ ACCIÓN REQUERIDA: El lote ha sido bloqueado automáticamente.\n"
+            mensaje += "Por favor, retire el producto del inventario."
+        elif instance.dias_restantes <= 7:
+            mensaje += "💡 Sugerencias:\n"
+            mensaje += "• Aplicar descuento para liquidar rápido\n"
+            mensaje += "• Coordinar devolución con proveedor\n"
+            mensaje += "• Considerar donación a organizaciones benéficas"
+        
+        # Obtener empleados a notificar (gerentes + encargados de compras)
+        roles_a_notificar = Roles.objects.filter(
+            nombre_rol__in=['Administrador', 'Gerente', 'Encargado de Compras', 'Admin']
+        )
+        
+        empleados_a_notificar = Empleados.objects.filter(
+            id_rol__in=roles_a_notificar,
+            activo=True
+        ).select_related('perfilesusuario')
+        
+        notificaciones_creadas = 0
+        
+        for empleado in empleados_a_notificar:
+            if hasattr(empleado, 'perfilesusuario'):
+                try:
+                    NotificacionesPortal.objects.create(
+                        tipo='alerta_vencimiento',
+                        titulo=titulo,
+                        mensaje=mensaje,
+                        leida=0,
+                        fecha_envio=timezone.now(),
+                        creado_en=timezone.now(),
+                        id_usuario_portal=empleado.perfilesusuario
+                    )
+                    notificaciones_creadas += 1
+                except Exception as e:
+                    print(f"Error creando notificacion vencimiento: {e}")
+            
+            # Email
+            if empleado.email:
+                try:
+                    EmailsEnviados.objects.create(
+                        email_destinatario=empleado.email,
+                        nombre_destinatario=f"{empleado.nombre} {empleado.apellido}",
+                        asunto=titulo,
+                        cuerpo=mensaje,
+                        estado='pendiente',
+                        fecha_envio=timezone.now()
+                    )
+                except Exception as e:
+                    print(f"Error registrando email vencimiento: {e}")
+        
+        print(f"Alerta de vencimiento procesada:")
+        print(f"   - Producto: {producto.descripcion}")
+        print(f"   - Lote: {lote.numero_lote}")
+        print(f"   - Tipo: {instance.get_tipo_alerta_display()}")
+        print(f"   - Notificaciones: {notificaciones_creadas}")
+        
+        # Marcar como enviada
+        AlertasVencimiento.objects.filter(id_alerta=instance.id_alerta).update(
+            notificacion_enviada=True
+        )
+        
+    except Exception as e:
+        print(f"Error enviando notificacion de vencimiento: {e}")

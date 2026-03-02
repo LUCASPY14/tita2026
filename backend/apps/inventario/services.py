@@ -143,8 +143,15 @@ class StockService:
             StockUnico actualizado
             
         Raises:
-            ValidationError: Si no hay stock disponible
+            ValidationError: Si no hay stock disponible o cantidad inválida
         """
+        # Validar cantidad > 0
+        if cantidad <= 0:
+            raise ValidationError({
+                'error': 'La cantidad debe ser mayor a 0',
+                'cantidad': str(cantidad)
+            })
+        
         # Validar primero (sin bloqueo)
         validacion = StockService.validar_disponibilidad(producto_id, cantidad)
         
@@ -180,6 +187,16 @@ class StockService:
         stock_anterior = stock.cantidad
         stock.cantidad -= cantidad
         stock.save()
+        
+        # Registrar movimiento de stock
+        MovimientosStock.objects.create(
+            id_producto=producto,
+            tipo_movimiento='Egreso',
+            cantidad=cantidad,
+            motivo=motivo,
+            stock_resultante=stock.cantidad,
+            id_empleado_autoriza=empleado
+        )
         
         return stock
     
