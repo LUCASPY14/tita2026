@@ -5,6 +5,7 @@ import Dashboard from '../pages/dashboard/Dashboard';
 import Recargas from '../pages/recargas';
 import POS from '../pages/pos';
 import Clientes from '../pages/clientes';
+import Productos from '../pages/productos';
 import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -33,8 +34,10 @@ const AppRoutes: React.FC = () => {
                 {/* Módulo de Clientes */}
                 <Route path="/clientes" element={<Clientes />} />
                 
+                {/* Módulo de Productos */}
+                <Route path="/productos" element={<Productos />} />
+                
                 {/* Placeholder routes - to be implemented */}
-                <Route path="/productos" element={<div className="text-center py-12"><h2 className="text-2xl font-bold text-gray-700">Gestión de Productos</h2><p className="text-gray-500 mt-2">Próximamente...</p></div>} />
                 <Route path="/almuerzos" element={<div className="text-center py-12"><h2 className="text-2xl font-bold text-gray-700">Menú de Almuerzos</h2><p className="text-gray-500 mt-2">Próximamente...</p></div>} />
                 <Route path="/reportes" element={<div className="text-center py-12"><h2 className="text-2xl font-bold text-gray-700">Reportes y Estadísticas</h2><p className="text-gray-500 mt-2">Próximamente...</p></div>} />
                 <Route path="/notificaciones" element={<div className="text-center py-12"><h2 className="text-2xl font-bold text-gray-700">Centro de Notificaciones</h2><p className="text-gray-500 mt-2">Próximamente...</p></div>} />

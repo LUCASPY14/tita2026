@@ -113,7 +113,7 @@ export interface CargaSaldo {
   numero_comprobante?: string;
 }
 
-// Tipos para módulo de POS
+// Tipos para módulo de POS y Productos
 export interface Producto {
   id_producto: number;
   codigo_barra?: string;
@@ -122,8 +122,15 @@ export interface Producto {
   permite_stock_negativo: boolean;
   activo: boolean;
   id_categoria: number;
+  id_impuesto: number;
+  id_unidad_medida?: number;
+  // Propiedades calculadas/relacionadas
   categoria_nombre?: string;
+  unidad_medida_nombre?: string;
+  unidad_medida_abreviatura?: string;
   precio?: number; // Precio según lista del cliente
+  stock_actual?: number;
+  requiere_reposicion?: boolean;
 }
 
 export interface Categoria {
@@ -131,6 +138,48 @@ export interface Categoria {
   nombre: string;
   activo: boolean;
   id_categoria_padre?: number;
+  // Propiedades calculadas
+  es_categoria_raiz?: boolean;
+  nombre_completo?: string;
+}
+
+export interface UnidadMedida {
+  id_unidad_medida: number;
+  nombre: string;
+  abreviatura: string;
+  activo: boolean;
+}
+
+export interface ListaPrecio {
+  id_lista: number;
+  nombre_lista: string;
+  fecha_vigencia?: string;
+  moneda: string;
+  activo: boolean;
+}
+
+export interface PrecioPorLista {
+  id_precio: number;
+  precio_unitario: number;
+  fecha_vigencia: string;
+  id_lista: number;
+  id_producto: number;
+  // Propiedades relacionadas
+  lista_nombre?: string;
+  producto_descripcion?: string;
+}
+
+export interface HistoricoPrecio {
+  id_historico: number;
+  precio_anterior: number;
+  precio_nuevo: number;
+  fecha_cambio: string;
+  id_empleado?: number;
+  id_producto: number;
+  // Propiedades calculadas
+  variacion_porcentual?: number;
+  empleado_nombre?: string;
+  producto_descripcion?: string;
 }
 
 export interface ItemCarrito {
