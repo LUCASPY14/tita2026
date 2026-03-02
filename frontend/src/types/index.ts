@@ -226,3 +226,91 @@ export interface Venta {
 }
 
 
+
+// Tipos para módulo de Compras
+export interface Proveedor {
+  id_proveedor: number;
+  ruc: string;
+  razon_social: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  ciudad?: string;
+  activo: boolean;
+  fecha_registro: string;
+}
+
+export interface Compra {
+  id_compra: number;
+  fecha: string;
+  monto_total: number;
+  saldo_pendiente: number;
+  estado_pago: 'Pendiente' | 'Parcial' | 'Pagado';
+  nro_factura?: string;
+  observaciones?: string;
+  id_proveedor: number;
+  id_documento?: number;
+  // Propiedades relacionadas
+  proveedor_nombre?: string;
+  detalles?: DetalleCompra[];
+}
+
+export interface DetalleCompra {
+  id_detalle: number;
+  costo_unitario: number;
+  cantidad: number;
+  subtotal: number;
+  monto_iva?: number;
+  id_compra: number;
+  id_producto: number;
+  // Propiedades relacionadas
+  producto_nombre?: string;
+  producto_descripcion?: string;
+}
+
+export interface CompraData {
+  fecha: string;
+  id_proveedor: number;
+  nro_factura?: string;
+  observaciones?: string;
+  detalles: {
+    id_producto: number;
+    cantidad: number;
+    costo_unitario: number;
+  }[];
+}
+
+export interface PagoProveedor {
+  id_pago_proveedor: number;
+  fecha_creacion: string;
+  id_medio_pago: number;
+  // Propiedades relacionadas
+  medio_pago_descripcion?: string;
+}
+
+export interface NotaCreditoProveedor {
+  id_nota_proveedor: number;
+  nro_factura_compra?: number;
+  fecha: string;
+  monto_total: number;
+  observacion?: string;
+  estado: 'Pendiente' | 'Aplicada' | 'Cancelada';
+  fecha_creacion: string;
+  id_compra_original?: number;
+  id_proveedor: number;
+  // Propiedades relacionadas
+  proveedor_nombre?: string;
+}
+
+export interface CuentaCorrienteProveedor {
+  total_compras: number;
+  total_pagado: number;
+  saldo_pendiente: number;
+  compras_pendientes: number;
+  notas_credito: number;
+  proveedor?: {
+    id: number;
+    razon_social: string;
+    ruc: string;
+  };
+}
