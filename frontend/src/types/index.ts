@@ -69,3 +69,53 @@ export interface ApiError {
   errors?: Record<string, string[]>;
   status?: number;
 }
+
+// Tipos para módulo de Recargas
+export interface Hijo {
+  id_hijo: number;
+  nombre: string;
+  apellido: string;
+  fecha_nacimiento?: string;
+  grado?: string;
+  foto_perfil?: string;
+  activo: boolean;
+  id_cliente_responsable: number;
+  nombre_completo?: string;
+}
+
+export interface Tarjeta {
+  nro_tarjeta: string;
+  saldo_actual: number;
+  estado: 'Activa' | 'Bloqueada' | 'Inactiva';
+  fecha_vencimiento?: string;
+  saldo_alerta?: number;
+  fecha_creacion: string;
+  permite_saldo_negativo: boolean;
+  limite_credito: number;
+  notificar_saldo_bajo: boolean;
+  id_hijo: number;
+  codigo_barras?: string;
+  hijo_nombre?: string;
+  hijo_apellido?: string;
+  saldo_disponible?: number;
+}
+
+export interface CargaSaldo {
+  id_carga: number;
+  fecha_carga: string;
+  monto_cargado: number;
+  referencia?: string;
+  estado: 'Pendiente' | 'Confirmada' | 'Rechazada' | 'Cancelada';
+  pay_request_id?: string;
+  tx_id?: string;
+  fecha_confirmacion?: string;
+  custom_identifier?: string;
+  nro_tarjeta: string;
+  id_cliente_origen?: number;
+  tarjeta_numero?: string;
+  hijo_nombre?: string;
+  cliente_nombre?: string;
+  metodo_pago?: 'efectivo' | 'tarjeta_pos' | 'transferencia' | 'bancard';
+  numero_comprobante?: string;
+}
+
