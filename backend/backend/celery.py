@@ -30,6 +30,10 @@ app.conf.beat_schedule = {
         'task': 'apps.inventario.tasks.verificar_vencimientos',
         'schedule': crontab(hour=9, minute=0),  # Todos los días a las 9 AM
     },
+    'limpiar-notificaciones-antiguas': {
+        'task': 'apps.notificaciones.tasks.limpiar_notificaciones_antiguas',
+        'schedule': crontab(hour=3, minute=0, day_of_week=0),  # Domingos a las 3 AM
+    },
 }
 
 app.conf.timezone = 'America/Asuncion'  # Paraguay timezone
