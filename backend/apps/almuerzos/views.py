@@ -43,61 +43,103 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
     """
     ViewSet para registrar consumos de almuerzo.
     
-    IMPORTANTE: Este módulo es INDEPENDIENTE del saldo de cantina.
-    - NO descuenta saldo de la tarjeta prepago
-    - La facturación es mensual y separada
-    - Solo usa la tarjeta para identificación del hijo
+    REGLA DE NEGOCIO (Nuevo sistema con saldo prepago):
+    - Máximo 2 registros por alumno por día
+    - Primer registro: desccuenta saldo (ya_cobrado=True)
+    - Segundo registro: NO descuenta saldo (ya_cobrado=False, solo operativo)
+    - Tercer intento: BLOQUEADO
+    
+    El cobro se realiza con saldo prepago de la tarjeta (como cantina).
+    La facturación ya fue realizada al recargar la tarjeta.
     """
     queryset = RegistrosConsumoAlmuerzo.objects.all()
     serializer_class = RegistrosConsumoAlmuerzoSerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['estado', 'id_hijo', 'fecha_consumo']
-    ordering = ['-fecha_consumo']
+    filterset_fields = ['estado', 'id_hijo', 'fecha_consumo', 'ya_cobrado']
+    ordering = ['-fecha_consumo', '-hora_registro']
 
     def perform_create(self, serializer):
         """
-        Registra el consumo de almuerzo sin afectar el saldo de cantina.
-        Calcula el costo según suscripción o tipo de almuerzo.
-        """
-        registro_data = serializer.validated_data
-        id_suscripcion = registro_data.get('id_suscripcion')
-        id_tipo_almuerzo = registro_data.get('id_tipo_almuerzo')
+        Registra el consumo de almuerzo con lógica de doble registro.
         
-        # Validar que tenga suscripción O tipo de almuerzo
-        if not id_suscripcion and not id_tipo_almuerzo:
+        - Valida límite de 2 registros por día
+        - Determina si el registro debe generar cobro (ya_cobrado)
+        - Descuenta saldo de la tarjeta solo en el primer registro del día
+        """
+        from .validators import validar_limite_registros_diarios, determinar_si_cobra
+        
+        registro_data = serializer.validated_data
+        id_hijo = registro_data.get('id_hijo')
+        fecha_consumo = registro_data.get('fecha_consumo')
+        nro_tarjeta = registro_data.get('nro_tarjeta')
+        id_tipo_almuerzo = registro_data.get('id_tipo_almuerzo')
+        id_suscripcion = registro_data.get('id_suscripcion')
+        
+        # Validar tarjeta presente
+        if not nro_tarjeta:
+            raise ValidationError({
+                'error': 'Debe especificar la tarjeta para registrar el almuerzo'
+            })
+        
+        # Validar límite de 2 registros por día (lanza excepción si excede)
+        validar_limite_registros_diarios(id_hijo, fecha_consumo)
+        
+        # Determinar si este registro debe cobrar
+        debe_cobrar = determinar_si_cobra(id_hijo, fecha_consumo)
+        
+        # Calcular costo según suscripción o tipo de almuerzo
+        if id_suscripcion:
+            # Con suscripción: validar que esté activa
+            if id_suscripcion.estado != 'Activa':
+                raise ValidationError({
+                    'error': 'La suscripción no está activa',
+                    'estado_suscripcion': id_suscripcion.estado
+                })
+            # Suscripción activa: usar precio del plan mensual
+            costo_calculado = id_suscripcion.id_plan_almuerzo.precio_mensual / 30  # Aproximado
+        elif id_tipo_almuerzo:
+            # Sin suscripción: precio unitario
+            costo_calculado = id_tipo_almuerzo.precio_unitario
+        else:
             raise ValidationError({
                 'error': 'Debe especificar una suscripción o un tipo de almuerzo'
             })
         
-        # Si tiene suscripción, validar que esté activa
-        if id_suscripcion:
-            if id_suscripcion.estado != 'activo':
-                raise ValidationError({
-                    'error': 'La suscripción no está activa',
-                    'estado_suscripcion': id_suscripcion.estado,
-                    'mensaje': 'Solo se pueden registrar consumos con suscripciones activas'
-                })
-            
-            # Con suscripción activa, el costo es 0 (ya pagado mensualmente)
-            costo_calculado = 0
-        else:
-            # Sin suscripción: se cobra el precio unitario del tipo de almuerzo
-            if id_tipo_almuerzo:
-                costo_calculado = id_tipo_almuerzo.precio_unitario
-            else:
-                raise ValidationError({
-                    'error': 'Debe especificar el tipo de almuerzo para consumos sin suscripción'
-                })
-        
-        # Guardar el registro con el costo calculado
+        # Guardar el registro
         with transaction.atomic():
-            registro = serializer.save(costo_almuerzo=costo_calculado)
-            
-            # Si tiene costo, agregar a cuenta mensual del almuerzo
-            # NOTA: Esto NO afecta el saldo de la tarjeta de cantina
-            if costo_calculado > 0:
-                self._agregar_a_cuenta_mensual(registro)
-                registro.marcado_en_cuenta = True
+            # Si debe cobrar, descontar saldo de la tarjeta
+            if debe_cobrar:
+                # Verificar saldo suficiente
+                if nro_tarjeta.saldo < costo_calculado:
+                    raise ValidationError({
+                        'error': 'Saldo insuficiente en la tarjeta',
+                        'saldo_actual': float(nro_tarjeta.saldo),
+                        'costo_almuerzo': float(costo_calculado),
+                        'faltante': float(costo_calculado - nro_tarjeta.saldo)
+                    })
+                
+                # Descontar saldo
+                nro_tarjeta.saldo = F('saldo') - costo_calculado
+                nro_tarjeta.save(update_fields=['saldo'])
+                nro_tarjeta.refresh_from_db()
+                
+                # Guardar registro con ya_cobrado=True
+                registro = serializer.save(
+                    costo_almuerzo=costo_calculado,
+                    ya_cobrado=True,
+                    estado='Confirmado'
+                )
+                
+                # TODO: Registrar movimiento en historial de tarjeta (similar a cantina)
+                # Aquí se podría crear un registro en MovimientosSaldoTarjeta
+                
+            else:
+                # Segundo registro del día: NO cobrar
+                registro = serializer.save(
+                    costo_almuerzo=0,  # No genera costo
+                    ya_cobrado=False,  # Marcado como NO cobrado
+                    estado='Confirmado'
+                )
                 registro.save()
 
     def _agregar_a_cuenta_mensual(self, registro):

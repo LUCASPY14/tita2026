@@ -66,6 +66,10 @@ class RegistrosConsumoAlmuerzo(models.Model):
     fecha_consumo = models.DateField()
     hora_registro = models.TimeField()
     costo_almuerzo = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    ya_cobrado = models.BooleanField(
+        default=True,
+        help_text="Indica si este registro generó cobro de saldo. El primer registro del día cobra (True), el segundo no cobra (False)"
+    )
     marcado_en_cuenta = models.BooleanField(default=False, help_text="Indica si el consumo se agregó a la cuenta mensual de almuerzo (NO relacionado con saldo de cantina)")
     estado = models.CharField(max_length=20)
     motivo_rechazo = models.CharField(max_length=255, blank=True, null=True)
