@@ -35,7 +35,7 @@ class IsCajeroOrAdmin(permissions.BasePermission):
         # Esto asume que existe un modelo Empleado vinculado al usuario
         try:
             empleado = request.user.empleado
-            return empleado.id_rol.nombre.lower() in ['cajero', 'administrador']
+            return empleado.id_rol.nombre_rol.lower() in ['cajero', 'administrador']
         except:
             return False
 
@@ -100,7 +100,7 @@ class CanManageVentas(permissions.BasePermission):
         try:
             empleado = request.user.empleado
             roles_permitidos = ['cajero', 'administrador', 'gerente']
-            return empleado.id_rol.nombre.lower() in roles_permitidos
+            return empleado.id_rol.nombre_rol.lower() in roles_permitidos
         except:
             return False
 
@@ -121,7 +121,7 @@ class CanManageInventario(permissions.BasePermission):
         try:
             empleado = request.user.empleado
             roles_permitidos = ['administrador', 'gerente', 'encargado_inventario']
-            return empleado.id_rol.nombre.lower() in roles_permitidos
+            return empleado.id_rol.nombre_rol.lower() in roles_permitidos
         except:
             return False
 
