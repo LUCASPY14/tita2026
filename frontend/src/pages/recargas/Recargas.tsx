@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Card } from '../../components/common';
-import BusquedaHijo from './components/BusquedaHijo';
-import FormularioRecarga from './components/FormularioRecarga';
-import HistorialRecargas from './components/HistorialRecargas';
+import { BusquedaHijo, FormularioRecarga, HistorialRecargas } from './components';
 import type { Hijo, Tarjeta } from '../../types';
 
 const Recargas: React.FC = () => {
