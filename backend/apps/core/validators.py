@@ -469,11 +469,14 @@ def validar_estado_carga(estado):
     Valida el estado de la carga de saldo.
     
     Estados válidos:
-    - Pendiente: Esperando confirmación de pago
-    - Confirmado: Pago confirmado y saldo acreditado
-    - Rechazado: Pago rechazado
-    - Cancelado: Carga cancelada
-    - Reembolsado: Carga reembolsada
+    - pendiente: Recarga iniciada, esperando confirmación
+    - pendiente_validacion: Transferencia recibida, esperando validación del cajero
+    - validacion_pendiente: Esperando aprobación de supervisor (monto elevado)
+    - completada: Recarga exitosa, saldo acreditado
+    - rechazada: Pago rechazado
+    - cancelada: Carga cancelada
+    - reembolsada: Carga reembolsada
+    - expirada: Recarga no confirmada en tiempo límite
     
     Args:
         estado (str): Estado de la carga
@@ -481,7 +484,16 @@ def validar_estado_carga(estado):
     Raises:
         ValidationError: Si el estado no es válido
     """
-    ESTADOS_VALIDOS = ['Pendiente', 'Confirmado', 'Rechazado', 'Cancelado', 'Reembolsado']
+    ESTADOS_VALIDOS = [
+        'pendiente',
+        'pendiente_validacion',
+        'validacion_pendiente',
+        'completada',
+        'rechazada',
+        'cancelada',
+        'reembolsada',
+        'expirada'
+    ]
     
     if not estado:
         raise ValidationError("El estado de la carga es obligatorio")
@@ -522,6 +534,87 @@ def validar_referencia_pago(referencia):
     if not re.match(r'^[A-Za-z0-9\-_]+$', referencia_limpia):
         raise ValidationError(
             "La referencia solo puede contener letras, números, guiones y guiones bajos"
+        )
+
+
+def validar_metodo_pago_recarga(metodo_pago):
+    """
+    Valida el método de pago de la recarga.
+    
+    Métodos válidos:
+    - efectivo: Pago en efectivo en caja
+    - bancard: Pasarela de pago Bancard
+    - tarjeta_pos: Tarjeta física en POS de caja
+    - transferencia: Transferencia bancaria
+    
+    Args:
+        metodo_pago (str): Método de pago
+    
+    Raises:
+        ValidationError: Si el método no es válido
+    """
+    METODOS_VALIDOS = ['efectivo', 'bancard', 'tarjeta_pos', 'transferencia']
+    
+    if not metodo_pago:
+        raise ValidationError("El método de pago es obligatorio")
+    
+    if metodo_pago not in METODOS_VALIDOS:
+        raise ValidationError(
+            f"Método '{metodo_pago}' no válido. Métodos permitidos: {', '.join(METODOS_VALIDOS)}"
+        )
+
+
+def validar_numero_comprobante(numero_comprobante):
+    """
+    Valida el número de comprobante bancario/externo.
+    
+    Reglas:
+    - Longitud: 5-100 caracteres
+    - Formato: alfanumérico con guiones
+    - Unicidad: Se verifica en servicio
+    
+    Args:
+        numero_comprobante (str): Número del comprobante
+    
+    Raises:
+        ValidationError: Si el número es inválido
+    """
+    if not numero_comprobante:
+        return  # Es opcional en algunos flujos
+    
+    comprobante_limpio = numero_comprobante.strip().upper()
+    
+    if len(comprobante_limpio) < 5:
+        raise ValidationError("El número de comprobante debe tener al menos 5 caracteres")
+    
+    if len(comprobante_limpio) > 100:
+        raise ValidationError("El número de comprobante no puede exceder 100 caracteres")
+    
+    if not re.match(r'^[A-Z0-9\-_]+$', comprobante_limpio):
+        raise ValidationError(
+            "El número de comprobante solo puede contener letras mayúsculas, números, guiones y guiones bajos"
+        )
+
+
+def validar_codigo_referencia_interno(codigo):
+    """
+    Valida el código de referencia interno para transferencias.
+    
+    Formato esperado: REF-YYYYMMDD-NNNNN
+    Ejemplo: REF-20260302-00001
+    
+    Args:
+        codigo (str): Código de referencia
+    
+    Raises:
+        ValidationError: Si el código es inválido
+    """
+    if not codigo:
+        return  # Es opcional
+    
+    if not re.match(r'^REF-\d{8}-\d{5}$', codigo):
+        raise ValidationError(
+            "El código de referencia debe tener el formato REF-YYYYMMDD-NNNNN (ej: REF-20260302-00001)"
         )
 
 

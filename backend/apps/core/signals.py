@@ -12,39 +12,41 @@ from .models import CargasSaldo, ConsumosTarjeta, Tarjetas
 def actualizar_saldo_recarga(sender, instance, created, **kwargs):
     """
     Actualiza el saldo de la tarjeta cuando se confirma una recarga.
-    Solo se ejecuta cuando el estado cambia a 'confirmado'.
+    Solo se ejecuta cuando el estado cambia a 'completada'.
+    
+    IMPORTANTE: Este signal está deshabilitado porque la lógica de acreditación
+    se maneja ahora en RecargaService.acreditar_saldo() para mayor control.
+    
+    Se mantiene el código por compatibilidad pero no se ejecuta.
     """
-    # Solo procesar si la recarga está confirmada
-    if instance.estado == 'confirmado':
-        # Verificar si ya se procesó esta recarga
-        # (evitar duplicados si se guarda múltiples veces)
-        if not hasattr(instance, '_saldo_actualizado'):
-            with transaction.atomic():
-                tarjeta = Tarjetas.objects.select_for_update().get(nro_tarjeta=instance.nro_tarjeta.nro_tarjeta)
-                saldo_anterior = tarjeta.saldo_actual
-                
-                # Solo aumentar saldo si no se había procesado antes
-                # Verificamos si ya existe un consumo registrado para esta recarga
-                consumo_existe = ConsumosTarjeta.objects.filter(
-                    detalle__contains=f"Recarga #{instance.id_carga}"
-                ).exists()
-                
-                if not consumo_existe:
-                    tarjeta.saldo_actual += instance.monto_cargado
-                    tarjeta.save()
-                    
-                    # Registrar en historial de consumos (como entrada positiva)
-                    ConsumosTarjeta.objects.create(
-                        nro_tarjeta=tarjeta,
-                        fecha_consumo=instance.fecha_confirmacion or instance.fecha_carga,
-                        monto_consumido=-instance.monto_cargado,  # Negativo = ingreso
-                        detalle=f"Recarga #{instance.id_carga} - {instance.referencia or 'Sin referencia'}",
-                        saldo_anterior=saldo_anterior,
-                        saldo_posterior=tarjeta.saldo_actual
-                    )
-                    
-                    # Marcar como procesado
-                    instance._saldo_actualizado = True
+    # DESHABILITADO - La acreditación se hace en el servicio
+    return
+    
+    # Código original (comentado):
+    # if instance.estado == 'completada':
+    #     if not hasattr(instance, '_saldo_actualizado'):
+    #         with transaction.atomic():
+    #             tarjeta = Tarjetas.objects.select_for_update().get(nro_tarjeta=instance.nro_tarjeta.nro_tarjeta)
+    #             saldo_anterior = tarjeta.saldo_actual
+    #             
+    #             consumo_existe = ConsumosTarjeta.objects.filter(
+    #                 detalle__contains=f"Recarga #{instance.id_carga}"
+    #             ).exists()
+    #             
+    #             if not consumo_existe:
+    #                 tarjeta.saldo_actual += instance.monto_cargado
+    #                 tarjeta.save()
+    #                 
+    #                 ConsumosTarjeta.objects.create(
+    #                     nro_tarjeta=tarjeta,
+    #                     fecha_consumo=instance.fecha_confirmacion or instance.fecha_carga,
+    #                     monto_consumido=-instance.monto_cargado,
+    #                     detalle=f"Recarga #{instance.id_carga} - {instance.referencia or 'Sin referencia'}",
+    #                     saldo_anterior=saldo_anterior,
+    #                     saldo_posterior=tarjeta.saldo_actual
+    #                 )
+    #                 
+    #                 instance._saldo_actualizado = True
 
 
 @receiver(post_save, sender=ConsumosTarjeta)

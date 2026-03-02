@@ -20,11 +20,40 @@ class TarjetasSerializer(serializers.ModelSerializer):
 
 class CargasSaldoSerializer(serializers.ModelSerializer):
     tarjeta_numero = serializers.CharField(source='nro_tarjeta.nro_tarjeta', read_only=True)
-    cliente_nombre = serializers.CharField(source='id_cliente_origen.nombre', read_only=True)
+    hijo_nombre = serializers.SerializerMethodField(read_only=True)
+    cliente_nombre = serializers.CharField(source='id_cliente_origen.nombres', read_only=True)
+    cajero_nombre = serializers.SerializerMethodField(read_only=True)
+    supervisor_nombre = serializers.SerializerMethodField(read_only=True)
     
     class Meta:
         model = CargasSaldo
         fields = '__all__'
+        read_only_fields = [
+            'id_carga',
+            'fecha_carga',
+            'fecha_confirmacion',
+            'fecha_aprobacion',
+            'id_factura'
+        ]
+    
+    def get_hijo_nombre(self, obj):
+        """Retorna nombre completo del hijo"""
+        try:
+            return f"{obj.nro_tarjeta.id_hijo.nombre} {obj.nro_tarjeta.id_hijo.apellido}"
+        except:
+            return None
+    
+    def get_cajero_nombre(self, obj):
+        """Retorna nombre del cajero responsable"""
+        if obj.usuario_responsable:
+            return obj.usuario_responsable.nombre
+        return None
+    
+    def get_supervisor_nombre(self, obj):
+        """Retorna nombre del supervisor aprobador"""
+        if obj.supervisor_aprobador:
+            return obj.supervisor_aprobador.nombre
+        return None
 
 
 class ConsumosTarjetaSerializer(serializers.ModelSerializer):
