@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'corsheaders',
     'django_filters',
+    'django_celery_beat',  # Celery Beat para tareas programadas
     
     # Local apps
     'apps.common',
@@ -276,3 +277,40 @@ LOGGING = {
         },
     },
 }
+
+# ==============================================================================
+# CELERY CONFIGURATION
+# ==============================================================================
+
+# Broker: Redis (cambiar en producción)
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+
+# Configuración general
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/Asuncion'  # Paraguay
+CELERY_ENABLE_UTC = True
+
+# Configuración de Beat (tareas programadas)
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Configuración de tareas
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutos
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutos
+
+# Configuración de workers
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
+
+# ==============================================================================
+# BANCARD CONFIGURATION (Pasarela de pagos)
+# ==============================================================================
+
+BANCARD_AMBIENTE = os.environ.get('BANCARD_AMBIENTE', 'staging')  # 'staging' o 'production'
+BANCARD_PUBLIC_KEY = os.environ.get('BANCARD_PUBLIC_KEY', '')
+BANCARD_PRIVATE_KEY = os.environ.get('BANCARD_PRIVATE_KEY', '')
+BANCARD_IP_WHITELIST = ['190.105.242.0/24', '127.0.0.1']  # IPs permitidas para webhooks
+
