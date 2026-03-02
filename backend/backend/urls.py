@@ -58,6 +58,9 @@ urlpatterns = [
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
     
+    # Webhooks (sin autenticación JWT)
+    path('api/webhooks/bancard/', include('apps.api_integrations.urls'), name='webhook_bancard'),
+    
     # API Documentation
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
