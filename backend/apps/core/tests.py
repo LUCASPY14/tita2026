@@ -290,3 +290,149 @@ class MediosPagoTest(TestCase):
         
         self.assertFalse(medio.genera_comision)
         self.assertFalse(medio.requiere_validacion)
+
+
+# ==============================================================================
+# TESTS PARA NUEVAS IMPLEMENTACIONES (Stock, Compras, Autorizaciones)
+# ==============================================================================
+
+
+class AutorizacionServiceTest(TestCase):
+    """Tests para AutorizacionService"""
+    
+    def setUp(self):
+        """Configurar datos de prueba"""
+        # Crear roles
+        from apps.usuarios.models import Roles, Empleados
+        
+        self.rol_cajero = Roles.objects.create(
+            nombre_rol='Cajero',
+            descripcion='Cajero de ventas'
+        )
+        
+        self.rol_gerente = Roles.objects.create(
+            nombre_rol='Gerente',
+            descripcion='Gerente de tienda'
+        )
+        
+        # Crear empleados
+        self.cajero = Empleados.objects.create(
+            nombre='Juan',
+            apellido='Cajero',
+            usuario='cajero1',
+            contrasena_hash='hash123',
+            fecha_ingreso=timezone.now(),
+            email='cajero@test.com',
+            activo=True,
+            id_rol=self.rol_cajero
+        )
+        
+        self.gerente = Empleados.objects.create(
+            nombre='María',
+            apellido='Gerente',
+            usuario='gerente1',
+            contrasena_hash='hash456',
+            fecha_ingreso=timezone.now(),
+            email='gerente@test.com',
+            activo=True,
+            id_rol=self.rol_gerente
+        )
+        
+        # Crear límite para cajero
+        from apps.core.models import LimitesTransaccion
+        
+        self.limite = LimitesTransaccion.objects.create(
+            id_rol=self.rol_cajero,
+            tipo_operacion='venta',
+            monto_maximo_sin_autorizacion=Decimal('500000.00'),
+            requiere_autorizacion_doble=False,
+            activo=True
+        )
+        self.limite.roles_autorizadores.add(self.rol_gerente)
+    
+    def test_validar_operacion_dentro_limite(self):
+        """Test: Operación dentro del límite no requiere autorización"""
+        from apps.core.services import AutorizacionService
+        
+        validacion = AutorizacionService.validar_operacion(
+            empleado=self.cajero,
+            tipo_operacion='venta',
+            monto=Decimal('300000.00')  # Dentro del límite
+        )
+        
+        self.assertTrue(validacion['puede_ejecutar'])
+        self.assertFalse(validacion['requiere_autorizacion'])
+        self.assertTrue(validacion['autorizado'])
+    
+    def test_validar_operacion_excede_limite(self):
+        """Test: Operación que excede límite requiere autorización"""
+        from apps.core.services import AutorizacionService
+        
+        validacion = AutorizacionService.validar_operacion(
+            empleado=self.cajero,
+            tipo_operacion='venta',
+            monto=Decimal('800000.00')  # Excede el límite
+        )
+        
+        self.assertFalse(validacion['puede_ejecutar'])
+        self.assertTrue(validacion['requiere_autorizacion'])
+        self.assertFalse(validacion['autorizado'])
+        self.assertEqual(validacion['limite'], Decimal('500000.00'))
+        self.assertEqual(validacion['excedente'], Decimal('300000.00'))
+    
+    def test_validar_operacion_con_autorizacion_valida(self):
+        """Test: Operación autorizada por gerente"""
+        from apps.core.services import AutorizacionService
+        
+        validacion = AutorizacionService.validar_operacion(
+            empleado=self.cajero,
+            tipo_operacion='venta',
+            monto=Decimal('800000.00'),
+            autorizador=self.gerente,  # Gerente autoriza
+            motivo='Cliente especial'
+        )
+        
+        self.assertTrue(validacion['puede_ejecutar'])
+        self.assertTrue(validacion['requiere_autorizacion'])
+        self.assertTrue(validacion['autorizado'])
+    
+    def test_validar_autoautorizacion(self):
+        """Test: No puede auto-autorizarse"""
+        from apps.core.services import AutorizacionService
+        
+        validacion = AutorizacionService.validar_operacion(
+            empleado=self.cajero,
+            tipo_operacion='venta',
+            monto=Decimal('800000.00'),
+            autorizador=self.cajero,  # Intenta auto-autorizarse
+            motivo='Test'
+        )
+        
+        self.assertFalse(validacion['puede_ejecutar'])
+        self.assertGreater(len(validacion['errores']), 0)
+    
+    def test_registrar_autorizacion(self):
+        """Test: Debe registrar autorización para auditoría"""
+        from apps.core.services import AutorizacionService
+        from apps.core.models import RegistroAutorizaciones
+        
+        registro = AutorizacionService.registrar_autorizacion(
+            tipo_operacion='venta',
+            monto=Decimal('800000.00'),
+            solicitante=self.cajero,
+            autorizador=self.gerente,
+            motivo='Cliente especial',
+            ip_address='192.168.1.100'
+        )
+        
+        self.assertIsNotNone(registro)
+        self.assertEqual(registro.tipo_operacion, 'venta')
+        self.assertEqual(registro.monto, Decimal('800000.00'))
+        self.assertEqual(registro.id_empleado_solicitante, self.cajero)
+        self.assertEqual(registro.id_empleado_autorizador, self.gerente)
+        self.assertEqual(registro.ip_address, '192.168.1.100')
+        
+        # Verificar que se guardó en la BD
+        self.assertTrue(RegistroAutorizaciones.objects.filter(
+            id_autorizacion=registro.id_autorizacion
+        ).exists())

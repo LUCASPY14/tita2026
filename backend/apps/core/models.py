@@ -3,6 +3,7 @@ Modelos de la app core
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
 from django.db import models
+from decimal import Decimal
 
 
 class Tarjetas(models.Model):
@@ -216,3 +217,229 @@ class CacheConfiguracion(models.Model):
     class Meta:
         managed = True
         db_table = 'cache_configuracion'
+
+class LimitesTransaccion(models.Model):
+    """
+    Límites de autorización por rol para operaciones críticas.
+    
+    Permite configurar montos máximos sin autorización de supervisor.
+    
+    Casos de uso:
+    - Venta > límite → requiere autorización
+    - Descuento > límite → requiere autorización
+    - Ajuste inventario > límite → requiere aprobación gerente
+    - Nota de crédito > límite → requiere doble autorización
+    """
+    id_limite = models.AutoField(primary_key=True)
+    tipo_operacion = models.CharField(
+        max_length=50,
+        choices=[
+            ('venta', 'Venta'),
+            ('descuento', 'Aplicar descuento'),
+            ('nota_credito_cliente', 'Nota de crédito a cliente'),
+            ('nota_credito_proveedor', 'Nota de crédito de proveedor'),
+            ('ajuste_inventario', 'Ajuste de inventario'),
+            ('exceder_credito', 'Exceder límite de crédito cliente'),
+            ('anular_venta', 'Anular venta'),
+            ('retiro_caja', 'Retiro de caja'),
+            ('devolucion', 'Procesar devolución')
+        ],
+        help_text="Tipo de operación a controlar"
+    )
+    monto_maximo_sin_autorizacion = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Monto máximo que el rol puede procesar sin autorización"
+    )
+    requiere_autorizacion_doble = models.BooleanField(
+        default=False,
+        help_text="Requiere autorización de dos supervisores diferentes"
+    )
+    roles_autorizadores = models.ManyToManyField(
+        'usuarios.Roles',
+        related_name='roles_autorizados_para',
+        blank=True,
+        help_text="Roles que pueden autorizar esta operación"
+    )
+    activo = models.BooleanField(
+        default=True
+    )
+    observaciones = models.TextField(
+        blank=True,
+        null=True
+    )
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True
+    )
+    fecha_modificacion = models.DateTimeField(
+        auto_now=True
+    )
+    id_rol = models.ForeignKey(
+        'usuarios.Roles',
+        models.DO_NOTHING,
+        db_column='id_rol',
+        related_name='limites_transaccion',
+        help_text="Rol al que aplica este límite"
+    )
+    id_empleado_configurador = models.ForeignKey(
+        'usuarios.Empleados',
+        models.DO_NOTHING,
+        db_column='id_empleado_configurador',
+        blank=True,
+        null=True,
+        help_text="Quién configuró este límite"
+    )
+    
+    class Meta:
+        managed = True
+        db_table = 'limites_transaccion'
+        verbose_name = 'Límite de Transacción'
+        verbose_name_plural = 'Límites de Transacciones'
+        unique_together = (('id_rol', 'tipo_operacion'),)
+        indexes = [
+            models.Index(fields=['id_rol', 'tipo_operacion']),
+            models.Index(fields=['tipo_operacion', 'activo']),
+        ]
+    
+    def __str__(self):
+        return f"{self.id_rol.nombre_rol} - {self.get_tipo_operacion_display()}: Gs. {self.monto_maximo_sin_autorizacion:,.0f}"
+    
+    @staticmethod
+    def obtener_limite(rol, tipo_operacion):
+        """
+        Obtiene el límite configurado para un rol y tipo de operación.
+        
+        Returns:
+            LimitesTransaccion o None si no hay límite configurado
+        """
+        try:
+            return LimitesTransaccion.objects.get(
+                id_rol=rol,
+                tipo_operacion=tipo_operacion,
+                activo=True
+            )
+        except LimitesTransaccion.DoesNotExist:
+            return None
+    
+    @staticmethod
+    def requiere_autorizacion(rol, tipo_operacion, monto):
+        """
+        Verifica si una operación requiere autorización.
+        
+        Args:
+            rol: Instancia de Roles
+            tipo_operacion: str (ej: 'venta', 'descuento')
+            monto: Decimal
+        
+        Returns:
+            dict con:
+                - requiere: bool
+                - limite: Decimal o None
+                - mensaje: str
+                - doble_autorizacion: bool
+        """
+        limite = LimitesTransaccion.obtener_limite(rol, tipo_operacion)
+        
+        if not limite:
+            # Sin límite configurado = sin restricciones
+            return {
+                'requiere': False,
+                'limite': None,
+                'mensaje': 'No hay límite configurado para este rol',
+                'doble_autorizacion': False
+            }
+        
+        requiere = monto > limite.monto_maximo_sin_autorizacion
+        
+        return {
+            'requiere': requiere,
+            'limite': limite.monto_maximo_sin_autorizacion,
+            'mensaje': f'El monto excede el límite de Gs. {limite.monto_maximo_sin_autorizacion:,.0f}' if requiere else 'Operación dentro del límite',
+            'doble_autorizacion': limite.requiere_autorizacion_doble,
+            'excedente': monto - limite.monto_maximo_sin_autorizacion if requiere else Decimal('0.00')
+        }
+
+
+class RegistroAutorizaciones(models.Model):
+    """
+    Registro de todas las autorizaciones otorgadas.
+    
+    Permite auditoría completa de:
+    - Quién autorizó qué operación
+    - Cuándo se autorizó
+    - Motivo de la autorización
+    """
+    id_autorizacion = models.AutoField(primary_key=True)
+    tipo_operacion = models.CharField(max_length=50)
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    motivo = models.TextField(
+        help_text="Justificación de por qué se autorizó"
+    )
+    fecha_autorizacion = models.DateTimeField(
+        auto_now_add=True
+    )
+    ip_address = models.GenericIPAddressField(
+        blank=True,
+        null=True
+    )
+    id_empleado_solicitante = models.ForeignKey(
+        'usuarios.Empleados',
+        models.DO_NOTHING,
+        db_column='id_empleado_solicitante',
+        related_name='autorizaciones_solicitadas',
+        help_text="Quien solicita la autorización"
+    )
+    id_empleado_autorizador = models.ForeignKey(
+        'usuarios.Empleados',
+        models.DO_NOTHING,
+        db_column='id_empleado_autorizador',
+        related_name='autorizaciones_otorgadas',
+        help_text="Quien autoriza (supervisor/gerente)"
+    )
+    id_empleado_autorizador_2 = models.ForeignKey(
+        'usuarios.Empleados',
+        models.DO_NOTHING,
+        db_column='id_empleado_autorizador_2',
+        blank=True,
+        null=True,
+        related_name='autorizaciones_dobles',
+        help_text="Segundo autorizador (si requiere doble autorización)"
+    )
+    
+    # Relaciones opcionales con operaciones específicas
+    id_venta = models.ForeignKey(
+        'ventas.Ventas',
+        models.DO_NOTHING,
+        db_column='id_venta',
+        blank=True,
+        null=True
+    )
+    id_compra = models.ForeignKey(
+        'compras.Compras',
+        models.DO_NOTHING,
+        db_column='id_compra',
+        blank=True,
+        null=True
+    )
+    id_ajuste = models.ForeignKey(
+        'inventario.AjustesInventario',
+        models.DO_NOTHING,
+        db_column='id_ajuste',
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        managed = True
+        db_table = 'registro_autorizaciones'
+        verbose_name = 'Registro de Autorización'
+        verbose_name_plural = 'Registro de Autorizaciones'
+        ordering = ['-fecha_autorizacion']
+        indexes = [
+            models.Index(fields=['id_empleado_solicitante', '-fecha_autorizacion']),
+            models.Index(fields=['id_empleado_autorizador', '-fecha_autorizacion']),
+            models.Index(fields=['tipo_operacion', '-fecha_autorizacion']),
+        ]
+    
+    def __str__(self):
+        return f"{self.tipo_operacion} - Gs. {self.monto:,.0f} - {self.fecha_autorizacion.strftime('%d/%m/%Y %H:%M')}"
