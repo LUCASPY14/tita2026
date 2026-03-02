@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { authService, User, LoginCredentials } from '@services/auth.service';
+import { authService, User, LoginCredentials } from '../services/auth.service';
 
 interface UseAuthReturn {
   user: User | null;

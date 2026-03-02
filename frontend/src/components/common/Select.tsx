@@ -1,24 +1,30 @@
 import React, { forwardRef } from 'react';
 import clsx from 'clsx';
+import { ChevronDown } from 'lucide-react';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface SelectOption {
+  value: string | number;
+  label: string;
+  disabled?: boolean;
+}
+
+export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
   label?: string;
   error?: string;
   helperText?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
-  inputSize?: 'sm' | 'md' | 'lg';
+  options: SelectOption[];
+  placeholder?: string;
+  selectSize?: 'sm' | 'md' | 'lg';
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(({
+const Select = forwardRef<HTMLSelectElement, SelectProps>(({
   label,
   name,
-  type = 'text',
   error,
   helperText,
-  leftIcon,
-  rightIcon,
-  inputSize = 'md',
+  options,
+  placeholder,
+  selectSize = 'md',
   required = false,
   disabled = false,
   className = '',
@@ -30,16 +36,16 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
     lg: 'px-4 py-3 text-lg',
   };
 
-  const inputClasses = clsx(
-    'w-full border rounded-lg transition-all duration-200',
+  const selectClasses = clsx(
+    'w-full border rounded-lg transition-all duration-200 appearance-none',
     'focus:outline-none focus:ring-2 focus:ring-offset-0',
     'disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500',
+    'bg-white cursor-pointer',
     error 
       ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
       : 'border-gray-300 focus:ring-amber-500 focus:border-amber-500',
-    sizeClasses[inputSize],
-    leftIcon && 'pl-10',
-    rightIcon && 'pr-10',
+    sizeClasses[selectSize],
+    'pr-10', // Espacio para el icono
     className
   );
 
@@ -52,27 +58,34 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
         </label>
       )}
       <div className="relative">
-        {leftIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            {leftIcon}
-          </div>
-        )}
-        <input
+        <select
           ref={ref}
           id={name}
           name={name}
-          type={type}
           disabled={disabled}
-          className={inputClasses}
+          className={selectClasses}
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? `${name}-error` : helperText ? `${name}-helper` : undefined}
           {...props}
-        />
-        {rightIcon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-            {rightIcon}
-          </div>
-        )}
+        >
+          {placeholder && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
+          {options.map((option) => (
+            <option 
+              key={option.value} 
+              value={option.value}
+              disabled={option.disabled}
+            >
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+          <ChevronDown className="h-5 w-5" />
+        </div>
       </div>
       {error && (
         <p id={`${name}-error`} className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
@@ -89,6 +102,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
   );
 });
 
-Input.displayName = 'Input';
+Select.displayName = 'Select';
 
-export default Input;
+export default Select;

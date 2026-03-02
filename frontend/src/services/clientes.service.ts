@@ -1,5 +1,5 @@
 import api from './api';
-import { Cliente, PaginatedResponse } from '@/types';
+import { Cliente, PaginatedResponse } from '../types';
 
 export interface ClienteCreateData {
   nombre: string;

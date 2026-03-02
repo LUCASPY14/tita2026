@@ -1,5 +1,5 @@
 import api from './api';
-import { Venta, PaginatedResponse, DetalleVenta } from '@/types';
+import { Venta, PaginatedResponse } from '../types';
 
 export interface VentaCreateData {
   cliente_id: number;

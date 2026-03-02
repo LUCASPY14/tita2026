@@ -1,5 +1,5 @@
 import api from './api';
-import { Producto, PaginatedResponse, Categoria } from '@/types';
+import { Producto, PaginatedResponse, Categoria } from '../types';
 
 export interface ProductoCreateData {
   codigo: string;

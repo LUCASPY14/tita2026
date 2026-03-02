@@ -1,4 +1,4 @@
-# Tipos globales y compartidos
+// Tipos globales y compartidos
 
 export interface User {
   id: number;

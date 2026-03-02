@@ -1,5 +1,68 @@
 import React from 'react';
+import clsx from 'clsx';
+import { Loader2 } from 'lucide-react';
 
+export interface SpinnerProps {
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  variant?: 'primary' | 'secondary' | 'white';
+  fullScreen?: boolean;
+  text?: string;
+  className?: string;
+}
+
+const Spinner: React.FC<SpinnerProps> = ({
+  size = 'md',
+  variant = 'primary',
+  fullScreen = false,
+  text,
+  className = '',
+}) => {
+  const sizeClasses = {
+    xs: 'h-4 w-4',
+    sm: 'h-6 w-6',
+    md: 'h-8 w-8',
+    lg: 'h-12 w-12',
+    xl: 'h-16 w-16',
+  };
+
+  const variantClasses = {
+    primary: 'text-amber-500',
+    secondary: 'text-green-500',
+    white: 'text-white',
+  };
+
+  const spinner = (
+    <div className={clsx('flex flex-col items-center gap-3', className)}>
+      <Loader2 
+        className={clsx(
+          'animate-spin',
+          sizeClasses[size],
+          variantClasses[variant]
+        )} 
+      />
+      {text && (
+        <p className={clsx(
+          'text-sm font-medium',
+          variant === 'white' ? 'text-white' : 'text-gray-600'
+        )}>
+          {text}
+        </p>
+      )}
+    </div>
+  );
+
+  if (fullScreen) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+        {spinner}
+      </div>
+    );
+  }
+
+  return spinner;
+};
+
+// Backward compatibility - LoadingSpinner legacy interface
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   color?: string;
@@ -8,37 +71,15 @@ interface LoadingSpinnerProps {
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
   size = 'md', 
-  color = 'text-primary-600',
   text 
 }) => {
-  const sizeClasses = {
-    sm: 'h-6 w-6',
-    md: 'h-10 w-10',
-    lg: 'h-16 w-16',
-  };
-
   return (
     <div className="flex flex-col items-center justify-center p-4">
-      <div className={`${sizeClasses[size]} ${color} animate-spin`}>
-        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle 
-            className="opacity-25" 
-            cx="12" 
-            cy="12" 
-            r="10" 
-            stroke="currentColor" 
-            strokeWidth="4"
-          ></circle>
-          <path 
-            className="opacity-75" 
-            fill="currentColor" 
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          ></path>
-        </svg>
-      </div>
-      {text && <p className={`mt-2 text-sm ${color}`}>{text}</p>}
+      <Spinner size={size} text={text} />
     </div>
   );
 };
 
+export { Spinner };
 export default LoadingSpinner;
+

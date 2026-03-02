@@ -1,27 +1,23 @@
 import React, { forwardRef } from 'react';
 import clsx from 'clsx';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
   helperText?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
-  inputSize?: 'sm' | 'md' | 'lg';
+  textareaSize?: 'sm' | 'md' | 'lg';
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(({
+const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
   label,
   name,
-  type = 'text',
   error,
   helperText,
-  leftIcon,
-  rightIcon,
-  inputSize = 'md',
+  textareaSize = 'md',
   required = false,
   disabled = false,
   className = '',
+  rows = 4,
   ...props
 }, ref) => {
   const sizeClasses = {
@@ -30,16 +26,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
     lg: 'px-4 py-3 text-lg',
   };
 
-  const inputClasses = clsx(
-    'w-full border rounded-lg transition-all duration-200',
+  const textareaClasses = clsx(
+    'w-full border rounded-lg transition-all duration-200 resize-y',
     'focus:outline-none focus:ring-2 focus:ring-offset-0',
     'disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500',
     error 
       ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
       : 'border-gray-300 focus:ring-amber-500 focus:border-amber-500',
-    sizeClasses[inputSize],
-    leftIcon && 'pl-10',
-    rightIcon && 'pr-10',
+    sizeClasses[textareaSize],
     className
   );
 
@@ -51,29 +45,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      <div className="relative">
-        {leftIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            {leftIcon}
-          </div>
-        )}
-        <input
-          ref={ref}
-          id={name}
-          name={name}
-          type={type}
-          disabled={disabled}
-          className={inputClasses}
-          aria-invalid={error ? 'true' : 'false'}
-          aria-describedby={error ? `${name}-error` : helperText ? `${name}-helper` : undefined}
-          {...props}
-        />
-        {rightIcon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-            {rightIcon}
-          </div>
-        )}
-      </div>
+      <textarea
+        ref={ref}
+        id={name}
+        name={name}
+        disabled={disabled}
+        rows={rows}
+        className={textareaClasses}
+        aria-invalid={error ? 'true' : 'false'}
+        aria-describedby={error ? `${name}-error` : helperText ? `${name}-helper` : undefined}
+        {...props}
+      />
       {error && (
         <p id={`${name}-error`} className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -89,6 +71,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
   );
 });
 
-Input.displayName = 'Input';
+Textarea.displayName = 'Textarea';
 
-export default Input;
+export default Textarea;
