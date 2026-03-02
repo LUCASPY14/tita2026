@@ -9,15 +9,46 @@ export interface User {
   last_name?: string;
 }
 
+// Tipos para módulo de Clientes
 export interface Cliente {
-  id: number;
-  nombre: string;
-  ruc: string;
-  telefono: string;
-  email: string;
+  id_cliente: number;
+  nombres: string;
+  apellidos: string;
+  razon_social?: string;
+  ruc_ci: string;
   direccion?: string;
-  created_at: string;
-  updated_at: string;
+  ciudad?: string;
+  telefono?: string;
+  email?: string;
+  limite_credito?: number;
+  activo: boolean;
+  fecha_registro: string;
+  id_lista: number;
+  id_tipo_cliente: number;
+  // Propiedades calculadas (desde backend)
+  nombre_completo?: string;
+  credito_utilizado?: number;
+  credito_disponible?: number;
+  tiene_credito_disponible?: boolean;
+  porcentaje_credito_usado?: number;
+}
+
+export interface TipoCliente {
+  id_tipo_cliente: number;
+  nombre: string;
+  descripcion?: string;
+  activo: boolean;
+}
+
+export interface CuentaCorriente {
+  total_debe: number;
+  total_haber: number;
+  saldo_neto: number;
+  limite_credito: number;
+  credito_disponible: number;
+  porcentaje_usado: number;
+  cantidad_facturas_pendientes: number;
+  cantidad_notas_credito: number;
 }
 
 export interface PaginatedResponse<T> {
