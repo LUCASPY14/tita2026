@@ -358,8 +358,81 @@ class MediosPagoViewSet(viewsets.ModelViewSet):
 
 
 class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
+    """ViewSet para configuración del sistema"""
     queryset = ConfiguracionSistema.objects.all()
     serializer_class = ConfiguracionSistemaSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ['tipo', 'categoria']
+    filterset_fields = ['tipo', 'categoria', 'activo']
     search_fields = ['clave', 'descripcion']
+    
+    @action(detail=False, methods=['get'])
+    def por_categoria(self, request):
+        """Obtiene configuraciones agrupadas por categoría"""
+        try:
+            configuraciones = ConfiguracionSistema.objects.filter(activo=True).order_by('categoria', 'clave')
+            
+            # Agrupar por categoría
+            por_categoria = {}
+            for config in configuraciones:
+                if config.categoria not in por_categoria:
+                    por_categoria[config.categoria] = []
+                por_categoria[config.categoria].append(self.get_serializer(config).data)
+            
+            return Response(por_categoria)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=True, methods=['post'])
+    def actualizar_valor(self, request, pk=None):
+        """Actualiza el valor de una configuración"""
+        try:
+            config = self.get_object()
+            nuevo_valor = request.data.get('valor')
+            
+            if nuevo_valor is None:
+                return Response(
+                    {'error': 'El campo valor es requerido'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # TODO: Validar el valor según config.validacion
+            config.valor = str(nuevo_valor)
+            
+            # Actualizar updated_by si se proporciona
+            updated_by_id = request.data.get('updated_by')
+            if updated_by_id:
+                config.updated_by_id = updated_by_id
+            
+            from django.utils import timezone
+            config.updated_at = timezone.now()
+            config.save()
+            
+            serializer = self.get_serializer(config)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=True, methods=['post'])
+    def resetear_default(self, request, pk=None):
+        """Resetea una configuración a su valor por defecto"""
+        try:
+            config = self.get_object()
+            config.valor = config.valor_defecto
+            
+            from django.utils import timezone
+            config.updated_at = timezone.now()
+            config.save()
+            
+            serializer = self.get_serializer(config)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )

@@ -10,6 +10,7 @@ import Compras from '../pages/compras';
 import Almuerzos from '../pages/almuerzos';
 import Reportes from '../pages/Reportes';
 import Notificaciones from '../pages/Notificaciones';
+import Configuracion from '../pages/Configuracion';
 import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -53,8 +54,8 @@ const AppRoutes: React.FC = () => {
                 {/* Módulo de Notificaciones */}
                 <Route path="/notificaciones" element={<Notificaciones />} />
                 
-                {/* Placeholder routes - to be implemented */}
-                <Route path="/configuracion" element={<div className="text-center py-12"><h2 className="text-2xl font-bold text-gray-700">Configuración del Sistema</h2><p className="text-gray-500 mt-2">Próximamente...</p></div>} />
+                {/* Módulo de Configuración */}
+                <Route path="/configuracion" element={<Configuracion />} />
               </Routes>
             </MainLayout>
           </ProtectedRoute>

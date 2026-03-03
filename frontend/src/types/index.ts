@@ -771,3 +771,87 @@ export interface ActualizarPreferenciasData {
   email_activo: boolean;
   push_activo: boolean;
 }
+
+// ==================== Tipos Configuración del Sistema ====================
+
+export interface ConfiguracionSistema {
+  id_config: number;
+  clave: string;
+  valor: string;
+  tipo: 'string' | 'number' | 'boolean' | 'json' | 'email' | 'url' | 'password';
+  categoria: string;
+  descripcion: string;
+  valor_defecto: string;
+  requerido: boolean;
+  validacion: string;
+  valores_permitidos: any;
+  valor_min: string;
+  valor_max: string;
+  requiere_reinicio: boolean;
+  solo_superuser: boolean;
+  activo: boolean;
+  updated_at: string;
+  updated_by?: number;
+  updated_by_nombre?: string;
+}
+
+export interface CacheConfiguracion {
+  id_cache: number;
+  clave: string;
+  descripcion: string;
+  ttl_segundos: number;
+  max_size_mb: number;
+  tipo_cache: string;
+  auto_invalidate: boolean;
+  eventos_invalid: any;
+  activo: boolean;
+  hits: number;
+  misses: number;
+  ultima_limpieza?: string;
+  hit_rate?: number;
+}
+
+export interface LimiteTransaccion {
+  id_limite: number;
+  tipo_operacion: string;
+  monto_maximo_sin_autorizacion: number;
+  requiere_autorizacion_doble: boolean;
+  activo: boolean;
+  observaciones?: string;
+  fecha_creacion: string;
+  fecha_modificacion: string;
+  id_rol: number;
+  rol_nombre?: string;
+  id_empleado_configurador?: number;
+  configurador_nombre?: string;
+}
+
+export interface RegistroAutorizacion {
+  id_autorizacion: number;
+  tipo_operacion: string;
+  monto: number;
+  motivo: string;
+  fecha_autorizacion: string;
+  ip_address?: string;
+  id_empleado_solicitante: number;
+  solicitante_nombre?: string;
+  id_empleado_autorizador: number;
+  autorizador_nombre?: string;
+  id_empleado_autorizador_2?: number;
+  autorizador_2_nombre?: string;
+}
+
+export interface ConfiguracionParams {
+  categoria?: string;
+  tipo?: string;
+  activo?: boolean;
+}
+
+export interface ActualizarConfiguracionData {
+  valor: string;
+  updated_by?: number;
+}
+
+export interface LimpiarCacheData {
+  clave?: string;
+}
