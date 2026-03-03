@@ -1,7 +1,7 @@
 """
 Tests para la app notificaciones
 """
-import pytest
+import pytest  # type: ignore
 from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta

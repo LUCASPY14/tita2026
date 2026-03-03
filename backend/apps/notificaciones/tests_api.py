@@ -1,7 +1,7 @@
 """
 Tests para ViewSets de notificaciones - API Tests
 """
-import pytest
+import pytest  # type: ignore
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient

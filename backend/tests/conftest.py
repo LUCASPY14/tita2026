@@ -1,7 +1,7 @@
 """
 Configuración de pytest
 """
-import pytest
+import pytest  # type: ignore
 from django.conf import settings
 
 
