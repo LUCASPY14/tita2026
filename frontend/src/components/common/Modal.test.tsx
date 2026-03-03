@@ -13,7 +13,7 @@ describe('Modal Component', () => {
   });
 
   test('no renderiza cuando isOpen=false', () => {
-    const { container } = render(
+    render(
       <Modal isOpen={false} onClose={mockOnClose}>
         <p>Modal Content</p>
       </Modal>

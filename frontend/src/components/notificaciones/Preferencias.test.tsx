@@ -118,7 +118,6 @@ describe('Preferencias Component', () => {
     const firstEmailCheckbox = emailLabels[0].previousElementSibling?.previousElementSibling as HTMLInputElement;
     
     if (firstEmailCheckbox && firstEmailCheckbox.type === 'checkbox') {
-      const wasChecked = firstEmailCheckbox.checked;
       await user.click(firstEmailCheckbox);
 
       await waitFor(() => {

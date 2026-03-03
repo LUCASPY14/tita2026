@@ -83,7 +83,7 @@ describe('Checkbox Component', () => {
   });
 
   test('label tiene color deshabilitado cuando disabled', () => {
-    const { container } = render(<Checkbox name="test" label="Disabled Label" disabled />);
+    render(<Checkbox name="test" label="Disabled Label" disabled />);
     const label = screen.getByText('Disabled Label');
     expect(label).toHaveClass('text-gray-400');
   });

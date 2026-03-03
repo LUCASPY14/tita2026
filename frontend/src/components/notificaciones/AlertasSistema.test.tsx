@@ -10,7 +10,7 @@ jest.mock('../../services/notificaciones.service', () => ({
   default: {
     getAlertas: jest.fn(),
     resolverAlerta: jest.fn(),
-    formatearFecha: jest.fn((fecha) => 'hace 2 horas'),
+    formatearFecha: jest.fn(() => 'hace 2 horas'),
   },
 }));
 

@@ -86,14 +86,14 @@ describe('Input Component', () => {
   });
 
   test('renderiza leftIcon cuando se proporciona', () => {
-    const { container } = render(<Input name="email" leftIcon={<Mail data-testid="email-icon" />} />);
+    render(<Input name="email" leftIcon={<Mail data-testid="email-icon" />} />);
     expect(screen.getByTestId('email-icon')).toBeInTheDocument();
     const input = screen.getByRole('textbox');
     expect(input).toHaveClass('pl-10');
   });
 
   test('renderiza rightIcon cuando se proporciona', () => {
-    const { container } = render(<Input name="search" rightIcon={<Mail data-testid="search-icon" />} />);
+    render(<Input name="search" rightIcon={<Mail data-testid="search-icon" />} />);
     expect(screen.getByTestId('search-icon')).toBeInTheDocument();
     const input = screen.getByRole('textbox');
     expect(input).toHaveClass('pr-10');
