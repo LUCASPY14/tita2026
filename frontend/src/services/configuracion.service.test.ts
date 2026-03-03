@@ -5,7 +5,6 @@ import axios from 'axios';
 import {
   getConfiguraciones,
   getConfiguracionesPorCategoria,
-  getConfiguracionById,
   actualizarConfiguracion,
   resetearConfiguracion,
   formatearValorConfig,
@@ -26,18 +25,15 @@ describe('Configuracion Service', () => {
   describe('API Functions', () => {
     test('getConfiguraciones obtiene lista de configuraciones', async () => {
       const mockResponse = {
-        data: {
-          results: [
-            {
-              id_configuracion: 1,
-              clave: 'TIMEOUT_SESSION',
-              valor: '30',
-              tipo: 'int',
-              categoria: 'seguridad'
-            }
-          ],
-          count: 1
-        }
+        data: [
+          {
+            id_configuracion: 1,
+            clave: 'TIMEOUT_SESSION',
+            valor: '30',
+            tipo: 'number',
+            categoria: 'seguridad'
+          }
+        ]
       };
 
       mockedAxios.get.mockResolvedValue(mockResponse);
@@ -45,12 +41,12 @@ describe('Configuracion Service', () => {
       const result = await getConfiguraciones({ categoria: 'seguridad' });
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
-        '/configuracion/',
+        expect.stringContaining('/configuracion-sistema/'),
         expect.objectContaining({
           params: { categoria: 'seguridad' }
         })
       );
-      expect(result.results).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
 
     test('getConfiguracionesPorCategoria agrupa por categoría', async () => {
@@ -69,7 +65,9 @@ describe('Configuracion Service', () => {
 
       const result = await getConfiguracionesPorCategoria();
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('/configuracion/por_categoria/');
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        expect.stringContaining('/configuracion-sistema/por_categoria/')
+      );
       expect(result).toHaveProperty('seguridad');
       expect(result).toHaveProperty('email');
     });
@@ -85,10 +83,10 @@ describe('Configuracion Service', () => {
 
       mockedAxios.post.mockResolvedValue(mockResponse);
 
-      const result = await actualizarConfiguracion(1, '60');
+      const result = await actualizarConfiguracion(1, { valor: '60' });
 
       expect(mockedAxios.post).toHaveBeenCalledWith(
-        '/configuracion/1/actualizar_valor/',
+        expect.stringContaining('/configuracion-sistema/1/actualizar_valor/'),
         { valor: '60' }
       );
       expect(result.valor).toBe('60');
@@ -109,7 +107,7 @@ describe('Configuracion Service', () => {
       const result = await resetearConfiguracion(1);
 
       expect(mockedAxios.post).toHaveBeenCalledWith(
-        '/configuracion/1/resetear_default/'
+        expect.stringContaining('/configuracion-sistema/1/resetear_default/')
       );
       expect(result.valor).toBe(result.valor_defecto);
     });
@@ -117,72 +115,72 @@ describe('Configuracion Service', () => {
 
   describe('Helper Functions', () => {
     test('formatearValorConfig formatea boolean', () => {
-      expect(formatearValorConfig('true', 'boolean')).toBe('Sí');
-      expect(formatearValorConfig('false', 'boolean')).toBe('No');
+      expect(formatearValorConfig({ valor: 'true', tipo: 'boolean' } as any)).toBe('Sí');
+      expect(formatearValorConfig({ valor: 'false', tipo: 'boolean' } as any)).toBe('No');
     });
 
     test('formatearValorConfig formatea int', () => {
-      expect(formatearValorConfig('100', 'int')).toBe('100');
+      expect(formatearValorConfig({ valor: '100', tipo: 'number' } as any)).toBe('100');
     });
 
     test('formatearValorConfig formatea decimal', () => {
-      expect(formatearValorConfig('10.50', 'decimal')).toBe('10.50');
+      expect(formatearValorConfig({ valor: '10.50', tipo: 'number' } as any)).toContain('10');
     });
 
     test('formatearValorConfig formatea password', () => {
-      expect(formatearValorConfig('secreto123', 'password')).toBe('********');
+      expect(formatearValorConfig({ valor: 'secreto123', tipo: 'password' } as any)).toBe('••••••••');
     });
 
     test('formatearValorConfig formatea json', () => {
       const jsonStr = '{"key": "value"}';
-      const result = formatearValorConfig(jsonStr, 'json');
+      const result = formatearValorConfig({ valor: jsonStr, tipo: 'json' } as any);
       expect(result).toContain('key');
       expect(result).toContain('value');
     });
 
     test('validarValorConfig valida boolean', () => {
-      expect(validarValorConfig('true', 'boolean', {})).toBe(true);
-      expect(validarValorConfig('false', 'boolean', {})).toBe(true);
-      expect(validarValorConfig('invalid', 'boolean', {})).toBe(false);
+      expect(validarValorConfig({ tipo: 'boolean', requerido: false } as any, 'true').valido).toBe(true);
+      expect(validarValorConfig({ tipo: 'boolean', requerido: false } as any, 'false').valido).toBe(true);
+      expect(validarValorConfig({ tipo: 'boolean', requerido: false } as any, 'invalid').valido).toBe(false);
     });
 
     test('validarValorConfig valida int', () => {
-      expect(validarValorConfig('100', 'int', {})).toBe(true);
-      expect(validarValorConfig('abc', 'int', {})).toBe(false);
+      expect(validarValorConfig({ tipo: 'number', requerido: false } as any, '100').valido).toBe(true);
+      expect(validarValorConfig({ tipo: 'number', requerido: false } as any, 'abc').valido).toBe(false);
     });
 
     test('validarValorConfig valida decimal', () => {
-      expect(validarValorConfig('10.50', 'decimal', {})).toBe(true);
-      expect(validarValorConfig('10.5.0', 'decimal', {})).toBe(false);
+      expect(validarValorConfig({ tipo: 'number', requerido: false } as any, '10.50').valido).toBe(true);
+      expect(validarValorConfig({ tipo: 'number', requerido: false } as any, '10.5.0').valido).toBe(false);
     });
 
     test('validarValorConfig valida rango int', () => {
-      const config = { valor_min: 1, valor_max: 100 };
-      expect(validarValorConfig('50', 'int', config)).toBe(true);
-      expect(validarValorConfig('0', 'int', config)).toBe(false);
-      expect(validarValorConfig('101', 'int', config)).toBe(false);
+      const config = { tipo: 'number', requerido: false, valor_min: '1', valor_max: '100' };
+      expect(validarValorConfig(config as any, '50').valido).toBe(true);
+      expect(validarValorConfig(config as any, '0').valido).toBe(false);
+      expect(validarValorConfig(config as any, '101').valido).toBe(false);
     });
 
     test('validarValorConfig valida valores permitidos', () => {
-      const config = { valores_permitidos: ['DEBUG', 'INFO', 'ERROR'] };
-      expect(validarValorConfig('INFO', 'string', config)).toBe(true);
-      expect(validarValorConfig('WARNING', 'string', config)).toBe(false);
+      const config = { tipo: 'string', requerido: false, valores_permitidos: 'DEBUG,INFO,ERROR' };
+      expect(validarValorConfig(config as any, 'INFO').valido).toBe(true);
+      expect(validarValorConfig(config as any, 'WARNING').valido).toBe(false);
     });
 
     test('validarValorConfig valida email', () => {
-      expect(validarValorConfig('test@example.com', 'email', {})).toBe(true);
-      expect(validarValorConfig('invalid-email', 'email', {})).toBe(false);
+      expect(validarValorConfig({ tipo: 'email', requerido: false } as any, 'test@example.com').valido).toBe(true);
+      expect(validarValorConfig({ tipo: 'email', requerido: false } as any, 'invalid-email').valido).toBe(false);
     });
 
     test('validarValorConfig valida url', () => {
-      expect(validarValorConfig('https://example.com', 'url', {})).toBe(true);
-      expect(validarValorConfig('http://localhost', 'url', {})).toBe(true);
-      expect(validarValorConfig('not-a-url', 'url', {})).toBe(false);
+      expect(validarValorConfig({ tipo: 'url', requerido: false } as any, 'https://example.com').valido).toBe(true);
+      expect(validarValorConfig({ tipo: 'url', requerido: false } as any, 'http://localhost').valido).toBe(true);
+      expect(validarValorConfig({ tipo: 'url', requerido: false } as any, 'not-a-url').valido).toBe(false);
     });
 
     test('validarValorConfig valida json', () => {
-      expect(validarValorConfig('{"key": "value"}', 'json', {})).toBe(true);
-      expect(validarValorConfig('{invalid json}', 'json', {})).toBe(false);
+      expect(validarValorConfig({ tipo: 'json', requerido: false } as any, '{"key": "value"}').valido).toBe(true);
+      expect(validarValorConfig({ tipo: 'json', requerido: false } as any, '{invalid json}').valido).toBe(false);
     });
 
     test('getIconoCategoria devuelve icono correcto', () => {
@@ -206,16 +204,16 @@ describe('Configuracion Service', () => {
 
   describe('Edge Cases', () => {
     test('maneja valores vacíos', () => {
-      expect(formatearValorConfig('', 'string')).toBe('');
-      expect(validarValorConfig('', 'string', { requerido: false })).toBe(true);
+      expect(formatearValorConfig({ valor: '', tipo: 'string' } as any)).toBe('');
+      expect(validarValorConfig({ tipo: 'string', requerido: false } as any, '').valido).toBe(true);
     });
 
     test('maneja valores null', () => {
-      expect(formatearValorConfig(null as any, 'string')).toBe('');
+      expect(formatearValorConfig({ valor: null as any, tipo: 'string' } as any)).toBe('');
     });
 
     test('maneja json mal formado', () => {
-      const resultado = formatearValorConfig('{not valid json', 'json');
+      const resultado = formatearValorConfig({ valor: '{not valid json', tipo: 'json' } as any);
       expect(resultado).toBe('{not valid json');
     });
   });

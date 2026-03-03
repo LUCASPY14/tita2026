@@ -27,20 +27,15 @@ describe('Notificaciones Service', () => {
   describe('API Functions', () => {
     test('getNotificaciones obtiene lista de notificaciones', async () => {
       const mockResponse = {
-        data: {
-          results: [
-            {
-              id_notificacion: 1,
-              tipo: 'info',
-              titulo: 'Test',
-              mensaje: 'Mensaje test',
-              leida: false
-            }
-          ],
-          count: 1,
-          next: null,
-          previous: null
-        }
+        data: [
+          {
+            id_notificacion: 1,
+            tipo: 'info',
+            titulo: 'Test',
+            mensaje: 'Mensaje test',
+            leida: 0
+          }
+        ]
       };
 
       mockedAxios.get.mockResolvedValue(mockResponse);
@@ -48,13 +43,14 @@ describe('Notificaciones Service', () => {
       const result = await getNotificaciones({ leida: false });
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
-        '/notificaciones/portal/',
+        expect.stringContaining('/notificaciones-portal/'),
         expect.objectContaining({
           params: { leida: false }
         })
       );
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].titulo).toBe('Test');
+      expect(result).toHaveLength(1);
+      expect(result[0].titulo).toBe('Test');
+      expect(result[0].leida).toBe(false);
     });
 
     test('getNotificacionById obtiene notificación específica', async () => {
@@ -93,43 +89,37 @@ describe('Notificaciones Service', () => {
     });
 
     test('marcarTodasLeidas marca todas como leídas', async () => {
-      const mockResponse = {
-        data: {
-          mensaje: 'Todas las notificaciones fueron marcadas como leídas',
-          actualizadas: 5
-        }
-      };
+      mockedAxios.post.mockResolvedValue({ data: undefined });
 
-      mockedAxios.post.mockResolvedValue(mockResponse);
-
-      const result = await marcarTodasLeidas();
+      await marcarTodasLeidas(1);
 
       expect(mockedAxios.post).toHaveBeenCalledWith(
-        '/notificaciones/portal/marcar_todas_leidas/'
+        expect.stringContaining('/notificaciones-portal/marcar_todas_leidas/'),
+        { id_usuario_portal: 1 }
       );
-      expect(result.actualizadas).toBe(5);
     });
 
     test('getResumenNotificaciones obtiene resumen', async () => {
       const mockResumen = {
-        total: 10,
+        total_notificaciones: 10,
         no_leidas: 3,
-        por_tipo: {
-          info: 5,
-          warning: 3,
-          error: 1,
-          success: 1
-        }
+        notificaciones_hoy: 5,
+        alertas_criticas: 1,
+        notificaciones_saldo: 2,
+        alertas_sistema: 4
       };
 
       mockedAxios.get.mockResolvedValue({ data: mockResumen });
 
-      const result = await getResumenNotificaciones();
+      const result = await getResumenNotificaciones(1);
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
-        '/notificaciones/portal/resumen/'
+        expect.stringContaining('/notificaciones-portal/resumen/'),
+        expect.objectContaining({
+          params: { id_usuario_portal: 1 }
+        })
       );
-      expect(result.total).toBe(10);
+      expect(result.total_notificaciones).toBe(10);
       expect(result.no_leidas).toBe(3);
     });
   });

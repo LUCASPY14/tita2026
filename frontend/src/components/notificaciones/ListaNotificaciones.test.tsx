@@ -4,10 +4,17 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import ListaNotificaciones from './ListaNotificaciones';
-import * as notificacionesService from '../../../services/notificaciones.service';
+import notificacionesService from '../../services/notificaciones.service';
 
 // Mock del service
-jest.mock('../../../services/notificaciones.service');
+jest.mock('../../services/notificaciones.service', () => ({
+  __esModule: true,
+  default: {
+    getNotificaciones: jest.fn(),
+    marcarNotificacionLeida: jest.fn(),
+    calcularTiempoTranscurrido: jest.fn((fecha: string) => 'hace 2 horas'),
+  },
+}));
 
 const mockNotificaciones = [
   {
@@ -56,16 +63,12 @@ const renderWithRouter = (component: React.ReactElement) => {
 describe('ListaNotificaciones Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (notificacionesService.getNotificaciones as jest.Mock).mockResolvedValue({
-      results: mockNotificaciones,
-      count: 3,
-      next: null,
-      previous: null
-    });
+    // El servicio retorna array directo, no paginado
+    (notificacionesService.getNotificaciones as jest.Mock).mockResolvedValue(mockNotificaciones);
   });
 
   test('renderiza la lista de notificaciones', async () => {
-    renderWithRouter(<ListaNotificaciones />);
+    renderWithRouter(<ListaNotificaciones idUsuario={1} />);
 
     // Esperar a que carguen las notificaciones
     await waitFor(() => {
@@ -77,12 +80,12 @@ describe('ListaNotificaciones Component', () => {
   });
 
   test('muestra estado de cargando inicialmente', () => {
-    renderWithRouter(<ListaNotificaciones />);
+    renderWithRouter(<ListaNotificaciones idUsuario={1} />);
     expect(screen.getByText(/cargando/i)).toBeInTheDocument();
   });
 
   test('filtra notificaciones no leídas', async () => {
-    renderWithRouter(<ListaNotificaciones />);
+    renderWithRouter(<ListaNotificaciones idUsuario={1} />);
 
     await waitFor(() => {
       expect(screen.getByText('Nueva venta registrada')).toBeInTheDocument();
@@ -106,7 +109,7 @@ describe('ListaNotificaciones Component', () => {
       fecha_lectura: new Date().toISOString()
     });
 
-    renderWithRouter(<ListaNotificaciones />);
+    renderWithRouter(<ListaNotificaciones idUsuario={1} />);
 
     await waitFor(() => {
       expect(screen.getByText('Nueva venta registrada')).toBeInTheDocument();
@@ -126,7 +129,7 @@ describe('ListaNotificaciones Component', () => {
   });
 
   test('muestra badge "Nueva" para notificaciones recientes no leídas', async () => {
-    renderWithRouter(<ListaNotificaciones />);
+    renderWithRouter(<ListaNotificaciones idUsuario={1} />);
 
     await waitFor(() => {
       expect(screen.getByText('Nueva venta registrada')).toBeInTheDocument();
@@ -138,7 +141,7 @@ describe('ListaNotificaciones Component', () => {
   });
 
   test('muestra icono diferente según tipo de notificación', async () => {
-    renderWithRouter(<ListaNotificaciones />);
+    renderWithRouter(<ListaNotificaciones idUsuario={1} />);
 
     await waitFor(() => {
       expect(screen.getByText('Nueva venta registrada')).toBeInTheDocument();
@@ -154,7 +157,7 @@ describe('ListaNotificaciones Component', () => {
       new Error('Error al cargar')
     );
 
-    renderWithRouter(<ListaNotificaciones />);
+    renderWithRouter(<ListaNotificaciones idUsuario={1} />);
 
     await waitFor(() => {
       expect(screen.getByText(/error/i)).toBeInTheDocument();
@@ -162,14 +165,11 @@ describe('ListaNotificaciones Component', () => {
   });
 
   test('muestra mensaje cuando no hay notificaciones', async () => {
-    (notificacionesService.getNotificaciones as jest.Mock).mockResolvedValue({
-      results: [],
-      count: 0,
-      next: null,
-      previous: null
-    });
+    (notificacionesService.getNotificaciones as jest.Mock).mockResolvedValue(
+      []
+    );
 
-    renderWithRouter(<ListaNotificaciones />);
+    renderWithRouter(<ListaNotificaciones idUsuario={1} />);
 
     await waitFor(() => {
       expect(screen.getByText(/no hay notificaciones/i)).toBeInTheDocument();

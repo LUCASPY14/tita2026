@@ -13,10 +13,10 @@ from apps.notificaciones.models import (
     AlertasSistema,
     PreferenciasNotificacion,
     EmailsEnviados,
-    SMSEnviados
+    SmsEnviados
 )
 from apps.clientes.models import Clientes, Hijos, TiposCliente
-from apps.usuarios.models import Empleados, Usuarios
+from apps.usuarios.models import Empleados, Roles
 from apps.productos.models import ListasPrecios
 from apps.core.models import Tarjetas
 
@@ -26,22 +26,23 @@ class NotificacionesPortalTest(TestCase):
     
     def setUp(self):
         """Configuración inicial para los tests"""
-        # Crear usuario
-        self.usuario = Usuarios.objects.create(
-            username='admin',
-            email='admin@cantina.com',
+        # Crear rol
+        self.rol = Roles.objects.create(
+            nombre_rol='Administrador',
+            descripcion='Rol de prueba',
             activo=True
         )
-        self.usuario.set_password('admin123')
-        self.usuario.save()
         
         # Crear empleado
         self.empleado = Empleados.objects.create(
             nombre='Juan',
             apellido='Admin',
-            ruc_ci='12345678',
+            usuario='admin',
+            contrasena_hash='hashed_password',
+            fecha_ingreso=timezone.now(),
+            email='admin@cantina.com',
             activo=True,
-            id_usuario=self.usuario
+            id_rol=self.rol
         )
     
     def test_crear_notificacion_portal(self):
@@ -198,20 +199,22 @@ class AlertasSistemaTest(TestCase):
     
     def setUp(self):
         """Configuración inicial"""
-        self.usuario = Usuarios.objects.create(
-            username='admin',
-            email='admin@cantina.com',
+        # Crear rol
+        self.rol = Roles.objects.create(
+            nombre_rol='Administrador',
+            descripcion='Rol de prueba',
             activo=True
         )
-        self.usuario.set_password('admin123')
-        self.usuario.save()
         
         self.empleado = Empleados.objects.create(
             nombre='Juan',
             apellido='Admin',
-            ruc_ci='12345678',
+            usuario='admin',
+            contrasena_hash='hashed_password',
+            fecha_ingreso=timezone.now(),
+            email='admin@cantina.com',
             activo=True,
-            id_usuario=self.usuario
+            id_rol=self.rol
         )
     
     def test_crear_alerta_critica(self):
@@ -276,20 +279,22 @@ class PreferenciasNotificacionTest(TestCase):
     
     def setUp(self):
         """Configuración inicial"""
-        self.usuario = Usuarios.objects.create(
-            username='admin',
-            email='admin@cantina.com',
+        # Crear rol
+        self.rol = Roles.objects.create(
+            nombre_rol='Administrador',
+            descripcion='Rol de prueba',
             activo=True
         )
-        self.usuario.set_password('admin123')
-        self.usuario.save()
         
         self.empleado = Empleados.objects.create(
             nombre='Juan',
             apellido='Admin',
-            ruc_ci='12345678',
+            usuario='admin',
+            contrasena_hash='hashed_password',
+            fecha_ingreso=timezone.now(),
+            email='admin@cantina.com',
             activo=True,
-            id_usuario=self.usuario
+            id_rol=self.rol
         )
     
     def test_crear_preferencias_default(self):
@@ -353,12 +358,12 @@ class TestEmailsEnviados:
 
 
 @pytest.mark.django_db
-class TestSMSEnviados:
-    """Tests para el modelo SMSEnviados usando pytest"""
+class TestSmsEnviados:
+    """Tests para el modelo SmsEnviados usando pytest"""
     
     def test_crear_sms_enviado(self):
         """Test: Registrar SMS enviado"""
-        sms = SMSEnviados.objects.create(
+        sms = SmsEnviados.objects.create(
             numero_destino='+595981234567',
             mensaje='Test SMS',
             estado='enviado',
@@ -371,7 +376,7 @@ class TestSMSEnviados:
     
     def test_sms_pendiente(self):
         """Test: SMS en estado pendiente"""
-        sms = SMSEnviados.objects.create(
+        sms = SmsEnviados.objects.create(
             numero_destino='+595981111111',
             mensaje='Pending SMS',
             estado='pendiente'
