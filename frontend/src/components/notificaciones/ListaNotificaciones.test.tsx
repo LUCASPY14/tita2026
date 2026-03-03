@@ -12,7 +12,7 @@ jest.mock('../../services/notificaciones.service', () => ({
   default: {
     getNotificaciones: jest.fn(),
     marcarNotificacionLeida: jest.fn(),
-    calcularTiempoTranscurrido: jest.fn((fecha: string) => 'hace 2 horas'),
+    calcularTiempoTranscurrido: jest.fn(() => 'hace 2 horas'),
   },
 }));
 
