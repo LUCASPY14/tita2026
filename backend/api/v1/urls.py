@@ -14,6 +14,7 @@ from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, Su
 from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet
 from apps.inventario.views import StockUnicoViewSet, MovimientosStockViewSet, AjustesInventarioViewSet
 from apps.reportes.views import ReportesViewSet
+from apps.notificaciones.views import NotificacionesPortalViewSet, NotificacionesSaldoViewSet, AlertasSistemaViewSet, PreferenciasNotificacionViewSet
 
 # Create a router for ViewSets
 router = DefaultRouter()
@@ -67,6 +68,12 @@ router.register(r'ajustes-inventario', AjustesInventarioViewSet)
 
 # Register Reportes ViewSets
 router.register(r'reportes', ReportesViewSet, basename='reportes')
+
+# Register Notificaciones ViewSets
+router.register(r'notificaciones-portal', NotificacionesPortalViewSet, basename='notificaciones-portal')
+router.register(r'notificaciones-saldo', NotificacionesSaldoViewSet, basename='notificaciones-saldo')
+router.register(r'alertas-sistema', AlertasSistemaViewSet, basename='alertas-sistema')
+router.register(r'preferencias-notificacion', PreferenciasNotificacionViewSet, basename='preferencias-notificacion')
 
 urlpatterns = [
     path('', include(router.urls)),
