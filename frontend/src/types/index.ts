@@ -403,3 +403,255 @@ export interface RegistroConsumoData {
   id_tipo_almuerzo?: number;
   id_suscripcion?: number;
 }
+
+// Tipos para módulo de Reportes y Estadísticas
+export interface ReporteVentas {
+  fecha_inicio: string;
+  fecha_fin: string;
+  total_ventas: number;
+  total_monto: number;
+  promedio_ticket: number;
+  ventas_efectivo: number;
+  ventas_tarjeta: number;
+  ventas_online: number;
+  top_productos: TopProductoVenta[];
+  ventas_por_dia: VentaPorDia[];
+  detalles: DetalleVentaReporte[];
+}
+
+export interface TopProductoVenta {
+  id_producto__nombre: string;
+  id_producto__codigo: string;
+  cantidad_vendida: number;
+  total_vendido: number;
+}
+
+export interface VentaPorDia {
+  fecha: string;
+  cantidad: number;
+  monto_total: number;
+}
+
+export interface DetalleVentaReporte {
+  id_venta: number;
+  fecha_venta: string;
+  total: number;
+  metodo_pago: string;
+  id_empleado__nombre: string;
+  id_empleado__apellido: string;
+}
+
+export interface ReporteRecargas {
+  fecha_inicio: string;
+  fecha_fin: string;
+  total_recargas: number;
+  total_acreditado: number;
+  total_comisiones: number;
+  total_cobrado: number;
+  recargas_por_metodo: RecargaPorMetodo[];
+  recargas_por_estado: RecargaPorEstado[];
+  estadisticas_diarias: EstadisticaDiariaRecarga[];
+}
+
+export interface RecargaPorMetodo {
+  metodo_pago: string;
+  cantidad: number;
+  monto_total: number;
+  comision_total: number;
+}
+
+export interface RecargaPorEstado {
+  estado: string;
+  cantidad: number;
+  monto_total: number;
+}
+
+export interface EstadisticaDiariaRecarga {
+  fecha: string;
+  cantidad_recargas: number;
+  monto_acreditado: number;
+  comision_total: number;
+}
+
+export interface ReporteTopProductos {
+  fecha_inicio: string;
+  fecha_fin: string;
+  top_productos: ProductoMasVendido[];
+  total_productos_vendidos: number;
+  monto_total_ventas: number;
+}
+
+export interface ProductoMasVendido {
+  id_producto__id_producto: number;
+  id_producto__codigo: string;
+  id_producto__nombre: string;
+  id_producto__id_categoria__nombre: string;
+  cantidad_vendida: number;
+  total_vendido: number;
+  precio_promedio: number;
+  ventas_count: number;
+}
+
+export interface ReporteConsumosTarjeta {
+  nro_tarjeta: string;
+  estudiante: string;
+  total_consumos: number;
+  monto_total_consumido: number;
+  saldo_inicial: number;
+  saldo_final: number;
+  consumos: ConsumoDetalle[];
+}
+
+export interface ConsumoDetalle {
+  id_consumo: number;
+  fecha_consumo: string;
+  monto_consumido: number;
+  saldo_anterior: number;
+  saldo_nuevo: number;
+  id_venta__id_venta?: number;
+}
+
+export interface ReporteFinanciero {
+  fecha_inicio: string;
+  fecha_fin: string;
+  ingresos_ventas: number;
+  ingresos_recargas: number;
+  comisiones_cobradas: number;
+  ingreso_total: number;
+  costo_inventario: number;
+  margen_bruto: number;
+  porcentaje_margen: number;
+}
+
+export interface DashboardKPIs {
+  fecha: string;
+  ventas_del_dia: number;
+  cantidad_ventas: number;
+  recargas_del_dia: number;
+  cantidad_recargas: number;
+  tarjetas_activas: number;
+  productos_bajo_stock: number;
+  ticket_promedio: number;
+  saldo_total_tarjetas: number;
+}
+
+export interface DashboardVentas {
+  periodo: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  ventas_por_dia: VentaDiaDashboard[];
+  ventas_por_metodo_pago: VentaPorMetodoPago[];
+  productos_mas_vendidos: ProductoDashboard[];
+  comparacion_semana_anterior: ComparacionPeriodo;
+  tendencia: 'crecimiento' | 'decrecimiento' | 'estable';
+}
+
+export interface VentaDiaDashboard {
+  fecha: string;
+  cantidad_ventas: number;
+  total_vendido: number;
+  ticket_promedio: number;
+}
+
+export interface VentaPorMetodoPago {
+  metodo_pago: string;
+  cantidad: number;
+  total: number;
+}
+
+export interface ProductoDashboard {
+  id_producto__nombre: string;
+  id_producto__codigo: string;
+  cantidad_vendida: number;
+  total_vendido: number;
+}
+
+export interface ComparacionPeriodo {
+  periodo_actual: number;
+  periodo_anterior: number;
+  variacion_porcentual: number;
+}
+
+export interface DashboardRecargas {
+  periodo: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  recargas_por_dia: RecargaDiaDashboard[];
+  recargas_por_metodo: RecargaPorMetodoDashboard[];
+  comisiones_generadas: number;
+  total_recargas: number;
+  recargas_exitosas: number;
+  tasa_exito: number;
+}
+
+export interface RecargaDiaDashboard {
+  fecha: string;
+  cantidad_recargas: number;
+  monto_total: number;
+  comision_total: number;
+}
+
+export interface RecargaPorMetodoDashboard {
+  metodo_pago: string;
+  cantidad: number;
+  monto_total: number;
+  comision_total: number;
+}
+
+export interface DashboardFinanciero {
+  mes: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  ingresos_totales: number;
+  ingresos_ventas: number;
+  ingresos_comisiones: number;
+  gastos_estimados: number;
+  margen_neto: number;
+  proyeccion_fin_mes: number;
+  dias_transcurridos: number;
+  dias_totales: number;
+}
+
+// Parámetros para consultas de reportes
+export interface ReporteVentasParams {
+  fecha_inicio: string;
+  fecha_fin: string;
+  metodo_pago?: string;
+  id_empleado?: number;
+}
+
+export interface ReporteRecargasParams {
+  fecha_inicio: string;
+  fecha_fin: string;
+  metodo_pago?: string;
+  estado?: string;
+}
+
+export interface ReporteTopProductosParams {
+  fecha_inicio: string;
+  fecha_fin: string;
+  limite?: number;
+}
+
+export interface ReporteConsumosTarjetaParams {
+  nro_tarjeta: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+}
+
+export interface ReporteFinancieroParams {
+  fecha_inicio: string;
+  fecha_fin: string;
+}
+
+export interface DashboardVentasParams {
+  dias?: number;
+}
+
+export interface DashboardRecargasParams {
+  dias?: number;
+}
+
+export interface DashboardFinancieroParams {
+  mes?: number;
+}

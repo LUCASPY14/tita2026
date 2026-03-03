@@ -13,6 +13,7 @@ from apps.core.views import TarjetasViewSet, CargasSaldoViewSet, ConsumosTarjeta
 from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, SuscripcionesAlmuerzoViewSet, RegistrosConsumoAlmuerzoViewSet, AlergenosViewSet
 from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet
 from apps.inventario.views import StockUnicoViewSet, MovimientosStockViewSet, AjustesInventarioViewSet
+from apps.reportes.views import ReportesViewSet
 
 # Create a router for ViewSets
 router = DefaultRouter()
@@ -63,6 +64,9 @@ router.register(r'usuarios-portal', UsuariosPortalViewSet)
 router.register(r'stock', StockUnicoViewSet)
 router.register(r'movimientos-stock', MovimientosStockViewSet)
 router.register(r'ajustes-inventario', AjustesInventarioViewSet)
+
+# Register Reportes ViewSets
+router.register(r'reportes', ReportesViewSet, basename='reportes')
 
 urlpatterns = [
     path('', include(router.urls)),
