@@ -150,8 +150,6 @@ describe('AlertasSistema Component', () => {
     render(<AlertasSistema />);
 
     await waitFor(() => {
-      const noAlertasMsg = screen.queryByText(/no hay alertas/i) || 
-                           screen.queryByText(/sin alertas/i);
       // El componente puede mostrar lista vacía sin mensaje
       expect(screen.queryByText('Stock Crítico')).not.toBeInTheDocument();
     });
