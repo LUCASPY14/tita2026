@@ -314,3 +314,92 @@ export interface CuentaCorrienteProveedor {
     ruc: string;
   };
 }
+
+// Tipos para módulo de Almuerzos
+export interface PlanAlmuerzo {
+  id_plan_almuerzo: number;
+  nombre_plan: string;
+  descripcion?: string;
+  precio_mensual: number;
+  dias_semana_incluidos: string;
+  fecha_creacion?: string;
+  activo: boolean;
+}
+
+export interface TipoAlmuerzo {
+  id_tipo_almuerzo: number;
+  nombre: string;
+  descripcion?: string;
+  precio_unitario: number;
+  incluye_plato_principal: boolean;
+  incluye_postre: boolean;
+  incluye_bebida: boolean;
+  fecha_creacion: string;
+  activo: boolean;
+}
+
+export interface SuscripcionAlmuerzo {
+  id_suscripcion: number;
+  fecha_inicio: string;
+  fecha_fin?: string;
+  estado: 'Activa' | 'Pendiente' | 'Finalizada' | 'Cancelada';
+  id_hijo: number;
+  id_plan_almuerzo: number;
+  // Propiedades relacionadas
+  hijo_nombre?: string;
+  plan_nombre?: string;
+}
+
+export interface RegistroConsumoAlmuerzo {
+  id_registro_consumo: number;
+  fecha_consumo: string;
+  hora_registro: string;
+  costo_almuerzo?: number;
+  ya_cobrado: boolean;
+  marcado_en_cuenta: boolean;
+  estado: 'Confirmado' | 'Pendiente' | 'Rechazado';
+  motivo_rechazo?: string;
+  id_hijo: number;
+  id_suscripcion?: number;
+  id_tipo_almuerzo?: number;
+  nro_tarjeta?: string;
+  id_empleado_registro?: number;
+  // Propiedades relacionadas
+  hijo_nombre?: string;
+  tipo_almuerzo_nombre?: string;
+}
+
+export interface CuentaAlmuerzoMensual {
+  id_cuenta: number;
+  anio: number;
+  mes: number;
+  cantidad_almuerzos: number;
+  monto_total: number;
+  forma_cobro: string;
+  monto_pagado: number;
+  estado: 'Pendiente' | 'Pagada' | 'Parcial';
+  fecha_generacion: string;
+  fecha_actualizacion: string;
+  observaciones?: string;
+  id_hijo: number;
+}
+
+export interface Alergeno {
+  id_alergeno: number;
+  nombre: string;
+  descripcion?: string;
+  palabras_clave: string[];
+  nivel_severidad: 'Bajo' | 'Medio' | 'Alto';
+  icono?: string;
+  activo: boolean;
+  fecha_creacion: string;
+  usuario_creacion?: string;
+}
+
+export interface RegistroConsumoData {
+  fecha_consumo: string;
+  id_hijo: number;
+  nro_tarjeta: string;
+  id_tipo_almuerzo?: number;
+  id_suscripcion?: number;
+}
