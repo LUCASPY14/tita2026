@@ -655,3 +655,119 @@ export interface DashboardRecargasParams {
 export interface DashboardFinancieroParams {
   mes?: number;
 }
+
+// Tipos para módulo de Notificaciones
+export interface NotificacionPortal {
+  id_notificacion: number;
+  tipo: string;
+  titulo: string;
+  mensaje: string;
+  leida: boolean;
+  fecha_envio: string;
+  fecha_lectura?: string;
+  creado_en: string;
+  id_usuario_portal: number;
+}
+
+export interface NotificacionSaldo {
+  id_notificacion: number;
+  tipo_notificacion: string;
+  saldo_actual: number;
+  mensaje: string;
+  enviada_email: boolean;
+  enviada_sms: boolean;
+  leida: boolean;
+  email_destinatario?: string;
+  fecha_creacion: string;
+  fecha_envio?: string;
+  nro_tarjeta: string;
+  // Propiedades relacionadas
+  hijo_nombre?: string;
+}
+
+export interface AlertaSistema {
+  id_alerta: number;
+  tipo: string;
+  mensaje: string;
+  fecha_creacion: string;
+  fecha_leida?: string;
+  estado: 'Pendiente' | 'Leida' | 'Resuelta';
+  id_empleado_resuelve?: number;
+  fecha_resolucion?: string;
+  observaciones?: string;
+  // Propiedades relacionadas
+  empleado_nombre?: string;
+}
+
+export interface PreferenciasNotificacion {
+  id_preferencia: number;
+  tipo_notificacion: string;
+  email_activo: boolean;
+  push_activo: boolean;
+  creado_en: string;
+  actualizado_en: string;
+  id_usuario_portal: number;
+}
+
+export interface EmailEnviado {
+  id_email: number;
+  email_destinatario: string;
+  nombre_destinatario: string;
+  asunto: string;
+  estado: 'Pendiente' | 'Enviado' | 'Entregado' | 'Error';
+  fecha_envio: string;
+  fecha_entrega?: string;
+  fecha_apertura?: string;
+  mensaje_error?: string;
+  intentos: number;
+  id_cliente?: number;
+  enviado_por?: number;
+}
+
+export interface SMSEnviado {
+  id_sms: number;
+  telefono: string;
+  mensaje: string;
+  estado: 'Pendiente' | 'Enviado' | 'Entregado' | 'Error';
+  fecha_envio: string;
+  fecha_entrega?: string;
+  costo?: number;
+  id_cliente?: number;
+  enviado_por?: number;
+}
+
+export interface ResumenNotificaciones {
+  total_notificaciones: number;
+  no_leidas: number;
+  notificaciones_hoy: number;
+  alertas_criticas: number;
+  notificaciones_saldo: number;
+  alertas_sistema: number;
+}
+
+// Parámetros para consultas de notificaciones
+export interface NotificacionesParams {
+  page?: number;
+  page_size?: number;
+  leida?: boolean;
+  tipo?: string;
+  fecha_desde?: string;
+  fecha_hasta?: string;
+}
+
+export interface AlertasParams {
+  page?: number;
+  page_size?: number;
+  estado?: string;
+  tipo?: string;
+}
+
+export interface MarcarLeidaData {
+  ids: number[];
+}
+
+export interface ActualizarPreferenciasData {
+  tipo_notificacion: string;
+  email_activo: boolean;
+  push_activo: boolean;
+}
