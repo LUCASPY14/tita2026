@@ -24,7 +24,7 @@ describe('Button Component', () => {
   test('muestra variante primary por defecto', () => {
     render(<Button>Button</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-blue-600');
+    expect(button).toHaveClass('bg-amber-500');
   });
 
   test('aplica variante danger correctamente', () => {
@@ -36,14 +36,14 @@ describe('Button Component', () => {
   test('aplica variante outline correctamente', () => {
     render(<Button variant="outline">Outline</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('border-gray-300');
+    expect(button).toHaveClass('border-amber-500');
   });
 
   test('está deshabilitado cuando disabled=true', () => {
     render(<Button disabled>Disabled</Button>);
     const button = screen.getByRole('button');
     expect(button).toBeDisabled();
-    expect(button).toHaveClass('opacity-50');
+    expect(button).toHaveClass('disabled:opacity-50');
   });
 
   test('no ejecuta onClick cuando está deshabilitado', () => {
@@ -60,8 +60,8 @@ describe('Button Component', () => {
     render(<Button isLoading>Loading</Button>);
     const button = screen.getByRole('button');
     expect(button).toBeDisabled();
-    // El texto "Loading" debería estar presente pero el spinner también
-    expect(button).toHaveTextContent('Loading');
+    // El texto "Cargando..." debería estar presente junto con el spinner
+    expect(button).toHaveTextContent('Cargando...');
   });
 
   test('aplica size small correctamente', () => {

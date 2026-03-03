@@ -30,7 +30,7 @@ describe('Card Component', () => {
   test('aplica estilos base de Card', () => {
     const { container } = render(<Card>Content</Card>);
     const card = container.firstChild;
-    expect(card).toHaveClass('bg-white', 'rounded-lg', 'shadow');
+    expect(card).toHaveClass('bg-white', 'rounded-lg', 'border', 'border-gray-200');
   });
 
   test('renderiza múltiples children', () => {
