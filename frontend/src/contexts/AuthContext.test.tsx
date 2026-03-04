@@ -4,7 +4,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuthProvider, useAuthContext } from './AuthContext';
-import { authService } from '../services/auth.service';
+import { authService, UserRole } from '../services/auth.service';
 import toast from 'react-hot-toast';
 
 // Mock del servicio de autenticación
@@ -14,6 +14,8 @@ jest.mock('../services/auth.service', () => ({
     logout: jest.fn(),
     getCurrentUser: jest.fn(),
     isAuthenticated: jest.fn(),
+    refreshToken: jest.fn(),
+    getToken: jest.fn(),
   },
 }));
 
@@ -31,7 +33,7 @@ const mockedToast = toast as jest.Mocked<typeof toast>;
 
 // Componente de prueba para testing
 const TestComponent = () => {
-  const { user, isAuthenticated, isLoading, login, logout } = useAuthContext();
+  const { user, isAuthenticated, isLoading, login, logout, refreshUserData } = useAuthContext();
 
   const handleLogin = async () => {
     try {
@@ -53,6 +55,7 @@ const TestComponent = () => {
       <div data-testid="user-id">{user?.id || 'Sin ID'}</div>
       <button onClick={handleLogin}>Login</button>
       <button onClick={logout}>Logout</button>
+      <button onClick={refreshUserData}>Refresh User Data</button>
     </div>
   );
 };
@@ -83,7 +86,7 @@ describe('AuthContext', () => {
       id: 1,
       username: 'testuser',
       email: 'test@test.com',
-      role: 'admin',
+      role: 'admin' as UserRole,
     };
 
     mockedAuthService.getCurrentUser.mockReturnValue(mockUser);
@@ -107,7 +110,7 @@ describe('AuthContext', () => {
       id: 1,
       username: 'testuser',
       email: 'test@test.com',
-      role: 'admin',
+      role: 'admin' as UserRole,
     };
 
     mockedAuthService.getCurrentUser.mockReturnValue(null);
@@ -147,7 +150,7 @@ describe('AuthContext', () => {
       id: 1,
       username: 'testuser',
       email: 'test@test.com',
-      role: 'admin',
+      role: 'admin' as UserRole,
     };
 
     mockedAuthService.getCurrentUser.mockReturnValue(mockUser);

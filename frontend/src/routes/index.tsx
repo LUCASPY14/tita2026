@@ -27,35 +27,85 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <MainLayout>
               <Routes>
+                {/* Dashboard - Accesible para todos */}
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 
-                {/* Módulo de Recargas */}
-                <Route path="/recargas" element={<Recargas />} />
+                {/* Módulo de Recargas - Admin, Gerente, Cajero */}
+                <Route 
+                  path="/recargas" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'cajero']}>
+                      <Recargas />
+                    </ProtectedRoute>
+                  } 
+                />
                 
-                {/* Módulo de Ventas - POS */}
-                <Route path="/ventas" element={<POS />} />
+                {/* Módulo de Ventas - POS - Admin, Gerente, Cajero */}
+                <Route 
+                  path="/ventas" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'cajero']}>
+                      <POS />
+                    </ProtectedRoute>
+                  } 
+                />
                 
-                {/* Módulo de Clientes */}
-                <Route path="/clientes" element={<Clientes />} />
+                {/* Módulo de Clientes - Admin, Gerente */}
+                <Route 
+                  path="/clientes" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                      <Clientes />
+                    </ProtectedRoute>
+                  } 
+                />
                 
-                {/* Módulo de Productos */}
-                <Route path="/productos" element={<Productos />} />
+                {/* Módulo de Productos - Admin, Gerente */}
+                <Route 
+                  path="/productos" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                      <Productos />
+                    </ProtectedRoute>
+                  } 
+                />
                 
-                {/* Módulo de Compras */}
-                <Route path="/compras" element={<Compras />} />
+                {/* Módulo de Compras - Admin, Gerente */}
+                <Route 
+                  path="/compras" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                      <Compras />
+                    </ProtectedRoute>
+                  } 
+                />
                 
-                {/* Módulo de Almuerzos */}
+                {/* Módulo de Almuerzos - Todos */}
                 <Route path="/almuerzos" element={<Almuerzos />} />
                 
-                {/* Módulo de Reportes */}
-                <Route path="/reportes" element={<Reportes />} />
+                {/* Módulo de Reportes - Solo Admin y Gerente */}
+                <Route 
+                  path="/reportes" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                      <Reportes />
+                    </ProtectedRoute>
+                  } 
+                />
                 
-                {/* Módulo de Notificaciones */}
+                {/* Módulo de Notificaciones - Todos */}
                 <Route path="/notificaciones" element={<Notificaciones />} />
                 
-                {/* Módulo de Configuración */}
-                <Route path="/configuracion" element={<Configuracion />} />
+                {/* Módulo de Configuración - Solo Admin */}
+                <Route 
+                  path="/configuracion" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <Configuracion />
+                    </ProtectedRoute>
+                  } 
+                />
               </Routes>
             </MainLayout>
           </ProtectedRoute>

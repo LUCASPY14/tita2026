@@ -1,5 +1,5 @@
 import api from './api';
-import { authService, LoginCredentials, LoginResponse, User } from './auth.service';
+import { authService, LoginCredentials, LoginResponse, User, UserRole } from './auth.service';
 
 jest.mock('./api');
 const mockedApi = api as jest.Mocked<typeof api>;
@@ -117,7 +117,7 @@ describe('Auth Service', () => {
         id: 5,
         username: 'admin',
         email: 'admin@cantina.com',
-        role: 'super_admin'
+        role: 'admin'
       };
       localStorage.setItem('user', JSON.stringify(fullUser));
 
@@ -125,7 +125,7 @@ describe('Auth Service', () => {
 
       expect(result).toEqual(fullUser);
       expect(result?.id).toBe(5);
-      expect(result?.role).toBe('super_admin');
+      expect(result?.role).toBe('admin');
     });
   });
 
@@ -166,7 +166,7 @@ describe('Auth Service', () => {
       const credentials: LoginCredentials = { username: 'user1', password: 'pass1' };
       const response: LoginResponse = {
         token: 'token123',
-        user: { id: 10, username: 'user1', email: 'user1@test.com', role: 'user' }
+        user: { id: 10, username: 'user1', email: 'user1@test.com', role: 'empleado' as UserRole }
       };
       mockedApi.post.mockResolvedValue({ data: response });
 
@@ -198,4 +198,103 @@ describe('Auth Service', () => {
       expect(JSON.parse(storedUser!)).toEqual(response.user);
     });
   });
+
+  describe('refreshToken', () => {
+    test('debe renovar el token exitosamente', async () => {
+      localStorage.setItem('refreshToken', 'refresh-token-456');
+
+      const mockResponse = {
+        data: {
+          token: 'new-access-token',
+          refreshToken: 'new-refresh-token',
+        },
+      };
+
+      mockedApi.post.mockResolvedValue(mockResponse);
+
+      const result = await authService.refreshToken();
+
+      expect(mockedApi.post).toHaveBeenCalledWith('/auth/refresh/', {
+        refresh: 'refresh-token-456',
+      });
+      expect(localStorage.getItem('token')).toBe('new-access-token');
+      expect(localStorage.getItem('refreshToken')).toBe('new-refresh-token');
+      expect(result).toEqual(mockResponse.data);
+    });
+
+    test('debe lanzar error si no hay refreshToken en localStorage', async () => {
+      await expect(authService.refreshToken()).rejects.toThrow(
+        'No refresh token available'
+      );
+    });
+
+    test('debe limpiar localStorage si el refresh falla', async () => {
+      localStorage.setItem('refreshToken', 'invalid-refresh-token');
+      localStorage.setItem('token', 'old-token');
+      localStorage.setItem('user', JSON.stringify({ id: 1 }));
+
+      mockedApi.post.mockRejectedValue(new Error('Refresh token expired'));
+
+      await expect(authService.refreshToken()).rejects.toThrow('Refresh token expired');
+
+      // Verificar que se limpió el localStorage
+      expect(localStorage.getItem('token')).toBeNull();
+      expect(localStorage.getItem('refreshToken')).toBeNull();
+      expect(localStorage.getItem('user')).toBeNull();
+    });
+
+    test('debe guardar solo refreshToken si la respuesta no incluye uno nuevo', async () => {
+      localStorage.setItem('refreshToken', 'refresh-token-123');
+
+      const mockResponse = {
+        data: {
+          token: 'new-access-token',
+        },
+      };
+
+      mockedApi.post.mockResolvedValue(mockResponse);
+
+      await authService.refreshToken();
+
+      expect(localStorage.getItem('token')).toBe('new-access-token');
+      expect(localStorage.getItem('refreshToken')).toBe('refresh-token-123'); // El mismo de antes
+    });
+  });
+
+  describe('getToken', () => {
+    test('debe retornar el token del localStorage si existe', () => {
+      localStorage.setItem('token', 'access-token-123');
+      expect(authService.getToken()).toBe('access-token-123');
+    });
+
+    test('debe retornar null si no hay token', () => {
+      expect(authService.getToken()).toBeNull();
+    });
+  });
+
+  describe('login con refreshToken', () => {
+    test('debe guardar refreshToken cuando se proporciona en el login', async () => {
+      const mockResponse = {
+        data: {
+          token: 'access-token',
+          refreshToken: 'refresh-token',
+          user: {
+            id: 1,
+            username: 'testuser',
+            email: 'test@test.com',
+            role: 'admin' as const,
+          },
+        },
+      };
+
+      mockedApi.post.mockResolvedValue(mockResponse);
+
+      await authService.login({ username: 'testuser', password: 'password' });
+
+      expect(localStorage.getItem('token')).toBe('access-token');
+      expect(localStorage.getItem('refreshToken')).toBe('refresh-token');
+      expect(localStorage.getItem('user')).toBe(JSON.stringify(mockResponse.data.user));
+    });
+  });
 });
+

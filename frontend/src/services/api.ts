@@ -23,16 +23,7 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para manejar errores
-api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
+// NOTA: El interceptor de respuesta para refresh tokens
+// se maneja en AuthContext para tener acceso al estado de la aplicación
 
 export default api;

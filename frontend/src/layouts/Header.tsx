@@ -7,9 +7,10 @@ import {
   LogOut, 
   Settings, 
   ChevronDown,
-  Search
+  Search,
+  Shield
 } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import { useUIStore } from '../store/uiStore';
 import clsx from 'clsx';
 import { Avatar, Badge, SearchBar } from '../components/common';
@@ -51,7 +52,7 @@ const mockNotifications: Notification[] = [
 ];
 
 const Header: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuthContext();
   const { toggleSidebar } = useUIStore();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -64,6 +65,16 @@ const Header: React.FC = () => {
   };
 
   const unreadCount = mockNotifications.filter(n => !n.read).length;
+
+  // Mapeo de roles a colores y etiquetas
+  const roleConfig = {
+    admin: { label: 'Administrador', color: 'bg-purple-100 text-purple-700' },
+    gerente: { label: 'Gerente', color: 'bg-blue-100 text-blue-700' },
+    cajero: { label: 'Cajero', color: 'bg-green-100 text-green-700' },
+    empleado: { label: 'Empleado', color: 'bg-gray-100 text-gray-700' },
+  };
+
+  const currentRole = user?.role ? roleConfig[user.role] : null;
 
   const notificationColors = {
     info: 'bg-blue-100 text-blue-600',
@@ -194,11 +205,14 @@ const Header: React.FC = () => {
                 status="online"
               />
               <div className="hidden text-left lg:block">
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-gray-900 flex items-center gap-1">
                   {user?.username || 'Usuario'}
+                  {user?.role === 'admin' && (
+                    <Shield className="h-3 w-3 text-purple-600" />
+                  )}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {user?.role || 'Administrador'}
+                  {currentRole?.label || 'Sin rol'}
                 </p>
               </div>
               <ChevronDown className="hidden h-4 w-4 text-gray-500 lg:block" />
@@ -211,14 +225,27 @@ const Header: React.FC = () => {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowUserMenu(false)}
                 />
-                <div className="absolute right-0 top-full z-20 mt-2 w-56 rounded-lg border border-gray-200 bg-white shadow-lg">
+                <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-lg border border-gray-200 bg-white shadow-lg">
                   <div className="border-b border-gray-200 px-4 py-3">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
                       {user?.username || 'Usuario'}
+                      {user?.role === 'admin' && (
+                        <Shield className="h-4 w-4 text-purple-600" />
+                      )}
                     </p>
                     <p className="mt-0.5 text-xs text-gray-500">
                       {user?.email || 'usuario@cantina.com'}
                     </p>
+                    {currentRole && (
+                      <div className="mt-2">
+                        <span className={clsx(
+                          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
+                          currentRole.color
+                        )}>
+                          {currentRole.label}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="py-2">
                     <button

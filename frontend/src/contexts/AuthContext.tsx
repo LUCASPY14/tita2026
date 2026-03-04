@@ -5,11 +5,14 @@
  * - Usuario actual autenticado
  * - Estado de carga de autenticación
  * - Funciones de login/logout
+ * - Intercepción automática de renovación de tokens
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService, User, LoginCredentials } from '../services/auth.service';
 import toast from 'react-hot-toast';
+import api from '../services/api';
+import { AxiosError } from 'axios';
 
 interface AuthContextType {
   user: User | null;
@@ -17,6 +20,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => void;
+  refreshUserData: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +32,7 @@ export interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     // Verificar si hay un usuario logueado al cargar la aplicación
@@ -51,6 +56,63 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuthStatus();
   }, []);
 
+  // Configurar interceptor de respuesta para manejar refresh de tokens
+  useEffect(() => {
+    const responseInterceptor = api.interceptors.response.use(
+      (response) => response,
+      async (error: AxiosError) => {
+        const originalRequest = error.config as any;
+
+        // Si es error 401 y no es de login/refresh, intentar renovar token
+        if (
+          error.response?.status === 401 &&
+          !originalRequest._retry &&
+          !originalRequest.url?.includes('/auth/login') &&
+          !originalRequest.url?.includes('/auth/refresh')
+        ) {
+          if (isRefreshing) {
+            // Si ya se está renovando, esperar
+            return Promise.reject(error);
+          }
+
+          originalRequest._retry = true;
+          setIsRefreshing(true);
+
+          try {
+            // Intentar renovar el token
+            await authService.refreshToken();
+            
+            // Actualizar el header de autorización de la petición original
+            const newToken = authService.getToken();
+            if (originalRequest.headers && newToken) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            }
+
+            // Reintentar la petición original
+            return api(originalRequest);
+          } catch (refreshError) {
+            // Si el refresh falló, cerrar sesión
+            console.error('Error renovando token:', refreshError);
+            authService.logout();
+            setUser(null);
+            toast.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+            window.location.href = '/login';
+            return Promise.reject(refreshError);
+          } finally {
+            setIsRefreshing(false);
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+
+    // Limpiar interceptor al desmontar
+    return () => {
+      api.interceptors.response.eject(responseInterceptor);
+    };
+  }, [isRefreshing]);
+
   const login = async (credentials: LoginCredentials): Promise<void> => {
     try {
       setIsLoading(true);
@@ -72,12 +134,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     toast.success('Sesión cerrada exitosamente');
   };
 
+  const refreshUserData = (): void => {
+    const currentUser = authService.getCurrentUser();
+    setUser(currentUser);
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
     isLoading,
     login,
     logout,
+    refreshUserData,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
