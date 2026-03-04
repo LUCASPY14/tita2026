@@ -112,16 +112,7 @@ describe('ReportesPersonalizados Component', () => {
   });
 
   test('genera reporte financiero exitosamente', async () => {
-    const user = userEvent.setup();
     render(<ReportesPersonalizados />);
-    
-    // Primero buscar y hacer click en el botón del tipo de reporte que contenga "Top"
-    // para identificar el grupo de botones de tipo
-    const botonesReporte = screen.getAllByRole('button');
-    
-    // Buscar un botón que indique que podemos cambiar de tipo
-    // Tipicamente hay 5 tipos, vamos a buscar texto que indique otros tipos
-    const tiposDisponibles = ['Ventas', 'Recargas'];
     
     // Ya que el test anterior funcionó con 'Recargas', 
     // asumimos que el selector de tipo funciona
@@ -134,7 +125,6 @@ describe('ReportesPersonalizados Component', () => {
   });
 
   test('valida campo requerido de tarjeta para reporte de consumos', async () => {
-    const user = userEvent.setup();
     render(<ReportesPersonalizados />);
     
     // Intentar generar reporte sin llenar nro_tarjeta debería mostrar error

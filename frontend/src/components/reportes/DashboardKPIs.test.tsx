@@ -1,7 +1,7 @@
 /**
  * Tests para el componente DashboardKPIs
  */
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DashboardKPIs from './DashboardKPIs';
 import reportesService from '../../services/reportes.service';
