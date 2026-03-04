@@ -1,47 +1,34 @@
 /**
  * Página de Notificaciones
- * Centro de notificaciones multicanal del sistema
+ * Centro de notificaciones multicanal del sistema con filtrado por rol
  */
 
-import React, { useState, useEffect } from 'react';
-import { Bell, AlertTriangle, Settings } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, AlertTriangle, Settings, Shield, Info } from 'lucide-react';
 import {
   ListaNotificaciones,
   AlertasSistema,
   Preferencias,
 } from '../components/notificaciones';
-import notificacionesService from '../services/notificaciones.service';
-import { ResumenNotificaciones } from '../types';
 import { useAuthContext } from '../contexts/AuthContext';
-import toast from 'react-hot-toast';
+import { useNotificationsByRole } from '../hooks/useNotificationsByRole';
 
 type TabType = 'notificaciones' | 'alertas' | 'preferencias';
 
 const Notificaciones: React.FC = () => {
   const { user } = useAuthContext();
   const [tabActiva, setTabActiva] = useState<TabType>('notificaciones');
-  const [resumen, setResumen] = useState<ResumenNotificaciones | null>(null);
-  const [cargando, setCargando] = useState(true);
+  
+  // Hook para notificaciones filtradas por rol
+  const { 
+    resumen, 
+    resumenCriticidad, 
+    cargando, 
+    refrescar 
+  } = useNotificationsByRole();
 
   // Obtener id_usuario del contexto de autenticación
-  const idUsuario = user?.id || 1; // Fallback a 1 si no hay usuario
-
-  useEffect(() => {
-    cargarResumen();
-  }, []);
-
-  const cargarResumen = async () => {
-    try {
-      setCargando(true);
-      const data = await notificacionesService.getResumenNotificaciones(idUsuario);
-      setResumen(data);
-    } catch (error) {
-      console.error('Error cargando resumen:', error);
-      toast.error('Error al cargar el resumen de notificaciones');
-    } finally {
-      setCargando(false);
-    }
-  };
+  const idUsuario = user?.id || 1;
 
   const tabs = [
     {
@@ -54,7 +41,7 @@ const Notificaciones: React.FC = () => {
       id: 'alertas' as const,
       nombre: 'Alertas del Sistema',
       icon: AlertTriangle,
-      badge: resumen?.alertas_sistema || 0,
+      badge: (resumenCriticidad.criticas + resumenCriticidad.altas) || 0,
     },
     {
       id: 'preferencias' as const,
@@ -76,54 +63,104 @@ const Notificaciones: React.FC = () => {
         </p>
       </div>
 
+      {/* Info de filtrado por rol */}
+      {user && (
+        <div className="mb-4 rounded-lg bg-blue-50 border border-blue-200 p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-blue-900 flex items-center gap-2">
+                <span>Vista personalizada para tu rol</span>
+                {user.role === 'admin' && <Shield className="h-4 w-4" />}
+              </h3>
+              <p className="mt-1 text-sm text-blue-700">
+                {user.role === 'admin' && 
+                  'Como administrador, ves todas las notificaciones y alertas del sistema.'}
+                {user.role === 'gerente' && 
+                  'Como gerente, ves notificaciones operativas y alertas de gestión.'}
+                {user.role === 'cajero' && 
+                  'Como cajero, ves notificaciones de ventas y transacciones.'}
+                {user.role === 'empleado' && 
+                  'Como empleado, ves notificaciones generales del sistema.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Panel de Resumen */}
       {!cargando && resumen && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total</p>
+                <p className="text-xs text-gray-500">Total</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {resumen.total_notificaciones}
                 </p>
               </div>
-              <Bell className="h-8 w-8 text-blue-600" />
+              <Bell className="h-6 w-6 text-blue-600" />
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">No Leídas</p>
+                <p className="text-xs text-gray-500">No Leídas</p>
                 <p className="text-2xl font-bold text-orange-600">
                   {resumen.no_leidas}
                 </p>
               </div>
-              <Bell className="h-8 w-8 text-orange-600" />
+              <Bell className="h-6 w-6 text-orange-600" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
+          {/* Resumen de criticidad */}
+          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg shadow p-4 border border-red-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Hoy</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {resumen.notificaciones_hoy}
+                <p className="text-xs text-red-700 font-medium">Críticas</p>
+                <p className="text-2xl font-bold text-red-900">
+                  {resumenCriticidad.criticas}
                 </p>
               </div>
-              <Bell className="h-8 w-8 text-green-600" />
+              <AlertTriangle className="h-6 w-6 text-red-600" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow p-4 border border-orange-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Alertas Críticas</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {resumen.alertas_criticas}
+                <p className="text-xs text-orange-700 font-medium">Altas</p>
+                <p className="text-2xl font-bold text-orange-900">
+                  {resumenCriticidad.altas}
                 </p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-600" />
+              <AlertTriangle className="h-6 w-6 text-orange-600" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg shadow p-4 border border-yellow-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-yellow-700 font-medium">Medias</p>
+                <p className="text-2xl font-bold text-yellow-900">
+                  {resumenCriticidad.medias}
+                </p>
+              </div>
+              <AlertTriangle className="h-6 w-6 text-yellow-600" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow p-4 border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-blue-700 font-medium">Bajas</p>
+                <p className="text-2xl font-bold text-blue-900">
+                  {resumenCriticidad.bajas}
+                </p>
+              </div>
+              <Info className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -181,11 +218,11 @@ const Notificaciones: React.FC = () => {
           {tabActiva === 'notificaciones' && (
             <ListaNotificaciones
               idUsuario={idUsuario}
-              onNotificacionLeida={cargarResumen}
+              onNotificacionLeida={refrescar}
             />
           )}
           {tabActiva === 'alertas' && (
-            <AlertasSistema onAlertaResuelta={cargarResumen} />
+            <AlertasSistema onAlertaResuelta={refrescar} />
           )}
           {tabActiva === 'preferencias' && (
             <Preferencias idUsuario={idUsuario} />

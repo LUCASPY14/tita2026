@@ -8,48 +8,14 @@ import {
   Settings, 
   ChevronDown,
   Search,
-  Shield
+  Shield,
+  AlertTriangle
 } from 'lucide-react';
 import { useAuthContext } from '../contexts/AuthContext';
 import { useUIStore } from '../store/uiStore';
+import { useNotificationsByRole } from '../hooks/useNotificationsByRole';
 import clsx from 'clsx';
 import { Avatar, Badge, SearchBar } from '../components/common';
-
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  type: 'info' | 'success' | 'warning' | 'error';
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: 1,
-    title: 'Nueva recarga',
-    message: 'Cliente Juan Pérez recargó Gs. 50.000',
-    time: 'Hace 5 min',
-    read: false,
-    type: 'success',
-  },
-  {
-    id: 2,
-    title: 'Stock bajo',
-    message: 'Producto "Coca Cola 500ml" tiene stock bajo',
-    time: 'Hace 15 min',
-    read: false,
-    type: 'warning',
-  },
-  {
-    id: 3,
-    title: 'Venta completada',
-    message: 'Venta #1234 completada por Gs. 25.000',
-    time: 'Hace 1 hora',
-    read: true,
-    type: 'info',
-  },
-];
 
 const Header: React.FC = () => {
   const { user, logout } = useAuthContext();
@@ -58,13 +24,57 @@ const Header: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  
+  // Hook para notificaciones filtradas por rol
+  const { 
+    notificaciones, 
+    alertas, 
+    resumen, 
+    resumenCriticidad,
+    marcarComoLeida 
+  } = useNotificationsByRole();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const unreadCount = mockNotifications.filter(n => !n.read).length;
+  // Calcular notificaciones no leídas (solo notificaciones normales + alertas pendientes)
+  const unreadCount = (resumen?.no_leidas || 0) + (resumenCriticidad.criticas + resumenCriticidad.altas);
+
+  // Combinar notificaciones y alertas críticas para el dropdown
+  const notificacionesCombinadas = [
+    ...alertas.slice(0, 3).map(alerta => ({
+      id: `alerta-${alerta.id_alerta}`,
+      title: alerta.tipo,
+      message: alerta.mensaje,
+      time: new Date(alerta.fecha_creacion).toLocaleDateString('es-PY'),
+      read: alerta.estado !== 'Pendiente',
+      type: alerta.criticidad === 'critico' ? 'error' as const : 
+            alerta.criticidad === 'alto' ? 'warning' as const : 'info' as const,
+      isAlert: true,
+    })),
+    ...notificaciones.slice(0, 5).map(notif => ({
+      id: `notif-${notif.id_notificacion}`,
+      title: notif.tipo,
+      message: notif.mensaje,
+      time: new Date(notif.fecha_envio).toLocaleDateString('es-PY'),
+      read: notif.leida,
+      type: 'info' as const,
+      isAlert: false,
+      notifId: notif.id_notificacion,
+    }))
+  ];
+
+  const handleNotificationClick = async (item: any) => {
+    if (!item.isAlert && !item.read) {
+      try {
+        await marcarComoLeida(item.notifId);
+      } catch (error) {
+        console.error('Error marcando notificación:', error);
+      }
+    }
+  };
 
   // Mapeo de roles a colores y etiquetas
   const roleConfig = {
@@ -147,16 +157,17 @@ const Header: React.FC = () => {
                     </div>
                   </div>
                   <div className="max-h-96 overflow-y-auto">
-                    {mockNotifications.length === 0 ? (
+                    {notificacionesCombinadas.length === 0 ? (
                       <div className="px-4 py-8 text-center text-sm text-gray-500">
-                        No hay notificaciones
+                        No hay notificaciones para tu rol
                       </div>
                     ) : (
-                      mockNotifications.map((notification) => (
+                      notificacionesCombinadas.map((notification) => (
                         <div
                           key={notification.id}
+                          onClick={() => handleNotificationClick(notification)}
                           className={clsx(
-                            'border-b border-gray-100 px-4 py-3 transition-colors hover:bg-gray-50',
+                            'border-b border-gray-100 px-4 py-3 transition-colors hover:bg-gray-50 cursor-pointer',
                             !notification.read && 'bg-blue-50/50'
                           )}
                         >
@@ -165,13 +176,22 @@ const Header: React.FC = () => {
                               'mt-1 rounded-full p-1.5',
                               notificationColors[notification.type]
                             )}>
-                              <Bell className="h-3 w-3" />
+                              {notification.isAlert ? (
+                                <AlertTriangle className="h-3 w-3" />
+                              ) : (
+                                <Bell className="h-3 w-3" />
+                              )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900">
-                                {notification.title}
-                              </p>
-                              <p className="mt-0.5 text-sm text-gray-600">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {notification.title}
+                                </p>
+                                {notification.isAlert && (
+                                  <Badge variant="danger" size="sm">Alerta</Badge>
+                                )}
+                              </div>
+                              <p className="mt-0.5 text-sm text-gray-600 line-clamp-2">
                                 {notification.message}
                               </p>
                               <p className="mt-1 text-xs text-gray-500">
@@ -184,7 +204,13 @@ const Header: React.FC = () => {
                     )}
                   </div>
                   <div className="border-t border-gray-200 px-4 py-2">
-                    <button className="w-full text-center text-sm font-medium text-amber-600 hover:text-amber-700">
+                    <button 
+                      onClick={() => {
+                        navigate('/notificaciones');
+                        setShowNotifications(false);
+                      }}
+                      className="w-full text-center text-sm font-medium text-amber-600 hover:text-amber-700"
+                    >
                       Ver todas las notificaciones
                     </button>
                   </div>

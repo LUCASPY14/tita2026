@@ -697,6 +697,9 @@ export interface AlertaSistema {
   observaciones?: string;
   // Propiedades relacionadas
   empleado_nombre?: string;
+  // Propiedades para filtrado por rol
+  criticidad?: 'critico' | 'alto' | 'medio' | 'bajo';
+  roles_objetivo?: string[]; // Roles que deben ver esta alerta
 }
 
 export interface PreferenciasNotificacion {

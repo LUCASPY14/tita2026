@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, Users } from 'lucide-react';
 import { Card, Button } from '../../components/common';
-import { UserTable, UserForm } from './components';
+import UserTable from './components/UserTable';
+import UserForm from './components/UserForm';
 import type { Usuario } from '../../services/users.service';
 
 type Vista = 'lista' | 'crear' | 'editar';
