@@ -13,15 +13,18 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell,
-  FileText
+  FileText,
+  UserCog
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
+import { useHasRole } from '../hooks/usePermissions';
 
 interface NavItem {
   name: string;
   path: string;
   icon: React.ElementType;
   badge?: number;
+  adminOnly?: boolean; // Nuevo: indica si solo es para admins
 }
 
 const navigation: NavItem[] = [
@@ -35,11 +38,21 @@ const navigation: NavItem[] = [
   { name: 'Notificaciones', path: '/notificaciones', icon: Bell, badge: 3 },
   { name: 'Compras', path: '/compras', icon: FileText },
   { name: 'Configuración', path: '/configuracion', icon: Settings },
+  { name: 'Usuarios', path: '/admin/usuarios', icon: UserCog, adminOnly: true },
 ];
 
 const Sidebar: React.FC = () => {
   const { sidebarOpen, toggleSidebar } = useUIStore();
   const location = useLocation();
+  const isAdmin = useHasRole(['admin']);
+
+  // Filtrar navegación según permisos
+  const filteredNavigation = navigation.filter(item => {
+    if (item.adminOnly) {
+      return isAdmin;
+    }
+    return true;
+  });
 
   return (
     <>
@@ -100,7 +113,7 @@ const Sidebar: React.FC = () => {
 
         {/* Navegación */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             const Icon = item.icon;
 

@@ -11,6 +11,7 @@ import Almuerzos from '../pages/almuerzos';
 import Reportes from '../pages/Reportes';
 import Notificaciones from '../pages/Notificaciones';
 import Configuracion from '../pages/Configuracion';
+import { UserManagement } from '../pages/usuarios';
 import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -103,6 +104,16 @@ const AppRoutes: React.FC = () => {
                   element={
                     <ProtectedRoute requiredRoles={['admin']}>
                       <Configuracion />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                {/* Módulo de Gestión de Usuarios - Solo Admin */}
+                <Route 
+                  path="/admin/usuarios" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <UserManagement />
                     </ProtectedRoute>
                   } 
                 />
