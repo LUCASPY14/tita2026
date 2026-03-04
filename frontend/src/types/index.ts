@@ -858,3 +858,65 @@ export interface ActualizarConfiguracionData {
 export interface LimpiarCacheData {
   clave?: string;
 }
+
+// Tipos para módulo de Auditoría
+export interface AuditoriaOperacion {
+  id_auditoria: number;
+  usuario: string;
+  tipo_usuario: string;
+  id_usuario: number | null;
+  operacion: string;
+  tabla_afectada: string | null;
+  id_registro: number | null;
+  descripcion: string | null;
+  datos_anteriores: any | null;
+  datos_nuevos: any | null;
+  ip_address: string | null;
+  ciudad: string | null;
+  pais: string | null;
+  user_agent: string | null;
+  fecha_operacion: string;
+  resultado: string;
+  mensaje_error: string | null;
+  tipo_operacion_display?: string;
+  resultado_display?: string;
+}
+
+export interface FiltrosAuditoria {
+  fecha_desde?: string;
+  fecha_hasta?: string;
+  id_usuario?: number;
+  usuario?: string;
+  tipo_usuario?: string;
+  operacion?: string;
+  tabla?: string;
+  tabla_afectada?: string;
+  resultado?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+  ordering?: string;
+}
+
+export interface EstadisticasAuditoria {
+  operaciones_por_tipo: Array<{operacion: string; total: number}>;
+  operaciones_por_resultado: Array<{resultado: string; total: number}>;
+  usuarios_mas_activos: Array<{usuario: string; tipo_usuario: string; total_operaciones: number}>;
+  tablas_mas_modificadas: Array<{tabla_afectada: string; total: number}>;
+  total_registros: number;
+}
+
+export interface TimelineAuditoria {
+  fecha: string;
+  total: number;
+}
+
+export interface ActividadUsuario {
+  id_usuario: number;
+  total_operaciones: number;
+  ultima_actividad: AuditoriaOperacion | null;
+  operaciones_por_tipo: Array<{operacion: string; total: number}>;
+  operaciones_exitosas: number;
+  operaciones_fallidas: number;
+  tasa_exito: number;
+}

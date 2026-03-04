@@ -14,7 +14,8 @@ from .views import (
     RolesViewSet,
     EmpleadosViewSet,
     PerfilesUsuarioViewSet,
-    UsuariosPortalViewSet
+    UsuariosPortalViewSet,
+    AuditoriaOperacionesViewSet
 )
 
 
@@ -33,6 +34,7 @@ router.register(r'2fa', TwoFactorViewSet, basename='2fa')
 router.register(r'sesiones', SesionesViewSet, basename='sesiones')
 router.register(r'password', PasswordRecoveryViewSet, basename='password')
 router.register(r'permisos', PermisosViewSet, basename='permisos')
+router.register(r'auditoria', AuditoriaOperacionesViewSet, basename='auditoria')
 
 
 urlpatterns = [

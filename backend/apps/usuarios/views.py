@@ -15,11 +15,12 @@ from django.utils.decorators import method_decorator
 
 from .models import (
     Empleados, Roles, PerfilesUsuario, UsuariosPortal,
-    SesionesActivas, BloqueosCuenta
+    SesionesActivas, BloqueosCuenta, AuditoriaOperaciones
 )
 from .serializers import (
     EmpleadosSerializer, RolesSerializer, 
-    PerfilesUsuarioSerializer, UsuariosPortalSerializer
+    PerfilesUsuarioSerializer, UsuariosPortalSerializer,
+    AuditoriaOperacionesSerializer
 )
 from .services import (
     AuthenticationService,
@@ -694,3 +695,144 @@ class UsuariosPortalViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['activo', 'id_cliente']
     search_fields = ['email']
+
+
+class AuditoriaOperacionesViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet de solo lectura para consulta de logs de auditoría.
+    Incluye filtros avanzados por usuario, operación, tabla, fechas y resultado.
+    """
+    queryset = AuditoriaOperaciones.objects.all().order_by('-fecha_operacion')
+    serializer_class = AuditoriaOperacionesSerializer
+    permission_classes = [IsAuthenticated, EsAdministrador]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['tipo_usuario', 'operacion', 'tabla_afectada', 'resultado']
+    search_fields = ['usuario', 'descripcion', 'ip_address', 'ciudad']
+    ordering_fields = ['fecha_operacion', 'usuario', 'operacion', 'resultado']
+    
+    def get_queryset(self):
+        """
+        Filtra queryset con parámetros adicionales:
+        - fecha_desde / fecha_hasta: rango de fechas
+        - id_usuario: filtrar por usuario específico
+        - tabla: tabla afectada
+        """
+        queryset = super().get_queryset()
+        
+        # Filtro por rango de fechas
+        fecha_desde = self.request.query_params.get('fecha_desde', None)
+        fecha_hasta = self.request.query_params.get('fecha_hasta', None)
+        
+        if fecha_desde:
+            queryset = queryset.filter(fecha_operacion__gte=fecha_desde)
+        if fecha_hasta:
+            queryset = queryset.filter(fecha_operacion__lte=fecha_hasta)
+        
+        # Filtro por ID de usuario
+        id_usuario = self.request.query_params.get('id_usuario', None)
+        if id_usuario:
+            queryset = queryset.filter(id_usuario=id_usuario)
+        
+        # Filtro por tabla afectada
+        tabla = self.request.query_params.get('tabla', None)
+        if tabla:
+            queryset = queryset.filter(tabla_afectada=tabla)
+        
+        return queryset
+    
+    @action(detail=False, methods=['get'])
+    def estadisticas(self, request):
+        """
+        Retorna estadísticas generales de auditoría:
+        - Total de operaciones por tipo
+        - Total de operaciones por resultado
+        - Usuarios más activos
+        - Tablas más modificadas
+        """
+        from django.db.models import Count
+        
+        queryset = self.get_queryset()
+        
+        # Operaciones por tipo
+        ops_por_tipo = queryset.values('operacion').annotate(
+            total=Count('id_auditoria')
+        ).order_by('-total')[:10]
+        
+        # Operaciones por resultado
+        ops_por_resultado = queryset.values('resultado').annotate(
+            total=Count('id_auditoria')
+        )
+        
+        # Usuarios más activos
+        usuarios_activos = queryset.values('usuario', 'tipo_usuario').annotate(
+            total_operaciones=Count('id_auditoria')
+        ).order_by('-total_operaciones')[:10]
+        
+        # Tablas más modificadas
+        tablas_modificadas = queryset.exclude(tabla_afectada__isnull=True).values('tabla_afectada').annotate(
+            total=Count('id_auditoria')
+        ).order_by('-total')[:10]
+        
+        return Response({
+            'operaciones_por_tipo': ops_por_tipo,
+            'operaciones_por_resultado': ops_por_resultado,
+            'usuarios_mas_activos': usuarios_activos,
+            'tablas_mas_modificadas': tablas_modificadas,
+            'total_registros': queryset.count()
+        })
+    
+    @action(detail=False, methods=['get'])
+    def timeline(self, request):
+        """
+        Retorna timeline de operaciones agrupadas por día.
+        Útil para gráficos de actividad en el tiempo.
+        """
+        from django.db.models.functions import TruncDate
+        from django.db.models import Count
+        
+        queryset = self.get_queryset()
+        
+        timeline = queryset.annotate(
+            fecha=TruncDate('fecha_operacion')
+        ).values('fecha').annotate(
+            total=Count('id_auditoria')
+        ).order_by('fecha')
+        
+        return Response(list(timeline))
+    
+    @action(detail=False, methods=['get'])
+    def actividad_usuario(self, request):
+        """
+        Retorna actividad detallada de un usuario específico.
+        Requiere parámetro: id_usuario
+        """
+        id_usuario = request.query_params.get('id_usuario', None)
+        
+        if not id_usuario:
+            return Response(
+                {'error': 'Se requiere el parámetro id_usuario'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        queryset = self.queryset.filter(id_usuario=id_usuario)
+        
+        # Resumen de actividad
+        total_operaciones = queryset.count()
+        ultima_actividad = queryset.first()
+        
+        ops_por_tipo = queryset.values('operacion').annotate(
+            total=Count('id_auditoria')
+        ).order_by('-total')
+        
+        ops_exitosas = queryset.filter(resultado='EXITO').count()
+        ops_fallidas = queryset.exclude(resultado='EXITO').count()
+        
+        return Response({
+            'id_usuario': id_usuario,
+            'total_operaciones': total_operaciones,
+            'ultima_actividad': AuditoriaOperacionesSerializer(ultima_actividad).data if ultima_actividad else None,
+            'operaciones_por_tipo': ops_por_tipo,
+            'operaciones_exitosas': ops_exitosas,
+            'operaciones_fallidas': ops_fallidas,
+            'tasa_exito': round((ops_exitosas / total_operaciones * 100), 2) if total_operaciones > 0 else 0
+        })
