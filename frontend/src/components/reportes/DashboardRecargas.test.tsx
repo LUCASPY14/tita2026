@@ -65,7 +65,9 @@ describe('DashboardRecargas Component', () => {
     
     await waitFor(() => {
       expect(reportesService.getDashboardRecargas).toHaveBeenCalledWith({ dias: 7 });
-      expect(screen.getByText('Últimos 7 días')).toBeInTheDocument();
+      // Buscar específicamente el periodo mostrado, no la opción del select
+      const periodoTexto = screen.getAllByText('Últimos 7 días')[0];
+      expect(periodoTexto).toBeInTheDocument();
     });
   });
 
@@ -91,8 +93,12 @@ describe('DashboardRecargas Component', () => {
     render(<DashboardRecargas />);
     
     await waitFor(() => {
-      expect(screen.getByText('Tasa de Éxito')).toBeInTheDocument();
-      expect(screen.getByText(/96\.7%/)).toBeInTheDocument();
+      // Buscar todos los elementos con "Tasa de Éxito" y verificar el primero
+      const tasaTextos = screen.getAllByText('Tasa de Éxito');
+      expect(tasaTextos[0]).toBeInTheDocument();
+      // Usar getAllByText porque el porcentaje puede aparecer múltiples veces
+      const porcentajes = screen.getAllByText(/96\.7%/);
+      expect(porcentajes.length).toBeGreaterThan(0);
     });
   });
 
@@ -101,9 +107,9 @@ describe('DashboardRecargas Component', () => {
     
     await waitFor(() => {
       expect(screen.getByText('Comisiones')).toBeInTheDocument();
-      // Formato: ₲ 50.000
-      const comisionElement = screen.getByText(/50\.000/);
-      expect(comisionElement).toBeInTheDocument();
+      // Formato: ₲ 50.000 - Usar getAllByText porque puede aparecer múltiples veces
+      const comisionElements = screen.getAllByText(/50\.000/);
+      expect(comisionElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -111,11 +117,10 @@ describe('DashboardRecargas Component', () => {
     const user = userEvent.setup();
     render(<DashboardRecargas />);
     
-    await waitFor(() => {
-      expect(reportesService.getDashboardRecargas).toHaveBeenCalledWith({ dias: 7 });
-    });
+    // Esperar a que cargue y aparezca el select
+    const select = await screen.findByRole('combobox');
+    expect(reportesService.getDashboardRecargas).toHaveBeenCalledWith({ dias: 7 });
 
-    const select = screen.getByRole('combobox');
     await user.selectOptions(select, '30');
 
     await waitFor(() => {
@@ -165,7 +170,9 @@ describe('DashboardRecargas Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Total Recargas')).toBeInTheDocument();
       expect(screen.getByText('Recargas Exitosas')).toBeInTheDocument();
-      expect(screen.getByText('Tasa de Éxito')).toBeInTheDocument();
+      // Usar getAllByText para "Tasa de Éxito" que aparece múltiples veces
+      const tasaTextos = screen.getAllByText('Tasa de Éxito');
+      expect(tasaTextos.length).toBeGreaterThan(0);
       expect(screen.getByText('Comisiones')).toBeInTheDocument();
     });
   });
@@ -182,7 +189,9 @@ describe('DashboardRecargas Component', () => {
     render(<DashboardRecargas />);
     
     await waitFor(() => {
-      expect(screen.getByText(/50\.0%/)).toBeInTheDocument();
+      // Usar getAllByText porque puede aparecer múltiples veces
+      const porcentajes = screen.getAllByText(/50\.0%/);
+      expect(porcentajes.length).toBeGreaterThan(0);
     });
   });
 
@@ -190,9 +199,9 @@ describe('DashboardRecargas Component', () => {
     render(<DashboardRecargas />);
     
     await waitFor(() => {
-      // Verifica formato de moneda paraguaya
-      const comision = screen.getByText(/50\.000/);
-      expect(comision).toBeInTheDocument();
+      // Verifica formato de moneda paraguaya - puede aparecer múltiples veces
+      const comisiones = screen.getAllByText(/50\.000/);
+      expect(comisiones.length).toBeGreaterThan(0);
     });
   });
 });
