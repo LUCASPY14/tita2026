@@ -135,12 +135,12 @@ describe('Preferencias Component', () => {
       expect(screen.getByText('Recarga Exitosa')).toBeInTheDocument();
     });
 
-    // Buscar primer checkbox de push
-    const pushLabels = screen.getAllByText('Push');
-    const firstPushCheckbox = pushLabels[0].previousElementSibling?.previousElementSibling as HTMLInputElement;
+    // Buscar primer checkbox de portal (push)
+    const portalLabels = screen.getAllByText('Portal');
+    const firstPortalCheckbox = portalLabels[0].previousElementSibling?.previousElementSibling as HTMLInputElement;
     
-    if (firstPushCheckbox && firstPushCheckbox.type === 'checkbox') {
-      await user.click(firstPushCheckbox);
+    if (firstPortalCheckbox && firstPortalCheckbox.type === 'checkbox') {
+      await user.click(firstPortalCheckbox);
 
       await waitFor(() => {
         expect(notificacionesService.actualizarPreferencias).toHaveBeenCalled();

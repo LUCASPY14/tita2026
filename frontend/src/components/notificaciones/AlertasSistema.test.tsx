@@ -28,23 +28,22 @@ import toast from 'react-hot-toast';
 
 const mockAlertas = [
   {
-    id: 1,
+    id_alerta: 1,
     tipo: 'stock_critico',
     criticidad: 'alto',
-    titulo: 'Stock Crítico',
-    descripcion: 'Producto bajo en stock',
+    mensaje: 'Producto bajo en stock',
     estado: 'Pendiente',
     fecha_creacion: '2024-01-01T10:00:00',
   },
   {
-    id: 2,
+    id_alerta: 2,
     tipo: 'anomalia',
     criticidad: 'medio',
-    titulo: 'Anomalía detectada',
-    descripcion: 'Transacción inusual',
+    mensaje: 'Transacción inusual',
     estado: 'Resuelta',
     fecha_creacion: '2024-01-02T10:00:00',
     fecha_resolucion: '2024-01-02T11:00:00',
+    observaciones: 'Se corrigió la transacción',
   },
 ];
 
@@ -57,14 +56,13 @@ describe('AlertasSistema Component', () => {
   test('renderiza correctamente', async () => {
     render(<AlertasSistema />);
     await waitFor(() => {
-      expect(screen.getByText('Stock Crítico')).toBeInTheDocument();
+      expect(screen.getByText('STOCK_CRITICO')).toBeInTheDocument();
     });
   });
 
   test('muestra spinner de carga inicialmente', () => {
     render(<AlertasSistema />);
-    const spinner = screen.getByRole('status', { hidden: true }) || 
-                    document.querySelector('.animate-spin');
+    const spinner = document.querySelector('.animate-spin');
     expect(spinner).toBeInTheDocument();
   });
 
@@ -73,8 +71,8 @@ describe('AlertasSistema Component', () => {
     
     await waitFor(() => {
       expect(notificacionesService.getAlertas).toHaveBeenCalledWith({});
-      expect(screen.getByText('Stock Crítico')).toBeInTheDocument();
-      expect(screen.getByText('Anomalía detectada')).toBeInTheDocument();
+      expect(screen.getByText('STOCK_CRITICO')).toBeInTheDocument();
+      expect(screen.getByText('ANOMALIA')).toBeInTheDocument();
     });
   });
 
@@ -92,7 +90,7 @@ describe('AlertasSistema Component', () => {
     render(<AlertasSistema />);
     
     await waitFor(() => {
-      expect(screen.getByText('Stock Crítico')).toBeInTheDocument();
+      expect(screen.getByText('STOCK_CRITICO')).toBeInTheDocument();
     });
 
     const botonPendientes = screen.getByText('Pendientes');
@@ -150,8 +148,8 @@ describe('AlertasSistema Component', () => {
     render(<AlertasSistema />);
 
     await waitFor(() => {
-      // El componente puede mostrar lista vacía sin mensaje
-      expect(screen.queryByText('Stock Crítico')).not.toBeInTheDocument();
+      expect(screen.getByText('No hay alertas')).toBeInTheDocument();
+      expect(screen.queryByText('STOCK_CRITICO')).not.toBeInTheDocument();
     });
   });
 });
