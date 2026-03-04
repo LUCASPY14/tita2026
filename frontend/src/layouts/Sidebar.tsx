@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { 
   LayoutDashboard, 
+  TrendingUp,
   CreditCard, 
   ShoppingCart, 
   Users, 
@@ -30,6 +31,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Dashboard Mejorado', path: '/dashboard/mejorado', icon: TrendingUp },
   { name: 'Recargas', path: '/recargas', icon: CreditCard },
   { name: 'Punto de Venta', path: '/ventas', icon: ShoppingCart },
   { name: 'Clientes', path: '/clientes', icon: Users },

@@ -10,7 +10,7 @@
  * - Dashboards (KPIs, ventas, recargas, financiero)
  */
 
-import axios from 'axios';
+import axios from '../utils/axiosConfig';
 import type {
   ReporteVentas,
   ReporteVentasParams,

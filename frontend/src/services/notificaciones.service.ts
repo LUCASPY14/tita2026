@@ -3,7 +3,7 @@
  * Gestión de notificaciones, alertas y preferencias del sistema
  */
 
-import axios from 'axios';
+import axios from '../utils/axiosConfig';
 import {
   NotificacionPortal,
   NotificacionSaldo,

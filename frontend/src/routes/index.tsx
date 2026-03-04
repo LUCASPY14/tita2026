@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from '../pages/auth/Login';
 import Dashboard from '../pages/dashboard/Dashboard';
+import DashboardMejorado from '../pages/dashboard/DashboardMejorado';
 import Recargas from '../pages/recargas';
 import POS from '../pages/pos';
 import Clientes from '../pages/clientes';
@@ -31,6 +32,7 @@ const AppRoutes: React.FC = () => {
               <Routes>
                 {/* Dashboard - Accesible para todos */}
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard/mejorado" element={<DashboardMejorado />} />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 
                 {/* Módulo de Recargas - Admin, Gerente, Cajero */}

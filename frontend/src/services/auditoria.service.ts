@@ -3,7 +3,7 @@
  * Gestión de logs de auditoría y tracking de operaciones del sistema
  */
 
-import axios from 'axios';
+import axios from '../utils/axiosConfig';
 import {
   AuditoriaOperacion,
   FiltrosAuditoria,

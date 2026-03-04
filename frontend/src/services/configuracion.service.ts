@@ -3,7 +3,7 @@
  * Gestión de configuraciones, caché y límites del sistema
  */
 
-import axios from 'axios';
+import axios from '../utils/axiosConfig';
 import {
   ConfiguracionSistema,
   ConfiguracionParams,
