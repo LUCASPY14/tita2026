@@ -12,17 +12,19 @@ import {
 } from '../components/notificaciones';
 import notificacionesService from '../services/notificaciones.service';
 import { ResumenNotificaciones } from '../types';
+import { useAuthContext } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 type TabType = 'notificaciones' | 'alertas' | 'preferencias';
 
 const Notificaciones: React.FC = () => {
+  const { user } = useAuthContext();
   const [tabActiva, setTabActiva] = useState<TabType>('notificaciones');
   const [resumen, setResumen] = useState<ResumenNotificaciones | null>(null);
   const [cargando, setCargando] = useState(true);
 
-  // TODO: Obtener id_usuario del contexto de autenticación
-  const idUsuario = 1;
+  // Obtener id_usuario del contexto de autenticación
+  const idUsuario = user?.id || 1; // Fallback a 1 si no hay usuario
 
   useEffect(() => {
     cargarResumen();

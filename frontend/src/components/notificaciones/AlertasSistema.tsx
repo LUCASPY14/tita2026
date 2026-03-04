@@ -15,6 +15,7 @@ import { AlertaSistema } from '../../types';
 import notificacionesService from '../../services/notificaciones.service';
 import toast from 'react-hot-toast';
 import Button from '../common/Button';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 interface AlertasSistemaProps {
   onAlertaResuelta?: () => void;
@@ -23,6 +24,7 @@ interface AlertasSistemaProps {
 const AlertasSistemaComponent: React.FC<AlertasSistemaProps> = ({
   onAlertaResuelta,
 }) => {
+  const { user } = useAuthContext();
   const [alertas, setAlertas] = useState<AlertaSistema[]>([]);
   const [cargando, setCargando] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState<string>('');
@@ -61,8 +63,8 @@ const AlertasSistemaComponent: React.FC<AlertasSistemaProps> = ({
 
     try {
       setResolviendoId(id);
-      // TODO: Obtener id_empleado del contexto de autenticación
-      const idEmpleado = 1;
+      // Obtener id_empleado del contexto de autenticación
+      const idEmpleado = user?.id || 1; // Fallback a 1 si no hay usuario
       await notificacionesService.resolverAlerta(id, observaciones, idEmpleado);
       toast.success('Alerta resuelta exitosamente');
       setObservaciones('');

@@ -22,6 +22,15 @@ jest.mock('react-hot-toast', () => ({
   },
 }));
 
+// Mock del AuthContext
+jest.mock('../../contexts/AuthContext', () => ({
+  useAuthContext: () => ({
+    user: { id: 1, username: 'testuser' },
+    isAuthenticated: true,
+    isLoading: false,
+  }),
+}));
+
 import AlertasSistema from './AlertasSistema';
 import notificacionesService from '../../services/notificaciones.service';
 import toast from 'react-hot-toast';
