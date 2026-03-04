@@ -21,22 +21,20 @@ describe('Recargas Service', () => {
   describe('buscarHijos', () => {
     const mockHijos: Hijo[] = [
       {
-        id: 1,
-        nombres: 'Juan',
-        apellidos: 'Pérez',
+        id_hijo: 1,
+        nombre: 'Juan',
+        apellido: 'Pérez',
         grado: '5to Grado',
-        seccion: 'A',
-        id_cliente_responsable: 10,
-        activo: true
+        activo: true,
+        id_cliente_responsable: 10
       },
       {
-        id: 2,
-        nombres: 'María',
-        apellidos: 'López',
+        id_hijo: 2,
+        nombre: 'María',
+        apellido: 'López',
         grado: '3er Grado',
-        seccion: 'B',
-        id_cliente_responsable: 11,
-        activo: true
+        activo: true,
+        id_cliente_responsable: 11
       }
     ];
 
@@ -101,13 +99,12 @@ describe('Recargas Service', () => {
 
   describe('getHijoById', () => {
     const mockHijo: Hijo = {
-      id: 1,
-      nombres: 'Juan',
-      apellidos: 'Pérez',
+      id_hijo: 1,
+      nombre: 'Juan',
+      apellido: 'Pérez',
       grado: '5to Grado',
-      seccion: 'A',
-      id_cliente_responsable: 10,
-      activo: true
+      activo: true,
+      id_cliente_responsable: 10
     };
 
     test('debe obtener hijo por ID', async () => {
@@ -129,10 +126,13 @@ describe('Recargas Service', () => {
   describe('buscarTarjetas', () => {
     const mockTarjetas: Tarjeta[] = [
       {
-        id: 1,
         nro_tarjeta: '1234567890',
-        saldo: 100.00,
-        estado: 'ACTIVA',
+        saldo_actual: 100.00,
+        estado: 'Activa',
+        fecha_creacion: '2024-01-01',
+        permite_saldo_negativo: false,
+        limite_credito: 0,
+        notificar_saldo_bajo: true,
         id_hijo: 1
       }
     ];
@@ -174,10 +174,13 @@ describe('Recargas Service', () => {
 
   describe('getTarjetaByHijo', () => {
     const mockTarjeta: Tarjeta = {
-      id: 1,
       nro_tarjeta: '1234567890',
-      saldo: 100.00,
-      estado: 'ACTIVA',
+      saldo_actual: 100.00,
+      estado: 'Activa',
+      fecha_creacion: '2024-01-01',
+      permite_saldo_negativo: false,
+      limite_credito: 0,
+      notificar_saldo_bajo: true,
       id_hijo: 1
     };
 
@@ -216,11 +219,11 @@ describe('Recargas Service', () => {
   describe('getRecargas', () => {
     const mockRecargas: CargaSaldo[] = [
       {
-        id: 1,
+        id_carga: 1,
         nro_tarjeta: '1234567890',
-        monto: 50.00,
-        fecha: '2024-01-15',
-        estado: 'APROBADA',
+        monto_cargado: 50.00,
+        fecha_carga: '2024-01-15',
+        estado: 'Confirmada',
         metodo_pago: 'efectivo'
       }
     ];
@@ -274,11 +277,11 @@ describe('Recargas Service', () => {
 
   describe('getRecargaById', () => {
     const mockRecarga: CargaSaldo = {
-      id: 1,
+      id_carga: 1,
       nro_tarjeta: '1234567890',
-      monto: 50.00,
-      fecha: '2024-01-15',
-      estado: 'APROBADA',
+      monto_cargado: 50.00,
+      fecha_carga: '2024-01-15',
+      estado: 'Confirmada',
       metodo_pago: 'efectivo'
     };
 
@@ -385,11 +388,11 @@ describe('Recargas Service', () => {
     };
 
     const mockRecarga: CargaSaldo = {
-      id: 1,
+      id_carga: 1,
       nro_tarjeta: '1234567890',
-      monto: 100.00,
-      fecha: '2024-01-15',
-      estado: 'PENDIENTE',
+      monto_cargado: 100.00,
+      fecha_carga: '2024-01-15',
+      estado: 'Pendiente',
       metodo_pago: 'transferencia'
     };
 
@@ -416,11 +419,11 @@ describe('Recargas Service', () => {
 
   describe('aprobarRecarga', () => {
     const mockRecarga: CargaSaldo = {
-      id: 1,
+      id_carga: 1,
       nro_tarjeta: '1234567890',
-      monto: 50.00,
-      fecha: '2024-01-15',
-      estado: 'APROBADA',
+      monto_cargado: 50.00,
+      fecha_carga: '2024-01-15',
+      estado: 'Confirmada',
       metodo_pago: 'transferencia'
     };
 
@@ -433,7 +436,7 @@ describe('Recargas Service', () => {
         supervisor_id: 10
       });
       expect(result).toEqual(mockRecarga);
-      expect(result.estado).toBe('APROBADA');
+      expect(result.estado).toBe('Confirmada');
     });
 
     test('debe aprobar recarga sin ID de supervisor', async () => {
@@ -456,29 +459,31 @@ describe('Recargas Service', () => {
   describe('Integration scenarios', () => {
     test('flujo completo: buscar hijo -> obtener tarjeta -> procesar recarga', async () => {
       const hijo: Hijo = {
-        id: 1,
-        nombres: 'Juan',
-        apellidos: 'Pérez',
+        id_hijo: 1,
+        nombre: 'Juan',
+        apellido: 'Pérez',
         grado: '5to',
-        seccion: 'A',
-        id_cliente_responsable: 10,
-        activo: true
+        activo: true,
+        id_cliente_responsable: 10
       };
 
       const tarjeta: Tarjeta = {
-        id: 1,
         nro_tarjeta: '1234567890',
-        saldo: 50.00,
-        estado: 'ACTIVA',
+        saldo_actual: 50.00,
+        estado: 'Activa',
+        fecha_creacion: '2024-01-01',
+        permite_saldo_negativo: false,
+        limite_credito: 0,
+        notificar_saldo_bajo: true,
         id_hijo: 1
       };
 
       const recarga: CargaSaldo = {
-        id: 1,
+        id_carga: 1,
         nro_tarjeta: '1234567890',
-        monto: 50.00,
-        fecha: '2024-01-15',
-        estado: 'APROBADA',
+        monto_cargado: 50.00,
+        fecha_carga: '2024-01-15',
+        estado: 'Confirmada',
         metodo_pago: 'efectivo'
       };
 
@@ -487,7 +492,7 @@ describe('Recargas Service', () => {
         data: { count: 1, next: null, previous: null, results: [hijo] }
       });
       const hijosResult = await recargasService.buscarHijos({ search: 'Juan' });
-      expect(hijosResult.results[0].id).toBe(1);
+      expect(hijosResult.results[0].id_hijo).toBe(1);
 
       // Obtener tarjeta
       mockedApi.get.mockResolvedValueOnce({
@@ -503,7 +508,7 @@ describe('Recargas Service', () => {
         monto: 50.00,
         metodo_pago: 'efectivo'
       });
-      expect(recargaResult.estado).toBe('APROBADA');
+      expect(recargaResult.estado).toBe('Confirmada');
     });
   });
 });

@@ -13,26 +13,28 @@ describe('Ventas Service', () => {
   describe('getAll', () => {
     const mockVentas: Venta[] = [
       {
-        id: 1,
-        numero_venta: 'V-001',
+        id_venta: 1,
+        nro_factura_venta: 1,
         fecha: '2024-01-15',
-        cliente_id: 10,
+        id_cliente: 10,
         cliente_nombre: 'Juan Pérez',
-        metodo_pago: 'EFECTIVO',
-        total: 150.00,
+        monto_total: 150.00,
+        saldo_pendiente: 0,
+        estado_pago: 'Pagado',
         estado: 'COMPLETADA',
-        items: []
+        tipo_venta: 'Contado'
       },
       {
-        id: 2,
-        numero_venta: 'V-002',
+        id_venta: 2,
+        nro_factura_venta: 2,
         fecha: '2024-01-16',
-        cliente_id: 11,
+        id_cliente: 11,
         cliente_nombre: 'María López',
-        metodo_pago: 'TARJETA',
-        total: 250.00,
+        monto_total: 250.00,
+        saldo_pendiente: 0,
+        estado_pago: 'Pagado',
         estado: 'COMPLETADA',
-        items: []
+        tipo_venta: 'Contado'
       }
     ];
 
@@ -116,24 +118,16 @@ describe('Ventas Service', () => {
 
   describe('getById', () => {
     const mockVenta: Venta = {
-      id: 1,
-      numero_venta: 'V-001',
+      id_venta: 1,
+      nro_factura_venta: 1,
       fecha: '2024-01-15',
-      cliente_id: 10,
+      id_cliente: 10,
       cliente_nombre: 'Juan Pérez',
-      metodo_pago: 'EFECTIVO',
-      total: 150.00,
+      monto_total: 150.00,
+      saldo_pendiente: 0,
+      estado_pago: 'Pagado',
       estado: 'COMPLETADA',
-      items: [
-        {
-          id: 1,
-          producto_id: 5,
-          producto_nombre: 'Producto Test',
-          cantidad: 2,
-          precio_unitario: 75.00,
-          subtotal: 150.00
-        }
-      ]
+      tipo_venta: 'Contado'
     };
 
     test('debe obtener venta por ID', async () => {
@@ -143,16 +137,16 @@ describe('Ventas Service', () => {
 
       expect(mockedApi.get).toHaveBeenCalledWith('/ventas/1/');
       expect(result).toEqual(mockVenta);
-      expect(result.id).toBe(1);
+      expect(result.id_venta).toBe(1);
     });
 
-    test('debe obtener venta con items completos', async () => {
+    test('debe obtener venta con datos completos', async () => {
       mockedApi.get.mockResolvedValue({ data: mockVenta });
 
       const result = await ventasService.getById(1);
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0].producto_nombre).toBe('Producto Test');
+      expect(result.cliente_nombre).toBe('Juan Pérez');
+      expect(result.monto_total).toBe(150.00);
     });
 
     test('debe manejar venta no encontrada', async () => {
@@ -176,15 +170,16 @@ describe('Ventas Service', () => {
     };
 
     const mockCreatedVenta: Venta = {
-      id: 1,
-      numero_venta: 'V-001',
+      id_venta: 1,
+      nro_factura_venta: 1,
       fecha: '2024-01-15',
-      cliente_id: 10,
+      id_cliente: 10,
       cliente_nombre: 'Juan Pérez',
-      metodo_pago: 'EFECTIVO',
-      total: 150.00,
+      monto_total: 150.00,
+      saldo_pendiente: 0,
+      estado_pago: 'Pagado',
       estado: 'COMPLETADA',
-      items: []
+      tipo_venta: 'Contado'
     };
 
     test('debe crear venta nueva', async () => {
@@ -194,7 +189,7 @@ describe('Ventas Service', () => {
 
       expect(mockedApi.post).toHaveBeenCalledWith('/ventas/', mockVentaData);
       expect(result).toEqual(mockCreatedVenta);
-      expect(result.id).toBe(1);
+      expect(result.id_venta).toBe(1);
     });
 
     test('debe crear venta con método de pago TARJETA', async () => {
@@ -202,11 +197,13 @@ describe('Ventas Service', () => {
         ...mockVentaData,
         metodo_pago: 'TARJETA'
       };
-      mockedApi.post.mockResolvedValue({ data: { ...mockCreatedVenta, metodo_pago: 'TARJETA' } });
+      mockedApi.post.mockResolvedValue({ 
+        data: { ...mockCreatedVenta, tipo_venta: 'Contado' } 
+      });
 
       const result = await ventasService.create(tarjetaData);
 
-      expect(result.metodo_pago).toBe('TARJETA');
+      expect(result.tipo_venta).toBe('Contado');
     });
 
     test('debe crear venta con múltiples items', async () => {
@@ -235,15 +232,16 @@ describe('Ventas Service', () => {
 
   describe('update', () => {
     const mockUpdatedVenta: Venta = {
-      id: 1,
-      numero_venta: 'V-001',
+      id_venta: 1,
+      nro_factura_venta: 1,
       fecha: '2024-01-15',
-      cliente_id: 11,
+      id_cliente: 11,
       cliente_nombre: 'María López',
-      metodo_pago: 'TARJETA',
-      total: 200.00,
+      monto_total: 200.00,
+      saldo_pendiente: 0,
+      estado_pago: 'Pagado',
       estado: 'COMPLETADA',
-      items: []
+      tipo_venta: 'Credito'
     };
 
     test('debe actualizar venta existente', async () => {
@@ -259,13 +257,15 @@ describe('Ventas Service', () => {
       expect(result).toEqual(mockUpdatedVenta);
     });
 
-    test('debe actualizar solo el método de pago', async () => {
+    test('debe actualizar tipo de venta', async () => {
       const updateData = { metodo_pago: 'TRANSFERENCIA' as const };
-      mockedApi.put.mockResolvedValue({ data: { ...mockUpdatedVenta, metodo_pago: 'TRANSFERENCIA' } });
+      mockedApi.put.mockResolvedValue({ 
+        data: { ...mockUpdatedVenta, tipo_venta: 'Contado' } 
+      });
 
       const result = await ventasService.update(1, updateData);
 
-      expect(result.metodo_pago).toBe('TRANSFERENCIA');
+      expect(result.tipo_venta).toBe('Contado');
     });
 
     test('debe manejar venta no encontrada en update', async () => {
@@ -322,15 +322,16 @@ describe('Ventas Service', () => {
       };
 
       const ventaCreada: Venta = {
-        id: 1,
-        numero_venta: 'V-001',
+        id_venta: 1,
+        nro_factura_venta: 1,
         fecha: '2024-01-15',
-        cliente_id: 10,
+        id_cliente: 10,
         cliente_nombre: 'Juan Pérez',
-        metodo_pago: 'EFECTIVO',
-        total: 150.00,
+        monto_total: 150.00,
+        saldo_pendiente: 0,
+        estado_pago: 'Pagado',
         estado: 'COMPLETADA',
-        items: []
+        tipo_venta: 'Contado'
       };
 
       const cancelResponse: CancelarVentaResponse = {
@@ -342,7 +343,7 @@ describe('Ventas Service', () => {
       // Crear
       mockedApi.post.mockResolvedValueOnce({ data: ventaCreada });
       const created = await ventasService.create(ventaData);
-      expect(created.id).toBe(1);
+      expect(created.id_venta).toBe(1);
 
       // Obtener
       mockedApi.get.mockResolvedValueOnce({ data: ventaCreada });

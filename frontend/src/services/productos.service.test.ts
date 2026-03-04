@@ -26,7 +26,7 @@ describe('Productos Service', () => {
   describe('getProductos', () => {
     const mockProductos: Producto[] = [
       {
-        id: 1,
+        id_producto: 1,
         codigo_barra: '1234567890123',
         descripcion: 'Producto Test 1',
         stock_actual: 100,
@@ -37,7 +37,7 @@ describe('Productos Service', () => {
         id_impuesto: 1
       },
       {
-        id: 2,
+        id_producto: 2,
         codigo_barra: '9876543210987',
         descripcion: 'Producto Test 2',
         stock_actual: 50,
@@ -128,7 +128,7 @@ describe('Productos Service', () => {
 
   describe('getProductoById', () => {
     const mockProducto: Producto = {
-      id: 1,
+      id_producto: 1,
       codigo_barra: '1234567890123',
       descripcion: 'Producto Detallado',
       stock_actual: 100,
@@ -147,7 +147,7 @@ describe('Productos Service', () => {
 
       expect(mockedApi.get).toHaveBeenCalledWith('/productos/1/');
       expect(result).toEqual(mockProducto);
-      expect(result.id).toBe(1);
+      expect(result.id_producto).toBe(1);
     });
 
     test('debe manejar producto no encontrado', async () => {
@@ -159,7 +159,7 @@ describe('Productos Service', () => {
 
   describe('buscarPorCodigoBarra', () => {
     const mockProducto: Producto = {
-      id: 1,
+      id_producto: 1,
       codigo_barra: '1234567890123',
       descripcion: 'Producto Buscado',
       stock_actual: 100,
@@ -214,7 +214,7 @@ describe('Productos Service', () => {
     };
 
     const mockProductoCreado: Producto = {
-      id: 3,
+      id_producto: 3,
       ...mockProductoData,
       stock_actual: 0
     };
@@ -226,7 +226,7 @@ describe('Productos Service', () => {
 
       expect(mockedApi.post).toHaveBeenCalledWith('/productos/', mockProductoData);
       expect(result).toEqual(mockProductoCreado);
-      expect(result.id).toBe(3);
+      expect(result.id_producto).toBe(3);
     });
 
     test('debe crear producto con unidad de medida', async () => {
@@ -259,7 +259,7 @@ describe('Productos Service', () => {
 
   describe('actualizarProducto', () => {
     const mockProductoActualizado: Producto = {
-      id: 1,
+      id_producto: 1,
       codigo_barra: '1234567890123',
       descripcion: 'Producto Actualizado',
       stock_actual: 150,
@@ -321,7 +321,7 @@ describe('Productos Service', () => {
 
   describe('toggleEstadoProducto', () => {
     const mockProducto: Producto = {
-      id: 1,
+      id_producto: 1,
       codigo_barra: '1234567890123',
       descripcion: 'Producto Test',
       stock_actual: 100,
@@ -353,8 +353,8 @@ describe('Productos Service', () => {
 
   describe('getCategorias', () => {
     const mockCategorias: Categoria[] = [
-      { id: 1, nombre: 'Bebidas', activo: true },
-      { id: 2, nombre: 'Alimentos', activo: true }
+      { id_categoria: 1, nombre: 'Bebidas', activo: true },
+      { id_categoria: 2, nombre: 'Alimentos', activo: true }
     ];
 
     const mockResponse: PaginatedResponse<Categoria> = {
@@ -384,10 +384,9 @@ describe('Productos Service', () => {
 
   describe('getCategoriaById', () => {
     const mockCategoria: Categoria = {
-      id: 1,
+      id_categoria: 1,
       nombre: 'Bebidas',
-      activo: true,
-      id_categoria_padre: null
+      activo: true
     };
 
     test('debe obtener categoría por ID', async () => {
@@ -407,7 +406,7 @@ describe('Productos Service', () => {
     };
 
     const mockCategoriaCreada: Categoria = {
-      id: 3,
+      id_categoria: 3,
       ...mockCategoriaData
     };
 
@@ -437,7 +436,7 @@ describe('Productos Service', () => {
 
   describe('actualizarCategoria', () => {
     const mockCategoriaActualizada: Categoria = {
-      id: 1,
+      id_categoria: 1,
       nombre: 'Bebidas Actualizadas',
       activo: true
     };
@@ -471,8 +470,8 @@ describe('Productos Service', () => {
 
   describe('getUnidadesMedida', () => {
     const mockUnidades: UnidadMedida[] = [
-      { id: 1, nombre: 'Unidad', simbolo: 'UN' },
-      { id: 2, nombre: 'Kilo', simbolo: 'KG' }
+      { id_unidad_medida: 1, nombre: 'Unidad', abreviatura: 'UN', activo: true },
+      { id_unidad_medida: 2, nombre: 'Kilo', abreviatura: 'KG', activo: true }
     ];
 
     test('debe obtener unidades de medida', async () => {
@@ -487,8 +486,8 @@ describe('Productos Service', () => {
 
   describe('getListasPrecios', () => {
     const mockListas: ListaPrecio[] = [
-      { id: 1, nombre: 'Precio Público', activo: true },
-      { id: 2, nombre: 'Precio Mayorista', activo: true }
+      { id_lista: 1, nombre_lista: 'Precio Público', moneda: 'PYG', activo: true },
+      { id_lista: 2, nombre_lista: 'Precio Mayorista', moneda: 'PYG', activo: true }
     ];
 
     test('debe obtener listas de precios', async () => {
@@ -503,8 +502,8 @@ describe('Productos Service', () => {
 
   describe('getPreciosPorProducto', () => {
     const mockPrecios: PrecioPorLista[] = [
-      { id: 1, precio_unitario: 10.00, id_lista: 1, id_producto: 1 },
-      { id: 2, precio_unitario: 8.00, id_lista: 2, id_producto: 1 }
+      { id_precio: 1, precio_unitario: 10.00, fecha_vigencia: '2024-01-01', id_lista: 1, id_producto: 1 },
+      { id_precio: 2, precio_unitario: 8.00, fecha_vigencia: '2024-01-01', id_lista: 2, id_producto: 1 }
     ];
 
     test('debe obtener precios por producto', async () => {
@@ -521,8 +520,9 @@ describe('Productos Service', () => {
 
   describe('actualizarPrecio', () => {
     const mockPrecio: PrecioPorLista = {
-      id: 1,
+      id_precio: 1,
       precio_unitario: 15.00,
+      fecha_vigencia: '2024-01-01',
       id_lista: 1,
       id_producto: 1
     };
@@ -547,8 +547,9 @@ describe('Productos Service', () => {
     };
 
     const mockPrecio: PrecioPorLista = {
-      id: 3,
-      ...mockPrecioData
+      id_precio: 3,
+      ...mockPrecioData,
+      fecha_vigencia: '2024-01-01'
     };
 
     test('debe crear precio nuevo', async () => {
@@ -574,7 +575,7 @@ describe('Productos Service', () => {
       };
 
       const productoCreado: Producto = {
-        id: 10,
+        id_producto: 10,
         ...productoData,
         stock_actual: 0
       };
@@ -586,14 +587,15 @@ describe('Productos Service', () => {
       };
 
       const precioCreado: PrecioPorLista = {
-        id: 5,
-        ...precioData
+        id_precio: 5,
+        ...precioData,
+        fecha_vigencia: '2024-01-01'
       };
 
       // Crear producto
       mockedApi.post.mockResolvedValueOnce({ data: productoCreado });
       const created = await productosService.crearProducto(productoData);
-      expect(created.id).toBe(10);
+      expect(created.id_producto).toBe(10);
 
       // Agregar precio
       mockedApi.post.mockResolvedValueOnce({ data: precioCreado });
