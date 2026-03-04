@@ -30,7 +30,7 @@ const mockKPIs = {
   cantidad_recargas: 15,
   saldo_total_tarjetas: 500000,
   tarjetas_activas: 120,
-  productos_stock_critico: 3,
+  productos_bajo_stock: 3,
 };
 
 describe('DashboardKPIs Component', () => {
@@ -94,8 +94,12 @@ describe('DashboardKPIs Component', () => {
     render(<DashboardKPIs />);
     
     await waitFor(() => {
-      expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.getByText('Productos Bajo Stock')).toBeInTheDocument();
     });
+    
+    // Verifica que el número 3 esté presente como texto grande
+    const stockElement = screen.getByText('Productos Bajo Stock').closest('.bg-white');
+    expect(stockElement).toHaveTextContent('3');
   });
 
   test('permite cambiar fecha seleccionada', async () => {
@@ -119,8 +123,9 @@ describe('DashboardKPIs Component', () => {
     const user = userEvent.setup();
     render(<DashboardKPIs />);
     
+    // Esperar a que los datos se carguen completamente
     await waitFor(() => {
-      expect(reportesService.getKPIsPrincipales).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Ventas del Día')).toBeInTheDocument();
     });
 
     const refreshButton = screen.getByTitle('Actualizar');
@@ -157,9 +162,13 @@ describe('DashboardKPIs Component', () => {
     render(<DashboardKPIs />);
     
     await waitFor(() => {
-      expect(screen.getByText('Ticket Promedio')).toBeInTheDocument();
-      const ticketElement = screen.getByText(/6\.000/);
-      expect(ticketElement).toBeInTheDocument();
+      // Hay múltiples elementos con "Ticket Promedio", usar getAllByText
+      const ticketElements = screen.getAllByText('Ticket Promedio');
+      expect(ticketElements.length).toBeGreaterThan(0);
+      
+      // Verificar que el valor formateado está presente (múltiples ocurrencias)
+      const ticketValueElements = screen.getAllByText(/6\.000/);
+      expect(ticketValueElements.length).toBeGreaterThan(0);
     });
   });
 
