@@ -304,11 +304,11 @@ describe('Recargas Service', () => {
     };
 
     const mockRecarga: CargaSaldo = {
-      id: 1,
+      id_carga: 1,
       nro_tarjeta: '1234567890',
-      monto: 50.00,
-      fecha: '2024-01-15',
-      estado: 'APROBADA',
+      monto_cargado: 50.00,
+      fecha_carga: '2024-01-15',
+      estado: 'Confirmada',
       metodo_pago: 'efectivo'
     };
 

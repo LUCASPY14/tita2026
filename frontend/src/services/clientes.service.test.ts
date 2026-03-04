@@ -199,9 +199,16 @@ describe('Clientes Service', () => {
     };
     const mockClienteCreado: Cliente = {
       id_cliente: 3,
-      ...mockClienteData,
+      nombres: 'Pedro',
+      apellidos: 'González',
       razon_social: 'Pedro González',
+      ruc_ci: '5555555555',
+      telefono: '0985555555',
+      email: 'pedro@example.com',
+      activo: true,
       fecha_registro: '2024-01-15',
+      id_lista: 1,
+      id_tipo_cliente: 1,
     };
     test('debe crear cliente nuevo', async () => {
       mockedApi.post.mockResolvedValue({ data: mockClienteCreado });
@@ -437,9 +444,14 @@ describe('Clientes Service', () => {
       };
       const clienteCreado: Cliente = {
         id_cliente: 10,
-        ...clienteData,
+        nombres: 'Test',
+        apellidos: 'Cliente',
+        ruc_ci: '1111111111',
+        activo: true,
         razon_social: 'Test Cliente',
         fecha_registro: '2024-01-15',
+        id_lista: 1,
+        id_tipo_cliente: 1,
       };
       const cuentaCorriente: CuentaCorriente = {
         total_debe: 0,
