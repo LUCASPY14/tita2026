@@ -743,8 +743,8 @@ describe('Almuerzos Service', () => {
 
       test('debe crear alérgeno nuevo', async () => {
         const alergenoCreado: Alergeno = { 
-          id_alergeno: 3, 
           ...alergenoData as Alergeno,
+          id_alergeno: 3, 
           fecha_creacion: '2024-01-15',
           usuario_creacion: 'admin'
         };
