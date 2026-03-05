@@ -24,7 +24,7 @@ import logging
 from apps.core.models import CargasSaldo, ConsumosTarjeta, Tarjetas
 from apps.ventas.models import Ventas, DetallesVenta
 from apps.productos.models import Productos
-from apps.inventario.models import InventarioGeneral
+from apps.inventario.models import StockUnico, MovimientosStock
 from apps.reportes.models import PlantillasReporte
 
 

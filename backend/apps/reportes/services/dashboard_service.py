@@ -22,7 +22,7 @@ import logging
 from apps.core.models import CargasSaldo, ConsumosTarjeta, Tarjetas
 from apps.ventas.models import Ventas
 from apps.productos.models import Productos
-from apps.inventario.models import InventarioGeneral
+from apps.inventario.models import StockUnico
 from apps.reportes.models import KpiMetricas, ValoresKpi, Dashboards
 
 
@@ -99,8 +99,8 @@ class DashboardService:
             ).count()
             
             # Productos bajo stock
-            productos_bajo_stock = InventarioGeneral.objects.filter(
-                cantidad_disponible__lte=F('minimo_requerido')
+            productos_bajo_stock = StockUnico.objects.filter(
+                cantidad__lte=F('id_producto__cantidad_minima')
             ).count()
             
             # Saldo total en tarjetas (dinero circulante)

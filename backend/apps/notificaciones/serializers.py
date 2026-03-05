@@ -1,6 +1,7 @@
 """
 Serializers para app de Notificaciones
-"""from rest_framework import serializers
+"""
+from rest_framework import serializers
 from .models import (
     NotificacionesPortal,
     NotificacionesSaldo,
