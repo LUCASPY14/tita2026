@@ -3,7 +3,7 @@ from .models import StockUnico, MovimientosStock, AjustesInventario
 
 
 class StockUnicoSerializer(serializers.ModelSerializer):
-    producto_nombre = serializers.CharField(source='id_producto.nombre', read_only=True)
+    producto_nombre = serializers.CharField(source='id_producto.descripcion', read_only=True)
     producto_categoria = serializers.CharField(source='id_producto.id_categoria.nombre', read_only=True)
     
     class Meta:
@@ -12,7 +12,7 @@ class StockUnicoSerializer(serializers.ModelSerializer):
 
 
 class MovimientosStockSerializer(serializers.ModelSerializer):
-    producto_nombre = serializers.CharField(source='id_producto.nombre', read_only=True)
+    producto_nombre = serializers.CharField(source='id_producto.descripcion', read_only=True)
     empleado_nombre = serializers.CharField(source='id_empleado_autoriza.nombre', read_only=True)
     
     class Meta:

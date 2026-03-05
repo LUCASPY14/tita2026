@@ -110,17 +110,17 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             # Si debe cobrar, descontar saldo de la tarjeta
             if debe_cobrar:
                 # Verificar saldo suficiente
-                if nro_tarjeta.saldo < costo_calculado:
+                if nro_tarjeta.saldo_actual < costo_calculado:
                     raise ValidationError({
                         'error': 'Saldo insuficiente en la tarjeta',
-                        'saldo_actual': float(nro_tarjeta.saldo),
+                        'saldo_actual': float(nro_tarjeta.saldo_actual),
                         'costo_almuerzo': float(costo_calculado),
-                        'faltante': float(costo_calculado - nro_tarjeta.saldo)
+                        'faltante': float(costo_calculado - nro_tarjeta.saldo_actual)
                     })
                 
                 # Descontar saldo
-                nro_tarjeta.saldo = F('saldo') - costo_calculado
-                nro_tarjeta.save(update_fields=['saldo'])
+                nro_tarjeta.saldo_actual = F('saldo_actual') - costo_calculado
+                nro_tarjeta.save(update_fields=['saldo_actual'])
                 nro_tarjeta.refresh_from_db()
                 
                 # Guardar registro con ya_cobrado=True
@@ -129,6 +129,9 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                     ya_cobrado=True,
                     estado='Confirmado'
                 )
+                
+                # Actualizar cuenta mensual
+                self._agregar_a_cuenta_mensual(registro)
                 
                 # TODO: Registrar movimiento en historial de tarjeta (similar a cantina)
                 # Aquí se podría crear un registro en MovimientosSaldoTarjeta
@@ -141,6 +144,9 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                     estado='Confirmado'
                 )
                 registro.save()
+                
+                # Actualizar cuenta mensual (aunque sea con costo 0)
+                self._agregar_a_cuenta_mensual(registro)
 
     def _agregar_a_cuenta_mensual(self, registro):
         """

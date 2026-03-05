@@ -3,7 +3,7 @@ from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Prom
 
 
 class DetallesVentaSerializer(serializers.ModelSerializer):
-    producto_nombre = serializers.CharField(source='id_producto.nombre', read_only=True)
+    producto_nombre = serializers.CharField(source='id_producto.descripcion', read_only=True)
     
     class Meta:
         model = DetallesVenta
@@ -21,8 +21,8 @@ class PagosVentaSerializer(serializers.ModelSerializer):
 class VentasSerializer(serializers.ModelSerializer):
     detalles = DetallesVentaSerializer(many=True, read_only=True, source='detallesventa_set')
     pagos = PagosVentaSerializer(many=True, read_only=True, source='pagosventa_set')
-    cliente_nombre = serializers.CharField(source='id_cliente.nombre', read_only=True)
-    cliente_apellido = serializers.CharField(source='id_cliente.apellido', read_only=True)
+    cliente_nombre = serializers.CharField(source='id_cliente.nombres', read_only=True)
+    cliente_apellido = serializers.CharField(source='id_cliente.apellidos', read_only=True)
     cajero_nombre = serializers.CharField(source='id_empleado_cajero.nombre', read_only=True)
     
     class Meta:
@@ -31,7 +31,7 @@ class VentasSerializer(serializers.ModelSerializer):
 
 
 class NotasCreditoClienteSerializer(serializers.ModelSerializer):
-    cliente_nombre = serializers.CharField(source='id_cliente.nombre', read_only=True)
+    cliente_nombre = serializers.CharField(source='id_cliente.nombres', read_only=True)
     
     class Meta:
         model = NotasCreditoCliente

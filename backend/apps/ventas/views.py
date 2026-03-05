@@ -24,7 +24,9 @@ class VentasViewSet(viewsets.ModelViewSet):
     - Admin, Gerentes y Cajeros: Acceso total
     - Otros: Sin acceso
     """
-    queryset = Ventas.objects.all()
+    queryset = Ventas.objects.select_related(
+        'id_cliente', 'id_empleado_cajero', 'id_medio_pago'
+    ).prefetch_related('detallesventa_set', 'pagosventa_set')
     serializer_class = VentasSerializer
     permission_classes = [IsAuthenticated, CanManageVentas]
     throttle_classes = [VentasRateThrottle, BurstRateThrottle]
@@ -180,7 +182,8 @@ class VentasViewSet(viewsets.ModelViewSet):
         
         # VALIDACIÓN -1: LÍMITES POR ROL (NUEVO - Control de autorización)
         empleado_cajero = self.request.user.empleado if hasattr(self.request.user, 'empleado') else None
-        
+        validacion_limite = {'puede_ejecutar': True, 'requiere_autorizacion': False}
+
         if empleado_cajero:
             validacion_limite = AutorizacionService.validar_operacion(
                 empleado=empleado_cajero,
