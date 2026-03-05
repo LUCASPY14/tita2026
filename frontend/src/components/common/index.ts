@@ -37,6 +37,8 @@ export type { ModalProps } from './Modal';
 
 export { default as ConfirmDialog } from './ConfirmDialog';
 
+export { default as Skeleton, SkeletonLine, SkeletonKPI } from './Skeleton';
+
 export { default as SearchBar } from './SearchBar';
 export type { SearchBarProps } from './SearchBar';
 

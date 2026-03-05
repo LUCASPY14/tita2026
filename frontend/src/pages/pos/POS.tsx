@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, History, RotateCcw } from 'lucide-react';
 import { Card } from '../../components/common';
 import { CatalogoProductos, CarritoCompras, ProcesarVenta, HistorialVentas, NotasCredito } from './components';
@@ -77,7 +77,30 @@ const POS: React.FC = () => {
   const totalCarrito = carrito.reduce((sum, item) => sum + item.subtotal, 0);
   const cantidadItems = carrito.reduce((sum, item) => sum + item.cantidad, 0);
 
-  return (
+  // Atajos de teclado
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignorar si hay un input/textarea activo
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === 'Enter' && vista === 'pos' && carrito.length > 0 && !mostrarProcesar) {
+        e.preventDefault();
+        setMostrarProcesar(true);
+      }
+      if (e.key === 'Escape' && mostrarProcesar) {
+        e.preventDefault();
+        setMostrarProcesar(false);
+      }
+      if (e.key === 'F2' && vista === 'pos') {
+        e.preventDefault();
+        vaciarCarrito();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [vista, carrito.length, mostrarProcesar]);
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -86,6 +109,11 @@ const POS: React.FC = () => {
           <p className="mt-2 text-gray-600">
             Gestiona las ventas de productos de la cantina
           </p>
+          <div className="mt-1 flex gap-3 text-xs text-gray-400">
+            <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">Enter</span> Procesar venta
+            <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">F2</span> Vaciar carrito
+            <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">Esc</span> Cerrar modal
+          </div>
         </div>
         
         {/* Indicador de Carrito */}

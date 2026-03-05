@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Edit, Eye, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
-import { Input, Button, Badge, Spinner, ConfirmDialog } from '../../../components/common';
+import { Input, Button, Badge, Spinner, ConfirmDialog, Skeleton } from '../../../components/common';
 import { clientesService } from '../../../services/clientes.service';
 import type { Cliente } from '../../../types';
 import { useDebounce } from '../../../hooks/useDebounce';
@@ -118,10 +118,7 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
 
       {/* Tabla */}
       {cargando ? (
-        <div className="flex items-center justify-center py-12">
-          <Spinner />
-          <span className="ml-2 text-gray-600">Cargando clientes...</span>
-        </div>
+        <Skeleton rows={6} cols={5} />
       ) : clientes.length === 0 ? (
         <div className="py-12 text-center">
           <p className="text-gray-500">No se encontraron clientes</p>

@@ -8,7 +8,7 @@
  * - Productos bajo stock
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { 
   DollarSign, 
   ShoppingCart, 
@@ -20,31 +20,48 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import { Card } from '../common';
+import { Card, SkeletonKPI } from '../common';
 import reportesService from '../../services/reportes.service';
 import type { DashboardKPIs as DashboardKPIsType } from '../../types';
 
 export default function DashboardKPIs() {
   const [kpis, setKpis] = useState<DashboardKPIsType | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<Date>(new Date());
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     cargarKPIs();
   }, [fechaSeleccionada]);
 
-  const cargarKPIs = async () => {
-    setCargando(true);
+  // Auto-refresh cada 5 minutos sólo si es el día actual
+  useEffect(() => {
+    const hoy = new Date().toISOString().split('T')[0];
+    if (fechaSeleccionada !== hoy) return;
+
+    intervalRef.current = setInterval(() => {
+      cargarKPIs(true);
+    }, 5 * 60 * 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [fechaSeleccionada]);
+
+  const cargarKPIs = async (silencioso = false) => {
+    if (!silencioso) setCargando(true);
     try {
       const data = await reportesService.getKPIsPrincipales(fechaSeleccionada);
       setKpis(data);
+      setUltimaActualizacion(new Date());
     } catch (error) {
       console.error('Error cargando KPIs:', error);
-      toast.error('Error al cargar los KPIs');
+      if (!silencioso) toast.error('Error al cargar los KPIs');
     } finally {
-      setCargando(false);
+      if (!silencioso) setCargando(false);
     }
   };
 
@@ -59,8 +76,12 @@ export default function DashboardKPIs() {
 
   if (cargando) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <RefreshCw className="animate-spin text-blue-600" size={32} />
+      <div className="space-y-6">
+        <div className="h-20 animate-pulse rounded-lg bg-gray-100" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => <SkeletonKPI key={i} />)}
+        </div>
+        <div className="h-32 animate-pulse rounded-lg bg-gray-100" />
       </div>
     );
   }
@@ -92,13 +113,18 @@ export default function DashboardKPIs() {
               max={new Date().toISOString().split('T')[0]}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button
-              onClick={cargarKPIs}
-              className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-              title="Actualizar"
-            >
-              <RefreshCw size={20} />
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              <button
+                onClick={() => cargarKPIs()}
+                className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                title="Actualizar"
+              >
+                <RefreshCw size={20} />
+              </button>
+              <span className="text-xs text-gray-400">
+                {ultimaActualizacion.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
           </div>
         </div>
       </Card>

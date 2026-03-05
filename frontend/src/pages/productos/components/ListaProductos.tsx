@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Package, Edit, Eye, Trash2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
 import { productosService } from '../../../services/productos.service';
 import { Producto, Categoria } from '../../../types';
-import { Card, Spinner, ConfirmDialog } from '../../../components/common';
+import { Card, Spinner, ConfirmDialog, Skeleton } from '../../../components/common';
 import { useDebounce } from '../../../hooks/useDebounce';
 import toast from 'react-hot-toast';
 
@@ -104,9 +104,7 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
   if (cargando && productos.length === 0) {
     return (
       <Card>
-        <div className="flex items-center justify-center py-12">
-          <Spinner size="lg" />
-        </div>
+        <Skeleton rows={8} cols={6} />
       </Card>
     );
   }

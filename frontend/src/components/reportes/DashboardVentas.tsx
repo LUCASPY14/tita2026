@@ -9,33 +9,42 @@
  * - Tendencia
  */
 
-import { useEffect, useState } from 'react';
-import { Calendar, TrendingUp, TrendingDown, Minus, Download } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Calendar, TrendingUp, TrendingDown, Minus, Download, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import { Card } from '../common';
+import { Card, Skeleton } from '../common';
 import reportesService from '../../services/reportes.service';
 import type { DashboardVentas as DashboardVentasType } from '../../types';
 
 export default function DashboardVentas() {
   const [dashboard, setDashboard] = useState<DashboardVentasType | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<Date>(new Date());
   const [diasSeleccionados, setDiasSeleccionados] = useState(7);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     cargarDashboard();
   }, [diasSeleccionados]);
 
-  const cargarDashboard = async () => {
-    setCargando(true);
+  // Auto-refresh cada 5 minutos
+  useEffect(() => {
+    intervalRef.current = setInterval(() => cargarDashboard(true), 5 * 60 * 1000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [diasSeleccionados]);
+
+  const cargarDashboard = async (silencioso = false) => {
+    if (!silencioso) setCargando(true);
     try {
       const data = await reportesService.getDashboardVentas({ dias: diasSeleccionados });
       setDashboard(data);
+      setUltimaActualizacion(new Date());
     } catch (error) {
       console.error('Error cargando dashboard ventas:', error);
-      toast.error('Error al cargar el dashboard');
+      if (!silencioso) toast.error('Error al cargar el dashboard');
     } finally {
-      setCargando(false);
+      if (!silencioso) setCargando(false);
     }
   };
 
@@ -57,8 +66,13 @@ export default function DashboardVentas() {
 
   if (cargando) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="space-y-6">
+        <div className="h-20 animate-pulse rounded-lg bg-gray-100" />
+        <div className="h-32 animate-pulse rounded-lg bg-gray-100" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton rows={7} cols={1} />
+          <Skeleton rows={4} cols={1} />
+        </div>
       </div>
     );
   }
@@ -93,6 +107,18 @@ export default function DashboardVentas() {
               <option value={30}>Últimos 30 días</option>
               <option value={90}>Últimos 90 días</option>
             </select>
+            <div className="flex flex-col items-end gap-1">
+              <button
+                onClick={() => cargarDashboard()}
+                className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                title="Actualizar"
+              >
+                <RefreshCw size={20} />
+              </button>
+              <span className="text-xs text-gray-400">
+                {ultimaActualizacion.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
           </div>
         </div>
       </Card>
