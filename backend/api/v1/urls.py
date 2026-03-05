@@ -6,12 +6,12 @@ from rest_framework.routers import DefaultRouter
 
 # Import ViewSets
 from apps.clientes.views import ClientesViewSet, HijosViewSet
-from apps.productos.views import ProductosViewSet, CategoriasViewSet
+from apps.productos.views import ProductosViewSet, CategoriasViewSet, UnidadesMedidaViewSet, ListasPreciosViewSet, PreciosPorListaViewSet
 from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaViewSet, NotasCreditoClienteViewSet, PromocionesViewSet
 from apps.compras.views import ProveedoresViewSet, ComprasViewSet, DetallesCompraViewSet, PagosProveedoresViewSet, NotasCreditoProveedorViewSet
 from apps.core.views import TarjetasViewSet, CargasSaldoViewSet, ConsumosTarjetaViewSet, MediosPagoViewSet, ConfiguracionSistemaViewSet
 from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, SuscripcionesAlmuerzoViewSet, RegistrosConsumoAlmuerzoViewSet, AlergenosViewSet
-from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet
+from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet, AuthViewSet, PermisosViewSet, AuditoriaOperacionesViewSet
 from apps.inventario.views import StockUnicoViewSet, MovimientosStockViewSet, AjustesInventarioViewSet
 from apps.reportes.views import ReportesViewSet
 from apps.notificaciones.views import NotificacionesPortalViewSet, NotificacionesSaldoViewSet, AlertasSistemaViewSet, PreferenciasNotificacionViewSet
@@ -26,6 +26,9 @@ router.register(r'hijos', HijosViewSet)
 # Register Productos ViewSets
 router.register(r'productos', ProductosViewSet)
 router.register(r'categorias', CategoriasViewSet)
+router.register(r'unidades-medida', UnidadesMedidaViewSet)
+router.register(r'listas-precios', ListasPreciosViewSet)
+router.register(r'precios-por-lista', PreciosPorListaViewSet)
 
 # Register Ventas ViewSets
 router.register(r'ventas', VentasViewSet)
@@ -56,10 +59,13 @@ router.register(r'registros-consumo-almuerzo', RegistrosConsumoAlmuerzoViewSet)
 router.register(r'alergenos', AlergenosViewSet)
 
 # Register Usuarios ViewSets
+router.register(r'auth', AuthViewSet, basename='auth')
 router.register(r'roles', RolesViewSet)
 router.register(r'empleados', EmpleadosViewSet)
 router.register(r'perfiles-usuario', PerfilesUsuarioViewSet)
 router.register(r'usuarios-portal', UsuariosPortalViewSet)
+router.register(r'permisos', PermisosViewSet, basename='permisos')
+router.register(r'usuarios/auditoria', AuditoriaOperacionesViewSet, basename='auditoria')
 
 # Register Inventario ViewSets
 router.register(r'stock', StockUnicoViewSet)

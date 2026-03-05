@@ -64,10 +64,10 @@ class ComprasViewSet(viewsets.ModelViewSet):
     queryset = Compras.objects.all()
     serializer_class = ComprasSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['estado_pago', 'id_proveedor', 'estado']
-    search_fields = ['nro_factura_compra', 'id_proveedor__razon_social']
-    ordering_fields = ['fecha_compra', 'monto_total']
-    ordering = ['-fecha_compra']
+    filterset_fields = ['estado_pago', 'id_proveedor']
+    search_fields = ['nro_factura', 'id_proveedor__razon_social']
+    ordering_fields = ['fecha', 'monto_total']
+    ordering = ['-fecha']
 
     def perform_create(self, serializer):
         """

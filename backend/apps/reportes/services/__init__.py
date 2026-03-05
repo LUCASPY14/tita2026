@@ -79,36 +79,36 @@ class ReporteService:
         try:
             # Base query
             ventas_query = Ventas.objects.filter(
-                fecha_venta__gte=fecha_inicio,
-                fecha_venta__lte=fecha_fin
+                fecha__gte=fecha_inicio,
+                fecha__lte=fecha_fin
             )
             
             # Filtros opcionales
             if metodo_pago:
-                ventas_query = ventas_query.filter(metodo_pago=metodo_pago)
+                ventas_query = ventas_query.filter(id_medio_pago__descripcion__iexact=metodo_pago)
             
             if id_empleado:
-                ventas_query = ventas_query.filter(id_empleado=id_empleado)
+                ventas_query = ventas_query.filter(id_empleado_cajero=id_empleado)
             
             # Estadísticas generales
             stats = ventas_query.aggregate(
                 total_ventas=Count('id_venta'),
-                total_monto=Sum('total'),
-                promedio_ticket=Avg('total')
+                total_monto=Sum('monto_total'),
+                promedio_ticket=Avg('monto_total')
             )
             
             # Ventas por método de pago
             ventas_efectivo = ventas_query.filter(
-                metodo_pago='efectivo'
-            ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+                id_medio_pago__descripcion__iexact='efectivo'
+            ).aggregate(total=Sum('monto_total'))['total'] or Decimal('0.00')
             
             ventas_tarjeta = ventas_query.filter(
-                metodo_pago='tarjeta'
-            ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+                id_medio_pago__descripcion__iexact='tarjeta'
+            ).aggregate(total=Sum('monto_total'))['total'] or Decimal('0.00')
             
             ventas_online = ventas_query.filter(
-                metodo_pago='online'
-            ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+                id_medio_pago__descripcion__iexact='online'
+            ).aggregate(total=Sum('monto_total'))['total'] or Decimal('0.00')
             
             # Top 10 productos más vendidos
             top_productos = DetallesVenta.objects.filter(
@@ -123,22 +123,21 @@ class ReporteService:
             
             # Ventas por día
             ventas_por_dia = ventas_query.extra(
-                select={'fecha': 'DATE(fecha_venta)'}
-            ).values('fecha').annotate(
+                select={'fecha_dia': 'DATE(fecha)'}
+            ).values('fecha_dia').annotate(
                 cantidad=Count('id_venta'),
-                monto_total=Sum('total')
-            ).order_by('fecha')
+                monto_total=Sum('monto_total')
+            ).order_by('fecha_dia')
             
             # Detalles de ventas
             ventas_detalle = ventas_query.select_related(
-                'id_empleado'
+                'id_empleado_cajero'
             ).values(
                 'id_venta',
-                'fecha_venta',
-                'total',
-                'metodo_pago',
-                'id_empleado__nombre',
-                'id_empleado__apellido'
+                'fecha',
+                'monto_total',
+                'id_empleado_cajero__nombre',
+                'id_empleado_cajero__apellido'
             )
             
             return {
@@ -203,33 +202,31 @@ class ReporteService:
             
             # Estadísticas generales
             stats = recargas_query.aggregate(
-                total_recargas=Count('id_recarga'),
+                total_recargas=Count('id_carga'),
                 total_acreditado=Sum('monto_cargado'),
-                total_comisiones=Sum('comision'),
-                total_cobrado=Sum('total_cobrado')
+                total_cobrado=Sum('monto_cargado')
             )
-            
-            # Recargas por método de pago
-            recargas_por_metodo = recargas_query.values('metodo_pago').annotate(
-                cantidad=Count('id_recarga'),
-                monto_total=Sum('monto_cargado'),
-                comision_total=Sum('comision')
-            )
+            stats['total_comisiones'] = Decimal('0.00')
             
             # Recargas por estado
+            recargas_por_metodo = recargas_query.values('estado').annotate(
+                cantidad=Count('id_carga'),
+                monto_total=Sum('monto_cargado')
+            )
+            
+            # Recargas por estado (desglose)
             recargas_por_estado = recargas_query.values('estado').annotate(
-                cantidad=Count('id_recarga'),
+                cantidad=Count('id_carga'),
                 monto_total=Sum('monto_cargado')
             )
             
             # Estadísticas diarias
             estadisticas_diarias = recargas_query.extra(
-                select={'fecha': 'DATE(fecha_carga)'}
-            ).values('fecha').annotate(
-                cantidad_recargas=Count('id_recarga'),
-                monto_acreditado=Sum('monto_cargado'),
-                comision_total=Sum('comision')
-            ).order_by('fecha')
+                select={'fecha_dia': 'DATE(fecha_carga)'}
+            ).values('fecha_dia').annotate(
+                cantidad_recargas=Count('id_carga'),
+                monto_acreditado=Sum('monto_cargado')
+            ).order_by('fecha_dia')
             
             return {
                 'fecha_inicio': fecha_inicio,
@@ -272,12 +269,12 @@ class ReporteService:
         try:
             # Query de productos vendidos
             top_productos = DetallesVenta.objects.filter(
-                id_venta__fecha_venta__gte=fecha_inicio,
-                id_venta__fecha_venta__lte=fecha_fin
+                id_venta__fecha__gte=fecha_inicio,
+                id_venta__fecha__lte=fecha_fin
             ).values(
                 'id_producto__id_producto',
-                'id_producto__codigo',
-                'id_producto__nombre',
+                'id_producto__codigo_barra',
+                'id_producto__descripcion',
                 'id_producto__id_categoria__nombre'
             ).annotate(
                 cantidad_vendida=Sum('cantidad'),
@@ -413,26 +410,25 @@ class ReporteService:
         try:
             # Ingresos por ventas
             ventas_stats = Ventas.objects.filter(
-                fecha_venta__gte=fecha_inicio,
-                fecha_venta__lte=fecha_fin
+                fecha__gte=fecha_inicio,
+                fecha__lte=fecha_fin
             ).aggregate(
-                total_ventas=Sum('total')
+                total_ventas=Sum('monto_total')
             )
             
             ingresos_ventas = ventas_stats['total_ventas'] or Decimal('0.00')
             
-            # Ingresos por recargas (solo comisiones)
+            # Ingresos por recargas
             recargas_stats = CargasSaldo.objects.filter(
                 fecha_carga__gte=fecha_inicio,
                 fecha_carga__lte=fecha_fin,
                 estado='completada'
             ).aggregate(
-                total_recargas=Sum('monto_cargado'),
-                total_comisiones=Sum('comision')
+                total_recargas=Sum('monto_cargado')
             )
             
             ingresos_recargas = recargas_stats['total_recargas'] or Decimal('0.00')
-            comisiones_cobradas = recargas_stats['total_comisiones'] or Decimal('0.00')
+            comisiones_cobradas = Decimal('0.00')
             
             # Ingreso total
             ingreso_total = ingresos_ventas + comisiones_cobradas

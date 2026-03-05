@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -34,8 +35,8 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
     queryset = CargasSaldo.objects.all()
     serializer_class = CargasSaldoSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['estado', 'nro_tarjeta', 'metodo_pago', 'usuario_responsable']
-    search_fields = ['referencia', 'codigo_referencia_interno', 'numero_comprobante_externo']
+    filterset_fields = ['estado', 'nro_tarjeta', 'id_cliente_origen']
+    search_fields = ['referencia', 'pay_request_id', 'tx_id', 'custom_identifier']
     ordering_fields = ['fecha_carga', 'fecha_confirmacion']
     ordering = ['-fecha_carga']
     
@@ -361,6 +362,7 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
     """ViewSet para configuración del sistema"""
     queryset = ConfiguracionSistema.objects.all()
     serializer_class = ConfiguracionSistemaSerializer
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['tipo', 'categoria', 'activo']
     search_fields = ['clave', 'descripcion']

@@ -77,11 +77,11 @@ class DashboardService:
             
             # Ventas del día
             ventas_stats = Ventas.objects.filter(
-                fecha_venta__date=fecha
+                fecha__date=fecha
             ).aggregate(
-                total_ventas=Sum('total'),
+                total_ventas=Sum('monto_total'),
                 cantidad_ventas=Count('id_venta'),
-                ticket_promedio=Avg('total')
+                ticket_promedio=Avg('monto_total')
             )
             
             # Recargas del día
@@ -90,7 +90,7 @@ class DashboardService:
                 estado='completada'
             ).aggregate(
                 total_recargas=Sum('monto_cargado'),
-                cantidad_recargas=Count('id_recarga')
+                cantidad_recargas=Count('id_carga')
             )
             
             # Tarjetas activas
@@ -100,7 +100,7 @@ class DashboardService:
             
             # Productos bajo stock
             productos_bajo_stock = StockUnico.objects.filter(
-                cantidad__lte=F('id_producto__cantidad_minima')
+                cantidad__lte=F('id_producto__stock_minimo')
             ).count()
             
             # Saldo total en tarjetas (dinero circulante)
@@ -150,34 +150,34 @@ class DashboardService:
             
             # Ventas por día
             ventas_por_dia = Ventas.objects.filter(
-                fecha_venta__gte=fecha_inicio,
-                fecha_venta__lte=fecha_fin
+                fecha__gte=fecha_inicio,
+                fecha__lte=fecha_fin
             ).extra(
-                select={'fecha': 'DATE(fecha_venta)'}
-            ).values('fecha').annotate(
+                select={'fecha_dia': 'DATE(fecha)'}
+            ).values('fecha_dia').annotate(
                 cantidad_ventas=Count('id_venta'),
-                total_vendido=Sum('total'),
-                ticket_promedio=Avg('total')
-            ).order_by('fecha')
+                total_vendido=Sum('monto_total'),
+                ticket_promedio=Avg('monto_total')
+            ).order_by('fecha_dia')
             
             # Ventas por método de pago
             ventas_por_metodo = Ventas.objects.filter(
-                fecha_venta__gte=fecha_inicio,
-                fecha_venta__lte=fecha_fin
-            ).values('metodo_pago').annotate(
+                fecha__gte=fecha_inicio,
+                fecha__lte=fecha_fin
+            ).values('id_medio_pago__descripcion').annotate(
                 cantidad=Count('id_venta'),
-                total=Sum('total')
+                total=Sum('monto_total')
             )
             
             # Productos más vendidos
             from apps.ventas.models import DetallesVenta
             
             productos_mas_vendidos = DetallesVenta.objects.filter(
-                id_venta__fecha_venta__gte=fecha_inicio,
-                id_venta__fecha_venta__lte=fecha_fin
+                id_venta__fecha__gte=fecha_inicio,
+                id_venta__fecha__lte=fecha_fin
             ).values(
-                'id_producto__nombre',
-                'id_producto__codigo'
+                'id_producto__descripcion',
+                'id_producto__codigo_barra'
             ).annotate(
                 cantidad_vendida=Sum('cantidad'),
                 total_vendido=Sum(F('cantidad') * F('precio_unitario'))
@@ -188,14 +188,14 @@ class DashboardService:
             fecha_fin_anterior = fecha_inicio - timedelta(days=1)
             
             ventas_periodo_actual = Ventas.objects.filter(
-                fecha_venta__gte=fecha_inicio,
-                fecha_venta__lte=fecha_fin
-            ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+                fecha__gte=fecha_inicio,
+                fecha__lte=fecha_fin
+            ).aggregate(total=Sum('monto_total'))['total'] or Decimal('0.00')
             
             ventas_periodo_anterior = Ventas.objects.filter(
-                fecha_venta__gte=fecha_inicio_anterior,
-                fecha_venta__lte=fecha_fin_anterior
-            ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+                fecha__gte=fecha_inicio_anterior,
+                fecha__lte=fecha_fin_anterior
+            ).aggregate(total=Sum('monto_total'))['total'] or Decimal('0.00')
             
             # Calcular tendencia
             if ventas_periodo_anterior > 0:
@@ -256,31 +256,23 @@ class DashboardService:
                 fecha_carga__gte=fecha_inicio,
                 fecha_carga__lte=fecha_fin
             ).extra(
-                select={'fecha': 'DATE(fecha_carga)'}
-            ).values('fecha').annotate(
-                cantidad_recargas=Count('id_recarga'),
-                monto_total=Sum('monto_cargado'),
-                comision_total=Sum('comision')
-            ).order_by('fecha')
+                select={'fecha_dia': 'DATE(fecha_carga)'}
+            ).values('fecha_dia').annotate(
+                cantidad_recargas=Count('id_carga'),
+                monto_total=Sum('monto_cargado')
+            ).order_by('fecha_dia')
             
-            # Recargas por método
+            # Recargas por estado
             recargas_por_metodo = CargasSaldo.objects.filter(
                 fecha_carga__gte=fecha_inicio,
                 fecha_carga__lte=fecha_fin
-            ).values('metodo_pago').annotate(
-                cantidad=Count('id_recarga'),
-                monto_total=Sum('monto_cargado'),
-                comision_total=Sum('comision')
+            ).values('estado').annotate(
+                cantidad=Count('id_carga'),
+                monto_total=Sum('monto_cargado')
             )
             
-            # Comisiones generadas
-            comisiones_total = CargasSaldo.objects.filter(
-                fecha_carga__gte=fecha_inicio,
-                fecha_carga__lte=fecha_fin,
-                estado='completada'
-            ).aggregate(
-                total_comisiones=Sum('comision')
-            )['total_comisiones'] or Decimal('0.00')
+            # Comisiones generadas (campo no disponible en modelo actual)
+            comisiones_total = Decimal('0.00')
             
             # Tasa de éxito
             total_recargas = CargasSaldo.objects.filter(
@@ -351,20 +343,14 @@ class DashboardService:
             
             # Ingresos por ventas
             ingresos_ventas = Ventas.objects.filter(
-                fecha_venta__gte=fecha_inicio,
-                fecha_venta__lte=fecha_fin
+                fecha__gte=fecha_inicio,
+                fecha__lte=fecha_fin
             ).aggregate(
-                total=Sum('total')
+                total=Sum('monto_total')
             )['total'] or Decimal('0.00')
             
-            # Ingresos por comisiones
-            ingresos_comisiones = CargasSaldo.objects.filter(
-                fecha_carga__gte=fecha_inicio,
-                fecha_carga__lte=fecha_fin,
-                estado='completada'
-            ).aggregate(
-                total=Sum('comision')
-            )['total'] or Decimal('0.00')
+            # Ingresos por comisiones (campo no disponible en modelo actual)
+            ingresos_comisiones = Decimal('0.00')
             
             # Ingresos totales
             ingresos_totales = ingresos_ventas + ingresos_comisiones
