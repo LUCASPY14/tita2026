@@ -3,7 +3,7 @@
  * Gestión de notificaciones, alertas y preferencias del sistema
  */
 
-import axios from '../utils/axiosConfig';
+import api from './api';
 import {
   NotificacionPortal,
   NotificacionSaldo,
@@ -15,17 +15,16 @@ import {
   ActualizarPreferenciasData,
 } from '../types';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
-
 // ==================== Notificaciones Portal ====================
 
 /**
  * Obtiene notificaciones del portal con filtros opcionales
  */
 export const getNotificaciones = async (params?: NotificacionesParams): Promise<NotificacionPortal[]> => {
-  const response = await axios.get(`${API_URL}/notificaciones-portal/`, { params });
+  const response = await api.get('/notificaciones-portal/', { params });
+  const items = response.data.results ?? response.data;
   // Convertir IntegerField a boolean
-  return response.data.map((n: any) => ({
+  return items.map((n: any) => ({
     ...n,
     leida: n.leida === 1,
   }));
@@ -35,7 +34,7 @@ export const getNotificaciones = async (params?: NotificacionesParams): Promise<
  * Obtiene una notificación por ID
  */
 export const getNotificacionById = async (id: number): Promise<NotificacionPortal> => {
-  const response = await axios.get(`${API_URL}/notificaciones-portal/${id}/`);
+  const response = await api.get(`/notificaciones-portal/${id}/`);
   return {
     ...response.data,
     leida: response.data.leida === 1,
@@ -46,7 +45,7 @@ export const getNotificacionById = async (id: number): Promise<NotificacionPorta
  * Marca una notificación como leída
  */
 export const marcarNotificacionLeida = async (id: number): Promise<NotificacionPortal> => {
-  const response = await axios.post(`${API_URL}/notificaciones-portal/${id}/marcar_leida/`);
+  const response = await api.post(`/notificaciones-portal/${id}/marcar_leida/`);
   return {
     ...response.data,
     leida: response.data.leida === 1,
@@ -57,7 +56,7 @@ export const marcarNotificacionLeida = async (id: number): Promise<NotificacionP
  * Marca todas las notificaciones como leídas
  */
 export const marcarTodasLeidas = async (idUsuario: number): Promise<void> => {
-  await axios.post(`${API_URL}/notificaciones-portal/marcar_todas_leidas/`, {
+  await api.post('/notificaciones-portal/marcar_todas_leidas/', {
     id_usuario_portal: idUsuario,
   });
 };
@@ -66,7 +65,7 @@ export const marcarTodasLeidas = async (idUsuario: number): Promise<void> => {
  * Obtiene el resumen de notificaciones
  */
 export const getResumenNotificaciones = async (idUsuario: number): Promise<ResumenNotificaciones> => {
-  const response = await axios.get(`${API_URL}/notificaciones-portal/resumen/`, {
+  const response = await api.get('/notificaciones-portal/resumen/', {
     params: { id_usuario_portal: idUsuario },
   });
   return response.data;
@@ -78,9 +77,10 @@ export const getResumenNotificaciones = async (idUsuario: number): Promise<Resum
  * Obtiene notificaciones de saldo con filtros opcionales
  */
 export const getNotificacionesSaldo = async (params?: NotificacionesParams): Promise<NotificacionSaldo[]> => {
-  const response = await axios.get(`${API_URL}/notificaciones-saldo/`, { params });
+  const response = await api.get('/notificaciones-saldo/', { params });
+  const items = response.data.results ?? response.data;
   // Convertir IntegerFields a boolean
-  return response.data.map((n: any) => ({
+  return items.map((n: any) => ({
     ...n,
     enviada_email: n.enviada_email === 1,
     enviada_sms: n.enviada_sms === 1,
@@ -92,7 +92,7 @@ export const getNotificacionesSaldo = async (params?: NotificacionesParams): Pro
  * Obtiene una notificación de saldo por ID
  */
 export const getNotificacionSaldoById = async (id: number): Promise<NotificacionSaldo> => {
-  const response = await axios.get(`${API_URL}/notificaciones-saldo/${id}/`);
+  const response = await api.get(`/notificaciones-saldo/${id}/`);
   return {
     ...response.data,
     enviada_email: response.data.enviada_email === 1,
@@ -107,15 +107,15 @@ export const getNotificacionSaldoById = async (id: number): Promise<Notificacion
  * Obtiene alertas del sistema con filtros opcionales
  */
 export const getAlertas = async (params?: AlertasParams): Promise<AlertaSistema[]> => {
-  const response = await axios.get(`${API_URL}/alertas-sistema/`, { params });
-  return response.data;
+  const response = await api.get('/alertas-sistema/', { params });
+  return response.data.results ?? response.data;
 };
 
 /**
  * Obtiene una alerta por ID
  */
 export const getAlertaById = async (id: number): Promise<AlertaSistema> => {
-  const response = await axios.get(`${API_URL}/alertas-sistema/${id}/`);
+  const response = await api.get(`/alertas-sistema/${id}/`);
   return response.data;
 };
 
@@ -127,7 +127,7 @@ export const resolverAlerta = async (
   observaciones: string,
   idEmpleado?: number
 ): Promise<AlertaSistema> => {
-  const response = await axios.post(`${API_URL}/alertas-sistema/${id}/resolver/`, {
+  const response = await api.post(`/alertas-sistema/${id}/resolver/`, {
     observaciones,
     id_empleado_resuelve: idEmpleado,
   });
@@ -140,11 +140,12 @@ export const resolverAlerta = async (
  * Obtiene las preferencias de notificación de un usuario
  */
 export const getPreferencias = async (idUsuario: number): Promise<PreferenciasNotificacion[]> => {
-  const response = await axios.get(`${API_URL}/preferencias-notificacion/obtener_preferencias/`, {
+  const response = await api.get('/preferencias-notificacion/obtener_preferencias/', {
     params: { id_usuario_portal: idUsuario },
   });
+  const items = response.data.results ?? response.data;
   // Convertir IntegerFields a boolean
-  return response.data.map((p: any) => ({
+  return items.map((p: any) => ({
     ...p,
     email_activo: p.email_activo === 1,
     push_activo: p.push_activo === 1,
@@ -158,7 +159,7 @@ export const actualizarPreferencias = async (
   idUsuario: number,
   data: ActualizarPreferenciasData
 ): Promise<PreferenciasNotificacion> => {
-  const response = await axios.post(`${API_URL}/preferencias-notificacion/actualizar_preferencias/`, {
+  const response = await api.post('/preferencias-notificacion/actualizar_preferencias/', {
     id_usuario_portal: idUsuario,
     tipo_notificacion: data.tipo_notificacion,
     email_activo: data.email_activo ? 1 : 0,

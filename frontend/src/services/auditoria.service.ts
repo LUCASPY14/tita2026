@@ -3,7 +3,7 @@
  * Gestión de logs de auditoría y tracking de operaciones del sistema
  */
 
-import axios from '../utils/axiosConfig';
+import api from './api';
 import {
   AuditoriaOperacion,
   FiltrosAuditoria,
@@ -12,8 +12,6 @@ import {
   ActividadUsuario,
   PaginatedResponse,
 } from '../types';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
 
 // ==================== Logs de Auditoría ====================
 
@@ -25,7 +23,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
 export const getLogsAuditoria = async (
   filtros?: FiltrosAuditoria
 ): Promise<PaginatedResponse<AuditoriaOperacion>> => {
-  const response = await axios.get(`${API_URL}/usuarios/auditoria/`, {
+  const response = await api.get(`/usuarios/auditoria/`, {
     params: filtros,
   });
   return response.data;
@@ -37,7 +35,7 @@ export const getLogsAuditoria = async (
  * @returns Detalle del log
  */
 export const getLogAuditoriaById = async (id: number): Promise<AuditoriaOperacion> => {
-  const response = await axios.get(`${API_URL}/usuarios/auditoria/${id}/`);
+  const response = await api.get(`/usuarios/auditoria/${id}/`);
   return response.data;
 };
 
@@ -49,7 +47,7 @@ export const getLogAuditoriaById = async (id: number): Promise<AuditoriaOperacio
 export const getEstadisticasAuditoria = async (
   filtros?: FiltrosAuditoria
 ): Promise<EstadisticasAuditoria> => {
-  const response = await axios.get(`${API_URL}/usuarios/auditoria/estadisticas/`, {
+  const response = await api.get(`/usuarios/auditoria/estadisticas/`, {
     params: filtros,
   });
   return response.data;
@@ -63,7 +61,7 @@ export const getEstadisticasAuditoria = async (
 export const getTimelineAuditoria = async (
   filtros?: FiltrosAuditoria
 ): Promise<TimelineAuditoria[]> => {
-  const response = await axios.get(`${API_URL}/usuarios/auditoria/timeline/`, {
+  const response = await api.get(`/usuarios/auditoria/timeline/`, {
     params: filtros,
   });
   return response.data;
@@ -79,7 +77,7 @@ export const getActividadUsuario = async (
   idUsuario: number,
   filtros?: FiltrosAuditoria
 ): Promise<ActividadUsuario> => {
-  const response = await axios.get(`${API_URL}/usuarios/auditoria/actividad_usuario/`, {
+  const response = await api.get(`/usuarios/auditoria/actividad_usuario/`, {
     params: { id_usuario: idUsuario, ...filtros },
   });
   return response.data;

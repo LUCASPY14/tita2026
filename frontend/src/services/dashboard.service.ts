@@ -3,15 +3,13 @@
  * Gestión de dashboards personalizados y métricas en tiempo real
  */
 
-import axios from '../utils/axiosConfig';
+import api from './api';
 import {
   DashboardKPIs,
   DashboardVentas,
   DashboardRecargas,
   DashboardFinanciero,
 } from '../types';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
 
 // ==================== KPIs Principales ====================
 
@@ -21,7 +19,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
  * @returns KPIs principales del día
  */
 export const getKpisPrincipales = async (fecha?: string): Promise<DashboardKPIs> => {
-  const response = await axios.get(`${API_URL}/reportes/kpis-principales/`, {
+  const response = await api.get(`/reportes/kpis-principales/`, {
     params: { fecha },
   });
   return response.data;
@@ -35,7 +33,7 @@ export const getKpisPrincipales = async (fecha?: string): Promise<DashboardKPIs>
  * @returns Dashboard completo de ventas
  */
 export const getDashboardVentas = async (dias: number = 7): Promise<DashboardVentas> => {
-  const response = await axios.get(`${API_URL}/reportes/dashboard-ventas/`, {
+  const response = await api.get(`/reportes/dashboard-ventas/`, {
     params: { dias },
   });
   return response.data;
@@ -49,7 +47,7 @@ export const getDashboardVentas = async (dias: number = 7): Promise<DashboardVen
  * @returns Dashboard completo de recargas
  */
 export const getDashboardRecargas = async (dias: number = 7): Promise<DashboardRecargas> => {
-  const response = await axios.get(`${API_URL}/reportes/dashboard-recargas/`, {
+  const response = await api.get(`/reportes/dashboard-recargas/`, {
     params: { dias },
   });
   return response.data;
@@ -63,7 +61,7 @@ export const getDashboardRecargas = async (dias: number = 7): Promise<DashboardR
  * @returns Dashboard completo financiero
  */
 export const getDashboardFinanciero = async (mes?: number): Promise<DashboardFinanciero> => {
-  const response = await axios.get(`${API_URL}/reportes/dashboard-financiero/`, {
+  const response = await api.get(`/reportes/dashboard-financiero/`, {
     params: { mes },
   });
   return response.data;

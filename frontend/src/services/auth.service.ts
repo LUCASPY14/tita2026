@@ -5,6 +5,21 @@ import api from './api';
  */
 export type UserRole = 'admin' | 'gerente' | 'cajero' | 'empleado';
 
+// Función para mapear roles del backend a UserRole
+const mapRoleFromBackend = (backendRole: string): UserRole => {
+  const roleMap: { [key: string]: UserRole } = {
+    'administrador': 'admin',
+    'admin': 'admin',
+    'gerente': 'gerente',
+    'cajero': 'cajero',
+    'vendedor': 'cajero',
+    'empleado': 'empleado'
+  };
+  
+  const normalizedRole = backendRole.toLowerCase();
+  return roleMap[normalizedRole] || 'empleado';
+};
+
 export interface User {
   id: number;
   username: string;
@@ -30,15 +45,40 @@ export interface RefreshTokenResponse {
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
-    const response = await api.post<LoginResponse>('/auth/login/', credentials);
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      if (response.data.refreshToken) {
-        localStorage.setItem('refreshToken', response.data.refreshToken);
+    const response = await api.post('/auth/login/', credentials);
+    
+    // El backend devuelve: { success, tokens: { access, refresh }, empleado, mensaje }
+    const data = response.data;
+    
+    if (data.success && data.tokens) {
+      const tokens = data.tokens;
+      const empleado = data.empleado;
+      
+      // Guardar tokens
+      localStorage.setItem('token', tokens.access);
+      if (tokens.refresh) {
+        localStorage.setItem('refreshToken', tokens.refresh);
       }
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // Adaptar estructura del usuario
+      const user: User = {
+        id: empleado.id,
+        username: empleado.usuario,
+        email: empleado.email || '',
+        role: mapRoleFromBackend(empleado.rol || 'empleado')
+      };
+      
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Retornar en el formato esperado
+      return {
+        token: tokens.access,
+        refreshToken: tokens.refresh,
+        user: user
+      };
+    } else {
+      throw new Error(data.mensaje || 'Error al iniciar sesión');
     }
-    return response.data;
   },
 
   logout: (): void => {

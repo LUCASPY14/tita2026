@@ -10,7 +10,7 @@
  * - Dashboards (KPIs, ventas, recargas, financiero)
  */
 
-import axios from '../utils/axiosConfig';
+import api from './api';
 import type {
   ReporteVentas,
   ReporteVentasParams,
@@ -31,8 +31,6 @@ import type {
   DashboardFinancieroParams,
 } from '../types';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
-
 // ============================================================================
 // Reportes
 // ============================================================================
@@ -41,7 +39,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
  * Genera reporte de ventas con filtros
  */
 export async function getReporteVentas(params: ReporteVentasParams): Promise<ReporteVentas> {
-  const response = await axios.get<ReporteVentas>(`${API_URL}/reportes/ventas/`, { params });
+  const response = await api.get<ReporteVentas>(`/reportes/ventas/`, { params });
   return response.data;
 }
 
@@ -49,7 +47,7 @@ export async function getReporteVentas(params: ReporteVentasParams): Promise<Rep
  * Genera reporte de recargas con filtros
  */
 export async function getReporteRecargas(params: ReporteRecargasParams): Promise<ReporteRecargas> {
-  const response = await axios.get<ReporteRecargas>(`${API_URL}/reportes/recargas/`, { params });
+  const response = await api.get<ReporteRecargas>(`/reportes/recargas/`, { params });
   return response.data;
 }
 
@@ -57,7 +55,7 @@ export async function getReporteRecargas(params: ReporteRecargasParams): Promise
  * Genera reporte de productos más vendidos
  */
 export async function getReporteTopProductos(params: ReporteTopProductosParams): Promise<ReporteTopProductos> {
-  const response = await axios.get<ReporteTopProductos>(`${API_URL}/reportes/top-productos/`, { params });
+  const response = await api.get<ReporteTopProductos>(`/reportes/top-productos/`, { params });
   return response.data;
 }
 
@@ -65,7 +63,7 @@ export async function getReporteTopProductos(params: ReporteTopProductosParams):
  * Genera reporte de consumos de una tarjeta específica
  */
 export async function getReporteConsumosTarjeta(params: ReporteConsumosTarjetaParams): Promise<ReporteConsumosTarjeta> {
-  const response = await axios.get<ReporteConsumosTarjeta>(`${API_URL}/reportes/consumos-tarjeta/`, { params });
+  const response = await api.get<ReporteConsumosTarjeta>(`/reportes/consumos-tarjeta/`, { params });
   return response.data;
 }
 
@@ -73,7 +71,7 @@ export async function getReporteConsumosTarjeta(params: ReporteConsumosTarjetaPa
  * Genera reporte financiero consolidado
  */
 export async function getReporteFinanciero(params: ReporteFinancieroParams): Promise<ReporteFinanciero> {
-  const response = await axios.get<ReporteFinanciero>(`${API_URL}/reportes/financiero/`, { params });
+  const response = await api.get<ReporteFinanciero>(`/reportes/financiero/`, { params });
   return response.data;
 }
 
@@ -86,7 +84,7 @@ export async function getReporteFinanciero(params: ReporteFinancieroParams): Pro
  */
 export async function getKPIsPrincipales(fecha?: string): Promise<DashboardKPIs> {
   const params = fecha ? { fecha } : {};
-  const response = await axios.get<DashboardKPIs>(`${API_URL}/reportes/kpis-principales/`, { params });
+  const response = await api.get<DashboardKPIs>(`/reportes/kpis-principales/`, { params });
   return response.data;
 }
 
@@ -94,7 +92,7 @@ export async function getKPIsPrincipales(fecha?: string): Promise<DashboardKPIs>
  * Obtiene dashboard de ventas (últimos N días)
  */
 export async function getDashboardVentas(params: DashboardVentasParams = {}): Promise<DashboardVentas> {
-  const response = await axios.get<DashboardVentas>(`${API_URL}/reportes/dashboard-ventas/`, { params });
+  const response = await api.get<DashboardVentas>(`/reportes/dashboard-ventas/`, { params });
   return response.data;
 }
 
@@ -102,7 +100,7 @@ export async function getDashboardVentas(params: DashboardVentasParams = {}): Pr
  * Obtiene dashboard de recargas (últimos N días)
  */
 export async function getDashboardRecargas(params: DashboardRecargasParams = {}): Promise<DashboardRecargas> {
-  const response = await axios.get<DashboardRecargas>(`${API_URL}/reportes/dashboard-recargas/`, { params });
+  const response = await api.get<DashboardRecargas>(`/reportes/dashboard-recargas/`, { params });
   return response.data;
 }
 
@@ -110,7 +108,7 @@ export async function getDashboardRecargas(params: DashboardRecargasParams = {})
  * Obtiene dashboard financiero mensual
  */
 export async function getDashboardFinanciero(params: DashboardFinancieroParams = {}): Promise<DashboardFinanciero> {
-  const response = await axios.get<DashboardFinanciero>(`${API_URL}/reportes/dashboard-financiero/`, { params });
+  const response = await api.get<DashboardFinanciero>(`/reportes/dashboard-financiero/`, { params });
   return response.data;
 }
 
@@ -122,7 +120,7 @@ export async function getDashboardFinanciero(params: DashboardFinancieroParams =
  * Exporta reporte a PDF
  */
 export async function exportarReportePDF(tipo: string, params: Record<string, any>): Promise<Blob> {
-  const response = await axios.get(`${API_URL}/reportes/exportar-pdf/`, {
+  const response = await api.get(`/reportes/exportar-pdf/`, {
     params: { tipo, ...params },
     responseType: 'blob'
   });
@@ -133,7 +131,7 @@ export async function exportarReportePDF(tipo: string, params: Record<string, an
  * Exporta reporte a Excel
  */
 export async function exportarReporteExcel(tipo: string, params: Record<string, any>): Promise<Blob> {
-  const response = await axios.get(`${API_URL}/reportes/exportar-excel/`, {
+  const response = await api.get(`/reportes/exportar-excel/`, {
     params: { tipo, ...params },
     responseType: 'blob'
   });

@@ -3,14 +3,12 @@
  * Gestión de configuraciones, caché y límites del sistema
  */
 
-import axios from '../utils/axiosConfig';
+import api from './api';
 import {
   ConfiguracionSistema,
   ConfiguracionParams,
   ActualizarConfiguracionData,
 } from '../types';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
 
 // ==================== Configuración del Sistema ====================
 
@@ -18,7 +16,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
  * Obtiene todas las configuraciones del sistema
  */
 export const getConfiguraciones = async (params?: ConfiguracionParams): Promise<ConfiguracionSistema[]> => {
-  const response = await axios.get(`${API_URL}/configuracion-sistema/`, { params });
+  const response = await api.get('/configuracion-sistema/', { params });
   return response.data;
 };
 
@@ -26,7 +24,7 @@ export const getConfiguraciones = async (params?: ConfiguracionParams): Promise<
  * Obtiene configuraciones agrupadas por categoría
  */
 export const getConfiguracionesPorCategoria = async (): Promise<Record<string, ConfiguracionSistema[]>> => {
-  const response = await axios.get(`${API_URL}/configuracion-sistema/por_categoria/`);
+  const response = await api.get('/configuracion-sistema/por_categoria/');
   return response.data;
 };
 
@@ -34,7 +32,7 @@ export const getConfiguracionesPorCategoria = async (): Promise<Record<string, C
  * Obtiene una configuración por ID
  */
 export const getConfiguracionById = async (id: number): Promise<ConfiguracionSistema> => {
-  const response = await axios.get(`${API_URL}/configuracion-sistema/${id}/`);
+  const response = await api.get(`/configuracion-sistema/${id}/`);
   return response.data;
 };
 
@@ -45,7 +43,7 @@ export const actualizarConfiguracion = async (
   id: number,
   data: ActualizarConfiguracionData
 ): Promise<ConfiguracionSistema> => {
-  const response = await axios.post(`${API_URL}/configuracion-sistema/${id}/actualizar_valor/`, data);
+  const response = await api.post(`/configuracion-sistema/${id}/actualizar_valor/`, data);
   return response.data;
 };
 
@@ -53,7 +51,7 @@ export const actualizarConfiguracion = async (
  * Resetea una configuración a su valor por defecto
  */
 export const resetearConfiguracion = async (id: number): Promise<ConfiguracionSistema> => {
-  const response = await axios.post(`${API_URL}/configuracion-sistema/${id}/resetear_default/`);
+  const response = await api.post(`/configuracion-sistema/${id}/resetear_default/`);
   return response.data;
 };
 

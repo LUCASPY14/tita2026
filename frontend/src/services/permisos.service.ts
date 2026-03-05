@@ -3,7 +3,7 @@
  * Gestión de permisos del sistema y asignación a roles
  */
 
-import axios from '../utils/axiosConfig';
+import api from './api';
 import type {
   Permiso,
   PermisosResponse,
@@ -13,15 +13,13 @@ import type {
   PermisosResult,
 } from '../types';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
-
 // ==================== Permisos ====================
 
 /**
  * Obtiene todos los permisos del sistema agrupados por módulo
  */
 export const listarPermisos = async (): Promise<PermisosResponse> => {
-  const response = await axios.get(`${API_URL}/permisos/listar/`);
+  const response = await api.get('/permisos/listar/');
   return response.data;
 };
 
@@ -30,7 +28,7 @@ export const listarPermisos = async (): Promise<PermisosResponse> => {
  * Solo debe ejecutarse en configuración inicial
  */
 export const inicializarPermisos = async (): Promise<PermisosResult> => {
-  const response = await axios.post(`${API_URL}/permisos/inicializar/`);
+  const response = await api.post('/permisos/inicializar/');
   return response.data;
 };
 
@@ -40,7 +38,7 @@ export const inicializarPermisos = async (): Promise<PermisosResult> => {
 export const asignarPermisoARol = async (
   data: AsignarPermisoRequest
 ): Promise<PermisosResult> => {
-  const response = await axios.post(`${API_URL}/permisos/asignar_a_rol/`, data);
+  const response = await api.post('/permisos/asignar_a_rol/', data);
   return response.data;
 };
 
@@ -50,7 +48,7 @@ export const asignarPermisoARol = async (
 export const removerPermisoDeRol = async (
   data: RemoverPermisoRequest
 ): Promise<PermisosResult> => {
-  const response = await axios.post(`${API_URL}/permisos/remover_de_rol/`, data);
+  const response = await api.post('/permisos/remover_de_rol/', data);
   return response.data;
 };
 
@@ -60,7 +58,7 @@ export const removerPermisoDeRol = async (
  * Obtiene todos los permisos asignados a un rol específico
  */
 export const obtenerPermisosDeRol = async (idRol: number): Promise<RolConPermisos> => {
-  const response = await axios.get(`${API_URL}/roles/${idRol}/permisos/`);
+  const response = await api.get(`/roles/${idRol}/permisos/`);
   return response.data;
 };
 
