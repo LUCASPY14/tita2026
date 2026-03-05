@@ -3,8 +3,8 @@ from .models import Tarjetas, CargasSaldo, ConsumosTarjeta, MediosPago, Configur
 
 
 class TarjetasSerializer(serializers.ModelSerializer):
-    hijo_nombre = serializers.CharField(source='id_hijo.nombres', read_only=True)
-    hijo_apellido = serializers.CharField(source='id_hijo.apellidos', read_only=True)
+    hijo_nombre = serializers.CharField(source='id_hijo.nombre', read_only=True)
+    hijo_apellido = serializers.CharField(source='id_hijo.apellido', read_only=True)
     saldo_disponible = serializers.SerializerMethodField()
     
     class Meta:
@@ -45,15 +45,17 @@ class CargasSaldoSerializer(serializers.ModelSerializer):
     
     def get_cajero_nombre(self, obj):
         """Retorna nombre del cajero responsable"""
-        if obj.usuario_responsable:
+        try:
             return obj.usuario_responsable.nombre
-        return None
+        except AttributeError:
+            return None
     
     def get_supervisor_nombre(self, obj):
         """Retorna nombre del supervisor aprobador"""
-        if obj.supervisor_aprobador:
+        try:
             return obj.supervisor_aprobador.nombre
-        return None
+        except AttributeError:
+            return None
 
 
 class ConsumosTarjetaSerializer(serializers.ModelSerializer):

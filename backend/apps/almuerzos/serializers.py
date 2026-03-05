@@ -18,7 +18,7 @@ class TiposAlmuerzoSerializer(serializers.ModelSerializer):
 
 
 class SuscripcionesAlmuerzoSerializer(serializers.ModelSerializer):
-    hijo_nombre = serializers.CharField(source='id_hijo.nombres', read_only=True)
+    hijo_nombre = serializers.CharField(source='id_hijo.nombre', read_only=True)
     plan_nombre = serializers.CharField(source='id_plan_almuerzo.nombre_plan', read_only=True)
     
     class Meta:
@@ -27,7 +27,7 @@ class SuscripcionesAlmuerzoSerializer(serializers.ModelSerializer):
 
 
 class RegistrosConsumoAlmuerzoSerializer(serializers.ModelSerializer):
-    hijo_nombre = serializers.CharField(source='id_hijo.nombres', read_only=True)
+    hijo_nombre = serializers.CharField(source='id_hijo.nombre', read_only=True)
     tipo_almuerzo_nombre = serializers.CharField(source='id_tipo_almuerzo.nombre', read_only=True)
     
     class Meta:
@@ -50,6 +50,6 @@ class CuentasAlmuerzoMensualSerializer(serializers.ModelSerializer):
 
     def get_hijo_nombre(self, obj):
         try:
-            return f"{obj.id_hijo.nombres} {obj.id_hijo.apellidos}"
+            return f"{obj.id_hijo.nombre} {obj.id_hijo.apellido}"
         except Exception:
             return None
