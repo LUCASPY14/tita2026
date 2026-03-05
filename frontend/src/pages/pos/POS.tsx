@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, History } from 'lucide-react';
 import { Card } from '../../components/common';
-import { CatalogoProductos, CarritoCompras, ProcesarVenta } from './components';
+import { CatalogoProductos, CarritoCompras, ProcesarVenta, HistorialVentas } from './components';
 import type { ItemCarrito, Producto } from '../../types';
 
+type Vista = 'pos' | 'historial';
+
 const POS: React.FC = () => {
+  const [vista, setVista] = useState<Vista>('pos');
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [mostrarProcesar, setMostrarProcesar] = useState(false);
 
@@ -86,7 +89,7 @@ const POS: React.FC = () => {
         </div>
         
         {/* Indicador de Carrito */}
-        {cantidadItems > 0 && (
+        {vista === 'pos' && cantidadItems > 0 && (
           <div className="flex items-center gap-3 rounded-lg bg-amber-50 px-4 py-3">
             <ShoppingCart className="h-6 w-6 text-amber-600" />
             <div>
@@ -99,6 +102,41 @@ const POS: React.FC = () => {
         )}
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
+        <button
+          type="button"
+          onClick={() => setVista('pos')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+            vista === 'pos'
+              ? 'bg-white text-amber-700 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ShoppingCart className="h-4 w-4" />
+          Venta
+          {cantidadItems > 0 && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-xs text-white">
+              {cantidadItems}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setVista('historial')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+            vista === 'historial'
+              ? 'bg-white text-amber-700 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <History className="h-4 w-4" />
+          Historial de Ventas
+        </button>
+      </div>
+
+      {/* Vista: POS */}
+      {vista === 'pos' && (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Columna izquierda: Catálogo */}
         <div className="lg:col-span-2">
@@ -137,6 +175,14 @@ const POS: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
+
+      {/* Vista: Historial */}
+      {vista === 'historial' && (
+        <Card title="Historial de Ventas" subtitle="Consulta y filtra todas las ventas realizadas">
+          <HistorialVentas />
+        </Card>
+      )}
 
       {/* Modal de Procesar Venta */}
       {mostrarProcesar && (
