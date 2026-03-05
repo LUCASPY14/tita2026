@@ -4,3 +4,4 @@ export { default as CarritoCompras } from './CarritoCompras';
 export { default as ProcesarVenta } from './ProcesarVenta';
 export { default as HistorialVentas } from './HistorialVentas';
 export { default as NotasCredito } from './NotasCredito';
+export { default as ReciboVenta } from './ReciboVenta';

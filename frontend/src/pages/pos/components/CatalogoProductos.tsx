@@ -65,6 +65,18 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
     }
   };
 
+  const getStockBadge = (producto: Producto) => {
+    if (producto.stock_actual === null || producto.stock_actual === undefined) return null;
+    const stock = producto.stock_actual;
+    if (stock <= 0) {
+      return <span className="ml-1 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Sin stock</span>;
+    }
+    if (producto.requiere_reposicion) {
+      return <span className="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">Stock bajo: {stock}</span>;
+    }
+    return <span className="ml-1 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Stock: {stock}</span>;
+  };
+
   const handleAgregar = (producto: Producto) => {
     onAgregarProducto(producto, 1);
     toast.success(`${producto.descripcion} agregado al carrito`);
@@ -129,11 +141,12 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
             >
               <div className="flex-1">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="flex-1">
                     <h4 className="font-semibold text-gray-900">{producto.descripcion}</h4>
                     {producto.codigo_barra && (
                       <p className="mt-1 text-xs text-gray-500">Código: {producto.codigo_barra}</p>
                     )}
+                    <div className="mt-1">{getStockBadge(producto)}</div>
                   </div>
                   {producto.activo && (
                     <Badge variant="success" size="sm">
@@ -151,6 +164,7 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
                 onClick={() => handleAgregar(producto)}
                 leftIcon={<Plus className="h-4 w-4" />}
                 className="ml-4"
+                disabled={producto.stock_actual !== undefined && producto.stock_actual !== null && producto.stock_actual <= 0 && !producto.permite_stock_negativo}
               >
                 Agregar
               </Button>

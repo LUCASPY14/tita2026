@@ -10,6 +10,7 @@ import Productos from '../pages/productos';
 import Compras from '../pages/compras';
 import Almuerzos from '../pages/almuerzos';
 import Reportes from '../pages/Reportes';
+import Inventario from '../pages/inventario/Inventario';
 import Notificaciones from '../pages/Notificaciones';
 import Configuracion from '../pages/Configuracion';
 import Auditoria from '../pages/Auditoria';
@@ -83,6 +84,16 @@ const AppRoutes: React.FC = () => {
                   element={
                     <ProtectedRoute requiredRoles={['admin', 'gerente']}>
                       <Compras />
+                    </ProtectedRoute>
+                  } 
+                />
+
+                {/* Módulo de Inventario - Admin, Gerente */}
+                <Route 
+                  path="/inventario" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                      <Inventario />
                     </ProtectedRoute>
                   } 
                 />

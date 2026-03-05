@@ -3,7 +3,8 @@ import { X, CreditCard, Wallet, DollarSign, AlertTriangle, CheckCircle, Tag, Loa
 import { Button, Card } from '../../../components/common';
 import { BusquedaHijo } from '../../recargas/components';
 import { posService } from '../../../services/pos.service';
-import type { Producto, Hijo, Tarjeta, MedioPago, VentaData } from '../../../types';
+import type { Producto, Hijo, Tarjeta, MedioPago, VentaData, Venta } from '../../../types';
+import ReciboVenta from './ReciboVenta';
 import toast from 'react-hot-toast';
 
 interface ItemCarrito {
@@ -40,6 +41,8 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
     tipo_descuento: string;
     descripcion: string;
   } | null>(null);
+  const [ventaRealizada, setVentaRealizada] = useState<Venta | null>(null);
+  const [mostrarRecibo, setMostrarRecibo] = useState(false);
 
   useEffect(() => {
     cargarMediosPago();
@@ -160,11 +163,12 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
         ventaData.aplicar_promociones = true;
       }
 
-      await posService.crearVenta(ventaData);
+      const ventaCreada = await posService.crearVenta(ventaData);
       
       toast.success('Venta procesada exitosamente');
+      setVentaRealizada(ventaCreada);
+      setMostrarRecibo(true);
       onVentaExitosa();
-      onCerrar();
     } catch (error: any) {
       console.error('Error al procesar venta:', error);
       toast.error(error.response?.data?.detail || 'Error al procesar la venta');
@@ -434,6 +438,30 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Recibo post-venta */}
+      {mostrarRecibo && ventaRealizada && (
+        <ReciboVenta
+          nroFactura={ventaRealizada.nro_factura_venta}
+          fecha={ventaRealizada.fecha}
+          items={items.map(i => ({
+            descripcion: i.producto.descripcion,
+            cantidad: i.cantidad,
+            precio_unitario: i.precio_unitario,
+            subtotal: i.subtotal,
+          }))}
+          total={total}
+          descuento={promoValidada?.descuento_calculado}
+          metodoPago={metodoPago}
+          comprobante={numeroComprobante || undefined}
+          clienteNombre={hijoSeleccionado ? `${hijoSeleccionado.nombre} ${hijoSeleccionado.apellido}` : undefined}
+          tarjetaNro={tarjetaSeleccionada?.nro_tarjeta}
+          onCerrar={() => {
+            setMostrarRecibo(false);
+            onCerrar();
+          }}
+        />
+      )}
     </div>
   );
 };

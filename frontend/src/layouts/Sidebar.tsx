@@ -17,7 +17,8 @@ import {
   FileText,
   UserCog,
   Shield,
-  KeyRound
+  KeyRound,
+  Warehouse
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useHasRole } from '../hooks/usePermissions';
@@ -38,6 +39,7 @@ const BASE_NAVIGATION: NavItem[] = [
   { name: 'Punto de Venta', path: '/ventas', icon: ShoppingCart },
   { name: 'Clientes', path: '/clientes', icon: Users },
   { name: 'Productos', path: '/productos', icon: Package },
+  { name: 'Inventario', path: '/inventario', icon: Warehouse },
   { name: 'Almuerzos', path: '/almuerzos', icon: Utensils },
   { name: 'Reportes', path: '/reportes', icon: BarChart3 },
   { name: 'Notificaciones', path: '/notificaciones', icon: Bell },
