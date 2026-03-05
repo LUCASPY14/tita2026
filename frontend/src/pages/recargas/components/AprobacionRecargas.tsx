@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, Clock, AlertTriangle, RefreshCw, User } from 'lucide-react';
-import { Spinner, Badge } from '../../../components/common';
+import { Spinner, Badge, ConfirmDialog } from '../../../components/common';
 import { recargasService } from '../../../services/recargas.service';
 import type { CargaSaldo } from '../../../types';
 import toast from 'react-hot-toast';
@@ -16,6 +16,7 @@ const AprobacionRecargas: React.FC = () => {
   const [recargas, setRecargas] = useState<CargaSaldo[]>([]);
   const [cargando, setCargando] = useState(true);
   const [aprobandoId, setAprobandoId] = useState<number | null>(null);
+  const [recargaAConfirmar, setRecargaAConfirmar] = useState<CargaSaldo | null>(null);
 
   const cargarPendientes = useCallback(async () => {
     setCargando(true);
@@ -37,7 +38,14 @@ const AprobacionRecargas: React.FC = () => {
     cargarPendientes();
   }, [cargarPendientes]);
 
-  const handleAprobar = async (recarga: CargaSaldo) => {
+  const handleAprobar = (recarga: CargaSaldo) => {
+    setRecargaAConfirmar(recarga);
+  };
+
+  const confirmarAprobacion = async () => {
+    const recarga = recargaAConfirmar;
+    if (!recarga) return;
+    setRecargaAConfirmar(null);
     setAprobandoId(recarga.id_carga);
     try {
       await recargasService.aprobarRecarga(recarga.id_carga, 1);
@@ -157,6 +165,17 @@ const AprobacionRecargas: React.FC = () => {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!recargaAConfirmar}
+        onClose={() => setRecargaAConfirmar(null)}
+        onConfirm={confirmarAprobacion}
+        title="Confirmar aprobación"
+        message={recargaAConfirmar ? `¿Aprobar la recarga de ${formatearMoneda(recargaAConfirmar.monto_cargado)} para ${recargaAConfirmar.hijo_nombre || recargaAConfirmar.cliente_nombre || `Tarjeta ${recargaAConfirmar.nro_tarjeta}`}?` : ''}
+        confirmText="Aprobar"
+        cancelText="Cancelar"
+        variant="success"
+      />
     </div>
   );
 };

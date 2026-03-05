@@ -41,6 +41,55 @@ export default function ReportesPersonalizados() {
   const [reporteVentas, setReporteVentas] = useState<ReporteVentas | null>(null);
   const [reporteFinanciero, setReporteFinanciero] = useState<ReporteFinanciero | null>(null);
 
+  const exportarCSV = (datos: Record<string, any>[], nombreArchivo: string) => {
+    if (!datos.length) return;
+    const cabeceras = Object.keys(datos[0]);
+    const lineas = [
+      cabeceras.join(','),
+      ...datos.map(fila =>
+        cabeceras.map(c => {
+          const str = String(fila[c] ?? '');
+          return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+        }).join(',')
+      ),
+    ];
+    const blob = new Blob(['\uFEFF' + lineas.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${nombreArchivo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportarCSV = () => {
+    if (tipoReporte === 'ventas' && reporteVentas) {
+      exportarCSV([{
+        'Fecha Inicio': fechaInicio,
+        'Fecha Fin': fechaFin,
+        'Total Ventas': reporteVentas.total_ventas,
+        'Monto Total': reporteVentas.total_monto,
+        'Ticket Promedio': reporteVentas.promedio_ticket,
+        'Ventas Efectivo': reporteVentas.ventas_efectivo,
+        'Ventas Tarjeta': reporteVentas.ventas_tarjeta,
+        'Ventas Online': reporteVentas.ventas_online,
+      }], `reporte-ventas-${fechaInicio}-${fechaFin}`);
+    } else if (tipoReporte === 'financiero' && reporteFinanciero) {
+      exportarCSV([{
+        'Fecha Inicio': fechaInicio,
+        'Fecha Fin': fechaFin,
+        'Ingresos Ventas': reporteFinanciero.ingresos_ventas,
+        'Comisiones Cobradas': reporteFinanciero.comisiones_cobradas,
+        'Ingreso Total': reporteFinanciero.ingreso_total,
+        'Costo Inventario': reporteFinanciero.costo_inventario,
+        'Margen Bruto': reporteFinanciero.margen_bruto,
+        'Porcentaje Margen': reporteFinanciero.porcentaje_margen,
+      }], `reporte-financiero-${fechaInicio}-${fechaFin}`);
+    }
+  };
+
+  const puedeExportar = (tipoReporte === 'ventas' && !!reporteVentas) || (tipoReporte === 'financiero' && !!reporteFinanciero);
+
   const generarReporte = async () => {
     setCargando(true);
     try {
@@ -257,13 +306,25 @@ export default function ReportesPersonalizados() {
           )}
         </div>
 
-        <Button
-          onClick={generarReporte}
-          disabled={cargando}
-          className="w-full md:w-auto"
-        >
-          {cargando ? 'Generando...' : 'Generar Reporte'}
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            onClick={generarReporte}
+            disabled={cargando}
+            className="w-full md:w-auto"
+          >
+            {cargando ? 'Generando...' : 'Generar Reporte'}
+          </Button>
+          {puedeExportar && (
+            <Button
+              variant="outline"
+              onClick={handleExportarCSV}
+              className="flex items-center gap-2"
+            >
+              <Download size={16} />
+              Exportar CSV
+            </Button>
+          )}
+        </div>
       </Card>
 
       {/* Resultados - Reporte de Ventas */}

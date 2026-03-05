@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Package, TrendingDown, RefreshCw, Search, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { Spinner } from '../../components/common';
 import { inventarioService, type StockItem, type MovimientoStock } from '../../services/inventario.service';
+import { useDebounce } from '../../hooks/useDebounce';
 import toast from 'react-hot-toast';
 
 type Vista = 'stock' | 'movimientos';
@@ -28,11 +29,13 @@ const Inventario: React.FC = () => {
   const [busqueda, setBusqueda] = useState('');
   const [filtroTipo, setFiltroTipo] = useState<'' | 'Ingreso' | 'Egreso'>('');
 
+  const busquedaDebounced = useDebounce(busqueda);
+
   const cargarStock = useCallback(async () => {
     setCargando(true);
     try {
       const params: any = { page_size: 100 };
-      if (busqueda) params.search = busqueda;
+      if (busquedaDebounced) params.search = busquedaDebounced;
       const resp = await inventarioService.getStock(params);
       setStock(resp.results || []);
     } catch {
@@ -40,7 +43,7 @@ const Inventario: React.FC = () => {
     } finally {
       setCargando(false);
     }
-  }, [busqueda]);
+  }, [busquedaDebounced]);
 
   const cargarMovimientos = useCallback(async () => {
     setCargando(true);

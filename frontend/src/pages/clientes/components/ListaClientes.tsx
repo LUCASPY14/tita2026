@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Edit, Eye, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
-import { Input, Button, Badge, Spinner } from '../../../components/common';
+import { Input, Button, Badge, Spinner, ConfirmDialog } from '../../../components/common';
 import { clientesService } from '../../../services/clientes.service';
 import type { Cliente } from '../../../types';
+import { useDebounce } from '../../../hooks/useDebounce';
 import toast from 'react-hot-toast';
 
 interface ListaClientesProps {
@@ -17,10 +18,13 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
   const [filtroActivo, setFiltroActivo] = useState<boolean | undefined>(undefined);
   const [paginaActual, setPaginaActual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
+  const [clienteAEliminar, setClienteAEliminar] = useState<Cliente | null>(null);
+
+  const busquedaDebounced = useDebounce(busqueda);
 
   useEffect(() => {
     cargarClientes();
-  }, [busqueda, filtroActivo, paginaActual]);
+  }, [busquedaDebounced, filtroActivo, paginaActual]);
 
   const cargarClientes = async () => {
     setCargando(true);
@@ -30,8 +34,8 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
         page_size: 10,
       };
 
-      if (busqueda) {
-        params.search = busqueda;
+      if (busquedaDebounced) {
+        params.search = busquedaDebounced;
       }
 
       if (filtroActivo !== undefined) {
@@ -59,14 +63,16 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
     }
   };
 
-  const handleEliminar = async (cliente: Cliente) => {
-    if (!window.confirm(`¿Estás seguro de eliminar al cliente ${cliente.nombres} ${cliente.apellidos}?`)) {
-      return;
-    }
+  const handleEliminar = (cliente: Cliente) => {
+    setClienteAEliminar(cliente);
+  };
 
+  const confirmarEliminar = async () => {
+    if (!clienteAEliminar) return;
     try {
-      await clientesService.eliminarCliente(cliente.id_cliente);
+      await clientesService.eliminarCliente(clienteAEliminar.id_cliente);
       toast.success('Cliente eliminado exitosamente');
+      setClienteAEliminar(null);
       cargarClientes();
     } catch (error) {
       toast.error('Error al eliminar el cliente');
@@ -251,6 +257,15 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
           )}
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={!!clienteAEliminar}
+        onClose={() => setClienteAEliminar(null)}
+        onConfirm={confirmarEliminar}
+        title="Eliminar cliente"
+        message={clienteAEliminar ? `¿Estás seguro de eliminar al cliente ${clienteAEliminar.nombres} ${clienteAEliminar.apellidos}? Esta acción no se puede deshacer.` : ''}
+        confirmText="Eliminar"
+      />
     </div>
   );
 };

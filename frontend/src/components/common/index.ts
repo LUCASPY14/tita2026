@@ -35,6 +35,8 @@ export type { CardProps } from './Card';
 export { default as Modal, ModalFooter } from './Modal';
 export type { ModalProps } from './Modal';
 
+export { default as ConfirmDialog } from './ConfirmDialog';
+
 export { default as SearchBar } from './SearchBar';
 export type { SearchBarProps } from './SearchBar';
 

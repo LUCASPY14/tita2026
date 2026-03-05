@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Search, Package, Edit, Eye, Trash2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
 import { productosService } from '../../../services/productos.service';
 import { Producto, Categoria } from '../../../types';
-import { Card, Spinner } from '../../../components/common';
+import { Card, Spinner, ConfirmDialog } from '../../../components/common';
+import { useDebounce } from '../../../hooks/useDebounce';
 import toast from 'react-hot-toast';
 
 interface ListaProductosProps {
@@ -19,6 +20,9 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
   const [filtroCategoria, setFiltroCategoria] = useState<number | undefined>();
   const [paginaActual, setPaginaActual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
+  const [productoAEliminar, setProductoAEliminar] = useState<Producto | null>(null);
+
+  const busquedaDebounced = useDebounce(busqueda);
 
   useEffect(() => {
     cargarCategorias();
@@ -26,7 +30,7 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
 
   useEffect(() => {
     cargarProductos();
-  }, [busqueda, filtroActivo, filtroCategoria, paginaActual]);
+  }, [busquedaDebounced, filtroActivo, filtroCategoria, paginaActual]);
 
   const cargarCategorias = async () => {
     try {
@@ -45,7 +49,7 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
         page_size: 10,
       };
 
-      if (busqueda) params.search = busqueda;
+      if (busquedaDebounced) params.search = busquedaDebounced;
       if (filtroActivo !== undefined) params.activo = filtroActivo;
       if (filtroCategoria) params.id_categoria = filtroCategoria;
 
@@ -71,14 +75,16 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
     }
   };
 
-  const handleEliminar = async (producto: Producto) => {
-    if (!window.confirm(`¿Está seguro de eliminar el producto "${producto.descripcion}"?`)) {
-      return;
-    }
+  const handleEliminar = (producto: Producto) => {
+    setProductoAEliminar(producto);
+  };
 
+  const confirmarEliminar = async () => {
+    if (!productoAEliminar) return;
     try {
-      await productosService.eliminarProducto(producto.id_producto);
+      await productosService.eliminarProducto(productoAEliminar.id_producto);
       toast.success('Producto eliminado exitosamente');
+      setProductoAEliminar(null);
       cargarProductos();
     } catch (error) {
       toast.error('Error al eliminar producto');
@@ -349,6 +355,15 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
           </>
         )}
       </Card>
+
+      <ConfirmDialog
+        isOpen={!!productoAEliminar}
+        onClose={() => setProductoAEliminar(null)}
+        onConfirm={confirmarEliminar}
+        title="Eliminar producto"
+        message={productoAEliminar ? `¿Está seguro de eliminar el producto "${productoAEliminar.descripcion}"? Esta acción no se puede deshacer.` : ''}
+        confirmText="Eliminar"
+      />
     </div>
   );
 };

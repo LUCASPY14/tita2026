@@ -3,6 +3,7 @@ import { Search, Plus, Package } from 'lucide-react';
 import { Input, Button, Select, Spinner, Badge } from '../../../components/common';
 import { posService } from '../../../services/pos.service';
 import type { Producto, Categoria } from '../../../types';
+import { useDebounce } from '../../../hooks/useDebounce';
 import toast from 'react-hot-toast';
 
 interface CatalogoProductosProps {
@@ -17,13 +18,15 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
   const [cargando, setCargando] = useState(true);
   const [cargandoCategorias, setCargandoCategorias] = useState(true);
 
+  const busquedaDebounced = useDebounce(busqueda);
+
   useEffect(() => {
     cargarCategorias();
   }, []);
 
   useEffect(() => {
     cargarProductos();
-  }, [busqueda, categoriaSeleccionada]);
+  }, [busquedaDebounced, categoriaSeleccionada]);
 
   const cargarCategorias = async () => {
     try {
@@ -47,8 +50,8 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
         page_size: 50,
       };
 
-      if (busqueda) {
-        params.search = busqueda;
+      if (busquedaDebounced) {
+        params.search = busquedaDebounced;
       }
 
       if (categoriaSeleccionada) {
