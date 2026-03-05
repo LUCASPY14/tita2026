@@ -4,7 +4,7 @@ import { Search, CheckCircle, AlertCircle, Clock, User, CreditCard, DollarSign }
 import { recargasService } from '../../../services/recargas.service';
 import { almuerzosService } from '../../../services/almuerzos.service';
 import toast from 'react-hot-toast';
-import type { Hijo, Tarjeta, TipoAlmuerzo, SuscripcionAlmuerzo, RegistroConsumoAlmuerzo } from '../../../types';
+import type { Hijo, Tarjeta, TipoAlmuerzo, SuscripcionAlmuerzo, RegistroConsumoAlmuerzo, Alergeno } from '../../../types';
 
 interface RegistroConsumoProps {
   onRegistroExitoso: () => void;
@@ -22,6 +22,7 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
   const [registrando, setRegistrando] = useState(false);
   const [registrosHoy, setRegistrosHoy] = useState<RegistroConsumoAlmuerzo[]>([]);
   const [cargandoRegistros, setCargandoRegistros] = useState(false);
+  const [alergenos, setAlergenos] = useState<Alergeno[]>([]);
 
   useEffect(() => {
     cargarTiposAlmuerzo();
@@ -31,6 +32,9 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
   useEffect(() => {
     if (hijoSeleccionado) {
       verificarSuscripcionActiva();
+      cargarAlergenos();
+    } else {
+      setAlergenos([]);
     }
   }, [hijoSeleccionado]);
 
@@ -67,6 +71,15 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
     } catch (error) {
       console.error('Error al verificar suscripción:', error);
       setSuscripcionActiva(null);
+    }
+  };
+
+  const cargarAlergenos = async () => {
+    try {
+      const response = await almuerzosService.getAlergenos({ activo: true });
+      setAlergenos(response.results || response);
+    } catch (error) {
+      console.error('Error al cargar alérgenos:', error);
     }
   };
 
@@ -172,6 +185,7 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
     setTarjetaSeleccionada(null);
     setTipoSeleccionado(0);
     setSuscripcionActiva(null);
+    setAlergenos([]);
   };
 
   const formatearMoneda = (valor: number) => {
@@ -274,6 +288,35 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
                   )}
                 </div>
               </div>
+
+              {/* Alérgenos del Menú */}
+              {alergenos.length > 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-800">
+                    <AlertCircle className="h-4 w-4" />
+                    Alérgenos presentes en el menú — verificar con el alumno
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {alergenos.map((a) => {
+                      const colorClasses =
+                        a.nivel_severidad === 'Alto'
+                          ? 'bg-red-100 text-red-800 border-red-200'
+                          : a.nivel_severidad === 'Medio'
+                          ? 'bg-orange-100 text-orange-800 border-orange-200'
+                          : 'bg-gray-100 text-gray-700 border-gray-200';
+                      return (
+                        <span
+                          key={a.id_alergeno}
+                          className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${colorClasses}`}
+                        >
+                          {a.icono && <span>{a.icono}</span>}
+                          {a.nombre}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Selección de Tipo de Almuerzo (solo si no tiene suscripción) */}
               {!suscripcionActiva && (

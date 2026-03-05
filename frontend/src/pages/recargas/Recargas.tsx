@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { CreditCard, ArrowLeftRight } from 'lucide-react';
+import { CreditCard, ArrowLeftRight, ShieldCheck } from 'lucide-react';
 import { Card } from '../../components/common';
-import { BusquedaHijo, FormularioRecarga, HistorialRecargas, MovimientosSaldo } from './components';
+import { BusquedaHijo, FormularioRecarga, HistorialRecargas, MovimientosSaldo, AprobacionRecargas } from './components';
 import type { Hijo, Tarjeta } from '../../types';
 
-type Vista = 'recargas' | 'movimientos';
+type Vista = 'recargas' | 'movimientos' | 'aprobacion';
 
 const Recargas: React.FC = () => {
   const [vista, setVista] = useState<Vista>('recargas');
@@ -56,6 +56,18 @@ const Recargas: React.FC = () => {
         >
           <ArrowLeftRight className="h-4 w-4" />
           Movimientos de Saldo
+        </button>
+        <button
+          type="button"
+          onClick={() => setVista('aprobacion')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+            vista === 'aprobacion'
+              ? 'bg-white text-amber-700 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ShieldCheck className="h-4 w-4" />
+          Aprobación
         </button>
       </div>
 
@@ -133,6 +145,13 @@ const Recargas: React.FC = () => {
           }
         >
           <MovimientosSaldo tarjetaPreseleccionada={tarjetaSeleccionada} />
+        </Card>
+      )}
+
+      {/* Vista: Aprobación de Recargas */}
+      {vista === 'aprobacion' && (
+        <Card>
+          <AprobacionRecargas />
         </Card>
       )}
     </div>

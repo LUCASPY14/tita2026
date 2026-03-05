@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Wallet, DollarSign, AlertTriangle, CheckCircle } from 'lucide-react';
+import { X, CreditCard, Wallet, DollarSign, AlertTriangle, CheckCircle, Tag, Loader2 } from 'lucide-react';
 import { Button, Card } from '../../../components/common';
 import { BusquedaHijo } from '../../recargas/components';
 import { posService } from '../../../services/pos.service';
@@ -33,6 +33,13 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
   const [mediosPago, setMediosPago] = useState<MedioPago[]>([]);
   const [hijoSeleccionado, setHijoSeleccionado] = useState<Hijo | null>(null);
   const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState<Tarjeta | null>(null);
+  const [codigoPromo, setCodigoPromo] = useState('');
+  const [validandoPromo, setValidandoPromo] = useState(false);
+  const [promoValidada, setPromoValidada] = useState<{
+    descuento_calculado: number;
+    tipo_descuento: string;
+    descripcion: string;
+  } | null>(null);
 
   useEffect(() => {
     cargarMediosPago();
@@ -57,6 +64,36 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
     return undefined;
   };
 
+  const medioPagoPos = mediosPago.find(m => m.nombre.toLowerCase().includes('pos')) ?? null;
+  const posGeneraComision = metodoPago === 'pos' && (medioPagoPos?.genera_comision ?? false);
+  const totalConDescuento = promoValidada ? total - promoValidada.descuento_calculado : total;
+
+  const handleValidarPromo = async () => {
+    if (!codigoPromo.trim()) return;
+    setValidandoPromo(true);
+    try {
+      const result = await posService.validarCodigoPromo({
+        codigo_promocion: codigoPromo.trim(),
+        monto_total: total,
+        productos: items.map(i => ({ id_producto: i.producto.id_producto, cantidad: i.cantidad })),
+      });
+      if (result.valido) {
+        setPromoValidada({
+          descuento_calculado: result.descuento_calculado,
+          tipo_descuento: result.tipo_descuento,
+          descripcion: result.descripcion,
+        });
+        toast.success(`Promoción aplicada: ${result.descripcion}`);
+      } else {
+        toast.error(result.mensaje || 'Código de promoción inválido');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Error al validar la promoción');
+    } finally {
+      setValidandoPromo(false);
+    }
+  };
+
   const formatearPrecio = (precio?: number): string => {
     if (!precio) return 'Gs. 0';
     return `Gs. ${precio.toLocaleString('es-PY')}`;
@@ -76,7 +113,7 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
         return 'La tarjeta seleccionada no está activa';
       }
 
-      if (tarjetaSeleccionada.saldo_actual < total) {
+      if (tarjetaSeleccionada.saldo_actual < totalConDescuento) {
         return `Saldo insuficiente. Disponible: ${formatearPrecio(tarjetaSeleccionada.saldo_actual)}`;
       }
     }
@@ -118,6 +155,11 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
         ventaData.numero_comprobante = numeroComprobante.trim();
       }
 
+      if (promoValidada && codigoPromo.trim()) {
+        ventaData.codigo_promocion = codigoPromo.trim();
+        ventaData.aplicar_promociones = true;
+      }
+
       await posService.crearVenta(ventaData);
       
       toast.success('Venta procesada exitosamente');
@@ -133,14 +175,14 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
 
   const calcularNuevoSaldo = (): number => {
     if (metodoPago === 'tarjeta_hijo' && tarjetaSeleccionada) {
-      return tarjetaSeleccionada.saldo_actual - total;
+      return tarjetaSeleccionada.saldo_actual - totalConDescuento;
     }
     return 0;
   };
 
   const saldoInsuficiente = metodoPago === 'tarjeta_hijo' && 
     tarjetaSeleccionada ? 
-    tarjetaSeleccionada.saldo_actual < total :
+    tarjetaSeleccionada.saldo_actual < totalConDescuento :
     false;
 
   return (
@@ -242,6 +284,12 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
                   placeholder="Ej: 123456"
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
                 />
+                {posGeneraComision && (
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <p>Este medio de pago genera una <strong>comisión adicional</strong> que será calculada y registrada al confirmar la venta.</p>
+                  </div>
+                )}
               </div>
             )}
           </Card>
@@ -271,8 +319,62 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
 
             <div className="border-t pt-4">
               <div className="flex items-center justify-between text-lg font-bold">
-                <span>Total</span>
-                <span className="text-amber-600">{formatearPrecio(total)}</span>
+                <span>{promoValidada ? 'Subtotal' : 'Total'}</span>
+                <span className={promoValidada ? 'text-gray-500 line-through' : 'text-amber-600'}>
+                  {formatearPrecio(total)}
+                </span>
+              </div>
+
+              {promoValidada && (
+                <div className="mt-1 flex items-center justify-between text-sm text-green-700">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3.5 w-3.5" />
+                    Descuento ({promoValidada.descripcion})
+                  </span>
+                  <span className="font-medium">- {formatearPrecio(promoValidada.descuento_calculado)}</span>
+                </div>
+              )}
+
+              {promoValidada && (
+                <div className="mt-2 flex items-center justify-between text-lg font-bold text-green-700">
+                  <span>Total final</span>
+                  <span>{formatearPrecio(totalConDescuento)}</span>
+                </div>
+              )}
+
+              {/* Código de Promoción */}
+              <div className="mt-4 rounded-lg border border-gray-200 p-3">
+                <p className="mb-2 flex items-center gap-1 text-sm font-medium text-gray-700">
+                  <Tag className="h-4 w-4" />
+                  Código de Promoción
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={codigoPromo}
+                    onChange={(e) => {
+                      setCodigoPromo(e.target.value);
+                      if (promoValidada) setPromoValidada(null);
+                    }}
+                    placeholder="Ingresá el código"
+                    className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    disabled={validandoPromo}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleValidarPromo}
+                    disabled={!codigoPromo.trim() || validandoPromo}
+                    className="flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {validandoPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+                  </button>
+                </div>
+                {promoValidada && (
+                  <p className="mt-1.5 flex items-center gap-1 text-xs text-green-700">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Promoción aplicada correctamente
+                  </p>
+                )}
               </div>
 
               {metodoPago === 'tarjeta_hijo' && tarjetaSeleccionada && (

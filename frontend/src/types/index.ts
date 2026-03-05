@@ -99,7 +99,7 @@ export interface CargaSaldo {
   fecha_carga: string;
   monto_cargado: number;
   referencia?: string;
-  estado: 'Pendiente' | 'Confirmada' | 'Rechazada' | 'Cancelada';
+  estado: 'Pendiente' | 'Confirmada' | 'Rechazada' | 'Cancelada' | 'pendiente_validacion';
   pay_request_id?: string;
   tx_id?: string;
   fecha_confirmacion?: string;
@@ -203,6 +203,8 @@ export interface VentaData {
   tipo_venta: 'Contado' | 'Credito';
   id_medio_pago?: number;
   numero_comprobante?: string;
+  codigo_promocion?: string;
+  aplicar_promociones?: boolean;
   detalles: {
     id_producto: number;
     cantidad: number;

@@ -125,4 +125,21 @@ export const posService = {
     const response = await api.post(`/notas-credito-cliente/${id}/anular/`, { motivo_anulacion: motivo });
     return response.data;
   },
+
+  // Promociones
+  validarCodigoPromo: async (data: {
+    codigo_promocion: string;
+    monto_total: number;
+    productos: Array<{ id_producto: number; cantidad: number }>;
+  }): Promise<{
+    valido: boolean;
+    descuento_calculado: number;
+    tipo_descuento: string;
+    descripcion: string;
+    productos_afectados: number[];
+    mensaje: string;
+  }> => {
+    const response = await api.post('/promociones/validar_codigo/', data);
+    return response.data;
+  },
 };
