@@ -11,7 +11,7 @@ from .models import (
 )
 from .serializers import (
     PlanesAlmuerzoSerializer, TiposAlmuerzoSerializer, SuscripcionesAlmuerzoSerializer, 
-    RegistrosConsumoAlmuerzoSerializer, AlergenosSerializer
+    RegistrosConsumoAlmuerzoSerializer, AlergenosSerializer, CuentasAlmuerzoMensualSerializer
 )
 
 
@@ -180,3 +180,12 @@ class AlergenosViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['activo', 'nivel_severidad']
     search_fields = ['nombre']
+
+
+class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
+    queryset = CuentasAlmuerzoMensual.objects.select_related('id_hijo').all()
+    serializer_class = CuentasAlmuerzoMensualSerializer
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['id_hijo', 'anio', 'mes', 'estado']
+    ordering_fields = ['anio', 'mes', 'monto_total']
+    ordering = ['-anio', '-mes']

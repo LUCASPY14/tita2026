@@ -8,6 +8,32 @@ import type {
   PaginatedResponse 
 } from '../types';
 
+export interface NotaCredito {
+  id_nota: number;
+  nro_nota_credito: number;
+  fecha_emision: string;
+  motivo: string;
+  monto_total: string;
+  estado: string;
+  id_cliente: number;
+  id_empleado_autoriza: number;
+  id_venta_origen: number | null;
+}
+
+export interface DevolucionData {
+  id_venta: number;
+  productos: Array<{ id_producto: number; cantidad: number; motivo_item?: string }>;
+  motivo: string;
+  tipo_devolucion: 'total' | 'parcial';
+}
+
+export interface NotaCreditoParams {
+  page?: number;
+  page_size?: number;
+  estado?: string;
+  id_cliente?: number;
+}
+
 export interface ProductoParams {
   page?: number;
   page_size?: number;
@@ -81,6 +107,22 @@ export const posService = {
 
   getVentaById: async (id: number): Promise<Venta> => {
     const response = await api.get<Venta>(`/ventas/${id}/`);
+    return response.data;
+  },
+
+  // Notas de crédito / Devoluciones
+  getNotasCredito: async (params?: NotaCreditoParams): Promise<PaginatedResponse<NotaCredito>> => {
+    const response = await api.get<PaginatedResponse<NotaCredito>>('/notas-credito-cliente/', { params });
+    return response.data;
+  },
+
+  crearDevolucion: async (data: DevolucionData): Promise<{ exito: boolean; nota_credito: NotaCredito; monto_devuelto: string; mensaje: string }> => {
+    const response = await api.post('/notas-credito-cliente/crear_devolucion/', data);
+    return response.data;
+  },
+
+  anularNotaCredito: async (id: number, motivo: string): Promise<{ exito: boolean; mensaje: string }> => {
+    const response = await api.post(`/notas-credito-cliente/${id}/anular/`, { motivo_anulacion: motivo });
     return response.data;
   },
 };

@@ -10,7 +10,7 @@ from apps.productos.views import ProductosViewSet, CategoriasViewSet, UnidadesMe
 from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaViewSet, NotasCreditoClienteViewSet, PromocionesViewSet
 from apps.compras.views import ProveedoresViewSet, ComprasViewSet, DetallesCompraViewSet, PagosProveedoresViewSet, NotasCreditoProveedorViewSet
 from apps.core.views import TarjetasViewSet, CargasSaldoViewSet, ConsumosTarjetaViewSet, MediosPagoViewSet, ConfiguracionSistemaViewSet
-from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, SuscripcionesAlmuerzoViewSet, RegistrosConsumoAlmuerzoViewSet, AlergenosViewSet
+from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, SuscripcionesAlmuerzoViewSet, RegistrosConsumoAlmuerzoViewSet, AlergenosViewSet, CuentasAlmuerzoMensualViewSet
 from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet, AuthViewSet, PermisosViewSet, AuditoriaOperacionesViewSet
 from apps.inventario.views import StockUnicoViewSet, MovimientosStockViewSet, AjustesInventarioViewSet
 from apps.reportes.views import ReportesViewSet
@@ -57,6 +57,7 @@ router.register(r'tipos-almuerzo', TiposAlmuerzoViewSet)
 router.register(r'suscripciones-almuerzo', SuscripcionesAlmuerzoViewSet)
 router.register(r'registros-consumo-almuerzo', RegistrosConsumoAlmuerzoViewSet)
 router.register(r'alergenos', AlergenosViewSet)
+router.register(r'cuentas-almuerzo-mensual', CuentasAlmuerzoMensualViewSet)
 
 # Register Usuarios ViewSets
 router.register(r'auth', AuthViewSet, basename='auth')

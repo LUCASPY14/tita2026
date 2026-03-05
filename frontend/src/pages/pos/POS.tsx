@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { ShoppingCart, History } from 'lucide-react';
+import { ShoppingCart, History, RotateCcw } from 'lucide-react';
 import { Card } from '../../components/common';
-import { CatalogoProductos, CarritoCompras, ProcesarVenta, HistorialVentas } from './components';
+import { CatalogoProductos, CarritoCompras, ProcesarVenta, HistorialVentas, NotasCredito } from './components';
 import type { ItemCarrito, Producto } from '../../types';
 
-type Vista = 'pos' | 'historial';
+type Vista = 'pos' | 'historial' | 'devoluciones';
 
 const POS: React.FC = () => {
   const [vista, setVista] = useState<Vista>('pos');
@@ -133,6 +133,18 @@ const POS: React.FC = () => {
           <History className="h-4 w-4" />
           Historial de Ventas
         </button>
+        <button
+          type="button"
+          onClick={() => setVista('devoluciones')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+            vista === 'devoluciones'
+              ? 'bg-white text-amber-700 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <RotateCcw className="h-4 w-4" />
+          Devoluciones
+        </button>
       </div>
 
       {/* Vista: POS */}
@@ -181,6 +193,13 @@ const POS: React.FC = () => {
       {vista === 'historial' && (
         <Card title="Historial de Ventas" subtitle="Consulta y filtra todas las ventas realizadas">
           <HistorialVentas />
+        </Card>
+      )}
+
+      {/* Vista: Devoluciones */}
+      {vista === 'devoluciones' && (
+        <Card title="Devoluciones y Notas de Crédito" subtitle="Gestiona las devoluciones y notas de crédito emitidas">
+          <NotasCredito />
         </Card>
       )}
 

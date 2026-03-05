@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     PlanesAlmuerzo, TiposAlmuerzo, SuscripcionesAlmuerzo,
-    RegistrosConsumoAlmuerzo, Alergenos
+    RegistrosConsumoAlmuerzo, Alergenos, CuentasAlmuerzoMensual
 )
 
 
@@ -39,3 +39,17 @@ class AlergenosSerializer(serializers.ModelSerializer):
     class Meta:
         model = Alergenos
         fields = '__all__'
+
+
+class CuentasAlmuerzoMensualSerializer(serializers.ModelSerializer):
+    hijo_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CuentasAlmuerzoMensual
+        fields = '__all__'
+
+    def get_hijo_nombre(self, obj):
+        try:
+            return f"{obj.id_hijo.nombres} {obj.id_hijo.apellidos}"
+        except Exception:
+            return None

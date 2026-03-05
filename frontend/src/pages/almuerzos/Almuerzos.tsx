@@ -3,10 +3,11 @@ import {
   RegistroConsumo, 
   GestionPlanes, 
   GestionSuscripciones,
-  HistorialConsumos 
+  HistorialConsumos,
+  FacturacionMensual
 } from './components';
 
-type Vista = 'registro' | 'planes' | 'suscripciones' | 'historial';
+type Vista = 'registro' | 'planes' | 'suscripciones' | 'historial' | 'facturacion';
 
 const Almuerzos: React.FC = () => {
   const [vista, setVista] = useState<Vista>('registro');
@@ -21,7 +22,8 @@ const Almuerzos: React.FC = () => {
     { id: 'registro' as Vista, label: 'Registro de Consumo', icon: '🍽️' },
     { id: 'planes' as Vista, label: 'Planes de Almuerzo', icon: '📋' },
     { id: 'suscripciones' as Vista, label: 'Suscripciones', icon: '👥' },
-    { id: 'historial' as Vista, label: 'Historial', icon: '📊' }
+    { id: 'historial' as Vista, label: 'Historial', icon: '📊' },
+    { id: 'facturacion' as Vista, label: 'Facturación Mensual', icon: '💰' },
   ];
 
   return (
@@ -76,6 +78,10 @@ const Almuerzos: React.FC = () => {
 
         {vista === 'historial' && (
           <HistorialConsumos key={actualizarHistorial} />
+        )}
+
+        {vista === 'facturacion' && (
+          <FacturacionMensual />
         )}
       </div>
     </div>
