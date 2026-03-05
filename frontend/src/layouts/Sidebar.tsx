@@ -16,7 +16,8 @@ import {
   Bell,
   FileText,
   UserCog,
-  Shield
+  Shield,
+  KeyRound
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useHasRole } from '../hooks/usePermissions';
@@ -42,6 +43,7 @@ const navigation: NavItem[] = [
   { name: 'Compras', path: '/compras', icon: FileText },
   { name: 'Configuración', path: '/configuracion', icon: Settings },
   { name: 'Usuarios', path: '/admin/usuarios', icon: UserCog, adminOnly: true },
+  { name: 'Permisos', path: '/admin/permisos', icon: KeyRound, adminOnly: true },
   { name: 'Auditoría', path: '/admin/auditoria', icon: Shield, adminOnly: true },
 ];
 

@@ -569,6 +569,45 @@ class PermisosViewSet(viewsets.ViewSet):
                 'success': False,
                 'mensaje': 'Rol no encontrado'
             }, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=False, methods=['post'])
+    def remover_de_rol(self, request):
+        """
+        Remueve un permiso de un rol.
+        
+        POST /api/v1/permisos/remover_de_rol/
+        Body:
+        {
+            "id_rol": 1,
+            "codigo_permiso": "ventas.crear"
+        }
+        """
+        id_rol = request.data.get('id_rol')
+        codigo_permiso = request.data.get('codigo_permiso')
+        
+        if not id_rol or not codigo_permiso:
+            return Response({
+                'success': False,
+                'mensaje': 'id_rol y codigo_permiso son requeridos'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            rol = Roles.objects.get(id=id_rol)
+            
+            resultado = PermissionService.remover_permiso_de_rol(
+                rol, codigo_permiso
+            )
+            
+            if resultado['success']:
+                return Response(resultado, status=status.HTTP_200_OK)
+            else:
+                return Response(resultado, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Roles.DoesNotExist:
+            return Response({
+                'success': False,
+                'mensaje': 'Rol no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
 
 
 # ==================== CRUD BÁSICOS ====================

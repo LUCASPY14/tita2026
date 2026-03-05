@@ -13,6 +13,7 @@ import Reportes from '../pages/Reportes';
 import Notificaciones from '../pages/Notificaciones';
 import Configuracion from '../pages/Configuracion';
 import Auditoria from '../pages/Auditoria';
+import GestionPermisos from '../pages/permisos';
 import { UserManagement } from '../pages/usuarios';
 import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
@@ -127,6 +128,16 @@ const AppRoutes: React.FC = () => {
                   element={
                     <ProtectedRoute requiredRoles={['admin']}>
                       <UserManagement />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                {/* Módulo de Gestión de Permisos - Solo Admin */}
+                <Route 
+                  path="/admin/permisos" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <GestionPermisos />
                     </ProtectedRoute>
                   } 
                 />

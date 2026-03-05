@@ -920,3 +920,66 @@ export interface ActividadUsuario {
   operaciones_fallidas: number;
   tasa_exito: number;
 }
+
+// ==================== Tipos para Permisos ====================
+
+export interface Permiso {
+  id: number;
+  codigo_permiso: string;
+  nombre: string;
+  modulo: string;
+  descripcion?: string;
+  activo?: boolean;
+  fecha_creacion?: string;
+}
+
+export interface RolPermiso {
+  id: number;
+  id_rol: number;
+  id_permiso: number;
+  fecha_asignacion: string;
+  asignado_por?: number;
+  permiso?: Permiso;
+}
+
+export interface PermisosPorModulo {
+  [modulo: string]: Permiso[];
+}
+
+export interface PermisosResponse {
+  permisos: Permiso[];
+  permisos_por_modulo: PermisosPorModulo;
+  total: number;
+}
+
+export interface RolConPermisos {
+  rol: {
+    id: number;
+    nombre_rol: string;
+    descripcion?: string;
+  };
+  permisos: Array<{
+    id_permiso__id: number;
+    id_permiso__codigo_permiso: string;
+    id_permiso__nombre: string;
+    id_permiso__modulo: string;
+    fecha_asignacion: string;
+  }>;
+  total: number;
+}
+
+export interface AsignarPermisoRequest {
+  id_rol: number;
+  codigo_permiso: string;
+}
+
+export interface RemoverPermisoRequest {
+  id_rol: number;
+  codigo_permiso: string;
+}
+
+export interface PermisosResult {
+  success: boolean;
+  mensaje: string;
+}
+
