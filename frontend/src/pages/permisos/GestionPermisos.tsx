@@ -4,9 +4,7 @@ import permisosService from '../../services/permisos.service';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import type { Permiso, PermisosPorModulo, RolConPermisos } from '../../types';
 import toast from 'react-hot-toast';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+import api from '../../services/api';
 
 interface Rol {
   id_rol: number;
@@ -47,7 +45,7 @@ const GestionPermisos: React.FC = () => {
 
   const cargarRoles = async () => {
     try {
-      const response = await axios.get(`${API_URL}/roles/`);
+      const response = await api.get('/roles/');
       setRoles(response.data.results || response.data);
     } catch (error) {
       console.error('Error cargando roles:', error);

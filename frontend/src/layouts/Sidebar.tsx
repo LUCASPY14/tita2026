@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useHasRole } from '../hooks/usePermissions';
+import { useNotificationsByRole } from '../hooks/useNotificationsByRole';
 
 interface NavItem {
   name: string;
@@ -30,7 +31,7 @@ interface NavItem {
   adminOnly?: boolean; // Nuevo: indica si solo es para admins
 }
 
-const navigation: NavItem[] = [
+const BASE_NAVIGATION: NavItem[] = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Dashboard Mejorado', path: '/dashboard/mejorado', icon: TrendingUp },
   { name: 'Recargas', path: '/recargas', icon: CreditCard },
@@ -39,7 +40,7 @@ const navigation: NavItem[] = [
   { name: 'Productos', path: '/productos', icon: Package },
   { name: 'Almuerzos', path: '/almuerzos', icon: Utensils },
   { name: 'Reportes', path: '/reportes', icon: BarChart3 },
-  { name: 'Notificaciones', path: '/notificaciones', icon: Bell, badge: 3 },
+  { name: 'Notificaciones', path: '/notificaciones', icon: Bell },
   { name: 'Compras', path: '/compras', icon: FileText },
   { name: 'Configuración', path: '/configuracion', icon: Settings },
   { name: 'Usuarios', path: '/admin/usuarios', icon: UserCog, adminOnly: true },
@@ -51,6 +52,13 @@ const Sidebar: React.FC = () => {
   const { sidebarOpen, toggleSidebar } = useUIStore();
   const location = useLocation();
   const isAdmin = useHasRole(['admin']);
+  const { resumen, resumenCriticidad } = useNotificationsByRole();
+
+  const notifBadge = (resumen?.no_leidas || 0) + (resumenCriticidad.criticas + resumenCriticidad.altas);
+
+  const navigation = BASE_NAVIGATION.map(item =>
+    item.path === '/notificaciones' ? { ...item, badge: notifBadge } : item
+  );
 
   // Filtrar navegación según permisos
   const filteredNavigation = navigation.filter(item => {

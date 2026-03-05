@@ -18,8 +18,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <Sidebar />
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      {/* Main Content Area - ajustado para compensar el sidebar */}
+      <div 
+        className={clsx(
+          'flex flex-1 flex-col overflow-hidden transition-all duration-300',
+          sidebarOpen ? 'ml-64' : 'ml-16'
+        )}
+      >
         {/* Header */}
         <Header />
 
@@ -29,12 +34,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <Breadcrumbs />
 
           {/* Main Content */}
-          <main
-            className={clsx(
-              'flex-1 transition-all duration-300',
-              sidebarOpen ? 'lg:ml-0' : 'lg:ml-0'
-            )}
-          >
+          <main className="flex-1">
             <div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
               {children}
             </div>

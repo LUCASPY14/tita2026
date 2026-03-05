@@ -9,9 +9,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuthContext } from './AuthContext';
-import axios from '../utils/axiosConfig';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+import api from '../services/api';
 
 interface PermissionsContextType {
   permisos: string[];
@@ -42,7 +40,7 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
 
     try {
       setIsLoading(true);
-      const response = await axios.get(`${API_URL}/auth/perfil/`);
+      const response = await api.get('/auth/perfil/');
       const permisosData = response.data.permisos || [];
       setPermisos(permisosData);
     } catch (error) {
@@ -106,8 +104,12 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
    * Verifica si el usuario tiene acceso de administrador total
    */
   const hasAdminAccess = useCallback((): boolean => {
-    return permisos.includes('admin.acceso_total');
-  }, [permisos]);
+    // Check from loaded permissions
+    if (permisos.includes('admin.acceso_total')) return true;
+    // Fallback: check from user role stored in auth context
+    if (user?.role === 'admin') return true;
+    return false;
+  }, [permisos, user]);
 
   /**
    * Recarga los permisos del usuario

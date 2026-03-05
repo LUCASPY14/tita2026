@@ -15,6 +15,7 @@ import Configuracion from '../pages/Configuracion';
 import Auditoria from '../pages/Auditoria';
 import GestionPermisos from '../pages/permisos';
 import { UserManagement } from '../pages/usuarios';
+import Perfil from '../pages/Perfil';
 import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -101,6 +102,9 @@ const AppRoutes: React.FC = () => {
                 
                 {/* Módulo de Notificaciones - Todos */}
                 <Route path="/notificaciones" element={<Notificaciones />} />
+                
+                {/* Perfil de usuario */}
+                <Route path="/perfil" element={<Perfil />} />
                 
                 {/* Módulo de Configuración - Solo Admin */}
                 <Route 
