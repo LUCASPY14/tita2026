@@ -418,10 +418,15 @@ class EsAdministrador(permissions.BasePermission):
             return False
         
         try:
-            empleado = Empleados.objects.get(id=request.user.id)
+            empleado = Empleados.objects.get(usuario=request.user.username)
         except Empleados.DoesNotExist:
             return False
         
+        # Verificar si es administrador por rol
+        if empleado.id_rol and empleado.id_rol.nombre_rol in ['Admin', 'Administrador']:
+            return True
+            
+        # También verificar permiso específico si existe
         return PermissionService.empleado_tiene_permiso(empleado, 'admin.acceso_total')
 
 
@@ -444,7 +449,7 @@ def requiere_permiso(codigo_permiso: str):
                 raise PermissionDenied("Debe estar autenticado")
             
             try:
-                empleado = Empleados.objects.get(id=request.user.id)
+                empleado = Empleados.objects.get(usuario=request.user.username)
             except Empleados.DoesNotExist:
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied("Usuario no encontrado")

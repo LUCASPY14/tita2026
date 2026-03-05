@@ -82,7 +82,7 @@ class TwoFactorAuthService:
         try:
             # Verificar si ya tiene 2FA habilitado
             auth_2fa_existente = Autenticacion2Fa.objects.filter(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
                 tipo_usuario='empleado',
                 habilitado=True
             ).first()
@@ -101,12 +101,13 @@ class TwoFactorAuthService:
             
             # Crear registro 2FA
             auth_2fa = Autenticacion2Fa.objects.create(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
                 tipo_usuario='empleado',
                 secret_key=secret_key,
                 backup_codes=json.dumps(backup_codes),
                 habilitado=True,
-                fecha_activacion=timezone.now()
+                fecha_activacion=timezone.now(),
+                fecha_creacion=timezone.now()
             )
             
             # Generar URI de provisioning para QR
@@ -130,15 +131,19 @@ class TwoFactorAuthService:
             
             # Registrar en auditoría
             AuditoriaOperaciones.objects.create(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
+                tipo_usuario='empleado',
+                id_usuario=empleado.id_empleado,
                 operacion='HABILITAR_2FA',
                 tabla_afectada='Autenticacion2Fa',
-                ip_origen=ip_address,
+                ip_address=ip_address,
                 datos_nuevos={
-                    'id_auth_2fa': auth_2fa.id,
+                    'id_auth_2fa': auth_2fa.pk,
                     'tipo_usuario': 'empleado',
                     'timestamp': str(timezone.now())
-                }
+                },
+                fecha_operacion=timezone.now(),
+                resultado='exitoso'
             )
             
             return {
@@ -177,7 +182,7 @@ class TwoFactorAuthService:
         try:
             # Buscar configuración 2FA
             auth_2fa = Autenticacion2Fa.objects.filter(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
                 tipo_usuario='empleado',
                 habilitado=True
             ).first()
@@ -288,13 +293,12 @@ class TwoFactorAuthService:
         Registra un intento de verificación 2FA.
         """
         return Intentos2Fa.objects.create(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
             tipo_usuario='empleado',
             ip_address=ip_address,
             ciudad=ciudad,
             pais=pais,
-            exitoso=exitoso,
-            motivo_fallo=motivo_fallo,
+            exitoso=1 if exitoso else 0,
             fecha_intento=timezone.now()
         )
     
@@ -305,9 +309,9 @@ class TwoFactorAuthService:
         """
         tiempo_limite = timezone.now() - timedelta(minutes=minutos)
         return Intentos2Fa.objects.filter(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
             tipo_usuario='empleado',
-            exitoso=False,
+            exitoso=0,
             fecha_intento__gte=tiempo_limite
         ).count()
     
@@ -322,7 +326,7 @@ class TwoFactorAuthService:
         """
         try:
             auth_2fa = Autenticacion2Fa.objects.filter(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
                 tipo_usuario='empleado',
                 habilitado=True
             ).first()
@@ -338,17 +342,21 @@ class TwoFactorAuthService:
             
             # Registrar en auditoría
             AuditoriaOperaciones.objects.create(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
+                tipo_usuario='empleado',
+                id_usuario=empleado.id_empleado,
                 operacion='DESHABILITAR_2FA',
                 tabla_afectada='Autenticacion2Fa',
-                ip_origen=ip_address,
+                ip_address=ip_address,
                 datos_anteriores={
                     'habilitado': True
                 },
                 datos_nuevos={
                     'habilitado': False,
                     'timestamp': str(timezone.now())
-                }
+                },
+                fecha_operacion=timezone.now(),
+                resultado='exitoso'
             )
             
             return {
@@ -374,7 +382,7 @@ class TwoFactorAuthService:
         """
         try:
             auth_2fa = Autenticacion2Fa.objects.filter(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
                 tipo_usuario='empleado',
                 habilitado=True
             ).first()
@@ -393,14 +401,18 @@ class TwoFactorAuthService:
             
             # Registrar en auditoría
             AuditoriaOperaciones.objects.create(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
+                tipo_usuario='empleado',
+                id_usuario=empleado.id_empleado,
                 operacion='REGENERAR_BACKUP_CODES',
                 tabla_afectada='Autenticacion2Fa',
-                ip_origen=ip_address,
+                ip_address=ip_address,
                 datos_nuevos={
                     'num_codigos': len(nuevos_backup_codes),
                     'timestamp': str(timezone.now())
-                }
+                },
+                fecha_operacion=timezone.now(),
+                resultado='exitoso'
             )
             
             return {
@@ -425,7 +437,7 @@ class TwoFactorAuthService:
             True si tiene 2FA habilitado, False caso contrario
         """
         return Autenticacion2Fa.objects.filter(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
             tipo_usuario='empleado',
             habilitado=True
         ).exists()
@@ -447,7 +459,7 @@ class TwoFactorAuthService:
             }
         """
         auth_2fa = Autenticacion2Fa.objects.filter(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
             tipo_usuario='empleado'
         ).first()
         
@@ -467,18 +479,18 @@ class TwoFactorAuthService:
         
         # Obtener estadísticas de intentos
         total_intentos = Intentos2Fa.objects.filter(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
             tipo_usuario='empleado'
         ).count()
         
         intentos_exitosos = Intentos2Fa.objects.filter(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
             tipo_usuario='empleado',
             exitoso=True
         ).count()
         
         ultimo_intento = Intentos2Fa.objects.filter(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
             tipo_usuario='empleado'
         ).order_by('-fecha_intento').first()
         

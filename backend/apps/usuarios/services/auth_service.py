@@ -115,7 +115,7 @@ class AuthenticationService:
         
         # Buscar bloqueos activos
         bloqueo_activo = BloqueosCuenta.objects.filter(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
             activo=True
         ).first()
         
@@ -162,7 +162,9 @@ class AuthenticationService:
         
         # Registrar en auditoría
         AuditoriaOperaciones.objects.create(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
+            tipo_usuario='empleado',
+            id_usuario=empleado.id_empleado,
             operacion='BLOQUEO_CUENTA',
             tabla_afectada='BloqueosCuenta',
             ip_origen=ip_address,
@@ -187,12 +189,10 @@ class AuthenticationService:
             Instancia de IntentosLogin creada
         """
         return IntentosLogin.objects.create(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
             ip_address=ip_address,
-            exitoso=exitoso,
+            exitoso=1 if exitoso else 0,
             motivo_fallo=motivo_fallo,
-            navegador=navegador,
-            dispositivo=dispositivo,
             fecha_intento=timezone.now()
         )
     
@@ -203,8 +203,8 @@ class AuthenticationService:
         """
         tiempo_limite = timezone.now() - timedelta(minutes=minutos)
         return IntentosLogin.objects.filter(
-            id_empleado=empleado,
-            exitoso=False,
+            usuario=empleado.usuario,
+            exitoso=0,  # 0 = False, 1 = True
             fecha_intento__gte=tiempo_limite
         ).count()
     
@@ -219,12 +219,16 @@ class AuthenticationService:
                 'refresh': token_refresco
             }
         """
-        refresh = RefreshToken.for_user(empleado)
+        # Obtener el Django User correspondiente al empleado
+        from django.contrib.auth.models import User
+        django_user = User.objects.get(username=empleado.usuario)
+        
+        refresh = RefreshToken.for_user(django_user)
         
         # Agregar claims personalizados
-        refresh['id_empleado'] = empleado.id
+        refresh['id_empleado'] = empleado.id_empleado
         refresh['usuario'] = empleado.usuario
-        refresh['id_rol'] = empleado.id_rol.id if empleado.id_rol else None
+        refresh['id_rol'] = empleado.id_rol.id_rol if empleado.id_rol else None
         refresh['nombre_completo'] = f"{empleado.nombre} {empleado.apellido}"
         
         return {
@@ -324,21 +328,26 @@ class AuthenticationService:
             # Crear sesión activa
             session_key = tokens['refresh']  # Usar refresh token como session_key
             SesionesActivas.objects.create(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
+                tipo_usuario='empleado',
                 session_key=session_key[:255],  # Truncar si es muy largo
                 ip_address=ip_address,
                 user_agent=user_agent[:500] if user_agent else None,
                 fecha_inicio=timezone.now(),
-                fecha_expiracion=timezone.now() + timedelta(hours=AuthenticationService.TIEMPO_EXPIRACION_SESSION_HORAS),
+                ultima_actividad=timezone.now(),
                 activa=True
             )
             
             # Registrar en auditoría
             AuditoriaOperaciones.objects.create(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
+                tipo_usuario='empleado',
+                id_usuario=empleado.id_empleado,
                 operacion='LOGIN',
                 tabla_afectada='Empleados',
-                ip_origen=ip_address,
+                ip_address=ip_address,
+                fecha_operacion=timezone.now(),
+                resultado='EXITOSO',
                 datos_nuevos={
                     'usuario': usuario,
                     'timestamp': str(timezone.now())
@@ -349,13 +358,13 @@ class AuthenticationService:
                 'success': True,
                 'tokens': tokens,
                 'empleado': {
-                    'id': empleado.id,
+                    'id': empleado.id_empleado,
                     'usuario': empleado.usuario,
                     'nombre': empleado.nombre,
                     'apellido': empleado.apellido,
                     'email': empleado.email,
                     'rol': empleado.id_rol.nombre_rol if empleado.id_rol else None,
-                    'id_rol': empleado.id_rol.id if empleado.id_rol else None
+                    'id_rol': empleado.id_rol.id_rol if empleado.id_rol else None
                 },
                 'mensaje': 'Login exitoso',
                 'codigo': 'LOGIN_EXITOSO'

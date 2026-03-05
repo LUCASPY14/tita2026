@@ -43,6 +43,7 @@ class AuthViewSet(viewsets.ViewSet):
     """
     ViewSet para autenticación (login, logout, cambio de contraseña).
     """
+    permission_classes = [AllowAny]  # Permitir acceso sin autenticación para login
     
     @method_decorator(ratelimit(key='ip', rate='5/m', method='POST'))
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
@@ -58,7 +59,7 @@ class AuthViewSet(viewsets.ViewSet):
             "password": "Admin123!@#"
         }
         """
-        usuario = request.data.get('usuario')
+        usuario = request.data.get('usuario') or request.data.get('username')
         password = request.data.get('password')
         
         if not usuario or not password:
@@ -165,7 +166,11 @@ class AuthViewSet(viewsets.ViewSet):
         
         GET /api/v1/auth/perfil/
         """
-        empleado = request.user
+        try:
+            empleado = Empleados.objects.select_related('id_rol').get(usuario=request.user.username)
+        except Empleados.DoesNotExist:
+            return Response({'error': 'Empleado no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        
         serializer = EmpleadosSerializer(empleado)
         
         # Agregar permisos
@@ -704,6 +709,81 @@ class EmpleadosViewSet(viewsets.ModelViewSet):
                 'mensaje': resultado['mensaje']
             }, status=status.HTTP_400_BAD_REQUEST)
     
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def cambiar_password(self, request, pk=None):
+        """
+        Cambia la contraseña de un empleado (solo para administradores).
+        
+        POST /api/v1/empleados/{id}/cambiar_password/
+        Body:
+        {
+            "password": "NewPassword123!"
+        }
+        """
+        try:
+            empleado_target = self.get_object()
+            new_password = request.data.get('password')
+            
+            if not new_password:
+                return Response({
+                    'success': False,
+                    'mensaje': 'La nueva contraseña es requerida'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validar longitud mínima
+            if len(new_password) < 8:
+                return Response({
+                    'success': False,
+                    'mensaje': 'La contraseña debe tener al menos 8 caracteres'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Verificar si el usuario actual tiene permisos de admin
+            empleado_actual_user = request.user
+            try:
+                empleado_actual = Empleados.objects.get(usuario=empleado_actual_user.username)
+                if not empleado_actual.id_rol or empleado_actual.id_rol.nombre_rol not in ['Admin', 'Administrador']:
+                    return Response({
+                        'success': False,
+                        'mensaje': 'No tienes permisos para cambiar contraseñas de otros usuarios'
+                    }, status=status.HTTP_403_FORBIDDEN)
+            except Empleados.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'mensaje': 'Usuario no encontrado en el sistema'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Cambiar la contraseña
+            import bcrypt
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            empleado_target.contrasena_hash = hashed_password.decode('utf-8')
+            empleado_target.save()
+            
+            # Actualizar el User de Django también si existe
+            from django.contrib.auth.models import User
+            try:
+                django_user = User.objects.get(username=empleado_target.usuario)
+                django_user.set_password(new_password)
+                django_user.save()
+            except User.DoesNotExist:
+                pass  # No existe user de Django asociado
+            
+            # Log de la operación (opcional)
+            # from django.utils import timezone
+            # ip_address = self._get_client_ip(request)
+            # Auditoría simplificada por ahora
+            print(f"Admin {empleado_actual.usuario} cambió password de {empleado_target.usuario}")
+            
+            return Response({
+                'success': True,
+                'mensaje': f'Contraseña actualizada exitosamente para {empleado_target.nombre} {empleado_target.apellido}'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'mensaje': f'Error al cambiar la contraseña: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def _get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
