@@ -14,6 +14,7 @@ DATABASES = {
         'PASSWORD': 'L01G05S33Vice.42',
         'HOST': 'localhost',
         'PORT': '3306',
+        'ATOMIC_REQUESTS': False,
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",

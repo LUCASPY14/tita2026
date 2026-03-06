@@ -156,7 +156,12 @@ class RecargaServiceValidarIdempotenciaTest(TransactionTestCase):
             nombre="Test", apellido="Hijo", grado="1ro", id_cliente_responsable=self.cliente
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="T001", saldo_actual=Decimal("0"), estado="activa", id_hijo=self.hijo
+            nro_tarjeta="T001", 
+            saldo_actual=Decimal("0"), 
+            estado="activa", 
+            fecha_creacion=timezone.now(),
+            limite_credito=Decimal("1000.00"),
+            id_hijo=self.hijo
         )
 
     def test_comprobante_nuevo_retorna_false(self):
@@ -172,6 +177,7 @@ class RecargaServiceValidarIdempotenciaTest(TransactionTestCase):
         # Crear recarga con comprobante
         CargasSaldo.objects.create(
             nro_tarjeta=self.tarjeta,
+            fecha_carga=timezone.now(),
             monto_cargado=Decimal("100"),
             metodo_pago="efectivo",
             estado="completada",
@@ -190,6 +196,7 @@ class RecargaServiceValidarIdempotenciaTest(TransactionTestCase):
         # Crear recarga con referencia Bancard
         CargasSaldo.objects.create(
             nro_tarjeta=self.tarjeta,
+            fecha_carga=timezone.now(),
             monto_cargado=Decimal("100"),
             metodo_pago="bancard",
             estado="completada",
@@ -231,10 +238,16 @@ class RecargaServiceAcreditarSaldoTest(TransactionTestCase):
             nombre="Test", apellido="Hijo", grado="1ro", id_cliente_responsable=self.cliente
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="T001", saldo_actual=Decimal("0"), estado="activa", id_hijo=self.hijo
+            nro_tarjeta="T001", 
+            saldo_actual=Decimal("0"), 
+            estado="activa", 
+            fecha_creacion=timezone.now(),
+            limite_credito=Decimal("1000.00"),
+            id_hijo=self.hijo
         )
         self.recarga = CargasSaldo.objects.create(
             nro_tarjeta=self.tarjeta,
+            fecha_carga=timezone.now(),
             monto_cargado=Decimal("100000"),
             metodo_pago="efectivo",
             estado="completada",
@@ -273,6 +286,7 @@ class RecargaServiceAcreditarSaldoTest(TransactionTestCase):
         # Segunda recarga
         recarga2 = CargasSaldo.objects.create(
             nro_tarjeta=self.tarjeta,
+            fecha_carga=timezone.now(),
             monto_cargado=Decimal("50000"),
             metodo_pago="efectivo",
             estado="completada",
@@ -318,7 +332,12 @@ class RecargaServiceGenerarFacturaTest(TransactionTestCase):
             nombre="Test", apellido="Hijo", grado="1ro", id_cliente_responsable=self.cliente
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="T001", saldo_actual=Decimal("0"), estado="activa", id_hijo=self.hijo
+            nro_tarjeta="T001", 
+            saldo_actual=Decimal("0"), 
+            estado="activa", 
+            fecha_creacion=timezone.now(),
+            limite_credito=Decimal("1000.00"),
+            id_hijo=self.hijo
         )
 
         # Crear categoría
@@ -326,6 +345,7 @@ class RecargaServiceGenerarFacturaTest(TransactionTestCase):
 
         self.recarga = CargasSaldo.objects.create(
             nro_tarjeta=self.tarjeta,
+            fecha_carga=timezone.now(),
             monto_cargado=Decimal("100000"),
             total_cobrado=Decimal("103400"),
             comision_aplicada=Decimal("3400"),
@@ -398,7 +418,12 @@ class RecargaServiceProcesarRecargaCajaTest(TransactionTestCase):
             nombre="Test", apellido="Hijo", grado="1ro", id_cliente_responsable=self.cliente
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="T001", saldo_actual=Decimal("0"), estado="activa", id_hijo=self.hijo
+            nro_tarjeta="T001", 
+            saldo_actual=Decimal("0"), 
+            estado="activa", 
+            fecha_creacion=timezone.now(),
+            limite_credito=Decimal("1000.00"),
+            id_hijo=self.hijo
         )
 
         # Crear empleado
@@ -479,7 +504,12 @@ class RecargaServiceTransferenciaTest(TransactionTestCase):
             nombre="Test", apellido="Hijo", grado="1ro", id_cliente_responsable=self.cliente
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="T001", saldo_actual=Decimal("0"), estado="activa", id_hijo=self.hijo
+            nro_tarjeta="T001", 
+            saldo_actual=Decimal("0"), 
+            estado="activa", 
+            fecha_creacion=timezone.now(),
+            limite_credito=Decimal("1000.00"),
+            id_hijo=self.hijo
         )
         self.rol = Roles.objects.create(nombre_rol="Cajero", activo=True)
         self.empleado = Empleados.objects.create(
@@ -556,6 +586,7 @@ class RecargaServiceTransferenciaTest(TransactionTestCase):
         # Crear recarga pendiente de validación
         recarga = CargasSaldo.objects.create(
             nro_tarjeta=self.tarjeta,
+            fecha_carga=timezone.now(),
             monto_cargado=Decimal("600000"),
             metodo_pago="transferencia",
             estado="validacion_pendiente",

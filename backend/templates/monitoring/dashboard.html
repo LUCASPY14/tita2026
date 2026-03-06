@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Dashboard - Cantina Tita</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .metric-card.warning {
+            border-left-color: #f39c12;
+        }
+        
+        .metric-card.error {
+            border-left-color: #e74c3c;
+        }
+        
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .metric-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-healthy {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .metric-detail {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        .alerts-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .alert-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            border-left: 4px solid #f39c12;
+            background: #fff3cd;
+        }
+        
+        .performance-chart {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .refresh-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .refresh-button:hover {
+            background: #5a67d8;
+        }
+        
+        .loading {
+            display: inline-block;
+            margin-left: 0.5rem;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .timestamp {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Performance Dashboard</h1>
+        <p>Sistema de Monitoreo - Cantina Tita</p>
+    </div>
+    
+    <div class="container">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <button id="refreshButton" class="refresh-button" onclick="refreshDashboard()">
+                Actualizar Dashboard
+            </button>
+            <span id="lastUpdate" class="timestamp"></span>
+        </div>
+        
+        <div class="dashboard-grid">
+            <!-- Database Metrics -->
+            <div class="metric-card" id="databaseCard">
+                <div class="metric-header">
+                    <div class="metric-title">🗄️ Base de Datos</div>
+                    <span class="status-badge status-healthy" id="dbStatus">Healthy</span>
+                </div>
+                <div class="metric-value" id="dbQueryTime">--</div>
+                <div class="metric-label">Tiempo promedio de consulta (ms)</div>
+                <div class="metric-detail">
+                    <div>Conexiones activas: <span id="dbConnections">--</span></div>
+                    <div>Cache hit ratio: <span id="dbCacheRatio">--</span>%</div>
+                </div>
+            </div>
+            
+            <!-- System Metrics -->
+            <div class="metric-card" id="systemCard">
+                <div class="metric-header">
+                    <div class="metric-title">🖥️ Sistema</div>
+                    <span class="status-badge status-healthy" id="systemStatus">Healthy</span>
+                </div>
+                <div class="metric-value" id="systemCpu">--</div>
+                <div class="metric-label">Uso de CPU (%)</div>
+                <div class="metric-detail">
+                    <div>Memoria: <span id="systemMemory">--</span>%</div>
+                    <div>Disco: <span id="systemDisk">-- GB</span> disponible</div>
+                </div>
+            </div>
+            
+            <!-- API Metrics -->
+            <div class="metric-card" id="apiCard">
+                <div class="metric-header">
+                    <div class="metric-title">🌐 API</div>
+                    <span class="status-badge status-healthy" id="apiStatus">Healthy</span>
+                </div>
+                <div class="metric-value" id="apiResponseTime">--</div>
+                <div class="metric-label">Tiempo de respuesta (ms)</div>
+                <div class="metric-detail">
+                    <div>Requests/min: <span id="apiRpm">--</span></div>
+                    <div>Error rate: <span id="apiErrorRate">--</span>%</div>
+                </div>
+            </div>
+            
+            <!-- Overall Health -->
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-title">❤️ Estado General</div>
+                    <span class="status-badge status-healthy" id="overallStatus">Healthy</span>
+                </div>
+                <div class="metric-value" id="healthScore">--</div>
+                <div class="metric-label">Score de salud (0-100)</div>
+                <div class="metric-detail">
+                    <div>Alertas activas: <span id="alertCount">--</span></div>
+                    <div>Última verificación: <span id="lastCheck">--</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alerts Section -->
+        <div class="alerts-section" id="alertsSection" style="display: none;">
+            <h3>🚨 Alertas Activas</h3>
+            <div id="alertsList"></div>
+        </div>
+        
+        <!-- Performance Chart Placeholder -->
+        <div class="performance-chart">
+            <h3>📊 Rendimiento en Tiempo Real</h3>
+            <p style="color: #7f8c8d; text-align: center; padding: 2rem;">
+                Gráfico de rendimiento en tiempo real<br>
+                <small>(Requiere integración con Chart.js o similar)</small>
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        let isLoading = false;
+        
+        async function refreshDashboard() {
+            if (isLoading) return;
+            
+            isLoading = true;
+            const refreshButton = document.getElementById('refreshButton');
+            const originalText = refreshButton.innerHTML;
+            refreshButton.innerHTML = 'Actualizando... <span class="loading">⟳</span>';
+            refreshButton.disabled = true;
+            
+            try {
+                // Fetch dashboard data
+                const response = await fetch('/monitoring/dashboard/');
+                const data = await response.json();
+                
+                updateDashboard(data);
+                
+                // Update last update timestamp
+                document.getElementById('lastUpdate').textContent = 
+                    `Última actualización: ${new Date().toLocaleTimeString()}`;
+                
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+                // Show error state
+                showErrorState();
+            } finally {
+                isLoading = false;
+                refreshButton.innerHTML = originalText;
+                refreshButton.disabled = false;
+            }
+        }
+        
+        function updateDashboard(data) {
+            // Update database metrics
+            updateDatabaseMetrics(data.database);
+            
+            // Update system metrics
+            updateSystemMetrics(data.system);
+            
+            // Update API metrics
+            updateAPIMetrics(data.api);
+            
+            // Update overall status
+            updateOverallStatus(data.status, data);
+            
+            // Update alerts
+            updateAlerts(data.alerts);
+        }
+        
+        function updateDatabaseMetrics(dbData) {
+            document.getElementById('dbQueryTime').textContent = 
+                Math.round(dbData.avg_query_time_ms || 0);
+            document.getElementById('dbConnections').textContent = 
+                dbData.active_connections || '--';
+            document.getElementById('dbCacheRatio').textContent = 
+                Math.round((dbData.cache_hit_ratio || 0) * 100);
+            
+            updateStatus('dbStatus', dbData.status || 'unknown');
+            updateCardStatus('databaseCard', dbData.status || 'unknown');
+        }
+        
+        function updateSystemMetrics(sysData) {
+            document.getElementById('systemCpu').textContent = 
+                Math.round(sysData.cpu_percent || 0);
+            document.getElementById('systemMemory').textContent = 
+                Math.round(sysData.memory_percent || 0);
+            document.getElementById('systemDisk').textContent = 
+                Math.round(sysData.disk_free_gb || 0);
+            
+            updateStatus('systemStatus', sysData.status || 'unknown');
+            updateCardStatus('systemCard', sysData.status || 'unknown');
+        }
+        
+        function updateAPIMetrics(apiData) {
+            document.getElementById('apiResponseTime').textContent = 
+                Math.round(apiData.response_time_avg_ms || 0);
+            document.getElementById('apiRpm').textContent = 
+                apiData.requests_per_minute || '--';
+            document.getElementById('apiErrorRate').textContent = 
+                Math.round((apiData.error_rate_percent || 0) * 100) / 100;
+            
+            updateStatus('apiStatus', apiData.status || 'unknown');
+            updateCardStatus('apiCard', apiData.status || 'unknown');
+        }
+        
+        function updateOverallStatus(status, data) {
+            const healthScore = Math.round(
+                (data.database.health_score + data.system.health_score) / 2 || 0
+            );
+            
+            document.getElementById('healthScore').textContent = healthScore;
+            document.getElementById('alertCount').textContent = 
+                data.alerts.total || 0;
+            document.getElementById('lastCheck').textContent = 
+                new Date().toLocaleTimeString();
+            
+            updateStatus('overallStatus', status.overall || 'unknown');
+        }
+        
+        function updateAlerts(alerts) {
+            const alertsSection = document.getElementById('alertsSection');
+            const alertsList = document.getElementById('alertsList');
+            
+            if (alerts.total > 0) {
+                alertsSection.style.display = 'block';
+                
+                let alertsHtml = '';
+                if (alerts.database && alerts.database.length > 0) {
+                    alerts.database.forEach(alert => {
+                        alertsHtml += `<div class="alert-item">🗄️ ${alert}</div>`;
+                    });
+                }
+                
+                alertsList.innerHTML = alertsHtml || '<div class="alert-item">No hay alertas específicas</div>';
+            } else {
+                alertsSection.style.display = 'none';
+            }
+        }
+        
+        function updateStatus(elementId, status) {
+            const element = document.getElementById(elementId);
+            element.className = 'status-badge';
+            
+            switch(status) {
+                case 'healthy':
+                    element.classList.add('status-healthy');
+                    element.textContent = 'Saludable';
+                    break;
+                case 'warning':
+                    element.classList.add('status-warning');
+                    element.textContent = 'Advertencia';
+                    break;
+                case 'error':
+                    element.classList.add('status-error');
+                    element.textContent = 'Error';
+                    break;
+                default:
+                    element.classList.add('status-warning');
+                    element.textContent = 'Desconocido';
+            }
+        }
+        
+        function updateCardStatus(cardId, status) {
+            const card = document.getElementById(cardId);
+            card.className = 'metric-card';
+            
+            if (status === 'warning') {
+                card.classList.add('warning');
+            } else if (status === 'error') {
+                card.classList.add('error');
+            }
+        }
+        
+        function showErrorState() {
+            document.querySelectorAll('.metric-value').forEach(el => {
+                el.textContent = 'Error';
+            });
+            
+            document.querySelectorAll('.status-badge').forEach(el => {
+                el.className = 'status-badge status-error';
+                el.textContent = 'Error';
+            });
+        }
+        
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (!isLoading) {
+                refreshDashboard();
+            }
+        }, 30000);
+        
+        // Initial load
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshDashboard();
+        });
+    </script>
+</body>
+</html>
