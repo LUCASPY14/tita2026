@@ -25,10 +25,10 @@
 ### Fase 1: Configuración Básica de CI
 
 - [x] Crear archivo `.github/workflows/ci.yml`
-- [ ] Validar sintaxis YAML del workflow
-- [ ] Probar workflow con push a rama `desarrollo`
-- [ ] Verificar que tests backend se ejecuten correctamente
-- [ ] Verificar que tests frontend se ejecuten correctamente
+- [x] Validar sintaxis YAML del workflow
+- [x] Probar workflow con push a rama `desarrollo`
+- [ ] Verificar que tests backend se ejecuten correctamente en CI
+- [ ] Verificar que tests frontend se ejecuten correctamente en CI
 
 ### Fase 2: Coverage Reporting
 
