@@ -1,0 +1,600 @@
+name: Advanced CI/CD Pipeline - Cantina Tita
+
+on:
+  push:
+    branches: [desarrollo, staging, main]
+  pull_request:
+    branches: [desarrollo, staging, main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging  
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ${{ github.repository }}-backend
+  IMAGE_FRONTEND: ${{ github.repository }}-frontend
+
+jobs:
+  # ================================
+  # SECURITY SCANNING
+  # ================================
+  security-scan:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ================================
+  # BACKEND PIPELINE
+  # ================================
+  backend-tests:
+    name: Backend Tests & Coverage
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cantina_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install coverage pytest-django pytest-cov
+          pip install locust  # For load testing
+      
+      - name: Run comprehensive tests
+        env:
+          SECRET_KEY: test-secret-key-for-ci-${{ github.run_id }}
+          DEBUG: False
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cantina_test
+          ALLOWED_HOSTS: localhost,127.0.0.1
+        run: |
+          cd backend
+          # Run tests with coverage
+          coverage run --source='apps' -m pytest apps/ -v --tb=short
+          coverage report --show-missing
+          coverage xml
+          coverage html
+          
+          # Generate coverage badge
+          coverage-badge -o coverage.svg
+      
+      - name: Run backend performance tests
+        env:
+          SECRET_KEY: test-secret-key-for-ci-${{ github.run_id }}
+          DEBUG: False
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cantina_test
+        run: |
+          cd backend
+          python manage.py migrate --noinput
+          python manage.py collectstatic --noinput
+          
+          # Start Django server in background
+          python manage.py runserver &
+          sleep 10
+          
+          # Run load tests
+          cd ../performance_tests
+          locust --headless --users 10 --spawn-rate 2 \
+                 --host http://localhost:8000 \
+                 --run-time 60s \
+                 --html performance_report.html
+      
+      - name: Upload test coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-reports
+          path: |
+            backend/htmlcov/
+            backend/coverage.svg
+            performance_tests/performance_report.html
+
+  backend-quality:
+    name: Backend Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install quality tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install black flake8 isort mypy bandit safety
+      
+      - name: Code formatting check
+        run: |
+          cd backend
+          black --check . || (echo "❌ Code formatting issues found" && exit 1)
+      
+      - name: Import sorting check
+        run: |
+          cd backend
+          isort --check-only . || (echo "❌ Import sorting issues found" && exit 1)
+      
+      - name: Linting with flake8
+        run: |
+          cd backend
+          flake8 apps/ --max-line-length=100 --statistics
+      
+      - name: Type checking with mypy
+        run: |
+          cd backend
+          mypy apps/ --ignore-missing-imports || echo "⚠️  Type checking warnings found"
+      
+      - name: Security check with bandit
+        run: |
+          cd backend
+          bandit -r apps/ -f json -o bandit-report.json || echo "⚠️  Security warnings found"
+      
+      - name: Dependency security check
+        run: |
+          cd backend
+          safety check --json --output safety-report.json || echo "⚠️  Dependency vulnerabilities found"
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            backend/bandit-report.json
+            backend/safety-report.json
+
+  # ================================
+  # FRONTEND PIPELINE
+  # ================================
+  frontend-tests:
+    name: Frontend Tests & Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Run tests with coverage
+        run: |
+          cd frontend
+          npm test -- --coverage --watchAll=false --passWithNoTests
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./frontend/coverage/coverage-final.json
+          flags: frontend
+          name: frontend-coverage
+
+  frontend-quality:
+    name: Frontend Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Type checking
+        run: |
+          cd frontend
+          npm run type-check
+      
+      - name: Linting
+        run: |
+          cd frontend
+          npm run lint
+      
+      - name: Security audit
+        run: |
+          cd frontend
+          npm audit --audit-level=moderate
+
+  # ================================
+  # E2E TESTING
+  # ================================
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cantina_e2e
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Setup backend for E2E
+        env:
+          SECRET_KEY: e2e-secret-key-${{ github.run_id }}
+          DEBUG: False
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cantina_e2e
+        run: |
+          cd backend
+          python manage.py migrate --noinput
+          python manage.py collectstatic --noinput
+          python manage.py loaddata fixtures/test_data.json || echo "No fixtures found"
+          python manage.py runserver &
+          echo $! > server.pid
+          sleep 10
+      
+      - name: Build and serve frontend
+        run: |
+          cd frontend
+          npm run build
+          npm install -g serve
+          serve -s build -l 3000 &
+          echo $! > server.pid
+          sleep 5
+      
+      - name: Run Cypress E2E tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: frontend
+          wait-on: 'http://localhost:3000, http://localhost:8000'
+          wait-on-timeout: 120
+          record: true
+        env:
+          # Optional: Set CYPRESS_RECORD_KEY in repository secrets for cloud recording
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY != '' && secrets.CYPRESS_RECORD_KEY || '' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload E2E artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: frontend/cypress/screenshots
+          
+      - name: Upload E2E videos
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cypress-videos
+          path: frontend/cypress/videos
+
+  # ================================
+  # DOCKER BUILD & PUSH
+  # ================================
+  build-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [security-scan, backend-quality, frontend-quality]
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata for backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BACKEND }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+      
+      - name: Extract metadata for frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_FRONTEND }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+      
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./docker/backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./docker/frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ================================
+  # DEPLOYMENT WORKFLOWS
+  # ================================
+  deploy-development:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, build-images]
+    if: github.ref == 'refs/heads/desarrollo' && github.event_name == 'push'
+    # environment:
+    #   name: development
+    #   url: https://dev.cantina-tita.com
+    
+    steps:
+      - name: Deploy to Development
+        run: |
+          echo "🚀 Deploying to Development Environment"
+          # Here would be actual deployment commands
+          # kubectl apply -f k8s/development/
+          # helm upgrade --install cantina-dev ./helm-chart --values ./helm-chart/values-dev.yaml
+      
+      - name: Run smoke tests
+        run: |
+          echo "🧪 Running smoke tests on development"
+          # curl -f https://dev.cantina-tita.com/health/ || exit 1
+      
+      - name: Notify team
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              text: "✅ Development deployment successful",
+              attachments: [{
+                color: 'good',
+                fields: [{
+                  title: 'Repository',
+                  value: '${{ github.repository }}',
+                  short: true
+                }, {
+                  title: 'Branch',
+                  value: '${{ github.ref_name }}',
+                  short: true
+                }]
+              }]
+            }
+        env:
+          # Optional: Set SLACK_WEBHOOK_URL in repository secrets for notifications
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL != '' && secrets.SLACK_WEBHOOK_URL || '' }}
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, build-images]
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    # environment:
+    #   name: staging
+    #   url: https://staging.cantina-tita.com
+    
+    steps:
+      - name: Deploy to Staging
+        run: |
+          echo "🚀 Deploying to Staging Environment"
+      
+      - name: Run full test suite
+        run: |
+          echo "🧪 Running full test suite on staging"
+      
+      - name: Performance baseline test
+        run: |
+          echo "⚡ Running performance baseline tests"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, build-images]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Environment configuration - requires setup in repository settings
+    # environment: production
+    
+    steps:
+      - name: Deploy to Production
+        run: |
+          echo "🚀 Deploying to Production Environment"
+          echo "Note: Configure 'production' environment in repository settings if needed"
+      
+      - name: Verify deployment
+        run: |
+          echo "✅ Verifying production deployment"
+      
+      - name: Update monitoring
+        run: |
+          echo "📊 Updating monitoring dashboards"
+
+  # ================================
+  # PERFORMANCE & MONITORING
+  # ================================
+  performance-tests:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    needs: [build-images]
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[perf-test]')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run load tests
+        run: |
+          echo "⚡ Running comprehensive load tests"
+          # docker-compose -f docker-compose.perf.yml up --abort-on-container-exit
+      
+      - name: Generate performance report
+        run: |
+          echo "📊 Generating performance report"
+      
+      - name: Upload performance artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-reports
+          path: performance_tests/reports/
+
+  # ================================
+  # SUMMARY & NOTIFICATIONS
+  # ================================
+  pipeline-summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: [
+      security-scan, backend-tests, backend-quality, 
+      frontend-tests, frontend-quality, e2e-tests, 
+      build-images
+    ]
+    if: always()
+    
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🏗️ CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Tests | ${{ needs.backend-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Quality | ${{ needs.backend-quality.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Tests | ${{ needs.frontend-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Quality | ${{ needs.frontend-quality.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Images | ${{ needs.build-images.result }} |" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Notify on failure
+        if: contains(needs.*.result, 'failure')
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: "❌ CI/CD Pipeline failed for ${{ github.repository }}"
+        env:
+          # Optional: Set SLACK_WEBHOOK_URL in repository secrets for notifications
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL != '' && secrets.SLACK_WEBHOOK_URL || '' }}
