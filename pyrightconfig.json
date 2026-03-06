@@ -1,0 +1,29 @@
+{
+  "include": [
+    "backend/apps",
+    "backend/tests",
+    "performance_tests"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/migrations",
+    "**/.venv",
+    "**/venv"
+  ],
+  "ignore": [
+    "**/.coveragerc",
+    "**/coverage.xml",
+    "**/htmlcov"
+  ],
+  "extraPaths": [
+    "backend"
+  ],
+  "pythonVersion": "3.14",
+  "pythonPlatform": "Windows",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": "warning",
+  "reportUnusedVariable": "warning"
+}

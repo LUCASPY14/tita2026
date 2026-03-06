@@ -1,0 +1,36 @@
+# Set line endings for all files
+* text=auto
+
+# Specific file types
+*.py text
+*.md text
+*.yml text
+*.yaml text
+*.json text
+*.js text
+*.ts text
+*.tsx text
+*.css text
+*.scss text
+*.html text
+
+# Configuration files
+.coveragerc text
+.gitignore text
+.dockerignore text
+.env.example text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+# Font files
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.otf binary
