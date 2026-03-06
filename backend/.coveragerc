@@ -1,0 +1,51 @@
+# -*- mode: conf -*-
+# vim: set filetype=dosini :
+# .coveragerc - Coverage.py configuration file for Cantina Tita Backend
+# This is an INI-style configuration file for coverage reporting
+# NOT Python code - do not analyze with Pylance/Pyright
+
+[run]
+source = apps
+branch = True
+omit = 
+    */venv/*
+    */env/*
+    */migrations/*
+    */settings/*
+    */tests/*
+    */test_*.py
+    */conftest.py
+    manage.py
+    */wsgi.py
+    */asgi.py
+    */urls.py
+    */admin.py
+    */apps.py
+    */fixtures/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    return NotImplemented
+    class Meta:
+    @(abc\.)?abstractmethod
+    if TYPE_CHECKING:
+    if 0:
+    if __name__ == .__main__.:
+
+ignore_errors = True
+show_missing = True
+precision = 2
+fail_under = 85
+
+[html]
+directory = htmlcov
+title = Cantina Tita Coverage Report
+
+[xml]
+output = coverage.xml
