@@ -118,17 +118,17 @@ jobs:
       - name: Check code formatting with Black
         run: |
           cd backend
-          black --check apps/ || echo "⚠️ Código no formateado correctamente"
+          black --check apps/ || echo "WARNING: Código no formateado correctamente"
       
       - name: Run Flake8 linter
         run: |
           cd backend
-          flake8 apps/ --max-line-length=100 --extend-ignore=E203,W503 || echo "⚠️ Problemas de linting encontrados"
+          flake8 apps/ --max-line-length=100 --extend-ignore=E203,W503 || echo "WARNING: Problemas de linting encontrados"
       
       - name: Check import sorting with isort
         run: |
           cd backend
-          isort --check-only apps/ || echo "⚠️ Imports no ordenados correctamente"
+          isort --check-only apps/ || echo "WARNING: Imports no ordenados correctamente"
 
   frontend-linting:
     name: Frontend Code Quality
@@ -153,12 +153,12 @@ jobs:
       - name: Run ESLint
         run: |
           cd frontend
-          npm run lint || echo "⚠️ Problemas de linting encontrados"
+          npm run lint || echo "WARNING: Problemas de linting encontrados"
       
       - name: Type check with TypeScript
         run: |
           cd frontend
-          npm run type-check || npx tsc --noEmit || echo "⚠️ Errores de tipos encontrados"
+          npm run type-check || npx tsc --noEmit || echo "WARNING: Errores de tipos encontrados"
 
   build-backend:
     name: Build Backend
@@ -218,7 +218,7 @@ jobs:
         run: |
           cd frontend
           du -sh build/
-          echo "📦 Bundle size:"
+          echo "Bundle size:"
           find build/ -type f -name "*.js" -exec du -h {} \;
       
       - name: Upload build artifact
@@ -236,7 +236,7 @@ jobs:
     steps:
       - name: Summary
         run: |
-          echo "✅ CI Pipeline completado"
+          echo "SUCCESS: CI Pipeline completado"
           echo "Backend Tests: ${{ needs.backend-tests.result }}"
           echo "Frontend Tests: ${{ needs.frontend-tests.result }}"
           echo "Backend Linting: ${{ needs.backend-linting.result }}"
