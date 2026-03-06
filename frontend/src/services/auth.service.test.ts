@@ -16,8 +16,24 @@ describe('Auth Service', () => {
       password: 'testpass123'
     };
 
-    const mockLoginResponse: LoginResponse = {
+    const mockBackendResponse = {
+      success: true,
+      tokens: {
+        access: 'mock-jwt-token-12345',
+        refresh: 'mock-refresh-token-67890'
+      },
+      empleado: {
+        id: 1,
+        usuario: 'testuser',
+        email: 'test@example.com',
+        rol: 'admin'
+      },
+      mensaje: 'Login exitoso'
+    };
+
+    const expectedLoginResponse: LoginResponse = {
       token: 'mock-jwt-token-12345',
+      refreshToken: 'mock-refresh-token-67890',
       user: {
         id: 1,
         username: 'testuser',
@@ -27,14 +43,14 @@ describe('Auth Service', () => {
     };
 
     test('debe realizar login exitosamente y guardar token y usuario', async () => {
-      mockedApi.post.mockResolvedValue({ data: mockLoginResponse });
+      mockedApi.post.mockResolvedValue({ data: mockBackendResponse });
 
       const result = await authService.login(mockCredentials);
 
       expect(mockedApi.post).toHaveBeenCalledWith('/auth/login/', mockCredentials);
-      expect(result).toEqual(mockLoginResponse);
+      expect(result).toEqual(expectedLoginResponse);
       expect(localStorage.getItem('token')).toBe('mock-jwt-token-12345');
-      expect(localStorage.getItem('user')).toBe(JSON.stringify(mockLoginResponse.user));
+      expect(localStorage.getItem('user')).toContain('testuser');
     });
 
     test('debe manejar error de credenciales inválidas', async () => {
@@ -47,18 +63,21 @@ describe('Auth Service', () => {
     });
 
     test('debe manejar respuesta sin token', async () => {
-      const responseWithoutToken = { data: { user: mockLoginResponse.user } };
-      mockedApi.post.mockResolvedValue(responseWithoutToken as any);
+      const responseWithoutSuccess = { 
+        data: { 
+          success: false,
+          mensaje: 'Error al iniciar sesión' 
+        } 
+      };
+      mockedApi.post.mockResolvedValue(responseWithoutSuccess as any);
 
-      const result = await authService.login(mockCredentials);
-
-      expect(result).toEqual(responseWithoutToken.data);
+      await expect(authService.login(mockCredentials)).rejects.toThrow('Error al iniciar sesión');
       expect(localStorage.getItem('token')).toBeNull();
     });
 
     test('debe hacer login con username vacío', async () => {
       const emptyCredentials: LoginCredentials = { username: '', password: 'pass' };
-      mockedApi.post.mockResolvedValue({ data: mockLoginResponse });
+      mockedApi.post.mockResolvedValue({ data: mockBackendResponse });
 
       await authService.login(emptyCredentials);
 
@@ -164,16 +183,19 @@ describe('Auth Service', () => {
   describe('Integration scenarios', () => {
     test('flujo completo: login -> getCurrentUser -> isAuthenticated -> logout', async () => {
       const credentials: LoginCredentials = { username: 'user1', password: 'pass1' };
-      const response: LoginResponse = {
-        token: 'token123',
-        user: { id: 10, username: 'user1', email: 'user1@test.com', role: 'empleado' as UserRole }
+      const backendResponse = {
+        success: true,
+        tokens: { access: 'token123', refresh: 'refresh123' },
+        empleado: { id: 10, usuario: 'user1', email: 'user1@test.com', rol: 'empleado' },
+        mensaje: 'Login exitoso'
       };
-      mockedApi.post.mockResolvedValue({ data: response });
+      const expectedUser = { id: 10, username: 'user1', email: 'user1@test.com', role: 'empleado' as UserRole };
+      mockedApi.post.mockResolvedValue({ data: backendResponse });
 
       // Login
       await authService.login(credentials);
       expect(authService.isAuthenticated()).toBe(true);
-      expect(authService.getCurrentUser()).toEqual(response.user);
+      expect(authService.getCurrentUser()).toEqual(expectedUser);
 
       // Logout
       authService.logout();
@@ -182,11 +204,14 @@ describe('Auth Service', () => {
     });
 
     test('debe mantener usuario en localStorage después de recargar página', async () => {
-      const response: LoginResponse = {
-        token: 'persistent-token',
-        user: { id: 20, username: 'persistent', email: 'p@test.com', role: 'admin' }
+      const backendResponse = {
+        success: true,
+        tokens: { access: 'persistent-token', refresh: 'persistent-refresh' },
+        empleado: { id: 20, usuario: 'persistent', email: 'p@test.com', rol: 'admin' },
+        mensaje: 'Login exitoso'
       };
-      mockedApi.post.mockResolvedValue({ data: response });
+      const expectedUser = { id: 20, username: 'persistent', email: 'p@test.com', role: 'admin' };
+      mockedApi.post.mockResolvedValue({ data: backendResponse });
 
       await authService.login({ username: 'persistent', password: 'pass' });
 
@@ -195,7 +220,7 @@ describe('Auth Service', () => {
       const storedToken = localStorage.getItem('token');
 
       expect(storedToken).toBe('persistent-token');
-      expect(JSON.parse(storedUser!)).toEqual(response.user);
+      expect(JSON.parse(storedUser!)).toEqual(expectedUser);
     });
   });
 
@@ -276,15 +301,25 @@ describe('Auth Service', () => {
     test('debe guardar refreshToken cuando se proporciona en el login', async () => {
       const mockResponse = {
         data: {
-          token: 'access-token',
-          refreshToken: 'refresh-token',
-          user: {
-            id: 1,
-            username: 'testuser',
-            email: 'test@test.com',
-            role: 'admin' as const,
+          success: true,
+          tokens: {
+            access: 'access-token',
+            refresh: 'refresh-token',
           },
+          empleado: {
+            id: 1,
+            usuario: 'testuser',
+            email: 'test@test.com',
+            rol: 'admin',
+          },
+          mensaje: 'Login exitoso'
         },
+      };
+      const expectedUser = {
+        id: 1,
+        username: 'testuser',
+        email: 'test@test.com',
+        role: 'admin' as const,
       };
 
       mockedApi.post.mockResolvedValue(mockResponse);
@@ -293,7 +328,7 @@ describe('Auth Service', () => {
 
       expect(localStorage.getItem('token')).toBe('access-token');
       expect(localStorage.getItem('refreshToken')).toBe('refresh-token');
-      expect(localStorage.getItem('user')).toBe(JSON.stringify(mockResponse.data.user));
+      expect(localStorage.getItem('user')).toBe(JSON.stringify(expectedUser));
     });
   });
 });

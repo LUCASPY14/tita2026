@@ -49,8 +49,8 @@ describe('DashboardKPIs Component', () => {
 
   test('muestra spinner de carga inicialmente', () => {
     render(<DashboardKPIs />);
-    const spinner = document.querySelector('.animate-spin');
-    expect(spinner).toBeInTheDocument();
+    const skeleton = document.querySelector('.animate-pulse');
+    expect(skeleton).toBeInTheDocument();
   });
 
   test('carga y muestra KPIs al montar', async () => {

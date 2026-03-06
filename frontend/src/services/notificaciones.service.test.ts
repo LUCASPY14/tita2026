@@ -1,7 +1,7 @@
 /**
  * Tests para notificaciones.service.ts
  */
-import axios from 'axios';
+import api from './api';
 import {
   getNotificaciones,
   getNotificacionById,
@@ -15,8 +15,8 @@ import {
   getColorCriticidad
 } from './notificaciones.service';
 
-// Axios ya está mockeado globalmente en setupTests.ts
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+jest.mock('./api');
+const mockedApi = api as jest.Mocked<typeof api>;
 
 describe('Notificaciones Service', () => {
   beforeEach(() => {
@@ -37,11 +37,11 @@ describe('Notificaciones Service', () => {
         ]
       };
 
-      mockedAxios.get.mockResolvedValue(mockResponse);
+      mockedApi.get.mockResolvedValue(mockResponse);
 
       const result = await getNotificaciones({ leida: false });
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/notificaciones-portal/'),
         expect.objectContaining({
           params: { leida: false }
@@ -60,11 +60,11 @@ describe('Notificaciones Service', () => {
         mensaje: 'Mensaje de prueba'
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockNotificacion });
+      mockedApi.get.mockResolvedValue({ data: mockNotificacion });
 
       const result = await getNotificacionById(1);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/notificaciones-portal/1/');
+      expect(mockedApi.get).toHaveBeenCalledWith('/notificaciones-portal/1/');
       expect(result.titulo).toBe('Notificación Test');
     });
 
@@ -77,22 +77,22 @@ describe('Notificaciones Service', () => {
         }
       };
 
-      mockedAxios.post.mockResolvedValue(mockResponse);
+      mockedApi.post.mockResolvedValue(mockResponse);
 
       const result = await marcarNotificacionLeida(1);
 
-      expect(mockedAxios.post).toHaveBeenCalledWith(
-        'http://localhost:8000/api/v1/notificaciones-portal/1/marcar_leida/'
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/notificaciones-portal/1/marcar_leida/'
       );
       expect(result.leida).toBe(true);
     });
 
     test('marcarTodasLeidas marca todas como leídas', async () => {
-      mockedAxios.post.mockResolvedValue({ data: undefined });
+      mockedApi.post.mockResolvedValue({ data: undefined });
 
       await marcarTodasLeidas(1);
 
-      expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect(mockedApi.post).toHaveBeenCalledWith(
         expect.stringContaining('/notificaciones-portal/marcar_todas_leidas/'),
         { id_usuario_portal: 1 }
       );
@@ -108,11 +108,11 @@ describe('Notificaciones Service', () => {
         alertas_sistema: 4
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockResumen });
+      mockedApi.get.mockResolvedValue({ data: mockResumen });
 
       const result = await getResumenNotificaciones(1);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/notificaciones-portal/resumen/'),
         expect.objectContaining({
           params: { id_usuario_portal: 1 }
@@ -193,7 +193,7 @@ describe('Notificaciones Service', () => {
 
   describe('Error Handling', () => {
     test('getNotificaciones maneja errores correctamente', async () => {
-      mockedAxios.get.mockRejectedValue(new Error('Network Error'));
+      mockedApi.get.mockRejectedValue(new Error('Network Error'));
 
       await expect(getNotificaciones()).rejects.toThrow('Network Error');
     });
@@ -202,7 +202,7 @@ describe('Notificaciones Service', () => {
       const error = {
         response: { status: 404, data: { detail: 'Not found' } }
       };
-      mockedAxios.post.mockRejectedValue(error);
+      mockedApi.post.mockRejectedValue(error);
 
       await expect(marcarNotificacionLeida(999)).rejects.toEqual(error);
     });

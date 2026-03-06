@@ -9,15 +9,16 @@ import {
   getDashboardRecargas,
   getDashboardFinanciero,
   exportarReportePDF,
-  exportarReporteExcel,  formatearMoneda,
+  exportarReporteExcel,
+  formatearMoneda,
   formatearFecha,
   formatearFechaHora,
   calcularRangoFechas,
 } from './reportes.service';
-import axios from 'axios';
+import api from './api';
 
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+jest.mock('./api');
+const mockedApi = api as jest.Mocked<typeof api>;
 
 describe('Reportes Service', () => {
   beforeEach(() => {
@@ -42,11 +43,11 @@ describe('Reportes Service', () => {
         fecha_fin: '2024-01-31',
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReporte });
+      mockedApi.get.mockResolvedValue({ data: mockReporte });
 
       const result = await getReporteVentas(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/ventas/'),
         { params }
       );
@@ -66,11 +67,11 @@ describe('Reportes Service', () => {
         fecha_fin: '2024-01-31',
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReporte });
+      mockedApi.get.mockResolvedValue({ data: mockReporte });
 
       const result = await getReporteVentas(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/ventas/'),
         { params }
       );
@@ -78,7 +79,7 @@ describe('Reportes Service', () => {
     });
 
     it('debería manejar errores al obtener reporte de ventas', async () => {
-      mockedAxios.get.mockRejectedValue(new Error('Error de red'));
+      mockedApi.get.mockRejectedValue(new Error('Error de red'));
 
       const params = {
         fecha_inicio: '2024-01-01',
@@ -98,7 +99,7 @@ describe('Reportes Service', () => {
         recargas_por_dia: [],
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReporte });
+      mockedApi.get.mockResolvedValue({ data: mockReporte });
 
       const params = {
         fecha_inicio: '2024-01-01',
@@ -107,7 +108,7 @@ describe('Reportes Service', () => {
 
       const result = await getReporteRecargas(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/recargas/'),
         { params }
       );
@@ -128,11 +129,11 @@ describe('Reportes Service', () => {
         estado: 'Confirmada' as const,
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReporte });
+      mockedApi.get.mockResolvedValue({ data: mockReporte });
 
       const result = await getReporteRecargas(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/recargas/'),
         { params }
       );
@@ -149,7 +150,7 @@ describe('Reportes Service', () => {
         ],
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReporte });
+      mockedApi.get.mockResolvedValue({ data: mockReporte });
 
       const params = {
         fecha_inicio: '2024-01-01',
@@ -158,7 +159,7 @@ describe('Reportes Service', () => {
 
       const result = await getReporteTopProductos(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/top-productos/'),
         { params }
       );
@@ -178,11 +179,11 @@ describe('Reportes Service', () => {
         limite: 5,
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReporte });
+      mockedApi.get.mockResolvedValue({ data: mockReporte });
 
       const result = await getReporteTopProductos(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/top-productos/'),
         { params }
       );
@@ -204,11 +205,11 @@ describe('Reportes Service', () => {
         fecha_fin: '2024-01-31',
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReporte });
+      mockedApi.get.mockResolvedValue({ data: mockReporte });
 
       const result = await getReporteConsumosTarjeta(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/consumos-tarjeta/'),
         { params }
       );
@@ -216,7 +217,7 @@ describe('Reportes Service', () => {
     });
 
     it('debería manejar errores al obtener consumos por tarjeta', async () => {
-      mockedAxios.get.mockRejectedValue(new Error('Cliente no encontrado'));
+      mockedApi.get.mockRejectedValue(new Error('Cliente no encontrado'));
 
       const params = {
         nro_tarjeta: '999999',
@@ -238,7 +239,7 @@ describe('Reportes Service', () => {
         utilidad_neta: 350000,
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReporte });
+      mockedApi.get.mockResolvedValue({ data: mockReporte });
 
       const params = {
         fecha_inicio: '2024-01-01',
@@ -247,7 +248,7 @@ describe('Reportes Service', () => {
 
       const result = await getReporteFinanciero(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/financiero/'),
         { params }
       );
@@ -268,11 +269,11 @@ describe('Reportes Service', () => {
         fecha_fin: '2024-01-31',
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReporte });
+      mockedApi.get.mockResolvedValue({ data: mockReporte });
 
       const result = await getReporteFinanciero(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/financiero/'),
         { params }
       );
@@ -293,11 +294,11 @@ describe('Reportes Service', () => {
         ticket_promedio: 6000,
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockKPIs });
+      mockedApi.get.mockResolvedValue({ data: mockKPIs });
 
       const result = await getKPIsPrincipales();
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/kpis-principales/'),
         { params: {} }
       );
@@ -312,11 +313,11 @@ describe('Reportes Service', () => {
         ticket_promedio: 6000,
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockKPIs });
+      mockedApi.get.mockResolvedValue({ data: mockKPIs });
 
       const result = await getKPIsPrincipales('2024-01-15');
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/kpis-principales/'),
         { params: { fecha: '2024-01-15' } }
       );
@@ -335,11 +336,11 @@ describe('Reportes Service', () => {
         ventas_por_metodo_pago: [],
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockDashboard });
+      mockedApi.get.mockResolvedValue({ data: mockDashboard });
 
       const result = await getDashboardVentas();
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/dashboard-ventas/'),
         expect.objectContaining({ params: expect.anything() })
       );
@@ -360,11 +361,11 @@ describe('Reportes Service', () => {
         dias: 30,
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockDashboard });
+      mockedApi.get.mockResolvedValue({ data: mockDashboard });
 
       const result = await getDashboardVentas(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/dashboard-ventas/'),
         { params }
       );
@@ -382,11 +383,11 @@ describe('Reportes Service', () => {
         recargas_por_estado: [],
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockDashboard });
+      mockedApi.get.mockResolvedValue({ data: mockDashboard });
 
       const result = await getDashboardRecargas();
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/dashboard-recargas/'),
         expect.objectContaining({ params: expect.anything() })
       );
@@ -406,11 +407,11 @@ describe('Reportes Service', () => {
         dias: 7,
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockDashboard });
+      mockedApi.get.mockResolvedValue({ data: mockDashboard });
 
       const result = await getDashboardRecargas(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/dashboard-recargas/'),
         { params }
       );
@@ -430,11 +431,11 @@ describe('Reportes Service', () => {
         distribucion_gastos: [],
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockDashboard });
+      mockedApi.get.mockResolvedValue({ data: mockDashboard });
 
       const result = await getDashboardFinanciero();
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/dashboard-financiero/'),
         expect.objectContaining({ params: expect.anything() })
       );
@@ -456,11 +457,11 @@ describe('Reportes Service', () => {
         mes: 1,
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockDashboard });
+      mockedApi.get.mockResolvedValue({ data: mockDashboard });
 
       const result = await getDashboardFinanciero(params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/dashboard-financiero/'),
         { params }
       );
@@ -476,11 +477,11 @@ describe('Reportes Service', () => {
     it('debería exportar reporte de ventas a PDF', async () => {
       const mockBlob = new Blob(['PDF content'], { type: 'application/pdf' });
 
-      mockedAxios.get.mockResolvedValue({ data: mockBlob });
+      mockedApi.get.mockResolvedValue({ data: mockBlob });
 
       const result = await exportarReportePDF('ventas', {});
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/exportar-pdf/'),
         expect.objectContaining({ responseType: 'blob' })
       );
@@ -491,11 +492,11 @@ describe('Reportes Service', () => {
       const mockBlob = new Blob(['PDF content'], { type: 'application/pdf' });
       const params = { fecha_inicio: '2024-01-01', fecha_fin: '2024-01-31' };
 
-      mockedAxios.get.mockResolvedValue({ data: mockBlob });
+      mockedApi.get.mockResolvedValue({ data: mockBlob });
 
       const result = await exportarReportePDF('ventas', params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/exportar-pdf/'),
         expect.objectContaining({ responseType: 'blob' })
       );
@@ -503,7 +504,7 @@ describe('Reportes Service', () => {
     });
 
     it('debería manejar errores al exportar PDF', async () => {
-      mockedAxios.get.mockRejectedValue(new Error('Error al generar PDF'));
+      mockedApi.get.mockRejectedValue(new Error('Error al generar PDF'));
 
       await expect(exportarReportePDF('ventas', {})).rejects.toThrow('Error al generar PDF');
     });
@@ -515,11 +516,11 @@ describe('Reportes Service', () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
 
-      mockedAxios.get.mockResolvedValue({ data: mockBlob });
+      mockedApi.get.mockResolvedValue({ data: mockBlob });
 
       const result = await exportarReporteExcel('recargas', {});
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/exportar-excel/'),
         expect.objectContaining({ responseType: 'blob' })
       );
@@ -532,11 +533,11 @@ describe('Reportes Service', () => {
       });
       const params = { fecha_inicio: '2024-01-01', fecha_fin: '2024-01-31' };
 
-      mockedAxios.get.mockResolvedValue({ data: mockBlob });
+      mockedApi.get.mockResolvedValue({ data: mockBlob });
 
       const result = await exportarReporteExcel('recargas', params);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/reportes/exportar-excel/'),
         expect.objectContaining({ responseType: 'blob' })
       );
@@ -544,7 +545,7 @@ describe('Reportes Service', () => {
     });
 
     it('debería manejar errores al exportar Excel', async () => {
-      mockedAxios.get.mockRejectedValue(new Error('Error al generar Excel'));
+      mockedApi.get.mockRejectedValue(new Error('Error al generar Excel'));
 
       await expect(exportarReporteExcel('recargas', {})).rejects.toThrow('Error al generar Excel');
     });
@@ -689,11 +690,11 @@ describe('Reportes Service', () => {
         tendencia: 'crecimiento' as const,
       };
 
-      mockedAxios.get.mockResolvedValueOnce({ data: mockKPIs });
+      mockedApi.get.mockResolvedValueOnce({ data: mockKPIs });
       const kpis = await getKPIsPrincipales();
       expect(kpis.ventas_del_dia).toBe(50000);
 
-      mockedAxios.get.mockResolvedValueOnce({ data: mockDashboard });
+      mockedApi.get.mockResolvedValueOnce({ data: mockDashboard });
       const dashboard = await getDashboardVentas();
       expect(dashboard.ventas_por_dia).toHaveLength(1);
       expect(dashboard.ventas_por_dia[0].total_vendido).toBe(50000);
@@ -715,12 +716,12 @@ describe('Reportes Service', () => {
       };
 
       // Consultar reporte
-      mockedAxios.get.mockResolvedValueOnce({ data: mockReporte });
+      mockedApi.get.mockResolvedValueOnce({ data: mockReporte });
       const reporte = await getReporteVentas(params);
       expect(reporte.total_ventas).toBe(150000);
 
       // Exportar a PDF
-      mockedAxios.get.mockResolvedValueOnce({ data: mockBlob });
+      mockedApi.get.mockResolvedValueOnce({ data: mockBlob });
       const pdf = await exportarReportePDF('ventas', params);
       expect(pdf).toEqual(mockBlob);
     });

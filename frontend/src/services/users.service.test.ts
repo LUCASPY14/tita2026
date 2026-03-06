@@ -42,7 +42,7 @@ describe('Users Service', () => {
     ];
 
     test('debe obtener todos los usuarios', async () => {
-      mockedApi.get.mockResolvedValue({ data: mockUsuarios });
+      mockedApi.get.mockResolvedValue({ data: { results: mockUsuarios } });
 
       const result = await usersService.getAll();
 
@@ -52,7 +52,7 @@ describe('Users Service', () => {
     });
 
     test('debe manejar respuesta vacía', async () => {
-      mockedApi.get.mockResolvedValue({ data: [] });
+      mockedApi.get.mockResolvedValue({ data: { results: [] } });
 
       const result = await usersService.getAll();
 
@@ -308,7 +308,7 @@ describe('Roles Service', () => {
     ];
 
     test('debe obtener todos los roles', async () => {
-      mockedApi.get.mockResolvedValue({ data: mockRoles });
+      mockedApi.get.mockResolvedValue({ data: { results: mockRoles } });
 
       const result = await rolesService.getAll();
 
@@ -329,7 +329,7 @@ describe('Roles Service', () => {
     ];
 
     test('debe obtener solo roles activos', async () => {
-      mockedApi.get.mockResolvedValue({ data: mockActiveRoles });
+      mockedApi.get.mockResolvedValue({ data: { results: mockActiveRoles } });
 
       const result = await rolesService.getActive();
 

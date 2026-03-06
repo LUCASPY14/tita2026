@@ -61,8 +61,8 @@ describe('DashboardVentas Component', () => {
 
   test('muestra spinner de carga inicialmente', () => {
     render(<DashboardVentas />);
-    const spinner = document.querySelector('.animate-spin');
-    expect(spinner).toBeInTheDocument();
+    const skeleton = document.querySelector('.animate-pulse');
+    expect(skeleton).toBeInTheDocument();
   });
 
   test('carga y muestra dashboard al montar', async () => {

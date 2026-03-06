@@ -1,7 +1,7 @@
 /**
  * Tests para configuracion.service.ts
  */
-import axios from 'axios';
+import api from './api';
 import {
   getConfiguraciones,
   getConfiguracionesPorCategoria,
@@ -13,8 +13,8 @@ import {
   getColorCategoria
 } from './configuracion.service';
 
-// Axios ya está mockeado globalmente en setupTests.ts
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+jest.mock('./api');
+const mockedApi = api as jest.Mocked<typeof api>;
 
 describe('Configuracion Service', () => {
   beforeEach(() => {
@@ -35,11 +35,11 @@ describe('Configuracion Service', () => {
         ]
       };
 
-      mockedAxios.get.mockResolvedValue(mockResponse);
+      mockedApi.get.mockResolvedValue(mockResponse);
 
       const result = await getConfiguraciones({ categoria: 'seguridad' });
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/configuracion-sistema/'),
         expect.objectContaining({
           params: { categoria: 'seguridad' }
@@ -60,11 +60,11 @@ describe('Configuracion Service', () => {
         }
       };
 
-      mockedAxios.get.mockResolvedValue(mockResponse);
+      mockedApi.get.mockResolvedValue(mockResponse);
 
       const result = await getConfiguracionesPorCategoria();
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockedApi.get).toHaveBeenCalledWith(
         expect.stringContaining('/configuracion-sistema/por_categoria/')
       );
       expect(result).toHaveProperty('seguridad');
@@ -80,11 +80,11 @@ describe('Configuracion Service', () => {
         }
       };
 
-      mockedAxios.post.mockResolvedValue(mockResponse);
+      mockedApi.post.mockResolvedValue(mockResponse);
 
       const result = await actualizarConfiguracion(1, { valor: '60' });
 
-      expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect(mockedApi.post).toHaveBeenCalledWith(
         expect.stringContaining('/configuracion-sistema/1/actualizar_valor/'),
         { valor: '60' }
       );
@@ -101,11 +101,11 @@ describe('Configuracion Service', () => {
         }
       };
 
-      mockedAxios.post.mockResolvedValue(mockResponse);
+      mockedApi.post.mockResolvedValue(mockResponse);
 
       const result = await resetearConfiguracion(1);
 
-      expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect(mockedApi.post).toHaveBeenCalledWith(
         expect.stringContaining('/configuracion-sistema/1/resetear_default/')
       );
       expect(result.valor).toBe(result.valor_defecto);
