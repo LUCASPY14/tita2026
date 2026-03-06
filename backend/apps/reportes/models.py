@@ -2,6 +2,7 @@
 Modelos de la app reportes
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
+
 from django.db import models
 
 
@@ -15,18 +16,19 @@ class PlantillasReporte(models.Model):
     frecuencia = models.CharField(max_length=20)
     activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
-    created_by = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='created_by', blank=True, null=True)
-
-    
+    created_by = models.ForeignKey(
+        "usuarios.Empleados", models.DO_NOTHING, db_column="created_by", blank=True, null=True
+    )
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
-        db_table = 'plantillas_reporte'
-        verbose_name = 'Plantilla de Reporte'
-        verbose_name_plural = 'Plantillas de Reportes'
+        db_table = "plantillas_reporte"
+        verbose_name = "Plantilla de Reporte"
+        verbose_name_plural = "Plantillas de Reportes"
+
 
 class Dashboards(models.Model):
     id_dashboard = models.AutoField(primary_key=True)
@@ -38,16 +40,17 @@ class Dashboards(models.Model):
     activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-    id_empleado = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado')
-
-    
+    id_empleado = models.ForeignKey(
+        "usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado"
+    )
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
-        db_table = 'dashboards'
+        db_table = "dashboards"
+
 
 class KpiMetricas(models.Model):
     id_kpi = models.AutoField(primary_key=True)
@@ -60,14 +63,13 @@ class KpiMetricas(models.Model):
     frecuencia = models.CharField(max_length=20)
     activo = models.BooleanField(default=True)
 
-    
-
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
-        db_table = 'kpi_metricas'
+        db_table = "kpi_metricas"
+
 
 class ValoresKpi(models.Model):
     id_valor = models.AutoField(primary_key=True)
@@ -76,17 +78,16 @@ class ValoresKpi(models.Model):
     notas = models.TextField(blank=True, null=True)
     auto_calc = models.IntegerField()
     created_at = models.DateTimeField()
-    id_kpi = models.ForeignKey('KpiMetricas', models.DO_NOTHING, db_column='id_kpi')
-
-    
+    id_kpi = models.ForeignKey("KpiMetricas", models.DO_NOTHING, db_column="id_kpi")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
-        db_table = 'valores_kpi'
-        unique_together = (('id_kpi', 'fecha'),)
+        db_table = "valores_kpi"
+        unique_together = (("id_kpi", "fecha"),)
+
 
 class PlantillasTarea(models.Model):
     id_plantilla = models.AutoField(primary_key=True)
@@ -103,16 +104,17 @@ class PlantillasTarea(models.Model):
     notif_error = models.IntegerField()
     activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
-    created_by = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='created_by', blank=True, null=True)
-
-    
+    created_by = models.ForeignKey(
+        "usuarios.Empleados", models.DO_NOTHING, db_column="created_by", blank=True, null=True
+    )
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
-        db_table = 'plantillas_tarea'
+        db_table = "plantillas_tarea"
+
 
 class EjecucionesTarea(models.Model):
     id_ejecucion = models.AutoField(primary_key=True)
@@ -126,32 +128,33 @@ class EjecucionesTarea(models.Model):
     pid = models.IntegerField(blank=True, null=True)
     servidor = models.CharField(max_length=100)
     parametros = models.JSONField()
-    ejecutado_por = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='ejecutado_por', blank=True, null=True)
-    id_plantilla = models.ForeignKey('PlantillasTarea', models.DO_NOTHING, db_column='id_plantilla')
-
-    
+    ejecutado_por = models.ForeignKey(
+        "usuarios.Empleados", models.DO_NOTHING, db_column="ejecutado_por", blank=True, null=True
+    )
+    id_plantilla = models.ForeignKey("PlantillasTarea", models.DO_NOTHING, db_column="id_plantilla")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
-        db_table = 'ejecuciones_tarea'
+        db_table = "ejecuciones_tarea"
+
 
 class DestinatariosTarea(models.Model):
     id_destinatario = models.AutoField(primary_key=True)
     notif_inicio = models.IntegerField()
     notif_fin = models.IntegerField()
     notif_error = models.IntegerField()
-    id_empleado = models.ForeignKey('usuarios.Empleados', models.DO_NOTHING, db_column='id_empleado')
-    id_plantilla = models.ForeignKey('PlantillasTarea', models.DO_NOTHING, db_column='id_plantilla')
-
-    
+    id_empleado = models.ForeignKey(
+        "usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado"
+    )
+    id_plantilla = models.ForeignKey("PlantillasTarea", models.DO_NOTHING, db_column="id_plantilla")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
-        db_table = 'destinatarios_tarea'
-        unique_together = (('id_plantilla', 'id_empleado'),)
+        db_table = "destinatarios_tarea"
+        unique_together = (("id_plantilla", "id_empleado"),)

@@ -4,76 +4,77 @@ Cobertura completa de los 45 valid
 
 adores
 """
+
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from datetime import datetime, date, time
 from apps.notificaciones.validators import *
 
-
 # =============================================================================
 # TESTS - NOTIFICACIONES PORTAL
 # =============================================================================
 
+
 class ValidarTipoNotificacionPortalTest(TestCase):
     def test_tipo_valido(self):
         try:
-            validar_tipo_notificacion_portal('alerta')
-            validar_tipo_notificacion_portal('recordatorio')
+            validar_tipo_notificacion_portal("alerta")
+            validar_tipo_notificacion_portal("recordatorio")
         except ValidationError:
             self.fail("Tipo válido lanzó ValidationError")
-    
+
     def test_tipo_vacio(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_notificacion_portal('')
-    
+            validar_tipo_notificacion_portal("")
+
     def test_tipo_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_notificacion_portal('ab')
-    
+            validar_tipo_notificacion_portal("ab")
+
     def test_tipo_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_notificacion_portal('a' * 51)
-    
+            validar_tipo_notificacion_portal("a" * 51)
+
     def test_tipo_no_valido(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_notificacion_portal('tipo_invalido')
+            validar_tipo_notificacion_portal("tipo_invalido")
 
 
 class ValidarTituloNotificacionTest(TestCase):
     def test_titulo_valido(self):
         try:
-            validar_titulo_notificacion('Nueva venta registrada')
+            validar_titulo_notificacion("Nueva venta registrada")
         except ValidationError:
             self.fail("Título válido lanzó ValidationError")
-    
+
     def test_titulo_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_titulo_notificacion('Hola')
-    
+            validar_titulo_notificacion("Hola")
+
     def test_titulo_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_titulo_notificacion('a' * 256)
-    
+            validar_titulo_notificacion("a" * 256)
+
     def test_titulo_caracteres_invalidos(self):
         with self.assertRaises(ValidationError):
-            validar_titulo_notificacion('Título con <script>')
+            validar_titulo_notificacion("Título con <script>")
 
 
 class ValidarMensajeNotificacionTest(TestCase):
     def test_mensaje_valido(self):
         try:
-            validar_mensaje_notificacion('Este es un mensaje de prueba válido.')
+            validar_mensaje_notificacion("Este es un mensaje de prueba válido.")
         except ValidationError:
             self.fail("Mensaje válido lanzó ValidationError")
-    
+
     def test_mensaje_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_mensaje_notificacion('Corto')
-    
+            validar_mensaje_notificacion("Corto")
+
     def test_mensaje_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_mensaje_notificacion('a' * 5001)
+            validar_mensaje_notificacion("a" * 5001)
 
 
 class ValidarLeidaNotificacionTest(TestCase):
@@ -83,7 +84,7 @@ class ValidarLeidaNotificacionTest(TestCase):
             validar_leida_notificacion(1)
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_leida_invalida(self):
         with self.assertRaises(ValidationError):
             validar_leida_notificacion(2)
@@ -95,25 +96,26 @@ class ValidarLeidaNotificacionTest(TestCase):
 # TESTS - NOTIFICACIONES SALDO
 # =============================================================================
 
+
 class ValidarSaldoActualTest(TestCase):
     def test_saldo_valido(self):
         try:
-            validar_saldo_actual(Decimal('1000.00'))
-            validar_saldo_actual(Decimal('0.00'))
+            validar_saldo_actual(Decimal("1000.00"))
+            validar_saldo_actual(Decimal("0.00"))
         except ValidationError:
             self.fail("Saldo válido lanzó ValidationError")
-    
+
     def test_saldo_negativo(self):
         with self.assertRaises(ValidationError):
-            validar_saldo_actual(Decimal('-100.00'))
-    
+            validar_saldo_actual(Decimal("-100.00"))
+
     def test_saldo_excesivo(self):
         with self.assertRaises(ValidationError):
-            validar_saldo_actual(Decimal('100000000.00'))
-    
+            validar_saldo_actual(Decimal("100000000.00"))
+
     def test_saldo_muchos_decimales(self):
         with self.assertRaises(ValidationError):
-            validar_saldo_actual(Decimal('100.123'))
+            validar_saldo_actual(Decimal("100.123"))
 
 
 class ValidarEnviadaEmailTest(TestCase):
@@ -123,7 +125,7 @@ class ValidarEnviadaEmailTest(TestCase):
             validar_enviada_email(1)
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_enviada_invalida(self):
         with self.assertRaises(ValidationError):
             validar_enviada_email(2)
@@ -136,7 +138,7 @@ class ValidarEnviadaSmsTest(TestCase):
             validar_enviada_sms(1)
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_enviada_invalida(self):
         with self.assertRaises(ValidationError):
             validar_enviada_sms(2)
@@ -146,78 +148,80 @@ class ValidarEnviadaSmsTest(TestCase):
 # TESTS - SOLICITUDES NOTIFICACIÓN
 # =============================================================================
 
+
 class ValidarSaldoAlertaTest(TestCase):
     def test_saldo_valido(self):
         try:
-            validar_saldo_alerta(Decimal('500.00'))
+            validar_saldo_alerta(Decimal("500.00"))
         except ValidationError:
             self.fail("Saldo válido lanzó ValidationError")
-    
+
     def test_saldo_cero(self):
         with self.assertRaises(ValidationError):
-            validar_saldo_alerta(Decimal('0.00'))
-    
+            validar_saldo_alerta(Decimal("0.00"))
+
     def test_saldo_negativo(self):
         with self.assertRaises(ValidationError):
-            validar_saldo_alerta(Decimal('-50.00'))
-    
+            validar_saldo_alerta(Decimal("-50.00"))
+
     def test_saldo_excesivo(self):
         with self.assertRaises(ValidationError):
-            validar_saldo_alerta(Decimal('10000000.00'))
+            validar_saldo_alerta(Decimal("10000000.00"))
 
 
 class ValidarDestinoNotificacionTest(TestCase):
     def test_destino_valido(self):
         try:
-            validar_destino_notificacion('Email')
-            validar_destino_notificacion('SMS')
-            validar_destino_notificacion('Ambos')
+            validar_destino_notificacion("Email")
+            validar_destino_notificacion("SMS")
+            validar_destino_notificacion("Ambos")
         except ValidationError:
             self.fail("Destino válido lanzó ValidationError")
-    
+
     def test_destino_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_destino_notificacion('WhatsApp')
+            validar_destino_notificacion("WhatsApp")
 
 
 class ValidarEstadoSolicitudTest(TestCase):
     def test_estado_valido(self):
         try:
-            validar_estado_solicitud('Pendiente')
-            validar_estado_solicitud('Enviada')
+            validar_estado_solicitud("Pendiente")
+            validar_estado_solicitud("Enviada")
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_estado_none(self):
         try:
             validar_estado_solicitud(None)
         except ValidationError:
             self.fail("None no debería lanzar error (es opcional)")
-    
+
     def test_estado_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_estado_solicitud('Procesando')
+            validar_estado_solicitud("Procesando")
 
 
 # =============================================================================
 # TESTS - PREFERENCIAS NOTIFICACIÓN
 # =============================================================================
 
+
 class ValidarTipoPreferenciaNotificacionTest(TestCase):
     def test_tipo_valido(self):
         try:
-            validar_tipo_preferencia_notificacion('ventas')
-            validar_tipo_preferencia_notificacion('compras')
+            validar_tipo_preferencia_notificacion("ventas")
+            validar_tipo_preferencia_notificacion("compras")
         except ValidationError:
             self.fail("Tipo válido lanzó ValidationError")
-    
+
     def test_tipo_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_preferencia_notificacion('tipo_invalido')
-    
+            validar_tipo_preferencia_notificacion("tipo_invalido")
+
     def test_tipo_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_preferencia_notificacion('a' * 51)
+            validar_tipo_preferencia_notificacion("a" * 51)
 
 
 class ValidarEmailActivoTest(TestCase):
@@ -227,7 +231,7 @@ class ValidarEmailActivoTest(TestCase):
             validar_email_activo(1)
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_email_activo_invalido(self):
         with self.assertRaises(ValidationError):
             validar_email_activo(2)
@@ -240,7 +244,7 @@ class ValidarPushActivoTest(TestCase):
             validar_push_activo(1)
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_push_activo_invalido(self):
         with self.assertRaises(ValidationError):
             validar_push_activo(2)
@@ -250,90 +254,91 @@ class ValidarPushActivoTest(TestCase):
 # TESTS - EMAILS ENVIADOS
 # =============================================================================
 
+
 class ValidarEmailDestinatarioTest(TestCase):
     def test_email_valido(self):
         try:
-            validar_email_destinatario('usuario@ejemplo.com')
-            validar_email_destinatario('test.user+tag@dominio.py')
+            validar_email_destinatario("usuario@ejemplo.com")
+            validar_email_destinatario("test.user+tag@dominio.py")
         except ValidationError:
             self.fail("Email válido lanzó ValidationError")
-    
+
     def test_email_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_email_destinatario('email_sin_arroba.com')
+            validar_email_destinatario("email_sin_arroba.com")
         with self.assertRaises(ValidationError):
-            validar_email_destinatario('email@')
-    
+            validar_email_destinatario("email@")
+
     def test_email_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_email_destinatario('a' * 250 + '@test.com')
+            validar_email_destinatario("a" * 250 + "@test.com")
 
 
 class ValidarNombreDestinatarioTest(TestCase):
     def test_nombre_valido(self):
         try:
-            validar_nombre_destinatario('Juan Pérez')
+            validar_nombre_destinatario("Juan Pérez")
             validar_nombre_destinatario("O'Connor")
         except ValidationError:
             self.fail("Nombre válido lanzó ValidationError")
-    
+
     def test_nombre_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_nombre_destinatario('A')
-    
+            validar_nombre_destinatario("A")
+
     def test_nombre_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_nombre_destinatario('a' * 101)
-    
+            validar_nombre_destinatario("a" * 101)
+
     def test_nombre_caracteres_invalidos(self):
         with self.assertRaises(ValidationError):
-            validar_nombre_destinatario('Juan123')
+            validar_nombre_destinatario("Juan123")
 
 
 class ValidarAsuntoEmailTest(TestCase):
     def test_asunto_valido(self):
         try:
-            validar_asunto_email('Confirmación de compra')
+            validar_asunto_email("Confirmación de compra")
         except ValidationError:
             self.fail("Asunto válido lanzó ValidationError")
-    
+
     def test_asunto_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_asunto_email('OK')
-    
+            validar_asunto_email("OK")
+
     def test_asunto_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_asunto_email('a' * 201)
+            validar_asunto_email("a" * 201)
 
 
 class ValidarCuerpoEmailTest(TestCase):
     def test_cuerpo_valido(self):
         try:
-            validar_cuerpo_email('Este es el cuerpo del email con contenido suficiente.')
+            validar_cuerpo_email("Este es el cuerpo del email con contenido suficiente.")
         except ValidationError:
             self.fail("Cuerpo válido lanzó ValidationError")
-    
+
     def test_cuerpo_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_cuerpo_email('Hola')
-    
+            validar_cuerpo_email("Hola")
+
     def test_cuerpo_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_cuerpo_email('a' * 50001)
+            validar_cuerpo_email("a" * 50001)
 
 
 class ValidarEstadoEmailTest(TestCase):
     def test_estado_valido(self):
         try:
-            validar_estado_email('Pendiente')
-            validar_estado_email('Enviado')
-            validar_estado_email('Entregado')
+            validar_estado_email("Pendiente")
+            validar_estado_email("Enviado")
+            validar_estado_email("Entregado")
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_estado_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_estado_email('Procesando')
+            validar_estado_email("Procesando")
 
 
 class ValidarIntentosEnvioTest(TestCase):
@@ -344,11 +349,11 @@ class ValidarIntentosEnvioTest(TestCase):
             validar_intentos_envio(10)
         except ValidationError:
             self.fail("Intentos válidos lanzaron ValidationError")
-    
+
     def test_intentos_negativos(self):
         with self.assertRaises(ValidationError):
             validar_intentos_envio(-1)
-    
+
     def test_intentos_excesivos(self):
         with self.assertRaises(ValidationError):
             validar_intentos_envio(11)
@@ -358,221 +363,224 @@ class ValidarIntentosEnvioTest(TestCase):
 # TESTS - SMS ENVIADOS
 # =============================================================================
 
+
 class ValidarTelefonoSmsTest(TestCase):
     def test_telefono_valido(self):
         try:
-            validar_telefono_sms('0981123456')
-            validar_telefono_sms('+595981123456')
-            validar_telefono_sms('(0981) 123-456')
+            validar_telefono_sms("0981123456")
+            validar_telefono_sms("+595981123456")
+            validar_telefono_sms("(0981) 123-456")
         except ValidationError:
             self.fail("Teléfono válido lanzó ValidationError")
-    
+
     def test_telefono_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_telefono_sms('12345')
-    
+            validar_telefono_sms("12345")
+
     def test_telefono_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_telefono_sms('1' * 21)
-    
+            validar_telefono_sms("1" * 21)
+
     def test_telefono_caracteres_invalidos(self):
         with self.assertRaises(ValidationError):
-            validar_telefono_sms('098abc1234')
+            validar_telefono_sms("098abc1234")
 
 
 class ValidarMensajeSmsTest(TestCase):
     def test_mensaje_valido(self):
         try:
-            validar_mensaje_sms('Este es un mensaje SMS válido.')
+            validar_mensaje_sms("Este es un mensaje SMS válido.")
         except ValidationError:
             self.fail("Mensaje válido lanzó ValidationError")
-    
+
     def test_mensaje_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_mensaje_sms('Hola')
-    
+            validar_mensaje_sms("Hola")
+
     def test_mensaje_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_mensaje_sms('a' * 161)
+            validar_mensaje_sms("a" * 161)
 
 
 class ValidarEstadoSmsTest(TestCase):
     def test_estado_valido(self):
         try:
-            validar_estado_sms('Pendiente')
-            validar_estado_sms('Enviado')
+            validar_estado_sms("Pendiente")
+            validar_estado_sms("Enviado")
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_estado_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_estado_sms('Procesando')
+            validar_estado_sms("Procesando")
 
 
 class ValidarCostoSmsTest(TestCase):
     def test_costo_valido(self):
         try:
-            validar_costo_sms(Decimal('50.00'))
+            validar_costo_sms(Decimal("50.00"))
             validar_costo_sms(None)  # Opcional
         except ValidationError:
             self.fail("Costo válido lanzó ValidationError")
-    
+
     def test_costo_negativo(self):
         with self.assertRaises(ValidationError):
-            validar_costo_sms(Decimal('-10.00'))
-    
+            validar_costo_sms(Decimal("-10.00"))
+
     def test_costo_excesivo(self):
         with self.assertRaises(ValidationError):
-            validar_costo_sms(Decimal('100000.00'))
+            validar_costo_sms(Decimal("100000.00"))
 
 
 # =============================================================================
 # TESTS - PLANTILLAS EMAIL/SMS
 # =============================================================================
 
+
 class ValidarCodigoTemplateTest(TestCase):
     def test_codigo_valido(self):
         try:
-            validar_codigo_template('TPL_BIENVENIDA_01')
-            validar_codigo_template('codigo_123')
+            validar_codigo_template("TPL_BIENVENIDA_01")
+            validar_codigo_template("codigo_123")
         except ValidationError:
             self.fail("Código válido lanzó ValidationError")
-    
+
     def test_codigo_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_codigo_template('AB')
-    
+            validar_codigo_template("AB")
+
     def test_codigo_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_codigo_template('a' * 51)
-    
+            validar_codigo_template("a" * 51)
+
     def test_codigo_caracteres_invalidos(self):
         with self.assertRaises(ValidationError):
-            validar_codigo_template('codigo-con-guion')
+            validar_codigo_template("codigo-con-guion")
 
 
 class ValidarNombreTemplateTest(TestCase):
     def test_nombre_valido(self):
         try:
-            validar_nombre_template('Plantilla de Bienvenida')
+            validar_nombre_template("Plantilla de Bienvenida")
         except ValidationError:
             self.fail("Nombre válido lanzó ValidationError")
-    
+
     def test_nombre_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_nombre_template('AB')
-    
+            validar_nombre_template("AB")
+
     def test_nombre_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_nombre_template('a' * 101)
+            validar_nombre_template("a" * 101)
 
 
 class ValidarVariablesTemplateTest(TestCase):
     def test_variables_validas(self):
         try:
-            validar_variables_template(['nombre', 'apellido', 'email'])
+            validar_variables_template(["nombre", "apellido", "email"])
             validar_variables_template([])  # Lista vacía es válida
         except ValidationError:
             self.fail("Variables válidas lanzaron ValidationError")
-    
+
     def test_variables_como_json_string(self):
         try:
             validar_variables_template('["nombre", "email"]')
         except ValidationError:
             self.fail("JSON string válido lanzó ValidationError")
-    
+
     def test_variables_no_lista(self):
         with self.assertRaises(ValidationError):
-            validar_variables_template({'nombre': 'Usuario'})
-    
+            validar_variables_template({"nombre": "Usuario"})
+
     def test_variables_excesivas(self):
         with self.assertRaises(ValidationError):
-            validar_variables_template(['var' + str(i) for i in range(51)])
-    
+            validar_variables_template(["var" + str(i) for i in range(51)])
+
     def test_variable_muy_corta(self):
         with self.assertRaises(ValidationError):
-            validar_variables_template(['a'])
-    
+            validar_variables_template(["a"])
+
     def test_variable_muy_larga(self):
         with self.assertRaises(ValidationError):
-            validar_variables_template(['a' * 51])
+            validar_variables_template(["a" * 51])
 
 
 class ValidarCategoriaTemplateTest(TestCase):
     def test_categoria_valida(self):
         try:
-            validar_categoria_template('Ventas')
-            validar_categoria_template('Promociones')
+            validar_categoria_template("Ventas")
+            validar_categoria_template("Promociones")
         except ValidationError:
             self.fail("Categoría válida lanzó ValidationError")
-    
+
     def test_categoria_invalida(self):
         with self.assertRaises(ValidationError):
-            validar_categoria_template('Categoría Inválida')
+            validar_categoria_template("Categoría Inválida")
 
 
 class ValidarCuerpoHtmlTemplateTest(TestCase):
     def test_cuerpo_html_valido(self):
         try:
-            validar_cuerpo_html_template('<html><body><h1>Título</h1></body></html>')
+            validar_cuerpo_html_template("<html><body><h1>Título</h1></body></html>")
         except ValidationError:
             self.fail("Cuerpo HTML válido lanzó ValidationError")
-    
+
     def test_cuerpo_html_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_cuerpo_html_template('<p>Corto</p>')
-    
+            validar_cuerpo_html_template("<p>Corto</p>")
+
     def test_cuerpo_html_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_cuerpo_html_template('<p>' + 'a' * 100000 + '</p>')
+            validar_cuerpo_html_template("<p>" + "a" * 100000 + "</p>")
 
 
 # =============================================================================
 # TESTS - CAMPAÑAS COMUNICACIÓN
 # =============================================================================
 
+
 class ValidarNombreCampanaTest(TestCase):
     def test_nombre_valido(self):
         try:
-            validar_nombre_campana('Campaña de Verano 2024')
+            validar_nombre_campana("Campaña de Verano 2024")
         except ValidationError:
             self.fail("Nombre válido lanzó ValidationError")
-    
+
     def test_nombre_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_nombre_campana('Camp')
-    
+            validar_nombre_campana("Camp")
+
     def test_nombre_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_nombre_campana('a' * 101)
+            validar_nombre_campana("a" * 101)
 
 
 class ValidarTipoCampanaTest(TestCase):
     def test_tipo_valido(self):
         try:
-            validar_tipo_campana('Email')
-            validar_tipo_campana('SMS')
-            validar_tipo_campana('Mixta')
+            validar_tipo_campana("Email")
+            validar_tipo_campana("SMS")
+            validar_tipo_campana("Mixta")
         except ValidationError:
             self.fail("Tipo válido lanzó ValidationError")
-    
+
     def test_tipo_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_campana('WhatsApp')
+            validar_tipo_campana("WhatsApp")
 
 
 class ValidarEstadoCampanaTest(TestCase):
     def test_estado_valido(self):
         try:
-            validar_estado_campana('Borrador')
-            validar_estado_campana('Programada')
-            validar_estado_campana('Enviada')
+            validar_estado_campana("Borrador")
+            validar_estado_campana("Programada")
+            validar_estado_campana("Enviada")
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_estado_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_estado_campana('En Proceso')
+            validar_estado_campana("En Proceso")
 
 
 class ValidarTotalDestinatariosTest(TestCase):
@@ -583,11 +591,11 @@ class ValidarTotalDestinatariosTest(TestCase):
             validar_total_destinatarios(1000000)
         except ValidationError:
             self.fail("Total válido lanzó ValidationError")
-    
+
     def test_total_negativo(self):
         with self.assertRaises(ValidationError):
             validar_total_destinatarios(-1)
-    
+
     def test_total_excesivo(self):
         with self.assertRaises(ValidationError):
             validar_total_destinatarios(1000001)
@@ -597,48 +605,49 @@ class ValidarTotalDestinatariosTest(TestCase):
 # TESTS - ALERTAS AUTOMÁTICAS
 # =============================================================================
 
+
 class ValidarNombreAlertaTest(TestCase):
     def test_nombre_valido(self):
         try:
-            validar_nombre_alerta('Alerta de Stock Bajo')
+            validar_nombre_alerta("Alerta de Stock Bajo")
         except ValidationError:
             self.fail("Nombre válido lanzó ValidationError")
-    
+
     def test_nombre_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_nombre_alerta('ABCD')
-    
+            validar_nombre_alerta("ABCD")
+
     def test_nombre_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_nombre_alerta('a' * 101)
+            validar_nombre_alerta("a" * 101)
 
 
 class ValidarTipoAlertaTest(TestCase):
     def test_tipo_valido(self):
         try:
-            validar_tipo_alerta('Inventario')
-            validar_tipo_alerta('Ventas')
+            validar_tipo_alerta("Inventario")
+            validar_tipo_alerta("Ventas")
         except ValidationError:
             self.fail("Tipo válido lanzó ValidationError")
-    
+
     def test_tipo_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_alerta('TipoInválido')
+            validar_tipo_alerta("TipoInválido")
 
 
 class ValidarCriticidadAlertaTest(TestCase):
     def test_criticidad_valida(self):
         try:
-            validar_criticidad_alerta('Baja')
-            validar_criticidad_alerta('Media')
-            validar_criticidad_alerta('Alta')
-            validar_criticidad_alerta('Crítica')
+            validar_criticidad_alerta("Baja")
+            validar_criticidad_alerta("Media")
+            validar_criticidad_alerta("Alta")
+            validar_criticidad_alerta("Crítica")
         except ValidationError:
             self.fail("Criticidad válida lanzó ValidationError")
-    
+
     def test_criticidad_invalida(self):
         with self.assertRaises(ValidationError):
-            validar_criticidad_alerta('Urgente')
+            validar_criticidad_alerta("Urgente")
 
 
 class ValidarFrecuenciaMinutosTest(TestCase):
@@ -649,11 +658,11 @@ class ValidarFrecuenciaMinutosTest(TestCase):
             validar_frecuencia_minutos(43200)
         except ValidationError:
             self.fail("Frecuencia válida lanzó ValidationError")
-    
+
     def test_frecuencia_cero(self):
         with self.assertRaises(ValidationError):
             validar_frecuencia_minutos(0)
-    
+
     def test_frecuencia_excesiva(self):
         with self.assertRaises(ValidationError):
             validar_frecuencia_minutos(43201)
@@ -663,71 +672,73 @@ class ValidarFrecuenciaMinutosTest(TestCase):
 # TESTS - ALERTAS SISTEMA
 # =============================================================================
 
+
 class ValidarTipoAlertaSistemaTest(TestCase):
     def test_tipo_valido(self):
         try:
-            validar_tipo_alerta_sistema('error')
-            validar_tipo_alerta_sistema('warning')
-            validar_tipo_alerta_sistema('info')
+            validar_tipo_alerta_sistema("error")
+            validar_tipo_alerta_sistema("warning")
+            validar_tipo_alerta_sistema("info")
         except ValidationError:
             self.fail("Tipo válido lanzó ValidationError")
-    
+
     def test_tipo_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_alerta_sistema('tipo_invalido')
+            validar_tipo_alerta_sistema("tipo_invalido")
 
 
 class ValidarMensajeAlertaSistemaTest(TestCase):
     def test_mensaje_valido(self):
         try:
-            validar_mensaje_alerta_sistema('Error en el sistema de ventas.')
+            validar_mensaje_alerta_sistema("Error en el sistema de ventas.")
         except ValidationError:
             self.fail("Mensaje válido lanzó ValidationError")
-    
+
     def test_mensaje_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_mensaje_alerta_sistema('Error')
-    
+            validar_mensaje_alerta_sistema("Error")
+
     def test_mensaje_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_mensaje_alerta_sistema('a' * 501)
+            validar_mensaje_alerta_sistema("a" * 501)
 
 
 class ValidarEstadoAlertaSistemaTest(TestCase):
     def test_estado_valido(self):
         try:
-            validar_estado_alerta_sistema('Pendiente')
-            validar_estado_alerta_sistema('Resuelta')
+            validar_estado_alerta_sistema("Pendiente")
+            validar_estado_alerta_sistema("Resuelta")
             validar_estado_alerta_sistema(None)  # Opcional
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_estado_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_estado_alerta_sistema('En Proceso')
+            validar_estado_alerta_sistema("En Proceso")
 
 
 # =============================================================================
 # TESTS - HISTORIAL ALERTAS
 # =============================================================================
 
+
 class ValidarDatosContextoHistorialTest(TestCase):
     def test_datos_validos(self):
         try:
-            validar_datos_contexto_historial({'usuario': 'admin', 'accion': 'login'})
+            validar_datos_contexto_historial({"usuario": "admin", "accion": "login"})
             validar_datos_contexto_historial({})  # Dict vacío es válido
         except ValidationError:
             self.fail("Datos válidos lanzaron ValidationError")
-    
+
     def test_datos_como_json_string(self):
         try:
             validar_datos_contexto_historial('{"usuario": "admin"}')
         except ValidationError:
             self.fail("JSON string válido lanzó ValidationError")
-    
+
     def test_datos_no_dict(self):
         with self.assertRaises(ValidationError):
-            validar_datos_contexto_historial(['lista', 'no', 'valida'])
+            validar_datos_contexto_historial(["lista", "no", "valida"])
 
 
 class ValidarResueltoHistorialTest(TestCase):
@@ -737,7 +748,7 @@ class ValidarResueltoHistorialTest(TestCase):
             validar_resuelto_historial(1)
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_resuelto_invalido(self):
         with self.assertRaises(ValidationError):
             validar_resuelto_historial(2)
@@ -747,72 +758,73 @@ class ValidarResueltoHistorialTest(TestCase):
 # TESTS - ANOMALÍAS DETECTADAS
 # =============================================================================
 
+
 class ValidarUsuarioAnomaliaTest(TestCase):
     def test_usuario_valido(self):
         try:
-            validar_usuario_anomalia('admin')
-            validar_usuario_anomalia('usuario_test')
+            validar_usuario_anomalia("admin")
+            validar_usuario_anomalia("usuario_test")
         except ValidationError:
             self.fail("Usuario válido lanzó ValidationError")
-    
+
     def test_usuario_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_usuario_anomalia('ab')
-    
+            validar_usuario_anomalia("ab")
+
     def test_usuario_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_usuario_anomalia('a' * 101)
+            validar_usuario_anomalia("a" * 101)
 
 
 class ValidarTipoAnomaliaTest(TestCase):
     def test_tipo_valido(self):
         try:
-            validar_tipo_anomalia('acceso_inusual')
-            validar_tipo_anomalia('intentos_fallidos')
+            validar_tipo_anomalia("acceso_inusual")
+            validar_tipo_anomalia("intentos_fallidos")
         except ValidationError:
             self.fail("Tipo válido lanzó ValidationError")
-    
+
     def test_tipo_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_anomalia('tipo_invalido')
+            validar_tipo_anomalia("tipo_invalido")
 
 
 class ValidarIpAddressTest(TestCase):
     def test_ipv4_valida(self):
         try:
-            validar_ip_address('192.168.1.1')
-            validar_ip_address('10.0.0.1')
+            validar_ip_address("192.168.1.1")
+            validar_ip_address("10.0.0.1")
             validar_ip_address(None)  # Opcional
         except ValidationError:
             self.fail("IPv4 válida lanzó ValidationError")
-    
+
     def test_ipv6_valida(self):
         try:
-            validar_ip_address('2001:0db8:85a3:0000:0000:8a2e:0370:7334')
-            validar_ip_address('::1')
+            validar_ip_address("2001:0db8:85a3:0000:0000:8a2e:0370:7334")
+            validar_ip_address("::1")
         except ValidationError:
             self.fail("IPv6 válida lanzó ValidationError")
-    
+
     def test_ip_invalida(self):
         with self.assertRaises(ValidationError):
-            validar_ip_address('999.999.999.999')
+            validar_ip_address("999.999.999.999")
         with self.assertRaises(ValidationError):
-            validar_ip_address('no_es_ip')
+            validar_ip_address("no_es_ip")
 
 
 class ValidarNivelRiesgoAnomaliaTest(TestCase):
     def test_nivel_valido(self):
         try:
-            validar_nivel_riesgo_anomalia('Bajo')
-            validar_nivel_riesgo_anomalia('Medio')
-            validar_nivel_riesgo_anomalia('Alto')
-            validar_nivel_riesgo_anomalia('Crítico')
+            validar_nivel_riesgo_anomalia("Bajo")
+            validar_nivel_riesgo_anomalia("Medio")
+            validar_nivel_riesgo_anomalia("Alto")
+            validar_nivel_riesgo_anomalia("Crítico")
         except ValidationError:
             self.fail("Nivel válido lanzó ValidationError")
-    
+
     def test_nivel_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_nivel_riesgo_anomalia('Urgente')
+            validar_nivel_riesgo_anomalia("Urgente")
 
 
 class ValidarNotificadoAnomaliaTest(TestCase):
@@ -822,7 +834,7 @@ class ValidarNotificadoAnomaliaTest(TestCase):
             validar_notificado_anomalia(1)
         except ValidationError:
             self.fail("Estado válido lanzó ValidationError")
-    
+
     def test_notificado_invalido(self):
         with self.assertRaises(ValidationError):
             validar_notificado_anomalia(2)
@@ -832,31 +844,32 @@ class ValidarNotificadoAnomaliaTest(TestCase):
 # TESTS - RESTRICCIONES HORARIAS
 # =============================================================================
 
+
 class ValidarTipoUsuarioRestriccionTest(TestCase):
     def test_tipo_valido(self):
         try:
-            validar_tipo_usuario_restriccion('Empleado')
-            validar_tipo_usuario_restriccion('Cliente')
+            validar_tipo_usuario_restriccion("Empleado")
+            validar_tipo_usuario_restriccion("Cliente")
         except ValidationError:
             self.fail("Tipo válido lanzó ValidationError")
-    
+
     def test_tipo_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_tipo_usuario_restriccion('Usuario')
+            validar_tipo_usuario_restriccion("Usuario")
 
 
 class ValidarDiaSemanaRestriccionTest(TestCase):
     def test_dia_valido(self):
         try:
-            validar_dia_semana_restriccion('Lunes')
-            validar_dia_semana_restriccion('Martes')
-            validar_dia_semana_restriccion('Todos')
+            validar_dia_semana_restriccion("Lunes")
+            validar_dia_semana_restriccion("Martes")
+            validar_dia_semana_restriccion("Todos")
         except ValidationError:
             self.fail("Día válido lanzó ValidationError")
-    
+
     def test_dia_invalido(self):
         with self.assertRaises(ValidationError):
-            validar_dia_semana_restriccion('Monday')
+            validar_dia_semana_restriccion("Monday")
 
 
 class ValidarRangoHorarioRestriccionTest(TestCase):
@@ -865,11 +878,11 @@ class ValidarRangoHorarioRestriccionTest(TestCase):
             validar_rango_horario_restriccion(time(8, 0), time(18, 0))
         except ValidationError:
             self.fail("Rango válido lanzó ValidationError")
-    
+
     def test_rango_invalido(self):
         with self.assertRaises(ValidationError):
             validar_rango_horario_restriccion(time(18, 0), time(8, 0))
-    
+
     def test_rango_igual(self):
         with self.assertRaises(ValidationError):
             validar_rango_horario_restriccion(time(8, 0), time(8, 0))

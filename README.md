@@ -1,6 +1,6 @@
 # Sistema de Gestión Cantina Tita
 
-![CI Pipeline](https://github.com/usuario/cantina_tita/workflows/CI%20Pipeline%20-%20Cantina%20Tita/badge.svg)
+![CI Pipeline](https://github.com/LUCASPY14/tita2026/actions/workflows/ci.yml/badge.svg?branch=desarrollo)
 ![Backend Tests](https://img.shields.io/badge/backend%20tests-151%20passing-brightgreen)
 ![Frontend Tests](https://img.shields.io/badge/frontend%20tests-670%20passing-brightgreen)
 ![Backend Coverage](https://img.shields.io/badge/backend%20coverage-26%25-yellow)
@@ -20,14 +20,16 @@ Sistema integral de gestión para cantina escolar, con módulos de ventas, almue
   - Models: 92% coverage
   - Serializers: 85-100% coverage
   - Admin: 54-73% coverage
-- ⏳ **E2E Tests:** Pendiente
-- ⏳ **CI/CD:** Configurado (Sprint 3)
+- ⏳ **E2E Tests:** Pendiente Sprint 4
+- ✅ **CI/CD:** GitHub Actions activo
+
+**Ver Workflow:** [GitHub Actions](https://github.com/LUCASPY14/tita2026/actions)
 
 ### Calidad de Código
 - ✅ Sin errores de TypeScript
 - ✅ Tests funcionando correctamente
 - ✅ Arquitectura modular y escalable
-- 🔄 Linting automatizado en CI/CD
+- ✅ Linting automatizado (Black, Flake8, ESLint)
 
 ## 📁 Estructura del Proyecto
 

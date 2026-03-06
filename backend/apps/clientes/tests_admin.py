@@ -1,7 +1,8 @@
 """
 Tests complementarios para admin de clientes
-Sprint 2 - Backend Coverage Improvement  
+Sprint 2 - Backend Coverage Improvement
 """
+
 from django.test import TestCase
 from django.contrib import admin
 from apps.clientes.models import Clientes, Hijos, TiposCliente
@@ -17,24 +18,19 @@ class ClientesAdminTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         self.lista = ListasPrecios.objects.create(
-            nombre_lista='Lista General',
-            moneda='PYG',
-            activo=True
+            nombre_lista="Lista General", moneda="PYG", activo=True
         )
-        
-        self.tipo_cliente = TiposCliente.objects.create(
-            nombre_tipo='Regular',
-            activo=True
-        )
-        
+
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+
         self.cliente = Clientes.objects.create(
-            nombres='Juan',
-            apellidos='Pérez',
-            ruc_ci='1234567890',
-            limite_credito=Decimal('500000.00'),
+            nombres="Juan",
+            apellidos="Pérez",
+            ruc_ci="1234567890",
+            limite_credito=Decimal("500000.00"),
             activo=True,
             id_lista=self.lista,
-            id_tipo_cliente=self.tipo_cliente
+            id_tipo_cliente=self.tipo_cliente,
         )
 
     def test_admin_registered(self):
@@ -44,7 +40,7 @@ class ClientesAdminTest(TestCase):
     def test_list_display(self):
         """Test que list_display está configurado"""
         admin_instance = ClientesAdmin(Clientes, admin.site)
-        self.assertTrue(hasattr(admin_instance, 'list_display'))
+        self.assertTrue(hasattr(admin_instance, "list_display"))
 
 
 class HijosAdminTest(TestCase):
@@ -52,31 +48,24 @@ class HijosAdminTest(TestCase):
 
     def setUp(self):
         """Configuración inicial"""
-        lista = ListasPrecios.objects.create(
-            nombre_lista='Lista',
-            moneda='PYG',
-            activo=True
-        )
-        tipo_cliente = TiposCliente.objects.create(
-            nombre_tipo='Padre',
-            activo=True
-        )
+        lista = ListasPrecios.objects.create(nombre_lista="Lista", moneda="PYG", activo=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
         cliente = Clientes.objects.create(
-            nombres='Roberto',
-            apellidos='Silva',
-            ruc_ci='5555555555',
+            nombres="Roberto",
+            apellidos="Silva",
+            ruc_ci="5555555555",
             activo=True,
             id_lista=lista,
-            id_tipo_cliente=tipo_cliente
+            id_tipo_cliente=tipo_cliente,
         )
-        
+
         self.hijo = Hijos.objects.create(
-            nombre='Carlos',
-            apellido='Silva',
+            nombre="Carlos",
+            apellido="Silva",
             fecha_nacimiento=timezone.datetime(2010, 5, 15).date(),
-            grado='Octavo',
+            grado="Octavo",
             activo=True,
-            id_cliente_responsable=cliente
+            id_cliente_responsable=cliente,
         )
 
     def test_admin_registered(self):

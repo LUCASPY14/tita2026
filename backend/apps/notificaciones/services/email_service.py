@@ -21,21 +21,20 @@ from django.utils import timezone
 
 from apps.notificaciones.models import EmailsEnviados
 
-
 logger = logging.getLogger(__name__)
 
 
 class EmailService:
     """
     Service Layer para envío de emails multicanal.
-    
+
     Métodos principales:
     - enviar_alerta_saldo_bajo()
     - enviar_recarga_exitosa()
     - enviar_factura_recarga()
     - enviar_email_generico()
     """
-    
+
     @staticmethod
     def enviar_alerta_saldo_bajo(
         email_destinatario: str,
@@ -43,11 +42,11 @@ class EmailService:
         nro_tarjeta: str,
         nombre_hijo: str,
         saldo_actual: Decimal,
-        saldo_alerta: Decimal
+        saldo_alerta: Decimal,
     ) -> Dict:
         """
         Envía email de alerta de saldo bajo.
-        
+
         Args:
             email_destinatario: Email del destinatario
             nombre_destinatario: Nombre completo del destinatario
@@ -55,7 +54,7 @@ class EmailService:
             nombre_hijo: Nombre del estudiante
             saldo_actual: Saldo actual
             saldo_alerta: Límite de alerta configurado
-        
+
         Returns:
             {
                 'success': bool,
@@ -65,7 +64,7 @@ class EmailService:
         """
         try:
             asunto = f"⚠️ Alerta de Saldo Bajo - Tarjeta {nro_tarjeta}"
-            
+
             # Generar cuerpo HTML
             cuerpo_html = f"""
             <html>
@@ -121,7 +120,7 @@ class EmailService:
             </body>
             </html>
             """
-            
+
             # Cuerpo texto plano
             cuerpo_texto = f"""
 ALERTA DE SALDO BAJO
@@ -139,56 +138,52 @@ Le recomendamos realizar una recarga para evitar inconvenientes.
 
 Cantina Tita - Sistema de Gestión
             """
-            
+
             # Crear email multipart
             email = EmailMultiAlternatives(
                 subject=asunto,
                 body=cuerpo_texto,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[email_destinatario]
+                to=[email_destinatario],
             )
             email.attach_alternative(cuerpo_html, "text/html")
-            
+
             # Enviar
             email.send(fail_silently=False)
-            
+
             # Registrar en BD
             email_enviado = EmailsEnviados.objects.create(
                 email_destinatario=email_destinatario,
                 nombre_destinatario=nombre_destinatario,
                 asunto=asunto,
                 cuerpo=cuerpo_texto,
-                estado='enviado',
-                fecha_envio=timezone.now()
+                estado="enviado",
+                fecha_envio=timezone.now(),
             )
-            
+
             logger.info(f"Email saldo bajo enviado a {email_destinatario}")
-            
+
             return {
-                'success': True,
-                'id_email': email_enviado.id_email,
-                'fecha_envio': email_enviado.fecha_envio
+                "success": True,
+                "id_email": email_enviado.id_email,
+                "fecha_envio": email_enviado.fecha_envio,
             }
-            
+
         except Exception as e:
             logger.error(f"Error enviando email saldo bajo: {str(e)}")
-            
+
             # Registrar error en BD
             EmailsEnviados.objects.create(
                 email_destinatario=email_destinatario,
                 nombre_destinatario=nombre_destinatario,
                 asunto=asunto,
                 cuerpo=f"Error: {str(e)}",
-                estado='error',
-                fecha_envio=timezone.now()
+                estado="error",
+                fecha_envio=timezone.now(),
             )
-            
-            return {
-                'success': False,
-                'error': str(e)
-            }
-    
-    
+
+            return {"success": False, "error": str(e)}
+
     @staticmethod
     def enviar_recarga_exitosa(
         email_destinatario: str,
@@ -198,11 +193,11 @@ Cantina Tita - Sistema de Gestión
         monto_acreditado: Decimal,
         saldo_nuevo: Decimal,
         metodo_pago: str,
-        fecha_recarga: datetime
+        fecha_recarga: datetime,
     ) -> Dict:
         """
         Envía email de confirmación de recarga exitosa.
-        
+
         Args:
             email_destinatario: Email del cliente
             nombre_destinatario: Nombre del cliente
@@ -212,7 +207,7 @@ Cantina Tita - Sistema de Gestión
             saldo_nuevo: Nuevo saldo
             metodo_pago: Método de pago utilizado
             fecha_recarga: Fecha y hora de la recarga
-        
+
         Returns:
             {
                 'success': bool,
@@ -221,7 +216,7 @@ Cantina Tita - Sistema de Gestión
         """
         try:
             asunto = f"✅ Recarga Exitosa - Tarjeta {nro_tarjeta}"
-            
+
             cuerpo_html = f"""
             <html>
             <head>
@@ -262,7 +257,7 @@ Cantina Tita - Sistema de Gestión
             </body>
             </html>
             """
-            
+
             cuerpo_texto = f"""
 RECARGA EXITOSA
 
@@ -279,57 +274,50 @@ Fecha: {fecha_recarga.strftime('%d/%m/%Y %H:%M')}
 
 Gracias por confiar en Cantina Tita.
             """
-            
+
             email = EmailMultiAlternatives(
                 subject=asunto,
                 body=cuerpo_texto,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[email_destinatario]
+                to=[email_destinatario],
             )
             email.attach_alternative(cuerpo_html, "text/html")
             email.send(fail_silently=False)
-            
+
             # Registrar
             email_enviado = EmailsEnviados.objects.create(
                 email_destinatario=email_destinatario,
                 nombre_destinatario=nombre_destinatario,
                 asunto=asunto,
                 cuerpo=cuerpo_texto,
-                estado='enviado',
-                fecha_envio=timezone.now()
+                estado="enviado",
+                fecha_envio=timezone.now(),
             )
-            
-            return {
-                'success': True,
-                'id_email': email_enviado.id_email
-            }
-            
+
+            return {"success": True, "id_email": email_enviado.id_email}
+
         except Exception as e:
             logger.error(f"Error enviando email recarga: {str(e)}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
-    
-    
+            return {"success": False, "error": str(e)}
+
     @staticmethod
     def enviar_email_generico(
         email_destinatario: str,
         nombre_destinatario: str,
         asunto: str,
         mensaje: str,
-        tipo_email: str = 'generico'
+        tipo_email: str = "generico",
     ) -> Dict:
         """
         Envía email genérico.
-        
+
         Args:
             email_destinatario: Email del destinatario
             nombre_destinatario: Nombre del destinatario
             asunto: Asunto del email
             mensaje: Cuerpo del mensaje
             tipo_email: Tipo de email (generico, alerta, notificacion)
-        
+
         Returns:
             {
                 'success': bool,
@@ -342,27 +330,21 @@ Gracias por confiar en Cantina Tita.
                 message=mensaje,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email_destinatario],
-                fail_silently=False
+                fail_silently=False,
             )
-            
+
             # Registrar
             email_enviado = EmailsEnviados.objects.create(
                 email_destinatario=email_destinatario,
                 nombre_destinatario=nombre_destinatario,
                 asunto=asunto,
                 cuerpo=mensaje,
-                estado='enviado',
-                fecha_envio=timezone.now()
+                estado="enviado",
+                fecha_envio=timezone.now(),
             )
-            
-            return {
-                'success': True,
-                'id_email': email_enviado.id_email
-            }
-            
+
+            return {"success": True, "id_email": email_enviado.id_email}
+
         except Exception as e:
             logger.error(f"Error enviando email genérico: {str(e)}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            return {"success": False, "error": str(e)}

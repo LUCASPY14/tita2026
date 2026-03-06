@@ -2,6 +2,7 @@
 Signals para auditoría automática de cambios en modelos
 Registra automáticamente todas las operaciones CRUD
 """
+
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -15,11 +16,11 @@ from apps.usuarios.models import (
     Roles,
     PerfilesUsuario,
     SesionesActivas,
-    BloqueosCuenta
+    BloqueosCuenta,
 )
 
-
 # ==================== HELPER FUNCTIONS ====================
+
 
 def obtener_empleado_actual():
     """
@@ -27,7 +28,8 @@ def obtener_empleado_actual():
     Requiere middleware que establezca el empleado en el thread.
     """
     from threading import current_thread
-    return getattr(current_thread(), 'current_empleado', None)
+
+    return getattr(current_thread(), "current_empleado", None)
 
 
 def obtener_ip_actual():
@@ -35,29 +37,30 @@ def obtener_ip_actual():
     Obtiene la IP actual del contexto (thread-local).
     """
     from threading import current_thread
-    return getattr(current_thread(), 'current_ip', None)
+
+    return getattr(current_thread(), "current_ip", None)
 
 
 def serializar_modelo(instancia, campos_excluir=None):
     """
     Serializa una instancia de modelo a diccionario JSON-serializable.
-    
+
     Args:
         instancia: Instancia del modelo
         campos_excluir: Lista de campos a excluir (ej: ['contrasena_hash'])
-        
+
     Returns:
         Diccionario con los datos del modelo
     """
     if campos_excluir is None:
-        campos_excluir = ['contrasena_hash', 'password', 'secret_key']
-    
+        campos_excluir = ["contrasena_hash", "password", "secret_key"]
+
     datos = {}
-    
+
     for field in instancia._meta.fields:
         if field.name not in campos_excluir:
             valor = getattr(instancia, field.name)
-            
+
             # Convertir ForeignKey a ID
             if field.is_relation:
                 if valor:
@@ -66,15 +69,16 @@ def serializar_modelo(instancia, campos_excluir=None):
                     datos[field.name] = None
             else:
                 # Convertir datetime a string
-                if hasattr(valor, 'isoformat'):
+                if hasattr(valor, "isoformat"):
                     datos[field.name] = valor.isoformat()
                 else:
                     datos[field.name] = valor
-    
+
     return datos
 
 
 # ==================== SIGNALS PARA EMPLEADOS ====================
+
 
 @receiver(pre_save, sender=Empleados)
 def empleado_pre_save(sender, instance, **kwargs):
@@ -100,60 +104,67 @@ def empleado_post_save(sender, instance, created, **kwargs):
     # Sincronizar Django auth.User (necesario para SimpleJWT)
     try:
         from django.contrib.auth.models import User
+
         django_user, _ = User.objects.get_or_create(
             username=instance.usuario,
             defaults={
-                'first_name': instance.nombre,
-                'last_name': instance.apellido,
-                'email': instance.email or '',
-                'is_active': instance.activo,
-            }
+                "first_name": instance.nombre,
+                "last_name": instance.apellido,
+                "email": instance.email or "",
+                "is_active": instance.activo,
+            },
         )
         if django_user.is_active != instance.activo:
             django_user.is_active = instance.activo
-            django_user.save(update_fields=['is_active'])
+            django_user.save(update_fields=["is_active"])
     except Exception as e:
         print(f"Error sincronizando auth.User para empleado {instance.usuario}: {str(e)}")
 
     try:
         empleado_actual = obtener_empleado_actual()
-        ip_actual = obtener_ip_actual() or '127.0.0.1'
-        
+        ip_actual = obtener_ip_actual() or "127.0.0.1"
+
         if created:
             # Empleado creado
             AuditoriaOperaciones.objects.create(
-                usuario=empleado_actual.usuario if empleado_actual else 'sistema',
-                tipo_usuario='empleado',
+                usuario=empleado_actual.usuario if empleado_actual else "sistema",
+                tipo_usuario="empleado",
                 id_usuario=empleado_actual.id_empleado if empleado_actual else None,
-                operacion='CREAR_EMPLEADO',
-                tabla_afectada='Empleados',
+                operacion="CREAR_EMPLEADO",
+                tabla_afectada="Empleados",
                 id_registro=instance.id_empleado,
                 ip_address=ip_actual,
                 datos_nuevos=serializar_modelo(instance),
                 fecha_operacion=timezone.now(),
-                resultado='OK'
+                resultado="OK",
             )
         else:
             # Empleado actualizado - registrar cambios específicos
-            if hasattr(instance, '_estado_anterior') and instance._estado_anterior:
+            if hasattr(instance, "_estado_anterior") and instance._estado_anterior:
                 estado_anterior = instance._estado_anterior
-                
+
                 # Campos a auditar específicamente
                 campos_importantes = [
-                    'nombre', 'apellido', 'usuario', 'email', 
-                    'activo', 'id_rol', 'telefono', 'direccion'
+                    "nombre",
+                    "apellido",
+                    "usuario",
+                    "email",
+                    "activo",
+                    "id_rol",
+                    "telefono",
+                    "direccion",
                 ]
-                
+
                 for campo in campos_importantes:
                     valor_anterior = getattr(estado_anterior, campo, None)
                     valor_nuevo = getattr(instance, campo, None)
-                    
+
                     # Convertir ForeignKey a ID para comparación
-                    if hasattr(valor_anterior, 'pk'):
+                    if hasattr(valor_anterior, "pk"):
                         valor_anterior = valor_anterior.pk
-                    if hasattr(valor_nuevo, 'pk'):
+                    if hasattr(valor_nuevo, "pk"):
                         valor_nuevo = valor_nuevo.pk
-                    
+
                     if valor_anterior != valor_nuevo:
                         # Registrar cambio en AuditoriaEmpleados
                         AuditoriaEmpleados.objects.create(
@@ -163,27 +174,27 @@ def empleado_post_save(sender, instance, created, **kwargs):
                             valor_nuevo=str(valor_nuevo) if valor_nuevo else None,
                             modificado_por=empleado_actual,
                             ip_origen=ip_actual,
-                            fecha_modificacion=timezone.now()
+                            fecha_modificacion=timezone.now(),
                         )
-                
+
                 # Registrar operación general
                 AuditoriaOperaciones.objects.create(
-                    usuario=empleado_actual.usuario if empleado_actual else 'sistema',
-                    tipo_usuario='empleado',
+                    usuario=empleado_actual.usuario if empleado_actual else "sistema",
+                    tipo_usuario="empleado",
                     id_usuario=empleado_actual.id_empleado if empleado_actual else None,
-                    operacion='ACTUALIZAR_EMPLEADO',
-                    tabla_afectada='Empleados',
+                    operacion="ACTUALIZAR_EMPLEADO",
+                    tabla_afectada="Empleados",
                     id_registro=instance.id_empleado,
                     ip_address=ip_actual,
                     datos_anteriores=serializar_modelo(estado_anterior),
                     datos_nuevos=serializar_modelo(instance),
                     fecha_operacion=timezone.now(),
-                    resultado='OK'
+                    resultado="OK",
                 )
-                
+
                 # Limpiar estado anterior
-                delattr(instance, '_estado_anterior')
-    
+                delattr(instance, "_estado_anterior")
+
     except Exception as e:
         # No fallar la operación por errores de auditoría
         print(f"Error en auditoría de empleado: {str(e)}")
@@ -196,26 +207,27 @@ def empleado_post_delete(sender, instance, **kwargs):
     """
     try:
         empleado_actual = obtener_empleado_actual()
-        ip_actual = obtener_ip_actual() or '127.0.0.1'
-        
+        ip_actual = obtener_ip_actual() or "127.0.0.1"
+
         AuditoriaOperaciones.objects.create(
-            usuario=empleado_actual.usuario if empleado_actual else 'sistema',
-            tipo_usuario='empleado',
+            usuario=empleado_actual.usuario if empleado_actual else "sistema",
+            tipo_usuario="empleado",
             id_usuario=empleado_actual.id_empleado if empleado_actual else None,
-            operacion='ELIMINAR_EMPLEADO',
-            tabla_afectada='Empleados',
+            operacion="ELIMINAR_EMPLEADO",
+            tabla_afectada="Empleados",
             id_registro=instance.id_empleado,
             ip_address=ip_actual,
             datos_anteriores=serializar_modelo(instance),
             fecha_operacion=timezone.now(),
-            resultado='OK'
+            resultado="OK",
         )
-    
+
     except Exception as e:
         print(f"Error en auditoría de eliminación: {str(e)}")
 
 
 # ==================== SIGNALS PARA ROLES ====================
+
 
 @receiver(post_save, sender=Roles)
 def rol_post_save(sender, instance, created, **kwargs):
@@ -224,28 +236,28 @@ def rol_post_save(sender, instance, created, **kwargs):
     """
     try:
         empleado_actual = obtener_empleado_actual()
-        ip_actual = obtener_ip_actual() or '127.0.0.1'
-        
-        operacion = 'CREAR_ROL' if created else 'ACTUALIZAR_ROL'
-        
+        ip_actual = obtener_ip_actual() or "127.0.0.1"
+
+        operacion = "CREAR_ROL" if created else "ACTUALIZAR_ROL"
+
         AuditoriaOperaciones.objects.create(
-            usuario=empleado_actual.usuario if empleado_actual else 'sistema',
-            tipo_usuario='empleado',
+            usuario=empleado_actual.usuario if empleado_actual else "sistema",
+            tipo_usuario="empleado",
             id_usuario=empleado_actual.id_empleado if empleado_actual else None,
             operacion=operacion,
-            tabla_afectada='Roles',
+            tabla_afectada="Roles",
             id_registro=instance.id_rol,
             ip_address=ip_actual,
             datos_nuevos={
-                'id_rol': instance.id_rol,
-                'nombre_rol': instance.nombre_rol,
-                'descripcion': instance.descripcion,
-                'activo': instance.activo
+                "id_rol": instance.id_rol,
+                "nombre_rol": instance.nombre_rol,
+                "descripcion": instance.descripcion,
+                "activo": instance.activo,
             },
             fecha_operacion=timezone.now(),
-            resultado='OK'
+            resultado="OK",
         )
-    
+
     except Exception as e:
         print(f"Error en auditoría de rol: {str(e)}")
 
@@ -257,29 +269,30 @@ def rol_post_delete(sender, instance, **kwargs):
     """
     try:
         empleado_actual = obtener_empleado_actual()
-        ip_actual = obtener_ip_actual() or '127.0.0.1'
-        
+        ip_actual = obtener_ip_actual() or "127.0.0.1"
+
         AuditoriaOperaciones.objects.create(
-            usuario=empleado_actual.usuario if empleado_actual else 'sistema',
-            tipo_usuario='empleado',
+            usuario=empleado_actual.usuario if empleado_actual else "sistema",
+            tipo_usuario="empleado",
             id_usuario=empleado_actual.id_empleado if empleado_actual else None,
-            operacion='ELIMINAR_ROL',
-            tabla_afectada='Roles',
+            operacion="ELIMINAR_ROL",
+            tabla_afectada="Roles",
             id_registro=instance.id_rol,
             ip_address=ip_actual,
             datos_anteriores={
-                'nombre_rol': instance.nombre_rol,
-                'descripcion': instance.descripcion
+                "nombre_rol": instance.nombre_rol,
+                "descripcion": instance.descripcion,
             },
             fecha_operacion=timezone.now(),
-            resultado='OK'
+            resultado="OK",
         )
-    
+
     except Exception as e:
         print(f"Error en auditoría de eliminación de rol: {str(e)}")
 
 
 # ==================== SIGNALS PARA SESIONES ====================
+
 
 @receiver(post_save, sender=SesionesActivas)
 def sesion_post_save(sender, instance, created, **kwargs):
@@ -295,12 +308,13 @@ def sesion_post_save(sender, instance, created, **kwargs):
             if not instance.activa and instance.fecha_cierre:
                 # Sesión cerrada - NO auditar aquí porque se hace en SessionService
                 pass
-    
+
     except Exception as e:
         print(f"Error en auditoría de sesión: {str(e)}")
 
 
 # ==================== SIGNALS PARA BLOQUEOS ====================
+
 
 @receiver(post_save, sender=BloqueosCuenta)
 def bloqueo_post_save(sender, instance, created, **kwargs):
@@ -315,30 +329,31 @@ def bloqueo_post_save(sender, instance, created, **kwargs):
             # Bloqueo actualizado (desbloqueo)
             if not instance.activo:
                 empleado_actual = obtener_empleado_actual()
-                ip_actual = obtener_ip_actual() or '127.0.0.1'
-                
+                ip_actual = obtener_ip_actual() or "127.0.0.1"
+
                 AuditoriaOperaciones.objects.create(
-                    usuario=empleado_actual.usuario if empleado_actual else 'sistema',
-                    tipo_usuario='empleado',
+                    usuario=empleado_actual.usuario if empleado_actual else "sistema",
+                    tipo_usuario="empleado",
                     id_usuario=empleado_actual.id_empleado if empleado_actual else None,
-                    operacion='DESBLOQUEAR_CUENTA',
-                    tabla_afectada='BloqueosCuenta',
+                    operacion="DESBLOQUEAR_CUENTA",
+                    tabla_afectada="BloqueosCuenta",
                     id_registro=instance.id,
                     ip_address=ip_actual,
                     datos_nuevos={
-                        'id_empleado': instance.id_empleado.id_empleado,
-                        'motivo_original': instance.motivo,
-                        'desbloqueado_en': str(timezone.now())
+                        "id_empleado": instance.id_empleado.id_empleado,
+                        "motivo_original": instance.motivo,
+                        "desbloqueado_en": str(timezone.now()),
                     },
                     fecha_operacion=timezone.now(),
-                    resultado='OK'
+                    resultado="OK",
                 )
-    
+
     except Exception as e:
         print(f"Error en auditoría de bloqueo: {str(e)}")
 
 
 # ==================== SIGNALS PARA PERFILES ====================
+
 
 @receiver(post_save, sender=PerfilesUsuario)
 def perfil_post_save(sender, instance, created, **kwargs):
@@ -347,33 +362,36 @@ def perfil_post_save(sender, instance, created, **kwargs):
     """
     try:
         empleado_actual = obtener_empleado_actual()
-        ip_actual = obtener_ip_actual() or '127.0.0.1'
-        
-        operacion = 'CREAR_PERFIL' if created else 'ACTUALIZAR_PERFIL'
-        
+        ip_actual = obtener_ip_actual() or "127.0.0.1"
+
+        operacion = "CREAR_PERFIL" if created else "ACTUALIZAR_PERFIL"
+
         AuditoriaOperaciones.objects.create(
             usuario=empleado_actual.usuario if empleado_actual else instance.id_empleado.usuario,
-            tipo_usuario='empleado',
-            id_usuario=empleado_actual.id_empleado if empleado_actual else instance.id_empleado.id_empleado,
+            tipo_usuario="empleado",
+            id_usuario=(
+                empleado_actual.id_empleado if empleado_actual else instance.id_empleado.id_empleado
+            ),
             operacion=operacion,
-            tabla_afectada='PerfilesUsuario',
+            tabla_afectada="PerfilesUsuario",
             id_registro=instance.id,
             ip_address=ip_actual,
             datos_nuevos={
-                'id_empleado': instance.id_empleado.id_empleado,
-                'tema': instance.tema,
-                'idioma': instance.idioma,
-                'timezone': instance.timezone
+                "id_empleado": instance.id_empleado.id_empleado,
+                "tema": instance.tema,
+                "idioma": instance.idioma,
+                "timezone": instance.timezone,
             },
             fecha_operacion=timezone.now(),
-            resultado='OK'
+            resultado="OK",
         )
-    
+
     except Exception as e:
         print(f"Error en auditoría de perfil: {str(e)}")
 
 
 # ==================== CONFIGURACIÓN DE SIGNALS ====================
+
 
 def conectar_signals():
     """
