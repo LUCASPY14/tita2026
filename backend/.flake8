@@ -1,0 +1,25 @@
+[flake8]
+max-line-length = 100
+extend-ignore = E203, W503, E501
+exclude = 
+    migrations,
+    __pycache__,
+    venv,
+    .venv,
+    env,
+    .env,
+    htmlcov,
+    .coverage,
+    *.pyc,
+    .git,
+    __init__.py
+
+per-file-ignores =
+    # Allow star imports in __init__ files
+    __init__.py:F401,F403
+
+# Complexity
+max-complexity = 10
+
+# Docstrings
+docstring-convention = google

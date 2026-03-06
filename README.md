@@ -1,6 +1,33 @@
 # Sistema de Gestión Cantina Tita
 
+![CI Pipeline](https://github.com/usuario/cantina_tita/workflows/CI%20Pipeline%20-%20Cantina%20Tita/badge.svg)
+![Backend Tests](https://img.shields.io/badge/backend%20tests-151%20passing-brightgreen)
+![Frontend Tests](https://img.shields.io/badge/frontend%20tests-670%20passing-brightgreen)
+![Backend Coverage](https://img.shields.io/badge/backend%20coverage-26%25-yellow)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![Django](https://img.shields.io/badge/django-4.2+-green)
+![React](https://img.shields.io/badge/react-18-blue)
+![TypeScript](https://img.shields.io/badge/typescript-4.9+-blue)
+
 Sistema integral de gestión para cantina escolar, con módulos de ventas, almuerzos, inventario, clientes y reportes.
+
+## 📊 Estado del Proyecto
+
+### Tests & Cobertura
+- ✅ **Backend:** 151/151 tests passing (100%)
+- ✅ **Frontend:** 670/670 tests passing (100%)
+- 🟡 **Backend Coverage:** 26% (objetivo: 40%)
+  - Models: 92% coverage
+  - Serializers: 85-100% coverage
+  - Admin: 54-73% coverage
+- ⏳ **E2E Tests:** Pendiente
+- ⏳ **CI/CD:** Configurado (Sprint 3)
+
+### Calidad de Código
+- ✅ Sin errores de TypeScript
+- ✅ Tests funcionando correctamente
+- ✅ Arquitectura modular y escalable
+- 🔄 Linting automatizado en CI/CD
 
 ## 📁 Estructura del Proyecto
 
@@ -94,6 +121,54 @@ npm start
 ```
 
 El frontend estará disponible en `http://localhost:3000`
+
+## 🧪 Testing
+
+### Ejecutar Tests Backend
+
+```bash
+cd backend
+
+# Ejecutar todos los tests
+python manage.py test apps --keepdb
+
+# Ejecutar tests con cobertura
+coverage run --source='apps' manage.py test apps --keepdb
+coverage report
+coverage html  # Genera reporte HTML en htmlcov/
+
+# Ejecutar tests de una app específica
+python manage.py test apps.ventas --keepdb
+python manage.py test apps.productos.tests_models --keepdb
+
+# Estado actual: 151 tests, 26% coverage
+```
+
+### Ejecutar Tests Frontend
+
+```bash
+cd frontend
+
+# Ejecutar todos los tests
+npm test
+
+# Ejecutar tests con cobertura
+npm test -- --coverage
+
+# Ejecutar tests en modo watch
+npm test -- --watch
+
+# Estado actual: 670 tests passing (100%)
+```
+
+### Reporte de Cobertura
+
+Los reportes de cobertura están disponibles:
+- Backend: `backend/htmlcov/index.html`
+- Frontend: `frontend/coverage/lcov-report/index.html`
+
+Ver [VALIDATION_REPORT.md](VALIDATION_REPORT.md) para análisis detallado de testing.
+
 
 ## 🔧 Tecnologías
 
