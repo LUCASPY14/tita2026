@@ -31,6 +31,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
   });
 
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [camposTocados, setCamposTocados] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     cargarRoles();
@@ -65,6 +66,60 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
       console.error('Error al cargar roles:', error);
       toast.error('Error al cargar los roles');
     }
+  };
+
+  const validarCampo = (nombre: string, valor: any): string => {
+    switch (nombre) {
+      case 'nombre':
+        return !valor.trim() ? 'El nombre es requerido' : '';
+      
+      case 'apellido':
+        return !valor.trim() ? 'El apellido es requerido' : '';
+      
+      case 'usuario':
+        if (!valor.trim()) return 'El nombre de usuario es requerido';
+        if (valor.length < 3) return 'Debe tener al menos 3 caracteres';
+        if (!/^[a-zA-Z0-9_]+$/.test(valor)) return 'Solo letras, números y guión bajo';
+        return '';
+      
+      case 'email':
+        if (!valor.trim()) return 'El email es requerido';
+        if (!/\S+@\S+\.\S+/.test(valor)) return 'Email inválido';
+        return '';
+      
+      case 'password':
+        if (!valor && !usuario) return 'La contraseña es requerida';
+        if (valor && valor.length < 8) return 'Debe tener al menos 8 caracteres';
+        if (valor && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(valor))
+          return 'Debe contener mayúsculas, minúsculas y números';
+        return '';
+      
+      case 'confirmarPassword':
+        if (formData.password !== valor) return 'Las contraseñas no coinciden';
+        return '';
+      
+      case 'id_rol':
+        return (!valor || valor === 0) ? 'Debe seleccionar un rol' : '';
+      
+      default:
+        return '';
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setCamposTocados(prev => ({ ...prev, [name]: true }));
+    
+    const error = validarCampo(name, value);
+    setErrores(prev => {
+      if (error) {
+        return { ...prev, [name]: error };
+      } else {
+        const nuevos = { ...prev };
+        delete nuevos[name];
+        return nuevos;
+      }
+    });
   };
 
   const validarFormulario = (): boolean => {
@@ -129,19 +184,26 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
+    const newValue = type === 'number' ? parseInt(value) || 0 :
+                     type === 'checkbox' ? (e.target as HTMLInputElement).checked :
+                     value;
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseInt(value) || 0 :
-              type === 'checkbox' ? (e.target as HTMLInputElement).checked :
-              value,
+      [name]: newValue,
     }));
 
-    // Limpiar error del campo
-    if (errores[name]) {
+    // Si el campo ya fue tocado, validar en tiempo real
+    if (camposTocados[name]) {
+      const error = validarCampo(name, newValue);
       setErrores(prev => {
-        const nuevos = { ...prev };
-        delete nuevos[name];
-        return nuevos;
+        if (error) {
+          return { ...prev, [name]: error };
+        } else {
+          const nuevos = { ...prev };
+          delete nuevos[name];
+          return nuevos;
+        }
       });
     }
   };
@@ -226,6 +288,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
             name="nombre"
             value={formData.nombre}
             onChange={handleChange}
+            onBlur={handleBlur}
             error={errores.nombre}
             required
             placeholder="Ej: Juan"
@@ -236,6 +299,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
             name="apellido"
             value={formData.apellido}
             onChange={handleChange}
+            onBlur={handleBlur}
             error={errores.apellido}
             required
             placeholder="Ej: Pérez"
@@ -246,6 +310,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
             name="usuario"
             value={formData.usuario}
             onChange={handleChange}
+            onBlur={handleBlur}
             error={errores.usuario}
             required
             disabled={!!usuario} // No permitir cambiar el username si está editando
@@ -259,6 +324,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
             type="email"
             value={formData.email}
             onChange={handleChange}
+            onBlur={handleBlur}
             error={errores.email}
             required
             placeholder="[email protected]"
@@ -279,6 +345,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
               type={mostrarPassword ? 'text' : 'password'}
               value={formData.password}
               onChange={handleChange}
+              onBlur={handleBlur}
               error={errores.password}
               required={!usuario}
               placeholder="••••••••"
@@ -299,6 +366,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
             type={mostrarPassword ? 'text' : 'password'}
             value={formData.confirmarPassword}
             onChange={handleChange}
+            onBlur={handleBlur}
             error={errores.confirmarPassword}
             required={!usuario}
             placeholder="••••••••"
@@ -351,6 +419,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
               name="id_rol"
               value={formData.id_rol}
               onChange={handleChange}
+              onBlur={handleBlur}
               className={`w-full rounded-lg border ${errores.id_rol ? 'border-red-500' : 'border-gray-300'} px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
               required
             >

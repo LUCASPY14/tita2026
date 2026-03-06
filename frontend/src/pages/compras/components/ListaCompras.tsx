@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Edit, Eye, Trash2, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { comprasService } from '../../../services/compras.service';
 import { Compra, Proveedor } from '../../../types';
-import { Card, Spinner } from '../../../components/common';
+import { Card, Spinner, EmptyState, Skeleton } from '../../../components/common';
 import toast from 'react-hot-toast';
 
 interface ListaComprasProps {
@@ -188,17 +188,23 @@ const ListaCompras: React.FC<ListaComprasProps> = ({ onEditar, onVerDetalle }) =
       {/* Tabla de Compras */}
       <Card>
         {cargando ? (
-          <div className="flex items-center justify-center py-12">
-            <Spinner size="lg" />
-          </div>
+          <Skeleton rows={8} cols={6} />
         ) : compras.length === 0 ? (
-          <div className="py-12 text-center">
-            <ShoppingCart className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No hay compras</h3>
-            <p className="mt-2 text-sm text-gray-500">
-              No se encontraron compras con los filtros seleccionados
-            </p>
-          </div>
+          <EmptyState
+            icon={ShoppingCart}
+            title="No hay compras"
+            description={busqueda || filtroEstado || filtroProveedor
+              ? "No se encontraron compras con los filtros seleccionados"
+              : "Comienza registrando tu primera compra"}
+            action={busqueda || filtroEstado || filtroProveedor ? {
+              label: "Limpiar filtros",
+              onClick: () => {
+                setBusqueda('');
+                setFiltroEstado(undefined);
+                setFiltroProveedor(undefined);
+              }
+            } : undefined}
+          />
         ) : (
           <>
             <div className="overflow-x-auto">

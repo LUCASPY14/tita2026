@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Input, Spinner } from '../../../components/common';
-import { Calendar, Clock, User, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import { Card, Input, Spinner, EmptyState } from '../../../components/common';
+import { Calendar, Clock, User, CheckCircle, XCircle, DollarSign, UtensilsCrossed } from 'lucide-react';
 import { almuerzosService } from '../../../services/almuerzos.service';
 import toast from 'react-hot-toast';
 import type { RegistroConsumoAlmuerzo } from '../../../types';
@@ -285,13 +285,21 @@ const HistorialConsumos: React.FC = () => {
             )}
           </>
         ) : (
-          <div className="py-12 text-center">
-            <Clock className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-900">No hay registros</h3>
-            <p className="mt-2 text-sm text-gray-500">
-              No se encontraron consumos con los filtros aplicados
-            </p>
-          </div>
+          <EmptyState
+            icon={UtensilsCrossed}
+            title="Sin registros de consumo"
+            description={filtros.fecha_desde || filtros.fecha_hasta || filtros.estado
+              ? "Intenta cambiar los filtros"
+              : "No hay consumos registrados en el sistema"}
+            action={filtros.fecha_desde || filtros.fecha_hasta || filtros.estado ? {
+              label: "Limpiar filtros",
+              onClick: () => {
+                setFiltros({ busqueda: '', fecha_desde: '', fecha_hasta: '', estado: '' });
+                setPaginaActual(1);
+              }
+            } : undefined}
+            size="sm"
+          />
         )}
       </Card>
     </div>

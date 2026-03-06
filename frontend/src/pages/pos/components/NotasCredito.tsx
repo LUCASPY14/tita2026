@@ -3,7 +3,7 @@ import {
   RefreshCw, ChevronLeft, ChevronRight, RotateCcw,
   XCircle, FileX, Search, AlertTriangle,
 } from 'lucide-react';
-import { Button, Spinner, Badge } from '../../../components/common';
+import { Button, Spinner, Badge, EmptyState } from '../../../components/common';
 import { posService } from '../../../services/pos.service';
 import type { Venta } from '../../../types';
 import type { NotaCredito, DevolucionData } from '../../../services/pos.service';
@@ -342,10 +342,17 @@ const NotasCredito: React.FC = () => {
             {cargandoNotas ? (
               <div className="flex items-center justify-center py-16"><Spinner size="lg" /></div>
             ) : notas.length === 0 ? (
-              <div className="py-16 text-center">
-                <FileX className="mx-auto h-12 w-12 text-gray-300" />
-                <p className="mt-3 text-gray-500">No hay notas de crédito registradas</p>
-              </div>
+              <EmptyState
+                icon={FileX}
+                title="Sin notas de crédito"
+                description={estadoFiltro
+                  ? "No hay notas con este estado"
+                  : "No hay notas de crédito registradas"}
+                action={estadoFiltro ? {
+                  label: "Limpiar filtro",
+                  onClick: () => setEstadoFiltro('')
+                } : undefined}
+              />
             ) : (
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -451,7 +458,18 @@ const NotasCredito: React.FC = () => {
             {cargandoVentas ? (
               <div className="flex items-center justify-center py-12"><Spinner size="lg" /></div>
             ) : ventas.length === 0 ? (
-              <div className="py-12 text-center text-gray-500 text-sm">No se encontraron ventas</div>
+              <EmptyState
+                icon={Search}
+                title="Sin ventas disponibles"
+                description={busquedaVenta
+                  ? "No se encontraron resultados"
+                  : "No hay ventas activas para devolver"}
+                action={busquedaVenta ? {
+                  label: "Limpiar búsqueda",
+                  onClick: () => setBusquedaVenta('')
+                } : undefined}
+                size="sm"
+              />
             ) : (
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">

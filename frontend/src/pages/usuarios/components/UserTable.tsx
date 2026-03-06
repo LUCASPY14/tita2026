@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Edit, Shield, ToggleLeft, ToggleRight, Trash2, Key, Mail, Phone } from 'lucide-react';
-import { Input, Button, Badge, Spinner } from '../../../components/common';
+import { Search, Edit, Shield, ToggleLeft, ToggleRight, Trash2, Key, Mail, Phone, Users as UsersIcon } from 'lucide-react';
+import { Input, Button, Badge, ConfirmDialog, Skeleton, EmptyState } from '../../../components/common';
 import { usersService, rolesService } from '../../../services/users.service';
 import type { Usuario, Rol } from '../../../services/users.service';
+import { useDebounce } from '../../../hooks/useDebounce';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -18,18 +19,22 @@ const UserTable: React.FC<UserTableProps> = ({ onEditar, onActualizarLista }) =>
   const [busqueda, setBusqueda] = useState('');
   const [filtroActivo, setFiltroActivo] = useState<boolean | undefined>(undefined);
   const [filtroRol, setFiltroRol] = useState<number | undefined>(undefined);
+  const [usuarioAEliminar, setUsuarioAEliminar] = useState<Usuario | null>(null);
+  const [modalResetPassword, setModalResetPassword] = useState<{
+    usuario: Usuario;
+    password: string;
+  } | null>(null);
+
+  const busquedaDebounced = useDebounce(busqueda, 300);
 
   useEffect(() => {
     cargarDatos();
   }, []);
 
   useEffect(() => {
-    // Filtrar clientes cuando cambia la búsqueda o filtros
-    if (!cargando) {
-      // En este caso simplemente re-renderizamos, el filtrado es en el frontend
-      // Si fuera backend pagination, haríamos una nueva petición
-    }
-  }, [busqueda, filtroActivo, filtroRol]);
+    // Re-filtrar cuando cambia búsqueda debounced o filtros
+    // El filtrado es local, ya tenemos todos los usuarios
+  }, [busquedaDebounced, filtroActivo, filtroRol]);
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -65,40 +70,42 @@ const UserTable: React.FC<UserTableProps> = ({ onEditar, onActualizarLista }) =>
   };
 
   const handleEliminar = async (usuario: Usuario) => {
-    if (!window.confirm(
-      `¿Estás seguro de eliminar al usuario ${usuario.nombre} ${usuario.apellido}?\n\n` +
-      `Esta acción no se puede deshacer. Considera desactivar el usuario en su lugar.`
-    )) {
-      return;
-    }
+    setUsuarioAEliminar(usuario);
+  };
+
+  const confirmarEliminar = async () => {
+    if (!usuarioAEliminar) return;
 
     try {
-      await usersService.delete(usuario.id_empleado);
+      await usersService.delete(usuarioAEliminar.id_empleado);
       toast.success('Usuario eliminado exitosamente');
       cargarDatos();
       onActualizarLista();
     } catch (error) {
       toast.error('Error al eliminar el usuario');
+    } finally {
+      setUsuarioAEliminar(null);
     }
   };
 
   const handleResetPassword = async (usuario: Usuario) => {
-    const newPassword = prompt(
-      `Ingrese la nueva contraseña para ${usuario.nombre} ${usuario.apellido}:`
-    );
+    setModalResetPassword({ usuario, password: '' });
+  };
 
-    if (!newPassword) {
-      return;
-    }
+  const confirmarResetPassword = async () => {
+    if (!modalResetPassword) return;
 
-    if (newPassword.length < 8) {
+    const { usuario, password } = modalResetPassword;
+
+    if (password.length < 8) {
       toast.error('La contraseña debe tener al menos 8 caracteres');
       return;
     }
 
     try {
-      await usersService.changePassword(usuario.id_empleado, { password: newPassword });
+      await usersService.changePassword(usuario.id_empleado, { password });
       toast.success('Contraseña actualizada exitosamente');
+      setModalResetPassword(null);
     } catch (error) {
       toast.error('Error al cambiar la contraseña');
     }
@@ -115,9 +122,9 @@ const UserTable: React.FC<UserTableProps> = ({ onEditar, onActualizarLista }) =>
   };
 
   const usuariosFiltrados = usuarios.filter((usuario) => {
-    // Filtro de búsqueda
-    if (busqueda) {
-      const searchLower = busqueda.toLowerCase();
+    // Filtro de búsqueda (debounced)
+    if (busquedaDebounced) {
+      const searchLower = busquedaDebounced.toLowerCase();
       const coincide = 
         usuario.nombre.toLowerCase().includes(searchLower) ||
         usuario.apellido.toLowerCase().includes(searchLower) ||
@@ -221,14 +228,24 @@ const UserTable: React.FC<UserTableProps> = ({ onEditar, onActualizarLista }) =>
 
       {/* Tabla */}
       {cargando ? (
-        <div className="flex items-center justify-center py-12">
-          <Spinner />
-          <span className="ml-2 text-gray-600">Cargando usuarios...</span>
-        </div>
+        <Skeleton rows={8} cols={6} />
       ) : usuariosFiltrados.length === 0 ? (
-        <div className="py-12 text-center">
-          <p className="text-gray-500">No se encontraron usuarios</p>
-        </div>
+        <EmptyState
+          icon={UsersIcon}
+          title="No se encontraron usuarios"
+          description={busquedaDebounced || filtroActivo !== undefined || filtroRol !== undefined
+            ? "Intenta ajustar los filtros de búsqueda"
+            : "Comienza creando tu primer usuario del sistema"
+          }
+          action={busquedaDebounced || filtroActivo !== undefined || filtroRol !== undefined ? {
+            label: "Limpiar filtros",
+            onClick: () => {
+              setBusqueda('');
+              setFiltroActivo(undefined);
+              setFiltroRol(undefined);
+            }
+          } : undefined}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -353,6 +370,80 @@ const UserTable: React.FC<UserTableProps> = ({ onEditar, onActualizarLista }) =>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Modal de confirmación para eliminar */}
+      <ConfirmDialog
+        isOpen={!!usuarioAEliminar}
+        onClose={() => setUsuarioAEliminar(null)}
+        onConfirm={confirmarEliminar}
+        title="Eliminar usuario"
+        message={
+          usuarioAEliminar
+            ? `¿Estás seguro de eliminar al usuario ${usuarioAEliminar.nombre} ${usuarioAEliminar.apellido}?\n\nEsta acción no se puede deshacer. Considera desactivar el usuario en su lugar.`
+            : ''
+        }
+        variant="danger"
+      />
+
+      {/* Modal para reset password */}
+      {modalResetPassword && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setModalResetPassword(null)}></div>
+            <span className="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
+            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle">
+              <div>
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+                  <Key className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="mt-3 text-center sm:mt-5">
+                  <h3 className="text-lg font-medium leading-6 text-gray-900" id="modal-title">
+                    Cambiar contraseña
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500">
+                      Ingrese la nueva contraseña para {modalResetPassword.usuario.nombre} {modalResetPassword.usuario.apellido}
+                    </p>
+                  </div>
+                  <div className="mt-4">
+                    <Input
+                      type="password"
+                      value={modalResetPassword.password}
+                      onChange={(e) => setModalResetPassword({ ...modalResetPassword, password: e.target.value })}
+                      placeholder="Nueva contraseña (mínimo 8 caracteres)"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          confirmarResetPassword();
+                        }
+                      }}
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      La contraseña debe tener al menos 8 caracteres
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                <Button
+                  onClick={confirmarResetPassword}
+                  disabled={modalResetPassword.password.length < 8}
+                  className="inline-flex w-full justify-center sm:col-start-2"
+                >
+                  Cambiar contraseña
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setModalResetPassword(null)}
+                  className="mt-3 inline-flex w-full justify-center sm:col-start-1 sm:mt-0"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

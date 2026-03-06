@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Package, TrendingDown, RefreshCw, Search, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
-import { Spinner } from '../../components/common';
+import { Spinner, EmptyState } from '../../components/common';
 import { inventarioService, type StockItem, type MovimientoStock } from '../../services/inventario.service';
 import { useDebounce } from '../../hooks/useDebounce';
 import toast from 'react-hot-toast';
@@ -144,10 +144,17 @@ const Inventario: React.FC = () => {
           {cargando ? (
             <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
           ) : stock.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 py-16 text-center">
-              <Package className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-              <p className="text-gray-500">No se encontraron registros de stock</p>
-            </div>
+            <EmptyState
+              icon={Package}
+              title="Sin productos"
+              description={busquedaDebounced
+                ? "No se encontraron productos con ese criterio"
+                : "No hay productos en el inventario"}
+              action={busquedaDebounced ? {
+                label: "Limpiar búsqueda",
+                onClick: () => setBusqueda('')
+              } : undefined}
+            />
           ) : (
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
               <table className="min-w-full divide-y divide-gray-200">
@@ -210,10 +217,19 @@ const Inventario: React.FC = () => {
           {cargando ? (
             <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
           ) : movimientos.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 py-16 text-center">
-              <Package className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-              <p className="text-gray-500">No hay movimientos registrados</p>
-            </div>
+            <EmptyState
+              icon={filtroTipo === 'Ingreso' ? ArrowUpCircle : filtroTipo === 'Egreso' ? ArrowDownCircle : Package}
+              title="Sin movimientos"
+              description={
+                filtroTipo === 'Ingreso' ? "No hay movimientos de entrada" :
+                filtroTipo === 'Egreso' ? "No hay movimientos de salida" :
+                "No hay movimientos registrados"
+              }
+              action={filtroTipo ? {
+                label: "Mostrar todos",
+                onClick: () => setFiltroTipo('')
+              } : undefined}
+            />
           ) : (
             <div className="space-y-2">
               {movimientos.map(mov => (

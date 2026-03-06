@@ -3,7 +3,7 @@ import {
   Search, Filter, RefreshCw, Eye, Calendar, TrendingUp,
   ChevronLeft, ChevronRight, DollarSign, ShoppingBag,
 } from 'lucide-react';
-import { Input, Button, Spinner, Badge } from '../../../components/common';
+import { Input, Button, Spinner, Badge, EmptyState } from '../../../components/common';
 import { posService } from '../../../services/pos.service';
 import type { Venta } from '../../../types';
 
@@ -220,10 +220,24 @@ const HistorialVentas: React.FC = () => {
             <Spinner size="lg" />
           </div>
         ) : ventas.length === 0 ? (
-          <div className="py-16 text-center">
-            <ShoppingBag className="mx-auto h-12 w-12 text-gray-300" />
-            <p className="mt-3 text-gray-500">No se encontraron ventas con los filtros aplicados</p>
-          </div>
+          <EmptyState
+            icon={ShoppingBag}
+            title="No hay ventas registradas"
+            description={busqueda || estadoPago || tipoVenta || fechaDesde || fechaHasta
+              ? "Intenta cambiar los filtros"
+              : "Comienza a registrar ventas"}
+            action={busqueda || estadoPago || tipoVenta || fechaDesde || fechaHasta ? {
+              label: "Limpiar filtros",
+              onClick: () => {
+                setBusqueda('');
+                setEstadoPago('');
+                setTipoVenta('');
+                setFechaDesde('');
+                setFechaHasta('');
+                cargarVentas(1, true);
+              }
+            } : undefined}
+          />
         ) : (
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">

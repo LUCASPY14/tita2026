@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, ChevronDown, ChevronRight, Check, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { Shield, ChevronDown, ChevronRight, Check, X, AlertCircle, RefreshCw, Lock } from 'lucide-react';
 import permisosService from '../../services/permisos.service';
 import { usePermissions } from '../../contexts/PermissionsContext';
+import { ConfirmDialog, Skeleton, EmptyState } from '../../components/common';
 import type { Permiso, PermisosPorModulo, RolConPermisos } from '../../types';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -24,6 +25,8 @@ const GestionPermisos: React.FC = () => {
   const [modulosExpandidos, setModulosExpandidos] = useState<Set<string>>(new Set());
   const [cargando, setCargando] = useState(false);
   const [procesando, setProcesando] = useState(false);
+  const [mostrarConfirmInicializar, setMostrarConfirmInicializar] = useState(false);
+  const [permisoToggle, setPermisoToggle] = useState<{ permiso: Permiso; accion: 'asignar' | 'remover' } | null>(null);
 
   // Funciones
   const cargarPermisos = async () => {
@@ -84,12 +87,22 @@ const GestionPermisos: React.FC = () => {
   const togglePermiso = async (permiso: Permiso) => {
     if (!rolSeleccionado) return;
     
+    const tienePermiso = rolTienePermiso(permiso.codigo_permiso);
+    setPermisoToggle({
+      permiso,
+      accion: tienePermiso ? 'remover' : 'asignar'
+    });
+  };
+
+  const confirmarTogglePermiso = async () => {
+    if (!permisoToggle || !rolSeleccionado) return;
+
+    const { permiso, accion } = permisoToggle;
+    
     try {
       setProcesando(true);
-      const tienePermiso = rolTienePermiso(permiso.codigo_permiso);
       
-      if (tienePermiso) {
-        // Remover permiso
+      if (accion === 'remover') {
         const resultado = await permisosService.removerPermisoDeRol({
           id_rol: rolSeleccionado,
           codigo_permiso: permiso.codigo_permiso,
@@ -102,7 +115,6 @@ const GestionPermisos: React.FC = () => {
           toast.error(resultado.mensaje || 'Error al remover permiso');
         }
       } else {
-        // Asignar permiso
         const resultado = await permisosService.asignarPermisoARol({
           id_rol: rolSeleccionado,
           codigo_permiso: permiso.codigo_permiso,
@@ -120,14 +132,15 @@ const GestionPermisos: React.FC = () => {
       toast.error('Error al gestionar permiso');
     } finally {
       setProcesando(false);
+      setPermisoToggle(null);
     }
   };
 
-  const inicializarPermisos = async () => {
-    if (!window.confirm('¿Estás seguro de que quieres inicializar todos los permisos? Esto creará los permisos base del sistema.')) {
-      return;
-    }
-    
+  const inicializarPermisos = () => {
+    setMostrarConfirmInicializar(true);
+  };
+
+  const confirmarInicializarPermisos = async () => {
     try {
       setProcesando(true);
       const resultado = await permisosService.inicializarPermisos();
@@ -143,6 +156,7 @@ const GestionPermisos: React.FC = () => {
       toast.error('Error al inicializar permisos');
     } finally {
       setProcesando(false);
+      setMostrarConfirmInicializar(false);
     }
   };
 
@@ -248,6 +262,9 @@ const GestionPermisos: React.FC = () => {
               Asignar permisos al rol: {roles.find(r => r.id_rol === rolSeleccionado)?.nombre_rol}
             </p>
           </div>
+          {cargando ? (
+            <Skeleton rows={8} cols={2} />
+          ) : (
           <div className="space-y-2">
             {Object.entries(permisosPorModulo).map(([modulo, permisosModulo]) => (
               <div key={modulo} className="border rounded-lg overflow-hidden">
@@ -332,22 +349,44 @@ const GestionPermisos: React.FC = () => {
               </div>
             ))}
           </div>
+          )}
         </div>
       )}
 
       {/* Estado vacío */}
       {!rolSeleccionado && (
-        <div className="bg-white rounded-lg shadow p-12">
-          <div className="text-center">
-            <Shield className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Selecciona un Rol
-            </h3>
-            <p className="text-gray-600">
-              Selecciona un rol arriba para ver y gestionar sus permisos
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          icon={Lock}
+          title="Selecciona un Rol"
+          description="Selecciona un rol arriba para ver y gestionar sus permisos"
+          size="lg"
+        />
+      )}
+
+      {/* Modal de confirmación para inicializar permisos */}
+      <ConfirmDialog
+        isOpen={mostrarConfirmInicializar}
+        onClose={() => setMostrarConfirmInicializar(false)}
+        onConfirm={confirmarInicializarPermisos}
+        title="Inicializar Permisos"
+        message="¿Estás seguro de que quieres inicializar todos los permisos? Esto creará los permisos base del sistema."
+        variant="primary"
+      />
+
+      {/* Modal de confirmación para toggle permiso */}
+      {permisoToggle && (
+        <ConfirmDialog
+          isOpen={!!permisoToggle}
+          onClose={() => setPermisoToggle(null)}
+          onConfirm={confirmarTogglePermiso}
+          title={permisoToggle.accion === 'asignar' ? 'Asignar Permiso' : 'Remover Permiso'}
+          message={
+            permisoToggle.accion === 'asignar'
+              ? `¿Deseas asignar el permiso "${permisoToggle.permiso.nombre}" al rol seleccionado?`
+              : `¿Deseas remover el permiso "${permisoToggle.permiso.nombre}" del rol seleccionado?`
+          }
+          variant={permisoToggle.accion === 'asignar' ? 'success' : 'danger'}
+        />
       )}
     </div>
   );

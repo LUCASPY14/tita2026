@@ -1,6 +1,6 @@
 import React, {useState, useEffect } from 'react';
 import { Search, Plus, Package } from 'lucide-react';
-import { Input, Button, Select, Spinner, Badge } from '../../../components/common';
+import { Input, Button, Select, Spinner, Badge, EmptyState } from '../../../components/common';
 import { posService } from '../../../services/pos.service';
 import type { Producto, Categoria } from '../../../types';
 import { useDebounce } from '../../../hooks/useDebounce';
@@ -124,17 +124,19 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
           <span className="ml-2 text-gray-600">Cargando productos...</span>
         </div>
       ) : productos.length === 0 ? (
-        <div className="py-12 text-center">
-          <Package className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-lg font-medium text-gray-900">
-            No se encontraron productos
-          </h3>
-          <p className="mt-2 text-sm text-gray-500">
-            {busqueda || categoriaSeleccionada
-              ? 'Intenta con otros filtros'
-              : 'No hay productos disponibles'}
-          </p>
-        </div>
+        <EmptyState
+          icon={Package}
+          title={busqueda || categoriaSeleccionada ? 'No se encontraron productos' : 'No hay productos disponibles'}
+          description={busqueda || categoriaSeleccionada ? "Intenta con otros filtros" : "Agrega productos al catálogo para comenzar"}
+          action={busqueda || categoriaSeleccionada ? {
+            label: "Limpiar filtros",
+            onClick: () => {
+              setBusqueda('');
+              setCategoriaSeleccionada('');
+            }
+          } : undefined}
+          size="sm"
+        />
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {productos.map((producto) => (

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Package, Edit, Eye, Trash2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
 import { productosService } from '../../../services/productos.service';
 import { Producto, Categoria } from '../../../types';
-import { Card, Spinner, ConfirmDialog, Skeleton } from '../../../components/common';
+import { Card, ConfirmDialog, Skeleton, EmptyState } from '../../../components/common';
 import { useDebounce } from '../../../hooks/useDebounce';
 import toast from 'react-hot-toast';
 
@@ -185,17 +185,23 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
       {/* Tabla de Productos */}
       <Card>
         {cargando ? (
-          <div className="flex items-center justify-center py-12">
-            <Spinner size="lg" />
-          </div>
+          <Skeleton rows={8} cols={6} />
         ) : productos.length === 0 ? (
-          <div className="py-12 text-center">
-            <Package className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No hay productos</h3>
-            <p className="mt-2 text-sm text-gray-500">
-              No se encontraron productos con los filtros seleccionados
-            </p>
-          </div>
+          <EmptyState
+            icon={Package}
+            title="No hay productos"
+            description={busquedaDebounced || filtroActivo !== undefined || filtroCategoria !== undefined
+              ? "No se encontraron productos con los filtros seleccionados"
+              : "Comienza agregando tu primer producto al catálogo"}
+            action={busquedaDebounced || filtroActivo !== undefined || filtroCategoria !== undefined ? {
+              label: "Limpiar filtros",
+              onClick: () => {
+                setBusqueda('');
+                setFiltroActivo(undefined);
+                setFiltroCategoria(undefined);
+              }
+            } : undefined}
+          />
         ) : (
           <>
             <div className="overflow-x-auto">

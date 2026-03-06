@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Edit, Eye, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
-import { Input, Button, Badge, ConfirmDialog, Skeleton } from '../../../components/common';
+import { Input, Button, Badge, ConfirmDialog, Skeleton, EmptyState } from '../../../components/common';
 import { clientesService } from '../../../services/clientes.service';
 import type { Cliente } from '../../../types';
 import { useDebounce } from '../../../hooks/useDebounce';
@@ -120,9 +120,20 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
       {cargando ? (
         <Skeleton rows={6} cols={5} />
       ) : clientes.length === 0 ? (
-        <div className="py-12 text-center">
-          <p className="text-gray-500">No se encontraron clientes</p>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="No se encontraron clientes"
+          description={busquedaDebounced || filtroActivo !== undefined
+            ? "Intenta ajustar los filtros de búsqueda"
+            : "Comienza agregando tu primer cliente"}
+          action={busquedaDebounced || filtroActivo !== undefined ? {
+            label: "Limpiar filtros",
+            onClick: () => {
+              setBusqueda('');
+              setFiltroActivo(undefined);
+            }
+          } : undefined}
+        />
       ) : (
         <>
           <div className="overflow-x-auto">

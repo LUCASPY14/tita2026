@@ -20,7 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { Card, Button, Badge } from '../components/common';
+import { Card, Button, Badge, EmptyState } from '../components/common';
 import { useAuditoria } from '../hooks/useAuditoria';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -369,6 +369,25 @@ const Auditoria: React.FC = () => {
           </div>
         )}
 
+        {cargando ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <RefreshCw className="h-8 w-8 animate-spin text-gray-400 mb-3" />
+            <span className="text-gray-500">Cargando registros...</span>
+          </div>
+        ) : logs.length === 0 ? (
+          <EmptyState
+            icon={Activity}
+            title="Sin registros de auditoría"
+            description={(busqueda || fechaDesde || fechaHasta || tipoUsuario || operacion || resultado || tabla)
+              ? "Intenta ajustar los filtros"
+              : "No hay actividad registrada en el sistema"}
+            action={(busqueda || fechaDesde || fechaHasta || tipoUsuario || operacion || resultado || tabla) ? {
+              label: "Limpiar filtros",
+              onClick: handleLimpiarFiltros
+            } : undefined}
+            size="lg"
+          />
+        ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -397,55 +416,41 @@ const Auditoria: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {cargando ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                    <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
-                    Cargando registros...
+              {logs.map((log) => (
+                <tr key={log.id_auditoria} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    {formatearFecha(log.fecha_operacion)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{log.usuario}</div>
+                    <div className="text-xs text-gray-500">{log.tipo_usuario}</div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    {log.tipo_operacion_display || log.operacion}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    {log.tabla_afectada || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                    {log.descripcion || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    {log.ip_address || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      {getResultadoIcon(log.resultado)}
+                      <Badge className={getResultadoBadgeClass(log.resultado)}>
+                        {log.resultado_display || log.resultado}
+                      </Badge>
+                    </div>
                   </td>
                 </tr>
-              ) : logs.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                    No se encontraron registros
-                  </td>
-                </tr>
-              ) : (
-                logs.map((log) => (
-                  <tr key={log.id_auditoria} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {formatearFecha(log.fecha_operacion)}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{log.usuario}</div>
-                      <div className="text-xs text-gray-500">{log.tipo_usuario}</div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {log.tipo_operacion_display || log.operacion}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {log.tabla_afectada || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
-                      {log.descripcion || '-'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {log.ip_address || '-'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {getResultadoIcon(log.resultado)}
-                        <Badge className={getResultadoBadgeClass(log.resultado)}>
-                          {log.resultado_display || log.resultado}
-                        </Badge>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
+        )}
 
         {/* Paginación */}
         {totalPaginas > 1 && (
