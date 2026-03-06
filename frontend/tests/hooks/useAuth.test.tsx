@@ -61,7 +61,7 @@ describe('🧪 useAuth Hook Tests', () => {
     const { result } = renderHook(() => useAuthContext(), { wrapper });
 
     await act(async () => {
-      await result.current.login('testuser', 'password123');
+      await result.current.login({ username: 'testuser', password: 'password123' });
     });
 
     await waitFor(() => {
@@ -70,7 +70,7 @@ describe('🧪 useAuth Hook Tests', () => {
     });
 
     // Verificar que se llamó al servicio
-    expect(authService.login).toHaveBeenCalledWith('testuser', 'password123');
+    expect(authService.login).toHaveBeenCalledWith({ username: 'testuser', password: 'password123' });
   });
 
   test('✅ CRÍTICO: should handle login failure', async () => {
@@ -86,7 +86,7 @@ describe('🧪 useAuth Hook Tests', () => {
 
     await expect(async () => {
       await act(async () => {
-        await result.current.login('testuser', 'wrongpassword');
+        await result.current.login({ username: 'testuser', password: 'wrongpassword' });
       });
     }).rejects.toThrow();
 
@@ -154,21 +154,19 @@ describe('🧪 useAuth Hook Tests', () => {
     });
   });
 
-  test('✅ CRÍTICO: should check if user has specific permission', () => {
+  test('✅ CRÍTICO: should restore user data correctly', () => {
     const mockUser = {
       id_empleado: 1,
       usuario: 'testuser',
       nombre: 'Test',
       apellido: 'User',
       email: 'test@cantina.com',
-      permisos: [
-        { codigo_permiso: 'VER_VENTAS' },
-        { codigo_permiso: 'CREAR_PRODUCTOS' }
-      ],
     };
 
     localStorage.setItem('token', 'mock-token');
     localStorage.setItem('user', JSON.stringify(mockUser));
+    
+    (authService.getCurrentUser as jest.Mock).mockReturnValue(mockUser);
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <AuthProvider>{children}</AuthProvider>
@@ -176,10 +174,11 @@ describe('🧪 useAuth Hook Tests', () => {
 
     const { result } = renderHook(() => useAuthContext(), { wrapper });
 
-    // Si existe método hasPermission
-    if (result.current.hasPermission) {
-      expect(result.current.hasPermission('VER_VENTAS')).toBe(true);
-      expect(result.current.hasPermission('ELIMINAR_CLIENTES')).toBe(false);
-    }
+    // Verificar que el contexto puede refrescar datos del usuario
+    act(() => {
+      result.current.refreshUserData();
+    });
+    
+    expect(authService.getCurrentUser).toHaveBeenCalled();
   });
 });
