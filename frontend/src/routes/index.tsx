@@ -1,10 +1,10 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from '../pages/auth/Login';
-import Dashboard from '../pages/dashboard/Dashboard';
 import DashboardMejorado from '../pages/dashboard/DashboardMejorado';
 import Recargas from '../pages/recargas';
 import POS from '../pages/pos';
+import Ventas from '../pages/ventas';
 import Clientes from '../pages/clientes';
 import Productos from '../pages/productos';
 import Compras from '../pages/compras';
@@ -34,8 +34,7 @@ const AppRoutes: React.FC = () => {
             <MainLayout>
               <Routes>
                 {/* Dashboard - Accesible para todos */}
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard/mejorado" element={<DashboardMejorado />} />
+                <Route path="/dashboard" element={<DashboardMejorado />} />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 
                 {/* Módulo de Recargas - Admin, Gerente, Cajero */}
@@ -54,6 +53,16 @@ const AppRoutes: React.FC = () => {
                   element={
                     <ProtectedRoute requiredRoles={['admin', 'gerente', 'cajero']}>
                       <POS />
+                    </ProtectedRoute>
+                  } 
+                />
+
+                {/* Gestión de Ventas - Historial y seguimiento - Admin, Gerente */}
+                <Route 
+                  path="/ventas/gestion" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                      <Ventas />
                     </ProtectedRoute>
                   } 
                 />

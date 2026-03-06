@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Edit, Eye, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
-import { Input, Button, Badge, Spinner, ConfirmDialog, Skeleton } from '../../../components/common';
+import { Input, Button, Badge, ConfirmDialog, Skeleton } from '../../../components/common';
 import { clientesService } from '../../../services/clientes.service';
 import type { Cliente } from '../../../types';
 import { useDebounce } from '../../../hooks/useDebounce';

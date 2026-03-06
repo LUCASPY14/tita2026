@@ -1,24 +1,29 @@
 /**
  * Página de Reportes y Estadísticas
- * 
+ *
  * Muestra dashboards y reportes del sistema:
  * - KPIs principales
  * - Dashboard de ventas
  * - Dashboard de recargas
- * - Reporte financiero
  * - Reportes personalizados
  */
 
 import { useState } from 'react';
 import { BarChart3, TrendingUp, Wallet, FileText } from 'lucide-react';
 
-// Importar componentes (crearemos después)
-import  { DashboardKPIs } from '../components/reportes';
-import  { DashboardVentas } from '../components/reportes';
-import  { DashboardRecargas } from '../components/reportes';
-import  { ReportesPersonalizados } from '../components/reportes';
+import { DashboardKPIs } from '../components/reportes';
+import { DashboardVentas } from '../components/reportes';
+import { DashboardRecargas } from '../components/reportes';
+import { ReportesPersonalizados } from '../components/reportes';
 
 type Vista = 'kpis' | 'ventas' | 'recargas' | 'reportes';
+
+const TAB_ITEMS: { id: Vista; label: string; Icon: React.ElementType }[] = [
+  { id: 'kpis',     label: 'KPIs Principales',       Icon: BarChart3 },
+  { id: 'ventas',   label: 'Dashboard Ventas',        Icon: TrendingUp },
+  { id: 'recargas', label: 'Dashboard Recargas',      Icon: Wallet },
+  { id: 'reportes', label: 'Reportes Personalizados', Icon: FileText },
+];
 
 export default function Reportes() {
   const [vista, setVista] = useState<Vista>('kpis');
@@ -35,69 +40,30 @@ export default function Reportes() {
 
       {/* Navigation Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setVista('kpis')}
-            className={`
-              flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
-              ${vista === 'kpis'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
-          >
-            <BarChart3 size={20} />
-            KPIs Principales
-          </button>
-
-          <button
-            onClick={() => setVista('ventas')}
-            className={`
-              flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
-              ${vista === 'ventas'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
-          >
-            <TrendingUp size={20} />
-            Dashboard Ventas
-          </button>
-
-          <button
-            onClick={() => setVista('recargas')}
-            className={`
-              flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
-              ${vista === 'recargas'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
-          >
-            <Wallet size={20} />
-            Dashboard Recargas
-          </button>
-
-          <button
-            onClick={() => setVista('reportes')}
-            className={`
-              flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
-              ${vista === 'reportes'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
-          >
-            <FileText size={20} />
-            Reportes Personalizados
-          </button>
+        <nav className="-mb-px flex space-x-8" aria-label="Pestañas de reportes">
+          {TAB_ITEMS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setVista(id)}
+              className={[
+                'flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors',
+                vista === id
+                  ? 'border-amber-500 text-amber-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+              ].join(' ')}
+              aria-current={vista === id ? 'page' : undefined}
+            >
+              <Icon size={18} />
+              {label}
+            </button>
+          ))}
         </nav>
       </div>
 
       {/* Content */}
-      <div className="mt-6">
-        {vista === 'kpis' && <DashboardKPIs />}
-        {vista === 'ventas' && <DashboardVentas />}
+      <div>
+        {vista === 'kpis'     && <DashboardKPIs />}
+        {vista === 'ventas'   && <DashboardVentas />}
         {vista === 'recargas' && <DashboardRecargas />}
         {vista === 'reportes' && <ReportesPersonalizados />}
       </div>

@@ -147,7 +147,15 @@ class AuthViewSet(viewsets.ViewSet):
                 'mensaje': 'Ambas contraseñas son requeridas'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        empleado = request.user
+        # Obtener instancia de Empleados (request.user es Django auth.User)
+        try:
+            empleado = Empleados.objects.get(usuario=request.user.username)
+        except Empleados.DoesNotExist:
+            return Response({
+                'success': False,
+                'mensaje': 'Empleado no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
         ip_address = self._get_client_ip(request)
         
         resultado = AuthenticationService.cambiar_password(

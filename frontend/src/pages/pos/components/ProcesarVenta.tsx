@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 interface ItemCarrito {
   producto: Producto;
   cantidad: number;
+  precio_unitario: number;
   subtotal: number;
 }
 

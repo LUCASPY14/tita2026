@@ -167,13 +167,15 @@ class AuthenticationService:
             id_usuario=empleado.id_empleado,
             operacion='BLOQUEO_CUENTA',
             tabla_afectada='BloqueosCuenta',
-            ip_origen=ip_address,
+            ip_address=ip_address,
             datos_nuevos={
-                'id_bloqueo': bloqueo.id,
+                'id_bloqueo': bloqueo.pk,
                 'motivo': motivo,
                 'temporal': temporal,
                 'fecha_desbloqueo': str(fecha_desbloqueo) if fecha_desbloqueo else None
-            }
+            },
+            fecha_operacion=timezone.now(),
+            resultado='EXITO'
         )
         
         return bloqueo
@@ -477,27 +479,29 @@ class AuthenticationService:
             
             # Registrar en auditoría
             AuditoriaOperaciones.objects.create(
-                id_empleado=empleado,
-                operacion='CAMBIO_PASSWORD',
+                usuario=empleado.usuario,
+                tipo_usuario='empleado',
+                id_usuario=empleado.id_empleado,
+                operacion='PASSWORD_CHANGE',
                 tabla_afectada='Empleados',
-                ip_origen=ip_address,
+                id_registro=empleado.id_empleado,
+                ip_address=ip_address,
                 datos_anteriores={
                     'hash_password': hash_anterior[:20] + '...'
                 },
                 datos_nuevos={
                     'hash_password': empleado.contrasena_hash[:20] + '...',
                     'timestamp': str(timezone.now())
-                }
+                },
+                fecha_operacion=timezone.now(),
+                resultado='EXITO'
             )
             
             # Invalidar todas las sesiones activas (forzar re-login)
             SesionesActivas.objects.filter(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
                 activa=True
-            ).update(
-                activa=False,
-                fecha_cierre=timezone.now()
-            )
+            ).update(activa=False)
             
             return {
                 'success': True,

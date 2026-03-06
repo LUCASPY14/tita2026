@@ -29,14 +29,15 @@ interface NavItem {
   path: string;
   icon: React.ElementType;
   badge?: number;
-  adminOnly?: boolean; // Nuevo: indica si solo es para admins
+  adminOnly?: boolean;
+  end?: boolean; // coincidencia exacta de ruta (sin startsWith)
 }
 
 const BASE_NAVIGATION: NavItem[] = [
-  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Dashboard Mejorado', path: '/dashboard/mejorado', icon: TrendingUp },
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, end: true },
   { name: 'Recargas', path: '/recargas', icon: CreditCard },
-  { name: 'Punto de Venta', path: '/ventas', icon: ShoppingCart },
+  { name: 'Punto de Venta', path: '/ventas', icon: ShoppingCart, end: true },
+  { name: 'Gestión Ventas', path: '/ventas/gestion', icon: TrendingUp },
   { name: 'Clientes', path: '/clientes', icon: Users },
   { name: 'Productos', path: '/productos', icon: Package },
   { name: 'Inventario', path: '/inventario', icon: Warehouse },
@@ -130,13 +131,16 @@ const Sidebar: React.FC = () => {
         {/* Navegación */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4">
           {filteredNavigation.map((item) => {
-            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            const isActive = item.end
+              ? location.pathname === item.path
+              : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             const Icon = item.icon;
 
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
+                end={item.end}
                 className={({ isActive: active }) =>
                   clsx(
                     'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
