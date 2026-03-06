@@ -1,0 +1,21 @@
+{
+  "admin": {
+    "email": "admin@cantina.com",
+    "password": "admin123",
+    "name": "Administrador Sistema",
+    "role": "admin"
+  },
+  "cajero": {
+    "email": "cajero@cantina.com", 
+    "password": "cajero123",
+    "name": "Juan Cajero",
+    "role": "cajero"
+  },
+  "cliente": {
+    "email": "cliente@test.com",
+    "password": "cliente123",
+    "name": "Maria Cliente",
+    "ruc_ci": "12345678",
+    "telefono": "0981123456"
+  }
+}

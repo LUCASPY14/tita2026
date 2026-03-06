@@ -1,0 +1,26 @@
+{
+  "almuerzo_completo": {
+    "nombre": "Almuerzo Completo",
+    "precio": 25000,
+    "categoria": "Almuerzos", 
+    "descripcion": "Almuerzo completo con postre",
+    "activo": true,
+    "codigo": "ALM001"
+  },
+  "bebida_gaseosa": {
+    "nombre": "Gaseosa 600ml",
+    "precio": 8000,
+    "categoria": "Bebidas",
+    "descripcion": "Gaseosa de 600ml",
+    "activo": true,
+    "codigo": "BEB001"
+  },
+  "snack_papas": {
+    "nombre": "Papas Fritas",
+    "precio": 12000,
+    "categoria": "Snacks",
+    "descripcion": "Papas fritas caseras",
+    "activo": true,
+    "codigo": "SNK001"
+  }
+}
