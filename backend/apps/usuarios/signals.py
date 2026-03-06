@@ -95,7 +95,26 @@ def empleado_pre_save(sender, instance, **kwargs):
 def empleado_post_save(sender, instance, created, **kwargs):
     """
     Audita cambios en empleados (creación y actualización).
+    Sincroniza el Django auth.User correspondiente para que JWT funcione.
     """
+    # Sincronizar Django auth.User (necesario para SimpleJWT)
+    try:
+        from django.contrib.auth.models import User
+        django_user, _ = User.objects.get_or_create(
+            username=instance.usuario,
+            defaults={
+                'first_name': instance.nombre,
+                'last_name': instance.apellido,
+                'email': instance.email or '',
+                'is_active': instance.activo,
+            }
+        )
+        if django_user.is_active != instance.activo:
+            django_user.is_active = instance.activo
+            django_user.save(update_fields=['is_active'])
+    except Exception as e:
+        print(f"Error sincronizando auth.User para empleado {instance.usuario}: {str(e)}")
+
     try:
         empleado_actual = obtener_empleado_actual()
         ip_actual = obtener_ip_actual() or '127.0.0.1'

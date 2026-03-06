@@ -219,9 +219,21 @@ class AuthenticationService:
                 'refresh': token_refresco
             }
         """
-        # Obtener el Django User correspondiente al empleado
+        # Obtener o crear el Django User correspondiente al empleado
         from django.contrib.auth.models import User
-        django_user = User.objects.get(username=empleado.usuario)
+        django_user, created = User.objects.get_or_create(
+            username=empleado.usuario,
+            defaults={
+                'first_name': empleado.nombre,
+                'last_name': empleado.apellido,
+                'email': empleado.email or '',
+                'is_active': empleado.activo,
+            }
+        )
+        # Sync activo status if user already existed
+        if not created and django_user.is_active != empleado.activo:
+            django_user.is_active = empleado.activo
+            django_user.save(update_fields=['is_active'])
         
         refresh = RefreshToken.for_user(django_user)
         

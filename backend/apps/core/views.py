@@ -249,11 +249,20 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
             
             # Validar hijo existe
             try:
-                hijo = Hijos.objects.select_related('id_tarjeta').get(id_hijo=hijo_id)
+                hijo = Hijos.objects.select_related('tarjeta').get(id_hijo=hijo_id)
             except Hijos.DoesNotExist:
                 return Response(
                     {'error': f'Hijo con ID {hijo_id} no encontrado'},
                     status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Validar que el hijo tiene tarjeta asignada
+            try:
+                tarjeta = hijo.tarjeta
+            except Exception:
+                return Response(
+                    {'error': f'El hijo con ID {hijo_id} no tiene tarjeta asignada'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
             
             # Validar monto
@@ -275,16 +284,10 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
             
             # Crear recarga en estado pendiente
             recarga = CargasSaldo.objects.create(
-                nro_tarjeta=hijo.id_tarjeta,
+                nro_tarjeta=tarjeta,
                 monto_cargado=resultado_montos['monto_recarga'],
-                metodo_pago='bancard',
                 estado='pendiente',
-                total_cobrado=resultado_montos['total_cobrado'],
-                comision_aplicada=resultado_montos['comision_monto'],
-                porcentaje_comision=resultado_montos['comision_porcentaje'],
                 fecha_carga=timezone.now(),
-                ip_origen=request.META.get('REMOTE_ADDR', ''),
-                usuario_responsable=getattr(request.user, 'empleado', None) if hasattr(request, 'user') else None
             )
             
             # Iniciar transacción con Bancard
@@ -302,7 +305,7 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
             if not resultado_bancard.get('success'):
                 # Cancelar recarga si Bancard falló
                 recarga.estado = 'rechazada'
-                recarga.motivo_rechazo = resultado_bancard.get('error', 'Error desconocido de Bancard')
+                recarga.referencia = str(resultado_bancard.get('error', 'Error desconocido de Bancard'))[:100]
                 recarga.save()
                 
                 return Response(
@@ -315,7 +318,8 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
                 )
             
             # Actualizar recarga con datos de Bancard
-            recarga.referencia_externa = resultado_bancard['shop_process_id']
+            recarga.referencia = resultado_bancard['shop_process_id']
+            recarga.pay_request_id = resultado_bancard.get('process_id', '')
             recarga.save()
             
             # Retornar respuesta exitosa
