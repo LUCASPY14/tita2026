@@ -240,7 +240,7 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
 
             # Validar hijo existe
             try:
-                hijo = Hijos.objects.select_related("tarjeta").get(id_hijo=hijo_id)
+                hijo = Hijos.objects.select_related("tarjetas").get(id_hijo=hijo_id)
             except Hijos.DoesNotExist:
                 return Response(
                     {"error": f"Hijo con ID {hijo_id} no encontrado"},
@@ -249,7 +249,7 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
 
             # Validar que el hijo tiene tarjeta asignada
             try:
-                tarjeta = hijo.tarjeta
+                tarjeta = hijo.tarjetas
             except Exception:
                 return Response(
                     {"error": f"El hijo con ID {hijo_id} no tiene tarjeta asignada"},
@@ -275,6 +275,9 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
             recarga = CargasSaldo.objects.create(
                 nro_tarjeta=tarjeta,
                 monto_cargado=resultado_montos["monto_recarga"],
+                comision=resultado_montos["comision_monto"],
+                total_cobrado=resultado_montos["total_cobrado"],
+                metodo_pago="bancard",
                 estado="pendiente",
                 fecha_carga=timezone.now(),
             )
@@ -326,7 +329,7 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
                     "monto_acreditar": float(resultado_montos["monto_recarga"]),
                     "mensaje": "Redirigir al usuario a payment_url para completar el pago",
                 },
-                status=status.HTTP_200_OK,
+                status=status.HTTP_201_CREATED,
             )
 
         except Exception as e:
@@ -360,6 +363,13 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
     filterset_fields = ["tipo", "categoria", "activo"]
     search_fields = ["clave", "descripcion"]
 
+    def get_queryset(self):
+        """Filtra configs solo_superuser para usuarios no-superuser."""
+        qs = super().get_queryset()
+        if not self.request.user.is_superuser:
+            qs = qs.filter(solo_superuser=False)
+        return qs
+
     @action(detail=False, methods=["get"])
     def por_categoria(self, request):
         """Obtiene configuraciones agrupadas por categoría"""
@@ -382,8 +392,8 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def actualizar_valor(self, request, pk=None):
         """Actualiza el valor de una configuración"""
+        config = self.get_object()
         try:
-            config = self.get_object()
             nuevo_valor = request.data.get("valor")
 
             if nuevo_valor is None:
@@ -394,10 +404,8 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
             # TODO: Validar el valor según config.validacion
             config.valor = str(nuevo_valor)
 
-            # Actualizar updated_by si se proporciona
-            updated_by_id = request.data.get("updated_by")
-            if updated_by_id:
-                config.updated_by_id = updated_by_id
+            # Actualizar updated_by con el usuario autenticado
+            config.updated_by = request.user
 
             from django.utils import timezone
 

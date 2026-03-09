@@ -590,7 +590,6 @@ class RecargaServiceTransferenciaTest(TransactionTestCase):
             monto_cargado=Decimal("600000"),
             metodo_pago="transferencia",
             estado="validacion_pendiente",
-            requiere_validacion_supervisor=True,
             usuario_responsable=self.empleado,
         )
 

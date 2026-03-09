@@ -16,6 +16,7 @@ from decimal import Decimal
 from unittest.mock import patch, MagicMock
 from datetime import date, datetime, timedelta
 
+from django.contrib.auth.models import User
 from apps.core.models import (
     Tarjetas,
     CargasSaldo,
@@ -98,6 +99,10 @@ class RecargaCajaActionTest(TransactionTestCase):
             activo=True,
             id_rol=self.rol_cajero,
         )
+
+        # Autenticar cliente
+        self.auth_user = User.objects.create_user(username='viewset_auth_user', password='testpass123')
+        self.client.force_authenticate(user=self.auth_user)
 
     def test_recarga_caja_efectivo_exitosa(self):
         """Debe procesar recarga en efectivo correctamente"""
@@ -224,6 +229,10 @@ class GenerarReferenciaTransferenciaActionTest(TestCase):
             id_hijo=self.hijo,
         )
 
+        # Autenticar cliente
+        self.auth_user = User.objects.create_user(username='gen_ref_auth_user', password='testpass123')
+        self.client.force_authenticate(user=self.auth_user)
+
     def test_generar_referencia_transferencia_exitosa(self):
         """Debe generar código de referencia para transferencia"""
         url = "/api/v1/cargas-saldo/transferencia/referencia/"
@@ -348,6 +357,10 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
             id_rol=self.rol_supervisor,
         )
 
+        # Autenticar cliente
+        self.auth_user = User.objects.create_user(username='validar_transf_auth_user', password='testpass123')
+        self.client.force_authenticate(user=self.auth_user)
+
     def test_validar_transferencia_con_codigo_monto_bajo_auto_aprueba(self):
         """Debe auto-aprobar transferencias < ₲500K con código"""
         url = "/api/v1/cargas-saldo/transferencia/validar/"
@@ -396,10 +409,10 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
 
         response = self.client.post(url, data, format="json")
 
-        # Debe quedar en pendiente_validacion
+        # Debe quedar en validacion_pendiente (requiere supervisor)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["requiere_aprobacion"])
-        self.assertEqual(response.data["estado"], "pendiente_validacion")
+        self.assertEqual(response.data["estado"], "validacion_pendiente")
 
     def test_validar_transferencia_sin_codigo_manual(self):
         """Debe permitir validar transferencia sin código (manual)"""
@@ -544,6 +557,10 @@ class AprobarSupervisorActionTest(TransactionTestCase):
             id_rol=self.rol_supervisor,
         )
 
+        # Autenticar cliente
+        self.auth_user = User.objects.create_user(username='aprobar_auth_user', password='testpass123')
+        self.client.force_authenticate(user=self.auth_user)
+
     def test_aprobar_supervisor_exitosa(self):
         """Debe aprobar recarga pendiente correctamente"""
         url = f"/api/v1/cargas-saldo/{self.recarga_pendiente.id_recarga}/aprobar/"
@@ -635,6 +652,10 @@ class IniciarRecargaBancardActionTest(TestCase):
             limite_credito=Decimal("10000000.00"),
             id_hijo=self.hijo,
         )
+
+        # Autenticar cliente
+        self.auth_user = User.objects.create_user(username='bancard_auth_user', password='testpass123')
+        self.client.force_authenticate(user=self.auth_user)
 
     @patch("apps.api_integrations.services.BancardService.iniciar_transaccion")
     def test_iniciar_recarga_bancard_exitosa(self, mock_iniciar):

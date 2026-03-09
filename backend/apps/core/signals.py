@@ -20,34 +20,36 @@ def actualizar_saldo_recarga(sender, instance, created, **kwargs):
 
     Se mantiene el código por compatibilidad pero no se ejecuta.
     """
-    # DESHABILITADO - La acreditación se hace en el servicio
-    return
+    ESTADOS_ACREDITAR = {'confirmado'}
+    if instance.estado not in ESTADOS_ACREDITAR:
+        return
+    if hasattr(instance, '_saldo_actualizado'):
+        return
 
-    # Código original (comentado):
-    # if instance.estado == 'completada':
-    #     if not hasattr(instance, '_saldo_actualizado'):
-    #         with transaction.atomic():
-    #             tarjeta = Tarjetas.objects.select_for_update().get(nro_tarjeta=instance.nro_tarjeta.nro_tarjeta)
-    #             saldo_anterior = tarjeta.saldo_actual
-    #
-    #             consumo_existe = ConsumosTarjeta.objects.filter(
-    #                 detalle__contains=f"Recarga #{instance.id_carga}"
-    #             ).exists()
-    #
-    #             if not consumo_existe:
-    #                 tarjeta.saldo_actual += instance.monto_cargado
-    #                 tarjeta.save()
-    #
-    #                 ConsumosTarjeta.objects.create(
-    #                     nro_tarjeta=tarjeta,
-    #                     fecha_consumo=instance.fecha_confirmacion or instance.fecha_carga,
-    #                     monto_consumido=-instance.monto_cargado,
-    #                     detalle=f"Recarga #{instance.id_carga} - {instance.referencia or 'Sin referencia'}",
-    #                     saldo_anterior=saldo_anterior,
-    #                     saldo_posterior=tarjeta.saldo_actual
-    #                 )
-    #
-    #                 instance._saldo_actualizado = True
+    with transaction.atomic():
+        tarjeta = Tarjetas.objects.select_for_update().get(
+            nro_tarjeta=instance.nro_tarjeta.nro_tarjeta
+        )
+        saldo_anterior = tarjeta.saldo_actual
+
+        consumo_existe = ConsumosTarjeta.objects.filter(
+            detalle__contains=f"Recarga #{instance.id_carga}"
+        ).exists()
+
+        if not consumo_existe:
+            tarjeta.saldo_actual += instance.monto_cargado
+            tarjeta.save()
+
+            ConsumosTarjeta.objects.create(
+                nro_tarjeta=tarjeta,
+                fecha_consumo=instance.fecha_confirmacion or instance.fecha_carga,
+                monto_consumido=-instance.monto_cargado,
+                detalle=f"Recarga #{instance.id_carga} - {instance.referencia or 'Sin referencia'}",
+                saldo_anterior=saldo_anterior,
+                saldo_posterior=tarjeta.saldo_actual,
+            )
+
+            instance._saldo_actualizado = True
 
 
 @receiver(post_save, sender=ConsumosTarjeta)

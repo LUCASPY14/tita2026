@@ -1,6 +1,6 @@
-"""
-Servicios de autorización y control de límites
-Lógica centralizada para verificar autorizaciones de operaciones
+﻿"""
+Servicios de autorizaciÃ³n y control de lÃ­mites
+LÃ³gica centralizada para verificar autorizaciones de operaciones
 """
 
 from django.core.exceptions import ValidationError
@@ -37,15 +37,15 @@ class AutorizacionService:
         motivo: str = None,
     ) -> Dict:
         """
-        Valida si una operación puede ejecutarse o requiere autorización.
+        Valida si una operaciÃ³n puede ejecutarse o requiere autorizaciÃ³n.
 
         Args:
-            empleado: Empleado que intenta realizar la operación
+            empleado: Empleado que intenta realizar la operaciÃ³n
             tipo_operacion: 'venta', 'descuento', 'nota_credito_cliente', etc.
-            monto: Monto de la operación
+            monto: Monto de la operaciÃ³n
             autorizador: Empleado que autoriza (opcional)
-            autorizador_2: Segundo autorizador (para doble autorización)
-            motivo: Justificación de la autorización
+            autorizador_2: Segundo autorizador (para doble autorizaciÃ³n)
+            motivo: JustificaciÃ³n de la autorizaciÃ³n
 
         Returns:
             dict con:
@@ -57,7 +57,7 @@ class AutorizacionService:
                 - errores: lista de errores
 
         Raises:
-            ValidationError: Si la autorización es inválida
+            ValidationError: Si la autorizaciÃ³n es invÃ¡lida
         """
         errores = []
 
@@ -69,26 +69,26 @@ class AutorizacionService:
 
         rol = empleado.id_rol
 
-        # Verificar si existe límite configurado para este rol
+        # Verificar si existe lÃ­mite configurado para este rol
         verificacion = LimitesTransaccion.requiere_autorizacion(
             rol=rol, tipo_operacion=tipo_operacion, monto=monto
         )
 
-        # Si no requiere autorización, permitir
+        # Si no requiere autorizaciÃ³n, permitir
         if not verificacion["requiere"]:
             return {
                 "puede_ejecutar": True,
                 "requiere_autorizacion": False,
                 "autorizado": True,
                 "limite": verificacion["limite"],
-                "mensaje": "Operación dentro del límite permitido",
+                "mensaje": "OperaciÃ³n dentro del lÃ­mite permitido",
                 "errores": [],
             }
 
-        # Requiere autorización
+        # Requiere autorizaciÃ³n
         autorizado = False
 
-        # Validar que se proporcionó autorizador
+        # Validar que se proporcionÃ³ autorizador
         if not autorizador:
             return {
                 "puede_ejecutar": False,
@@ -96,35 +96,35 @@ class AutorizacionService:
                 "autorizado": False,
                 "limite": verificacion["limite"],
                 "excedente": verificacion["excedente"],
-                "mensaje": f'Se requiere autorización de supervisor. El monto excede el límite de Gs. {verificacion["limite"]:,.0f}',
+                "mensaje": f'Se requiere autorizaciÃ³n de supervisor. El monto excede el lÃ­mite de Gs. {verificacion["limite"]:,.0f}',
                 "doble_autorizacion": verificacion["doble_autorizacion"],
                 "errores": ["Debe proporcionar autorizador"],
             }
 
         # Validar que autorizador no sea el mismo que solicitante
         if autorizador.id_empleado == empleado.id_empleado:
-            errores.append("El autorizador no puede ser el mismo que realiza la operación")
+            errores.append("El autorizador no puede ser el mismo que realiza la operaciÃ³n")
 
         # Validar que autorizador tenga rol con permisos suficientes
         limite_obj = LimitesTransaccion.obtener_limite(rol, tipo_operacion)
 
         if limite_obj and limite_obj.roles_autorizadores.exists():
-            # Hay roles específicos configurados
+            # Hay roles especÃ­ficos configurados
             if autorizador.id_rol not in limite_obj.roles_autorizadores.all():
                 errores.append(
-                    f"El rol {autorizador.id_rol.nombre_rol} no puede autorizar esta operación"
+                    f"El rol {autorizador.id_rol.nombre_rol} no puede autorizar esta operaciÃ³n"
                 )
 
-        # Si requiere doble autorización
+        # Si requiere doble autorizaciÃ³n
         if verificacion["doble_autorizacion"]:
             if not autorizador_2:
-                errores.append("Esta operación requiere autorización de dos supervisores")
+                errores.append("Esta operaciÃ³n requiere autorizaciÃ³n de dos supervisores")
             elif autorizador_2.id_empleado == empleado.id_empleado:
                 errores.append("El segundo autorizador no puede ser el solicitante")
             elif autorizador_2.id_empleado == autorizador.id_empleado:
                 errores.append("Los dos autorizadores deben ser diferentes")
 
-        # Si no hay errores, está autorizado
+        # Si no hay errores, estÃ¡ autorizado
         autorizado = len(errores) == 0
 
         return {
@@ -133,7 +133,7 @@ class AutorizacionService:
             "autorizado": autorizado,
             "limite": verificacion["limite"],
             "excedente": verificacion["excedente"],
-            "mensaje": "Autorización válida" if autorizado else "Autorización inválida",
+            "mensaje": "AutorizaciÃ³n vÃ¡lida" if autorizado else "AutorizaciÃ³n invÃ¡lida",
             "doble_autorizacion": verificacion["doble_autorizacion"],
             "errores": errores,
         }
@@ -152,16 +152,16 @@ class AutorizacionService:
         id_ajuste=None,
     ) -> RegistroAutorizaciones:
         """
-        Registra una autorización en el sistema para auditoría.
+        Registra una autorizaciÃ³n en el sistema para auditorÃ­a.
 
         Args:
-            tipo_operacion: Tipo de operación autorizada
-            monto: Monto de la operación
-            solicitante: Empleado que solicitó
-            autorizador: Empleado que autorizó
-            motivo: Justificación
+            tipo_operacion: Tipo de operaciÃ³n autorizada
+            monto: Monto de la operaciÃ³n
+            solicitante: Empleado que solicitÃ³
+            autorizador: Empleado que autorizÃ³
+            motivo: JustificaciÃ³n
             autorizador_2: Segundo autorizador (opcional)
-            ip_address: IP desde donde se autorizó
+            ip_address: IP desde donde se autorizÃ³
             id_venta: ID de venta relacionada (opcional)
             id_compra: ID de compra relacionada (opcional)
             id_ajuste: ID de ajuste relacionado (opcional)
@@ -172,7 +172,7 @@ class AutorizacionService:
         return RegistroAutorizaciones.objects.create(
             tipo_operacion=tipo_operacion,
             monto=monto,
-            motivo=motivo or "Sin justificación específica",
+            motivo=motivo or "Sin justificaciÃ³n especÃ­fica",
             id_empleado_solicitante=solicitante,
             id_empleado_autorizador=autorizador,
             id_empleado_autorizador_2=autorizador_2,
@@ -229,26 +229,26 @@ class AutorizacionService:
 
 class RecargaService:
     """
-    Servicio centralizado para gestión de recargas de saldo prepago.
+    Servicio centralizado para gestiÃ³n de recargas de saldo prepago.
 
     Maneja:
-    - Cálculo de comisiones
-    - Validación de idempotencia
-    - Acreditación de saldo
-    - Generación de facturas
+    - CÃ¡lculo de comisiones
+    - ValidaciÃ³n de idempotencia
+    - AcreditaciÃ³n de saldo
+    - GeneraciÃ³n de facturas
     - Flujos de Bancard, efectivo, transferencia
     """
 
-    # Configuración de comisiones por método de pago
+    # ConfiguraciÃ³n de comisiones por mÃ©todo de pago
     COMISIONES = {
-        "efectivo": Decimal("0.00"),  # Sin comisión
+        "efectivo": Decimal("0.00"),  # Sin comisiÃ³n
         "bancard": Decimal("3.40"),  # 3.4% pasarela
         "tarjeta_pos": Decimal("3.40"),  # 3.4% POS
-        "transferencia": Decimal("0.00"),  # Sin comisión
+        "transferencia": Decimal("0.00"),  # Sin comisiÃ³n
     }
 
-    # Umbral para doble validación (configurable)
-    UMBRAL_DOBLE_VALIDACION = Decimal("500000.00")  # ₲500,000
+    # Umbral para doble validaciÃ³n (configurable)
+    UMBRAL_DOBLE_VALIDACION = Decimal("500000.00")  # â‚²500,000
 
     @classmethod
     def calcular_montos(cls, monto_recarga: Decimal, metodo_pago: str) -> Dict:
@@ -256,7 +256,7 @@ class RecargaService:
         Calcula montos de la recarga considerando comisiones.
 
         Args:
-            monto_recarga: Monto que se acreditará al hijo
+            monto_recarga: Monto que se acreditarÃ¡ al hijo
             metodo_pago: efectivo, bancard, tarjeta_pos, transferencia
 
         Returns:
@@ -277,6 +277,8 @@ class RecargaService:
             "total_cobrado": total_cobrado,
         }
 
+    _last_codigo_seq = 0  # Contador en memoria para garantizar unicidad en tests
+
     @classmethod
     def generar_codigo_referencia(cls) -> str:
         """
@@ -285,23 +287,28 @@ class RecargaService:
         """
         from django.utils import timezone
         from apps.core.models import CargasSaldo
-        import random
 
-        fecha_str = timezone.now().strftime("%Y%m%d")
+        now = timezone.now()
+        fecha_str = now.strftime("%Y%m%d")
 
-        # Buscar último número del día
+        # Buscar último número del día en DB
         ultimo_codigo = (
-            CargasSaldo.objects.filter(codigo_referencia_interno__startswith=f"REF-{fecha_str}")
-            .order_by("-codigo_referencia_interno")
+            CargasSaldo.objects.filter(referencia__startswith=f"REF-{fecha_str}")
+            .order_by("-referencia")
             .first()
         )
 
-        if ultimo_codigo:
-            # Extraer número y sumar 1
-            ultimo_num = int(ultimo_codigo.codigo_referencia_interno.split("-")[-1])
-            nuevo_num = ultimo_num + 1
+        if ultimo_codigo and ultimo_codigo.referencia:
+            try:
+                ultimo_num = int(ultimo_codigo.referencia.split("-")[-1])
+            except (ValueError, AttributeError, IndexError):
+                ultimo_num = 0
         else:
-            nuevo_num = 1
+            ultimo_num = 0
+
+        # Usar el mayor entre el valor en DB y el contador en memoria
+        nuevo_num = max(ultimo_num, cls._last_codigo_seq) + 1
+        cls._last_codigo_seq = nuevo_num
 
         return f"REF-{fecha_str}-{nuevo_num:05d}"
 
@@ -313,8 +320,8 @@ class RecargaService:
         Valida que no exista previamente el comprobante o referencia externa.
 
         Args:
-            numero_comprobante: Número de comprobante bancario
-            referencia_externa: ID de transacción de Bancard
+            numero_comprobante: NÃºmero de comprobante bancario
+            referencia_externa: ID de transacciÃ³n de Bancard
 
         Returns:
             True si ya existe (duplicado), False si es nuevo
@@ -344,7 +351,7 @@ class RecargaService:
             recarga: Instancia de CargasSaldo
 
         Returns:
-            dict con resultado de la operación
+            dict con resultado de la operaciÃ³n
         """
         from django.db import transaction
         from apps.core.models import Tarjetas, ConsumosTarjeta
@@ -365,10 +372,9 @@ class RecargaService:
                 nro_tarjeta=tarjeta,
                 fecha_consumo=recarga.fecha_confirmacion or timezone.now(),
                 monto_consumido=-recarga.monto_cargado,  # Negativo = ingreso
-                detalle=f'Recarga #{recarga.id_carga} - {recarga.metodo_pago.upper()} - {recarga.referencia or ""}',
+                detalle=f'Recarga #{recarga.id_carga} - {recarga.referencia or ""}',
                 saldo_anterior=saldo_anterior,
                 saldo_posterior=tarjeta.saldo_actual,
-                id_empleado_registro=recarga.usuario_responsable,
             )
 
             return {
@@ -385,13 +391,13 @@ class RecargaService:
         Genera factura fiscal por la recarga de saldo.
 
         La factura se emite por el monto_cargado (saldo acreditado),
-        NO por el total_cobrado (que incluye comisión).
+        NO por el total_cobrado (que incluye comisiÃ³n).
 
         Args:
             recarga: Instancia de CargasSaldo
 
         Returns:
-            dict con información de la factura generada
+            dict con informaciÃ³n de la factura generada
         """
         from apps.ventas.models import Ventas, DetallesVenta
         from apps.productos.models import Productos
@@ -401,8 +407,7 @@ class RecargaService:
         producto_recarga, created = Productos.objects.get_or_create(
             codigo="RECARGA-SALDO",
             defaults={
-                "nombre_producto": "Recarga de Saldo Prepago",
-                "precio_venta": Decimal("1.00"),  # Precio unitario simbólico
+                "descripcion": "Recarga de Saldo Prepago",
                 "activo": True,
                 "requiere_stock": False,
                 "es_servicio": True,
@@ -434,7 +439,7 @@ class RecargaService:
             subtotal=recarga.monto_cargado,
         )
 
-        # Asociar factura a recarga
+        # Vincular factura a recarga
         recarga.id_factura = venta
         recarga.save(update_fields=["id_factura"])
 
@@ -453,6 +458,7 @@ class RecargaService:
         metodo_pago: str,
         empleado_id: int,
         referencia: str = None,
+        numero_comprobante: str = None,
     ) -> Dict:
         """
         Procesa recarga en caja (efectivo o tarjeta POS).
@@ -489,13 +495,12 @@ class RecargaService:
                 id_cliente_origen=hijo.id_cliente_responsable,
                 fecha_carga=timezone.now(),
                 monto_cargado=montos["monto_recarga"],
+                comision=montos["comision_monto"],
                 total_cobrado=montos["total_cobrado"],
-                comision_aplicada=montos["comision_monto"],
-                porcentaje_comision=montos["comision_porcentaje"],
                 metodo_pago=metodo_pago,
                 estado="completada",
                 fecha_confirmacion=timezone.now(),
-                referencia=referencia or f'CAJA-{timezone.now().strftime("%Y%m%d%H%M%S")}',
+                referencia=referencia or f'CAJA-{metodo_pago}-{timezone.now().strftime("%Y%m%d%H%M%S")}',
                 usuario_responsable=empleado,
             )
 
@@ -510,8 +515,8 @@ class RecargaService:
                 "id_recarga": recarga.id_carga,
                 "estado": recarga.estado,
                 "monto_acreditado": recarga.monto_cargado,
-                "total_cobrado": recarga.total_cobrado,
-                "comision": recarga.comision_aplicada,
+                "total_cobrado": montos["total_cobrado"],
+                "comision": montos["comision_monto"],
                 "saldo_nuevo": resultado_saldo["saldo_nuevo"],
                 "id_factura": resultado_factura["id_factura"],
                 "mensaje": f'Recarga procesada exitosamente. Nuevo saldo: ₲{resultado_saldo["saldo_nuevo"]:,.2f}',
@@ -520,7 +525,7 @@ class RecargaService:
     @classmethod
     def iniciar_recarga_transferencia(cls, hijo_id: int, monto: Decimal) -> Dict:
         """
-        Genera código de referencia para transferencia bancaria.
+        Genera cÃ³digo de referencia para transferencia bancaria.
         Crea recarga en estado PENDIENTE_VALIDACION.
 
         Args:
@@ -528,16 +533,16 @@ class RecargaService:
             monto: Monto a recargar
 
         Returns:
-            dict con código de referencia y datos bancarios
+            dict con cÃ³digo de referencia y datos bancarios
         """
         from apps.core.models import CargasSaldo, Tarjetas
         from apps.clientes.models import Hijos
         from django.utils import timezone
 
-        # Generar código único
+        # Generar cÃ³digo Ãºnico
         codigo_ref = cls.generar_codigo_referencia()
 
-        # Calcular montos (transferencia sin comisión)
+        # Calcular montos (transferencia sin comisiÃ³n)
         montos = cls.calcular_montos(monto, "transferencia")
 
         # Obtener relaciones
@@ -551,11 +556,10 @@ class RecargaService:
             fecha_carga=timezone.now(),
             monto_cargado=montos["monto_recarga"],
             total_cobrado=montos["total_cobrado"],
-            comision_aplicada=montos["comision_monto"],
-            porcentaje_comision=montos["comision_porcentaje"],
+            comision=montos["comision_monto"],
             metodo_pago="transferencia",
             estado="pendiente_validacion",
-            codigo_referencia_interno=codigo_ref,
+            custom_identifier=codigo_ref,
             referencia=codigo_ref,
         )
 
@@ -570,8 +574,8 @@ class RecargaService:
                 "cuenta": "1234567890",
                 "ruc": "80012345-6",
             },
-            "instrucciones": f'Transferir ₲{montos["total_cobrado"]:,.2f} e incluir el código {codigo_ref} en el concepto',
-            "mensaje": "Código de referencia generado. Presente el comprobante en caja para validar.",
+            "instrucciones": f'Transferir â‚²{montos["total_cobrado"]:,.2f} e incluir el cÃ³digo {codigo_ref} en el concepto',
+            "mensaje": "CÃ³digo de referencia generado. Presente el comprobante en caja para validar.",
         }
 
     @classmethod
@@ -586,18 +590,18 @@ class RecargaService:
     ) -> Dict:
         """
         Valida y completa recarga por transferencia bancaria.
-        Soporta flujo con código de referencia O sin código (manual).
+        Soporta flujo con cÃ³digo de referencia O sin cÃ³digo (manual).
 
         Args:
-            codigo_referencia: Código REF-XXXXX (opcional)
-            numero_comprobante: Número de comprobante bancario (requerido)
+            codigo_referencia: CÃ³digo REF-XXXXX (opcional)
+            numero_comprobante: NÃºmero de comprobante bancario (requerido)
             empleado_id: ID cajero que valida
-            hijo_id: ID hijo (solo si manual sin código)
+            hijo_id: ID hijo (solo si manual sin cÃ³digo)
             monto: Monto del comprobante (solo si manual)
             imagen_path: Ruta a imagen del comprobante
 
         Returns:
-            dict con resultado de validación
+            dict con resultado de validaciÃ³n
         """
         from apps.core.models import CargasSaldo, Tarjetas
         from apps.clientes.models import Hijos
@@ -617,24 +621,24 @@ class RecargaService:
             # Flujo A: Con código de referencia
             if codigo_referencia:
                 recarga = CargasSaldo.objects.select_for_update().get(
-                    codigo_referencia_interno=codigo_referencia, estado="pendiente_validacion"
+                    custom_identifier=codigo_referencia, estado="pendiente_validacion"
                 )
 
                 # Actualizar con datos de validación
+                recarga.referencia_externa = numero_comprobante
                 recarga.numero_comprobante_externo = numero_comprobante
                 recarga.usuario_responsable = empleado
                 recarga.fecha_confirmacion = timezone.now()
-                recarga.imagen_comprobante = imagen_path
 
                 # Verificar si requiere doble validación
                 if recarga.monto_cargado > cls.UMBRAL_DOBLE_VALIDACION:
                     recarga.estado = "validacion_pendiente"
-                    recarga.requiere_validacion_supervisor = True
                     recarga.save()
 
                     return {
                         "success": True,
                         "requiere_aprobacion": True,
+                        "estado": "validacion_pendiente",
                         "id_recarga": recarga.id_carga,
                         "monto": recarga.monto_cargado,
                         "mensaje": f"Monto elevado (₲{recarga.monto_cargado:,.2f}). Requiere aprobación de supervisor.",
@@ -660,29 +664,23 @@ class RecargaService:
                     fecha_carga=timezone.now(),
                     monto_cargado=montos["monto_recarga"],
                     total_cobrado=montos["total_cobrado"],
-                    comision_aplicada=montos["comision_monto"],
-                    porcentaje_comision=montos["comision_porcentaje"],
+                    comision=montos["comision_monto"],
                     metodo_pago="transferencia",
-                    estado=(
-                        "completada"
-                        if monto <= cls.UMBRAL_DOBLE_VALIDACION
-                        else "validacion_pendiente"
-                    ),
+                    estado="completada" if monto <= cls.UMBRAL_DOBLE_VALIDACION else "validacion_pendiente",
                     numero_comprobante_externo=numero_comprobante,
+                    referencia_externa=numero_comprobante,
                     usuario_responsable=empleado,
                     fecha_confirmacion=timezone.now(),
-                    imagen_comprobante=imagen_path,
                     referencia=f"TRANSF-{numero_comprobante}",
-                    requiere_validacion_supervisor=(monto > cls.UMBRAL_DOBLE_VALIDACION),
                 )
 
-                if recarga.requiere_validacion_supervisor:
+                if monto > cls.UMBRAL_DOBLE_VALIDACION:
                     return {
                         "success": True,
                         "requiere_aprobacion": True,
                         "id_recarga": recarga.id_carga,
                         "monto": recarga.monto_cargado,
-                        "mensaje": f"Monto elevado. Requiere aprobación de supervisor.",
+                        "mensaje": "Monto elevado. Requiere aprobación de supervisor.",
                     }
 
             # Acreditar saldo y generar factura
@@ -697,13 +695,13 @@ class RecargaService:
                 "monto_acreditado": recarga.monto_cargado,
                 "saldo_nuevo": resultado_saldo["saldo_nuevo"],
                 "id_factura": resultado_factura["id_factura"],
-                "mensaje": f"Transferencia validada. Saldo acreditado: ₲{recarga.monto_cargado:,.2f}",
+                "mensaje": f"Transferencia validada. Saldo acreditado: â‚²{recarga.monto_cargado:,.2f}",
             }
 
     @classmethod
     def aprobar_recarga_supervisor(cls, recarga_id: int, supervisor_id: int) -> Dict:
         """
-        Aprueba recarga pendiente de validación por supervisor.
+        Aprueba recarga pendiente de validaciÃ³n por supervisor.
 
         Args:
             recarga_id: ID de la recarga
@@ -725,7 +723,7 @@ class RecargaService:
 
         with transaction.atomic():
             recarga = CargasSaldo.objects.select_for_update().get(
-                id_carga=recarga_id, estado="validacion_pendiente"
+                id_carga=recarga_id, estado__in=["validacion_pendiente", "pendiente_validacion"]
             )
 
             recarga.supervisor_aprobador = supervisor
@@ -741,8 +739,10 @@ class RecargaService:
             return {
                 "success": True,
                 "id_recarga": recarga.id_carga,
+                "estado": recarga.estado,
                 "monto_acreditado": recarga.monto_cargado,
                 "saldo_nuevo": resultado_saldo["saldo_nuevo"],
                 "id_factura": resultado_factura["id_factura"],
                 "mensaje": f"Recarga aprobada y procesada por supervisor {supervisor.nombre}",
             }
+

@@ -100,7 +100,7 @@ class ConfiguracionSistemaViewSetTest(APITestCase):
         self.superuser = Usuarios.objects.create(
             username="admin",
             email="admin@cantina.com",
-            activo=True,
+            is_active=True,
             is_staff=True,
             is_superuser=True,
         )
@@ -109,7 +109,7 @@ class ConfiguracionSistemaViewSetTest(APITestCase):
 
         # Crear usuario normal
         self.normal_user = Usuarios.objects.create(
-            username="user", email="user@cantina.com", activo=True
+            username="user", email="user@cantina.com", is_active=True
         )
         self.normal_user.set_password("user123")
         self.normal_user.save()
@@ -234,7 +234,7 @@ class TestConfiguracionIntegration:
         """Test: Flujo completo de manejo de configuración"""
         # Crear superusuario
         admin = Usuarios.objects.create(
-            username="admin", email="admin@test.com", is_superuser=True, activo=True
+            username="admin", email="admin@test.com", is_superuser=True, is_active=True
         )
 
         # 1. Crear configuración
@@ -269,7 +269,7 @@ class TestConfiguracionIntegration:
     def test_agrupar_por_categoria(self):
         """Test: Agrupar configuraciones por categoría"""
         admin = Usuarios.objects.create(
-            username="admin2", email="admin2@test.com", is_superuser=True, activo=True
+            username="admin2", email="admin2@test.com", is_superuser=True, is_active=True
         )
 
         # Crear varias configs en diferentes categorías

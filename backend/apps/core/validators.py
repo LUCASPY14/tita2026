@@ -475,16 +475,20 @@ def validar_estado_carga(estado):
         "pendiente_validacion",
         "validacion_pendiente",
         "completada",
+        "confirmado",
         "rechazada",
+        "rechazado",
         "cancelada",
+        "cancelado",
         "reembolsada",
+        "reembolsado",
         "expirada",
     ]
 
     if not estado:
         raise ValidationError("El estado de la carga es obligatorio")
 
-    if estado not in ESTADOS_VALIDOS:
+    if estado.lower() not in ESTADOS_VALIDOS and estado not in ESTADOS_VALIDOS:
         raise ValidationError(
             f"Estado '{estado}' no válido. Estados permitidos: {', '.join(ESTADOS_VALIDOS)}"
         )
@@ -1091,10 +1095,10 @@ def validar_motivo_autorizacion(motivo):
 
     motivo_limpio = str(motivo).strip()
 
-    # Validar longitud
-    if len(motivo_limpio) < 10:
+    # Validar longitud (mínimo 20 caracteres para contexto adecuado)
+    if len(motivo_limpio) < 20:
         raise ValidationError(
-            "El motivo debe tener al menos 10 caracteres para proporcionar contexto adecuado"
+            "El motivo debe tener al menos 20 caracteres para proporcionar contexto adecuado"
         )
 
     if len(motivo_limpio) > 500:
