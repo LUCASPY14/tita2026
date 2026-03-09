@@ -115,7 +115,7 @@ class AuthenticationService:
         """
         # Verificar si el empleado está marcado como inactivo
         if not empleado.activo:
-            return True, "Cuenta desactivada"
+            return True, "Cuenta inactiva"
 
         # Buscar bloqueos activos
         bloqueo_activo = BloqueosCuenta.objects.filter(
@@ -129,7 +129,7 @@ class AuthenticationService:
                 bloqueo_activo.save()
                 return False, None
 
-            return True, bloqueo_activo.motivo
+            return True, f"Cuenta bloqueada: {bloqueo_activo.motivo}"
 
         return False, None
 
@@ -156,9 +156,11 @@ class AuthenticationService:
             )
 
         bloqueo = BloqueosCuenta.objects.create(
-            id_empleado=empleado,
+            usuario=empleado.usuario,
+            tipo_usuario="empleado",
             motivo=motivo,
-            ip_origen=ip_address,
+            bloqueado_por="sistema",
+            ip_address=ip_address,
             fecha_bloqueo=timezone.now(),
             fecha_desbloqueo=fecha_desbloqueo,
             activo=True,
@@ -179,7 +181,7 @@ class AuthenticationService:
                 "fecha_desbloqueo": str(fecha_desbloqueo) if fecha_desbloqueo else None,
             },
             fecha_operacion=timezone.now(),
-            resultado="EXITO",
+            resultado="exitoso",
         )
 
         return bloqueo
@@ -367,12 +369,14 @@ class AuthenticationService:
                 tabla_afectada="Empleados",
                 ip_address=ip_address,
                 fecha_operacion=timezone.now(),
-                resultado="EXITOSO",
+                resultado="exitoso",
                 datos_nuevos={"usuario": usuario, "timestamp": str(timezone.now())},
             )
 
             return {
                 "success": True,
+                "access": tokens["access"],
+                "refresh": tokens["refresh"],
                 "tokens": tokens,
                 "empleado": {
                     "id": empleado.id_empleado,
@@ -408,21 +412,26 @@ class AuthenticationService:
         try:
             # Invalidar sesión
             sesion = SesionesActivas.objects.filter(
-                id_empleado=empleado, session_key=session_key[:255], activa=True
+                usuario=empleado.usuario, session_key=session_key[:255], activa=True
             ).first()
 
             if sesion:
                 sesion.activa = False
-                sesion.fecha_cierre = timezone.now()
                 sesion.save()
+            else:
+                return {"success": False, "mensaje": "Sesion no encontrada"}
 
             # Registrar en auditoría
             AuditoriaOperaciones.objects.create(
-                id_empleado=empleado,
+                usuario=empleado.usuario,
+                tipo_usuario="empleado",
+                id_usuario=empleado.id_empleado,
                 operacion="LOGOUT",
                 tabla_afectada="SesionesActivas",
-                ip_origen=ip_address,
+                ip_address=ip_address,
                 datos_nuevos={"session_key": session_key[:50], "timestamp": str(timezone.now())},
+                fecha_operacion=timezone.now(),
+                resultado="exitoso",
             )
 
             return {"success": True, "mensaje": "Logout exitoso"}
@@ -483,7 +492,7 @@ class AuthenticationService:
                     "timestamp": str(timezone.now()),
                 },
                 fecha_operacion=timezone.now(),
-                resultado="EXITO",
+                resultado="exitoso",
             )
 
             # Invalidar todas las sesiones activas (forzar re-login)
@@ -526,7 +535,7 @@ class AuthenticationService:
 
             # Verificar que el usuario no exista
             if Empleados.objects.filter(usuario=usuario).exists():
-                return {"success": False, "mensaje": "El nombre de usuario ya está en uso"}
+                return {"success": False, "mensaje": "El nombre de usuario ya existe"}
 
             # Verificar que el email no exista
             if Empleados.objects.filter(email=email).exists():
@@ -565,7 +574,7 @@ class AuthenticationService:
                     "timestamp": str(timezone.now()),
                 },
                 fecha_operacion=timezone.now(),
-                resultado="OK",
+                resultado="exitoso",
             )
 
             return {

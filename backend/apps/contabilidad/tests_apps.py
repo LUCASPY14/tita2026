@@ -80,7 +80,7 @@ class ContabilidadAppsConfigTest(TestCase):
         """Debe cargar todos los modelos correctamente"""
         try:
             app_config = apps.get_app_config('contabilidad')
-            models = app_config.get_models()
+            models = list(app_config.get_models())
             
             # Verificar que se cargaron modelos
             self.assertGreater(len(models), 0, "Debe tener modelos definidos")

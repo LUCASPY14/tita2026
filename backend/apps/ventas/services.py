@@ -6,6 +6,7 @@ Contiene la lógica de negocio para promociones y devoluciones.
 from django.db import transaction, models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from decimal import Decimal
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
@@ -396,13 +397,13 @@ class DevolucionService:
         try:
             venta = Ventas.objects.select_for_update().get(id_venta=id_venta)
         except Ventas.DoesNotExist:
-            raise ValidationError({"error": "Venta no encontrada", "id_venta": id_venta})
+            raise DRFValidationError({"error": "Venta no encontrada", "id_venta": id_venta})
 
         # 2. Validar que no hayan pasado más de X días (política de devolución)
         dias_transcurridos = (timezone.now().date() - venta.fecha.date()).days
 
         if dias_transcurridos > DevolucionService.DIAS_LIMITE_DEVOLUCION:
-            raise ValidationError(
+            raise DRFValidationError(
                 {
                     "error": f"Devolución fuera de plazo (máximo {DevolucionService.DIAS_LIMITE_DEVOLUCION} días)",
                     "dias_transcurridos": dias_transcurridos,
@@ -412,7 +413,7 @@ class DevolucionService:
 
         # 3. Validar estado de venta (debe estar confirmada)
         if venta.estado not in ["Activa"]:
-            raise ValidationError(
+            raise DRFValidationError(
                 {"error": "Solo se pueden devolver ventas activas", "estado_venta": venta.estado}
             )
 
@@ -429,7 +430,7 @@ class DevolucionService:
 
             # Validar que el producto esté en la venta
             if id_producto not in productos_venta:
-                raise ValidationError(
+                raise DRFValidationError(
                     {
                         "error": f"Producto {id_producto} no está en la venta original",
                         "id_producto": id_producto,
@@ -438,7 +439,7 @@ class DevolucionService:
 
             # Validar cantidad (no puede devolver más de lo comprado)
             if cantidad_dev > productos_venta[id_producto].cantidad:
-                raise ValidationError(
+                raise DRFValidationError(
                     {
                         "error": f"Cantidad a devolver excede lo comprado",
                         "id_producto": id_producto,
@@ -559,10 +560,10 @@ class DevolucionService:
         try:
             nota = NotasCreditoCliente.objects.select_for_update().get(id_nota=id_nota)
         except NotasCreditoCliente.DoesNotExist:
-            raise ValidationError({"error": "Nota de crédito no encontrada"})
+            raise DRFValidationError({"error": "Nota de crédito no encontrada"})
 
         if nota.estado == "Anulada":
-            raise ValidationError({"error": "Nota de crédito ya anulada"})
+            raise DRFValidationError({"error": "Nota de crédito ya anulada"})
 
         # Revertir stock (descontar lo que se reintegró)
         detalles = DetallesNotaCredito.objects.filter(id_nota=nota)

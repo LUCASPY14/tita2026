@@ -25,32 +25,32 @@ class ProveedoresApiAdmin(admin.ModelAdmin):
     list_display = (
         "id_proveedor",
         "nombre",
-        "tipo_servicio_badge",
+        "tipo_servicio",
+        "url_base",
         "version",
-        "tipo_auth_badge",
-        "timeout",
-        "max_reintentos",
-        "activo_badge",
+        "activo",
         "created_at",
     )
 
     list_filter = ("activo", "tipo_servicio", "tipo_auth", "created_at")
 
-    search_fields = ("nombre", "descripcion", "url_base", "version")
+    search_fields = ("nombre", "descripcion", "url_base", "version", "tipo_servicio")
 
     readonly_fields = ("id_proveedor", "created_at")
 
+    ordering = ["nombre"]
+
     fieldsets = (
         (
-            "📡 Información Principal",
+            "Información Básica",
             {"fields": ("id_proveedor", "nombre", "descripcion", "tipo_servicio")},
         ),
         (
-            "🔗 Conexión",
+            "Configuración de API",
             {"fields": ("url_base", "version", "documentacion", "timeout", "max_reintentos")},
         ),
-        ("🔐 Autenticación", {"fields": ("tipo_auth", "config_auth")}),
-        ("⚙️ Estado", {"fields": ("activo", "created_at")}),
+        ("Autenticación", {"fields": ("tipo_auth", "config_auth")}),
+        ("Estado", {"fields": ("activo", "created_at")}),
     )
 
     def tipo_servicio_badge(self, obj):
@@ -112,19 +112,20 @@ class EndpointsApiAdmin(admin.ModelAdmin):
     list_display = (
         "id_endpoint",
         "nombre",
-        "metodo_badge",
+        "proveedor_nombre",
+        "metodo",
         "path",
-        "id_proveedor",
-        "requiere_auth_badge",
-        "cache_segundos",
-        "activo_badge",
+        "requiere_auth",
+        "activo",
     )
 
-    list_filter = ("activo", "metodo", "requiere_auth", "id_proveedor")
+    list_filter = ("metodo", "requiere_auth", "activo", "id_proveedor")
 
     search_fields = ("nombre", "descripcion", "path")
 
     readonly_fields = ("id_endpoint",)
+
+    raw_id_fields = ("id_proveedor",)
 
     fieldsets = (
         (
@@ -172,6 +173,11 @@ class EndpointsApiAdmin(admin.ModelAdmin):
 
     activo_badge.short_description = "Estado"
 
+    def proveedor_nombre(self, obj):
+        return obj.id_proveedor.nombre if obj.id_proveedor else "-"
+
+    proveedor_nombre.short_description = "Proveedor"
+
 
 # ============================================================================
 # LOGS LLAMADAS API
@@ -183,11 +189,11 @@ class LogsLlamadasApiAdmin(admin.ModelAdmin):
     list_display = (
         "id_log",
         "timestamp",
-        "metodo_badge",
-        "url_corta",
-        "status_badge",
+        "metodo",
+        "url",
+        "status_code",
         "tiempo_ms",
-        "exitoso_badge",
+        "exitoso",
         "intento",
         "ip_origen",
     )
@@ -199,6 +205,8 @@ class LogsLlamadasApiAdmin(admin.ModelAdmin):
     readonly_fields = ("id_log", "timestamp")
 
     date_hierarchy = "timestamp"
+
+    ordering = ["-timestamp"]
 
     fieldsets = (
         (
@@ -265,6 +273,14 @@ class LogsLlamadasApiAdmin(admin.ModelAdmin):
 
     exitoso_badge.short_description = "Resultado"
 
+    def has_add_permission(self, request):
+        """No permitir agregar logs manualmente"""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """No permitir editar logs existentes"""
+        return False
+
 
 # ============================================================================
 # CREDENCIALES API
@@ -275,17 +291,17 @@ class CredencialesApiAdmin(admin.ModelAdmin):
 
     list_display = (
         "id_credencial",
-        "id_proveedor",
-        "ambiente_badge",
+        "proveedor_nombre",
+        "ambiente",
         "tiene_api_key",
         "tiene_secret",
         "tiene_token",
         "fecha_expiracion",
-        "activo_badge",
+        "activo",
         "updated_at",
     )
 
-    list_filter = ("activo", "ambiente", "id_proveedor", "fecha_expiracion")
+    list_filter = ("activo", "ambiente", "id_proveedor", "fecha_expiracion", "updated_at")
 
     search_fields = ("id_proveedor__nombre",)
 
@@ -349,6 +365,11 @@ class CredencialesApiAdmin(admin.ModelAdmin):
 
     activo_badge.short_description = "Estado"
 
+    def proveedor_nombre(self, obj):
+        return obj.id_proveedor.nombre if obj.id_proveedor else "-"
+
+    proveedor_nombre.short_description = "Proveedor"
+
 
 # ============================================================================
 # LOGS WEBHOOKS
@@ -362,8 +383,8 @@ class LogsWebhooksAdmin(admin.ModelAdmin):
         "timestamp",
         "evento_tipo",
         "ip_origen",
-        "verificacion_badge",
-        "procesado_badge",
+        "verificacion_ok",
+        "procesado_ok",
         "tiempo_proc_ms",
         "id_webhook",
     )
@@ -372,7 +393,7 @@ class LogsWebhooksAdmin(admin.ModelAdmin):
 
     search_fields = ("evento_tipo", "ip_origen", "error_msg", "user_agent")
 
-    readonly_fields = ("id_log", "timestamp")
+    readonly_fields = ("id_log", "timestamp", "payload", "headers")
 
     date_hierarchy = "timestamp"
 
@@ -402,6 +423,14 @@ class LogsWebhooksAdmin(admin.ModelAdmin):
 
     procesado_badge.short_description = "Procesamiento"
 
+    def has_add_permission(self, request):
+        """No permitir agregar logs manualmente"""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """No permitir editar logs existentes"""
+        return False
+
 
 # ============================================================================
 # WEBHOOK ENDPOINTS
@@ -413,11 +442,10 @@ class WebhookEndpointsAdmin(admin.ModelAdmin):
     list_display = (
         "id_webhook",
         "nombre",
+        "proveedor_nombre",
         "path",
-        "id_proveedor",
-        "requiere_verificacion_badge",
-        "eventos_count",
-        "activo_badge",
+        "requiere_verificacion",
+        "activo",
         "created_at",
     )
 
@@ -467,3 +495,8 @@ class WebhookEndpointsAdmin(admin.ModelAdmin):
         return format_html('<span style="color: red; font-weight: bold;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"
+
+    def proveedor_nombre(self, obj):
+        return obj.id_proveedor.nombre if obj.id_proveedor else "-"
+
+    proveedor_nombre.short_description = "Proveedor"

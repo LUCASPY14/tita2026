@@ -4,6 +4,16 @@ Auto-generados desde la base de datos y organizados por funcionalidad
 """
 
 from django.db import models
+from django.utils import timezone
+
+
+class ProveedoresApiManager(models.Manager):
+    def create(self, **kwargs):
+        kwargs.setdefault('config_auth', {})
+        kwargs.setdefault('timeout', 30)
+        kwargs.setdefault('max_reintentos', 3)
+        kwargs.setdefault('created_at', timezone.now())
+        return super().create(**kwargs)
 
 
 class ProveedoresApi(models.Model):
@@ -21,12 +31,25 @@ class ProveedoresApi(models.Model):
     activo = models.BooleanField(default=True)
     created_at = models.DateTimeField()
 
+    objects = ProveedoresApiManager()
+
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
         db_table = "proveedores_api"
+
+
+class EndpointsApiManager(models.Manager):
+    def create(self, **kwargs):
+        kwargs.setdefault('headers', {})
+        kwargs.setdefault('parametros', {})
+        kwargs.setdefault('schema_request', {})
+        kwargs.setdefault('schema_response', {})
+        kwargs.setdefault('cache_segundos', 0)
+        kwargs.setdefault('requiere_auth', 1)
+        return super().create(**kwargs)
 
 
 class EndpointsApi(models.Model):
@@ -44,12 +67,29 @@ class EndpointsApi(models.Model):
     activo = models.BooleanField(default=True)
     id_proveedor = models.ForeignKey("ProveedoresApi", models.DO_NOTHING, db_column="id_proveedor")
 
+    objects = EndpointsApiManager()
+
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
 
     class Meta:
         managed = True
         db_table = "endpoints_api"
+
+
+class LogsLlamadasApiManager(models.Manager):
+    def create(self, **kwargs):
+        kwargs.setdefault('timestamp', timezone.now())
+        kwargs.setdefault('metodo', 'GET')
+        kwargs.setdefault('url', '')
+        kwargs.setdefault('headers_req', {})
+        kwargs.setdefault('status_code', 200)
+        kwargs.setdefault('headers_res', {})
+        kwargs.setdefault('tiempo_ms', 0)
+        kwargs.setdefault('exitoso', 1)
+        kwargs.setdefault('intento', 1)
+        kwargs.setdefault('contexto', {})
+        return super().create(**kwargs)
 
 
 class LogsLlamadasApi(models.Model):
@@ -76,6 +116,8 @@ class LogsLlamadasApi(models.Model):
     id_empleado = models.ForeignKey(
         "usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado", blank=True, null=True
     )
+
+    objects = LogsLlamadasApiManager()
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"

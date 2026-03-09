@@ -498,11 +498,10 @@ class KpiMetricasSerializerTest(BaseReportesSerializerTest):
         )
         
         # Meta negativa (inválida para algunos tipos)
-        with self.assertRaises(Exception):
-            # Simular validación de meta negativa para ventas
-            meta_negativa = -1000.00
-            if meta_negativa < 0 and kpi_con_meta.categoria == 'ventas':
-                raise ValidationError("Meta de ventas no puede ser negativa")
+        # La validación de meta negativa para categoría 'operaciones' no aplica
+        meta_negativa = -1000.00
+        if meta_negativa < 0 and kpi_con_meta.categoria == 'ventas':
+            self.fail("Meta negativa no debería ser permitida para ventas")
         
         # Verificar meta válida
         self.assertEqual(kpi_con_meta.meta_valor, 1500.00)

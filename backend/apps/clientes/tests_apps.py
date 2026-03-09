@@ -260,7 +260,7 @@ class ClientesAppIntegrationTest(TestCase):
         # Test configuración completa sin errores
         try:
             app_config = apps.get_app_config('clientes')
-            models = app_config.get_models()
+            models = list(app_config.get_models())
             
             # Verificar que todo está correctamente configurado
             self.assertGreater(len(models), 0)

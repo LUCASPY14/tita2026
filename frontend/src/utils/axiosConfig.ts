@@ -111,8 +111,8 @@ const enviarLogAuditoria = async (
  */
 axios.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Agregar token si existe
-    const token = localStorage.getItem('access_token');
+    // Agregar token si existe (corregido: usar 'token' en vez de 'access_token')
+    const token = localStorage.getItem('token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

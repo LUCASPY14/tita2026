@@ -49,7 +49,7 @@ class MovimientosCaja(models.Model):
     id_movimiento = models.BigAutoField(primary_key=True)
     tipo_movimiento = models.CharField(max_length=20)
     monto = models.DecimalField(max_digits=12, decimal_places=2)
-    monto_comision = models.DecimalField(max_digits=12, decimal_places=2)
+    monto_comision = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     fecha_movimiento = models.DateTimeField()
     descripcion = models.CharField(max_length=200, blank=True, null=True)
     id_cierre = models.ForeignKey(

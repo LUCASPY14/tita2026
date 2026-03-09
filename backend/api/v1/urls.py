@@ -50,6 +50,7 @@ router.register(r'cargas-saldo', CargasSaldoViewSet)
 router.register(r'consumos-tarjeta', ConsumosTarjetaViewSet)
 router.register(r'medios-pago', MediosPagoViewSet)
 router.register(r'configuracion-sistema', ConfiguracionSistemaViewSet)
+router.register(r'configuracion', ConfiguracionSistemaViewSet, basename='configuracion')
 
 # Register Almuerzos ViewSets
 router.register(r'planes-almuerzo', PlanesAlmuerzoViewSet)

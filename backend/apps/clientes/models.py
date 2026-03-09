@@ -8,6 +8,24 @@ from django.core.validators import EmailValidator
 from decimal import Decimal
 
 
+class ClientesManager(models.Manager):
+    def create(self, **kwargs):
+        if 'id_lista' not in kwargs and 'id_lista_id' not in kwargs:
+            from apps.productos.models import ListasPrecios
+            lista, _ = ListasPrecios.objects.get_or_create(
+                nombre_lista='General',
+                defaults={'activo': True},
+            )
+            kwargs['id_lista'] = lista
+        if 'id_tipo_cliente' not in kwargs and 'id_tipo_cliente_id' not in kwargs:
+            tipo, _ = TiposCliente.objects.get_or_create(
+                nombre_tipo='Regular',
+                defaults={'activo': True},
+            )
+            kwargs['id_tipo_cliente'] = tipo
+        return super().create(**kwargs)
+
+
 class Clientes(models.Model):
     """
     Modelo de clientes (padres/tutores) que compran en la cantina.
@@ -34,6 +52,8 @@ class Clientes(models.Model):
     id_tipo_cliente = models.ForeignKey(
         "TiposCliente", models.DO_NOTHING, db_column="id_tipo_cliente"
     )
+
+    objects = ClientesManager()
 
     class Meta:
         managed = True

@@ -34,6 +34,8 @@ class MockRequest:
     """Mock de request para testing admin"""
     def __init__(self, user=None):
         self.user = user
+        self.GET = {}
+        self.POST = {}
 
 
 class ProveedoresApiAdminTest(TestCase):

@@ -1,10 +1,12 @@
+import os
 from django.apps import AppConfig
 
 
 class UsuariosConfig(AppConfig):
+    path = os.path.dirname(os.path.abspath(__file__))
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.usuarios"
-    verbose_name = "Gestión de Usuarios"
+    verbose_name = "Usuarios"
 
     def ready(self):
         """
@@ -15,5 +17,3 @@ class UsuariosConfig(AppConfig):
             import apps.usuarios.signals  # noqa
         except ImportError:
             pass
-
-    verbose_name = "Usuarios y Autenticación"

@@ -1,4 +1,7 @@
 from django.contrib import admin
+from django import forms
+from django.utils import timezone
+from django.utils.formats import sanitize_separators
 from .models import (
     Empleados,
     Roles,
@@ -9,8 +12,20 @@ from .models import (
 )
 
 
+class EmpleadosAdminForm(forms.ModelForm):
+    fecha_ingreso = forms.DateTimeField(
+        input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%d'],
+        widget=forms.DateTimeInput(format='%Y-%m-%d %H:%M:%S'),
+    )
+
+    class Meta:
+        model = Empleados
+        fields = "__all__"
+
+
 @admin.register(Empleados)
 class EmpleadosAdmin(admin.ModelAdmin):
+    form = EmpleadosAdminForm
     list_display = ["id_empleado", "nombre", "apellido", "usuario", "email", "activo"]
     list_filter = ["activo", "fecha_ingreso"]
     search_fields = ["nombre", "apellido", "email", "usuario"]

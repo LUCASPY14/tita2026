@@ -58,11 +58,10 @@ class TwoFactorAuthService:
         """
         codigos = []
         for _ in range(cantidad):
-            # Generar código aleatorio de 8 caracteres
-            codigo = secrets.token_hex(4).upper()
-            # Formatear como XXXX-XXXX
-            codigo_formateado = f"{codigo[:4]}-{codigo[4:]}"
-            codigos.append(codigo_formateado)
+            # Generar código numérico en formato XXXX-XXXX
+            bloque_1 = f"{secrets.randbelow(10000):04d}"
+            bloque_2 = f"{secrets.randbelow(10000):04d}"
+            codigos.append(f"{bloque_1}-{bloque_2}")
         return codigos
 
     @staticmethod
@@ -100,7 +99,7 @@ class TwoFactorAuthService:
                 usuario=empleado.usuario,
                 tipo_usuario="empleado",
                 secret_key=secret_key,
-                backup_codes=json.dumps(backup_codes),
+                backup_codes=backup_codes,
                 habilitado=True,
                 fecha_activacion=timezone.now(),
                 fecha_creacion=timezone.now(),
@@ -109,7 +108,7 @@ class TwoFactorAuthService:
             # Generar URI de provisioning para QR
             totp = pyotp.TOTP(secret_key)
             provisioning_uri = totp.provisioning_uri(
-                name=empleado.email or empleado.usuario,
+                name=empleado.usuario,
                 issuer_name=TwoFactorAuthService.ISSUER_NAME,
             )
 
@@ -257,13 +256,20 @@ class TwoFactorAuthService:
             True si el código es válido, False caso contrario
         """
         try:
-            backup_codes = json.loads(auth_2fa.backup_codes)
+            if isinstance(auth_2fa.backup_codes, str):
+                backup_codes = json.loads(auth_2fa.backup_codes)
+            else:
+                backup_codes = list(auth_2fa.backup_codes or [])
 
             # Buscar código en la lista
-            if codigo in backup_codes:
-                # Remover código usado
-                backup_codes.remove(codigo)
-                auth_2fa.backup_codes = json.dumps(backup_codes)
+            codigo_normalizado = codigo.replace("-", "")
+            backup_codes_normalizados = [c.replace("-", "") for c in backup_codes]
+
+            if codigo_normalizado in backup_codes_normalizados:
+                # Remover código usado respetando el formato almacenado
+                idx = backup_codes_normalizados.index(codigo_normalizado)
+                backup_codes.pop(idx)
+                auth_2fa.backup_codes = backup_codes
                 auth_2fa.save()
 
                 return True
@@ -326,7 +332,8 @@ class TwoFactorAuthService:
                 return {"success": False, "mensaje": "2FA no está habilitado"}
 
             auth_2fa.habilitado = False
-            auth_2fa.save()
+            auth_2fa.ultima_verificacion = timezone.now()
+            auth_2fa.save(update_fields=["habilitado", "ultima_verificacion"])
 
             # Registrar en auditoría
             AuditoriaOperaciones.objects.create(
@@ -368,7 +375,7 @@ class TwoFactorAuthService:
             # Generar nuevos códigos
             nuevos_backup_codes = TwoFactorAuthService._generar_backup_codes()
 
-            auth_2fa.backup_codes = json.dumps(nuevos_backup_codes)
+            auth_2fa.backup_codes = nuevos_backup_codes
             auth_2fa.save()
 
             # Registrar en auditoría
@@ -430,13 +437,26 @@ class TwoFactorAuthService:
         ).first()
 
         if not auth_2fa:
-            return {"habilitado": False}
+            return {
+                "success": True,
+                "habilitado": False,
+                "fecha_habilitado": None,
+                "total_intentos": 0,
+                "intentos_exitosos": 0,
+                "intentos_fallidos": 0,
+                "intentos_fallidos_recientes": 0,
+                "backup_codes_restantes": 0,
+                "ultimo_uso": None,
+            }
 
         # Contar códigos de respaldo restantes
         backup_codes_restantes = 0
         if auth_2fa.backup_codes:
             try:
-                backup_codes = json.loads(auth_2fa.backup_codes)
+                if isinstance(auth_2fa.backup_codes, str):
+                    backup_codes = json.loads(auth_2fa.backup_codes)
+                else:
+                    backup_codes = list(auth_2fa.backup_codes)
                 backup_codes_restantes = len(backup_codes)
             except:
                 pass
@@ -456,12 +476,18 @@ class TwoFactorAuthService:
             .first()
         )
 
+        intentos_fallidos_recientes = TwoFactorAuthService._contar_intentos_fallidos_recientes(
+            empleado, TwoFactorAuthService.TIEMPO_BLOQUEO_2FA_MINUTOS
+        )
+
         return {
+            "success": True,
             "habilitado": auth_2fa.habilitado,
-            "fecha_activacion": auth_2fa.fecha_activacion,
+            "fecha_habilitado": auth_2fa.fecha_activacion,
             "total_intentos": total_intentos,
             "intentos_exitosos": intentos_exitosos,
             "intentos_fallidos": total_intentos - intentos_exitosos,
+            "intentos_fallidos_recientes": intentos_fallidos_recientes,
             "backup_codes_restantes": backup_codes_restantes,
             "ultimo_uso": ultimo_intento.fecha_intento if ultimo_intento else None,
         }

@@ -16,7 +16,7 @@ class ApiIntegrationsConfigTest(TestCase):
     def setUp(self):
         """Configurar datos de prueba"""
         self.app_config = ApiIntegrationsConfig(
-            'api_integrations',
+            'apps.api_integrations',
             'apps.api_integrations'
         )
 
@@ -71,7 +71,7 @@ class ApiIntegrationsConfigTest(TestCase):
         app_config = apps.get_app_config('api_integrations')
         
         # Obtener todos los modelos de la app
-        models = app_config.get_models()
+        models = list(app_config.get_models())
         
         # Debe tener modelos definidos
         self.assertGreater(len(models), 0)

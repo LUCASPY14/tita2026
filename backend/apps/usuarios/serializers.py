@@ -16,6 +16,13 @@ class EmpleadosSerializer(serializers.ModelSerializer):
         fields = "__all__"
         extra_kwargs = {"contrasena_hash": {"write_only": True}}
 
+    def get_fields(self):
+        fields = super().get_fields()
+        # Make contrasena_hash optional for updates (when instance exists)
+        if self.instance is not None:
+            fields["contrasena_hash"].required = False
+        return fields
+
 
 class PerfilesUsuarioSerializer(serializers.ModelSerializer):
     empleado_nombre = serializers.CharField(source="id_empleado.nombre", read_only=True)

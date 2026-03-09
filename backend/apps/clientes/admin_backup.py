@@ -1,85 +1,15 @@
 """
 Admin configuration for Clientes module - Simple version for testing
+Re-exports admin classes from admin.py for backwards compatibility.
 """
 
-from django.contrib import admin
-from .models import (
-    Clientes,
-    TiposCliente,
-    Hijos,
-    Grados,
-    HistorialGradosHijos,
-    RestriccionesHijos,
-    AutorizacionesSaldoNegativo,
-    LogsAutorizaciones,
+from apps.clientes.admin import (  # noqa: F401
+    ClientesAdmin,
+    TiposClienteAdmin,
+    HijosAdmin,
+    GradosAdmin,
+    HistorialGradosHijosAdmin,
+    RestriccionesHijosAdmin,
+    AutorizacionesSaldoNegativoAdmin,
+    LogsAutorizacionesAdmin,
 )
-
-
-@admin.register(Clientes)
-class ClientesAdmin(admin.ModelAdmin):
-    list_display = ["id_cliente", "nombres", "apellidos", "ruc_ci", "email", "activo"]
-    list_filter = ["activo"]
-    search_fields = ["nombres", "apellidos", "ruc_ci", "email"]
-
-
-@admin.register(TiposCliente)
-class TiposClienteAdmin(admin.ModelAdmin):
-    list_display = ["id_tipo_cliente", "nombre_tipo", "activo"]
-    list_filter = ["activo"]
-    search_fields = ["nombre_tipo"]
-
-
-@admin.register(Hijos)
-class HijosAdmin(admin.ModelAdmin):
-    list_display = ["id_hijo", "nombre", "apellido", "grado", "activo"]
-    list_filter = ["activo", "grado"]
-    search_fields = ["nombre", "apellido"]
-
-
-@admin.register(Grados)
-class GradosAdmin(admin.ModelAdmin):
-    list_display = ["id_grado", "nombre_grado", "nivel", "activo"]
-    list_filter = ["activo", "nivel"]
-    search_fields = ["nombre_grado"]
-
-
-@admin.register(HistorialGradosHijos)
-class HistorialGradosHijosAdmin(admin.ModelAdmin):
-    list_display = [
-        "id_historial",
-        "id_hijo",
-        "grado_anterior",
-        "grado_nuevo",
-        "anio_escolar",
-        "fecha_cambio",
-    ]
-    list_filter = ["anio_escolar", "motivo"]
-    search_fields = ["id_hijo__nombre", "id_hijo__apellido"]
-
-
-@admin.register(RestriccionesHijos)
-class RestriccionesHijosAdmin(admin.ModelAdmin):
-    list_display = ["id_restriccion", "id_hijo", "tipo_restriccion", "severidad", "activo"]
-    list_filter = ["activo", "severidad"]
-    search_fields = ["tipo_restriccion"]
-
-
-@admin.register(AutorizacionesSaldoNegativo)
-class AutorizacionesSaldoNegativoAdmin(admin.ModelAdmin):
-    list_display = [
-        "id_autorizacion",
-        "id_cliente",
-        "monto_autorizado",
-        "estado",
-        "fecha_autorizacion",
-    ]
-    list_filter = ["estado"]
-    search_fields = ["id_cliente__nombres", "id_cliente__apellidos"]
-
-
-@admin.register(LogsAutorizaciones)
-class LogsAutorizacionesAdmin(admin.ModelAdmin):
-    list_display = ["id_log", "tipo_operacion", "resultado", "codigo_barra", "fecha_hora"]
-    list_filter = ["tipo_operacion", "resultado"]
-    search_fields = ["codigo_barra"]
-    readonly_fields = ["id_log", "fecha_hora"]

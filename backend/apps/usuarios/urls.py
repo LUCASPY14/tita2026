@@ -5,6 +5,7 @@ Incluye autenticación, 2FA, sesiones, permisos y CRUD
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from rest_framework.permissions import AllowAny
 
 from .views import (
     AuthViewSet,
@@ -19,12 +20,25 @@ from .views import (
     AuditoriaOperacionesViewSet,
 )
 
+
+class PublicRolesViewSet(RolesViewSet):
+    """Public read-only alias for RolesViewSet (used by /api/usuarios/ routes)."""
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+
+class PublicEmpleadosViewSet(EmpleadosViewSet):
+    """Public read-only alias for EmpleadosViewSet (used by /api/usuarios/ routes)."""
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+
 # Router principal
 router = DefaultRouter()
 
-# Registrar ViewSets CRUD
-router.register(r"roles", RolesViewSet, basename="roles")
-router.register(r"empleados", EmpleadosViewSet, basename="empleados")
+# Registrar ViewSets CRUD (public versions for /api/usuarios/ path)
+router.register(r"roles", PublicRolesViewSet, basename="usuarios-roles")
+router.register(r"empleados", PublicEmpleadosViewSet, basename="usuarios-empleados")
 router.register(r"perfiles", PerfilesUsuarioViewSet, basename="perfiles")
 router.register(r"portal", UsuariosPortalViewSet, basename="portal")
 

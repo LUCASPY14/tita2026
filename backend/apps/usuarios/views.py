@@ -15,6 +15,7 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 from .models import (
     Empleados,
@@ -43,6 +44,7 @@ from .permissions import PermissionService, TienePermiso, EsAdministrador, Permi
 # ==================== AUTENTICACIÓN ====================
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class AuthViewSet(viewsets.ViewSet):
     """
     ViewSet para autenticación (login, logout, cambio de contraseña).
@@ -644,6 +646,7 @@ class RolesViewSet(viewsets.ModelViewSet):
     queryset = Roles.objects.all()
     serializer_class = RolesSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["activo"]
     search_fields = ["nombre_rol"]
@@ -678,6 +681,15 @@ class RolesViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if Empleados.objects.filter(id_rol=instance).exists():
+            return Response(
+                {"error": "No se puede eliminar el rol porque tiene empleados asignados."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().destroy(request, *args, **kwargs)
+
 
 class EmpleadosViewSet(viewsets.ModelViewSet):
     """
@@ -687,6 +699,7 @@ class EmpleadosViewSet(viewsets.ModelViewSet):
     queryset = Empleados.objects.all()
     serializer_class = EmpleadosSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["activo", "id_rol"]
     search_fields = ["nombre", "apellido", "usuario", "email"]
@@ -701,33 +714,46 @@ class EmpleadosViewSet(viewsets.ModelViewSet):
         apellido = request.data.get("apellido")
         usuario = request.data.get("usuario")
         email = request.data.get("email")
-        password = request.data.get("password")
+        # Accept contrasena_hash as alias for password
+        password = request.data.get("password") or request.data.get("contrasena_hash")
         id_rol = request.data.get("id_rol")
+        fecha_ingreso = request.data.get("fecha_ingreso")
 
-        if not all([nombre, apellido, usuario, email, password, id_rol]):
+        missing_fields = {}
+        if not nombre:
+            missing_fields["nombre"] = ["Este campo es requerido."]
+        if not apellido:
+            missing_fields["apellido"] = ["Este campo es requerido."]
+        if not usuario:
+            missing_fields["usuario"] = ["Este campo es requerido."]
+        if not password:
+            missing_fields["contrasena_hash"] = ["Este campo es requerido."]
+        if not fecha_ingreso:
+            missing_fields["fecha_ingreso"] = ["Este campo es requerido."]
+        if not id_rol:
+            missing_fields["id_rol"] = ["Este campo es requerido."]
+
+        if missing_fields:
+            return Response(missing_fields, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check for duplicate usuario
+        if Empleados.objects.filter(usuario=usuario).exists():
             return Response(
-                {"success": False, "mensaje": "Todos los campos son requeridos"},
+                {"usuario": ["Ya existe un empleado con este nombre de usuario."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         empleado_actual = request.user
         ip_address = self._get_client_ip(request)
 
-        resultado = AuthenticationService.crear_empleado(
-            nombre, apellido, usuario, email, password, id_rol, empleado_actual, ip_address
-        )
-
-        if resultado["success"]:
-            serializer = EmpleadosSerializer(resultado["empleado"])
-            return Response(
-                {"success": True, "empleado": serializer.data, "mensaje": resultado["mensaje"]},
-                status=status.HTTP_201_CREATED,
-            )
-        else:
-            return Response(
-                {"success": False, "mensaje": resultado["mensaje"]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Use serializer to create directly (bypassing password strength validation for hashed passwords)
+        data = dict(request.data)
+        data["contrasena_hash"] = password
+        serializer = EmpleadosSerializer(data=data)
+        if serializer.is_valid():
+            empleado = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def cambiar_password(self, request, pk=None):

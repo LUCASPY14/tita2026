@@ -40,8 +40,9 @@ class RolesViewSetTest(APITestCase):
             id_rol=self.rol
         )
         
-        # Configurar autenticación JWT (simulada)
-        self.client.force_authenticate(user=None)
+        # Autenticar cliente
+        self.auth_user = User.objects.create_user(username='testuser_auth', password='testpass123')
+        self.client.force_authenticate(user=self.auth_user)
 
     def test_listar_roles(self):
         """Debe listar todos los roles"""
@@ -180,7 +181,9 @@ class EmpleadosViewSetTest(APITestCase):
             id_rol=self.rol
         )
         
-        self.client.force_authenticate(user=None)
+        # Autenticar cliente
+        self.auth_user = User.objects.create_user(username='emp_auth_user', password='testpass123')
+        self.client.force_authenticate(user=self.auth_user)
 
     def test_listar_empleados(self):
         """Debe listar empleados con información del rol"""
@@ -369,7 +372,8 @@ class UsuariosPermissionsTest(TestCase):
     def test_validacion_campos_requeridos(self):
         """Debe validar campos requeridos en creación"""
         client = APIClient()
-        client.force_authenticate(user=None)
+        auth_user = User.objects.create_user(username='perm_test_user', password='testpass123')
+        client.force_authenticate(user=auth_user)
         
         # Test para Roles
         url = reverse('roles-list')

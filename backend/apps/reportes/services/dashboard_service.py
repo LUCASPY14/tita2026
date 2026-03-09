@@ -99,8 +99,7 @@ class DashboardService:
                 saldo_total=Sum("saldo_actual")
             )["saldo_total"] or Decimal("0.00")
 
-            return {
-                "fecha": fecha,
+            kpis_data = {
                 "ventas_del_dia": ventas_stats["total_ventas"] or Decimal("0.00"),
                 "cantidad_ventas": ventas_stats["cantidad_ventas"] or 0,
                 "recargas_del_dia": recargas_stats["total_recargas"] or Decimal("0.00"),
@@ -109,6 +108,11 @@ class DashboardService:
                 "productos_bajo_stock": productos_bajo_stock,
                 "ticket_promedio": ventas_stats["ticket_promedio"] or Decimal("0.00"),
                 "saldo_total_tarjetas": saldo_total,
+            }
+            return {
+                "fecha": fecha,
+                "kpis": kpis_data,
+                **kpis_data,
             }
 
         except Exception as e:
@@ -198,10 +202,23 @@ class DashboardService:
             else:
                 tendencia = "estable"
 
+            resumen = {
+                "total_ventas": ventas_periodo_actual,
+                "tendencia": tendencia,
+                "variacion_porcentual": variacion,
+            }
+            graficos = {
+                "ventas_por_dia": list(ventas_por_dia),
+                "ventas_por_metodo_pago": list(ventas_por_metodo),
+                "productos_mas_vendidos": list(productos_mas_vendidos),
+            }
             return {
+                "periodo_dias": dias,
                 "periodo": f"Últimos {dias} días",
                 "fecha_inicio": fecha_inicio,
                 "fecha_fin": fecha_fin,
+                "resumen": resumen,
+                "graficos": graficos,
                 "ventas_por_dia": list(ventas_por_dia),
                 "ventas_por_metodo_pago": list(ventas_por_metodo),
                 "productos_mas_vendidos": list(productos_mas_vendidos),
@@ -276,10 +293,17 @@ class DashboardService:
                 else Decimal("0.00")
             )
 
+            resumen = {
+                "total_recargas": total_recargas,
+                "recargas_exitosas": recargas_exitosas,
+                "tasa_exito": tasa_exito,
+            }
             return {
+                "periodo_dias": dias,
                 "periodo": f"Últimos {dias} días",
                 "fecha_inicio": fecha_inicio,
                 "fecha_fin": fecha_fin,
+                "resumen": resumen,
                 "recargas_por_dia": list(recargas_por_dia),
                 "recargas_por_metodo": list(recargas_por_metodo),
                 "comisiones_generadas": comisiones_total,
@@ -351,10 +375,20 @@ class DashboardService:
             else:
                 proyeccion_fin_mes = Decimal("0.00")
 
+            resumen_financiero = {
+                "ingresos_totales": ingresos_totales,
+                "ingresos_ventas": ingresos_ventas,
+                "ingresos_comisiones": ingresos_comisiones,
+                "gastos_estimados": gastos_estimados,
+                "margen_neto": margen_neto,
+                "proyeccion_fin_mes": proyeccion_fin_mes,
+            }
             return {
                 "mes": mes,
+                "año": hoy.year,
                 "fecha_inicio": fecha_inicio,
                 "fecha_fin": fecha_fin,
+                "resumen_financiero": resumen_financiero,
                 "ingresos_totales": ingresos_totales,
                 "ingresos_ventas": ingresos_ventas,
                 "ingresos_comisiones": ingresos_comisiones,
