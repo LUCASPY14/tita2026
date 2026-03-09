@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DER CLIENTES | Cantina TITA</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page { size: letter; margin: 0.5in; }
+        @media print { body { margin: 0; padding: 0; } .no-print { display: none; } }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 8.5in; margin: 0 auto; background: white; padding: 0.5in; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        .subtitle { color: #7f8c8d; font-size: 14px; margin-bottom: 20px; }
+        .description { background: #ecf0f1; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0; }
+        .description h3 { margin-top: 0; color: #2c3e50; }
+        .mermaid { background: white; padding: 20px; display: flex; justify-content: center; }
+        .footer { text-align: center; color: #95a5a6; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1; }
+        .export-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .export-btn:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <button class="export-btn no-print" onclick="window.print()">🖨️ Imprimir/PDF</button>
+    
+    <div class="container">
+        <h1>DER CLIENTES - Gestión de Clientes e Hijos</h1>
+        <div class="subtitle">Sistema Cantina TITA | Fecha: 6 de Marzo, 2026</div>
+        
+        <div class="description">
+            <h3>Entidades Principales</h3>
+            <ul>
+                <li><strong>CLIENTES</strong>: Padres/tutores de estudiantes</li>
+                <li><strong>HIJOS</strong>: Estudiantes del colegio</li>
+                <li><strong>RESTRICCIONES_HIJOS</strong>: Alergias/intolerancias</li>
+                <li><strong>HISTORIAL_GRADOS</strong>: Historial académico</li>
+                <li><strong>AUTORIZACIONES_SALDO_NEGATIVO</strong>: Crédito autorizado</li>
+            </ul>
+            <h3>Reglas de Negocio</h3>
+            <ul>
+                <li>Un cliente puede tener múltiples hijos</li>
+                <li>Restricciones alimentarias con vigencia temporal</li>
+                <li>Autorización de saldo negativo por cliente</li>
+                <li>Historial académico completo del estudiante</li>
+            </ul>
+        </div>
+        
+        <div class="mermaid">
+erDiagram
+    CLIENTES ||--o{ HIJOS : tiene
+    HIJOS ||--o{ RESTRICCIONES_HIJOS : tiene
+    HIJOS ||--o{ HISTORIAL_GRADOS : "cursó"
+    CLIENTES ||--o{ AUTORIZACIONES_SALDO_NEGATIVO : autoriza
+    
+    CLIENTES {
+        int id_cliente PK
+        varchar nombre
+        varchar apellido
+        varchar documento UK
+        varchar telefono
+        varchar email
+        decimal limite_credito
+        decimal cuenta_corriente
+        boolean activo
+        datetime fecha_registro
+    }
+    
+    HIJOS {
+        int id_hijo PK
+        int id_cliente FK
+        varchar nombre
+        varchar apellido
+        date fecha_nacimiento
+        varchar documento UK
+        varchar grado_actual
+        varchar seccion
+        boolean activo
+    }
+    
+    RESTRICCIONES_HIJOS {
+        int id_restriccion PK
+        int id_hijo FK
+        varchar tipo_restriccion
+        varchar alergeno
+        varchar nivel_severidad
+        date fecha_inicio
+        date fecha_fin
+        boolean activo
+    }
+    
+    HISTORIAL_GRADOS {
+        int id_historial PK
+        int id_hijo FK
+        varchar grado
+        int anio
+        date fecha_inicio
+        date fecha_fin
+    }
+    
+    AUTORIZACIONES_SALDO_NEGATIVO {
+        int id_autorizacion PK
+        int id_cliente FK
+        decimal saldo_negativo_autorizado
+        decimal monto_maximo
+        date fecha_autorizacion
+        date fecha_vencimiento
+        boolean activo
+    }
+        </div>
+        
+        <div class="footer">© 2026 Cantina TITA - Documentación de Arquitectura</div>
+    </div>
+    
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', themeVariables: { fontSize: '14px' } });
+    </script>
+</body>
+</html>

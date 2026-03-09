@@ -1,0 +1,7986 @@
+{
+  "tables": {
+    "ajustes_inventario": [
+      {
+        "col": "id_ajuste",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_hora",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_ajuste",
+        "type": "varchar(8)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_aprobacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_aprueba",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_solicita",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "alergenos": [
+      {
+        "col": "id_alergeno",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "palabras_clave",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nivel_severidad",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "icono",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "usuario_creacion",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "alerta_destinatarios": [
+      {
+        "col": "id_destinatario",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "via_email",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "via_sistema",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_alerta",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "alertas_automaticas": [
+      {
+        "col": "id_alerta",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "condicion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_alerta",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "criticidad",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "frecuencia_min",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ultima_verificacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "alertas_sistema": [
+      {
+        "col": "id_alerta",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tipo",
+        "type": "varchar(30)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mensaje",
+        "type": "varchar(500)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_leida",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(9)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_resuelve",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_resolucion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "alertas_stock": [
+      {
+        "col": "id_alerta",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tipo_alerta",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "stock_actual",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "stock_minimo",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_generada",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_resuelta",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activa",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notificacion_enviada",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "alertas_vencimiento": [
+      {
+        "col": "id_alerta",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tipo_alerta",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "dias_restantes",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_generada",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_vencimiento",
+        "type": "date",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "cantidad_lote",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "accion_tomada",
+        "type": "varchar(100)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_accion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notificacion_enviada",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_responsable",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_lote",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "anomalias_detectadas": [
+      {
+        "col": "id_anomalia",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_anomalia",
+        "type": "varchar(30)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_address",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_deteccion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nivel_riesgo",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notificado",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "aplicacion_pagos_compras": [
+      {
+        "col": "id_aplicacion",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "monto_aplicado",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_compra",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_pago_proveedor",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "aplicacion_pagos_ventas": [
+      {
+        "col": "id_aplicacion",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "monto_aplicado",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_pago_venta",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_venta",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "auditoria_comisiones": [
+      {
+        "col": "id_auditoria",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_cambio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "campo_modificado",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_anterior",
+        "type": "decimal(10,4)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_nuevo",
+        "type": "decimal(10,4)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_modifico",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_tarifa",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "auditoria_empleados": [
+      {
+        "col": "id_auditoria",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_cambio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "campo_modificado",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_anterior",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_nuevo",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_origen",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "auditoria_operaciones": [
+      {
+        "col": "id_auditoria",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_usuario",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_usuario",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "operacion",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tabla_afectada",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_registro",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "datos_anteriores",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "datos_nuevos",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_address",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ciudad",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "pais",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "user_agent",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_operacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "resultado",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mensaje_error",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "auditoria_usuarios_web": [
+      {
+        "col": "id_auditoria",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_cambio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "campo_modificado",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_anterior",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_nuevo",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_origen",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "autenticacion_2fa": [
+      {
+        "col": "id_2fa",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(100)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "tipo_usuario",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "secret_key",
+        "type": "varchar(32)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "backup_codes",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "habilitado",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_activacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ultima_verificacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "autorizaciones_saldo_negativo": [
+      {
+        "col": "id_autorizacion",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "monto_autorizado",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "saldo_anterior",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "saldo_resultante",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_autorizacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_venta",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_autoriza",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "bloqueos_cuenta": [
+      {
+        "col": "id_bloqueo",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_usuario",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_bloqueo",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_desbloqueo",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "bloqueado_por",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_address",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "cache_configuracion": [
+      {
+        "col": "id_cache",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "clave",
+        "type": "varchar(100)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ttl_segundos",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "max_size_mb",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_cache",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "auto_invalidate",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "eventos_invalid",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "hits",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "misses",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ultima_limpieza",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "cajas": [
+      {
+        "col": "id_caja",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre_caja",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ubicacion",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "campanas_comunicacion": [
+      {
+        "col": "id_campana",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "segmentacion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_programada",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_enviada",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_destinatarios",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_enviados",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_entregados",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_by",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_email_template",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_sms_template",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "cargas_saldo": [
+      {
+        "col": "id_carga",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_carga",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "monto_cargado",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "referencia",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(30)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "pay_request_id",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tx_id",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_confirmacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "custom_identifier",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente_origen",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_nota",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "nro_tarjeta",
+        "type": "varchar(20)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "metodo_pago",
+        "type": "varchar(30)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_cobrado",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "comision_aplicada",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "porcentaje_comision",
+        "type": "decimal(5,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "numero_comprobante_externo",
+        "type": "varchar(100)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "codigo_referencia_interno",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "referencia_externa",
+        "type": "varchar(100)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_responsable",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_supervisor_aprobador",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_aprobacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_factura",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "imagen_comprobante",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_origen",
+        "type": "char(39)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "webhook_payload",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo_rechazo",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "requiere_validacion_supervisor",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "categorias": [
+      {
+        "col": "id_categoria",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_categoria_padre",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "categorias_promocion": [
+      {
+        "col": "id_categoria_promocion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "id_categoria",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_promocion",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "cierres_caja": [
+      {
+        "col": "id_cierre",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_hora_apertura",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_hora_cierre",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_inicial",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_contado_fisico",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "diferencia_efectivo",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(7)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_caja",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "clientes": [
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombres",
+        "type": "varchar(100)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "apellidos",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "razon_social",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ruc_ci",
+        "type": "varchar(20)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "direccion",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ciudad",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "telefono",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "email",
+        "type": "varchar(254)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "limite_credito",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_registro",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_lista",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_tipo_cliente",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "compras": [
+      {
+        "col": "id_compra",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_total",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "saldo_pendiente",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado_pago",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nro_factura",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_proveedor",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_documento",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "conciliacion_pagos": [
+      {
+        "col": "id_conciliacion",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_acreditacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_conciliacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_acreditado",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_actualizacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_pago_venta",
+        "type": "bigint",
+        "key": "UNI",
+        "extra": ""
+      }
+    ],
+    "configuracion_sistema": [
+      {
+        "col": "id_config",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "clave",
+        "type": "varchar(100)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "valor",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "categoria",
+        "type": "varchar(50)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_defecto",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "requerido",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "validacion",
+        "type": "varchar(500)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valores_permitidos",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_min",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_max",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "requiere_reinicio",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "solo_superuser",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "updated_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "updated_by",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "consumos_tarjeta": [
+      {
+        "col": "id_consumo",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_consumo",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "monto_consumido",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "detalle",
+        "type": "varchar(200)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "saldo_anterior",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "saldo_posterior",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_registro",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "nro_tarjeta",
+        "type": "varchar(20)",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "costos_historicos": [
+      {
+        "col": "id_costo_historico",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "costo_unitario",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_compra",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_compra",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "cantidad_comprada",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "credenciales_api": [
+      {
+        "col": "id_credencial",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "ambiente",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "api_key",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "secret",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "token",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "configuracion",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_expiracion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "updated_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_proveedor",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "cuentas_almuerzo_mensual": [
+      {
+        "col": "id_cuenta",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "anio",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mes",
+        "type": "smallint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cantidad_almuerzos",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_total",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "forma_cobro",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_pagado",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_generacion",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_actualizacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "dashboards": [
+      {
+        "col": "id_dashboard",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "configuracion",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "es_publico",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "predeterminado",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "updated_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "datos_empresa": [
+      {
+        "col": "id_empresa",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "ruc",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "razon_social",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "direccion",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ciudad",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "pais",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "telefono",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "email",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "destinatarios_tarea": [
+      {
+        "col": "id_destinatario",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "notif_inicio",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notif_fin",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notif_error",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_plantilla",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "detalles_ajuste": [
+      {
+        "col": "id_detalle",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "cantidad_ajustada",
+        "type": "decimal(8,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_ajuste",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_movimiento_stock",
+        "type": "bigint",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "detalles_compra": [
+      {
+        "col": "id_detalle",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "costo_unitario",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cantidad",
+        "type": "decimal(8,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "subtotal",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_iva",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_compra",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "detalles_nota_credito": [
+      {
+        "col": "id_detalle_nota",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "cantidad",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "precio_unitario",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "subtotal",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_nota",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "detalles_nota_credito_proveedor": [
+      {
+        "col": "id_detalle_nc_proveedor",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "cantidad",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "precio_unitario",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "subtotal",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_nota_proveedor",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "detalles_venta": [
+      {
+        "col": "id_detalle",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "cantidad",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "precio_unitario",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "subtotal",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_venta",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "documento_impuestos": [
+      {
+        "col": "id_documento",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": ""
+      },
+      {
+        "col": "id_impuesto",
+        "type": "int",
+        "key": "PRI",
+        "extra": ""
+      },
+      {
+        "col": "base_imponible",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_impuesto",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "documentos_tributarios": [
+      {
+        "col": "id_documento",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nro_secuencial",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_emision",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_total",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nro_timbrado",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "tipo_documento",
+        "type": "enum('FISICO','ELECTRONICO')",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cdc",
+        "type": "varchar(44)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "url_kude",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado_sifen",
+        "type": "varchar(9)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_envio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_respuesta",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nro_preimpreso_interno",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "ejecuciones_tarea": [
+      {
+        "col": "id_ejecucion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_inicio",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_fin",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "duracion_seg",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(20)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "resultado",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "error_msg",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "logs",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "pid",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "servidor",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "parametros",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ejecutado_por",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_plantilla",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "emails_enviados": [
+      {
+        "col": "id_email",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "email_destinatario",
+        "type": "varchar(254)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nombre_destinatario",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "asunto",
+        "type": "varchar(200)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cuerpo",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_envio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_entrega",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_apertura",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mensaje_error",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "intentos",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "enviado_por",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_template",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "empleados": [
+      {
+        "col": "id_empleado",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "apellido",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "contrasena_hash",
+        "type": "varchar(60)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_ingreso",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "direccion",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ciudad",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "pais",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "telefono",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "email",
+        "type": "varchar(254)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_baja",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_rol",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "endpoints_api": [
+      {
+        "col": "id_endpoint",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "path",
+        "type": "varchar(200)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "metodo",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "headers",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "parametros",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "schema_request",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "schema_response",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cache_segundos",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "requiere_auth",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_proveedor",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "grados": [
+      {
+        "col": "id_grado",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre_grado",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "nivel",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "orden_visualizacion",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "es_ultimo_grado",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "hijos": [
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "apellido",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_nacimiento",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "grado",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "foto_perfil",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_foto",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente_responsable",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "historial_alertas": [
+      {
+        "col": "id_historial",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_disparada",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mensaje",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "datos_contexto",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "resuelto",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_resolucion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_alerta",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "resuelto_por",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "historial_grados_hijos": [
+      {
+        "col": "id_historial",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "grado_anterior",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "grado_nuevo",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "anio_escolar",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_cambio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "usuario_registro",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "historico_precios": [
+      {
+        "col": "id_historico",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "precio_anterior",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "precio_nuevo",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_cambio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "impuestos": [
+      {
+        "col": "id_impuesto",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre_impuesto",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "porcentaje",
+        "type": "decimal(4,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "vigente_desde",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "vigente_hasta",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "intentos_2fa": [
+      {
+        "col": "id_intento",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_usuario",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_address",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ciudad",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "pais",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "codigo_ingresado",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "exitoso",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_codigo",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_intento",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "intentos_login": [
+      {
+        "col": "id_intento",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_address",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ciudad",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "pais",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_intento",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "exitoso",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo_fallo",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "kpi_metricas": [
+      {
+        "col": "id_kpi",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "formula",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "unidad",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_objetivo",
+        "type": "decimal(15,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "categoria",
+        "type": "varchar(30)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "frecuencia",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "limites_transaccion": [
+      {
+        "col": "id_limite",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tipo_operacion",
+        "type": "varchar(50)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "monto_maximo_sin_autorizacion",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "requiere_autorizacion_doble",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_modificacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_configurador",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_rol",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "limites_transaccion_roles_autorizadores": [
+      {
+        "col": "id",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "limitestransaccion_id",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "roles_id",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "listas_precios": [
+      {
+        "col": "id_lista",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre_lista",
+        "type": "varchar(100)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "fecha_vigencia",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "moneda",
+        "type": "varchar(3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "logs_autorizaciones": [
+      {
+        "col": "id_log",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "codigo_barra",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_operacion",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_registro_afectado",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_usuario",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_hora",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_origen",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "resultado",
+        "type": "varchar(15)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_tarjeta_autorizacion",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "logs_llamadas_api": [
+      {
+        "col": "id_log",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "timestamp",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "metodo",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "url",
+        "type": "varchar(500)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "headers_req",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "payload_req",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "status_code",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "headers_res",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "payload_res",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tiempo_ms",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "bytes_sent",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "bytes_received",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "exitoso",
+        "type": "tinyint(1)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "error_msg",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "intento",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_origen",
+        "type": "char(39)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "contexto",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_endpoint",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "logs_webhooks": [
+      {
+        "col": "id_log",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "timestamp",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "headers",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "payload",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "evento_tipo",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "verificacion_ok",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "procesado_ok",
+        "type": "tinyint(1)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "tiempo_proc_ms",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "error_msg",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_origen",
+        "type": "char(39)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "user_agent",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_webhook",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "lotes_producto": [
+      {
+        "col": "id_lote",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "numero_lote",
+        "type": "varchar(100)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_fabricacion",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_vencimiento",
+        "type": "date",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "cantidad_inicial",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cantidad_disponible",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "bloqueado",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo_bloqueo",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_bloqueo",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_compra",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "medios_pago": [
+      {
+        "col": "id_medio_pago",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "descripcion",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "genera_comision",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "requiere_validacion",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "movimientos_caja": [
+      {
+        "col": "id_movimiento",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tipo_movimiento",
+        "type": "varchar(20)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "monto",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_comision",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_movimiento",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "varchar(200)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_cierre",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_medio_pago",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_venta",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "movimientos_stock": [
+      {
+        "col": "id_movimiento_stock",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_hora",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "tipo_movimiento",
+        "type": "varchar(7)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "cantidad",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "stock_resultante",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_compra",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_venta",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_ajuste",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_autoriza",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "motivo",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "notas_credito_cliente": [
+      {
+        "col": "id_nota",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nro_nota_credito",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_emision",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_total",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_autoriza",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_venta_origen",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "notas_credito_proveedor": [
+      {
+        "col": "id_nota_proveedor",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nro_factura_compra",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_total",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observacion",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_compra_original",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_proveedor",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "notificaciones_portal": [
+      {
+        "col": "id_notificacion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tipo",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "titulo",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mensaje",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "leida",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_envio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_lectura",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "creado_en",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_usuario_portal",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "notificaciones_saldo": [
+      {
+        "col": "id_notificacion",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tipo_notificacion",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "saldo_actual",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mensaje",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "enviada_email",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "enviada_sms",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "leida",
+        "type": "tinyint(1)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "email_destinatario",
+        "type": "varchar(254)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_envio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nro_tarjeta",
+        "type": "varchar(20)",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "pagos_almuerzo_mensual": [
+      {
+        "col": "id_pago_almuerzo",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_pago",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_pagado",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mes_pagado",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(9)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_suscripcion",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_venta",
+        "type": "bigint",
+        "key": "UNI",
+        "extra": ""
+      }
+    ],
+    "pagos_cuentas_almuerzo": [
+      {
+        "col": "id_pago",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_pago",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "medio_pago",
+        "type": "varchar(15)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "referencia",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_cuenta",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_registro",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "pagos_proveedores": [
+      {
+        "col": "id_pago_proveedor",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_medio_pago",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "pagos_venta": [
+      {
+        "col": "id_pago_venta",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "monto",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "referencia_transaccion",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_pago",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(10)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_cierre",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_medio_pago",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "nro_tarjeta_usada",
+        "type": "varchar(20)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_venta",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "monto_comision",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "patrones_acceso": [
+      {
+        "col": "id_patron",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_usuario",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_address",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "horario_inicio",
+        "type": "time(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "horario_fin",
+        "type": "time(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "dias_semana",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "primera_deteccion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ultima_deteccion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "frecuencia_accesos",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "es_habitual",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "perfiles_usuario": [
+      {
+        "col": "id_perfil",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tema",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "idioma",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "timezone",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "dashboard_config",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "menu_colapsado",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notif_email",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notif_push",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notif_desktop",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "formato_fecha",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "moneda",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "config_adicional",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "updated_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado",
+        "type": "int",
+        "key": "UNI",
+        "extra": ""
+      }
+    ],
+    "permisos": [
+      {
+        "col": "id",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "codigo_permiso",
+        "type": "varchar(100)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "modulo",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "planes_almuerzo": [
+      {
+        "col": "id_plan_almuerzo",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre_plan",
+        "type": "varchar(100)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "precio_mensual",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "dias_semana_incluidos",
+        "type": "varchar(60)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "plantillas_email": [
+      {
+        "col": "id_template",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "codigo",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "asunto",
+        "type": "varchar(200)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cuerpo_html",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cuerpo_texto",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "variables",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "categoria",
+        "type": "varchar(30)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "updated_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_by",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "plantillas_reporte": [
+      {
+        "col": "id_template",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "query_sql",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "parametros",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_reporte",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "frecuencia",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_by",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "plantillas_sms": [
+      {
+        "col": "id_template",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "codigo",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mensaje",
+        "type": "varchar(160)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "variables",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "categoria",
+        "type": "varchar(30)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "plantillas_tarea": [
+      {
+        "col": "id_plantilla",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_tarea",
+        "type": "varchar(30)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "comando",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "parametros",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "frecuencia",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cron",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "timeout",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "max_reintentos",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notif_exito",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notif_error",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_by",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "precios_por_lista": [
+      {
+        "col": "id_precio",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "precio_unitario",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_vigencia",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_lista",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "preferencias_notificacion": [
+      {
+        "col": "id_preferencia",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tipo_notificacion",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "email_activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "push_activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "creado_en",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "actualizado_en",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_usuario_portal",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "productos": [
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "codigo_barra",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "varchar(255)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "stock_minimo",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "permite_stock_negativo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_categoria",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_impuesto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_unidad_medida",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "productos_alergenos": [
+      {
+        "col": "id_producto_alergeno",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "contiene",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_registro",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "usuario_registro",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_alergeno",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "productos_promocion": [
+      {
+        "col": "id_producto_promocion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_promocion",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "promociones": [
+      {
+        "col": "id_promocion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(200)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_promocion",
+        "type": "varchar(25)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor_descuento",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_inicio",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_fin",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "hora_inicio",
+        "type": "time(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "hora_fin",
+        "type": "time(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "dias_semana",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "aplica_a",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "min_cantidad",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_minimo",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "max_usos_cliente",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "max_usos_total",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "usos_actuales",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "requiere_codigo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "codigo_promocion",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "prioridad",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "usuario_creacion",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "promociones_aplicadas": [
+      {
+        "col": "id_aplicacion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "monto_descontado",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_aplicacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_promocion",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_venta",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "proveedores": [
+      {
+        "col": "id_proveedor",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "ruc",
+        "type": "varchar(20)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "razon_social",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "telefono",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "email",
+        "type": "varchar(254)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "direccion",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ciudad",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_registro",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "proveedores_api": [
+      {
+        "col": "id_proveedor",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_servicio",
+        "type": "varchar(30)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "url_base",
+        "type": "varchar(200)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "version",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "documentacion",
+        "type": "varchar(200)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_auth",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "config_auth",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "timeout",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "max_reintentos",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "puntos_expedicion": [
+      {
+        "col": "id_punto",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "codigo_establecimiento",
+        "type": "varchar(3)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "codigo_punto_expedicion",
+        "type": "varchar(3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion_ubicacion",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "registro_autorizaciones": [
+      {
+        "col": "id_autorizacion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tipo_operacion",
+        "type": "varchar(50)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "monto",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_autorizacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_address",
+        "type": "char(39)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_ajuste",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_compra",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_autorizador",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_autorizador_2",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_solicitante",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_venta",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "registros_consumo_almuerzo": [
+      {
+        "col": "id_registro_consumo",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_consumo",
+        "type": "date",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "hora_registro",
+        "type": "time(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "costo_almuerzo",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "marcado_en_cuenta",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo_rechazo",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_suscripcion",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_tipo_almuerzo",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "nro_tarjeta",
+        "type": "varchar(20)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_registro",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "ya_cobrado",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "renovaciones_sesion": [
+      {
+        "col": "id_renovacion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "session_key_anterior",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "session_key_nuevo",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_address",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "user_agent",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_renovacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "restricciones_hijos": [
+      {
+        "col": "id_restriccion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "tipo_restriccion",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "severidad",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "requiere_autorizacion",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_registro",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_ultima_actualizacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "restricciones_horarias": [
+      {
+        "col": "id_restriccion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_usuario",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "dia_semana",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "hora_inicio",
+        "type": "time(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "hora_fin",
+        "type": "time(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "roles": [
+      {
+        "col": "id_rol",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre_rol",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "roles_permisos": [
+      {
+        "col": "id",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_asignacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "asignado_por",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_permiso",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_rol",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "sesiones_activas": [
+      {
+        "col": "id_sesion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_usuario",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "session_key",
+        "type": "varchar(255)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "ip_address",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "user_agent",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_inicio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ultima_actividad",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activa",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "sms_enviados": [
+      {
+        "col": "id_sms",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "telefono",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mensaje",
+        "type": "varchar(160)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_envio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_entrega",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "costo",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "enviado_por",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_template",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "solicitudes_notificacion": [
+      {
+        "col": "id_solicitud",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "saldo_alerta",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mensaje",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "destino",
+        "type": "varchar(8)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(9)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_solicitud",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_envio",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "nro_tarjeta",
+        "type": "varchar(20)",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "stock_unico": [
+      {
+        "col": "id_stock",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "cantidad",
+        "type": "decimal(10,3)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_ultima_actualizacion",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "UNI",
+        "extra": ""
+      }
+    ],
+    "suscripciones_almuerzo": [
+      {
+        "col": "id_suscripcion",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_inicio",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_fin",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_plan_almuerzo",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "tarifas_comision": [
+      {
+        "col": "id_tarifa",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha_inicio_vigencia",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_fin_vigencia",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "porcentaje_comision",
+        "type": "decimal(5,4)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_fijo_comision",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_medio_pago",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "tarjetas": [
+      {
+        "col": "nro_tarjeta",
+        "type": "varchar(20)",
+        "key": "PRI",
+        "extra": ""
+      },
+      {
+        "col": "saldo_actual",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(20)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "fecha_vencimiento",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "saldo_alerta",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "permite_saldo_negativo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "limite_credito",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notificar_saldo_bajo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ultima_notificacion_saldo",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "codigo_barras",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      }
+    ],
+    "tarjetas_autorizacion": [
+      {
+        "col": "id_tarjeta_autorizacion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "codigo_barra",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "tipo_autorizacion",
+        "type": "varchar(15)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "puede_anular_almuerzos",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "puede_anular_ventas",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "puede_anular_recargas",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "puede_modificar_precios",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_vencimiento",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "observaciones",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "timbrados": [
+      {
+        "col": "nro_timbrado",
+        "type": "int",
+        "key": "PRI",
+        "extra": ""
+      },
+      {
+        "col": "tipo_documento",
+        "type": "varchar(12)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_inicio",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_fin",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nro_inicial",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nro_final",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "es_electronico",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_punto",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "tipos_almuerzo": [
+      {
+        "col": "id_tipo_almuerzo",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "precio_unitario",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "incluye_plato_principal",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "incluye_postre",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "incluye_bebida",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "tipos_cliente": [
+      {
+        "col": "id_tipo_cliente",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre_tipo",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "tokens_recuperacion": [
+      {
+        "col": "id_token",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "token",
+        "type": "varchar(64)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_expiracion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "usado",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_uso",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ip_solicitud",
+        "type": "varchar(45)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "tokens_verificacion": [
+      {
+        "col": "id_token",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "token",
+        "type": "varchar(100)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "tipo",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "expira_en",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "usado",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_creacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_uso",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_usuario_portal",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "transacciones_online": [
+      {
+        "col": "id_transaccion",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "monto",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "metodo_pago",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "referencia_pago",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_transaccion_externa",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "datos_extra",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_transaccion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "creado_en",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "actualizado_en",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nro_tarjeta",
+        "type": "varchar(20)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_usuario_portal",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "unidades_medida": [
+      {
+        "col": "id_unidad_medida",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "abreviatura",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "usuarios_portal": [
+      {
+        "col": "id_usuario_portal",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "email",
+        "type": "varchar(255)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "password_hash",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "email_verificado",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_registro",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ultimo_acceso",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "UNI",
+        "extra": ""
+      }
+    ],
+    "usuarios_web_clientes": [
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "PRI",
+        "extra": ""
+      },
+      {
+        "col": "usuario",
+        "type": "varchar(50)",
+        "key": "UNI",
+        "extra": ""
+      },
+      {
+        "col": "contrasena_hash",
+        "type": "varchar(128)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ultimo_acceso",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "valores_kpi": [
+      {
+        "col": "id_valor",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "fecha",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "valor",
+        "type": "decimal(15,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "notas",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "auto_calc",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_kpi",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "ventas": [
+      {
+        "col": "id_venta",
+        "type": "bigint",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nro_factura_venta",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha",
+        "type": "datetime(6)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "monto_total",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "saldo_pendiente",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado_pago",
+        "type": "varchar(10)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(10)",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "tipo_venta",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "motivo_credito",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "genera_factura_legal",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "autorizado_por",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_cliente",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_empleado_cajero",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_medio_pago",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      },
+      {
+        "col": "id_documento",
+        "type": "bigint",
+        "key": "MUL",
+        "extra": ""
+      }
+    ],
+    "vista_almuerzos_diarios_hijos": [
+      {
+        "col": "id_registro_consumo",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_consumo",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "hora_registro",
+        "type": "time(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nombre_hijo",
+        "type": "varchar(201)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "responsable_nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "responsable_apellido",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nro_tarjeta",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "tipo_almuerzo",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion_almuerzo",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "costo_almuerzo",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "marcado_en_cuenta",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "origen",
+        "type": "varchar(11)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_suscripcion",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "vista_consumos_hijo": [
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nombre_completo_hijo",
+        "type": "varchar(201)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "responsable_nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "responsable_apellido",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nro_tarjeta",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "saldo_actual",
+        "type": "decimal(12,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_consumos",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_consumido",
+        "type": "decimal(34,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "ultimo_consumo",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_recargas",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_recargado",
+        "type": "decimal(34,2)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "vista_cuentas_mensuales_hijos": [
+      {
+        "col": "id_cuenta",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_hijo",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nombre_hijo",
+        "type": "varchar(201)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "responsable_nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "responsable_apellido",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "responsable_telefono",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "anio",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "mes",
+        "type": "smallint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cantidad_almuerzos",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_total",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "forma_cobro",
+        "type": "varchar(20)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_pagado",
+        "type": "decimal(10,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "saldo_pendiente",
+        "type": "decimal(11,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "estado",
+        "type": "varchar(10)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_generacion",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_actualizacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "cantidad_pagos",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "vista_resumen_caja_diario": [
+      {
+        "col": "fecha",
+        "type": "date",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_ventas",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_total_ventas",
+        "type": "decimal(34,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_recargas",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "monto_total_recargas",
+        "type": "decimal(34,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_ingresos_dia",
+        "type": "decimal(35,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_transacciones_pago",
+        "type": "bigint",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_efectivo",
+        "type": "decimal(34,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_tarjeta_debito",
+        "type": "decimal(34,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_tarjeta_credito",
+        "type": "decimal(34,2)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "total_transferencias",
+        "type": "decimal(34,2)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "vista_stock_alerta": [
+      {
+        "col": "id_producto",
+        "type": "int",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "codigo_barra",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "categoria",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "stock_actual",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "stock_minimo",
+        "type": "decimal(10,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "diferencia",
+        "type": "decimal(11,3)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "nivel_alerta",
+        "type": "varchar(7)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "fecha_ultima_actualizacion",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "unidad_medida",
+        "type": "varchar(50)",
+        "key": "",
+        "extra": ""
+      }
+    ],
+    "webhook_endpoints": [
+      {
+        "col": "id_webhook",
+        "type": "int",
+        "key": "PRI",
+        "extra": "auto_increment"
+      },
+      {
+        "col": "nombre",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "descripcion",
+        "type": "longtext",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "path",
+        "type": "varchar(200)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "requiere_verificacion",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "secret_key",
+        "type": "varchar(255)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "header_verificacion",
+        "type": "varchar(100)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "eventos",
+        "type": "json",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "handler_func",
+        "type": "varchar(200)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "activo",
+        "type": "tinyint(1)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "created_at",
+        "type": "datetime(6)",
+        "key": "",
+        "extra": ""
+      },
+      {
+        "col": "id_proveedor",
+        "type": "int",
+        "key": "MUL",
+        "extra": ""
+      }
+    ]
+  },
+  "fks": [
+    {
+      "table": "ajustes_inventario",
+      "col": "id_empleado_aprueba",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "ajustes_inventario",
+      "col": "id_empleado_solicita",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "alerta_destinatarios",
+      "col": "id_alerta",
+      "ref_table": "alertas_automaticas",
+      "ref_col": "id_alerta"
+    },
+    {
+      "table": "alerta_destinatarios",
+      "col": "id_empleado",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "alertas_stock",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "alertas_vencimiento",
+      "col": "id_empleado_responsable",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "alertas_vencimiento",
+      "col": "id_lote",
+      "ref_table": "lotes_producto",
+      "ref_col": "id_lote"
+    },
+    {
+      "table": "aplicacion_pagos_compras",
+      "col": "id_compra",
+      "ref_table": "compras",
+      "ref_col": "id_compra"
+    },
+    {
+      "table": "aplicacion_pagos_compras",
+      "col": "id_pago_proveedor",
+      "ref_table": "pagos_proveedores",
+      "ref_col": "id_pago_proveedor"
+    },
+    {
+      "table": "aplicacion_pagos_ventas",
+      "col": "id_pago_venta",
+      "ref_table": "pagos_venta",
+      "ref_col": "id_pago_venta"
+    },
+    {
+      "table": "aplicacion_pagos_ventas",
+      "col": "id_venta",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "auditoria_comisiones",
+      "col": "id_empleado_modifico",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "auditoria_comisiones",
+      "col": "id_tarifa",
+      "ref_table": "tarifas_comision",
+      "ref_col": "id_tarifa"
+    },
+    {
+      "table": "auditoria_empleados",
+      "col": "id_empleado",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "auditoria_usuarios_web",
+      "col": "id_cliente",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "autorizaciones_saldo_negativo",
+      "col": "id_cliente",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "autorizaciones_saldo_negativo",
+      "col": "id_empleado_autoriza",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "autorizaciones_saldo_negativo",
+      "col": "id_venta",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "campanas_comunicacion",
+      "col": "created_by",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "campanas_comunicacion",
+      "col": "id_email_template",
+      "ref_table": "plantillas_email",
+      "ref_col": "id_template"
+    },
+    {
+      "table": "campanas_comunicacion",
+      "col": "id_sms_template",
+      "ref_table": "plantillas_sms",
+      "ref_col": "id_template"
+    },
+    {
+      "table": "cargas_saldo",
+      "col": "id_cliente_origen",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "cargas_saldo",
+      "col": "id_empleado_responsable",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "cargas_saldo",
+      "col": "id_factura",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "cargas_saldo",
+      "col": "id_supervisor_aprobador",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "cargas_saldo",
+      "col": "nro_tarjeta",
+      "ref_table": "tarjetas",
+      "ref_col": "nro_tarjeta"
+    },
+    {
+      "table": "categorias",
+      "col": "id_categoria_padre",
+      "ref_table": "categorias",
+      "ref_col": "id_categoria"
+    },
+    {
+      "table": "categorias_promocion",
+      "col": "id_categoria",
+      "ref_table": "categorias",
+      "ref_col": "id_categoria"
+    },
+    {
+      "table": "categorias_promocion",
+      "col": "id_promocion",
+      "ref_table": "promociones",
+      "ref_col": "id_promocion"
+    },
+    {
+      "table": "cierres_caja",
+      "col": "id_caja",
+      "ref_table": "cajas",
+      "ref_col": "id_caja"
+    },
+    {
+      "table": "cierres_caja",
+      "col": "id_empleado",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "clientes",
+      "col": "id_lista",
+      "ref_table": "listas_precios",
+      "ref_col": "id_lista"
+    },
+    {
+      "table": "clientes",
+      "col": "id_tipo_cliente",
+      "ref_table": "tipos_cliente",
+      "ref_col": "id_tipo_cliente"
+    },
+    {
+      "table": "compras",
+      "col": "id_documento",
+      "ref_table": "documentos_tributarios",
+      "ref_col": "id_documento"
+    },
+    {
+      "table": "compras",
+      "col": "id_proveedor",
+      "ref_table": "proveedores",
+      "ref_col": "id_proveedor"
+    },
+    {
+      "table": "conciliacion_pagos",
+      "col": "id_pago_venta",
+      "ref_table": "pagos_venta",
+      "ref_col": "id_pago_venta"
+    },
+    {
+      "table": "configuracion_sistema",
+      "col": "updated_by",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "consumos_tarjeta",
+      "col": "id_empleado_registro",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "consumos_tarjeta",
+      "col": "nro_tarjeta",
+      "ref_table": "tarjetas",
+      "ref_col": "nro_tarjeta"
+    },
+    {
+      "table": "costos_historicos",
+      "col": "id_compra",
+      "ref_table": "compras",
+      "ref_col": "id_compra"
+    },
+    {
+      "table": "costos_historicos",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "credenciales_api",
+      "col": "id_proveedor",
+      "ref_table": "proveedores_api",
+      "ref_col": "id_proveedor"
+    },
+    {
+      "table": "cuentas_almuerzo_mensual",
+      "col": "id_hijo",
+      "ref_table": "hijos",
+      "ref_col": "id_hijo"
+    },
+    {
+      "table": "dashboards",
+      "col": "id_empleado",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "destinatarios_tarea",
+      "col": "id_empleado",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "destinatarios_tarea",
+      "col": "id_plantilla",
+      "ref_table": "plantillas_tarea",
+      "ref_col": "id_plantilla"
+    },
+    {
+      "table": "detalles_ajuste",
+      "col": "id_ajuste",
+      "ref_table": "ajustes_inventario",
+      "ref_col": "id_ajuste"
+    },
+    {
+      "table": "detalles_ajuste",
+      "col": "id_movimiento_stock",
+      "ref_table": "movimientos_stock",
+      "ref_col": "id_movimiento_stock"
+    },
+    {
+      "table": "detalles_ajuste",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "detalles_compra",
+      "col": "id_compra",
+      "ref_table": "compras",
+      "ref_col": "id_compra"
+    },
+    {
+      "table": "detalles_compra",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "detalles_nota_credito",
+      "col": "id_nota",
+      "ref_table": "notas_credito_cliente",
+      "ref_col": "id_nota"
+    },
+    {
+      "table": "detalles_nota_credito",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "detalles_nota_credito_proveedor",
+      "col": "id_nota_proveedor",
+      "ref_table": "notas_credito_proveedor",
+      "ref_col": "id_nota_proveedor"
+    },
+    {
+      "table": "detalles_nota_credito_proveedor",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "detalles_venta",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "detalles_venta",
+      "col": "id_venta",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "documento_impuestos",
+      "col": "id_documento",
+      "ref_table": "documentos_tributarios",
+      "ref_col": "id_documento"
+    },
+    {
+      "table": "documento_impuestos",
+      "col": "id_impuesto",
+      "ref_table": "impuestos",
+      "ref_col": "id_impuesto"
+    },
+    {
+      "table": "documentos_tributarios",
+      "col": "nro_timbrado",
+      "ref_table": "timbrados",
+      "ref_col": "nro_timbrado"
+    },
+    {
+      "table": "ejecuciones_tarea",
+      "col": "ejecutado_por",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "ejecuciones_tarea",
+      "col": "id_plantilla",
+      "ref_table": "plantillas_tarea",
+      "ref_col": "id_plantilla"
+    },
+    {
+      "table": "emails_enviados",
+      "col": "enviado_por",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "emails_enviados",
+      "col": "id_cliente",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "emails_enviados",
+      "col": "id_template",
+      "ref_table": "plantillas_email",
+      "ref_col": "id_template"
+    },
+    {
+      "table": "empleados",
+      "col": "id_rol",
+      "ref_table": "roles",
+      "ref_col": "id_rol"
+    },
+    {
+      "table": "endpoints_api",
+      "col": "id_proveedor",
+      "ref_table": "proveedores_api",
+      "ref_col": "id_proveedor"
+    },
+    {
+      "table": "hijos",
+      "col": "id_cliente_responsable",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "historial_alertas",
+      "col": "id_alerta",
+      "ref_table": "alertas_automaticas",
+      "ref_col": "id_alerta"
+    },
+    {
+      "table": "historial_alertas",
+      "col": "resuelto_por",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "historial_grados_hijos",
+      "col": "id_hijo",
+      "ref_table": "hijos",
+      "ref_col": "id_hijo"
+    },
+    {
+      "table": "historico_precios",
+      "col": "id_empleado",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "historico_precios",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "limites_transaccion",
+      "col": "id_empleado_configurador",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "limites_transaccion",
+      "col": "id_rol",
+      "ref_table": "roles",
+      "ref_col": "id_rol"
+    },
+    {
+      "table": "limites_transaccion_roles_autorizadores",
+      "col": "limitestransaccion_id",
+      "ref_table": "limites_transaccion",
+      "ref_col": "id_limite"
+    },
+    {
+      "table": "limites_transaccion_roles_autorizadores",
+      "col": "roles_id",
+      "ref_table": "roles",
+      "ref_col": "id_rol"
+    },
+    {
+      "table": "logs_autorizaciones",
+      "col": "id_tarjeta_autorizacion",
+      "ref_table": "tarjetas_autorizacion",
+      "ref_col": "id_tarjeta_autorizacion"
+    },
+    {
+      "table": "logs_llamadas_api",
+      "col": "id_empleado",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "logs_llamadas_api",
+      "col": "id_endpoint",
+      "ref_table": "endpoints_api",
+      "ref_col": "id_endpoint"
+    },
+    {
+      "table": "logs_webhooks",
+      "col": "id_webhook",
+      "ref_table": "webhook_endpoints",
+      "ref_col": "id_webhook"
+    },
+    {
+      "table": "lotes_producto",
+      "col": "id_compra",
+      "ref_table": "compras",
+      "ref_col": "id_compra"
+    },
+    {
+      "table": "lotes_producto",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "movimientos_caja",
+      "col": "id_cierre",
+      "ref_table": "cierres_caja",
+      "ref_col": "id_cierre"
+    },
+    {
+      "table": "movimientos_caja",
+      "col": "id_medio_pago",
+      "ref_table": "medios_pago",
+      "ref_col": "id_medio_pago"
+    },
+    {
+      "table": "movimientos_caja",
+      "col": "id_venta",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "movimientos_stock",
+      "col": "id_compra",
+      "ref_table": "compras",
+      "ref_col": "id_compra"
+    },
+    {
+      "table": "movimientos_stock",
+      "col": "id_empleado_autoriza",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "movimientos_stock",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "movimientos_stock",
+      "col": "id_venta",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "notas_credito_cliente",
+      "col": "id_cliente",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "notas_credito_cliente",
+      "col": "id_empleado_autoriza",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "notas_credito_cliente",
+      "col": "id_venta_origen",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "notas_credito_proveedor",
+      "col": "id_compra_original",
+      "ref_table": "compras",
+      "ref_col": "id_compra"
+    },
+    {
+      "table": "notas_credito_proveedor",
+      "col": "id_proveedor",
+      "ref_table": "proveedores",
+      "ref_col": "id_proveedor"
+    },
+    {
+      "table": "notificaciones_portal",
+      "col": "id_usuario_portal",
+      "ref_table": "usuarios_portal",
+      "ref_col": "id_usuario_portal"
+    },
+    {
+      "table": "notificaciones_saldo",
+      "col": "nro_tarjeta",
+      "ref_table": "tarjetas",
+      "ref_col": "nro_tarjeta"
+    },
+    {
+      "table": "pagos_almuerzo_mensual",
+      "col": "id_suscripcion",
+      "ref_table": "suscripciones_almuerzo",
+      "ref_col": "id_suscripcion"
+    },
+    {
+      "table": "pagos_almuerzo_mensual",
+      "col": "id_venta",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "pagos_cuentas_almuerzo",
+      "col": "id_cuenta",
+      "ref_table": "cuentas_almuerzo_mensual",
+      "ref_col": "id_cuenta"
+    },
+    {
+      "table": "pagos_cuentas_almuerzo",
+      "col": "id_empleado_registro",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "pagos_proveedores",
+      "col": "id_medio_pago",
+      "ref_table": "medios_pago",
+      "ref_col": "id_medio_pago"
+    },
+    {
+      "table": "pagos_venta",
+      "col": "id_medio_pago",
+      "ref_table": "medios_pago",
+      "ref_col": "id_medio_pago"
+    },
+    {
+      "table": "pagos_venta",
+      "col": "id_venta",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "pagos_venta",
+      "col": "nro_tarjeta_usada",
+      "ref_table": "tarjetas",
+      "ref_col": "nro_tarjeta"
+    },
+    {
+      "table": "perfiles_usuario",
+      "col": "id_empleado",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "plantillas_email",
+      "col": "created_by",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "plantillas_reporte",
+      "col": "created_by",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "plantillas_tarea",
+      "col": "created_by",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "precios_por_lista",
+      "col": "id_lista",
+      "ref_table": "listas_precios",
+      "ref_col": "id_lista"
+    },
+    {
+      "table": "precios_por_lista",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "preferencias_notificacion",
+      "col": "id_usuario_portal",
+      "ref_table": "usuarios_portal",
+      "ref_col": "id_usuario_portal"
+    },
+    {
+      "table": "productos",
+      "col": "id_categoria",
+      "ref_table": "categorias",
+      "ref_col": "id_categoria"
+    },
+    {
+      "table": "productos",
+      "col": "id_impuesto",
+      "ref_table": "impuestos",
+      "ref_col": "id_impuesto"
+    },
+    {
+      "table": "productos",
+      "col": "id_unidad_medida",
+      "ref_table": "unidades_medida",
+      "ref_col": "id_unidad_medida"
+    },
+    {
+      "table": "productos_alergenos",
+      "col": "id_alergeno",
+      "ref_table": "alergenos",
+      "ref_col": "id_alergeno"
+    },
+    {
+      "table": "productos_alergenos",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "productos_promocion",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "productos_promocion",
+      "col": "id_promocion",
+      "ref_table": "promociones",
+      "ref_col": "id_promocion"
+    },
+    {
+      "table": "promociones_aplicadas",
+      "col": "id_promocion",
+      "ref_table": "promociones",
+      "ref_col": "id_promocion"
+    },
+    {
+      "table": "promociones_aplicadas",
+      "col": "id_venta",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "registro_autorizaciones",
+      "col": "id_ajuste",
+      "ref_table": "ajustes_inventario",
+      "ref_col": "id_ajuste"
+    },
+    {
+      "table": "registro_autorizaciones",
+      "col": "id_compra",
+      "ref_table": "compras",
+      "ref_col": "id_compra"
+    },
+    {
+      "table": "registro_autorizaciones",
+      "col": "id_empleado_autorizador",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "registro_autorizaciones",
+      "col": "id_empleado_autorizador_2",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "registro_autorizaciones",
+      "col": "id_empleado_solicitante",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "registro_autorizaciones",
+      "col": "id_venta",
+      "ref_table": "ventas",
+      "ref_col": "id_venta"
+    },
+    {
+      "table": "registros_consumo_almuerzo",
+      "col": "id_empleado_registro",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "registros_consumo_almuerzo",
+      "col": "id_hijo",
+      "ref_table": "hijos",
+      "ref_col": "id_hijo"
+    },
+    {
+      "table": "registros_consumo_almuerzo",
+      "col": "id_suscripcion",
+      "ref_table": "suscripciones_almuerzo",
+      "ref_col": "id_suscripcion"
+    },
+    {
+      "table": "registros_consumo_almuerzo",
+      "col": "id_tipo_almuerzo",
+      "ref_table": "tipos_almuerzo",
+      "ref_col": "id_tipo_almuerzo"
+    },
+    {
+      "table": "registros_consumo_almuerzo",
+      "col": "nro_tarjeta",
+      "ref_table": "tarjetas",
+      "ref_col": "nro_tarjeta"
+    },
+    {
+      "table": "restricciones_hijos",
+      "col": "id_hijo",
+      "ref_table": "hijos",
+      "ref_col": "id_hijo"
+    },
+    {
+      "table": "roles_permisos",
+      "col": "asignado_por",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "roles_permisos",
+      "col": "id_permiso",
+      "ref_table": "permisos",
+      "ref_col": "id"
+    },
+    {
+      "table": "roles_permisos",
+      "col": "id_rol",
+      "ref_table": "roles",
+      "ref_col": "id_rol"
+    },
+    {
+      "table": "sms_enviados",
+      "col": "enviado_por",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "sms_enviados",
+      "col": "id_cliente",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "sms_enviados",
+      "col": "id_template",
+      "ref_table": "plantillas_sms",
+      "ref_col": "id_template"
+    },
+    {
+      "table": "solicitudes_notificacion",
+      "col": "id_cliente",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "solicitudes_notificacion",
+      "col": "nro_tarjeta",
+      "ref_table": "tarjetas",
+      "ref_col": "nro_tarjeta"
+    },
+    {
+      "table": "stock_unico",
+      "col": "id_producto",
+      "ref_table": "productos",
+      "ref_col": "id_producto"
+    },
+    {
+      "table": "suscripciones_almuerzo",
+      "col": "id_hijo",
+      "ref_table": "hijos",
+      "ref_col": "id_hijo"
+    },
+    {
+      "table": "suscripciones_almuerzo",
+      "col": "id_plan_almuerzo",
+      "ref_table": "planes_almuerzo",
+      "ref_col": "id_plan_almuerzo"
+    },
+    {
+      "table": "tarifas_comision",
+      "col": "id_medio_pago",
+      "ref_table": "medios_pago",
+      "ref_col": "id_medio_pago"
+    },
+    {
+      "table": "tarjetas",
+      "col": "id_hijo",
+      "ref_table": "hijos",
+      "ref_col": "id_hijo"
+    },
+    {
+      "table": "tarjetas_autorizacion",
+      "col": "id_empleado",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "timbrados",
+      "col": "id_punto",
+      "ref_table": "puntos_expedicion",
+      "ref_col": "id_punto"
+    },
+    {
+      "table": "tokens_recuperacion",
+      "col": "id_cliente",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "tokens_verificacion",
+      "col": "id_usuario_portal",
+      "ref_table": "usuarios_portal",
+      "ref_col": "id_usuario_portal"
+    },
+    {
+      "table": "transacciones_online",
+      "col": "id_usuario_portal",
+      "ref_table": "usuarios_portal",
+      "ref_col": "id_usuario_portal"
+    },
+    {
+      "table": "transacciones_online",
+      "col": "nro_tarjeta",
+      "ref_table": "tarjetas",
+      "ref_col": "nro_tarjeta"
+    },
+    {
+      "table": "usuarios_portal",
+      "col": "id_cliente",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "usuarios_web_clientes",
+      "col": "id_cliente",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "valores_kpi",
+      "col": "id_kpi",
+      "ref_table": "kpi_metricas",
+      "ref_col": "id_kpi"
+    },
+    {
+      "table": "ventas",
+      "col": "autorizado_por",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "ventas",
+      "col": "id_cliente",
+      "ref_table": "clientes",
+      "ref_col": "id_cliente"
+    },
+    {
+      "table": "ventas",
+      "col": "id_documento",
+      "ref_table": "documentos_tributarios",
+      "ref_col": "id_documento"
+    },
+    {
+      "table": "ventas",
+      "col": "id_empleado_cajero",
+      "ref_table": "empleados",
+      "ref_col": "id_empleado"
+    },
+    {
+      "table": "ventas",
+      "col": "id_hijo",
+      "ref_table": "hijos",
+      "ref_col": "id_hijo"
+    },
+    {
+      "table": "ventas",
+      "col": "id_medio_pago",
+      "ref_table": "medios_pago",
+      "ref_col": "id_medio_pago"
+    },
+    {
+      "table": "webhook_endpoints",
+      "col": "id_proveedor",
+      "ref_table": "proveedores_api",
+      "ref_col": "id_proveedor"
+    }
+  ]
+}

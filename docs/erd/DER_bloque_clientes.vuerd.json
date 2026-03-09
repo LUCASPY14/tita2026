@@ -1,0 +1,2753 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dineug/erd-editor/main/json-schema/schema.json",
+  "version": "3.0.0",
+  "settings": {
+    "width": 4000,
+    "height": 4000,
+    "scrollTop": -2500,
+    "scrollLeft": 0,
+    "zoomLevel": 1,
+    "show": 437,
+    "database": 4,
+    "databaseName": "dbcantinatita",
+    "canvasType": "ERD",
+    "language": 1,
+    "tableNameCase": 4,
+    "columnNameCase": 2,
+    "bracketType": 1,
+    "relationshipDataTypeSync": true,
+    "relationshipOptimization": false,
+    "columnOrder": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
+    "maxWidthComment": -1,
+    "ignoreSaveSettings": 0
+  },
+  "doc": {
+    "tableIds": [
+      "T000001",
+      "T000012",
+      "T000027",
+      "T000035",
+      "T000045",
+      "T000055",
+      "T000061",
+      "T000072",
+      "T000076",
+      "T000091"
+    ],
+    "relationshipIds": [
+      "R000001",
+      "R000002",
+      "R000003",
+      "R000004",
+      "R000005",
+      "R000006",
+      "R000007",
+      "R000008",
+      "R000009",
+      "R000010",
+      "R000011",
+      "R000012"
+    ],
+    "indexIds": [],
+    "memoIds": []
+  },
+  "collections": {
+    "tableEntities": {
+      "T000001": {
+        "id": "T000001",
+        "name": "autorizaciones_saldo_negativo",
+        "comment": "clientes",
+        "columnIds": [
+          "C000002",
+          "C000003",
+          "C000004",
+          "C000005",
+          "C000006",
+          "C000007",
+          "C000008",
+          "C000009",
+          "C000010",
+          "C000011"
+        ],
+        "seqColumnIds": [
+          "C000002",
+          "C000003",
+          "C000004",
+          "C000005",
+          "C000006",
+          "C000007",
+          "C000008",
+          "C000009",
+          "C000010",
+          "C000011"
+        ],
+        "ui": {
+          "x": 80,
+          "y": 80,
+          "zIndex": 1,
+          "widthName": 162,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1773014451645,
+          "createAt": 1773014451645
+        }
+      },
+      "T000012": {
+        "id": "T000012",
+        "name": "clientes",
+        "comment": "clientes",
+        "columnIds": [
+          "C000013",
+          "C000014",
+          "C000015",
+          "C000016",
+          "C000017",
+          "C000018",
+          "C000019",
+          "C000020",
+          "C000021",
+          "C000022",
+          "C000023",
+          "C000024",
+          "C000025",
+          "C000026"
+        ],
+        "seqColumnIds": [
+          "C000013",
+          "C000014",
+          "C000015",
+          "C000016",
+          "C000017",
+          "C000018",
+          "C000019",
+          "C000020",
+          "C000021",
+          "C000022",
+          "C000023",
+          "C000024",
+          "C000025",
+          "C000026"
+        ],
+        "ui": {
+          "x": 410,
+          "y": 80,
+          "zIndex": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "T000027": {
+        "id": "T000027",
+        "name": "grados",
+        "comment": "clientes",
+        "columnIds": [
+          "C000028",
+          "C000029",
+          "C000030",
+          "C000031",
+          "C000032",
+          "C000033",
+          "C000034"
+        ],
+        "seqColumnIds": [
+          "C000028",
+          "C000029",
+          "C000030",
+          "C000031",
+          "C000032",
+          "C000033",
+          "C000034"
+        ],
+        "ui": {
+          "x": 740,
+          "y": 80,
+          "zIndex": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "T000035": {
+        "id": "T000035",
+        "name": "hijos",
+        "comment": "clientes",
+        "columnIds": [
+          "C000036",
+          "C000037",
+          "C000038",
+          "C000039",
+          "C000040",
+          "C000041",
+          "C000042",
+          "C000043",
+          "C000044"
+        ],
+        "seqColumnIds": [
+          "C000036",
+          "C000037",
+          "C000038",
+          "C000039",
+          "C000040",
+          "C000041",
+          "C000042",
+          "C000043",
+          "C000044"
+        ],
+        "ui": {
+          "x": 1070,
+          "y": 80,
+          "zIndex": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "T000045": {
+        "id": "T000045",
+        "name": "historial_grados_hijos",
+        "comment": "clientes",
+        "columnIds": [
+          "C000046",
+          "C000047",
+          "C000048",
+          "C000049",
+          "C000050",
+          "C000051",
+          "C000052",
+          "C000053",
+          "C000054"
+        ],
+        "seqColumnIds": [
+          "C000046",
+          "C000047",
+          "C000048",
+          "C000049",
+          "C000050",
+          "C000051",
+          "C000052",
+          "C000053",
+          "C000054"
+        ],
+        "ui": {
+          "x": 80,
+          "y": 664,
+          "zIndex": 1,
+          "widthName": 115,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "T000055": {
+        "id": "T000055",
+        "name": "listas_precios",
+        "comment": "clientes",
+        "columnIds": [
+          "C000056",
+          "C000057",
+          "C000058",
+          "C000059",
+          "C000060"
+        ],
+        "seqColumnIds": [
+          "C000056",
+          "C000057",
+          "C000058",
+          "C000059",
+          "C000060"
+        ],
+        "ui": {
+          "x": 410,
+          "y": 664,
+          "zIndex": 1,
+          "widthName": 71,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "T000061": {
+        "id": "T000061",
+        "name": "restricciones_hijos",
+        "comment": "clientes",
+        "columnIds": [
+          "C000062",
+          "C000063",
+          "C000064",
+          "C000065",
+          "C000066",
+          "C000067",
+          "C000068",
+          "C000069",
+          "C000070",
+          "C000071"
+        ],
+        "seqColumnIds": [
+          "C000062",
+          "C000063",
+          "C000064",
+          "C000065",
+          "C000066",
+          "C000067",
+          "C000068",
+          "C000069",
+          "C000070",
+          "C000071"
+        ],
+        "ui": {
+          "x": 740,
+          "y": 664,
+          "zIndex": 1,
+          "widthName": 98,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "T000072": {
+        "id": "T000072",
+        "name": "tipos_cliente",
+        "comment": "clientes",
+        "columnIds": [
+          "C000073",
+          "C000074",
+          "C000075"
+        ],
+        "seqColumnIds": [
+          "C000073",
+          "C000074",
+          "C000075"
+        ],
+        "ui": {
+          "x": 1070,
+          "y": 664,
+          "zIndex": 1,
+          "widthName": 68,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "T000076": {
+        "id": "T000076",
+        "name": "empleados",
+        "comment": "usuarios",
+        "columnIds": [
+          "C000077",
+          "C000078",
+          "C000079",
+          "C000080",
+          "C000081",
+          "C000082",
+          "C000083",
+          "C000084",
+          "C000085",
+          "C000086",
+          "C000087",
+          "C000088",
+          "C000089",
+          "C000090"
+        ],
+        "seqColumnIds": [
+          "C000077",
+          "C000078",
+          "C000079",
+          "C000080",
+          "C000081",
+          "C000082",
+          "C000083",
+          "C000084",
+          "C000085",
+          "C000086",
+          "C000087",
+          "C000088",
+          "C000089",
+          "C000090"
+        ],
+        "ui": {
+          "x": 80,
+          "y": 1108,
+          "zIndex": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "T000091": {
+        "id": "T000091",
+        "name": "ventas",
+        "comment": "ventas",
+        "columnIds": [
+          "C000092",
+          "C000093",
+          "C000094",
+          "C000095",
+          "C000096",
+          "C000097",
+          "C000098",
+          "C000099",
+          "C000100",
+          "C000101",
+          "C000102",
+          "C000103",
+          "C000104",
+          "C000105",
+          "C000106",
+          "C000107"
+        ],
+        "seqColumnIds": [
+          "C000092",
+          "C000093",
+          "C000094",
+          "C000095",
+          "C000096",
+          "C000097",
+          "C000098",
+          "C000099",
+          "C000100",
+          "C000101",
+          "C000102",
+          "C000103",
+          "C000104",
+          "C000105",
+          "C000106",
+          "C000107"
+        ],
+        "ui": {
+          "x": 410,
+          "y": 1108,
+          "zIndex": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      }
+    },
+    "tableColumnEntities": {
+      "C000002": {
+        "id": "C000002",
+        "tableId": "T000001",
+        "name": "id_autorizacion",
+        "comment": "",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 82,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451645,
+          "createAt": 1773014451645
+        }
+      },
+      "C000003": {
+        "id": "C000003",
+        "tableId": "T000001",
+        "name": "monto_autorizado",
+        "comment": "",
+        "dataType": "DECIMAL(12,2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 99,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000004": {
+        "id": "C000004",
+        "tableId": "T000001",
+        "name": "saldo_anterior",
+        "comment": "",
+        "dataType": "DECIMAL(12,2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 77,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000005": {
+        "id": "C000005",
+        "tableId": "T000001",
+        "name": "saldo_resultante",
+        "comment": "",
+        "dataType": "DECIMAL(12,2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 88,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000006": {
+        "id": "C000006",
+        "tableId": "T000001",
+        "name": "motivo",
+        "comment": "",
+        "dataType": "LONGTEXT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000007": {
+        "id": "C000007",
+        "tableId": "T000001",
+        "name": "fecha_autorizacion",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 100,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000008": {
+        "id": "C000008",
+        "tableId": "T000001",
+        "name": "estado",
+        "comment": "",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000009": {
+        "id": "C000009",
+        "tableId": "T000001",
+        "name": "id_venta",
+        "comment": "",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000010": {
+        "id": "C000010",
+        "tableId": "T000001",
+        "name": "id_cliente",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000011": {
+        "id": "C000011",
+        "tableId": "T000001",
+        "name": "id_empleado_autoriza",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 118,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000013": {
+        "id": "C000013",
+        "tableId": "T000012",
+        "name": "id_cliente",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000014": {
+        "id": "C000014",
+        "tableId": "T000012",
+        "name": "nombres",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000015": {
+        "id": "C000015",
+        "tableId": "T000012",
+        "name": "apellidos",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000016": {
+        "id": "C000016",
+        "tableId": "T000012",
+        "name": "razon_social",
+        "comment": "",
+        "dataType": "VARCHAR(255)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 66,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000017": {
+        "id": "C000017",
+        "tableId": "T000012",
+        "name": "ruc_ci",
+        "comment": "",
+        "dataType": "VARCHAR(20)",
+        "default": "",
+        "options": 12,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000018": {
+        "id": "C000018",
+        "tableId": "T000012",
+        "name": "direccion",
+        "comment": "",
+        "dataType": "VARCHAR(255)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000019": {
+        "id": "C000019",
+        "tableId": "T000012",
+        "name": "ciudad",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000020": {
+        "id": "C000020",
+        "tableId": "T000012",
+        "name": "telefono",
+        "comment": "",
+        "dataType": "VARCHAR(20)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000021": {
+        "id": "C000021",
+        "tableId": "T000012",
+        "name": "email",
+        "comment": "",
+        "dataType": "VARCHAR(254)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000022": {
+        "id": "C000022",
+        "tableId": "T000012",
+        "name": "limite_credito",
+        "comment": "",
+        "dataType": "DECIMAL(12,2)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 73,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000023": {
+        "id": "C000023",
+        "tableId": "T000012",
+        "name": "activo",
+        "comment": "",
+        "dataType": "SMALLINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000024": {
+        "id": "C000024",
+        "tableId": "T000012",
+        "name": "fecha_registro",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 76,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000025": {
+        "id": "C000025",
+        "tableId": "T000012",
+        "name": "id_lista",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000026": {
+        "id": "C000026",
+        "tableId": "T000012",
+        "name": "id_tipo_cliente",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000028": {
+        "id": "C000028",
+        "tableId": "T000027",
+        "name": "id_grado",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000029": {
+        "id": "C000029",
+        "tableId": "T000027",
+        "name": "nombre_grado",
+        "comment": "",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 12,
+        "ui": {
+          "keys": 0,
+          "widthName": 80,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000030": {
+        "id": "C000030",
+        "tableId": "T000027",
+        "name": "nivel",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000031": {
+        "id": "C000031",
+        "tableId": "T000027",
+        "name": "orden_visualizacion",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 105,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000032": {
+        "id": "C000032",
+        "tableId": "T000027",
+        "name": "es_ultimo_grado",
+        "comment": "",
+        "dataType": "SMALLINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 89,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000033": {
+        "id": "C000033",
+        "tableId": "T000027",
+        "name": "activo",
+        "comment": "",
+        "dataType": "SMALLINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000034": {
+        "id": "C000034",
+        "tableId": "T000027",
+        "name": "fecha_creacion",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 80,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000036": {
+        "id": "C000036",
+        "tableId": "T000035",
+        "name": "id_hijo",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000037": {
+        "id": "C000037",
+        "tableId": "T000035",
+        "name": "nombre",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000038": {
+        "id": "C000038",
+        "tableId": "T000035",
+        "name": "apellido",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000039": {
+        "id": "C000039",
+        "tableId": "T000035",
+        "name": "fecha_nacimiento",
+        "comment": "",
+        "dataType": "DATE",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 94,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000040": {
+        "id": "C000040",
+        "tableId": "T000035",
+        "name": "grado",
+        "comment": "",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000041": {
+        "id": "C000041",
+        "tableId": "T000035",
+        "name": "foto_perfil",
+        "comment": "",
+        "dataType": "VARCHAR(255)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000042": {
+        "id": "C000042",
+        "tableId": "T000035",
+        "name": "fecha_foto",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000043": {
+        "id": "C000043",
+        "tableId": "T000035",
+        "name": "activo",
+        "comment": "",
+        "dataType": "SMALLINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000044": {
+        "id": "C000044",
+        "tableId": "T000035",
+        "name": "id_cliente_responsable",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 121,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000046": {
+        "id": "C000046",
+        "tableId": "T000045",
+        "name": "id_historial",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000047": {
+        "id": "C000047",
+        "tableId": "T000045",
+        "name": "grado_anterior",
+        "comment": "",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 80,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000048": {
+        "id": "C000048",
+        "tableId": "T000045",
+        "name": "grado_nuevo",
+        "comment": "",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 71,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000049": {
+        "id": "C000049",
+        "tableId": "T000045",
+        "name": "anio_escolar",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000050": {
+        "id": "C000050",
+        "tableId": "T000045",
+        "name": "fecha_cambio",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 74,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000051": {
+        "id": "C000051",
+        "tableId": "T000045",
+        "name": "motivo",
+        "comment": "",
+        "dataType": "VARCHAR(20)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000052": {
+        "id": "C000052",
+        "tableId": "T000045",
+        "name": "usuario_registro",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 87,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000053": {
+        "id": "C000053",
+        "tableId": "T000045",
+        "name": "observaciones",
+        "comment": "",
+        "dataType": "LONGTEXT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 77,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000054": {
+        "id": "C000054",
+        "tableId": "T000045",
+        "name": "id_hijo",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000056": {
+        "id": "C000056",
+        "tableId": "T000055",
+        "name": "id_lista",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000057": {
+        "id": "C000057",
+        "tableId": "T000055",
+        "name": "nombre_lista",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 12,
+        "ui": {
+          "keys": 0,
+          "widthName": 70,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000058": {
+        "id": "C000058",
+        "tableId": "T000055",
+        "name": "fecha_vigencia",
+        "comment": "",
+        "dataType": "DATE",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 79,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000059": {
+        "id": "C000059",
+        "tableId": "T000055",
+        "name": "moneda",
+        "comment": "",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000060": {
+        "id": "C000060",
+        "tableId": "T000055",
+        "name": "activo",
+        "comment": "",
+        "dataType": "SMALLINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000062": {
+        "id": "C000062",
+        "tableId": "T000061",
+        "name": "id_restriccion",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 71,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000063": {
+        "id": "C000063",
+        "tableId": "T000061",
+        "name": "tipo_restriccion",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 83,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000064": {
+        "id": "C000064",
+        "tableId": "T000061",
+        "name": "descripcion",
+        "comment": "",
+        "dataType": "LONGTEXT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 62,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000065": {
+        "id": "C000065",
+        "tableId": "T000061",
+        "name": "observaciones",
+        "comment": "",
+        "dataType": "LONGTEXT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 77,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000066": {
+        "id": "C000066",
+        "tableId": "T000061",
+        "name": "severidad",
+        "comment": "",
+        "dataType": "VARCHAR(20)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000067": {
+        "id": "C000067",
+        "tableId": "T000061",
+        "name": "requiere_autorizacion",
+        "comment": "",
+        "dataType": "SMALLINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 116,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000068": {
+        "id": "C000068",
+        "tableId": "T000061",
+        "name": "fecha_registro",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 76,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000069": {
+        "id": "C000069",
+        "tableId": "T000061",
+        "name": "fecha_ultima_actualizacion",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 142,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000070": {
+        "id": "C000070",
+        "tableId": "T000061",
+        "name": "activo",
+        "comment": "",
+        "dataType": "SMALLINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000071": {
+        "id": "C000071",
+        "tableId": "T000061",
+        "name": "id_hijo",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000073": {
+        "id": "C000073",
+        "tableId": "T000072",
+        "name": "id_tipo_cliente",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000074": {
+        "id": "C000074",
+        "tableId": "T000072",
+        "name": "nombre_tipo",
+        "comment": "",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 12,
+        "ui": {
+          "keys": 0,
+          "widthName": 70,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000075": {
+        "id": "C000075",
+        "tableId": "T000072",
+        "name": "activo",
+        "comment": "",
+        "dataType": "SMALLINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000077": {
+        "id": "C000077",
+        "tableId": "T000076",
+        "name": "id_empleado",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 70,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000078": {
+        "id": "C000078",
+        "tableId": "T000076",
+        "name": "nombre",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000079": {
+        "id": "C000079",
+        "tableId": "T000076",
+        "name": "apellido",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000080": {
+        "id": "C000080",
+        "tableId": "T000076",
+        "name": "usuario",
+        "comment": "",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 12,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000081": {
+        "id": "C000081",
+        "tableId": "T000076",
+        "name": "contrasena_hash",
+        "comment": "",
+        "dataType": "VARCHAR(60)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 90,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000082": {
+        "id": "C000082",
+        "tableId": "T000076",
+        "name": "fecha_ingreso",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 75,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000083": {
+        "id": "C000083",
+        "tableId": "T000076",
+        "name": "direccion",
+        "comment": "",
+        "dataType": "VARCHAR(255)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000084": {
+        "id": "C000084",
+        "tableId": "T000076",
+        "name": "ciudad",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000085": {
+        "id": "C000085",
+        "tableId": "T000076",
+        "name": "pais",
+        "comment": "",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000086": {
+        "id": "C000086",
+        "tableId": "T000076",
+        "name": "telefono",
+        "comment": "",
+        "dataType": "VARCHAR(20)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000087": {
+        "id": "C000087",
+        "tableId": "T000076",
+        "name": "email",
+        "comment": "",
+        "dataType": "VARCHAR(254)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000088": {
+        "id": "C000088",
+        "tableId": "T000076",
+        "name": "activo",
+        "comment": "",
+        "dataType": "SMALLINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000089": {
+        "id": "C000089",
+        "tableId": "T000076",
+        "name": "fecha_baja",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000090": {
+        "id": "C000090",
+        "tableId": "T000076",
+        "name": "id_rol",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000092": {
+        "id": "C000092",
+        "tableId": "T000091",
+        "name": "id_venta",
+        "comment": "",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000093": {
+        "id": "C000093",
+        "tableId": "T000091",
+        "name": "nro_factura_venta",
+        "comment": "",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 95,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000094": {
+        "id": "C000094",
+        "tableId": "T000091",
+        "name": "fecha",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000095": {
+        "id": "C000095",
+        "tableId": "T000091",
+        "name": "monto_total",
+        "comment": "",
+        "dataType": "DECIMAL(12,2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 66,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000096": {
+        "id": "C000096",
+        "tableId": "T000091",
+        "name": "saldo_pendiente",
+        "comment": "",
+        "dataType": "DECIMAL(12,2)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 89,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000097": {
+        "id": "C000097",
+        "tableId": "T000091",
+        "name": "estado_pago",
+        "comment": "",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 70,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000098": {
+        "id": "C000098",
+        "tableId": "T000091",
+        "name": "estado",
+        "comment": "",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000099": {
+        "id": "C000099",
+        "tableId": "T000091",
+        "name": "tipo_venta",
+        "comment": "",
+        "dataType": "VARCHAR(20)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000100": {
+        "id": "C000100",
+        "tableId": "T000091",
+        "name": "motivo_credito",
+        "comment": "",
+        "dataType": "LONGTEXT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 81,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000101": {
+        "id": "C000101",
+        "tableId": "T000091",
+        "name": "genera_factura_legal",
+        "comment": "",
+        "dataType": "SMALLINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 110,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000102": {
+        "id": "C000102",
+        "tableId": "T000091",
+        "name": "autorizado_por",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 2,
+          "widthName": 82,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000103": {
+        "id": "C000103",
+        "tableId": "T000091",
+        "name": "id_cliente",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000104": {
+        "id": "C000104",
+        "tableId": "T000091",
+        "name": "id_empleado_cajero",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 107,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000105": {
+        "id": "C000105",
+        "tableId": "T000091",
+        "name": "id_hijo",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000106": {
+        "id": "C000106",
+        "tableId": "T000091",
+        "name": "id_medio_pago",
+        "comment": "",
+        "dataType": "INT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 83,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "C000107": {
+        "id": "C000107",
+        "tableId": "T000091",
+        "name": "id_documento",
+        "comment": "",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      }
+    },
+    "relationshipEntities": {
+      "R000001": {
+        "id": "R000001",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "T000012",
+          "columnIds": [
+            "C000013"
+          ],
+          "x": 410,
+          "y": 276,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "T000001",
+          "columnIds": [
+            "C000010"
+          ],
+          "x": 411,
+          "y": 228,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000002": {
+        "id": "R000002",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "T000076",
+          "columnIds": [
+            "C000077"
+          ],
+          "x": 231.5,
+          "y": 1108,
+          "direction": 4
+        },
+        "end": {
+          "tableId": "T000001",
+          "columnIds": [
+            "C000011"
+          ],
+          "x": 162.75,
+          "y": 376,
+          "direction": 8
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000003": {
+        "id": "R000003",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "T000091",
+          "columnIds": [
+            "C000092"
+          ],
+          "x": 463.83333333333337,
+          "y": 1108,
+          "direction": 4
+        },
+        "end": {
+          "tableId": "T000001",
+          "columnIds": [
+            "C000009"
+          ],
+          "x": 328.25,
+          "y": 376,
+          "direction": 8
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000004": {
+        "id": "R000004",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "T000055",
+          "columnIds": [
+            "C000056"
+          ],
+          "x": 556,
+          "y": 664,
+          "direction": 4
+        },
+        "end": {
+          "tableId": "T000012",
+          "columnIds": [
+            "C000025"
+          ],
+          "x": 458.5,
+          "y": 472,
+          "direction": 8
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000005": {
+        "id": "R000005",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "T000072",
+          "columnIds": [
+            "C000073"
+          ],
+          "x": 1070,
+          "y": 728,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "T000012",
+          "columnIds": [
+            "C000026"
+          ],
+          "x": 652.5,
+          "y": 472,
+          "direction": 8
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000006": {
+        "id": "R000006",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "T000012",
+          "columnIds": [
+            "C000013"
+          ],
+          "x": 701,
+          "y": 276,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "T000035",
+          "columnIds": [
+            "C000044"
+          ],
+          "x": 1070,
+          "y": 148,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000007": {
+        "id": "R000007",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "T000035",
+          "columnIds": [
+            "C000036"
+          ],
+          "x": 1070,
+          "y": 284,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "T000045",
+          "columnIds": [
+            "C000054"
+          ],
+          "x": 380,
+          "y": 800,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000008": {
+        "id": "R000008",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "T000035",
+          "columnIds": [
+            "C000036"
+          ],
+          "x": 1320.5,
+          "y": 352,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "T000061",
+          "columnIds": [
+            "C000071"
+          ],
+          "x": 917.5,
+          "y": 664,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000009": {
+        "id": "R000009",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 1,
+        "start": {
+          "tableId": "T000076",
+          "columnIds": [
+            "C000077"
+          ],
+          "x": 383,
+          "y": 1206,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "T000091",
+          "columnIds": [
+            "C000102"
+          ],
+          "x": 410,
+          "y": 1218,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000010": {
+        "id": "R000010",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "T000012",
+          "columnIds": [
+            "C000013"
+          ],
+          "x": 555.5,
+          "y": 472,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "T000091",
+          "columnIds": [
+            "C000103"
+          ],
+          "x": 571.5,
+          "y": 1108,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000011": {
+        "id": "R000011",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "T000076",
+          "columnIds": [
+            "C000077"
+          ],
+          "x": 383,
+          "y": 1402,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "T000091",
+          "columnIds": [
+            "C000104"
+          ],
+          "x": 410,
+          "y": 1438,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      },
+      "R000012": {
+        "id": "R000012",
+        "identification": false,
+        "relationshipType": 4,
+        "startRelationshipType": 1,
+        "start": {
+          "tableId": "T000035",
+          "columnIds": [
+            "C000036"
+          ],
+          "x": 1153.5,
+          "y": 352,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "T000091",
+          "columnIds": [
+            "C000105"
+          ],
+          "x": 679.1666666666666,
+          "y": 1108,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1773014451646,
+          "createAt": 1773014451646
+        }
+      }
+    },
+    "indexEntities": {},
+    "indexColumnEntities": {},
+    "memoEntities": {}
+  }
+}

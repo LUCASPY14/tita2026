@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DER USUARIOS | Cantina TITA</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page { size: letter; margin: 0.5in; }
+        @media print { body { margin: 0; padding: 0; } .no-print { display: none; } }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 8.5in; margin: 0 auto; background: white; padding: 0.5in; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        .subtitle { color: #7f8c8d; font-size: 14px; margin-bottom: 20px; }
+        .description { background: #ecf0f1; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0; }
+        .description h3 { margin-top: 0; color: #2c3e50; }
+        .mermaid { background: white; padding: 20px; display: flex; justify-content: center; }
+        .footer { text-align: center; color: #95a5a6; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1; }
+        .export-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .export-btn:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <button class="export-btn no-print" onclick="window.print()">🖨️ Imprimir/PDF</button>
+    
+    <div class="container">
+        <h1>DER USUARIOS - Autenticación y Roles</h1>
+        <div class="subtitle">Sistema Cantina TITA | Fecha: 6 de Marzo, 2026</div>
+        
+        <div class="description">
+            <h3>Características de Seguridad</h3>
+            <ul>
+                <li>Permisos CRUD granulares (Crear, Leer, Actualizar, Eliminar)</li>
+                <li>Autenticación de dos factores (2FA) para roles críticos</li>
+                <li>Sesiones multi-dispositivo con control de IPs</li>
+                <li>Jerarquía de roles con niveles de autorización</li>
+                <li>Perfiles de usuario personalizables (tema, idioma, dashboard)</li>
+            </ul>
+        </div>
+        
+        <div class="mermaid">
+erDiagram
+    EMPLEADOS }o--|| ROLES : tiene
+    ROLES ||--o{ PERMISOS_ROL : posee
+    PERMISOS_ROL }o--|| PERMISOS : asigna
+    EMPLEADOS ||--|| PERFILES_USUARIO : configura
+    EMPLEADOS ||--o{ SESIONES_USUARIO : inicia
+    EMPLEADOS ||--o{ AUTENTICACION_2FA : usa
+    
+    EMPLEADOS {
+        int id_empleado PK
+        varchar usuario UK
+        varchar contrasena_hash
+        varchar nombre
+        varchar email
+        int id_rol FK
+        boolean activo
+    }
+    
+    ROLES {
+        int id_rol PK
+        varchar nombre_rol UK
+        text descripcion
+        int nivel_jerarquia
+        boolean activo
+    }
+    
+    PERMISOS {
+        int id_permiso PK
+        varchar codigo UK
+        varchar nombre
+        varchar modulo
+        varchar accion
+    }
+    
+    PERMISOS_ROL {
+        int id_permiso_rol PK
+        int id_rol FK
+        int id_permiso FK
+        boolean puede_crear
+        boolean puede_leer
+        boolean puede_actualizar
+        boolean puede_eliminar
+    }
+    
+    PERFILES_USUARIO {
+        int id_perfil PK
+        int id_empleado FK
+        varchar tema
+        varchar idioma
+        json dashboard_config
+    }
+    
+    SESIONES_USUARIO {
+        int id_sesion PK
+        int id_empleado FK
+        varchar session_key UK
+        varchar ip_address
+        datetime fecha_inicio
+        boolean activo
+    }
+    
+    AUTENTICACION_2FA {
+        int id_2fa PK
+        varchar usuario
+        varchar secret_key
+        boolean habilitado
+    }
+        </div>
+        
+        <div class="footer">© 2026 Cantina TITA - Documentación de Arquitectura</div>
+    </div>
+    
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', themeVariables: { fontSize: '13px' } });
+    </script>
+</body>
+</html>

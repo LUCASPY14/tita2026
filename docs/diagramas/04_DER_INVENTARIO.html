@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DER INVENTARIO | Cantina TITA</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page { size: letter; margin: 0.5in; }
+        @media print { body { margin: 0; padding: 0; } .no-print { display: none; } }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 8.5in; margin: 0 auto; background: white; padding: 0.5in; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        .subtitle { color: #7f8c8d; font-size: 14px; margin-bottom: 20px; }
+        .description { background: #ecf0f1; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0; }
+        .description h3 { margin-top: 0; color: #2c3e50; }
+        .mermaid { background: white; padding: 20px; display: flex; justify-content: center; }
+        .footer { text-align: center; color: #95a5a6; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1; }
+        .export-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .export-btn:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <button class="export-btn no-print" onclick="window.print()">🖨️ Imprimir/PDF</button>
+    
+    <div class="container">
+        <h1>DER INVENTARIO - Control de Stock y Lotes</h1>
+        <div class="subtitle">Sistema Cantina TITA | Fecha: 6 de Marzo, 2026</div>
+        
+        <div class="description">
+            <h3>Algoritmos Implementados</h3>
+            <ul>
+                <li>Costo promedio ponderado automático</li>
+                <li>Control FIFO (First In, First Out) de lotes</li>
+                <li>Alertas por stock mínimo</li>
+                <li>Alertas por vencimiento próximo (7 días)</li>
+            </ul>
+        </div>
+        
+        <div class="mermaid">
+erDiagram
+    PRODUCTOS ||--|| STOCK_UNICO : tiene
+    PRODUCTOS ||--o{ MOVIMIENTOS_STOCK : mueve
+    PRODUCTOS ||--o{ LOTES_PRODUCTO : agrupa
+    STOCK_UNICO ||--o{ ALERTAS_STOCK : genera
+    LOTES_PRODUCTO ||--o{ ALERTAS_VENCIMIENTO : alerta
+    MOVIMIENTOS_STOCK ||--o{ COSTOS_HISTORICOS : calcula
+    
+    STOCK_UNICO {
+        int id_stock PK
+        int id_producto FK
+        decimal cantidad_actual
+        decimal cantidad_reservada
+        decimal costo_promedio
+        decimal valor_total_stock
+        datetime fecha_ultimo_movimiento
+    }
+    
+    MOVIMIENTOS_STOCK {
+        int id_movimiento PK
+        int id_producto FK
+        varchar tipo_movimiento
+        decimal cantidad
+        decimal costo_unitario
+        int id_empleado FK
+        datetime fecha_movimiento
+    }
+    
+    LOTES_PRODUCTO {
+        int id_lote PK
+        int id_producto FK
+        varchar numero_lote UK
+        decimal cantidad_actual
+        decimal costo_unitario
+        date fecha_vencimiento
+        boolean activo
+    }
+    
+    ALERTAS_STOCK {
+        int id_alerta PK
+        int id_stock FK
+        varchar tipo_alerta
+        varchar nivel_urgencia
+        boolean resuelta
+        datetime fecha_alerta
+    }
+    
+    ALERTAS_VENCIMIENTO {
+        int id_alerta PK
+        int id_lote FK
+        int dias_para_vencimiento
+        boolean notificada
+        datetime fecha_alerta
+    }
+    
+    COSTOS_HISTORICOS {
+        int id_costo PK
+        int id_producto FK
+        decimal costo_anterior
+        decimal costo_nuevo
+        datetime fecha_calculo
+    }
+        </div>
+        
+        <div class="footer">© 2026 Cantina TITA - Documentación de Arquitectura</div>
+    </div>
+    
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', themeVariables: { fontSize: '14px' } });
+    </script>
+</body>
+</html>

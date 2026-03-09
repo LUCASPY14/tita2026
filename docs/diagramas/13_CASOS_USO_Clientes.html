@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casos de Uso - Clientes | Cantina TITA</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page { size: letter; margin: 0.5in; }
+        @media print { body { margin: 0; padding: 0; } .no-print { display: none; } }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 8.5in; margin: 0 auto; background: white; padding: 0.5in; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        .subtitle { color: #7f8c8d; font-size: 14px; margin-bottom: 20px; }
+        .description { background: #ecf0f1; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0; }
+        .description h3 { margin-top: 0; color: #2c3e50; }
+        .mermaid { background: white; padding: 20px; display: flex; justify-content: center; }
+        .footer { text-align: center; color: #95a5a6; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1; }
+        .export-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .export-btn:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <button class="export-btn no-print" onclick="window.print()">🖨️ Imprimir/PDF</button>
+    
+    <div class="container">
+        <h1>CASOS DE USO - Gestión de Clientes y Tarjetas</h1>
+        <div class="subtitle">Sistema Cantina TITA | Módulo de Clientes | Fecha: 6 de Marzo, 2026</div>
+        
+        <div class="description">
+            <h3>Actores del Sistema</h3>
+            <ul>
+                <li><strong style="color: #90EE90;">Cliente/Padre</strong>: Tutor del estudiante, gestiona tarjetas y saldo</li>
+                <li><strong style="color: #87CEEB;">Estudiante</strong>: Usa la tarjeta para consumir en la cantina</li>
+                <li><strong style="color: #FFD700;">Cajero</strong>: Empleado que administra operaciones de tarjetas</li>
+            </ul>
+            <h3>Casos de Uso Principales</h3>
+            <ol>
+                <li><strong>UC1 - Registrar Cliente</strong>: Alta de nuevo cliente en el sistema</li>
+                <li><strong>UC2 - Gestionar Hijos</strong>: Agregar/modificar estudiantes y restricciones alimentarias</li>
+                <li><strong>UC3 - Emitir Tarjeta</strong>: Crear nueva tarjeta prepago vinculada a estudiante</li>
+                <li><strong>UC4 - Cargar Saldo</strong>: Recarga de saldo (efectivo/transferencia/online)</li>
+                <li><strong>UC5 - Consultar Saldo</strong>: Ver saldo disponible en tiempo real</li>
+                <li><strong>UC6 - Consumir Saldo</strong>: Compra con tarjeta en cantina</li>
+                <li><strong>UC7 - Bloquear Tarjeta</strong>: Bloqueo por pérdida, robo o seguridad</li>
+                <li><strong>UC8 - Historial Movimientos</strong>: Consulta de transacciones realizadas</li>
+                <li><strong>UC9 - Autorizar Saldo Negativo</strong>: Conceder crédito temporal a cliente</li>
+                <li><strong>UC10 - Pago Online</strong>: Recarga online con tarjeta de crédito</li>
+            </ol>
+        </div>
+        
+        <div class="mermaid">
+graph LR
+    Cliente([Cliente/Padre])
+    Estudiante([Estudiante])
+    Cajero([Cajero])
+    
+    UC1[Registrar Cliente]
+    UC2[Gestionar Hijos]
+    UC3[Emitir Tarjeta]
+    UC4[Cargar Saldo]
+    UC5[Consultar Saldo]
+    UC6[Consumir Saldo]
+    UC7[Bloquear Tarjeta]
+    UC8[Historial Movimientos]
+    UC9[Autorizar Saldo Negativo]
+    UC10[Pago Online]
+    
+    Cliente --> UC1
+    Cliente --> UC2
+    Cliente --> UC5
+    Cliente --> UC8
+    Cliente --> UC10
+    
+    Estudiante --> UC6
+    
+    Cajero --> UC3
+    Cajero --> UC4
+    Cajero --> UC7
+    Cajero --> UC9
+    
+    style Cliente fill:#90EE90
+    style Estudiante fill:#87CEEB
+    style Cajero fill:#FFD700
+        </div>
+        
+        <div class="footer">© 2026 Cantina TITA - Documentación de Arquitectura</div>
+    </div>
+    
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', themeVariables: { fontSize: '13px' } });
+    </script>
+</body>
+</html>

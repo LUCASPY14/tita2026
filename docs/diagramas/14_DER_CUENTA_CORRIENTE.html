@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DER CUENTA CORRIENTE | Cantina TITA</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page { size: letter; margin: 0.5in; }
+        @media print { body { margin: 0; padding: 0; } .no-print { display: none; } }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 8.5in; margin: 0 auto; background: white; padding: 0.5in; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        .subtitle { color: #7f8c8d; font-size: 14px; margin-bottom: 20px; }
+        .description { background: #ecf0f1; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0; }
+        .description h3 { margin-top: 0; color: #2c3e50; }
+        .mermaid { background: white; padding: 20px; display: flex; justify-content: center; }
+        .footer { text-align: center; color: #95a5a6; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1; }
+        .export-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .export-btn:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <button class="export-btn no-print" onclick="window.print()">🖨️ Imprimir/PDF</button>
+    
+    <div class="container">
+        <h1>DER CUENTA CORRIENTE - Crédito a Clientes</h1>
+        <div class="subtitle">Sistema Cantina TITA | Fecha: 6 de Marzo, 2026</div>
+        
+        <div class="description">
+            <h3>Características de Cuenta Corriente</h3>
+            <ul>
+                <li><strong>Límite de crédito</strong>: Monto máximo que el cliente puede deber</li>
+                <li><strong>Días de crédito</strong>: Plazo para pagar sin intereses</li>
+                <li><strong>Saldo en tiempo real</strong>: Actualización instantánea con cada movimiento</li>
+                <li><strong>Estado de cuenta mensual</strong>: Resumen automático de débitos y créditos</li>
+                <li><strong>Alertas de vencimiento</strong>: Notificaciones antes de que venza el crédito</li>
+                <li><strong>Aplicación de pagos</strong>: Asignación manual o automática a facturas pendientes</li>
+            </ul>
+            <h3>Tipos de Movimientos</h3>
+            <ul>
+                <li>DEBITO: Consumos, facturas, cargos por servicio</li>
+                <li>CREDITO: Pagos, devoluciones, ajustes a favor</li>
+            </ul>
+        </div>
+        
+        <div class="mermaid">
+erDiagram
+    CLIENTES ||--|| CUENTAS_CORRIENTES : tiene
+    CUENTAS_CORRIENTES ||--o{ MOVIMIENTOS_CTA_CTE : registra
+    CUENTAS_CORRIENTES ||--o{ ESTADOS_CUENTA : genera
+    MOVIMIENTOS_CTA_CTE }o--o| VENTAS : origina_en
+    MOVIMIENTOS_CTA_CTE }o--o| PAGOS_CLIENTE : origina_en
+    ALERTAS_VENCIMIENTO }o--|| CUENTAS_CORRIENTES : monitorea
+    
+    CLIENTES {
+        int id_cliente PK
+        varchar nombre_completo
+        varchar documento UK
+        varchar email
+        varchar telefono
+        boolean activo
+    }
+    
+    CUENTAS_CORRIENTES {
+        int id_cuenta_corriente PK
+        int id_cliente FK
+        decimal limite_credito
+        int dias_credito
+        decimal saldo_actual
+        decimal saldo_vencido
+        date fecha_ultimo_pago
+        varchar estado
+    }
+    
+    MOVIMIENTOS_CTA_CTE {
+        int id_movimiento PK
+        int id_cuenta_corriente FK
+        varchar tipo_movimiento
+        varchar concepto
+        decimal monto
+        decimal saldo_anterior
+        decimal saldo_nuevo
+        date fecha_movimiento
+        date fecha_vencimiento
+        int id_venta FK
+        int id_pago FK
+    }
+    
+    ESTADOS_CUENTA {
+        int id_estado PK
+        int id_cuenta_corriente FK
+        int mes
+        int anio
+        decimal saldo_inicial
+        decimal total_debitos
+        decimal total_creditos
+        decimal saldo_final
+        date fecha_generacion
+    }
+    
+    ALERTAS_VENCIMIENTO {
+        int id_alerta PK
+        int id_cuenta_corriente FK
+        decimal monto_vencido
+        date fecha_vencimiento
+        boolean notificado
+        datetime fecha_notificacion
+    }
+    
+    PAGOS_CLIENTE {
+        int id_pago PK
+        int id_cliente FK
+        decimal monto_total
+        varchar medio_pago
+        date fecha_pago
+        varchar estado
+    }
+    
+    VENTAS {
+        int id_venta PK
+        int id_cliente FK
+        decimal total
+        date fecha_venta
+        varchar estado_pago
+    }
+        </div>
+        
+        <div class="description">
+            <h3>Reglas de Negocio</h3>
+            <ol>
+                <li><strong>RN1</strong>: El saldo_actual debe ser menor o igual al límite_credito</li>
+                <li><strong>RN2</strong>: Si fecha_vencimiento < CURRENT_DATE, mover a saldo_vencido</li>
+                <li><strong>RN3</strong>: Generar alerta 7 días antes del vencimiento</li>
+                <li><strong>RN4</strong>: Bloquear nuevas ventas si saldo_vencido > 0 (configurable)</li>
+                <li><strong>RN5</strong>: Los pagos se aplican primero a saldos vencidos (FIFO)</li>
+                <li><strong>RN6</strong>: Estado de cuenta se genera automáticamente el día 1 de cada mes</li>
+            </ol>
+        </div>
+        
+        <div class="footer">© 2026 Cantina TITA - Documentación de Arquitectura</div>
+    </div>
+    
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', themeVariables: { fontSize: '13px' } });
+    </script>
+</body>
+</html>
