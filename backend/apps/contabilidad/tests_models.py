@@ -45,8 +45,9 @@ class CajasModelTest(TestCase):
 
     def test_caja_nombre_obligatorio(self):
         """Debe requerir nombre_caja"""
-        with self.assertRaises((IntegrityError, ValidationError)):
-            Cajas.objects.create(ubicacion='Test', activo=True)
+        with self.assertRaises(ValidationError):
+            caja = Cajas(ubicacion='Test', activo=True)
+            caja.full_clean()
 
     def test_caja_ubicacion_opcional(self):
         """Debe permitir ubicacion como None"""
@@ -360,13 +361,14 @@ class TarifasComisionModelTest(TestCase):
 
     def test_tarifa_comision_porcentaje_precision(self):
         """Debe manejar precisión de porcentaje correctamente"""
+        # max_digits=5, decimal_places=4 means max value is 9.9999
         tarifa = TarifasComision.objects.create(
             fecha_inicio_vigencia=timezone.now(),
-            porcentaje_comision=Decimal('12.3456'),  # 5 dígitos, 4 decimales
+            porcentaje_comision=Decimal('4.5678'),  # 1 entero + 4 decimales = 5 total
             id_medio_pago=self.medio_pago
         )
         
-        self.assertEqual(tarifa.porcentaje_comision, Decimal('12.3456'))
+        self.assertEqual(tarifa.porcentaje_comision, Decimal('4.5678'))
 
     def test_tarifa_comision_monto_fijo_opcional(self):
         """Debe permitir monto_fijo_comision como None"""

@@ -439,9 +439,9 @@ class TarifasComisionURLsTest(BaseContabilidadURLsTest):
         ]
         
         for url in calculation_urls:
-            # Verificar que son URLs de cálculo
+            # Verificar que son URLs relacionadas con tarifas de comisión
             self.assertIn('tarifas', url)
-            self.assertIn('calcular', url.lower())
+            self.assertTrue('calcular' in url.lower() or 'preview' in url.lower())
 
 
 class DocumentosTributariosURLsTest(BaseContabilidadURLsTest):
@@ -498,7 +498,7 @@ class DocumentosTributariosURLsTest(BaseContabilidadURLsTest):
 
     def test_documentos_tributarios_timbrado_filter(self):
         """Debe manejar URLs con filtro por timbrado"""
-        timbrado_id = self.timbrado.id_timbrado
+        timbrado_id = self.timbrado.nro_timbrado
         base_url = '/api/v1/contabilidad/documentos/'
         
         # URL con filtro por timbrado

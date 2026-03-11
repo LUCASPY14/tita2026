@@ -109,8 +109,10 @@ class ProveedoresApiModelTest(TestCase):
             data.pop(campo, None)
             
             with self.subTest(campo=campo):
-                with self.assertRaises((IntegrityError, ValueError)):
-                    ProveedoresApi.objects.create(**data)
+                with self.assertRaises((IntegrityError, ValueError, ValidationError, TypeError)):
+                    obj = ProveedoresApi(**data)
+                    obj.full_clean()
+                    obj.save()
 
     def test_proveedor_campos_opcionales(self):
         """Debe permitir campos opcionales como None"""

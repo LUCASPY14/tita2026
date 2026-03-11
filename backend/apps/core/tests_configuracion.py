@@ -302,7 +302,7 @@ class TestConfiguracionIntegration:
         from django.db.models import Count
 
         categorias = ConfiguracionSistema.objects.values("categoria").annotate(
-            total=Count("id_configuracion")
+            total=Count("id_config")
         )
 
         assert len(categorias) >= 2

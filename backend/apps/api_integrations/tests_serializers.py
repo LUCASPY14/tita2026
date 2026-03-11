@@ -363,8 +363,10 @@ class EndpointsApiSerializerTest(TestCase):
 
     def test_serializer_proveedor_nombre_read_only(self):
         """Debe incluir nombre del proveedor como read-only"""
-        # Crear endpoint
-        endpoint = EndpointsApi.objects.create(**self.valid_data)
+        # Crear endpoint (usando objeto proveedor, no ID)
+        create_data = self.valid_data.copy()
+        create_data['id_proveedor'] = self.proveedor
+        endpoint = EndpointsApi.objects.create(**create_data)
         
         # Serializar para lectura
         serializer = EndpointsApiSerializer(endpoint)

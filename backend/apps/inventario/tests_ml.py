@@ -58,7 +58,7 @@ class StockForecastingServiceTest(TestCase):
 
         # Crear stock
         self.stock = StockUnico.objects.create(
-            id_producto=self.producto, cantidad=Decimal("100.00")
+            id_producto=self.producto, cantidad=Decimal("9999.00")
         )
 
         # Crear rol para empleado
@@ -102,14 +102,12 @@ class StockForecastingServiceTest(TestCase):
             # Crear venta
             venta = Ventas.objects.create(
                 id_cliente=self.cliente,
-                id_empleado=self.empleado,
-                fecha_hora=fecha,
-                total=Decimal("800.00"),
-                estado="confirmada",
-                metodo_pago="efectivo",
+                id_empleado_cajero=self.empleado,
+                monto_total=Decimal(str(cantidad_diaria * 80)),
+                estado="Activa",
             )
 
-            # Crear detalle
+            # Signal auto-creates MovimientosStock when DetallesVenta is saved
             DetallesVenta.objects.create(
                 id_venta=venta,
                 id_producto=self.producto,
@@ -118,15 +116,10 @@ class StockForecastingServiceTest(TestCase):
                 subtotal=Decimal(str(cantidad_diaria * 80)),
             )
 
-            # Registrar movimiento de stock
-            MovimientosStock.objects.create(
-                id_producto=self.producto,
-                tipo_movimiento="Egreso",
-                cantidad=Decimal(str(cantidad_diaria)),
-                motivo="venta",
-                id_venta=venta,
-                fecha_hora=fecha,
-            )
+            # Backdate the signal-created movement for ML historical queries
+            MovimientosStock.objects.filter(
+                id_venta=venta, tipo_movimiento="Egreso", motivo="venta"
+            ).update(fecha_hora=fecha)
 
     def test_obtener_datos_historicos(self):
         """Test: obtener datos históricos de ventas"""
@@ -209,11 +202,9 @@ class StockForecastingServiceTest(TestCase):
         fecha_pico = timezone.now() - timedelta(days=5)
         venta_pico = Ventas.objects.create(
             id_cliente=self.cliente,
-            id_empleado=self.empleado,
-            fecha_hora=fecha_pico,
-            total=Decimal("4000.00"),
-            estado="confirmada",
-            metodo_pago="efectivo",
+            id_empleado_cajero=self.empleado,
+            monto_total=Decimal("4000.00"),
+            estado="Activa",
         )
         DetallesVenta.objects.create(
             id_venta=venta_pico,
@@ -222,14 +213,9 @@ class StockForecastingServiceTest(TestCase):
             precio_unitario=Decimal("80.00"),
             subtotal=Decimal("4000.00"),
         )
-        MovimientosStock.objects.create(
-            id_producto=self.producto,
-            tipo_movimiento="Egreso",
-            cantidad=Decimal("50"),
-            motivo="venta",
-            id_venta=venta_pico,
-            fecha_hora=fecha_pico,
-        )
+        MovimientosStock.objects.filter(
+            id_venta=venta_pico, tipo_movimiento="Egreso", motivo="venta"
+        ).update(fecha_hora=fecha_pico)
 
         anomalias = StockForecastingService.detectar_anomalias(self.producto.id_producto, dias=30)
 
@@ -261,11 +247,9 @@ class StockForecastingServiceTest(TestCase):
 
             venta = Ventas.objects.create(
                 id_cliente=self.cliente,
-                id_empleado=self.empleado,
-                fecha_hora=fecha,
-                total=Decimal(str(cantidad * 80)),
-                estado="confirmada",
-                metodo_pago="efectivo",
+                id_empleado_cajero=self.empleado,
+                monto_total=Decimal(str(cantidad * 80)),
+                estado="Activa",
             )
             DetallesVenta.objects.create(
                 id_venta=venta,
@@ -274,14 +258,9 @@ class StockForecastingServiceTest(TestCase):
                 precio_unitario=Decimal("80.00"),
                 subtotal=Decimal(str(cantidad * 80)),
             )
-            MovimientosStock.objects.create(
-                id_producto=self.producto,
-                tipo_movimiento="Egreso",
-                cantidad=Decimal(str(cantidad)),
-                motivo="venta",
-                id_venta=venta,
-                fecha_hora=fecha,
-            )
+            MovimientosStock.objects.filter(
+                id_venta=venta, tipo_movimiento="Egreso", motivo="venta"
+            ).update(fecha_hora=fecha)
 
         patron = StockForecastingService.analizar_estacionalidad(self.producto.id_producto, dias=60)
 
@@ -396,11 +375,9 @@ class StockForecastingServiceTest(TestCase):
         """Helper: crear una venta individual"""
         venta = Ventas.objects.create(
             id_cliente=self.cliente,
-            id_empleado=self.empleado,
-            fecha_hora=fecha,
-            total=Decimal(str(cantidad * 80)),
-            estado="confirmada",
-            metodo_pago="efectivo",
+            id_empleado_cajero=self.empleado,
+            monto_total=Decimal(str(cantidad * 80)),
+            estado="Activa",
         )
         DetallesVenta.objects.create(
             id_venta=venta,
@@ -409,11 +386,6 @@ class StockForecastingServiceTest(TestCase):
             precio_unitario=Decimal("80.00"),
             subtotal=Decimal(str(cantidad * 80)),
         )
-        MovimientosStock.objects.create(
-            id_producto=self.producto,
-            tipo_movimiento="Egreso",
-            cantidad=Decimal(str(cantidad)),
-            motivo="venta",
-            id_venta=venta,
-            fecha_hora=fecha,
-        )
+        MovimientosStock.objects.filter(
+            id_venta=venta, tipo_movimiento="Egreso", motivo="venta"
+        ).update(fecha_hora=fecha)

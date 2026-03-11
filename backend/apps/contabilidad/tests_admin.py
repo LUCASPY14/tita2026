@@ -606,6 +606,7 @@ class DocumentosTributariosAdminTest(BaseContabilidadAdminTest):
         documento = DocumentosTributarios.objects.create(
             nro_secuencial=300,
             fecha_emision=timezone.now(),
+            monto_total=Decimal('100000.00'),
             tipo_documento='factura',
             nro_timbrado=self.timbrado
         )
@@ -624,6 +625,7 @@ class DocumentosTributariosAdminTest(BaseContabilidadAdminTest):
         doc_hoy = DocumentosTributarios.objects.create(
             nro_secuencial=400,
             fecha_emision=hoy,
+            monto_total=Decimal('100000.00'),
             nro_timbrado=self.timbrado,
             tipo_documento='factura'
         )
@@ -631,6 +633,7 @@ class DocumentosTributariosAdminTest(BaseContabilidadAdminTest):
         doc_ayer = DocumentosTributarios.objects.create(
             nro_secuencial=401,
             fecha_emision=ayer,
+            monto_total=Decimal('100000.00'),
             nro_timbrado=self.timbrado,
             tipo_documento='factura'
         )
@@ -656,6 +659,7 @@ class DocumentosTributariosAdminTest(BaseContabilidadAdminTest):
         documento_valido = DocumentosTributarios.objects.create(
             nro_secuencial=nro_valido,
             fecha_emision=timezone.now(),
+            monto_total=Decimal('100000.00'),
             nro_timbrado=self.timbrado,
             tipo_documento='factura'
         )

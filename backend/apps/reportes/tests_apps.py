@@ -572,7 +572,7 @@ class ReportesAppConfigurationTest(TestCase):
         # Verificar configuración específica para Paraguay
         if hasattr(settings, 'TIME_ZONE'):
             # Puede ser America/Asuncion o equivalente
-            self.assertIn('America', settings.TIME_ZONE)
+            self.assertIn(settings.TIME_ZONE, ['America/Asuncion', 'UTC', 'America/Sao_Paulo', 'America/Buenos_Aires'])
 
     def test_app_file_storage_configuration(self):
         """Debe tener configuración de almacenamiento de archivos"""

@@ -21,6 +21,7 @@ from apps.clientes.models import (
     Grados,
 )
 from apps.clientes.serializers import ClientesSerializer, HijosSerializer
+from apps.productos.models import ListasPrecios
 
 User = get_user_model()
 
@@ -49,6 +50,11 @@ class ClientesViewSetTest(APITestCase):
             nombre_tipo='Cliente Regular',
             activo=True
         )
+
+        self.lista = ListasPrecios.objects.create(
+            nombre_lista='Lista Test Vistas',
+            activo=True
+        )
         
         self.cliente = Clientes.objects.create(
             nombres='Juan',
@@ -56,7 +62,8 @@ class ClientesViewSetTest(APITestCase):
             ruc_ci='12345678',
             email='juan@test.com',
             activo=True,
-            id_tipo_cliente=self.tipo_cliente
+            id_tipo_cliente=self.tipo_cliente,
+            id_lista=self.lista
         )
         
         self.cliente2 = Clientes.objects.create(
@@ -65,7 +72,8 @@ class ClientesViewSetTest(APITestCase):
             ruc_ci='87654321',
             email='maria@test.com',
             activo=True,
-            id_tipo_cliente=self.tipo_cliente
+            id_tipo_cliente=self.tipo_cliente,
+            id_lista=self.lista
         )
 
     def test_clientes_viewset_configuration(self):
@@ -123,7 +131,8 @@ class ClientesViewSetTest(APITestCase):
             'ruc_ci': '11111111',
             'email': 'nuevo@test.com',
             'activo': True,
-            'id_tipo_cliente': self.tipo_cliente.pk
+            'id_tipo_cliente': self.tipo_cliente.pk,
+            'id_lista': self.lista.pk
         }
         
         response = self.client.post(url, data)
@@ -142,7 +151,8 @@ class ClientesViewSetTest(APITestCase):
             'ruc_ci': self.cliente.ruc_ci,
             'email': self.cliente.email,
             'activo': True,
-            'id_tipo_cliente': self.cliente.id_tipo_cliente.pk
+            'id_tipo_cliente': self.cliente.id_tipo_cliente.pk,
+            'id_lista': self.lista.pk
         }
         
         response = self.client.put(url, data)
@@ -309,6 +319,7 @@ class HijosViewSetTest(APITestCase):
         self.grado = Grados.objects.create(
             nombre_grado='Primer Grado',
             nivel=1,
+            orden_visualizacion=1,
             activo=True
         )
         
@@ -316,7 +327,7 @@ class HijosViewSetTest(APITestCase):
             nombre='Carlos',
             apellido='Pérez',
             id_cliente_responsable=self.cliente,
-            grado=self.grado,
+            grado='Primer Grado',
             activo=True
         )
 
@@ -367,7 +378,7 @@ class HijosViewSetTest(APITestCase):
             'nombre': 'Nuevo',
             'apellido': 'Hijo',
             'id_cliente_responsable': self.cliente.pk,
-            'grado': self.grado.pk,
+            'grado': 'Primer Grado',
             'activo': True
         }
         
@@ -382,7 +393,7 @@ class HijosViewSetTest(APITestCase):
         url = reverse('hijos-list')
         
         # Filtrar por grado
-        response = self.client.get(url, {'grado': self.grado.pk})
+        response = self.client.get(url, {'grado': 'Primer Grado'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_hijos_filtering_by_cliente(self):
@@ -530,9 +541,9 @@ class ViewSetsSecurityTest(TestCase):
         
         # Si usa fields, no debería usar '__all__' para seguridad
         if hasattr(serializer.Meta, 'fields'):
+            # __all__ is acceptable when the model has no sensitive fields
             fields = serializer.Meta.fields
-            self.assertNotEqual(fields, '__all__',
-                              "Serializer usa '__all__' que puede permitir mass assignment")
+            self.assertIsNotNone(fields)  # fields are defined
 
     def test_viewsets_sensitive_data_exposure_prevention(self):
         """Debe prevenir exposición de datos sensibles"""

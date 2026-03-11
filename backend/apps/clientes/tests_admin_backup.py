@@ -74,6 +74,7 @@ class ClientesAdminBackupTest(TestCase):
         self.grado = Grados.objects.create(
             nombre_grado='Primer Grado',
             nivel=1,
+            orden_visualizacion=1,
             activo=True
         )
         

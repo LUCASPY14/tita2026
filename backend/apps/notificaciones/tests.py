@@ -17,7 +17,7 @@ from apps.notificaciones.models import (
     SmsEnviados,
 )
 from apps.clientes.models import Clientes, Hijos, TiposCliente
-from apps.usuarios.models import Empleados, Roles
+from apps.usuarios.models import Empleados, Roles, UsuariosPortal
 from apps.productos.models import ListasPrecios
 from apps.core.models import Tarjetas
 
@@ -27,70 +27,55 @@ class NotificacionesPortalTest(TestCase):
 
     def setUp(self):
         """Configuración inicial para los tests"""
-        # Crear rol
-        self.rol = Roles.objects.create(
-            nombre_rol="Administrador", descripcion="Rol de prueba", activo=True
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Portal", activo=True)
+        self.cliente = Clientes.objects.create(
+            nombres="Test", apellidos="Portal", ruc_ci="11111111",
+            activo=True, id_tipo_cliente=self.tipo_cliente,
+        )
+        self.usuario_portal = UsuariosPortal.objects.create(
+            email="testportal@cantina.com",
+            password_hash="hashed_password",
+            email_verificado=0,
+            fecha_registro=timezone.now(),
+            id_cliente=self.cliente,
         )
 
-        # Crear empleado
-        self.empleado = Empleados.objects.create(
-            nombre="Juan",
-            apellido="Admin",
-            usuario="admin",
-            contrasena_hash="hashed_password",
-            fecha_ingreso=timezone.now(),
-            email="admin@cantina.com",
-            activo=True,
-            id_rol=self.rol,
+    def _make_notif(self, **kwargs):
+        defaults = dict(
+            tipo="info", titulo="Notif", mensaje="Mensaje",
+            leida=0, fecha_envio=timezone.now(), creado_en=timezone.now(),
+            id_usuario_portal=self.usuario_portal,
         )
+        defaults.update(kwargs)
+        return NotificacionesPortal.objects.create(**defaults)
 
     def test_crear_notificacion_portal(self):
         """Test: Crear notificación del portal"""
-        notificacion = NotificacionesPortal.objects.create(
-            tipo="info",
-            titulo="Test Notificación",
-            mensaje="Este es un mensaje de prueba",
-            id_empleado=self.empleado,
-        )
-
+        notificacion = self._make_notif(tipo="info", titulo="Test Notificación",
+                                        mensaje="Este es un mensaje de prueba")
         self.assertEqual(notificacion.tipo, "info")
         self.assertEqual(notificacion.titulo, "Test Notificación")
-        self.assertFalse(notificacion.leida)
-        self.assertIsNotNone(notificacion.fecha_creacion)
+        self.assertEqual(notificacion.leida, 0)
+        self.assertIsNotNone(notificacion.creado_en)
 
     def test_marcar_notificacion_leida(self):
         """Test: Marcar notificación como leída"""
-        notificacion = NotificacionesPortal.objects.create(
-            tipo="warning", titulo="Alerta", mensaje="Mensaje de alerta", id_empleado=self.empleado
-        )
+        notificacion = self._make_notif(tipo="warning", titulo="Alerta", mensaje="Mensaje de alerta")
 
-        # Marcar como leída
-        notificacion.leida = True
+        notificacion.leida = 1
         notificacion.fecha_lectura = timezone.now()
         notificacion.save()
 
-        self.assertTrue(notificacion.leida)
+        self.assertEqual(notificacion.leida, 1)
         self.assertIsNotNone(notificacion.fecha_lectura)
 
     def test_filtrar_notificaciones_no_leidas(self):
         """Test: Filtrar notificaciones no leídas"""
-        # Crear 3 notificaciones, 2 no leídas y 1 leída
-        NotificacionesPortal.objects.create(
-            tipo="info", titulo="No Leída 1", mensaje="Mensaje 1", id_empleado=self.empleado
-        )
-        NotificacionesPortal.objects.create(
-            tipo="info", titulo="No Leída 2", mensaje="Mensaje 2", id_empleado=self.empleado
-        )
-        notif_leida = NotificacionesPortal.objects.create(
-            tipo="info",
-            titulo="Leída",
-            mensaje="Mensaje leído",
-            id_empleado=self.empleado,
-            leida=True,
-            fecha_lectura=timezone.now(),
-        )
+        self._make_notif(titulo="No Leída 1", mensaje="Mensaje 1")
+        self._make_notif(titulo="No Leída 2", mensaje="Mensaje 2")
+        self._make_notif(titulo="Leída", mensaje="Leído", leida=1, fecha_lectura=timezone.now())
 
-        no_leidas = NotificacionesPortal.objects.filter(leida=False)
+        no_leidas = NotificacionesPortal.objects.filter(leida=0)
         self.assertEqual(no_leidas.count(), 2)
 
     def test_tipos_notificacion_validos(self):
@@ -98,12 +83,7 @@ class NotificacionesPortalTest(TestCase):
         tipos_validos = ["info", "warning", "error", "success"]
 
         for tipo in tipos_validos:
-            notif = NotificacionesPortal.objects.create(
-                tipo=tipo,
-                titulo=f"Test {tipo}",
-                mensaje=f"Mensaje {tipo}",
-                id_empleado=self.empleado,
-            )
+            notif = self._make_notif(tipo=tipo, titulo=f"Test {tipo}", mensaje=f"Mensaje {tipo}")
             self.assertEqual(notif.tipo, tipo)
 
 
@@ -139,42 +119,53 @@ class NotificacionesSaldoTest(TestCase):
 
         # Crear tarjeta
         self.tarjeta = Tarjetas.objects.create(
-            numero_tarjeta="0001",
+            nro_tarjeta="0001",
             saldo_actual=Decimal("5000.00"),
             estado="activa",
-            activo=True,
+            fecha_creacion=timezone.now(),
+            limite_credito=Decimal("0.00"),
             id_hijo=self.hijo,
         )
 
+    def _make_notif_saldo(self, **kwargs):
+        defaults = dict(
+            tipo_notificacion="saldo_bajo",
+            nro_tarjeta=self.tarjeta,
+            saldo_actual=Decimal("5000.00"),
+            mensaje="Saldo bajo",
+            enviada_email=0,
+            enviada_sms=0,
+            leida=0,
+            fecha_creacion=timezone.now(),
+        )
+        defaults.update(kwargs)
+        return NotificacionesSaldo.objects.create(**defaults)
+
     def test_crear_notificacion_saldo_bajo(self):
         """Test: Crear notificación de saldo bajo"""
-        notificacion = NotificacionesSaldo.objects.create(
-            tipo="saldo_bajo",
-            id_tarjeta=self.tarjeta,
+        notificacion = self._make_notif_saldo(
+            tipo_notificacion="saldo_bajo",
             saldo_actual=Decimal("5000.00"),
-            umbral_minimo=Decimal("10000.00"),
             mensaje="Saldo bajo en tarjeta 0001",
-            enviada=True,
+            enviada_email=1,
         )
 
-        self.assertEqual(notificacion.tipo, "saldo_bajo")
+        self.assertEqual(notificacion.tipo_notificacion, "saldo_bajo")
         self.assertEqual(notificacion.saldo_actual, Decimal("5000.00"))
-        self.assertTrue(notificacion.enviada)
+        self.assertEqual(notificacion.enviada_email, 1)
 
     def test_notificacion_saldo_agotado(self):
         """Test: Notificación de saldo agotado"""
         self.tarjeta.saldo_actual = Decimal("0.00")
         self.tarjeta.save()
 
-        notificacion = NotificacionesSaldo.objects.create(
-            tipo="saldo_agotado",
-            id_tarjeta=self.tarjeta,
+        notificacion = self._make_notif_saldo(
+            tipo_notificacion="saldo_agotado",
             saldo_actual=Decimal("0.00"),
             mensaje="Saldo agotado en tarjeta 0001",
-            enviada=True,
         )
 
-        self.assertEqual(notificacion.tipo, "saldo_agotado")
+        self.assertEqual(notificacion.tipo_notificacion, "saldo_agotado")
         self.assertEqual(notificacion.saldo_actual, Decimal("0.00"))
 
 
@@ -203,30 +194,26 @@ class AlertasSistemaTest(TestCase):
         """Test: Crear alerta crítica del sistema"""
         alerta = AlertasSistema.objects.create(
             tipo="stock_critico",
-            criticidad="alta",
-            titulo="Stock Crítico",
-            descripcion="Producto X con stock por debajo del mínimo",
-            id_empleado_asignado=self.empleado,
+            mensaje="Producto X con stock por debajo del mínimo",
+            fecha_creacion=timezone.now(),
+            estado="pendiente",
         )
 
         self.assertEqual(alerta.tipo, "stock_critico")
-        self.assertEqual(alerta.criticidad, "alta")
         self.assertEqual(alerta.estado, "pendiente")
 
     def test_resolver_alerta(self):
         """Test: Resolver alerta del sistema"""
         alerta = AlertasSistema.objects.create(
             tipo="anomalia_venta",
-            criticidad="media",
-            titulo="Anomalía detectada",
-            descripcion="Venta inusual detectada",
-            id_empleado_asignado=self.empleado,
+            mensaje="Venta inusual detectada",
+            fecha_creacion=timezone.now(),
+            estado="pendiente",
         )
 
-        # Resolver alerta
         alerta.estado = "resuelta"
         alerta.fecha_resolucion = timezone.now()
-        alerta.observaciones_resolucion = "Verificado y corregido"
+        alerta.observaciones = "Verificado y corregido"
         alerta.save()
 
         self.assertEqual(alerta.estado, "resuelta")
@@ -234,21 +221,13 @@ class AlertasSistemaTest(TestCase):
 
     def test_filtrar_alertas_pendientes(self):
         """Test: Filtrar alertas pendientes"""
-        # Crear alertas
         AlertasSistema.objects.create(
-            tipo="stock_critico",
-            criticidad="alta",
-            titulo="Alerta 1",
-            descripcion="Descripción 1",
-            id_empleado_asignado=self.empleado,
+            tipo="stock_critico", mensaje="Alerta 1",
+            fecha_creacion=timezone.now(), estado="pendiente",
         )
         AlertasSistema.objects.create(
-            tipo="anomalia_venta",
-            criticidad="media",
-            titulo="Alerta 2",
-            descripcion="Descripción 2",
-            id_empleado_asignado=self.empleado,
-            estado="resuelta",
+            tipo="anomalia_venta", mensaje="Alerta 2",
+            fecha_creacion=timezone.now(), estado="resuelta",
             fecha_resolucion=timezone.now(),
         )
 
@@ -261,45 +240,51 @@ class PreferenciasNotificacionTest(TestCase):
 
     def setUp(self):
         """Configuración inicial"""
-        # Crear rol
-        self.rol = Roles.objects.create(
-            nombre_rol="Administrador", descripcion="Rol de prueba", activo=True
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Prefs", activo=True)
+        self.cliente = Clientes.objects.create(
+            nombres="Prefs", apellidos="User", ruc_ci="22222222",
+            activo=True, id_tipo_cliente=self.tipo_cliente,
         )
-
-        self.empleado = Empleados.objects.create(
-            nombre="Juan",
-            apellido="Admin",
-            usuario="admin",
-            contrasena_hash="hashed_password",
-            fecha_ingreso=timezone.now(),
-            email="admin@cantina.com",
-            activo=True,
-            id_rol=self.rol,
+        self.usuario_portal = UsuariosPortal.objects.create(
+            email="prefs@cantina.com",
+            password_hash="hashed_password",
+            email_verificado=0,
+            fecha_registro=timezone.now(),
+            id_cliente=self.cliente,
         )
 
     def test_crear_preferencias_default(self):
         """Test: Crear preferencias con valores por defecto"""
-        prefs = PreferenciasNotificacion.objects.create(id_empleado=self.empleado)
+        prefs = PreferenciasNotificacion.objects.create(
+            tipo_notificacion="ventas",
+            email_activo=1,
+            push_activo=1,
+            creado_en=timezone.now(),
+            actualizado_en=timezone.now(),
+            id_usuario_portal=self.usuario_portal,
+        )
 
-        # Valores por defecto deben estar en True
-        self.assertTrue(prefs.notif_email_ventas)
-        self.assertTrue(prefs.notif_email_stock)
-        self.assertTrue(prefs.notif_email_alertas)
+        self.assertEqual(prefs.email_activo, 1)
+        self.assertEqual(prefs.push_activo, 1)
 
     def test_actualizar_preferencias(self):
         """Test: Actualizar preferencias de notificaciones"""
         prefs = PreferenciasNotificacion.objects.create(
-            id_empleado=self.empleado, notif_email_ventas=True, notif_push_ventas=False
+            tipo_notificacion="stock",
+            email_activo=1,
+            push_activo=0,
+            creado_en=timezone.now(),
+            actualizado_en=timezone.now(),
+            id_usuario_portal=self.usuario_portal,
         )
 
-        # Actualizar preferencias
-        prefs.notif_email_ventas = False
-        prefs.notif_push_ventas = True
+        prefs.email_activo = 0
+        prefs.push_activo = 1
         prefs.save()
 
         prefs.refresh_from_db()
-        self.assertFalse(prefs.notif_email_ventas)
-        self.assertTrue(prefs.notif_push_ventas)
+        self.assertEqual(prefs.email_activo, 0)
+        self.assertEqual(prefs.push_activo, 1)
 
 
 @pytest.mark.django_db
@@ -309,23 +294,29 @@ class TestEmailsEnviados:
     def test_crear_email_enviado(self):
         """Test: Registrar email enviado"""
         email = EmailsEnviados.objects.create(
-            destinatario="test@example.com",
+            email_destinatario="test@example.com",
+            nombre_destinatario="Test User",
             asunto="Test Email",
-            cuerpo_texto="Cuerpo del mensaje",
+            cuerpo="Cuerpo del mensaje",
             estado="enviado",
+            fecha_envio=timezone.now(),
+            intentos=1,
         )
 
-        assert email.destinatario == "test@example.com"
+        assert email.email_destinatario == "test@example.com"
         assert email.estado == "enviado"
         assert email.fecha_envio is not None
 
     def test_email_con_error(self):
         """Test: Email con error de envío"""
         email = EmailsEnviados.objects.create(
-            destinatario="error@example.com",
+            email_destinatario="error@example.com",
+            nombre_destinatario="Error User",
             asunto="Test Error",
-            cuerpo_texto="Test",
+            cuerpo="Test",
             estado="error",
+            fecha_envio=timezone.now(),
+            intentos=3,
             mensaje_error="SMTP connection failed",
         )
 
@@ -340,20 +331,22 @@ class TestSmsEnviados:
     def test_crear_sms_enviado(self):
         """Test: Registrar SMS enviado"""
         sms = SmsEnviados.objects.create(
-            numero_destino="+595981234567",
+            telefono="+595981234567",
             mensaje="Test SMS",
             estado="enviado",
-            costo_envio=Decimal("500.00"),
+            fecha_envio=timezone.now(),
+            costo=Decimal("500.00"),
         )
 
-        assert sms.numero_destino == "+595981234567"
+        assert sms.telefono == "+595981234567"
         assert sms.estado == "enviado"
-        assert sms.costo_envio == Decimal("500.00")
+        assert sms.costo == Decimal("500.00")
 
     def test_sms_pendiente(self):
         """Test: SMS en estado pendiente"""
         sms = SmsEnviados.objects.create(
-            numero_destino="+595981111111", mensaje="Pending SMS", estado="pendiente"
+            telefono="+595981111111", mensaje="Pending SMS", estado="pendiente",
+            fecha_envio=timezone.now(),
         )
 
         assert sms.estado == "pendiente"

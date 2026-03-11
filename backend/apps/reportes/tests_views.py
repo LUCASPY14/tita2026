@@ -696,7 +696,7 @@ class ReportesViewsIntegrationTest(BaseReportesViewsTest):
         """Debe mantener formato de respuesta consistente"""
         # Usar mocks para tener control total sobre respuestas
         with patch('apps.reportes.services.ReporteService.generar_reporte_ventas') as mock_ventas, \
-             patch('apps.reportes.services.DashboardService.calcular_kpis_principales') as mock_kpis:
+             patch('apps.reportes.services.dashboard_service.DashboardService.calcular_kpis_principales') as mock_kpis:
             
             mock_ventas.return_value = {'total_ventas': 0}
             mock_kpis.return_value = {'kpis': {}}

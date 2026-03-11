@@ -8,6 +8,9 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 from decimal import Decimal
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 from apps.productos.models import (
     Productos,
@@ -37,6 +40,13 @@ class ProductosViewSetAPITest(TestCase):
         """Configuración inicial"""
         self.client = APIClient()
 
+        # Crear usuario admin Django
+        self.user = User.objects.create_user(
+            username='admin_prod_test',
+            password='testpass123',
+            is_staff=True
+        )
+
         # Crear rol admin
         self.rol_admin = Roles.objects.create(
             nombre_rol="Administrador", descripcion="Administrador del sistema", activo=True
@@ -54,7 +64,7 @@ class ProductosViewSetAPITest(TestCase):
         )
 
         # Autenticar
-        self.client.force_authenticate(user=self.admin)
+        self.client.force_authenticate(user=self.user)
 
         # Crear categoría
         self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
@@ -289,6 +299,13 @@ class CategoriasViewSetAPITest(TestCase):
         """Configuración inicial"""
         self.client = APIClient()
 
+        # Crear usuario admin Django
+        self.user = User.objects.create_user(
+            username='admin_cat_test',
+            password='testpass123',
+            is_staff=True
+        )
+
         # Crear empleado admin
         self.rol_admin = Roles.objects.create(nombre_rol="Administrador", activo=True)
 
@@ -302,7 +319,7 @@ class CategoriasViewSetAPITest(TestCase):
             id_rol=self.rol_admin,
         )
 
-        self.client.force_authenticate(user=self.admin)
+        self.client.force_authenticate(user=self.user)
 
     def test_crear_categoria(self):
         """Test: Crear nueva categoría"""

@@ -358,6 +358,10 @@ class ValidarSaldoTarjetaTest(TestCase):
             nombre="Test", apellido="Hijo", grado="1ro", activo=True, id_cliente_responsable=cliente
         )
 
+        hijo2 = Hijos.objects.create(
+            nombre="Test2", apellido="Hijo", grado="2do", activo=True, id_cliente_responsable=cliente
+        )
+
         self.tarjeta_sin_credito = Tarjetas.objects.create(
             nro_tarjeta="T001",
             saldo_actual=Decimal("50000"),
@@ -376,7 +380,7 @@ class ValidarSaldoTarjetaTest(TestCase):
             fecha_creacion=timezone.now(),
             permite_saldo_negativo=True,
             limite_credito=Decimal("50000"),
-            id_hijo=hijo,
+            id_hijo=hijo2,
             codigo_barras="BAR002",
         )
 
