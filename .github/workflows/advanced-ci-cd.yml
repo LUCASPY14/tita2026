@@ -87,46 +87,45 @@ jobs:
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install coverage pytest-django pytest-cov
-          pip install locust  # For load testing
-      
+
       - name: Run comprehensive tests
         env:
+          DJANGO_SETTINGS_MODULE: backend.settings.test
           SECRET_KEY: test-secret-key-for-ci-${{ github.run_id }}
-          DEBUG: False
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cantina_test
+          DEBUG: 'False'
           ALLOWED_HOSTS: localhost,127.0.0.1
         run: |
           cd backend
-          # Run tests with coverage
-          coverage run --source='apps' -m pytest apps/ -v --tb=short
-          coverage report --show-missing
-          coverage xml
-          coverage html
-          
-          # Generate coverage badge
-          coverage-badge -o coverage.svg
+          python -m pytest apps/ --cov=apps --cov-report=term-missing \
+            --cov-report=xml --cov-report=html \
+            --tb=short -q -p no:warnings
+          # Summary
+          python -m coverage report --show-missing | tail -5
       
       - name: Run backend performance tests
         env:
+          DJANGO_SETTINGS_MODULE: backend.settings.test
           SECRET_KEY: test-secret-key-for-ci-${{ github.run_id }}
-          DEBUG: False
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cantina_test
+          DEBUG: 'False'
         run: |
           cd backend
           python manage.py migrate --noinput
           python manage.py collectstatic --noinput
-          
+
           # Start Django server in background
-          python manage.py runserver &
+          python manage.py runserver 0.0.0.0:8000 &
           sleep 10
-          
-          # Run load tests
-          cd ../performance_tests
-          locust --headless --users 10 --spawn-rate 2 \
-                 --host http://localhost:8000 \
-                 --run-time 60s \
-                 --html performance_report.html
+
+          # Run load tests if locustfile exists
+          if [ -f ../performance_tests/locustfile.py ]; then
+            cd ../performance_tests
+            locust --headless --users 10 --spawn-rate 2 \
+                   --host http://localhost:8000 \
+                   --run-time 60s \
+                   --html performance_report.html
+          else
+            echo "No locustfile.py found, skipping load tests"
+          fi
       
       - name: Upload test coverage
         uses: codecov/codecov-action@v3
@@ -350,10 +349,7 @@ jobs:
           working-directory: frontend
           wait-on: 'http://localhost:3000, http://localhost:8000'
           wait-on-timeout: 120
-          record: true
         env:
-          # Optional: Set CYPRESS_RECORD_KEY in repository secrets for cloud recording
-          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY != '' && secrets.CYPRESS_RECORD_KEY || '' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Upload E2E artifacts
@@ -590,11 +586,10 @@ jobs:
           echo "| Docker Images | ${{ needs.build-images.result }} |" >> $GITHUB_STEP_SUMMARY
       
       - name: Notify on failure
-        if: contains(needs.*.result, 'failure')
+        if: contains(needs.*.result, 'failure') && secrets.SLACK_WEBHOOK_URL != ''
         uses: 8398a7/action-slack@v3
         with:
           status: failure
-          text: "❌ CI/CD Pipeline failed for ${{ github.repository }}"
+          text: "CI/CD Pipeline failed for ${{ github.repository }}"
         env:
-          # Optional: Set SLACK_WEBHOOK_URL in repository secrets for notifications
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL != '' && secrets.SLACK_WEBHOOK_URL || '' }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

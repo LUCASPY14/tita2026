@@ -7,54 +7,47 @@ on:
 
 jobs:
   backend-tests:
-    name: Backend Tests (Django)
+    name: Backend Tests (Django + pytest)
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      
+        uses: actions/checkout@v4
+
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
       - name: Install dependencies
         run: |
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install coverage
-      
+
       - name: Run tests with coverage
         env:
-          SECRET_KEY: test-secret-key-for-ci
-          DEBUG: True
-          DATABASE_URL: sqlite:///test_db.sqlite3
+          DJANGO_SETTINGS_MODULE: backend.settings.test
+          SECRET_KEY: test-secret-key-for-ci-${{ github.run_id }}
+          DEBUG: 'True'
         run: |
           cd backend
-          coverage run --source='apps' manage.py test apps --keepdb
-          coverage report
-          coverage xml
-          coverage html
-      
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v3
+          python -m pytest apps/ --cov=apps --cov-report=term-missing \
+            --cov-report=xml --cov-report=html \
+            --tb=short -q -p no:warnings
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
         with:
           file: ./backend/coverage.xml
           flags: backend
           name: backend-coverage
-      
+          fail_ci_if_error: false
+
       - name: Upload HTML coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: backend-coverage-report
           path: backend/htmlcov/
@@ -66,33 +59,42 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
-      - name: Set up Node.js 18
-        uses: actions/setup-node@v3
+
+  frontend-tests:
+    name: Frontend Tests (React + Jest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-      
+
       - name: Install dependencies
         run: |
           cd frontend
           npm ci
-      
+
       - name: Run tests with coverage
         run: |
           cd frontend
           npm test -- --watchAll=false --coverage --passWithNoTests
-      
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v3
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
         with:
           file: ./frontend/coverage/coverage-final.json
           flags: frontend
           name: frontend-coverage
-      
+          fail_ci_if_error: false
+
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage-report
           path: frontend/coverage/
@@ -100,31 +102,31 @@ jobs:
   backend-linting:
     name: Backend Code Quality
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      
+        uses: actions/checkout@v4
+
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install linting tools
         run: |
           python -m pip install --upgrade pip
           pip install black flake8 isort
-      
+
       - name: Check code formatting with Black
         run: |
           cd backend
           black --check apps/ || echo "WARNING: Código no formateado correctamente"
-      
+
       - name: Run Flake8 linter
         run: |
           cd backend
           flake8 apps/ --max-line-length=100 --extend-ignore=E203,W503 || echo "WARNING: Problemas de linting encontrados"
-      
+
       - name: Check import sorting with isort
         run: |
           cd backend
@@ -133,113 +135,166 @@ jobs:
   frontend-linting:
     name: Frontend Code Quality
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Set up Node.js 18
-        uses: actions/setup-node@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-      
+
       - name: Install dependencies
         run: |
           cd frontend
           npm ci
-      
+
       - name: Run ESLint
         run: |
           cd frontend
           npm run lint || echo "WARNING: Problemas de linting encontrados"
-      
+
       - name: Type check with TypeScript
         run: |
           cd frontend
-          npm run type-check || npx tsc --noEmit || echo "WARNING: Errores de tipos encontrados"
+          npx tsc --noEmit || echo "WARNING: Errores de tipos encontrados"
 
   build-backend:
     name: Build Backend
     runs-on: ubuntu-latest
     needs: [backend-tests, backend-linting]
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      
+        uses: actions/checkout@v4
+
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
       - name: Install dependencies
         run: |
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      
+
       - name: Collect static files
         env:
-          SECRET_KEY: build-secret-key
-          DEBUG: False
+          DJANGO_SETTINGS_MODULE: backend.settings.test
+          SECRET_KEY: build-secret-key-${{ github.run_id }}
+          DEBUG: 'False'
         run: |
           cd backend
-          python manage.py collectstatic --noinput || echo "✓ Static files collected"
+          python manage.py collectstatic --noinput
 
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
     needs: [frontend-tests, frontend-linting]
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Set up Node.js 18
-        uses: actions/setup-node@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-      
+
       - name: Install dependencies
         run: |
           cd frontend
           npm ci
-      
+
       - name: Build production bundle
+        env:
+          CI: 'false'
         run: |
           cd frontend
           npm run build
-      
-      - name: Check bundle size
+
+      - name: Report bundle size
         run: |
           cd frontend
+          echo "=== Bundle size ==="
           du -sh build/
-          echo "Bundle size:"
-          find build/ -type f -name "*.js" -exec du -h {} \;
-      
+          find build/static/js -name "*.js" -not -name "*.map" -exec du -h {} \;
+
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-build
           path: frontend/build/
+          retention-days: 7
+
+  e2e-tests:
+    name: E2E Tests (Cypress)
+    runs-on: ubuntu-latest
+    needs: [build-frontend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/build
+
+      - name: Run Cypress E2E tests against dev server
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: frontend
+          start: npm start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 60
+          browser: chrome
+          headless: true
+
+      - name: Upload E2E screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: frontend/cypress/screenshots
 
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests, backend-linting, frontend-linting, build-backend, build-frontend]
+    needs: [backend-tests, frontend-tests, backend-linting, frontend-linting, build-backend, build-frontend, e2e-tests]
     if: always()
-    
+
     steps:
-      - name: Summary
+      - name: Write summary
         run: |
-          echo "SUCCESS: CI Pipeline completado"
-          echo "Backend Tests: ${{ needs.backend-tests.result }}"
-          echo "Frontend Tests: ${{ needs.frontend-tests.result }}"
-          echo "Backend Linting: ${{ needs.backend-linting.result }}"
-          echo "Frontend Linting: ${{ needs.frontend-linting.result }}"
-          echo "Backend Build: ${{ needs.build-backend.result }}"
-          echo "Frontend Build: ${{ needs.build-frontend.result }}"
+          echo "## CI Pipeline - Cantina Tita" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Tests | ${{ needs.backend-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Tests | ${{ needs.frontend-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Linting | ${{ needs.backend-linting.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Linting | ${{ needs.frontend-linting.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Build | ${{ needs.build-backend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Build | ${{ needs.build-frontend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY

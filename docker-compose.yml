@@ -148,6 +148,21 @@ services:
       - cantina-network
     restart: unless-stopped
 
+  # Frontend React (multi-stage build: Node -> nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend/Dockerfile
+    container_name: cantina_frontend
+    networks:
+      - cantina-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
@@ -162,6 +177,7 @@ services:
       - media_files:/usr/share/nginx/html/media:ro
     depends_on:
       - backend
+      - frontend
     networks:
       - cantina-network
     restart: unless-stopped
