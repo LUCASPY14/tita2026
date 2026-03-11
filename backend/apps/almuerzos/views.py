@@ -4,7 +4,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db import transaction
 from django.db.models import F
+from django.utils import timezone
 from datetime import datetime
+from decimal import Decimal
 from .models import (
     PlanesAlmuerzo,
     TiposAlmuerzo,
@@ -144,8 +146,17 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 # Actualizar cuenta mensual
                 self._agregar_a_cuenta_mensual(registro)
 
-                # TODO: Registrar movimiento en historial de tarjeta (similar a cantina)
-                # Aquí se podría crear un registro en MovimientosSaldoTarjeta
+                # Registrar movimiento en historial de tarjeta
+                from apps.core.models import ConsumosTarjeta
+                saldo_anterior = nro_tarjeta.saldo_actual + costo_calculado
+                ConsumosTarjeta.objects.create(
+                    fecha_consumo=timezone.now(),
+                    monto_consumido=costo_calculado,
+                    detalle=f"Almuerzo registrado (ID {registro.pk})",
+                    saldo_anterior=saldo_anterior,
+                    saldo_posterior=nro_tarjeta.saldo_actual,
+                    nro_tarjeta=nro_tarjeta,
+                )
 
             else:
                 # Segundo registro del día: NO cobrar

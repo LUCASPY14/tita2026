@@ -640,3 +640,41 @@ def validar_notif_error_destinatario(value):
     """
     if value not in [0, 1]:
         raise ValidationError("El campo notif_error debe ser 0 (no) o 1 (sí).")
+
+
+def validar_configuracion_json(value):
+    """Valida que el valor sea un dict JSON válido."""
+    if value is None:
+        return
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            raise ValidationError("La configuración debe ser un JSON válido.")
+    if not isinstance(value, dict):
+        raise ValidationError("La configuración debe ser un objeto JSON (dict).")
+    return value
+
+
+def validar_frecuencia_ejecucion(value):
+    """Valida la frecuencia de ejecución de tareas programadas."""
+    FRECUENCIAS_VALIDAS = ["manual", "diaria", "semanal", "mensual", "personalizado"]
+    if value and value.lower() not in FRECUENCIAS_VALIDAS:
+        raise ValidationError(
+            f'Frecuencia inválida. Debe ser una de: {", ".join(FRECUENCIAS_VALIDAS)}'
+        )
+    return value
+
+
+def validar_formato_datos_json(value):
+    """Valida que el valor tenga un formato de datos JSON correcto."""
+    if value is None:
+        return
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            raise ValidationError("El formato de datos debe ser JSON válido.")
+    if not isinstance(value, (dict, list)):
+        raise ValidationError("El formato de datos debe ser un objeto o lista JSON.")
+    return value

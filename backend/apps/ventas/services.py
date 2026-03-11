@@ -333,10 +333,33 @@ class PromocionService:
 
     @staticmethod
     def _calcular_combo(promocion, items: List[Dict]) -> Decimal:
-        """Calcula descuento para combo"""
-        # Por ahora retorna descuento fijo
-        # TODO: Implementar lógica de combos con múltiples productos
-        return promocion.valor_descuento
+        """Calcula descuento para combo: todos los productos del combo deben estar en el carrito."""
+        from apps.ventas.models import ProductosPromocion
+
+        # Obtener los productos requeridos en el combo
+        productos_combo = set(
+            ProductosPromocion.objects.filter(id_promocion=promocion).values_list(
+                "id_producto", flat=True
+            )
+        )
+
+        if not productos_combo:
+            # Sin productos definidos: aplicar descuento fijo directo
+            return promocion.valor_descuento
+
+        # Verificar que TODOS los productos del combo estén presentes en el carrito
+        ids_en_carrito = {item["id_producto"] for item in items}
+        if not productos_combo.issubset(ids_en_carrito):
+            return Decimal("0.00")
+
+        # Calcular cuántos combos completos se pueden armar
+        min_repeticiones = min(
+            int(item["cantidad"])
+            for item in items
+            if item["id_producto"] in productos_combo
+        )
+
+        return promocion.valor_descuento * min_repeticiones
 
 
 class DevolucionService:

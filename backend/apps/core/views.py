@@ -401,7 +401,11 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
                     {"error": "El campo valor es requerido"}, status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # TODO: Validar el valor según config.validacion
+            # Validar el valor según el tipo y restricciones de la configuración
+            error_validacion = self._validar_valor_config(config, nuevo_valor)
+            if error_validacion:
+                return Response({"error": error_validacion}, status=status.HTTP_400_BAD_REQUEST)
+
             config.valor = str(nuevo_valor)
 
             # Actualizar updated_by con el usuario autenticado
@@ -416,6 +420,75 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @staticmethod
+    def _validar_valor_config(config, nuevo_valor) -> str | None:
+        """
+        Valida el nuevo valor según el tipo y restricciones de la configuración.
+
+        Returns:
+            Mensaje de error (str) si la validación falla, None si es válido.
+        """
+        import json
+
+        tipo = config.tipo  # 'string', 'integer', 'decimal', 'boolean', 'json'
+        valor_str = str(nuevo_valor).strip()
+
+        # Validar tipo de dato
+        if tipo == "integer":
+            try:
+                valor_num = int(valor_str)
+            except (ValueError, TypeError):
+                return f"El valor debe ser un número entero (tipo: {tipo})"
+            if config.valor_min:
+                try:
+                    if valor_num < int(config.valor_min):
+                        return f"El valor mínimo permitido es {config.valor_min}"
+                except (ValueError, TypeError):
+                    pass
+            if config.valor_max:
+                try:
+                    if valor_num > int(config.valor_max):
+                        return f"El valor máximo permitido es {config.valor_max}"
+                except (ValueError, TypeError):
+                    pass
+
+        elif tipo == "decimal":
+            try:
+                from decimal import Decimal, InvalidOperation
+                valor_num = Decimal(valor_str)
+            except (InvalidOperation, TypeError):
+                return f"El valor debe ser un número decimal (tipo: {tipo})"
+            if config.valor_min:
+                try:
+                    if valor_num < Decimal(config.valor_min):
+                        return f"El valor mínimo permitido es {config.valor_min}"
+                except (InvalidOperation, TypeError):
+                    pass
+            if config.valor_max:
+                try:
+                    if valor_num > Decimal(config.valor_max):
+                        return f"El valor máximo permitido es {config.valor_max}"
+                except (InvalidOperation, TypeError):
+                    pass
+
+        elif tipo == "boolean":
+            if valor_str.lower() not in ("true", "false", "1", "0"):
+                return "El valor debe ser true o false"
+
+        elif tipo == "json":
+            try:
+                json.loads(valor_str)
+            except (json.JSONDecodeError, TypeError):
+                return "El valor debe ser JSON válido"
+
+        # Validar valores permitidos (lista blanca)
+        if config.valores_permitidos:
+            permitidos = config.valores_permitidos if isinstance(config.valores_permitidos, list) else []
+            if permitidos and valor_str not in [str(v) for v in permitidos]:
+                return f"Valor no permitido. Valores válidos: {', '.join(str(v) for v in permitidos)}"
+
+        return None
 
     @action(detail=True, methods=["post"])
     def resetear_default(self, request, pk=None):

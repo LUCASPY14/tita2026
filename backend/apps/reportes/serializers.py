@@ -24,7 +24,7 @@ from .validators import (
     validar_formato_datos_json
 )
 from apps.usuarios.models import Empleados
-from apps.usuarios.serializers import EmpleadoBasicoSerializer
+from apps.usuarios.serializers import EmpleadosSerializer as EmpleadoBasicoSerializer
 
 
 class ConfiguracionJSONField(serializers.JSONField):

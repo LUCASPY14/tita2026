@@ -246,13 +246,15 @@ class PreferenciasNotificacionViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            now = timezone.now()
             preferencia, created = PreferenciasNotificacion.objects.update_or_create(
                 id_usuario_portal_id=id_usuario,
                 tipo_notificacion=tipo_notificacion,
                 defaults={
                     "email_activo": 1 if email_activo else 0,
                     "push_activo": 1 if push_activo else 0,
-                    "actualizado_en": timezone.now(),
+                    "actualizado_en": now,
+                    "creado_en": now,
                 },
             )
 

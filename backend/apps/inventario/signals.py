@@ -315,9 +315,17 @@ def enviar_notificacion_alerta(sender, instance, created, **kwargs):
                     )
                     emails_enviados += 1
 
-                    # TODO: Integrar con celery/redis para envío asíncrono
-                    # from apps.notificaciones.tasks import enviar_email_task
-                    # enviar_email_task.delay(email_id)
+                    # Envío asíncrono vía Celery
+                    try:
+                        from apps.notificaciones.tasks import enviar_email_async
+                        enviar_email_async.delay(
+                            email_destinatario=empleado.email,
+                            nombre_destinatario=f"{empleado.nombre} {empleado.apellido}",
+                            asunto=titulo,
+                            mensaje=mensaje,
+                        )
+                    except Exception:
+                        pass  # Celery puede no estar disponible; el registro ya quedó guardado
 
                 except Exception as e:
                     print(f"Error registrando email para {empleado.email}: {e}")

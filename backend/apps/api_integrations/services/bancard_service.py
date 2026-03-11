@@ -78,7 +78,7 @@ class BancardService:
         try:
             config = ConfiguracionSistema.objects.filter(clave=clave, activo=True).first()
             if config:
-                return config.valor_texto or config.valor_numerico
+                return config.valor
         except Exception:
             pass
 

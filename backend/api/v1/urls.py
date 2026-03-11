@@ -13,8 +13,14 @@ from apps.core.views import TarjetasViewSet, CargasSaldoViewSet, ConsumosTarjeta
 from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, SuscripcionesAlmuerzoViewSet, RegistrosConsumoAlmuerzoViewSet, AlergenosViewSet, CuentasAlmuerzoMensualViewSet
 from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet, AuthViewSet, PermisosViewSet, AuditoriaOperacionesViewSet
 from apps.inventario.views import StockUnicoViewSet, MovimientosStockViewSet, AjustesInventarioViewSet
-from apps.reportes.views import ReportesViewSet
+from apps.reportes.views import (
+    ReportesViewSet,
+    PlantillasReporteViewSet, DashboardsViewSet, KpiMetricasViewSet,
+    PlantillasTareaViewSet, EjecucionesTareaViewSet,
+    reportes_util_view, reportes_export_view,
+)
 from apps.notificaciones.views import NotificacionesPortalViewSet, NotificacionesSaldoViewSet, AlertasSistemaViewSet, PreferenciasNotificacionViewSet
+from apps.api_integrations.views import bancard_webhook, webhook_test
 
 # Create a router for ViewSets
 router = DefaultRouter()
@@ -76,6 +82,11 @@ router.register(r'ajustes-inventario', AjustesInventarioViewSet)
 
 # Register Reportes ViewSets
 router.register(r'reportes', ReportesViewSet, basename='reportes')
+router.register(r'reportes/plantillas', PlantillasReporteViewSet, basename='plantillas-reporte')
+router.register(r'reportes/dashboards', DashboardsViewSet, basename='dashboards')
+router.register(r'reportes/kpis', KpiMetricasViewSet, basename='kpi-metricas')
+router.register(r'reportes/tareas', PlantillasTareaViewSet, basename='plantillas-tarea')
+router.register(r'reportes/ejecuciones', EjecucionesTareaViewSet, basename='ejecuciones-tarea')
 
 # Register Notificaciones ViewSets
 router.register(r'notificaciones-portal', NotificacionesPortalViewSet, basename='notificaciones-portal')
@@ -85,4 +96,16 @@ router.register(r'preferencias-notificacion', PreferenciasNotificacionViewSet, b
 
 urlpatterns = [
     path('', include(router.urls)),
+    # Webhook endpoints (no auth required)
+    path('webhooks/bancard/', bancard_webhook, name='bancard-webhook'),
+    path('webhooks/test/', webhook_test, name='webhook-test'),
+    # Reportes utility endpoints
+    path('reportes/utils/validar_cron/', reportes_util_view, name='reportes-validar-cron'),
+    path('reportes/utils/test_conexion/', reportes_util_view, name='reportes-test-conexion'),
+    path('reportes/utils/esquema_bd/', reportes_util_view, name='reportes-esquema-bd'),
+    path('reportes/utils/preview_query/', reportes_util_view, name='reportes-preview-query'),
+    # Reportes export endpoints
+    path('reportes/exportar/reporte/<int:pk>/', reportes_export_view, name='reportes-exportar-reporte'),
+    path('reportes/exportar/dashboard/<int:pk>/', reportes_export_view, name='reportes-exportar-dashboard'),
+    path('reportes/exportar/archivo/<str:file_id>/', reportes_export_view, name='reportes-descargar-archivo'),
 ]

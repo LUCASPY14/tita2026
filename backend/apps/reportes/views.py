@@ -14,11 +14,17 @@ Endpoints disponibles:
 """
 
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
 from datetime import date, datetime
 from django.utils.dateparse import parse_date
 
+from .models import PlantillasReporte, Dashboards, KpiMetricas, PlantillasTarea, EjecucionesTarea
+from .serializers import (
+    PlantillasReporteSerializer, DashboardsSerializer, KpiMetricasSerializer,
+    PlantillasTareaSerializer, EjecucionesTareaSerializer,
+)
 from .services import ReporteService
 from .services.dashboard_service import DashboardService
 
@@ -323,3 +329,102 @@ class ReportesViewSet(viewsets.ViewSet):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# CRUD ViewSets for reportes models
+# ──────────────────────────────────────────────────────────────────────────────
+
+class PlantillasReporteViewSet(ModelViewSet):
+    queryset = PlantillasReporte.objects.all()
+    serializer_class = PlantillasReporteSerializer
+
+    @action(detail=True, methods=['post'], url_path='ejecutar', url_name='ejecutar')
+    def ejecutar(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+    @action(detail=True, methods=['get'], url_path='preview', url_name='preview')
+    def preview(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+    @action(detail=True, methods=['post'], url_path='validar_sql', url_name='validar-sql')
+    def validar_sql(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+
+class DashboardsViewSet(ModelViewSet):
+    queryset = Dashboards.objects.all()
+    serializer_class = DashboardsSerializer
+
+    @action(detail=True, methods=['get', 'post'], url_path='exportar', url_name='exportar')
+    def exportar(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+    @action(
+        detail=True,
+        methods=['get'],
+        url_path=r'widget/(?P<widget_id>[^/]+)/datos',
+        url_name='widget-datos',
+    )
+    def widget_datos(self, request, pk=None, widget_id=None):
+        return Response({'widget_id': widget_id})
+
+
+class KpiMetricasViewSet(ModelViewSet):
+    queryset = KpiMetricas.objects.all()
+    serializer_class = KpiMetricasSerializer
+
+    @action(detail=True, methods=['post'], url_path='calcular', url_name='calcular')
+    def calcular(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+    @action(detail=True, methods=['get'], url_path='historial', url_name='historial')
+    def historial(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+    @action(detail=False, methods=['get'], url_path='dashboard_summary', url_name='dashboard-summary')
+    def dashboard_summary(self, request):
+        return Response({'status': 'ok'})
+
+
+class PlantillasTareaViewSet(ModelViewSet):
+    queryset = PlantillasTarea.objects.all()
+    serializer_class = PlantillasTareaSerializer
+
+    @action(detail=True, methods=['post'], url_path='ejecutar', url_name='ejecutar')
+    def ejecutar(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+    @action(detail=True, methods=['get'], url_path='ejecuciones', url_name='ejecuciones')
+    def ejecuciones(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+    @action(detail=True, methods=['post'], url_path='toggle_activo', url_name='toggle-activo')
+    def toggle_activo(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+
+class EjecucionesTareaViewSet(ModelViewSet):
+    queryset = EjecucionesTarea.objects.all()
+    serializer_class = EjecucionesTareaSerializer
+
+    @action(detail=True, methods=['post'], url_path='cancelar', url_name='cancelar')
+    def cancelar(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+    @action(detail=True, methods=['get'], url_path='logs', url_name='logs')
+    def logs(self, request, pk=None):
+        return Response({'status': 'ok'})
+
+
+@api_view(['GET', 'POST'])
+def reportes_util_view(request, **kwargs):
+    """Stub view para endpoints de utilidades de reportes."""
+    return Response({'status': 'ok'})
+
+
+@api_view(['GET', 'POST'])
+def reportes_export_view(request, **kwargs):
+    """Stub view para endpoints de exportación de reportes."""
+    return Response({'status': 'ok'})
+

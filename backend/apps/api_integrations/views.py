@@ -94,14 +94,12 @@ def bancard_webhook(request):
         try:
             LogsWebhooks.objects.create(
                 timestamp=timezone.now(),
-                proveedor="Bancard",
-                evento="payment_confirmation",
+                evento_tipo="payment_confirmation",
                 payload=json.dumps(data),
-                headers=json.dumps(dict(request.headers)),
-                procesado=resultado.get("success", False),
-                resultado=json.dumps(resultado),
-                ip_origen=request.META.get("REMOTE_ADDR"),
-                id_transaccion=shop_process_id,
+                headers=dict(request.headers),
+                verificacion_ok=1,
+                procesado_ok=1 if resultado.get("success", False) else 0,
+                ip_origen=request.META.get("REMOTE_ADDR", ""),
             )
         except Exception as log_error:
             # No fallar si falla el logging

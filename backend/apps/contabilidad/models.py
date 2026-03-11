@@ -163,7 +163,7 @@ class DocumentosTributarios(models.Model):
 
 
 class DocumentoImpuestos(models.Model):
-    id_documento = models.ForeignKey(
+    id_documento = models.OneToOneField(
         "DocumentosTributarios", models.DO_NOTHING, db_column="id_documento", primary_key=True
     )
     id_impuesto = models.ForeignKey("Impuestos", models.DO_NOTHING, db_column="id_impuesto")
