@@ -103,6 +103,11 @@ backend/test_results_final.txt
 backend/test_summary.txt
 backend/module_summary.txt
 backend/REPORTE_PROGRESO_TESTS.md
+backend/cov_out.xml
+backend/coverage_report.json
+backend/test_full_run.txt
+backend/test_run_now.txt
+backend/test_summary_current.txt
 
 # Superseded ERD diagram folders (replaced by erd_gv/)
 docs/erd_jpg/
