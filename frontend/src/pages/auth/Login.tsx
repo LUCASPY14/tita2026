@@ -33,11 +33,19 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await login(formData);
-      navigate('/dashboard');
+      const result = await login(formData);
+      if (result.requires2FA) {
+        navigate('/verificar-2fa');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       console.error('Error en login:', err);
-      setError(err.message || err.response?.data?.message || 'Error al iniciar sesión');
+      setError(
+        err.response?.data?.mensaje ||
+        err.message ||
+        'Error al iniciar sesión'
+      );
     } finally {
       setLoading(false);
     }
@@ -96,7 +104,10 @@ const Login: React.FC = () => {
 
           {/* Footer */}
           <div className="mt-6 text-center">
-            <a href="#" className="text-sm text-primary-600 hover:text-primary-700">
+            <a
+              href="/recuperar-password"
+              className="text-sm text-primary-600 hover:text-primary-700 hover:underline"
+            >
               ¿Olvidaste tu contraseña?
             </a>
           </div>

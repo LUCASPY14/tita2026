@@ -1,5 +1,5 @@
 import api from './api';
-import { authService, LoginCredentials, LoginResponse, User, UserRole } from './auth.service';
+import { authService, LoginCredentials, LoginResponse, User } from './auth.service';
 
 jest.mock('./api');
 const mockedApi = api as jest.Mocked<typeof api>;
@@ -32,6 +32,7 @@ describe('Auth Service', () => {
     };
 
     const expectedLoginResponse: LoginResponse = {
+      requires2FA: false,
       token: 'mock-jwt-token-12345',
       refreshToken: 'mock-refresh-token-67890',
       user: {

@@ -14,13 +14,18 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 import { AxiosError } from 'axios';
 
+export interface LoginResult {
+  requires2FA: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<LoginResult>;
   logout: () => void;
   refreshUserData: () => void;
+  completeLogin: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -113,12 +118,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [isRefreshing]);
 
-  const login = async (credentials: LoginCredentials): Promise<void> => {
+  const login = async (credentials: LoginCredentials): Promise<LoginResult> => {
     try {
       setIsLoading(true);
-      const data = await authService.login(credentials);
-      setUser(data.user);
-      toast.success(`Bienvenido, ${data.user.username}!`);
+      const outcome = await authService.login(credentials);
+      if (!outcome.requires2FA) {
+        setUser(outcome.user);
+        toast.success(`Bienvenido, ${outcome.user.username}!`);
+      }
+      return { requires2FA: outcome.requires2FA };
     } catch (error) {
       console.error('Error en login:', error);
       toast.error('Error de autenticación');
@@ -126,6 +134,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  /** Llamado tras completar verificación 2FA para actualizar estado global. */
+  const completeLogin = (user: User): void => {
+    setUser(user);
+    toast.success(`Bienvenido, ${user.username}!`);
   };
 
   const logout = (): void => {
@@ -146,6 +160,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     refreshUserData,
+    completeLogin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

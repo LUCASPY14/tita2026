@@ -116,6 +116,7 @@ describe('AuthContext', () => {
     mockedAuthService.getCurrentUser.mockReturnValue(null);
     mockedAuthService.isAuthenticated.mockReturnValue(false);
     mockedAuthService.login.mockResolvedValue({
+      requires2FA: false,
       token: 'test-token',
       user: mockUser,
     });
