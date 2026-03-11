@@ -22,8 +22,10 @@ import {
 } from 'lucide-react';
 import { Card, Button, Badge, EmptyState } from '../components/common';
 import { useAuditoria } from '../hooks/useAuditoria';
+import auditoriaService from '../services/auditoria.service';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import type { AuditoriaOperacion } from '../types';
 
 const Auditoria: React.FC = () => {
   const {
@@ -50,6 +52,7 @@ const Auditoria: React.FC = () => {
   const [operacion, setOperacion] = useState('');
   const [resultado, setResultado] = useState('');
   const [tabla, setTabla] = useState('');
+  const [exportando, setExportando] = useState(false);
 
   // Cargar estadísticas al montar
   useEffect(() => {
@@ -82,9 +85,72 @@ const Auditoria: React.FC = () => {
     limpiarFiltros();
   };
 
-  const handleExportar = () => {
-    // TODO: Implementar exportación a CSV/Excel
-    console.log('Exportar logs');
+  const handleExportar = async () => {
+    setExportando(true);
+    try {
+      // Obtener todos los registros con los filtros actuales (sin paginación)
+      const filtrosExport: any = {};
+      if (fechaDesde) filtrosExport.fecha_desde = fechaDesde;
+      if (fechaHasta) filtrosExport.fecha_hasta = fechaHasta;
+      if (busqueda) filtrosExport.search = busqueda;
+      if (tipoUsuario) filtrosExport.tipo_usuario = tipoUsuario;
+      if (operacion) filtrosExport.operacion = operacion;
+      if (resultado) filtrosExport.resultado = resultado;
+      if (tabla) filtrosExport.tabla_afectada = tabla;
+      filtrosExport.page_size = 10000;
+      filtrosExport.page = 1;
+
+      const response = await auditoriaService.getLogsAuditoria(filtrosExport);
+      const registros: AuditoriaOperacion[] = response.results || [];
+
+      // Construir CSV
+      const cabeceras = [
+        'ID', 'Fecha', 'Usuario', 'Tipo Usuario', 'Operación',
+        'Tabla Afectada', 'ID Registro', 'Descripción',
+        'IP', 'Ciudad', 'País', 'Resultado', 'Error',
+      ];
+
+      const escaparCSV = (valor: any): string => {
+        if (valor === null || valor === undefined) return '';
+        const str = String(valor);
+        return str.includes(',') || str.includes('"') || str.includes('\n')
+          ? `"${str.replace(/"/g, '""')}"`
+          : str;
+      };
+
+      const filas = registros.map((log) => [
+        log.id_auditoria,
+        log.fecha_operacion
+          ? format(new Date(log.fecha_operacion), 'dd/MM/yyyy HH:mm:ss')
+          : '',
+        log.usuario,
+        log.tipo_usuario,
+        log.operacion,
+        log.tabla_afectada ?? '',
+        log.id_registro ?? '',
+        log.descripcion ?? '',
+        log.ip_address ?? '',
+        log.ciudad ?? '',
+        log.pais ?? '',
+        log.resultado,
+        log.mensaje_error ?? '',
+      ].map(escaparCSV).join(','));
+
+      const contenidoCSV = [cabeceras.join(','), ...filas].join('\n');
+      const bom = '\uFEFF'; // BOM para compatibilidad con Excel
+      const blob = new Blob([bom + contenidoCSV], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const fechaArchivo = format(new Date(), 'yyyyMMdd_HHmmss');
+      a.href = url;
+      a.download = `auditoria_${fechaArchivo}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error al exportar logs de auditoría:', err);
+    } finally {
+      setExportando(false);
+    }
   };
 
   // Utilidades de renderizado
@@ -149,8 +215,9 @@ const Auditoria: React.FC = () => {
             variant="secondary"
             onClick={handleExportar}
             leftIcon={<Download className="h-4 w-4" />}
+            disabled={exportando}
           >
-            Exportar
+            {exportando ? 'Exportando...' : 'Exportar CSV'}
           </Button>
         </div>
       </div>

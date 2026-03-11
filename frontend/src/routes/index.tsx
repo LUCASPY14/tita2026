@@ -1,6 +1,8 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from '../pages/auth/Login';
+import Verify2FA from '../pages/auth/Verify2FA';
+import RecuperarPassword from '../pages/auth/RecuperarPassword';
 import DashboardMejorado from '../pages/dashboard/DashboardMejorado';
 import Recargas from '../pages/recargas';
 import POS from '../pages/pos';
@@ -25,6 +27,8 @@ const AppRoutes: React.FC = () => {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
+      <Route path="/verificar-2fa" element={<Verify2FA />} />
+      <Route path="/recuperar-password" element={<RecuperarPassword />} />
 
       {/* Protected Routes with Layout */}
       <Route
