@@ -12,11 +12,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='kpimetricas',
-            name='created_at',
-            field=models.DateTimeField(blank=True, null=True),
-        ),
+        # created_at already exists in the DB (added before this migration was recorded)
         migrations.AddField(
             model_name='kpimetricas',
             name='frecuencia_actualizacion',
