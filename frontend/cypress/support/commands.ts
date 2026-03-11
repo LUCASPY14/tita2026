@@ -1,25 +1,35 @@
 // cypress/support/commands.ts
 /// <reference types="cypress" />
 
-// Comando para login
-Cypress.Commands.add('login', (email: string, password: string) => {
+// Comando para login (usa username como campo, igual que el backend)
+Cypress.Commands.add('login', (username: string, password: string) => {
   cy.request({
     method: 'POST',
     url: `${Cypress.env('API_BASE_URL')}/auth/login/`,
-    body: {
-      email,
-      password
-    }
+    body: { username, password },
+    failOnStatusCode: false,
   }).then((response) => {
-    window.localStorage.setItem('authToken', response.body.access)
-    window.localStorage.setItem('refreshToken', response.body.refresh)
-    window.localStorage.setItem('user', JSON.stringify(response.body.user))
-  })
+    const data = response.body;
+    if (data.tokens) {
+      window.localStorage.setItem('token', data.tokens.access);
+      if (data.tokens.refresh) {
+        window.localStorage.setItem('refreshToken', data.tokens.refresh);
+      }
+    }
+    if (data.empleado) {
+      window.localStorage.setItem('user', JSON.stringify({
+        id: data.empleado.id,
+        username: data.empleado.usuario,
+        email: data.empleado.email || '',
+        role: data.empleado.rol || 'empleado',
+      }));
+    }
+  });
 })
 
 // Comando para logout
 Cypress.Commands.add('logout', () => {
-  window.localStorage.removeItem('authToken')
+  window.localStorage.removeItem('token')
   window.localStorage.removeItem('refreshToken')
   window.localStorage.removeItem('user')
   cy.clearCookies()
