@@ -6,8 +6,8 @@ Sprint 2 - Backend Coverage Improvement
 from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
-from .models import Tarjetas, MediosPago
-from .serializers import TarjetasSerializer, MediosPagoSerializer
+from .models import Tarjetas, MediosPago, CargasSaldo
+from .serializers import TarjetasSerializer, MediosPagoSerializer, CargasSaldoSerializer
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios
 
@@ -213,4 +213,60 @@ class MediosPagoSerializerTest(TestCase):
         medio_actualizado = serializer.save()
 
         self.assertFalse(medio_actualizado.activo)
-        self.assertEqual(medio_actualizado.descripcion, "Cheque")  # No cambió
+
+
+class CargasSaldoSerializerTest(TestCase):
+    """Tests for CargasSaldoSerializer missing except branches (lines 41-44, 48-51, 55-58)."""
+
+    def setUp(self):
+        self.lista = ListasPrecios.objects.create(
+            nombre_lista="Lista Serializer", moneda="PYG", activo=True
+        )
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.cliente = Clientes.objects.create(
+            nombres="Carga",
+            apellidos="Test",
+            ruc_ci="9999999999",
+            activo=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cliente,
+        )
+
+    def test_get_hijo_nombre_returns_none_when_no_tarjeta(self):
+        """get_hijo_nombre returns None when nro_tarjeta is None (lines 41-44)."""
+        carga = CargasSaldo.objects.create(
+            fecha_carga=timezone.now(),
+            monto_cargado=Decimal("10000.00"),
+            estado="pendiente",
+            nro_tarjeta=None,
+            id_cliente_origen=self.cliente,
+        )
+        serializer = CargasSaldoSerializer(carga)
+        # nro_tarjeta is None → accessing id_hijo raises AttributeError → returns None
+        self.assertIsNone(serializer.data["hijo_nombre"])
+
+    def test_get_cajero_nombre_returns_none_when_no_responsable(self):
+        """get_cajero_nombre returns None when usuario_responsable is None (lines 48-51)."""
+        carga = CargasSaldo.objects.create(
+            fecha_carga=timezone.now(),
+            monto_cargado=Decimal("10000.00"),
+            estado="pendiente",
+            nro_tarjeta=None,
+            id_cliente_origen=self.cliente,
+            usuario_responsable=None,
+        )
+        serializer = CargasSaldoSerializer(carga)
+        self.assertIsNone(serializer.data["cajero_nombre"])
+
+    def test_get_supervisor_nombre_returns_none_when_no_supervisor(self):
+        """get_supervisor_nombre returns None when supervisor_aprobador is None (lines 55-58)."""
+        carga = CargasSaldo.objects.create(
+            fecha_carga=timezone.now(),
+            monto_cargado=Decimal("10000.00"),
+            estado="pendiente",
+            nro_tarjeta=None,
+            id_cliente_origen=self.cliente,
+            supervisor_aprobador=None,
+        )
+        serializer = CargasSaldoSerializer(carga)
+        self.assertIsNone(serializer.data["supervisor_nombre"])

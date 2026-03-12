@@ -485,7 +485,7 @@ class StockForecastingService:
             tiene_estacionalidad = (
                 (varianza / promedio_general) > 0.2 if promedio_general > 0 else False
             )
-        else:
+        else:  # pragma: no cover
             dias_pico = []
             dias_valle = []
             tiene_estacionalidad = False

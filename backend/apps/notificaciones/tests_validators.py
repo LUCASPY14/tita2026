@@ -886,3 +886,338 @@ class ValidarRangoHorarioRestriccionTest(TestCase):
     def test_rango_igual(self):
         with self.assertRaises(ValidationError):
             validar_rango_horario_restriccion(time(8, 0), time(8, 0))
+
+    def test_hora_inicio_no_es_time(self):
+        """Line 777: hora_inicio not a time object."""
+        with self.assertRaises(ValidationError):
+            validar_rango_horario_restriccion("08:00", time(18, 0))
+
+    def test_hora_fin_no_es_time(self):
+        """Line 780: hora_fin not a time object."""
+        with self.assertRaises(ValidationError):
+            validar_rango_horario_restriccion(time(8, 0), "18:00")
+
+
+# =============================================================================
+# EXTRA TESTS for missing lines (None / invalid-type branches)
+# =============================================================================
+
+class ValidarTituloNoneTest(TestCase):
+    def test_titulo_none(self):
+        """Line 50: titulo=None."""
+        with self.assertRaises(ValidationError):
+            validar_titulo_notificacion(None)
+
+
+class ValidarMensajeNoneTest(TestCase):
+    def test_mensaje_none(self):
+        """Line 70: mensaje=None."""
+        with self.assertRaises(ValidationError):
+            validar_mensaje_notificacion(None)
+
+
+class ValidarSaldoActualNoneTest(TestCase):
+    def test_saldo_none(self):
+        """Line 93: saldo=None."""
+        with self.assertRaises(ValidationError):
+            validar_saldo_actual(None)
+
+    def test_saldo_invalido_conversion(self):
+        """Lines 97-98: Decimal('abc') raises InvalidOperation → ValidationError."""
+        with self.assertRaises(ValidationError):
+            validar_saldo_actual("no_es_numero")
+
+
+class ValidarSaldoAlertaNoneTest(TestCase):
+    def test_saldo_alerta_none(self):
+        """Line 131: saldo_alerta=None."""
+        with self.assertRaises(ValidationError):
+            validar_saldo_alerta(None)
+
+    def test_saldo_alerta_invalido(self):
+        """Lines 135-136: Decimal('abc') → ValidationError."""
+        with self.assertRaises(ValidationError):
+            validar_saldo_alerta("texto")
+
+    def test_saldo_alerta_muchos_decimales(self):
+        """Line 146: saldo has more than 2 decimals."""
+        with self.assertRaises(ValidationError):
+            validar_saldo_alerta(Decimal("100.123"))
+
+
+class ValidarDestinoNoneTest(TestCase):
+    def test_destino_none(self):
+        """Line 152: destino=None."""
+        with self.assertRaises(ValidationError):
+            validar_destino_notificacion(None)
+
+
+class ValidarEstadoSolicitudNoStringTest(TestCase):
+    def test_estado_no_string(self):
+        """Line 165: estado not None but not a string."""
+        with self.assertRaises(ValidationError):
+            validar_estado_solicitud(123)
+
+
+class ValidarTipoPreferenciaNoneTest(TestCase):
+    def test_tipo_none(self):
+        """Line 180: tipo=None."""
+        with self.assertRaises(ValidationError):
+            validar_tipo_preferencia_notificacion(None)
+
+    def test_tipo_muy_corto(self):
+        """Line 184: tipo < 3 chars."""
+        with self.assertRaises(ValidationError):
+            validar_tipo_preferencia_notificacion("ab")
+
+
+class ValidarEmailDestinatarioNoneTest(TestCase):
+    def test_email_none(self):
+        """Line 223: email=None."""
+        with self.assertRaises(ValidationError):
+            validar_email_destinatario(None)
+
+
+class ValidarNombreDestinatarioNoneTest(TestCase):
+    def test_nombre_none(self):
+        """Line 237: nombre=None."""
+        with self.assertRaises(ValidationError):
+            validar_nombre_destinatario(None)
+
+
+class ValidarAsuntoNoneTest(TestCase):
+    def test_asunto_none(self):
+        """Line 257: asunto=None."""
+        with self.assertRaises(ValidationError):
+            validar_asunto_email(None)
+
+
+class ValidarCuerpoEmailNoneTest(TestCase):
+    def test_cuerpo_none(self):
+        """Line 269: cuerpo=None."""
+        with self.assertRaises(ValidationError):
+            validar_cuerpo_email(None)
+
+
+class ValidarEstadoEmailNoneTest(TestCase):
+    def test_estado_none(self):
+        """Line 281: estado=None."""
+        with self.assertRaises(ValidationError):
+            validar_estado_email(None)
+
+
+class ValidarIntentosEnvioNoneTest(TestCase):
+    def test_intentos_none(self):
+        """Line 300: value=None (not int)."""
+        with self.assertRaises(ValidationError):
+            validar_intentos_envio(None)
+
+
+class ValidarTelefonoNoneTest(TestCase):
+    def test_telefono_none(self):
+        """Line 317: telefono=None."""
+        with self.assertRaises(ValidationError):
+            validar_telefono_sms(None)
+
+
+class ValidarMensajeSmsNoneTest(TestCase):
+    def test_mensaje_sms_none(self):
+        """Line 339: mensaje=None."""
+        with self.assertRaises(ValidationError):
+            validar_mensaje_sms(None)
+
+
+class ValidarEstadoSmsNoneTest(TestCase):
+    def test_estado_sms_none(self):
+        """Line 352: estado=None."""
+        with self.assertRaises(ValidationError):
+            validar_estado_sms(None)
+
+
+class ValidarCostoSmsInvalidTest(TestCase):
+    def test_costo_invalido_conversion(self):
+        """Lines 367-368: Decimal('abc') → ValidationError."""
+        with self.assertRaises(ValidationError):
+            validar_costo_sms("no_numero")
+
+    def test_costo_muchos_decimales(self):
+        """Line 378: costo has more than 2 decimals."""
+        with self.assertRaises(ValidationError):
+            validar_costo_sms(Decimal("10.123"))
+
+
+class ValidarCodigoTemplateNoneTest(TestCase):
+    def test_codigo_none(self):
+        """Line 389: codigo=None."""
+        with self.assertRaises(ValidationError):
+            validar_codigo_template(None)
+
+
+class ValidarNombreTemplateNoneTest(TestCase):
+    def test_nombre_none(self):
+        """Line 406: nombre=None."""
+        with self.assertRaises(ValidationError):
+            validar_nombre_template(None)
+
+
+class ValidarVariablesTemplateNoneTest(TestCase):
+    def test_variables_none(self):
+        """Line 418: variables=None."""
+        with self.assertRaises(ValidationError):
+            validar_variables_template(None)
+
+    def test_variables_json_invalido(self):
+        """Lines 424-425: invalid JSON string → JSONDecodeError."""
+        with self.assertRaises(ValidationError):
+            validar_variables_template("{invalid json")
+
+    def test_variable_no_string(self):
+        """Line 438: variable inside list is not a string."""
+        with self.assertRaises(ValidationError):
+            validar_variables_template([123, "nombre"])
+
+
+class ValidarCategoriaNoneTest(TestCase):
+    def test_categoria_none(self):
+        """Line 446: categoria=None."""
+        with self.assertRaises(ValidationError):
+            validar_categoria_template(None)
+
+
+class ValidarCuerpoHtmlNoneTest(TestCase):
+    def test_cuerpo_html_none(self):
+        """Line 469: cuerpo_html=None."""
+        with self.assertRaises(ValidationError):
+            validar_cuerpo_html_template(None)
+
+
+class ValidarNombreCampanaNoneTest(TestCase):
+    def test_nombre_campana_none(self):
+        """Line 486: nombre_campana=None."""
+        with self.assertRaises(ValidationError):
+            validar_nombre_campana(None)
+
+
+class ValidarTipoCampanaNoneTest(TestCase):
+    def test_tipo_campana_none(self):
+        """Line 498: tipo_campana=None."""
+        with self.assertRaises(ValidationError):
+            validar_tipo_campana(None)
+
+
+class ValidarEstadoCampanaNoneTest(TestCase):
+    def test_estado_campana_none(self):
+        """Line 508: estado_campana=None."""
+        with self.assertRaises(ValidationError):
+            validar_estado_campana(None)
+
+
+class ValidarTotalDestinatariosNoneTest(TestCase):
+    def test_total_none(self):
+        """Line 519: total=None (not int)."""
+        with self.assertRaises(ValidationError):
+            validar_total_destinatarios(None)
+
+
+class ValidarNombreAlertaNoneTest(TestCase):
+    def test_nombre_alerta_none(self):
+        """Line 536: nombre=None."""
+        with self.assertRaises(ValidationError):
+            validar_nombre_alerta(None)
+
+
+class ValidarTipoAlertaNoneTest(TestCase):
+    def test_tipo_alerta_none(self):
+        """Line 548: tipo=None."""
+        with self.assertRaises(ValidationError):
+            validar_tipo_alerta(None)
+
+
+class ValidarCriticidadNoneTest(TestCase):
+    def test_criticidad_none(self):
+        """Line 559: criticidad=None."""
+        with self.assertRaises(ValidationError):
+            validar_criticidad_alerta(None)
+
+
+class ValidarFrecuenciaNoneTest(TestCase):
+    def test_frecuencia_none(self):
+        """Line 572: value=None (not int)."""
+        with self.assertRaises(ValidationError):
+            validar_frecuencia_minutos(None)
+
+
+class ValidarTipoAlertaSistemaNoneTest(TestCase):
+    def test_tipo_alerta_sistema_none(self):
+        """Line 589: tipo=None."""
+        with self.assertRaises(ValidationError):
+            validar_tipo_alerta_sistema(None)
+
+
+class ValidarMensajeAlertaSistemaNoneTest(TestCase):
+    def test_mensaje_alerta_none(self):
+        """Line 600: mensaje=None."""
+        with self.assertRaises(ValidationError):
+            validar_mensaje_alerta_sistema(None)
+
+
+class ValidarEstadoAlertaSistemaNoStringTest(TestCase):
+    def test_estado_not_string_not_none(self):
+        """Line 616: estado not None and not string."""
+        with self.assertRaises(ValidationError):
+            validar_estado_alerta_sistema(42)
+
+
+class ValidarDatosContextoNoneTest(TestCase):
+    def test_datos_none(self):
+        """Line 632: datos=None."""
+        with self.assertRaises(ValidationError):
+            validar_datos_contexto_historial(None)
+
+    def test_datos_json_invalido(self):
+        """Lines 638-639: invalid JSON string → JSONDecodeError."""
+        with self.assertRaises(ValidationError):
+            validar_datos_contexto_historial("{invalid json")
+
+
+class ValidarUsuarioAnomaliaNoneTest(TestCase):
+    def test_usuario_none(self):
+        """Line 660: usuario=None."""
+        with self.assertRaises(ValidationError):
+            validar_usuario_anomalia(None)
+
+
+class ValidarTipoAnomaliaNoneTest(TestCase):
+    def test_tipo_anomalia_none(self):
+        """Line 672: tipo=None."""
+        with self.assertRaises(ValidationError):
+            validar_tipo_anomalia(None)
+
+
+class ValidarIpAddressNoStringTest(TestCase):
+    def test_ip_not_string_not_none(self):
+        """Line 693: value not None and not string."""
+        with self.assertRaises(ValidationError):
+            validar_ip_address(12345)
+
+
+class ValidarNivelRiesgoNoneTest(TestCase):
+    def test_nivel_none(self):
+        """Line 716: nivel=None."""
+        with self.assertRaises(ValidationError):
+            validar_nivel_riesgo_anomalia(None)
+
+
+class ValidarTipoUsuarioRestriccionNoneTest(TestCase):
+    def test_tipo_usuario_none(self):
+        """Line 742: tipo=None."""
+        with self.assertRaises(ValidationError):
+            validar_tipo_usuario_restriccion(None)
+
+
+class ValidarDiaSemanaRestriccionNoneTest(TestCase):
+    def test_dia_none(self):
+        """Line 755: dia=None."""
+        with self.assertRaises(ValidationError):
+            validar_dia_semana_restriccion(None)
+

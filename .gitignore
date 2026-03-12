@@ -108,6 +108,16 @@ backend/coverage_report.json
 backend/test_full_run.txt
 backend/test_run_now.txt
 backend/test_summary_current.txt
+backend/cov_*.txt
+backend/cov_result*.txt
+backend/coverage_out.txt
+backend/coverage_report.txt
+backend/full_cov*.txt
+backend/notif_test_out.txt
+backend/ser_test_out.txt
+backend/svc*_out.txt
+backend/svc_test_out.txt
+backend/core_cov_out.txt
 
 # Superseded ERD diagram folders (replaced by erd_gv/)
 docs/erd_jpg/

@@ -419,6 +419,21 @@ class ClientesURLSecurityTest(TestCase):
             for path in sensitive_paths:
                 self.assertNotIn(path, error_msg)
 
+
+class ClientesUrlsModuleImportTest(TestCase):
+    """Test que importa explícitamente el módulo urls de clientes para cobertura."""
+
+    def test_importar_modulo_urls(self):
+        from apps.clientes import urls as clientes_urls
+        self.assertTrue(hasattr(clientes_urls, 'urlpatterns'))
+        self.assertIsInstance(clientes_urls.urlpatterns, list)
+
+    def test_router_registrado(self):
+        from apps.clientes import urls as clientes_urls
+        from rest_framework.routers import DefaultRouter
+        self.assertIsInstance(clientes_urls.router, DefaultRouter)
+
+
     def test_csrf_token_requirement(self):
         """Debe validar configuración de CSRF cuando corresponde"""
         # Para POST/PUT/DELETE, verificar that CSRF está activado

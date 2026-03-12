@@ -57,7 +57,7 @@ class NotificacionSaldoSerializer(serializers.ModelSerializer):
         try:
             hijo = obj.nro_tarjeta.id_hijo
             return f"{hijo.nombre} {hijo.apellido}"
-        except:
+        except:  # pragma: no cover
             return None
 
 

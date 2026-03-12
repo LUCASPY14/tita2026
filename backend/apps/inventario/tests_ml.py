@@ -389,3 +389,257 @@ class StockForecastingServiceTest(TestCase):
         MovimientosStock.objects.filter(
             id_venta=venta, tipo_movimiento="Egreso", motivo="venta"
         ).update(fecha_hora=fecha)
+
+    # ── New extended tests for branch coverage ──────────────────────────────
+
+    def test_calcular_estadisticas_un_solo_dato(self):
+        """Line 154: else branch when mitad==0 (only 1 data point)."""
+        # Create just 1 sale so len(cantidades)=1 → mitad=0 → else: tendencia='estable'
+        fecha = timezone.now() - timedelta(days=1)
+        self._crear_venta_unitaria(fecha, cantidad=10)
+        stats = StockForecastingService.calcular_estadisticas_basicas(
+            self.producto.id_producto, dias=30
+        )
+        self.assertEqual(stats["tendencia"], "estable")
+
+    def test_predecir_demanda_tendencia_creciente(self):
+        """Line 224: factor_tendencia=1.05 when tendencia='creciente'."""
+        # Build creciente stats: second half > first half * 1.1
+        for dia in range(15):
+            fecha = timezone.now() - timedelta(days=30 - dia)
+            self._crear_venta_unitaria(fecha, cantidad=5)
+        for dia in range(15, 30):
+            fecha = timezone.now() - timedelta(days=30 - dia)
+            self._crear_venta_unitaria(fecha, cantidad=8)  # 60% more → creciente
+        predicciones = StockForecastingService.predecir_demanda_simple(
+            self.producto.id_producto, dias_adelante=3
+        )
+        self.assertEqual(len(predicciones), 3)
+
+    def test_predecir_demanda_tendencia_decreciente(self):
+        """Line 226: factor_tendencia=0.95 when tendencia='decreciente'."""
+        for dia in range(15):
+            fecha = timezone.now() - timedelta(days=30 - dia)
+            self._crear_venta_unitaria(fecha, cantidad=15)
+        for dia in range(15, 30):
+            fecha = timezone.now() - timedelta(days=30 - dia)
+            self._crear_venta_unitaria(fecha, cantidad=8)  # decreciente
+        predicciones = StockForecastingService.predecir_demanda_simple(
+            self.producto.id_producto, dias_adelante=3
+        )
+        self.assertEqual(len(predicciones), 3)
+
+    def test_predecir_demanda_dias_sin_venta(self):
+        """Line 220: promedios_dia_semana[dia] = float(promedio) for days with no sales."""
+        # Create sales only on Mondays for 30 days — other days have no ventas
+        for semana in range(5):
+            fecha = timezone.now() - timedelta(days=28 - semana * 7)
+            # force Monday (weekday=0)
+            while fecha.weekday() != 0:
+                fecha -= timedelta(days=1)
+            self._crear_venta_unitaria(fecha, cantidad=10)
+        predicciones = StockForecastingService.predecir_demanda_simple(
+            self.producto.id_producto, dias_adelante=7
+        )
+        # Should return predictions using fallback for days with no sales
+        self.assertGreater(len(predicciones), 0)
+
+    def test_calcular_punto_reorden_sin_datos(self):
+        """Line 305: early return when no historical data."""
+        resultado = StockForecastingService.calcular_punto_reorden(
+            self.producto.id_producto, lead_time_dias=7
+        )
+        self.assertIn("error", resultado)
+        self.assertEqual(resultado["punto_reorden"], Decimal("0"))
+
+    def test_calcular_punto_reorden_menor_que_minimo(self):
+        """Lines 335-336: punto_reorden < stock_minimo_actual → uses stock_minimo."""
+        # Create sales with low demand so punto_reorden ends up below default stock_minimo=10
+        for dia in range(30):
+            fecha = timezone.now() - timedelta(days=30 - dia)
+            self._crear_venta_unitaria(fecha, cantidad=1)  # 1 unit/day → reorden ≈ 7+small
+        # stock_minimo is 10, so if calculated punto_reorden < 10, it should use 10
+        resultado = StockForecastingService.calcular_punto_reorden(
+            self.producto.id_producto, lead_time_dias=7
+        )
+        # Regardless of which branch, resultado should have punto_reorden and recomendacion
+        self.assertIn("punto_reorden", resultado)
+        self.assertIn("recomendacion", resultado)
+
+    def test_calcular_punto_reorden_producto_inexistente(self):
+        """Lines 341-342: bare except when Productos.get raises DoesNotExist."""
+        from unittest.mock import patch
+        # Need real historical data so we don't exit early at line 305
+        for dia in range(30):
+            fecha = timezone.now() - timedelta(days=30 - dia)
+            self._crear_venta_unitaria(fecha, cantidad=10)
+        # Patch Productos.objects.get (imported inside the method) to raise so except branch fires
+        with patch("apps.productos.models.Productos.objects.get", side_effect=Exception("not found")):
+            resultado = StockForecastingService.calcular_punto_reorden(
+                self.producto.id_producto, lead_time_dias=7
+            )
+        self.assertIn("recomendacion", resultado)
+        self.assertIn("Configurar como nuevo stock m", resultado["recomendacion"])
+
+    def test_detectar_anomalias_menos_de_7_registros(self):
+        """Line 383: returns [] when total_registros < 7."""
+        # Create only 3 sales
+        for dia in range(3):
+            fecha = timezone.now() - timedelta(days=3 - dia)
+            self._crear_venta_unitaria(fecha, cantidad=10)
+        resultado = StockForecastingService.detectar_anomalias(
+            self.producto.id_producto, dias=30
+        )
+        self.assertEqual(resultado, [])
+
+    def test_detectar_anomalias_caida(self):
+        """Lines 412-413: caida anomaly detected when quantity far below mean."""
+        # Create 20 days of normal sales (10 units) then 1 very low sale
+        for dia in range(20):
+            fecha = timezone.now() - timedelta(days=25 - dia)
+            self._crear_venta_unitaria(fecha, cantidad=10)
+        # Very low sale = 0.1 units → caida below (media - 2*std)
+        fecha_caida = timezone.now() - timedelta(days=3)
+        venta = Ventas.objects.create(
+            id_cliente=self.cliente,
+            id_empleado_cajero=self.empleado,
+            monto_total=Decimal("8.00"),
+            estado="Activa",
+        )
+        from apps.ventas.models import DetallesVenta
+        DetallesVenta.objects.create(
+            id_venta=venta,
+            id_producto=self.producto,
+            cantidad=Decimal("0.1"),  # Extremely low → caida
+            precio_unitario=Decimal("80.00"),
+            subtotal=Decimal("8.00"),
+        )
+        MovimientosStock.objects.filter(
+            id_venta=venta, tipo_movimiento="Egreso", motivo="venta"
+        ).update(fecha_hora=fecha_caida)
+        anomalias = StockForecastingService.detectar_anomalias(
+            self.producto.id_producto, dias=30
+        )
+        tipos = [a["tipo"] for a in anomalias]
+        self.assertIn("caida", tipos)
+
+    def test_analizar_estacionalidad_menos_de_14(self):
+        """Line 447: early return when total_registros < 14."""
+        # Create only 10 sales
+        for dia in range(10):
+            fecha = timezone.now() - timedelta(days=10 - dia)
+            self._crear_venta_unitaria(fecha, cantidad=5)
+        resultado = StockForecastingService.analizar_estacionalidad(
+            self.producto.id_producto, dias=30
+        )
+        self.assertFalse(resultado["tiene_estacionalidad"])
+        self.assertIn("error", resultado)
+
+    def test_analizar_estacionalidad_dias_sin_venta(self):
+        """Line 467: patron_semanal[dia]=0 for days with no sales."""
+        # Create 14+ sales but all on same day of week → other days get 0
+        for semana in range(3):
+            monday_offset = 21 - semana * 7
+            for day_offset in range(5):  # 5 consecutive days each week
+                fecha = timezone.now() - timedelta(days=monday_offset - day_offset)
+                self._crear_venta_unitaria(fecha, cantidad=8)
+        resultado = StockForecastingService.analizar_estacionalidad(
+            self.producto.id_producto, dias=90
+        )
+        # Should complete without error; at least one day with 0 ventas should be covered
+        self.assertIn("patron_semanal", resultado)
+
+    def test_recomendacion_compra_sin_datos(self):
+        """Line 530: early return when no historical data."""
+        resultado = StockForecastingService.obtener_recomendacion_compra(
+            self.producto.id_producto, stock_actual=Decimal("100.00")
+        )
+        self.assertIn("error", resultado)
+        self.assertEqual(resultado["cantidad_comprar"], Decimal("0"))
+
+    def test_recomendacion_compra_demanda_cero(self):
+        """Lines 542, 581: demanda_diaria=0 paths (dias_cobertura=999, agotamiento=None)."""
+        # Create a product with exactly zero demand (movement saved but with qty 0 via mock)
+        from unittest.mock import patch, MagicMock
+        # Patch calcular_estadisticas_basicas to return demanda=0 but no error key
+        stats_mock = {
+            "demanda_promedio_diaria": Decimal("0"),
+            "demanda_maxima": Decimal("0"),
+            "demanda_minima": Decimal("0"),
+            "desviacion_estandar": 0.0,
+            "tendencia": "estable",
+            "estacionalidad": False,
+            "total_dias_con_venta": 5,
+        }
+        punto_reorden_mock = {"punto_reorden": Decimal("10"), "error": "x"}
+        with patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock), \
+             patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock):
+            resultado = StockForecastingService.obtener_recomendacion_compra(
+                self.producto.id_producto, stock_actual=Decimal("50.00")
+            )
+        self.assertEqual(resultado["dias_cobertura_actual"], 999)
+        self.assertIsNone(resultado["prediccion_agotamiento"])
+
+    def test_recomendacion_compra_urgencia_alta(self):
+        """Lines 564-565: urgencia='alta' when dias_cobertura in (2,5]."""
+        from unittest.mock import patch
+        stats_mock = {
+            "demanda_promedio_diaria": Decimal("10"),
+            "demanda_maxima": Decimal("15"),
+            "demanda_minima": Decimal("5"),
+            "desviacion_estandar": 2.0,
+            "tendencia": "estable",
+            "estacionalidad": False,
+            "total_dias_con_venta": 30,
+        }
+        punto_reorden_mock = {"punto_reorden": Decimal("200")}
+        with patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock), \
+             patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock):
+            # stock=40 → dias_cobertura = 40//10 = 4 → 'alta'
+            resultado = StockForecastingService.obtener_recomendacion_compra(
+                self.producto.id_producto, stock_actual=Decimal("40")
+            )
+        self.assertEqual(resultado["urgencia"], "alta")
+
+    def test_recomendacion_compra_urgencia_media(self):
+        """Lines 567-568: urgencia='media' when dias_cobertura in (5,10]."""
+        from unittest.mock import patch
+        stats_mock = {
+            "demanda_promedio_diaria": Decimal("10"),
+            "demanda_maxima": Decimal("15"),
+            "demanda_minima": Decimal("5"),
+            "desviacion_estandar": 2.0,
+            "tendencia": "estable",
+            "estacionalidad": False,
+            "total_dias_con_venta": 30,
+        }
+        punto_reorden_mock = {"punto_reorden": Decimal("200")}
+        with patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock), \
+             patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock):
+            # stock=80 → dias_cobertura = 80//10 = 8 → 'media'
+            resultado = StockForecastingService.obtener_recomendacion_compra(
+                self.producto.id_producto, stock_actual=Decimal("80")
+            )
+        self.assertEqual(resultado["urgencia"], "media")
+
+    def test_recomendacion_compra_urgencia_baja(self):
+        """Lines 570-571: urgencia='baja' when dias_cobertura>10 but stock<punto_reorden."""
+        from unittest.mock import patch
+        stats_mock = {
+            "demanda_promedio_diaria": Decimal("10"),
+            "demanda_maxima": Decimal("15"),
+            "demanda_minima": Decimal("5"),
+            "desviacion_estandar": 2.0,
+            "tendencia": "estable",
+            "estacionalidad": False,
+            "total_dias_con_venta": 30,
+        }
+        # punto_reorden=200, stock=120 → dias_cobertura=12>10, stock<punto_reorden → baja
+        punto_reorden_mock = {"punto_reorden": Decimal("200")}
+        with patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock), \
+             patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock):
+            resultado = StockForecastingService.obtener_recomendacion_compra(
+                self.producto.id_producto, stock_actual=Decimal("120")
+            )
+        self.assertEqual(resultado["urgencia"], "baja")
+

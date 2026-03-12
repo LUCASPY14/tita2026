@@ -1,5 +1,4 @@
 name: Advanced CI/CD Pipeline - Cantina Tita
-
 on:
   push:
     branches: [desarrollo, staging, main]
@@ -463,6 +462,8 @@ jobs:
           # curl -f https://dev.cantina-tita.com/health/ || exit 1
       
       - name: Notify team
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        continue-on-error: true
         uses: 8398a7/action-slack@v3
         with:
           status: custom
@@ -484,7 +485,7 @@ jobs:
             }
         env:
           # Optional: Set SLACK_WEBHOOK_URL in repository secrets for notifications
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL != '' && secrets.SLACK_WEBHOOK_URL || '' }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL || '' }}
 
   deploy-staging:
     name: Deploy to Staging
@@ -586,7 +587,7 @@ jobs:
           echo "| Docker Images | ${{ needs.build-images.result }} |" >> $GITHUB_STEP_SUMMARY
       
       - name: Notify on failure
-        if: contains(needs.*.result, 'failure') && secrets.SLACK_WEBHOOK_URL != ''
+        if: contains(needs.*.result, 'failure')
         uses: 8398a7/action-slack@v3
         with:
           status: failure

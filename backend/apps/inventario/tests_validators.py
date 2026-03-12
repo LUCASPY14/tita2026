@@ -689,3 +689,96 @@ class ValidadoresAlertasTestCase(TestCase):
         with self.assertRaises(ValidationError) as context:
             validar_umbral_alerta(Decimal("150"), Decimal("10"), Decimal("100"))
         self.assertIn("no puede ser mayor que el stock máximo", str(context.exception))
+
+
+# ---------------------------------------------------------------------------
+# Tests adicionales para cubrir líneas faltantes
+# ---------------------------------------------------------------------------
+
+class ValidarStockDisponibleLineasFaltantesTest(TestCase):
+    """Cubre línea 166 (id_producto como objeto) y línea 187 (StockUnico.DoesNotExist)"""
+
+    def setUp(self):
+        self.impuesto = Impuestos.objects.create(
+            nombre_impuesto="IVA Test Cov", porcentaje=10.00, vigente_desde="2024-01-01", activo=True
+        )
+        self.categoria = Categorias.objects.create(nombre="Cat Cov", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad Cov", abreviatura="uc", activo=True)
+        self.producto = Productos.objects.create(
+            codigo_barra="COV0000000001",
+            descripcion="Producto Cobertura",
+            stock_minimo=1,
+            permite_stock_negativo=False,
+            id_impuesto=self.impuesto,
+            id_categoria=self.categoria,
+            id_unidad_medida=self.unidad,
+            activo=True,
+        )
+
+    def test_id_producto_como_instancia_objeto(self):
+        """Línea 166: id_producto es un objeto con atributo id_producto → se usa .id_producto"""
+        StockUnico.objects.create(id_producto=self.producto, cantidad=Decimal("100"))
+        # Pasar la instancia del producto directamente (tiene atributo id_producto)
+        try:
+            validar_stock_disponible(self.producto, 5)
+        except ValidationError:
+            self.fail("Debería pasar con instancia producto y stock suficiente")
+
+    def test_stock_unico_does_not_exist(self):
+        """Línea 187: StockUnico no existe para el producto → ValidationError"""
+        # El producto existe pero NO tiene StockUnico creado
+        with self.assertRaises(ValidationError) as ctx:
+            validar_stock_disponible(self.producto.id_producto, 1)
+        self.assertIn("registro de stock", str(ctx.exception))
+
+
+class ValidarCantidadAjusteNoneTest(TestCase):
+    """Cubre línea 336: cantidad_ajuste=None → ValidationError"""
+
+    def test_cantidad_ajuste_none_raises(self):
+        with self.assertRaises(ValidationError) as ctx:
+            validar_cantidad_ajuste(None, "Merma")
+        self.assertIn("requerida", str(ctx.exception))
+
+
+class ValidarUmbralConfianzaNoneTest(TestCase):
+    """Cubre línea 528: umbral=None → ValidationError"""
+
+    def test_umbral_none_raises(self):
+        with self.assertRaises(ValidationError) as ctx:
+            validar_umbral_confianza(None)
+        self.assertIn("requerido", str(ctx.exception))
+
+
+class ValidarLeadTimeNoneTest(TestCase):
+    """Cubre línea 555: lead_time_dias=None → ValidationError"""
+
+    def test_lead_time_none_raises(self):
+        with self.assertRaises(ValidationError) as ctx:
+            validar_lead_time(None)
+        self.assertIn("requerido", str(ctx.exception))
+
+
+class ValidarDiasCoberturaLineaFaltanteTest(TestCase):
+    """Cubre línea 582: dias_cobertura=None → ValidationError"""
+
+    def test_dias_cobertura_none_raises(self):
+        with self.assertRaises(ValidationError) as ctx:
+            validar_dias_cobertura(None)
+        self.assertIn("requerido", str(ctx.exception))
+
+
+class ValidarCostoUnitarioLineasFaltantesTest(TestCase):
+    """Cubre líneas 612 (None) y 616-617 (tipo inválido → ValueError)"""
+
+    def test_costo_none_raises(self):
+        """Línea 612: costo=None → ValidationError"""
+        with self.assertRaises(ValidationError) as ctx:
+            validar_costo_unitario(None)
+        self.assertIn("requerido", str(ctx.exception))
+
+    def test_costo_texto_invalido_raises(self):
+        """Líneas 616-617: costo='abc' → ValueError → ValidationError"""
+        with self.assertRaises(ValidationError) as ctx:
+            validar_costo_unitario("abc")
+        self.assertIn("número", str(ctx.exception))

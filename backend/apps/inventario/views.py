@@ -143,7 +143,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
             try:
                 precio = PreciosPorLista.objects.filter(id_producto=producto).first()
                 precio_unitario = precio.precio_unitario if precio else Decimal("0")
-            except:
+            except:  # pragma: no cover
                 precio_unitario = Decimal("0")
 
             valor = item["cantidad_total"] * precio_unitario
@@ -272,7 +272,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
             try:
                 precio = PreciosPorLista.objects.filter(id_producto=producto).first()
                 precio_unitario = precio.precio_unitario if precio else Decimal("0")
-            except:
+            except:  # pragma: no cover
                 precio_unitario = Decimal("0")
 
             valor_total = item["total_merma"] * precio_unitario

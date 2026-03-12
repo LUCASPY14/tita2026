@@ -94,3 +94,247 @@ class ReadOnlyTest(TestCase):
         request.user = self.user
 
         self.assertTrue(permission.has_permission(request, None))
+
+
+class IsCajeroOrAdminTest(TestCase):
+    """Tests para IsCajeroOrAdmin permission"""
+
+    def setUp(self):
+        from apps.common.permissions import IsCajeroOrAdmin
+        self.factory = APIRequestFactory()
+        self.permission = IsCajeroOrAdmin()
+        self.admin_user = User.objects.create_user(
+            username="cajero_admin", password="pass", is_staff=True
+        )
+        self.normal_user = User.objects.create_user(
+            username="cajero_normal", password="pass", is_staff=False
+        )
+
+    def test_no_autenticado_retorna_false(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        request.user = MagicMock()
+        request.user.is_authenticated = False
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_admin_staff_retorna_true(self):
+        request = self.factory.get("/")
+        request.user = self.admin_user
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_usuario_sin_empleado_retorna_false(self):
+        """Usuario sin atributo empleado: except devuelve False"""
+        request = self.factory.get("/")
+        request.user = self.normal_user
+        # normal_user no tiene .empleado → exception → False
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_usuario_con_rol_cajero(self):
+        from unittest.mock import MagicMock, PropertyMock
+        request = self.factory.get("/")
+        user = MagicMock()
+        user.is_authenticated = True
+        user.is_staff = False
+        rol_mock = MagicMock()
+        rol_mock.nombre_rol = "Cajero"
+        empleado_mock = MagicMock()
+        empleado_mock.id_rol = rol_mock
+        user.empleado = empleado_mock
+        request.user = user
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_usuario_con_rol_no_permitido(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        user = MagicMock()
+        user.is_authenticated = True
+        user.is_staff = False
+        rol_mock = MagicMock()
+        rol_mock.nombre_rol = "Supervisor"
+        empleado_mock = MagicMock()
+        empleado_mock.id_rol = rol_mock
+        user.empleado = empleado_mock
+        request.user = user
+        self.assertFalse(self.permission.has_permission(request, None))
+
+
+class IsOwnerOrAdminTest(TestCase):
+    """Tests para IsOwnerOrAdmin permission"""
+
+    def setUp(self):
+        from apps.common.permissions import IsOwnerOrAdmin
+        self.factory = APIRequestFactory()
+        self.permission = IsOwnerOrAdmin()
+        self.admin_user = User.objects.create_user(
+            username="owner_admin", password="pass", is_staff=True
+        )
+        self.normal_user = User.objects.create_user(
+            username="owner_normal", password="pass", is_staff=False
+        )
+
+    def test_admin_tiene_acceso_total(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        request.user = self.admin_user
+        obj = MagicMock()
+        self.assertTrue(self.permission.has_object_permission(request, None, obj))
+
+    def test_objeto_con_id_cliente_correcto(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        request.user = self.normal_user
+        obj = MagicMock()
+        obj.id_cliente = MagicMock()
+        obj.id_cliente.user = self.normal_user
+        self.assertTrue(self.permission.has_object_permission(request, None, obj))
+
+    def test_objeto_con_id_cliente_incorrecto(self):
+        from unittest.mock import MagicMock
+        other_user = User.objects.create_user(username="other_user", password="pass")
+        request = self.factory.get("/")
+        request.user = self.normal_user
+        obj = MagicMock()
+        obj.id_cliente = MagicMock()
+        obj.id_cliente.user = other_user
+        self.assertFalse(self.permission.has_object_permission(request, None, obj))
+
+    def test_objeto_con_usuario_correcto(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        request.user = self.normal_user
+        obj = MagicMock(spec=['usuario'])
+        obj.usuario = self.normal_user
+        self.assertTrue(self.permission.has_object_permission(request, None, obj))
+
+    def test_objeto_sin_id_cliente_ni_usuario(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        request.user = self.normal_user
+        obj = MagicMock(spec=[])  # sin atributos
+        self.assertFalse(self.permission.has_object_permission(request, None, obj))
+
+
+class IsClienteOrAdminTest(TestCase):
+    """Tests para IsClienteOrAdmin permission"""
+
+    def setUp(self):
+        from apps.common.permissions import IsClienteOrAdmin
+        self.factory = APIRequestFactory()
+        self.permission = IsClienteOrAdmin()
+        self.admin_user = User.objects.create_user(
+            username="cliente_admin", password="pass", is_staff=True
+        )
+        self.normal_user = User.objects.create_user(
+            username="cliente_normal", password="pass", is_staff=False
+        )
+
+    def test_no_autenticado_retorna_false(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        request.user = MagicMock()
+        request.user.is_authenticated = False
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_admin_retorna_true(self):
+        request = self.factory.get("/")
+        request.user = self.admin_user
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_usuario_sin_cliente_retorna_false(self):
+        """User sin atributo .cliente retorna True porque hasattr chequea existencia"""
+        request = self.factory.get("/")
+        request.user = self.normal_user
+        # Django User doesn't have .cliente attr
+        self.assertFalse(self.permission.has_permission(request, None))
+
+
+class CanManageVentasTest(TestCase):
+    """Tests para CanManageVentas permission"""
+
+    def setUp(self):
+        from apps.common.permissions import CanManageVentas
+        self.factory = APIRequestFactory()
+        self.permission = CanManageVentas()
+        self.admin_user = User.objects.create_user(
+            username="ventas_admin", password="pass", is_staff=True
+        )
+        self.normal_user = User.objects.create_user(
+            username="ventas_normal", password="pass", is_staff=False
+        )
+
+    def test_no_autenticado_retorna_false(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        request.user = MagicMock()
+        request.user.is_authenticated = False
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_staff_retorna_true(self):
+        request = self.factory.get("/")
+        request.user = self.admin_user
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_cajero_retorna_true(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        user = MagicMock()
+        user.is_authenticated = True
+        user.is_staff = False
+        rol_mock = MagicMock()
+        rol_mock.nombre_rol = "Cajero"
+        empleado_mock = MagicMock()
+        empleado_mock.id_rol = rol_mock
+        user.empleado = empleado_mock
+        request.user = user
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_sin_empleado_retorna_false(self):
+        request = self.factory.get("/")
+        request.user = self.normal_user
+        self.assertFalse(self.permission.has_permission(request, None))
+
+
+class CanManageInventarioTest(TestCase):
+    """Tests para CanManageInventario permission"""
+
+    def setUp(self):
+        from apps.common.permissions import CanManageInventario
+        self.factory = APIRequestFactory()
+        self.permission = CanManageInventario()
+        self.admin_user = User.objects.create_user(
+            username="inv_admin", password="pass", is_staff=True
+        )
+        self.normal_user = User.objects.create_user(
+            username="inv_normal", password="pass", is_staff=False
+        )
+
+    def test_no_autenticado_retorna_false(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        request.user = MagicMock()
+        request.user.is_authenticated = False
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_staff_retorna_true(self):
+        request = self.factory.get("/")
+        request.user = self.admin_user
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_gerente_retorna_true(self):
+        from unittest.mock import MagicMock
+        request = self.factory.get("/")
+        user = MagicMock()
+        user.is_authenticated = True
+        user.is_staff = False
+        rol_mock = MagicMock()
+        rol_mock.nombre_rol = "Gerente"
+        empleado_mock = MagicMock()
+        empleado_mock.id_rol = rol_mock
+        user.empleado = empleado_mock
+        request.user = user
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_sin_empleado_retorna_false(self):
+        request = self.factory.get("/")
+        request.user = self.normal_user
+        self.assertFalse(self.permission.has_permission(request, None))

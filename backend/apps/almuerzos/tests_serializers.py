@@ -6,11 +6,12 @@ Sprint 2 - Backend Coverage Improvement
 from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
-from .models import PlanesAlmuerzo, TiposAlmuerzo, SuscripcionesAlmuerzo
+from .models import PlanesAlmuerzo, TiposAlmuerzo, SuscripcionesAlmuerzo, CuentasAlmuerzoMensual
 from .serializers import (
     PlanesAlmuerzoSerializer,
     TiposAlmuerzoSerializer,
     SuscripcionesAlmuerzoSerializer,
+    CuentasAlmuerzoMensualSerializer,
 )
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios
@@ -243,3 +244,71 @@ class SuscripcionesAlmuerzoSerializerTest(TestCase):
         suscripcion = serializer.save()
         self.assertIsNotNone(suscripcion.id_suscripcion)
         self.assertEqual(suscripcion.estado, "activa")
+
+
+class CuentasAlmuerzoMensualSerializerTest(TestCase):
+    """Tests for CuentasAlmuerzoMensualSerializer (lines 56-59: except Exception)."""
+
+    def setUp(self):
+        self.lista = ListasPrecios.objects.create(
+            nombre_lista="Lista Almuerzo Cuenta", moneda="PYG", activo=True
+        )
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.cliente = Clientes.objects.create(
+            nombres="Cuenta",
+            apellidos="Test",
+            ruc_ci="8888888888",
+            activo=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cliente,
+        )
+        self.hijo = Hijos.objects.create(
+            nombre="CuentaHijo",
+            apellido="Test",
+            fecha_nacimiento="2015-01-01",
+            grado="Primero",
+            activo=True,
+            id_cliente_responsable=self.cliente,
+        )
+
+    def test_get_hijo_nombre_returns_full_name(self):
+        """get_hijo_nombre returns 'nombre apellido' when hijo exists."""
+        from django.utils import timezone as tz
+        cuenta = CuentasAlmuerzoMensual.objects.create(
+            anio=2026,
+            mes=3,
+            cantidad_almuerzos=20,
+            monto_total="200000.00",
+            forma_cobro="mensual",
+            monto_pagado="0.00",
+            estado="activo",
+            fecha_generacion=tz.now().date(),
+            fecha_actualizacion=tz.now(),
+            id_hijo=self.hijo,
+        )
+        serializer = CuentasAlmuerzoMensualSerializer(cuenta)
+        self.assertEqual(serializer.data["hijo_nombre"], "CuentaHijo Test")
+
+    def test_get_hijo_nombre_returns_none_on_exception(self):
+        """get_hijo_nombre returns None when accessing id_hijo raises (lines 56-59)."""
+        cuenta = CuentasAlmuerzoMensual.objects.create(
+            anio=2026,
+            mes=4,
+            cantidad_almuerzos=5,
+            monto_total="50000.00",
+            forma_cobro="mensual",
+            monto_pagado="0.00",
+            estado="activo",
+            fecha_generacion=__import__('datetime').date.today(),
+            fecha_actualizacion=__import__('django.utils.timezone', fromlist=['timezone']).now(),
+            id_hijo=self.hijo,
+        )
+        # Mock id_hijo to raise on attribute access
+        from unittest.mock import PropertyMock, patch
+        with patch.object(
+            type(cuenta), "id_hijo",
+            new_callable=PropertyMock,
+            side_effect=Exception("hijo error"),
+        ):
+            serializer = CuentasAlmuerzoMensualSerializer(cuenta)
+            self.assertIsNone(serializer.data["hijo_nombre"])

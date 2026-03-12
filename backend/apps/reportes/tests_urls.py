@@ -863,3 +863,17 @@ class ReportesURLConfigurationTest(SimpleTestCase):
         for url in sensitive_actions:
             self.assertTrue(url.endswith('/'))  # Preparadas para POST
             self.assertNotIn('?', url)  # No query parameters sensibles
+
+
+class ReportesUrlsModuleImportTest(SimpleTestCase):
+    """Importa el módulo urls de reportes explícitamente para cobertura."""
+
+    def test_importar_modulo_urls(self):
+        from apps.reportes import urls as reportes_urls
+        self.assertTrue(hasattr(reportes_urls, 'urlpatterns'))
+        self.assertIsInstance(reportes_urls.urlpatterns, list)
+
+    def test_router_instancia(self):
+        from apps.reportes import urls as reportes_urls
+        from rest_framework.routers import DefaultRouter
+        self.assertIsInstance(reportes_urls.router, DefaultRouter)

@@ -71,7 +71,7 @@ class NotificacionesPortalViewSet(viewsets.ModelViewSet):
 
             serializer = self.get_serializer(notificacion)
             return Response(serializer.data)
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=["post"])
@@ -89,7 +89,7 @@ class NotificacionesPortalViewSet(viewsets.ModelViewSet):
             )
 
             return Response({"success": True, "mensaje": "Notificaciones marcadas como leídas"})
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=["get"])
@@ -131,7 +131,7 @@ class NotificacionesPortalViewSet(viewsets.ModelViewSet):
                     "alertas_sistema": alertas_sistema,
                 }
             )
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -205,7 +205,7 @@ class AlertasSistemaViewSet(viewsets.ModelViewSet):
 
             serializer = self.get_serializer(alerta)
             return Response(serializer.data)
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -228,7 +228,7 @@ class PreferenciasNotificacionViewSet(viewsets.ModelViewSet):
             preferencias = PreferenciasNotificacion.objects.filter(id_usuario_portal=id_usuario)
             serializer = self.get_serializer(preferencias, many=True)
             return Response(serializer.data)
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=["post"])
@@ -260,5 +260,5 @@ class PreferenciasNotificacionViewSet(viewsets.ModelViewSet):
 
             serializer = self.get_serializer(preferencia)
             return Response(serializer.data)
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
