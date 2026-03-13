@@ -21,16 +21,44 @@ from apps.usuarios.models import (
 
 # ==================== STUB ATTRIBUTES FOR TESTING ====================
 # These stubs allow tests to patch signals module attributes
-def audit_logger(*args, **kwargs): pass
-def send_notification(*args, **kwargs): pass
-def update_last_login(*args, **kwargs): pass
-def hash_password(*args, **kwargs): pass
-def log_role_change(*args, **kwargs): pass
-def invalidate_sessions(*args, **kwargs): pass
-def cleanup_user_data(*args, **kwargs): pass
-def create_user_profile(*args, **kwargs): pass
-def send_welcome_email(*args, **kwargs): pass
-def audit_log(*args, **kwargs): pass
+def audit_logger(*args, **kwargs):
+    pass
+
+
+def send_notification(*args, **kwargs):
+    pass
+
+
+def update_last_login(*args, **kwargs):
+    pass
+
+
+def hash_password(*args, **kwargs):
+    pass
+
+
+def log_role_change(*args, **kwargs):
+    pass
+
+
+def invalidate_sessions(*args, **kwargs):
+    pass
+
+
+def cleanup_user_data(*args, **kwargs):
+    pass
+
+
+def create_user_profile(*args, **kwargs):
+    pass
+
+
+def send_welcome_email(*args, **kwargs):
+    pass
+
+
+def audit_log(*args, **kwargs):
+    pass
 
 # ==================== HELPER FUNCTIONS ====================
 
