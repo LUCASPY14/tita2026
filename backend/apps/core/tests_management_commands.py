@@ -138,6 +138,27 @@ class CrearRolesInicialesCommandTest(TestCase):
         from apps.usuarios.models import Roles
         self.assertGreater(Roles.objects.count(), 0)
 
+
+class MonitorDatabaseCommandImportTest(TestCase):
+    """Tests for core/management/commands/monitor_database.py (0% coverage)."""
+
+    def test_module_importable(self):
+        """Importing the module executes lines 8-14 (os, sys imports + sys.path.insert + re-export)."""
+        import importlib
+        import sys
+        # Remove cached module so it re-executes all module-level lines
+        mod_name = "apps.core.management.commands.monitor_database"
+        sys.modules.pop(mod_name, None)
+        module = importlib.import_module(mod_name)
+        # Command is re-exported from monitoring.database_monitor
+        self.assertTrue(hasattr(module, "Command"))
+
+    def test_command_class_is_base_command_subclass(self):
+        """Command re-exported from monitoring is a valid Django management command."""
+        from django.core.management.base import BaseCommand
+        from apps.core.management.commands.monitor_database import Command
+        self.assertTrue(issubclass(Command, BaseCommand))
+
     def test_command_recrear_cancelado(self):
         """Lines 63-70: recrear=True with non-'SI' answer cancels the operation."""
         from unittest.mock import patch
