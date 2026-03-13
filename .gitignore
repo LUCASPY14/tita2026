@@ -125,3 +125,5 @@ docs/erd_v2/
 
 # Temp script artifacts
 scripts/generate_erd_graphviz_clean.py
+
+backend/val_cov.txt
