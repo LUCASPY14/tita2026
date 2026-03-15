@@ -9,11 +9,11 @@ DEBUG = True
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'dbcantinatita',
-        'USER': 'root',
-        'PASSWORD': 'L01G05S33Vice.42',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': os.environ.get('DB_NAME', 'cantina_tita_db'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
         'ATOMIC_REQUESTS': False,
         'OPTIONS': {
             'charset': 'utf8mb4',

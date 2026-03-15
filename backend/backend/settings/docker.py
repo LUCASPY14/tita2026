@@ -14,17 +14,19 @@ ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',')]
 # SECRET KEY desde variable de entorno
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-key')
 
-# Base de datos PostgreSQL
+# Base de datos MySQL
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql'),
-        'NAME': os.getenv('DB_NAME', 'cantina_db'),
+        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
+        'NAME': os.getenv('DB_NAME', 'cantina_tita_db'),
         'USER': os.getenv('DB_USER', 'cantina_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'cantina_pass'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'cantina_password'),
         'HOST': os.getenv('DB_HOST', 'db'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'PORT': os.getenv('DB_PORT', '3306'),
         'CONN_MAX_AGE': 600,  # Mantener conexiones abiertas por 10 minutos
         'OPTIONS': {
+            'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             'connect_timeout': 10,
         },
     }

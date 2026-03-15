@@ -1,22 +1,22 @@
 services:
-  # Base de datos PostgreSQL
+  # Base de datos MySQL
   db:
-    image: postgres:15-alpine
+    image: mysql:8.0
     container_name: cantina_db
     environment:
-      POSTGRES_DB: ${DB_NAME:-cantina_db}
-      POSTGRES_USER: ${DB_USER:-cantina_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-cantina_pass}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      MYSQL_DATABASE: ${DB_NAME:-cantina_tita_db}
+      MYSQL_USER: ${DB_USER:-cantina_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-cantina_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_HOST_PORT:-3307}:3306"
     networks:
       - cantina-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cantina_user}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USER:-cantina_user}", "-p${DB_PASSWORD:-cantina_password}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -61,12 +61,12 @@ services:
       - DEBUG=${DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY:-django-insecure-change-this}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
-      - DB_ENGINE=django.db.backends.postgresql
-      - DB_NAME=${DB_NAME:-cantina_db}
+      - DB_ENGINE=django.db.backends.mysql
+      - DB_NAME=${DB_NAME:-cantina_tita_db}
       - DB_USER=${DB_USER:-cantina_user}
-      - DB_PASSWORD=${DB_PASSWORD:-cantina_pass}
+      - DB_PASSWORD=${DB_PASSWORD:-cantina_password}
       - DB_HOST=db
-      - DB_PORT=5432
+      - DB_PORT=3306
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_pass}
@@ -95,12 +95,12 @@ services:
       - DJANGO_SETTINGS_MODULE=backend.settings.docker
       - DEBUG=${DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY:-django-insecure-change-this}
-      - DB_ENGINE=django.db.backends.postgresql
-      - DB_NAME=${DB_NAME:-cantina_db}
+      - DB_ENGINE=django.db.backends.mysql
+      - DB_NAME=${DB_NAME:-cantina_tita_db}
       - DB_USER=${DB_USER:-cantina_user}
-      - DB_PASSWORD=${DB_PASSWORD:-cantina_pass}
+      - DB_PASSWORD=${DB_PASSWORD:-cantina_password}
       - DB_HOST=db
-      - DB_PORT=5432
+      - DB_PORT=3306
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_pass}
@@ -133,12 +133,12 @@ services:
       - DJANGO_SETTINGS_MODULE=backend.settings.docker
       - DEBUG=${DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY:-django-insecure-change-this}
-      - DB_ENGINE=django.db.backends.postgresql
-      - DB_NAME=${DB_NAME:-cantina_db}
+      - DB_ENGINE=django.db.backends.mysql
+      - DB_NAME=${DB_NAME:-cantina_tita_db}
       - DB_USER=${DB_USER:-cantina_user}
-      - DB_PASSWORD=${DB_PASSWORD:-cantina_pass}
+      - DB_PASSWORD=${DB_PASSWORD:-cantina_password}
       - DB_HOST=db
-      - DB_PORT=5432
+      - DB_PORT=3306
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_pass}
@@ -193,7 +193,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  mysql_data:
     driver: local
   redis_data:
     driver: local
