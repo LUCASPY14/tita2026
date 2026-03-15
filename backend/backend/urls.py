@@ -46,8 +46,13 @@ def api_root(request):
         }
     })
 
+def health_check(request):
+    """Health check endpoint for Docker"""
+    return JsonResponse({'status': 'ok'})
+
 urlpatterns = [
     path('', api_root, name='api-root'),
+    path('health/', health_check, name='health-check'),
     path('admin/', admin.site.urls),
     
     # API v1
