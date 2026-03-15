@@ -63,7 +63,7 @@ CELERY_RESULT_EXPIRES = 3600  # 1 hora
 
 # Static y Media files
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -72,7 +72,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 if not DEBUG:
     # En producción, especifica los orígenes permitidos
-    CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+    _cors_env = os.getenv('CORS_ALLOWED_ORIGINS', '')
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_env.split(',') if o.strip()]
 
 # CSRF - Confiar en orígenes desde la red local
 CSRF_TRUSTED_ORIGINS = [
