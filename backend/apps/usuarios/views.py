@@ -583,7 +583,7 @@ class PermisosViewSet(viewsets.ViewSet):
             )
 
         try:
-            rol = Roles.objects.get(id=id_rol)
+            rol = Roles.objects.get(pk=id_rol)
             empleado = request.user
 
             resultado = PermissionService.asignar_permiso_a_rol(rol, codigo_permiso, empleado)
@@ -620,7 +620,7 @@ class PermisosViewSet(viewsets.ViewSet):
             )
 
         try:
-            rol = Roles.objects.get(id=id_rol)
+            rol = Roles.objects.get(pk=id_rol)
 
             resultado = PermissionService.remover_permiso_de_rol(rol, codigo_permiso)
 

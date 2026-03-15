@@ -316,7 +316,7 @@ class TienePermiso(permissions.BasePermission):
 
         # Obtener empleado del request (asumiendo que está en request.user)
         try:
-            empleado = Empleados.objects.get(id=request.user.id)
+            empleado = Empleados.objects.get(usuario=request.user.username)
         except Empleados.DoesNotExist:
             return False
 
@@ -344,7 +344,7 @@ class TieneAlgunosPermisos(permissions.BasePermission):
             return False
 
         try:
-            empleado = Empleados.objects.get(id=request.user.id)
+            empleado = Empleados.objects.get(usuario=request.user.username)
         except Empleados.DoesNotExist:
             return False
 
@@ -370,7 +370,7 @@ class TieneTodosPermisos(permissions.BasePermission):
             return False
 
         try:
-            empleado = Empleados.objects.get(id=request.user.id)
+            empleado = Empleados.objects.get(usuario=request.user.username)
         except Empleados.DoesNotExist:
             return False
 
@@ -458,7 +458,7 @@ def requiere_algunos_permisos(*codigos_permisos):
                 raise PermissionDenied("Debe estar autenticado")
 
             try:
-                empleado = Empleados.objects.get(id=request.user.id)
+                empleado = Empleados.objects.get(usuario=request.user.username)
             except Empleados.DoesNotExist:
                 from rest_framework.exceptions import PermissionDenied
 
