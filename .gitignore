@@ -132,3 +132,5 @@ backend/.coverage_check
 backend/coverage_check.txt
 backend/coverage_final.txt
 backend/fresh_coverage.txt
+backend/coverage.json
+backend/gunicorn.ctl
