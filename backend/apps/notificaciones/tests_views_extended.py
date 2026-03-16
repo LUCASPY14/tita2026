@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para notificaciones views
 Cubre ramas no cubiertas por tests_api.py
 """
@@ -30,10 +30,10 @@ class BaseNotifTest(APITestCase):
         self.auth_user = User.objects.create_user(
             username='notif_ext_user', email='notif_ext@test.com', password='pass123'
         )
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Ext Test', activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Ext Test', estado=True)
         self.cliente = Clientes.objects.create(
             nombres='Ext', apellidos='Test', ruc_ci='EXT0001',
-            activo=True, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_tipo_cliente=self.tipo_cliente,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
             email='ext_portal@test.com',
@@ -105,13 +105,13 @@ class NotificacionesSaldoFiltroTest(APITestCase):
         auth_user = User.objects.create_user(
             username='saldo_filtro_user', email='saldo_filtro@test.com', password='pass123'
         )
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo='Saldo Filtro', activo=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo='Saldo Filtro', estado=True)
         cliente = Clientes.objects.create(
             nombres='Saldo', apellidos='Filtro', ruc_ci='SALDOF01',
-            activo=True, id_tipo_cliente=tipo_cliente,
+            estado=True, id_tipo_cliente=tipo_cliente,
         )
         hijo = Hijos.objects.create(
-            nombre='H', apellido='Ijo', activo=True, id_cliente_responsable=cliente
+            nombre='H', apellido='Ijo', estado=True, id_cliente_responsable=cliente
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta='SF001',

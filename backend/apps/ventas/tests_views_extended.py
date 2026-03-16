@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para apps/ventas/views.py
 Cubre: NotasCreditoClienteViewSet custom actions, PromocionesViewSet custom actions
 """
@@ -232,7 +232,7 @@ class PromocionesViewSetActivasTest(TestCase):
             nombre='Promo Test',
             tipo_promocion='porcentaje',
             valor_descuento=Decimal('10'),
-            activo=True,
+            estado=True,
             fecha_inicio=date.today(),
             aplica_a='todos',
             min_cantidad=1,

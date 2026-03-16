@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para apps/usuarios/views.py
 Cubre: AuthViewSet, TwoFactorViewSet, SesionesViewSet, PasswordRecoveryViewSet,
        PermisosViewSet, RolesViewSet.permisos/destroy, EmpleadosViewSet.create/cambiar_password,
@@ -31,7 +31,7 @@ def make_user(username='testuser'):
 
 
 def make_rol(nombre='Cajero'):
-    return Roles.objects.get_or_create(nombre_rol=nombre, defaults={'descripcion': '', 'activo': True})[0]
+    return Roles.objects.get_or_create(nombre_rol=nombre, defaults={'descripcion': '', 'estado': True})[0]
 
 
 def make_empleado(usuario, rol=None):
@@ -44,7 +44,7 @@ def make_empleado(usuario, rol=None):
             'apellido': 'User',
             'contrasena_hash': 'x',
             'fecha_ingreso': timezone.now(),
-            'activo': True,
+            'estado': True,
             'id_rol': rol,
         }
     )[0]
@@ -603,7 +603,7 @@ class RolesViewSetExtendedTest(TestCase):
 
     def test_destroy_sin_empleados(self):
         """Debe eliminar el rol si no tiene empleados"""
-        rol_libre = Roles.objects.create(nombre_rol='RolSinEmpleados', descripcion='', activo=True)
+        rol_libre = Roles.objects.create(nombre_rol='RolSinEmpleados', descripcion='', estado=True)
         view = RolesViewSet.as_view({'delete': 'destroy'})
         request = self.factory.delete(f'/roles/{rol_libre.pk}/')
         force_authenticate(request, user=self.user)

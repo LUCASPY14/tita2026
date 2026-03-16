@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para apps/core/tasks.py
 Cubre líneas faltantes:
 39-46 (loop interior de expirar_recargas_pendientes),
@@ -22,13 +22,13 @@ from apps.productos.models import ListasPrecios
 def _make_cliente(suffix=""):
     tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo=f"TipoCT{suffix}")
     lista, _ = ListasPrecios.objects.get_or_create(
-        nombre_lista=f"ListaCT{suffix}", defaults={"activo": True}
+        nombre_lista=f"ListaCT{suffix}", defaults={"estado": True}
     )
     return Clientes.objects.create(
         nombres=f"ClienteCT{suffix}",
         apellidos="Tasks",
         ruc_ci=f"CT{suffix}1234",
-        activo=True,
+        estado=True,
         id_lista=lista,
         id_tipo_cliente=tipo,
     )
@@ -38,7 +38,7 @@ def _make_hijo(cliente, suffix=""):
     return Hijos.objects.create(
         nombre=f"HijoCT{suffix}",
         apellido="Tasks",
-        activo=True,
+        estado=True,
         id_cliente_responsable=cliente,
     )
 

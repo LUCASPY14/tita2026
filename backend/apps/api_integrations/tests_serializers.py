@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para serializers de api_integrations
 Cubre serialización y validación de datos de APIs externas
 """
@@ -135,7 +135,7 @@ class ProveedoresApiSerializerTest(TestCase):
             'config_auth': {'api_key': 'test_key'},
             'timeout': 30,
             'max_reintentos': 3,
-            'activo': True,
+            'estado': True,
             'created_at': timezone.now()
         }
 
@@ -246,7 +246,7 @@ class ProveedoresApiSerializerTest(TestCase):
         # Update parcial
         update_data = {
             'timeout': 60,
-            'activo': False
+            'estado': False
         }
         
         serializer = ProveedoresApiSerializer(proveedor, data=update_data, partial=True)
@@ -254,7 +254,7 @@ class ProveedoresApiSerializerTest(TestCase):
         
         updated_proveedor = serializer.save()
         self.assertEqual(updated_proveedor.timeout, 60)
-        self.assertFalse(updated_proveedor.activo)
+        self.assertFalse(updated_proveedor.estado)
         # Otros campos deben mantenerse
         self.assertEqual(updated_proveedor.nombre, 'TestProvider')
 
@@ -288,7 +288,7 @@ class EndpointsApiSerializerTest(TestCase):
             'schema_response': {'type': 'object'},
             'cache_segundos': 300,
             'requiere_auth': 1,
-            'activo': True,
+            'estado': True,
             'id_proveedor': self.proveedor.id_proveedor
         }
 
@@ -409,7 +409,7 @@ class LogsLlamadasApiSerializerTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='TestRole',
             descripcion='Rol para pruebas',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(

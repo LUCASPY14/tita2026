@@ -408,7 +408,7 @@ class RecargaService:
             codigo="RECARGA-SALDO",
             defaults={
                 "descripcion": "Recarga de Saldo Prepago",
-                "activo": True,
+                "estado": True,
                 "requiere_stock": False,
                 "es_servicio": True,
             },

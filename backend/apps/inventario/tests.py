@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para la app inventario - Stock,  Lotes, Vencimientos, Alertas
 """
 
@@ -35,7 +35,7 @@ class StockServiceTest(TransactionTestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear unidad de medida
@@ -50,7 +50,7 @@ class StockServiceTest(TransactionTestCase):
             codigo_barra="7891234567890",
             stock_minimo=Decimal("10.000"),
             permite_stock_negativo=False,
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -61,7 +61,7 @@ class StockServiceTest(TransactionTestCase):
             codigo_barra="7891234567891",
             stock_minimo=Decimal("10.000"),
             permite_stock_negativo=False,
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -72,7 +72,7 @@ class StockServiceTest(TransactionTestCase):
             codigo_barra="7891234567892",
             stock_minimo=Decimal("5.000"),
             permite_stock_negativo=True,  # Permite stock negativo
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -101,7 +101,7 @@ class StockServiceTest(TransactionTestCase):
             contrasena_hash="hash123",
             fecha_ingreso=timezone.now(),
             email="juan@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -230,7 +230,7 @@ class LotesProductoTest(TestCase):
             nombre_impuesto="IVA 5%",
             porcentaje=Decimal("5.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear unidad de medida
@@ -244,7 +244,7 @@ class LotesProductoTest(TestCase):
             descripcion="Leche Entera 1L",
             codigo_barra="7891234567890",
             stock_minimo=Decimal("20.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_5,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -351,7 +351,7 @@ class AlertasStockTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear unidad de medida
@@ -365,7 +365,7 @@ class AlertasStockTest(TestCase):
             descripcion="Agua Mineral 500ml",
             codigo_barra="7891234567890",
             stock_minimo=Decimal("50.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -417,7 +417,7 @@ class AlertasVencimientoTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear unidad de medida
@@ -431,7 +431,7 @@ class AlertasVencimientoTest(TestCase):
             descripcion="Carne Molida",
             codigo_barra="7891234567890",
             stock_minimo=Decimal("5.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,

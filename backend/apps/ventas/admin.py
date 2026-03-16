@@ -1,4 +1,4 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones
 
 
@@ -51,8 +51,8 @@ class PromocionesAdmin(admin.ModelAdmin):
         "tipo_promocion",
         "fecha_inicio",
         "fecha_fin",
-        "activo",
+        "estado",
     ]
-    list_filter = ["activo", "tipo_promocion"]
+    list_filter = ["estado", "tipo_promocion"]
     search_fields = ["nombre", "codigo_promocion"]
     ordering = ["-fecha_inicio"]

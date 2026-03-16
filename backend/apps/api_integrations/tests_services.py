@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para servicios de api_integrations
 Cubre BancardService y otros servicios de integración API
 """
@@ -32,14 +32,14 @@ class BancardServiceTest(TestCase):
             clave='BANCARD_PUBLIC_KEY',
             valor_texto='test_public_key_123',
             descripcion='Clave pública de Bancard para testing',
-            activo=True
+            estado=True
         )
         
         ConfiguracionSistema.objects.create(
             clave='BANCARD_PRIVATE_KEY',
             valor_texto='test_private_key_456',
             descripcion='Clave privada de Bancard para testing',
-            activo=True
+            estado=True
         )
         
         # Crear proveedor

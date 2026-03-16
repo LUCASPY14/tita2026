@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for apps/inventario/models.py to cover missing lines.
 
 Targets:
@@ -52,17 +52,17 @@ class InventarioModelsExtTestBase(TestCase):
             nombre_impuesto="IVA10Inv",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
-        self.categoria = Categorias.objects.create(nombre="CatInvExt", activo=True)
+        self.categoria = Categorias.objects.create(nombre="CatInvExt", estado=True)
         self.unidad = UnidadesMedida.objects.create(
-            nombre="UnitInvExt", abreviatura="UIE", activo=True
+            nombre="UnitInvExt", abreviatura="UIE", estado=True
         )
         self.producto = Productos.objects.create(
             codigo_barra="EXTINV00001",
             descripcion="Producto ExtInv",
             stock_minimo=Decimal("5.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,

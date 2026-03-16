@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para models de reportes
 Cubre modelos de plantillas, dashboards, KPIs, tareas y ejecuciones
 """
@@ -31,7 +31,7 @@ class BaseReportesModelTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Administrador',
             descripcion='Rol administrativo',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -56,7 +56,7 @@ class PlantillasReporteModelTest(BaseReportesModelTest):
             parametros={'fecha': 'date'},
             tipo_reporte='ventas',
             frecuencia='diario',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             created_by=self.empleado
         )
@@ -64,7 +64,7 @@ class PlantillasReporteModelTest(BaseReportesModelTest):
         self.assertEqual(plantilla.nombre, 'Reporte Ventas Diarias')
         self.assertEqual(plantilla.tipo_reporte, 'ventas')
         self.assertEqual(plantilla.frecuencia, 'diario')
-        self.assertTrue(plantilla.activo)
+        self.assertTrue(plantilla.estado)
         self.assertEqual(plantilla.created_by, self.empleado)
 
     def test_plantilla_reporte_str_representation(self):
@@ -212,7 +212,7 @@ class DashboardsModelTest(BaseReportesModelTest):
             configuracion=configuracion_dashboard,
             es_publico=1,
             predeterminado=1,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -221,7 +221,7 @@ class DashboardsModelTest(BaseReportesModelTest):
         self.assertEqual(dashboard.nombre, 'Dashboard Principal')
         self.assertEqual(dashboard.es_publico, 1)
         self.assertEqual(dashboard.predeterminado, 1)
-        self.assertTrue(dashboard.activo)
+        self.assertTrue(dashboard.estado)
         self.assertEqual(dashboard.id_empleado, self.empleado)
 
     def test_dashboard_configuracion_json_compleja(self):
@@ -372,14 +372,14 @@ class KpiMetricasModelTest(BaseReportesModelTest):
             valor_objetivo=Decimal('10000000.00'),
             categoria='ventas',
             frecuencia='diario',
-            activo=True
+            estado=True
         )
         
         self.assertEqual(kpi.nombre, 'Ventas Totales')
         self.assertEqual(kpi.unidad, 'PYG')
         self.assertEqual(kpi.valor_objetivo, Decimal('10000000.00'))
         self.assertEqual(kpi.categoria, 'ventas')
-        self.assertTrue(kpi.activo)
+        self.assertTrue(kpi.estado)
 
     def test_kpi_metricas_diferentes_tipos(self):
         """Debe manejar diferentes tipos de KPIs"""
@@ -418,7 +418,7 @@ class KpiMetricasModelTest(BaseReportesModelTest):
                 unidad=kpi_data['unidad'],
                 categoria=kpi_data['categoria'],
                 frecuencia='semanal',
-                activo=True
+                estado=True
             )
             
             self.assertEqual(kpi.categoria, kpi_data['categoria'])
@@ -445,7 +445,7 @@ class KpiMetricasModelTest(BaseReportesModelTest):
             unidad='PYG',
             categoria='operativo',
             frecuencia='diario',
-            activo=True
+            estado=True
         )
         
         self.assertIn('CASE', kpi.formula)
@@ -467,7 +467,7 @@ class KpiMetricasModelTest(BaseReportesModelTest):
                 unidad='unidad',
                 categoria=categoria,
                 frecuencia='mensual',
-                activo=True
+                estado=True
             )
             
             self.assertEqual(kpi.categoria, categoria)
@@ -502,7 +502,7 @@ class ValoresKpiModelTest(BaseReportesModelTest):
             unidad='unidades',
             categoria='test',
             frecuencia='diario',
-            activo=True
+            estado=True
         )
 
     def test_crear_valor_kpi_basico(self):
@@ -654,7 +654,7 @@ class PlantillasTareaModelTest(BaseReportesModelTest):
             max_reintentos=3,
             notif_exito=1,
             notif_error=1,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             created_by=self.empleado
         )
@@ -664,7 +664,7 @@ class PlantillasTareaModelTest(BaseReportesModelTest):
         self.assertEqual(plantilla.cron, '0 2 * * *')
         self.assertEqual(plantilla.timeout, 3600)
         self.assertEqual(plantilla.max_reintentos, 3)
-        self.assertTrue(plantilla.activo)
+        self.assertTrue(plantilla.estado)
 
     def test_plantilla_tarea_diferentes_tipos(self):
         """Debe manejar diferentes tipos de tareas"""

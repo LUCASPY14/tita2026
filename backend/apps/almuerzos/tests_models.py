@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para modelos de la app almuerzos
 Sprint 2 - Backend Coverage Improvement
 """
@@ -28,7 +28,7 @@ class PlanesAlmuerzoModelTest(TestCase):
             descripcion="Almuerzo diario básico",
             precio_mensual=Decimal("400000.00"),
             dias_semana_incluidos="Lunes-Viernes",
-            activo=True,
+            estado=True,
         )
 
         self.assertIsNotNone(str(plan))
@@ -41,12 +41,12 @@ class PlanesAlmuerzoModelTest(TestCase):
             precio_mensual=Decimal("600000.00"),
             dias_semana_incluidos="Lunes-Viernes",
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.assertIsNotNone(plan.id_plan_almuerzo)
         self.assertEqual(plan.precio_mensual, Decimal("600000.00"))
-        self.assertTrue(plan.activo)
+        self.assertTrue(plan.estado)
 
     def test_plan_inactivo(self):
         """Test de plan inactivo"""
@@ -55,10 +55,10 @@ class PlanesAlmuerzoModelTest(TestCase):
             descripcion="Plan descontinuado",
             precio_mensual=Decimal("350000.00"),
             dias_semana_incluidos="Lunes-Viernes",
-            activo=False,
+            estado=False,
         )
 
-        self.assertFalse(plan.activo)
+        self.assertFalse(plan.estado)
 
 
 class TiposAlmuerzoModelTest(TestCase):
@@ -71,7 +71,7 @@ class TiposAlmuerzoModelTest(TestCase):
             descripcion="Menú diario estándar",
             precio_unitario=Decimal("25000.00"),
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.assertIsNotNone(str(tipo))
@@ -86,7 +86,7 @@ class TiposAlmuerzoModelTest(TestCase):
             incluye_postre=True,
             incluye_bebida=True,
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.assertTrue(tipo.incluye_plato_principal)
@@ -103,7 +103,7 @@ class TiposAlmuerzoModelTest(TestCase):
             incluye_postre=False,
             incluye_bebida=False,
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.assertTrue(tipo.incluye_plato_principal)
@@ -118,18 +118,18 @@ class SuscripcionesAlmuerzoModelTest(TestCase):
         """Configuración inicial para cada test"""
         # Crear lista de precios
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Estudiantes", moneda="PYG", activo=True
+            nombre_lista="Lista Estudiantes", moneda="PYG", estado=True
         )
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
             nombres="Roberto",
             apellidos="Silva",
             ruc_ci="7777777777",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -140,7 +140,7 @@ class SuscripcionesAlmuerzoModelTest(TestCase):
             apellido="Silva",
             fecha_nacimiento=timezone.datetime(2013, 5, 15).date(),
             grado="Sexto Grado",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -149,7 +149,7 @@ class SuscripcionesAlmuerzoModelTest(TestCase):
             nombre_plan="Plan Regular",
             precio_mensual=Decimal("450000.00"),
             dias_semana_incluidos="Lunes-Viernes",
-            activo=True,
+            estado=True,
         )
 
     def test_str_method(self):
@@ -213,18 +213,18 @@ class RegistrosConsumoAlmuerzoModelTest(TestCase):
         """Configuración inicial para cada test"""
         # Crear lista de precios
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista General", moneda="PYG", activo=True
+            nombre_lista="Lista General", moneda="PYG", estado=True
         )
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
             nombres="Elena",
             apellidos="Benítez",
             ruc_ci="6666666666",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -235,7 +235,7 @@ class RegistrosConsumoAlmuerzoModelTest(TestCase):
             apellido="Benítez",
             fecha_nacimiento=timezone.datetime(2012, 8, 20).date(),
             grado="Séptimo Grado",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -254,7 +254,7 @@ class RegistrosConsumoAlmuerzoModelTest(TestCase):
             nombre="Menú del Día",
             precio_unitario=Decimal("25000.00"),
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
     def test_str_method(self):
@@ -340,19 +340,19 @@ class ModelosAlmuerzosAdicionalesTest(TestCase):
     """Tests __str__ para modelos adicionales de almuerzos."""
 
     def setUp(self):
-        self.lista = ListasPrecios.objects.create(nombre_lista='Lista Str Test', moneda='PYG', activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Tipo Str', activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista='Lista Str Test', moneda='PYG', estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Tipo Str', estado=True)
         self.cliente = Clientes.objects.create(
             nombres='Test', apellidos='Str', ruc_ci='9000001',
-            activo=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
         )
         self.hijo = Hijos.objects.create(
             nombre='Hijo', apellido='Str',
             fecha_nacimiento=timezone.now().date(),
-            activo=True, id_cliente_responsable=self.cliente,
+            estado=True, id_cliente_responsable=self.cliente,
         )
         self.plan = PlanesAlmuerzo.objects.create(
-            nombre_plan='Plan Str', precio_mensual=Decimal('400000'), dias_semana_incluidos='L-V', activo=True,
+            nombre_plan='Plan Str', precio_mensual=Decimal('400000'), dias_semana_incluidos='L-V', estado=True,
         )
         self.suscripcion = SuscripcionesAlmuerzo.objects.create(
             fecha_inicio=timezone.now().date(), estado='Activa',
@@ -401,7 +401,7 @@ class ModelosAlmuerzosAdicionalesTest(TestCase):
             nombre='Gluten Str',
             palabras_clave=['trigo', 'harina'],
             nivel_severidad='Alto',
-            activo=True,
+            estado=True,
             fecha_creacion=timezone.now(),
         )
         self.assertIn('#', str(alergeno))
@@ -409,18 +409,18 @@ class ModelosAlmuerzosAdicionalesTest(TestCase):
     def test_str_productos_alergenos(self):
         impuesto = Impuestos.objects.create(
             nombre_impuesto='IVA Str', porcentaje=10,
-            vigente_desde=timezone.now().date(), activo=True,
+            vigente_desde=timezone.now().date(), estado=True,
         )
-        cat = Categorias.objects.create(nombre='Cat Str', activo=True)
+        cat = Categorias.objects.create(nombre='Cat Str', estado=True)
         prod = Productos.objects.create(
             descripcion='Producto Str', stock_minimo=0,
-            activo=True, id_categoria=cat, id_impuesto=impuesto,
+            estado=True, id_categoria=cat, id_impuesto=impuesto,
         )
         alergeno = Alergenos.objects.create(
             nombre='Lactosa Str',
             palabras_clave=['leche'],
             nivel_severidad='Medio',
-            activo=True,
+            estado=True,
             fecha_creacion=timezone.now(),
         )
         prod_alerg = ProductosAlergenos.objects.create(

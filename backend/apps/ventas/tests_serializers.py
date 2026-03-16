@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para Serializers de Ventas
 Objetivo: Aumentar cobertura de serializers de 0% a 40%+
 """
@@ -22,31 +22,31 @@ class VentasSerializerTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         # Crear rol y empleado
-        self.rol = Roles.objects.create(nombre_rol="Cajero", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="Juan",
             apellido="Cajero",
             usuario="jcajero",
             email="cajero@test.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
         # Crear medio de pago
-        self.medio_pago = MediosPago.objects.create(descripcion="Efectivo", activo=True)
+        self.medio_pago = MediosPago.objects.create(descripcion="Efectivo", estado=True)
 
         # Crear tipo de cliente y lista de precios
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
-        self.lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        self.lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
             nombres="María",
             apellidos="González",
             ruc_ci="12345678",
-            activo=True,
+            estado=True,
             id_lista=self.lista_precio,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -120,17 +120,17 @@ class DetallesVentaSerializerTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         # Crear unidad
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="un", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="un", estado=True)
 
         # Crear impuesto
         self.impuesto = Impuestos.objects.create(
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear producto
@@ -140,32 +140,32 @@ class DetallesVentaSerializerTest(TestCase):
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto,
-            activo=True,
+            estado=True,
         )
 
         # Crear venta
-        rol = Roles.objects.create(nombre_rol="Cajero", activo=True)
+        rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
         empleado = Empleados.objects.create(
             nombre="Cajero",
             apellido="Test",
             usuario="cajero",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=rol,
         )
 
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
-        lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
+        lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
         cliente = Clientes.objects.create(
             nombres="Cliente",
             apellidos="Test",
             ruc_ci="123",
-            activo=True,
+            estado=True,
             id_lista=lista_precio,
             id_tipo_cliente=tipo_cliente,
         )
 
-        medio_pago = MediosPago.objects.create(descripcion="Efectivo", activo=True)
+        medio_pago = MediosPago.objects.create(descripcion="Efectivo", estado=True)
 
         self.venta = Ventas.objects.create(
             tipo_venta="contado",

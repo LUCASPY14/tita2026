@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para serializers de la app almuerzos
 Sprint 2 - Backend Coverage Improvement
 """
@@ -27,7 +27,7 @@ class PlanesAlmuerzoSerializerTest(TestCase):
             descripcion="Almuerzo básico diario",
             precio_mensual=Decimal("400000.00"),
             dias_semana_incluidos="Lunes-Viernes",
-            activo=True,
+            estado=True,
         )
 
         serializer = PlanesAlmuerzoSerializer(plan)
@@ -36,7 +36,7 @@ class PlanesAlmuerzoSerializerTest(TestCase):
         self.assertEqual(data["nombre_plan"], "Plan Básico")
         self.assertEqual(Decimal(data["precio_mensual"]), Decimal("400000.00"))
         self.assertEqual(data["dias_semana_incluidos"], "Lunes-Viernes")
-        self.assertTrue(data["activo"])
+        self.assertTrue(data["estado"])
 
     def test_validar_plan_valido(self):
         """Test de validación de datos válidos de plan"""
@@ -45,7 +45,7 @@ class PlanesAlmuerzoSerializerTest(TestCase):
             "descripcion": "Almuerzo premium con postre",
             "precio_mensual": "600000.00",
             "dias_semana_incluidos": "Lunes-Viernes",
-            "activo": True,
+            "estado": True,
         }
 
         serializer = PlanesAlmuerzoSerializer(data=data)
@@ -56,7 +56,7 @@ class PlanesAlmuerzoSerializerTest(TestCase):
         data = {
             "precio_mensual": "500000.00",
             "dias_semana_incluidos": "Lunes-Viernes",
-            "activo": True,
+            "estado": True,
         }
 
         serializer = PlanesAlmuerzoSerializer(data=data)
@@ -70,7 +70,7 @@ class PlanesAlmuerzoSerializerTest(TestCase):
             "descripcion": "Todo incluido",
             "precio_mensual": "800000.00",
             "dias_semana_incluidos": "Lunes-Viernes",
-            "activo": True,
+            "estado": True,
         }
 
         serializer = PlanesAlmuerzoSerializer(data=data)
@@ -91,7 +91,7 @@ class TiposAlmuerzoSerializerTest(TestCase):
             descripcion="Menú diario principal",
             precio_unitario=Decimal("25000.00"),
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         serializer = TiposAlmuerzoSerializer(tipo)
@@ -99,7 +99,7 @@ class TiposAlmuerzoSerializerTest(TestCase):
 
         self.assertEqual(data["nombre"], "Menú del Día")
         self.assertEqual(Decimal(data["precio_unitario"]), Decimal("25000.00"))
-        self.assertTrue(data["activo"])
+        self.assertTrue(data["estado"])
 
     def test_validar_tipo_valido(self):
         """Test de validación de datos válidos de tipo"""
@@ -108,7 +108,7 @@ class TiposAlmuerzoSerializerTest(TestCase):
             "descripcion": "Opción sin carne",
             "precio_unitario": "28000.00",
             "fecha_creacion": timezone.now().isoformat(),
-            "activo": True,
+            "estado": True,
         }
 
         serializer = TiposAlmuerzoSerializer(data=data)
@@ -121,7 +121,7 @@ class TiposAlmuerzoSerializerTest(TestCase):
             "descripcion": "Opción baja en calorías",
             "precio_unitario": "30000.00",
             "fecha_creacion": timezone.now().isoformat(),
-            "activo": True,
+            "estado": True,
         }
 
         serializer = TiposAlmuerzoSerializer(data=data)
@@ -139,18 +139,18 @@ class SuscripcionesAlmuerzoSerializerTest(TestCase):
         """Configuración inicial para cada test"""
         # Crear lista de precios
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Estudiantes", moneda="PYG", activo=True
+            nombre_lista="Lista Estudiantes", moneda="PYG", estado=True
         )
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
             nombres="Ricardo",
             apellidos="Núñez",
             ruc_ci="9999999999",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -161,7 +161,7 @@ class SuscripcionesAlmuerzoSerializerTest(TestCase):
             apellido="Núñez",
             fecha_nacimiento=timezone.datetime(2014, 3, 10).date(),
             grado="Quinto Grado",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -171,7 +171,7 @@ class SuscripcionesAlmuerzoSerializerTest(TestCase):
             descripcion="Almuerzo estándar",
             precio_mensual=Decimal("450000.00"),
             dias_semana_incluidos="Lunes-Viernes",
-            activo=True,
+            estado=True,
         )
 
     def test_serializar_suscripcion_completa(self):
@@ -251,14 +251,14 @@ class CuentasAlmuerzoMensualSerializerTest(TestCase):
 
     def setUp(self):
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Almuerzo Cuenta", moneda="PYG", activo=True
+            nombre_lista="Lista Almuerzo Cuenta", moneda="PYG", estado=True
         )
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Cuenta",
             apellidos="Test",
             ruc_ci="8888888888",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -267,7 +267,7 @@ class CuentasAlmuerzoMensualSerializerTest(TestCase):
             apellido="Test",
             fecha_nacimiento="2015-01-01",
             grado="Primero",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -281,7 +281,7 @@ class CuentasAlmuerzoMensualSerializerTest(TestCase):
             monto_total="200000.00",
             forma_cobro="mensual",
             monto_pagado="0.00",
-            estado="activo",
+            estado="estado",
             fecha_generacion=tz.now().date(),
             fecha_actualizacion=tz.now(),
             id_hijo=self.hijo,
@@ -298,7 +298,7 @@ class CuentasAlmuerzoMensualSerializerTest(TestCase):
             monto_total="50000.00",
             forma_cobro="mensual",
             monto_pagado="0.00",
-            estado="activo",
+            estado="estado",
             fecha_generacion=__import__('datetime').date.today(),
             fecha_actualizacion=__import__('django.utils.timezone', fromlist=['timezone']).now(),
             id_hijo=self.hijo,

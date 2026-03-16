@@ -1,4 +1,4 @@
-"""
+﻿"""
 Serializers para reportes
 Maneja la serialización y validación de datos de reportes
 """
@@ -54,7 +54,7 @@ class ConfiguracionJSONField(serializers.JSONField):
 class PlantillasReporteSerializer(serializers.ModelSerializer):
     """Serializer para plantillas de reportes"""
     
-    activo = serializers.BooleanField(default=True)
+    estado = serializers.BooleanField(default=True)
     fecha_creacion = serializers.DateTimeField(read_only=True)
     fecha_modificacion = serializers.DateTimeField(read_only=True)
     configuracion_json = ConfiguracionJSONField()
@@ -71,7 +71,7 @@ class PlantillasReporteSerializer(serializers.ModelSerializer):
             'descripcion',
             'tipo_reporte',
             'configuracion_json',
-            'activo',
+            'estado',
             'fecha_creacion',
             'fecha_modificacion',
             'total_ejecuciones',
@@ -97,7 +97,7 @@ class PlantillasReporteSerializer(serializers.ModelSerializer):
         # Verificar unicidad en plantillas activas
         query = PlantillasReporte.objects.filter(
             nombre=value.strip(),
-            activo=True
+            estado=True
         )
         
         # Excluir instancia actual en actualizaciones
@@ -172,7 +172,7 @@ class PlantillasReporteListSerializer(serializers.ModelSerializer):
             'id_plantilla',
             'nombre',
             'tipo_reporte',
-            'activo',
+            'estado',
             'fecha_creacion',
             'total_ejecuciones',
             'estado_ultima_ejecucion'
@@ -191,7 +191,7 @@ class PlantillasReporteListSerializer(serializers.ModelSerializer):
 class DashboardsSerializer(serializers.ModelSerializer):
     """Serializer para dashboards"""
     
-    activo = serializers.BooleanField(default=True)
+    estado = serializers.BooleanField(default=True)
     fecha_creacion = serializers.DateTimeField(read_only=True)
     configuracion_dashboard = ConfiguracionJSONField()
     
@@ -210,7 +210,7 @@ class DashboardsSerializer(serializers.ModelSerializer):
             'nombre',
             'descripcion',
             'configuracion_dashboard',
-            'activo',
+            'estado',
             'fecha_creacion',
             'kpis_principales',
             'orden_widgets'
@@ -244,13 +244,13 @@ class DashboardsSerializer(serializers.ModelSerializer):
                 "El nombre debe tener al menos 2 caracteres"
             )
         
-        query = Dashboards.objects.filter(nombre=value.strip(), activo=True)
+        query = Dashboards.objects.filter(nombre=value.strip(), estado=True)
         if self.instance:
             query = query.exclude(id_dashboard=self.instance.id_dashboard)
         
         if query.exists():
             raise serializers.ValidationError(
-                "Ya existe un dashboard activo con este nombre"
+                "Ya existe un dashboard estado con este nombre"
             )
         
         return value.strip()
@@ -258,14 +258,14 @@ class DashboardsSerializer(serializers.ModelSerializer):
     def get_kpis_principales(self, obj):
         """Obtener KPIs principales del dashboard"""
         # Filtrar KPIs activos del dashboard
-        kpis = obj.kpis.filter(activo=True).order_by('orden_visualizacion')[:5]
+        kpis = obj.kpis.filter(estado=True).order_by('orden_visualizacion')[:5]
         return KpiMetricasSerializer(kpis, many=True).data
 
 
 class KpiMetricasSerializer(serializers.ModelSerializer):
     """Serializer para métricas KPI"""
     
-    activo = serializers.BooleanField(default=True)
+    estado = serializers.BooleanField(default=True)
     fecha_creacion = serializers.DateTimeField(read_only=True)
     configuracion_calculo = ConfiguracionJSONField()
     
@@ -289,7 +289,7 @@ class KpiMetricasSerializer(serializers.ModelSerializer):
             'tipo_metrica',
             'configuracion_calculo',
             'orden_visualizacion',
-            'activo',
+            'estado',
             'fecha_creacion',
             'dashboard_nombre',
             'valor_actual',
@@ -404,7 +404,7 @@ class ValoresKpiSerializer(serializers.ModelSerializer):
 class PlantillasTareaSerializer(serializers.ModelSerializer):
     """Serializer para plantillas de tareas"""
     
-    activo = serializers.BooleanField(default=True)
+    estado = serializers.BooleanField(default=True)
     fecha_creacion = serializers.DateTimeField(read_only=True)
     configuracion_tarea = ConfiguracionJSONField()
     
@@ -431,7 +431,7 @@ class PlantillasTareaSerializer(serializers.ModelSerializer):
             'tipo_tarea',
             'frecuencia_ejecucion',
             'configuracion_tarea',
-            'activo',
+            'estado',
             'fecha_creacion',
             'proxima_ejecucion',
             'total_ejecuciones_exitosas'
@@ -587,7 +587,7 @@ class DestinatariosTareaSerializer(serializers.ModelSerializer):
             'id_plantilla_tarea',
             'id_empleado',
             'tipo_notificacion',
-            'activo',
+            'estado',
             'empleado_info',
             'plantilla_nombre'
         ]
@@ -609,7 +609,7 @@ class DestinatariosTareaSerializer(serializers.ModelSerializer):
             id_plantilla_tarea=data['id_plantilla_tarea'],
             id_empleado=data['id_empleado'],
             tipo_notificacion=data['tipo_notificacion'],
-            activo=True
+            estado=True
         )
         
         if self.instance:

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para módulo de inventario
 Valida reglas de negocio, concurrencia y consistencia ACID
 """
@@ -28,17 +28,17 @@ class StockUnicoTest(TestCase):
     def setUp(self):
         """Configurar datos de prueba"""
         # Categoría
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         # Unidad de medida
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", estado=True)
 
         # Impuesto
         self.impuesto = Impuestos.objects.create(
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Producto
@@ -46,7 +46,7 @@ class StockUnicoTest(TestCase):
             descripcion="Coca Cola 2L",
             stock_minimo=Decimal("50.000"),
             permite_stock_negativo=False,
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,

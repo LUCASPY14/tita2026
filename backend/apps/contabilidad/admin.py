@@ -1,4 +1,4 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     Cajas,
@@ -23,17 +23,17 @@ from .models import (
 @admin.register(Cajas)
 class CajasAdmin(admin.ModelAdmin):
     list_display = ["id_caja", "nombre_caja", "ubicacion", "activo_badge"]
-    list_filter = ["activo"]
+    list_filter = ["estado"]
     search_fields = ["nombre_caja", "ubicacion"]
     ordering = ["nombre_caja"]
 
     fieldsets = (
         ("Información General", {"fields": ("nombre_caja", "ubicacion")}),
-        ("Estado", {"fields": ("activo",)}),
+        ("Estado", {"fields": ("estado",)}),
     )
 
     def activo_badge(self, obj):
-        if obj.activo:
+        if obj.estado:
             color = "green"
             icon = "✓"
             texto = "Activa"
@@ -207,7 +207,7 @@ class TarifasComisionAdmin(admin.ModelAdmin):
         "fecha_fin_vigencia",
         "activo_badge",
     ]
-    list_filter = ["activo", "id_medio_pago", "fecha_inicio_vigencia"]
+    list_filter = ["estado", "id_medio_pago", "fecha_inicio_vigencia"]
     ordering = ["-fecha_inicio_vigencia"]
     readonly_fields = ["id_tarifa"]
 
@@ -215,7 +215,7 @@ class TarifasComisionAdmin(admin.ModelAdmin):
         ("Información General", {"fields": ("id_tarifa", "id_medio_pago")}),
         ("Comisiones", {"fields": ("porcentaje_comision", "monto_fijo_comision")}),
         ("Vigencia", {"fields": ("fecha_inicio_vigencia", "fecha_fin_vigencia")}),
-        ("Estado", {"fields": ("activo",)}),
+        ("Estado", {"fields": ("estado",)}),
     )
 
     def porcentaje_display(self, obj):
@@ -234,7 +234,7 @@ class TarifasComisionAdmin(admin.ModelAdmin):
     monto_fijo_display.short_description = "Monto Fijo"
 
     def activo_badge(self, obj):
-        if obj.activo:
+        if obj.estado:
             return format_html('<span style="color: green; font-weight: bold;">✓ Activa</span>')
         return format_html('<span style="color: red;">✗ Inactiva</span>')
 
@@ -461,7 +461,7 @@ class TimbradosAdmin(admin.ModelAdmin):
         "es_electronico_badge",
         "activo_badge",
     ]
-    list_filter = ["activo", "tipo_documento", "es_electronico"]
+    list_filter = ["estado", "tipo_documento", "es_electronico"]
     search_fields = ["nro_timbrado"]
     ordering = ["-fecha_inicio"]
     readonly_fields = ["nro_timbrado", "disponibles_display"]
@@ -473,7 +473,7 @@ class TimbradosAdmin(admin.ModelAdmin):
         ),
         ("Vigencia", {"fields": ("fecha_inicio", "fecha_fin")}),
         ("Numeración", {"fields": ("nro_inicial", "nro_final", "disponibles_display")}),
-        ("Estado", {"fields": ("activo",)}),
+        ("Estado", {"fields": ("estado",)}),
     )
 
     def numeros_display(self, obj):
@@ -494,8 +494,8 @@ class TimbradosAdmin(admin.ModelAdmin):
     es_electronico_badge.short_description = "Tipo"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
         return format_html('<span style="color: red;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"
@@ -516,7 +516,7 @@ class TimbradosAdmin(admin.ModelAdmin):
 @admin.register(PuntosExpedicion)
 class PuntosExpedicionAdmin(admin.ModelAdmin):
     list_display = ["id_punto", "codigo_completo_display", "descripcion_ubicacion", "activo_badge"]
-    list_filter = ["activo"]
+    list_filter = ["estado"]
     search_fields = ["codigo_establecimiento", "codigo_punto_expedicion", "descripcion_ubicacion"]
     ordering = ["codigo_establecimiento", "codigo_punto_expedicion"]
     readonly_fields = ["id_punto", "codigo_completo_display"]
@@ -534,7 +534,7 @@ class PuntosExpedicionAdmin(admin.ModelAdmin):
             },
         ),
         ("Detalles", {"fields": ("descripcion_ubicacion",)}),
-        ("Estado", {"fields": ("activo",)}),
+        ("Estado", {"fields": ("estado",)}),
     )
 
     def codigo_completo_display(self, obj):
@@ -545,8 +545,8 @@ class PuntosExpedicionAdmin(admin.ModelAdmin):
     codigo_completo_display.short_description = "Código Completo"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
         return format_html('<span style="color: red;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"
@@ -568,7 +568,7 @@ class DatosEmpresaAdmin(admin.ModelAdmin):
         "email",
         "activo_badge",
     ]
-    list_filter = ["activo", "ciudad", "pais"]
+    list_filter = ["estado", "ciudad", "pais"]
     search_fields = ["razon_social", "ruc", "email"]
     ordering = ["razon_social"]
     readonly_fields = ["id_empresa"]
@@ -577,11 +577,11 @@ class DatosEmpresaAdmin(admin.ModelAdmin):
         ("Información Fiscal", {"fields": ("id_empresa", "ruc", "razon_social")}),
         ("Ubicación", {"fields": ("direccion", "ciudad", "pais")}),
         ("Contacto", {"fields": ("telefono", "email")}),
-        ("Estado", {"fields": ("activo",)}),
+        ("Estado", {"fields": ("estado",)}),
     )
 
     def activo_badge(self, obj):
-        if obj.activo:
+        if obj.estado:
             return format_html('<span style="color: green; font-weight: bold;">✓ Activa</span>')
         return format_html('<span style="color: red;">✗ Inactiva</span>')
 
@@ -603,7 +603,7 @@ class ImpuestosAdmin(admin.ModelAdmin):
         "vigente_hasta",
         "activo_badge",
     ]
-    list_filter = ["activo", "vigente_desde"]
+    list_filter = ["estado", "vigente_desde"]
     search_fields = ["nombre_impuesto"]
     ordering = ["nombre_impuesto"]
     readonly_fields = ["id_impuesto"]
@@ -611,7 +611,7 @@ class ImpuestosAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Información del Impuesto", {"fields": ("id_impuesto", "nombre_impuesto", "porcentaje")}),
         ("Vigencia", {"fields": ("vigente_desde", "vigente_hasta")}),
-        ("Estado", {"fields": ("activo",)}),
+        ("Estado", {"fields": ("estado",)}),
     )
 
     def porcentaje_display(self, obj):
@@ -620,8 +620,8 @@ class ImpuestosAdmin(admin.ModelAdmin):
     porcentaje_display.short_description = "Porcentaje"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
         return format_html('<span style="color: red;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"

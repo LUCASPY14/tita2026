@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests complementarios para modelos de compras
 Sprint 2 - Backend Coverage Improvement
 """
@@ -28,12 +28,12 @@ class ProveedoresModelTest(TestCase):
             telefono="0981123456",
             email="contacto@abc.com",
             fecha_registro=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.assertIsNotNone(proveedor.id_proveedor)
         self.assertEqual(proveedor.razon_social, "Distribuidora ABC")
-        self.assertTrue(proveedor.activo)
+        self.assertTrue(proveedor.estado)
 
     def test_str_method(self):
         """Test del método __str__"""
@@ -41,7 +41,7 @@ class ProveedoresModelTest(TestCase):
             razon_social="Proveedor XYZ",
             ruc="80099999-9",
             fecha_registro=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.assertIsNotNone(str(proveedor))
@@ -52,14 +52,14 @@ class ComprasModelTest(TestCase):
 
     def setUp(self):
         """Configuración inicial"""
-        self.rol = Roles.objects.create(nombre_rol="Comprador", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Comprador", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="Comprador",
             apellido="Test",
             usuario="comprador",
             email="comprador@test.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -67,7 +67,7 @@ class ComprasModelTest(TestCase):
             razon_social="Proveedor Test",
             ruc="80055555-5",
             fecha_registro=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
     def test_crear_compra(self):
@@ -101,7 +101,7 @@ class ModelosComprasAdicionalesTest(TestCase):
     def setUp(self):
         self.proveedor = Proveedores.objects.create(
             razon_social='Prov Str Test', ruc='80077777-7',
-            fecha_registro=timezone.now(), activo=True,
+            fecha_registro=timezone.now(), estado=True,
         )
         self.compra = Compras.objects.create(
             fecha=timezone.now(),
@@ -112,15 +112,15 @@ class ModelosComprasAdicionalesTest(TestCase):
         )
         self.impuesto = Impuestos.objects.create(
             nombre_impuesto='IVA Compras', porcentaje=10,
-            vigente_desde=timezone.now().date(), activo=True,
+            vigente_desde=timezone.now().date(), estado=True,
         )
-        self.cat = Categorias.objects.create(nombre='Cat Compras', activo=True)
+        self.cat = Categorias.objects.create(nombre='Cat Compras', estado=True)
         self.producto = Productos.objects.create(
             descripcion='Prod Compras Str', stock_minimo=0,
-            activo=True, id_categoria=self.cat, id_impuesto=self.impuesto,
+            estado=True, id_categoria=self.cat, id_impuesto=self.impuesto,
         )
         self.medio_pago = MediosPago.objects.create(
-            nombre='Efectivo Compras', genera_comision=False, activo=True,
+            nombre='Efectivo Compras', genera_comision=False, estado=True,
         )
 
     def test_str_detalles_compra(self):

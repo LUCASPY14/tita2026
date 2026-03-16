@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para la app notificaciones
 """
 
@@ -27,10 +27,10 @@ class NotificacionesPortalTest(TestCase):
 
     def setUp(self):
         """Configuración inicial para los tests"""
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Portal", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Portal", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Test", apellidos="Portal", ruc_ci="11111111",
-            activo=True, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_tipo_cliente=self.tipo_cliente,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
             email="testportal@cantina.com",
@@ -93,17 +93,17 @@ class NotificacionesSaldoTest(TestCase):
     def setUp(self):
         """Configuración inicial para los tests"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
             nombres="María",
             apellidos="González",
             ruc_ci="87654321",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -113,7 +113,7 @@ class NotificacionesSaldoTest(TestCase):
             nombre="Ana",
             apellido="González",
             grado="3ro",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -176,7 +176,7 @@ class AlertasSistemaTest(TestCase):
         """Configuración inicial"""
         # Crear rol
         self.rol = Roles.objects.create(
-            nombre_rol="Administrador", descripcion="Rol de prueba", activo=True
+            nombre_rol="Administrador", descripcion="Rol de prueba", estado=True
         )
 
         self.empleado = Empleados.objects.create(
@@ -186,7 +186,7 @@ class AlertasSistemaTest(TestCase):
             contrasena_hash="hashed_password",
             fecha_ingreso=timezone.now(),
             email="admin@cantina.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -240,10 +240,10 @@ class PreferenciasNotificacionTest(TestCase):
 
     def setUp(self):
         """Configuración inicial"""
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Prefs", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Prefs", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Prefs", apellidos="User", ruc_ci="22222222",
-            activo=True, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_tipo_cliente=self.tipo_cliente,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
             email="prefs@cantina.com",
@@ -369,14 +369,14 @@ class NotificacionesModelsStrTest(TestCase):
         from apps.productos.models import ListasPrecios
 
         # Minimal setUp for FK models
-        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista Str", activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Str Test", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista Str", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Str Test", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="Str", apellidos="Test", ruc_ci="Str001", activo=True,
+            nombres="Str", apellidos="Test", ruc_ci="Str001", estado=True,
             id_tipo_cliente=self.tipo_cliente,
         )
         self.hijo = Hijos.objects.create(
-            nombre="StrHijo", apellido="Test", grado="1ro", activo=True,
+            nombre="StrHijo", apellido="Test", grado="1ro", estado=True,
             id_cliente_responsable=self.cliente,
         )
         self.tarjeta = Tarjetas.objects.create(
@@ -388,10 +388,10 @@ class NotificacionesModelsStrTest(TestCase):
             email="str_test@cantina.com", password_hash="x", email_verificado=0,
             fecha_registro=timezone.now(), id_cliente=self.cliente,
         )
-        self.rol = Roles.objects.create(nombre_rol="StrRol Emp", descripcion="x", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="StrRol Emp", descripcion="x", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="StrE", apellido="Emp", usuario="str_emp_notif", contrasena_hash="x",
-            fecha_ingreso=timezone.now(), activo=True, id_rol=self.rol,
+            fecha_ingreso=timezone.now(), estado=True, id_rol=self.rol,
         )
 
     def test_notificaciones_portal_str(self):
@@ -451,7 +451,7 @@ class NotificacionesModelsStrTest(TestCase):
         n = PlantillasEmail.objects.create(
             codigo="STR_TPL_01", nombre="Str Tpl", asunto="A",
             cuerpo_html="<p>Hi</p>", variables=[], categoria="Ventas",
-            activo=True, created_at=timezone.now(), updated_at=timezone.now(),
+            estado=True, created_at=timezone.now(), updated_at=timezone.now(),
         )
         self.assertIn("PlantillasEmail", str(n))
 
@@ -459,7 +459,7 @@ class NotificacionesModelsStrTest(TestCase):
         from apps.notificaciones.models import PlantillasSms
         n = PlantillasSms.objects.create(
             codigo="STR_SMS_01", nombre="Str SMS Tpl", mensaje="Test mensaje SMS",
-            variables=[], categoria="Ventas", activo=True, created_at=timezone.now(),
+            variables=[], categoria="Ventas", estado=True, created_at=timezone.now(),
         )
         self.assertIn("PlantillasSms", str(n))
 
@@ -477,7 +477,7 @@ class NotificacionesModelsStrTest(TestCase):
         from apps.notificaciones.models import AlertasAutomaticas
         n = AlertasAutomaticas.objects.create(
             nombre="Alerta Str", descripcion="Desc", condicion="cond",
-            tipo_alerta="Inventario", criticidad="Baja", frecuencia_min=30, activo=True,
+            tipo_alerta="Inventario", criticidad="Baja", frecuencia_min=30, estado=True,
         )
         self.assertIn("AlertasAutomaticas", str(n))
 
@@ -485,10 +485,10 @@ class NotificacionesModelsStrTest(TestCase):
         from apps.notificaciones.models import AlertasAutomaticas, AlertaDestinatarios
         alerta = AlertasAutomaticas.objects.create(
             nombre="AlertaD Str", descripcion="D", condicion="c",
-            tipo_alerta="Ventas", criticidad="Media", frecuencia_min=60, activo=True,
+            tipo_alerta="Ventas", criticidad="Media", frecuencia_min=60, estado=True,
         )
         n = AlertaDestinatarios.objects.create(
-            via_email=1, via_sistema=1, activo=True,
+            via_email=1, via_sistema=1, estado=True,
             id_alerta=alerta, id_empleado=self.empleado,
         )
         self.assertIn("AlertaDestinatarios", str(n))
@@ -504,7 +504,7 @@ class NotificacionesModelsStrTest(TestCase):
         from apps.notificaciones.models import AlertasAutomaticas, HistorialAlertas
         alerta = AlertasAutomaticas.objects.create(
             nombre="AlertaH Str", descripcion="D", condicion="c",
-            tipo_alerta="Sistema", criticidad="Alta", frecuencia_min=5, activo=True,
+            tipo_alerta="Sistema", criticidad="Alta", frecuencia_min=5, estado=True,
         )
         n = HistorialAlertas.objects.create(
             fecha_disparada=timezone.now(), mensaje="M",
@@ -526,7 +526,7 @@ class NotificacionesModelsStrTest(TestCase):
         n = RestriccionesHorarias.objects.create(
             tipo_usuario="Empleado", dia_semana="Lunes",
             hora_inicio=time(8, 0), hora_fin=time(18, 0),
-            activo=True, fecha_creacion=timezone.now(),
+            estado=True, fecha_creacion=timezone.now(),
         )
         self.assertIn("RestriccionesHorarias", str(n))
 

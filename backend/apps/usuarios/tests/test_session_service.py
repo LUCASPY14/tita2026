@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para SessionService
 Cobertura completa de gestión de sesiones y detección de patrones
 """
@@ -17,7 +17,7 @@ class SessionServiceTest(TransactionTestCase):
         """Configuración inicial para cada test"""
         # Crear rol de prueba
         self.rol_test = Roles.objects.create(
-            nombre_rol="Test Role", descripcion="Rol para testing", activo=True
+            nombre_rol="Test Role", descripcion="Rol para testing", estado=True
         )
 
         # Crear empleado de prueba
@@ -29,7 +29,7 @@ class SessionServiceTest(TransactionTestCase):
             contrasena_hash="hash_test",
             id_rol=self.rol_test,
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.ip_address = "192.168.1.100"

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app notificaciones
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
@@ -157,7 +157,7 @@ class PlantillasEmail(models.Model):
     cuerpo_texto = models.TextField(blank=True, null=True)
     variables = models.JSONField()
     categoria = models.CharField(max_length=30)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     created_by = models.ForeignKey(
@@ -181,7 +181,7 @@ class PlantillasSms(models.Model):
     mensaje = models.CharField(max_length=160)
     variables = models.JSONField()
     categoria = models.CharField(max_length=30)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     created_at = models.DateTimeField()
 
     def __str__(self):
@@ -231,7 +231,7 @@ class AlertasAutomaticas(models.Model):
     tipo_alerta = models.CharField(max_length=20)
     criticidad = models.CharField(max_length=10)
     frecuencia_min = models.IntegerField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     ultima_verificacion = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
@@ -246,7 +246,7 @@ class AlertaDestinatarios(models.Model):
     id_destinatario = models.AutoField(primary_key=True)
     via_email = models.IntegerField()
     via_sistema = models.IntegerField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     id_alerta = models.ForeignKey("AlertasAutomaticas", models.DO_NOTHING, db_column="id_alerta")
     id_empleado = models.ForeignKey(
         "usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado"
@@ -325,7 +325,7 @@ class RestriccionesHorarias(models.Model):
     dia_semana = models.CharField(max_length=20)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField()
 
     def __str__(self):

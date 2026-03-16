@@ -1,4 +1,4 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     PlantillasReporte,
@@ -25,13 +25,13 @@ class PlantillasReporteAdmin(admin.ModelAdmin):
         "activo_badge",
         "created_at",
     ]
-    list_filter = ["tipo_reporte", "frecuencia", "activo", "created_at"]
+    list_filter = ["tipo_reporte", "frecuencia", "estado", "created_at"]
     search_fields = ["nombre", "descripcion"]
     ordering = ["nombre"]
     readonly_fields = ["created_at"]
 
     fieldsets = (
-        ("Información General", {"fields": ("nombre", "descripcion", "activo")}),
+        ("Información General", {"fields": ("nombre", "descripcion", "estado")}),
         (
             "Configuración del Reporte",
             {"fields": ("query_sql", "parametros", "tipo_reporte", "frecuencia")},
@@ -81,11 +81,11 @@ class PlantillasReporteAdmin(admin.ModelAdmin):
     frecuencia_badge.short_description = "Frecuencia"
 
     def activo_badge(self, obj):
-        """Muestra el estado activo con badge de color"""
-        if obj.activo:
+        """Muestra el estado estado con badge de color"""
+        if obj.estado:
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
-                'border-radius: 3px;">✓ Activo</span>'
+                'border-radius: 3px;">✓ estado</span>'
             )
         return format_html(
             '<span style="background-color: red; color: white; padding: 3px 10px; '
@@ -110,13 +110,13 @@ class DashboardsAdmin(admin.ModelAdmin):
         "predeterminado_badge",
         "activo_badge",
     ]
-    list_filter = ["es_publico", "predeterminado", "activo", "created_at"]
+    list_filter = ["es_publico", "predeterminado", "estado", "created_at"]
     search_fields = ["nombre", "descripcion"]
     ordering = ["nombre"]
     readonly_fields = ["created_at", "updated_at"]
 
     fieldsets = (
-        ("Información General", {"fields": ("nombre", "descripcion", "id_empleado", "activo")}),
+        ("Información General", {"fields": ("nombre", "descripcion", "id_empleado", "estado")}),
         ("Configuración", {"fields": ("configuracion", "es_publico", "predeterminado")}),
         ("Auditoría", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
@@ -150,11 +150,11 @@ class DashboardsAdmin(admin.ModelAdmin):
     predeterminado_badge.short_description = "Tipo"
 
     def activo_badge(self, obj):
-        """Muestra el estado activo con badge de color"""
-        if obj.activo:
+        """Muestra el estado estado con badge de color"""
+        if obj.estado:
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
-                'border-radius: 3px;">✓ Activo</span>'
+                'border-radius: 3px;">✓ estado</span>'
             )
         return format_html(
             '<span style="background-color: red; color: white; padding: 3px 10px; '
@@ -180,12 +180,12 @@ class KpiMetricasAdmin(admin.ModelAdmin):
         "frecuencia_badge",
         "activo_badge",
     ]
-    list_filter = ["activo", "categoria", "frecuencia", "unidad"]
+    list_filter = ["estado", "categoria", "frecuencia", "unidad"]
     search_fields = ["nombre", "descripcion"]
     ordering = ["nombre"]
 
     fieldsets = (
-        ("Información General", {"fields": ("nombre", "descripcion", "activo")}),
+        ("Información General", {"fields": ("nombre", "descripcion", "estado")}),
         (
             "Configuración del KPI",
             {"fields": ("formula", "unidad", "valor_objetivo", "categoria", "frecuencia")},
@@ -241,11 +241,11 @@ class KpiMetricasAdmin(admin.ModelAdmin):
     frecuencia_badge.short_description = "Frecuencia"
 
     def activo_badge(self, obj):
-        """Muestra el estado activo con badge de color"""
-        if obj.activo:
+        """Muestra el estado estado con badge de color"""
+        if obj.estado:
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
-                'border-radius: 3px;">✓ Activo</span>'
+                'border-radius: 3px;">✓ estado</span>'
             )
         return format_html(
             '<span style="background-color: red; color: white; padding: 3px 10px; '
@@ -311,13 +311,13 @@ class PlantillasTareaAdmin(admin.ModelAdmin):
         "timeout_display",
         "activo_badge",
     ]
-    list_filter = ["tipo_tarea", "frecuencia", "activo", "created_at"]
+    list_filter = ["tipo_tarea", "frecuencia", "estado", "created_at"]
     search_fields = ["nombre", "descripcion", "comando"]
     ordering = ["nombre"]
     readonly_fields = ["created_at"]
 
     fieldsets = (
-        ("Información General", {"fields": ("nombre", "descripcion", "tipo_tarea", "activo")}),
+        ("Información General", {"fields": ("nombre", "descripcion", "tipo_tarea", "estado")}),
         (
             "Configuración de Ejecución",
             {
@@ -401,11 +401,11 @@ class PlantillasTareaAdmin(admin.ModelAdmin):
     timeout_display.short_description = "Timeout"
 
     def activo_badge(self, obj):
-        """Muestra el estado activo con badge de color"""
-        if obj.activo:
+        """Muestra el estado estado con badge de color"""
+        if obj.estado:
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
-                'border-radius: 3px;">✓ Activo</span>'
+                'border-radius: 3px;">✓ estado</span>'
             )
         return format_html(
             '<span style="background-color: red; color: white; padding: 3px 10px; '

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Management command para crear roles iniciales del sistema.
 
 Este comando debe ejecutarse antes de setup_limites_inicial.
@@ -35,27 +35,27 @@ class Command(BaseCommand):
             {
                 "nombre_rol": "Admin",
                 "descripcion": "Administrador del sistema con acceso completo",
-                "activo": True,
+                "estado": True,
             },
             {
                 "nombre_rol": "Gerente",
                 "descripcion": "Gerente con autorización de operaciones altas",
-                "activo": True,
+                "estado": True,
             },
             {
                 "nombre_rol": "Cajero",
                 "descripcion": "Cajero de ventas con límites básicos",
-                "activo": True,
+                "estado": True,
             },
             {
                 "nombre_rol": "Encargado Compras",
                 "descripcion": "Encargado de gestión de compras y proveedores",
-                "activo": True,
+                "estado": True,
             },
             {
                 "nombre_rol": "Encargado Inventario",
                 "descripcion": "Encargado de control de stock y almacén",
-                "activo": True,
+                "estado": True,
             },
         ]
 
@@ -83,7 +83,7 @@ class Command(BaseCommand):
                     nombre_rol=datos_rol["nombre_rol"],
                     defaults={
                         "descripcion": datos_rol["descripcion"],
-                        "activo": datos_rol["activo"],
+                        "estado": datos_rol["estado"],
                     },
                 )
 
@@ -108,8 +108,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("✅ Roles disponibles en el sistema:"))
         self.stdout.write("")
         for rol in Roles.objects.all().order_by("nombre_rol"):
-            icono = "✓" if rol.activo else "✗"
-            estado = "Activo" if rol.activo else "Inactivo"
+            icono = "✓" if rol.estado else "✗"
+            estado = "estado" if rol.estado else "Inactivo"
             self.stdout.write(
                 f"   {icono} [{rol.id_rol:2d}] {rol.nombre_rol:25s} - {rol.descripcion} ({estado})"
             )

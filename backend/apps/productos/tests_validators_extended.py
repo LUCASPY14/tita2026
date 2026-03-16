@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for apps/productos/validators.py covering previously missing lines.
 
 Missing lines targeted: 127, 131-132, 167, 171-172, 206-221, 245, 250-251, 254,
@@ -99,7 +99,7 @@ class ValidarCambioEstadoProductoExtendedTest(TestCase):
         """Lines 210-218: deactivating product with stock > 0 and no negative allowed raises."""
         producto = MagicMock()
         producto.id_producto = 1
-        producto.activo = True
+        producto.estado = True
         producto.stock_actual = 10
         producto.permite_stock_negativo = False
         producto.descripcion = "Arroz"
@@ -111,7 +111,7 @@ class ValidarCambioEstadoProductoExtendedTest(TestCase):
         """Lines 210-218: deactivating with stock but negativo allowed — no error."""
         producto = MagicMock()
         producto.id_producto = 1
-        producto.activo = True
+        producto.estado = True
         producto.stock_actual = 10
         producto.permite_stock_negativo = True
         result = validar_cambio_estado_producto(producto, False)
@@ -121,7 +121,7 @@ class ValidarCambioEstadoProductoExtendedTest(TestCase):
         """Line 221: activating a product returns True."""
         producto = MagicMock()
         producto.id_producto = 1
-        producto.activo = False
+        producto.estado = False
         result = validar_cambio_estado_producto(producto, True)
         self.assertTrue(result)
 
@@ -129,7 +129,7 @@ class ValidarCambioEstadoProductoExtendedTest(TestCase):
         """Deactivating product without stock works."""
         producto = MagicMock()
         producto.id_producto = 1
-        producto.activo = True
+        producto.estado = True
         producto.stock_actual = 0
         result = validar_cambio_estado_producto(producto, False)
         self.assertTrue(result)
@@ -584,7 +584,7 @@ class ValidarUnidadActivaConProductosExtendedTest(TestCase):
 
         with self.assertRaises(ValidationError) as ctx:
             validar_unidad_activa_con_productos(unidad)
-        self.assertIn("activo", str(ctx.exception).lower())
+        self.assertIn("estado", str(ctx.exception).lower())
 
 
 # ==============================================================================

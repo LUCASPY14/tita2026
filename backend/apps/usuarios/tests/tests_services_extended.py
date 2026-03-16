@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for PasswordRecoveryService and SessionService
 Targeting uncovered lines for coverage improvement.
 """
@@ -25,7 +25,7 @@ class BaseUsuariosTest(TransactionTestCase):
 
     def setUp(self):
         self.rol = Roles.objects.create(
-            nombre_rol="TestRolExt", descripcion="Test", activo=True
+            nombre_rol="TestRolExt", descripcion="Test", estado=True
         )
         self.empleado = Empleados.objects.create(
             nombre="Ext",
@@ -35,7 +35,7 @@ class BaseUsuariosTest(TransactionTestCase):
             contrasena_hash="testhash",
             id_rol=self.rol,
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
         )
         self.ip = "10.0.0.1"
 

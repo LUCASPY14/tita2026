@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters
+﻿from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.common.permissions import IsAdminOrReadOnly
@@ -29,7 +29,7 @@ class ProductosViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["activo", "id_categoria"]
+    filterset_fields = ["estado", "id_categoria"]
     search_fields = ["codigo_barra", "descripcion"]
     ordering_fields = ["descripcion", "stock_minimo"]
     ordering = ["descripcion"]
@@ -49,7 +49,7 @@ class CategoriasViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     throttle_classes = [BurstRateThrottle]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["activo"]
+    filterset_fields = ["estado"]
     search_fields = ["nombre"]
     ordering = ["nombre"]
 
@@ -59,12 +59,12 @@ class UnidadesMedidaViewSet(viewsets.ModelViewSet):
     ViewSet para gestionar unidades de medida.
     """
 
-    queryset = UnidadesMedida.objects.filter(activo=True)
+    queryset = UnidadesMedida.objects.filter(estado=True)
     serializer_class = UnidadesMedidaSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["activo"]
+    filterset_fields = ["estado"]
     ordering = ["nombre"]
 
 
@@ -73,12 +73,12 @@ class ListasPreciosViewSet(viewsets.ModelViewSet):
     ViewSet para gestionar listas de precios.
     """
 
-    queryset = ListasPrecios.objects.filter(activo=True)
+    queryset = ListasPrecios.objects.filter(estado=True)
     serializer_class = ListasPreciosSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["activo"]
+    filterset_fields = ["estado"]
     ordering = ["nombre_lista"]
 
 

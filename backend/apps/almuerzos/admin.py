@@ -1,4 +1,4 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     PlanesAlmuerzo,
@@ -23,7 +23,7 @@ class PlanesAlmuerzoAdmin(admin.ModelAdmin):
         "estado_badge",
         "fecha_creacion",
     ]
-    list_filter = ["activo", "fecha_creacion"]
+    list_filter = ["estado", "fecha_creacion"]
     search_fields = ["nombre_plan", "descripcion"]
     readonly_fields = ["id_plan_almuerzo", "fecha_creacion"]
     ordering = ["nombre_plan"]
@@ -31,7 +31,7 @@ class PlanesAlmuerzoAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Información del Plan", {"fields": ("id_plan_almuerzo", "nombre_plan", "descripcion")}),
         ("Precios y Días", {"fields": ("precio_mensual", "dias_semana_incluidos")}),
-        ("Estado", {"fields": ("activo", "fecha_creacion")}),
+        ("Estado", {"fields": ("estado", "fecha_creacion")}),
     )
 
     def precio_mensual_badge(self, obj):
@@ -43,9 +43,9 @@ class PlanesAlmuerzoAdmin(admin.ModelAdmin):
     precio_mensual_badge.short_description = "Precio Mensual"
 
     def estado_badge(self, obj):
-        if obj.activo:
+        if obj.estado:
             return format_html(
-                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">ACTIVO</span>'
+                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">estado</span>'
             )
         return format_html(
             '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">INACTIVO</span>'
@@ -65,7 +65,7 @@ class TiposAlmuerzoAdmin(admin.ModelAdmin):
         "incluye_bebida",
         "estado_badge",
     ]
-    list_filter = ["activo", "incluye_plato_principal", "incluye_postre", "incluye_bebida"]
+    list_filter = ["estado", "incluye_plato_principal", "incluye_postre", "incluye_bebida"]
     search_fields = ["nombre", "descripcion"]
     readonly_fields = ["id_tipo_almuerzo", "fecha_creacion"]
     ordering = ["nombre"]
@@ -79,7 +79,7 @@ class TiposAlmuerzoAdmin(admin.ModelAdmin):
             "Componentes Incluidos",
             {"fields": ("incluye_plato_principal", "incluye_postre", "incluye_bebida")},
         ),
-        ("Estado", {"fields": ("activo", "fecha_creacion")}),
+        ("Estado", {"fields": ("estado", "fecha_creacion")}),
     )
 
     def precio_unitario_badge(self, obj):
@@ -91,9 +91,9 @@ class TiposAlmuerzoAdmin(admin.ModelAdmin):
     precio_unitario_badge.short_description = "Precio"
 
     def estado_badge(self, obj):
-        if obj.activo:
+        if obj.estado:
             return format_html(
-                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">ACTIVO</span>'
+                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">estado</span>'
             )
         return format_html(
             '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">INACTIVO</span>'
@@ -381,7 +381,7 @@ class AlergenosAdmin(admin.ModelAdmin):
         "estado_badge",
         "fecha_creacion",
     ]
-    list_filter = ["nivel_severidad", "activo", "fecha_creacion"]
+    list_filter = ["nivel_severidad", "estado", "fecha_creacion"]
     search_fields = ["nombre", "descripcion"]
     readonly_fields = ["id_alergeno", "fecha_creacion"]
     ordering = ["nombre"]
@@ -391,7 +391,7 @@ class AlergenosAdmin(admin.ModelAdmin):
         ("Clasificación", {"fields": ("nivel_severidad", "palabras_clave")}),
         (
             "Registro",
-            {"fields": ("activo", "fecha_creacion", "usuario_creacion"), "classes": ("collapse",)},
+            {"fields": ("estado", "fecha_creacion", "usuario_creacion"), "classes": ("collapse",)},
         ),
     )
 
@@ -413,9 +413,9 @@ class AlergenosAdmin(admin.ModelAdmin):
     nivel_severidad_badge.short_description = "Severidad"
 
     def estado_badge(self, obj):
-        if obj.activo:
+        if obj.estado:
             return format_html(
-                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">ACTIVO</span>'
+                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">estado</span>'
             )
         return format_html(
             '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">INACTIVO</span>'

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para apps/almuerzos/views.py
 Cubre RegistrosConsumoAlmuerzoViewSet.perform_create() y _agregar_a_cuenta_mensual()
 """
@@ -50,15 +50,15 @@ class AlmuerzosViewSetCreateBaseFixture(TestCase):
     """Base fixture for perform_create tests that require real data"""
 
     def setUp(self):
-        lista = ListasPrecios.objects.create(nombre_lista='Minorista', activo=True)
-        tipo_c = TiposCliente.objects.create(nombre_tipo='Regular', activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista='Minorista', estado=True)
+        tipo_c = TiposCliente.objects.create(nombre_tipo='Regular', estado=True)
         self.cliente = Clientes.objects.create(
             nombres='Rosa', apellidos='Test', ruc_ci='12345678',
-            limite_credito=Decimal('100.00'), activo=True,
+            limite_credito=Decimal('100.00'), estado=True,
             id_lista=lista, id_tipo_cliente=tipo_c,
         )
         self.hijo = Hijos.objects.create(
-            nombre='Luisa', apellido='Test', grado='3ro', activo=True,
+            nombre='Luisa', apellido='Test', grado='3ro', estado=True,
             id_cliente_responsable=self.cliente,
         )
         self.tarjeta = Tarjetas.objects.create(
@@ -71,19 +71,19 @@ class AlmuerzosViewSetCreateBaseFixture(TestCase):
             nombre_plan='Plan Prueba', descripcion='Plan test',
             precio_mensual=Decimal('120.00'),
             dias_semana_incluidos='Lunes,Martes',
-            fecha_creacion=timezone.now(), activo=True,
+            fecha_creacion=timezone.now(), estado=True,
         )
         self.tipo_almuerzo = TiposAlmuerzo.objects.create(
             nombre='Almuerzo Std', descripcion='desc',
             precio_unitario=Decimal('10.00'),
             incluye_plato_principal=True, incluye_postre=False, incluye_bebida=False,
-            fecha_creacion=timezone.now(), activo=True,
+            fecha_creacion=timezone.now(), estado=True,
         )
-        rol = Roles.objects.create(nombre_rol='CocinaX', activo=True)
+        rol = Roles.objects.create(nombre_rol='CocinaX', estado=True)
         self.empleado = Empleados.objects.create(
             nombre='Emp', apellido='Test', usuario='emptest',
             contrasena_hash='hash', fecha_ingreso=timezone.now(),
-            activo=True, id_rol=rol,
+            estado=True, id_rol=rol,
         )
 
 

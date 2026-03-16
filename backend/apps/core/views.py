@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+﻿from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -349,7 +349,7 @@ class MediosPagoViewSet(viewsets.ModelViewSet):
     queryset = MediosPago.objects.all()
     serializer_class = MediosPagoSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ["activo"]
+    filterset_fields = ["estado"]
     search_fields = ["descripcion"]
 
 
@@ -360,7 +360,7 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
     serializer_class = ConfiguracionSistemaSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ["tipo", "categoria", "activo"]
+    filterset_fields = ["tipo", "categoria", "estado"]
     search_fields = ["clave", "descripcion"]
 
     def get_queryset(self):
@@ -374,7 +374,7 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
     def por_categoria(self, request):
         """Obtiene configuraciones agrupadas por categoría"""
         try:
-            configuraciones = ConfiguracionSistema.objects.filter(activo=True).order_by(
+            configuraciones = ConfiguracionSistema.objects.filter(estado=True).order_by(
                 "categoria", "clave"
             )
 

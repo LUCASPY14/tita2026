@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for apps/inventario/views.py - AjustesInventarioViewSet custom actions
 Covers the 188 missing lines in inventario/views.py (22.31% coverage)
 """
@@ -742,10 +742,10 @@ def _make_producto_for_views(suffix="vw"):
     from apps.productos.models import Categorias, UnidadesMedida, Productos
     from apps.contabilidad.models import Impuestos
     impuesto, _ = Impuestos.objects.get_or_create(
-        nombre_impuesto=f"IVA views {suffix}", defaults={"porcentaje": 10.0, "vigente_desde": "2024-01-01", "activo": True}
+        nombre_impuesto=f"IVA views {suffix}", defaults={"porcentaje": 10.0, "vigente_desde": "2024-01-01", "estado": True}
     )
-    categoria, _ = Categorias.objects.get_or_create(nombre=f"Cat views {suffix}", defaults={"activo": True})
-    unidad, _ = UnidadesMedida.objects.get_or_create(nombre=f"Um views {suffix}", defaults={"abreviatura": f"u{suffix[:3]}", "activo": True})
+    categoria, _ = Categorias.objects.get_or_create(nombre=f"Cat views {suffix}", defaults={"estado": True})
+    unidad, _ = UnidadesMedida.objects.get_or_create(nombre=f"Um views {suffix}", defaults={"abreviatura": f"u{suffix[:3]}", "estado": True})
     producto = Productos.objects.create(
         codigo_barra=f"VIEWS{suffix[:7]:0<7}",
         descripcion=f"Producto Views {suffix}",
@@ -754,7 +754,7 @@ def _make_producto_for_views(suffix="vw"):
         id_impuesto=impuesto,
         id_categoria=categoria,
         id_unidad_medida=unidad,
-        activo=True,
+        estado=True,
     )
     return producto
 

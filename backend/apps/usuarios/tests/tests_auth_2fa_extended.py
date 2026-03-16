@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for AuthenticationService and TwoFactorAuthService
 Targeting uncovered lines for coverage improvement.
 """
@@ -26,7 +26,7 @@ class BaseAuthTest(TransactionTestCase):
 
     def setUp(self):
         self.rol = Roles.objects.create(
-            nombre_rol="TestRolAuth", descripcion="Test", activo=True
+            nombre_rol="TestRolAuth", descripcion="Test", estado=True
         )
         self.empleado = Empleados.objects.create(
             nombre="Auth",
@@ -36,7 +36,7 @@ class BaseAuthTest(TransactionTestCase):
             contrasena_hash=AuthenticationService._hash_password(self.password),
             id_rol=self.rol,
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
         )
         self.ip = "10.0.0.2"
 
@@ -73,7 +73,7 @@ class GenerarTokensExistingUserTest(BaseAuthTest):
         User.objects.create_user(
             username=self.empleado.usuario,
             email=self.empleado.email,
-            is_active=False,  # different from empleado.activo=True
+            is_active=False,  # different from empleado.estado=True
         )
         tokens = AuthenticationService._generar_tokens_jwt(self.empleado)
         self.assertIn("access", tokens)
@@ -206,7 +206,7 @@ class Base2FATest(TransactionTestCase):
 
     def setUp(self):
         self.rol = Roles.objects.create(
-            nombre_rol="TestRol2FA", descripcion="Test", activo=True
+            nombre_rol="TestRol2FA", descripcion="Test", estado=True
         )
         self.empleado = Empleados.objects.create(
             nombre="TwoFA",
@@ -216,7 +216,7 @@ class Base2FATest(TransactionTestCase):
             contrasena_hash="testhash",
             id_rol=self.rol,
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
         )
         self.ip = "10.0.0.3"
 

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Management command para configurar límites de transacción iniciales.
 
 Uso:
@@ -185,7 +185,7 @@ class Command(BaseCommand):
                     defaults={
                         "monto_maximo_sin_autorizacion": config["monto"],
                         "requiere_autorizacion_doble": config["doble_auth"],
-                        "activo": True,
+                        "estado": True,
                         "observaciones": f"Configuración inicial - {config['tipo_operacion']}",
                     },
                 )

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for apps/api_integrations/admin.py
 Covers all custom display methods across 6 admin classes.
 """
@@ -130,13 +130,13 @@ class ProveedoresApiAdminTest(TestCase):
         self.assertIn("6c757d", result)
 
     def test_activo_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("green", result)
-        self.assertIn("Activo", result)
+        self.assertIn("estado", result)
 
     def test_activo_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("red", result)
 
@@ -204,12 +204,12 @@ class EndpointsApiAdminTest(TestCase):
         self.assertIn("Público", result)
 
     def test_activo_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("green", result)
 
     def test_activo_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("red", result)
 
@@ -395,12 +395,12 @@ class CredencialesApiAdminTest(TestCase):
         self.assertIn("ccc", result)
 
     def test_activo_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("green", result)
 
     def test_activo_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("red", result)
 
@@ -511,12 +511,12 @@ class WebhookEndpointsAdminTest(TestCase):
         self.assertEqual(result, "—")
 
     def test_activo_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("green", result)
 
     def test_activo_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("red", result)
 

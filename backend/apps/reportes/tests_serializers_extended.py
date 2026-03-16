@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para serializers de reportes
 Cubre rutas de código no cubiertas por tests_serializers.py
 """
@@ -68,7 +68,7 @@ class PlantillasReporteSerializerValidateNombreTest(TestCase):
     """Tests para validate_nombre del PlantillasReporteSerializer"""
 
     def setUp(self):
-        self.rol = Roles.objects.create(nombre_rol='Analista', descripcion='test', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='Analista', descripcion='test', estado=True)
         self.empleado = Empleados.objects.create(
             nombre='Test', apellido='User', usuario='testuser',
             contrasena_hash='$2b$12$hash', fecha_ingreso=timezone.now(), id_rol=self.rol
@@ -93,7 +93,7 @@ class PlantillasReporteSerializerValidateNombreTest(TestCase):
             parametros={},
             tipo_reporte='ventas',
             frecuencia='manual',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             created_by=self.empleado,
         )
@@ -209,7 +209,7 @@ class DashboardsSerializerValidateTest(TestCase):
     """Tests para validaciones del DashboardsSerializer"""
 
     def setUp(self):
-        self.rol = Roles.objects.create(nombre_rol='Analista2', descripcion='test', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='Analista2', descripcion='test', estado=True)
         self.empleado = Empleados.objects.create(
             nombre='Dash', apellido='User', usuario='dashuser',
             contrasena_hash='$2b$12$hash', fecha_ingreso=timezone.now(), id_rol=self.rol
@@ -254,7 +254,7 @@ class DashboardsSerializerValidateTest(TestCase):
             configuracion={},
             es_publico=0,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado,
@@ -269,7 +269,7 @@ class DashboardsSerializerValidateTest(TestCase):
             configuracion={},
             es_publico=0,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado,

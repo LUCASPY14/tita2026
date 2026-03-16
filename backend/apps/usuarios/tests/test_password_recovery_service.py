@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para PasswordRecoveryService
 Cobertura completa de recuperación de contraseñas y verificación de email
 """
@@ -18,7 +18,7 @@ class PasswordRecoveryServiceTest(TransactionTestCase):
         """Configuración inicial para cada test"""
         # Crear rol de prueba
         self.rol_test = Roles.objects.create(
-            nombre_rol="Test Role", descripcion="Rol para testing", activo=True
+            nombre_rol="Test Role", descripcion="Rol para testing", estado=True
         )
 
         # Crear empleado de prueba
@@ -30,7 +30,7 @@ class PasswordRecoveryServiceTest(TransactionTestCase):
             contrasena_hash="hash_test",
             id_rol=self.rol_test,
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.ip_address = "127.0.0.1"
@@ -113,7 +113,7 @@ class RequestPasswordRecoveryTest(PasswordRecoveryServiceTest):
 
     def test_solicitar_recuperacion_cuenta_inactiva(self):
         """No permitir recuperación para cuenta inactiva"""
-        self.empleado.activo = False
+        self.empleado.estado = False
         self.empleado.save()
 
         resultado = PasswordRecoveryService.solicitar_recuperacion_empleado(

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para serializers de compras
 Sprint 2 - Backend Coverage Improvement
 """
@@ -22,7 +22,7 @@ class ProveedoresSerializerTest(TestCase):
             telefono="0981123456",
             email="contacto@abc.com",
             fecha_registro=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         serializer = ProveedoresSerializer(proveedor)
@@ -38,7 +38,7 @@ class ProveedoresSerializerTest(TestCase):
             "ruc": "80099999-9",
             "telefono": "0982999999",
             "fecha_registro": timezone.now().isoformat(),
-            "activo": True,
+            "estado": True,
         }
 
         serializer = ProveedoresSerializer(data=data)
@@ -56,7 +56,7 @@ class ComprasSerializerTest(TestCase):
             razon_social="Proveedor Test",
             ruc="80055555-5",
             fecha_registro=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
     def test_serializar_compra(self):

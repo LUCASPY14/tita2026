@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para configuración de URLs de la app usuarios
 Cubre routing, resolución de URLs y acceso a endpoints
 """
@@ -117,7 +117,7 @@ class UsuariosEndpointsTest(APITestCase):
         self.rol = Roles.objects.create(
             nombre_rol="TestRole",
             descripcion="Rol de prueba",
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -127,7 +127,7 @@ class UsuariosEndpointsTest(APITestCase):
             contrasena_hash="$2b$12$hashedpassword",
             fecha_ingreso=timezone.now(),
             email="test@example.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol
         )
 
@@ -163,7 +163,7 @@ class UsuariosEndpointsTest(APITestCase):
         create_data = {
             'nombre_rol': 'CRUD Test Role',
             'descripcion': 'Rol de prueba CRUD',
-            'activo': True
+            'estado': True
         }
         create_response = self.client.post(base_url, create_data, format='json')
         
@@ -178,7 +178,7 @@ class UsuariosEndpointsTest(APITestCase):
             update_data = {
                 'nombre_rol': 'Updated CRUD Role',
                 'descripcion': 'Descripción actualizada',
-                'activo': False
+                'estado': False
             }
             update_response = self.client.put(
                 f'{base_url}{new_role_id}/', 
@@ -208,7 +208,7 @@ class UsuariosEndpointsTest(APITestCase):
             'contrasena_hash': '$2b$12$hashedpass',
             'fecha_ingreso': timezone.now().isoformat(),
             'email': 'crud@test.com',
-            'activo': True,
+            'estado': True,
             'id_rol': self.rol.id_rol
         }
         create_response = self.client.post(base_url, create_data, format='json')
@@ -241,11 +241,11 @@ class UsuariosEndpointsTest(APITestCase):
     def test_filtering_and_search_endpoints(self):
         """Debe soportar filtrado y búsqueda en endpoints"""
         # Crear datos adicionales para filtrar
-        Roles.objects.create(nombre_rol="Filterable Role", activo=False)
+        Roles.objects.create(nombre_rol="Filterable Role", estado=False)
         
         search_params = [
-            {'activo': 'true'},
-            {'activo': 'false'},
+            {'estado': 'true'},
+            {'estado': 'false'},
             {'search': 'Test'},
             {'ordering': 'nombre_rol'},
             {'ordering': '-nombre_rol'}
@@ -276,7 +276,7 @@ class UsuariosEndpointsTest(APITestCase):
         for i in range(15):
             Roles.objects.create(
                 nombre_rol=f"Pagination Role {i}",
-                activo=True
+                estado=True
             )
         
         # Test paginación básica

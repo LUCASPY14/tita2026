@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para admin de api_integrations
 Cubre configuración e interfaz administrativa para integraciones API
 """
@@ -65,7 +65,7 @@ class ProveedoresApiAdminTest(TestCase):
             config_auth={'api_key': 'admin_test_key'},
             timeout=30,
             max_reintentos=3,
-            activo=True,
+            estado=True,
             created_at=timezone.now()
         )
 
@@ -73,7 +73,7 @@ class ProveedoresApiAdminTest(TestCase):
         """Debe mostrar campos correctos en lista"""
         expected_fields = [
             'id_proveedor', 'nombre', 'tipo_servicio', 
-            'url_base', 'version', 'activo', 'created_at'
+            'url_base', 'version', 'estado', 'created_at'
         ]
         
         for field in expected_fields:
@@ -82,7 +82,7 @@ class ProveedoresApiAdminTest(TestCase):
 
     def test_admin_list_filter(self):
         """Debe tener filtros apropiados"""
-        expected_filters = ['activo', 'tipo_servicio', 'tipo_auth', 'created_at']
+        expected_filters = ['estado', 'tipo_servicio', 'tipo_auth', 'created_at']
         
         for filter_field in expected_filters:
             with self.subTest(filter=filter_field):
@@ -198,7 +198,7 @@ class EndpointsApiAdminTest(TestCase):
             schema_response={'type': 'object'},
             cache_segundos=300,
             requiere_auth=1,
-            activo=True,
+            estado=True,
             id_proveedor=self.proveedor
         )
 
@@ -206,7 +206,7 @@ class EndpointsApiAdminTest(TestCase):
         """Debe mostrar campos correctos en lista de endpoints"""
         expected_fields = [
             'id_endpoint', 'nombre', 'proveedor_nombre', 'metodo', 
-            'path', 'requiere_auth', 'activo'
+            'path', 'requiere_auth', 'estado'
         ]
         
         for field in expected_fields:
@@ -215,7 +215,7 @@ class EndpointsApiAdminTest(TestCase):
 
     def test_admin_list_filter(self):
         """Debe filtrar por campos apropiados"""
-        expected_filters = ['metodo', 'requiere_auth', 'activo', 'id_proveedor']
+        expected_filters = ['metodo', 'requiere_auth', 'estado', 'id_proveedor']
         
         for filter_field in expected_filters:
             with self.subTest(filter=filter_field):
@@ -256,7 +256,7 @@ class LogsLlamadasApiAdminTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='AdminRole',
             descripcion='Rol para admin tests',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -374,7 +374,7 @@ class CredencialesApiAdminTest(TestCase):
             configuracion={'oauth_scope': 'read write'},
             fecha_expiracion=timezone.now() + timezone.timedelta(days=30),
             updated_at=timezone.now(),
-            activo=True,
+            estado=True,
             id_proveedor=self.proveedor
         )
 
@@ -383,7 +383,7 @@ class CredencialesApiAdminTest(TestCase):
         list_display = self.admin.list_display
         
         # Debe incluir campos informativos
-        expected_safe_fields = ['id_credencial', 'proveedor_nombre', 'ambiente', 'activo', 'updated_at']
+        expected_safe_fields = ['id_credencial', 'proveedor_nombre', 'ambiente', 'estado', 'updated_at']
         for field in expected_safe_fields:
             with self.subTest(field=field):
                 self.assertIn(field, list_display)
@@ -419,7 +419,7 @@ class CredencialesApiAdminTest(TestCase):
 
     def test_admin_list_filter_credentials(self):
         """Debe filtrar por campos seguros"""
-        expected_filters = ['ambiente', 'activo', 'id_proveedor', 'updated_at']
+        expected_filters = ['ambiente', 'estado', 'id_proveedor', 'updated_at']
         
         for filter_field in expected_filters:
             with self.subTest(filter=filter_field):
@@ -535,7 +535,7 @@ class WebhookEndpointsAdminTest(TestCase):
             header_verificacion='X-Admin-Signature',
             eventos=['admin.test', 'admin.update'],
             handler_func='webhooks.admin_handler',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_proveedor=self.proveedor
         )
@@ -544,7 +544,7 @@ class WebhookEndpointsAdminTest(TestCase):
         """Debe mostrar campos apropiados en lista de webhook endpoints"""
         expected_fields = [
             'id_webhook', 'nombre', 'proveedor_nombre', 'path', 
-            'requiere_verificacion', 'activo'
+            'requiere_verificacion', 'estado'
         ]
         
         for field in expected_fields:
@@ -554,7 +554,7 @@ class WebhookEndpointsAdminTest(TestCase):
     def test_admin_list_filter_webhook_endpoints(self):
         """Debe filtrar webhook endpoints apropiadamente"""
         expected_filters = [
-            'requiere_verificacion', 'activo', 'id_proveedor', 'created_at'
+            'requiere_verificacion', 'estado', 'id_proveedor', 'created_at'
         ]
         
         for filter_field in expected_filters:
@@ -660,7 +660,7 @@ class ApiIntegrationsAdminIntegrationTest(TestCase):
         # Crear proveedores con diferentes estados
         ProveedoresApi.objects.create(
             nombre='ActiveProvider',
-            descripcion='Proveedor activo',
+            descripcion='Proveedor estado',
             tipo_servicio='filter_test',
             url_base='https://api.active.test',
             version='1.0',
@@ -668,7 +668,7 @@ class ApiIntegrationsAdminIntegrationTest(TestCase):
             config_auth={},
             timeout=30,
             max_reintentos=1,
-            activo=True,
+            estado=True,
             created_at=timezone.now()
         )
         
@@ -682,7 +682,7 @@ class ApiIntegrationsAdminIntegrationTest(TestCase):
             config_auth={},
             timeout=30,
             max_reintentos=1,
-            activo=False,
+            estado=False,
             created_at=timezone.now()
         )
         
@@ -690,5 +690,5 @@ class ApiIntegrationsAdminIntegrationTest(TestCase):
         site = AdminSite()
         admin_class = ProveedoresApiAdmin(ProveedoresApi, site)
         
-        # Debe poder filtrar por activo
-        self.assertIn('activo', admin_class.list_filter)
+        # Debe poder filtrar por estado
+        self.assertIn('estado', admin_class.list_filter)

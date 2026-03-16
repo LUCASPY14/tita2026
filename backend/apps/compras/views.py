@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+﻿from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
@@ -25,7 +25,7 @@ class ProveedoresViewSet(viewsets.ModelViewSet):
     queryset = Proveedores.objects.all()
     serializer_class = ProveedoresSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["activo", "ciudad"]
+    filterset_fields = ["estado", "ciudad"]
     search_fields = ["razon_social", "ruc", "email"]
     ordering_fields = ["razon_social"]
     ordering = ["razon_social"]

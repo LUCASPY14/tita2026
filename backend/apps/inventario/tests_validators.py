@@ -192,15 +192,15 @@ class ValidadoresStockDisponibleTestCase(TestCase):
     def setUp(self):
         """Crear datos de prueba"""
         self.impuesto = Impuestos.objects.create(
-            nombre_impuesto="IVA 10%", porcentaje=10.00, vigente_desde="2024-01-01", activo=True
+            nombre_impuesto="IVA 10%", porcentaje=10.00, vigente_desde="2024-01-01", estado=True
         )
 
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="u", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="u", estado=True)
 
         self.lista_precio = ListasPrecios.objects.create(
-            nombre_lista="Minorista", moneda="PYG", activo=True
+            nombre_lista="Minorista", moneda="PYG", estado=True
         )
 
         # Producto con stock
@@ -212,7 +212,7 @@ class ValidadoresStockDisponibleTestCase(TestCase):
             id_impuesto=self.impuesto,
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
-            activo=True,
+            estado=True,
         )
 
         StockUnico.objects.create(id_producto=self.producto, cantidad=Decimal("50"))
@@ -226,7 +226,7 @@ class ValidadoresStockDisponibleTestCase(TestCase):
             id_impuesto=self.impuesto,
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
-            activo=True,
+            estado=True,
         )
 
         StockUnico.objects.create(id_producto=self.producto_negativo, cantidad=Decimal("10"))
@@ -700,10 +700,10 @@ class ValidarStockDisponibleLineasFaltantesTest(TestCase):
 
     def setUp(self):
         self.impuesto = Impuestos.objects.create(
-            nombre_impuesto="IVA Test Cov", porcentaje=10.00, vigente_desde="2024-01-01", activo=True
+            nombre_impuesto="IVA Test Cov", porcentaje=10.00, vigente_desde="2024-01-01", estado=True
         )
-        self.categoria = Categorias.objects.create(nombre="Cat Cov", activo=True)
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad Cov", abreviatura="uc", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Cat Cov", estado=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad Cov", abreviatura="uc", estado=True)
         self.producto = Productos.objects.create(
             codigo_barra="COV0000000001",
             descripcion="Producto Cobertura",
@@ -712,7 +712,7 @@ class ValidarStockDisponibleLineasFaltantesTest(TestCase):
             id_impuesto=self.impuesto,
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
-            activo=True,
+            estado=True,
         )
 
     def test_id_producto_como_instancia_objeto(self):

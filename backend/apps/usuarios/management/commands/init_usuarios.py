@@ -1,4 +1,4 @@
-"""
+﻿"""
 Management command para inicializar el sistema de usuarios
 Crea permisos, roles y usuario admin inicial
 """
@@ -119,7 +119,7 @@ class Command(BaseCommand):
         for rol_data in roles:
             rol, created = Roles.objects.get_or_create(
                 nombre_rol=rol_data["nombre_rol"],
-                defaults={"descripcion": rol_data["descripcion"], "activo": True},
+                defaults={"descripcion": rol_data["descripcion"], "estado": True},
             )
 
             if created:
@@ -172,8 +172,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.MIGRATE_HEADING("=== Resumen de Inicialización ===\n"))
 
         total_permisos = PermissionService.inicializar_permisos()["total"]
-        total_roles = Roles.objects.filter(activo=True).count()
-        total_empleados = Empleados.objects.filter(activo=True).count()
+        total_roles = Roles.objects.filter(estado=True).count()
+        total_empleados = Empleados.objects.filter(estado=True).count()
 
         self.stdout.write(f"Permisos del sistema: {total_permisos}")
         self.stdout.write(f"Roles creados: {total_roles}")

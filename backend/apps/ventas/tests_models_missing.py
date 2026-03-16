@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests targeting remaining missing lines in apps/ventas/models.py
 
 Missing lines:
@@ -51,11 +51,11 @@ def _make_base_fixtures():
 
     lista, _ = ListasPrecios.objects.get_or_create(
         nombre_lista="General_vm",
-        defaults={"moneda": "PYG", "activo": True},
+        defaults={"moneda": "PYG", "estado": True},
     )
     tipo_cliente, _ = TiposCliente.objects.get_or_create(
         nombre_tipo="VM_Regular",
-        defaults={"activo": True},
+        defaults={"estado": True},
     )
     cliente, _ = Clientes.objects.get_or_create(
         ruc_ci="VM0000001",
@@ -63,13 +63,13 @@ def _make_base_fixtures():
             "nombres": "VM",
             "apellidos": "Test",
             "limite_credito": Decimal("0"),
-            "activo": True,
+            "estado": True,
             "id_lista": lista,
             "id_tipo_cliente": tipo_cliente,
         },
     )
     rol, _ = Roles.objects.get_or_create(
-        nombre_rol="VM_Cajero", defaults={"activo": True}
+        nombre_rol="VM_Cajero", defaults={"estado": True}
     )
     empleado, _ = Empleados.objects.get_or_create(
         email="vm_cajero@test.com",
@@ -82,23 +82,23 @@ def _make_base_fixtures():
     )
     medio_pago, _ = MediosPago.objects.get_or_create(
         descripcion="VM_Efectivo",
-        defaults={"genera_comision": False, "requiere_validacion": False, "activo": True},
+        defaults={"genera_comision": False, "requiere_validacion": False, "estado": True},
     )
     impuesto = Impuestos.objects.create(
         nombre_impuesto=f"IVA_VM_{timezone.now().timestamp()}",
         porcentaje=Decimal("10.00"),
         vigente_desde=timezone.now().date(),
-        activo=True,
+        estado=True,
     )
     categoria, _ = Categorias.objects.get_or_create(
-        nombre="VM_Cat", defaults={"activo": True}
+        nombre="VM_Cat", defaults={"estado": True}
     )
     unidad, _ = UnidadesMedida.objects.get_or_create(
-        nombre="VM_UN", defaults={"abreviatura": "UN", "activo": True}
+        nombre="VM_UN", defaults={"abreviatura": "UN", "estado": True}
     )
     producto = Productos.objects.create(
         descripcion=f"VM_Prod_{timezone.now().timestamp()}",
-        activo=True,
+        estado=True,
         id_categoria=categoria,
         id_impuesto=impuesto,
         id_unidad_medida=unidad,
@@ -231,10 +231,10 @@ class VentasManagerIdEmpleadoDefaultTest(TestCase):
         from apps.clientes.models import Clientes, TiposCliente
         from apps.productos.models import ListasPrecios
         lista, _ = ListasPrecios.objects.get_or_create(
-            nombre_lista="General", defaults={"moneda": "PYG", "activo": True}
+            nombre_lista="General", defaults={"moneda": "PYG", "estado": True}
         )
         tipo, _ = TiposCliente.objects.get_or_create(
-            nombre_tipo="General", defaults={"activo": True}
+            nombre_tipo="General", defaults={"estado": True}
         )
         self.cliente, _ = Clientes.objects.get_or_create(
             ruc_ci="0000000",
@@ -514,7 +514,7 @@ class PromocionesStrTest(TestCase):
             monto_minimo=Decimal("0"),
             usos_actuales=0,
             prioridad=1,
-            activo=True,
+            estado=True,
             fecha_creacion=timezone.now(),
         )
         result = str(promo)
@@ -536,7 +536,7 @@ class _PromoFixtureMixin:
             monto_minimo=Decimal("0"),
             usos_actuales=0,
             prioridad=1,
-            activo=True,
+            estado=True,
             fecha_creacion=timezone.now(),
         )
 
@@ -549,7 +549,7 @@ class CategoriasPromocionStrTest(_PromoFixtureMixin, TestCase):
         from apps.productos.models import Categorias
 
         cat, _ = Categorias.objects.get_or_create(
-            nombre="VM_CatPromo", defaults={"activo": True}
+            nombre="VM_CatPromo", defaults={"estado": True}
         )
         promo = self._make_promo()
         cat_promo = CategoriasPromocion.objects.create(

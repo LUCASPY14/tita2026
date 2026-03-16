@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para VentasViewSet - API REST endpoints
 Objetivo: Aumentar cobertura de views/endpoints de 0% a 40%+
 """
@@ -51,7 +51,7 @@ class VentasViewSetAPITest(TestCase):
 
         # Crear rol y empleado (cajero)
         self.rol_cajero = Roles.objects.create(
-            nombre_rol="Cajero", descripcion="Cajero de ventas", activo=True
+            nombre_rol="Cajero", descripcion="Cajero de ventas", estado=True
         )
 
         self.empleado_cajero = Empleados.objects.create(
@@ -60,7 +60,7 @@ class VentasViewSetAPITest(TestCase):
             usuario="jcajero",
             email="cajero@test.com",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol_cajero,
         )
 
@@ -69,14 +69,14 @@ class VentasViewSetAPITest(TestCase):
 
         # Crear medio de pago
         self.medio_pago_efectivo = MediosPago.objects.create(
-            descripcion="Efectivo", activo=True, genera_comision=False
+            descripcion="Efectivo", estado=True, genera_comision=False
         )
 
         # Crear lista de precios
-        self.lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        self.lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
@@ -84,13 +84,13 @@ class VentasViewSetAPITest(TestCase):
             apellidos="González",
             ruc_ci="12345678",
             limite_credito=Decimal("1000.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista_precio,
             id_tipo_cliente=self.tipo_cliente,
         )
 
         # Crear categoría y unidad de medida
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="un")
 
@@ -99,7 +99,7 @@ class VentasViewSetAPITest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear producto
@@ -110,7 +110,7 @@ class VentasViewSetAPITest(TestCase):
             id_unidad_medida=self.unidad,
             stock_minimo=Decimal("10"),
             id_impuesto=self.impuesto_10,
-            activo=True,
+            estado=True,
         )
 
         # Crear precio por lista
@@ -235,7 +235,7 @@ class VentasViewSetAPITest(TestCase):
             nombres="Pedro",
             apellidos="Ramírez",
             ruc_ci="87654321",
-            activo=True,
+            estado=True,
             id_lista=self.lista_precio,
             id_tipo_cliente=self.tipo_cliente,
         )

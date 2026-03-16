@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para TwoFactorAuthService
 Cobertura completa de autenticación de dos factores (2FA/TOTP)
 """
@@ -19,7 +19,7 @@ class TwoFactorAuthServiceTest(TransactionTestCase):
         """Configuración inicial para cada test"""
         # Crear rol de prueba
         self.rol_test = Roles.objects.create(
-            nombre_rol="Test Role", descripcion="Rol para testing", activo=True
+            nombre_rol="Test Role", descripcion="Rol para testing", estado=True
         )
 
         # Crear empleado de prueba
@@ -31,7 +31,7 @@ class TwoFactorAuthServiceTest(TransactionTestCase):
             contrasena_hash="hash_test",
             id_rol=self.rol_test,
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.ip_address = "127.0.0.1"
@@ -261,7 +261,7 @@ class Verify2FATest(TwoFactorAuthServiceTest):
             contrasena_hash="hash_test",
             id_rol=self.rol_test,
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         resultado = TwoFactorAuthService.verificar_codigo_2fa(
@@ -338,7 +338,7 @@ class Disable2FATest(TwoFactorAuthServiceTest):
             contrasena_hash="hash_test",
             id_rol=self.rol_test,
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         resultado = TwoFactorAuthService.deshabilitar_2fa_empleado(
@@ -412,7 +412,7 @@ class RegenerateBackupCodesTest(TwoFactorAuthServiceTest):
             contrasena_hash="hash_test",
             id_rol=self.rol_test,
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         resultado = TwoFactorAuthService.regenerar_backup_codes(

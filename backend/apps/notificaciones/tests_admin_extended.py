@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for apps/notificaciones/admin.py
 Covers all custom display methods across 15 admin classes.
 """
@@ -238,7 +238,7 @@ class PreferenciasNotificacionAdminTest(TestCase):
         obj = _mock_obj(email_activo=1)
         result = str(self.admin.email_activo_badge(obj))
         self.assertIn("green", result)
-        self.assertIn("Activo", result)
+        self.assertIn("estado", result)
 
     def test_email_activo_badge_inactivo(self):
         obj = _mock_obj(email_activo=0)
@@ -250,7 +250,7 @@ class PreferenciasNotificacionAdminTest(TestCase):
         obj = _mock_obj(push_activo=1)
         result = str(self.admin.push_activo_badge(obj))
         self.assertIn("green", result)
-        self.assertIn("Activo", result)
+        self.assertIn("estado", result)
 
     def test_push_activo_badge_inactivo(self):
         obj = _mock_obj(push_activo=0)
@@ -421,13 +421,13 @@ class PlantillasEmailAdminTest(TestCase):
         self.admin = PlantillasEmailAdmin(PlantillasEmail, self.site)
 
     def test_activo_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("green", result)
-        self.assertIn("Activo", result)
+        self.assertIn("estado", result)
 
     def test_activo_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("red", result)
         self.assertIn("Inactivo", result)
@@ -471,12 +471,12 @@ class PlantillasSmsAdminTest(TestCase):
         self.assertEqual(len(result), 53)
 
     def test_activo_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("green", result)
 
     def test_activo_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("red", result)
 
@@ -668,12 +668,12 @@ class AlertasAutomaticasAdminTest(TestCase):
         self.assertIn("gray", result)
 
     def test_activo_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("green", result)
 
     def test_activo_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("red", result)
 
@@ -711,12 +711,12 @@ class AlertaDestinatariosAdminTest(TestCase):
         self.assertIn("gray", result)
 
     def test_activo_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("green", result)
 
     def test_activo_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("red", result)
 
@@ -943,11 +943,11 @@ class RestriccionesHorariasAdminTest(TestCase):
         self.assertIn("17:00", result)
 
     def test_activo_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("green", result)
 
     def test_activo_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("red", result)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for apps/contabilidad/admin.py targeting uncovered display methods.
 
 Missing lines: 36-45, 82-87, 96-98, 103-105, 110-121, 126-130, 165-173, 182,
@@ -63,16 +63,16 @@ class CajasAdminTest(TestCase):
         self.admin = CajasAdmin(Cajas, self.site)
 
     def test_activo_badge_active(self):
-        """Lines 36-41: activo=True returns green badge."""
-        obj = _mock_obj(activo=True)
+        """Lines 36-41: estado=True returns green badge."""
+        obj = _mock_obj(estado=True)
         result = self.admin.activo_badge(obj)
         self.assertIn("green", result)
         self.assertIn("Activa", result)
         self.assertIn("✓", result)
 
     def test_activo_badge_inactive(self):
-        """Lines 42-45: activo=False returns red badge."""
-        obj = _mock_obj(activo=False)
+        """Lines 42-45: estado=False returns red badge."""
+        obj = _mock_obj(estado=False)
         result = self.admin.activo_badge(obj)
         self.assertIn("red", result)
         self.assertIn("Inactiva", result)
@@ -285,15 +285,15 @@ class TarifasComisionAdminTest(TestCase):
         self.assertEqual(result, "-")
 
     def test_activo_badge_active(self):
-        """Lines 237-239: activo=True returns green badge."""
-        obj = _mock_obj(activo=True)
+        """Lines 237-239: estado=True returns green badge."""
+        obj = _mock_obj(estado=True)
         result = self.admin.activo_badge(obj)
         self.assertIn("green", result)
         self.assertIn("Activa", result)
 
     def test_activo_badge_inactive(self):
-        """Lines 237-239: activo=False returns red badge."""
-        obj = _mock_obj(activo=False)
+        """Lines 237-239: estado=False returns red badge."""
+        obj = _mock_obj(estado=False)
         result = self.admin.activo_badge(obj)
         self.assertIn("red", result)
         self.assertIn("Inactiva", result)
@@ -519,15 +519,15 @@ class TimbradosAdminTest(TestCase):
         self.assertIn("Papel", result)
 
     def test_activo_badge_active(self):
-        """Lines 497-499: activo=True returns green badge."""
-        obj = _mock_obj(activo=True)
+        """Lines 497-499: estado=True returns green badge."""
+        obj = _mock_obj(estado=True)
         result = self.admin.activo_badge(obj)
         self.assertIn("green", result)
-        self.assertIn("Activo", result)
+        self.assertIn("estado", result)
 
     def test_activo_badge_inactive(self):
-        """Lines 497-499: activo=False returns red badge."""
-        obj = _mock_obj(activo=False)
+        """Lines 497-499: estado=False returns red badge."""
+        obj = _mock_obj(estado=False)
         result = self.admin.activo_badge(obj)
         self.assertIn("red", result)
 
@@ -557,15 +557,15 @@ class PuntosExpedicionAdminTest(TestCase):
         self.assertIn("001-001", result)
 
     def test_activo_badge_active(self):
-        """Lines 548-550: activo=True returns green badge."""
-        obj = _mock_obj(activo=True)
+        """Lines 548-550: estado=True returns green badge."""
+        obj = _mock_obj(estado=True)
         result = self.admin.activo_badge(obj)
         self.assertIn("green", result)
-        self.assertIn("Activo", result)
+        self.assertIn("estado", result)
 
     def test_activo_badge_inactive(self):
-        """Lines 548-550: activo=False returns red badge."""
-        obj = _mock_obj(activo=False)
+        """Lines 548-550: estado=False returns red badge."""
+        obj = _mock_obj(estado=False)
         result = self.admin.activo_badge(obj)
         self.assertIn("red", result)
 
@@ -582,15 +582,15 @@ class DatosEmpresaAdminTest(TestCase):
         self.admin = DatosEmpresaAdmin(DatosEmpresa, self.site)
 
     def test_activo_badge_active(self):
-        """Lines 584-586: activo=True returns green badge."""
-        obj = _mock_obj(activo=True)
+        """Lines 584-586: estado=True returns green badge."""
+        obj = _mock_obj(estado=True)
         result = self.admin.activo_badge(obj)
         self.assertIn("green", result)
         self.assertIn("Activa", result)
 
     def test_activo_badge_inactive(self):
-        """Lines 584-586: activo=False returns red badge."""
-        obj = _mock_obj(activo=False)
+        """Lines 584-586: estado=False returns red badge."""
+        obj = _mock_obj(estado=False)
         result = self.admin.activo_badge(obj)
         self.assertIn("red", result)
 
@@ -619,14 +619,14 @@ class ImpuestosAdminTest(TestCase):
         self.assertIn("0.00%", result)
 
     def test_activo_badge_active(self):
-        """Lines 623-625: activo=True returns green badge."""
-        obj = _mock_obj(activo=True)
+        """Lines 623-625: estado=True returns green badge."""
+        obj = _mock_obj(estado=True)
         result = self.admin.activo_badge(obj)
         self.assertIn("green", result)
-        self.assertIn("Activo", result)
+        self.assertIn("estado", result)
 
     def test_activo_badge_inactive(self):
-        """Lines 623-625: activo=False returns red badge."""
-        obj = _mock_obj(activo=False)
+        """Lines 623-625: estado=False returns red badge."""
+        obj = _mock_obj(estado=False)
         result = self.admin.activo_badge(obj)
         self.assertIn("red", result)

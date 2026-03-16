@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para AuthenticationService
 Cobertura completa de funcionalidades de autenticación y seguridad
 """
@@ -24,7 +24,7 @@ class AuthenticationServiceTest(TransactionTestCase):
         """Configuración inicial para cada test"""
         # Crear rol de prueba
         self.rol_test = Roles.objects.create(
-            nombre_rol="Test Role", descripcion="Rol para testing", activo=True
+            nombre_rol="Test Role", descripcion="Rol para testing", estado=True
         )
 
         # Crear empleado de prueba
@@ -37,7 +37,7 @@ class AuthenticationServiceTest(TransactionTestCase):
             contrasena_hash=AuthenticationService._hash_password(self.password),
             id_rol=self.rol_test,
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.ip_address = "127.0.0.1"
@@ -211,7 +211,7 @@ class LoginTest(AuthenticationServiceTest):
 
     def test_login_empleado_inactivo(self):
         """Login con empleado inactivo"""
-        self.empleado.activo = False
+        self.empleado.estado = False
         self.empleado.save()
 
         resultado = AuthenticationService.login(
@@ -226,13 +226,13 @@ class LoginTest(AuthenticationServiceTest):
 
     def test_login_cuenta_bloqueada(self):
         """Login con cuenta bloqueada"""
-        # Crear bloqueo activo
+        # Crear bloqueo estado
         BloqueosCuenta.objects.create(
             id_empleado=self.empleado,
             fecha_bloqueo=timezone.now(),
             fecha_desbloqueo=timezone.now() + timedelta(minutes=30),
             motivo="Test bloqueo",
-            activo=True,
+            estado=True,
         )
 
         resultado = AuthenticationService.login(
@@ -257,7 +257,7 @@ class LoginTest(AuthenticationServiceTest):
             )
 
         # Verificar que la cuenta está bloqueada
-        bloqueo = BloqueosCuenta.objects.filter(id_empleado=self.empleado, activo=True).first()
+        bloqueo = BloqueosCuenta.objects.filter(id_empleado=self.empleado, estado=True).first()
 
         self.assertIsNotNone(bloqueo)
         self.assertIn("intentos fallidos", bloqueo.motivo.lower())
@@ -483,13 +483,13 @@ class AccountLockingTest(AuthenticationServiceTest):
         self.assertIsNone(mensaje)
 
     def test_verificar_cuenta_bloqueada_activa(self):
-        """Cuenta con bloqueo activo y vigente"""
+        """Cuenta con bloqueo estado y vigente"""
         BloqueosCuenta.objects.create(
             id_empleado=self.empleado,
             fecha_bloqueo=timezone.now(),
             fecha_desbloqueo=timezone.now() + timedelta(minutes=30),
             motivo="Test",
-            activo=True,
+            estado=True,
         )
 
         bloqueada, mensaje = AuthenticationService.verificar_cuenta_bloqueada(self.empleado)
@@ -505,7 +505,7 @@ class AccountLockingTest(AuthenticationServiceTest):
             fecha_bloqueo=timezone.now() - timedelta(hours=1),
             fecha_desbloqueo=timezone.now() - timedelta(minutes=1),
             motivo="Test",
-            activo=True,
+            estado=True,
         )
 
         bloqueada, mensaje = AuthenticationService.verificar_cuenta_bloqueada(self.empleado)
@@ -514,4 +514,4 @@ class AccountLockingTest(AuthenticationServiceTest):
 
         # Verificar que el bloqueo se marcó como inactivo
         bloqueo = BloqueosCuenta.objects.get(id_empleado=self.empleado)
-        self.assertFalse(bloqueo.activo)
+        self.assertFalse(bloqueo.estado)

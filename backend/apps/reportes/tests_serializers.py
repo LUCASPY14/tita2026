@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para serializers de reportes
 Cubre validación de datos, serialización y deserialización de reportes
 """
@@ -32,7 +32,7 @@ class BaseReportesSerializerTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Analista Reportes',
             descripcion='Rol de analista',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -59,7 +59,7 @@ class PlantillasReporteSerializerTest(BaseReportesSerializerTest):
             },
             'tipo_reporte': 'ventas',
             'frecuencia': 'mensual',
-            'activo': True
+            'estado': True
         }
         
         # Crear instancia para validar estructura
@@ -74,7 +74,7 @@ class PlantillasReporteSerializerTest(BaseReportesSerializerTest):
             self.assertEqual(plantilla.nombre, valid_data['nombre'])
             self.assertEqual(plantilla.query_sql, valid_data['query_sql'])
             self.assertEqual(plantilla.parametros, valid_data['parametros'])
-            self.assertTrue(plantilla.activo)
+            self.assertTrue(plantilla.estado)
             
         except Exception as e:
             self.fail(f"Datos válidos fallaron validación: {e}")
@@ -234,7 +234,7 @@ class PlantillasReporteSerializerTest(BaseReportesSerializerTest):
             parametros={'formato_fecha': 'string'},
             tipo_reporte='test',
             frecuencia='manual',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             created_by=self.empleado
         )
@@ -246,7 +246,7 @@ class PlantillasReporteSerializerTest(BaseReportesSerializerTest):
             'descripcion': 'Test de formato de output',
             'tipo_reporte': 'test',
             'frecuencia': 'manual',
-            'activo': True,
+            'estado': True,
             'parametros': {'formato_fecha': 'string'},
             'created_by': {
                 'id_empleado': self.empleado.id_empleado,
@@ -324,7 +324,7 @@ class DashboardsSerializerTest(BaseReportesSerializerTest):
             configuracion=configuracion_valida,
             es_publico=1,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -387,7 +387,7 @@ class DashboardsSerializerTest(BaseReportesSerializerTest):
             configuracion={'widgets': []},
             es_publico=1,  # Público
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -399,7 +399,7 @@ class DashboardsSerializerTest(BaseReportesSerializerTest):
             configuracion={'widgets': []},
             es_publico=0,  # Privado
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -421,7 +421,7 @@ class DashboardsSerializerTest(BaseReportesSerializerTest):
             configuracion={},
             es_publico=1,
             predeterminado=1,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -432,7 +432,7 @@ class DashboardsSerializerTest(BaseReportesSerializerTest):
             configuracion={},
             es_publico=1,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -469,7 +469,7 @@ class KpiMetricasSerializerTest(BaseReportesSerializerTest):
             meta_valor=1000000.00,
             categoria='ventas',
             frecuencia_actualizacion='diario',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -492,7 +492,7 @@ class KpiMetricasSerializerTest(BaseReportesSerializerTest):
             meta_valor=1500.00,
             categoria='operaciones',
             frecuencia_actualizacion='diario',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -519,7 +519,7 @@ class KpiMetricasSerializerTest(BaseReportesSerializerTest):
                 unidad_medida='test',
                 categoria='test',
                 frecuencia_actualizacion=frecuencia,
-                activo=True,
+                estado=True,
                 created_at=timezone.now(),
                 id_empleado=self.empleado
             )
@@ -590,7 +590,7 @@ class PlantillasTareaSerializerTest(BaseReportesSerializerTest):
                 nombre=f'Tarea Cron {i}',
                 configuracion_programacion=config_programacion,
                 configuracion_envio={'email': True},
-                activo=True,
+                estado=True,
                 created_at=timezone.now(),
                 id_empleado=self.empleado
             )
@@ -634,7 +634,7 @@ class PlantillasTareaSerializerTest(BaseReportesSerializerTest):
             nombre='Envío Válido',
             configuracion_programacion={'tipo': 'manual'},
             configuracion_envio=config_envio_valida,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -659,7 +659,7 @@ class PlantillasTareaSerializerTest(BaseReportesSerializerTest):
             nombre='Tarea con Destinatarios',
             configuracion_programacion={'tipo': 'manual'},
             configuracion_envio={'email': True},
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -709,7 +709,7 @@ class EjecucionesTareaSerializerTest(BaseReportesSerializerTest):
             nombre='Tarea para Ejecuciones',
             configuracion_programacion={'tipo': 'manual'},
             configuracion_envio={'email': False},
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -731,7 +731,7 @@ class EjecucionesTareaSerializerTest(BaseReportesSerializerTest):
             nombre='Tarea Timing Test',
             configuracion_programacion={'tipo': 'manual'},
             configuracion_envio={},
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -765,7 +765,7 @@ class EjecucionesTareaSerializerTest(BaseReportesSerializerTest):
             nombre='Tarea con Resultados',
             configuracion_programacion={'tipo': 'manual'},
             configuracion_envio={},
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -830,7 +830,7 @@ class ReportesSerializersIntegrationTest(BaseReportesSerializerTest):
             parametros={},
             tipo_reporte='ventas',
             frecuencia='diario',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             created_by=self.empleado
         )
@@ -857,7 +857,7 @@ class ReportesSerializersIntegrationTest(BaseReportesSerializerTest):
             configuracion=dashboard_config,
             es_publico=1,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -871,7 +871,7 @@ class ReportesSerializersIntegrationTest(BaseReportesSerializerTest):
                 'expresion': '0 9 * * 1-5'  # Lunes a viernes a las 9 AM
             },
             configuracion_envio={'email': True, 'formato': 'pdf'},
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )

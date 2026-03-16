@@ -1,4 +1,4 @@
-"""
+﻿"""
 Views para gestión completa de usuarios con seguridad empresarial
 Incluye: Autenticación, 2FA, Permisos, Sesiones, Recuperación de contraseñas
 """
@@ -528,7 +528,7 @@ class PermisosViewSet(viewsets.ViewSet):
 
         GET /api/v1/permisos/listar/
         """
-        permisos = Permisos.objects.filter(activo=True).values(
+        permisos = Permisos.objects.filter(estado=True).values(
             "id", "codigo_permiso", "nombre", "modulo", "descripcion"
         )
 
@@ -648,7 +648,7 @@ class RolesViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = None
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ["activo"]
+    filterset_fields = ["estado"]
     search_fields = ["nombre_rol"]
 
     @action(detail=True, methods=["get"])
@@ -701,7 +701,7 @@ class EmpleadosViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = None
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["activo", "id_rol"]
+    filterset_fields = ["estado", "id_rol"]
     search_fields = ["nombre", "apellido", "usuario", "email"]
     ordering_fields = ["apellido", "nombre"]
     ordering = ["apellido", "nombre"]
@@ -871,7 +871,7 @@ class UsuariosPortalViewSet(viewsets.ModelViewSet):
     serializer_class = UsuariosPortalSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ["activo", "id_cliente"]
+    filterset_fields = ["estado", "id_cliente"]
     search_fields = ["email"]
 
 

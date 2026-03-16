@@ -335,10 +335,10 @@ class ValidadoresJerarquiaCategoriaTestCase(TestCase):
 
     def setUp(self):
         """Configurar categorías de prueba"""
-        self.padre = Categorias.objects.create(id_categoria=1, nombre="Bebidas", activo=True)
+        self.padre = Categorias.objects.create(id_categoria=1, nombre="Bebidas", estado=True)
 
         self.hija = Categorias.objects.create(
-            id_categoria=2, nombre="Gaseosas", activo=True, id_categoria_padre=self.padre
+            id_categoria=2, nombre="Gaseosas", estado=True, id_categoria_padre=self.padre
         )
 
     def test_jerarquia_valida(self):
@@ -699,14 +699,14 @@ class ValidadoresConModelosTestCase(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         # Crear unidad de medida
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", estado=True)
 
     def test_validar_producto_unico_nuevo(self):
         """Test: Validar que un producto nuevo sea único"""
@@ -753,11 +753,11 @@ class ValidadoresConModelosTestCase(TestCase):
 
     def test_validar_categoria_activa_con_productos_existentes(self):
         """Test: No desactivar categoría con productos activos"""
-        # Crear producto activo en la categoría
+        # Crear producto estado en la categoría
         Productos.objects.create(
             descripcion="Producto Test",
             stock_minimo=Decimal("0"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -767,15 +767,15 @@ class ValidadoresConModelosTestCase(TestCase):
         with self.assertRaises(ValidationError) as context:
             validar_categoria_activa_con_productos(self.categoria)
 
-        self.assertIn("producto(s) activo(s)", str(context.exception))
+        self.assertIn("producto(s) estado(s)", str(context.exception))
 
     def test_validar_unidad_activa_con_productos_existentes(self):
         """Test: No desactivar unidad con productos activos"""
-        # Crear producto activo con esta unidad
+        # Crear producto estado con esta unidad
         Productos.objects.create(
             descripcion="Producto Test",
             stock_minimo=Decimal("0"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -785,4 +785,4 @@ class ValidadoresConModelosTestCase(TestCase):
         with self.assertRaises(ValidationError) as context:
             validar_unidad_activa_con_productos(self.unidad)
 
-        self.assertIn("producto(s) activo(s)", str(context.exception))
+        self.assertIn("producto(s) estado(s)", str(context.exception))

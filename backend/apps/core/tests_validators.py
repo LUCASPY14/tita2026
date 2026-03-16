@@ -945,7 +945,7 @@ class ValidadoresUnicidadRolOperacionTestCase(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol="Cajero",
             descripcion="Rol de cajero",
-            activo=True,
+            estado=True,
             fecha_creacion=datetime.now(),
         )
 
@@ -954,7 +954,7 @@ class ValidadoresUnicidadRolOperacionTestCase(TestCase):
             id_rol=self.rol,
             tipo_operacion="venta",
             monto_maximo_sin_autorizacion=Decimal("100000.00"),
-            activo=True,
+            estado=True,
         )
 
     def test_unicidad_nuevo_limite_diferente_operacion(self):

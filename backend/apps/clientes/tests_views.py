@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para views de clientes
 Cubre ViewSets y vistas de funcionalidad para clientes
 """
@@ -48,12 +48,12 @@ class ClientesViewSetTest(APITestCase):
         # Crear datos de prueba
         self.tipo_cliente = TiposCliente.objects.create(
             nombre_tipo='Cliente Regular',
-            activo=True
+            estado=True
         )
 
         self.lista = ListasPrecios.objects.create(
             nombre_lista='Lista Test Vistas',
-            activo=True
+            estado=True
         )
         
         self.cliente = Clientes.objects.create(
@@ -61,7 +61,7 @@ class ClientesViewSetTest(APITestCase):
             apellidos='Pérez',
             ruc_ci='12345678',
             email='juan@test.com',
-            activo=True,
+            estado=True,
             id_tipo_cliente=self.tipo_cliente,
             id_lista=self.lista
         )
@@ -71,7 +71,7 @@ class ClientesViewSetTest(APITestCase):
             apellidos='González',
             ruc_ci='87654321',
             email='maria@test.com',
-            activo=True,
+            estado=True,
             id_tipo_cliente=self.tipo_cliente,
             id_lista=self.lista
         )
@@ -90,7 +90,7 @@ class ClientesViewSetTest(APITestCase):
         self.assertIn(filters.OrderingFilter, viewset.filter_backends)
         
         # Verificar campos de filtrado
-        self.assertEqual(viewset.filterset_fields, ["activo", "id_tipo_cliente"])
+        self.assertEqual(viewset.filterset_fields, ["estado", "id_tipo_cliente"])
         self.assertEqual(viewset.search_fields, ["nombres", "apellidos", "ruc_ci", "email"])
         self.assertEqual(viewset.ordering, ["apellidos", "nombres"])
 
@@ -130,7 +130,7 @@ class ClientesViewSetTest(APITestCase):
             'apellidos': 'Cliente',
             'ruc_ci': '11111111',
             'email': 'nuevo@test.com',
-            'activo': True,
+            'estado': True,
             'id_tipo_cliente': self.tipo_cliente.pk,
             'id_lista': self.lista.pk
         }
@@ -150,7 +150,7 @@ class ClientesViewSetTest(APITestCase):
             'apellidos': self.cliente.apellidos,
             'ruc_ci': self.cliente.ruc_ci,
             'email': self.cliente.email,
-            'activo': True,
+            'estado': True,
             'id_tipo_cliente': self.cliente.id_tipo_cliente.pk,
             'id_lista': self.lista.pk
         }
@@ -170,7 +170,7 @@ class ClientesViewSetTest(APITestCase):
         self.assertIn(response.status_code, [204, 403])
 
     def test_clientes_filtering_by_activo(self):
-        """Debe filtrar clientes por estado activo"""
+        """Debe filtrar clientes por estado estado"""
         self.client.force_authenticate(user=self.admin_user)
         
         # Crear cliente inactivo
@@ -179,18 +179,18 @@ class ClientesViewSetTest(APITestCase):
             apellidos='Cliente',
             ruc_ci='99999999',
             email='inactivo@test.com',
-            activo=False,
+            estado=False,
             id_tipo_cliente=self.tipo_cliente
         )
         
         url = reverse('clientes-list')
         
         # Filtrar por activos
-        response = self.client.get(url, {'activo': 'true'})
+        response = self.client.get(url, {'estado': 'true'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # Filtrar por inactivos
-        response = self.client.get(url, {'activo': 'false'})
+        response = self.client.get(url, {'estado': 'false'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_clientes_search_functionality(self):
@@ -264,7 +264,7 @@ class ClientesViewSetTest(APITestCase):
             'apellidos': 'User',
             'ruc_ci': '12345678',  # RUC duplicado
             'email': 'test@test.com',
-            'activo': True,
+            'estado': True,
             'id_tipo_cliente': self.tipo_cliente.pk
         }
         
@@ -304,7 +304,7 @@ class HijosViewSetTest(APITestCase):
         # Crear datos de prueba
         self.tipo_cliente = TiposCliente.objects.create(
             nombre_tipo='Cliente Regular',
-            activo=True
+            estado=True
         )
         
         self.cliente = Clientes.objects.create(
@@ -312,7 +312,7 @@ class HijosViewSetTest(APITestCase):
             apellidos='Pérez',
             ruc_ci='12345678',
             email='juan@test.com',
-            activo=True,
+            estado=True,
             id_tipo_cliente=self.tipo_cliente
         )
         
@@ -320,7 +320,7 @@ class HijosViewSetTest(APITestCase):
             nombre_grado='Primer Grado',
             nivel=1,
             orden_visualizacion=1,
-            activo=True
+            estado=True
         )
         
         self.hijo = Hijos.objects.create(
@@ -328,7 +328,7 @@ class HijosViewSetTest(APITestCase):
             apellido='Pérez',
             id_cliente_responsable=self.cliente,
             grado='Primer Grado',
-            activo=True
+            estado=True
         )
 
     def test_hijos_viewset_configuration(self):
@@ -340,7 +340,7 @@ class HijosViewSetTest(APITestCase):
         self.assertEqual(viewset.serializer_class, HijosSerializer)
         
         # Verificar filtros
-        self.assertEqual(viewset.filterset_fields, ["activo", "grado", "id_cliente_responsable"])
+        self.assertEqual(viewset.filterset_fields, ["estado", "grado", "id_cliente_responsable"])
         self.assertEqual(viewset.search_fields, ["nombre", "apellido"])
         self.assertEqual(viewset.ordering, ["apellido", "nombre"])
 
@@ -379,7 +379,7 @@ class HijosViewSetTest(APITestCase):
             'apellido': 'Hijo',
             'id_cliente_responsable': self.cliente.pk,
             'grado': 'Primer Grado',
-            'activo': True
+            'estado': True
         }
         
         response = self.client.post(url, data)
@@ -435,7 +435,7 @@ class HijosViewSetTest(APITestCase):
             'nombre': 'Test',
             'apellido': 'Hijo',
             'grado': self.grado.pk,
-            'activo': True
+            'estado': True
             # Falta id_cliente_responsable
         }
         

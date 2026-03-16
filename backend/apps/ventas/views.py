@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+﻿from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
@@ -69,7 +69,7 @@ class VentasViewSet(viewsets.ModelViewSet):
         now = timezone.now()
         tarifa = (
             TarifasComision.objects.filter(
-                id_medio_pago=medio_pago, activo=True, fecha_inicio_vigencia__lte=now
+                id_medio_pago=medio_pago, estado=True, fecha_inicio_vigencia__lte=now
             )
             .filter(
                 models.Q(fecha_fin_vigencia__isnull=True) | models.Q(fecha_fin_vigencia__gte=now)
@@ -698,7 +698,7 @@ class PromocionesViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     throttle_classes = [BurstRateThrottle]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ["activo", "tipo_promocion"]
+    filterset_fields = ["estado", "tipo_promocion"]
     search_fields = ["nombre", "codigo_promocion"]
 
     @action(detail=False, methods=["post"])
@@ -779,7 +779,7 @@ class PromocionesViewSet(viewsets.ModelViewSet):
         ahora = timezone.now()
 
         promociones = (
-            Promociones.objects.filter(activo=True, fecha_inicio__lte=ahora.date())
+            Promociones.objects.filter(estado=True, fecha_inicio__lte=ahora.date())
             .filter(models.Q(fecha_fin__isnull=True) | models.Q(fecha_fin__gte=ahora.date()))
             .order_by("prioridad")
         )
@@ -868,7 +868,7 @@ class PromocionesViewSet(viewsets.ModelViewSet):
             {
                 "periodo": {"inicio": fecha_inicio, "fin": fecha_fin},
                 "resumen": {
-                    "total_promociones_activas": Promociones.objects.filter(activo=True).count(),
+                    "total_promociones_activas": Promociones.objects.filter(estado=True).count(),
                     "total_usos": resumen["total_usos"] or 0,
                     "total_descuentos": str(resumen["total_descuentos"] or 0),
                     "promedio_descuento_por_uso": str(resumen["promedio_descuento"] or 0),
@@ -935,7 +935,7 @@ class PromocionesViewSet(viewsets.ModelViewSet):
                     "tipo": promo.tipo_promocion,
                     "total_usos": promo.total_usos,
                     "total_descuentos": str(promo.total_descuentos or 0),
-                    "estado": "activa" if promo.activo else "inactiva",
+                    "estado": "activa" if promo.estado else "inactiva",
                 }
             )
 

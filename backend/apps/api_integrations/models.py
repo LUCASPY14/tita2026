@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app api_integrations
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
@@ -28,7 +28,7 @@ class ProveedoresApi(models.Model):
     config_auth = models.JSONField()
     timeout = models.IntegerField()
     max_reintentos = models.IntegerField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     created_at = models.DateTimeField()
 
     objects = ProveedoresApiManager()
@@ -64,7 +64,7 @@ class EndpointsApi(models.Model):
     schema_response = models.JSONField()
     cache_segundos = models.IntegerField()
     requiere_auth = models.IntegerField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     id_proveedor = models.ForeignKey("ProveedoresApi", models.DO_NOTHING, db_column="id_proveedor")
 
     objects = EndpointsApiManager()
@@ -136,7 +136,7 @@ class CredencialesApi(models.Model):
     configuracion = models.JSONField()
     fecha_expiracion = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     id_proveedor = models.ForeignKey("ProveedoresApi", models.DO_NOTHING, db_column="id_proveedor")
 
     def __str__(self):
@@ -182,7 +182,7 @@ class WebhookEndpoints(models.Model):
     header_verificacion = models.CharField(max_length=100)
     eventos = models.JSONField()
     handler_func = models.CharField(max_length=200)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     id_proveedor = models.ForeignKey("ProveedoresApi", models.DO_NOTHING, db_column="id_proveedor")
 

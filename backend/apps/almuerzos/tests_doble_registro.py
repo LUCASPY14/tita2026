@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests específicos para la lógica de doble registro de almuerzo
 Validación de regla: Máximo 2 registros por día, cobro solo del primero
 """
@@ -26,8 +26,8 @@ class ValidarLimiteRegistrosDiariosTest(TestCase):
     def setUp(self):
         """Crear datos de prueba"""
         # Crear lista de precios y tipo de cliente
-        lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         # Crear cliente
         cliente = Clientes.objects.create(
@@ -35,7 +35,7 @@ class ValidarLimiteRegistrosDiariosTest(TestCase):
             apellidos="Cliente",
             ruc_ci="1234567890",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
         )
@@ -45,7 +45,7 @@ class ValidarLimiteRegistrosDiariosTest(TestCase):
             nombre="Juan",
             apellido="Pérez",
             grado="1ro",
-            activo=True,
+            estado=True,
             id_cliente_responsable=cliente,
         )
 
@@ -65,7 +65,7 @@ class ValidarLimiteRegistrosDiariosTest(TestCase):
             precio_unitario=Decimal("15000"),
             incluye_plato_principal=True,
             fecha_creacion=date.today(),
-            activo=True,
+            estado=True,
         )
 
         self.fecha_hoy = date.today()
@@ -184,8 +184,8 @@ class DeterminarSiCobraTest(TestCase):
     def setUp(self):
         """Crear datos de prueba"""
         # Crear lista de precios y tipo de cliente
-        lista = ListasPrecios.objects.create(nombre_lista="Mayorista", activo=True)
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="VIP", activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Mayorista", estado=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="VIP", estado=True)
 
         # Crear cliente
         cliente = Clientes.objects.create(
@@ -193,7 +193,7 @@ class DeterminarSiCobraTest(TestCase):
             apellidos="Cliente2",
             ruc_ci="0987654321",
             limite_credito=Decimal("1000.00"),
-            activo=True,
+            estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
         )
@@ -203,7 +203,7 @@ class DeterminarSiCobraTest(TestCase):
             nombre="María",
             apellido="López",
             grado="2do",
-            activo=True,
+            estado=True,
             id_cliente_responsable=cliente,
         )
 
@@ -223,7 +223,7 @@ class DeterminarSiCobraTest(TestCase):
             precio_unitario=Decimal("12000"),
             incluye_plato_principal=True,
             fecha_creacion=date.today(),
-            activo=True,
+            estado=True,
         )
 
         self.fecha_hoy = date.today()
@@ -277,8 +277,8 @@ class IntegracionRegistrosConsumoTest(TestCase):
     def setUp(self):
         """Crear ambiente completo"""
         # Crear lista de precios y tipo de cliente
-        lista = ListasPrecios.objects.create(nombre_lista="Escolar", activo=True)
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Estudiante", activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Escolar", estado=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Estudiante", estado=True)
 
         # Crear cliente
         cliente = Clientes.objects.create(
@@ -286,7 +286,7 @@ class IntegracionRegistrosConsumoTest(TestCase):
             apellidos="Mendez",
             ruc_ci="1122334455",
             limite_credito=Decimal("800.00"),
-            activo=True,
+            estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
         )
@@ -296,7 +296,7 @@ class IntegracionRegistrosConsumoTest(TestCase):
             nombre="Pedro",
             apellido="Mendez",
             grado="3ro",
-            activo=True,
+            estado=True,
             id_cliente_responsable=cliente,
         )
 
@@ -318,7 +318,7 @@ class IntegracionRegistrosConsumoTest(TestCase):
             incluye_postre=True,
             incluye_bebida=True,
             fecha_creacion=date.today(),
-            activo=True,
+            estado=True,
         )
 
         self.fecha = date.today()

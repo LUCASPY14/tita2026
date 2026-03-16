@@ -1,4 +1,4 @@
-"""
+﻿"""
 Additional coverage tests for apps/usuarios/signals.py.
 
 Missing branch/line targets:
@@ -59,7 +59,7 @@ class SerializarModeloExplicitCamposExcluirTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol="SerCovTest",
             descripcion="Test",
-            activo=True,
+            estado=True,
         )
 
     def test_serializar_con_campos_excluir_explicito(self):
@@ -71,7 +71,7 @@ class SerializarModeloExplicitCamposExcluirTest(TestCase):
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
             email="sercov@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
         # Pass campos_excluir explicitly → `if campos_excluir is None:` is False (branch 68->71)
@@ -122,7 +122,7 @@ class BloqueoPostSaveObtenerIPExceptionTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol="BloqueoIPExcTest",
             descripcion="Test",
-            activo=True,
+            estado=True,
         )
 
     def test_bloqueo_post_save_370_exit_via_empleado_exception(self):
@@ -135,18 +135,18 @@ class BloqueoPostSaveObtenerIPExceptionTest(TestCase):
             tipo_usuario="empleado",
             motivo="Test motivo",
             fecha_bloqueo=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         with patch(
             "apps.usuarios.signals.obtener_empleado_actual",
             side_effect=Exception("empleado fetch error"),
         ):
-            bloqueo.activo = False
+            bloqueo.estado = False
             bloqueo.save()
 
         bloqueo.refresh_from_db()
-        self.assertFalse(bloqueo.activo)
+        self.assertFalse(bloqueo.estado)
 
     def test_bloqueo_post_save_normal_success_path(self):
         """370->exit (success): desbloqueo audit runs successfully — normal function exit."""
@@ -157,13 +157,13 @@ class BloqueoPostSaveObtenerIPExceptionTest(TestCase):
             tipo_usuario="empleado",
             motivo="Bloqueo de prueba",
             fecha_bloqueo=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         # No patches — AuditoriaOperaciones.create() runs successfully
         # empleado_actual=None → usuario="sistema", id_usuario=None → valid
-        bloqueo.activo = False
+        bloqueo.estado = False
         bloqueo.save()
 
         bloqueo.refresh_from_db()
-        self.assertFalse(bloqueo.activo)
+        self.assertFalse(bloqueo.estado)

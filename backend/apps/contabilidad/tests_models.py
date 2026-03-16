@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para modelos de contabilidad
 Cubre validaciones, relaciones y funcionalidad de modelos contables
 """
@@ -36,32 +36,32 @@ class CajasModelTest(TestCase):
         caja = Cajas.objects.create(
             nombre_caja='Caja Principal',
             ubicacion='Planta Baja - Sector A',
-            activo=True
+            estado=True
         )
         
         self.assertEqual(caja.nombre_caja, 'Caja Principal')
         self.assertEqual(caja.ubicacion, 'Planta Baja - Sector A')
-        self.assertTrue(caja.activo)
+        self.assertTrue(caja.estado)
 
     def test_caja_nombre_obligatorio(self):
         """Debe requerir nombre_caja"""
         with self.assertRaises(ValidationError):
-            caja = Cajas(ubicacion='Test', activo=True)
+            caja = Cajas(ubicacion='Test', estado=True)
             caja.full_clean()
 
     def test_caja_ubicacion_opcional(self):
         """Debe permitir ubicacion como None"""
         caja = Cajas.objects.create(
             nombre_caja='Caja Sin Ubicación',
-            activo=True
+            estado=True
         )
         
         self.assertIsNone(caja.ubicacion)
 
     def test_caja_activo_default_true(self):
-        """Debe tener activo=True por defecto"""
+        """Debe tener estado=True por defecto"""
         caja = Cajas.objects.create(nombre_caja='Caja Default')
-        self.assertTrue(caja.activo)
+        self.assertTrue(caja.estado)
 
     def test_caja_string_representation(self):
         """Debe retornar representación string correcta"""
@@ -74,7 +74,7 @@ class CajasModelTest(TestCase):
         long_name = 'x' * 51  # Excede max_length=50
         
         with self.assertRaises(ValidationError):
-            caja = Cajas(nombre_caja=long_name, activo=True)
+            caja = Cajas(nombre_caja=long_name, estado=True)
             caja.full_clean()
 
 
@@ -86,14 +86,14 @@ class CierresCajaModelTest(TestCase):
         # Crear caja
         self.caja = Cajas.objects.create(
             nombre_caja='Caja Test',
-            activo=True
+            estado=True
         )
         
         # Crear empleado
         self.rol = Roles.objects.create(
             nombre_rol='Cajero',
             descripcion='Rol de cajero',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -202,7 +202,7 @@ class MovimientosCajaModelTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Cajero',
             descripcion='Rol cajero',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -225,7 +225,7 @@ class MovimientosCajaModelTest(TestCase):
         self.medio_pago = MediosPago.objects.create(
             nombre='Efectivo',
             descripcion='Pago en efectivo',
-            activo=True
+            estado=True
         )
 
     def test_crear_movimiento_caja_valido(self):
@@ -318,7 +318,7 @@ class TarifasComisionModelTest(TestCase):
         self.medio_pago = MediosPago.objects.create(
             nombre='Tarjeta Crédito',
             descripcion='Pago con tarjeta de crédito',
-            activo=True
+            estado=True
         )
 
     def test_crear_tarifa_comision_valida(self):
@@ -327,13 +327,13 @@ class TarifasComisionModelTest(TestCase):
             fecha_inicio_vigencia=timezone.now(),
             porcentaje_comision=Decimal('3.5000'),
             monto_fijo_comision=Decimal('1000.00'),
-            activo=True,
+            estado=True,
             id_medio_pago=self.medio_pago
         )
         
         self.assertEqual(tarifa.porcentaje_comision, Decimal('3.5000'))
         self.assertEqual(tarifa.monto_fijo_comision, Decimal('1000.00'))
-        self.assertTrue(tarifa.activo)
+        self.assertTrue(tarifa.estado)
 
     def test_tarifa_comision_vigencia_fechas(self):
         """Debe manejar fechas de vigencia correctamente"""
@@ -381,14 +381,14 @@ class TarifasComisionModelTest(TestCase):
         self.assertIsNone(tarifa.monto_fijo_comision)
 
     def test_tarifa_comision_activo_default(self):
-        """Debe tener activo=True por defecto"""
+        """Debe tener estado=True por defecto"""
         tarifa = TarifasComision.objects.create(
             fecha_inicio_vigencia=timezone.now(),
             porcentaje_comision=Decimal('1.5000'),
             id_medio_pago=self.medio_pago
         )
         
-        self.assertTrue(tarifa.activo)
+        self.assertTrue(tarifa.estado)
 
     def test_tarifa_comision_string_representation(self):
         """Debe retornar representación string correcta"""
@@ -410,7 +410,7 @@ class AuditoriaComisionesModelTest(TestCase):
         self.medio_pago = MediosPago.objects.create(
             nombre='Débito',
             descripcion='Tarjeta débito',
-            activo=True
+            estado=True
         )
 
         self.tarifa = TarifasComision.objects.create(
@@ -422,7 +422,7 @@ class AuditoriaComisionesModelTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Admin',
             descripcion='Administrador',
-            activo=True
+            estado=True
         )
 
         self.empleado = Empleados.objects.create(
@@ -496,12 +496,12 @@ class ImpuestosModelTest(TestCase):
             nombre_impuesto='IVA',
             porcentaje=Decimal('10.00'),
             vigente_desde=date.today(),
-            activo=True
+            estado=True
         )
         
         self.assertEqual(impuesto.nombre_impuesto, 'IVA')
         self.assertEqual(impuesto.porcentaje, Decimal('10.00'))
-        self.assertTrue(impuesto.activo)
+        self.assertTrue(impuesto.estado)
 
     def test_impuesto_nombre_unico(self):
         """Debe validar unicidad de nombre_impuesto"""
@@ -555,14 +555,14 @@ class ImpuestosModelTest(TestCase):
         self.assertIsNone(impuesto.vigente_hasta)
 
     def test_impuesto_activo_default(self):
-        """Debe tener activo=True por defecto"""
+        """Debe tener estado=True por defecto"""
         impuesto = Impuestos.objects.create(
             nombre_impuesto='Default',
             porcentaje=Decimal('8.00'),
             vigente_desde=date.today()
         )
         
-        self.assertTrue(impuesto.activo)
+        self.assertTrue(impuesto.estado)
 
     def test_impuesto_string_representation(self):
         """Debe retornar representación string correcta"""
@@ -591,7 +591,7 @@ class PuntosExpedicionModelTest(TestCase):
             codigo_establecimiento='001',
             codigo_punto_expedicion='001',
             descripcion_ubicacion='Local Principal - Av. Central',
-            activo=True
+            estado=True
         )
         
         self.assertEqual(punto.codigo_establecimiento, '001')
@@ -636,13 +636,13 @@ class PuntosExpedicionModelTest(TestCase):
         self.assertIsNone(punto.descripcion_ubicacion)
 
     def test_punto_expedicion_activo_default(self):
-        """Debe tener activo=True por defecto"""
+        """Debe tener estado=True por defecto"""
         punto = PuntosExpedicion.objects.create(
             codigo_establecimiento='004',
             codigo_punto_expedicion='001'
         )
         
-        self.assertTrue(punto.activo)
+        self.assertTrue(punto.estado)
 
     def test_punto_expedicion_string_representation(self):
         """Debe retornar representación string correcta"""
@@ -668,7 +668,7 @@ class DatosEmpresaModelTest(TestCase):
             pais='Paraguay',
             telefono='+595 21 123456',
             email='info@cantinatita.com',
-            activo=True
+            estado=True
         )
         
         self.assertEqual(empresa.ruc, '80001234-5')
@@ -700,13 +700,13 @@ class DatosEmpresaModelTest(TestCase):
         self.assertIsNone(empresa.email)
 
     def test_datos_empresa_activo_default(self):
-        """Debe tener activo=True por defecto"""
+        """Debe tener estado=True por defecto"""
         empresa = DatosEmpresa.objects.create(
             ruc='11111111-1',
-            razon_social='Default Activo'
+            razon_social='Default estado'
         )
         
-        self.assertTrue(empresa.activo)
+        self.assertTrue(empresa.estado)
 
     def test_datos_empresa_string_representation(self):
         """Debe retornar representación string correcta"""
@@ -747,7 +747,7 @@ class ContabilidadModelsIntegrationTest(TestCase):
             nro_inicial=1,
             nro_final=10000,
             es_electronico=1,
-            activo=True,
+            estado=True,
             id_punto=self.punto_expedicion
         )
         
@@ -858,7 +858,7 @@ class ContabilidadModelsStrTest(TestCase):
             nro_inicial=1,
             nro_final=9999,
             es_electronico=1,
-            activo=True,
+            estado=True,
             id_punto=self.punto_expedicion,
         )
 

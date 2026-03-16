@@ -1,4 +1,4 @@
-"""Extended tests for apps/productos/admin.py - covers custom display methods."""
+﻿"""Extended tests for apps/productos/admin.py - covers custom display methods."""
 from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch, PropertyMock
@@ -81,13 +81,13 @@ class CategoriasAdminTest(TestCase):
         self.assertEqual(result, "0 productos")
 
     def test_estado_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
-        self.assertIn("ACTIVO", result)
+        self.assertIn("estado", result)
         self.assertIn("28a745", result)
 
     def test_estado_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("INACTIVO", result)
 
@@ -108,7 +108,7 @@ class CategoriasAdminTest(TestCase):
         queryset = MagicMock()
         queryset.update.return_value = 3
         self.admin.activar_categorias(request, queryset)
-        queryset.update.assert_called_once_with(activo=True)
+        queryset.update.assert_called_once_with(estado=True)
         request.assert_not_called()  # message_user is called on admin
 
     def test_desactivar_categorias_sin_productos_activos(self):
@@ -117,7 +117,7 @@ class CategoriasAdminTest(TestCase):
         cat1.productos.filter.return_value.count.return_value = 0
         queryset = [cat1]
         self.admin.desactivar_categorias(request, queryset)
-        self.assertTrue(cat1.activo == False or cat1.save.called)
+        self.assertTrue(cat1.estado == False or cat1.save.called)
 
     def test_desactivar_categorias_con_productos_activos(self):
         request = MagicMock()
@@ -155,12 +155,12 @@ class UnidadesMedidaAdminTest(TestCase):
         self.assertEqual(result, "0 productos")
 
     def test_estado_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
-        self.assertIn("ACTIVO", result)
+        self.assertIn("estado", result)
 
     def test_estado_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("INACTIVO", result)
 
@@ -239,12 +239,12 @@ class ProductosAdminTest(TestCase):
         self.assertIn("❌", result)
 
     def test_estado_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
-        self.assertIn("ACTIVO", result)
+        self.assertIn("estado", result)
 
     def test_estado_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("INACTIVO", result)
 
@@ -253,14 +253,14 @@ class ProductosAdminTest(TestCase):
         queryset = MagicMock()
         queryset.update.return_value = 2
         self.admin.activar_productos(request, queryset)
-        queryset.update.assert_called_once_with(activo=True)
+        queryset.update.assert_called_once_with(estado=True)
 
     def test_desactivar_productos(self):
         request = MagicMock()
         queryset = MagicMock()
         queryset.update.return_value = 1
         self.admin.desactivar_productos(request, queryset)
-        queryset.update.assert_called_once_with(activo=False)
+        queryset.update.assert_called_once_with(estado=False)
 
     def test_duplicar_producto_mas_de_uno(self):
         request = MagicMock()
@@ -279,7 +279,7 @@ class ProductosAdminTest(TestCase):
         self.admin.duplicar_producto(request, queryset)
         producto.save.assert_called_once()
         self.assertEqual(producto.descripcion, "Café (Copia)")
-        self.assertFalse(producto.activo)
+        self.assertFalse(producto.estado)
         self.assertIsNone(producto.codigo_barra)
 
 
@@ -346,12 +346,12 @@ class ListasPreciosAdminTest(TestCase):
         self.assertEqual(result, "0 precios")
 
     def test_estado_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("ACTIVA", result)
 
     def test_estado_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("INACTIVA", result)
 

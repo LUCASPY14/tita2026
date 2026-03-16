@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para modelos de la app clientes
 Sprint 2 - Backend Coverage Improvement
 """
@@ -19,7 +19,7 @@ class ClientesModelTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol
-        self.rol = Roles.objects.create(nombre_rol="Vendedor", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Vendedor", estado=True)
 
         # Crear empleado
         self.empleado = Empleados.objects.create(
@@ -28,21 +28,21 @@ class ClientesModelTest(TestCase):
             usuario="ana.garcia",
             email="ana@example.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
         # Crear lista de precios
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Minorista", moneda="PYG", activo=True
+            nombre_lista="Lista Minorista", moneda="PYG", estado=True
         )
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Mayorista", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Mayorista", estado=True)
 
         # Crear medio de pago
         self.medio_pago = MediosPago.objects.create(
-            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, activo=True
+            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, estado=True
         )
 
         # Crear cliente
@@ -51,7 +51,7 @@ class ClientesModelTest(TestCase):
             apellidos="Mendoza",
             ruc_ci="5555555555",
             limite_credito=Decimal("1000000.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -166,16 +166,16 @@ class HijosModelTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Estudiantes", moneda="PYG", activo=True
+            nombre_lista="Lista Estudiantes", moneda="PYG", estado=True
         )
 
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
 
         self.cliente = Clientes.objects.create(
             nombres="Luis",
             apellidos="Torres",
             ruc_ci="6666666666",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -185,7 +185,7 @@ class HijosModelTest(TestCase):
             apellido="Torres",
             fecha_nacimiento=timezone.datetime(2012, 4, 20).date(),
             grado="Séptimo Grado",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -206,7 +206,7 @@ class HijosModelTest(TestCase):
             nombre="Santiago",
             apellido="Torres",
             grado="Primer Grado",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -219,7 +219,7 @@ class HijosModelTest(TestCase):
     def test_str_method_sin_grado(self):
         """Test del método __str__ cuando no tiene grado"""
         hijo_sin_grado = Hijos.objects.create(
-            nombre="Mateo", apellido="Torres", activo=True, id_cliente_responsable=self.cliente
+            nombre="Mateo", apellido="Torres", estado=True, id_cliente_responsable=self.cliente
         )
 
         self.assertEqual(str(hijo_sin_grado), "Torres, Mateo (Sin grado)")
@@ -229,14 +229,14 @@ class ClientesEdgeCasesTest(TestCase):
     """Tests para casos borde de las propiedades de Clientes."""
 
     def setUp(self):
-        self.lista = ListasPrecios.objects.create(nombre_lista='Lista Edge', moneda='PYG', activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Tipo Edge', activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista='Lista Edge', moneda='PYG', estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Tipo Edge', estado=True)
 
     def test_credito_disponible_sin_limite(self):
         """credito_disponible retorna 0 cuando limite_credito es None."""
         cliente = Clientes.objects.create(
             nombres='Sin', apellidos='Limite', ruc_ci='9000001',
-            activo=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
         )
         self.assertEqual(cliente.credito_disponible, Decimal('0.00'))
         # porcentaje_credito_usado también retorna 0.00 cuando no hay limite
@@ -246,15 +246,15 @@ class ClientesEdgeCasesTest(TestCase):
         """tiene_credito_disponible es False si no hay limite_credito."""
         cliente = Clientes.objects.create(
             nombres='Sin', apellidos='Credito', ruc_ci='9000002',
-            activo=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
         )
         self.assertFalse(cliente.tiene_credito_disponible)
 
     def test_esta_activo_property(self):
-        """esta_activo retorna True cuando activo=True."""
+        """esta_activo retorna True cuando estado=True."""
         cliente = Clientes.objects.create(
             nombres='Act', apellidos='Ivo', ruc_ci='9000003',
-            activo=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
         )
         self.assertTrue(cliente.esta_activo)
 
@@ -263,14 +263,14 @@ class RestriccionesHijosTest(TestCase):
     """Tests para la propiedad es_critica de RestriccionesHijos."""
 
     def setUp(self):
-        self.lista = ListasPrecios.objects.create(nombre_lista='Lista RH', moneda='PYG', activo=True)
-        self.tipo = TiposCliente.objects.create(nombre_tipo='Tipo RH', activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista='Lista RH', moneda='PYG', estado=True)
+        self.tipo = TiposCliente.objects.create(nombre_tipo='Tipo RH', estado=True)
         self.cliente = Clientes.objects.create(
             nombres='Rest', apellidos='HijosTest', ruc_ci='9100001',
-            activo=True, id_lista=self.lista, id_tipo_cliente=self.tipo,
+            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo,
         )
         self.hijo = Hijos.objects.create(
-            nombre='Hijo', apellido='RH', activo=True,
+            nombre='Hijo', apellido='RH', estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -278,7 +278,7 @@ class RestriccionesHijosTest(TestCase):
         """es_critica retorna True cuando severidad es critica."""
         r = RestriccionesHijos.objects.create(
             tipo_restriccion='Alergia', severidad='critica',
-            activo=True, id_hijo=self.hijo,
+            estado=True, id_hijo=self.hijo,
         )
         self.assertTrue(r.es_critica)
 
@@ -286,6 +286,6 @@ class RestriccionesHijosTest(TestCase):
         """es_critica retorna False cuando severidad es Baja."""
         r = RestriccionesHijos.objects.create(
             tipo_restriccion='Intolerancia', severidad='Baja',
-            activo=True, id_hijo=self.hijo,
+            estado=True, id_hijo=self.hijo,
         )
         self.assertFalse(r.es_critica)

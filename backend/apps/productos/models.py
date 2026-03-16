@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app productos
 Gestión de productos, categorías, precios y unidades de medida
 """
@@ -25,14 +25,14 @@ class ProductosManager(models.Manager):
             from datetime import date
             impuesto, _ = Impuestos.objects.get_or_create(
                 nombre_impuesto='IVA 0%',
-                defaults={'porcentaje': 0, 'vigente_desde': date(2020, 1, 1), 'activo': True},
+                defaults={'porcentaje': 0, 'vigente_desde': date(2020, 1, 1), 'estado': True},
             )
             kwargs['id_impuesto'] = impuesto
         # Si no se provee id_categoria, crear/obtener una por defecto
         if 'id_categoria' not in kwargs and 'id_categoria_id' not in kwargs:
             categoria, _ = Categorias.objects.get_or_create(
                 nombre='General',
-                defaults={'activo': True},
+                defaults={'estado': True},
             )
             kwargs['id_categoria'] = categoria
         # Si es creación legacy, permitir stock negativo para evitar errores en tests
@@ -74,7 +74,7 @@ class Productos(models.Model):
     permite_stock_negativo = models.BooleanField(
         default=False, help_text="1 si permite vender sin stock"
     )
-    activo = models.BooleanField(default=True, help_text="1=Activo, 0=Inactivo")
+    estado = models.BooleanField(default=True, help_text="1=estado, 0=Inactivo")
     es_servicio = models.BooleanField(default=False, help_text="True si es un servicio (no requiere stock físico)")
     requiere_stock = models.BooleanField(default=True, help_text="False si no gestiona stock")
     id_categoria = models.ForeignKey(
@@ -154,7 +154,7 @@ class Categorias(models.Model):
     id_categoria = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, help_text="Nombre de la categoría")
     descripcion = models.TextField(blank=True, default="")
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     id_categoria_padre = models.ForeignKey(
         "self",
         models.DO_NOTHING,
@@ -196,7 +196,7 @@ class UnidadesMedida(models.Model):
     id_unidad_medida = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50, help_text="Nombre completo (Kilogramo, Litro)")
     abreviatura = models.CharField(max_length=10, help_text="Abreviatura (Kg, L)")
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     class Meta:
         managed = True
@@ -226,7 +226,7 @@ class ListasPrecios(models.Model):
         blank=True, null=True, help_text="Fecha desde la cual es válida"
     )
     moneda = models.CharField(max_length=3, default="PYG", help_text="Código de moneda (PYG, USD)")
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     class Meta:
         managed = True

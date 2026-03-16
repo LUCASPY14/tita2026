@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para views/viewsets de la app usuarios
 Cubre APIs, permisos, autenticación y endpoints customizados
 """
@@ -25,7 +25,7 @@ class RolesViewSetTest(APITestCase):
         self.rol = Roles.objects.create(
             nombre_rol="Administrador",
             descripcion="Rol de prueba",
-            activo=True
+            estado=True
         )
         
         # Crear empleado para autenticación
@@ -36,7 +36,7 @@ class RolesViewSetTest(APITestCase):
             contrasena_hash="$2b$12$hashedpassword",
             fecha_ingreso=timezone.now(),
             email="test@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol
         )
         
@@ -59,7 +59,7 @@ class RolesViewSetTest(APITestCase):
         data = {
             'nombre_rol': 'Nuevo Rol',
             'descripcion': 'Descripción del nuevo rol',
-            'activo': True
+            'estado': True
         }
         
         response = self.client.post(url, data, format='json')
@@ -69,7 +69,7 @@ class RolesViewSetTest(APITestCase):
         
         nuevo_rol = Roles.objects.get(nombre_rol='Nuevo Rol')
         self.assertEqual(nuevo_rol.descripcion, 'Descripción del nuevo rol')
-        self.assertTrue(nuevo_rol.activo)
+        self.assertTrue(nuevo_rol.estado)
 
     def test_crear_rol_sin_autenticacion(self):
         """Debe rechazar creación sin autenticación"""
@@ -104,7 +104,7 @@ class RolesViewSetTest(APITestCase):
         data = {
             'nombre_rol': 'Admin Actualizado',
             'descripcion': 'Descripción actualizada',
-            'activo': True
+            'estado': True
         }
         
         response = self.client.put(url, data, format='json')
@@ -127,21 +127,21 @@ class RolesViewSetTest(APITestCase):
         ])
 
     def test_filtrar_roles_activos(self):
-        """Debe filtrar roles por estado activo"""
+        """Debe filtrar roles por estado estado"""
         # Crear rol inactivo
         Roles.objects.create(
             nombre_rol="Rol Inactivo",
-            activo=False
+            estado=False
         )
         
         url = reverse('roles-list')
-        response = self.client.get(url, {'activo': 'true'})
+        response = self.client.get(url, {'estado': 'true'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # Solo debe retornar roles activos
         for rol in response.data:
-            self.assertTrue(rol['activo'])
+            self.assertTrue(rol['estado'])
 
     def test_buscar_roles(self):
         """Debe buscar roles por nombre"""
@@ -167,7 +167,7 @@ class EmpleadosViewSetTest(APITestCase):
         self.rol = Roles.objects.create(
             nombre_rol="Manager",
             descripcion="Rol de manager",
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -177,7 +177,7 @@ class EmpleadosViewSetTest(APITestCase):
             contrasena_hash="$2b$12$hashedpassword",
             fecha_ingreso=timezone.now(),
             email="juan@company.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol
         )
         
@@ -213,7 +213,7 @@ class EmpleadosViewSetTest(APITestCase):
             'contrasena_hash': 'hashedpassword123',
             'fecha_ingreso': timezone.now().isoformat(),
             'email': 'maria@company.com',
-            'activo': True,
+            'estado': True,
             'id_rol': self.rol.id_rol
         }
         
@@ -253,7 +253,7 @@ class EmpleadosViewSetTest(APITestCase):
             'usuario': 'jcmanager',
             'fecha_ingreso': self.empleado.fecha_ingreso.isoformat(),
             'email': 'juan.carlos@company.com',
-            'activo': True,
+            'estado': True,
             'id_rol': self.rol.id_rol
         }
         
@@ -279,7 +279,7 @@ class EmpleadosViewSetTest(APITestCase):
         ])
 
     def test_filtrar_empleados_activos(self):
-        """Debe filtrar empleados por estado activo"""
+        """Debe filtrar empleados por estado estado"""
         # Crear empleado inactivo
         Empleados.objects.create(
             nombre="Inactivo",
@@ -287,18 +287,18 @@ class EmpleadosViewSetTest(APITestCase):
             usuario="inactive",
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
-            activo=False,
+            estado=False,
             id_rol=self.rol
         )
         
         url = reverse('empleados-list')
-        response = self.client.get(url, {'activo': 'true'})
+        response = self.client.get(url, {'estado': 'true'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # Solo debe retornar empleados activos
         for empleado in response.data:
-            self.assertTrue(empleado['activo'])
+            self.assertTrue(empleado['estado'])
 
     def test_buscar_empleados(self):
         """Debe buscar empleados por nombre o apellido"""
@@ -348,7 +348,7 @@ class UsuariosPermissionsTest(TestCase):
         """Configurar datos de prueba"""
         self.rol = Roles.objects.create(
             nombre_rol="Tester",
-            activo=True
+            estado=True
         )
 
     def test_acceso_sin_autenticacion(self):

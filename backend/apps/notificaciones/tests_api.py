@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para ViewSets de notificaciones - API Tests
 """
 
@@ -34,10 +34,10 @@ class NotificacionesPortalViewSetTest(APITestCase):
         )
 
         # Crear cadena: TiposCliente -> Clientes -> UsuariosPortal
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular NApi", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular NApi", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Test", apellidos="NApi", ruc_ci="12340001",
-            activo=True, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_tipo_cliente=self.tipo_cliente,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
             email="portal_napi@cantina.com",
@@ -182,10 +182,10 @@ class PreferenciasNotificacionViewSetTest(APITestCase):
             username="user_pref", email="user_pref@cantina.com", password="pass123"
         )
 
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Pref", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Pref", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="User", apellidos="Pref", ruc_ci="11110002",
-            activo=True, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_tipo_cliente=self.tipo_cliente,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
             email="portal_pref@cantina.com",
@@ -233,13 +233,13 @@ class TestNotificacionesSaldoViewSet:
 
     def setup_method(self):
         """Configuración para cada test"""
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Saldo", activo=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Saldo", estado=True)
         cliente = Clientes.objects.create(
             nombres="Test", apellidos="Saldo", ruc_ci="99990001",
-            activo=True, id_tipo_cliente=tipo_cliente,
+            estado=True, id_tipo_cliente=tipo_cliente,
         )
         hijo = Hijos.objects.create(
-            nombre="Test", apellido="Hijo", activo=True, id_cliente_responsable=cliente
+            nombre="Test", apellido="Hijo", estado=True, id_cliente_responsable=cliente
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="9999001",

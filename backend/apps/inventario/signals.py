@@ -1,4 +1,4 @@
-"""
+﻿"""
 Signals para el módulo de inventario
 Actualización automática de stock con consistencia ACID y manejo de concurrencia
 """
@@ -274,7 +274,7 @@ def enviar_notificacion_alerta(sender, instance, created, **kwargs):
         )
 
         empleados_a_notificar = Empleados.objects.filter(
-            id_rol__in=roles_a_notificar, activo=True
+            id_rol__in=roles_a_notificar, estado=True
         ).select_related("perfilesusuario")
 
         notificaciones_creadas = 0
@@ -474,7 +474,7 @@ def enviar_notificacion_vencimiento(sender, instance, created, **kwargs):
         )
 
         empleados_a_notificar = Empleados.objects.filter(
-            id_rol__in=roles_a_notificar, activo=True
+            id_rol__in=roles_a_notificar, estado=True
         ).select_related("perfilesusuario")
 
         notificaciones_creadas = 0

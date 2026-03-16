@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para management commands de usuarios:
 - cleanup_usuarios
 - init_usuarios
@@ -104,7 +104,7 @@ class InitUsuariosCommandTest(TestCase):
         PermissionService.inicializar_permisos()
         Roles.objects.get_or_create(
             nombre_rol='Administrador',
-            defaults={'descripcion': 'Admin', 'activo': True}
+            defaults={'descripcion': 'Admin', 'estado': True}
         )
         # Crear el empleado admin
         Empleados.objects.get_or_create(
@@ -114,7 +114,7 @@ class InitUsuariosCommandTest(TestCase):
                 'apellido': 'Test',
                 'contrasena_hash': 'hash',
                 'fecha_ingreso': timezone.now(),
-                'activo': True,
+                'estado': True,
             }
         )
         out = StringIO()

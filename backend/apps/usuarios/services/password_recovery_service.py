@@ -1,4 +1,4 @@
-"""Servicio de recuperacion de contrasenas y verificacion de email."""
+﻿"""Servicio de recuperacion de contrasenas y verificacion de email."""
 
 from datetime import timedelta
 from typing import Dict
@@ -37,7 +37,7 @@ class PasswordRecoveryService:
     def solicitar_recuperacion_empleado(email: str, ip_address: str) -> Dict:
         """Solicita token de recuperacion para empleado."""
         try:
-            empleado = Empleados.objects.filter(email=email, activo=True).first()
+            empleado = Empleados.objects.filter(email=email, estado=True).first()
 
             # Mensaje generico para evitar enumeracion de usuarios.
             generic_ok = {
@@ -132,7 +132,7 @@ class PasswordRecoveryService:
             if token_db.fecha_expiracion <= timezone.now():
                 return {"success": False, "valido": False, "mensaje": "Token expirado"}
 
-            empleado = Empleados.objects.filter(email=token_db.id_cliente.email, activo=True).first()
+            empleado = Empleados.objects.filter(email=token_db.id_cliente.email, estado=True).first()
             if not empleado:
                 return {"success": False, "valido": False, "mensaje": "Empleado no disponible"}
 
@@ -256,7 +256,7 @@ class PasswordRecoveryService:
             if token_db.fecha_expiracion <= timezone.now():
                 return {"success": False, "mensaje": "Token invalido o expirado"}
 
-            empleado = Empleados.objects.filter(email=token_db.id_cliente.email, activo=True).first()
+            empleado = Empleados.objects.filter(email=token_db.id_cliente.email, estado=True).first()
             if not empleado:
                 return {"success": False, "mensaje": "Empleado no disponible"}
 

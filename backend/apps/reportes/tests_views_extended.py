@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for apps/reportes/views.py to cover missing exception and
 success paths.
 
@@ -487,7 +487,7 @@ class PlantillasReporteActionsTest(BaseReportesExtTest):
             query_sql="SELECT 1",
             parametros={},
             created_at=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
     def test_ejecutar(self):
@@ -540,7 +540,7 @@ class DashboardsActionsTest(BaseReportesExtTest):
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=empleado,
-            activo=True,
+            estado=True,
         )
 
     def test_exportar_get(self):
@@ -574,7 +574,7 @@ class KpiMetricasActionsTest(BaseReportesExtTest):
             nombre_kpi="test_kpi",
             descripcion="Test",
             categoria="ventas",
-            activo=True,
+            estado=True,
         )
 
     def test_calcular(self):
@@ -624,7 +624,7 @@ class PlantillasTareaActionsTest(BaseReportesExtTest):
     def test_toggle_activo(self):
         """POST toggle_activo action (line ~379)."""
         url = reverse(
-            "plantillas-tarea-toggle-activo", kwargs={"pk": self.tarea.pk}
+            "plantillas-tarea-toggle-estado", kwargs={"pk": self.tarea.pk}
         )
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para URLs de contabilidad
 Cubre routing, seguridad de endpoints y parámetros
 """
@@ -43,7 +43,7 @@ class BaseContabilidadURLsTest(APITestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Contador',
             descripcion='Rol de contador',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -59,13 +59,13 @@ class BaseContabilidadURLsTest(APITestCase):
         self.caja = Cajas.objects.create(
             nombre_caja='Caja URLs Test',
             ubicacion='Test Location',
-            activo=True
+            estado=True
         )
         
         self.medio_pago = MediosPago.objects.create(
             nombre='Efectivo URLs',
             descripcion='Para tests URLs',
-            activo=True
+            estado=True
         )
         
         # Cliente API
@@ -397,7 +397,7 @@ class TarifasComisionURLsTest(BaseContabilidadURLsTest):
         
         # URLs con filtros de vigencia
         vigencia_urls = [
-            f'{base_url}?activo=true',
+            f'{base_url}?estado=true',
             f'{base_url}?vigente=true',
             f'{base_url}?vigente_en=2024-01-15',
             f'{base_url}vigentes/',
@@ -576,7 +576,7 @@ class ImpuestosURLsTest(BaseContabilidadURLsTest):
             nombre_impuesto='IVA URLs Test',
             porcentaje=Decimal('10.00'),
             vigente_desde=date.today(),
-            activo=True
+            estado=True
         )
 
     def test_impuestos_list_url(self):
@@ -600,13 +600,13 @@ class ImpuestosURLsTest(BaseContabilidadURLsTest):
             self.assertIn(str(impuesto_id), expected_pattern)
 
     def test_impuestos_activo_filter(self):
-        """Debe manejar URLs con filtro por estado activo"""
+        """Debe manejar URLs con filtro por estado estado"""
         base_url = '/api/v1/contabilidad/impuestos/'
         
-        # URLs con filtro activo
+        # URLs con filtro estado
         activo_filter_urls = [
-            f'{base_url}?activo=true',
-            f'{base_url}?activo=false',
+            f'{base_url}?estado=true',
+            f'{base_url}?estado=false',
             f'{base_url}activos/',
             f'{base_url}inactivos/'
         ]
@@ -614,7 +614,7 @@ class ImpuestosURLsTest(BaseContabilidadURLsTest):
         for url in activo_filter_urls:
             if '?' in url:
                 # Verificar filtro por parámetro
-                self.assertIn('activo=', url)
+                self.assertIn('estado=', url)
                 self.assertTrue(url.startswith(base_url))
             else:
                 # Verificar endpoint específico

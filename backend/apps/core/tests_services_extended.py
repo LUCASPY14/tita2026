@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for apps/core/services.py
 Targeting missing lines: 66, 111-125, 201-221, 302-305, 614, 653-678
 """
@@ -50,17 +50,17 @@ class AutorizacionServiceDobleAutorizacionTest(TestCase):
         self.cajero = Empleados.objects.create(
             nombre='Juan', apellido='Cajero', usuario='cajero99',
             contrasena_hash='hash', fecha_ingreso=timezone.now(),
-            email='cajero99@test.com', activo=True, id_rol=self.rol_cajero,
+            email='cajero99@test.com', estado=True, id_rol=self.rol_cajero,
         )
         self.gerente = Empleados.objects.create(
             nombre='Maria', apellido='Gerente', usuario='gerente99',
             contrasena_hash='hash', fecha_ingreso=timezone.now(),
-            email='gerente99@test.com', activo=True, id_rol=self.rol_gerente,
+            email='gerente99@test.com', estado=True, id_rol=self.rol_gerente,
         )
         self.gerente2 = Empleados.objects.create(
             nombre='Ana', apellido='Gerente2', usuario='gerente98',
             contrasena_hash='hash', fecha_ingreso=timezone.now(),
-            email='gerente98@test.com', activo=True, id_rol=self.rol_gerente,
+            email='gerente98@test.com', estado=True, id_rol=self.rol_gerente,
         )
 
         self.limite = LimitesTransaccion.objects.create(
@@ -68,7 +68,7 @@ class AutorizacionServiceDobleAutorizacionTest(TestCase):
             tipo_operacion='venta_doble',
             monto_maximo_sin_autorizacion=Decimal('1000.00'),
             requiere_autorizacion_doble=True,  # doble autorizacion required
-            activo=True,
+            estado=True,
         )
         self.limite.roles_autorizadores.add(self.rol_gerente)
 
@@ -143,12 +143,12 @@ class AutorizacionServiceHistorialTest(TestCase):
         self.empleado = Empleados.objects.create(
             nombre='Test', apellido='Hist', usuario='hist99',
             contrasena_hash='hash', fecha_ingreso=timezone.now(),
-            email='hist99@test.com', activo=True, id_rol=self.rol,
+            email='hist99@test.com', estado=True, id_rol=self.rol,
         )
         self.autorizador = Empleados.objects.create(
             nombre='Auth', apellido='Hist', usuario='auth99',
             contrasena_hash='hash', fecha_ingreso=timezone.now(),
-            email='auth99@test.com', activo=True, id_rol=self.rol,
+            email='auth99@test.com', estado=True, id_rol=self.rol,
         )
 
         from apps.core.models import RegistroAutorizaciones
@@ -232,11 +232,11 @@ class RecargaServiceValidarTransferenciaExtendedTest(TestCase):
         self.empleado = Empleados.objects.create(
             nombre='Emp', apellido='Trans', usuario='emp_trans',
             contrasena_hash='hash', fecha_ingreso=timezone.now(),
-            email='emp_trans@test.com', activo=True, id_rol=self.rol,
+            email='emp_trans@test.com', estado=True, id_rol=self.rol,
         )
         self.cliente = Clientes.objects.create(
             nombres='Cliente', apellidos='Trans', ruc_ci='12345678_trans',
-            activo=True,
+            estado=True,
         )
         self.hijo = Hijos.objects.create(
             nombre='Hijo', apellido='Trans',

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Servicios de dominio para el módulo de ventas.
 Contiene la lógica de negocio para promociones y devoluciones.
 """
@@ -51,7 +51,7 @@ class PromocionService:
 
         # 1. Filtrar promociones activas y vigentes
         promociones_query = Promociones.objects.filter(
-            activo=True, fecha_inicio__lte=fecha_hora.date()
+            estado=True, fecha_inicio__lte=fecha_hora.date()
         ).filter(models.Q(fecha_fin__isnull=True) | models.Q(fecha_fin__gte=fecha_hora.date()))
 
         # 2. Si hay código, filtrar por código

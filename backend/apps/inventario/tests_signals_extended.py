@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para apps/inventario/signals.py
 Cubre líneas faltantes:
 48 (duplicate check return en actualizar_stock_compra),
@@ -31,7 +31,7 @@ from apps.usuarios.models import Empleados, Roles
 # ─── fixture helpers ────────────────────────────────────────────────────────
 
 def _make_rol(suffix=""):
-    return Roles.objects.create(nombre_rol=f"RolSig{suffix}", activo=True)
+    return Roles.objects.create(nombre_rol=f"RolSig{suffix}", estado=True)
 
 
 def _make_empleado(rol, suffix=""):
@@ -41,18 +41,18 @@ def _make_empleado(rol, suffix=""):
         usuario=f"emp_inv_sig_{suffix}",
         contrasena_hash="hash",
         fecha_ingreso=timezone.now(),
-        activo=True,
+        estado=True,
         id_rol=rol,
     )
 
 
 def _make_categoria(suffix=""):
-    return Categorias.objects.create(nombre=f"CatSig{suffix}", activo=True)
+    return Categorias.objects.create(nombre=f"CatSig{suffix}", estado=True)
 
 
 def _make_unidad(suffix=""):
     return UnidadesMedida.objects.create(
-        nombre=f"UndSig{suffix}", abreviatura=f"S{suffix[:2]}", activo=True
+        nombre=f"UndSig{suffix}", abreviatura=f"S{suffix[:2]}", estado=True
     )
 
 
@@ -61,7 +61,7 @@ def _make_impuesto(suffix=""):
         nombre_impuesto=f"IVASig{suffix}",
         porcentaje=Decimal("10.00"),
         vigente_desde=timezone.now().date(),
-        activo=True,
+        estado=True,
     )
 
 
@@ -70,7 +70,7 @@ def _make_producto(categoria, unidad, impuesto, suffix="", permite_negativo=Fals
         descripcion=f"ProdSig {suffix}",
         stock_minimo=stock_minimo,
         permite_stock_negativo=permite_negativo,
-        activo=True,
+        estado=True,
         id_categoria=categoria,
         id_impuesto=impuesto,
         id_unidad_medida=unidad,
@@ -82,7 +82,7 @@ def _make_proveedor(suffix=""):
         razon_social=f"ProvSig{suffix}",
         ruc=f"99001{suffix[:2] or '00'}-1",
         fecha_registro=timezone.now(),
-        activo=True,
+        estado=True,
     )
 
 
@@ -317,13 +317,13 @@ class DescontarStockVentaSignalTest(TransactionTestCase):
         tipo_cliente, _ = TiposCliente.objects.get_or_create(nombre_tipo="Normal")
         lista, _ = ListasPrecios.objects.get_or_create(
             nombre_lista="Lista General DSV",
-            defaults={"activo": True}
+            defaults={"estado": True}
         )
         self.cliente = Clientes.objects.create(
             nombres="Cliente",
             apellidos="SignalVtaTest",
             ruc_ci="9900999-D",
-            activo=True,
+            estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
         )
@@ -489,14 +489,14 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
 
     def _make_gerente(self, suffix="g"):
         """Create a Gerente role + empleado with email to trigger notification loop."""
-        rol, _ = Roles.objects.get_or_create(nombre_rol="Gerente", defaults={"activo": True})
+        rol, _ = Roles.objects.get_or_create(nombre_rol="Gerente", defaults={"estado": True})
         return Empleados.objects.create(
             nombre=f"Gerente{suffix}",
             apellido="NotifTest",
             usuario=f"gerente_notif_{suffix}",
             contrasena_hash="hash123456789012345678901234567890123456789012345678901234",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             email=f"gerente{suffix}@test.com",
             id_rol=rol,
         )
@@ -1110,14 +1110,14 @@ class EnviarNotificacionVencimientoTest(TestCase):
         )
 
     def _make_gerente_env(self, suffix="g"):
-        rol, _ = Roles.objects.get_or_create(nombre_rol="Gerente", defaults={"activo": True})
+        rol, _ = Roles.objects.get_or_create(nombre_rol="Gerente", defaults={"estado": True})
         return Empleados.objects.create(
             nombre=f"GerenteEnv{suffix}",
             apellido="VencTest",
             usuario=f"gerente_venc_{suffix}",
             contrasena_hash="hash123456789012345678901234567890123456789012345678901234",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             email=f"gerente_env{suffix}@test.com",
             id_rol=rol,
         )

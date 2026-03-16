@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app core
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
@@ -77,8 +77,8 @@ class TarjetasManager(models.Manager):
             kwargs.setdefault('saldo_actual', kwargs.pop('saldo'))
         else:
             kwargs.pop('saldo', None)
-        # Ignorar activo (campo no existe)
-        kwargs.pop('activo', None)
+        # Ignorar estado (campo no existe)
+        kwargs.pop('estado', None)
         # Defaults para campos requeridos
         kwargs.setdefault('saldo_actual', Decimal('0.00'))
         kwargs.setdefault('estado', 'activa')
@@ -189,7 +189,7 @@ class TarjetasAutorizacion(models.Model):
     puede_modificar_precios = models.BooleanField(
         default=False, help_text="Permite modificar precios en punto de venta"
     )
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField()
     fecha_vencimiento = models.DateField(blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
@@ -416,7 +416,7 @@ class MediosPago(LegacyCompatCoreMixin, models.Model):
     requiere_validacion = models.BooleanField(
         default=False, help_text="Requiere validación externa (ej: tarjeta crédito)"
     )
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     LEGACY_FIELD_MAP = {"nombre": "descripcion"}
     objects = LegacyCompatManager()
@@ -473,7 +473,7 @@ class ConfiguracionSistema(models.Model):
     solo_superuser = models.BooleanField(
         default=False, help_text="Solo superusuarios pueden modificar"
     )
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     updated_at = models.DateTimeField()
     updated_by = models.ForeignKey(
         "auth.User", models.SET_NULL, db_column="updated_by", blank=True, null=True
@@ -505,7 +505,7 @@ class CacheConfiguracion(models.Model):
         default=True, help_text="Invalidar automáticamente el caché"
     )
     eventos_invalid = models.JSONField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     hits = models.BigIntegerField()
     misses = models.BigIntegerField()
     ultima_limpieza = models.DateTimeField(blank=True, null=True)
@@ -561,7 +561,7 @@ class LimitesTransaccion(models.Model):
         blank=True,
         help_text="Roles que pueden autorizar esta operación",
     )
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     observaciones = models.TextField(blank=True, null=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
@@ -589,7 +589,7 @@ class LimitesTransaccion(models.Model):
         unique_together = (("id_rol", "tipo_operacion"),)
         indexes = [
             models.Index(fields=["id_rol", "tipo_operacion"]),
-            models.Index(fields=["tipo_operacion", "activo"]),
+            models.Index(fields=["tipo_operacion", "estado"]),
         ]
 
     def __str__(self):
@@ -605,7 +605,7 @@ class LimitesTransaccion(models.Model):
         """
         try:
             return LimitesTransaccion.objects.get(
-                id_rol=rol, tipo_operacion=tipo_operacion, activo=True
+                id_rol=rol, tipo_operacion=tipo_operacion, estado=True
             )
         except LimitesTransaccion.DoesNotExist:
             return None

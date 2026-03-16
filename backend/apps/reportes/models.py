@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app reportes
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
@@ -14,7 +14,7 @@ class PlantillasReporte(models.Model):
     parametros = models.JSONField()
     tipo_reporte = models.CharField(max_length=20)
     frecuencia = models.CharField(max_length=20)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     created_by = models.ForeignKey(
         "usuarios.Empleados", models.DO_NOTHING, db_column="created_by", blank=True, null=True
@@ -37,7 +37,7 @@ class Dashboards(models.Model):
     configuracion = models.JSONField()
     es_publico = models.IntegerField()
     predeterminado = models.IntegerField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     id_empleado = models.ForeignKey(
@@ -66,7 +66,7 @@ class KpiMetricas(models.Model):
     categoria = models.CharField(max_length=30)
     frecuencia = models.CharField(max_length=20, blank=True, default='')
     frecuencia_actualizacion = models.CharField(max_length=20, blank=True, default='')
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     created_at = models.DateTimeField(null=True, blank=True)
     id_empleado = models.ForeignKey(
         "usuarios.Empleados", models.DO_NOTHING, db_column="kpi_id_empleado", blank=True, null=True
@@ -111,7 +111,7 @@ class PlantillasTarea(models.Model):
     max_reintentos = models.IntegerField(default=0)
     notif_exito = models.IntegerField(default=0)
     notif_error = models.IntegerField(default=0)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     created_by = models.ForeignKey(
         "usuarios.Empleados", models.DO_NOTHING, db_column="created_by", blank=True, null=True

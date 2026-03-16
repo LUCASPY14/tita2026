@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para modelos de la app core
 Sprint 2 - Backend Coverage Improvement
 """
@@ -18,18 +18,18 @@ class TarjetasModelTest(TestCase):
         """Configuración inicial para cada test"""
         # Crear lista de precios
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Estudiantes", moneda="PYG", activo=True
+            nombre_lista="Lista Estudiantes", moneda="PYG", estado=True
         )
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
             nombres="Patricia",
             apellidos="Benítez",
             ruc_ci="7777777777",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -40,7 +40,7 @@ class TarjetasModelTest(TestCase):
             apellido="Benítez",
             fecha_nacimiento=timezone.datetime(2013, 8, 15).date(),
             grado="Sexto Grado",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 

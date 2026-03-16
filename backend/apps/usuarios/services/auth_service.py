@@ -1,4 +1,4 @@
-"""
+﻿"""
 Servicio de autenticación empresarial para cantina_tita
 Incluye: JWT, validación de contraseñas, bloqueo de cuentas, auditoría
 """
@@ -114,18 +114,18 @@ class AuthenticationService:
             (esta_bloqueada, motivo)
         """
         # Verificar si el empleado está marcado como inactivo
-        if not empleado.activo:
+        if not empleado.estado:
             return True, "Cuenta inactiva"
 
         # Buscar bloqueos activos
         bloqueo_activo = BloqueosCuenta.objects.filter(
-            usuario=empleado.usuario, activo=True
+            usuario=empleado.usuario, estado=True
         ).first()
 
         if bloqueo_activo:
             # Verificar si el bloqueo temporal ha expirado
             if bloqueo_activo.fecha_desbloqueo and timezone.now() > bloqueo_activo.fecha_desbloqueo:
-                bloqueo_activo.activo = False
+                bloqueo_activo.estado = False
                 bloqueo_activo.save()
                 return False, None
 
@@ -163,7 +163,7 @@ class AuthenticationService:
             ip_address=ip_address,
             fecha_bloqueo=timezone.now(),
             fecha_desbloqueo=fecha_desbloqueo,
-            activo=True,
+            estado=True,
         )
 
         # Registrar en auditoría
@@ -241,12 +241,12 @@ class AuthenticationService:
                 "first_name": empleado.nombre,
                 "last_name": empleado.apellido,
                 "email": empleado.email or "",
-                "is_active": empleado.activo,
+                "is_active": empleado.estado,
             },
         )
-        # Sync activo status if user already existed
-        if not created and django_user.is_active != empleado.activo:
-            django_user.is_active = empleado.activo
+        # Sync estado status if user already existed
+        if not created and django_user.is_active != empleado.estado:
+            django_user.is_active = empleado.estado
             django_user.save(update_fields=["is_active"])
 
         refresh = RefreshToken.for_user(django_user)
@@ -554,7 +554,7 @@ class AuthenticationService:
                 contrasena_hash=AuthenticationService._hash_password(password),
                 id_rol=rol,
                 fecha_ingreso=timezone.now(),
-                activo=True,
+                estado=True,
             )
 
             # Registrar en auditoría

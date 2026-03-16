@@ -1,4 +1,4 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 from django import forms
 from django.utils import timezone
 from django.utils.formats import sanitize_separators
@@ -26,16 +26,16 @@ class EmpleadosAdminForm(forms.ModelForm):
 @admin.register(Empleados)
 class EmpleadosAdmin(admin.ModelAdmin):
     form = EmpleadosAdminForm
-    list_display = ["id_empleado", "nombre", "apellido", "usuario", "email", "activo"]
-    list_filter = ["activo", "fecha_ingreso"]
+    list_display = ["id_empleado", "nombre", "apellido", "usuario", "email", "estado"]
+    list_filter = ["estado", "fecha_ingreso"]
     search_fields = ["nombre", "apellido", "email", "usuario"]
     ordering = ["apellido", "nombre"]
 
 
 @admin.register(Roles)
 class RolesAdmin(admin.ModelAdmin):
-    list_display = ["id_rol", "nombre_rol", "descripcion", "activo"]
-    list_filter = ["activo"]
+    list_display = ["id_rol", "nombre_rol", "descripcion", "estado"]
+    list_filter = ["estado"]
     search_fields = ["nombre_rol"]
     ordering = ["nombre_rol"]
 
@@ -49,8 +49,8 @@ class PerfilesUsuarioAdmin(admin.ModelAdmin):
 
 @admin.register(UsuariosPortal)
 class UsuariosPortalAdmin(admin.ModelAdmin):
-    list_display = ["id_usuario_portal", "email", "id_cliente", "activo", "fecha_registro"]
-    list_filter = ["activo", "fecha_registro"]
+    list_display = ["id_usuario_portal", "email", "id_cliente", "estado", "fecha_registro"]
+    list_filter = ["estado", "fecha_registro"]
     search_fields = ["email"]
     ordering = ["email"]
 

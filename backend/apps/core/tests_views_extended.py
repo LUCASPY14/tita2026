@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para apps/core/views.py
 Cubre las líneas faltantes en core/views.py:
 244-245 (hijo not found), 263-265 (sin tarjeta),
@@ -37,10 +37,10 @@ class IniciarRecargaBancardEdgeCasesTest(TestCase):
         self.client.force_authenticate(user=self.auth_user)
 
         self.tipo_cliente = TiposCliente.objects.create(
-            nombre_tipo="Standard Bancard", activo=True
+            nombre_tipo="Standard Bancard", estado=True
         )
         self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Bancard", activo=True
+            nombre_lista="Lista Bancard", estado=True
         )
         self.cliente = Clientes.objects.create(
             nombres="Ana",
@@ -345,7 +345,7 @@ class ConfiguracionSistemaActualizarValorTest(TestCase):
             valor_defecto="10",
             tipo="integer",
             categoria="sistema",
-            activo=True,
+            estado=True,
             valor_min="1",
             valor_max="100",
         )
@@ -355,7 +355,7 @@ class ConfiguracionSistemaActualizarValorTest(TestCase):
             valor_defecto="false",
             tipo="boolean",
             categoria="sistema",
-            activo=True,
+            estado=True,
         )
         self.config_decimal = ConfiguracionSistema.objects.create(
             clave="test_config_ext_decimal",
@@ -363,7 +363,7 @@ class ConfiguracionSistemaActualizarValorTest(TestCase):
             valor_defecto="10.00",
             tipo="decimal",
             categoria="sistema",
-            activo=True,
+            estado=True,
             valor_min="1.00",
             valor_max="100.00",
         )
@@ -373,7 +373,7 @@ class ConfiguracionSistemaActualizarValorTest(TestCase):
             valor_defecto="{}",
             tipo="json",
             categoria="sistema",
-            activo=True,
+            estado=True,
         )
 
     def test_actualizar_valor_sin_campo_valor_retorna_400(self):

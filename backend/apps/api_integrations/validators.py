@@ -1,4 +1,4 @@
-"""
+﻿"""
 Validadores del módulo API Integrations
 Validación de integraciones con APIs externas, webhooks, credenciales y logs
 """
@@ -200,9 +200,9 @@ def validar_max_reintentos(valor):
 
 
 def validar_activo_proveedor(valor):
-    """Valida el campo activo del proveedor"""
+    """Valida el campo estado del proveedor"""
     if not isinstance(valor, bool):
-        raise ValidationError("El campo activo debe ser un valor booleano (True/False).")
+        raise ValidationError("El campo estado debe ser un valor booleano (True/False).")
 
     return valor
 
@@ -382,9 +382,9 @@ def validar_requiere_auth_endpoint(valor):
 
 
 def validar_activo_endpoint(valor):
-    """Valida el campo activo del endpoint"""
+    """Valida el campo estado del endpoint"""
     if not isinstance(valor, bool):
-        raise ValidationError("El campo activo debe ser un valor booleano (True/False).")
+        raise ValidationError("El campo estado debe ser un valor booleano (True/False).")
 
     return valor
 
@@ -754,9 +754,9 @@ def validar_updated_at_cred(valor):
 
 
 def validar_activo_credencial(valor):
-    """Valida el campo activo de credencial"""
+    """Valida el campo estado de credencial"""
     if not isinstance(valor, bool):
-        raise ValidationError("El campo activo debe ser un valor booleano (True/False).")
+        raise ValidationError("El campo estado debe ser un valor booleano (True/False).")
 
     return valor
 
@@ -1018,9 +1018,9 @@ def validar_handler_func(valor):
 
 
 def validar_activo_webhook(valor):
-    """Valida el campo activo del webhook"""
+    """Valida el campo estado del webhook"""
     if not isinstance(valor, bool):
-        raise ValidationError("El campo activo debe ser un valor booleano (True/False).")
+        raise ValidationError("El campo estado debe ser un valor booleano (True/False).")
 
     return valor
 

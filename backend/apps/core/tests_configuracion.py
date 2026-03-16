@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para ConfiguracionSistema - ViewSets y Models
 """
 
@@ -29,7 +29,7 @@ class ConfiguracionSistemaModelTest(TestCase):
 
         self.assertEqual(config.clave, "MAX_INTENTOS_LOGIN")
         self.assertEqual(config.tipo, "int")
-        self.assertTrue(config.activo)
+        self.assertTrue(config.estado)
 
     def test_configuracion_con_validacion(self):
         """Test: Configuración con validación de rango"""

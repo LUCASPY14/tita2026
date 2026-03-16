@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para modelos de la app ventas
 Sprint 2 - Backend Coverage Improvement
 """
@@ -25,7 +25,7 @@ class VentasModelTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol
-        self.rol = Roles.objects.create(nombre_rol="Cajero", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
 
         # Crear empleado
         self.empleado = Empleados.objects.create(
@@ -34,17 +34,17 @@ class VentasModelTest(TestCase):
             usuario="carlos.mendoza",
             email="carlos@example.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
         # Crear lista de precios
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Minorista", moneda="PYG", activo=True
+            nombre_lista="Lista Minorista", moneda="PYG", estado=True
         )
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
@@ -52,14 +52,14 @@ class VentasModelTest(TestCase):
             apellidos="López",
             ruc_ci="8888888888",
             limite_credito=Decimal("500000.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
 
         # Crear medio de pago
         self.medio_pago = MediosPago.objects.create(
-            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, activo=True
+            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, estado=True
         )
 
     def test_str_method(self):
@@ -200,7 +200,7 @@ class VentasModelTest(TestCase):
             usuario="supervisor",
             email="supervisor@example.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -224,28 +224,28 @@ class VentasModelsAdicionalesTest(TestCase):
     """Tests __str__ y propiedades de modelos adicionales de ventas."""
 
     def setUp(self):
-        self.rol = Roles.objects.create(nombre_rol='Cajero Str', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='Cajero Str', estado=True)
         self.empleado = Empleados.objects.create(
             nombre='Emp', apellido='Str', usuario='emp_str',
-            email='emp_str@test.com', fecha_ingreso=timezone.now().date(), activo=True, id_rol=self.rol,
+            email='emp_str@test.com', fecha_ingreso=timezone.now().date(), estado=True, id_rol=self.rol,
         )
-        self.lista = ListasPrecios.objects.create(nombre_lista='Lista Str Ventas', moneda='PYG', activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Tipo Str V', activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista='Lista Str Ventas', moneda='PYG', estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Tipo Str V', estado=True)
         self.cliente = Clientes.objects.create(
             nombres='CLI', apellidos='STR', ruc_ci='5000002',
-            activo=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
         )
         self.medio_pago = MediosPago.objects.create(
-            nombre='Efectivo Str', genera_comision=False, activo=True,
+            nombre='Efectivo Str', genera_comision=False, estado=True,
         )
         self.impuesto = Impuestos.objects.create(
             nombre_impuesto='IVA Str V', porcentaje=10,
-            vigente_desde=timezone.now().date(), activo=True,
+            vigente_desde=timezone.now().date(), estado=True,
         )
-        self.cat = Categorias.objects.create(nombre='Cat Str V', activo=True)
+        self.cat = Categorias.objects.create(nombre='Cat Str V', estado=True)
         self.producto = Productos.objects.create(
             descripcion='Prod Str V', stock_minimo=0,
-            activo=True, id_categoria=self.cat, id_impuesto=self.impuesto,
+            estado=True, id_categoria=self.cat, id_impuesto=self.impuesto,
         )
         StockUnico.objects.create(id_producto=self.producto, cantidad=Decimal('50.000'))
         self.venta = Ventas.objects.create(
@@ -359,7 +359,7 @@ class VentasModelsAdicionalesTest(TestCase):
             nombre='Promo Str', tipo_promocion='porcentaje',
             valor_descuento=Decimal('10'), fecha_inicio=timezone.now().date(),
             aplica_a='todo', min_cantidad=1, monto_minimo=Decimal('0'),
-            usos_actuales=0, prioridad=1, activo=True,
+            usos_actuales=0, prioridad=1, estado=True,
             requiere_codigo=False, fecha_creacion=timezone.now(),
         )
         self.assertIn('#', str(promo))
@@ -369,7 +369,7 @@ class VentasModelsAdicionalesTest(TestCase):
             nombre='Promo Cat Str', tipo_promocion='porcentaje',
             valor_descuento=Decimal('5'), fecha_inicio=timezone.now().date(),
             aplica_a='categorias', min_cantidad=1, monto_minimo=Decimal('0'),
-            usos_actuales=0, prioridad=2, activo=True,
+            usos_actuales=0, prioridad=2, estado=True,
             requiere_codigo=False, fecha_creacion=timezone.now(),
         )
         cp = CategoriasPromocion.objects.create(id_categoria=self.cat, id_promocion=promo)
@@ -380,7 +380,7 @@ class VentasModelsAdicionalesTest(TestCase):
             nombre='Promo Prod Str', tipo_promocion='monto_fijo',
             valor_descuento=Decimal('1000'), fecha_inicio=timezone.now().date(),
             aplica_a='productos', min_cantidad=1, monto_minimo=Decimal('0'),
-            usos_actuales=0, prioridad=3, activo=True,
+            usos_actuales=0, prioridad=3, estado=True,
             requiere_codigo=False, fecha_creacion=timezone.now(),
         )
         pp = ProductosPromocion.objects.create(id_producto=self.producto, id_promocion=promo)
@@ -391,7 +391,7 @@ class VentasModelsAdicionalesTest(TestCase):
             nombre='Promo Aplic Str', tipo_promocion='porcentaje',
             valor_descuento=Decimal('10'), fecha_inicio=timezone.now().date(),
             aplica_a='todo', min_cantidad=1, monto_minimo=Decimal('0'),
-            usos_actuales=1, prioridad=4, activo=True,
+            usos_actuales=1, prioridad=4, estado=True,
             requiere_codigo=False, fecha_creacion=timezone.now(),
         )
         pa = PromocionesAplicadas.objects.create(

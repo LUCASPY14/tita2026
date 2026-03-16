@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app almuerzos
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
@@ -13,7 +13,7 @@ class PlanesAlmuerzo(models.Model):
     precio_mensual = models.DecimalField(max_digits=10, decimal_places=2)
     dias_semana_incluidos = models.CharField(max_length=60)
     fecha_creacion = models.DateTimeField(blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -32,7 +32,7 @@ class TiposAlmuerzo(models.Model):
     incluye_postre = models.BooleanField(default=False, help_text="Incluye postre")
     incluye_bebida = models.BooleanField(default=False, help_text="Incluye bebida")
     fecha_creacion = models.DateTimeField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -184,7 +184,7 @@ class Alergenos(models.Model):
     palabras_clave = models.JSONField()
     nivel_severidad = models.CharField(max_length=10)
     icono = models.CharField(max_length=10, blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField()
     usuario_creacion = models.CharField(max_length=100, blank=True, null=True)
 

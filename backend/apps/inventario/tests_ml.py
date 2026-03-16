@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para funcionalidades de Machine Learning en inventario.
 
 Prueba:
@@ -32,7 +32,7 @@ class StockForecastingServiceTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde="2024-01-01",
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría
@@ -43,7 +43,7 @@ class StockForecastingServiceTest(TestCase):
 
         # Crear lista de precios
         self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista General", fecha_vigencia="2024-01-01", moneda="PYG", activo=True
+            nombre_lista="Lista General", fecha_vigencia="2024-01-01", moneda="PYG", estado=True
         )
 
         # Crear producto
@@ -63,7 +63,7 @@ class StockForecastingServiceTest(TestCase):
 
         # Crear rol para empleado
         self.rol = Roles.objects.create(
-            nombre_rol="Vendedor", descripcion="Rol de vendedor", activo=True
+            nombre_rol="Vendedor", descripcion="Rol de vendedor", estado=True
         )
 
         # Crear empleado para ventas
@@ -77,11 +77,11 @@ class StockForecastingServiceTest(TestCase):
             direccion="Calle 123",
             fecha_ingreso=timezone.now(),
             id_rol=self.rol,
-            activo=True,
+            estado=True,
         )
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Estudiante", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Estudiante", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(

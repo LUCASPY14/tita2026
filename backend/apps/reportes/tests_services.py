@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para services de reportes
 Cubre la lógica de negocio para generación de reportes y dashboards
 """
@@ -29,7 +29,7 @@ class BaseReportesServiceTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Vendedor',
             descripcion='Rol de vendedor',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -45,20 +45,20 @@ class BaseReportesServiceTest(TestCase):
         self.medio_efectivo = MediosPago.objects.create(
             nombre='Efectivo',
             descripcion='Pago en efectivo',
-            activo=True
+            estado=True
         )
         
         self.medio_tarjeta = MediosPago.objects.create(
             nombre='Tarjeta',
             descripcion='Pago con tarjeta',
-            activo=True
+            estado=True
         )
         
         # Crear categoría y productos
         self.categoria = Categorias.objects.create(
             nombre='Bebidas',
             descripcion='Categoría de bebidas',
-            activo=True
+            estado=True
         )
         
         self.producto1 = Productos.objects.create(
@@ -66,7 +66,7 @@ class BaseReportesServiceTest(TestCase):
             codigo='CC001',
             precio_venta=Decimal('7500.00'),
             id_categoria=self.categoria,
-            activo=True
+            estado=True
         )
         
         self.producto2 = Productos.objects.create(
@@ -74,7 +74,7 @@ class BaseReportesServiceTest(TestCase):
             codigo='PP001',
             precio_venta=Decimal('7000.00'),
             id_categoria=self.categoria,
-            activo=True
+            estado=True
         )
 
     def crear_ventas_sample(self, cantidad=5, fecha_base=None):
@@ -112,7 +112,7 @@ class BaseReportesServiceTest(TestCase):
         tarjeta = Tarjetas.objects.create(
             nro_tarjeta='1234567890',
             saldo=Decimal('0.00'),
-            activo=True
+            estado=True
         )
         
         recargas = []

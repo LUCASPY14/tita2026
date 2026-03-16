@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para serializers de la app clientes
 Sprint 2 - Backend Coverage Improvement
 """
@@ -18,11 +18,11 @@ class ClientesSerializerTest(TestCase):
         """Configuración inicial para cada test"""
         # Crear lista de precios
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Minorista", moneda="PYG", activo=True
+            nombre_lista="Lista Minorista", moneda="PYG", estado=True
         )
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
 
     def test_serializar_cliente_completo(self):
         """Test de serialización de un cliente con todos los campos"""
@@ -35,7 +35,7 @@ class ClientesSerializerTest(TestCase):
             telefono="0981234567",
             email="juan.perez@example.com",
             limite_credito=Decimal("5000.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -49,7 +49,7 @@ class ClientesSerializerTest(TestCase):
         self.assertEqual(data["direccion"], "Av. Principal 123")
         self.assertEqual(data["email"], "juan.perez@example.com")
         self.assertEqual(Decimal(data["limite_credito"]), Decimal("5000.00"))
-        self.assertTrue(data["activo"])
+        self.assertTrue(data["estado"])
 
     def test_validar_cliente_valido(self):
         """Test de validación de datos válidos de cliente"""
@@ -62,7 +62,7 @@ class ClientesSerializerTest(TestCase):
             "telefono": "0987654321",
             "email": "maria.lopez@example.com",
             "limite_credito": "3000.00",
-            "activo": True,
+            "estado": True,
             "id_lista": self.lista.id_lista,
             "id_tipo_cliente": self.tipo_cliente.id_tipo_cliente,
         }
@@ -103,7 +103,7 @@ class ClientesSerializerTest(TestCase):
             apellidos="Sánchez",
             ruc_ci="1111111111",
             limite_credito=Decimal("1000.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -126,7 +126,7 @@ class ClientesSerializerTest(TestCase):
             "direccion": "Calle Nueva 789",
             "telefono": "0976543210",
             "limite_credito": "4000.00",
-            "activo": True,
+            "estado": True,
             "id_lista": self.lista.id_lista,
             "id_tipo_cliente": self.tipo_cliente.id_tipo_cliente,
         }
@@ -147,18 +147,18 @@ class HijosSerializerTest(TestCase):
         """Configuración inicial para cada test"""
         # Crear lista de precios
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Minorista", moneda="PYG", activo=True
+            nombre_lista="Lista Minorista", moneda="PYG", estado=True
         )
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
             nombres="José",
             apellidos="Díaz",
             ruc_ci="3333333333",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -170,7 +170,7 @@ class HijosSerializerTest(TestCase):
             apellido="Díaz",
             fecha_nacimiento="2015-03-15",
             grado="Primer Grado",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -180,7 +180,7 @@ class HijosSerializerTest(TestCase):
         self.assertEqual(data["nombre"], "Sofía")
         self.assertEqual(data["apellido"], "Díaz")
         self.assertEqual(data["grado"], "Primer Grado")
-        self.assertTrue(data["activo"])
+        self.assertTrue(data["estado"])
 
     def test_validar_hijo_valido(self):
         """Test de validación de datos válidos de hijo"""
@@ -189,7 +189,7 @@ class HijosSerializerTest(TestCase):
             "apellido": "Díaz",
             "fecha_nacimiento": "2016-07-20",
             "grado": "Segundo Grado",
-            "activo": True,
+            "estado": True,
             "id_cliente_responsable": self.cliente.id_cliente,
         }
 
@@ -229,7 +229,7 @@ class HijosSerializerTest(TestCase):
             "apellido": "Díaz",
             "fecha_nacimiento": "2017-11-25",
             "grado": "Kinder",
-            "activo": True,
+            "estado": True,
             "id_cliente_responsable": self.cliente.id_cliente,
         }
 

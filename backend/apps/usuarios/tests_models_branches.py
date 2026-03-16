@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests de cobertura de ramas para usuarios/models.py.
 Cubre los helpers _resolve_usuario_from_empleado, _resolve_cliente_from_empleado,
 el mixin LegacyCompatMixin, y las ramas en los __str__ referidos por el informe.
@@ -215,10 +215,10 @@ class ResolveClienteFromEmpleadoTest(TestCase):
         from django.utils import timezone
 
         # Pre-create TiposCliente and ListasPrecios
-        TiposCliente.objects.get_or_create(nombre_tipo="General_27_30", defaults={"activo": True})
+        TiposCliente.objects.get_or_create(nombre_tipo="General_27_30", defaults={"estado": True})
         ListasPrecios.objects.get_or_create(
             nombre_lista="General_27_30",
-            defaults={"fecha_vigencia": timezone.now().date(), "moneda": "PYG", "activo": True},
+            defaults={"fecha_vigencia": timezone.now().date(), "moneda": "PYG", "estado": True},
         )
 
         rol, _ = Roles.objects.get_or_create(nombre_rol="TestIntPkRol", defaults={"descripcion": "t"})
@@ -240,10 +240,10 @@ class ResolveClienteFromEmpleadoTest(TestCase):
         from django.utils import timezone
 
         # Pre-create TiposCliente and ListasPrecios so False arms are taken
-        tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo="General_test", defaults={"activo": True})
+        tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo="General_test", defaults={"estado": True})
         lista, _ = ListasPrecios.objects.get_or_create(
             nombre_lista="General_test",
-            defaults={"fecha_vigencia": timezone.now().date(), "moneda": "PYG", "activo": True},
+            defaults={"fecha_vigencia": timezone.now().date(), "moneda": "PYG", "estado": True},
         )
 
         # Create an Empleados instance and pass it (has id_empleado attr — hasattr passes)

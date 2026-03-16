@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para signals de usuarios
 Cubre hooks, listeners y automatizaciones de eventos de modelo
 """
@@ -19,7 +19,7 @@ class UsuariosSignalsTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol="SignalTest",
             descripcion="Rol para pruebas de signals",
-            activo=True
+            estado=True
         )
 
     @patch('apps.usuarios.signals.audit_logger')
@@ -50,7 +50,7 @@ class UsuariosSignalsTest(TestCase):
                 contrasena_hash="$2b$12$hashedpass",
                 fecha_ingreso=timezone.now(),
                 email="signal@test.com",
-                activo=True,
+                estado=True,
                 id_rol=self.rol
             )
             
@@ -179,14 +179,14 @@ class UsuariosSignalsTest(TestCase):
             usuario="deactivtest",
             contrasena_hash="$2b$12$hash",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol
         )
         
         # Simular signal handler
         def handle_user_deactivation(sender, instance, **kwargs):
             if hasattr(instance, '_original_activo'):
-                if instance._original_activo and not instance.activo:
+                if instance._original_activo and not instance.estado:
                     mock_invalidate.delay(empleado_id=instance.id_empleado)
         
         # Simular pre_save para capturar estado original
@@ -194,7 +194,7 @@ class UsuariosSignalsTest(TestCase):
             if instance.pk:
                 try:
                     original = sender.objects.get(pk=instance.pk)
-                    instance._original_activo = original.activo
+                    instance._original_activo = original.estado
                 except sender.DoesNotExist:
                     instance._original_activo = None
         
@@ -203,12 +203,12 @@ class UsuariosSignalsTest(TestCase):
         
         try:
             # Desactivar empleado
-            empleado.activo = False
+            empleado.estado = False
             empleado.save()
             
             # Verificar empleado desactivado
             empleado.refresh_from_db()
-            self.assertFalse(empleado.activo)
+            self.assertFalse(empleado.estado)
             
         finally:
             pre_save.disconnect(capture_original_state, sender=Empleados)

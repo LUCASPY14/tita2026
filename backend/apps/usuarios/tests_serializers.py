@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para serializers de la app usuarios
 Cubre validación, serialización y deserialización de datos
 """
@@ -19,7 +19,7 @@ class RolesSerializerTest(TestCase):
         rol = Roles.objects.create(
             nombre_rol="Administrador",
             descripcion="Rol con permisos completos",
-            activo=True
+            estado=True
         )
         
         serializer = RolesSerializer(rol)
@@ -27,7 +27,7 @@ class RolesSerializerTest(TestCase):
         
         self.assertEqual(data['nombre_rol'], "Administrador")
         self.assertEqual(data['descripcion'], "Rol con permisos completos")
-        self.assertTrue(data['activo'])
+        self.assertTrue(data['estado'])
         self.assertEqual(data['id_rol'], rol.id_rol)
 
     def test_deserializacion_rol_valida(self):
@@ -35,7 +35,7 @@ class RolesSerializerTest(TestCase):
         data = {
             'nombre_rol': 'Cajero',
             'descripcion': 'Rol de cajero',
-            'activo': True
+            'estado': True
         }
         
         serializer = RolesSerializer(data=data)
@@ -44,13 +44,13 @@ class RolesSerializerTest(TestCase):
         rol = serializer.save()
         self.assertEqual(rol.nombre_rol, 'Cajero')
         self.assertEqual(rol.descripcion, 'Rol de cajero')
-        self.assertTrue(rol.activo)
+        self.assertTrue(rol.estado)
 
     def test_validacion_nombre_rol_requerido(self):
         """Debe validar que nombre_rol es requerido"""
         data = {
             'descripcion': 'Rol sin nombre',
-            'activo': True
+            'estado': True
         }
         
         serializer = RolesSerializer(data=data)
@@ -75,7 +75,7 @@ class RolesSerializerTest(TestCase):
         """Debe permitir descripción opcional"""
         data = {
             'nombre_rol': 'RolSinDescripcion',
-            'activo': True
+            'estado': True
         }
         
         serializer = RolesSerializer(data=data)
@@ -92,7 +92,7 @@ class RolesSerializerTest(TestCase):
         data = {
             'nombre_rol': 'Actualizado',
             'descripcion': 'Nueva descripción',
-            'activo': False
+            'estado': False
         }
         
         serializer = RolesSerializer(rol, data=data)
@@ -101,7 +101,7 @@ class RolesSerializerTest(TestCase):
         rol_actualizado = serializer.save()
         self.assertEqual(rol_actualizado.nombre_rol, 'Actualizado')
         self.assertEqual(rol_actualizado.descripcion, 'Nueva descripción')
-        self.assertFalse(rol_actualizado.activo)
+        self.assertFalse(rol_actualizado.estado)
 
 
 class EmpleadosSerializerTest(TestCase):
@@ -123,7 +123,7 @@ class EmpleadosSerializerTest(TestCase):
             contrasena_hash="$2b$12$hashedpassword",
             fecha_ingreso=timezone.now(),
             email="juan@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol
         )
         
@@ -134,7 +134,7 @@ class EmpleadosSerializerTest(TestCase):
         self.assertEqual(data['apellido'], "Pérez")
         self.assertEqual(data['usuario'], "jperez")
         self.assertEqual(data['email'], "juan@test.com")
-        self.assertTrue(data['activo'])
+        self.assertTrue(data['estado'])
         self.assertEqual(data['id_rol'], self.rol.id_rol)
         self.assertEqual(data['rol_nombre'], "Tester")
         
@@ -150,7 +150,7 @@ class EmpleadosSerializerTest(TestCase):
             'contrasena_hash': 'hashedpass',
             'fecha_ingreso': timezone.now().isoformat(),
             'email': 'maria@test.com',
-            'activo': True,
+            'estado': True,
             'id_rol': self.rol.id_rol
         }
         
@@ -162,7 +162,7 @@ class EmpleadosSerializerTest(TestCase):
         self.assertEqual(empleado.apellido, 'García')
         self.assertEqual(empleado.usuario, 'mgarcia')
         self.assertEqual(empleado.email, 'maria@test.com')
-        self.assertTrue(empleado.activo)
+        self.assertTrue(empleado.estado)
         self.assertEqual(empleado.id_rol, self.rol)
 
     def test_validacion_campos_requeridos(self):

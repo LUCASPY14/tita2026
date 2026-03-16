@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para el módulo productos
 """
 
@@ -20,19 +20,19 @@ class CategoriasTest(TestCase):
 
     def setUp(self):
         """Configuración inicial para tests de categorías"""
-        self.categoria_padre = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria_padre = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         self.categoria_hija = Categorias.objects.create(
-            nombre="Gaseosas", activo=True, id_categoria_padre=self.categoria_padre
+            nombre="Gaseosas", estado=True, id_categoria_padre=self.categoria_padre
         )
 
     def test_crear_categoria_raiz(self):
         """Test: Crear categoría de nivel superior (sin padre)"""
-        categoria = Categorias.objects.create(nombre="Snacks", activo=True)
+        categoria = Categorias.objects.create(nombre="Snacks", estado=True)
 
         self.assertIsNotNone(categoria.id_categoria)
         self.assertEqual(categoria.nombre, "Snacks")
-        self.assertTrue(categoria.activo)
+        self.assertTrue(categoria.estado)
         self.assertIsNone(categoria.id_categoria_padre)
         self.assertTrue(categoria.es_categoria_raiz)
 
@@ -63,19 +63,19 @@ class UnidadesMedidaTest(TestCase):
 
     def test_crear_unidad_medida(self):
         """Test: Crear unidad de medida correctamente"""
-        unidad = UnidadesMedida.objects.create(nombre="Kilogramo", abreviatura="Kg", activo=True)
+        unidad = UnidadesMedida.objects.create(nombre="Kilogramo", abreviatura="Kg", estado=True)
 
         self.assertIsNotNone(unidad.id_unidad_medida)
         self.assertEqual(unidad.nombre, "Kilogramo")
         self.assertEqual(unidad.abreviatura, "Kg")
-        self.assertTrue(unidad.activo)
+        self.assertTrue(unidad.estado)
 
     def test_multiples_unidades(self):
         """Test: Crear múltiples unidades de medida"""
         unidades = [
-            UnidadesMedida.objects.create(nombre="Litro", abreviatura="L", activo=True),
-            UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", activo=True),
-            UnidadesMedida.objects.create(nombre="Gramo", abreviatura="g", activo=True),
+            UnidadesMedida.objects.create(nombre="Litro", abreviatura="L", estado=True),
+            UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", estado=True),
+            UnidadesMedida.objects.create(nombre="Gramo", abreviatura="g", estado=True),
         ]
 
         self.assertEqual(UnidadesMedida.objects.count(), 3)
@@ -92,14 +92,14 @@ class ProductosTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         # Crear unidad de medida
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", estado=True)
 
     def test_crear_producto_completo(self):
         """Test: Crear producto con todos los campos"""
@@ -108,7 +108,7 @@ class ProductosTest(TestCase):
             descripcion="Coca Cola 500ml",
             stock_minimo=Decimal("10.000"),
             permite_stock_negativo=False,
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -119,7 +119,7 @@ class ProductosTest(TestCase):
         self.assertEqual(producto.descripcion, "Coca Cola 500ml")
         self.assertEqual(producto.stock_minimo, Decimal("10.000"))
         self.assertFalse(producto.permite_stock_negativo)
-        self.assertTrue(producto.activo)
+        self.assertTrue(producto.estado)
         self.assertEqual(producto.id_categoria, self.categoria)
         self.assertEqual(producto.id_impuesto, self.impuesto)
         self.assertEqual(producto.id_unidad_medida, self.unidad)
@@ -129,7 +129,7 @@ class ProductosTest(TestCase):
         producto = Productos.objects.create(
             descripcion="Empanada Casera",
             stock_minimo=Decimal("5.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -209,22 +209,22 @@ class ListasPreciosTest(TestCase):
             nombre_lista="Minorista",
             fecha_vigencia=timezone.now().date(),
             moneda="PYG",
-            activo=True,
+            estado=True,
         )
 
         self.assertIsNotNone(lista.id_lista)
         self.assertEqual(lista.nombre_lista, "Minorista")
         self.assertEqual(lista.moneda, "PYG")
-        self.assertTrue(lista.activo)
+        self.assertTrue(lista.estado)
 
     def test_multiples_listas_precios(self):
         """Test: Crear múltiples listas de precios"""
         lista_minorista = ListasPrecios.objects.create(
-            nombre_lista="Minorista", moneda="PYG", activo=True
+            nombre_lista="Minorista", moneda="PYG", estado=True
         )
 
         lista_mayorista = ListasPrecios.objects.create(
-            nombre_lista="Mayorista", moneda="PYG", activo=True
+            nombre_lista="Mayorista", moneda="PYG", estado=True
         )
 
         self.assertEqual(ListasPrecios.objects.count(), 2)
@@ -232,7 +232,7 @@ class ListasPreciosTest(TestCase):
 
     def test_str_lista_precios(self):
         """Test: __str__ muestra nombre y moneda"""
-        lista = ListasPrecios.objects.create(nombre_lista="Estudiantes", moneda="USD", activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Estudiantes", moneda="USD", estado=True)
 
         self.assertEqual(str(lista), "Estudiantes (USD)")
 
@@ -247,12 +247,12 @@ class PreciosPorListaTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Categoría y unidad
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", estado=True)
 
         # Producto
         self.producto = Productos.objects.create(
@@ -265,11 +265,11 @@ class PreciosPorListaTest(TestCase):
 
         # Listas de precios
         self.lista_minorista = ListasPrecios.objects.create(
-            nombre_lista="Minorista", moneda="PYG", activo=True
+            nombre_lista="Minorista", moneda="PYG", estado=True
         )
 
         self.lista_mayorista = ListasPrecios.objects.create(
-            nombre_lista="Mayorista", moneda="PYG", activo=True
+            nombre_lista="Mayorista", moneda="PYG", estado=True
         )
 
     def test_crear_precio_producto(self):

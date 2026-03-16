@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para admin de contabilidad
 Cubre interfaz administrativa y funcionalidades de gestión
 """
@@ -46,7 +46,7 @@ class BaseContabilidadAdminTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Administrador',
             descripcion='Rol administrativo',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -62,13 +62,13 @@ class BaseContabilidadAdminTest(TestCase):
         self.caja = Cajas.objects.create(
             nombre_caja='Caja Admin Test',
             ubicacion='Administración',
-            activo=True
+            estado=True
         )
         
         self.medio_pago = MediosPago.objects.create(
             nombre='Efectivo Admin',
             descripcion='Para tests admin',
-            activo=True
+            estado=True
         )
         
         # Cliente para requests
@@ -85,11 +85,11 @@ class CajasAdminTest(BaseContabilidadAdminTest):
     def test_cajas_admin_list_display(self):
         """Debe mostrar campos correctos en lista"""
         # Crear múltiples cajas
-        Cajas.objects.create(nombre_caja='Caja 1', activo=True)
-        Cajas.objects.create(nombre_caja='Caja 2', activo=False)
+        Cajas.objects.create(nombre_caja='Caja 1', estado=True)
+        Cajas.objects.create(nombre_caja='Caja 2', estado=False)
         
         # Simular list_display
-        expected_fields = ['nombre_caja', 'ubicacion', 'activo']
+        expected_fields = ['nombre_caja', 'ubicacion', 'estado']
         
         # Verificar que los campos existen en el modelo
         for field in expected_fields:
@@ -118,14 +118,14 @@ class CajasAdminTest(BaseContabilidadAdminTest):
         self.assertNotIn(caja2, resultados_planta_alta)
 
     def test_cajas_admin_filter_by_activo(self):
-        """Debe permitir filtrar por estado activo"""
+        """Debe permitir filtrar por estado estado"""
         # Crear cajas con diferentes estados
-        caja_activa = Cajas.objects.create(nombre_caja='Activa', activo=True)
-        caja_inactiva = Cajas.objects.create(nombre_caja='Inactiva', activo=False)
+        caja_activa = Cajas.objects.create(nombre_caja='Activa', estado=True)
+        caja_inactiva = Cajas.objects.create(nombre_caja='Inactiva', estado=False)
         
         # Filtrar por estado
-        cajas_activas = Cajas.objects.filter(activo=True)
-        cajas_inactivas = Cajas.objects.filter(activo=False)
+        cajas_activas = Cajas.objects.filter(estado=True)
+        cajas_inactivas = Cajas.objects.filter(estado=False)
         
         self.assertIn(caja_activa, cajas_activas)
         self.assertNotIn(caja_activa, cajas_inactivas)
@@ -150,7 +150,7 @@ class CajasAdminTest(BaseContabilidadAdminTest):
         valid_data = {
             'nombre_caja': 'Caja Form Test',
             'ubicacion': 'Test Location',
-            'activo': True
+            'estado': True
         }
         
         # Crear a través de admin form simulation
@@ -164,7 +164,7 @@ class CajasAdminTest(BaseContabilidadAdminTest):
         invalid_data = {
             'nombre_caja': '',
             'ubicacion': 'Test Location',
-            'activo': True
+            'estado': True
         }
         
         with self.assertRaises(Exception):
@@ -448,14 +448,14 @@ class TarifasComisionAdminTest(BaseContabilidadAdminTest):
             fecha_inicio_vigencia=timezone.now(),
             porcentaje_comision=Decimal('3.5000'),
             monto_fijo_comision=Decimal('2000.00'),
-            activo=True,
+            estado=True,
             id_medio_pago=self.medio_pago
         )
         
         # Verificar campos importantes
         self.assertEqual(tarifa.porcentaje_comision, Decimal('3.5000'))
         self.assertEqual(tarifa.monto_fijo_comision, Decimal('2000.00'))
-        self.assertTrue(tarifa.activo)
+        self.assertTrue(tarifa.estado)
 
     def test_tarifas_comision_admin_vigencia_validation(self):
         """Debe validar lógica de vigencia en admin"""
@@ -464,7 +464,7 @@ class TarifasComisionAdminTest(BaseContabilidadAdminTest):
             fecha_inicio_vigencia=timezone.now() - timedelta(days=30),
             fecha_fin_vigencia=timezone.now() + timedelta(days=30),
             porcentaje_comision=Decimal('2.5000'),
-            activo=True,
+            estado=True,
             id_medio_pago=self.medio_pago
         )
         
@@ -500,7 +500,7 @@ class TarifasComisionAdminTest(BaseContabilidadAdminTest):
         otro_medio = MediosPago.objects.create(
             nombre='Tarjeta Débito',
             descripcion='Pagos con débito',
-            activo=True
+            estado=True
         )
         
         # Crear tarifas para diferentes medios
@@ -692,25 +692,25 @@ class ImpuestosAdminTest(BaseContabilidadAdminTest):
             nombre_impuesto='IVA 10% Admin',
             porcentaje=Decimal('10.00'),
             vigente_desde=date.today(),
-            activo=True
+            estado=True
         )
         
         # Campos para mostrar
         expected_fields = [
             'nombre_impuesto', 'porcentaje', 'vigente_desde',
-            'vigente_hasta', 'activo'
+            'vigente_hasta', 'estado'
         ]
         
         for field in expected_fields:
             self.assertTrue(hasattr(impuesto, field))
 
     def test_impuestos_admin_filter_by_activo(self):
-        """Debe permitir filtrar por estado activo"""
+        """Debe permitir filtrar por estado estado"""
         impuesto_activo = Impuestos.objects.create(
-            nombre_impuesto='IVA Activo',
+            nombre_impuesto='IVA estado',
             porcentaje=Decimal('10.00'),
             vigente_desde=date.today(),
-            activo=True
+            estado=True
         )
         
         impuesto_inactivo = Impuestos.objects.create(
@@ -718,12 +718,12 @@ class ImpuestosAdminTest(BaseContabilidadAdminTest):
             porcentaje=Decimal('5.00'),
             vigente_desde=date.today() - timedelta(days=365),
             vigente_hasta=date.today() - timedelta(days=1),
-            activo=False
+            estado=False
         )
         
         # Filtrar por estado
-        activos = Impuestos.objects.filter(activo=True)
-        inactivos = Impuestos.objects.filter(activo=False)
+        activos = Impuestos.objects.filter(estado=True)
+        inactivos = Impuestos.objects.filter(estado=False)
         
         self.assertIn(impuesto_activo, activos)
         self.assertIn(impuesto_inactivo, inactivos)
@@ -803,7 +803,7 @@ class ContabilidadAdminIntegrationTest(BaseContabilidadAdminTest):
             fecha_inicio_vigencia=timezone.now(),
             porcentaje_comision=Decimal('3.0000'),
             monto_fijo_comision=Decimal('1000.00'),
-            activo=True,
+            estado=True,
             id_medio_pago=self.medio_pago
         )
         
@@ -866,18 +866,18 @@ class ContabilidadAdminIntegrationTest(BaseContabilidadAdminTest):
             caja = Cajas.objects.create(
                 nombre_caja=f'Caja Bulk {i}',
                 ubicacion=f'Ubicación {i}',
-                activo=True
+                estado=True
             )
             cajas_bulk.append(caja)
         
         # Simular operación en lote: desactivar todas
         cajas_ids = [caja.id_caja for caja in cajas_bulk]
-        Cajas.objects.filter(id_caja__in=cajas_ids).update(activo=False)
+        Cajas.objects.filter(id_caja__in=cajas_ids).update(estado=False)
         
         # Verificar resultados
         cajas_desactivadas = Cajas.objects.filter(
             id_caja__in=cajas_ids,
-            activo=False
+            estado=False
         )
         self.assertEqual(cajas_desactivadas.count(), 10)
 

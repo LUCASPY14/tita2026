@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests targeting missing lines in apps/ventas/services.py.
 
 Missing ranges:
@@ -39,10 +39,10 @@ def _make_base_fixtures():
 
     lista, _ = ListasPrecios.objects.get_or_create(
         nombre_lista="SVC_General",
-        defaults={"moneda": "PYG", "activo": True},
+        defaults={"moneda": "PYG", "estado": True},
     )
     tipo_cliente, _ = TiposCliente.objects.get_or_create(
-        nombre_tipo="SVC_Regular", defaults={"activo": True}
+        nombre_tipo="SVC_Regular", defaults={"estado": True}
     )
     cliente, _ = Clientes.objects.get_or_create(
         ruc_ci="SVC0000001",
@@ -50,12 +50,12 @@ def _make_base_fixtures():
             "nombres": "SVC",
             "apellidos": "Test",
             "limite_credito": Decimal("0"),
-            "activo": True,
+            "estado": True,
             "id_lista": lista,
             "id_tipo_cliente": tipo_cliente,
         },
     )
-    Roles.objects.get_or_create(nombre_rol="SVC_Cajero", defaults={"activo": True})
+    Roles.objects.get_or_create(nombre_rol="SVC_Cajero", defaults={"estado": True})
     empleado, _ = Empleados.objects.get_or_create(
         email="svc_cajero@test.com",
         defaults={
@@ -67,23 +67,23 @@ def _make_base_fixtures():
     )
     medio_pago, _ = MediosPago.objects.get_or_create(
         descripcion="SVC_Efectivo",
-        defaults={"genera_comision": False, "requiere_validacion": False, "activo": True},
+        defaults={"genera_comision": False, "requiere_validacion": False, "estado": True},
     )
     impuesto = Impuestos.objects.create(
         nombre_impuesto=f"IVA_SVC_{timezone.now().timestamp()}",
         porcentaje=Decimal("10.00"),
         vigente_desde=timezone.now().date(),
-        activo=True,
+        estado=True,
     )
     categoria, _ = Categorias.objects.get_or_create(
-        nombre="SVC_Cat", defaults={"activo": True}
+        nombre="SVC_Cat", defaults={"estado": True}
     )
     unidad, _ = UnidadesMedida.objects.get_or_create(
-        nombre="SVC_UN", defaults={"abreviatura": "UN", "activo": True}
+        nombre="SVC_UN", defaults={"abreviatura": "UN", "estado": True}
     )
     producto = Productos.objects.create(
         descripcion=f"SVC_Prod_{timezone.now().timestamp()}",
-        activo=True,
+        estado=True,
         id_categoria=categoria,
         id_impuesto=impuesto,
         id_unidad_medida=unidad,
@@ -120,7 +120,7 @@ def _make_promo(**overrides):
         requiere_codigo=False,
         codigo_promocion=None,
         prioridad=1,
-        activo=True,
+        estado=True,
         fecha_creacion=timezone.now(),
     )
     defaults.update(overrides)

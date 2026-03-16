@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for core management commands.
 
 Covers:
@@ -19,13 +19,13 @@ class SetupLimitesInicialCommandTest(TestCase):
     def setUp(self):
         # Create the three required roles
         self.rol_admin = Roles.objects.create(
-            nombre_rol="Admin", descripcion="Admin role", activo=True
+            nombre_rol="Admin", descripcion="Admin role", estado=True
         )
         self.rol_gerente = Roles.objects.create(
-            nombre_rol="Gerente", descripcion="Gerente role", activo=True
+            nombre_rol="Gerente", descripcion="Gerente role", estado=True
         )
         self.rol_cajero = Roles.objects.create(
-            nombre_rol="Cajero", descripcion="Cajero role", activo=True
+            nombre_rol="Cajero", descripcion="Cajero role", estado=True
         )
 
     def test_command_creates_limits(self):

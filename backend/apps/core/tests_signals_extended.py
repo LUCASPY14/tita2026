@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para apps/core/signals.py
 Cubre líneas faltantes:
 27 (hasattr _saldo_actualizado → return en actualizar_saldo_recarga),
@@ -22,13 +22,13 @@ from apps.productos.models import ListasPrecios
 def _make_cliente(suffix=""):
     tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo=f"TipoCS{suffix}")
     lista, _ = ListasPrecios.objects.get_or_create(
-        nombre_lista=f"ListaCS{suffix}", defaults={"activo": True}
+        nombre_lista=f"ListaCS{suffix}", defaults={"estado": True}
     )
     return Clientes.objects.create(
         nombres=f"ClienteCS{suffix}",
         apellidos="Signals",
         ruc_ci=f"CS{suffix}9900{suffix[:2] or '00'}",
-        activo=True,
+        estado=True,
         id_lista=lista,
         id_tipo_cliente=tipo,
     )
@@ -38,7 +38,7 @@ def _make_hijo(cliente, suffix=""):
     return Hijos.objects.create(
         nombre=f"HijoCS{suffix}",
         apellido="Signals",
-        activo=True,
+        estado=True,
         id_cliente_responsable=cliente,
     )
 

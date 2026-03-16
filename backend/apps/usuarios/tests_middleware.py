@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para middleware de usuarios
 Cubre autenticación, autorización y procesamiento de requests
 """
@@ -21,7 +21,7 @@ class UsuariosMiddlewareTest(TestCase):
         
         self.rol = Roles.objects.create(
             nombre_rol="MiddlewareTest",
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -30,7 +30,7 @@ class UsuariosMiddlewareTest(TestCase):
             usuario="testuser",
             contrasena_hash="$2b$12$hashedpassword",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol
         )
 
@@ -198,8 +198,8 @@ class UsuariosMiddlewareTest(TestCase):
             if hasattr(request, 'user') and request.user.is_authenticated:
                 # Simular validación de sesión
                 session_checks = {
-                    'user_active': request.user.activo,
-                    'role_active': request.user.id_rol.activo,
+                    'user_active': request.user.estado,
+                    'role_active': request.user.id_rol.estado,
                     'session_valid': True,  # Simulado
                     'requires_reauth': False
                 }
@@ -217,14 +217,14 @@ class UsuariosMiddlewareTest(TestCase):
         request.user = self.empleado
         request.user.is_authenticated = True  # Mock
         
-        # Usuario activo
+        # Usuario estado
         validation = validate_session(request)
         self.assertTrue(validation['session_valid'])
         self.assertTrue(validation['user_active'])
         self.assertFalse(validation['requires_reauth'])
         
         # Usuario inactivo
-        self.empleado.activo = False
+        self.empleado.estado = False
         self.empleado.save()
         validation = validate_session(request)
         self.assertFalse(validation['session_valid'])

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for apps/almuerzos/admin.py
 Covers all custom display methods across 9 admin classes.
 """
@@ -68,13 +68,13 @@ class PlanesAlmuerzoAdminTest(TestCase):
         self.assertIn("FF9800", result)
 
     def test_estado_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("4CAF50", result)
-        self.assertIn("ACTIVO", result)
+        self.assertIn("estado", result)
 
     def test_estado_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("F44336", result)
         self.assertIn("INACTIVO", result)
@@ -107,12 +107,12 @@ class TiposAlmuerzoAdminTest(TestCase):
         self.assertIn("FF9800", result)
 
     def test_estado_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("4CAF50", result)
 
     def test_estado_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("F44336", result)
 
@@ -400,13 +400,13 @@ class AlergenosAdminTest(TestCase):
         self.assertIn("607D8B", result)
 
     def test_estado_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("4CAF50", result)
-        self.assertIn("ACTIVO", result)
+        self.assertIn("estado", result)
 
     def test_estado_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("F44336", result)
         self.assertIn("INACTIVO", result)

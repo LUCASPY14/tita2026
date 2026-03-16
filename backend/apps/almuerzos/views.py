@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+﻿from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -29,7 +29,7 @@ class PlanesAlmuerzoViewSet(viewsets.ModelViewSet):
     queryset = PlanesAlmuerzo.objects.all()
     serializer_class = PlanesAlmuerzoSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ["activo"]
+    filterset_fields = ["estado"]
     search_fields = ["nombre_plan"]
 
 
@@ -37,7 +37,7 @@ class TiposAlmuerzoViewSet(viewsets.ModelViewSet):
     queryset = TiposAlmuerzo.objects.all()
     serializer_class = TiposAlmuerzoSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ["activo"]
+    filterset_fields = ["estado"]
     search_fields = ["nombre"]
 
 
@@ -206,7 +206,7 @@ class AlergenosViewSet(viewsets.ModelViewSet):
     queryset = Alergenos.objects.all()
     serializer_class = AlergenosSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ["activo", "nivel_severidad"]
+    filterset_fields = ["estado", "nivel_severidad"]
     search_fields = ["nombre"]
 
 

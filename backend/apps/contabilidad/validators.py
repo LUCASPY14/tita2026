@@ -1,4 +1,4 @@
-"""
+﻿"""
 Validadores del módulo de Contabilidad
 Sistema completo de validación para facturación electrónica, cajas, comisiones y tributación
 """
@@ -39,9 +39,9 @@ def validar_ubicacion_caja(value):
 
 
 def validar_activo_caja(value):
-    """Valida campo activo de caja (boolean)"""
+    """Valida campo estado de caja (boolean)"""
     if not isinstance(value, bool):
-        raise ValidationError("El campo activo debe ser True o False.")
+        raise ValidationError("El campo estado debe ser True o False.")
 
 
 # =============================================================================
@@ -296,9 +296,9 @@ def validar_monto_fijo_comision(value):
 
 
 def validar_activo_tarifa(value):
-    """Valida campo activo de tarifa (boolean)"""
+    """Valida campo estado de tarifa (boolean)"""
     if not isinstance(value, bool):
-        raise ValidationError("El campo activo debe ser True o False.")
+        raise ValidationError("El campo estado debe ser True o False.")
 
 
 # =============================================================================
@@ -712,9 +712,9 @@ def validar_es_electronico_timbrado(value):
 
 
 def validar_activo_timbrado(value):
-    """Valida campo activo de timbrado (boolean)"""
+    """Valida campo estado de timbrado (boolean)"""
     if not isinstance(value, bool):
-        raise ValidationError("El campo activo debe ser True o False.")
+        raise ValidationError("El campo estado debe ser True o False.")
 
 
 # =============================================================================

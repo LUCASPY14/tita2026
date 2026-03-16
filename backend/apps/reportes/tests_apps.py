@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para aplicación de reportes
 Cubre configuración de la app, signals y configuraciones específicas
 """
@@ -129,7 +129,7 @@ class ReportesAppIntegrationTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Admin Reportes',
             descripcion='Administrador del sistema de reportes',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -159,7 +159,7 @@ class ReportesAppIntegrationTest(TestCase):
             configuracion={'widgets': []},
             es_publico=1,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -211,7 +211,7 @@ class ReportesAppIntegrationTest(TestCase):
             parametros={},
             tipo_reporte='ventas',
             frecuencia='diario',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             created_by=self.empleado
         )
@@ -222,14 +222,14 @@ class ReportesAppIntegrationTest(TestCase):
             parametros={},
             tipo_reporte='ventas',
             frecuencia='diario',
-            activo=False,
+            estado=False,
             created_at=timezone.now(),
             created_by=self.empleado
         )
         
         # Test manager personalizado (si existe)
         # En implementación real: plantillas_activas = PlantillasReporte.activos.all()
-        plantillas_activas = PlantillasReporte.objects.filter(activo=True)
+        plantillas_activas = PlantillasReporte.objects.filter(estado=True)
         self.assertEqual(plantillas_activas.count(), 1)
 
     def test_app_permissions_integration(self):

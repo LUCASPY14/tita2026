@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para la app compras - Validaciones y servicios de compras
 """
 
@@ -25,19 +25,19 @@ class CompraServiceValidacionTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
         self.impuesto_5 = Impuestos.objects.create(
             nombre_impuesto="IVA 5%",
             porcentaje=Decimal("5.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
         self.impuesto_exenta = Impuestos.objects.create(
             nombre_impuesto="EXENTA",
             porcentaje=Decimal("0.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear unidad de medida
@@ -51,7 +51,7 @@ class CompraServiceValidacionTest(TestCase):
             descripcion="Coca Cola 2L",
             codigo_barra="7891234567890",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -61,7 +61,7 @@ class CompraServiceValidacionTest(TestCase):
             descripcion="Pepsi 2L",
             codigo_barra="7891234567891",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_5,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -71,7 +71,7 @@ class CompraServiceValidacionTest(TestCase):
             descripcion="Sprite 2L",
             codigo_barra="7891234567892",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_exenta,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -235,19 +235,19 @@ class CompraServiceCalculoTotalesTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
         self.impuesto_5 = Impuestos.objects.create(
             nombre_impuesto="IVA 5%",
             porcentaje=Decimal("5.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
         self.impuesto_exenta = Impuestos.objects.create(
             nombre_impuesto="EXENTA",
             porcentaje=Decimal("0.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear unidad de medida
@@ -261,7 +261,7 @@ class CompraServiceCalculoTotalesTest(TestCase):
             descripcion="Producto IVA 10%",
             codigo_barra="7891111111111",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -271,7 +271,7 @@ class CompraServiceCalculoTotalesTest(TestCase):
             descripcion="Producto IVA 5%",
             codigo_barra="7892222222222",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_5,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -281,7 +281,7 @@ class CompraServiceCalculoTotalesTest(TestCase):
             descripcion="Producto Exenta",
             codigo_barra="7893333333333",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_exenta,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -432,7 +432,7 @@ class CompraServiceConfirmarCompraTest(TransactionTestCase):
             contrasena_hash="hash789",
             fecha_ingreso=timezone.now(),
             email="maria@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -443,7 +443,7 @@ class CompraServiceConfirmarCompraTest(TransactionTestCase):
             telefono="021-555-1234",
             email="ventas@abc.com.py",
             fecha_registro=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         # Crear unidad y categoría
@@ -456,7 +456,7 @@ class CompraServiceConfirmarCompraTest(TransactionTestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear producto
@@ -464,7 +464,7 @@ class CompraServiceConfirmarCompraTest(TransactionTestCase):
             descripcion="Coca Cola 2L",
             codigo_barra="7891234567890",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,

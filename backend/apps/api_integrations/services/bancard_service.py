@@ -1,4 +1,4 @@
-"""
+﻿"""
 Servicio de  integración con Bancard (Paraguay)
 API de pasarela de pagos para procesamiento de tarjetas de crédito/débito
 """
@@ -76,7 +76,7 @@ class BancardService:
             Valor de la configuración
         """
         try:
-            config = ConfiguracionSistema.objects.filter(clave=clave, activo=True).first()
+            config = ConfiguracionSistema.objects.filter(clave=clave, estado=True).first()
             if config:
                 return config.valor
         except Exception:

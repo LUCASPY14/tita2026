@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para la app ventas - Validación de saldo en tarjetas
 """
 
@@ -21,10 +21,10 @@ class VentasConTarjetaTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
@@ -32,7 +32,7 @@ class VentasConTarjetaTest(TestCase):
             apellidos="González",
             ruc_ci="87654321",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -42,7 +42,7 @@ class VentasConTarjetaTest(TestCase):
             nombre="Ana",
             apellido="González",
             grado="6to",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -64,7 +64,7 @@ class VentasConTarjetaTest(TestCase):
             nombre="Luis",
             apellido="González",
             grado="7mo",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -82,14 +82,14 @@ class VentasConTarjetaTest(TestCase):
         )
 
         # Crear rol y empleado cajero
-        self.rol = Roles.objects.create(nombre_rol="Cajero", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
         self.cajero = Empleados.objects.create(
             nombre="Pedro",
             apellido="Ramírez",
             usuario="cajero_test",
             contrasena_hash="hash123",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -98,7 +98,7 @@ class VentasConTarjetaTest(TestCase):
             descripcion="Tarjeta Prepago",
             genera_comision=False,
             requiere_validacion=False,
-            activo=True,
+            estado=True,
         )
 
     def test_venta_con_saldo_suficiente(self):
@@ -289,14 +289,14 @@ class SaldoDisponibleTest(TestCase):
 
     def setUp(self):
         """Configuración básica"""
-        lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
         cliente = Clientes.objects.create(
             nombres="Test",
             apellidos="User",
             ruc_ci="99999999",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
         )
@@ -304,7 +304,7 @@ class SaldoDisponibleTest(TestCase):
             nombre="Test",
             apellido="Child",
             grado="1ro",
-            activo=True,
+            estado=True,
             id_cliente_responsable=cliente,
         )
 
@@ -371,21 +371,21 @@ class PromocionServiceTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         # Crear unidad de medida
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", estado=True)
 
         # Crear productos
         self.producto1 = Productos.objects.create(
             descripcion="Coca Cola 500ml",
             codigo_barra="7890123456789",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -395,7 +395,7 @@ class PromocionServiceTest(TestCase):
             descripcion="Pepsi 500ml",
             codigo_barra="7890987654321",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -419,7 +419,7 @@ class PromocionServiceTest(TestCase):
             usos_actuales=0,
             requiere_codigo=False,
             prioridad=1,
-            activo=True,
+            estado=True,
             fecha_creacion=timezone.now(),
         )
 
@@ -442,20 +442,20 @@ class PromocionServiceTest(TestCase):
             requiere_codigo=True,
             codigo_promocion="DESCUENTO10",
             prioridad=2,
-            activo=True,
+            estado=True,
             fecha_creacion=timezone.now(),
         )
 
         # Crear tipo de cliente y cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
-        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
         self.cliente = Clientes.objects.create(
             nombres="Juan",
             apellidos="Pérez",
             ruc_ci="12345678",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -602,20 +602,20 @@ class PromocionServiceTest(TestCase):
         from apps.ventas.models import PromocionesAplicadas
 
         # Crear empleado
-        rol = Roles.objects.create(nombre_rol="Cajero", activo=True)
+        rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
         empleado = Empleados.objects.create(
             nombre="Ana",
             apellido="López",
             usuario="ana_test",
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=rol,
         )
 
         # Crear venta
         medio_pago = MediosPago.objects.create(
-            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, activo=True
+            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, estado=True
         )
 
         venta = Ventas.objects.create(
@@ -668,19 +668,19 @@ class DevolucionServiceTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría y unidad
-        self.categoria = Categorias.objects.create(nombre="Snacks", activo=True)
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Snacks", estado=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", estado=True)
 
         # Crear producto
         self.producto = Productos.objects.create(
             descripcion="Papas Fritas",
             codigo_barra="1234567890123",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -694,34 +694,34 @@ class DevolucionServiceTest(TestCase):
         )
 
         # Crear cliente
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
-        lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
         self.cliente = Clientes.objects.create(
             nombres="Carlos",
             apellidos="Ramírez",
             ruc_ci="98765432",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
         )
 
         # Crear empleado
-        rol = Roles.objects.create(nombre_rol="Gerente", activo=True)
+        rol = Roles.objects.create(nombre_rol="Gerente", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="Laura",
             apellido="Fernández",
             usuario="laura_test",
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=rol,
         )
 
         # Crear venta
         medio_pago = MediosPago.objects.create(
-            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, activo=True
+            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, estado=True
         )
 
         self.venta = Ventas.objects.create(
@@ -894,7 +894,7 @@ class DevolucionServiceTest(TestCase):
             descripcion="Galletas",
             codigo_barra="9999999999999",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,

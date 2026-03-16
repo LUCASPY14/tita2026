@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para configuración de admin de la app usuarios
 Cubre Django Admin interface, filtros, búsquedas y acciones
 """
@@ -26,9 +26,9 @@ class RolesAdminTest(TestCase):
         self.client.force_login(self.user)
         
         self.roles = [
-            Roles.objects.create(nombre_rol="Administrador", activo=True),
-            Roles.objects.create(nombre_rol="Cajero", activo=True),
-            Roles.objects.create(nombre_rol="Supervisor", activo=False),
+            Roles.objects.create(nombre_rol="Administrador", estado=True),
+            Roles.objects.create(nombre_rol="Cajero", estado=True),
+            Roles.objects.create(nombre_rol="Supervisor", estado=False),
         ]
 
     def test_admin_list_view(self):
@@ -49,7 +49,7 @@ class RolesAdminTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'nombre_rol')
         self.assertContains(response, 'descripcion')
-        self.assertContains(response, 'activo')
+        self.assertContains(response, 'estado')
 
     def test_admin_create_role(self):
         """Debe crear nuevo rol desde admin"""
@@ -57,7 +57,7 @@ class RolesAdminTest(TestCase):
         data = {
             'nombre_rol': 'Nuevo Rol Admin',
             'descripcion': 'Rol creado desde admin',
-            'activo': True
+            'estado': True
         }
         
         response = self.client.post(url, data)
@@ -65,7 +65,7 @@ class RolesAdminTest(TestCase):
         
         nuevo_rol = Roles.objects.get(nombre_rol='Nuevo Rol Admin')
         self.assertEqual(nuevo_rol.descripcion, 'Rol creado desde admin')
-        self.assertTrue(nuevo_rol.activo)
+        self.assertTrue(nuevo_rol.estado)
 
     def test_admin_edit_view(self):
         """Debe mostrar formulario de edición"""
@@ -83,7 +83,7 @@ class RolesAdminTest(TestCase):
         data = {
             'nombre_rol': 'Admin Actualizado',
             'descripcion': 'Descripción actualizada',
-            'activo': False
+            'estado': False
         }
         
         response = self.client.post(url, data)
@@ -91,7 +91,7 @@ class RolesAdminTest(TestCase):
         
         rol.refresh_from_db()
         self.assertEqual(rol.nombre_rol, 'Admin Actualizado')
-        self.assertFalse(rol.activo)
+        self.assertFalse(rol.estado)
 
     def test_admin_search_functionality(self):
         """Debe permitir búsqueda en admin"""
@@ -103,7 +103,7 @@ class RolesAdminTest(TestCase):
         self.assertNotContains(response, "Cajero")
 
     def test_admin_filter_by_activo(self):
-        """Debe filtrar por estado activo"""
+        """Debe filtrar por estado estado"""
         url = reverse('admin:usuarios_roles_changelist')
         response = self.client.get(url, {'activo__exact': '1'})  # Activos
         
@@ -128,7 +128,7 @@ class EmpleadosAdminTest(TestCase):
         
         self.rol = Roles.objects.create(
             nombre_rol="Manager",
-            activo=True
+            estado=True
         )
         
         self.empleados = [
@@ -139,7 +139,7 @@ class EmpleadosAdminTest(TestCase):
                 contrasena_hash="$2b$12$hash1",
                 fecha_ingreso=timezone.now(),
                 email="juan@company.com",
-                activo=True,
+                estado=True,
                 id_rol=self.rol
             ),
             Empleados.objects.create(
@@ -148,7 +148,7 @@ class EmpleadosAdminTest(TestCase):
                 usuario="mgarcia",
                 contrasena_hash="$2b$12$hash2",
                 fecha_ingreso=timezone.now(),
-                activo=False,
+                estado=False,
                 id_rol=self.rol
             )
         ]
@@ -185,7 +185,7 @@ class EmpleadosAdminTest(TestCase):
             'contrasena_hash': '$2b$12$newhash',
             'fecha_ingreso': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
             'email': 'carlos@company.com',
-            'activo': True,
+            'estado': True,
             'id_rol': self.rol.id_rol
         }
         
@@ -213,12 +213,12 @@ class EmpleadosAdminTest(TestCase):
         self.assertNotContains(response, "Juan")
 
     def test_empleados_admin_filter_by_activo(self):
-        """Debe filtrar empleados por estado activo"""
+        """Debe filtrar empleados por estado estado"""
         url = reverse('admin:usuarios_empleados_changelist')
         response = self.client.get(url, {'activo__exact': '1'})
         
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Juan")  # Activo
+        self.assertContains(response, "Juan")  # estado
         # María (inactiva) no debería aparecer
 
     def test_empleados_admin_filter_by_rol(self):
@@ -263,7 +263,7 @@ class EmpleadosAdminTest(TestCase):
             'contrasena_hash': empleado.contrasena_hash,
             'fecha_ingreso': empleado.fecha_ingreso.strftime('%Y-%m-%d %H:%M:%S'),
             'email': 'juan.carlos@company.com',
-            'activo': True,
+            'estado': True,
             'id_rol': self.rol.id_rol
         }
         

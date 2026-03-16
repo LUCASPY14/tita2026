@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests comprehensivos para RecargaService
 Cubre los 9 métodos principales con múltiples casos de prueba
 """
@@ -143,8 +143,8 @@ class RecargaServiceValidarIdempotenciaTest(TransactionTestCase):
     def setUp(self):
         """Setup con tarjeta válida"""
         # Crear datos necesarios
-        self.lista = ListasPrecios.objects.create(nombre_lista="Test", activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Test", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Test",
             apellidos="Cliente",
@@ -225,8 +225,8 @@ class RecargaServiceAcreditarSaldoTest(TransactionTestCase):
     def setUp(self):
         """Setup con tarjeta y recarga"""
         # Crear datos
-        self.lista = ListasPrecios.objects.create(nombre_lista="Test", activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Test", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Test",
             apellidos="Cliente",
@@ -319,8 +319,8 @@ class RecargaServiceGenerarFacturaTest(TransactionTestCase):
 
     def setUp(self):
         """Setup con datos completos"""
-        self.lista = ListasPrecios.objects.create(nombre_lista="Test", activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Test", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Test",
             apellidos="Cliente",
@@ -341,7 +341,7 @@ class RecargaServiceGenerarFacturaTest(TransactionTestCase):
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre_categoria="Servicios", activo=True)
+        self.categoria = Categorias.objects.create(nombre_categoria="Servicios", estado=True)
 
         self.recarga = CargasSaldo.objects.create(
             nro_tarjeta=self.tarjeta,
@@ -372,7 +372,7 @@ class RecargaServiceGenerarFacturaTest(TransactionTestCase):
             descripcion="Recarga de Saldo",
             precio_venta=Decimal("1"),
             es_servicio=True,
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
         )
 
@@ -405,8 +405,8 @@ class RecargaServiceProcesarRecargaCajaTest(TransactionTestCase):
 
     def setUp(self):
         """Setup completo para recarga en caja"""
-        self.lista = ListasPrecios.objects.create(nombre_lista="Test", activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Test", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Test",
             apellidos="Cliente",
@@ -427,18 +427,18 @@ class RecargaServiceProcesarRecargaCajaTest(TransactionTestCase):
         )
 
         # Crear empleado
-        self.rol = Roles.objects.create(nombre_rol="Cajero", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="Juan",
             apellido="Cajero",
             email="cajero@test.com",
             usuario="cajero1",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre_categoria="Servicios", activo=True)
+        self.categoria = Categorias.objects.create(nombre_categoria="Servicios", estado=True)
 
     def test_recarga_efectivo_completa(self):
         """Recarga en efectivo debe completarse inmediatamente"""
@@ -491,8 +491,8 @@ class RecargaServiceTransferenciaTest(TransactionTestCase):
 
     def setUp(self):
         """Setup para transferencias"""
-        self.lista = ListasPrecios.objects.create(nombre_lista="Test", activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Test", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Test",
             apellidos="Cliente",
@@ -511,16 +511,16 @@ class RecargaServiceTransferenciaTest(TransactionTestCase):
             limite_credito=Decimal("1000.00"),
             id_hijo=self.hijo
         )
-        self.rol = Roles.objects.create(nombre_rol="Cajero", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="Juan",
             apellido="Cajero",
             email="cajero@test.com",
             usuario="cajero1",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
-        self.categoria = Categorias.objects.create(nombre_categoria="Servicios", activo=True)
+        self.categoria = Categorias.objects.create(nombre_categoria="Servicios", estado=True)
 
     def test_iniciar_transferencia_genera_codigo(self):
         """Debe generar código de referencia único"""
@@ -573,13 +573,13 @@ class RecargaServiceTransferenciaTest(TransactionTestCase):
     def test_aprobar_recarga_supervisor(self):
         """Supervisor debe poder aprobar recarga pendiente"""
         # Crear supervisor
-        rol_supervisor = Roles.objects.create(nombre_rol="Supervisor", activo=True)
+        rol_supervisor = Roles.objects.create(nombre_rol="Supervisor", estado=True)
         supervisor = Empleados.objects.create(
             nombre="Maria",
             apellido="Supervisor",
             email="supervisor@test.com",
             usuario="supervisor1",
-            activo=True,
+            estado=True,
             id_rol=rol_supervisor,
         )
 
@@ -614,8 +614,8 @@ class RecargaServiceEdgeCasesTest(TransactionTestCase):
 
     def setUp(self):
         """Setup mínimo"""
-        self.lista = ListasPrecios.objects.create(nombre_lista="Test", activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Test", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Test", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Test",
             apellidos="Cliente",
@@ -626,13 +626,13 @@ class RecargaServiceEdgeCasesTest(TransactionTestCase):
 
     def test_hijo_inexistente_falla(self):
         """Procesar recarga con hijo inexistente debe fallar"""
-        rol = Roles.objects.create(nombre_rol="Cajero", activo=True)
+        rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
         empleado = Empleados.objects.create(
             nombre="Juan",
             apellido="Cajero",
             email="cajero@test.com",
             usuario="cajero1",
-            activo=True,
+            estado=True,
             id_rol=rol,
         )
 

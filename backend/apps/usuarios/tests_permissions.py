@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para sistema de permisos de usuarios
 Cubre permisos personalizados, validaciones de rol y autorizaciones
 """
@@ -23,24 +23,24 @@ class UsuariosPermissionsTest(TestCase):
         self.rol_admin = Roles.objects.create(
             nombre_rol="Administrador",
             descripcion="Permisos completos",
-            activo=True
+            estado=True
         )
         
         self.rol_supervisor = Roles.objects.create(
             nombre_rol="Supervisor",
             descripcion="Permisos de supervisión",
-            activo=True
+            estado=True
         )
         
         self.rol_cajero = Roles.objects.create(
             nombre_rol="Cajero",
             descripcion="Permisos básicos",
-            activo=True
+            estado=True
         )
         
         self.rol_inactivo = Roles.objects.create(
             nombre_rol="RolInactivo",
-            activo=False
+            estado=False
         )
         
         # Crear empleados
@@ -50,7 +50,7 @@ class UsuariosPermissionsTest(TestCase):
             usuario="admin",
             contrasena_hash="$2b$12$hash",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol_admin
         )
         
@@ -60,7 +60,7 @@ class UsuariosPermissionsTest(TestCase):
             usuario="supervisor",
             contrasena_hash="$2b$12$hash",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol_supervisor
         )
         
@@ -70,7 +70,7 @@ class UsuariosPermissionsTest(TestCase):
             usuario="cajero",
             contrasena_hash="$2b$12$hash",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol_cajero
         )
         
@@ -80,16 +80,16 @@ class UsuariosPermissionsTest(TestCase):
             usuario="inactive",
             contrasena_hash="$2b$12$hash",
             fecha_ingreso=timezone.now(),
-            activo=False,
+            estado=False,
             id_rol=self.rol_cajero
         )
 
     def test_is_admin_permission(self):
         """Debe verificar permisos de administrador"""
         def has_admin_permission(user):
-            if not hasattr(user, 'id_rol') or not user.activo:
+            if not hasattr(user, 'id_rol') or not user.estado:
                 return False
-            return user.id_rol.nombre_rol == "Administrador" and user.id_rol.activo
+            return user.id_rol.nombre_rol == "Administrador" and user.id_rol.estado
         
         self.assertTrue(has_admin_permission(self.admin))
         self.assertFalse(has_admin_permission(self.supervisor))
@@ -99,12 +99,12 @@ class UsuariosPermissionsTest(TestCase):
     def test_is_supervisor_or_admin_permission(self):
         """Debe verificar permisos de supervisor o superior"""
         def has_supervisor_permission(user):
-            if not hasattr(user, 'id_rol') or not user.activo:
+            if not hasattr(user, 'id_rol') or not user.estado:
                 return False
             
             supervisor_roles = ["Administrador", "Supervisor"]
             return (user.id_rol.nombre_rol in supervisor_roles and 
-                   user.id_rol.activo)
+                   user.id_rol.estado)
         
         self.assertTrue(has_supervisor_permission(self.admin))
         self.assertTrue(has_supervisor_permission(self.supervisor))
@@ -114,7 +114,7 @@ class UsuariosPermissionsTest(TestCase):
     def test_can_manage_users_permission(self):
         """Debe verificar permisos para gestionar usuarios"""
         def can_manage_users(user):
-            if not hasattr(user, 'id_rol') or not user.activo:
+            if not hasattr(user, 'id_rol') or not user.estado:
                 return False
             
             # Solo admin puede gestionar usuarios
@@ -127,13 +127,13 @@ class UsuariosPermissionsTest(TestCase):
     def test_can_process_sales_permission(self):
         """Debe verificar permisos para procesar ventas"""
         def can_process_sales(user):
-            if not hasattr(user, 'id_rol') or not user.activo:
+            if not hasattr(user, 'id_rol') or not user.estado:
                 return False
             
             # Cajero, supervisor y admin pueden procesar ventas
             sales_roles = ["Administrador", "Supervisor", "Cajero"]
             return (user.id_rol.nombre_rol in sales_roles and 
-                   user.id_rol.activo)
+                   user.id_rol.estado)
         
         self.assertTrue(can_process_sales(self.admin))
         self.assertTrue(can_process_sales(self.supervisor))
@@ -143,7 +143,7 @@ class UsuariosPermissionsTest(TestCase):
     def test_can_approve_high_amount_permission(self):
         """Debe verificar permisos para aprobar montos altos"""
         def can_approve_high_amounts(user, amount):
-            if not hasattr(user, 'id_rol') or not user.activo:
+            if not hasattr(user, 'id_rol') or not user.estado:
                 return False
             
             # Límites por rol
@@ -154,7 +154,7 @@ class UsuariosPermissionsTest(TestCase):
             }
             
             user_limit = limits.get(user.id_rol.nombre_rol, 0)
-            return amount <= user_limit and user.id_rol.activo
+            return amount <= user_limit and user.id_rol.estado
         
         # Monto bajo - todos pueden
         low_amount = 50000
@@ -177,7 +177,7 @@ class UsuariosPermissionsTest(TestCase):
     def test_can_view_reports_permission(self):
         """Debe verificar permisos para ver reportes"""
         def can_view_reports(user, report_type):
-            if not hasattr(user, 'id_rol') or not user.activo:
+            if not hasattr(user, 'id_rol') or not user.estado:
                 return False
             
             # Permisos por tipo de reporte
@@ -190,7 +190,7 @@ class UsuariosPermissionsTest(TestCase):
             
             allowed_roles = report_permissions.get(report_type, [])
             return (user.id_rol.nombre_rol in allowed_roles and 
-                   user.id_rol.activo)
+                   user.id_rol.estado)
         
         # Reportes diarios - todos pueden
         self.assertTrue(can_view_reports(self.admin, "daily_sales"))
@@ -216,14 +216,14 @@ class UsuariosPermissionsTest(TestCase):
             usuario="testinactive",
             contrasena_hash="$2b$12$hash",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol_inactivo
         )
         
         def has_any_permission(user):
             if not hasattr(user, 'id_rol'):
                 return False
-            return user.activo and user.id_rol.activo
+            return user.estado and user.id_rol.estado
         
         self.assertFalse(has_any_permission(empleado_rol_inactivo))
 
@@ -301,7 +301,7 @@ class UsuariosPermissionsTest(TestCase):
                 "Cajero": (time(7, 0), time(19, 0))  # 7 AM - 7 PM
             }
             
-            if not user.activo or not user.id_rol.activo:
+            if not user.estado or not user.id_rol.estado:
                 return False
             
             start_time, end_time = schedules.get(user.id_rol.nombre_rol, (time(9, 0), time(17, 0)))
@@ -329,7 +329,7 @@ class UsuariosPermissionsTest(TestCase):
             }
         
         def can_perform_action_with_level(user, required_level):
-            if not user.activo or not user.id_rol.activo:
+            if not user.estado or not user.id_rol.estado:
                 return False
             
             hierarchy = get_role_hierarchy()

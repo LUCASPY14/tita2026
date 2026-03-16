@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para views de reportes
 Cubre ViewSets de reportes y dashboards
 """
@@ -37,7 +37,7 @@ class BaseReportesViewsTest(APITestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Administrador',
             descripcion='Rol administrativo',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -57,13 +57,13 @@ class BaseReportesViewsTest(APITestCase):
         self.medio_pago = MediosPago.objects.create(
             nombre='Efectivo',
             descripcion='Pago en efectivo',
-            activo=True
+            estado=True
         )
         
         self.categoria = CategoriaProductos.objects.create(
             nombre='Bebidas',
             descripcion='Categoría de bebidas',
-            activo=True
+            estado=True
         )
         
         self.producto = Productos.objects.create(
@@ -71,7 +71,7 @@ class BaseReportesViewsTest(APITestCase):
             codigo='CC001',
             precio_venta=Decimal('7500.00'),
             id_categoria=self.categoria,
-            activo=True
+            estado=True
         )
 
     def crear_datos_ventas_sample(self):
@@ -104,7 +104,7 @@ class BaseReportesViewsTest(APITestCase):
         tarjeta = Tarjetas.objects.create(
             nro_tarjeta='1234567890',
             saldo=Decimal('100000.00'),
-            activo=True
+            estado=True
         )
         
         # Recargas de ejemplo

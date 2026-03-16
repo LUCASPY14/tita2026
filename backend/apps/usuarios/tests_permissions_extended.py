@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests comprehensivos para apps/usuarios/permissions.py
 Cubre PermissionService, clases de permisos DRF y decoradores
 """
@@ -30,7 +30,7 @@ def crear_empleado_basico(nombre='Test', apellido='User', usuario='tu', rol=None
             usuario=usuario,
             contrasena_hash='$2b$12$hash',
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=rol,
         )
     # Sin rol explícito: el manager EmpleadosManager asigna Cajero por defecto
@@ -40,7 +40,7 @@ def crear_empleado_basico(nombre='Test', apellido='User', usuario='tu', rol=None
         usuario=usuario,
         contrasena_hash='$2b$12$hash',
         fecha_ingreso=timezone.now(),
-        activo=True,
+        estado=True,
     )
 
 
@@ -63,7 +63,7 @@ class PermissionServiceEmpleadoTienePermisoTest(TestCase):
 
     def setUp(self):
         PermissionService.inicializar_permisos()
-        self.rol = Roles.objects.create(nombre_rol='Vendedor', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='Vendedor', estado=True)
         self.empleado = crear_empleado_basico(usuario='emp1', rol=self.rol)
 
     def test_sin_empleado_retorna_false(self):
@@ -94,7 +94,7 @@ class PermissionServiceAlgunosPermisosTest(TestCase):
 
     def setUp(self):
         PermissionService.inicializar_permisos()
-        self.rol = Roles.objects.create(nombre_rol='Cajero2', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='Cajero2', estado=True)
         self.empleado = crear_empleado_basico(usuario='caj2', rol=self.rol)
 
     def test_tiene_al_menos_uno(self):
@@ -116,7 +116,7 @@ class PermissionServiceTodosPermisosTest(TestCase):
 
     def setUp(self):
         PermissionService.inicializar_permisos()
-        self.rol = Roles.objects.create(nombre_rol='Cajero3', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='Cajero3', estado=True)
         self.empleado = crear_empleado_basico(usuario='caj3', rol=self.rol)
 
     def test_tiene_todos(self):
@@ -141,7 +141,7 @@ class PermissionServiceObtenerPermisosTest(TestCase):
 
     def setUp(self):
         PermissionService.inicializar_permisos()
-        self.rol = Roles.objects.create(nombre_rol='Cajero4', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='Cajero4', estado=True)
         self.empleado = crear_empleado_basico(usuario='caj4', rol=self.rol)
 
     def test_sin_rol_retorna_lista_vacia(self):
@@ -167,7 +167,7 @@ class PermissionServiceAsignarPermisosTest(TestCase):
 
     def setUp(self):
         PermissionService.inicializar_permisos()
-        self.rol = Roles.objects.create(nombre_rol='RolAsignar', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='RolAsignar', estado=True)
         self.asignador = crear_empleado_basico(usuario='asignador', rol=None)
 
     def test_asignar_permiso_exitoso(self):
@@ -188,7 +188,7 @@ class PermissionServiceRemoverPermisosTest(TestCase):
 
     def setUp(self):
         PermissionService.inicializar_permisos()
-        self.rol = Roles.objects.create(nombre_rol='RolRemover', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='RolRemover', estado=True)
         self.asignador = crear_empleado_basico(usuario='remover', rol=None)
 
     def test_remover_permiso_exitoso(self):
@@ -230,7 +230,7 @@ class TienePermisoClassTest(TestCase):
     def test_sin_permiso_requerido_retorna_true(self):
         """Si el view no define permission_required, se permite tras encontrar empleado"""
         PermissionService.inicializar_permisos()
-        rol = Roles.objects.create(nombre_rol='RolTP', activo=True)
+        rol = Roles.objects.create(nombre_rol='RolTP', estado=True)
         emp = crear_empleado_basico(usuario='usrtp', rol=rol)
         request = self.factory.get('/')
         user = MagicMock()
@@ -244,7 +244,7 @@ class TienePermisoClassTest(TestCase):
     def test_con_permiso_retorna_true(self):
         """Con empleado que tiene el permiso, has_permission devuelve True"""
         PermissionService.inicializar_permisos()
-        rol = Roles.objects.create(nombre_rol='RolTPperm', activo=True)
+        rol = Roles.objects.create(nombre_rol='RolTPperm', estado=True)
         emp = crear_empleado_basico(usuario='usrtpperm', rol=rol)
         permiso = Permisos.objects.get(codigo_permiso='ventas.ver')
         RolesPermisos.objects.create(id_rol=rol, id_permiso=permiso)
@@ -285,7 +285,7 @@ class TieneAlgunosPermisosClassTest(TestCase):
 
     def test_sin_permisos_requeridos_retorna_true(self):
         PermissionService.inicializar_permisos()
-        rol = Roles.objects.create(nombre_rol='RolTAP', activo=True)
+        rol = Roles.objects.create(nombre_rol='RolTAP', estado=True)
         emp = crear_empleado_basico(usuario='usrtap', rol=rol)
         request = self.factory.get('/')
         user = MagicMock()
@@ -323,7 +323,7 @@ class TieneTodosPermisosClassTest(TestCase):
 
     def test_sin_permisos_requeridos_retorna_true(self):
         PermissionService.inicializar_permisos()
-        rol = Roles.objects.create(nombre_rol='RolTTP', activo=True)
+        rol = Roles.objects.create(nombre_rol='RolTTP', estado=True)
         emp = crear_empleado_basico(usuario='usrttp', rol=rol)
         request = self.factory.get('/')
         user = MagicMock()
@@ -356,7 +356,7 @@ class EsAdministradorClassTest(TestCase):
         self.assertFalse(self.permiso_class.has_permission(request, MagicMock()))
 
     def test_admin_por_nombre_rol(self):
-        rola = Roles.objects.create(nombre_rol='Admin', activo=True)
+        rola = Roles.objects.create(nombre_rol='Admin', estado=True)
         emp = crear_empleado_basico(usuario='admintest2', rol=rola)
         request = self.factory.get('/')
         user = MagicMock()
@@ -367,7 +367,7 @@ class EsAdministradorClassTest(TestCase):
 
     def test_administrador_por_nombre_rol(self):
         PermissionService.inicializar_permisos()
-        rola = Roles.objects.create(nombre_rol='Administrador', activo=True)
+        rola = Roles.objects.create(nombre_rol='Administrador', estado=True)
         emp = crear_empleado_basico(usuario='admintest3', rol=rola)
         request = self.factory.get('/')
         user = MagicMock()
@@ -378,7 +378,7 @@ class EsAdministradorClassTest(TestCase):
 
     def test_no_administrador(self):
         PermissionService.inicializar_permisos()
-        rola = Roles.objects.create(nombre_rol='Cajero', activo=True)
+        rola = Roles.objects.create(nombre_rol='Cajero', estado=True)
         emp = crear_empleado_basico(usuario='nonadmin', rol=rola)
         request = self.factory.get('/')
         user = MagicMock()
@@ -392,7 +392,7 @@ class RequierePermisoDecoradorTest(TestCase):
 
     def setUp(self):
         PermissionService.inicializar_permisos()
-        self.rol = Roles.objects.create(nombre_rol='RolDec', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='RolDec', estado=True)
         self.empleado = crear_empleado_basico(usuario='dec1', rol=self.rol)
         self.factory = RequestFactory()
 
@@ -458,7 +458,7 @@ class RequiereAlgunosPermisosDecoradorTest(TestCase):
 
     def setUp(self):
         PermissionService.inicializar_permisos()
-        self.rol = Roles.objects.create(nombre_rol='RolDec2', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='RolDec2', estado=True)
         self.empleado = crear_empleado_basico(usuario='dec2', rol=self.rol)
         self.factory = RequestFactory()
 

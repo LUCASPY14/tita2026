@@ -1,4 +1,4 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     NotificacionesPortal,
@@ -209,14 +209,14 @@ class PreferenciasNotificacionAdmin(admin.ModelAdmin):
 
     def email_activo_badge(self, obj):
         if obj.email_activo == 1:
-            return format_html('<span style="color: green;">✓ Activo</span>')
+            return format_html('<span style="color: green;">✓ estado</span>')
         return format_html('<span style="color: gray;">✗ Inactivo</span>')
 
     email_activo_badge.short_description = "Email"
 
     def push_activo_badge(self, obj):
         if obj.push_activo == 1:
-            return format_html('<span style="color: green;">✓ Activo</span>')
+            return format_html('<span style="color: green;">✓ estado</span>')
         return format_html('<span style="color: gray;">✗ Inactivo</span>')
 
     push_activo_badge.short_description = "Push"
@@ -362,7 +362,7 @@ class PlantillasEmailAdmin(admin.ModelAdmin):
         "variables_count",
         "updated_at",
     ]
-    list_filter = ["categoria", "activo", "created_at"]
+    list_filter = ["categoria", "estado", "created_at"]
     search_fields = ["codigo", "nombre", "asunto"]
     ordering = ["categoria", "nombre"]
     readonly_fields = ["id_template", "created_at", "updated_at"]
@@ -373,12 +373,12 @@ class PlantillasEmailAdmin(admin.ModelAdmin):
             {"fields": ("id_template", "codigo", "nombre", "descripcion", "categoria")},
         ),
         ("Contenido", {"fields": ("asunto", "cuerpo_html", "cuerpo_texto", "variables")}),
-        ("Estado", {"fields": ("activo", "created_at", "updated_at", "created_by")}),
+        ("Estado", {"fields": ("estado", "created_at", "updated_at", "created_by")}),
     )
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green;">✓ estado</span>')
         return format_html('<span style="color: red;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"
@@ -406,7 +406,7 @@ class PlantillasSmsAdmin(admin.ModelAdmin):
         "activo_badge",
         "variables_count",
     ]
-    list_filter = ["categoria", "activo", "created_at"]
+    list_filter = ["categoria", "estado", "created_at"]
     search_fields = ["codigo", "nombre", "mensaje"]
     ordering = ["categoria", "nombre"]
     readonly_fields = ["id_template", "created_at"]
@@ -414,7 +414,7 @@ class PlantillasSmsAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Información", {"fields": ("id_template", "codigo", "nombre", "categoria")}),
         ("Mensaje", {"fields": ("mensaje", "variables")}),
-        ("Estado", {"fields": ("activo", "created_at")}),
+        ("Estado", {"fields": ("estado", "created_at")}),
     )
 
     def mensaje_preview(self, obj):
@@ -425,8 +425,8 @@ class PlantillasSmsAdmin(admin.ModelAdmin):
     mensaje_preview.short_description = "Mensaje"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green;">✓ estado</span>')
         return format_html('<span style="color: red;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"
@@ -525,7 +525,7 @@ class AlertasAutomaticasAdmin(admin.ModelAdmin):
         "activo_badge",
         "ultima_verificacion",
     ]
-    list_filter = ["tipo_alerta", "criticidad", "activo"]
+    list_filter = ["tipo_alerta", "criticidad", "estado"]
     search_fields = ["nombre", "descripcion"]
     ordering = ["criticidad", "nombre"]
     readonly_fields = ["id_alerta", "ultima_verificacion"]
@@ -533,7 +533,7 @@ class AlertasAutomaticasAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Información", {"fields": ("id_alerta", "nombre", "descripcion")}),
         ("Configuración", {"fields": ("tipo_alerta", "criticidad", "condicion", "frecuencia_min")}),
-        ("Estado", {"fields": ("activo", "ultima_verificacion")}),
+        ("Estado", {"fields": ("estado", "ultima_verificacion")}),
     )
 
     def tipo_alerta_badge(self, obj):
@@ -569,8 +569,8 @@ class AlertasAutomaticasAdmin(admin.ModelAdmin):
     criticidad_badge.short_description = "Criticidad"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green;">✓ estado</span>')
         return format_html('<span style="color: red;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"
@@ -591,7 +591,7 @@ class AlertaDestinatariosAdmin(admin.ModelAdmin):
         "via_sistema_badge",
         "activo_badge",
     ]
-    list_filter = ["via_email", "via_sistema", "activo", "id_alerta"]
+    list_filter = ["via_email", "via_sistema", "estado", "id_alerta"]
     search_fields = ["id_empleado__nombre", "id_empleado__apellido"]
     ordering = ["id_alerta", "id_empleado"]
     readonly_fields = ["id_destinatario"]
@@ -599,7 +599,7 @@ class AlertaDestinatariosAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Información", {"fields": ("id_destinatario", "id_alerta", "id_empleado")}),
         ("Canales de Notificación", {"fields": ("via_email", "via_sistema")}),
-        ("Estado", {"fields": ("activo",)}),
+        ("Estado", {"fields": ("estado",)}),
     )
 
     def via_email_badge(self, obj):
@@ -617,8 +617,8 @@ class AlertaDestinatariosAdmin(admin.ModelAdmin):
     via_sistema_badge.short_description = "Sistema"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green;">✓ estado</span>')
         return format_html('<span style="color: red;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"
@@ -806,7 +806,7 @@ class RestriccionesHorariasAdmin(admin.ModelAdmin):
         "activo_badge",
         "fecha_creacion",
     ]
-    list_filter = ["tipo_usuario", "dia_semana", "activo", "fecha_creacion"]
+    list_filter = ["tipo_usuario", "dia_semana", "estado", "fecha_creacion"]
     search_fields = ["usuario"]
     ordering = ["tipo_usuario", "dia_semana", "hora_inicio"]
     readonly_fields = ["id_restriccion", "fecha_creacion"]
@@ -814,7 +814,7 @@ class RestriccionesHorariasAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Información", {"fields": ("id_restriccion", "usuario", "tipo_usuario")}),
         ("Restricción", {"fields": ("dia_semana", "hora_inicio", "hora_fin")}),
-        ("Estado", {"fields": ("activo", "fecha_creacion")}),
+        ("Estado", {"fields": ("estado", "fecha_creacion")}),
     )
 
     def rango_horario(self, obj):
@@ -827,8 +827,8 @@ class RestriccionesHorariasAdmin(admin.ModelAdmin):
     rango_horario.short_description = "Horario Permitido"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green;">✓ estado</span>')
         return format_html('<span style="color: red;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"

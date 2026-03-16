@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests de ramas faltantes en productos/models.py
 Cubre branches en ProductosManager._prepare_kwargs, precio_venta property,
 CategoriasManager, HistoricoPrecios.variacion_porcentual, y get_or_create.
@@ -45,7 +45,7 @@ class ProductosManagerBranchesTest(TestCase):
         )
         lista, _ = ListasPrecios.objects.get_or_create(
             nombre_lista="General_precio_branch",
-            defaults={"fecha_vigencia": tz.now().date(), "moneda": "PYG", "activo": True},
+            defaults={"fecha_vigencia": tz.now().date(), "moneda": "PYG", "estado": True},
         )
         PreciosPorLista.objects.create(
             id_producto=p,

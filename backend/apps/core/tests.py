@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para la app core - Reglas de negocio de tarjetas prepago
 """
 
@@ -19,10 +19,10 @@ class TarjetasModelTest(TestCase):
     def setUp(self):
         """Configuración inicial para los tests"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
@@ -30,7 +30,7 @@ class TarjetasModelTest(TestCase):
             apellidos="Pérez",
             ruc_ci="12345678",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -40,7 +40,7 @@ class TarjetasModelTest(TestCase):
             nombre="Pedro",
             apellido="Pérez",
             grado="5to",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -189,14 +189,14 @@ class CargasSaldoSignalTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         # Crear datos base (igual que TarjetasModelTest)
-        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Juan",
             apellidos="Pérez",
             ruc_ci="12345678",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -204,7 +204,7 @@ class CargasSaldoSignalTest(TestCase):
             nombre="Pedro",
             apellido="Pérez",
             grado="5to",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
         self.tarjeta = Tarjetas.objects.create(
@@ -276,7 +276,7 @@ class MediosPagoTest(TestCase):
             descripcion="Tarjeta Crédito",
             genera_comision=True,  # BooleanField
             requiere_validacion=True,  # BooleanField
-            activo=True,
+            estado=True,
         )
 
         self.assertTrue(medio.genera_comision)
@@ -285,7 +285,7 @@ class MediosPagoTest(TestCase):
     def test_medio_pago_efectivo(self):
         """Test: Efectivo sin comisión"""
         medio = MediosPago.objects.create(
-            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, activo=True
+            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, estado=True
         )
 
         self.assertFalse(medio.genera_comision)
@@ -319,7 +319,7 @@ class AutorizacionServiceTest(TestCase):
             contrasena_hash="hash123",
             fecha_ingreso=timezone.now(),
             email="cajero@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol_cajero,
         )
 
@@ -330,7 +330,7 @@ class AutorizacionServiceTest(TestCase):
             contrasena_hash="hash456",
             fecha_ingreso=timezone.now(),
             email="gerente@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol_gerente,
         )
 
@@ -342,7 +342,7 @@ class AutorizacionServiceTest(TestCase):
             tipo_operacion="venta",
             monto_maximo_sin_autorizacion=Decimal("500000.00"),
             requiere_autorizacion_doble=False,
-            activo=True,
+            estado=True,
         )
         self.limite.roles_autorizadores.add(self.rol_gerente)
 

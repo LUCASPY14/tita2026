@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for apps/usuarios/signals.py to cover missing branches.
 
 Targets:
@@ -36,7 +36,7 @@ class SerializarModeloTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol="SerializaTest",
             descripcion="Test",
-            activo=True,
+            estado=True,
         )
 
     def test_serializar_con_fk_nulo(self):
@@ -49,7 +49,7 @@ class SerializarModeloTest(TestCase):
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
             email="serial@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
         # Access serializar with the new instance — FK id_rol will have a value
@@ -99,7 +99,7 @@ class EmpleadoPreSaveDoesNotExistTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol="PreSaveTest",
             descripcion="Test",
-            activo=True,
+            estado=True,
         )
 
     def test_pre_save_doesnotexist_branch(self):
@@ -111,7 +111,7 @@ class EmpleadoPreSaveDoesNotExistTest(TestCase):
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
             email="presave@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -133,7 +133,7 @@ class EmpleadoPostSaveExceptionTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol="PostSaveExcTest",
             descripcion="Test",
-            activo=True,
+            estado=True,
         )
 
     def test_post_save_user_sync_exception(self):
@@ -150,7 +150,7 @@ class EmpleadoPostSaveExceptionTest(TestCase):
                 contrasena_hash="hash",
                 fecha_ingreso=timezone.now(),
                 email="excsync@test.com",
-                activo=True,
+                estado=True,
                 id_rol=self.rol,
             )
             self.assertIsNotNone(empleado.id_empleado)
@@ -169,7 +169,7 @@ class EmpleadoPostSaveExceptionTest(TestCase):
                 contrasena_hash="hash",
                 fecha_ingreso=timezone.now(),
                 email="excaudit@test.com",
-                activo=True,
+                estado=True,
                 id_rol=self.rol,
             )
             self.assertIsNotNone(empleado.id_empleado)
@@ -182,7 +182,7 @@ class EmpleadoPostDeleteExceptionTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol="PostDeleteExcTest",
             descripcion="Test",
-            activo=True,
+            estado=True,
         )
 
     def test_post_delete_audit_exception(self):
@@ -194,7 +194,7 @@ class EmpleadoPostDeleteExceptionTest(TestCase):
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
             email="delexc@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -223,7 +223,7 @@ class RolSignalExceptionTest(TestCase):
             rol = Roles.objects.create(
                 nombre_rol="RolSaveExc",
                 descripcion="Test",
-                activo=True,
+                estado=True,
             )
             self.assertIsNotNone(rol.id_rol)
 
@@ -232,7 +232,7 @@ class RolSignalExceptionTest(TestCase):
         rol = Roles.objects.create(
             nombre_rol="RolDelExc",
             descripcion="Test",
-            activo=True,
+            estado=True,
         )
 
         with patch(
@@ -300,7 +300,7 @@ class BloqueoSignalExceptionTest(TestCase):
             tipo_usuario="empleado",
             motivo="Test motivo",
             fecha_bloqueo=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         with patch(
@@ -308,10 +308,10 @@ class BloqueoSignalExceptionTest(TestCase):
             side_effect=Exception("Bloqueo audit error"),
         ):
             # Deactivate the block → triggers the desbloqueo branch in signal
-            bloqueo.activo = False
+            bloqueo.estado = False
             bloqueo.save()
             bloqueo.refresh_from_db()
-            self.assertFalse(bloqueo.activo)
+            self.assertFalse(bloqueo.estado)
 
 
 class PerfilSignalTest(TestCase):
@@ -321,7 +321,7 @@ class PerfilSignalTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol="PerfilSigTest",
             descripcion="Test",
-            activo=True,
+            estado=True,
         )
         self.empleado = Empleados.objects.create(
             nombre="PerfilSig",
@@ -330,7 +330,7 @@ class PerfilSignalTest(TestCase):
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
             email="perfilsig@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -416,7 +416,7 @@ class EmpleadoUpdateAuditTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol="UpdateAuditTest",
             descripcion="Test",
-            activo=True,
+            estado=True,
         )
 
     def test_empleado_update_triggers_audit(self):
@@ -428,7 +428,7 @@ class EmpleadoUpdateAuditTest(TestCase):
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
             email="updateaudit@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
         # Update a field that differs to trigger AuditoriaEmpleados.create

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para apps/inventario/services.py
 Cubre líneas faltantes:
 47-48 (Productos.DoesNotExist en validar_disponibilidad),
@@ -24,13 +24,13 @@ from apps.usuarios.models import Empleados, Roles
 
 def make_base_objects():
     """Helper to create base product-related objects"""
-    categoria = Categorias.objects.create(nombre="TestCat_Srv", activo=True)
-    unidad = UnidadesMedida.objects.create(nombre="TestUnd_Srv", abreviatura="SV", activo=True)
+    categoria = Categorias.objects.create(nombre="TestCat_Srv", estado=True)
+    unidad = UnidadesMedida.objects.create(nombre="TestUnd_Srv", abreviatura="SV", estado=True)
     impuesto = Impuestos.objects.create(
         nombre_impuesto="IVA_Srv",
         porcentaje=Decimal("10.00"),
         vigente_desde=timezone.now().date(),
-        activo=True,
+        estado=True,
     )
     return categoria, unidad, impuesto
 
@@ -41,7 +41,7 @@ def make_producto(categoria, unidad, impuesto, suffix="", permite_negativo=False
         descripcion=f"Producto Srv {suffix}",
         stock_minimo=stock_minimo or Decimal("5.000"),
         permite_stock_negativo=permite_negativo,
-        activo=True,
+        estado=True,
         id_categoria=categoria,
         id_impuesto=impuesto,
         id_unidad_medida=unidad,
@@ -50,7 +50,7 @@ def make_producto(categoria, unidad, impuesto, suffix="", permite_negativo=False
 
 def make_empleado(suffix=""):
     """Helper to create an employee"""
-    rol = Roles.objects.create(nombre_rol=f"RolSrv{suffix}", activo=True)
+    rol = Roles.objects.create(nombre_rol=f"RolSrv{suffix}", estado=True)
     return Empleados.objects.create(
         nombre=f"Emp{suffix}",
         apellido="Srv",
@@ -58,7 +58,7 @@ def make_empleado(suffix=""):
         contrasena_hash="hash",
         fecha_ingreso=timezone.now(),
         email=f"emp_srv_{suffix}@test.com",
-        activo=True,
+        estado=True,
         id_rol=rol,
     )
 

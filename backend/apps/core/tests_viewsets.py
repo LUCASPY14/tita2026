@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para ViewSets de app Core - Custom Actions y CRUD
 
 Este módulo contiene tests para:
@@ -47,15 +47,15 @@ class RecargaCajaActionTest(TransactionTestCase):
         self.viewset = CargasSaldoViewSet.as_view({"post": "recarga_caja"})
 
         # Crear dependencias (TiposCliente, ListasPrecios)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", estado=True)
 
         self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Estándar", activo=True
+            nombre_lista="Lista Estándar", estado=True
         )
 
         # Crear rol para empleado
         self.rol_cajero = Roles.objects.create(
-            nombre_rol="Cajero", descripcion="Empleado de caja", activo=True
+            nombre_rol="Cajero", descripcion="Empleado de caja", estado=True
         )
 
         # Crear cliente de prueba
@@ -96,7 +96,7 @@ class RecargaCajaActionTest(TransactionTestCase):
             fecha_ingreso=datetime.now(),
             telefono="0987654321",
             email="ana@cantina.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol_cajero,
         )
 
@@ -196,10 +196,10 @@ class GenerarReferenciaTransferenciaActionTest(TestCase):
         self.client = APIClient()
 
         # Crear dependencias
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", estado=True)
 
         self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Estándar", activo=True
+            nombre_lista="Lista Estándar", estado=True
         )
 
         # Crear cliente y hijo
@@ -293,10 +293,10 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
         self.client = APIClient()
 
         # Crear dependencias
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", estado=True)
 
         self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Estándar", activo=True
+            nombre_lista="Lista Estándar", estado=True
         )
 
         # Crear cliente y hijo
@@ -342,7 +342,7 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
         from apps.usuarios.models import Roles
 
         self.rol_supervisor = Roles.objects.create(
-            nombre_rol="Supervisor", descripcion="Supervisor de caja", activo=True
+            nombre_rol="Supervisor", descripcion="Supervisor de caja", estado=True
         )
 
         self.empleado = Empleados.objects.create(
@@ -353,7 +353,7 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
             fecha_ingreso=datetime.now(),
             email="supervisor@cantina.com",
             telefono="0999999999",
-            activo=True,
+            estado=True,
             id_rol=self.rol_supervisor,
         )
 
@@ -493,10 +493,10 @@ class AprobarSupervisorActionTest(TransactionTestCase):
         self.client = APIClient()
 
         # Crear dependencias
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", estado=True)
 
         self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Estándar", activo=True
+            nombre_lista="Lista Estándar", estado=True
         )
 
         # Crear cliente y hijo
@@ -542,7 +542,7 @@ class AprobarSupervisorActionTest(TransactionTestCase):
         from apps.usuarios.models import Roles
 
         self.rol_supervisor = Roles.objects.create(
-            nombre_rol="Supervisor", descripcion="Supervisor de operaciones", activo=True
+            nombre_rol="Supervisor", descripcion="Supervisor de operaciones", estado=True
         )
 
         self.supervisor = Empleados.objects.create(
@@ -553,7 +553,7 @@ class AprobarSupervisorActionTest(TransactionTestCase):
             fecha_ingreso=datetime.now(),
             email="supervisor@cantina.com",
             telefono="0911111111",
-            activo=True,
+            estado=True,
             id_rol=self.rol_supervisor,
         )
 
@@ -620,10 +620,10 @@ class IniciarRecargaBancardActionTest(TestCase):
         self.client = APIClient()
 
         # Crear dependencias
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", estado=True)
 
         self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Estándar", activo=True
+            nombre_lista="Lista Estándar", estado=True
         )
 
         # Crear cliente y hijo

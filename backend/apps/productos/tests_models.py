@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para modelos de la app productos
 Sprint 2 - Backend Coverage Improvement
 """
@@ -21,21 +21,21 @@ class ProductosModelTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         # Crear unidad de medida
-        self.unidad = UnidadesMedida.objects.create(nombre="Litro", abreviatura="L", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Litro", abreviatura="L", estado=True)
 
         # Crear producto
         self.producto = Productos.objects.create(
             codigo_barra="7890000000001",
             descripcion="Agua Mineral 2L",
             stock_minimo=Decimal("20.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -50,7 +50,7 @@ class ProductosModelTest(TestCase):
         producto_sin_codigo = Productos.objects.create(
             descripcion="Producto sin código",
             stock_minimo=Decimal("5.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
         )
@@ -88,16 +88,16 @@ class CategoriasModelTest(TestCase):
 
     def test_crear_categoria_raiz(self):
         """Test de creación de categoría sin padre"""
-        categoria = Categorias.objects.create(nombre="Alimentos", activo=True)
+        categoria = Categorias.objects.create(nombre="Alimentos", estado=True)
 
         self.assertIsNone(categoria.id_categoria_padre)
         self.assertEqual(str(categoria), "Alimentos")
 
     def test_crear_subcategoria(self):
         """Test de creación de subcategoría con padre"""
-        padre = Categorias.objects.create(nombre="Bebidas", activo=True)
+        padre = Categorias.objects.create(nombre="Bebidas", estado=True)
 
-        hija = Categorias.objects.create(nombre="Gaseosas", id_categoria_padre=padre, activo=True)
+        hija = Categorias.objects.create(nombre="Gaseosas", id_categoria_padre=padre, estado=True)
 
         self.assertEqual(hija.id_categoria_padre, padre)
         self.assertEqual(str(hija), "Bebidas > Gaseosas")
@@ -109,7 +109,7 @@ class ListasPreciosModelTest(TestCase):
     def test_str_method(self):
         """Test del método __str__"""
         lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Mayorista", moneda="PYG", activo=True
+            nombre_lista="Lista Mayorista", moneda="PYG", estado=True
         )
 
         self.assertEqual(str(lista), "Lista Mayorista (PYG)")
@@ -117,7 +117,7 @@ class ListasPreciosModelTest(TestCase):
     def test_str_method_con_moneda_usd(self):
         """Test del método __str__ con moneda USD"""
         lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Internacional", moneda="USD", activo=True
+            nombre_lista="Lista Internacional", moneda="USD", estado=True
         )
 
         self.assertEqual(str(lista), "Lista Internacional (USD)")
@@ -125,7 +125,7 @@ class ListasPreciosModelTest(TestCase):
     def test_fecha_vigencia_opcional(self):
         """Test que fecha_vigencia es opcional"""
         lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Sin Fecha", moneda="PYG", activo=True
+            nombre_lista="Lista Sin Fecha", moneda="PYG", estado=True
         )
 
         self.assertIsNone(lista.fecha_vigencia)
@@ -140,25 +140,25 @@ class PreciosPorListaModelTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
-        self.categoria = Categorias.objects.create(nombre="Snacks", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Snacks", estado=True)
 
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", estado=True)
 
         self.producto = Productos.objects.create(
             codigo_barra="7890111111111",
             descripcion="Galletas",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
         )
 
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Minorista", moneda="PYG", activo=True
+            nombre_lista="Lista Minorista", moneda="PYG", estado=True
         )
 
     def test_crear_precio_por_lista(self):
@@ -189,17 +189,17 @@ class UnidadesMedidaModelTest(TestCase):
 
     def test_str_method(self):
         """Test del método __str__"""
-        unidad = UnidadesMedida.objects.create(nombre="Kilogramo", abreviatura="Kg", activo=True)
+        unidad = UnidadesMedida.objects.create(nombre="Kilogramo", abreviatura="Kg", estado=True)
 
         self.assertEqual(str(unidad), "Kilogramo (Kg)")
 
     def test_crear_unidad_completa(self):
         """Test de creación de unidad con todos los campos"""
-        unidad = UnidadesMedida.objects.create(nombre="Litro", abreviatura="L", activo=True)
+        unidad = UnidadesMedida.objects.create(nombre="Litro", abreviatura="L", estado=True)
 
         self.assertEqual(unidad.nombre, "Litro")
         self.assertEqual(unidad.abreviatura, "L")
-        self.assertTrue(unidad.activo)
+        self.assertTrue(unidad.estado)
 
 
 class ProductosNombrePropertyTest(TestCase):
@@ -209,12 +209,12 @@ class ProductosNombrePropertyTest(TestCase):
         """nombre property devuelve el mismo valor que descripcion."""
         impuesto = Impuestos.objects.create(
             nombre_impuesto='IVA Nom', porcentaje=10,
-            vigente_desde=timezone.now().date(), activo=True,
+            vigente_desde=timezone.now().date(), estado=True,
         )
-        cat = Categorias.objects.create(nombre='Cat Nom', activo=True)
+        cat = Categorias.objects.create(nombre='Cat Nom', estado=True)
         producto = Productos.objects.create(
             descripcion='Producto Alias Nombre',
-            stock_minimo=0, activo=True,
+            stock_minimo=0, estado=True,
             id_categoria=cat, id_impuesto=impuesto,
         )
         self.assertEqual(producto.nombre, 'Producto Alias Nombre')

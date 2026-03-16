@@ -1,4 +1,4 @@
-"""
+﻿"""
 Configuración del panel de administración para api_integrations
 Gestión de proveedores API, endpoints, webhooks, credenciales y logs
 """
@@ -28,11 +28,11 @@ class ProveedoresApiAdmin(admin.ModelAdmin):
         "tipo_servicio",
         "url_base",
         "version",
-        "activo",
+        "estado",
         "created_at",
     )
 
-    list_filter = ("activo", "tipo_servicio", "tipo_auth", "created_at")
+    list_filter = ("estado", "tipo_servicio", "tipo_auth", "created_at")
 
     search_fields = ("nombre", "descripcion", "url_base", "version", "tipo_servicio")
 
@@ -50,7 +50,7 @@ class ProveedoresApiAdmin(admin.ModelAdmin):
             {"fields": ("url_base", "version", "documentacion", "timeout", "max_reintentos")},
         ),
         ("Autenticación", {"fields": ("tipo_auth", "config_auth")}),
-        ("Estado", {"fields": ("activo", "created_at")}),
+        ("Estado", {"fields": ("estado", "created_at")}),
     )
 
     def tipo_servicio_badge(self, obj):
@@ -95,8 +95,8 @@ class ProveedoresApiAdmin(admin.ModelAdmin):
     tipo_auth_badge.short_description = "Autenticación"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
         return format_html('<span style="color: red; font-weight: bold;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"
@@ -116,10 +116,10 @@ class EndpointsApiAdmin(admin.ModelAdmin):
         "metodo",
         "path",
         "requiere_auth",
-        "activo",
+        "estado",
     )
 
-    list_filter = ("metodo", "requiere_auth", "activo", "id_proveedor")
+    list_filter = ("metodo", "requiere_auth", "estado", "id_proveedor")
 
     search_fields = ("nombre", "descripcion", "path")
 
@@ -134,7 +134,7 @@ class EndpointsApiAdmin(admin.ModelAdmin):
         ),
         ("🌐 Configuración HTTP", {"fields": ("path", "metodo", "headers", "parametros")}),
         ("📋 Esquemas", {"fields": ("schema_request", "schema_response")}),
-        ("⚙️ Opciones", {"fields": ("requiere_auth", "cache_segundos", "activo")}),
+        ("⚙️ Opciones", {"fields": ("requiere_auth", "cache_segundos", "estado")}),
     )
 
     def metodo_badge(self, obj):
@@ -167,8 +167,8 @@ class EndpointsApiAdmin(admin.ModelAdmin):
     requiere_auth_badge.short_description = "Autenticación"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
         return format_html('<span style="color: red; font-weight: bold;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"
@@ -297,11 +297,11 @@ class CredencialesApiAdmin(admin.ModelAdmin):
         "tiene_secret",
         "tiene_token",
         "fecha_expiracion",
-        "activo",
+        "estado",
         "updated_at",
     )
 
-    list_filter = ("activo", "ambiente", "id_proveedor", "fecha_expiracion", "updated_at")
+    list_filter = ("estado", "ambiente", "id_proveedor", "fecha_expiracion", "updated_at")
 
     search_fields = ("id_proveedor__nombre",)
 
@@ -314,7 +314,7 @@ class CredencialesApiAdmin(admin.ModelAdmin):
             {"fields": ("api_key", "secret", "token"), "classes": ("collapse",)},
         ),
         ("⚙️ Configuración", {"fields": ("configuracion", "fecha_expiracion")}),
-        ("📅 Estado", {"fields": ("activo", "updated_at")}),
+        ("📅 Estado", {"fields": ("estado", "updated_at")}),
     )
 
     def ambiente_badge(self, obj):
@@ -359,8 +359,8 @@ class CredencialesApiAdmin(admin.ModelAdmin):
     tiene_token.short_description = "Token"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
         return format_html('<span style="color: red; font-weight: bold;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"
@@ -445,11 +445,11 @@ class WebhookEndpointsAdmin(admin.ModelAdmin):
         "proveedor_nombre",
         "path",
         "requiere_verificacion",
-        "activo",
+        "estado",
         "created_at",
     )
 
-    list_filter = ("activo", "requiere_verificacion", "id_proveedor", "created_at")
+    list_filter = ("estado", "requiere_verificacion", "id_proveedor", "created_at")
 
     search_fields = ("nombre", "descripcion", "path", "handler_func")
 
@@ -465,7 +465,7 @@ class WebhookEndpointsAdmin(admin.ModelAdmin):
             "🔒 Seguridad",
             {"fields": ("requiere_verificacion", "secret_key", "header_verificacion")},
         ),
-        ("⚙️ Estado", {"fields": ("activo", "created_at")}),
+        ("⚙️ Estado", {"fields": ("estado", "created_at")}),
     )
 
     def requiere_verificacion_badge(self, obj):
@@ -490,8 +490,8 @@ class WebhookEndpointsAdmin(admin.ModelAdmin):
     eventos_count.short_description = "Eventos"
 
     def activo_badge(self, obj):
-        if obj.activo:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Activo</span>')
+        if obj.estado:
+            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
         return format_html('<span style="color: red; font-weight: bold;">✗ Inactivo</span>')
 
     activo_badge.short_description = "Estado"

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para Cuenta Corriente de Clientes y Proveedores
 Valida reglas de negocio de crédito, pagos y notas de crédito
 """
@@ -26,7 +26,7 @@ class CuentaCorrienteClienteTest(TestCase):
     def setUp(self):
         """Configurar datos de prueba"""
         # Tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Mayorista", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Mayorista", estado=True)
 
         # Lista de precios
         self.lista_precios = ListasPrecios.objects.create(nombre_lista="Mayorista")
@@ -37,14 +37,14 @@ class CuentaCorrienteClienteTest(TestCase):
             apellidos="Pérez",
             ruc_ci="1234567",
             limite_credito=Decimal("500000.00"),
-            activo=True,
+            estado=True,
             id_tipo_cliente=self.tipo_cliente,
             id_lista=self.lista_precios,
         )
 
         # Rol para empleado
         self.rol = Roles.objects.create(
-            nombre_rol="Cajero", descripcion="Cajero de ventas", activo=True
+            nombre_rol="Cajero", descripcion="Cajero de ventas", estado=True
         )
 
         # Empleado cajero
@@ -60,7 +60,7 @@ class CuentaCorrienteClienteTest(TestCase):
         # Medio de pago
         self.medio_pago, _ = MediosPago.objects.get_or_create(
             descripcion="Efectivo",
-            defaults={"genera_comision": False, "requiere_validacion": False, "activo": True},
+            defaults={"genera_comision": False, "requiere_validacion": False, "estado": True},
         )
 
     def test_cliente_sin_credito_usado(self):
@@ -258,13 +258,13 @@ class CuentaCorrienteProveedorTest(TestCase):
         self.proveedor = Proveedores.objects.create(
             ruc="80012345",
             razon_social="Distribuidora ABC S.A.",
-            activo=True,
+            estado=True,
             fecha_registro=timezone.now(),
         )
 
         self.medio_pago, _ = MediosPago.objects.get_or_create(
             descripcion="Transferencia Bancaria",
-            defaults={"genera_comision": False, "requiere_validacion": False, "activo": True},
+            defaults={"genera_comision": False, "requiere_validacion": False, "estado": True},
         )
 
     def test_actualizacion_saldo_compra_con_pago(self):

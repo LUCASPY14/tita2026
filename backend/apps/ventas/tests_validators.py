@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para validadores personalizados del módulo de ventas
 Coverage completo de validators.py
 """
@@ -306,16 +306,16 @@ class ValidarCreditoDisponibleTest(TestCase):
 
     def setUp(self):
         """Configurar cliente con crédito"""
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
-        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
         self.cliente = Clientes.objects.create(
             nombres="Test",
             apellidos="Cliente",
             ruc_ci="123456",
             limite_credito=Decimal("100000.00"),
-            activo=True,
+            estado=True,
             id_tipo_cliente=self.tipo_cliente,
             id_lista=self.lista,
         )
@@ -341,25 +341,25 @@ class ValidarSaldoTarjetaTest(TestCase):
         """Configurar tarjeta"""
         from apps.clientes.models import Hijos
 
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
-        lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
         cliente = Clientes.objects.create(
             nombres="Test",
             apellidos="Cliente",
             ruc_ci="123456",
-            activo=True,
+            estado=True,
             id_tipo_cliente=tipo_cliente,
             id_lista=lista,
         )
 
         hijo = Hijos.objects.create(
-            nombre="Test", apellido="Hijo", grado="1ro", activo=True, id_cliente_responsable=cliente
+            nombre="Test", apellido="Hijo", grado="1ro", estado=True, id_cliente_responsable=cliente
         )
 
         hijo2 = Hijos.objects.create(
-            nombre="Test2", apellido="Hijo", grado="2do", activo=True, id_cliente_responsable=cliente
+            nombre="Test2", apellido="Hijo", grado="2do", estado=True, id_cliente_responsable=cliente
         )
 
         self.tarjeta_sin_credito = Tarjetas.objects.create(

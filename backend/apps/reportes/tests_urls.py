@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para URLs de reportes
 Cubre routing y configuración de URLs de reportes
 """
@@ -120,8 +120,8 @@ class ReportesURLPatternsTest(SimpleTestCase):
         url = reverse('plantillas-tarea-ejecuciones', kwargs={'pk': 1})
         self.assertEqual(url, '/api/v1/reportes/tareas/1/ejecuciones/')
         
-        # URL toggle activo
-        url = reverse('plantillas-tarea-toggle-activo', kwargs={'pk': 1})
+        # URL toggle estado
+        url = reverse('plantillas-tarea-toggle-estado', kwargs={'pk': 1})
         self.assertEqual(url, '/api/v1/reportes/tareas/1/toggle_activo/')
 
     def test_ejecuciones_tarea_urls_pattern(self):
@@ -294,7 +294,7 @@ class ReportesURLRoutingTest(APITestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Tester URL',
             descripcion='Usuario para tests de URL',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -349,7 +349,7 @@ class ReportesURLRoutingTest(APITestCase):
             configuracion={'widgets': []},
             es_publico=1,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -403,7 +403,7 @@ class ReportesURLRoutingTest(APITestCase):
             nombre='Test Routing Tarea',
             configuracion_programacion={'tipo': 'manual'},
             configuracion_envio={'email': False},
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -478,8 +478,8 @@ class ReportesURLRoutingTest(APITestCase):
             '/api/v1/reportes/plantillas/?tipo_reporte=ventas',
             '/api/v1/reportes/plantillas/?search=ventas&ordering=nombre',
             '/api/v1/reportes/dashboards/?es_publico=1',
-            '/api/v1/reportes/kpis/?categoria=ventas&activo=true',
-            '/api/v1/reportes/tareas/?activo=true&page=1&page_size=10'
+            '/api/v1/reportes/kpis/?categoria=ventas&estado=true',
+            '/api/v1/reportes/tareas/?estado=true&page=1&page_size=10'
         ]
         
         for url in urls_with_params:

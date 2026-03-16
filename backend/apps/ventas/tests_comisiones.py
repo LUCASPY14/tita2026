@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para comisiones POS Bancard
 Validación de cálculo y registro de comisiones
 """
@@ -22,10 +22,10 @@ class ComisionesBancardTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
@@ -33,7 +33,7 @@ class ComisionesBancardTest(TestCase):
             apellidos="Martínez",
             ruc_ci="12345678",
             limite_credito=Decimal("1000.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -43,7 +43,7 @@ class ComisionesBancardTest(TestCase):
             nombre="Juan",
             apellido="Martínez",
             grado="5to",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -61,31 +61,31 @@ class ComisionesBancardTest(TestCase):
         )
 
         # Crear rol y empleado
-        self.rol = Roles.objects.create(nombre_rol="Cajero", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
         self.cajero = Empleados.objects.create(
             nombre="María",
             apellido="Gómez",
             usuario="cajero_test",
             contrasena_hash="hash789",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
         # Crear medios de pago Bancard para tests
         self.debito, _ = MediosPago.objects.get_or_create(
             descripcion="Tarjeta Débito Bancard",
-            defaults={"genera_comision": True, "requiere_validacion": True, "activo": True},
+            defaults={"genera_comision": True, "requiere_validacion": True, "estado": True},
         )
         self.credito, _ = MediosPago.objects.get_or_create(
             descripcion="Tarjeta Crédito Bancard",
-            defaults={"genera_comision": True, "requiere_validacion": True, "activo": True},
+            defaults={"genera_comision": True, "requiere_validacion": True, "estado": True},
         )
 
         # Crear tarifas para tests
         self.tarifa_debito, _ = TarifasComision.objects.get_or_create(
             id_medio_pago=self.debito,
-            activo=True,
+            estado=True,
             fecha_fin_vigencia__isnull=True,
             defaults={
                 "fecha_inicio_vigencia": timezone.now(),
@@ -95,7 +95,7 @@ class ComisionesBancardTest(TestCase):
         )
         self.tarifa_credito, _ = TarifasComision.objects.get_or_create(
             id_medio_pago=self.credito,
-            activo=True,
+            estado=True,
             fecha_fin_vigencia__isnull=True,
             defaults={
                 "fecha_inicio_vigencia": timezone.now(),
@@ -147,7 +147,7 @@ class ComisionesBancardTest(TestCase):
             descripcion="Efectivo",
             genera_comision=False,  # No genera comisión
             requiere_validacion=False,
-            activo=True,
+            estado=True,
         )
 
         viewset = VentasViewSet()
@@ -297,7 +297,7 @@ class ComisionesBancardTest(TestCase):
             descripcion="Nuevo POS Sin Tarifa",
             genera_comision=True,
             requiere_validacion=True,
-            activo=True,
+            estado=True,
         )
 
         viewset = VentasViewSet()
@@ -317,35 +317,35 @@ class IntegracionComisionesTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         # Reutilizar setup similar
-        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Ana",
             apellidos="López",
             ruc_ci="87654321",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
-        self.rol = Roles.objects.create(nombre_rol="Gerente", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Gerente", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="Carlos",
             apellido="Ruiz",
             usuario="gerente_test",
             contrasena_hash="hash321",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
         self.debito, _ = MediosPago.objects.get_or_create(
             descripcion="Tarjeta Débito Bancard",
-            defaults={"genera_comision": True, "requiere_validacion": True, "activo": True},
+            defaults={"genera_comision": True, "requiere_validacion": True, "estado": True},
         )
         # Crear tarifa para débito
         TarifasComision.objects.get_or_create(
             id_medio_pago=self.debito,
-            activo=True,
+            estado=True,
             fecha_fin_vigencia__isnull=True,
             defaults={
                 "fecha_inicio_vigencia": timezone.now(),

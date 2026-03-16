@@ -1,4 +1,4 @@
-"""
+﻿"""
 Validadores para la app Core - Tarjetas, Configuración y Límites de Transacción
 
 Este módulo contiene validadores para:
@@ -1055,7 +1055,7 @@ def validar_unicidad_rol_operacion(id_rol, tipo_operacion, id_limite_actual=None
 
     # Buscar límite existente
     query = LimitesTransaccion.objects.filter(
-        id_rol=id_rol, tipo_operacion=tipo_operacion, activo=True
+        id_rol=id_rol, tipo_operacion=tipo_operacion, estado=True
     )
 
     # Excluir el límite actual si estamos editando
@@ -1065,7 +1065,7 @@ def validar_unicidad_rol_operacion(id_rol, tipo_operacion, id_limite_actual=None
     if query.exists():
         limite_existente = query.first()
         raise ValidationError(
-            f"Ya existe un límite activo para el rol '{limite_existente.id_rol.nombre_rol}' "
+            f"Ya existe un límite estado para el rol '{limite_existente.id_rol.nombre_rol}' "
             f"y la operación '{limite_existente.get_tipo_operacion_display()}'. "
             f"Monto actual: ₲{limite_existente.monto_maximo_sin_autorizacion:,.2f}"
         )

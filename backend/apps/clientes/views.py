@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters
+﻿from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.common.permissions import IsAdminOrReadOnly, IsClienteOrAdmin
@@ -23,7 +23,7 @@ class ClientesViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsClienteOrAdmin]
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["activo", "id_tipo_cliente"]
+    filterset_fields = ["estado", "id_tipo_cliente"]
     search_fields = ["nombres", "apellidos", "ruc_ci", "email"]
     ordering_fields = ["nombres", "apellidos", "fecha_registro"]
     ordering = ["apellidos", "nombres"]
@@ -43,6 +43,6 @@ class HijosViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsClienteOrAdmin]
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["activo", "grado", "id_cliente_responsable"]
+    filterset_fields = ["estado", "grado", "id_cliente_responsable"]
     search_fields = ["nombre", "apellido"]
     ordering = ["apellido", "nombre"]

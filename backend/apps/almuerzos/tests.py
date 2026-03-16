@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para la app almuerzos - Independencia del módulo de cantina
 """
 
@@ -29,15 +29,15 @@ class IndependenciaAlmuerzoCantinaTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         # Crear datos base
-        lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         self.cliente = Clientes.objects.create(
             nombres="Roberto",
             apellidos="Martínez",
             ruc_ci="55555555",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
         )
@@ -46,7 +46,7 @@ class IndependenciaAlmuerzoCantinaTest(TestCase):
             nombre="Sofía",
             apellido="Martínez",
             grado="4to",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -70,7 +70,7 @@ class IndependenciaAlmuerzoCantinaTest(TestCase):
             precio_mensual=Decimal("120.00"),
             dias_semana_incluidos="Lunes,Martes,Miércoles,Jueves,Viernes",
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         # Crear tipo de almuerzo (para consumos sin suscripción)
@@ -82,27 +82,27 @@ class IndependenciaAlmuerzoCantinaTest(TestCase):
             incluye_postre=True,
             incluye_bebida=True,
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         # Crear suscripción activa
         self.suscripcion = SuscripcionesAlmuerzo.objects.create(
             fecha_inicio=date.today(),
             fecha_fin=None,
-            estado="activo",
+            estado="estado",
             id_hijo=self.hijo,
             id_plan_almuerzo=self.plan,
         )
 
         # Crear empleado
-        rol = Roles.objects.create(nombre_rol="Encargado Cocina", activo=True)
+        rol = Roles.objects.create(nombre_rol="Encargado Cocina", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="Carmen",
             apellido="López",
             usuario="empleado_test",
             contrasena_hash="hash456",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=rol,
         )
 
@@ -163,7 +163,7 @@ class IndependenciaAlmuerzoCantinaTest(TestCase):
             nombre="Carlos",
             apellido="Martínez",
             grado="2do",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -251,15 +251,15 @@ class SuscripcionesAlmuerzoTest(TestCase):
 
     def setUp(self):
         """Configuración base"""
-        lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         cliente = Clientes.objects.create(
             nombres="Laura",
             apellidos="Fernández",
             ruc_ci="77777777",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
         )
@@ -268,7 +268,7 @@ class SuscripcionesAlmuerzoTest(TestCase):
             nombre="Diego",
             apellido="Fernández",
             grado="3ro",
-            activo=True,
+            estado=True,
             id_cliente_responsable=cliente,
         )
 
@@ -278,7 +278,7 @@ class SuscripcionesAlmuerzoTest(TestCase):
             precio_mensual=Decimal("80.00"),
             dias_semana_incluidos="Lunes,Miércoles,Viernes",
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
     def test_crear_suscripcion_activa(self):
@@ -286,12 +286,12 @@ class SuscripcionesAlmuerzoTest(TestCase):
         suscripcion = SuscripcionesAlmuerzo.objects.create(
             fecha_inicio=date.today(),
             fecha_fin=None,  # Sin fecha fin = recurrente
-            estado="activo",
+            estado="estado",
             id_hijo=self.hijo,
             id_plan_almuerzo=self.plan,
         )
 
-        self.assertEqual(suscripcion.estado, "activo")
+        self.assertEqual(suscripcion.estado, "estado")
         self.assertIsNone(suscripcion.fecha_fin)
         self.assertEqual(suscripcion.id_plan_almuerzo.precio_mensual, Decimal("80.00"))
 
@@ -299,7 +299,7 @@ class SuscripcionesAlmuerzoTest(TestCase):
         """Test: Con suscripción activa, el costo del almuerzo es 0"""
         suscripcion = SuscripcionesAlmuerzo.objects.create(
             fecha_inicio=date.today(),
-            estado="activo",
+            estado="estado",
             id_hijo=self.hijo,
             id_plan_almuerzo=self.plan,
         )
@@ -324,7 +324,7 @@ class TiposAlmuerzoTest(TestCase):
             incluye_postre=True,  # BooleanField
             incluye_bebida=True,  # BooleanField
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.assertTrue(tipo.incluye_plato_principal)
@@ -341,7 +341,7 @@ class TiposAlmuerzoTest(TestCase):
             incluye_postre=False,  # No incluye
             incluye_bebida=False,  # No incluye
             fecha_creacion=timezone.now(),
-            activo=True,
+            estado=True,
         )
 
         self.assertTrue(tipo.incluye_plato_principal)
@@ -354,15 +354,15 @@ class CuentasAlmuerzoMensualTest(TestCase):
 
     def setUp(self):
         """Configuración"""
-        lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         cliente = Clientes.objects.create(
             nombres="Patricia",
             apellidos="Sosa",
             ruc_ci="88888888",
             limite_credito=Decimal("500.00"),
-            activo=True,
+            estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
         )
@@ -371,7 +371,7 @@ class CuentasAlmuerzoMensualTest(TestCase):
             nombre="Martín",
             apellido="Sosa",
             grado="5to",
-            activo=True,
+            estado=True,
             id_cliente_responsable=cliente,
         )
 

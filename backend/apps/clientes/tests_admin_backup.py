@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para admin_backup de clientes
 Cubre configuración de Django Admin para el módulo de clientes
 """
@@ -59,7 +59,7 @@ class ClientesAdminBackupTest(TestCase):
         # Crear datos de prueba básicos
         self.tipo_cliente = TiposCliente.objects.create(
             nombre_tipo='Cliente Regular',
-            activo=True
+            estado=True
         )
         
         self.cliente = Clientes.objects.create(
@@ -67,7 +67,7 @@ class ClientesAdminBackupTest(TestCase):
             apellidos='Pérez',
             ruc_ci='12345678',
             email='juan@test.com',
-            activo=True,
+            estado=True,
             id_tipo_cliente=self.tipo_cliente
         )
         
@@ -75,7 +75,7 @@ class ClientesAdminBackupTest(TestCase):
             nombre_grado='Primer Grado',
             nivel=1,
             orden_visualizacion=1,
-            activo=True
+            estado=True
         )
         
         self.hijo = Hijos.objects.create(
@@ -83,7 +83,7 @@ class ClientesAdminBackupTest(TestCase):
             apellido='Pérez',
             id_cliente_responsable=self.cliente,
             grado=self.grado,
-            activo=True
+            estado=True
         )
 
     def test_clientes_admin_registration(self):
@@ -94,13 +94,13 @@ class ClientesAdminBackupTest(TestCase):
     def test_clientes_admin_list_display(self):
         """Debe tener configuración correcta de list_display"""
         admin_instance = ClientesAdmin(Clientes, self.site)
-        expected_fields = ["id_cliente", "nombres", "apellidos", "ruc_ci", "email", "activo"]
+        expected_fields = ["id_cliente", "nombres", "apellidos", "ruc_ci", "email", "estado"]
         self.assertEqual(admin_instance.list_display, expected_fields)
 
     def test_clientes_admin_list_filter(self):
         """Debe tener configuración correcta de list_filter"""
         admin_instance = ClientesAdmin(Clientes, self.site)
-        self.assertEqual(admin_instance.list_filter, ["activo"])
+        self.assertEqual(admin_instance.list_filter, ["estado"])
 
     def test_clientes_admin_search_fields(self):
         """Debe tener configuración correcta de search_fields"""
@@ -122,11 +122,11 @@ class ClientesAdminBackupTest(TestCase):
         admin_instance = TiposClienteAdmin(TiposCliente, self.site)
         
         # Verificar list_display
-        expected_display = ["id_tipo_cliente", "nombre_tipo", "activo"]
+        expected_display = ["id_tipo_cliente", "nombre_tipo", "estado"]
         self.assertEqual(admin_instance.list_display, expected_display)
         
         # Verificar filtros
-        self.assertEqual(admin_instance.list_filter, ["activo"])
+        self.assertEqual(admin_instance.list_filter, ["estado"])
         self.assertEqual(admin_instance.search_fields, ["nombre_tipo"])
 
     def test_hijos_admin_configuration(self):
@@ -134,11 +134,11 @@ class ClientesAdminBackupTest(TestCase):
         admin_instance = HijosAdmin(Hijos, self.site)
         
         # Verificar list_display
-        expected_display = ["id_hijo", "nombre", "apellido", "grado", "activo"]
+        expected_display = ["id_hijo", "nombre", "apellido", "grado", "estado"]
         self.assertEqual(admin_instance.list_display, expected_display)
         
         # Verificar filtros
-        self.assertEqual(admin_instance.list_filter, ["activo", "grado"])
+        self.assertEqual(admin_instance.list_filter, ["estado", "grado"])
         self.assertEqual(admin_instance.search_fields, ["nombre", "apellido"])
 
     def test_grados_admin_configuration(self):
@@ -146,11 +146,11 @@ class ClientesAdminBackupTest(TestCase):
         admin_instance = GradosAdmin(Grados, self.site)
         
         # Verificar list_display
-        expected_display = ["id_grado", "nombre_grado", "nivel", "activo"]
+        expected_display = ["id_grado", "nombre_grado", "nivel", "estado"]
         self.assertEqual(admin_instance.list_display, expected_display)
         
         # Verificar filtros
-        self.assertEqual(admin_instance.list_filter, ["activo", "nivel"])
+        self.assertEqual(admin_instance.list_filter, ["estado", "nivel"])
         self.assertEqual(admin_instance.search_fields, ["nombre_grado"])
 
     def test_historial_grados_admin_configuration(self):
@@ -177,11 +177,11 @@ class ClientesAdminBackupTest(TestCase):
         admin_instance = RestriccionesHijosAdmin(RestriccionesHijos, self.site)
         
         # Verificar list_display
-        expected_display = ["id_restriccion", "id_hijo", "tipo_restriccion", "severidad", "activo"]
+        expected_display = ["id_restriccion", "id_hijo", "tipo_restriccion", "severidad", "estado"]
         self.assertEqual(admin_instance.list_display, expected_display)
         
         # Verificar filtros
-        self.assertEqual(admin_instance.list_filter, ["activo", "severidad"])
+        self.assertEqual(admin_instance.list_filter, ["estado", "severidad"])
 
     def test_autorizaciones_saldo_admin_configuration(self):
         """Debe tener configuración correcta para AutorizacionesSaldoNegativo"""

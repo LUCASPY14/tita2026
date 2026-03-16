@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para modelos de la app inventario
 Sprint 2 - Backend Coverage Improvement
 """
@@ -18,7 +18,7 @@ class StockUnicoModelTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol
-        self.rol = Roles.objects.create(nombre_rol="Inventarista", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Inventarista", estado=True)
 
         # Crear empleado
         self.empleado = Empleados.objects.create(
@@ -27,7 +27,7 @@ class StockUnicoModelTest(TestCase):
             usuario="ana.torres",
             email="ana@example.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -36,15 +36,15 @@ class StockUnicoModelTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Snacks", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Snacks", estado=True)
 
         # Crear unidad de medida
         self.unidad = UnidadesMedida.objects.create(
-            nombre="Unidad", abreviatura="Unid", activo=True
+            nombre="Unidad", abreviatura="Unid", estado=True
         )
 
         # Crear producto
@@ -52,7 +52,7 @@ class StockUnicoModelTest(TestCase):
             codigo_barra="1234567890123",
             descripcion="Papas Fritas",
             stock_minimo=Decimal("20.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -109,7 +109,7 @@ class MovimientosStockModelTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol
-        self.rol = Roles.objects.create(nombre_rol="Inventarista", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Inventarista", estado=True)
 
         # Crear empleado
         self.empleado = Empleados.objects.create(
@@ -118,7 +118,7 @@ class MovimientosStockModelTest(TestCase):
             usuario="jose.martinez",
             email="jose@example.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -127,21 +127,21 @@ class MovimientosStockModelTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         # Crear unidad
-        self.unidad = UnidadesMedida.objects.create(nombre="Litro", abreviatura="L", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Litro", abreviatura="L", estado=True)
 
         # Crear producto
         self.producto = Productos.objects.create(
             codigo_barra="7890000000001",
             descripcion="Agua Mineral",
             stock_minimo=Decimal("30.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -218,7 +218,7 @@ class AjustesInventarioModelTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol
-        self.rol = Roles.objects.create(nombre_rol="Gerente", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Gerente", estado=True)
 
         # Crear empleado
         self.empleado = Empleados.objects.create(
@@ -227,7 +227,7 @@ class AjustesInventarioModelTest(TestCase):
             usuario="pedro.ramirez",
             email="pedro@example.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 

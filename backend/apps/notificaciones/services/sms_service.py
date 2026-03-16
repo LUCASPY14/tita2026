@@ -1,4 +1,4 @@
-"""
+﻿"""
 Service Layer para Envío de SMS
 
 Soporta múltiples providers:
@@ -52,7 +52,7 @@ class SMSService:
                 'costo': Decimal (opcional)
             }
         """
-        # Validar que SMS esté activo
+        # Validar que SMS esté estado
         sms_activo = getattr(settings, "SMS_ENABLED", True)
         solo_produccion = getattr(settings, "SMS_SOLO_PRODUCCION", False)
 

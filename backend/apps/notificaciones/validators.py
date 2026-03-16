@@ -1,4 +1,4 @@
-"""
+﻿"""
 Validadores para la aplicación Notificaciones
 Incluye validaciones para emails, SMS, plantillas, campañas y alertas
 """
@@ -203,13 +203,13 @@ def validar_tipo_preferencia_notificacion(value):
 def validar_email_activo(value):
     """Valida si las notificaciones por email están activas"""
     if value not in [0, 1]:
-        raise ValidationError("Email activo debe ser 0 (inactivo) o 1 (activo).")
+        raise ValidationError("Email estado debe ser 0 (inactivo) o 1 (estado).")
 
 
 def validar_push_activo(value):
     """Valida si las notificaciones push están activas"""
     if value not in [0, 1]:
-        raise ValidationError("Push activo debe ser 0 (inactivo) o 1 (activo).")
+        raise ValidationError("Push estado debe ser 0 (inactivo) o 1 (estado).")
 
 
 # =============================================================================

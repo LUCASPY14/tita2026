@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para apps/compras/views.py
 Cubre ComprasViewSet acciones personalizadas y ProveedoresViewSet
 """
@@ -20,7 +20,7 @@ def crear_proveedor():
     return Proveedores.objects.create(
         razon_social='Proveedor Test',
         ruc='80012345-0',
-        activo=True,
+        estado=True,
         fecha_registro=timezone.now(),
     )
 

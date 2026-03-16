@@ -1,4 +1,4 @@
-"""Tests for apps/core/admin.py - covers custom display methods in all ModelAdmin classes."""
+﻿"""Tests for apps/core/admin.py - covers custom display methods in all ModelAdmin classes."""
 from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -191,13 +191,13 @@ class TarjetasAutorizacionAdminTest(TestCase):
         self.assertIn("Sin permisos", result)
 
     def test_estado_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("ACTIVA", result)
         self.assertIn("28a745", result)
 
     def test_estado_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("INACTIVA", result)
 
@@ -453,12 +453,12 @@ class MediosPagoAdminTest(TestCase):
         self.assertIn("6c757d", result)
 
     def test_estado_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
-        self.assertIn("ACTIVO", result)
+        self.assertIn("estado", result)
 
     def test_estado_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("INACTIVO", result)
 
@@ -614,12 +614,12 @@ class CacheConfiguracionAdminTest(TestCase):
         self.assertIn("dc3545", result)
 
     def test_activo_badge_activo(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
-        self.assertIn("ACTIVO", result)
+        self.assertIn("estado", result)
 
     def test_activo_badge_inactivo(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("INACTIVO", result)
 
@@ -671,12 +671,12 @@ class LimitesTransaccionAdminTest(TestCase):
         self.assertIn("simple", result)
 
     def test_activo_badge_true(self):
-        obj = _mock_obj(activo=True)
+        obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
-        self.assertIn("ACTIVO", result)
+        self.assertIn("estado", result)
 
     def test_activo_badge_false(self):
-        obj = _mock_obj(activo=False)
+        obj = _mock_obj(estado=False)
         result = str(self.admin.activo_badge(obj))
         self.assertIn("INACTIVO", result)
 

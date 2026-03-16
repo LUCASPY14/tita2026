@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para apps/compras/signals.py
 Cubre líneas faltantes:
 32 (if not created: return en actualizar_saldo_compra),
@@ -25,12 +25,12 @@ def make_proveedor():
         razon_social="Proveedor Signals Test",
         ruc="99887-1",
         fecha_registro=timezone.now(),
-        activo=True,
+        estado=True,
     )
 
 
 def make_empleado():
-    rol = Roles.objects.create(nombre_rol="RolSignals", activo=True)
+    rol = Roles.objects.create(nombre_rol="RolSignals", estado=True)
     return Empleados.objects.create(
         nombre="EmpSignals",
         apellido="Test",
@@ -38,7 +38,7 @@ def make_empleado():
         contrasena_hash="hash",
         fecha_ingreso=timezone.now(),
         email="emp_signals@test.com",
-        activo=True,
+        estado=True,
         id_rol=rol,
     )
 
@@ -55,7 +55,7 @@ def make_compra(proveedor, monto_total=Decimal("100000.00"), saldo=None, estado_
 
 
 def make_pago_proveedor():
-    medio = MediosPago.objects.create(descripcion="Efectivo Signals", activo=True)
+    medio = MediosPago.objects.create(descripcion="Efectivo Signals", estado=True)
     return PagosProveedores.objects.create(
         fecha_creacion=timezone.now(),
         id_medio_pago=medio,

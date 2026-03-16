@@ -1,4 +1,4 @@
-"""
+﻿"""
 Servicios de dominio para inventario
 Lógica de negocio centralizada y reutilizable
 """
@@ -213,7 +213,7 @@ class StockService:
         from django.db.models import F
 
         productos = (
-            Productos.objects.filter(stock__cantidad__lte=F("stock_minimo"), activo=True)
+            Productos.objects.filter(stock__cantidad__lte=F("stock_minimo"), estado=True)
             .select_related("stock")
             .order_by("stock__cantidad")
         )

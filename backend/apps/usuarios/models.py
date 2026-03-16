@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app usuarios
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
@@ -37,7 +37,7 @@ def _resolve_cliente_from_empleado(value):
 
     tipo_cliente = TiposCliente.objects.first()
     if not tipo_cliente:
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="General", activo=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="General", estado=True)
 
     lista_precio = ListasPrecios.objects.first()
     if not lista_precio:
@@ -45,7 +45,7 @@ def _resolve_cliente_from_empleado(value):
             nombre_lista="General",
             fecha_vigencia=timezone.now().date(),
             moneda="PYG",
-            activo=True,
+            estado=True,
         )
 
     return Clientes.objects.create(
@@ -54,7 +54,7 @@ def _resolve_cliente_from_empleado(value):
         ruc_ci=f"EMP-{empleado.id_empleado}",
         email=email,
         telefono=empleado.telefono,
-        activo=True,
+        estado=True,
         id_tipo_cliente=tipo_cliente,
         id_lista=lista_precio,
     )
@@ -164,7 +164,7 @@ class Empleados(models.Model):
     pais = models.CharField(max_length=100, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.CharField(max_length=254, blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     fecha_baja = models.DateTimeField(blank=True, null=True)
     id_rol = models.ForeignKey("Roles", models.DO_NOTHING, db_column="id_rol")
 
@@ -194,7 +194,7 @@ class Roles(models.Model):
     id_rol = models.AutoField(primary_key=True)
     nombre_rol = models.CharField(unique=True, max_length=50)
     descripcion = models.CharField(max_length=100, blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     def delete(self, *args, **kwargs):
         if self.empleados_set.exists():
@@ -452,7 +452,7 @@ class BloqueosCuenta(LegacyCompatMixin, models.Model):
     fecha_desbloqueo = models.DateTimeField(blank=True, null=True)
     bloqueado_por = models.CharField(max_length=100, blank=True, null=True)
     ip_address = models.CharField(max_length=45, blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     LEGACY_FIELD_MAP = {"id_empleado": "usuario"}
     LEGACY_VALUE_RESOLVERS = {"id_empleado": _resolve_usuario_from_empleado}
@@ -473,7 +473,7 @@ class UsuariosPortal(models.Model):
     email_verificado = models.IntegerField()
     fecha_registro = models.DateTimeField()
     ultimo_acceso = models.DateTimeField(blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     id_cliente = models.OneToOneField(
         "clientes.Clientes", models.DO_NOTHING, db_column="id_cliente"
     )
@@ -493,7 +493,7 @@ class UsuariosWebClientes(models.Model):
     usuario = models.CharField(unique=True, max_length=50)
     contrasena_hash = models.CharField(max_length=128)
     ultimo_acceso = models.DateTimeField(blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"

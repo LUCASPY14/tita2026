@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para ProductosViewSet - API REST endpoints
 Objetivo: Aumentar cobertura de productos views
 """
@@ -49,7 +49,7 @@ class ProductosViewSetAPITest(TestCase):
 
         # Crear rol admin
         self.rol_admin = Roles.objects.create(
-            nombre_rol="Administrador", descripcion="Administrador del sistema", activo=True
+            nombre_rol="Administrador", descripcion="Administrador del sistema", estado=True
         )
 
         # Crear empleado admin
@@ -59,7 +59,7 @@ class ProductosViewSetAPITest(TestCase):
             usuario="admin",
             email="admin@test.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol_admin,
         )
 
@@ -67,21 +67,21 @@ class ProductosViewSetAPITest(TestCase):
         self.client.force_authenticate(user=self.user)
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         # Crear unidad de medida
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="un", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="un", estado=True)
 
         # Crear impuesto
         self.impuesto_10 = Impuestos.objects.create(
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear lista de precios
-        self.lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        self.lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
     def test_listar_productos_sin_autenticacion(self):
         """Test: Listar productos sin autenticación debe retornar 401"""
@@ -109,7 +109,7 @@ class ProductosViewSetAPITest(TestCase):
             "id_unidad_medida": self.unidad.id_unidad_medida,
             "stock_minimo": "10",
             "id_impuesto": self.impuesto_10.id_impuesto,
-            "activo": True,
+            "estado": True,
         }
 
         response = self.client.post(url, data, format="json")
@@ -144,7 +144,7 @@ class ProductosViewSetAPITest(TestCase):
             id_unidad_medida=self.unidad,
             stock_minimo=Decimal("5"),
             id_impuesto=self.impuesto_10,
-            activo=True,
+            estado=True,
         )
 
         url = reverse("productos-detail", kwargs={"pk": producto.id_producto})
@@ -163,7 +163,7 @@ class ProductosViewSetAPITest(TestCase):
             id_unidad_medida=self.unidad,
             stock_minimo=Decimal("10"),
             id_impuesto=self.impuesto_10,
-            activo=True,
+            estado=True,
         )
 
         url = reverse("productos-detail", kwargs={"pk": producto.id_producto})
@@ -185,22 +185,22 @@ class ProductosViewSetAPITest(TestCase):
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto_10,
-            activo=True,
+            estado=True,
         )
 
         url = reverse("productos-detail", kwargs={"pk": producto.id_producto})
-        data = {"activo": False}
+        data = {"estado": False}
 
         response = self.client.patch(url, data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         producto.refresh_from_db()
-        self.assertFalse(producto.activo)
+        self.assertFalse(producto.estado)
 
     def test_filtrar_productos_por_categoria(self):
         """Test: Filtrar productos por categoría"""
-        categoria_snacks = Categorias.objects.create(nombre="Snacks", activo=True)
+        categoria_snacks = Categorias.objects.create(nombre="Snacks", estado=True)
 
         # Producto de bebidas
         producto1 = Productos.objects.create(
@@ -209,7 +209,7 @@ class ProductosViewSetAPITest(TestCase):
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto_10,
-            activo=True,
+            estado=True,
         )
 
         # Producto de snacks
@@ -219,7 +219,7 @@ class ProductosViewSetAPITest(TestCase):
             id_categoria=categoria_snacks,
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto_10,
-            activo=True,
+            estado=True,
         )
 
         url = reverse("productos-list")
@@ -237,7 +237,7 @@ class ProductosViewSetAPITest(TestCase):
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto_10,
-            activo=True,
+            estado=True,
         )
 
         Productos.objects.create(
@@ -246,7 +246,7 @@ class ProductosViewSetAPITest(TestCase):
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto_10,
-            activo=True,
+            estado=True,
         )
 
         Productos.objects.create(
@@ -255,7 +255,7 @@ class ProductosViewSetAPITest(TestCase):
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto_10,
-            activo=True,
+            estado=True,
         )
 
         url = reverse("productos-list")
@@ -268,11 +268,11 @@ class ProductosViewSetAPITest(TestCase):
         """Test: Filtrar solo productos activos"""
         Productos.objects.create(
             codigo_barra="ACT001",
-            descripcion="Producto Activo",
+            descripcion="Producto estado",
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto_10,
-            activo=True,
+            estado=True,
         )
 
         Productos.objects.create(
@@ -281,15 +281,15 @@ class ProductosViewSetAPITest(TestCase):
             id_categoria=self.categoria,
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto_10,
-            activo=False,
+            estado=False,
         )
 
         url = reverse("productos-list")
-        response = self.client.get(url, {"activo": "true"})
+        response = self.client.get(url, {"estado": "true"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["descripcion"], "Producto Activo")
+        self.assertEqual(response.data["results"][0]["descripcion"], "Producto estado")
 
 
 class CategoriasViewSetAPITest(TestCase):
@@ -307,7 +307,7 @@ class CategoriasViewSetAPITest(TestCase):
         )
 
         # Crear empleado admin
-        self.rol_admin = Roles.objects.create(nombre_rol="Administrador", activo=True)
+        self.rol_admin = Roles.objects.create(nombre_rol="Administrador", estado=True)
 
         self.admin = Empleados.objects.create(
             nombre="Admin",
@@ -315,7 +315,7 @@ class CategoriasViewSetAPITest(TestCase):
             usuario="admin",
             email="admin@test.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol_admin,
         )
 
@@ -324,7 +324,7 @@ class CategoriasViewSetAPITest(TestCase):
     def test_crear_categoria(self):
         """Test: Crear nueva categoría"""
         url = reverse("categorias-list")
-        data = {"nombre": "Bebidas Calientes", "activo": True}
+        data = {"nombre": "Bebidas Calientes", "estado": True}
 
         response = self.client.post(url, data, format="json")
 
@@ -333,13 +333,13 @@ class CategoriasViewSetAPITest(TestCase):
 
         categoria = Categorias.objects.first()
         self.assertEqual(categoria.nombre, "Bebidas Calientes")
-        self.assertTrue(categoria.activo)
+        self.assertTrue(categoria.estado)
 
     def test_listar_categorias(self):
         """Test: Listar todas las categorías"""
-        Categorias.objects.create(nombre="Bebidas", activo=True)
-        Categorias.objects.create(nombre="Snacks", activo=True)
-        Categorias.objects.create(nombre="Lácteos", activo=False)
+        Categorias.objects.create(nombre="Bebidas", estado=True)
+        Categorias.objects.create(nombre="Snacks", estado=True)
+        Categorias.objects.create(nombre="Lácteos", estado=False)
 
         url = reverse("categorias-list")
         response = self.client.get(url)
@@ -349,11 +349,11 @@ class CategoriasViewSetAPITest(TestCase):
 
     def test_filtrar_categorias_activas(self):
         """Test: Filtrar solo categorías activas"""
-        Categorias.objects.create(nombre="Activa", activo=True)
-        Categorias.objects.create(nombre="Inactiva", activo=False)
+        Categorias.objects.create(nombre="Activa", estado=True)
+        Categorias.objects.create(nombre="Inactiva", estado=False)
 
         url = reverse("categorias-list")
-        response = self.client.get(url, {"activo": "true"})
+        response = self.client.get(url, {"estado": "true"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)

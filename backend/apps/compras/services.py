@@ -1,4 +1,4 @@
-"""
+﻿"""
 Servicios de dominio para compras
 Lógica de negocio centralizada y reutilizable
 """
@@ -76,7 +76,7 @@ class CompraService:
                 producto = Productos.objects.get(id_producto=producto_id)
 
                 # Advertencia si producto inactivo
-                if not producto.activo:
+                if not producto.estado:
                     warnings.append(
                         {
                             "producto_id": producto_id,

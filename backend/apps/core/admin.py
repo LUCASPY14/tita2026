@@ -1,4 +1,4 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from datetime import timedelta
@@ -163,7 +163,7 @@ class TarjetasAutorizacionAdmin(admin.ModelAdmin):
         "fecha_vencimiento_display",
     ]
 
-    list_filter = ["tipo_autorizacion", "activo", "fecha_creacion"]
+    list_filter = ["tipo_autorizacion", "estado", "fecha_creacion"]
     search_fields = ["codigo_barra", "id_empleado__nombre", "id_empleado__apellido"]
     readonly_fields = ["fecha_creacion"]
     date_hierarchy = "fecha_creacion"
@@ -171,7 +171,7 @@ class TarjetasAutorizacionAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             "Información de la Tarjeta",
-            {"fields": ("codigo_barra", "tipo_autorizacion", "id_empleado", "activo")},
+            {"fields": ("codigo_barra", "tipo_autorizacion", "id_empleado", "estado")},
         ),
         (
             "Permisos",
@@ -246,8 +246,8 @@ class TarjetasAutorizacionAdmin(admin.ModelAdmin):
     permisos_badge.short_description = "Permisos"
 
     def estado_badge(self, obj):
-        """Estado activo/inactivo"""
-        if obj.activo:
+        """Estado estado/inactivo"""
+        if obj.estado:
             return format_html(
                 '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">ACTIVA</span>'
             )
@@ -536,7 +536,7 @@ class MediosPagoAdmin(admin.ModelAdmin):
         "estado_badge",
     ]
 
-    list_filter = ["genera_comision", "requiere_validacion", "activo"]
+    list_filter = ["genera_comision", "requiere_validacion", "estado"]
     search_fields = ["descripcion"]
     ordering = ["descripcion"]
 
@@ -563,10 +563,10 @@ class MediosPagoAdmin(admin.ModelAdmin):
     requiere_validacion_badge.short_description = "Validación"
 
     def estado_badge(self, obj):
-        """Estado activo/inactivo"""
-        if obj.activo:
+        """Estado estado/inactivo"""
+        if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">ACTIVO</span>'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">estado</span>'
             )
         return format_html(
             '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">INACTIVO</span>'
@@ -588,7 +588,7 @@ class ConfiguracionSistemaAdmin(admin.ModelAdmin):
         "updated_info",
     ]
 
-    list_filter = ["tipo", "categoria", "requerido", "activo"]
+    list_filter = ["tipo", "categoria", "requerido", "estado"]
     search_fields = ["clave", "descripcion"]
     readonly_fields = ["updated_at"]
     ordering = ["categoria", "clave"]
@@ -605,7 +605,7 @@ class ConfiguracionSistemaAdmin(admin.ModelAdmin):
         ),
         (
             "Configuración",
-            {"fields": ("requerido", "requiere_reinicio", "solo_superuser", "activo")},
+            {"fields": ("requerido", "requiere_reinicio", "solo_superuser", "estado")},
         ),
         ("Auditoría", {"fields": ("updated_at", "updated_by"), "classes": ("collapse",)}),
     )
@@ -691,7 +691,7 @@ class CacheConfiguracionAdmin(admin.ModelAdmin):
         "activo_badge",
     ]
 
-    list_filter = ["tipo_cache", "auto_invalidate", "activo"]
+    list_filter = ["tipo_cache", "auto_invalidate", "estado"]
     search_fields = ["clave", "descripcion"]
     readonly_fields = ["hits", "misses", "ultima_limpieza"]
     ordering = ["clave"]
@@ -752,10 +752,10 @@ class CacheConfiguracionAdmin(admin.ModelAdmin):
     performance_display.short_description = "Performance (Hits/Total)"
 
     def activo_badge(self, obj):
-        """Estado activo"""
-        if obj.activo:
+        """Estado estado"""
+        if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">ACTIVO</span>'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">estado</span>'
             )
         return format_html(
             '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">INACTIVO</span>'
@@ -776,7 +776,7 @@ class LimitesTransaccionAdmin(admin.ModelAdmin):
         "activo_badge",
     ]
 
-    list_filter = ["id_rol", "tipo_operacion", "requiere_autorizacion_doble", "activo"]
+    list_filter = ["id_rol", "tipo_operacion", "requiere_autorizacion_doble", "estado"]
     search_fields = ["id_rol__nombre_rol", "observaciones"]
     readonly_fields = ["fecha_creacion", "fecha_modificacion"]
     ordering = ["id_rol", "tipo_operacion"]
@@ -787,7 +787,7 @@ class LimitesTransaccionAdmin(admin.ModelAdmin):
             {"fields": ("id_rol", "tipo_operacion", "monto_maximo_sin_autorizacion")},
         ),
         ("Autorización", {"fields": ("requiere_autorizacion_doble", "roles_autorizadores")}),
-        ("Estado", {"fields": ("activo", "observaciones")}),
+        ("Estado", {"fields": ("estado", "observaciones")}),
         (
             "Auditoría",
             {
@@ -844,10 +844,10 @@ class LimitesTransaccionAdmin(admin.ModelAdmin):
     doble_autorizacion_badge.short_description = "Autorización"
 
     def activo_badge(self, obj):
-        """Estado activo"""
-        if obj.activo:
+        """Estado estado"""
+        if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">ACTIVO</span>'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">estado</span>'
             )
         return format_html(
             '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">INACTIVO</span>'

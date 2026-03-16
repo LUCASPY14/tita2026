@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests complementarios para admin de productos
 Sprint 2 - Backend Coverage Improvement
 """
@@ -21,20 +21,20 @@ class ProductosAdminTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         self.unidad = UnidadesMedida.objects.create(
-            nombre="Unidad", abreviatura="Unid", activo=True
+            nombre="Unidad", abreviatura="Unid", estado=True
         )
 
         self.producto = Productos.objects.create(
             codigo_barra="1234567890",
             descripcion="Coca Cola 500ml",
             stock_minimo=Decimal("20.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -60,7 +60,7 @@ class CategoriasAdminTest(TestCase):
 
     def setUp(self):
         """Configuración inicial"""
-        self.categoria = Categorias.objects.create(nombre="Snacks", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Snacks", estado=True)
 
     def test_admin_registered(self):
         """Test que CategoriasAdmin está registrado"""

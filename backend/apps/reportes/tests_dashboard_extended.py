@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for dashboard_service.py to cover missing branches.
 
 Targets:
@@ -238,7 +238,7 @@ class DashboardGuardarKpiTest(TestCase):
             nombre_kpi="test_kpi",
             descripcion="Test",
             categoria="ventas",
-            activo=True,
+            estado=True,
         )
 
         today = date.today()
@@ -267,7 +267,7 @@ class DashboardGuardarKpiTest(TestCase):
             nombre_kpi="update_kpi",
             descripcion="Update test",
             categoria="financiero",
-            activo=True,
+            estado=True,
         )
         today = date.today()
 
@@ -303,7 +303,7 @@ class DashboardGuardarKpiTest(TestCase):
             nombre_kpi="exc_kpi",
             descripcion="Exc test",
             categoria="ventas",
-            activo=True,
+            estado=True,
         )
 
         with patch(

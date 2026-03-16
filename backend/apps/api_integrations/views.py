@@ -1,4 +1,4 @@
-"""
+﻿"""
 Views de la app api_integrations
 Manejo de webhooks de APIs externas
 """
@@ -140,7 +140,7 @@ def webhook_test(request):
     return Response(
         {
             "status": "ok",
-            "message": "Webhook endpoint de Bancard está activo",
+            "message": "Webhook endpoint de Bancard está estado",
             "método": "POST",
             "path": "/api/webhooks/bancard/",
         },

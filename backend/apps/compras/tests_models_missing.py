@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests targeting missing __str__ methods in apps/compras/models.py.
 
 Missing lines:
@@ -34,33 +34,33 @@ def _make_compras_fixtures():
         ruc="CM9999999-0",
         defaults={
             "razon_social": "CM Proveedor Test",
-            "activo": True,
+            "estado": True,
             "fecha_registro": timezone.now(),
         },
     )
     medio_pago, _ = MediosPago.objects.get_or_create(
         descripcion="CM_Efectivo",
-        defaults={"genera_comision": False, "requiere_validacion": False, "activo": True},
+        defaults={"genera_comision": False, "requiere_validacion": False, "estado": True},
     )
     impuesto = Impuestos.objects.create(
         nombre_impuesto=f"IVA_CM_{timezone.now().timestamp()}",
         porcentaje=Decimal("10.00"),
         vigente_desde=timezone.now().date(),
-        activo=True,
+        estado=True,
     )
     categoria, _ = Categorias.objects.get_or_create(
-        nombre="CM_Cat", defaults={"activo": True}
+        nombre="CM_Cat", defaults={"estado": True}
     )
     unidad, _ = Categorias.objects.get_or_create(
-        nombre="CM_UN_Cat", defaults={"activo": True}
+        nombre="CM_UN_Cat", defaults={"estado": True}
     )
     from apps.productos.models import UnidadesMedida
     unidad_medida, _ = UnidadesMedida.objects.get_or_create(
-        nombre="CM_UN", defaults={"abreviatura": "UN", "activo": True}
+        nombre="CM_UN", defaults={"abreviatura": "UN", "estado": True}
     )
     producto = Productos.objects.create(
         descripcion=f"CM_Prod_{timezone.now().timestamp()}",
-        activo=True,
+        estado=True,
         id_categoria=categoria,
         id_impuesto=impuesto,
         id_unidad_medida=unidad_medida,

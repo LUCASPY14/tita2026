@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests complementarios para admin de clientes
 Sprint 2 - Backend Coverage Improvement
 """
@@ -18,17 +18,17 @@ class ClientesAdminTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista General", moneda="PYG", activo=True
+            nombre_lista="Lista General", moneda="PYG", estado=True
         )
 
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 
         self.cliente = Clientes.objects.create(
             nombres="Juan",
             apellidos="Pérez",
             ruc_ci="1234567890",
             limite_credito=Decimal("500000.00"),
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -48,13 +48,13 @@ class HijosAdminTest(TestCase):
 
     def setUp(self):
         """Configuración inicial"""
-        lista = ListasPrecios.objects.create(nombre_lista="Lista", moneda="PYG", activo=True)
-        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Lista", moneda="PYG", estado=True)
+        tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
         cliente = Clientes.objects.create(
             nombres="Roberto",
             apellidos="Silva",
             ruc_ci="5555555555",
-            activo=True,
+            estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
         )
@@ -64,7 +64,7 @@ class HijosAdminTest(TestCase):
             apellido="Silva",
             fecha_nacimiento=timezone.datetime(2010, 5, 15).date(),
             grado="Octavo",
-            activo=True,
+            estado=True,
             id_cliente_responsable=cliente,
         )
 

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para serializers de la app core
 Sprint 2 - Backend Coverage Improvement
 """
@@ -19,18 +19,18 @@ class TarjetasSerializerTest(TestCase):
         """Configuración inicial para cada test"""
         # Crear lista de precios
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Estudiantes", moneda="PYG", activo=True
+            nombre_lista="Lista Estudiantes", moneda="PYG", estado=True
         )
 
         # Crear tipo de cliente
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
 
         # Crear cliente
         self.cliente = Clientes.objects.create(
             nombres="Carlos",
             apellidos="Ramírez",
             ruc_ci="4444444444",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )
@@ -41,7 +41,7 @@ class TarjetasSerializerTest(TestCase):
             apellido="Ramírez",
             fecha_nacimiento="2014-06-10",
             grado="Cuarto Grado",
-            activo=True,
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
@@ -136,7 +136,7 @@ class MediosPagoSerializerTest(TestCase):
     def test_serializar_medio_pago_completo(self):
         """Test de serialización de un medio de pago con todos los campos"""
         medio = MediosPago.objects.create(
-            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, activo=True
+            descripcion="Efectivo", genera_comision=False, requiere_validacion=False, estado=True
         )
 
         serializer = MediosPagoSerializer(medio)
@@ -145,7 +145,7 @@ class MediosPagoSerializerTest(TestCase):
         self.assertEqual(data["descripcion"], "Efectivo")
         self.assertFalse(data["genera_comision"])
         self.assertFalse(data["requiere_validacion"])
-        self.assertTrue(data["activo"])
+        self.assertTrue(data["estado"])
 
     def test_serializar_medio_pago_con_comision(self):
         """Test de serialización de un medio de pago que genera comisión"""
@@ -153,7 +153,7 @@ class MediosPagoSerializerTest(TestCase):
             descripcion="Tarjeta de Crédito",
             genera_comision=True,
             requiere_validacion=True,
-            activo=True,
+            estado=True,
         )
 
         serializer = MediosPagoSerializer(medio)
@@ -169,7 +169,7 @@ class MediosPagoSerializerTest(TestCase):
             "descripcion": "Transferencia Bancaria",
             "genera_comision": False,
             "requiere_validacion": True,
-            "activo": True,
+            "estado": True,
         }
 
         serializer = MediosPagoSerializer(data=data)
@@ -177,7 +177,7 @@ class MediosPagoSerializerTest(TestCase):
 
     def test_validar_medio_pago_sin_descripcion_invalido(self):
         """Test que valida que un medio de pago sin descripción es inválido"""
-        data = {"genera_comision": False, "requiere_validacion": False, "activo": True}
+        data = {"genera_comision": False, "requiere_validacion": False, "estado": True}
 
         serializer = MediosPagoSerializer(data=data)
         self.assertFalse(serializer.is_valid())
@@ -189,7 +189,7 @@ class MediosPagoSerializerTest(TestCase):
             "descripcion": "QR Pago Móvil",
             "genera_comision": True,
             "requiere_validacion": True,
-            "activo": True,
+            "estado": True,
         }
 
         serializer = MediosPagoSerializer(data=data)
@@ -203,16 +203,16 @@ class MediosPagoSerializerTest(TestCase):
     def test_actualizar_medio_pago_parcialmente(self):
         """Test de actualización parcial de medio de pago"""
         medio = MediosPago.objects.create(
-            descripcion="Cheque", genera_comision=False, requiere_validacion=True, activo=True
+            descripcion="Cheque", genera_comision=False, requiere_validacion=True, estado=True
         )
 
-        data = {"activo": False}
+        data = {"estado": False}
         serializer = MediosPagoSerializer(medio, data=data, partial=True)
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
         medio_actualizado = serializer.save()
 
-        self.assertFalse(medio_actualizado.activo)
+        self.assertFalse(medio_actualizado.estado)
 
 
 class CargasSaldoSerializerTest(TestCase):
@@ -220,14 +220,14 @@ class CargasSaldoSerializerTest(TestCase):
 
     def setUp(self):
         self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Serializer", moneda="PYG", activo=True
+            nombre_lista="Lista Serializer", moneda="PYG", estado=True
         )
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Carga",
             apellidos="Test",
             ruc_ci="9999999999",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cliente,
         )

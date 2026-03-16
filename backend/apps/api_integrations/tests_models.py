@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para modelos de api_integrations
 Cubre validaciones, relaciones y funcionalidad de modelos de integraciones API
 """
@@ -40,7 +40,7 @@ class ProveedoresApiModelTest(TestCase):
             },
             'timeout': 30,
             'max_reintentos': 3,
-            'activo': True,
+            'estado': True,
             'created_at': timezone.now()
         }
 
@@ -51,7 +51,7 @@ class ProveedoresApiModelTest(TestCase):
         self.assertEqual(proveedor.nombre, 'Bancard')
         self.assertEqual(proveedor.tipo_servicio, 'payment_gateway')
         self.assertEqual(proveedor.url_base, 'https://vpos.infonet.com.py')
-        self.assertTrue(proveedor.activo)
+        self.assertTrue(proveedor.estado)
         self.assertIsInstance(proveedor.config_auth, dict)
 
     def test_proveedor_string_representation(self):
@@ -125,10 +125,10 @@ class ProveedoresApiModelTest(TestCase):
     def test_proveedor_valores_por_defecto(self):
         """Debe aplicar valores por defecto correctamente"""
         data = self.proveedor_data.copy()
-        data.pop('activo', None)  # Usar default
+        data.pop('estado', None)  # Usar default
         
         proveedor = ProveedoresApi.objects.create(**data)
-        self.assertTrue(proveedor.activo)  # Default True
+        self.assertTrue(proveedor.estado)  # Default True
 
 
 class EndpointsApiModelTest(TestCase):
@@ -182,7 +182,7 @@ class EndpointsApiModelTest(TestCase):
             },
             'cache_segundos': 300,
             'requiere_auth': 1,
-            'activo': True,
+            'estado': True,
             'id_proveedor': self.proveedor
         }
 
@@ -250,7 +250,7 @@ class LogsLlamadasApiModelTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='TestRole',
             descripcion='Rol para pruebas',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -435,7 +435,7 @@ class CredencialesApiModelTest(TestCase):
             },
             'fecha_expiracion': timezone.now() + timezone.timedelta(days=30),
             'updated_at': timezone.now(),
-            'activo': True,
+            'estado': True,
             'id_proveedor': self.proveedor
         }
         
@@ -444,7 +444,7 @@ class CredencialesApiModelTest(TestCase):
         self.assertEqual(credencial.ambiente, 'staging')
         self.assertEqual(credencial.api_key, 'test_api_key_123')
         self.assertEqual(credencial.id_proveedor, self.proveedor)
-        self.assertTrue(credencial.activo)
+        self.assertTrue(credencial.estado)
 
     def test_credenciales_unique_together_constraint(self):
         """Debe validar unique_together (id_proveedor, ambiente)"""
@@ -574,7 +574,7 @@ class WebhookEndpointsModelTest(TestCase):
                 'payment.failed'
             ],
             'handler_func': 'webhooks.handlers.payment_handler',
-            'activo': True,
+            'estado': True,
             'created_at': timezone.now(),
             'id_proveedor': self.proveedor
         }

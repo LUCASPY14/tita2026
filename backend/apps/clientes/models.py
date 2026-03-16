@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app clientes
 Gestión de clientes, hijos, grados y restricciones
 """
@@ -14,13 +14,13 @@ class ClientesManager(models.Manager):
             from apps.productos.models import ListasPrecios
             lista, _ = ListasPrecios.objects.get_or_create(
                 nombre_lista='General',
-                defaults={'activo': True},
+                defaults={'estado': True},
             )
             kwargs['id_lista'] = lista
         if 'id_tipo_cliente' not in kwargs and 'id_tipo_cliente_id' not in kwargs:
             tipo, _ = TiposCliente.objects.get_or_create(
                 nombre_tipo='Regular',
-                defaults={'activo': True},
+                defaults={'estado': True},
             )
             kwargs['id_tipo_cliente'] = tipo
         return super().create(**kwargs)
@@ -46,7 +46,7 @@ class Clientes(models.Model):
     limite_credito = models.DecimalField(
         max_digits=12, decimal_places=2, blank=True, null=True, default=0
     )
-    activo = models.BooleanField(default=True, help_text="1=Activo, 0=Inactivo")
+    estado = models.BooleanField(default=True, help_text="1=estado, 0=Inactivo")
     fecha_registro = models.DateTimeField(auto_now_add=True)
     id_lista = models.ForeignKey("productos.ListasPrecios", models.DO_NOTHING, db_column="id_lista")
     id_tipo_cliente = models.ForeignKey(
@@ -167,8 +167,8 @@ class Clientes(models.Model):
 
     @property
     def esta_activo(self):
-        """Retorna True si el cliente está activo"""
-        return self.activo == 1
+        """Retorna True si el cliente está estado"""
+        return self.estado == 1
 
 
 class TiposCliente(models.Model):
@@ -178,7 +178,7 @@ class TiposCliente(models.Model):
 
     id_tipo_cliente = models.AutoField(primary_key=True)
     nombre_tipo = models.CharField(unique=True, max_length=50)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     class Meta:
         managed = True
@@ -208,7 +208,7 @@ class Hijos(models.Model):
     grado = models.CharField(max_length=50, blank=True, null=True)
     foto_perfil = models.CharField(max_length=255, blank=True, null=True)
     fecha_foto = models.DateTimeField(blank=True, null=True)
-    activo = models.BooleanField(default=True, help_text="1=Activo, 0=Inactivo")
+    estado = models.BooleanField(default=True, help_text="1=estado, 0=Inactivo")
     id_cliente_responsable = models.ForeignKey(
         "Clientes", models.DO_NOTHING, db_column="id_cliente_responsable", related_name="hijos"
     )
@@ -260,7 +260,7 @@ class Grados(models.Model):
     nivel = models.IntegerField(help_text="Nivel numérico del grado (1-12)")
     orden_visualizacion = models.IntegerField()
     es_ultimo_grado = models.BooleanField(default=False, help_text="1 si es el último grado")
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -328,7 +328,7 @@ class RestriccionesHijos(models.Model):
     )
     fecha_registro = models.DateTimeField(auto_now_add=True)
     fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     id_hijo = models.ForeignKey(
         "Hijos", models.DO_NOTHING, db_column="id_hijo", related_name="restricciones"
     )
@@ -342,7 +342,7 @@ class RestriccionesHijos(models.Model):
         verbose_name_plural = "Restricciones de Hijos"
         verbose_name = "Restricción de Hijo"
         verbose_name_plural = "Restricciones de Hijos"
-        ordering = ["-severidad", "-activo"]
+        ordering = ["-severidad", "-estado"]
 
     def __str__(self):
         return f"{self.tipo_restriccion} - {self.id_hijo} ({self.severidad})"

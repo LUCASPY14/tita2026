@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para URLs de clientes
 Cubre configuración de rutas y patrones URL para el módulo de clientes
 """
@@ -186,7 +186,7 @@ class ClientesURLRoutingTest(APITestCase):
         # Crear datos de prueba
         self.tipo_cliente = TiposCliente.objects.create(
             nombre_tipo='Cliente Test',
-            activo=True
+            estado=True
         )
         
         self.cliente = Clientes.objects.create(
@@ -194,7 +194,7 @@ class ClientesURLRoutingTest(APITestCase):
             apellidos='User',
             ruc_ci='12345678',
             email='test@test.com',
-            activo=True,
+            estado=True,
             id_tipo_cliente=self.tipo_cliente
         )
 

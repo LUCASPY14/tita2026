@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para views de contabilidad
 Cubre ViewSets y vistas de funcionalidad contable
 """
@@ -40,7 +40,7 @@ class ContabilidadViewsBaseTest(APITestCase):
         self.rol_cajero = Roles.objects.create(
             nombre_rol='Cajero',
             descripcion='Rol de cajero',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -56,14 +56,14 @@ class ContabilidadViewsBaseTest(APITestCase):
         self.caja = Cajas.objects.create(
             nombre_caja='Caja Principal',
             ubicacion='Planta Baja',
-            activo=True
+            estado=True
         )
         
         # Crear medio de pago
         self.medio_pago = MediosPago.objects.create(
             nombre='Efectivo',
             descripcion='Pago en efectivo',
-            activo=True
+            estado=True
         )
         
         # Cliente API
@@ -76,8 +76,8 @@ class CajasViewSetTest(ContabilidadViewsBaseTest):
     def test_cajas_list_endpoint_structure(self):
         """Debe estructurar endpoint list correctamente"""
         # Crear múltiples cajas
-        Cajas.objects.create(nombre_caja='Caja 2', activo=True)
-        Cajas.objects.create(nombre_caja='Caja 3', activo=False)
+        Cajas.objects.create(nombre_caja='Caja 2', estado=True)
+        Cajas.objects.create(nombre_caja='Caja 3', estado=False)
         
         # Si el endpoint existiera
         try:
@@ -98,13 +98,13 @@ class CajasViewSetTest(ContabilidadViewsBaseTest):
         valid_data = {
             'nombre_caja': 'Nueva Caja',
             'ubicacion': 'Segundo Piso',
-            'activo': True
+            'estado': True
         }
         
         # Datos inválidos
         invalid_data = {
             'nombre_caja': '',  # Nombre vacío
-            'activo': True
+            'estado': True
         }
         
         # Simular validación
@@ -121,20 +121,20 @@ class CajasViewSetTest(ContabilidadViewsBaseTest):
             caja_invalida.full_clean()
 
     def test_cajas_filter_by_activo(self):
-        """Debe permitir filtrar cajas por estado activo"""
+        """Debe permitir filtrar cajas por estado estado"""
         # Crear cajas con diferentes estados
         caja_activa = Cajas.objects.create(
             nombre_caja='Activa',
-            activo=True
+            estado=True
         )
         caja_inactiva = Cajas.objects.create(
             nombre_caja='Inactiva',
-            activo=False
+            estado=False
         )
         
         # Simular filtrado
-        cajas_activas = Cajas.objects.filter(activo=True)
-        cajas_inactivas = Cajas.objects.filter(activo=False)
+        cajas_activas = Cajas.objects.filter(estado=True)
+        cajas_inactivas = Cajas.objects.filter(estado=False)
         
         self.assertIn(caja_activa, cajas_activas)
         self.assertNotIn(caja_activa, cajas_inactivas)
@@ -370,7 +370,7 @@ class TarifasComisionViewSetTest(ContabilidadViewsBaseTest):
             'fecha_inicio_vigencia': timezone.now(),
             'porcentaje_comision': Decimal('3.5000'),
             'monto_fijo_comision': Decimal('1500.00'),
-            'activo': True,
+            'estado': True,
             'id_medio_pago': self.medio_pago
         }
         
@@ -378,7 +378,7 @@ class TarifasComisionViewSetTest(ContabilidadViewsBaseTest):
         
         self.assertEqual(tarifa.porcentaje_comision, Decimal('3.5000'))
         self.assertEqual(tarifa.monto_fijo_comision, Decimal('1500.00'))
-        self.assertTrue(tarifa.activo)
+        self.assertTrue(tarifa.estado)
 
     def test_tarifas_comision_vigencia_logic(self):
         """Debe manejar lógica de vigencia correctamente"""
@@ -548,14 +548,14 @@ class ImpuestosViewSetTest(ContabilidadViewsBaseTest):
             'nombre_impuesto': 'IVA 10%',
             'porcentaje': Decimal('10.00'),
             'vigente_desde': date.today(),
-            'activo': True
+            'estado': True
         }
         
         impuesto = Impuestos.objects.create(**impuesto_data)
         
         self.assertEqual(impuesto.nombre_impuesto, 'IVA 10%')
         self.assertEqual(impuesto.porcentaje, Decimal('10.00'))
-        self.assertTrue(impuesto.activo)
+        self.assertTrue(impuesto.estado)
 
     def test_impuestos_validacion_vigencia(self):
         """Debe validar lógica de vigencia de impuestos"""
@@ -565,7 +565,7 @@ class ImpuestosViewSetTest(ContabilidadViewsBaseTest):
             porcentaje=Decimal('10.00'),
             vigente_desde=date.today() - timedelta(days=30),
             vigente_hasta=date.today() + timedelta(days=30),
-            activo=True
+            estado=True
         )
         
         # Impuesto histórico
@@ -574,14 +574,14 @@ class ImpuestosViewSetTest(ContabilidadViewsBaseTest):
             porcentaje=Decimal('5.00'),
             vigente_desde=date.today() - timedelta(days=365),
             vigente_hasta=date.today() - timedelta(days=31),
-            activo=False
+            estado=False
         )
         
         # Obtener impuestos vigentes
         fecha_actual = date.today()
         impuestos_vigentes = Impuestos.objects.filter(
             vigente_desde__lte=fecha_actual,
-            activo=True
+            estado=True
         ).filter(
             Q(vigente_hasta__isnull=True) | Q(vigente_hasta__gte=fecha_actual)
         )

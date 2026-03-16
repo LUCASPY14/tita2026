@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para modelos de la app usuarios
 Cubre validaciones, métodos y comportamientos de Empleados y Roles
 """
@@ -20,12 +20,12 @@ class RolesModelTest(TestCase):
         rol = Roles.objects.create(
             nombre_rol="Administrador",
             descripcion="Rol con permisos completos",
-            activo=True
+            estado=True
         )
         
         self.assertEqual(rol.nombre_rol, "Administrador")
         self.assertEqual(rol.descripcion, "Rol con permisos completos")
-        self.assertTrue(rol.activo)
+        self.assertTrue(rol.estado)
         self.assertIsNotNone(rol.id_rol)
 
     def test_str_representation(self):
@@ -42,9 +42,9 @@ class RolesModelTest(TestCase):
             Roles.objects.create(nombre_rol="Supervisor")
 
     def test_rol_activo_por_defecto(self):
-        """Debe crear rol activo por defecto"""
+        """Debe crear rol estado por defecto"""
         rol = Roles.objects.create(nombre_rol="Vendedor")
-        self.assertTrue(rol.activo)
+        self.assertTrue(rol.estado)
 
     def test_descripcion_opcional(self):
         """Debe permitir descripción opcional"""
@@ -79,7 +79,7 @@ class EmpleadosModelTest(TestCase):
             contrasena_hash="$2b$12$hashedpassword",
             fecha_ingreso=timezone.now(),
             email="juan@test.com",
-            activo=True,
+            estado=True,
             id_rol=self.rol
         )
         
@@ -87,7 +87,7 @@ class EmpleadosModelTest(TestCase):
         self.assertEqual(empleado.apellido, "Pérez")
         self.assertEqual(empleado.usuario, "jperez")
         self.assertEqual(empleado.email, "juan@test.com")
-        self.assertTrue(empleado.activo)
+        self.assertTrue(empleado.estado)
         self.assertEqual(empleado.id_rol, self.rol)
 
     def test_str_representation(self):
@@ -125,7 +125,7 @@ class EmpleadosModelTest(TestCase):
             )
 
     def test_empleado_activo_por_defecto(self):
-        """Debe crear empleado activo por defecto"""
+        """Debe crear empleado estado por defecto"""
         empleado = Empleados.objects.create(
             nombre="Luis",
             apellido="Sánchez",
@@ -134,7 +134,7 @@ class EmpleadosModelTest(TestCase):
             fecha_ingreso=timezone.now(),
             id_rol=self.rol
         )
-        self.assertTrue(empleado.activo)
+        self.assertTrue(empleado.estado)
 
     def test_campos_opcionales(self):
         """Debe permitir campos opcionales como null"""

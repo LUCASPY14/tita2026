@@ -1,4 +1,4 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum
 from decimal import Decimal
@@ -25,14 +25,14 @@ class ProveedoresAdmin(admin.ModelAdmin):
         "estado_badge",
         "fecha_registro",
     ]
-    list_filter = ["activo", "ciudad", "fecha_registro"]
+    list_filter = ["estado", "ciudad", "fecha_registro"]
     search_fields = ["razon_social", "ruc", "email", "telefono"]
     ordering = ["razon_social"]
     date_hierarchy = "fecha_registro"
     list_per_page = 25
 
     fieldsets = (
-        ("Información Básica", {"fields": ("razon_social", "ruc", "activo")}),
+        ("Información Básica", {"fields": ("razon_social", "ruc", "estado")}),
         ("Datos de Contacto", {"fields": ("telefono", "email", "direccion", "ciudad")}),
         ("Auditoría", {"fields": ("fecha_registro",), "classes": ("collapse",)}),
     )
@@ -46,10 +46,10 @@ class ProveedoresAdmin(admin.ModelAdmin):
     ruc_display.short_description = "RUC"
 
     def estado_badge(self, obj):
-        """Badge coloreado para estado activo/inactivo"""
-        if obj.activo:
+        """Badge coloreado para estado estado/inactivo"""
+        if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">ACTIVO</span>'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">estado</span>'
             )
         return format_html(
             '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">INACTIVO</span>'

@@ -1,4 +1,4 @@
-"""
+﻿"""
 ViewSets para app de Reportes
 
 Endpoints disponibles:
@@ -399,7 +399,7 @@ class PlantillasTareaViewSet(ModelViewSet):
     def ejecuciones(self, request, pk=None):
         return Response({'status': 'ok'})
 
-    @action(detail=True, methods=['post'], url_path='toggle_activo', url_name='toggle-activo')
+    @action(detail=True, methods=['post'], url_path='toggle_activo', url_name='toggle-estado')
     def toggle_activo(self, request, pk=None):
         return Response({'status': 'ok'})
 

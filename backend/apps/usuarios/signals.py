@@ -1,4 +1,4 @@
-"""
+﻿"""
 Signals para auditoría automática de cambios en modelos
 Registra automáticamente todas las operaciones CRUD
 """
@@ -152,11 +152,11 @@ def empleado_post_save(sender, instance, created, **kwargs):
                 "first_name": instance.nombre,
                 "last_name": instance.apellido,
                 "email": instance.email or "",
-                "is_active": instance.activo,
+                "is_active": instance.estado,
             },
         )
-        if django_user.is_active != instance.activo:
-            django_user.is_active = instance.activo
+        if django_user.is_active != instance.estado:
+            django_user.is_active = instance.estado
             django_user.save(update_fields=["is_active"])
     except Exception as e:
         print(f"Error sincronizando auth.User para empleado {instance.usuario}: {str(e)}")
@@ -190,7 +190,7 @@ def empleado_post_save(sender, instance, created, **kwargs):
                     "apellido",
                     "usuario",
                     "email",
-                    "activo",
+                    "estado",
                     "id_rol",
                     "telefono",
                     "direccion",
@@ -292,7 +292,7 @@ def rol_post_save(sender, instance, created, **kwargs):
                 "id_rol": instance.id_rol,
                 "nombre_rol": instance.nombre_rol,
                 "descripcion": instance.descripcion,
-                "activo": instance.activo,
+                "estado": instance.estado,
             },
             fecha_operacion=timezone.now(),
             resultado="OK",
@@ -367,7 +367,7 @@ def bloqueo_post_save(sender, instance, created, **kwargs):
             pass
         else:
             # Bloqueo actualizado (desbloqueo)
-            if not instance.activo:
+            if not instance.estado:
                 empleado_actual = obtener_empleado_actual()
                 ip_actual = obtener_ip_actual() or "127.0.0.1"
 

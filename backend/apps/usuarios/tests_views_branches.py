@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests de cobertura de ramas para usuarios/views.py.
 Cubre los branches faltantes: _get_client_ip (X-Forwarded-For),
 cambiar_password (empleado no encontrado, admin check, Django User DoesNotExist).
@@ -298,15 +298,15 @@ class PermisosViewSetBranchTest(TestCase):
         # Create permisos from two modules, with 2 in the same module
         p1, _ = Permisos.objects.get_or_create(
             codigo_permiso="branch_test.ver",
-            defaults={"nombre": "P1", "modulo": "branch_mod_a", "activo": True},
+            defaults={"nombre": "P1", "modulo": "branch_mod_a", "estado": True},
         )
         p2, _ = Permisos.objects.get_or_create(
             codigo_permiso="branch_test.crear",
-            defaults={"nombre": "P2", "modulo": "branch_mod_a", "activo": True},  # same module
+            defaults={"nombre": "P2", "modulo": "branch_mod_a", "estado": True},  # same module
         )
         p3, _ = Permisos.objects.get_or_create(
             codigo_permiso="branch_test.eliminar",
-            defaults={"nombre": "P3", "modulo": "branch_mod_b", "activo": True},  # different module
+            defaults={"nombre": "P3", "modulo": "branch_mod_b", "estado": True},  # different module
         )
 
         factory = APIRequestFactory()

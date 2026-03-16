@@ -1,4 +1,4 @@
-"""
+﻿"""
 Admin configuration for Clientes module - Simple version for testing
 """
 
@@ -17,29 +17,29 @@ from .models import (
 
 @admin.register(Clientes)
 class ClientesAdmin(admin.ModelAdmin):
-    list_display = ["id_cliente", "nombres", "apellidos", "ruc_ci", "email", "activo"]
-    list_filter = ["activo"]
+    list_display = ["id_cliente", "nombres", "apellidos", "ruc_ci", "email", "estado"]
+    list_filter = ["estado"]
     search_fields = ["nombres", "apellidos", "ruc_ci", "email"]
 
 
 @admin.register(TiposCliente)
 class TiposClienteAdmin(admin.ModelAdmin):
-    list_display = ["id_tipo_cliente", "nombre_tipo", "activo"]
-    list_filter = ["activo"]
+    list_display = ["id_tipo_cliente", "nombre_tipo", "estado"]
+    list_filter = ["estado"]
     search_fields = ["nombre_tipo"]
 
 
 @admin.register(Hijos)
 class HijosAdmin(admin.ModelAdmin):
-    list_display = ["id_hijo", "nombre", "apellido", "grado", "activo"]
-    list_filter = ["activo", "grado"]
+    list_display = ["id_hijo", "nombre", "apellido", "grado", "estado"]
+    list_filter = ["estado", "grado"]
     search_fields = ["nombre", "apellido"]
 
 
 @admin.register(Grados)
 class GradosAdmin(admin.ModelAdmin):
-    list_display = ["id_grado", "nombre_grado", "nivel", "activo"]
-    list_filter = ["activo", "nivel"]
+    list_display = ["id_grado", "nombre_grado", "nivel", "estado"]
+    list_filter = ["estado", "nivel"]
     search_fields = ["nombre_grado"]
 
 
@@ -59,8 +59,8 @@ class HistorialGradosHijosAdmin(admin.ModelAdmin):
 
 @admin.register(RestriccionesHijos)
 class RestriccionesHijosAdmin(admin.ModelAdmin):
-    list_display = ["id_restriccion", "id_hijo", "tipo_restriccion", "severidad", "activo"]
-    list_filter = ["activo", "severidad"]
+    list_display = ["id_restriccion", "id_hijo", "tipo_restriccion", "severidad", "estado"]
+    list_filter = ["estado", "severidad"]
     search_fields = ["tipo_restriccion"]
 
 

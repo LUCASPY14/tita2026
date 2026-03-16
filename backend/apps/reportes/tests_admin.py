@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para admin de reportes
 Cubre interfaces administrativas y funcionalidad de gestión de reportes
 """
@@ -44,7 +44,7 @@ class BaseReportesAdminTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Analista Reportes',
             descripcion='Rol de analista de reportes',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -73,7 +73,7 @@ class PlantillasReporteAdminTest(BaseReportesAdminTest):
             parametros={'mes': 'integer'},
             tipo_reporte='ventas',
             frecuencia='mensual',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             created_by=self.empleado
         )
@@ -84,12 +84,12 @@ class PlantillasReporteAdminTest(BaseReportesAdminTest):
             parametros={'stock_minimo': 'integer'},
             tipo_reporte='inventario',
             frecuencia='semanal',
-            activo=False,
+            estado=False,
             created_at=timezone.now()
         )
         
         # Simular list_display
-        expected_fields = ['nombre', 'tipo_reporte', 'frecuencia', 'activo', 'created_at']
+        expected_fields = ['nombre', 'tipo_reporte', 'frecuencia', 'estado', 'created_at']
         
         # Verificar que los campos existen en el modelo
         for field in expected_fields:
@@ -259,14 +259,14 @@ class DashboardsAdminTest(BaseReportesAdminTest):
             configuracion=configuracion_dashboard,
             es_publico=1,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
         )
         
         # Campos esperados en list_display
-        expected_fields = ['nombre', 'es_publico', 'predeterminado', 'activo', 'id_empleado']
+        expected_fields = ['nombre', 'es_publico', 'predeterminado', 'estado', 'id_empleado']
         
         for field in expected_fields:
             self.assertTrue(hasattr(dashboard, field))
@@ -306,7 +306,7 @@ class DashboardsAdminTest(BaseReportesAdminTest):
             configuracion=configuracion_compleja,
             es_publico=0,
             predeterminado=1,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -328,7 +328,7 @@ class DashboardsAdminTest(BaseReportesAdminTest):
             configuracion={},
             es_publico=1,  # Público
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -340,7 +340,7 @@ class DashboardsAdminTest(BaseReportesAdminTest):
             configuracion={},
             es_publico=0,  # Privado
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -362,7 +362,7 @@ class DashboardsAdminTest(BaseReportesAdminTest):
             configuracion={},
             es_publico=1,
             predeterminado=1,  # Predeterminado
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -374,7 +374,7 @@ class DashboardsAdminTest(BaseReportesAdminTest):
             configuracion={},
             es_publico=1,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -425,7 +425,7 @@ class DashboardsAdminTest(BaseReportesAdminTest):
             configuracion=configuracion_valida,
             es_publico=1,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -457,13 +457,13 @@ class KpiMetricasAdminTest(BaseReportesAdminTest):
             meta_valor=10000000.00,
             categoria='ventas',
             frecuencia_actualizacion='diario',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
         
         # Campos esperados en admin
-        expected_fields = ['nombre_kpi', 'categoria', 'meta_valor', 'unidad_medida', 'activo']
+        expected_fields = ['nombre_kpi', 'categoria', 'meta_valor', 'unidad_medida', 'estado']
         
         for field in expected_fields:
             self.assertTrue(hasattr(kpi, field))
@@ -477,7 +477,7 @@ class KpiMetricasAdminTest(BaseReportesAdminTest):
             meta_valor=500000.00,
             categoria='ventas',
             frecuencia_actualizacion='diario',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -515,7 +515,7 @@ class PlantillasTareaAdminTest(BaseReportesAdminTest):
             descripcion='Genera reporte diario de ventas',
             configuracion_programacion=config_programacion,
             configuracion_envio={'email': True, 'formato': 'pdf'},
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -531,7 +531,7 @@ class PlantillasTareaAdminTest(BaseReportesAdminTest):
             nombre='Tarea con Destinatarios',
             configuracion_programacion={'tipo': 'manual'},
             configuracion_envio={'email': True},
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )
@@ -565,7 +565,7 @@ class ReportesAdminIntegrationTest(BaseReportesAdminTest):
             parametros={'fecha': 'date'},
             tipo_reporte='ventas',
             frecuencia='diario',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             created_by=self.empleado
         )
@@ -587,7 +587,7 @@ class ReportesAdminIntegrationTest(BaseReportesAdminTest):
             configuracion=dashboard_config,
             es_publico=1,
             predeterminado=0,
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
             id_empleado=self.empleado
@@ -604,7 +604,7 @@ class ReportesAdminIntegrationTest(BaseReportesAdminTest):
             nombre='Envío Automático Reporte',
             configuracion_programacion=tarea_config,
             configuracion_envio={'email': True, 'formato': 'pdf'},
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             id_empleado=self.empleado
         )

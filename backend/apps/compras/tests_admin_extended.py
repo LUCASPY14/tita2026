@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for apps/compras/admin.py targeting uncovered display methods.
 
 Missing lines: 44, 50-54, 93-95, 101, 108, 115-122, 129-137, 148-151, 157-158,
@@ -59,15 +59,15 @@ class ProveedoresAdminTest(TestCase):
         self.assertIn("80000001-1", result)
 
     def test_estado_badge_activo(self):
-        """Lines 50-54: activo=True returns green ACTIVO badge."""
-        obj = _mock_obj(activo=True)
+        """Lines 50-54: estado=True returns green estado badge."""
+        obj = _mock_obj(estado=True)
         result = self.admin.estado_badge(obj)
-        self.assertIn("ACTIVO", result)
+        self.assertIn("estado", result)
         self.assertIn("#28a745", result)
 
     def test_estado_badge_inactivo(self):
-        """Lines 50-54: activo=False returns red INACTIVO badge."""
-        obj = _mock_obj(activo=False)
+        """Lines 50-54: estado=False returns red INACTIVO badge."""
+        obj = _mock_obj(estado=False)
         result = self.admin.estado_badge(obj)
         self.assertIn("INACTIVO", result)
         self.assertIn("#dc3545", result)

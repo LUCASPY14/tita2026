@@ -1,4 +1,4 @@
-"""
+﻿"""
 Sistema de permisos granulares para cantina_tita
 Integración con Django REST Framework
 """
@@ -30,7 +30,7 @@ class Permisos(models.Model):
         max_length=50, help_text="Módulo al que pertenece (ventas, inventario, usuarios, etc)"
     )
     descripcion = models.TextField(blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -146,7 +146,7 @@ class PermissionService:
             modulo = codigo.split(".")[0]
 
             permiso, creado = Permisos.objects.get_or_create(
-                codigo_permiso=codigo, defaults={"nombre": nombre, "modulo": modulo, "activo": True}
+                codigo_permiso=codigo, defaults={"nombre": nombre, "modulo": modulo, "estado": True}
             )
 
             if creado:
@@ -252,7 +252,7 @@ class PermissionService:
             {'success': bool, 'mensaje': str}
         """
         try:
-            permiso = Permisos.objects.get(codigo_permiso=codigo_permiso, activo=True)
+            permiso = Permisos.objects.get(codigo_permiso=codigo_permiso, estado=True)
 
             relacion, creado = RolesPermisos.objects.get_or_create(
                 id_rol=rol, id_permiso=permiso, defaults={"asignado_por": asignado_por}

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests targeting missing lines in apps/ventas/views.py.
 
 Missing lines:
@@ -53,29 +53,29 @@ class EfectividadLoopTest(TestCase):
         self.client.force_authenticate(user=self.auth_user)
 
         # Minimal fixtures
-        self.rol = Roles.objects.create(nombre_rol="RPT_Rol", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="RPT_Rol", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="RPT",
             apellido="Emp",
             usuario="rptemp",
             email=f"rpt_{timezone.now().timestamp()}@test.com",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
-        self.lista = ListasPrecios.objects.create(nombre_lista="RPT_Lista", activo=True)
-        self.tipo_cli = TiposCliente.objects.create(nombre_tipo="RPT_Tipo", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="RPT_Lista", estado=True)
+        self.tipo_cli = TiposCliente.objects.create(nombre_tipo="RPT_Tipo", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="RPT",
             apellidos="Cliente",
             ruc_ci=f"RPT{timezone.now().timestamp():.0f}",
-            activo=True,
+            estado=True,
             id_lista=self.lista,
             id_tipo_cliente=self.tipo_cli,
         )
         self.medio = MediosPago.objects.create(
             descripcion=f"RPT_Medio_{timezone.now().timestamp()}",
-            activo=True,
+            estado=True,
             genera_comision=False,
         )
 
@@ -101,7 +101,7 @@ class EfectividadLoopTest(TestCase):
             monto_minimo=Decimal("0"),
             usos_actuales=0,
             prioridad=1,
-            activo=True,
+            estado=True,
             fecha_creacion=timezone.now(),
         )
 
@@ -175,33 +175,33 @@ def _make_full_setup(test_case, prefix):
     test_case.client = APIClient()
     test_case.client.force_authenticate(user=test_case.auth_user)
 
-    test_case.rol = Roles.objects.create(nombre_rol=f"{prefix}_rol", activo=True)
+    test_case.rol = Roles.objects.create(nombre_rol=f"{prefix}_rol", estado=True)
     test_case.empleado = Empleados.objects.create(
         nombre=prefix, apellido="Test",
         usuario=f"{prefix.lower()}_emp",
         email=f"{prefix.lower()}@test.com",
         fecha_ingreso=timezone.now(),
-        activo=True,
+        estado=True,
         id_rol=test_case.rol,
     )
-    test_case.lista = ListasPrecios.objects.create(nombre_lista=f"{prefix}_Lista", activo=True)
-    test_case.tipo_cli = TiposCliente.objects.create(nombre_tipo=f"{prefix}_Tipo", activo=True)
+    test_case.lista = ListasPrecios.objects.create(nombre_lista=f"{prefix}_Lista", estado=True)
+    test_case.tipo_cli = TiposCliente.objects.create(nombre_tipo=f"{prefix}_Tipo", estado=True)
     test_case.cliente = Clientes.objects.create(
         nombres=f"{prefix}Client",
         apellidos="Test",
         ruc_ci=f"{prefix[:8]}CI",
         limite_credito=Decimal("500000.00"),
-        activo=True,
+        estado=True,
         id_lista=test_case.lista,
         id_tipo_cliente=test_case.tipo_cli,
     )
-    test_case.cat = Categorias.objects.create(nombre=f"{prefix}_Cat", activo=True)
+    test_case.cat = Categorias.objects.create(nombre=f"{prefix}_Cat", estado=True)
     test_case.uni = UnidadesMedida.objects.create(nombre=f"{prefix}_Uni", abreviatura=prefix[:3].lower())
     test_case.imp = Impuestos.objects.create(
         nombre_impuesto=f"IVA {prefix}",
         porcentaje=Decimal("10.00"),
         vigente_desde=timezone.now().date(),
-        activo=True,
+        estado=True,
     )
     test_case.prod = Productos.objects.create(
         codigo_barra=f"{prefix[:6]}001",
@@ -210,7 +210,7 @@ def _make_full_setup(test_case, prefix):
         id_unidad_medida=test_case.uni,
         stock_minimo=Decimal("1"),
         id_impuesto=test_case.imp,
-        activo=True,
+        estado=True,
     )
     PreciosPorLista.objects.create(
         id_producto=test_case.prod,
@@ -219,7 +219,7 @@ def _make_full_setup(test_case, prefix):
     )
     StockUnico.objects.create(id_producto=test_case.prod, cantidad=Decimal("100.00"))
     test_case.medio = MediosPago.objects.create(
-        descripcion=f"{prefix}_Medio", activo=True, genera_comision=False
+        descripcion=f"{prefix}_Medio", estado=True, genera_comision=False
     )
 
 
@@ -283,7 +283,7 @@ class TarjetaNegativaOverLimitTest(TestCase):
         _make_full_setup(self, "TN")
         self.hijo = Hijos.objects.create(
             nombre="TNHijo", apellido="T",
-            id_cliente_responsable=self.cliente, activo=True,
+            id_cliente_responsable=self.cliente, estado=True,
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="TN0001",
@@ -385,7 +385,7 @@ class AuthorizationNoTarjetaTest(TestCase):
             usuario="ant_supervisor",
             email="ant_sup@test.com",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
         # Attach empleado to the API user
@@ -458,7 +458,7 @@ class CreditWithAuthOverLimitTest(TestCase):
             usuario="caol_sup",
             email="caol_sup@test.com",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -498,7 +498,7 @@ class TarjetaNegativaOKRangeTest(TestCase):
         _make_full_setup(self, "TNOK")
         self.hijo = Hijos.objects.create(
             nombre="TNOKHijo", apellido="T",
-            id_cliente_responsable=self.cliente, activo=True,
+            id_cliente_responsable=self.cliente, estado=True,
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="TNOK001",
@@ -580,7 +580,7 @@ class PromocionesAplicadasEnTransaccionTest(TestCase):
         _make_full_setup(self, "PAT")
         self.hijo = Hijos.objects.create(
             nombre="PATHijo", apellido="T",
-            id_cliente_responsable=self.cliente, activo=True,
+            id_cliente_responsable=self.cliente, estado=True,
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="PAT001",
@@ -663,7 +663,7 @@ class TarjetaAuthorizationTest(TestCase):
         _make_full_setup(self, "TAUTH")
         self.hijo = Hijos.objects.create(
             nombre="TAUTHHijo", apellido="T",
-            id_cliente_responsable=self.cliente, activo=True,
+            id_cliente_responsable=self.cliente, estado=True,
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="TAUTH001",
@@ -679,7 +679,7 @@ class TarjetaAuthorizationTest(TestCase):
             usuario="tauth_sup",
             email="tauth_sup@test.com",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
         self.auth_user.empleado = self.empleado
@@ -751,7 +751,7 @@ class TarjetaDoesNotExistTest(TestCase):
         # Create a Hijo WITHOUT an associated Tarjeta
         self.hijo_sin_tarjeta = Hijos.objects.create(
             nombre="TDNEHijo", apellido="T",
-            id_cliente_responsable=self.cliente, activo=True,
+            id_cliente_responsable=self.cliente, estado=True,
         )
 
     def test_hijo_sin_tarjeta_devuelve_error(self):

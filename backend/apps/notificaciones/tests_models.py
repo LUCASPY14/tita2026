@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para modelos de la app notificaciones
 Cubre el método __str__ de todos los modelos.
 """
@@ -25,18 +25,18 @@ class NotificacionesModelsBaseTest(TestCase):
 
     def setUp(self):
         self.lista = ListasPrecios.objects.create(
-            nombre_lista='Lista Notif', moneda='PYG', activo=True,
+            nombre_lista='Lista Notif', moneda='PYG', estado=True,
         )
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Tipo Notif', activo=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Tipo Notif', estado=True)
         self.cliente = Clientes.objects.create(
             nombres='Cli', apellidos='Notif', ruc_ci='7000001',
-            activo=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
+            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
         )
         from apps.clientes.models import Hijos
         self.hijo = Hijos.objects.create(
             nombre='Hijo', apellido='Notif',
             fecha_nacimiento=timezone.now().date(),
-            activo=True, id_cliente_responsable=self.cliente,
+            estado=True, id_cliente_responsable=self.cliente,
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta='NOTIF00001',
@@ -46,19 +46,19 @@ class NotificacionesModelsBaseTest(TestCase):
             limite_credito=Decimal('0'),
             id_hijo=self.hijo,
         )
-        self.rol = Roles.objects.create(nombre_rol='Rol Notif', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='Rol Notif', estado=True)
         self.empleado = Empleados.objects.create(
             nombre='Emp', apellido='Notif', usuario='emp_notif',
             contrasena_hash='hash',
             email='emp_notif@test.com',
-            fecha_ingreso=timezone.now(), activo=True, id_rol=self.rol,
+            fecha_ingreso=timezone.now(), estado=True, id_rol=self.rol,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
             email='portal_notif@test.com',
             password_hash='hash',
             email_verificado=0,
             fecha_registro=timezone.now(),
-            activo=True,
+            estado=True,
             id_cliente=self.cliente,
         )
 
@@ -153,7 +153,7 @@ class PlantillasEmailStrTest(TestCase):
             cuerpo_html='<p>Hola {nombre}</p>',
             variables={'nombre': 'string'},
             categoria='transaccional',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
         )
@@ -168,7 +168,7 @@ class PlantillasSmsStrTest(TestCase):
             mensaje='Hola {nombre}, tu saldo es {saldo}',
             variables={'nombre': 'string', 'saldo': 'number'},
             categoria='transaccional',
-            activo=True,
+            estado=True,
             created_at=timezone.now(),
         )
         self.assertIn('#', str(obj))
@@ -199,19 +199,19 @@ class AlertasAutomaticasStrTest(TestCase):
             tipo_alerta='sistema',
             criticidad='Alto',
             frecuencia_min=60,
-            activo=True,
+            estado=True,
         )
         self.assertIn('#', str(obj))
 
 
 class AlertaDestinatariosStrTest(TestCase):
     def setUp(self):
-        self.rol = Roles.objects.create(nombre_rol='Rol AD', activo=True)
+        self.rol = Roles.objects.create(nombre_rol='Rol AD', estado=True)
         self.empleado = Empleados.objects.create(
             nombre='AD', apellido='Test', usuario='ad_str',
             contrasena_hash='hash',
             email='ad_str@test.com',
-            fecha_ingreso=timezone.now(), activo=True, id_rol=self.rol,
+            fecha_ingreso=timezone.now(), estado=True, id_rol=self.rol,
         )
         self.alerta = AlertasAutomaticas.objects.create(
             nombre='Alerta AD Str',
@@ -220,14 +220,14 @@ class AlertaDestinatariosStrTest(TestCase):
             tipo_alerta='sistema',
             criticidad='Bajo',
             frecuencia_min=30,
-            activo=True,
+            estado=True,
         )
 
     def test_str(self):
         obj = AlertaDestinatarios.objects.create(
             via_email=1,
             via_sistema=0,
-            activo=True,
+            estado=True,
             id_alerta=self.alerta,
             id_empleado=self.empleado,
         )
@@ -254,7 +254,7 @@ class HistorialAlertasStrTest(TestCase):
             tipo_alerta='sistema',
             criticidad='Medio',
             frecuencia_min=15,
-            activo=True,
+            estado=True,
         )
 
     def test_str(self):
@@ -287,7 +287,7 @@ class RestriccionesHorariasStrTest(TestCase):
             dia_semana='Lunes',
             hora_inicio='08:00',
             hora_fin='18:00',
-            activo=True,
+            estado=True,
             fecha_creacion=timezone.now(),
         )
         self.assertIn('#', str(obj))

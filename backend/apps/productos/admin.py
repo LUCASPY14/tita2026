@@ -1,4 +1,4 @@
-"""
+﻿"""
 Administración del módulo de Productos
 Configuración avanzada del panel de administración para gestión de productos, categorías, precios y unidades
 """
@@ -36,13 +36,13 @@ class CategoriasAdmin(admin.ModelAdmin):
         "estado_badge",
         "nivel_jerarquia",
     ]
-    list_filter = ["activo", "id_categoria_padre"]
+    list_filter = ["estado", "id_categoria_padre"]
     search_fields = ["nombre"]
     ordering = ["nombre"]
     list_per_page = 50
 
     fieldsets = (
-        ("Información Básica", {"fields": ("nombre", "activo")}),
+        ("Información Básica", {"fields": ("nombre", "estado")}),
         (
             "Jerarquía",
             {
@@ -80,7 +80,7 @@ class CategoriasAdmin(admin.ModelAdmin):
     def total_productos(self, obj):
         """Total de productos en esta categoría"""
         total = obj.productos.count()
-        activos = obj.productos.filter(activo=True).count()
+        activos = obj.productos.filter(estado=True).count()
 
         if total > 0:
             return format_html(
@@ -94,9 +94,9 @@ class CategoriasAdmin(admin.ModelAdmin):
 
     def estado_badge(self, obj):
         """Badge coloreado de estado"""
-        if obj.activo:
+        if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">ACTIVO</span>'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">estado</span>'
             )
         return format_html(
             '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">INACTIVO</span>'
@@ -130,7 +130,7 @@ class CategoriasAdmin(admin.ModelAdmin):
 
     def activar_categorias(self, request, queryset):
         """Acción para activar categorías"""
-        updated = queryset.update(activo=True)
+        updated = queryset.update(estado=True)
         self.message_user(request, f"{updated} categoría(s) activada(s) exitosamente.")
 
     activar_categorias.short_description = "Activar categorías seleccionadas"
@@ -139,9 +139,9 @@ class CategoriasAdmin(admin.ModelAdmin):
         """Acción para desactivar categorías (solo si no tienen productos activos)"""
         count = 0
         for categoria in queryset:
-            productos_activos = categoria.productos.filter(activo=True).count()
+            productos_activos = categoria.productos.filter(estado=True).count()
             if productos_activos == 0:
-                categoria.activo = False
+                categoria.estado = False
                 categoria.save()
                 count += 1
 
@@ -167,12 +167,12 @@ class UnidadesMedidaAdmin(admin.ModelAdmin):
     """
 
     list_display = ["nombre", "abreviatura_badge", "total_productos", "estado_badge"]
-    list_filter = ["activo"]
+    list_filter = ["estado"]
     search_fields = ["nombre", "abreviatura"]
     ordering = ["nombre"]
     list_per_page = 50
 
-    fieldsets = (("Información Básica", {"fields": ("nombre", "abreviatura", "activo")}),)
+    fieldsets = (("Información Básica", {"fields": ("nombre", "abreviatura", "estado")}),)
 
     def abreviatura_badge(self, obj):
         """Abreviatura en badge"""
@@ -186,7 +186,7 @@ class UnidadesMedidaAdmin(admin.ModelAdmin):
     def total_productos(self, obj):
         """Total de productos con esta unidad"""
         total = obj.productos.count()
-        activos = obj.productos.filter(activo=True).count()
+        activos = obj.productos.filter(estado=True).count()
 
         if total > 0:
             return format_html(
@@ -200,9 +200,9 @@ class UnidadesMedidaAdmin(admin.ModelAdmin):
 
     def estado_badge(self, obj):
         """Badge de estado"""
-        if obj.activo:
+        if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">ACTIVO</span>'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">estado</span>'
             )
         return format_html(
             '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">INACTIVO</span>'
@@ -229,14 +229,14 @@ class ProductosAdmin(admin.ModelAdmin):
         "permite_stock_neg",
         "estado_badge",
     ]
-    list_filter = ["activo", "permite_stock_negativo", "id_categoria", "id_impuesto"]
+    list_filter = ["estado", "permite_stock_negativo", "id_categoria", "id_impuesto"]
     search_fields = ["codigo_barra", "descripcion"]
     ordering = ["descripcion"]
     list_per_page = 50
     autocomplete_fields = ["id_categoria", "id_impuesto", "id_unidad_medida"]
 
     fieldsets = (
-        ("Información Básica", {"fields": ("codigo_barra", "descripcion", "activo")}),
+        ("Información Básica", {"fields": ("codigo_barra", "descripcion", "estado")}),
         (
             "Clasificación",
             {
@@ -314,9 +314,9 @@ class ProductosAdmin(admin.ModelAdmin):
 
     def estado_badge(self, obj):
         """Badge de estado"""
-        if obj.activo:
+        if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">ACTIVO</span>'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">estado</span>'
             )
         return format_html(
             '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">INACTIVO</span>'
@@ -328,14 +328,14 @@ class ProductosAdmin(admin.ModelAdmin):
 
     def activar_productos(self, request, queryset):
         """Acción para activar productos"""
-        updated = queryset.update(activo=True)
+        updated = queryset.update(estado=True)
         self.message_user(request, f"{updated} producto(s) activado(s) exitosamente.")
 
     activar_productos.short_description = "Activar productos seleccionados"
 
     def desactivar_productos(self, request, queryset):
         """Acción para desactivar productos"""
-        updated = queryset.update(activo=False)
+        updated = queryset.update(estado=False)
         self.message_user(request, f"{updated} producto(s) desactivado(s) exitosamente.")
 
     desactivar_productos.short_description = "Desactivar productos seleccionados"
@@ -352,7 +352,7 @@ class ProductosAdmin(admin.ModelAdmin):
         producto.pk = None
         producto.codigo_barra = None
         producto.descripcion = f"{producto.descripcion} (Copia)"
-        producto.activo = False
+        producto.estado = False
         producto.save()
 
         self.message_user(request, f"Producto duplicado: {producto.descripcion}")
@@ -376,14 +376,14 @@ class ListasPreciosAdmin(admin.ModelAdmin):
         "total_precios",
         "estado_badge",
     ]
-    list_filter = ["activo", "moneda", "fecha_vigencia"]
+    list_filter = ["estado", "moneda", "fecha_vigencia"]
     search_fields = ["nombre_lista"]
     ordering = ["nombre_lista"]
     date_hierarchy = "fecha_vigencia"
     list_per_page = 50
 
     fieldsets = (
-        ("Información Básica", {"fields": ("nombre_lista", "moneda", "activo")}),
+        ("Información Básica", {"fields": ("nombre_lista", "moneda", "estado")}),
         (
             "Vigencia",
             {
@@ -474,7 +474,7 @@ class ListasPreciosAdmin(admin.ModelAdmin):
 
     def estado_badge(self, obj):
         """Badge de estado"""
-        if obj.activo:
+        if obj.estado:
             return format_html(
                 '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">ACTIVA</span>'
             )

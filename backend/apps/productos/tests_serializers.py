@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para Serializers de Productos
 Objetivo: Aumentar cobertura de serializers
 """
@@ -28,17 +28,17 @@ class ProductosSerializerTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         # Crear unidad
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="un", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="un", estado=True)
 
         # Crear impuesto
         self.impuesto = Impuestos.objects.create(
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
     def test_serializar_producto_completo(self):
@@ -50,7 +50,7 @@ class ProductosSerializerTest(TestCase):
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto,
             stock_minimo=Decimal("10"),
-            activo=True,
+            estado=True,
         )
 
         serializer = ProductosSerializer(producto)
@@ -59,7 +59,7 @@ class ProductosSerializerTest(TestCase):
         self.assertEqual(data["codigo_barra"], "77890123")
         self.assertEqual(data["descripcion"], "Coca Cola 500ml")
         self.assertEqual(Decimal(data["stock_minimo"]), Decimal("10"))
-        self.assertTrue(data["activo"])
+        self.assertTrue(data["estado"])
 
     def test_validar_producto_valido(self):
         """Test: Validar datos válidos para crear producto"""
@@ -70,7 +70,7 @@ class ProductosSerializerTest(TestCase):
             "id_unidad_medida": self.unidad.id_unidad_medida,
             "id_impuesto": self.impuesto.id_impuesto,
             "stock_minimo": "5",
-            "activo": True,
+            "estado": True,
         }
 
         serializer = ProductosSerializer(data=data)
@@ -83,7 +83,7 @@ class ProductosSerializerTest(TestCase):
             "id_categoria": self.categoria.id_categoria,
             "id_unidad_medida": self.unidad.id_unidad_medida,
             "id_impuesto": self.impuesto.id_impuesto,
-            "activo": True,
+            "estado": True,
         }
 
         serializer = ProductosSerializer(data=data)
@@ -99,7 +99,7 @@ class ProductosSerializerTest(TestCase):
             id_unidad_medida=self.unidad,
             id_impuesto=self.impuesto,
             stock_minimo=Decimal("5"),
-            activo=True,
+            estado=True,
         )
 
         # Actualizar solo la descripción
@@ -119,19 +119,19 @@ class CategoriasSerializerTest(TestCase):
 
     def test_serializar_categoria_raiz(self):
         """Test: Serializar categoría sin padre"""
-        categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         serializer = CategoriasSerializer(categoria)
         data = serializer.data
 
         self.assertEqual(data["nombre"], "Bebidas")
-        self.assertTrue(data["activo"])
+        self.assertTrue(data["estado"])
         self.assertIsNone(data.get("id_categoria_padre"))
 
     def test_serializar_subcategoria(self):
         """Test: Serializar categoría con padre"""
-        padre = Categorias.objects.create(nombre="Bebidas", activo=True)
-        hija = Categorias.objects.create(nombre="Gaseosas", id_categoria_padre=padre, activo=True)
+        padre = Categorias.objects.create(nombre="Bebidas", estado=True)
+        hija = Categorias.objects.create(nombre="Gaseosas", id_categoria_padre=padre, estado=True)
 
         serializer = CategoriasSerializer(hija)
         data = serializer.data
@@ -141,14 +141,14 @@ class CategoriasSerializerTest(TestCase):
 
     def test_crear_categoria_desde_serializer(self):
         """Test: Crear nueva categoría usando serializer"""
-        data = {"nombre": "Snacks", "activo": True}
+        data = {"nombre": "Snacks", "estado": True}
 
         serializer = CategoriasSerializer(data=data)
         self.assertTrue(serializer.is_valid())
 
         categoria = serializer.save()
         self.assertEqual(categoria.nombre, "Snacks")
-        self.assertTrue(categoria.activo)
+        self.assertTrue(categoria.estado)
         self.assertEqual(Categorias.objects.count(), 1)
 
 
@@ -158,13 +158,13 @@ class PreciosPorListaSerializerTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         # Crear categoría, unidad, impuesto
-        categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
-        unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="un", activo=True)
+        categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
+        unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="un", estado=True)
         impuesto = Impuestos.objects.create(
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear producto
@@ -174,11 +174,11 @@ class PreciosPorListaSerializerTest(TestCase):
             id_categoria=categoria,
             id_unidad_medida=unidad,
             id_impuesto=impuesto,
-            activo=True,
+            estado=True,
         )
 
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", activo=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
 
     def test_serializar_precio_producto(self):
         """Test: Serializar precio de producto en lista"""

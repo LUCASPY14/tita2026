@@ -1,4 +1,4 @@
-"""
+﻿"""
 Extended tests for apps/api_integrations/services/bancard_service.py
 targeting uncovered branches.
 
@@ -27,13 +27,13 @@ class BancardServiceGetConfigExceptionTest(TestCase):
             clave="BANCARD_PUBLIC_KEY",
             valor_texto="pub_key_test",
             descripcion="Public key",
-            activo=True,
+            estado=True,
         )
         ConfiguracionSistema.objects.create(
             clave="BANCARD_PRIVATE_KEY",
             valor_texto="priv_key_test",
             descripcion="Private key",
-            activo=True,
+            estado=True,
         )
 
     def test_get_config_database_exception_falls_back_to_settings(self):
@@ -56,13 +56,13 @@ class BancardServiceWebhookProcessingTest(TestCase):
             clave="BANCARD_PUBLIC_KEY",
             valor_texto="pub_key_test",
             descripcion="Public key",
-            activo=True,
+            estado=True,
         )
         ConfiguracionSistema.objects.create(
             clave="BANCARD_PRIVATE_KEY",
             valor_texto="priv_key_test",
             descripcion="Private key",
-            activo=True,
+            estado=True,
         )
         self.service = BancardService(ambiente="staging")
 
@@ -237,13 +237,13 @@ class BancardServiceConfirmarTransaccionTest(TestCase):
             clave="BANCARD_PUBLIC_KEY",
             valor_texto="pub_key_test",
             descripcion="Public key",
-            activo=True,
+            estado=True,
         )
         ConfiguracionSistema.objects.create(
             clave="BANCARD_PRIVATE_KEY",
             valor_texto="priv_key_test",
             descripcion="Private key",
-            activo=True,
+            estado=True,
         )
         self.service = BancardService(ambiente="staging")
 
@@ -297,13 +297,13 @@ class BancardServiceRollbackTransaccionTest(TestCase):
             clave="BANCARD_PUBLIC_KEY",
             valor_texto="pub_key_test",
             descripcion="Public key",
-            activo=True,
+            estado=True,
         )
         ConfiguracionSistema.objects.create(
             clave="BANCARD_PRIVATE_KEY",
             valor_texto="priv_key_test",
             descripcion="Private key",
-            activo=True,
+            estado=True,
         )
         self.service = BancardService(ambiente="staging")
 

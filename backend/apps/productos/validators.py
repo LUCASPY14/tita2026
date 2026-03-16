@@ -1,4 +1,4 @@
-"""
+﻿"""
 Validadores para el módulo de Productos
 Validaciones de negocio para productos, categorías, unidades de medida, precios y listas
 """
@@ -207,7 +207,7 @@ def validar_cambio_estado_producto(producto, nuevo_estado):
         raise ValidationError("Producto inválido.")
 
     # Si se está desactivando
-    if not nuevo_estado and producto.activo:
+    if not nuevo_estado and producto.estado:
         # Verificar stock (si el modelo tiene el método)
         if hasattr(producto, "stock_actual") and producto.stock_actual > 0:
             if not producto.permite_stock_negativo:
@@ -421,18 +421,18 @@ def validar_categoria_activa_con_productos(categoria):
         raise ValidationError("Categoría inválida.")
 
     # Contar productos activos en esta categoría
-    productos_activos = categoria.productos.filter(activo=True).count()
+    productos_activos = categoria.productos.filter(estado=True).count()
 
     if productos_activos > 0:
         raise ValidationError(
             f'No se puede desactivar la categoría "{categoria.nombre}" '
-            f"porque tiene {productos_activos} producto(s) activo(s). "
+            f"porque tiene {productos_activos} producto(s) estado(s). "
             "Desactive o reasigne los productos primero."
         )
 
     # Verificar subcategorías activas
     if hasattr(categoria, "subcategorias"):
-        subcategorias_activas = categoria.subcategorias.filter(activo=True).count()
+        subcategorias_activas = categoria.subcategorias.filter(estado=True).count()
 
         if subcategorias_activas > 0:
             raise ValidationError(
@@ -541,12 +541,12 @@ def validar_unidad_activa_con_productos(unidad):
         raise ValidationError("Unidad de medida inválida.")
 
     # Contar productos activos con esta unidad
-    productos_activos = unidad.productos.filter(activo=True).count()
+    productos_activos = unidad.productos.filter(estado=True).count()
 
     if productos_activos > 0:
         raise ValidationError(
             f'No se puede desactivar la unidad "{unidad.nombre}" '
-            f"porque tiene {productos_activos} producto(s) activo(s). "
+            f"porque tiene {productos_activos} producto(s) estado(s). "
             "Reasigne los productos a otra unidad primero."
         )
 
@@ -681,7 +681,7 @@ def validar_moneda_lista(moneda):
 
 def validar_lista_activa_con_precios(lista):
     """
-    Valida que no se puedan desactivar listas que están en uso activo.
+    Valida que no se puedan desactivar listas que están en uso estado.
 
     Args:
         lista: Instancia de la lista de precios

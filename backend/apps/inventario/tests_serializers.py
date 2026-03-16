@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para serializers de la app inventario
 Sprint 2 - Backend Coverage Improvement
 """
@@ -27,21 +27,21 @@ class StockUnicoSerializerTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Bebidas", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
         # Crear unidad de medida
-        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", activo=True)
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="UN", estado=True)
 
         # Crear producto
         self.producto = Productos.objects.create(
             codigo_barra="7890123456789",
             descripcion="Coca Cola 500ml",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -92,7 +92,7 @@ class MovimientosStockSerializerTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol
-        self.rol = Roles.objects.create(nombre_rol="Encargado Inventario", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Encargado Inventario", estado=True)
 
         # Crear empleado
         self.empleado = Empleados.objects.create(
@@ -101,7 +101,7 @@ class MovimientosStockSerializerTest(TestCase):
             usuario="roberto.perez",
             email="roberto@example.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -110,15 +110,15 @@ class MovimientosStockSerializerTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Snacks", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Snacks", estado=True)
 
         # Crear unidad de medida
         self.unidad = UnidadesMedida.objects.create(
-            nombre="Paquete", abreviatura="PKT", activo=True
+            nombre="Paquete", abreviatura="PKT", estado=True
         )
 
         # Crear producto
@@ -126,7 +126,7 @@ class MovimientosStockSerializerTest(TestCase):
             codigo_barra="7899876543210",
             descripcion="Papas Fritas",
             stock_minimo=Decimal("5.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,
@@ -186,7 +186,7 @@ class AjustesInventarioSerializerTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol
-        self.rol = Roles.objects.create(nombre_rol="Administrador", activo=True)
+        self.rol = Roles.objects.create(nombre_rol="Administrador", estado=True)
 
         # Crear empleado
         self.empleado = Empleados.objects.create(
@@ -195,7 +195,7 @@ class AjustesInventarioSerializerTest(TestCase):
             usuario="laura.gonzalez",
             email="laura@example.com",
             fecha_ingreso=timezone.now().date(),
-            activo=True,
+            estado=True,
             id_rol=self.rol,
         )
 
@@ -204,15 +204,15 @@ class AjustesInventarioSerializerTest(TestCase):
             nombre_impuesto="IVA 10%",
             porcentaje=Decimal("10.00"),
             vigente_desde=timezone.now().date(),
-            activo=True,
+            estado=True,
         )
 
         # Crear categoría
-        self.categoria = Categorias.objects.create(nombre="Alimentos", activo=True)
+        self.categoria = Categorias.objects.create(nombre="Alimentos", estado=True)
 
         # Crear unidad de medida
         self.unidad = UnidadesMedida.objects.create(
-            nombre="Kilogramo", abreviatura="KG", activo=True
+            nombre="Kilogramo", abreviatura="KG", estado=True
         )
 
         # Crear producto
@@ -220,7 +220,7 @@ class AjustesInventarioSerializerTest(TestCase):
             codigo_barra="7891234567890",
             descripcion="Arroz Blanco",
             stock_minimo=Decimal("10.000"),
-            activo=True,
+            estado=True,
             id_categoria=self.categoria,
             id_impuesto=self.impuesto,
             id_unidad_medida=self.unidad,

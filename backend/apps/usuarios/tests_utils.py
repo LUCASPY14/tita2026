@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para utilities de la app usuarios
 Cubre permissions, middleware, signals y configuración de apps
 """
@@ -48,13 +48,13 @@ class UsuariosPermissionsTest(TestCase):
         self.rol_admin = Roles.objects.create(
             nombre_rol="Administrador",
             descripcion="Permisos completos",
-            activo=True
+            estado=True
         )
         
         self.rol_cajero = Roles.objects.create(
             nombre_rol="Cajero",
             descripcion="Permisos limitados",
-            activo=True
+            estado=True
         )
         
         self.admin = Empleados.objects.create(
@@ -63,7 +63,7 @@ class UsuariosPermissionsTest(TestCase):
             usuario="admin",
             contrasena_hash="$2b$12$hash",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol_admin
         )
         
@@ -73,7 +73,7 @@ class UsuariosPermissionsTest(TestCase):
             usuario="cajero",
             contrasena_hash="$2b$12$hash",
             fecha_ingreso=timezone.now(),
-            activo=True,
+            estado=True,
             id_rol=self.rol_cajero
         )
 
@@ -95,27 +95,27 @@ class UsuariosPermissionsTest(TestCase):
         self.assertFalse(is_cajero_role(self.admin))
 
     def test_user_active_validation(self):
-        """Debe validar que usuario esté activo"""
+        """Debe validar que usuario esté estado"""
         def is_user_active(empleado):
-            return empleado.activo
+            return empleado.estado
         
         self.assertTrue(is_user_active(self.admin))
         
         # Inactivar usuario
-        self.admin.activo = False
+        self.admin.estado = False
         self.admin.save()
         
         self.assertFalse(is_user_active(self.admin))
 
     def test_role_active_validation(self):
-        """Debe validar que el rol esté activo"""
+        """Debe validar que el rol esté estado"""
         def is_role_active(empleado):
-            return empleado.id_rol.activo
+            return empleado.id_rol.estado
         
         self.assertTrue(is_role_active(self.admin))
         
         # Inactivar rol
-        self.rol_admin.activo = False
+        self.rol_admin.estado = False
         self.rol_admin.save()
         
         self.admin.refresh_from_db()
@@ -194,7 +194,7 @@ class UsuariosMiddlewareTest(TestCase):
     def test_authentication_check(self):
         """Debe verificar autenticación en middleware"""
         def is_authenticated(request):
-            return hasattr(request, 'user') and request.user.activo
+            return hasattr(request, 'user') and request.user.estado
         
         # Request con usuario autenticado
         auth_request = self.factory.get('/')
@@ -214,7 +214,7 @@ class UsuariosSignalsTest(TestCase):
         """Configurar datos de prueba"""
         self.rol = Roles.objects.create(
             nombre_rol="SignalTest",
-            activo=True
+            estado=True
         )
 
     @patch('apps.usuarios.signals.audit_log')

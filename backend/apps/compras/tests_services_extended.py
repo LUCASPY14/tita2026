@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests extendidos para apps/compras/services.py
 Cubre líneas faltantes:
 64-67 (producto inactivo warning),
@@ -27,13 +27,13 @@ def make_base_objects():
         nombre_impuesto="IVA10_Svc",
         porcentaje=Decimal("10.00"),
         vigente_desde=timezone.now().date(),
-        activo=True,
+        estado=True,
     )
     impuesto_5 = Impuestos.objects.create(
         nombre_impuesto="IVA5_Svc",
         porcentaje=Decimal("5.00"),
         vigente_desde=timezone.now().date(),
-        activo=True,
+        estado=True,
     )
     unidad = UnidadesMedida.objects.create(nombre="Und_Svc", abreviatura="sv")
     categoria = Categorias.objects.create(nombre="Cat_Svc")
@@ -45,12 +45,12 @@ def make_proveedor(suffix=""):
         razon_social=f"Proveedor Svc {suffix}",
         ruc=f"12345{suffix[-1:] if suffix else '0'}-1",
         fecha_registro=timezone.now(),
-        activo=True,
+        estado=True,
     )
 
 
 def make_empleado(suffix=""):
-    rol = Roles.objects.create(nombre_rol=f"RolCSvc{suffix}", activo=True)
+    rol = Roles.objects.create(nombre_rol=f"RolCSvc{suffix}", estado=True)
     return Empleados.objects.create(
         nombre=f"EmplCSvc{suffix}",
         apellido="Srv",
@@ -58,7 +58,7 @@ def make_empleado(suffix=""):
         contrasena_hash="hash",
         fecha_ingreso=timezone.now(),
         email=f"empl_csvc_{suffix}@test.com",
-        activo=True,
+        estado=True,
         id_rol=rol,
     )
 
@@ -73,9 +73,9 @@ class ValidarCompraEdgeCasesTest(TestCase):
     def setUp(self):
         self.impuesto_10, self.impuesto_5, self.unidad, self.categoria = make_base_objects()
         self.producto_activo = Productos.objects.create(
-            descripcion="Producto Activo Svc",
+            descripcion="Producto estado Svc",
             stock_minimo=Decimal("5.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -83,7 +83,7 @@ class ValidarCompraEdgeCasesTest(TestCase):
         self.producto_inactivo = Productos.objects.create(
             descripcion="Producto Inactivo Svc",
             stock_minimo=Decimal("5.000"),
-            activo=False,  # ← inactivo
+            estado=False,  # ← inactivo
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -150,7 +150,7 @@ class ConfirmarCompraEdgeCasesTest(TransactionTestCase):
         self.producto = Productos.objects.create(
             descripcion="ProductoCCsvc",
             stock_minimo=Decimal("0.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -202,7 +202,7 @@ class CalcularTotalesCompraExtendedTest(TestCase):
         self.producto_iva10 = Productos.objects.create(
             descripcion="Prod IVA10 Svc",
             stock_minimo=Decimal("0.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_10,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,
@@ -210,7 +210,7 @@ class CalcularTotalesCompraExtendedTest(TestCase):
         self.producto_iva5 = Productos.objects.create(
             descripcion="Prod IVA5 Svc",
             stock_minimo=Decimal("0.000"),
-            activo=True,
+            estado=True,
             id_impuesto=self.impuesto_5,
             id_unidad_medida=self.unidad,
             id_categoria=self.categoria,

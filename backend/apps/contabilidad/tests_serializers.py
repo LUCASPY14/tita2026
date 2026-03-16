@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para serializers de contabilidad
 Cubre validación de datos, serialización y deserialización
 """
@@ -35,7 +35,7 @@ class BaseContabilidadSerializerTest(TestCase):
         self.rol = Roles.objects.create(
             nombre_rol='Cajero',
             descripcion='Rol de cajero',
-            activo=True
+            estado=True
         )
         
         self.empleado = Empleados.objects.create(
@@ -51,14 +51,14 @@ class BaseContabilidadSerializerTest(TestCase):
         self.caja = Cajas.objects.create(
             nombre_caja='Caja Test',
             ubicacion='Test Location',
-            activo=True
+            estado=True
         )
         
         # Crear medio de pago
         self.medio_pago = MediosPago.objects.create(
             nombre='Efectivo',
             descripcion='Pago en efectivo',
-            activo=True
+            estado=True
         )
 
 
@@ -71,7 +71,7 @@ class CajasSerializerTest(BaseContabilidadSerializerTest):
         valid_data = {
             'nombre_caja': 'Nueva Caja Principal',
             'ubicacion': 'Planta Baja - Sector A',
-            'activo': True
+            'estado': True
         }
         
         # Crear instancia para validar estructura
@@ -82,7 +82,7 @@ class CajasSerializerTest(BaseContabilidadSerializerTest):
             # Verificar que los datos son válidos
             self.assertEqual(caja.nombre_caja, valid_data['nombre_caja'])
             self.assertEqual(caja.ubicacion, valid_data['ubicacion'])
-            self.assertTrue(caja.activo)
+            self.assertTrue(caja.estado)
             
         except Exception as e:
             self.fail(f"Datos válidos fallaron validación: {e}")
@@ -106,7 +106,7 @@ class CajasSerializerTest(BaseContabilidadSerializerTest):
         invalid_data = {
             'nombre_caja': 'x' * 256,  # Asumiendo max_length=255
             'ubicacion': 'Ubicación válida',
-            'activo': True
+            'estado': True
         }
         
         # Debería fallar por longitud
@@ -120,7 +120,7 @@ class CajasSerializerTest(BaseContabilidadSerializerTest):
         caja = Cajas.objects.create(
             nombre_caja='Caja Output Test',
             ubicacion='Test Location',
-            activo=True
+            estado=True
         )
         
         # Simular output del serializer
@@ -128,13 +128,13 @@ class CajasSerializerTest(BaseContabilidadSerializerTest):
             'id_caja': caja.id_caja,
             'nombre_caja': 'Caja Output Test',
             'ubicacion': 'Test Location',
-            'activo': True
+            'estado': True
         }
         
         # Verificar campos presentes
         self.assertEqual(caja.nombre_caja, expected_output['nombre_caja'])
         self.assertEqual(caja.ubicacion, expected_output['ubicacion'])
-        self.assertEqual(caja.activo, expected_output['activo'])
+        self.assertEqual(caja.estado, expected_output['estado'])
 
 
 class CierresCajaSerializerTest(BaseContabilidadSerializerTest):
@@ -579,7 +579,7 @@ class ImpuestosSerializerTest(BaseContabilidadSerializerTest):
                 'nombre_impuesto': f'IVA {porcentaje}%',
                 'porcentaje': porcentaje,
                 'vigente_desde': date.today(),
-                'activo': True
+                'estado': True
             }
             
             impuesto = Impuestos.objects.create(**data)
@@ -610,7 +610,7 @@ class ImpuestosSerializerTest(BaseContabilidadSerializerTest):
             porcentaje=Decimal('5.00'),
             vigente_desde=date.today() - timedelta(days=365),
             vigente_hasta=date.today() - timedelta(days=1),
-            activo=False
+            estado=False
         )
         
         # Impuesto actual
@@ -618,12 +618,12 @@ class ImpuestosSerializerTest(BaseContabilidadSerializerTest):
             nombre_impuesto='IVA Actual',
             porcentaje=Decimal('10.00'),
             vigente_desde=date.today(),
-            activo=True
+            estado=True
         )
         
         # Verificar estados
-        self.assertFalse(impuesto_historico.activo)
-        self.assertTrue(impuesto_actual.activo)
+        self.assertFalse(impuesto_historico.estado)
+        self.assertTrue(impuesto_actual.estado)
 
     def test_impuestos_serializer_calculo_monto(self):
         """Debe calcular montos de impuesto correctamente"""
@@ -649,7 +649,7 @@ class ImpuestosSerializerTest(BaseContabilidadSerializerTest):
             nombre_impuesto='IVA Completo',
             porcentaje=Decimal('10.00'),
             vigente_desde=date.today(),
-            activo=True
+            estado=True
         )
         
         # Simular output enriquecido del serializer
@@ -660,7 +660,7 @@ class ImpuestosSerializerTest(BaseContabilidadSerializerTest):
             'id_impuesto': impuesto.id_impuesto,
             'nombre_impuesto': 'IVA Completo',
             'porcentaje': '10.00',
-            'activo': True,
+            'estado': True,
             'ejemplo_calculo': {
                 'monto_base': '50000.00',
                 'monto_impuesto': str(impuesto_calculado)
@@ -811,7 +811,7 @@ class SerializersIntegrationTest(BaseContabilidadSerializerTest):
             caja = Cajas.objects.create(
                 nombre_caja=f'Caja Performance {i}',
                 ubicacion=f'Ubicación {i}',
-                activo=True
+                estado=True
             )
             cajas_creadas.append(caja)
         
@@ -822,7 +822,7 @@ class SerializersIntegrationTest(BaseContabilidadSerializerTest):
                 'id_caja': caja.id_caja,
                 'nombre_caja': caja.nombre_caja,
                 'ubicacion': caja.ubicacion,
-                'activo': caja.activo
+                'estado': caja.estado
             }
             cajas_data.append(data)
         

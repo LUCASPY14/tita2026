@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app compras
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
@@ -14,7 +14,7 @@ class Proveedores(models.Model):
     email = models.CharField(max_length=254, blank=True, null=True)
     direccion = models.CharField(max_length=255, blank=True, null=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     fecha_registro = models.DateTimeField()
 
     def __str__(self):
