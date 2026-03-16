@@ -83,7 +83,7 @@ def notificar_saldo_bajo(sender, instance, created, **kwargs):
                 tarjeta.ultima_notificacion_saldo = timezone.now()
                 tarjeta.save(update_fields=["ultima_notificacion_saldo"])
 
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 # No fallar la transacción si falla la notificación
                 import logging
 

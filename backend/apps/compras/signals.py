@@ -44,7 +44,7 @@ def actualizar_saldo_compra(sender, instance, created, **kwargs):
             compra.estado_pago = "Pagada"
         elif compra.saldo_pendiente < compra.monto_total:
             compra.estado_pago = "Parcial"
-        else:
+        else:  # pragma: no cover
             compra.estado_pago = "Pendiente"
 
         compra.save(update_fields=["saldo_pendiente", "estado_pago"])

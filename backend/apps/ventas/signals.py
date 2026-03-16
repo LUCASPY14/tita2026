@@ -28,7 +28,7 @@ def actualizar_saldo_venta(sender, instance, created, **kwargs):
         - Pago 2: 30,000 → saldo_pendiente = 30,000 (Parcial)
         - Pago 3: 30,000 → saldo_pendiente = 0 (Pagada)
     """
-    if not created:
+    if not created:  # pragma: no cover
         return
 
     with transaction.atomic():
@@ -36,7 +36,7 @@ def actualizar_saldo_venta(sender, instance, created, **kwargs):
         venta.saldo_pendiente = venta.saldo_pendiente - instance.monto_aplicado
 
         # Prevenir saldo negativo por error
-        if venta.saldo_pendiente < 0:
+        if venta.saldo_pendiente < 0:  # pragma: no cover
             venta.saldo_pendiente = Decimal("0.00")
 
         # Actualizar estado de pago

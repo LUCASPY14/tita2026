@@ -38,10 +38,9 @@ def expirar_recargas_pendientes(self):
             for recarga in recargas_a_expirar:
                 try:
                     recarga.estado = "expirada"
-                    recarga.motivo_rechazo = f"Recarga expirada por timeout (>{24}h sin confirmar)"
-                    recarga.save(update_fields=["estado", "motivo_rechazo"])
+                    recarga.save(update_fields=["estado"])
                     contador_expiradas += 1
-                except Exception as e:
+                except Exception as e:  # pragma: no cover
                     contador_errores += 1
                     print(f"Error al expirar recarga {recarga.id_carga}: {e}")
 

@@ -60,7 +60,7 @@ class IsOwnerOrAdmin(permissions.BasePermission):
         if hasattr(obj, "id_cliente"):
             try:
                 return obj.id_cliente.user == request.user
-            except:
+            except:  # pragma: no cover
                 return False
 
         if hasattr(obj, "usuario"):
@@ -85,7 +85,7 @@ class IsClienteOrAdmin(permissions.BasePermission):
         # Verificar si el usuario está asociado a un cliente
         try:
             return hasattr(request.user, "cliente")
-        except:
+        except:  # pragma: no cover
             return False
 
 

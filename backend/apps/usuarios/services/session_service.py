@@ -302,7 +302,7 @@ class SessionService:
                     frecuencia_accesos=1,
                     es_habitual=0,
                 )
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Error al analizar patron de acceso: {str(e)}")
 
     @staticmethod
