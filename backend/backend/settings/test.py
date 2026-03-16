@@ -35,6 +35,11 @@ DATABASES = {
 # Passwords más simples para tests
 AUTH_PASSWORD_VALIDATORS = []
 
+# Hasher rápido para tests (evita bcrypt lento y tests de rendimiento flaky)
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.MD5PasswordHasher',
+]
+
 # Email backend para tests
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
