@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app contabilidad
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
@@ -10,7 +10,7 @@ class Cajas(models.Model):
     id_caja = models.AutoField(primary_key=True)
     nombre_caja = models.CharField(max_length=50)
     ubicacion = models.CharField(max_length=100, blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -78,7 +78,7 @@ class TarifasComision(models.Model):
     monto_fijo_comision = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True
     )
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     id_medio_pago = models.ForeignKey(
         "core.MediosPago", models.DO_NOTHING, db_column="id_medio_pago"
     )
@@ -187,7 +187,7 @@ class Timbrados(models.Model):
     nro_inicial = models.IntegerField()
     nro_final = models.IntegerField()
     es_electronico = models.IntegerField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     id_punto = models.ForeignKey("PuntosExpedicion", models.DO_NOTHING, db_column="id_punto")
 
     def __str__(self):
@@ -205,7 +205,7 @@ class PuntosExpedicion(models.Model):
     codigo_establecimiento = models.CharField(max_length=3)
     codigo_punto_expedicion = models.CharField(max_length=3)
     descripcion_ubicacion = models.CharField(max_length=100, blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -225,7 +225,7 @@ class DatosEmpresa(models.Model):
     pais = models.CharField(max_length=100, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.CharField(max_length=100, blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -241,7 +241,7 @@ class Impuestos(models.Model):
     porcentaje = models.DecimalField(max_digits=4, decimal_places=2)
     vigente_desde = models.DateField()
     vigente_hasta = models.DateField(blank=True, null=True)
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"

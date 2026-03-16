@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos de la app ventas
 Gestión de ventas, pagos, notas de crédito y promociones
 """
@@ -83,6 +83,26 @@ class Ventas(models.Model):
     fecha = models.DateTimeField(auto_now_add=True, help_text="Fecha y hora de la venta")
     monto_total = models.DecimalField(
         max_digits=12, decimal_places=2, help_text="Monto total de la venta"
+    )
+    monto_gravada_10 = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="Base imponible gravada al 10%"
+    )
+    monto_gravada_5 = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="Base imponible gravada al 5%"
+    )
+    monto_exenta = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="Monto exento de IVA"
+    )
+    iva_10 = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="IVA liquidado al 10% (monto_gravada_10 / 11)"
+    )
+    iva_5 = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="IVA liquidado al 5% (monto_gravada_5 / 21)"
     )
     saldo_pendiente = models.DecimalField(
         max_digits=12,
@@ -192,6 +212,26 @@ class DetallesVenta(models.Model):
     cantidad = models.DecimalField(max_digits=10, decimal_places=3)
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+    monto_gravada_10 = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="Base imponible gravada al 10%"
+    )
+    monto_gravada_5 = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="Base imponible gravada al 5%"
+    )
+    monto_exenta = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="Monto exento de IVA"
+    )
+    iva_10 = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="IVA liquidado al 10% (subtotal / 11)"
+    )
+    iva_5 = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="IVA liquidado al 5% (subtotal / 21)"
+    )
     id_producto = models.ForeignKey(
         "productos.Productos", models.DO_NOTHING, db_column="id_producto"
     )
@@ -226,6 +266,18 @@ class PagosVenta(models.Model):
         help_text="Recargo por uso de POS (NO facturado, trasladado al cliente)",
     )
     referencia_transaccion = models.CharField(max_length=100, blank=True, null=True)
+    ref_pago_pos = models.CharField(
+        max_length=100, blank=True, null=True,
+        help_text="Número de referencia generado por el terminal POS"
+    )
+    ref_pg_transf = models.CharField(
+        max_length=100, blank=True, null=True,
+        help_text="Número de referencia/comprobante de transferencia bancaria"
+    )
+    banco_emisor = models.CharField(
+        max_length=100, blank=True, null=True,
+        help_text="Banco emisor del pago (transferencia o tarjeta)"
+    )
     fecha_pago = models.DateTimeField()
     estado = models.CharField(max_length=10)
     id_cierre = models.BigIntegerField(blank=True, null=True)
@@ -346,7 +398,7 @@ class Promociones(models.Model):
     requiere_codigo = models.BooleanField(default=True)
     codigo_promocion = models.CharField(unique=True, max_length=50, blank=True, null=True)
     prioridad = models.IntegerField()
-    activo = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField()
     usuario_creacion = models.CharField(max_length=100, blank=True, null=True)
 
