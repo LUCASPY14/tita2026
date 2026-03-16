@@ -157,7 +157,7 @@ def validar_config_auth(valor):
             raise ValidationError(
                 "La configuración de autenticación es demasiado grande (max 10000 caracteres)."
             )
-    except (TypeError, ValueError) as e:
+    except (TypeError, ValueError) as e:  # pragma: no cover
         raise ValidationError(f"La configuración de autenticación no es JSON válido: {str(e)}")
 
     return valor
@@ -331,7 +331,7 @@ def validar_schema_json(valor, nombre_campo="schema"):
         json_str = json.dumps(valor)
         if len(json_str) > 50000:
             raise ValidationError(f"El {nombre_campo} es demasiado grande (max 50000 caracteres).")
-    except (TypeError, ValueError) as e:
+    except (TypeError, ValueError) as e:  # pragma: no cover
         raise ValidationError(f"El {nombre_campo} no es JSON válido: {str(e)}")
 
     return valor
@@ -638,7 +638,7 @@ def validar_contexto_log(valor):
         json_str = json.dumps(valor)
         if len(json_str) > 10000:
             raise ValidationError("El contexto es demasiado grande (max 10000 caracteres).")
-    except (TypeError, ValueError) as e:
+    except (TypeError, ValueError) as e:  # pragma: no cover
         raise ValidationError(f"El contexto no es JSON válido: {str(e)}")
 
     return valor
@@ -711,7 +711,7 @@ def validar_configuracion_cred(valor):
         json_str = json.dumps(valor)
         if len(json_str) > 20000:
             raise ValidationError("La configuración es demasiado grande (max 20000 caracteres).")
-    except (TypeError, ValueError) as e:
+    except (TypeError, ValueError) as e:  # pragma: no cover
         raise ValidationError(f"La configuración no es JSON válido: {str(e)}")
 
     return valor

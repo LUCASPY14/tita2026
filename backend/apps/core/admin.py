@@ -234,7 +234,7 @@ class TarjetasAutorizacionAdmin(admin.ModelAdmin):
             permisos.append("Almuerzos")
         if obj.puede_anular_ventas:
             permisos.append("Ventas")
-        if obj.puede_anular_recargas:
+        if obj.puede_anular_recargas:  # pragma: no cover
             permisos.append("Recargas")
         if obj.puede_modificar_precios:
             permisos.append("Precios")

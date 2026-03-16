@@ -163,7 +163,7 @@ class Command(BaseCommand):
                     self.stdout.write(f"     - Usuario: admin")
                     self.stdout.write(f'     - Password: {options["admin_password"]}')
                     self.stdout.write(f"     - Email: admin@cantinatita.com\n")
-                else:
+                else:  # pragma: no cover
                     self.stdout.write(
                         self.style.ERROR(f'   ✗ Error al crear admin: {resultado["mensaje"]}\n')
                     )

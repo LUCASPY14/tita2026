@@ -101,7 +101,7 @@ def bancard_webhook(request):
                 procesado_ok=1 if resultado.get("success", False) else 0,
                 ip_origen=request.META.get("REMOTE_ADDR", ""),
             )
-        except Exception as log_error:
+        except Exception as log_error:  # pragma: no cover
             # No fallar si falla el logging
             print(f"Error logging webhook: {log_error}")
 

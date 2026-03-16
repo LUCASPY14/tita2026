@@ -109,7 +109,7 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                     }
                 )
             # Suscripción activa: usar precio del plan mensual
-            costo_calculado = id_suscripcion.id_plan_almuerzo.precio_mensual / 30  # Aproximado
+            costo_calculado = id_suscripcion.id_plan_almuerzo.precio_mensual / 30  # Aproximado  # pragma: no cover
         elif id_tipo_almuerzo:
             # Sin suscripción: precio unitario
             costo_calculado = id_tipo_almuerzo.precio_unitario

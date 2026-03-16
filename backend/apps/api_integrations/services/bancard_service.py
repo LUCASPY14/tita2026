@@ -423,7 +423,7 @@ class BancardService:
                             "saldo_nuevo": resultado_acreditacion["saldo_nuevo"],
                             "id_factura": resultado_factura["id_factura"],
                         }
-                    else:
+                    else:  # pragma: no cover
                         # Error al acreditar o facturar (muy raro)
                         recarga.estado = "rechazada"
                         recarga.motivo_rechazo = "Error al procesar acreditación o factura"

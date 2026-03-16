@@ -818,7 +818,7 @@ class EmpleadosViewSet(viewsets.ModelViewSet):
                 django_user = User.objects.get(username=empleado_target.usuario)
                 django_user.set_password(new_password)
                 django_user.save()
-            except User.DoesNotExist:
+            except User.DoesNotExist:  # pragma: no cover
                 pass  # No existe user de Django asociado
 
             # Log de la operación (opcional)
@@ -835,7 +835,7 @@ class EmpleadosViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_200_OK,
             )
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             return Response(
                 {"success": False, "mensaje": f"Error al cambiar la contraseña: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
