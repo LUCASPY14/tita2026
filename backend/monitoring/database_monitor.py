@@ -26,8 +26,12 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.core.cache import cache
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    _PSYCOPG2_AVAILABLE = True
+except ImportError:
+    _PSYCOPG2_AVAILABLE = False
 
 
 logger = logging.getLogger(__name__)

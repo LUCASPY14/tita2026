@@ -77,8 +77,9 @@ class TarjetasManager(models.Manager):
             kwargs.setdefault('saldo_actual', kwargs.pop('saldo'))
         else:
             kwargs.pop('saldo', None)
-        # Ignorar estado (campo no existe)
-        kwargs.pop('estado', None)
+        # Ignorar estado booleano (legacy activo=True/False); preservar si es string
+        if isinstance(kwargs.get('estado'), bool):
+            kwargs.pop('estado', None)
         # Defaults para campos requeridos
         kwargs.setdefault('saldo_actual', Decimal('0.00'))
         kwargs.setdefault('estado', 'activa')

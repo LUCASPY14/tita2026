@@ -105,7 +105,7 @@ class RolesAdminTest(TestCase):
     def test_admin_filter_by_activo(self):
         """Debe filtrar por estado estado"""
         url = reverse('admin:usuarios_roles_changelist')
-        response = self.client.get(url, {'activo__exact': '1'})  # Activos
+        response = self.client.get(url, {'estado__exact': '1'})  # Activos
         
         self.assertEqual(response.status_code, 200)
         # Debe mostrar solo roles activos
@@ -215,7 +215,7 @@ class EmpleadosAdminTest(TestCase):
     def test_empleados_admin_filter_by_activo(self):
         """Debe filtrar empleados por estado estado"""
         url = reverse('admin:usuarios_empleados_changelist')
-        response = self.client.get(url, {'activo__exact': '1'})
+        response = self.client.get(url, {'estado__exact': '1'})
         
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Juan")  # estado

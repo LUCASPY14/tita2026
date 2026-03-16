@@ -179,7 +179,7 @@ class PermissionService:
         if RolesPermisos.objects.filter(
             id_rol=empleado.id_rol,
             id_permiso__codigo_permiso="admin.acceso_total",
-            id_permiso__activo=True,
+            id_permiso__estado=True,
         ).exists():
             return True
 
@@ -187,7 +187,7 @@ class PermissionService:
         return RolesPermisos.objects.filter(
             id_rol=empleado.id_rol,
             id_permiso__codigo_permiso=codigo_permiso,
-            id_permiso__activo=True,
+            id_permiso__estado=True,
         ).exists()
 
     @staticmethod
@@ -235,7 +235,7 @@ class PermissionService:
 
         # Retornar permisos específicos del rol
         permisos = (
-            RolesPermisos.objects.filter(id_rol=empleado.id_rol, id_permiso__activo=True)
+            RolesPermisos.objects.filter(id_rol=empleado.id_rol, id_permiso__estado=True)
             .select_related("id_permiso")
             .values_list("id_permiso__codigo_permiso", flat=True)
         )
