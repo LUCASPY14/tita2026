@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para validadores de la app Core
 
 Este módulo contiene tests para todos los validadores de:
@@ -80,7 +80,7 @@ class ValidadoresNumeroTarjetaTestCase(TestCase):
         for numero in numeros_validos:
             try:
                 validar_numero_tarjeta(numero)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Número de tarjeta válido '{numero}' generó ValidationError")
 
     def test_numero_tarjeta_vacio(self):
@@ -135,7 +135,7 @@ class ValidadoresSaldoTarjetaTestCase(TestCase):
                 limite_credito=Decimal("500.00"),
                 permite_negativo=False,
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Saldo positivo válido generó ValidationError")
 
     def test_saldo_negativo_permitido(self):
@@ -146,7 +146,7 @@ class ValidadoresSaldoTarjetaTestCase(TestCase):
                 limite_credito=Decimal("500.00"),
                 permite_negativo=True,
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Saldo negativo dentro del límite generó ValidationError")
 
     def test_saldo_negativo_no_permitido(self):
@@ -187,7 +187,7 @@ class ValidadoresEstadoTarjetaTestCase(TestCase):
         for estado in estados_validos:
             try:
                 validar_estado_tarjeta(estado)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Estado válido '{estado}' generó ValidationError")
 
     def test_estado_invalido(self):
@@ -214,21 +214,21 @@ class ValidadoresCodigoBarrasTarjetaTestCase(TestCase):
         """Código EAN-13 válido no debe generar error"""
         try:
             validar_codigo_barras_tarjeta("1234567890123")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Código EAN-13 válido generó ValidationError")
 
     def test_codigo_barras_ean8_valido(self):
         """Código EAN-8 válido no debe generar error"""
         try:
             validar_codigo_barras_tarjeta("12345678")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Código EAN-8 válido generó ValidationError")
 
     def test_codigo_barras_alfanumerico_valido(self):
         """Código alfanumérico válido no debe generar error"""
         try:
             validar_codigo_barras_tarjeta("CARD-2024-001")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Código alfanumérico válido generó ValidationError")
 
     def test_codigo_barras_muy_corto(self):
@@ -292,14 +292,14 @@ class ValidadoresLimiteCreditoTestCase(TestCase):
         """Límite de crédito válido no debe generar error"""
         try:
             validar_limite_credito(Decimal("1000.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Límite de crédito válido generó ValidationError")
 
     def test_limite_credito_cero_valido(self):
         """Límite de crédito cero es válido"""
         try:
             validar_limite_credito(Decimal("0.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Límite cero generó ValidationError")
 
     def test_limite_credito_negativo(self):
@@ -361,7 +361,7 @@ class ValidadoresCodigoBarraAutorizacionTestCase(TestCase):
         """Código de barras válido no debe generar error"""
         try:
             validar_codigo_barra_autorizacion("AUTH-2024-001")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Código válido generó ValidationError")
 
     def test_codigo_barra_autorizacion_vacio(self):
@@ -393,7 +393,7 @@ class ValidadoresTipoAutorizacionTestCase(TestCase):
         for tipo in tipos_validos:
             try:
                 validar_tipo_autorizacion(tipo)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Tipo válido '{tipo}' generó ValidationError")
 
     def test_tipo_autorizacion_invalido(self):
@@ -422,7 +422,7 @@ class ValidadoresFechaVencimientoAutorizacionTestCase(TestCase):
         """Autorización permanente no requiere fecha de vencimiento"""
         try:
             validar_fecha_vencimiento_autorizacion(None, "Supervisor")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Fecha opcional para tipo permanente generó error")
 
     def test_fecha_vencimiento_futura_valida(self):
@@ -430,7 +430,7 @@ class ValidadoresFechaVencimientoAutorizacionTestCase(TestCase):
         fecha_futura = date.today() + timedelta(days=30)
         try:
             validar_fecha_vencimiento_autorizacion(fecha_futura, "Temporal")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Fecha futura válida generó ValidationError")
 
     def test_fecha_vencimiento_pasada(self):
@@ -458,7 +458,7 @@ class ValidadoresMontoCargaTestCase(TestCase):
         """Monto de carga válido no debe generar error"""
         try:
             validar_monto_carga(Decimal("50000.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Monto válido generó ValidationError")
 
     def test_monto_carga_cero(self):
@@ -492,7 +492,7 @@ class ValidadoresEstadoCargaTestCase(TestCase):
         for estado in estados_validos:
             try:
                 validar_estado_carga(estado)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Estado válido '{estado}' generó ValidationError")
 
     def test_estado_carga_invalido(self):
@@ -513,7 +513,7 @@ class ValidadoresReferenciaPagoTestCase(TestCase):
         """Referencia de pago válida no debe generar error"""
         try:
             validar_referencia_pago("REF-2024-001")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Referencia válida generó ValidationError")
 
     def test_referencia_pago_muy_corta(self):
@@ -544,7 +544,7 @@ class ValidadoresMontoConsumoTestCase(TestCase):
         """Monto de consumo válido no debe generar error"""
         try:
             validar_monto_consumo(Decimal("15000.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Monto válido generó ValidationError")
 
     def test_monto_consumo_cero(self):
@@ -574,7 +574,7 @@ class ValidadoresSaldosCoherentesTestCase(TestCase):
                 saldo_posterior=Decimal("500.00"),
                 monto_consumido=Decimal("500.00"),
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Saldos coherentes generaron ValidationError")
 
     def test_saldos_coherentes_con_tolerancia(self):
@@ -585,7 +585,7 @@ class ValidadoresSaldosCoherentesTestCase(TestCase):
                 saldo_posterior=Decimal("499.99"),
                 monto_consumido=Decimal("500.00"),
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Saldos dentro de tolerancia generaron ValidationError")
 
     def test_saldos_incoherentes(self):
@@ -610,7 +610,7 @@ class ValidadoresMontoTransaccionTestCase(TestCase):
         """Monto de transacción válido no debe generar error"""
         try:
             validar_monto_transaccion(Decimal("100000.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Monto válido generó ValidationError")
 
     def test_monto_transaccion_cero(self):
@@ -634,7 +634,7 @@ class ValidadoresMetodoPagoOnlineTestCase(TestCase):
         for metodo in metodos_validos:
             try:
                 validar_metodo_pago_online(metodo)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Método válido '{metodo}' generó ValidationError")
 
     def test_metodo_pago_invalido(self):
@@ -663,7 +663,7 @@ class ValidadoresDescripcionMedioPagoTestCase(TestCase):
         """Descripción válida no debe generar error"""
         try:
             validar_descripcion_medio_pago("Efectivo")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Descripción válida generó ValidationError")
 
     def test_descripcion_medio_pago_muy_corta(self):
@@ -702,7 +702,7 @@ class ValidadoresClaveConfiguracionTestCase(TestCase):
         for clave in claves_validas:
             try:
                 validar_clave_configuracion(clave)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Clave válida '{clave}' generó ValidationError")
 
     def test_clave_configuracion_mayusculas(self):
@@ -739,7 +739,7 @@ class ValidadoresTipoConfiguracionTestCase(TestCase):
         for tipo in tipos_validos:
             try:
                 validar_tipo_configuracion(tipo)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Tipo válido '{tipo}' generó ValidationError")
 
     def test_tipo_configuracion_invalido(self):
@@ -763,7 +763,7 @@ class ValidadoresValorConfiguracionTestCase(TestCase):
         """Valor entero válido no debe generar error"""
         try:
             validar_valor_configuracion("5", "int", valor_min="1", valor_max="10")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Valor int válido generó ValidationError")
 
     def test_valor_int_fuera_rango(self):
@@ -775,7 +775,7 @@ class ValidadoresValorConfiguracionTestCase(TestCase):
         """Valor decimal válido no debe generar error"""
         try:
             validar_valor_configuracion("5.50", "decimal", valor_min="0", valor_max="10")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Valor decimal válido generó ValidationError")
 
     def test_valor_bool_valido(self):
@@ -785,7 +785,7 @@ class ValidadoresValorConfiguracionTestCase(TestCase):
         for valor in valores_validos:
             try:
                 validar_valor_configuracion(valor, "bool")
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Valor bool válido '{valor}' generó ValidationError")
 
     def test_valor_bool_invalido(self):
@@ -797,7 +797,7 @@ class ValidadoresValorConfiguracionTestCase(TestCase):
         """Email válido no debe generar error"""
         try:
             validar_valor_configuracion("usuario@example.com", "email")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Email válido generó ValidationError")
 
     def test_valor_email_invalido(self):
@@ -809,7 +809,7 @@ class ValidadoresValorConfiguracionTestCase(TestCase):
         """URL válida no debe generar error"""
         try:
             validar_valor_configuracion("https://example.com/api", "url")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("URL válida generó ValidationError")
 
     def test_valor_url_invalida(self):
@@ -821,7 +821,7 @@ class ValidadoresValorConfiguracionTestCase(TestCase):
         """Fecha válida no debe generar error"""
         try:
             validar_valor_configuracion("2024-03-01", "date")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Fecha válida generó ValidationError")
 
     def test_valor_date_invalida(self):
@@ -835,7 +835,7 @@ class ValidadoresValorConfiguracionTestCase(TestCase):
             validar_valor_configuracion(
                 "opcion1", "string", valores_permitidos=["opcion1", "opcion2", "opcion3"]
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Valor en lista permitidos generó ValidationError")
 
     def test_valor_fuera_lista_permitidos(self):
@@ -853,7 +853,7 @@ class ValidadoresValoresPermitidosTestCase(TestCase):
         """Lista válida no debe generar error"""
         try:
             validar_valores_permitidos(["valor1", "valor2", "valor3"], "string")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Lista válida generó ValidationError")
 
     def test_valores_permitidos_no_lista(self):
@@ -892,7 +892,7 @@ class ValidadoresTipoOperacionLimiteTestCase(TestCase):
         for tipo in tipos_validos:
             try:
                 validar_tipo_operacion_limite(tipo)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Tipo válido '{tipo}' generó ValidationError")
 
     def test_tipo_operacion_invalido(self):
@@ -913,7 +913,7 @@ class ValidadoresMontoLimiteTestCase(TestCase):
         """Monto límite válido no debe generar error"""
         try:
             validar_monto_limite(Decimal("500000.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Monto válido generó ValidationError")
 
     def test_monto_limite_cero(self):
@@ -963,7 +963,7 @@ class ValidadoresUnicidadRolOperacionTestCase(TestCase):
             validar_unicidad_rol_operacion(
                 id_rol=self.rol, tipo_operacion="descuento", id_limite_actual=None
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Límite con diferente operación generó ValidationError")
 
     def test_unicidad_limite_duplicado(self):
@@ -979,7 +979,7 @@ class ValidadoresUnicidadRolOperacionTestCase(TestCase):
             validar_unicidad_rol_operacion(
                 id_rol=self.rol, tipo_operacion="venta", id_limite_actual=self.limite.id_limite
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Editar mismo límite generó ValidationError")
 
 
@@ -997,7 +997,7 @@ class ValidadoresMotivoAutorizacionTestCase(TestCase):
             validar_motivo_autorizacion(
                 "Cliente especial requiere descuento por volumen de compras recurrentes"
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Motivo válido generó ValidationError")
 
     def test_motivo_autorizacion_muy_corto(self):
@@ -1050,7 +1050,7 @@ class ValidadoresAutorizadoresDiferentesTestCase(TestCase):
                 id_empleado_autorizador=self.empleado2,
                 id_empleado_autorizador_2=self.empleado3,
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Autorizadores diferentes generaron ValidationError")
 
     def test_autorizador_igual_solicitante(self):

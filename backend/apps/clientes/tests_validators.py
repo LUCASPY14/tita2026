@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para los validadores del módulo Clientes
 Coverage completo de todas las reglas de negocio
 """
@@ -68,7 +68,7 @@ class ValidarNombresClienteTest(TestCase):
         for nombre in nombres_validos:
             try:
                 validar_nombres_cliente(nombre)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Nombre válido rechazado: {nombre}")
 
     def test_nombres_muy_cortos(self):
@@ -102,7 +102,7 @@ class ValidarApellidosClienteTest(TestCase):
         for apellido in apellidos_validos:
             try:
                 validar_apellidos_cliente(apellido)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Apellido válido rechazado: {apellido}")
 
     def test_apellidos_muy_cortos(self):
@@ -136,7 +136,7 @@ class ValidarRazonSocialTest(TestCase):
         for razon in razones_validas:
             try:
                 validar_razon_social(razon)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Razón social válida rechazada: {razon}")
 
     def test_razon_social_muy_corta(self):
@@ -155,7 +155,7 @@ class ValidarRazonSocialTest(TestCase):
         try:
             validar_razon_social(None)
             validar_razon_social("")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Razón social opcional rechazada")
 
 
@@ -166,28 +166,28 @@ class ValidarRucCiTest(TestCase):
         """RUC formato corto (XXXXX-Y) debe pasar"""
         try:
             validar_ruc_ci("12345-6")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("RUC válido formato corto rechazado")
 
     def test_ruc_valido_formato_largo(self):
         """RUC formato largo (XXXXXXXX-Y) debe pasar"""
         try:
             validar_ruc_ci("12345678-9")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("RUC válido formato largo rechazado")
 
     def test_ci_valida_con_puntos(self):
         """CI con puntos debe pasar"""
         try:
             validar_ruc_ci("1.234.567")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("CI válida con puntos rechazada")
 
     def test_ci_valida_sin_puntos(self):
         """CI sin puntos debe pasar"""
         try:
             validar_ruc_ci("1234567")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("CI válida sin puntos rechazada")
 
     def test_ruc_ci_vacio(self):
@@ -224,7 +224,7 @@ class ValidarEmailClienteTest(TestCase):
         for email in emails_validos:
             try:
                 validar_email_cliente(email)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Email válido rechazado: {email}")
 
     def test_email_invalido(self):
@@ -241,7 +241,7 @@ class ValidarEmailClienteTest(TestCase):
         try:
             validar_email_cliente(None)
             validar_email_cliente("")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Email opcional rechazado")
 
     def test_email_con_espacios(self):
@@ -263,7 +263,7 @@ class ValidarTelefonoClienteTest(TestCase):
         for movil in moviles_validos:
             try:
                 validar_telefono_cliente(movil)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Móvil válido rechazado: {movil}")
 
     def test_telefono_fijo_valido(self):
@@ -276,7 +276,7 @@ class ValidarTelefonoClienteTest(TestCase):
         for fijo in fijos_validos:
             try:
                 validar_telefono_cliente(fijo)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Fijo válido rechazado: {fijo}")
 
     def test_telefono_sin_cero_inicial(self):
@@ -294,7 +294,7 @@ class ValidarTelefonoClienteTest(TestCase):
         try:
             validar_telefono_cliente(None)
             validar_telefono_cliente("")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Teléfono opcional rechazado")
 
     def test_telefono_con_letras(self):
@@ -317,7 +317,7 @@ class ValidarLimiteCreditoClienteTest(TestCase):
         for limite in limites_validos:
             try:
                 validar_limite_credito_cliente(limite)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Límite válido rechazado: {limite}")
 
     def test_limite_credito_negativo(self):
@@ -339,7 +339,7 @@ class ValidarLimiteCreditoClienteTest(TestCase):
         """Límite None debe pasar (es opcional)"""
         try:
             validar_limite_credito_cliente(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Límite opcional rechazado")
 
 
@@ -356,7 +356,7 @@ class ValidarDireccionClienteTest(TestCase):
         for direccion in direcciones_validas:
             try:
                 validar_direccion_cliente(direccion)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Dirección válida rechazada: {direccion}")
 
     def test_direccion_muy_corta(self):
@@ -375,7 +375,7 @@ class ValidarDireccionClienteTest(TestCase):
         try:
             validar_direccion_cliente(None)
             validar_direccion_cliente("")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Dirección opcional rechazada")
 
 
@@ -398,7 +398,7 @@ class ValidarNombreTipoClienteTest(TestCase):
         for nombre in nombres_validos:
             try:
                 validar_nombre_tipo_cliente(nombre)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Nombre de tipo válido rechazado: {nombre}")
 
     def test_nombre_tipo_muy_corto(self):
@@ -437,7 +437,7 @@ class ValidarNombreHijoTest(TestCase):
         for nombre in nombres_validos:
             try:
                 validar_nombre_hijo(nombre)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Nombre válido rechazado: {nombre}")
 
     def test_nombre_hijo_muy_corto(self):
@@ -470,7 +470,7 @@ class ValidarApellidoHijoTest(TestCase):
         for apellido in apellidos_validos:
             try:
                 validar_apellido_hijo(apellido)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Apellido válido rechazado: {apellido}")
 
     def test_apellido_hijo_muy_corto(self):
@@ -503,7 +503,7 @@ class ValidarFechaNacimientoTest(TestCase):
         for fecha in fechas_validas:
             try:
                 validar_fecha_nacimiento(fecha)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Fecha válida rechazada: {fecha}")
 
     def test_fecha_nacimiento_futura(self):
@@ -534,7 +534,7 @@ class ValidarFechaNacimientoTest(TestCase):
         """Fecha None debe pasar (es opcional)"""
         try:
             validar_fecha_nacimiento(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Fecha opcional rechazada")
 
 
@@ -551,7 +551,7 @@ class ValidarGradoHijoTest(TestCase):
         for grado in grados_validos:
             try:
                 validar_grado_hijo(grado)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Grado válido rechazado: {grado}")
 
     def test_grado_muy_corto(self):
@@ -570,7 +570,7 @@ class ValidarGradoHijoTest(TestCase):
         try:
             validar_grado_hijo(None)
             validar_grado_hijo("")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Grado opcional rechazado")
 
 
@@ -586,7 +586,7 @@ class ValidarFotoPerfilTest(TestCase):
         for url in urls_validas:
             try:
                 validar_foto_perfil(url)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"URL válida rechazada: {url}")
 
     def test_foto_path_valido(self):
@@ -598,7 +598,7 @@ class ValidarFotoPerfilTest(TestCase):
         for path in paths_validos:
             try:
                 validar_foto_perfil(path)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Path válido rechazado: {path}")
 
     def test_foto_url_invalida(self):
@@ -617,7 +617,7 @@ class ValidarFotoPerfilTest(TestCase):
         try:
             validar_foto_perfil(None)
             validar_foto_perfil("")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Foto opcional rechazada")
 
 
@@ -640,7 +640,7 @@ class ValidarNombreGradoTest(TestCase):
         for nombre in nombres_validos:
             try:
                 validar_nombre_grado(nombre)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Nombre de grado válido rechazado: {nombre}")
 
     def test_nombre_grado_muy_corto(self):
@@ -668,7 +668,7 @@ class ValidarNivelGradoTest(TestCase):
         for nivel in range(1, 13):
             try:
                 validar_nivel_grado(nivel)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Nivel válido rechazado: {nivel}")
 
     def test_nivel_grado_cero(self):
@@ -701,7 +701,7 @@ class ValidarOrdenVisualizacionTest(TestCase):
         for orden in ordenes_validos:
             try:
                 validar_orden_visualizacion(orden)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Orden válido rechazado: {orden}")
 
     def test_orden_cero(self):
@@ -740,7 +740,7 @@ class ValidarAnioEscolarTest(TestCase):
         for anio in anios_validos:
             try:
                 validar_anio_escolar(anio)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Año válido rechazado: {anio}")
 
     def test_anio_escolar_muy_antiguo(self):
@@ -775,7 +775,7 @@ class ValidarMotivoCambioGradoTest(TestCase):
         for motivo in motivos_validos:
             try:
                 validar_motivo_cambio_grado(motivo)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Motivo válido rechazado: {motivo}")
 
     def test_motivo_invalido(self):
@@ -801,14 +801,14 @@ class ValidarCambioGradoTest(TestCase):
         """Cambio de grado válido debe pasar"""
         try:
             validar_cambio_grado("1° Grado", "2° Grado")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Cambio válido rechazado")
 
     def test_cambio_grado_sin_anterior(self):
         """Cambio sin grado anterior (inscripción nueva) debe pasar"""
         try:
             validar_cambio_grado(None, "1° Grado")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Inscripción nueva rechazada")
 
     def test_cambio_grado_mismo(self):
@@ -845,7 +845,7 @@ class ValidarTipoRestriccionTest(TestCase):
         for tipo in tipos_validos:
             try:
                 validar_tipo_restriccion(tipo)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Tipo válido rechazado: {tipo}")
 
     def test_tipo_restriccion_muy_corto(self):
@@ -873,7 +873,7 @@ class ValidarDescripcionRestriccionTest(TestCase):
         descripcion = "El estudiante presenta alergia severa al maní y derivados"
         try:
             validar_descripcion_restriccion(descripcion)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Descripción válida rechazada")
 
     def test_descripcion_muy_corta(self):
@@ -892,7 +892,7 @@ class ValidarDescripcionRestriccionTest(TestCase):
         try:
             validar_descripcion_restriccion(None)
             validar_descripcion_restriccion("")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Descripción opcional rechazada")
 
 
@@ -905,7 +905,7 @@ class ValidarSeveridadRestriccionTest(TestCase):
         for severidad in severidades_validas:
             try:
                 validar_severidad_restriccion(severidad)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Severidad válida rechazada: {severidad}")
 
     def test_severidad_invalida(self):
@@ -932,7 +932,7 @@ class ValidarObservacionesRestriccionTest(TestCase):
         observaciones = "Los padres han proporcionado EpiPen para emergencias"
         try:
             validar_observaciones_restriccion(observaciones)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Observaciones válidas rechazadas")
 
     def test_observaciones_muy_largas(self):
@@ -946,7 +946,7 @@ class ValidarObservacionesRestriccionTest(TestCase):
         try:
             validar_observaciones_restriccion(None)
             validar_observaciones_restriccion("")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Observaciones opcionales rechazadas")
 
 
@@ -968,7 +968,7 @@ class ValidarMontoAutorizadoTest(TestCase):
         for monto in montos_validos:
             try:
                 validar_monto_autorizado(monto)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Monto válido rechazado: {monto}")
 
     def test_monto_autorizado_cero(self):
@@ -1003,7 +1003,7 @@ class ValidarSaldosAutorizacionTest(TestCase):
                 saldo_resultante=Decimal("-500.00"),
                 monto_autorizado=Decimal("2000.00"),
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Saldos válidos rechazados")
 
     def test_saldo_resultante_mayor(self):
@@ -1033,7 +1033,7 @@ class ValidarMotivoAutorizacionTest(TestCase):
         motivo = "Cliente de confianza, pago pendiente para mañana"
         try:
             validar_motivo_autorizacion(motivo)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Motivo válido rechazado")
 
     def test_motivo_muy_corto(self):
@@ -1073,7 +1073,7 @@ class ValidarTipoOperacionLogTest(TestCase):
         for tipo in tipos_validos:
             try:
                 validar_tipo_operacion_log(tipo)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Tipo válido rechazado: {tipo}")
 
     def test_tipo_operacion_invalido(self):
@@ -1101,7 +1101,7 @@ class ValidarResultadoLogTest(TestCase):
         for resultado in resultados_validos:
             try:
                 validar_resultado_log(resultado)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Resultado válido rechazado: {resultado}")
 
     def test_resultado_invalido(self):
@@ -1134,7 +1134,7 @@ class ValidarIpOrigenTest(TestCase):
         for ip in ips_validas:
             try:
                 validar_ip_origen(ip)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"IP válida rechazada: {ip}")
 
     def test_ipv4_invalidas(self):
@@ -1157,7 +1157,7 @@ class ValidarIpOrigenTest(TestCase):
         for ip in ips_validas:
             try:
                 validar_ip_origen(ip)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"IPv6 válida rechazada: {ip}")
 
     def test_ip_opcional(self):
@@ -1165,7 +1165,7 @@ class ValidarIpOrigenTest(TestCase):
         try:
             validar_ip_origen(None)
             validar_ip_origen("")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("IP opcional rechazada")
 
     def test_ip_formato_invalido(self):

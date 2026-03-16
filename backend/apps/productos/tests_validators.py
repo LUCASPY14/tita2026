@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para los validadores del módulo productos
 Pruebas exhaustivas de todas las validaciones de negocio
 """
@@ -60,21 +60,21 @@ class ValidadoresCodigoBarraTestCase(TestCase):
         """Test: Código EAN-13 (13 dígitos) válido"""
         try:
             validar_codigo_barra("7891234567890")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_codigo_barra() falló con EAN-13 válido")
 
     def test_codigo_ean8_valido(self):
         """Test: Código EAN-8 (8 dígitos) válido"""
         try:
             validar_codigo_barra("12345678")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_codigo_barra() falló con EAN-8 válido")
 
     def test_codigo_upc_valido(self):
         """Test: Código UPC (12 dígitos) válido"""
         try:
             validar_codigo_barra("123456789012")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_codigo_barra() falló con UPC válido")
 
     def test_codigo_alfanumerico_valido(self):
@@ -84,7 +84,7 @@ class ValidadoresCodigoBarraTestCase(TestCase):
             with self.subTest(codigo=codigo):
                 try:
                     validar_codigo_barra(codigo)
-                except ValidationError:
+                except ValidationError:  # pragma: no cover
                     self.fail(f"validar_codigo_barra() falló con código válido: {codigo}")
 
     def test_codigo_numerico_longitud_invalida(self):
@@ -138,7 +138,7 @@ class ValidadoresDescripcionProductoTestCase(TestCase):
             with self.subTest(descripcion=desc):
                 try:
                     validar_descripcion_producto(desc)
-                except ValidationError:
+                except ValidationError:  # pragma: no cover
                     self.fail(
                         f"validar_descripcion_producto() falló con descripción válida: {desc}"
                     )
@@ -183,7 +183,7 @@ class ValidadoresStockMinimoTestCase(TestCase):
             with self.subTest(valor=valor):
                 try:
                     validar_stock_minimo(valor)
-                except ValidationError:
+                except ValidationError:  # pragma: no cover
                     self.fail(f"validar_stock_minimo() falló con valor válido: {valor}")
 
     def test_stock_minimo_negativo(self):
@@ -218,7 +218,7 @@ class ValidadoresPrecioPositivoTestCase(TestCase):
             with self.subTest(precio=precio):
                 try:
                     validar_precio_positivo(precio)
-                except ValidationError:
+                except ValidationError:  # pragma: no cover
                     self.fail(f"validar_precio_positivo() falló con precio válido: {precio}")
 
     def test_precio_cero(self):
@@ -257,14 +257,14 @@ class ValidadoresMargenUtilidadTestCase(TestCase):
         """Test: Margen de utilidad adecuado (>10%)"""
         try:
             validar_margen_utilidad(Decimal("5000"), Decimal("3000"))  # ~67% margen
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_margen_utilidad() falló con margen adecuado")
 
     def test_margen_exacto_minimo(self):
         """Test: Margen exactamente en el mínimo (10%)"""
         try:
             validar_margen_utilidad(Decimal("110"), Decimal("100"))  # 10% margen
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_margen_utilidad() falló con margen mínimo exacto")
 
     def test_margen_menor_al_minimo(self):
@@ -304,7 +304,7 @@ class ValidadoresNombreCategoriaTestCase(TestCase):
             with self.subTest(nombre=nombre):
                 try:
                     validar_nombre_categoria(nombre)
-                except ValidationError:
+                except ValidationError:  # pragma: no cover
                     self.fail(f"validar_nombre_categoria() falló con nombre válido: {nombre}")
 
     def test_nombre_muy_corto(self):
@@ -345,14 +345,14 @@ class ValidadoresJerarquiaCategoriaTestCase(TestCase):
         """Test: Jerarquía válida (asignar padre existente)"""
         try:
             validar_jerarquia_categoria(self.padre)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_jerarquia_categoria() falló con jerarquía válida")
 
     def test_categoria_raiz(self):
         """Test: Categoría raíz (sin padre)"""
         try:
             validar_jerarquia_categoria(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_jerarquia_categoria() falló con categoría raíz")
 
     def test_categoria_propio_padre(self):
@@ -384,7 +384,7 @@ class ValidadoresNombreUnidadTestCase(TestCase):
             with self.subTest(nombre=nombre):
                 try:
                     validar_nombre_unidad(nombre)
-                except ValidationError:
+                except ValidationError:  # pragma: no cover
                     self.fail(f"validar_nombre_unidad() falló con nombre válido: {nombre}")
 
     def test_nombre_muy_corto(self):
@@ -420,7 +420,7 @@ class ValidadoresAbreviaturaUnidadTestCase(TestCase):
             with self.subTest(abreviatura=abr):
                 try:
                     validar_abreviatura_unidad(abr)
-                except ValidationError:
+                except ValidationError:  # pragma: no cover
                     self.fail(f"validar_abreviatura_unidad() falló con abreviatura válida: {abr}")
 
     def test_abreviatura_muy_larga(self):
@@ -458,7 +458,7 @@ class ValidadoresNombreListaPreciosTestCase(TestCase):
             with self.subTest(nombre=nombre):
                 try:
                     validar_nombre_lista_precios(nombre)
-                except ValidationError:
+                except ValidationError:  # pragma: no cover
                     self.fail(f"validar_nombre_lista_precios() falló con nombre válido: {nombre}")
 
     def test_nombre_muy_corto(self):
@@ -484,7 +484,7 @@ class ValidadoresFechaVigenciaListaTestCase(TestCase):
         """Test: Fecha de vigencia hoy"""
         try:
             validar_fecha_vigencia_lista(date.today())
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_fecha_vigencia_lista() falló con fecha hoy")
 
     def test_fecha_vigencia_pasada_reciente(self):
@@ -492,7 +492,7 @@ class ValidadoresFechaVigenciaListaTestCase(TestCase):
         fecha = date.today() - timedelta(days=30)
         try:
             validar_fecha_vigencia_lista(fecha)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_fecha_vigencia_lista() falló con fecha pasada reciente")
 
     def test_fecha_vigencia_futura_cercana(self):
@@ -500,7 +500,7 @@ class ValidadoresFechaVigenciaListaTestCase(TestCase):
         fecha = date.today() + timedelta(days=30)
         try:
             validar_fecha_vigencia_lista(fecha)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_fecha_vigencia_lista() falló con fecha futura cercana")
 
     def test_fecha_vigencia_muy_futura(self):
@@ -529,21 +529,21 @@ class ValidadoresMonedaListaTestCase(TestCase):
         """Test: Moneda PYG válida"""
         try:
             validar_moneda_lista("PYG")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_moneda_lista() falló con PYG")
 
     def test_moneda_usd_valida(self):
         """Test: Moneda USD válida"""
         try:
             validar_moneda_lista("USD")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_moneda_lista() falló con USD")
 
     def test_moneda_lowercase_convertida(self):
         """Test: Moneda en minúsculas se acepta (convertida a mayúsculas)"""
         try:
             validar_moneda_lista("pyg")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_moneda_lista() falló con moneda en minúsculas")
 
     def test_moneda_invalida(self):
@@ -571,7 +571,7 @@ class ValidadoresPrecioUnitarioListaTestCase(TestCase):
         """Test: Precio unitario válido"""
         try:
             validar_precio_unitario_lista(Decimal("5000.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_precio_unitario_lista() falló con precio válido")
 
     def test_precio_unitario_cero(self):
@@ -587,14 +587,14 @@ class ValidadoresVariacionPrecioTestCase(TestCase):
         """Test: Variación pequeña (10%)"""
         try:
             validar_variacion_precio(Decimal("5500"), Decimal("5000"))  # +10%
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_variacion_precio() falló con variación pequeña")
 
     def test_variacion_moderada_valida(self):
         """Test: Variación moderada (30%)"""
         try:
             validar_variacion_precio(Decimal("6500"), Decimal("5000"))  # +30%
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_variacion_precio() falló con variación moderada")
 
     def test_variacion_grande_warning(self):
@@ -624,7 +624,7 @@ class ValidadoresCambioPrecioHistoricoTestCase(TestCase):
         """Test: Cambio de precio válido"""
         try:
             validar_cambio_precio_historico(Decimal("4000"), Decimal("5000"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_cambio_precio_historico() falló con cambio válido")
 
     def test_precios_iguales(self):
@@ -658,7 +658,7 @@ class ValidadoresFechaCambioPrecioTestCase(TestCase):
         """Test: Fecha de cambio actual"""
         try:
             validar_fecha_cambio_precio(timezone.now())
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_fecha_cambio_precio() falló con fecha actual")
 
     def test_fecha_cambio_pasada_reciente(self):
@@ -666,7 +666,7 @@ class ValidadoresFechaCambioPrecioTestCase(TestCase):
         fecha = timezone.now() - timedelta(days=30)
         try:
             validar_fecha_cambio_precio(fecha)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_fecha_cambio_precio() falló con fecha pasada reciente")
 
     def test_fecha_cambio_futura(self):
@@ -712,7 +712,7 @@ class ValidadoresConModelosTestCase(TestCase):
         """Test: Validar que un producto nuevo sea único"""
         try:
             validar_producto_unico("Coca Cola 500ml", "7890123456789")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("validar_producto_unico() falló con producto nuevo")
 
     def test_validar_producto_unico_descripcion_duplicada(self):

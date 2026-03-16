@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para los validadores del módulo Inventario
 Aseguran que todas las reglas de validación funcionan correctamente
 """
@@ -55,7 +55,7 @@ class ValidadoresCantidadTestCase(TestCase):
             validar_cantidad_positiva(10)
             validar_cantidad_positiva(Decimal("100.50"))
             validar_cantidad_positiva(0.01)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Esta cantidad debería ser válida")
 
     def test_cantidad_positiva_cero_invalida(self):
@@ -88,7 +88,7 @@ class ValidadoresCantidadTestCase(TestCase):
             validar_cantidad_no_negativa(0)
             validar_cantidad_no_negativa(10)
             validar_cantidad_no_negativa(Decimal("100.50"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estas cantidades deberían ser válidas")
 
     def test_cantidad_no_negativa_negativa_invalida(self):
@@ -101,7 +101,7 @@ class ValidadoresCantidadTestCase(TestCase):
         """None debe permitirse (validación opcional)"""
         try:
             validar_cantidad_no_negativa(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("None debería ser permitido")
 
 
@@ -113,7 +113,7 @@ class ValidadoresStockTestCase(TestCase):
         try:
             validar_stock_minimo_maximo(10, 100)
             validar_stock_minimo_maximo(Decimal("5"), Decimal("50"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Este rango debería ser válido")
 
     def test_stock_minimo_mayor_que_maximo_invalido(self):
@@ -145,7 +145,7 @@ class ValidadoresStockTestCase(TestCase):
         try:
             validar_stock_minimo_maximo(None, None)
             validar_stock_minimo_maximo(10, None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("None debería ser permitido")
 
 
@@ -157,7 +157,7 @@ class ValidadoresPuntoReordenTestCase(TestCase):
         try:
             validar_punto_reorden(50, 10, 100)
             validar_punto_reorden(Decimal("25"), Decimal("10"), Decimal("100"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Este punto de reorden debería ser válido")
 
     def test_punto_reorden_menor_que_minimo_invalido(self):
@@ -182,7 +182,7 @@ class ValidadoresPuntoReordenTestCase(TestCase):
         """None debe permitirse"""
         try:
             validar_punto_reorden(None, 10, 100)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("None debería ser permitido")
 
 
@@ -235,7 +235,7 @@ class ValidadoresStockDisponibleTestCase(TestCase):
         """Stock suficiente debe pasar validación"""
         try:
             validar_stock_disponible(self.producto.id_producto, 30)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Debería haber stock suficiente")
 
     def test_stock_insuficiente_debe_fallar(self):
@@ -248,7 +248,7 @@ class ValidadoresStockDisponibleTestCase(TestCase):
         """Productos que permiten negativo siempre pasan"""
         try:
             validar_stock_disponible(self.producto_negativo.id_producto, 500)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Producto permite stock negativo")
 
     def test_cantidad_cero_invalida(self):
@@ -272,7 +272,7 @@ class ValidadoresMovimientosTestCase(TestCase):
         try:
             validar_tipo_movimiento("Ingreso")
             validar_tipo_movimiento("Egreso")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estos tipos deberían ser válidos")
 
     def test_tipo_movimiento_invalido(self):
@@ -291,7 +291,7 @@ class ValidadoresMovimientosTestCase(TestCase):
         """Motivo suficientemente largo debe pasar"""
         try:
             validar_motivo_movimiento("Compra de mercadería a proveedor ABC")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Este motivo debería ser válido")
 
     def test_motivo_muy_corto_invalido(self):
@@ -318,7 +318,7 @@ class ValidadoresMovimientosTestCase(TestCase):
             validar_referencia_movimiento("Compra", 123)
             validar_referencia_movimiento("Venta", 456)
             validar_referencia_movimiento("Ajuste", 789)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estas referencias deberían ser válidas")
 
     def test_referencia_tipo_invalido(self):
@@ -337,7 +337,7 @@ class ValidadoresMovimientosTestCase(TestCase):
         """ID None debe permitirse (algunos movimientos no tienen referencia)"""
         try:
             validar_referencia_movimiento("Inicial", None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("ID None debería ser permitido")
 
 
@@ -352,7 +352,7 @@ class ValidadoresAjustesTestCase(TestCase):
             validar_tipo_ajuste("Correccion")
             validar_tipo_ajuste("Vencimiento")
             validar_tipo_ajuste("Deterioro")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estos tipos deberían ser válidos")
 
     def test_tipo_ajuste_invalido(self):
@@ -368,7 +368,7 @@ class ValidadoresAjustesTestCase(TestCase):
             validar_estado_ajuste("Aprobado")
             validar_estado_ajuste("Rechazado")
             validar_estado_ajuste("Aplicado")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estos estados deberían ser válidos")
 
     def test_estado_ajuste_invalido(self):
@@ -383,7 +383,7 @@ class ValidadoresAjustesTestCase(TestCase):
             validar_cantidad_ajuste(Decimal("-10"), "Merma")
             validar_cantidad_ajuste(Decimal("-5"), "Vencimiento")
             validar_cantidad_ajuste(Decimal("-3"), "Deterioro")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Merma con cantidad negativa debería ser válida")
 
     def test_cantidad_ajuste_merma_positiva_invalida(self):
@@ -396,7 +396,7 @@ class ValidadoresAjustesTestCase(TestCase):
         """Sobrante con cantidad positiva debe pasar"""
         try:
             validar_cantidad_ajuste(Decimal("10"), "Sobrante")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Sobrante con cantidad positiva debería ser válido")
 
     def test_cantidad_ajuste_sobrante_negativa_invalida(self):
@@ -415,7 +415,7 @@ class ValidadoresAjustesTestCase(TestCase):
         """Merma <= 5% debe pasar"""
         try:
             validar_merma_aceptable(Decimal("3"), Decimal("100"), porcentaje_max=5)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Merma aceptable debería ser válida")
 
     def test_merma_excesiva_invalida(self):
@@ -439,7 +439,7 @@ class ValidadoresLotesTestCase(TestCase):
         fecha_futura = timezone.now().date() + timedelta(days=30)
         try:
             validar_fecha_vencimiento(fecha_futura)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Fecha futura debería ser válida")
 
     def test_fecha_vencimiento_pasada_invalida(self):
@@ -453,7 +453,7 @@ class ValidadoresLotesTestCase(TestCase):
         """None debe permitirse (productos sin vencimiento)"""
         try:
             validar_fecha_vencimiento(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("None debería ser permitido")
 
     def test_numero_lote_valido(self):
@@ -462,7 +462,7 @@ class ValidadoresLotesTestCase(TestCase):
             validar_numero_lote("LOT-123")
             validar_numero_lote("ABC123")
             validar_numero_lote("2024-01-001")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estos números de lote deberían ser válidos")
 
     def test_numero_lote_muy_corto_invalido(self):
@@ -487,7 +487,7 @@ class ValidadoresLotesTestCase(TestCase):
         """Cantidades coincidentes deben pasar"""
         try:
             validar_cantidad_lote(Decimal("100"), Decimal("100"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Cantidades coincidentes deberían ser válidas")
 
     def test_cantidad_lote_no_coincide_invalida(self):
@@ -513,7 +513,7 @@ class ValidadoresMLForecastingTestCase(TestCase):
             validar_dias_historico(30)
             validar_dias_historico(90)
             validar_dias_historico(365)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estos valores deberían ser válidos")
 
     def test_dias_historico_muy_pocos_invalido(self):
@@ -541,7 +541,7 @@ class ValidadoresMLForecastingTestCase(TestCase):
             validar_umbral_confianza(0.75)
             validar_umbral_confianza(0.95)
             validar_umbral_confianza(0.99)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estos umbrales deberían ser válidos")
 
     def test_umbral_confianza_muy_bajo_invalido(self):
@@ -563,7 +563,7 @@ class ValidadoresMLForecastingTestCase(TestCase):
             validar_lead_time(7)
             validar_lead_time(30)
             validar_lead_time(90)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estos valores deberían ser válidos")
 
     def test_lead_time_cero_invalido(self):
@@ -585,7 +585,7 @@ class ValidadoresMLForecastingTestCase(TestCase):
             validar_dias_cobertura(14)
             validar_dias_cobertura(30)
             validar_dias_cobertura(60)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estos valores deberían ser válidos")
 
     def test_dias_cobertura_muy_pocos_invalido(self):
@@ -609,7 +609,7 @@ class ValidadoresCostosTestCase(TestCase):
         try:
             validar_costo_unitario(Decimal("100.50"))
             validar_costo_unitario(0.01)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estos costos deberían ser válidos")
 
     def test_costo_unitario_cero_invalido(self):
@@ -628,7 +628,7 @@ class ValidadoresCostosTestCase(TestCase):
         """Variación <= 30% debe pasar"""
         try:
             validar_variacion_costo(Decimal("120"), Decimal("100"), porcentaje_max_variacion=30)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Variación aceptable debería ser válida")
 
     def test_variacion_costo_excesiva_invalida(self):
@@ -642,7 +642,7 @@ class ValidadoresCostosTestCase(TestCase):
         try:
             validar_variacion_costo(Decimal("100"), None)
             validar_variacion_costo(Decimal("100"), Decimal("0"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Sin costo anterior debería ser válido")
 
 
@@ -656,7 +656,7 @@ class ValidadoresAlertasTestCase(TestCase):
             validar_nivel_alerta("Medio")
             validar_nivel_alerta("Alto")
             validar_nivel_alerta("Critico")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estos niveles deberían ser válidos")
 
     def test_nivel_alerta_invalido(self):
@@ -675,7 +675,7 @@ class ValidadoresAlertasTestCase(TestCase):
         """Umbral en rango válido debe pasar"""
         try:
             validar_umbral_alerta(Decimal("50"), Decimal("10"), Decimal("100"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Este umbral debería ser válido")
 
     def test_umbral_alerta_negativo_invalido(self):
@@ -721,7 +721,7 @@ class ValidarStockDisponibleLineasFaltantesTest(TestCase):
         # Pasar la instancia del producto directamente (tiene atributo id_producto)
         try:
             validar_stock_disponible(self.producto, 5)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Debería pasar con instancia producto y stock suficiente")
 
     def test_stock_unico_does_not_exist(self):

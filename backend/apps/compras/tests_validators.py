@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para validadores del módulo Compras
 Cobertura completa de 24 validadores
 """
@@ -48,14 +48,14 @@ class ValidadoresRUCTestCase(TestCase):
         """RUC válido con formato corto debe pasar"""
         try:
             validar_ruc("80012345-0")  # Dígito verificador correcto según algoritmo
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("RUC válido no debería lanzar error")
 
     def test_ruc_valido_formato_largo(self):
         """RUC válido con formato largo debe pasar"""
         try:
             validar_ruc("8001234-5")  # Dígito verificador correcto según algoritmo
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("RUC válido no debería lanzar error")
 
     def test_ruc_formato_invalido_sin_guion(self):
@@ -94,7 +94,7 @@ class ValidadoresRazonSocialTestCase(TestCase):
         try:
             validar_razon_social("Distribuidora ABC S.A.")
             validar_razon_social("Comercial XYZ & Asociados")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Razón social válida no debería fallar")
 
     def test_razon_social_muy_corta(self):
@@ -113,7 +113,7 @@ class ValidadoresRazonSocialTestCase(TestCase):
         """Caracteres especiales comunes deben ser permitidos"""
         try:
             validar_razon_social("Empresa De'Tal & Cía. S.R.L.")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Caracteres comunes deberían ser permitidos")
 
     def test_razon_social_vacia(self):
@@ -125,7 +125,7 @@ class ValidadoresRazonSocialTestCase(TestCase):
         """Razón social con acentos debe pasar"""
         try:
             validar_razon_social("Distribución Ñandutí S.A.")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Acentos deberían ser permitidos")
 
 
@@ -137,7 +137,7 @@ class ValidadoresEmailProveedorTestCase(TestCase):
         try:
             validar_email_proveedor("proveedor@empresa.com.py")
             validar_email_proveedor("contacto@distribuidora.com")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Email válido no debería fallar")
 
     def test_email_vacio_permitido(self):
@@ -145,7 +145,7 @@ class ValidadoresEmailProveedorTestCase(TestCase):
         try:
             validar_email_proveedor("")
             validar_email_proveedor(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Email vacío debería ser permitido")
 
     def test_email_formato_invalido(self):
@@ -170,7 +170,7 @@ class ValidadoresTelefonoProveedorTestCase(TestCase):
         try:
             validar_telefono_proveedor("0981123456")
             validar_telefono_proveedor("+595981123456")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Teléfono celular válido no debería fallar")
 
     def test_telefono_fijo_valido(self):
@@ -178,7 +178,7 @@ class ValidadoresTelefonoProveedorTestCase(TestCase):
         try:
             validar_telefono_proveedor("021-123456")
             validar_telefono_proveedor("0331234567")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Teléfono fijo válido no debería fallar")
 
     def test_telefono_vacio_permitido(self):
@@ -186,7 +186,7 @@ class ValidadoresTelefonoProveedorTestCase(TestCase):
         try:
             validar_telefono_proveedor("")
             validar_telefono_proveedor(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Teléfono vacío debería ser permitido")
 
     def test_telefono_formato_invalido(self):
@@ -205,14 +205,14 @@ class ValidadoresLimiteCreditoTestCase(TestCase):
         """Límite de crédito válido debe pasar"""
         try:
             validar_limite_credito_proveedor(Decimal("5000000.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Límite válido no debería fallar")
 
     def test_limite_credito_cero_valido(self):
         """Límite de crédito en cero debe ser válido"""
         try:
             validar_limite_credito_proveedor(Decimal("0.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Límite cero debería ser válido")
 
     def test_limite_credito_negativo_invalido(self):
@@ -232,7 +232,7 @@ class ValidadoresLimiteCreditoTestCase(TestCase):
         """Límite None debe ser permitido (sin límite)"""
         try:
             validar_limite_credito_proveedor(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Límite None debería ser permitido")
 
 
@@ -244,7 +244,7 @@ class ValidadoresMontoCompraTestCase(TestCase):
         try:
             validar_monto_compra(Decimal("1000000.00"))
             validar_monto_compra(Decimal("0.01"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Monto válido no debería fallar")
 
     def test_monto_compra_cero_invalido(self):
@@ -279,7 +279,7 @@ class ValidadoresEstadoPagoTestCase(TestCase):
         for estado in estados:
             try:
                 validar_estado_pago(estado)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Estado '{estado}' debería ser válido")
 
     def test_estado_pago_invalido(self):
@@ -297,14 +297,14 @@ class ValidadoresEstadoPagoTestCase(TestCase):
         """Transición Pendiente → Confirmado debe pasar"""
         try:
             validar_transicion_estado_compra("Pendiente", "Confirmado")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Transición válida no debería fallar")
 
     def test_transicion_confirmado_a_pagado_valida(self):
         """Transición Confirmado → Pagado debe pasar"""
         try:
             validar_transicion_estado_compra("Confirmado", "Pagado")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Transición válida no debería fallar")
 
     def test_transicion_pagado_a_cualquiera_invalida(self):
@@ -331,7 +331,7 @@ class ValidadoresFechaCompraTestCase(TestCase):
         """Fecha de hoy debe ser válida"""
         try:
             validar_fecha_compra(timezone.now())
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Fecha de hoy debería ser válida")
 
     def test_fecha_compra_una_semana_atras_valida(self):
@@ -339,7 +339,7 @@ class ValidadoresFechaCompraTestCase(TestCase):
         try:
             fecha = timezone.now() - timedelta(days=7)
             validar_fecha_compra(fecha)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Fecha reciente debería ser válida")
 
     def test_fecha_compra_futura_invalida(self):
@@ -369,21 +369,21 @@ class ValidadoresNumeroFacturaTestCase(TestCase):
         """Formato paraguayo estándar debe pasar"""
         try:
             validar_numero_factura("001-001-0001234")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Formato paraguayo válido no debería fallar")
 
     def test_numero_factura_formato_simple_valido(self):
         """Formato simple (13 dígitos) debe pasar"""
         try:
             validar_numero_factura("0010010001234")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Formato simple válido no debería fallar")
 
     def test_numero_factura_texto_libre_valido(self):
         """Texto libre razonable debe pasar"""
         try:
             validar_numero_factura("FACT-2024-00123")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Texto libre válido no debería fallar")
 
     def test_numero_factura_muy_largo_invalido(self):
@@ -396,7 +396,7 @@ class ValidadoresNumeroFacturaTestCase(TestCase):
         try:
             validar_numero_factura("")
             validar_numero_factura(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Número vacío debería ser permitido")
 
 
@@ -409,14 +409,14 @@ class ValidadoresSaldoCompraTestCase(TestCase):
             validar_saldo_compra(
                 saldo_pendiente=Decimal("500000.00"), monto_total=Decimal("1000000.00")
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Saldo válido no debería fallar")
 
     def test_saldo_compra_cero_valido(self):
         """Saldo cero debe ser válido (totalmente pagado)"""
         try:
             validar_saldo_compra(saldo_pendiente=Decimal("0.00"), monto_total=Decimal("1000000.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Saldo cero debería ser válido")
 
     def test_saldo_compra_negativo_invalido(self):
@@ -444,7 +444,7 @@ class ValidadoresCantidadCompraTestCase(TestCase):
         try:
             validar_cantidad_compra(Decimal("10.000"))
             validar_cantidad_compra(Decimal("0.001"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Cantidad válida no debería fallar")
 
     def test_cantidad_compra_cero_invalida(self):
@@ -476,7 +476,7 @@ class ValidadoresCostoUnitarioTestCase(TestCase):
         try:
             validar_costo_unitario(Decimal("50000.00"))
             validar_costo_unitario(Decimal("0.01"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Costo válido no debería fallar")
 
     def test_costo_unitario_cero_invalido(self):
@@ -511,7 +511,7 @@ class ValidadoresSubtotalCoherenteTestCase(TestCase):
                 costo_unitario=Decimal("5000.00"),
                 subtotal=Decimal("50000.00"),
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Subtotal coherente no debería fallar")
 
     def test_subtotal_coherente_con_redondeo(self):
@@ -522,7 +522,7 @@ class ValidadoresSubtotalCoherenteTestCase(TestCase):
                 costo_unitario=Decimal("1500.00"),
                 subtotal=Decimal("4999.50"),  # Real: 4999.50
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Diferencia mínima de redondeo debería ser tolerada")
 
     def test_subtotal_incoherente_mayor(self):
@@ -552,7 +552,7 @@ class ValidadoresMontoPagoTestCase(TestCase):
         """Monto de pago válido debe pasar"""
         try:
             validar_monto_pago(Decimal("1000000.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Monto válido no debería fallar")
 
     def test_monto_pago_cero_invalido(self):
@@ -580,7 +580,7 @@ class ValidadoresAplicacionPagoTestCase(TestCase):
             validar_aplicacion_pago(
                 monto_aplicado=Decimal("300000.00"), saldo_compra=Decimal("500000.00")
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Aplicación válida no debería fallar")
 
     def test_aplicacion_pago_total_valida(self):
@@ -589,7 +589,7 @@ class ValidadoresAplicacionPagoTestCase(TestCase):
             validar_aplicacion_pago(
                 monto_aplicado=Decimal("500000.00"), saldo_compra=Decimal("500000.00")
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Aplicación total debería ser válida")
 
     def test_aplicacion_pago_excede_saldo(self):
@@ -624,7 +624,7 @@ class ValidadoresSumaAplicacionesTestCase(TestCase):
             validar_suma_aplicaciones(
                 aplicaciones_totales=Decimal("800000.00"), monto_pago=Decimal("1000000.00")
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Suma válida no debería fallar")
 
     def test_suma_aplicaciones_exacta_valida(self):
@@ -633,7 +633,7 @@ class ValidadoresSumaAplicacionesTestCase(TestCase):
             validar_suma_aplicaciones(
                 aplicaciones_totales=Decimal("1000000.00"), monto_pago=Decimal("1000000.00")
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Suma exacta debería ser válida")
 
     def test_suma_aplicaciones_excede_pago(self):
@@ -654,7 +654,7 @@ class ValidadoresNotaCreditoTestCase(TestCase):
             validar_monto_nota_credito(
                 monto_nc=Decimal("200000.00"), monto_compra=Decimal("1000000.00")
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Monto de NC válido no debería fallar")
 
     def test_monto_nota_credito_total_valido(self):
@@ -663,7 +663,7 @@ class ValidadoresNotaCreditoTestCase(TestCase):
             validar_monto_nota_credito(
                 monto_nc=Decimal("1000000.00"), monto_compra=Decimal("1000000.00")
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("NC total debería ser válida")
 
     def test_monto_nota_credito_excede_compra(self):
@@ -683,7 +683,7 @@ class ValidadoresNotaCreditoTestCase(TestCase):
         """Motivo descriptivo debe pasar"""
         try:
             validar_motivo_nota_credito("Devolución por productos vencidos")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Motivo válido no debería fallar")
 
     def test_motivo_nota_credito_muy_corto(self):
@@ -703,7 +703,7 @@ class ValidadoresNotaCreditoTestCase(TestCase):
         for estado in estados:
             try:
                 validar_estado_nota_credito(estado)
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 self.fail(f"Estado '{estado}' debería ser válido")
 
     def test_estado_nota_credito_invalido(self):
@@ -721,14 +721,14 @@ class ValidadoresCuentaCorrienteTestCase(TestCase):
             validar_dias_credito(30)
             validar_dias_credito(60)
             validar_dias_credito(90)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Días válidos no deberían fallar")
 
     def test_dias_credito_cero_valido(self):
         """Cero días (contado) debe ser válido"""
         try:
             validar_dias_credito(0)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Cero días debería ser válido")
 
     def test_dias_credito_negativos_invalidos(self):
@@ -745,7 +745,7 @@ class ValidadoresCuentaCorrienteTestCase(TestCase):
         """None debe ser permitido (sin plazo definido)"""
         try:
             validar_dias_credito(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("None debería ser permitido")
 
     def test_compra_dentro_limite_credito(self):
@@ -756,7 +756,7 @@ class ValidadoresCuentaCorrienteTestCase(TestCase):
                 saldo_actual=Decimal("3000000.00"),
                 limite_credito=Decimal("5000000.00"),
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Compra dentro del límite no debería fallar")
 
     def test_compra_excede_limite_credito(self):
@@ -777,5 +777,5 @@ class ValidadoresCuentaCorrienteTestCase(TestCase):
                 saldo_actual=Decimal("50000000.00"),
                 limite_credito=None,
             )
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Sin límite debería permitir cualquier monto")

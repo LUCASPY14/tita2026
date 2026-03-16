@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para los validadores del módulo Notificaciones
 Cobertura completa de los 45 valid
 
@@ -21,7 +21,7 @@ class ValidarTipoNotificacionPortalTest(TestCase):
         try:
             validar_tipo_notificacion_portal("alerta")
             validar_tipo_notificacion_portal("recordatorio")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Tipo válido lanzó ValidationError")
 
     def test_tipo_vacio(self):
@@ -45,7 +45,7 @@ class ValidarTituloNotificacionTest(TestCase):
     def test_titulo_valido(self):
         try:
             validar_titulo_notificacion("Nueva venta registrada")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Título válido lanzó ValidationError")
 
     def test_titulo_muy_corto(self):
@@ -65,7 +65,7 @@ class ValidarMensajeNotificacionTest(TestCase):
     def test_mensaje_valido(self):
         try:
             validar_mensaje_notificacion("Este es un mensaje de prueba válido.")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Mensaje válido lanzó ValidationError")
 
     def test_mensaje_muy_corto(self):
@@ -82,7 +82,7 @@ class ValidarLeidaNotificacionTest(TestCase):
         try:
             validar_leida_notificacion(0)
             validar_leida_notificacion(1)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_leida_invalida(self):
@@ -102,7 +102,7 @@ class ValidarSaldoActualTest(TestCase):
         try:
             validar_saldo_actual(Decimal("1000.00"))
             validar_saldo_actual(Decimal("0.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Saldo válido lanzó ValidationError")
 
     def test_saldo_negativo(self):
@@ -123,7 +123,7 @@ class ValidarEnviadaEmailTest(TestCase):
         try:
             validar_enviada_email(0)
             validar_enviada_email(1)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_enviada_invalida(self):
@@ -136,7 +136,7 @@ class ValidarEnviadaSmsTest(TestCase):
         try:
             validar_enviada_sms(0)
             validar_enviada_sms(1)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_enviada_invalida(self):
@@ -153,7 +153,7 @@ class ValidarSaldoAlertaTest(TestCase):
     def test_saldo_valido(self):
         try:
             validar_saldo_alerta(Decimal("500.00"))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Saldo válido lanzó ValidationError")
 
     def test_saldo_cero(self):
@@ -175,7 +175,7 @@ class ValidarDestinoNotificacionTest(TestCase):
             validar_destino_notificacion("Email")
             validar_destino_notificacion("SMS")
             validar_destino_notificacion("Ambos")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Destino válido lanzó ValidationError")
 
     def test_destino_invalido(self):
@@ -188,13 +188,13 @@ class ValidarEstadoSolicitudTest(TestCase):
         try:
             validar_estado_solicitud("Pendiente")
             validar_estado_solicitud("Enviada")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_estado_none(self):
         try:
             validar_estado_solicitud(None)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("None no debería lanzar error (es opcional)")
 
     def test_estado_invalido(self):
@@ -212,7 +212,7 @@ class ValidarTipoPreferenciaNotificacionTest(TestCase):
         try:
             validar_tipo_preferencia_notificacion("ventas")
             validar_tipo_preferencia_notificacion("compras")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Tipo válido lanzó ValidationError")
 
     def test_tipo_invalido(self):
@@ -229,7 +229,7 @@ class ValidarEmailActivoTest(TestCase):
         try:
             validar_email_activo(0)
             validar_email_activo(1)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_email_activo_invalido(self):
@@ -242,7 +242,7 @@ class ValidarPushActivoTest(TestCase):
         try:
             validar_push_activo(0)
             validar_push_activo(1)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_push_activo_invalido(self):
@@ -260,7 +260,7 @@ class ValidarEmailDestinatarioTest(TestCase):
         try:
             validar_email_destinatario("usuario@ejemplo.com")
             validar_email_destinatario("test.user+tag@dominio.py")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Email válido lanzó ValidationError")
 
     def test_email_invalido(self):
@@ -279,7 +279,7 @@ class ValidarNombreDestinatarioTest(TestCase):
         try:
             validar_nombre_destinatario("Juan Pérez")
             validar_nombre_destinatario("O'Connor")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Nombre válido lanzó ValidationError")
 
     def test_nombre_muy_corto(self):
@@ -299,7 +299,7 @@ class ValidarAsuntoEmailTest(TestCase):
     def test_asunto_valido(self):
         try:
             validar_asunto_email("Confirmación de compra")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Asunto válido lanzó ValidationError")
 
     def test_asunto_muy_corto(self):
@@ -315,7 +315,7 @@ class ValidarCuerpoEmailTest(TestCase):
     def test_cuerpo_valido(self):
         try:
             validar_cuerpo_email("Este es el cuerpo del email con contenido suficiente.")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Cuerpo válido lanzó ValidationError")
 
     def test_cuerpo_muy_corto(self):
@@ -333,7 +333,7 @@ class ValidarEstadoEmailTest(TestCase):
             validar_estado_email("Pendiente")
             validar_estado_email("Enviado")
             validar_estado_email("Entregado")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_estado_invalido(self):
@@ -347,7 +347,7 @@ class ValidarIntentosEnvioTest(TestCase):
             validar_intentos_envio(0)
             validar_intentos_envio(5)
             validar_intentos_envio(10)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Intentos válidos lanzaron ValidationError")
 
     def test_intentos_negativos(self):
@@ -370,7 +370,7 @@ class ValidarTelefonoSmsTest(TestCase):
             validar_telefono_sms("0981123456")
             validar_telefono_sms("+595981123456")
             validar_telefono_sms("(0981) 123-456")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Teléfono válido lanzó ValidationError")
 
     def test_telefono_muy_corto(self):
@@ -390,7 +390,7 @@ class ValidarMensajeSmsTest(TestCase):
     def test_mensaje_valido(self):
         try:
             validar_mensaje_sms("Este es un mensaje SMS válido.")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Mensaje válido lanzó ValidationError")
 
     def test_mensaje_muy_corto(self):
@@ -407,7 +407,7 @@ class ValidarEstadoSmsTest(TestCase):
         try:
             validar_estado_sms("Pendiente")
             validar_estado_sms("Enviado")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_estado_invalido(self):
@@ -420,7 +420,7 @@ class ValidarCostoSmsTest(TestCase):
         try:
             validar_costo_sms(Decimal("50.00"))
             validar_costo_sms(None)  # Opcional
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Costo válido lanzó ValidationError")
 
     def test_costo_negativo(self):
@@ -442,7 +442,7 @@ class ValidarCodigoTemplateTest(TestCase):
         try:
             validar_codigo_template("TPL_BIENVENIDA_01")
             validar_codigo_template("codigo_123")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Código válido lanzó ValidationError")
 
     def test_codigo_muy_corto(self):
@@ -462,7 +462,7 @@ class ValidarNombreTemplateTest(TestCase):
     def test_nombre_valido(self):
         try:
             validar_nombre_template("Plantilla de Bienvenida")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Nombre válido lanzó ValidationError")
 
     def test_nombre_muy_corto(self):
@@ -479,13 +479,13 @@ class ValidarVariablesTemplateTest(TestCase):
         try:
             validar_variables_template(["nombre", "apellido", "email"])
             validar_variables_template([])  # Lista vacía es válida
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Variables válidas lanzaron ValidationError")
 
     def test_variables_como_json_string(self):
         try:
             validar_variables_template('["nombre", "email"]')
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("JSON string válido lanzó ValidationError")
 
     def test_variables_no_lista(self):
@@ -510,7 +510,7 @@ class ValidarCategoriaTemplateTest(TestCase):
         try:
             validar_categoria_template("Ventas")
             validar_categoria_template("Promociones")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Categoría válida lanzó ValidationError")
 
     def test_categoria_invalida(self):
@@ -522,7 +522,7 @@ class ValidarCuerpoHtmlTemplateTest(TestCase):
     def test_cuerpo_html_valido(self):
         try:
             validar_cuerpo_html_template("<html><body><h1>Título</h1></body></html>")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Cuerpo HTML válido lanzó ValidationError")
 
     def test_cuerpo_html_muy_corto(self):
@@ -543,7 +543,7 @@ class ValidarNombreCampanaTest(TestCase):
     def test_nombre_valido(self):
         try:
             validar_nombre_campana("Campaña de Verano 2024")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Nombre válido lanzó ValidationError")
 
     def test_nombre_muy_corto(self):
@@ -561,7 +561,7 @@ class ValidarTipoCampanaTest(TestCase):
             validar_tipo_campana("Email")
             validar_tipo_campana("SMS")
             validar_tipo_campana("Mixta")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Tipo válido lanzó ValidationError")
 
     def test_tipo_invalido(self):
@@ -575,7 +575,7 @@ class ValidarEstadoCampanaTest(TestCase):
             validar_estado_campana("Borrador")
             validar_estado_campana("Programada")
             validar_estado_campana("Enviada")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_estado_invalido(self):
@@ -589,7 +589,7 @@ class ValidarTotalDestinatariosTest(TestCase):
             validar_total_destinatarios(0)
             validar_total_destinatarios(1000)
             validar_total_destinatarios(1000000)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Total válido lanzó ValidationError")
 
     def test_total_negativo(self):
@@ -610,7 +610,7 @@ class ValidarNombreAlertaTest(TestCase):
     def test_nombre_valido(self):
         try:
             validar_nombre_alerta("Alerta de Stock Bajo")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Nombre válido lanzó ValidationError")
 
     def test_nombre_muy_corto(self):
@@ -627,7 +627,7 @@ class ValidarTipoAlertaTest(TestCase):
         try:
             validar_tipo_alerta("Inventario")
             validar_tipo_alerta("Ventas")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Tipo válido lanzó ValidationError")
 
     def test_tipo_invalido(self):
@@ -642,7 +642,7 @@ class ValidarCriticidadAlertaTest(TestCase):
             validar_criticidad_alerta("Media")
             validar_criticidad_alerta("Alta")
             validar_criticidad_alerta("Crítica")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Criticidad válida lanzó ValidationError")
 
     def test_criticidad_invalida(self):
@@ -656,7 +656,7 @@ class ValidarFrecuenciaMinutosTest(TestCase):
             validar_frecuencia_minutos(1)
             validar_frecuencia_minutos(60)
             validar_frecuencia_minutos(43200)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Frecuencia válida lanzó ValidationError")
 
     def test_frecuencia_cero(self):
@@ -679,7 +679,7 @@ class ValidarTipoAlertaSistemaTest(TestCase):
             validar_tipo_alerta_sistema("error")
             validar_tipo_alerta_sistema("warning")
             validar_tipo_alerta_sistema("info")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Tipo válido lanzó ValidationError")
 
     def test_tipo_invalido(self):
@@ -691,7 +691,7 @@ class ValidarMensajeAlertaSistemaTest(TestCase):
     def test_mensaje_valido(self):
         try:
             validar_mensaje_alerta_sistema("Error en el sistema de ventas.")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Mensaje válido lanzó ValidationError")
 
     def test_mensaje_muy_corto(self):
@@ -709,7 +709,7 @@ class ValidarEstadoAlertaSistemaTest(TestCase):
             validar_estado_alerta_sistema("Pendiente")
             validar_estado_alerta_sistema("Resuelta")
             validar_estado_alerta_sistema(None)  # Opcional
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_estado_invalido(self):
@@ -727,13 +727,13 @@ class ValidarDatosContextoHistorialTest(TestCase):
         try:
             validar_datos_contexto_historial({"usuario": "admin", "accion": "login"})
             validar_datos_contexto_historial({})  # Dict vacío es válido
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Datos válidos lanzaron ValidationError")
 
     def test_datos_como_json_string(self):
         try:
             validar_datos_contexto_historial('{"usuario": "admin"}')
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("JSON string válido lanzó ValidationError")
 
     def test_datos_no_dict(self):
@@ -746,7 +746,7 @@ class ValidarResueltoHistorialTest(TestCase):
         try:
             validar_resuelto_historial(0)
             validar_resuelto_historial(1)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_resuelto_invalido(self):
@@ -764,7 +764,7 @@ class ValidarUsuarioAnomaliaTest(TestCase):
         try:
             validar_usuario_anomalia("admin")
             validar_usuario_anomalia("usuario_test")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Usuario válido lanzó ValidationError")
 
     def test_usuario_muy_corto(self):
@@ -781,7 +781,7 @@ class ValidarTipoAnomaliaTest(TestCase):
         try:
             validar_tipo_anomalia("acceso_inusual")
             validar_tipo_anomalia("intentos_fallidos")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Tipo válido lanzó ValidationError")
 
     def test_tipo_invalido(self):
@@ -795,14 +795,14 @@ class ValidarIpAddressTest(TestCase):
             validar_ip_address("192.168.1.1")
             validar_ip_address("10.0.0.1")
             validar_ip_address(None)  # Opcional
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("IPv4 válida lanzó ValidationError")
 
     def test_ipv6_valida(self):
         try:
             validar_ip_address("2001:0db8:85a3:0000:0000:8a2e:0370:7334")
             validar_ip_address("::1")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("IPv6 válida lanzó ValidationError")
 
     def test_ip_invalida(self):
@@ -819,7 +819,7 @@ class ValidarNivelRiesgoAnomaliaTest(TestCase):
             validar_nivel_riesgo_anomalia("Medio")
             validar_nivel_riesgo_anomalia("Alto")
             validar_nivel_riesgo_anomalia("Crítico")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Nivel válido lanzó ValidationError")
 
     def test_nivel_invalido(self):
@@ -832,7 +832,7 @@ class ValidarNotificadoAnomaliaTest(TestCase):
         try:
             validar_notificado_anomalia(0)
             validar_notificado_anomalia(1)
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Estado válido lanzó ValidationError")
 
     def test_notificado_invalido(self):
@@ -850,7 +850,7 @@ class ValidarTipoUsuarioRestriccionTest(TestCase):
         try:
             validar_tipo_usuario_restriccion("Empleado")
             validar_tipo_usuario_restriccion("Cliente")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Tipo válido lanzó ValidationError")
 
     def test_tipo_invalido(self):
@@ -864,7 +864,7 @@ class ValidarDiaSemanaRestriccionTest(TestCase):
             validar_dia_semana_restriccion("Lunes")
             validar_dia_semana_restriccion("Martes")
             validar_dia_semana_restriccion("Todos")
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Día válido lanzó ValidationError")
 
     def test_dia_invalido(self):
@@ -876,7 +876,7 @@ class ValidarRangoHorarioRestriccionTest(TestCase):
     def test_rango_valido(self):
         try:
             validar_rango_horario_restriccion(time(8, 0), time(18, 0))
-        except ValidationError:
+        except ValidationError:  # pragma: no cover
             self.fail("Rango válido lanzó ValidationError")
 
     def test_rango_invalido(self):
