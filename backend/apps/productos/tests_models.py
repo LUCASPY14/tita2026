@@ -200,3 +200,21 @@ class UnidadesMedidaModelTest(TestCase):
         self.assertEqual(unidad.nombre, "Litro")
         self.assertEqual(unidad.abreviatura, "L")
         self.assertTrue(unidad.activo)
+
+
+class ProductosNombrePropertyTest(TestCase):
+    """Test para la propiedad alias 'nombre' de Productos."""
+
+    def test_nombre_property_alias(self):
+        """nombre property devuelve el mismo valor que descripcion."""
+        impuesto = Impuestos.objects.create(
+            nombre_impuesto='IVA Nom', porcentaje=10,
+            vigente_desde=timezone.now().date(), activo=True,
+        )
+        cat = Categorias.objects.create(nombre='Cat Nom', activo=True)
+        producto = Productos.objects.create(
+            descripcion='Producto Alias Nombre',
+            stock_minimo=0, activo=True,
+            id_categoria=cat, id_impuesto=impuesto,
+        )
+        self.assertEqual(producto.nombre, 'Producto Alias Nombre')

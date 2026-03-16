@@ -6,7 +6,7 @@ Sprint 2 - Backend Coverage Improvement
 from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
-from .models import Tarjetas
+from .models import Tarjetas, CargasSaldo
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios
 
@@ -197,3 +197,18 @@ class TarjetasModelTest(TestCase):
 
         expected = f"Tarjeta T109 - {self.hijo}"
         self.assertEqual(str(tarjeta), expected)
+
+
+class CargasSaldoModelTest(TestCase):
+    """Tests para propiedades alias de CargasSaldo."""
+
+    def test_codigo_referencia_alias(self):
+        """codigo_referencia es alias de custom_identifier."""
+        from django.utils import timezone as tz
+        carga = CargasSaldo.objects.create(
+            fecha_carga=tz.now(),
+            monto_cargado=Decimal('50000'),
+            estado='Completado',
+            custom_identifier='REF-2026-001',
+        )
+        self.assertEqual(carga.codigo_referencia, 'REF-2026-001')

@@ -840,3 +840,37 @@ class ContabilidadModelsIntegrationTest(TestCase):
         # Contar documentos asociados al timbrado
         documentos_count = DocumentosTributarios.objects.filter(nro_timbrado=timbrado).count()
         self.assertEqual(documentos_count, 1)
+
+
+class ContabilidadModelsStrTest(TestCase):
+    """Tests __str__ para modelos de contabilidad sin str coverage."""
+
+    def setUp(self):
+        self.punto_expedicion = PuntosExpedicion.objects.create(
+            codigo_establecimiento='001',
+            codigo_punto_expedicion='001',
+        )
+        self.timbrado = Timbrados.objects.create(
+            nro_timbrado=55555555,
+            tipo_documento='factura',
+            fecha_inicio=date.today(),
+            fecha_fin=date.today() + timedelta(days=365),
+            nro_inicial=1,
+            nro_final=9999,
+            es_electronico=1,
+            activo=True,
+            id_punto=self.punto_expedicion,
+        )
+
+    def test_str_timbrado(self):
+        self.assertIn('#', str(self.timbrado))
+
+    def test_str_documentos_tributarios(self):
+        doc = DocumentosTributarios.objects.create(
+            nro_secuencial=999,
+            fecha_emision=timezone.now(),
+            monto_total=Decimal('50000.00'),
+            nro_timbrado=self.timbrado,
+            tipo_documento='factura',
+        )
+        self.assertIn('#', str(doc))

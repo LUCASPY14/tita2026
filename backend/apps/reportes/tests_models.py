@@ -817,6 +817,22 @@ class PlantillasTareaModelTest(BaseReportesModelTest):
         expected_str = f"PlantillasTarea #{plantilla.pk}"
         self.assertEqual(str(plantilla), expected_str)
 
+    def test_id_empleado_setter_method(self):
+        """Debe cubrir el método id_empleado_setter (línea 123)"""
+        plantilla = PlantillasTarea.objects.create(
+            nombre='Tarea Setter',
+            tipo_tarea='test',
+            comando='cmd',
+            parametros={},
+            frecuencia='manual',
+            cron='0 0 * * *',
+            timeout=60,
+            max_reintentos=1,
+            created_at=timezone.now()
+        )
+        plantilla.id_empleado_setter(self.empleado)
+        self.assertEqual(plantilla.created_by, self.empleado)
+
 
 class EjecucionesTareaModelTest(BaseReportesModelTest):
     """Tests para modelo EjecucionesTarea"""
@@ -1228,3 +1244,45 @@ class DestinatariosTareaModelTest(BaseReportesModelTest):
         
         self.assertEqual(destinatarios_inicio.count(), 3)
         self.assertEqual(destinatarios_error.count(), 2)
+
+    def test_property_aliases(self):
+        """Debe cubrir los getters y setters de las propiedades alias (líneas 212-248)"""
+        destinatario = DestinatariosTarea.objects.create(
+            notif_inicio=0,
+            notif_fin=0,
+            notif_error=0,
+            id_empleado=self.empleado,
+            id_plantilla=self.plantilla
+        )
+
+        # Test getters
+        self.assertFalse(destinatario.notificar_inicio)
+        self.assertFalse(destinatario.notificar_fin)
+        self.assertFalse(destinatario.notificar_exito)
+        self.assertFalse(destinatario.notificar_error)
+        self.assertEqual(destinatario.id_plantilla_tarea, self.plantilla)
+
+        # Test setters
+        destinatario.notificar_inicio = True
+        self.assertEqual(destinatario.notif_inicio, 1)
+
+        destinatario.notificar_fin = True
+        self.assertEqual(destinatario.notif_fin, 1)
+
+        destinatario.notificar_exito = False
+        self.assertEqual(destinatario.notif_fin, 0)
+
+        destinatario.notificar_error = True
+        self.assertEqual(destinatario.notif_error, 1)
+
+        destinatario.id_plantilla_tarea = self.plantilla
+        self.assertEqual(destinatario.id_plantilla, self.plantilla)
+
+    def test_manager_con_kwargs_alias(self):
+        """DestinatariosTareaManager con notificar_fin kwarg cubre linea 188."""
+        destinatario = DestinatariosTarea.objects.create(
+            notificar_fin=True,
+            id_empleado=self.empleado2,
+            id_plantilla=self.plantilla,
+        )
+        self.assertEqual(destinatario.notif_fin, 1)
