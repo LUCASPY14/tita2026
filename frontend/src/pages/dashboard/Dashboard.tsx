@@ -184,7 +184,7 @@ const Dashboard: React.FC = () => {
         />
         <StatCard
           title="Tarjetas Activas"
-          value={kpis ? kpis.tarjetas_activas.toLocaleString('es-PY') : '—'}
+          value={kpis ? (kpis.tarjetas_activas ?? 0).toLocaleString('es-PY') : '—'}
           icon={Users}
           color="green"
           loading={cargando && !kpis}
