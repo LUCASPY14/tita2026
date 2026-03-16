@@ -799,3 +799,68 @@ class DashboardRequestSerializerTest(TestCase):
             'tipo_dashboard': 'inexistente',
         })
         self.assertFalse(s.is_valid())
+
+
+class PlantillasReporteSerializerMissingMethodsTest(TestCase):
+    """Tests for uncovered validator/getter methods of PlantillasReporteSerializer (lines 84, 88, 116, 120-121)"""
+
+    def setUp(self):
+        self.serializer = PlantillasReporteSerializer()
+
+    def test_validate_tipo_reporte_delegacion(self):
+        """validate_tipo_reporte debe delegar a validar_tipo_reporte"""
+        with patch('apps.reportes.serializers.validar_tipo_reporte', return_value='ventas') as mock_v:
+            result = self.serializer.validate_tipo_reporte('ventas')
+            mock_v.assert_called_once_with('ventas')
+            self.assertEqual(result, 'ventas')
+
+    def test_validate_configuracion_json_delegacion(self):
+        """validate_configuracion_json debe delegar a validar_configuracion_json"""
+        config = {'key': 'value'}
+        with patch('apps.reportes.serializers.validar_configuracion_json', return_value=config) as mock_v:
+            result = self.serializer.validate_configuracion_json(config)
+            mock_v.assert_called_once_with(config)
+            self.assertEqual(result, config)
+
+    def test_get_total_ejecuciones(self):
+        """get_total_ejecuciones debe filtrar y contar ejecuciones completadas"""
+        obj = Mock()
+        obj.ejecuciones.filter.return_value.count.return_value = 5
+        result = self.serializer.get_total_ejecuciones(obj)
+        self.assertEqual(result, 5)
+
+    def test_get_ultima_ejecucion_con_ejecucion(self):
+        """get_ultima_ejecucion debe retornar fecha_ejecucion de la última"""
+        ultima = Mock()
+        ultima.fecha_ejecucion = datetime(2024, 1, 15)
+        obj = Mock()
+        obj.ejecuciones.order_by.return_value.first.return_value = ultima
+        result = self.serializer.get_ultima_ejecucion(obj)
+        self.assertEqual(result, ultima.fecha_ejecucion)
+
+    def test_get_ultima_ejecucion_sin_ejecucion(self):
+        """get_ultima_ejecucion debe retornar None si no hay ejecuciones"""
+        obj = Mock()
+        obj.ejecuciones.order_by.return_value.first.return_value = None
+        result = self.serializer.get_ultima_ejecucion(obj)
+        self.assertIsNone(result)
+
+
+class DashboardsSerializerValidateNoDictTest(TestCase):
+    """Test validate_configuracion_dashboard when value is not a dict (line 223)"""
+
+    def test_validate_configuracion_dashboard_no_dict(self):
+        s = DashboardsSerializer()
+        with self.assertRaises(ValidationError):
+            s.validate_configuracion_dashboard("not a dict")
+
+
+class PlantillasTareaFrecuenciaValidatorTest(TestCase):
+    """Test validate_frecuencia_ejecucion delegation in PlantillasTareaSerializer (line 443)"""
+
+    def test_validate_frecuencia_ejecucion_delegacion(self):
+        s = PlantillasTareaSerializer()
+        with patch('apps.reportes.serializers.validar_frecuencia_ejecucion', return_value='diaria') as mock_v:
+            result = s.validate_frecuencia_ejecucion('diaria')
+            mock_v.assert_called_once_with('diaria')
+            self.assertEqual(result, 'diaria')

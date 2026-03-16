@@ -114,11 +114,23 @@ class IniciarRecargaBancardEdgeCasesTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_monto_cero_retorna_400(self):
-        """Monto = 0 → 400"""
+        """Monto = 0 → 400 (falsy, faltan datos)"""
         url = "/api/v1/cargas-saldo/init/"
         data = {
             "hijo_id": self.hijo_con_tarjeta.id_hijo,
             "monto": 0,
+            "return_url": "https://example.com/success",
+            "cancel_url": "https://example.com/cancel",
+        }
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_monto_negativo_retorna_400(self):
+        """Monto negativo → 400 (pasa all() pero falla validación)"""
+        url = "/api/v1/cargas-saldo/init/"
+        data = {
+            "hijo_id": self.hijo_con_tarjeta.id_hijo,
+            "monto": -100,
             "return_url": "https://example.com/success",
             "cancel_url": "https://example.com/cancel",
         }
