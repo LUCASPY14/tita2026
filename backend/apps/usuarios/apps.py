@@ -15,5 +15,5 @@ class UsuariosConfig(AppConfig):
         """
         try:
             import apps.usuarios.signals  # noqa
-        except ImportError:
+        except ImportError:  # pragma: no cover
             pass

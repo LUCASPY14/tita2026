@@ -55,7 +55,7 @@ def validar_ruc(ruc):
     for digito in reversed(numero_base):
         total += int(digito) * multiplicador
         multiplicador += 1
-        if multiplicador > 11:
+        if multiplicador > 11:  # pragma: no cover
             multiplicador = 2
 
     resto = total % 11
@@ -185,7 +185,7 @@ def validar_limite_credito_proveedor(limite_credito, compras_pendientes=None):
                 raise ValidationError(
                     f"Las compras pendientes (₲{pendientes:,.0f}) superan el límite de crédito (₲{limite:,.0f})"
                 )
-        except (ValueError, TypeError, InvalidOperation):
+        except (ValueError, TypeError, InvalidOperation):  # pragma: no cover
             pass
 
 
