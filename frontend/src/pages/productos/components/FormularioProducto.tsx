@@ -330,13 +330,13 @@ const FormularioProducto: React.FC<FormularioProductoProps> = ({
               <div className="flex items-center">
                 <input
                   type="checkbox"
-                  id="activo"
-                  name="activo"
+                  id="estado"
+                  name="estado"
                   checked={formData.estado}
                   onChange={handleChange}
                   className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
                 />
-                <label htmlFor="activo" className="ml-2 text-sm text-gray-700">
+                <label htmlFor="estado" className="ml-2 text-sm text-gray-700">
                   Producto activo
                 </label>
               </div>

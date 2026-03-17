@@ -27,7 +27,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
     ciudad: '',
     pais: 'Paraguay',
     id_rol: 0,
-    activo: true,
+    estado: true,
   });
 
   const [errores, setErrores] = useState<Record<string, string>>({});
@@ -48,7 +48,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
         ciudad: usuario.ciudad || '',
         pais: usuario.pais || 'Paraguay',
         id_rol: usuario.id_rol,
-        activo: usuario.activo,
+        estado: usuario.estado,
       });
     }
   }, [usuario]);
@@ -228,7 +228,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
           direccion: formData.direccion || undefined,
           ciudad: formData.ciudad || undefined,
           id_rol: formData.id_rol,
-          activo: formData.activo,
+          estado: formData.estado,
         };
 
         await usersService.update(usuario.id_empleado, updateData);
@@ -445,13 +445,13 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="activo"
-                name="activo"
-                checked={formData.activo}
+                id="estado"
+                name="estado"
+                checked={formData.estado}
                 onChange={handleChange}
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <label htmlFor="activo" className="text-sm font-medium text-gray-700">
+              <label htmlFor="estado" className="text-sm font-medium text-gray-700">
                 Usuario activo
               </label>
               <p className="text-xs text-gray-500">

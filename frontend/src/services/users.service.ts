@@ -15,7 +15,7 @@ export interface Usuario {
   ciudad?: string;
   pais?: string;
   fecha_ingreso: string;
-  activo: boolean;
+  estado: boolean;
   fecha_baja?: string;
   id_rol: number;
   rol_nombre?: string; // viene del serializer
@@ -28,7 +28,7 @@ export interface Rol {
   id_rol: number;
   nombre_rol: string;
   descripcion?: string;
-  activo: boolean;
+  estado: boolean;
 }
 
 /**
@@ -59,7 +59,7 @@ export interface UpdateUsuarioDto {
   ciudad?: string;
   pais?: string;
   id_rol?: number;
-  activo?: boolean;
+  estado?: boolean;
 }
 
 /**
@@ -113,7 +113,7 @@ export const usersService = {
    */
   deactivate: async (id: number): Promise<Usuario> => {
     const response = await api.patch<Usuario>(`/empleados/${id}/`, {
-      activo: false,
+      estado: false,
       fecha_baja: new Date().toISOString()
     });
     return response.data;
@@ -124,7 +124,7 @@ export const usersService = {
    */
   activate: async (id: number): Promise<Usuario> => {
     const response = await api.patch<Usuario>(`/empleados/${id}/`, {
-      activo: true,
+      estado: true,
       fecha_baja: null
     });
     return response.data;
@@ -161,7 +161,7 @@ export const rolesService = {
    * Obtener roles activos
    */
   getActive: async (): Promise<Rol[]> => {
-    const response = await api.get<{count: number; next: string | null; previous: string | null; results: Rol[]}>('/roles/?activo=true');
+    const response = await api.get<{count: number; next: string | null; previous: string | null; results: Rol[]}>('/roles/?estado=true');
     return response.data.results;
   },
 

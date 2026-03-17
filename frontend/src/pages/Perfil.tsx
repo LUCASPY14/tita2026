@@ -32,7 +32,7 @@ interface EmpleadoPerfil {
   ciudad: string;
   pais: string;
   fecha_ingreso: string;
-  activo: boolean;
+  estado: boolean;
   rol_nombre: string;
 }
 
@@ -205,8 +205,8 @@ const Perfil: React.FC = () => {
               icon={<CheckCircle className="h-4 w-4 text-gray-400" />}
               label="Estado"
               value={
-                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${empleado?.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {empleado?.activo ? 'Activo' : 'Inactivo'}
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${empleado?.estado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {empleado?.estado ? 'Activo' : 'Inactivo'}
                 </span>
               }
             />

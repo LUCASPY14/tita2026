@@ -55,7 +55,7 @@ const UserTable: React.FC<UserTableProps> = ({ onEditar, onActualizarLista }) =>
 
   const handleToggleEstado = async (usuario: Usuario) => {
     try {
-      if (usuario.activo) {
+      if (usuario.estado) {
         await usersService.deactivate(usuario.id_empleado);
         toast.success('Usuario desactivado exitosamente');
       } else {
@@ -135,7 +135,7 @@ const UserTable: React.FC<UserTableProps> = ({ onEditar, onActualizarLista }) =>
     }
 
     // Filtro de estado activo
-    if (filtroActivo !== undefined && usuario.activo !== filtroActivo) {
+    if (filtroActivo !== undefined && usuario.estado !== filtroActivo) {
       return false;
     }
 
@@ -211,13 +211,13 @@ const UserTable: React.FC<UserTableProps> = ({ onEditar, onActualizarLista }) =>
         <div className="rounded-lg bg-gradient-to-br from-green-50 to-green-100 p-4">
           <div className="text-sm font-medium text-green-600">Activos</div>
           <div className="text-2xl font-bold text-green-900">
-            {usuarios.filter(u => u.activo).length}
+            {usuarios.filter(u => u.estado).length}
           </div>
         </div>
         <div className="rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 p-4">
           <div className="text-sm font-medium text-gray-600">Inactivos</div>
           <div className="text-2xl font-bold text-gray-900">
-            {usuarios.filter(u => !u.activo).length}
+            {usuarios.filter(u => !u.estado).length}
           </div>
         </div>
         <div className="rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4">
@@ -323,8 +323,8 @@ const UserTable: React.FC<UserTableProps> = ({ onEditar, onActualizarLista }) =>
                     {formatearFecha(usuario.fecha_ingreso)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
-                    <Badge variant={usuario.activo ? 'success' : 'danger'}>
-                      {usuario.activo ? 'Activo' : 'Inactivo'}
+                    <Badge variant={usuario.estado ? 'success' : 'danger'}>
+                      {usuario.estado ? 'Activo' : 'Inactivo'}
                     </Badge>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
@@ -347,11 +347,11 @@ const UserTable: React.FC<UserTableProps> = ({ onEditar, onActualizarLista }) =>
                         onClick={() => handleToggleEstado(usuario)}
                         className={clsx(
                           'hover:opacity-80',
-                          usuario.activo ? 'text-orange-600' : 'text-green-600'
+                          usuario.estado ? 'text-orange-600' : 'text-green-600'
                         )}
-                        title={usuario.activo ? 'Desactivar usuario' : 'Activar usuario'}
+                        title={usuario.estado ? 'Desactivar usuario' : 'Activar usuario'}
                       >
-                        {usuario.activo ? (
+                        {usuario.estado ? (
                           <ToggleRight className="h-5 w-5" />
                         ) : (
                           <ToggleLeft className="h-5 w-5" />
