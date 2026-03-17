@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Card, Button, Badge, Spinner } from '../../../components/common';
 import { clientesService } from '../../../services/clientes.service';
+import { ListaHijos } from '../components';
 import type { Cliente, CuentaCorriente } from '../../../types';
 
 interface DetalleClienteProps {
@@ -250,6 +251,12 @@ const DetalleCliente: React.FC<DetalleClienteProps> = ({ cliente, onEditar }) =>
           </div>
         )}
       </Card>
+
+      {/* Gestión de Hijos */}
+      <ListaHijos 
+        clienteId={cliente.id_cliente}
+        clienteNombre={`${cliente.nombres} ${cliente.apellidos}`}
+      />
     </div>
   );
 };
