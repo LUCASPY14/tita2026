@@ -36,8 +36,19 @@ export default function CartScreen({ route, navigation }) {
     }
     setLoading(true);
     try {
-      const items = cart.map((i) => ({ producto: i.id, cantidad: i.cantidad }));
-      await api.post('/pedidos/', { items, notas: notas.trim() || undefined });
+      const detalles = cart.map((item) => ({
+        id_producto: item.id,
+        cantidad: item.cantidad,
+        precio_unitario: Number(item.precio),
+      }));
+      
+      const ventaData = {
+        tipo_venta: 'Contado',
+        detalles,
+        ...(notas.trim() && { observaciones: notas.trim() }),
+      };
+
+      await api.post('/ventas/', ventaData);
       setParentCart?.([]);
       Alert.alert('¡Pedido confirmado!', 'Tu pedido fue registrado. ¡Buen provecho!', [
         { text: 'OK', onPress: () => navigation.navigate('Menu') },
@@ -45,6 +56,7 @@ export default function CartScreen({ route, navigation }) {
     } catch (error) {
       const mensaje =
         error.response?.data?.detail ||
+        error.response?.data?.non_field_errors?.[0] ||
         JSON.stringify(error.response?.data) ||
         'No se pudo enviar el pedido.';
       Alert.alert('Error', mensaje);
