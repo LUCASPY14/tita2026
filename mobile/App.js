@@ -7,6 +7,9 @@ import { ActivityIndicator, View } from 'react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import CartScreen from './src/screens/CartScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import RestrictionsScreen from './src/screens/RestrictionsScreen';
+import AddRestrictionScreen from './src/screens/AddRestrictionScreen';
 import { isAuthenticated } from './src/services/auth.service';
 
 const Stack = createNativeStackNavigator();
@@ -55,6 +58,21 @@ export default function App() {
           name="Cart"
           component={CartScreen}
           options={{ title: 'Mi Pedido' }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{ title: 'Perfil', headerShown: false }}
+        />
+        <Stack.Screen
+          name="Restrictions"
+          component={RestrictionsScreen}
+          options={{ title: 'Restricciones', headerShown: false }}
+        />
+        <Stack.Screen
+          name="AddRestriction"
+          component={AddRestrictionScreen}
+          options={{ title: 'Restricción', headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>

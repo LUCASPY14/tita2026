@@ -39,6 +39,9 @@ export default function MenuScreen({ navigation }) {
     navigation.setOptions({
       headerRight: () => (
         <View style={styles.headerButtons}>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+            <Text style={styles.profileIcon}>👤</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Cart', { cart, setCart })}>
             <Text style={styles.cartIcon}>🛒 {cart.reduce((s, i) => s + i.cantidad, 0)}</Text>
           </TouchableOpacity>
@@ -163,6 +166,7 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 10, color: '#888' },
   emptyText: { color: '#999', fontSize: 16 },
   headerButtons: { flexDirection: 'row', alignItems: 'center', gap: 12, marginRight: 4 },
+  profileIcon: { fontSize: 18, color: '#fff' },
   cartIcon: { fontSize: 18, color: '#fff' },
   logoutBtn: { paddingHorizontal: 4 },
   logoutText: { color: '#fff', fontSize: 14 },
