@@ -5,6 +5,7 @@ import type {
   Venta,
   VentaData,
   MedioPago,
+  PagoVenta,
   PaginatedResponse 
 } from '../types';
 
@@ -141,5 +142,25 @@ export const posService = {
   }> => {
     const response = await api.post('/promociones/validar_codigo/', data);
     return response.data;
+  },
+
+  // Pagos de venta (cobros de crédito)
+  registrarPago: async (data: {
+    id_venta: number;
+    id_medio_pago: number;
+    monto: number;
+    ref_pago_pos?: string;
+    ref_pg_transf?: string;
+    banco_emisor?: string;
+  }): Promise<PagoVenta> => {
+    const response = await api.post<PagoVenta>('/pagos-venta/', data);
+    return response.data;
+  },
+
+  getPagosPorVenta: async (idVenta: number): Promise<PagoVenta[]> => {
+    const response = await api.get<PaginatedResponse<PagoVenta>>('/pagos-venta/', {
+      params: { id_venta: idVenta, page_size: 100 },
+    });
+    return response.data.results || [];
   },
 };

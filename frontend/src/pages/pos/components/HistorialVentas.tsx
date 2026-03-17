@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Filter, RefreshCw, Eye, Calendar, TrendingUp,
-  ChevronLeft, ChevronRight, DollarSign, ShoppingBag,
+  ChevronLeft, ChevronRight, DollarSign, ShoppingBag, Banknote,
 } from 'lucide-react';
 import { Input, Button, Spinner, Badge, EmptyState } from '../../../components/common';
 import { posService } from '../../../services/pos.service';
-import type { Venta } from '../../../types';
+import type { Venta, MedioPago } from '../../../types';
 
 const ESTADOS_PAGO = ['Pendiente', 'Parcial', 'Pagado'] as const;
 const TIPOS_VENTA = ['Contado', 'Credito'] as const;
@@ -26,6 +26,17 @@ const HistorialVentas: React.FC = () => {
 
   const [ventaDetalle, setVentaDetalle] = useState<Venta | null>(null);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+
+  // Estado para registro de pago
+  const [ventaPago, setVentaPago] = useState<Venta | null>(null);
+  const [mediosPago, setMediosPago] = useState<MedioPago[]>([]);
+  const [montoPago, setMontoPago] = useState('');
+  const [medioPagoId, setMedioPagoId] = useState('');
+  const [refPagoPos, setRefPagoPos] = useState('');
+  const [refPgTransf, setRefPgTransf] = useState('');
+  const [bancoEmisor, setBancoEmisor] = useState('');
+  const [procesandoPago, setProcesandoPago] = useState(false);
+  const [errorPago, setErrorPago] = useState('');
 
   const cargarVentas = useCallback(async (pagina = 1, resetear = false) => {
     setCargando(true);
@@ -55,6 +66,66 @@ const HistorialVentas: React.FC = () => {
   useEffect(() => {
     cargarVentas(paginaActual);
   }, [paginaActual]);
+
+  useEffect(() => {
+    posService.getMediosPago().then(setMediosPago).catch(() => {});
+  }, []);
+
+  const abrirModalPago = (venta: Venta) => {
+    setVentaPago(venta);
+    setMontoPago(String(venta.saldo_pendiente));
+    setMedioPagoId('');
+    setRefPagoPos('');
+    setRefPgTransf('');
+    setBancoEmisor('');
+    setErrorPago('');
+  };
+
+  const handleRegistrarPago = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ventaPago || !medioPagoId || !montoPago) return;
+    const monto = parseFloat(montoPago);
+    if (isNaN(monto) || monto <= 0) {
+      setErrorPago('Ingrese un monto válido mayor a cero.');
+      return;
+    }
+    if (monto > ventaPago.saldo_pendiente) {
+      setErrorPago(`El monto no puede superar el saldo pendiente (Gs. ${ventaPago.saldo_pendiente.toLocaleString('es-PY')}).`);
+      return;
+    }
+    const medioSeleccionado = mediosPago.find(m => m.id_medio_pago === Number(medioPagoId));
+    const esTransferencia = medioSeleccionado?.nombre.toLowerCase().includes('transfer');
+    const esPOS = !esTransferencia && medioSeleccionado && (
+      medioSeleccionado.nombre.toLowerCase().includes('tarjeta') ||
+      medioSeleccionado.nombre.toLowerCase().includes('pos') ||
+      medioSeleccionado.nombre.toLowerCase().includes('débit') ||
+      medioSeleccionado.nombre.toLowerCase().includes('debit') ||
+      medioSeleccionado.nombre.toLowerCase().includes('crédit') ||
+      medioSeleccionado.nombre.toLowerCase().includes('credit')
+    );
+    if (esTransferencia && !refPgTransf.trim()) {
+      setErrorPago('Ingrese el número de referencia de la transferencia.');
+      return;
+    }
+    setProcesandoPago(true);
+    setErrorPago('');
+    try {
+      await posService.registrarPago({
+        id_venta: ventaPago.id_venta,
+        id_medio_pago: Number(medioPagoId),
+        monto,
+        ...(esPOS && refPagoPos.trim() ? { ref_pago_pos: refPagoPos.trim() } : {}),
+        ...(esTransferencia ? { ref_pg_transf: refPgTransf.trim(), ...(bancoEmisor.trim() ? { banco_emisor: bancoEmisor.trim() } : {}) } : {}),
+      });
+      setVentaPago(null);
+      cargarVentas(paginaActual);
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || err?.response?.data?.non_field_errors?.[0] || 'Error al registrar el pago.';
+      setErrorPago(String(msg));
+    } finally {
+      setProcesandoPago(false);
+    }
+  };
 
   const handleBuscar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,14 +369,26 @@ const HistorialVentas: React.FC = () => {
                     {getEstadoPagoBadge(venta.estado_pago)}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <button
-                      type="button"
-                      onClick={() => setVentaDetalle(venta)}
-                      className="rounded-lg p-1.5 text-gray-400 hover:bg-amber-100 hover:text-amber-700 transition-colors"
-                      title="Ver detalle"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setVentaDetalle(venta)}
+                        className="rounded-lg p-1.5 text-gray-400 hover:bg-amber-100 hover:text-amber-700 transition-colors"
+                        title="Ver detalle"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      {venta.saldo_pendiente > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => abrirModalPago(venta)}
+                          className="rounded-lg p-1.5 text-red-400 hover:bg-green-100 hover:text-green-700 transition-colors"
+                          title="Registrar pago"
+                        >
+                          <Banknote className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -459,6 +542,135 @@ const HistorialVentas: React.FC = () => {
                 Cerrar
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Registro de Pago */}
+      {ventaPago && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setVentaPago(null)}>
+          <div
+            className="w-full max-w-md rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Registrar Pago</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Factura {ventaPago.nro_factura_venta ? `#${ventaPago.nro_factura_venta}` : `ID ${ventaPago.id_venta}`}
+                  {' · '}Cliente: {ventaPago.cliente_nombre || ventaPago.hijo_nombre || '—'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVentaPago(null)}
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleRegistrarPago} className="space-y-4 p-6">
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3 flex justify-between text-sm">
+                <span className="text-red-600 font-medium">Saldo pendiente:</span>
+                <span className="font-bold text-red-700">{formatearMoneda(ventaPago.saldo_pendiente)}</span>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Monto a pagar *</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={ventaPago.saldo_pendiente}
+                  step="1"
+                  value={montoPago}
+                  onChange={(e) => setMontoPago(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                  placeholder={`Máx. ${ventaPago.saldo_pendiente.toLocaleString('es-PY')}`}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Medio de pago *</label>
+                <select
+                  value={medioPagoId}
+                  onChange={(e) => { setMedioPagoId(e.target.value); setRefPagoPos(''); setRefPgTransf(''); setBancoEmisor(''); }}
+                  required
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                >
+                  <option value="">Seleccionar...</option>
+                  {mediosPago.map(m => (
+                    <option key={m.id_medio_pago} value={m.id_medio_pago}>{m.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Campos condicionales según medio de pago */}
+              {(() => {
+                const medio = mediosPago.find(m => m.id_medio_pago === Number(medioPagoId));
+                if (!medio) return null;
+                const nombre = medio.nombre.toLowerCase();
+                const esTransferencia = nombre.includes('transfer');
+                const esPOS = !esTransferencia && (nombre.includes('tarjeta') || nombre.includes('pos') || nombre.includes('debit') || nombre.includes('crédit') || nombre.includes('credit'));
+                return (
+                  <>
+                    {esPOS && (
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Ref. POS / Comprobante</label>
+                        <input
+                          type="text"
+                          value={refPagoPos}
+                          onChange={(e) => setRefPagoPos(e.target.value)}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                          placeholder="N° de referencia del terminal"
+                          maxLength={100}
+                        />
+                      </div>
+                    )}
+                    {esTransferencia && (
+                      <>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-gray-700">N° Referencia transferencia *</label>
+                          <input
+                            type="text"
+                            value={refPgTransf}
+                            onChange={(e) => setRefPgTransf(e.target.value)}
+                            required
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                            placeholder="Número de operación bancaria"
+                            maxLength={100}
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-gray-700">Banco emisor</label>
+                          <input
+                            type="text"
+                            value={bancoEmisor}
+                            onChange={(e) => setBancoEmisor(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                            placeholder="Ej: Banco Continental"
+                            maxLength={100}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
+
+              {errorPago && (
+                <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{errorPago}</p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="secondary" onClick={() => setVentaPago(null)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button type="submit" variant="primary" className="flex-1" disabled={procesandoPago}>
+                  {procesandoPago ? <Spinner size="sm" /> : 'Registrar Pago'}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
