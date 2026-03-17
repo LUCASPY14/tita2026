@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Spinner } from '../../../components/common';
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { almuerzosService } from '../../../services/almuerzos.service';
@@ -15,7 +15,7 @@ const GestionPlanes: React.FC = () => {
     descripcion: '',
     precio_mensual: '',
     dias_semana_incluidos: '',
-    activo: true
+    estado: true
   });
   const [guardando, setGuardando] = useState(false);
 
@@ -42,7 +42,7 @@ const GestionPlanes: React.FC = () => {
       descripcion: '',
       precio_mensual: '',
       dias_semana_incluidos: '',
-      activo: true
+      estado: true
     });
     setPlanEditando(null);
     setMostrarFormulario(true);
@@ -54,7 +54,7 @@ const GestionPlanes: React.FC = () => {
       descripcion: plan.descripcion || '',
       precio_mensual: plan.precio_mensual.toString(),
       dias_semana_incluidos: plan.dias_semana_incluidos,
-      activo: plan.activo
+      estado: plan.estado
     });
     setPlanEditando(plan);
     setMostrarFormulario(true);
@@ -80,7 +80,7 @@ const GestionPlanes: React.FC = () => {
         descripcion: formData.descripcion || undefined,
         precio_mensual: parseFloat(formData.precio_mensual),
         dias_semana_incluidos: formData.dias_semana_incluidos,
-        activo: formData.activo
+        estado: formData.estado
       };
 
       if (planEditando) {
@@ -103,8 +103,8 @@ const GestionPlanes: React.FC = () => {
 
   const handleToggleEstado = async (plan: PlanAlmuerzo) => {
     try {
-      await almuerzosService.toggleEstadoPlan(plan.id_plan_almuerzo, !plan.activo);
-      toast.success(`Plan ${!plan.activo ? 'activado' : 'desactivado'}`);
+      await almuerzosService.toggleEstadoPlan(plan.id_plan_almuerzo, !plan.estado);
+      toast.success(`Plan ${!plan.estado ? 'activado' : 'desactivado'}`);
       cargarPlanes();
     } catch (error) {
       console.error('Error al cambiar estado:', error);
@@ -200,8 +200,8 @@ const GestionPlanes: React.FC = () => {
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  checked={formData.activo}
-                  onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
+                  checked={formData.estado}
+                  onChange={(e) => setFormData({ ...formData, estado: e.target.checked })}
                   className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
                 />
                 <span className="text-sm font-medium text-gray-700">Plan activo</span>
@@ -305,12 +305,12 @@ const GestionPlanes: React.FC = () => {
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                          plan.activo
+                          plan.estado
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}
                       >
-                        {plan.activo ? 'Activo' : 'Inactivo'}
+                        {plan.estado ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -324,10 +324,10 @@ const GestionPlanes: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleToggleEstado(plan)}
-                          className={plan.activo ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800'}
-                          title={plan.activo ? 'Desactivar' : 'Activar'}
+                          className={plan.estado ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800'}
+                          title={plan.estado ? 'Desactivar' : 'Activar'}
                         >
-                          {plan.activo ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+                          {plan.estado ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
                         </button>
                         <button
                           onClick={() => handleEliminar(plan)}

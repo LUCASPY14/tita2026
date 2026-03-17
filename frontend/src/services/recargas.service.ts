@@ -33,7 +33,7 @@ export interface HijoParams {
   page_size?: number;
   search?: string;
   id_cliente_responsable?: number;
-  activo?: boolean;
+  estado?: boolean;
 }
 
 export interface TarjetaParams {

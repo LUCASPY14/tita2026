@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Edit, Package, Tag, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
 import { productosService } from '../../../services/productos.service';
 import { Producto, PrecioPorLista } from '../../../types';
@@ -125,12 +125,12 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
                   <div className="mt-2">
                     <span
                       className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        producto.activo
+                        producto.estado
                           ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {producto.activo ? 'Activo' : 'Inactivo'}
+                      {producto.estado ? 'Activo' : 'Inactivo'}
                     </span>
                   </div>
                 </div>
@@ -367,7 +367,7 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-600">Estado del Producto</p>
                   <p className="mt-1 text-sm text-gray-900">
-                    {producto.activo ? '✓ Activo' : '✗ Inactivo'}
+                    {producto.estado ? '✓ Activo' : '✗ Inactivo'}
                   </p>
                 </div>
               </div>

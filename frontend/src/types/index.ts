@@ -21,7 +21,7 @@ export interface Cliente {
   telefono?: string;
   email?: string;
   limite_credito?: number;
-  activo: boolean;
+  estado: boolean;
   fecha_registro: string;
   id_lista: number;
   id_tipo_cliente: number;
@@ -37,7 +37,7 @@ export interface TipoCliente {
   id_tipo_cliente: number;
   nombre: string;
   descripcion?: string;
-  activo: boolean;
+  estado: boolean;
 }
 
 export interface CuentaCorriente {
@@ -72,7 +72,7 @@ export interface Hijo {
   fecha_nacimiento?: string;
   grado?: string;
   foto_perfil?: string;
-  activo: boolean;
+  estado: boolean;
   id_cliente_responsable: number;
   nombre_completo?: string;
 }
@@ -120,7 +120,7 @@ export interface Producto {
   descripcion: string;
   stock_minimo: number;
   permite_stock_negativo: boolean;
-  activo: boolean;
+  estado: boolean;
   id_categoria: number;
   id_impuesto: number;
   id_unidad_medida?: number;
@@ -136,7 +136,7 @@ export interface Producto {
 export interface Categoria {
   id_categoria: number;
   nombre: string;
-  activo: boolean;
+  estado: boolean;
   id_categoria_padre?: number;
   // Propiedades calculadas
   es_categoria_raiz?: boolean;
@@ -147,7 +147,7 @@ export interface UnidadMedida {
   id_unidad_medida: number;
   nombre: string;
   abreviatura: string;
-  activo: boolean;
+  estado: boolean;
 }
 
 export interface ListaPrecio {
@@ -155,7 +155,7 @@ export interface ListaPrecio {
   nombre_lista: string;
   fecha_vigencia?: string;
   moneda: string;
-  activo: boolean;
+  estado: boolean;
 }
 
 export interface PrecioPorLista {
@@ -193,7 +193,7 @@ export interface MedioPago {
   id_medio_pago: number;
   nombre: string;
   genera_comision: boolean;
-  activo: boolean;
+  estado: boolean;
 }
 
 export interface VentaData {
@@ -225,6 +225,24 @@ export interface Venta {
   id_hijo?: number;
   cliente_nombre?: string;
   hijo_nombre?: string;
+  // Campos IVA fiscales
+  iva_10?: number;
+  iva_5?: number;
+  monto_exenta?: number;
+  monto_gravada_10?: number;
+  monto_gravada_5?: number;
+}
+
+export interface PagoVenta {
+  id_pago: number;
+  id_venta: number;
+  id_medio_pago: number;
+  monto: number;
+  fecha_pago: string;
+  ref_pago_pos?: string;
+  ref_pg_transf?: string;
+  banco_emisor?: string;
+  medio_pago_nombre?: string;
 }
 
 
@@ -238,7 +256,7 @@ export interface Proveedor {
   email?: string;
   direccion?: string;
   ciudad?: string;
-  activo: boolean;
+  estado: boolean;
   fecha_registro: string;
 }
 
@@ -325,7 +343,7 @@ export interface PlanAlmuerzo {
   precio_mensual: number;
   dias_semana_incluidos: string;
   fecha_creacion?: string;
-  activo: boolean;
+  estado: boolean;
 }
 
 export interface TipoAlmuerzo {
@@ -337,7 +355,7 @@ export interface TipoAlmuerzo {
   incluye_postre: boolean;
   incluye_bebida: boolean;
   fecha_creacion: string;
-  activo: boolean;
+  estado: boolean;
 }
 
 export interface SuscripcionAlmuerzo {
@@ -393,7 +411,7 @@ export interface Alergeno {
   palabras_clave: string[];
   nivel_severidad: 'Bajo' | 'Medio' | 'Alto';
   icono?: string;
-  activo: boolean;
+  estado: boolean;
   fecha_creacion: string;
   usuario_creacion?: string;
 }
@@ -794,7 +812,7 @@ export interface ConfiguracionSistema {
   valor_max: string;
   requiere_reinicio: boolean;
   solo_superuser: boolean;
-  activo: boolean;
+  estado: boolean;
   updated_at: string;
   updated_by?: number;
   updated_by_nombre?: string;
@@ -809,7 +827,7 @@ export interface CacheConfiguracion {
   tipo_cache: string;
   auto_invalidate: boolean;
   eventos_invalid: any;
-  activo: boolean;
+  estado: boolean;
   hits: number;
   misses: number;
   ultima_limpieza?: string;
@@ -821,7 +839,7 @@ export interface LimiteTransaccion {
   tipo_operacion: string;
   monto_maximo_sin_autorizacion: number;
   requiere_autorizacion_doble: boolean;
-  activo: boolean;
+  estado: boolean;
   observaciones?: string;
   fecha_creacion: string;
   fecha_modificacion: string;
@@ -849,7 +867,7 @@ export interface RegistroAutorizacion {
 export interface ConfiguracionParams {
   categoria?: string;
   tipo?: string;
-  activo?: boolean;
+  estado?: boolean;
 }
 
 export interface ActualizarConfiguracionData {
@@ -931,7 +949,7 @@ export interface Permiso {
   nombre: string;
   modulo: string;
   descripcion?: string;
-  activo?: boolean;
+  estado?: boolean;
   fecha_creacion?: string;
 }
 

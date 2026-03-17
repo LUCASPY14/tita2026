@@ -11,7 +11,7 @@ export interface ProveedorParams {
   page?: number;
   page_size?: number;
   search?: string;
-  activo?: boolean;
+  estado?: boolean;
   ciudad?: string;
   ordering?: string;
 }
@@ -34,7 +34,7 @@ export interface ProveedorData {
   email?: string;
   direccion?: string;
   ciudad?: string;
-  activo: boolean;
+  estado: boolean;
 }
 
 export const comprasService = {
@@ -71,8 +71,8 @@ export const comprasService = {
     await api.delete(`/proveedores/${id}/`);
   },
 
-  toggleEstadoProveedor: async (id: number, activo: boolean): Promise<Proveedor> => {
-    const response = await api.patch<Proveedor>(`/proveedores/${id}/`, { activo });
+  toggleEstadoProveedor: async (id: number, estado: boolean): Promise<Proveedor> => {
+    const response = await api.patch<Proveedor>(`/proveedores/${id}/`, { estado });
     return response.data;
   },
 

@@ -6,7 +6,7 @@ import type {
 
 // Interfaces para parámetros
 export interface PlanParams {
-  activo?: boolean;
+  estado?: boolean;
   search?: string;
   ordering?: string;
   page?: number;
@@ -14,7 +14,7 @@ export interface PlanParams {
 }
 
 export interface TipoParams {
-  activo?: boolean;
+  estado?: boolean;
   search?: string;
   ordering?: string;
   page?: number;
@@ -47,7 +47,7 @@ export interface PlanData {
   descripcion?: string;
   precio_mensual: number;
   dias_semana_incluidos: string;
-  activo?: boolean;
+  estado?: boolean;
 }
 
 export interface TipoData {
@@ -57,7 +57,7 @@ export interface TipoData {
   incluye_plato_principal?: boolean;
   incluye_postre?: boolean;
   incluye_bebida?: boolean;
-  activo?: boolean;
+  estado?: boolean;
 }
 
 export interface SuscripcionData {
@@ -95,8 +95,8 @@ export const almuerzosService = {
     return response.data;
   },
 
-  async toggleEstadoPlan(id: number, activo: boolean) {
-    const response = await api.patch(`/planes-almuerzo/${id}/`, { activo });
+  async toggleEstadoPlan(id: number, estado: boolean) {
+    const response = await api.patch(`/planes-almuerzo/${id}/`, { estado });
     return response.data;
   },
 
@@ -126,8 +126,8 @@ export const almuerzosService = {
     return response.data;
   },
 
-  async toggleEstadoTipo(id: number, activo: boolean) {
-    const response = await api.patch(`/tipos-almuerzo/${id}/`, { activo });
+  async toggleEstadoTipo(id: number, estado: boolean) {
+    const response = await api.patch(`/tipos-almuerzo/${id}/`, { estado });
     return response.data;
   },
 
@@ -227,7 +227,7 @@ export const almuerzosService = {
   },
 
   // === ALÉRGENOS ===
-  async getAlergenos(params?: { activo?: boolean; search?: string }) {
+  async getAlergenos(params?: { estado?: boolean; search?: string }) {
     const response = await api.get('/alergenos/', { params });
     return response.data;
   },

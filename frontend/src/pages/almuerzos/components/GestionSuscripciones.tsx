@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Spinner } from '../../../components/common';
 import { Plus, Edit, Trash2, User } from 'lucide-react';
 import { almuerzosService } from '../../../services/almuerzos.service';
@@ -46,7 +46,7 @@ const GestionSuscripciones: React.FC = () => {
 
   const cargarPlanes = async () => {
     try {
-      const response = await almuerzosService.getPlanes({ activo: true });
+      const response = await almuerzosService.getPlanes({ estado: true });
       setPlanes(response.results || response);
     } catch (error) {
       console.error('Error al cargar planes:', error);
@@ -55,7 +55,7 @@ const GestionSuscripciones: React.FC = () => {
 
   const cargarHijos = async () => {
     try {
-      const response = await recargasService.buscarHijos({ activo: true });
+      const response = await recargasService.buscarHijos({ estado: true });
       setHijos(response.results || response);
     } catch (error) {
       console.error('Error al cargar hijos:', error);

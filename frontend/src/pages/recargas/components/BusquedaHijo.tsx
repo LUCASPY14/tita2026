@@ -34,7 +34,7 @@ const BusquedaHijo: React.FC<BusquedaHijoProps> = ({ onHijoSeleccionado }) => {
       const response = await recargasService.buscarHijos({
         search: busqueda,
         page_size: 10,
-        activo: true,
+        estado: true,
       });
 
       setResultados(response.results || []);

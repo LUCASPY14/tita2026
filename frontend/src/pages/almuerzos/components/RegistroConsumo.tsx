@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Spinner } from '../../../components/common';
 import { Search, CheckCircle, AlertCircle, Clock, User, CreditCard, DollarSign } from 'lucide-react';
 import { recargasService } from '../../../services/recargas.service';
@@ -40,7 +40,7 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
 
   const cargarTiposAlmuerzo = async () => {
     try {
-      const response = await almuerzosService.getTipos({ activo: true });
+      const response = await almuerzosService.getTipos({ estado: true });
       setTiposAlmuerzo(response.results || response);
     } catch (error) {
       console.error('Error al cargar tipos de almuerzo:', error);
@@ -76,7 +76,7 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
 
   const cargarAlergenos = async () => {
     try {
-      const response = await almuerzosService.getAlergenos({ activo: true });
+      const response = await almuerzosService.getAlergenos({ estado: true });
       setAlergenos(response.results || response);
     } catch (error) {
       console.error('Error al cargar alérgenos:', error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Search, Edit, Eye, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import { Input, Button, Badge, ConfirmDialog, Skeleton, EmptyState } from '../../../components/common';
 import { clientesService } from '../../../services/clientes.service';
@@ -39,7 +39,7 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
       }
 
       if (filtroActivo !== undefined) {
-        params.activo = filtroActivo;
+        params.estado = filtroActivo;
       }
 
       const response = await clientesService.getClientes(params);
@@ -55,8 +55,8 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
 
   const handleToggleEstado = async (cliente: Cliente) => {
     try {
-      await clientesService.toggleEstadoCliente(cliente.id_cliente, !cliente.activo);
-      toast.success(`Cliente ${!cliente.activo ? 'activado' : 'desactivado'} exitosamente`);
+      await clientesService.toggleEstadoCliente(cliente.id_cliente, !cliente.estado);
+      toast.success(`Cliente ${!cliente.estado ? 'activado' : 'desactivado'} exitosamente`);
       cargarClientes();
     } catch (error) {
       toast.error('Error al cambiar el estado del cliente');
@@ -193,8 +193,8 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
                       )}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
-                      <Badge variant={cliente.activo ? 'success' : 'danger'}>
-                        {cliente.activo ? 'Activo' : 'Inactivo'}
+                      <Badge variant={cliente.estado ? 'success' : 'danger'}>
+                        {cliente.estado ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
@@ -215,10 +215,10 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
                         </button>
                         <button
                           onClick={() => handleToggleEstado(cliente)}
-                          className={`${cliente.activo ? 'text-gray-600' : 'text-green-600'} hover:opacity-70`}
-                          title={cliente.activo ? 'Desactivar' : 'Activar'}
+                          className={`${cliente.estado ? 'text-gray-600' : 'text-green-600'} hover:opacity-70`}
+                          title={cliente.estado ? 'Desactivar' : 'Activar'}
                         >
-                          {cliente.activo ? (
+                          {cliente.estado ? (
                             <ToggleRight className="h-5 w-5" />
                           ) : (
                             <ToggleLeft className="h-5 w-5" />

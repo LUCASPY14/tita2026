@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Edit, Eye, Trash2, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { comprasService } from '../../../services/compras.service';
 import { Compra, Proveedor } from '../../../types';
@@ -30,7 +30,7 @@ const ListaCompras: React.FC<ListaComprasProps> = ({ onEditar, onVerDetalle }) =
 
   const cargarProveedores = async () => {
     try {
-      const response = await comprasService.getProveedores({ activo: true });
+      const response = await comprasService.getProveedores({ estado: true });
       setProveedores(response.results);
     } catch (error) {
       console.error('Error al cargar proveedores:', error);

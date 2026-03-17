@@ -1,4 +1,4 @@
-import React, {useState, useEffect } from 'react';
+﻿import React, {useState, useEffect } from 'react';
 import { Search, Plus, Package } from 'lucide-react';
 import { Input, Button, Select, Spinner, Badge, EmptyState } from '../../../components/common';
 import { posService } from '../../../services/pos.service';
@@ -31,7 +31,7 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
   const cargarCategorias = async () => {
     try {
       const response = await posService.getCategorias({
-        activo: true,
+        estado: true,
         page_size: 100,
       });
       setCategorias(response.results || []);
@@ -46,7 +46,7 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
     setCargando(true);
     try {
       const params: any = {
-        activo: true,
+        estado: true,
         page_size: 50,
       };
 
@@ -153,7 +153,7 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
                     )}
                     <div className="mt-1">{getStockBadge(producto)}</div>
                   </div>
-                  {producto.activo && (
+                  {producto.estado && (
                     <Badge variant="success" size="sm">
                       Activo
                     </Badge>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   User,
   Phone,
@@ -69,8 +69,8 @@ const DetalleCliente: React.FC<DetalleClienteProps> = ({ cliente, onEditar }) =>
                   <p className="text-sm text-gray-500">{cliente.razon_social}</p>
                 )}
                 <div className="mt-1 flex items-center gap-2">
-                  <Badge variant={cliente.activo ? 'success' : 'danger'}>
-                    {cliente.activo ? 'Activo' : 'Inactivo'}
+                  <Badge variant={cliente.estado ? 'success' : 'danger'}>
+                    {cliente.estado ? 'Activo' : 'Inactivo'}
                   </Badge>
                   <span className="text-sm text-gray-500">
                     RUC/CI: {cliente.ruc_ci}

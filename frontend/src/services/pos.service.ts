@@ -38,14 +38,14 @@ export interface ProductoParams {
   page?: number;
   page_size?: number;
   search?: string;
-  activo?: boolean;
+  estado?: boolean;
   id_categoria?: number;
 }
 
 export interface CategoriaParams {
   page?: number;
   page_size?: number;
-  activo?: boolean;
+  estado?: boolean;
 }
 
 export interface VentaParams {
@@ -71,7 +71,7 @@ export const posService = {
 
   buscarProductoPorCodigo: async (codigo: string): Promise<Producto> => {
     const response = await api.get<PaginatedResponse<Producto>>('/productos/', {
-      params: { search: codigo, activo: true }
+      params: { search: codigo, estado: true }
     });
     const productos = response.data.results || [];
     if (productos.length === 0) {
@@ -89,7 +89,7 @@ export const posService = {
   // Medios de Pago
   getMediosPago: async (): Promise<MedioPago[]> => {
     const response = await api.get<PaginatedResponse<MedioPago>>('/medios-pago/', {
-      params: { activo: true, page_size: 100 }
+      params: { estado: true, page_size: 100 }
     });
     return response.data.results || [];
   },

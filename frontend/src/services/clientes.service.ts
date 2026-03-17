@@ -5,7 +5,7 @@ export interface ClienteParams {
   page?: number;
   page_size?: number;
   search?: string;
-  activo?: boolean;
+  estado?: boolean;
   id_tipo_cliente?: number;
   ordering?: string;
 }
@@ -20,7 +20,7 @@ export interface ClienteData {
   telefono?: string;
   email?: string;
   limite_credito?: number;
-  activo?: boolean;
+  estado?: boolean;
   id_lista: number;
   id_tipo_cliente: number;
 }
@@ -78,8 +78,8 @@ export const clientesService = {
   /**
    * Activa o desactiva un cliente
    */
-  toggleEstadoCliente: async (id: number, activo: boolean): Promise<Cliente> => {
-    const response = await api.patch<Cliente>(`/clientes/${id}/`, { activo });
+  toggleEstadoCliente: async (id: number, estado: boolean): Promise<Cliente> => {
+    const response = await api.patch<Cliente>(`/clientes/${id}/`, { estado });
     return response.data;
   },
 
@@ -96,7 +96,7 @@ export const clientesService = {
    */
   getTiposCliente: async (): Promise<TipoCliente[]> => {
     const response = await api.get<PaginatedResponse<TipoCliente>>('/tipos-cliente/', {
-      params: { activo: true, page_size: 100 }
+      params: { estado: true, page_size: 100 }
     });
     return response.data.results || [];
   },

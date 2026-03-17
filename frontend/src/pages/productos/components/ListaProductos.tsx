@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Search, Package, Edit, Eye, Trash2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
 import { productosService } from '../../../services/productos.service';
 import { Producto, Categoria } from '../../../types';
@@ -34,7 +34,7 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
 
   const cargarCategorias = async () => {
     try {
-      const response = await productosService.getCategorias({ activo: true });
+      const response = await productosService.getCategorias({ estado: true });
       setCategorias(response.results);
     } catch (error) {
       console.error('Error al cargar categorías:', error);
@@ -50,7 +50,7 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
       };
 
       if (busquedaDebounced) params.search = busquedaDebounced;
-      if (filtroActivo !== undefined) params.activo = filtroActivo;
+      if (filtroActivo !== undefined) params.estado = filtroActivo;
       if (filtroCategoria) params.id_categoria = filtroCategoria;
 
       const response = await productosService.getProductos(params);
@@ -66,8 +66,8 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
 
   const handleToggleEstado = async (producto: Producto) => {
     try {
-      await productosService.toggleEstadoProducto(producto.id_producto, !producto.activo);
-      toast.success(`Producto ${!producto.activo ? 'activado' : 'desactivado'} exitosamente`);
+      await productosService.toggleEstadoProducto(producto.id_producto, !producto.estado);
+      toast.success(`Producto ${!producto.estado ? 'activado' : 'desactivado'} exitosamente`);
       cargarProductos();
     } catch (error) {
       toast.error('Error al cambiar estado del producto');
@@ -278,12 +278,12 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
                       <td className="px-4 py-4 text-center">
                         <span
                           className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                            producto.activo
+                            producto.estado
                               ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
                           }`}
                         >
-                          {producto.activo ? 'Activo' : 'Inactivo'}
+                          {producto.estado ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
                       <td className="px-4 py-4">
@@ -305,13 +305,13 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
                           <button
                             onClick={() => handleToggleEstado(producto)}
                             className={`rounded p-1 ${
-                              producto.activo
+                              producto.estado
                                 ? 'text-gray-600 hover:bg-gray-50'
                                 : 'text-green-600 hover:bg-green-50'
                             }`}
-                            title={producto.activo ? 'Desactivar' : 'Activar'}
+                            title={producto.estado ? 'Desactivar' : 'Activar'}
                           >
-                            {producto.activo ? (
+                            {producto.estado ? (
                               <ToggleRight className="h-5 w-5" />
                             ) : (
                               <ToggleLeft className="h-5 w-5" />

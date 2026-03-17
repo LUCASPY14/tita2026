@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { productosService, ProductoData } from '../../../services/productos.service';
 import { Producto, Categoria, UnidadMedida } from '../../../types';
@@ -21,7 +21,7 @@ const FormularioProducto: React.FC<FormularioProductoProps> = ({
     descripcion: '',
     stock_minimo: 0,
     permite_stock_negativo: false,
-    activo: true,
+    estado: true,
     id_categoria: 0,
     id_impuesto: 1, // IVA 10% por defecto
     id_unidad_medida: undefined,
@@ -44,7 +44,7 @@ const FormularioProducto: React.FC<FormularioProductoProps> = ({
         descripcion: producto.descripcion,
         stock_minimo: producto.stock_minimo,
         permite_stock_negativo: producto.permite_stock_negativo,
-        activo: producto.activo,
+        estado: producto.estado,
         id_categoria: producto.id_categoria,
         id_impuesto: producto.id_impuesto,
         id_unidad_medida: producto.id_unidad_medida,
@@ -55,7 +55,7 @@ const FormularioProducto: React.FC<FormularioProductoProps> = ({
   const cargarDatosIniciales = async () => {
     try {
       const [responseCategorias, responseUnidades] = await Promise.all([
-        productosService.getCategorias({ activo: true }),
+        productosService.getCategorias({ estado: true }),
         productosService.getUnidadesMedida(),
       ]);
 
@@ -332,7 +332,7 @@ const FormularioProducto: React.FC<FormularioProductoProps> = ({
                   type="checkbox"
                   id="activo"
                   name="activo"
-                  checked={formData.activo}
+                  checked={formData.estado}
                   onChange={handleChange}
                   className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
                 />

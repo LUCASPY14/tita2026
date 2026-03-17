@@ -12,7 +12,7 @@ export interface ProductoParams {
   page?: number;
   page_size?: number;
   search?: string;
-  activo?: boolean;
+  estado?: boolean;
   id_categoria?: number;
   ordering?: string;
 }
@@ -22,7 +22,7 @@ export interface ProductoData {
   descripcion: string;
   stock_minimo: number;
   permite_stock_negativo: boolean;
-  activo: boolean;
+  estado: boolean;
   id_categoria: number;
   id_impuesto: number;
   id_unidad_medida?: number;
@@ -30,7 +30,7 @@ export interface ProductoData {
 
 export interface CategoriaData {
   nombre: string;
-  activo: boolean;
+  estado: boolean;
   id_categoria_padre?: number;
 }
 
@@ -74,14 +74,14 @@ export const productosService = {
     await api.delete(`/productos/${id}/`);
   },
 
-  toggleEstadoProducto: async (id: number, activo: boolean): Promise<Producto> => {
-    const response = await api.patch<Producto>(`/productos/${id}/`, { activo });
+  toggleEstadoProducto: async (id: number, estado: boolean): Promise<Producto> => {
+    const response = await api.patch<Producto>(`/productos/${id}/`, { estado });
     return response.data;
   },
 
   // === CATEGORÍAS ===
   
-  getCategorias: async (params?: { activo?: boolean }): Promise<PaginatedResponse<Categoria>> => {
+  getCategorias: async (params?: { estado?: boolean }): Promise<PaginatedResponse<Categoria>> => {
     const response = await api.get<PaginatedResponse<Categoria>>('/categorias/', { params });
     return response.data;
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Save, X } from 'lucide-react';
 import { Input, Button, Select } from '../../../components/common';
 import { clientesService, ClienteData } from '../../../services/clientes.service';
@@ -28,7 +28,7 @@ const FormularioCliente: React.FC<FormularioClienteProps> = ({
     telefono: '',
     email: '',
     limite_credito: 0,
-    activo: true,
+    estado: true,
     id_lista: 1, // Default lista de precios
     id_tipo_cliente: 1, // Default tipo cliente
   });
@@ -48,7 +48,7 @@ const FormularioCliente: React.FC<FormularioClienteProps> = ({
         telefono: cliente.telefono || '',
         email: cliente.email || '',
         limite_credito: cliente.limite_credito || 0,
-        activo: cliente.activo,
+        estado: cliente.estado,
         id_lista: cliente.id_lista,
         id_tipo_cliente: cliente.id_tipo_cliente,
       });
