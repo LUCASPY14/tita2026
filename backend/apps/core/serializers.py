@@ -5,6 +5,8 @@ from .models import Tarjetas, CargasSaldo, ConsumosTarjeta, MediosPago, Configur
 class TarjetasSerializer(serializers.ModelSerializer):
     hijo_nombre = serializers.CharField(source="id_hijo.nombre", read_only=True)
     hijo_apellido = serializers.CharField(source="id_hijo.apellido", read_only=True)
+    hijo_foto = serializers.CharField(source="id_hijo.foto_perfil", read_only=True)
+    hijo_fecha_foto = serializers.CharField(source="id_hijo.fecha_foto", read_only=True)
     saldo_disponible = serializers.SerializerMethodField()
 
     class Meta:

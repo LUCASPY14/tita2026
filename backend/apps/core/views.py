@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils import timezone
 from decimal import Decimal, InvalidOperation
 from .models import Tarjetas, CargasSaldo, ConsumosTarjeta, MediosPago, ConfiguracionSistema
 from .serializers import (
@@ -25,6 +26,54 @@ class TarjetasViewSet(viewsets.ModelViewSet):
     search_fields = ["nro_tarjeta", "codigo_barras"]
     ordering_fields = ["fecha_creacion"]
     ordering = ["nro_tarjeta"]
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def scan(self, request):
+        """
+        Endpoint para escaneo de código de barras en POS.
+        
+        POST: { "codigo_barras": "ABC123456" }
+        Returns: Información completa de la tarjeta incluyendo foto del hijo
+        """
+        codigo_barras = request.data.get('codigo_barras', '').strip()
+        
+        if not codigo_barras:
+            return Response(
+                {'error': 'Código de barras requerido'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            tarjeta = Tarjetas.objects.select_related('id_hijo').get(codigo_barras=codigo_barras)
+            
+            # Verificar estado de la tarjeta
+            if tarjeta.estado != 'ACTIVA':
+                return Response(
+                    {
+                        'error': 'Tarjeta inactiva',
+                        'estado': tarjeta.estado,
+                        'codigo_barras': codigo_barras
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Retornar información completa
+            serializer = self.get_serializer(tarjeta)
+            return Response({
+                'tarjeta': serializer.data,
+                'verificacion': {
+                    'estado_ok': True,
+                    'saldo_disponible': tarjeta.saldo_disponible,
+                    'alerta_saldo_bajo': tarjeta.esta_en_alerta,
+                    'timestamp': timezone.now()
+                }
+            })
+            
+        except Tarjetas.DoesNotExist:
+            return Response(
+                {'error': 'Tarjeta no encontrada', 'codigo_barras': codigo_barras}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class CargasSaldoViewSet(viewsets.ModelViewSet):
