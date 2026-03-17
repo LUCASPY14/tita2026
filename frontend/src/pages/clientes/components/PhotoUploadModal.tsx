@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, X, Trash2, Eye, AlertCircle, CheckCircle } from 'lucide-react';
-import { Card, Button, Avatar, Spinner, Modal } from '../../../components/common';
+import { Upload, X, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Button, Avatar, Spinner, Modal } from '../../../components/common';
 import api from '../../../services/api';
 import type { Hijo } from '../../../types';
 
@@ -159,13 +159,8 @@ const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
               <div className="flex justify-center">
                 <Avatar
                   src={hijo.foto_perfil}
-                  alt={`${hijo.nombre} ${hijo.apellido}`}
-                  size="2xl"
-                  fallback={
-                    <div className="text-gray-400">
-                      <Camera className="h-12 w-12" />
-                    </div>
-                  }
+                  name={`${hijo.nombre} ${hijo.apellido}`}
+                  size="xl"
                 />
               </div>
             </div>

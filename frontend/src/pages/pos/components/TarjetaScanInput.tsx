@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CreditCard, Scan, User, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { CreditCard, Scan, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { Card } from '../../../components/common';
 import api from '../../../services/api';
 import type { TarjetaEscaneada } from '../../../types';
@@ -74,8 +74,8 @@ const TarjetaScanInput: React.FC<TarjetaScanInputProps> = ({
           nombre: tarjeta.hijo_nombre,
           apellido: tarjeta.hijo_apellido,
           foto: tarjeta.hijo_foto,
-          fechaFoto: tarjeta.hijo_fecha_foto,
-        },
+          fechaFoto: tarjeta.hijo_fecha_foto
+        } as any,
         saldo: {
           actual: tarjeta.saldo_actual,
           disponible: verificacion.saldo_disponible,
@@ -88,11 +88,11 @@ const TarjetaScanInput: React.FC<TarjetaScanInputProps> = ({
       setSuccess(true);
       onTarjetaEscaneada(tarjetaEscaneada);
       
-    } catch (error) {
-      console.error('Error al escanear tarjeta:', error);
-      if (error.response?.status === 404) {
+    } catch (err: any) {
+      console.error('Error al escanear tarjeta:', err);
+      if (err.response?.status === 404) {
         setError('Tarjeta no encontrada');
-      } else if (error.response?.status === 403) {
+      } else if (err.response?.status === 403) {
         setError('Tarjeta bloqueada o inactiva');
       } else {
         setError('Error de conexión. Inténtalo de nuevo.');

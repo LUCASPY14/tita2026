@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { User, Plus, Edit, Camera, Trash2, Eye } from 'lucide-react';
+import { User, Plus, Edit, Camera, Trash2 } from 'lucide-react';
 import { Card, Button, Avatar, Badge, Spinner } from '../../../components/common';
-import { PhotoUploadModal } from './PhotoUploadModal';
-import { HijoFormModal } from './HijoFormModal';
+import { PhotoUploadModal, HijoFormModal } from '../components';
 import api from '../../../services/api';
 import type { Hijo } from '../../../types';
 
@@ -150,7 +149,7 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
                       <Avatar
                         src={hijo.foto_perfil}
                         alt={`${hijo.nombre} ${hijo.apellido}`}
-                        fallback={<User className="h-8 w-8 text-gray-400" />}
+                        name={`${hijo.nombre} ${hijo.apellido}`}
                         size="lg"
                       />
                       
