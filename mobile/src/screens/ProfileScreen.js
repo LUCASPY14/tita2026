@@ -8,14 +8,19 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  ActivityIndicator,
+  ActionSheetIOS,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import api from '../services/api';
 
 const ProfileScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const [hijoSeleccionado, setHijoSeleccionado] = useState(null);
   const [hijos, setHijos] = useState([]);
@@ -122,6 +127,146 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
+  const requestCameraPermissions = async () => {
+    const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+    const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    return cameraPermission.status === 'granted' && mediaLibraryPermission.status === 'granted';
+  };
+
+  const showPhotoActionSheet = () => {
+    if (!hijoSeleccionado) {
+      Alert.alert('Error', 'Por favor selecciona un hijo primero');
+      return;
+    }
+
+    const options = ['Tomar Foto', 'Seleccionar de Galería', 'Cancelar'];
+    const destructiveButtonIndex = 2;
+    const cancelButtonIndex = 2;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex,
+          destructiveButtonIndex,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) {
+            takePhoto();
+          } else if (buttonIndex === 1) {
+            pickImage();
+          }
+        }
+      );
+    } else {
+      // Para Android, mostrar Alert
+      Alert.alert(
+        'Seleccionar Foto',
+        'Elige una opción para la foto del estudiante',
+        [
+          { text: 'Tomar Foto', onPress: takePhoto },
+          { text: 'Galería', onPress: pickImage },
+          { text: 'Cancelar', style: 'cancel' }
+        ]
+      );
+    }
+  };
+
+  const takePhoto = async () => {
+    const hasPermissions = await requestCameraPermissions();
+    if (!hasPermissions) {
+      Alert.alert('Error', 'Se necesitan permisos de cámara y galería');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        await uploadPhoto(result.assets[0]);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo tomar la foto');
+      console.error('Camera error:', error);
+    }
+  };
+
+  const pickImage = async () => {
+    const hasPermissions = await requestCameraPermissions();
+    if (!hasPermissions) {
+      Alert.alert('Error', 'Se necesitan permisos de galería');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        await uploadPhoto(result.assets[0]);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      console.error('Image picker error:', error);
+    }
+  };
+
+  const uploadPhoto = async (image) => {
+    if (!hijoSeleccionado) {
+      Alert.alert('Error', 'No hay hijo seleccionado');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    
+    try {
+      // Crear FormData para upload
+      const formData = new FormData();
+      const filename = image.uri.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      formData.append('foto_perfil', {
+        uri: image.uri,
+        type: type,
+        name: filename || `photo_${Date.now()}.jpg`,
+      });
+
+      // Subir la foto
+      const response = await api.patch(`/hijos/${hijoSeleccionado.id_hijo}/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Actualizar el hijo seleccionado con la nueva foto
+      const updatedHijo = { ...hijoSeleccionado, foto_perfil: response.data.foto_perfil };
+      setHijoSeleccionado(updatedHijo);
+
+      // Actualizar en la lista de hijos
+      setHijos(prev => prev.map(h => 
+        h.id_hijo === hijoSeleccionado.id_hijo ? updatedHijo : h
+      ));
+
+      Alert.alert('Éxito', 'Foto actualizada correctamente');
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'No se pudo subir la foto. Inténtalo de nuevo.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -189,9 +334,32 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Información del Estudiante</Text>
           <View style={styles.hijoInfo}>
-            <View style={styles.hijoAvatar}>
-              <FontAwesome5 name="child" size={24} color="#4F46E5" />
-            </View>
+            <TouchableOpacity 
+              style={styles.hijoAvatarContainer}
+              onPress={showPhotoActionSheet}
+              disabled={uploadingPhoto}
+            >
+              {hijoSeleccionado.foto_perfil ? (
+                <Image 
+                  source={{ uri: hijoSeleccionado.foto_perfil }} 
+                  style={styles.hijoAvatarImage}
+                />
+              ) : (
+                <View style={styles.hijoAvatar}>
+                  <FontAwesome5 name="child" size={24} color="#4F46E5" />
+                </View>
+              )}
+              
+              {/* Overlay para indicar que es tocable */}
+              <View style={styles.photoOverlay}>
+                {uploadingPhoto ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <MaterialIcons name="camera-alt" size={16} color="#ffffff" />
+                )}
+              </View>
+            </TouchableOpacity>
+            
             <View style={styles.hijoDetails}>
               <Text style={styles.hijoFullName}>
                 {hijoSeleccionado.nombre} {hijoSeleccionado.apellido}
@@ -430,6 +598,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+  },
+  hijoAvatarContainer: {
+    position: 'relative',
+    marginRight: 15,
+  },
+  hijoAvatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#4F46E5',
+  },
+  photoOverlay: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#4F46E5',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   hijoDetails: {
     flex: 1,
