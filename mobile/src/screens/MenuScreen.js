@@ -21,7 +21,7 @@ export default function MenuScreen({ navigation }) {
 
   const fetchMenu = useCallback(async () => {
     try {
-      const { data } = await api.get('/productos/', { params: { disponible: true } });
+      const { data } = await api.get('/productos/', { params: { estado: true } });
       setProductos(Array.isArray(data) ? data : data.results || []);
     } catch (error) {
       Alert.alert('Error', 'No se pudo cargar el menú. Verificá tu conexión.');
@@ -90,7 +90,7 @@ export default function MenuScreen({ navigation }) {
             </Text>
           ) : null}
           <View style={styles.cardFooter}>
-            <Text style={styles.precio}>${Number(item.precio).toFixed(2)}</Text>
+            <Text style={styles.precio}>Gs. {Number(item.precio).toLocaleString('es-PY', { maximumFractionDigits: 0 })}</Text>
             <TouchableOpacity style={styles.addButton} onPress={() => addToCart(item)}>
               <Text style={styles.addButtonText}>
                 {qty > 0 ? `+1 (${qty})` : 'Agregar'}

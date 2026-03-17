@@ -58,7 +58,7 @@ export default function CartScreen({ route, navigation }) {
       <View style={styles.item}>
         <View style={styles.itemInfo}>
           <Text style={styles.itemNombre}>{item.nombre}</Text>
-          <Text style={styles.itemPrecio}>${Number(item.precio).toFixed(2)} c/u</Text>
+          <Text style={styles.itemPrecio}>Gs. {Number(item.precio).toLocaleString('es-PY', { maximumFractionDigits: 0 })} c/u</Text>
         </View>
         <View style={styles.quantityControl}>
           <TouchableOpacity style={styles.qtyBtn} onPress={() => updateCantidad(item.id, -1)}>
@@ -70,7 +70,7 @@ export default function CartScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
         <Text style={styles.subtotal}>
-          ${(Number(item.precio) * item.cantidad).toFixed(2)}
+          Gs. {Math.round(Number(item.precio) * item.cantidad).toLocaleString('es-PY', { maximumFractionDigits: 0 })}
         </Text>
       </View>
     );
@@ -101,7 +101,7 @@ export default function CartScreen({ route, navigation }) {
               />
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total:</Text>
-                <Text style={styles.totalAmount}>${total.toFixed(2)}</Text>
+                <Text style={styles.totalAmount}>Gs. {Math.round(total).toLocaleString('es-PY', { maximumFractionDigits: 0 })}</Text>
               </View>
               <TouchableOpacity
                 style={[styles.confirmBtn, loading && styles.confirmDisabled]}

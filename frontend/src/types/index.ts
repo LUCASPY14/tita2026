@@ -203,6 +203,9 @@ export interface VentaData {
   tipo_venta: 'Contado' | 'Credito';
   id_medio_pago?: number;
   numero_comprobante?: string;
+  ref_pago_pos?: string;     // Referencia del terminal POS
+  ref_pg_transf?: string;   // Referencia de transferencia bancaria
+  banco_emisor?: string;    // Banco emisor (transferencias)
   codigo_promocion?: string;
   aplicar_promociones?: boolean;
   detalles: {

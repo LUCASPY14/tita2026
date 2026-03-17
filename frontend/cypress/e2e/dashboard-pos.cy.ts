@@ -15,7 +15,7 @@ describe('Punto de Venta (POS)', () => {
       codigo_barra: 'CC500',
       precio: 5000,
       stock_actual: 50,
-      activo: true,
+      estado: true,
       imagen: null,
     },
     {
@@ -24,7 +24,7 @@ describe('Punto de Venta (POS)', () => {
       codigo_barra: 'EMP01',
       precio: 3000,
       stock_actual: 20,
-      activo: true,
+      estado: true,
       imagen: null,
     },
   ];

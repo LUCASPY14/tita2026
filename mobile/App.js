@@ -1,20 +1,40 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { ActivityIndicator, View } from 'react-native';
 
 import LoginScreen from './src/screens/LoginScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import CartScreen from './src/screens/CartScreen';
+import { isAuthenticated } from './src/services/auth.service';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  const [isReady, setIsReady] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    isAuthenticated().then((auth) => {
+      setLoggedIn(auth);
+      setIsReady(true);
+    });
+  }, []);
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#E3F2FD' }}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
       <Stack.Navigator
-        initialRouteName="Login"
+        initialRouteName={loggedIn ? 'Menu' : 'Login'}
         screenOptions={{
           headerStyle: { backgroundColor: '#2196F3' },
           headerTintColor: '#fff',

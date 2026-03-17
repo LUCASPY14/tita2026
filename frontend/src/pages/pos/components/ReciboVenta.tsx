@@ -15,7 +15,6 @@ interface ReciboVentaProps {
   total: number;
   descuento?: number;
   metodoPago: string;
-  comprobante?: string;
   clienteNombre?: string;
   tarjetaNro?: string;
   // Campos IVA fiscales (Paraguay)
@@ -24,6 +23,10 @@ interface ReciboVentaProps {
   montoExenta?: number;
   montoGravada10?: number;
   montoGravada5?: number;
+  // Campos de seguridad en pagos
+  refPagoPos?: string;
+  refPgTransf?: string;
+  bancoEmisor?: string;
   onCerrar: () => void;
 }
 
@@ -31,6 +34,7 @@ const METODO_LABELS: Record<string, string> = {
   efectivo: 'Efectivo',
   tarjeta_hijo: 'Tarjeta Estudiante',
   pos: 'POS (Tarjeta débito/crédito)',
+  transferencia: 'Transferencia Bancaria',
 };
 
 const ReciboVenta: React.FC<ReciboVentaProps> = ({
@@ -40,7 +44,6 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
   total,
   descuento,
   metodoPago,
-  comprobante,
   clienteNombre,
   tarjetaNro,
   iva10,
@@ -48,6 +51,9 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
   montoExenta,
   montoGravada10,
   montoGravada5,
+  refPagoPos,
+  refPgTransf,
+  bancoEmisor,
   onCerrar,
 }) => {
   const tieneIVA = (iva10 ?? 0) > 0 || (iva5 ?? 0) > 0 || (montoExenta ?? 0) > 0;
@@ -222,10 +228,22 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
               <span>Método de pago:</span>
               <span>{METODO_LABELS[metodoPago] ?? metodoPago}</span>
             </div>
-            {comprobante && (
+            {refPagoPos && (
               <div className="fila">
-                <span>Comprobante:</span>
-                <span>{comprobante}</span>
+                <span>Ref. POS:</span>
+                <span>{refPagoPos}</span>
+              </div>
+            )}
+            {refPgTransf && (
+              <div className="fila">
+                <span>Ref. Transf.:</span>
+                <span>{refPgTransf}</span>
+              </div>
+            )}
+            {bancoEmisor && (
+              <div className="fila">
+                <span>Banco:</span>
+                <span>{bancoEmisor}</span>
               </div>
             )}
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Wallet, DollarSign, AlertTriangle, CheckCircle, Tag, Loader2 } from 'lucide-react';
+import { X, CreditCard, Wallet, DollarSign, AlertTriangle, CheckCircle, Tag, Loader2, Banknote } from 'lucide-react';
 import { Button, Card } from '../../../components/common';
 import { BusquedaHijo } from '../../recargas/components';
 import { posService } from '../../../services/pos.service';
@@ -21,7 +21,7 @@ interface ProcesarVentaProps {
   onVentaExitosa: () => void;
 }
 
-type MetodoPago = 'efectivo' | 'tarjeta_hijo' | 'pos';
+type MetodoPago = 'efectivo' | 'tarjeta_hijo' | 'pos' | 'transferencia';
 
 const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
   items,
@@ -30,7 +30,9 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
   onVentaExitosa,
 }) => {
   const [metodoPago, setMetodoPago] = useState<MetodoPago>('efectivo');
-  const [numeroComprobante, setNumeroComprobante] = useState('');
+  const [refPagoPos, setRefPagoPos] = useState('');
+  const [refPgTransf, setRefPgTransf] = useState('');
+  const [bancoEmisor, setBancoEmisor] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [mediosPago, setMediosPago] = useState<MedioPago[]>([]);
   const [hijoSeleccionado, setHijoSeleccionado] = useState<Hijo | null>(null);
@@ -59,12 +61,10 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
   };
 
   const getMedioPagoId = (): number | undefined => {
-    if (metodoPago === 'pos' || metodoPago === 'tarjeta_hijo') {
-      const medio = mediosPago.find(m => 
-        m.nombre.toLowerCase().includes(metodoPago === 'pos' ? 'pos' : 'tarjeta')
-      );
-      return medio?.id_medio_pago;
-    }
+    const buscar = (term: string) => mediosPago.find(m => m.nombre.toLowerCase().includes(term))?.id_medio_pago;
+    if (metodoPago === 'pos') return buscar('pos');
+    if (metodoPago === 'tarjeta_hijo') return buscar('tarjeta');
+    if (metodoPago === 'transferencia') return buscar('transf') ?? buscar('transfer');
     return undefined;
   };
 
@@ -122,8 +122,12 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
       }
     }
 
-    if (metodoPago === 'pos' && !numeroComprobante.trim()) {
-      return 'Debes ingresar el número de comprobante para pago con POS';
+    if (metodoPago === 'pos' && !refPagoPos.trim()) {
+      return 'Debes ingresar la referencia del terminal POS';
+    }
+
+    if (metodoPago === 'transferencia' && !refPgTransf.trim()) {
+      return 'Debes ingresar el número de referencia de la transferencia';
     }
 
     return null;
@@ -151,12 +155,16 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
         ventaData.id_hijo = hijoSeleccionado.id_hijo;
       }
 
-      if (metodoPago === 'pos' || metodoPago === 'tarjeta_hijo') {
+      if (metodoPago === 'pos' || metodoPago === 'tarjeta_hijo' || metodoPago === 'transferencia') {
         ventaData.id_medio_pago = getMedioPagoId();
       }
 
-      if (metodoPago === 'pos' && numeroComprobante.trim()) {
-        ventaData.numero_comprobante = numeroComprobante.trim();
+      if (metodoPago === 'pos' && refPagoPos.trim()) {
+        ventaData.ref_pago_pos = refPagoPos.trim();
+      }
+      if (metodoPago === 'transferencia') {
+        if (refPgTransf.trim()) ventaData.ref_pg_transf = refPgTransf.trim();
+        if (bancoEmisor.trim()) ventaData.banco_emisor = bancoEmisor.trim();
       }
 
       if (promoValidada && codigoPromo.trim()) {
@@ -230,7 +238,7 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
             <h3 className="mb-4 text-lg font-semibold text-gray-900">
               Método de Pago
             </h3>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <button
                 onClick={() => setMetodoPago('efectivo')}
                 className={`flex items-center gap-3 rounded-lg border-2 p-4 transition-all ${
@@ -275,26 +283,72 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
                   <p className="text-xs text-gray-500">Tarjeta débito/crédito</p>
                 </div>
               </button>
+
+              <button
+                onClick={() => setMetodoPago('transferencia')}
+                className={`flex items-center gap-3 rounded-lg border-2 p-4 transition-all ${
+                  metodoPago === 'transferencia'
+                    ? 'border-amber-600 bg-amber-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <Banknote className="h-6 w-6 text-purple-600" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">Transferencia</p>
+                  <p className="text-xs text-gray-500">Bancaria / digital</p>
+                </div>
+              </button>
             </div>
 
             {metodoPago === 'pos' && (
-              <div className="mt-4">
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Número de Comprobante
-                </label>
-                <input
-                  type="text"
-                  value={numeroComprobante}
-                  onChange={(e) => setNumeroComprobante(e.target.value)}
-                  placeholder="Ej: 123456"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
-                />
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Referencia POS <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={refPagoPos}
+                    onChange={(e) => setRefPagoPos(e.target.value)}
+                    placeholder="N° de aprobación del terminal POS"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                </div>
                 {posGeneraComision && (
-                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                     <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
                     <p>Este medio de pago genera una <strong>comisión adicional</strong> que será calculada y registrada al confirmar la venta.</p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {metodoPago === 'transferencia' && (
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    N° de Referencia / Comprobante <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={refPgTransf}
+                    onChange={(e) => setRefPgTransf(e.target.value)}
+                    placeholder="Número de transferencia o comprobante bancario"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Banco emisor
+                  </label>
+                  <input
+                    type="text"
+                    value={bancoEmisor}
+                    onChange={(e) => setBancoEmisor(e.target.value)}
+                    placeholder="Ej: Banco Continental, Itaú, BCP..."
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                </div>
               </div>
             )}
           </Card>
@@ -454,7 +508,9 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
           total={total}
           descuento={promoValidada?.descuento_calculado}
           metodoPago={metodoPago}
-          comprobante={numeroComprobante || undefined}
+          refPagoPos={refPagoPos || undefined}
+          refPgTransf={refPgTransf || undefined}
+          bancoEmisor={bancoEmisor || undefined}
           clienteNombre={hijoSeleccionado ? `${hijoSeleccionado.nombre} ${hijoSeleccionado.apellido}` : undefined}
           tarjetaNro={tarjetaSeleccionada?.nro_tarjeta}
           iva10={ventaRealizada.iva_10}
