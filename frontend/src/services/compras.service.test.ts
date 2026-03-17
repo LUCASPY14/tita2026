@@ -1,4 +1,4 @@
-import api from './api';
+﻿import api from './api';
 import { 
   comprasService,
   ProveedorParams,
@@ -32,7 +32,7 @@ describe('Compras Service', () => {
         email: 'contacto@proveedorabc.com',
         direccion: 'Av. Principal 123',
         ciudad: 'Asunción',
-        activo: true,
+        estado: true,
         fecha_registro: '2024-01-01'
       },
       {
@@ -43,7 +43,7 @@ describe('Compras Service', () => {
         email: 'ventas@xyz.com',
         direccion: 'Calle Secundaria 456',
         ciudad: 'Luque',
-        activo: true,
+        estado: true,
         fecha_registro: '2024-01-05'
       }
     ];
@@ -85,7 +85,7 @@ describe('Compras Service', () => {
       });
 
       test('debe filtrar proveedores activos', async () => {
-        const params: ProveedorParams = { activo: true };
+        const params: ProveedorParams = { estado: true };
         mockedApi.get.mockResolvedValue({ data: mockResponse });
 
         await comprasService.getProveedores(params);
@@ -142,7 +142,7 @@ describe('Compras Service', () => {
         email: 'nuevo@proveedor.com',
         direccion: 'Av. Test 789',
         ciudad: 'San Lorenzo',
-        activo: true
+        estado: true
       };
 
       test('debe crear proveedor nuevo', async () => {
@@ -222,23 +222,23 @@ describe('Compras Service', () => {
 
     describe('toggleEstadoProveedor', () => {
       test('debe desactivar proveedor', async () => {
-        const proveedorInactivo: Proveedor = { ...mockProveedores[0], activo: false };
+        const proveedorInactivo: Proveedor = { ...mockProveedores[0], estado: false };
         mockedApi.patch.mockResolvedValue({ data: proveedorInactivo });
 
         const result = await comprasService.toggleEstadoProveedor(1, false);
 
-        expect(mockedApi.patch).toHaveBeenCalledWith('/proveedores/1/', { activo: false });
-        expect(result.activo).toBe(false);
+        expect(mockedApi.patch).toHaveBeenCalledWith('/proveedores/1/', { estado: false });
+        expect(result.estado).toBe(false);
       });
 
       test('debe activar proveedor', async () => {
-        const proveedorActivo: Proveedor = { ...mockProveedores[0], activo: true };
+        const proveedorActivo: Proveedor = { ...mockProveedores[0], estado: true };
         mockedApi.patch.mockResolvedValue({ data: proveedorActivo });
 
         const result = await comprasService.toggleEstadoProveedor(1, true);
 
-        expect(mockedApi.patch).toHaveBeenCalledWith('/proveedores/1/', { activo: true });
-        expect(result.activo).toBe(true);
+        expect(mockedApi.patch).toHaveBeenCalledWith('/proveedores/1/', { estado: true });
+        expect(result.estado).toBe(true);
       });
     });
 
@@ -524,7 +524,7 @@ describe('Compras Service', () => {
       const proveedorData: ProveedorData = {
         ruc: '80044444-4',
         razon_social: 'Test Proveedor',
-        activo: true
+        estado: true
       };
       const proveedorCreado: Proveedor = {
         id_proveedor: 10,

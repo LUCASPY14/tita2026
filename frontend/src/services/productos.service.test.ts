@@ -1,4 +1,4 @@
-import api from './api';
+﻿import api from './api';
 import {
   productosService,
   ProductoParams,
@@ -32,7 +32,7 @@ describe('Productos Service', () => {
         stock_actual: 100,
         stock_minimo: 10,
         permite_stock_negativo: false,
-        activo: true,
+        estado: true,
         id_categoria: 1,
         id_impuesto: 1
       },
@@ -43,7 +43,7 @@ describe('Productos Service', () => {
         stock_actual: 50,
         stock_minimo: 5,
         permite_stock_negativo: true,
-        activo: true,
+        estado: true,
         id_categoria: 2,
         id_impuesto: 1
       }
@@ -85,7 +85,7 @@ describe('Productos Service', () => {
     });
 
     test('debe filtrar productos activos', async () => {
-      const params: ProductoParams = { activo: true };
+      const params: ProductoParams = { estado: true };
       mockedApi.get.mockResolvedValue({ data: mockResponse });
 
       await productosService.getProductos(params);
@@ -134,7 +134,7 @@ describe('Productos Service', () => {
       stock_actual: 100,
       stock_minimo: 10,
       permite_stock_negativo: false,
-      activo: true,
+      estado: true,
       id_categoria: 1,
       id_impuesto: 1,
       id_unidad_medida: 1
@@ -165,7 +165,7 @@ describe('Productos Service', () => {
       stock_actual: 100,
       stock_minimo: 10,
       permite_stock_negativo: false,
-      activo: true,
+      estado: true,
       id_categoria: 1,
       id_impuesto: 1
     };
@@ -208,7 +208,7 @@ describe('Productos Service', () => {
       descripcion: 'Producto Nuevo',
       stock_minimo: 5,
       permite_stock_negativo: false,
-      activo: true,
+      estado: true,
       id_categoria: 1,
       id_impuesto: 1
     };
@@ -265,7 +265,7 @@ describe('Productos Service', () => {
       stock_actual: 150,
       stock_minimo: 15,
       permite_stock_negativo: true,
-      activo: true,
+      estado: true,
       id_categoria: 1,
       id_impuesto: 1
     };
@@ -327,18 +327,18 @@ describe('Productos Service', () => {
       stock_actual: 100,
       stock_minimo: 10,
       permite_stock_negativo: false,
-      activo: false,
+      estado: false,
       id_categoria: 1,
       id_impuesto: 1
     };
 
     test('debe activar producto', async () => {
-      mockedApi.patch.mockResolvedValue({ data: { ...mockProducto, activo: true } });
+      mockedApi.patch.mockResolvedValue({ data: { ...mockProducto, estado: true } });
 
       const result = await productosService.toggleEstadoProducto(1, true);
 
-      expect(mockedApi.patch).toHaveBeenCalledWith('/productos/1/', { activo: true });
-      expect(result.activo).toBe(true);
+      expect(mockedApi.patch).toHaveBeenCalledWith('/productos/1/', { estado: true });
+      expect(result.estado).toBe(true);
     });
 
     test('debe desactivar producto', async () => {
@@ -346,15 +346,15 @@ describe('Productos Service', () => {
 
       const result = await productosService.toggleEstadoProducto(1, false);
 
-      expect(mockedApi.patch).toHaveBeenCalledWith('/productos/1/', { activo: false });
-      expect(result.activo).toBe(false);
+      expect(mockedApi.patch).toHaveBeenCalledWith('/productos/1/', { estado: false });
+      expect(result.estado).toBe(false);
     });
   });
 
   describe('getCategorias', () => {
     const mockCategorias: Categoria[] = [
-      { id_categoria: 1, nombre: 'Bebidas', activo: true },
-      { id_categoria: 2, nombre: 'Alimentos', activo: true }
+      { id_categoria: 1, nombre: 'Bebidas', estado: true },
+      { id_categoria: 2, nombre: 'Alimentos', estado: true }
     ];
 
     const mockResponse: PaginatedResponse<Categoria> = {
@@ -376,9 +376,9 @@ describe('Productos Service', () => {
     test('debe filtrar categorías activas', async () => {
       mockedApi.get.mockResolvedValue({ data: mockResponse });
 
-      await productosService.getCategorias({ activo: true });
+      await productosService.getCategorias({ estado: true });
 
-      expect(mockedApi.get).toHaveBeenCalledWith('/categorias/', { params: { activo: true } });
+      expect(mockedApi.get).toHaveBeenCalledWith('/categorias/', { params: { estado: true } });
     });
   });
 
@@ -386,7 +386,7 @@ describe('Productos Service', () => {
     const mockCategoria: Categoria = {
       id_categoria: 1,
       nombre: 'Bebidas',
-      activo: true
+      estado: true
     };
 
     test('debe obtener categoría por ID', async () => {
@@ -402,7 +402,7 @@ describe('Productos Service', () => {
   describe('crearCategoria', () => {
     const mockCategoriaData: CategoriaData = {
       nombre: 'Nueva Categoría',
-      activo: true
+      estado: true
     };
 
     const mockCategoriaCreada: Categoria = {
@@ -438,7 +438,7 @@ describe('Productos Service', () => {
     const mockCategoriaActualizada: Categoria = {
       id_categoria: 1,
       nombre: 'Bebidas Actualizadas',
-      activo: true
+      estado: true
     };
 
     test('debe actualizar categoría', async () => {
@@ -470,8 +470,8 @@ describe('Productos Service', () => {
 
   describe('getUnidadesMedida', () => {
     const mockUnidades: UnidadMedida[] = [
-      { id_unidad_medida: 1, nombre: 'Unidad', abreviatura: 'UN', activo: true },
-      { id_unidad_medida: 2, nombre: 'Kilo', abreviatura: 'KG', activo: true }
+      { id_unidad_medida: 1, nombre: 'Unidad', abreviatura: 'UN', estado: true },
+      { id_unidad_medida: 2, nombre: 'Kilo', abreviatura: 'KG', estado: true }
     ];
 
     test('debe obtener unidades de medida', async () => {
@@ -486,8 +486,8 @@ describe('Productos Service', () => {
 
   describe('getListasPrecios', () => {
     const mockListas: ListaPrecio[] = [
-      { id_lista: 1, nombre_lista: 'Precio Público', moneda: 'PYG', activo: true },
-      { id_lista: 2, nombre_lista: 'Precio Mayorista', moneda: 'PYG', activo: true }
+      { id_lista: 1, nombre_lista: 'Precio Público', moneda: 'PYG', estado: true },
+      { id_lista: 2, nombre_lista: 'Precio Mayorista', moneda: 'PYG', estado: true }
     ];
 
     test('debe obtener listas de precios', async () => {
@@ -569,7 +569,7 @@ describe('Productos Service', () => {
         descripcion: 'Producto Integración',
         stock_minimo: 10,
         permite_stock_negativo: false,
-        activo: true,
+        estado: true,
         id_categoria: 1,
         id_impuesto: 1
       };

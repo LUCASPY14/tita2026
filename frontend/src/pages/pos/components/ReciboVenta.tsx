@@ -18,6 +18,12 @@ interface ReciboVentaProps {
   comprobante?: string;
   clienteNombre?: string;
   tarjetaNro?: string;
+  // Campos IVA fiscales (Paraguay)
+  iva10?: number;
+  iva5?: number;
+  montoExenta?: number;
+  montoGravada10?: number;
+  montoGravada5?: number;
   onCerrar: () => void;
 }
 
@@ -37,8 +43,14 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
   comprobante,
   clienteNombre,
   tarjetaNro,
+  iva10,
+  iva5,
+  montoExenta,
+  montoGravada10,
+  montoGravada5,
   onCerrar,
 }) => {
+  const tieneIVA = (iva10 ?? 0) > 0 || (iva5 ?? 0) > 0 || (montoExenta ?? 0) > 0;
   const reciboRef = useRef<HTMLDivElement>(null);
 
   const formatearPrecio = (valor: number) =>
@@ -166,6 +178,43 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
               <span>TOTAL:</span>
               <span>{formatearPrecio(totalFinal)}</span>
             </div>
+
+            {tieneIVA && (
+              <>
+                <div className="separador" />
+                <div style={{ fontSize: '10px', color: '#555', marginBottom: '2px', fontWeight: 'bold' }}>DESGLOSE FISCAL (IVA incluido)</div>
+                {(montoExenta ?? 0) > 0 && (
+                  <div className="fila" style={{ fontSize: '10px', color: '#555' }}>
+                    <span>Exenta:</span>
+                    <span>{formatearPrecio(montoExenta!)}</span>
+                  </div>
+                )}
+                {(montoGravada10 ?? 0) > 0 && (
+                  <div className="fila" style={{ fontSize: '10px', color: '#555' }}>
+                    <span>Gravada 10%:</span>
+                    <span>{formatearPrecio(montoGravada10!)}</span>
+                  </div>
+                )}
+                {(iva10 ?? 0) > 0 && (
+                  <div className="fila" style={{ fontSize: '10px', color: '#555' }}>
+                    <span>IVA (10%):</span>
+                    <span>{formatearPrecio(iva10!)}</span>
+                  </div>
+                )}
+                {(montoGravada5 ?? 0) > 0 && (
+                  <div className="fila" style={{ fontSize: '10px', color: '#555' }}>
+                    <span>Gravada 5%:</span>
+                    <span>{formatearPrecio(montoGravada5!)}</span>
+                  </div>
+                )}
+                {(iva5 ?? 0) > 0 && (
+                  <div className="fila" style={{ fontSize: '10px', color: '#555' }}>
+                    <span>IVA (5%):</span>
+                    <span>{formatearPrecio(iva5!)}</span>
+                  </div>
+                )}
+              </>
+            )}
 
             <div className="separador" />
 

@@ -1,4 +1,4 @@
-import api from './api';
+﻿import api from './api';
 import {
   clientesService,
   ClienteParams,
@@ -27,7 +27,7 @@ describe('Clientes Service', () => {
         ruc_ci: '1234567890',
         telefono: '0981234567',
         email: 'juan@example.com',
-        activo: true,
+        estado: true,
         fecha_registro: '2024-01-01',
         id_tipo_cliente: 1,
         id_lista: 1,
@@ -40,7 +40,7 @@ describe('Clientes Service', () => {
         ruc_ci: '9876543210',
         telefono: '0987654321',
         email: 'maria@example.com',
-        activo: true,
+        estado: true,
         fecha_registro: '2024-01-01',
         id_tipo_cliente: 2,
         id_lista: 1,
@@ -77,7 +77,7 @@ describe('Clientes Service', () => {
     });
 
     test('debe filtrar clientes activos', async () => {
-      const params: ClienteParams = { activo: true };
+      const params: ClienteParams = { estado: true };
       mockedApi.get.mockResolvedValue({ data: mockResponse });
       await clientesService.getClientes(params);
       expect(mockedApi.get).toHaveBeenCalledWith('/clientes/', { params });
@@ -122,7 +122,7 @@ describe('Clientes Service', () => {
       telefono: '0981234567',
       email: 'juan@example.com',
       limite_credito: 1000.0,
-      activo: true,
+      estado: true,
       fecha_registro: '2024-01-01',
       id_tipo_cliente: 1,
       id_lista: 1,
@@ -151,7 +151,7 @@ describe('Clientes Service', () => {
         apellidos: 'Pérez',
         razon_social: 'Juan Pérez',
         ruc_ci: '1234567890',
-        activo: true,
+        estado: true,
         fecha_registro: '2024-01-01',
         id_tipo_cliente: 1,
         id_lista: 1,
@@ -193,7 +193,7 @@ describe('Clientes Service', () => {
       ruc_ci: '5555555555',
       telefono: '0985555555',
       email: 'pedro@example.com',
-      activo: true,
+      estado: true,
       id_lista: 1,
       id_tipo_cliente: 1,
     };
@@ -205,7 +205,7 @@ describe('Clientes Service', () => {
       ruc_ci: '5555555555',
       telefono: '0985555555',
       email: 'pedro@example.com',
-      activo: true,
+      estado: true,
       fecha_registro: '2024-01-15',
       id_lista: 1,
       id_tipo_cliente: 1,
@@ -261,7 +261,7 @@ describe('Clientes Service', () => {
       ruc_ci: '1234567890',
       telefono: '0981111111',
       email: 'juancarlos@example.com',
-      activo: true,
+      estado: true,
       fecha_registro: '2024-01-01',
       id_tipo_cliente: 1,
       id_lista: 1,
@@ -319,29 +319,29 @@ describe('Clientes Service', () => {
       apellidos: 'Pérez',
       razon_social: 'Juan Pérez',
       ruc_ci: '1234567890',
-      activo: false,
+      estado: false,
       fecha_registro: '2024-01-01',
       id_tipo_cliente: 1,
       id_lista: 1,
     };
     test('debe activar cliente', async () => {
       mockedApi.patch.mockResolvedValue({
-        data: { ...mockCliente, activo: true },
+        data: { ...mockCliente, estado: true },
       });
       const result = await clientesService.toggleEstadoCliente(1, true);
       expect(mockedApi.patch).toHaveBeenCalledWith('/clientes/1/', {
-        activo: true,
+        estado: true,
       });
-      expect(result.activo).toBe(true);
+      expect(result.estado).toBe(true);
     });
 
     test('debe desactivar cliente', async () => {
       mockedApi.patch.mockResolvedValue({ data: mockCliente });
       const result = await clientesService.toggleEstadoCliente(1, false);
       expect(mockedApi.patch).toHaveBeenCalledWith('/clientes/1/', {
-        activo: false,
+        estado: false,
       });
-      expect(result.activo).toBe(false);
+      expect(result.estado).toBe(false);
     });
   });
 
@@ -375,8 +375,8 @@ describe('Clientes Service', () => {
 
   describe('getTiposCliente', () => {
     const mockTipos: TipoCliente[] = [
-      { id_tipo_cliente: 1, nombre: 'Mayorista', activo: true },
-      { id_tipo_cliente: 2, nombre: 'Minorista', activo: true },
+      { id_tipo_cliente: 1, nombre: 'Mayorista', estado: true },
+      { id_tipo_cliente: 2, nombre: 'Minorista', estado: true },
     ];
     test('debe obtener tipos de cliente', async () => {
       const mockResponse: PaginatedResponse<TipoCliente> = {
@@ -388,7 +388,7 @@ describe('Clientes Service', () => {
       mockedApi.get.mockResolvedValue({ data: mockResponse });
       const result = await clientesService.getTiposCliente();
       expect(mockedApi.get).toHaveBeenCalledWith('/tipos-cliente/', {
-        params: { activo: true, page_size: 100 },
+        params: { estado: true, page_size: 100 },
       });
       expect(result).toEqual(mockTipos);
       expect(result).toHaveLength(2);
@@ -438,7 +438,7 @@ describe('Clientes Service', () => {
         nombres: 'Test',
         apellidos: 'Cliente',
         ruc_ci: '1111111111',
-        activo: true,
+        estado: true,
         id_lista: 1,
         id_tipo_cliente: 1,
       };
@@ -447,7 +447,7 @@ describe('Clientes Service', () => {
         nombres: 'Test',
         apellidos: 'Cliente',
         ruc_ci: '1111111111',
-        activo: true,
+        estado: true,
         razon_social: 'Test Cliente',
         fecha_registro: '2024-01-15',
         id_lista: 1,

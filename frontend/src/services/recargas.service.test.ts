@@ -1,4 +1,4 @@
-import api from './api';
+﻿import api from './api';
 import {
   recargasService,
   RecargaCajaData,
@@ -25,7 +25,7 @@ describe('Recargas Service', () => {
         nombre: 'Juan',
         apellido: 'Pérez',
         grado: '5to Grado',
-        activo: true,
+        estado: true,
         id_cliente_responsable: 10
       },
       {
@@ -33,7 +33,7 @@ describe('Recargas Service', () => {
         nombre: 'María',
         apellido: 'López',
         grado: '3er Grado',
-        activo: true,
+        estado: true,
         id_cliente_responsable: 11
       }
     ];
@@ -74,7 +74,7 @@ describe('Recargas Service', () => {
     });
 
     test('debe filtrar hijos activos', async () => {
-      const params: HijoParams = { activo: true };
+      const params: HijoParams = { estado: true };
       mockedApi.get.mockResolvedValue({ data: mockResponse });
 
       await recargasService.buscarHijos(params);
@@ -103,7 +103,7 @@ describe('Recargas Service', () => {
       nombre: 'Juan',
       apellido: 'Pérez',
       grado: '5to Grado',
-      activo: true,
+      estado: true,
       id_cliente_responsable: 10
     };
 
@@ -463,7 +463,7 @@ describe('Recargas Service', () => {
         nombre: 'Juan',
         apellido: 'Pérez',
         grado: '5to',
-        activo: true,
+        estado: true,
         id_cliente_responsable: 10
       };
 

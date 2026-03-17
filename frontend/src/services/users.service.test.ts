@@ -1,4 +1,4 @@
-import api from './api';
+﻿import api from './api';
 import { usersService, rolesService, mapRolToUserRole, mapUserRoleToRolNombre } from './users.service';
 import type { Usuario, Rol, CreateUsuarioDto, UpdateUsuarioDto } from './users.service';
 
@@ -23,7 +23,7 @@ describe('Users Service', () => {
         ciudad: 'Asunción',
         pais: 'Paraguay',
         fecha_ingreso: '2024-01-01T00:00:00Z',
-        activo: true,
+        estado: true,
         id_rol: 1,
         rol_nombre: 'Administrador',
       },
@@ -35,7 +35,7 @@ describe('Users Service', () => {
         email: '[email protected]',
         telefono: '0987654321',
         fecha_ingreso: '2024-02-01T00:00:00Z',
-        activo: true,
+        estado: true,
         id_rol: 3,
         rol_nombre: 'Cajero',
       },
@@ -75,7 +75,7 @@ describe('Users Service', () => {
       usuario: 'jadmin',
       email: '[email protected]',
       fecha_ingreso: '2024-01-01T00:00:00Z',
-      activo: true,
+      estado: true,
       id_rol: 1,
       rol_nombre: 'Administrador',
     };
@@ -117,7 +117,7 @@ describe('Users Service', () => {
         id_empleado: 3,
         ...createData,
         fecha_ingreso: '2024-03-01T00:00:00Z',
-        activo: true,
+        estado: true,
         rol_nombre: 'Gerente',
       },
       mensaje: 'Usuario creado exitosamente',
@@ -164,7 +164,7 @@ describe('Users Service', () => {
       email: '[email protected]',
       telefono: '0981234568',
       fecha_ingreso: '2024-01-01T00:00:00Z',
-      activo: true,
+      estado: true,
       id_rol: 2,
       rol_nombre: 'Gerente',
     };
@@ -196,7 +196,7 @@ describe('Users Service', () => {
       usuario: 'jadmin',
       email: '[email protected]',
       fecha_ingreso: '2024-01-01T00:00:00Z',
-      activo: false,
+      estado: false,
       fecha_baja: '2024-03-01T00:00:00Z',
       id_rol: 1,
       rol_nombre: 'Administrador',
@@ -208,10 +208,10 @@ describe('Users Service', () => {
       const result = await usersService.deactivate(1);
 
       expect(mockedApi.patch).toHaveBeenCalledWith('/empleados/1/', {
-        activo: false,
+        estado: false,
         fecha_baja: expect.any(String),
       });
-      expect(result.activo).toBe(false);
+      expect(result.estado).toBe(false);
     });
   });
 
@@ -223,7 +223,7 @@ describe('Users Service', () => {
       usuario: 'jadmin',
       email: '[email protected]',
       fecha_ingreso: '2024-01-01T00:00:00Z',
-      activo: true,
+      estado: true,
       fecha_baja: undefined,
       id_rol: 1,
       rol_nombre: 'Administrador',
@@ -235,10 +235,10 @@ describe('Users Service', () => {
       const result = await usersService.activate(1);
 
       expect(mockedApi.patch).toHaveBeenCalledWith('/empleados/1/', {
-        activo: true,
+        estado: true,
         fecha_baja: null,
       });
-      expect(result.activo).toBe(true);
+      expect(result.estado).toBe(true);
     });
   });
 
@@ -291,19 +291,19 @@ describe('Roles Service', () => {
         id_rol: 1,
         nombre_rol: 'Administrador',
         descripcion: 'Acceso total al sistema',
-        activo: true,
+        estado: true,
       },
       {
         id_rol: 2,
         nombre_rol: 'Gerente',
         descripcion: 'Gestión de operaciones',
-        activo: true,
+        estado: true,
       },
       {
         id_rol: 3,
         nombre_rol: 'Cajero',
         descripcion: 'Operaciones de caja',
-        activo: true,
+        estado: true,
       },
     ];
 
@@ -324,7 +324,7 @@ describe('Roles Service', () => {
         id_rol: 1,
         nombre_rol: 'Administrador',
         descripcion: 'Acceso total',
-        activo: true,
+        estado: true,
       },
     ];
 
@@ -333,7 +333,7 @@ describe('Roles Service', () => {
 
       const result = await rolesService.getActive();
 
-      expect(mockedApi.get).toHaveBeenCalledWith('/roles/?activo=true');
+      expect(mockedApi.get).toHaveBeenCalledWith('/roles/?estado=true');
       expect(result).toEqual(mockActiveRoles);
     });
   });
@@ -343,7 +343,7 @@ describe('Roles Service', () => {
       id_rol: 1,
       nombre_rol: 'Administrador',
       descripcion: 'Acceso total',
-      activo: true,
+      estado: true,
     };
 
     test('debe obtener rol por ID', async () => {
@@ -360,7 +360,7 @@ describe('Roles Service', () => {
     const newRol = {
       nombre_rol: 'Supervisor',
       descripcion: 'Supervisión de operaciones',
-      activo: true,
+      estado: true,
     };
 
     const mockCreatedRol: Rol = {
@@ -387,7 +387,7 @@ describe('Roles Service', () => {
       id_rol: 1,
       nombre_rol: 'Administrador',
       descripcion: 'Nueva descripción',
-      activo: true,
+      estado: true,
     };
 
     test('debe actualizar un rol', async () => {

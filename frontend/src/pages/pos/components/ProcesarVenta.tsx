@@ -457,6 +457,11 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
           comprobante={numeroComprobante || undefined}
           clienteNombre={hijoSeleccionado ? `${hijoSeleccionado.nombre} ${hijoSeleccionado.apellido}` : undefined}
           tarjetaNro={tarjetaSeleccionada?.nro_tarjeta}
+          iva10={ventaRealizada.iva_10}
+          iva5={ventaRealizada.iva_5}
+          montoExenta={ventaRealizada.monto_exenta}
+          montoGravada10={ventaRealizada.monto_gravada_10}
+          montoGravada5={ventaRealizada.monto_gravada_5}
           onCerrar={() => {
             setMostrarRecibo(false);
             onCerrar();

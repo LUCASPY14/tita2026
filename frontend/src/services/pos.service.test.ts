@@ -1,4 +1,4 @@
-import api from './api';
+﻿import api from './api';
 import { posService } from './pos.service';
 import type { Producto, Categoria, MedioPago, Venta, VentaData, PaginatedResponse } from '../types';
 
@@ -26,7 +26,7 @@ describe('POS Service', () => {
       categoria_nombre: 'Comidas',
       id_impuesto: 1,
       permite_stock_negativo: false,
-      activo: true,
+      estado: true,
     };
 
     describe('getProductos', () => {
@@ -57,7 +57,7 @@ describe('POS Service', () => {
         const params = {
           search: 'hamburguesa',
           categoria: 1,
-          activo: true,
+          estado: true,
         };
 
         mockedApi.get.mockResolvedValue({ data: mockResponse });
@@ -84,10 +84,10 @@ describe('POS Service', () => {
 
         mockedApi.get.mockResolvedValue({ data: mockResponse });
 
-        await posService.getProductos({ activo: true });
+        await posService.getProductos({ estado: true });
 
         expect(mockedApi.get).toHaveBeenCalledWith('/productos/', { 
-          params: { activo: true } 
+          params: { estado: true } 
         });
       });
 
@@ -140,7 +140,7 @@ describe('POS Service', () => {
         const result = await posService.buscarProductoPorCodigo('12345');
 
         expect(mockedApi.get).toHaveBeenCalledWith('/productos/', {
-          params: { search: '12345', activo: true },
+          params: { search: '12345', estado: true },
         });
         expect(result).toEqual(mockProducto);
       });
@@ -164,7 +164,7 @@ describe('POS Service', () => {
         await expect(posService.buscarProductoPorCodigo('')).rejects.toThrow('Producto no encontrado');
 
         expect(mockedApi.get).toHaveBeenCalledWith('/productos/', {
-          params: { search: '', activo: true },
+          params: { search: '', estado: true },
         });
       });
     });
@@ -178,7 +178,7 @@ describe('POS Service', () => {
     const mockCategoria: Categoria = {
       id_categoria: 1,
       nombre: 'Comidas',
-      activo: true,
+      estado: true,
     };
 
     describe('getCategorias', () => {
@@ -208,7 +208,7 @@ describe('POS Service', () => {
 
         const params = {
           search: 'comida',
-          activo: true,
+          estado: true,
         };
 
         mockedApi.get.mockResolvedValue({ data: mockResponse });
@@ -235,10 +235,10 @@ describe('POS Service', () => {
 
         mockedApi.get.mockResolvedValue({ data: mockResponse });
 
-        await posService.getCategorias({ activo: true });
+        await posService.getCategorias({ estado: true });
 
         expect(mockedApi.get).toHaveBeenCalledWith('/categorias/', { 
-          params: { activo: true } 
+          params: { estado: true } 
         });
       });
     });
@@ -253,7 +253,7 @@ describe('POS Service', () => {
       id_medio_pago: 1,
       nombre: 'Efectivo',
       genera_comision: false,
-      activo: true,
+      estado: true,
     };
 
     describe('getMediosPago', () => {
@@ -270,7 +270,7 @@ describe('POS Service', () => {
         const result = await posService.getMediosPago();
 
         expect(mockedApi.get).toHaveBeenCalledWith('/medios-pago/', {
-          params: { activo: true, page_size: 100 },
+          params: { estado: true, page_size: 100 },
         });
         expect(result).toEqual([mockMedioPago]);
       });
@@ -516,7 +516,7 @@ describe('POS Service', () => {
         categoria_nombre: 'Comidas',
         id_impuesto: 1,
         permite_stock_negativo: false,
-        activo: true,
+        estado: true,
       };
 
       const mockVenta: Venta = {
@@ -561,7 +561,7 @@ describe('POS Service', () => {
       const mockCategoria: Categoria = {
         id_categoria: 1,
         nombre: 'Comidas',
-        activo: true,
+        estado: true,
       };
 
       const mockProductos: PaginatedResponse<Producto> = {
@@ -580,7 +580,7 @@ describe('POS Service', () => {
             categoria_nombre: 'Comidas',
             id_impuesto: 1,
             permite_stock_negativo: false,
-            activo: true,
+            estado: true,
           },
         ],
       };

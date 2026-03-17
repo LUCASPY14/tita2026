@@ -1,4 +1,4 @@
-import api from './api';
+﻿import api from './api';
 import { 
   almuerzosService, 
   PlanParams, 
@@ -32,7 +32,7 @@ describe('Almuerzos Service', () => {
         descripcion: 'Incluye almuerzo todos los días',
         precio_mensual: 500000,
         dias_semana_incluidos: 'Lunes,Martes,Miércoles,Jueves,Viernes',
-        activo: true,
+        estado: true,
         fecha_creacion: '2024-01-01'
       },
       {
@@ -41,7 +41,7 @@ describe('Almuerzos Service', () => {
         descripcion: 'Almuerzo 3 días por semana',
         precio_mensual: 300000,
         dias_semana_incluidos: 'Lunes,Miércoles,Viernes',
-        activo: true,
+        estado: true,
         fecha_creacion: '2024-01-01'
       }
     ];
@@ -64,7 +64,7 @@ describe('Almuerzos Service', () => {
       });
 
       test('debe obtener planes con filtros', async () => {
-        const params: PlanParams = { activo: true };
+        const params: PlanParams = { estado: true };
         mockedApi.get.mockResolvedValue({ data: mockResponse });
 
         await almuerzosService.getPlanes(params);
@@ -99,7 +99,7 @@ describe('Almuerzos Service', () => {
         descripcion: 'Plan de prueba',
         precio_mensual: 400000,
         dias_semana_incluidos: 'Lunes,Martes,Jueves',
-        activo: true
+        estado: true
       };
 
       test('debe crear plan nuevo', async () => {
@@ -138,13 +138,13 @@ describe('Almuerzos Service', () => {
 
     describe('toggleEstadoPlan', () => {
       test('debe desactivar plan', async () => {
-        const planInactivo = { ...mockPlanes[0], activo: false };
+        const planInactivo = { ...mockPlanes[0], estado: false };
         mockedApi.patch.mockResolvedValue({ data: planInactivo });
 
         const result = await almuerzosService.toggleEstadoPlan(1, false);
 
-        expect(mockedApi.patch).toHaveBeenCalledWith('/planes-almuerzo/1/', { activo: false });
-        expect(result.activo).toBe(false);
+        expect(mockedApi.patch).toHaveBeenCalledWith('/planes-almuerzo/1/', { estado: false });
+        expect(result.estado).toBe(false);
       });
     });
   });
@@ -160,7 +160,7 @@ describe('Almuerzos Service', () => {
         incluye_plato_principal: true,
         incluye_postre: true,
         incluye_bebida: true,
-        activo: true,
+        estado: true,
         fecha_creacion: '2024-01-01'
       },
       {
@@ -171,7 +171,7 @@ describe('Almuerzos Service', () => {
         incluye_plato_principal: true,
         incluye_postre: false,
         incluye_bebida: false,
-        activo: true,
+        estado: true,
         fecha_creacion: '2024-01-01'
       }
     ];
@@ -194,7 +194,7 @@ describe('Almuerzos Service', () => {
       });
 
       test('debe filtrar tipos activos', async () => {
-        const params: TipoParams = { activo: true };
+        const params: TipoParams = { estado: true };
         mockedApi.get.mockResolvedValue({ data: mockResponse });
 
         await almuerzosService.getTipos(params);
@@ -222,7 +222,7 @@ describe('Almuerzos Service', () => {
         incluye_plato_principal: true,
         incluye_postre: true,
         incluye_bebida: true,
-        activo: true
+        estado: true
       };
 
       test('debe crear tipo nuevo', async () => {
@@ -261,13 +261,13 @@ describe('Almuerzos Service', () => {
 
     describe('toggleEstadoTipo', () => {
       test('debe desactivar tipo', async () => {
-        const tipoInactivo = { ...mockTipos[0], activo: false };
+        const tipoInactivo = { ...mockTipos[0], estado: false };
         mockedApi.patch.mockResolvedValue({ data: tipoInactivo });
 
         const result = await almuerzosService.toggleEstadoTipo(1, false);
 
-        expect(mockedApi.patch).toHaveBeenCalledWith('/tipos-almuerzo/1/', { activo: false });
-        expect(result.activo).toBe(false);
+        expect(mockedApi.patch).toHaveBeenCalledWith('/tipos-almuerzo/1/', { estado: false });
+        expect(result.estado).toBe(false);
       });
     });
   });
@@ -667,7 +667,7 @@ describe('Almuerzos Service', () => {
         palabras_clave: ['trigo', 'pan', 'harina'],
         nivel_severidad: 'Alto',
         icono: '🌾',
-        activo: true,
+        estado: true,
         fecha_creacion: '2024-01-01',
         usuario_creacion: 'admin'
       },
@@ -678,7 +678,7 @@ describe('Almuerzos Service', () => {
         palabras_clave: ['leche', 'queso', 'yogur'],
         nivel_severidad: 'Medio',
         icono: '🥛',
-        activo: true,
+        estado: true,
         fecha_creacion: '2024-01-01',
         usuario_creacion: 'admin'
       }
@@ -702,7 +702,7 @@ describe('Almuerzos Service', () => {
       });
 
       test('debe filtrar alérgenos activos', async () => {
-        const params = { activo: true };
+        const params = { estado: true };
         mockedApi.get.mockResolvedValue({ data: mockResponse });
 
         await almuerzosService.getAlergenos(params);
@@ -738,7 +738,7 @@ describe('Almuerzos Service', () => {
         palabras_clave: ['maní', 'cacahuete', 'fruto seco'],
         nivel_severidad: 'Alto',
         icono: '🥜',
-        activo: true
+        estado: true
       };
 
       test('debe crear alérgeno nuevo', async () => {

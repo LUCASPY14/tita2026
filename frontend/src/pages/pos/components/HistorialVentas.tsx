@@ -412,6 +412,43 @@ const HistorialVentas: React.FC = () => {
                   </div>
                 )}
               </div>
+              {((ventaDetalle.iva_10 ?? 0) > 0 || (ventaDetalle.iva_5 ?? 0) > 0 || (ventaDetalle.monto_exenta ?? 0) > 0) && (
+                <div className="mt-3 rounded-lg bg-gray-50 border border-gray-200 p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Desglose Fiscal (IVA incluido)</p>
+                  <div className="space-y-1">
+                    {(ventaDetalle.monto_exenta ?? 0) > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Exenta:</span>
+                        <span className="font-medium">{formatearMoneda(ventaDetalle.monto_exenta!)}</span>
+                      </div>
+                    )}
+                    {(ventaDetalle.monto_gravada_10 ?? 0) > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Gravada 10%:</span>
+                        <span className="font-medium">{formatearMoneda(ventaDetalle.monto_gravada_10!)}</span>
+                      </div>
+                    )}
+                    {(ventaDetalle.iva_10 ?? 0) > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">IVA (10%):</span>
+                        <span className="font-medium text-blue-700">{formatearMoneda(ventaDetalle.iva_10!)}</span>
+                      </div>
+                    )}
+                    {(ventaDetalle.monto_gravada_5 ?? 0) > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Gravada 5%:</span>
+                        <span className="font-medium">{formatearMoneda(ventaDetalle.monto_gravada_5!)}</span>
+                      </div>
+                    )}
+                    {(ventaDetalle.iva_5 ?? 0) > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">IVA (5%):</span>
+                        <span className="font-medium text-blue-700">{formatearMoneda(ventaDetalle.iva_5!)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="border-t border-gray-200 px-6 py-3 text-right">
               <Button type="button" variant="secondary" onClick={() => setVentaDetalle(null)}>
