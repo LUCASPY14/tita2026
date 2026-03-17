@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, History, RotateCcw } from 'lucide-react';
 import { Card } from '../../components/common';
-import { CatalogoProductos, CarritoCompras, ProcesarVenta, HistorialVentas, NotasCredito } from './components';
-import type { ItemCarrito, Producto } from '../../types';
+import { CatalogoProductos, CarritoCompras, ProcesarVenta, HistorialVentas, NotasCredito, TarjetaScanInput, HijoCard } from './components';
+import type { ItemCarrito, Producto, TarjetaEscaneada } from '../../types';
 
 type Vista = 'pos' | 'historial' | 'devoluciones';
 
@@ -10,6 +10,7 @@ const POS: React.FC = () => {
   const [vista, setVista] = useState<Vista>('pos');
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [mostrarProcesar, setMostrarProcesar] = useState(false);
+  const [tarjetaActual, setTarjetaActual] = useState<TarjetaEscaneada | null>(null);
 
   const agregarAlCarrito = (producto: Producto, cantidad: number = 1) => {
     setCarrito(prev => {
@@ -72,6 +73,15 @@ const POS: React.FC = () => {
   const handleVentaExitosa = () => {
     vaciarCarrito();
     setMostrarProcesar(false);
+    // Mantener la tarjeta escaneada para próximas compras
+  };
+
+  const handleTarjetaEscaneada = (tarjeta: TarjetaEscaneada) => {
+    setTarjetaActual(tarjeta);
+  };
+
+  const cerrarHijo = () => {
+    setTarjetaActual(null);
   };
 
   const totalCarrito = carrito.reduce((sum, item) => sum + item.subtotal, 0);
@@ -179,25 +189,43 @@ const POS: React.FC = () => {
 
       {/* Vista: POS */}
       {vista === 'pos' && (
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Columna izquierda: Catálogo */}
-        <div className="lg:col-span-2">
-          <Card title="Catálogo de Productos" subtitle="Selecciona productos para agregar a la venta">
-            <CatalogoProductos onAgregarProducto={agregarAlCarrito} />
-          </Card>
-        </div>
+        <div className="space-y-6">
+          {/* Escaneo de tarjeta */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <TarjetaScanInput 
+              onTarjetaEscaneada={handleTarjetaEscaneada}
+              disabled={mostrarProcesar}
+            />
+            
+            {tarjetaActual && (
+              <HijoCard 
+                tarjeta={tarjetaActual}
+                onCerrar={cerrarHijo}
+                compactMode={true}
+              />
+            )}
+          </div>
 
-        {/* Columna derecha: Carrito */}
-        <div className="lg:col-span-1">
-          <div className="space-y-4">
-            <Card 
-              title="Carrito de Compras" 
-              subtitle={`${cantidadItems} producto${cantidadItems !== 1 ? 's' : ''}`}
-            >
-              <CarritoCompras
-                items={carrito}
-                onActualizarCantidad={actualizarCantidad}
-                onRemoverItem={eliminarDelCarrito}
+          {/* Catálogo y Carrito */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* Columna izquierda: Catálogo */}
+            <div className="lg:col-span-2">
+              <Card title="Catálogo de Productos" subtitle="Selecciona productos para agregar a la venta">
+                <CatalogoProductos onAgregarProducto={agregarAlCarrito} />
+              </Card>
+            </div>
+
+            {/* Columna derecha: Carrito */}
+            <div className="lg:col-span-1">
+              <div className="space-y-4">
+                <Card 
+                  title="Carrito de Compras" 
+                  subtitle={`${cantidadItems} producto${cantidadItems !== 1 ? 's' : ''}`}
+                >
+                  <CarritoCompras
+                    items={carrito}
+                    onActualizarCantidad={actualizarCantidad}
+                    onRemoverItem={eliminarDelCarrito}
                 onLimpiar={vaciarCarrito}
                 onProcesar={() => setMostrarProcesar(true)}
               />
@@ -216,7 +244,8 @@ const POS: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
+          </div>
+        </div>
       )}
 
       {/* Vista: Historial */}

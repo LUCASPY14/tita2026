@@ -1006,3 +1006,26 @@ export interface PermisosResult {
   mensaje: string;
 }
 
+// Tipos para escaneo de tarjetas POS
+export interface Hijo {
+  id: number;
+  nombre: string;
+  apellido: string;
+  foto?: string;
+  fechaFoto?: string;
+}
+
+export interface SaldoTarjeta {
+  actual: number;
+  disponible: number;
+  alertaBajo: boolean;
+}
+
+export interface TarjetaEscaneada {
+  numero: string;
+  hijo: Hijo;
+  saldo: SaldoTarjeta;
+  estado: string;
+  timestamp: Date;
+}
+
