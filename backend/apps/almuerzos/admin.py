@@ -177,7 +177,8 @@ class RegistrosConsumoAlmuerzoAdmin(admin.ModelAdmin):
     def costo_badge(self, obj):
         if not obj.costo_almuerzo:
             return format_html('<span style="color: #999;">N/A</span>')
-        return format_html("<strong>₲{:,.0f}</strong>", obj.costo_almuerzo)
+        costo_formateado = f"{obj.costo_almuerzo:,.0f}"
+        return format_html("<strong>₲{}</strong>", costo_formateado)
 
     costo_badge.short_description = "Costo"
 
@@ -261,26 +262,38 @@ class CuentasAlmuerzoMensualAdmin(admin.ModelAdmin):
     periodo_display.short_description = "Periodo"
 
     def monto_total_badge(self, obj):
-        return format_html("<strong>₲{:,.0f}</strong>", obj.monto_total)
+        if obj.monto_total is None:
+            return format_html('<span style="color: #999;">N/A</span>')
+        monto_formateado = f"{obj.monto_total:,.0f}"
+        return format_html("<strong>₲{}</strong>", monto_formateado)
 
     monto_total_badge.short_description = "Total"
 
     def monto_pagado_badge(self, obj):
+        if obj.monto_pagado is None or obj.monto_total is None:
+            return format_html('<span style="color: #999;">N/A</span>')
         color = "#4CAF50" if obj.monto_pagado >= obj.monto_total else "#FF9800"
-        return format_html('<strong style="color: {};">₲{:,.0f}</strong>', color, obj.monto_pagado)
+        monto_formateado = f"{obj.monto_pagado:,.0f}"
+        return format_html('<strong style="color: {};">₲{}</strong>', color, monto_formateado)
 
     monto_pagado_badge.short_description = "Pagado"
 
     def saldo_badge(self, obj):
+        if obj.monto_total is None or obj.monto_pagado is None:
+            return format_html('<span style="color: #999;">N/A</span>')
         saldo = obj.monto_total - obj.monto_pagado
         color = "#4CAF50" if saldo <= 0 else "#F44336"
-        return format_html('<strong style="color: {};">₲{:,.0f}</strong>', color, saldo)
+        saldo_formateado = f"{saldo:,.0f}"
+        return format_html('<strong style="color: {};">₲{}</strong>', color, saldo_formateado)
 
     saldo_badge.short_description = "Saldo"
 
     def saldo_pendiente_display(self, obj):
+        if obj.monto_total is None or obj.monto_pagado is None:
+            return format_html('<span style="color: #999;">N/A</span>')
         saldo = obj.monto_total - obj.monto_pagado
-        return format_html("<strong>₲{:,.2f}</strong>", saldo)
+        saldo_formateado = f"{saldo:,.2f}"
+        return format_html("<strong>₲{}</strong>", saldo_formateado)
 
     saldo_pendiente_display.short_description = "Saldo Pendiente"
 
@@ -322,7 +335,8 @@ class PagosAlmuerzoMensualAdmin(admin.ModelAdmin):
     )
 
     def monto_pagado_badge(self, obj):
-        return format_html('<strong style="color: #4CAF50;">₲{:,.0f}</strong>', obj.monto_pagado)
+        monto_formateado = f"{obj.monto_pagado:,.0f}"
+        return format_html('<strong style="color: #4CAF50;">₲{}</strong>', monto_formateado)
 
     monto_pagado_badge.short_description = "Monto"
 
@@ -366,7 +380,8 @@ class PagosCuentasAlmuerzoAdmin(admin.ModelAdmin):
     )
 
     def monto_badge(self, obj):
-        return format_html('<strong style="color: #4CAF50;">₲{:,.0f}</strong>', obj.monto)
+        monto_formateado = f"{obj.monto:,.0f}"
+        return format_html('<strong style="color: #4CAF50;">₲{}</strong>', monto_formateado)
 
     monto_badge.short_description = "Monto"
 

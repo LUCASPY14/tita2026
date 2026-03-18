@@ -206,7 +206,12 @@ class Hijos(models.Model):
     apellido = models.CharField(max_length=100, help_text="Apellido del estudiante")
     fecha_nacimiento = models.DateField(blank=True, null=True)
     grado = models.CharField(max_length=50, blank=True, null=True)
-    foto_perfil = models.CharField(max_length=255, blank=True, null=True)
+    foto_perfil = models.ImageField(
+        upload_to='fotos_estudiantes/', 
+        blank=True, 
+        null=True,
+        help_text="Foto de perfil del estudiante"
+    )
     fecha_foto = models.DateTimeField(blank=True, null=True)
     estado = models.BooleanField(default=True, help_text="1=estado, 0=Inactivo")
     id_cliente_responsable = models.ForeignKey(

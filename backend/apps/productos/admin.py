@@ -463,10 +463,11 @@ class ListasPreciosAdmin(admin.ModelAdmin):
             promedio = obj.precios.aggregate(Avg("precio_unitario"))[
                 "precio_unitario__avg"
             ] or Decimal("0")
+            promedio_formateado = f"{promedio:,.0f}"
             return format_html(
-                '<span style="font-weight: bold;">{}</span> precios<br><small style="color: #6c757d;">Promedio: ₲{:,.0f}</small>',
+                '<span style="font-weight: bold;">{}</span> precios<br><small style="color: #6c757d;">Promedio: ₲{}</small>',
                 total,
-                promedio,
+                promedio_formateado,
             )
         return "0 precios"
 
@@ -552,11 +553,12 @@ class PreciosPorListaAdmin(admin.ModelAdmin):
             "ARS": "$",
         }
         simbolo = simbolos.get(obj.id_lista.moneda, obj.id_lista.moneda)
+        precio_formateado = f"{obj.precio_unitario:,.2f}"
 
         return format_html(
-            '<span style="color: #28a745; font-weight: bold; font-size: 14px;">{} {:,.2f}</span>',
+            '<span style="color: #28a745; font-weight: bold; font-size: 14px;">{} {}</span>',
             simbolo,
-            obj.precio_unitario,
+            precio_formateado,
         )
 
     precio_display.short_description = "Precio"
@@ -586,14 +588,14 @@ class PreciosPorListaAdmin(admin.ModelAdmin):
 
             if diferencia > 0:
                 return format_html(
-                    '<span style="color: #dc3545;">▲ {:,.0f} ({:+.1f}%)</span>',
-                    diferencia,
+                    '<span style="color: #dc3545;">▲ {} ({:+.1f}%)</span>',
+                    f"{diferencia:,.0f}",
                     porcentaje,
                 )
             elif diferencia < 0:
                 return format_html(
-                    '<span style="color: #28a745;">▼ {:,.0f} ({:.1f}%)</span>',
-                    abs(diferencia),
+                    '<span style="color: #28a745;">▼ {} ({:.1f}%)</span>',
+                    f"{abs(diferencia):,.0f}",
                     porcentaje,
                 )
             return "="

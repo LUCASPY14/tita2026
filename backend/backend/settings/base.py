@@ -4,6 +4,13 @@ Configuración base de Django para el proyecto Cantina Tita
 import os
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+    # Carga variables de entorno desde backend/.env (solo en desarrollo local)
+    load_dotenv(Path(__file__).resolve().parent.parent.parent / '.env')
+except ImportError:
+    pass  # En Docker no se necesita dotenv, las vars vienen del docker-compose
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 

@@ -94,14 +94,16 @@ class CierresCajaAdmin(admin.ModelAdmin):
 
     def monto_inicial_display(self, obj):
         if obj.monto_inicial:
-            return format_html("₲{:,.0f}", obj.monto_inicial)
+            monto_formateado = f"{obj.monto_inicial:,.0f}"
+            return format_html("₲{}", monto_formateado)
         return "-"
 
     monto_inicial_display.short_description = "Inicial"
 
     def monto_contado_display(self, obj):
         if obj.monto_contado_fisico:
-            return format_html("₲{:,.0f}", obj.monto_contado_fisico)
+            monto_formateado = f"{obj.monto_contado_fisico:,.0f}"
+            return format_html("₲{}", monto_formateado)
         return "-"
 
     monto_contado_display.short_description = "Contado"
@@ -126,7 +128,8 @@ class CierresCajaAdmin(admin.ModelAdmin):
         if obj.fecha_hora_cierre and obj.fecha_hora_apertura:
             diff = obj.fecha_hora_cierre - obj.fecha_hora_apertura
             hours = diff.total_seconds() / 3600
-            return format_html("{:.1f} horas", hours)
+            horas_formateadas = f"{hours:.1f}"
+            return format_html("{} horas", horas_formateadas)
         return "En curso"
 
     duracion_display.short_description = "Duración"
@@ -179,13 +182,15 @@ class MovimientosCajaAdmin(admin.ModelAdmin):
     tipo_movimiento_badge.short_description = "Tipo"
 
     def monto_display(self, obj):
-        return format_html("₲{:,.0f}", obj.monto)
+        monto_formateado = f"{obj.monto:,.0f}"
+        return format_html("₲{}", monto_formateado)
 
     monto_display.short_description = "Monto"
 
     def monto_comision_display(self, obj):
         if obj.monto_comision > 0:
-            return format_html('<span style="color: orange;">₲{:,.0f}</span>', obj.monto_comision)
+            monto_formateado = f"{obj.monto_comision:,.0f}"
+            return format_html('<span style="color: orange;">₲{}</span>', monto_formateado)
         return "₲0"
 
     monto_comision_display.short_description = "Comisión"
@@ -228,7 +233,8 @@ class TarifasComisionAdmin(admin.ModelAdmin):
 
     def monto_fijo_display(self, obj):
         if obj.monto_fijo_comision:
-            return format_html("₲{:,.0f}", obj.monto_fijo_comision)
+            monto_formateado = f"{obj.monto_fijo_comision:,.0f}"
+            return format_html("₲{}", monto_formateado)
         return "-"
 
     monto_fijo_display.short_description = "Monto Fijo"
@@ -278,15 +284,17 @@ class AuditoriaComisionesAdmin(admin.ModelAdmin):
 
     def valor_anterior_display(self, obj):
         if obj.valor_anterior is not None:
-            return format_html('<span style="color: red;">{:.4f}</span>', obj.valor_anterior)
+            valor_formateado = f"{obj.valor_anterior:.4f}"
+            return format_html('<span style="color: red;">{}</span>', valor_formateado)
         return "-"
 
     valor_anterior_display.short_description = "Valor Anterior"
 
     def valor_nuevo_display(self, obj):
         if obj.valor_nuevo is not None:
+            valor_formateado = f"{obj.valor_nuevo:.4f}"
             return format_html(
-                '<span style="color: green; font-weight: bold;">{:.4f}</span>', obj.valor_nuevo
+                '<span style="color: green; font-weight: bold;">{}</span>', valor_formateado
             )
         return "-"
 
@@ -347,7 +355,8 @@ class ConciliacionPagosAdmin(admin.ModelAdmin):
 
     def monto_acreditado_display(self, obj):
         if obj.monto_acreditado:
-            return format_html("₲{:,.0f}", obj.monto_acreditado)
+            monto_formateado = f"{obj.monto_acreditado:,.0f}"
+            return format_html("₲{}", monto_formateado)
         return "-"
 
     monto_acreditado_display.short_description = "Monto Acreditado"
@@ -428,7 +437,8 @@ class DocumentosTributariosAdmin(admin.ModelAdmin):
     estado_sifen_badge.short_description = "Estado SIFEN"
 
     def monto_total_display(self, obj):
-        return format_html("<strong>₲{:,.0f}</strong>", obj.monto_total)
+        monto_formateado = f"{obj.monto_total:,.0f}"
+        return format_html("<strong>₲{}</strong>", monto_formateado)
 
     monto_total_display.short_description = "Monto Total"
 
@@ -478,7 +488,8 @@ class TimbradosAdmin(admin.ModelAdmin):
 
     def numeros_display(self, obj):
         total = obj.nro_final - obj.nro_inicial + 1
-        return format_html("{} - {} ({:,} docs)", obj.nro_inicial, obj.nro_final, total)
+        total_formateado = f"{total:,}"
+        return format_html("{} - {} ({} docs)", obj.nro_inicial, obj.nro_final, total_formateado)
 
     numeros_display.short_description = "Rango"
 
@@ -503,7 +514,8 @@ class TimbradosAdmin(admin.ModelAdmin):
     def disponibles_display(self, obj):
         total = obj.nro_final - obj.nro_inicial + 1
         # Esto podría calcularse desde DocumentosTributarios
-        return format_html("<strong>{:,}</strong> documentos disponibles", total)
+        total_formateado = f"{total:,}"
+        return format_html("<strong>{}</strong> documentos disponibles", total_formateado)
 
     disponibles_display.short_description = "Disponibles"
 
@@ -615,7 +627,8 @@ class ImpuestosAdmin(admin.ModelAdmin):
     )
 
     def porcentaje_display(self, obj):
-        return format_html("<strong>{:.2f}%</strong>", obj.porcentaje if obj.porcentaje else 0)
+        porcentaje_formateado = f"{obj.porcentaje if obj.porcentaje else 0:.2f}"
+        return format_html("<strong>{}%</strong>", porcentaje_formateado)
 
     porcentaje_display.short_description = "Porcentaje"
 

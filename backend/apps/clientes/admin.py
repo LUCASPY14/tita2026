@@ -34,6 +34,20 @@ class HijosAdmin(admin.ModelAdmin):
     list_display = ["id_hijo", "nombre", "apellido", "grado", "estado"]
     list_filter = ["estado", "grado"]
     search_fields = ["nombre", "apellido"]
+    
+    fieldsets = (
+        ("Información Personal", {
+            "fields": ("nombre", "apellido", "fecha_nacimiento", "grado", "id_cliente_responsable")
+        }),
+        ("Foto de Perfil", {
+            "fields": ("foto_perfil", "fecha_foto")
+        }),
+        ("Estado", {
+            "fields": ("estado",)
+        }),
+    )
+    
+    readonly_fields = ["fecha_foto"]
 
 
 @admin.register(Grados)
