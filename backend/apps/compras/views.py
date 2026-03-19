@@ -139,31 +139,27 @@ class ComprasViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def confirmar(self, request, pk=None):
         """
-        Confirma una compra y actualiza el inventario.
+        Confirma una compra.
 
         POST /api/compras/{id}/confirmar/
-
-        Returns:
-            - Compra confirmada
-            - Mensaje de éxito
         """
         compra = self.get_object()
 
-        # Obtener empleado del request
-        empleado = getattr(request.user, "empleado", None)
-
-        if not empleado:
-            return Response(
-                {"error": "Usuario no tiene empleado asociado"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
         try:
-            compra_confirmada = CompraService.confirmar_compra(
-                id_compra=compra.id_compra, empleado=empleado
-            )
+            resultado = CompraService.confirmar_compra(id_compra=compra.id_compra, empleado=None)
 
-            serializer = self.get_serializer(compra_confirmada)
+            if isinstance(resultado, dict):
+                if not resultado.get("exito", False):
+                    return Response(
+                        {"error": resultado.get("error", "No se pudo confirmar la compra")},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                # Recargar la compra desde la base de datos
+                compra.refresh_from_db()
+            else:
+                compra = resultado
 
+            serializer = self.get_serializer(compra)
             return Response(
                 {"mensaje": "Compra confirmada exitosamente", "compra": serializer.data}
             )
