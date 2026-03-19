@@ -11,6 +11,8 @@ from typing import List, Dict
 
 from .models import Compras, DetallesCompra, Proveedores
 from apps.productos.models import Productos
+from apps.inventario.models import StockUnico, MovimientosStock, CostosHistoricos
+from apps.usuarios.models import Empleados
 
 
 class CompraService:
@@ -175,6 +177,54 @@ class CompraService:
                 "error": "La compra no tiene productos asociados",
                 "id_compra": id_compra,
             }
+
+        # Obtener empleado autorizador: el que se pasa, o el primero activo del sistema
+        empleado_autoriza = empleado
+        if empleado_autoriza is None:
+            empleado_autoriza = Empleados.objects.filter(estado=True).first()
+        if empleado_autoriza is None:
+            return {
+                "exito": False,
+                "error": "No hay empleados registrados en el sistema para autorizar el movimiento",
+                "id_compra": id_compra,
+            }
+
+        # Actualizar inventario por cada detalle
+        for detalle in detalles:
+            producto = detalle.id_producto
+            cantidad = detalle.cantidad
+            costo = detalle.costo_unitario
+
+            # Obtener o crear registro de stock
+            stock, _ = StockUnico.objects.select_for_update().get_or_create(
+                id_producto=producto,
+                defaults={"cantidad": Decimal("0.000")},
+            )
+
+            nuevo_stock = stock.cantidad + cantidad
+            stock.cantidad = nuevo_stock
+            stock.save()
+
+            # Registrar movimiento de stock
+            MovimientosStock.objects.create(
+                tipo_movimiento="Ingreso",
+                motivo="compra",
+                cantidad=cantidad,
+                stock_resultante=nuevo_stock,
+                observaciones=f"Compra #{compra.id_compra} - Factura {compra.nro_factura or 'S/N'}",
+                id_compra=compra,
+                id_producto=producto,
+                id_empleado_autoriza=empleado_autoriza,
+            )
+
+            # Registrar costo histórico para costo promedio ponderado
+            CostosHistoricos.objects.create(
+                costo_unitario=costo,
+                cantidad_comprada=cantidad,
+                fecha_compra=compra.fecha,
+                id_compra=compra,
+                id_producto=producto,
+            )
 
         # Confirmar compra
         compra.estado_pago = "Confirmado"
