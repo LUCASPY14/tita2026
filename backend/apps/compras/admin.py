@@ -65,11 +65,13 @@ class ComprasAdmin(admin.ModelAdmin):
         "nro_factura_display",
         "proveedor_nombre",
         "fecha",
+        "tipo_pago_badge",
+        "medio_pago_display",
         "monto_display",
         "saldo_display",
         "estado_badge",
     ]
-    list_filter = ["estado_pago", "fecha", "id_proveedor"]
+    list_filter = ["estado_pago", "tipo_pago", "id_medio_pago", "fecha", "id_proveedor"]
     search_fields = ["nro_factura", "id_proveedor__razon_social", "observaciones"]
     ordering = ["-fecha", "-id_compra"]
     date_hierarchy = "fecha"
@@ -80,7 +82,11 @@ class ComprasAdmin(admin.ModelAdmin):
             "Información de Compra",
             {"fields": ("id_proveedor", "nro_factura", "fecha", "id_documento")},
         ),
-        ("Montos", {"fields": ("monto_total", "saldo_pendiente", "estado_pago")}),
+        (
+            "Forma de Pago",
+            {"fields": ("tipo_pago", "id_medio_pago", "estado_pago")},
+        ),
+        ("Montos", {"fields": ("monto_total", "saldo_pendiente")}),
         ("Observaciones", {"fields": ("observaciones",), "classes": ("collapse",)}),
     )
 
@@ -95,6 +101,27 @@ class ComprasAdmin(admin.ModelAdmin):
         return format_html('<em style="color: #999;">Sin factura</em>')
 
     nro_factura_display.short_description = "Nro. Factura"
+    
+    def tipo_pago_badge(self, obj):
+        """Badge para tipo de pago"""
+        if obj.tipo_pago == "Contado":
+            return format_html(
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">CONTADO</span>'
+            )
+        else:
+            return format_html(
+                '<span style="background-color: #ffc107; color: black; padding: 3px 10px; border-radius: 3px; font-weight: bold;">CRÉDITO</span>'
+            )
+    
+    tipo_pago_badge.short_description = "Tipo Pago"
+    
+    def medio_pago_display(self, obj):
+        """Muestra el medio de pago"""
+        if obj.id_medio_pago:
+            return obj.id_medio_pago.descripcion
+        return format_html('<em style="color: #999;">No especificado</em>')
+    
+    medio_pago_display.short_description = "Medio de Pago"
 
     def proveedor_nombre(self, obj):
         """Muestra nombre del proveedor"""

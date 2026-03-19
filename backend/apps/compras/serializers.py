@@ -19,6 +19,9 @@ class DetallesCompraSerializer(serializers.ModelSerializer):
 class ComprasSerializer(serializers.ModelSerializer):
     detalles = DetallesCompraSerializer(many=True, read_only=True, source="detallescompra_set")
     proveedor_nombre = serializers.CharField(source="id_proveedor.razon_social", read_only=True)
+    medio_pago_descripcion = serializers.CharField(
+        source="id_medio_pago.descripcion", read_only=True, allow_null=True
+    )
 
     class Meta:
         model = Compras

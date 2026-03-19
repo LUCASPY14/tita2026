@@ -28,14 +28,33 @@ class Proveedores(models.Model):
 
 
 class Compras(models.Model):
+    TIPO_PAGO_CHOICES = [
+        ('Contado', 'Contado'),
+        ('Crédito', 'Crédito'),
+    ]
+    
     id_compra = models.BigAutoField(primary_key=True)
     fecha = models.DateTimeField()
     monto_total = models.DecimalField(max_digits=12, decimal_places=2)
     saldo_pendiente = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     estado_pago = models.CharField(max_length=10)
+    tipo_pago = models.CharField(
+        max_length=10, 
+        choices=TIPO_PAGO_CHOICES,
+        default='Contado',
+        help_text="Indica si la compra es al contado o a crédito"
+    )
     nro_factura = models.CharField(max_length=50, blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
     id_proveedor = models.ForeignKey("Proveedores", models.DO_NOTHING, db_column="id_proveedor")
+    id_medio_pago = models.ForeignKey(
+        "core.MediosPago",
+        models.DO_NOTHING,
+        db_column="id_medio_pago",
+        blank=True,
+        null=True,
+        help_text="Forma de pago utilizada (efectivo, transferencia, etc.)"
+    )
     id_documento = models.ForeignKey(
         "contabilidad.DocumentosTributarios",
         models.DO_NOTHING,
@@ -50,8 +69,6 @@ class Compras(models.Model):
     class Meta:
         managed = True
         db_table = "compras"
-        verbose_name = "Compra"
-        verbose_name_plural = "Compras"
         verbose_name = "Compra"
         verbose_name_plural = "Compras"
 
