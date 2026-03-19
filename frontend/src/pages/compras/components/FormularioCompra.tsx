@@ -154,6 +154,10 @@ const FormularioCompra: React.FC<FormularioCompraProps> = ({
       nuevosErrores.id_proveedor = 'Debe seleccionar un proveedor';
     }
 
+    if (formData.tipo_pago === 'Contado' && !formData.id_medio_pago) {
+      nuevosErrores.id_medio_pago = 'Debe seleccionar un medio de pago para compras al contado';
+    }
+
     if (detalles.length === 0) {
       nuevosErrores.detalles = 'Debe agregar al menos un producto';
     }
@@ -165,10 +169,19 @@ const FormularioCompra: React.FC<FormularioCompraProps> = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'id_proveedor' ? Number(value) : value,
-    }));
+    setFormData((prev) => {
+      const newData = {
+        ...prev,
+        [name]: name === 'id_proveedor' ? Number(value) : value,
+      };
+
+      // Si cambia a crédito, limpiar medio de pago
+      if (name === 'tipo_pago' && value === 'Crédito') {
+        newData.id_medio_pago = null;
+      }
+
+      return newData;
+    });
 
     // Limpiar error del campo modificado
     if (errores[name]) {
@@ -193,6 +206,8 @@ const FormularioCompra: React.FC<FormularioCompraProps> = ({
     try {
       const data: CompraData = {
         ...formData,
+        // Si es a crédito, asegurar que id_medio_pago sea null
+        id_medio_pago: formData.tipo_pago === 'Crédito' ? null : formData.id_medio_pago,
         detalles: detalles.map((d) => ({
           id_producto: d.id_producto,
           cantidad: d.cantidad,
