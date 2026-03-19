@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, CreditCard, AlertTriangle, DollarSign, Calendar, Camera } from 'lucide-react';
+import { User, CreditCard, AlertTriangle, DollarSign, Camera } from 'lucide-react';
 import { Card } from '../../../components/common';
 import type { TarjetaEscaneada } from '../../../types';
 
