@@ -107,11 +107,13 @@ class ComprasViewSet(viewsets.ModelViewSet):
 
             # Guardar con totales calculados
             serializer.save(
-                monto_total=totales["total"], saldo_pendiente=totales["total"], estado="Pendiente"
+                monto_total=totales["total"], 
+                saldo_pendiente=totales["total"], 
+                estado_pago="Pendiente"
             )
         else:
             # Sin detalles, guardar como está
-            serializer.save(estado="Pendiente")
+            serializer.save(estado_pago="Pendiente")
 
     @action(detail=True, methods=["post"])
     def confirmar(self, request, pk=None):
