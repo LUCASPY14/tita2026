@@ -22,6 +22,14 @@ class ComprasSerializer(serializers.ModelSerializer):
     medio_pago_descripcion = serializers.CharField(
         source="id_medio_pago.descripcion", read_only=True, allow_null=True
     )
+    # Hacer estos campos opcionales para creación (se calculan en perform_create)
+    monto_total = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, default=0
+    )
+    estado_pago = serializers.CharField(max_length=10, required=False, default="Pendiente")
+    saldo_pendiente = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, allow_null=True
+    )
 
     class Meta:
         model = Compras

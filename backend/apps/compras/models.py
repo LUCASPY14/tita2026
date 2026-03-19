@@ -35,9 +35,18 @@ class Compras(models.Model):
     
     id_compra = models.BigAutoField(primary_key=True)
     fecha = models.DateTimeField()
-    monto_total = models.DecimalField(max_digits=12, decimal_places=2)
-    saldo_pendiente = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    estado_pago = models.CharField(max_length=10)
+    monto_total = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text="Monto total de la compra (calculado automáticamente)"
+    )
+    saldo_pendiente = models.DecimalField(
+        max_digits=12, decimal_places=2, blank=True, null=True,
+        help_text="Saldo pendiente de pago"
+    )
+    estado_pago = models.CharField(
+        max_length=10, default="Pendiente",
+        help_text="Estado del pago: Pendiente, Parcial, Pagado"
+    )
     tipo_pago = models.CharField(
         max_length=10, 
         choices=TIPO_PAGO_CHOICES,
