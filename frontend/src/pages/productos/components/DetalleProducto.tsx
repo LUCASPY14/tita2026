@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Edit, Package, Tag, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Edit, Package, Tag, DollarSign, TrendingUp, AlertCircle, Plus, X, Save } from 'lucide-react';
 import { productosService } from '../../../services/productos.service';
-import { Producto, PrecioPorLista } from '../../../types';
+import { Producto, PrecioPorLista, ListaPrecio } from '../../../types';
 import { Card, Spinner } from '../../../components/common';
 import toast from 'react-hot-toast';
 
@@ -13,19 +13,27 @@ interface DetalleProductoProps {
 
 const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, onVolver }) => {
   const [precios, setPrecios] = useState<PrecioPorLista[]>([]);
+  const [listasDisponibles, setListasDisponibles] = useState<ListaPrecio[]>([]);
   const [cargandoPrecios, setCargandoPrecios] = useState(true);
   const [editandoPrecio, setEditandoPrecio] = useState<number | null>(null);
   const [nuevoPrecio, setNuevoPrecio] = useState<string>('');
+  const [mostrarFormNuevo, setMostrarFormNuevo] = useState(false);
+  const [formNuevo, setFormNuevo] = useState({ id_lista: '', precio_unitario: '' });
+  const [guardandoNuevo, setGuardandoNuevo] = useState(false);
 
   useEffect(() => {
-    cargarPrecios();
+    cargarDatos();
   }, [producto.id_producto]);
 
-  const cargarPrecios = async () => {
+  const cargarDatos = async () => {
     setCargandoPrecios(true);
     try {
-      const data = await productosService.getPreciosPorProducto(producto.id_producto);
-      setPrecios(data);
+      const [datosPrecios, datosListas] = await Promise.all([
+        productosService.getPreciosPorProducto(producto.id_producto),
+        productosService.getListasPrecios(),
+      ]);
+      setPrecios(datosPrecios);
+      setListasDisponibles(datosListas);
     } catch (error) {
       console.error('Error al cargar precios:', error);
     } finally {
@@ -33,29 +41,65 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
     }
   };
 
+  // Listas que aún no tienen precio para este producto
+  const listasConPrecio = new Set(precios.map((p) => p.id_lista));
+  const listasSinPrecio = listasDisponibles.filter(
+    (l) => !listasConPrecio.has(l.id_lista) && l.estado
+  );
+
   const handleActualizarPrecio = async (idPrecio: number) => {
     const precioNumerico = parseFloat(nuevoPrecio);
-    
-    if (isNaN(precioNumerico) || precioNumerico < 0) {
-      toast.error('Ingrese un precio válido');
+    if (isNaN(precioNumerico) || precioNumerico <= 0) {
+      toast.error('Ingrese un precio mayor a 0');
       return;
     }
-
     try {
       await productosService.actualizarPrecio(idPrecio, precioNumerico);
       toast.success('Precio actualizado exitosamente');
       setEditandoPrecio(null);
       setNuevoPrecio('');
-      cargarPrecios();
+      cargarDatos();
     } catch (error) {
       toast.error('Error al actualizar precio');
       console.error('Error:', error);
     }
   };
 
+  const handleCrearPrecio = async () => {
+    const precioNumerico = parseFloat(formNuevo.precio_unitario);
+    if (!formNuevo.id_lista) {
+      toast.error('Seleccione una lista de precios');
+      return;
+    }
+    if (isNaN(precioNumerico) || precioNumerico <= 0) {
+      toast.error('Ingrese un precio mayor a 0');
+      return;
+    }
+    setGuardandoNuevo(true);
+    try {
+      await productosService.crearPrecio({
+        id_producto: producto.id_producto,
+        id_lista: parseInt(formNuevo.id_lista),
+        precio_unitario: precioNumerico,
+      });
+      toast.success('Precio creado exitosamente');
+      setMostrarFormNuevo(false);
+      setFormNuevo({ id_lista: '', precio_unitario: '' });
+      cargarDatos();
+    } catch (error: any) {
+      const msg = error.response?.data?.non_field_errors?.[0] ||
+                  error.response?.data?.detail ||
+                  'Error al crear precio';
+      toast.error(msg);
+    } finally {
+      setGuardandoNuevo(false);
+    }
+  };
+
   const iniciarEdicionPrecio = (precio: PrecioPorLista) => {
     setEditandoPrecio(precio.id_precio);
     setNuevoPrecio(precio.precio_unitario.toString());
+    setMostrarFormNuevo(false);
   };
 
   const cancelarEdicion = () => {
@@ -182,12 +226,94 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
           </Card>
 
           {/* Card Precios por Lista */}
-          <Card title="Precios por Lista">
+          <Card>
+            {/* Header de la card con botón agregar */}
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">Precios por Lista</h3>
+              {!cargandoPrecios && listasSinPrecio.length > 0 && (
+                <button
+                  onClick={() => {
+                    setMostrarFormNuevo(!mostrarFormNuevo);
+                    cancelarEdicion();
+                    setFormNuevo({ id_lista: '', precio_unitario: '' });
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Agregar Precio
+                </button>
+              )}
+            </div>
+
+            {/* Formulario nuevo precio */}
+            {mostrarFormNuevo && (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <h4 className="mb-3 text-sm font-semibold text-amber-800">Nuevo Precio</h4>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Lista de Precios <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formNuevo.id_lista}
+                      onChange={(e) => setFormNuevo((p) => ({ ...p, id_lista: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    >
+                      <option value="">Seleccione...</option>
+                      {listasSinPrecio.map((l) => (
+                        <option key={l.id_lista} value={l.id_lista}>
+                          {l.nombre_lista}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Precio Unitario (Gs.) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formNuevo.precio_unitario}
+                      onChange={(e) =>
+                        setFormNuevo((p) => ({ ...p, precio_unitario: e.target.value }))
+                      }
+                      placeholder="Ej: 5000"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleCrearPrecio();
+                        if (e.key === 'Escape') setMostrarFormNuevo(false);
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <button
+                      onClick={handleCrearPrecio}
+                      disabled={guardandoNuevo}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50"
+                    >
+                      <Save className="h-4 w-4" />
+                      {guardandoNuevo ? 'Guardando...' : 'Guardar'}
+                    </button>
+                    <button
+                      onClick={() => setMostrarFormNuevo(false)}
+                      className="rounded-lg border border-gray-300 p-2 hover:bg-gray-100"
+                    >
+                      <X className="h-4 w-4 text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-amber-700">
+                  💡 El precio de venta debe ser mayor al costo de compra del producto.
+                </p>
+              </div>
+            )}
+
             {cargandoPrecios ? (
               <div className="flex items-center justify-center py-8">
                 <Spinner size="md" />
               </div>
-            ) : precios.length === 0 ? (
+            ) : precios.length === 0 && !mostrarFormNuevo ? (
               <div className="py-8 text-center">
                 <Tag className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-4 text-sm font-medium text-gray-900">
@@ -196,8 +322,17 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
                 <p className="mt-2 text-sm text-gray-500">
                   Este producto aún no tiene precios asignados en ninguna lista
                 </p>
+                {listasSinPrecio.length > 0 && (
+                  <button
+                    onClick={() => setMostrarFormNuevo(true)}
+                    className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Agregar primer precio
+                  </button>
+                )}
               </div>
-            ) : (
+            ) : precios.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -228,16 +363,14 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
                           {editandoPrecio === precio.id_precio ? (
                             <input
                               type="number"
+                              min="1"
                               value={nuevoPrecio}
                               onChange={(e) => setNuevoPrecio(e.target.value)}
-                              className="w-32 rounded border border-gray-300 px-2 py-1 text-sm"
+                              className="w-36 rounded border border-amber-400 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
                               autoFocus
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleActualizarPrecio(precio.id_precio);
-                                } else if (e.key === 'Escape') {
-                                  cancelarEdicion();
-                                }
+                                if (e.key === 'Enter') handleActualizarPrecio(precio.id_precio);
+                                else if (e.key === 'Escape') cancelarEdicion();
                               }}
                             />
                           ) : (
@@ -247,7 +380,7 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
                           )}
                         </td>
                         <td className="px-4 py-4">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-gray-500">
                             {formatearFecha(precio.fecha_vigencia)}
                           </div>
                         </td>
@@ -256,13 +389,13 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
                             <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={() => handleActualizarPrecio(precio.id_precio)}
-                                className="text-xs text-green-600 hover:text-green-700"
+                                className="rounded px-2 py-1 text-xs font-medium text-green-600 hover:bg-green-50"
                               >
                                 Guardar
                               </button>
                               <button
                                 onClick={cancelarEdicion}
-                                className="text-xs text-gray-600 hover:text-gray-700"
+                                className="rounded px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100"
                               >
                                 Cancelar
                               </button>
@@ -282,7 +415,7 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
                   </tbody>
                 </table>
               </div>
-            )}
+            ) : null}
           </Card>
         </div>
 
@@ -319,7 +452,7 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
                         style={{
                           width: `${Math.min(
                             100,
-                            (producto.stock_actual / (producto.stock_minimo * 2)) * 100
+                            (producto.stock_actual / (producto.stock_minimo * 2 || 1)) * 100
                           )}%`,
                         }}
                       />
@@ -330,7 +463,7 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
             </div>
           </Card>
 
-          {/* Card Precio Promedio */}
+          {/* Card Resumen Precios */}
           <Card>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -348,11 +481,34 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
                   </p>
                 </div>
               </div>
-              <div className="border-t border-gray-200 pt-4">
+              <div className="border-t border-gray-200 pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Listas configuradas:</span>
-                  <span className="font-medium text-gray-900">{precios.length}</span>
+                  <span className={`font-medium ${precios.length === 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                    {precios.length} / {listasDisponibles.length}
+                  </span>
                 </div>
+                {precios.length > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Precio más bajo:</span>
+                      <span className="font-medium text-gray-900">
+                        {formatearMoneda(Math.min(...precios.map((p) => p.precio_unitario)))}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Precio más alto:</span>
+                      <span className="font-medium text-gray-900">
+                        {formatearMoneda(Math.max(...precios.map((p) => p.precio_unitario)))}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {precios.length === 0 && (
+                  <p className="text-xs text-red-600">
+                    ⚠️ Sin precio: el producto no podrá venderse en el POS
+                  </p>
+                )}
               </div>
             </div>
           </Card>
@@ -398,3 +554,4 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
 };
 
 export default DetalleProducto;
+
