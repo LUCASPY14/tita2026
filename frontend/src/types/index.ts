@@ -35,7 +35,8 @@ export interface Cliente {
 
 export interface TipoCliente {
   id_tipo_cliente: number;
-  nombre: string;
+  nombre_tipo: string;
+  nombre?: string;
   descripcion?: string;
   estado: boolean;
 }
