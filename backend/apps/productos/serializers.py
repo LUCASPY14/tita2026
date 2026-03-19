@@ -30,6 +30,7 @@ class PreciosPorListaSerializer(serializers.ModelSerializer):
 class ProductosSerializer(serializers.ModelSerializer):
     stock_actual = serializers.SerializerMethodField()
     requiere_reposicion = serializers.SerializerMethodField()
+    precio = serializers.SerializerMethodField()
 
     class Meta:
         model = Productos
@@ -46,3 +47,10 @@ class ProductosSerializer(serializers.ModelSerializer):
             return obj.stock.cantidad <= obj.stock_minimo
         except Exception:
             return False
+
+    def get_precio(self, obj):
+        try:
+            precio = obj.precios.order_by('id_precio').first()
+            return float(precio.precio_unitario) if precio else None
+        except Exception:
+            return None
