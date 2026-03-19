@@ -269,12 +269,15 @@ export interface Compra {
   monto_total: number;
   saldo_pendiente: number;
   estado_pago: 'Pendiente' | 'Parcial' | 'Pagado';
+  tipo_pago?: 'Contado' | 'Crédito';
+  id_medio_pago?: number | null;
   nro_factura?: string;
   observaciones?: string;
   id_proveedor: number;
   id_documento?: number;
   // Propiedades relacionadas
   proveedor_nombre?: string;
+  medio_pago_descripcion?: string;
   detalles?: DetalleCompra[];
 }
 
@@ -294,6 +297,8 @@ export interface DetalleCompra {
 export interface CompraData {
   fecha: string;
   id_proveedor: number;
+  tipo_pago?: 'Contado' | 'Crédito';
+  id_medio_pago?: number | null;
   nro_factura?: string;
   observaciones?: string;
   detalles: {

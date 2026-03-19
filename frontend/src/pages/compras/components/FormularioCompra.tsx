@@ -2,6 +2,7 @@
 import { X, Save, Plus, Trash2 } from 'lucide-react';
 import { comprasService } from '../../../services/compras.service';
 import { productosService } from '../../../services/productos.service';
+import { posService } from '../../../services/pos.service';
 import { Compra, Proveedor, Producto, CompraData } from '../../../types';
 import { Card, Spinner } from '../../../components/common';
 import toast from 'react-hot-toast';
@@ -27,6 +28,8 @@ const FormularioCompra: React.FC<FormularioCompraProps> = ({
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
     id_proveedor: 0,
+    tipo_pago: 'Contado' as 'Contado' | 'Crédito',
+    id_medio_pago: null as number | null,
     nro_factura: '',
     observaciones: '',
   });
@@ -34,6 +37,7 @@ const FormularioCompra: React.FC<FormularioCompraProps> = ({
   const [detalles, setDetalles] = useState<DetalleForm[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [mediosPago, setMediosPago] = useState<any[]>([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState<number>(0);
   const [cantidadNueva, setCantidadNueva] = useState<string>('1');
   const [costoNuevo, setCostoNuevo] = useState<string>('');
@@ -50,6 +54,8 @@ const FormularioCompra: React.FC<FormularioCompraProps> = ({
       setFormData({
         fecha: compra.fecha.split('T')[0],
         id_proveedor: compra.id_proveedor,
+        tipo_pago: (compra.tipo_pago || 'Contado') as 'Contado' | 'Crédito',
+        id_medio_pago: compra.id_medio_pago || null,
         nro_factura: compra.nro_factura || '',
         observaciones: compra.observaciones || '',
       });
@@ -69,13 +75,15 @@ const FormularioCompra: React.FC<FormularioCompraProps> = ({
 
   const cargarDatosIniciales = async () => {
     try {
-      const [responseProveedores, responseProductos] = await Promise.all([
+      const [responseProveedores, responseProductos, responseMediosPago] = await Promise.all([
         comprasService.getProveedores({ estado: true }),
         productosService.getProductos({ estado: true }),
+        posService.getMediosPago(),
       ]);
 
       setProveedores(responseProveedores.results);
       setProductos(responseProductos.results);
+      setMediosPago(responseMediosPago);
     } catch (error) {
       toast.error('Error al cargar datos iniciales');
       console.error('Error:', error);
@@ -303,6 +311,54 @@ const FormularioCompra: React.FC<FormularioCompraProps> = ({
                 <p className="mt-1 text-sm text-red-600">{errores.id_proveedor}</p>
               )}
             </div>
+
+            {/* Tipo de Pago */}
+            <div>
+              <label htmlFor="tipo_pago" className="block text-sm font-medium text-gray-700">
+                Tipo de Pago <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="tipo_pago"
+                name="tipo_pago"
+                value={formData.tipo_pago}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              >
+                <option value="Contado">Contado</option>
+                <option value="Crédito">Crédito</option>
+              </select>
+            </div>
+
+            {/* Medio de Pago - Solo si es Contado */}
+            {formData.tipo_pago === 'Contado' && (
+              <div>
+                <label htmlFor="id_medio_pago" className="block text-sm font-medium text-gray-700">
+                  Medio de Pago <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="id_medio_pago"
+                  name="id_medio_pago"
+                  value={formData.id_medio_pago || ''}
+                  onChange={(e) => {
+                    const value = e.target.value ? Number(e.target.value) : null;
+                    setFormData((prev) => ({
+                      ...prev,
+                      id_medio_pago: value,
+                    }));
+                  }}
+                  required={formData.tipo_pago === 'Contado'}
+                  className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                >
+                  <option value="">Seleccione medio de pago</option>
+                  {mediosPago.map((medio) => (
+                    <option key={medio.id_medio_pago} value={medio.id_medio_pago}>
+                      {medio.descripcion}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Número de Factura */}
             <div>
