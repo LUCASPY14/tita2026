@@ -15,7 +15,7 @@ class Proveedores(models.Model):
     direccion = models.CharField(max_length=255, blank=True, null=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True)
     estado = models.BooleanField(default=True)
-    fecha_registro = models.DateTimeField()
+    fecha_registro = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -23,8 +23,6 @@ class Proveedores(models.Model):
     class Meta:
         managed = True
         db_table = "proveedores"
-        verbose_name = "Proveedor"
-        verbose_name_plural = "Proveedores"
         verbose_name = "Proveedor"
         verbose_name_plural = "Proveedores"
 
