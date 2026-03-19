@@ -79,13 +79,9 @@ class ComprasViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Valida la compra antes de crearla.
-
-        Validaciones:
-        - Detalles deben tener cantidad > 0
-        - Detalles deben tener precio > 0
-        - No hay productos duplicados
+        Valida la compra antes de crearla y crea los detalles.
         """
+        from decimal import Decimal
         # Obtener detalles del request
         detalles = self.request.data.get("detalles", [])
 
@@ -105,12 +101,37 @@ class ComprasViewSet(viewsets.ModelViewSet):
             # Calcular totales
             totales = CompraService.calcular_totales_compra(detalles)
 
-            # Guardar con totales calculados
-            serializer.save(
-                monto_total=totales["total"], 
-                saldo_pendiente=totales["total"], 
+            # Guardar la compra con totales calculados
+            compra = serializer.save(
+                monto_total=totales["total"],
+                saldo_pendiente=totales["total"],
                 estado_pago="Pendiente"
             )
+
+            # Crear los registros DetallesCompra
+            from apps.productos.models import Productos
+            for detalle in detalles:
+                costo = Decimal(str(detalle.get("costo_unitario") or detalle.get("precio_unitario", 0)))
+                cantidad = Decimal(str(detalle.get("cantidad", 0)))
+                subtotal = costo * cantidad
+                producto = Productos.objects.get(id_producto=detalle["id_producto"])
+
+                # Calcular IVA del detalle
+                monto_iva = Decimal("0.00")
+                try:
+                    porcentaje = producto.id_impuesto.porcentaje
+                    monto_iva = subtotal * porcentaje / Decimal("100")
+                except Exception:
+                    pass
+
+                DetallesCompra.objects.create(
+                    id_compra=compra,
+                    id_producto=producto,
+                    cantidad=cantidad,
+                    costo_unitario=costo,
+                    subtotal=subtotal,
+                    monto_iva=monto_iva,
+                )
         else:
             # Sin detalles, guardar como está
             serializer.save(estado_pago="Pendiente")

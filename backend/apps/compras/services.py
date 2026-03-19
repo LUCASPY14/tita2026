@@ -69,7 +69,7 @@ class CompraService:
         for idx, detalle in enumerate(detalles_compra):
             producto_id = detalle.get("id_producto")
             cantidad = detalle.get("cantidad")
-            precio_unitario = detalle.get("precio_unitario")
+            precio_unitario = detalle.get("costo_unitario") or detalle.get("precio_unitario")
 
             # Validar producto existe
             try:
@@ -112,8 +112,8 @@ class CompraService:
                     {
                         "linea": idx + 1,
                         "producto": producto.descripcion,
-                        "campo": "precio_unitario",
-                        "mensaje": "El precio unitario debe ser mayor a 0",
+                        "campo": "costo_unitario",
+                        "mensaje": "El costo unitario debe ser mayor a 0",
                     }
                 )
 
@@ -203,7 +203,7 @@ class CompraService:
 
         for detalle in detalles_compra:
             cantidad = Decimal(str(detalle.get("cantidad", 0)))
-            precio = Decimal(str(detalle.get("precio_unitario", 0)))
+            precio = Decimal(str(detalle.get("costo_unitario") or detalle.get("precio_unitario", 0)))
             subtotal_linea = cantidad * precio
 
             # Obtener tipo de IVA del producto
