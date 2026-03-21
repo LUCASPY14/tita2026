@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, Save, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Save, X, Camera, CreditCard } from 'lucide-react';
 import { Modal, Button, Input, Select, Checkbox, Spinner } from '../../../components/common';
 import api from '../../../services/api';
 import type { Hijo } from '../../../types';
@@ -10,6 +10,13 @@ interface HijoFormModalProps {
   isEditing: boolean;
   onClose: () => void;
   onSave: () => void;
+}
+
+interface Grado {
+  id_grado: number;
+  nombre_grado: string;
+  nivel: number;
+  orden_visualizacion: number;
 }
 
 const HijoFormModal: React.FC<HijoFormModalProps> = ({
@@ -26,27 +33,17 @@ const HijoFormModal: React.FC<HijoFormModalProps> = ({
     grado: '',
     estado: true
   });
+  const [grados, setGrados] = useState<Grado[]>([]);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [tarjeta, setTarjeta] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const gradosOptions = [
-    { value: '', label: 'Seleccionar grado' },
-    { value: 'Maternal', label: 'Maternal' },
-    { value: 'Pre-kinder', label: 'Pre-kinder' },
-    { value: 'Kinder', label: 'Kinder' },
-    { value: '1° Grado', label: '1° Grado' },
-    { value: '2° Grado', label: '2° Grado' },
-    { value: '3° Grado', label: '3° Grado' },
-    { value: '4° Grado', label: '4° Grado' },
-    { value: '5° Grado', label: '5° Grado' },
-    { value: '6° Grado', label: '6° Grado' },
-    { value: '7° Grado', label: '7° Grado' },
-    { value: '8° Grado', label: '8° Grado' },
-    { value: '9° Grado', label: '9° Grado' },
-    { value: '1° Curso', label: '1° Curso' },
-    { value: '2° Curso', label: '2° Curso' },
-    { value: '3° Curso', label: '3° Curso' }
-  ];
+  useEffect(() => {
+    cargarGrados();
+  }, []);
 
   useEffect(() => {
     if (isEditing && hijo) {
@@ -57,104 +54,112 @@ const HijoFormModal: React.FC<HijoFormModalProps> = ({
         grado: hijo.grado || '',
         estado: hijo.estado ?? true
       });
+      if (hijo.foto_perfil) {
+        setFotoPreview(hijo.foto_perfil);
+      }
+      cargarTarjeta(hijo.id_hijo);
     }
   }, [hijo, isEditing]);
 
+  const cargarGrados = async () => {
+    try {
+      const resp = await api.get('/grados/', { params: { page_size: 100 } });
+      setGrados(resp.data.results || []);
+    } catch (error) {
+      console.error('Error al cargar grados:', error);
+    }
+  };
+
+  const cargarTarjeta = async (idHijo: number) => {
+    try {
+      const resp = await api.get('/tarjetas/', { params: { id_hijo: idHijo } });
+      const results = resp.data.results || resp.data;
+      if (results.length > 0) setTarjeta(results[0]);
+    } catch {
+      // Sin tarjeta asignada
+    }
+  };
+
+  const gradosOptions = [
+    { value: '', label: 'Seleccionar grado' },
+    ...grados.map(g => ({ value: g.nombre_grado, label: g.nombre_grado }))
+  ];
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.nombre.trim()) {
-      newErrors.nombre = 'El nombre es obligatorio';
-    }
-
-    if (!formData.apellido.trim()) {
-      newErrors.apellido = 'El apellido es obligatorio';
-    }
-
+    if (!formData.nombre.trim()) newErrors.nombre = 'El nombre es obligatorio';
+    if (!formData.apellido.trim()) newErrors.apellido = 'El apellido es obligatorio';
     if (formData.fecha_nacimiento) {
       const fechaNacimiento = new Date(formData.fecha_nacimiento);
       const hoy = new Date();
-      
-      if (fechaNacimiento > hoy) {
-        newErrors.fecha_nacimiento = 'La fecha de nacimiento no puede ser futura';
-      }
-      
-      // Validar que no sea muy antigua (más de 25 años)
+      if (fechaNacimiento > hoy) newErrors.fecha_nacimiento = 'La fecha de nacimiento no puede ser futura';
       const hace25Anos = new Date();
       hace25Anos.setFullYear(hace25Anos.getFullYear() - 25);
-      
-      if (fechaNacimiento < hace25Anos) {
-        newErrors.fecha_nacimiento = 'La fecha de nacimiento es muy antigua';
-      }
+      if (fechaNacimiento < hace25Anos) newErrors.fecha_nacimiento = 'La fecha de nacimiento es muy antigua';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFotoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setFotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setSaving(true);
-    
     try {
-      const payload = {
-        ...formData,
-        id_cliente_responsable: clienteId,
-        // Convertir fecha vacía a null
-        fecha_nacimiento: formData.fecha_nacimiento || null,
-        grado: formData.grado || null
-      };
+      const payload = new FormData();
+      payload.append('nombre', formData.nombre);
+      payload.append('apellido', formData.apellido);
+      payload.append('estado', String(formData.estado));
+      payload.append('id_cliente_responsable', String(clienteId));
+      if (formData.fecha_nacimiento) payload.append('fecha_nacimiento', formData.fecha_nacimiento);
+      if (formData.grado) payload.append('grado', formData.grado);
+      if (fotoFile) payload.append('foto_perfil', fotoFile);
 
       if (isEditing && hijo) {
-        // Actualizar hijo existente
-        await api.patch(`/hijos/${hijo.id_hijo}/`, payload);
+        await api.patch(`/hijos/${hijo.id_hijo}/`, payload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
       } else {
-        // Crear nuevo hijo
-        await api.post('/hijos/', payload);
+        await api.post('/hijos/', payload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
       }
-
       onSave();
     } catch (error: any) {
       console.error('Error al guardar hijo:', error);
-      
-      // Manejar errores de validación del backend
       if (error.response?.data) {
         const backendErrors: Record<string, string> = {};
         Object.entries(error.response.data).forEach(([key, value]) => {
-          if (Array.isArray(value)) {
-            backendErrors[key] = value[0];
-          } else {
-            backendErrors[key] = value as string;
-          }
+          backendErrors[key] = Array.isArray(value) ? value[0] : (value as string);
         });
         setErrors(backendErrors);
       } else {
-        setErrors({
-          general: 'Error al guardar. Inténtalo de nuevo.'
-        });
+        setErrors({ general: 'Error al guardar. IntÃ©ntalo de nuevo.' });
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Limpiar error específico cuando el usuario comience a escribir
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
   return (
     <Modal isOpen={true} onClose={onClose} size="md">
       <div className="p-6">
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
@@ -165,111 +170,144 @@ const HijoFormModal: React.FC<HijoFormModalProps> = ({
                 {isEditing ? 'Editar Hijo' : 'Agregar Nuevo Hijo'}
               </h3>
               <p className="text-sm text-gray-600">
-                {isEditing 
-                  ? 'Modifica la información del hijo'
-                  : 'Completa los datos del nuevo hijo'
-                }
+                {isEditing ? 'Modifica la informaciÃ³n del hijo' : 'Completa los datos del nuevo hijo'}
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <X className="h-6 w-6" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Error General */}
           {errors.general && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-700">{errors.general}</p>
             </div>
           )}
 
+          {/* Foto de Perfil */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative">
+              {fotoPreview ? (
+                <img
+                  src={fotoPreview}
+                  alt="Foto del hijo"
+                  className="h-20 w-20 rounded-full object-cover border-2 border-amber-400"
+                />
+              ) : (
+                <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300">
+                  <User className="h-8 w-8 text-gray-400" />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-amber-500 text-white flex items-center justify-center hover:bg-amber-600 shadow"
+                title="Cambiar foto"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFotoChange}
+            />
+            <p className="text-xs text-gray-500">Foto del estudiante (opcional)</p>
+          </div>
+
+          {/* Nombre y Apellido */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {/* Nombre */}
             <Input
               label="Nombre"
+              name="nombre"
               value={formData.nombre}
-              onChange={(value) => handleInputChange('nombre', value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('nombre', e.target.value)}
               error={errors.nombre}
               placeholder="Ejemplo: Juan"
               required
             />
-
-            {/* Apellido */}
             <Input
               label="Apellido"
+              name="apellido"
               value={formData.apellido}
-              onChange={(value) => handleInputChange('apellido', value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('apellido', e.target.value)}
               error={errors.apellido}
-              placeholder="Ejemplo: Pérez"
+              placeholder="Ejemplo: PÃ©rez"
               required
             />
           </div>
 
+          {/* Fecha y Grado */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {/* Fecha de Nacimiento */}
             <Input
               type="date"
               label="Fecha de Nacimiento"
+              name="fecha_nacimiento"
               value={formData.fecha_nacimiento}
-              onChange={(value) => handleInputChange('fecha_nacimiento', value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('fecha_nacimiento', e.target.value)}
               error={errors.fecha_nacimiento}
-              max={new Date().toISOString().split('T')[0]} // No permitir fechas futuras
+              max={new Date().toISOString().split('T')[0]}
             />
-
-            {/* Grado */}
             <Select
               label="Grado"
+              name="grado"
               value={formData.grado}
-              onChange={(value) => handleInputChange('grado', value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleInputChange('grado', e.target.value)}
               options={gradosOptions}
               error={errors.grado}
             />
           </div>
 
+          {/* Tarjeta (solo ediciÃ³n) */}
+          {isEditing && (
+            <div className="p-4 bg-gray-50 rounded-lg border">
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCard className="h-4 w-4 text-amber-600" />
+                <span className="text-sm font-medium text-gray-700">Tarjeta de Uso Exclusivo</span>
+              </div>
+              {tarjeta ? (
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p><span className="font-medium">Nro:</span> {tarjeta.nro_tarjeta}</p>
+                  <p><span className="font-medium">Saldo:</span> Gs. {Number(tarjeta.saldo_actual).toLocaleString('es-PY')}</p>
+                  <p><span className="font-medium">Estado:</span> {tarjeta.estado}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Sin tarjeta asignada. Se puede asignar desde el detalle del cliente.</p>
+              )}
+            </div>
+          )}
+
           {/* Estado */}
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
-              <label className="text-sm font-medium text-gray-700">
-                Estado del Hijo
-              </label>
-              <p className="text-sm text-gray-500">
-                Determina si el hijo está activo en el sistema
-              </p>
+              <label className="text-sm font-medium text-gray-700">Estado del Hijo</label>
+              <p className="text-sm text-gray-500">Determina si el hijo estÃ¡ activo en el sistema</p>
             </div>
             <Checkbox
               checked={formData.estado}
-              onChange={(checked) => handleInputChange('estado', checked)}
+              onChange={(e) => handleInputChange('estado', e.target.checked)}
               label="Activo"
             />
           </div>
 
-          {/* Botones de Acción */}
+          {/* Botones */}
           <div className="flex gap-3 pt-6 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={saving}
-              className="flex-1"
-            >
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving} className="flex-1">
               Cancelar
             </Button>
-            
             <Button
               type="submit"
               disabled={saving}
               leftIcon={saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
               className="flex-1"
             >
-              {saving 
+              {saving
                 ? (isEditing ? 'Actualizando...' : 'Guardando...')
-                : (isEditing ? 'Actualizar Hijo' : 'Guardar Hijo')
-              }
+                : (isEditing ? 'Actualizar Hijo' : 'Guardar Hijo')}
             </Button>
           </div>
         </form>

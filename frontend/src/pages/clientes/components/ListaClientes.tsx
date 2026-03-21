@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Edit, Eye, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import { Input, Button, Badge, ConfirmDialog, Skeleton, EmptyState } from '../../../components/common';
 import { clientesService } from '../../../services/clientes.service';
@@ -22,6 +22,7 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
 
   const busquedaDebounced = useDebounce(busqueda);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarClientes();
   }, [busquedaDebounced, filtroActivo, paginaActual]);

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Phone,
@@ -24,6 +24,7 @@ const DetalleCliente: React.FC<DetalleClienteProps> = ({ cliente, onEditar }) =>
   const [cuentaCorriente, setCuentaCorriente] = useState<CuentaCorriente | null>(null);
   const [cargandoCuenta, setCargandoCuenta] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarCuentaCorriente();
   }, [cliente.id_cliente]);

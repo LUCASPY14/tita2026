@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Spinner } from '../../../components/common';
 import { Search, CheckCircle, AlertCircle, Clock, User, CreditCard, DollarSign } from 'lucide-react';
 import { recargasService } from '../../../services/recargas.service';
@@ -29,6 +29,7 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
     cargarRegistrosDelDia();
   }, [actualizarClave]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (hijoSeleccionado) {
       verificarSuscripcionActiva();

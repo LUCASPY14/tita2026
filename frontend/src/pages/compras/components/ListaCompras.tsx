@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Edit, Eye, Trash2, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { comprasService } from '../../../services/compras.service';
 import { Compra, Proveedor } from '../../../types';
@@ -24,6 +24,7 @@ const ListaCompras: React.FC<ListaComprasProps> = ({ onEditar, onVerDetalle }) =
     cargarProveedores();
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarCompras();
   }, [busqueda, filtroEstado, filtroProveedor, paginaActual]);

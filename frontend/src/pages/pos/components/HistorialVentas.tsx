@@ -65,7 +65,7 @@ const HistorialVentas: React.FC = () => {
 
   useEffect(() => {
     cargarVentas(paginaActual);
-  }, [paginaActual]);
+  }, [paginaActual, cargarVentas]);
 
   useEffect(() => {
     posService.getMediosPago().then(setMediosPago).catch(() => {});

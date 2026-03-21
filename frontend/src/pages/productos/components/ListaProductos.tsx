@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Package, Edit, Eye, Trash2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
 import { productosService } from '../../../services/productos.service';
 import { Producto, Categoria } from '../../../types';
@@ -28,6 +28,7 @@ const ListaProductos: React.FC<ListaProductosProps> = ({ onEditar, onVerDetalle 
     cargarCategorias();
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarProductos();
   }, [busquedaDebounced, filtroActivo, filtroCategoria, paginaActual]);

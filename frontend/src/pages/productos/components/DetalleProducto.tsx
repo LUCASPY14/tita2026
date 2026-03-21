@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Edit, Package, Tag, DollarSign, TrendingUp, AlertCircle, Plus, X, Save } from 'lucide-react';
 import { productosService } from '../../../services/productos.service';
 import { Producto, PrecioPorLista, ListaPrecio } from '../../../types';
@@ -21,6 +21,7 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
   const [formNuevo, setFormNuevo] = useState({ id_lista: '', precio_unitario: '' });
   const [guardandoNuevo, setGuardandoNuevo] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarDatos();
   }, [producto.id_producto]);

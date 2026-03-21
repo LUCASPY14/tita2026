@@ -18,6 +18,7 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
   const [hijoSeleccionado, setHijoSeleccionado] = useState<Hijo | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarHijos();
   }, [clienteId]);

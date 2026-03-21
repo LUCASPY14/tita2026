@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Spinner } from '../../../components/common';
 import { Plus, Edit, Trash2, User } from 'lucide-react';
 import { almuerzosService } from '../../../services/almuerzos.service';
@@ -24,6 +24,7 @@ const GestionSuscripciones: React.FC = () => {
   });
   const [guardando, setGuardando] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarSuscripciones();
     cargarPlanes();
