@@ -33,6 +33,7 @@ const UserForm: React.FC<UserFormProps> = ({ usuario, onGuardado, onCancelar }) 
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [camposTocados, setCamposTocados] = useState<Record<string, boolean>>({});
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarRoles();
     if (usuario) {

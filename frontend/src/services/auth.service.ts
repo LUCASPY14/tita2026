@@ -3,7 +3,7 @@ import api from './api';
 /**
  * Roles disponibles en el sistema
  */
-export type UserRole = 'admin' | 'gerente' | 'cajero' | 'empleado';
+export type UserRole = 'admin' | 'gerente' | 'supervisor' | 'cajero' | 'cobrador' | 'empleado';
 
 // Clave usada en sessionStorage para el token temporal de 2FA
 const TEMP_2FA_TOKEN_KEY = 'cantina_2fa_temp_token';
@@ -14,8 +14,10 @@ const mapRoleFromBackend = (backendRole: string): UserRole => {
     'administrador': 'admin',
     'admin': 'admin',
     'gerente': 'gerente',
+    'supervisor': 'supervisor',
     'cajero': 'cajero',
     'vendedor': 'cajero',
+    'cobrador': 'cobrador',
     'empleado': 'empleado'
   };
   

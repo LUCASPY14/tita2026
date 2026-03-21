@@ -18,10 +18,12 @@ import {
   UserCog,
   Shield,
   KeyRound,
-  Warehouse
+  Warehouse,
+  Tag
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useHasRole } from '../hooks/usePermissions';
+import { useAuthContext } from '../contexts/AuthContext';
 import { useNotificationsByRole } from '../hooks/useNotificationsByRole';
 
 interface NavItem {
@@ -30,21 +32,23 @@ interface NavItem {
   icon: React.ElementType;
   badge?: number;
   adminOnly?: boolean;
-  end?: boolean; // coincidencia exacta de ruta (sin startsWith)
+  roles?: import('../services/auth.service').UserRole[];
+  end?: boolean;
 }
 
 const BASE_NAVIGATION: NavItem[] = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, end: true },
-  { name: 'Recargas', path: '/recargas', icon: CreditCard },
-  { name: 'Punto de Venta', path: '/ventas', icon: ShoppingCart, end: true },
-  { name: 'Gestión Ventas', path: '/ventas/gestion', icon: TrendingUp },
-  { name: 'Clientes', path: '/clientes', icon: Users },
-  { name: 'Productos', path: '/productos', icon: Package },
-  { name: 'Inventario', path: '/inventario', icon: Warehouse },
+  { name: 'Recargas', path: '/recargas', icon: CreditCard, roles: ['admin', 'gerente', 'cajero', 'cobrador'] },
+  { name: 'Punto de Venta', path: '/ventas', icon: ShoppingCart, end: true, roles: ['admin', 'gerente', 'cajero'] },
+  { name: 'Gestión Ventas', path: '/ventas/gestion', icon: TrendingUp, roles: ['admin', 'gerente', 'cobrador'] },
+  { name: 'Clientes', path: '/clientes', icon: Users, roles: ['admin', 'gerente', 'cobrador'] },
+  { name: 'Productos', path: '/productos', icon: Package, roles: ['admin', 'gerente', 'supervisor'] },
+  { name: 'Categorías', path: '/categorias', icon: Tag, roles: ['admin', 'gerente', 'supervisor'] },
+  { name: 'Inventario', path: '/inventario', icon: Warehouse, roles: ['admin', 'gerente', 'supervisor'] },
   { name: 'Almuerzos', path: '/almuerzos', icon: Utensils },
-  { name: 'Reportes', path: '/reportes', icon: BarChart3 },
+  { name: 'Reportes', path: '/reportes', icon: BarChart3, roles: ['admin', 'gerente'] },
   { name: 'Notificaciones', path: '/notificaciones', icon: Bell },
-  { name: 'Compras', path: '/compras', icon: FileText },
+  { name: 'Compras', path: '/compras', icon: FileText, roles: ['admin', 'gerente'] },
   { name: 'Configuración', path: '/configuracion', icon: Settings },
   { name: 'Usuarios', path: '/admin/usuarios', icon: UserCog, adminOnly: true },
   { name: 'Permisos', path: '/admin/permisos', icon: KeyRound, adminOnly: true },
@@ -55,6 +59,7 @@ const Sidebar: React.FC = () => {
   const { sidebarOpen, toggleSidebar } = useUIStore();
   const location = useLocation();
   const isAdmin = useHasRole(['admin']);
+  const { user } = useAuthContext();
   const { resumen, resumenCriticidad } = useNotificationsByRole();
 
   const notifBadge = (resumen?.no_leidas || 0) + (resumenCriticidad.criticas + resumenCriticidad.altas);
@@ -67,6 +72,9 @@ const Sidebar: React.FC = () => {
   const filteredNavigation = navigation.filter(item => {
     if (item.adminOnly) {
       return isAdmin;
+    }
+    if (item.roles && item.roles.length > 0) {
+      return user?.role ? (item.roles as string[]).includes(user.role) : false;
     }
     return true;
   });

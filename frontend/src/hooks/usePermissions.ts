@@ -134,6 +134,27 @@ export const usePermissions = (): Permissions => {
       canViewFinancialReports: false,
       canManageRecharges: true,
     },
+    cobrador: {
+      // Cobrador gestiona pagos y cuentas corrientes de clientes
+      canViewReports: false,
+      canManageUsers: false,
+      canManageConfiguration: false,
+      canProcessSales: false,
+      canProcessReturns: false,
+      canViewSalesHistory: true,
+      canManageInventory: false,
+      canViewInventory: false,
+      canManageProducts: false,
+      canManagePurchases: false,
+      canViewPurchases: false,
+      canManageClients: true,
+      canViewClients: true,
+      canManageAccountBalance: true,
+      canManageLunchSubscriptions: false,
+      canRegisterLunchConsumption: false,
+      canViewFinancialReports: false,
+      canManageRecharges: true,
+    },
     empleado: {
       // Empleado tiene permisos muy limitados
       canViewReports: false,

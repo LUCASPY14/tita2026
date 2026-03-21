@@ -18,6 +18,7 @@ import Configuracion from '../pages/Configuracion';
 import Auditoria from '../pages/Auditoria';
 import GestionPermisos from '../pages/permisos';
 import { UserManagement } from '../pages/usuarios';
+import Categorias from '../pages/categorias';
 import Perfil from '../pages/Perfil';
 import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
@@ -41,11 +42,11 @@ const AppRoutes: React.FC = () => {
                 <Route path="/dashboard" element={<DashboardMejorado />} />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 
-                {/* Módulo de Recargas - Admin, Gerente, Cajero */}
+                {/* Módulo de Recargas - Admin, Gerente, Cajero, Cobrador */}
                 <Route 
                   path="/recargas" 
                   element={
-                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'cajero']}>
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'cajero', 'cobrador']}>
                       <Recargas />
                     </ProtectedRoute>
                   } 
@@ -61,34 +62,44 @@ const AppRoutes: React.FC = () => {
                   } 
                 />
 
-                {/* Gestión de Ventas - Historial y seguimiento - Admin, Gerente */}
+                {/* Gestión de Ventas - Historial y seguimiento - Admin, Gerente, Cobrador */}
                 <Route 
                   path="/ventas/gestion" 
                   element={
-                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'cobrador']}>
                       <Ventas />
                     </ProtectedRoute>
                   } 
                 />
                 
-                {/* Módulo de Clientes - Admin, Gerente */}
+                {/* Módulo de Clientes - Admin, Gerente, Cobrador */}
                 <Route 
                   path="/clientes" 
                   element={
-                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'cobrador']}>
                       <Clientes />
                     </ProtectedRoute>
                   } 
                 />
                 
-                {/* Módulo de Productos - Admin, Gerente */}
+                {/* Módulo de Productos - Admin, Gerente, Supervisor */}
                 <Route 
                   path="/productos" 
                   element={
-                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'supervisor']}>
                       <Productos />
                     </ProtectedRoute>
                   } 
+                />
+
+                {/* Módulo de Categorías - Admin, Gerente, Supervisor */}
+                <Route
+                  path="/categorias"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'supervisor']}>
+                      <Categorias />
+                    </ProtectedRoute>
+                  }
                 />
                 
                 {/* Módulo de Compras - Admin, Gerente */}
