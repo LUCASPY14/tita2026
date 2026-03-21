@@ -5,11 +5,27 @@ Permisos personalizados para la API REST
 from rest_framework import permissions
 
 
+def _get_empleado_from_request(request):
+    """
+    Obtiene el Empleado a partir de los claims del JWT en el token de acceso.
+    Retorna None si no está disponible o no es un empleado.
+    """
+    try:
+        if request.auth and hasattr(request.auth, "payload"):
+            id_empleado = request.auth.payload.get("id_empleado")
+            if id_empleado:
+                from apps.usuarios.models import Empleados
+                return Empleados.objects.select_related("id_rol").get(pk=id_empleado)
+    except Exception:
+        pass
+    return None
+
+
 class IsAdminOrReadOnly(permissions.BasePermission):
     """
     Permiso personalizado que permite:
     - Lectura para cualquier usuario autenticado
-    - Escritura solo para administradores
+    - Escritura solo para administradores/gerentes/supervisores
     """
 
     def has_permission(self, request, view):
@@ -17,8 +33,16 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return request.user and request.user.is_authenticated
 
-        # Permitir métodos de escritura solo a administradores
-        return request.user and request.user.is_staff
+        # Permitir métodos de escritura a administradores Django (retrocompatibilidad)
+        if request.user and request.user.is_staff:
+            return True
+
+        # Permitir escritura a empleados con roles de gestión
+        empleado = _get_empleado_from_request(request)
+        if empleado is not None:
+            roles_permitidos = ["administrador", "admin", "gerente", "supervisor"]
+            return empleado.id_rol.nombre_rol.lower() in roles_permitidos
+        return False
 
 
 class IsCajeroOrAdmin(permissions.BasePermission):
@@ -30,17 +54,15 @@ class IsCajeroOrAdmin(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Los administradores tienen acceso total
+        # Los administradores Django tienen acceso total
         if request.user.is_staff:
             return True
 
-        # Verificar si el usuario tiene rol de cajero
-        # Esto asume que existe un modelo Empleado vinculado al usuario
-        try:
-            empleado = request.user.empleado
-            return empleado.id_rol.nombre_rol.lower() in ["cajero", "administrador"]
-        except:
-            return False
+        # Verificar el rol del empleado vía JWT
+        empleado = _get_empleado_from_request(request)
+        if empleado is not None:
+            return empleado.id_rol.nombre_rol.lower() in ["cajero", "administrador", "admin", "gerente"]
+        return False
 
 
 class IsOwnerOrAdmin(permissions.BasePermission):
@@ -71,18 +93,24 @@ class IsOwnerOrAdmin(permissions.BasePermission):
 
 class IsClienteOrAdmin(permissions.BasePermission):
     """
-    Permiso para clientes autenticados y administradores
+    Permiso para clientes autenticados y administradores (empleados).
+    Permite acceso a cualquier empleado autenticado vía JWT o a clientes de portal.
     """
 
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Los administradores tienen acceso total
+        # Administradores Django tienen acceso total (retrocompatibilidad)
         if request.user.is_staff:
             return True
 
-        # Verificar si el usuario está asociado a un cliente
+        # Empleados autenticados vía JWT tienen acceso
+        empleado = _get_empleado_from_request(request)
+        if empleado is not None:
+            return True
+
+        # Verificar si el usuario está asociado a un cliente (portal de clientes)
         try:
             return hasattr(request.user, "cliente")
         except:  # pragma: no cover
@@ -98,17 +126,16 @@ class CanManageVentas(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Administradores tienen acceso
+        # Administradores Django tienen acceso
         if request.user.is_staff:
             return True
 
-        # Cajeros pueden crear y ver ventas
-        try:
-            empleado = request.user.empleado
-            roles_permitidos = ["cajero", "administrador", "gerente"]
+        # Cajeros, administradores y gerentes pueden gestionar ventas
+        empleado = _get_empleado_from_request(request)
+        if empleado is not None:
+            roles_permitidos = ["cajero", "administrador", "admin", "gerente"]
             return empleado.id_rol.nombre_rol.lower() in roles_permitidos
-        except:
-            return False
+        return False
 
 
 class CanManageInventario(permissions.BasePermission):
@@ -120,17 +147,16 @@ class CanManageInventario(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Administradores tienen acceso
+        # Administradores Django tienen acceso
         if request.user.is_staff:
             return True
 
         # Solo roles específicos pueden gestionar inventario
-        try:
-            empleado = request.user.empleado
-            roles_permitidos = ["administrador", "gerente", "encargado_inventario"]
+        empleado = _get_empleado_from_request(request)
+        if empleado is not None:
+            roles_permitidos = ["administrador", "admin", "gerente", "encargado_inventario", "encargado compras"]
             return empleado.id_rol.nombre_rol.lower() in roles_permitidos
-        except:
-            return False
+        return False
 
 
 class ReadOnly(permissions.BasePermission):
