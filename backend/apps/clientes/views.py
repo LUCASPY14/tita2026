@@ -3,8 +3,8 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.common.permissions import IsAdminOrReadOnly, IsClienteOrAdmin
 from apps.common.throttling import BurstRateThrottle, SustainedRateThrottle
-from .models import Clientes, Hijos, TiposCliente
-from .serializers import ClientesSerializer, HijosSerializer, TiposClienteSerializer
+from .models import Clientes, Hijos, TiposCliente, Grados
+from .serializers import ClientesSerializer, HijosSerializer, TiposClienteSerializer, GradosSerializer
 
 
 # Create your views here.
@@ -33,6 +33,13 @@ class TiposClienteViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet de solo lectura para tipos de cliente."""
     queryset = TiposCliente.objects.filter(estado=True)
     serializer_class = TiposClienteSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class GradosViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet de solo lectura para grados escolares."""
+    queryset = Grados.objects.filter(estado=True).order_by('orden_visualizacion')
+    serializer_class = GradosSerializer
     permission_classes = [IsAuthenticated]
 
 
