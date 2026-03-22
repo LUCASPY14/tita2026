@@ -37,6 +37,7 @@ class RegistrosConsumoAlmuerzoSerializer(serializers.ModelSerializer):
     class Meta:
         model = RegistrosConsumoAlmuerzo
         fields = "__all__"
+        read_only_fields = ["hora_registro", "costo_almuerzo", "ya_cobrado", "estado", "marcado_en_cuenta"]
 
 
 class AlergenosSerializer(serializers.ModelSerializer):

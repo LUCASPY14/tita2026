@@ -3,7 +3,8 @@ from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db import transaction
-from datetime import datetime
+from django.db.models import F
+from datetime import datetime, date
 from .models import (
     PlanesAlmuerzo,
     TiposAlmuerzo,
@@ -103,7 +104,7 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                         "estado_suscripcion": id_suscripcion.estado,
                     }
                 )
-            costo_calculado = id_suscripcion.id_plan_almuerzo.precio_mensual / 30  # pragma: no cover
+            costo_calculado = id_suscripcion.id_plan_almuerzo.precio_mensual
         elif id_tipo_almuerzo:
             costo_calculado = id_tipo_almuerzo.precio_unitario
         else:
@@ -111,10 +112,13 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 {"error": "Debe especificar una suscripción o un tipo de almuerzo"}
             )
 
+        hora_ahora = datetime.now().time()
+
         with transaction.atomic():
             if debe_contabilizar:
                 # Primer ingreso del día: registrar con costo para facturación mensual
                 registro = serializer.save(
+                    hora_registro=hora_ahora,
                     costo_almuerzo=costo_calculado,
                     ya_cobrado=True,
                     estado="Confirmado",
@@ -123,6 +127,7 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             else:
                 # Segundo ingreso del día: sin costo (postre, reingreso, etc.)
                 registro = serializer.save(
+                    hora_registro=hora_ahora,
                     costo_almuerzo=0,
                     ya_cobrado=False,
                     estado="Confirmado",

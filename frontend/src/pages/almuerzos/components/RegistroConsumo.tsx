@@ -407,7 +407,12 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
                         <Clock className="h-3 w-3" />
                         {formatearHora(registro.hora_registro)}
                       </div>
-                      {registro.ya_cobrado && (
+                      {registro.ya_cobrado && registro.id_suscripcion && (
+                        <p className="mt-1 text-xs font-semibold text-purple-600">
+                          Plan mensual
+                        </p>
+                      )}
+                      {registro.ya_cobrado && !registro.id_suscripcion && (
                         <p className="mt-1 text-xs font-semibold text-green-600">
                           {formatearMoneda(registro.costo_almuerzo || 0)}
                         </p>
