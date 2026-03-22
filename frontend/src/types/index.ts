@@ -682,6 +682,12 @@ export interface ConsumoHijoDetalle {
   detalle: string | null;
   saldo_anterior: number;
   saldo_posterior: number;
+  productos: {
+    descripcion: string;
+    cantidad: number;
+    precio_unitario: number;
+    subtotal: number;
+  }[];
 }
 
 export interface ReporteConsumosHijo {

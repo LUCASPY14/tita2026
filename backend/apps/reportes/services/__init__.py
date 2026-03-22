@@ -20,6 +20,7 @@ from django.db.models import Sum, Count, Avg, Q, F
 from django.core.exceptions import ValidationError
 from typing import Dict, List, Optional
 import logging
+import re
 
 from apps.core.models import CargasSaldo, ConsumosTarjeta, Tarjetas
 from apps.ventas.models import Ventas, DetallesVenta
@@ -440,6 +441,40 @@ class ReporteService:
                     "saldo_posterior",
                 ).order_by("-fecha_consumo")
             )
+
+            # Adjuntar productos de cada venta --------------------------------
+            venta_ids = []
+            for c in consumos_detalle:
+                match = re.search(r'Venta #(\d+)', c.get('detalle') or '')
+                if match:
+                    venta_ids.append(int(match.group(1)))
+
+            detalles_por_venta: Dict[int, list] = {}
+            if venta_ids:
+                from apps.ventas.models import DetallesVenta
+                filas = DetallesVenta.objects.filter(
+                    id_venta__in=venta_ids
+                ).select_related('id_producto').values(
+                    'id_venta_id',
+                    'id_producto__descripcion',
+                    'cantidad',
+                    'precio_unitario',
+                    'subtotal',
+                )
+                for fila in filas:
+                    vid = fila['id_venta_id']
+                    detalles_por_venta.setdefault(vid, []).append({
+                        'descripcion': fila['id_producto__descripcion'],
+                        'cantidad': fila['cantidad'],
+                        'precio_unitario': fila['precio_unitario'],
+                        'subtotal': fila['subtotal'],
+                    })
+
+            for c in consumos_detalle:
+                match = re.search(r'Venta #(\d+)', c.get('detalle') or '')
+                vid = int(match.group(1)) if match else None
+                c['productos'] = detalles_por_venta.get(vid, [])
+            # -----------------------------------------------------------------
 
             total_gastado = abs(stats["monto_total"] or Decimal("0.00"))
             hijo = tarjeta.id_hijo

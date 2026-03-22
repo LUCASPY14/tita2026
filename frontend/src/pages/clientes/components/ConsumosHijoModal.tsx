@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ShoppingBag, Calendar, TrendingDown, CreditCard, AlertCircle } from 'lucide-react';
+import { X, ShoppingBag, Calendar, TrendingDown, CreditCard, AlertCircle, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { Button, Spinner } from '../../../components/common';
 import { getReporteConsumosHijo } from '../../../services/reportes.service';
-import type { Hijo, Tarjeta, ReporteConsumosHijo } from '../../../types';
+import type { Hijo, Tarjeta, ReporteConsumosHijo, ConsumoHijoDetalle } from '../../../types';
 
 interface ConsumosHijoModalProps {
   hijo: Hijo;
@@ -35,6 +35,81 @@ const thirtyDaysAgoStr = (): string => {
   d.setDate(d.getDate() - 30);
   return d.toISOString().split('T')[0];
 };
+
+// ─── ConsumoRow ──────────────────────────────────────────────────────────────
+interface ConsumoRowProps {
+  consumo: ConsumoHijoDetalle;
+  esRecarga: boolean;
+}
+
+const ConsumoRow: React.FC<ConsumoRowProps> = ({ consumo: c, esRecarga }) => {
+  const monto = Math.abs(Number(c.monto_consumido));
+
+  return (
+    <div
+      className={`rounded-lg border px-4 py-3 ${
+        esRecarga
+          ? 'border-green-200 bg-green-50'
+          : 'border-red-100 bg-white'
+      }`}
+    >
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {esRecarga ? (
+            <ArrowUpCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+          ) : (
+            <ArrowDownCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+          )}
+          <div className="min-w-0">
+            <span className="text-xs text-gray-500">
+              {formatFecha(c.fecha_consumo)} · {formatHora(c.fecha_consumo)}
+            </span>
+            {esRecarga && (
+              <p className="text-sm font-medium text-green-700 truncate">
+                Recarga de saldo
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className={`font-bold text-sm ${esRecarga ? 'text-green-700' : 'text-red-700'}`}>
+            {esRecarga ? '+' : '-'}{formatGs(monto)}
+          </p>
+          <p className="text-xs text-gray-400">
+            Saldo: {formatGs(c.saldo_posterior)}
+          </p>
+        </div>
+      </div>
+
+      {/* Productos (solo para compras) */}
+      {!esRecarga && c.productos && c.productos.length > 0 && (
+        <div className="mt-2 pl-6 space-y-1">
+          {c.productos.map((p, i) => (
+            <div key={i} className="flex items-center justify-between text-sm">
+              <span className="text-gray-700">
+                <span className="font-medium text-gray-900">
+                  {Number(p.cantidad) % 1 === 0
+                    ? Number(p.cantidad).toFixed(0)
+                    : Number(p.cantidad).toString()}×
+                </span>{' '}
+                {p.descripcion}
+              </span>
+              <span className="text-gray-500 text-xs ml-2 whitespace-nowrap">
+                {formatGs(p.subtotal)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!esRecarga && (!c.productos || c.productos.length === 0) && c.detalle && (
+        <p className="mt-1 pl-6 text-xs text-gray-400 italic">{c.detalle}</p>
+      )}
+    </div>
+  );
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 const ConsumosHijoModal: React.FC<ConsumosHijoModalProps> = ({ hijo, tarjeta, onClose }) => {
   const [fechaInicio, setFechaInicio] = useState(thirtyDaysAgoStr());
@@ -135,45 +210,51 @@ const ConsumosHijoModal: React.FC<ConsumosHijoModalProps> = ({ hijo, tarjeta, on
           ) : (
             <>
               {/* Summary Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                <div className="rounded-lg bg-blue-50 p-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <ShoppingBag className="h-4 w-4 text-blue-600" />
-                    <p className="text-xs font-medium text-blue-600">Compras</p>
-                  </div>
-                  <p className="text-xl font-bold text-blue-900">{reporte.total_consumos}</p>
-                </div>
+              {(() => {
+                const soloCompras = reporte.consumos.filter(c => Number(c.monto_consumido) > 0);
+                const totalGastado = soloCompras.reduce((sum, c) => sum + Number(c.monto_consumido), 0);
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <div className="rounded-lg bg-blue-50 p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <ShoppingBag className="h-4 w-4 text-blue-600" />
+                        <p className="text-xs font-medium text-blue-600">Compras</p>
+                      </div>
+                      <p className="text-xl font-bold text-blue-900">{soloCompras.length}</p>
+                    </div>
 
-                <div className="rounded-lg bg-red-50 p-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <TrendingDown className="h-4 w-4 text-red-600" />
-                    <p className="text-xs font-medium text-red-600">Total Gastado</p>
-                  </div>
-                  <p className="text-lg font-bold text-red-900">
-                    {formatGs(reporte.total_gastado)}
-                  </p>
-                </div>
+                    <div className="rounded-lg bg-red-50 p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <TrendingDown className="h-4 w-4 text-red-600" />
+                        <p className="text-xs font-medium text-red-600">Total Gastado</p>
+                      </div>
+                      <p className="text-lg font-bold text-red-900">
+                        {formatGs(totalGastado)}
+                      </p>
+                    </div>
 
-                <div className="rounded-lg bg-green-50 p-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <CreditCard className="h-4 w-4 text-green-600" />
-                    <p className="text-xs font-medium text-green-600">Saldo Actual</p>
-                  </div>
-                  <p className="text-lg font-bold text-green-900">
-                    {formatGs(reporte.saldo_actual ?? tarjeta?.saldo_actual)}
-                  </p>
-                </div>
+                    <div className="rounded-lg bg-green-50 p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <CreditCard className="h-4 w-4 text-green-600" />
+                        <p className="text-xs font-medium text-green-600">Saldo Actual</p>
+                      </div>
+                      <p className="text-lg font-bold text-green-900">
+                        {formatGs(reporte.saldo_actual ?? tarjeta?.saldo_actual)}
+                      </p>
+                    </div>
 
-                <div className="rounded-lg bg-gray-100 p-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Calendar className="h-4 w-4 text-gray-600" />
-                    <p className="text-xs font-medium text-gray-600">Período</p>
+                    <div className="rounded-lg bg-gray-100 p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Calendar className="h-4 w-4 text-gray-600" />
+                        <p className="text-xs font-medium text-gray-600">Período</p>
+                      </div>
+                      <p className="text-xs font-medium text-gray-800">
+                        {formatFecha(fechaInicio)} –<br />{formatFecha(fechaFin)}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs font-medium text-gray-800">
-                    {formatFecha(fechaInicio)} –<br />{formatFecha(fechaFin)}
-                  </p>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Tarjeta info */}
               <p className="text-xs text-gray-400 mb-4">
@@ -187,39 +268,17 @@ const ConsumosHijoModal: React.FC<ConsumosHijoModalProps> = ({ hijo, tarjeta, on
                   <p className="font-medium">Sin consumos en este período</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-lg border border-gray-200">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-                      <tr>
-                        <th className="px-4 py-3 text-left">Fecha</th>
-                        <th className="px-4 py-3 text-left">Hora</th>
-                        <th className="px-4 py-3 text-left">Detalle</th>
-                        <th className="px-4 py-3 text-right">Monto</th>
-                        <th className="px-4 py-3 text-right">Saldo Post.</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {reporte.consumos.map((c) => (
-                        <tr key={c.id_consumo} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                            {formatFecha(c.fecha_consumo)}
-                          </td>
-                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                            {formatHora(c.fecha_consumo)}
-                          </td>
-                          <td className="px-4 py-3 text-gray-700">
-                            {c.detalle || <span className="text-gray-400 italic">—</span>}
-                          </td>
-                          <td className="px-4 py-3 text-right font-medium text-red-700">
-                            {formatGs(c.monto_consumido)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
-                            {formatGs(c.saldo_posterior)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-2">
+                  {reporte.consumos.map((c) => {
+                    const esRecarga = Number(c.monto_consumido) < 0;
+                    return (
+                      <ConsumoRow
+                        key={c.id_consumo}
+                        consumo={c}
+                        esRecarga={esRecarga}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </>
