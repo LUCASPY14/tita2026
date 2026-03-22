@@ -142,8 +142,8 @@ const HistorialVentas: React.FC = () => {
 
   const totalPaginas = Math.ceil(totalRegistros / PAGE_SIZE);
 
-  const formatearMoneda = (monto: number) =>
-    `Gs. ${monto.toLocaleString('es-PY', { minimumFractionDigits: 0 })}`;
+  const formatearMoneda = (monto: number | string) =>
+    `Gs. ${Number(monto).toLocaleString('es-PY', { minimumFractionDigits: 0 })}`;
 
   const formatearFecha = (fecha: string) =>
     new Date(fecha).toLocaleDateString('es-PY', {
@@ -167,7 +167,7 @@ const HistorialVentas: React.FC = () => {
   };
 
   // Totales rápidos de la página actual
-  const totalPagina = ventas.reduce((s, v) => s + v.monto_total, 0);
+  const totalPagina = ventas.reduce((s, v) => s + Number(v.monto_total), 0);
 
   return (
     <div className="space-y-4">
