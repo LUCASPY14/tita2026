@@ -12,8 +12,9 @@ Fecha: Marzo 2026
 """
 
 from decimal import Decimal
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, time
 from django.utils import timezone
+from django.utils.timezone import make_aware, get_current_timezone
 from django.db.models import Sum, Count, Avg, Q, F
 from django.core.exceptions import ValidationError
 from typing import Dict, List, Optional
@@ -72,10 +73,17 @@ class DashboardService:
         """
         try:
             if not fecha:
-                fecha = date.today()
+                fecha = timezone.localdate()
+
+            # Rango del día en zona horaria local (evita CONVERT_TZ de MySQL)
+            tz = get_current_timezone()
+            inicio_dia = make_aware(datetime.combine(fecha, time.min), tz)
+            fin_dia = make_aware(datetime.combine(fecha + timedelta(days=1), time.min), tz)
 
             # Ventas del día
-            ventas_stats = Ventas.objects.filter(fecha__date=fecha).aggregate(
+            ventas_stats = Ventas.objects.filter(
+                fecha__gte=inicio_dia, fecha__lt=fin_dia
+            ).aggregate(
                 total_ventas=Sum("monto_total"),
                 cantidad_ventas=Count("id_venta"),
                 ticket_promedio=Avg("monto_total"),
@@ -83,7 +91,7 @@ class DashboardService:
 
             # Recargas del día
             recargas_stats = CargasSaldo.objects.filter(
-                fecha_carga__date=fecha, estado="completada"
+                fecha_carga__gte=inicio_dia, fecha_carga__lt=fin_dia, estado="completada"
             ).aggregate(total_recargas=Sum("monto_cargado"), cantidad_recargas=Count("id_carga"))
 
             # Tarjetas activas
