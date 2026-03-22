@@ -61,14 +61,14 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
   };
 
   const getMedioPagoId = (): number | undefined => {
-    const buscar = (term: string) => mediosPago.find(m => m.nombre.toLowerCase().includes(term))?.id_medio_pago;
+    const buscar = (term: string) => mediosPago.find(m => m.nombre?.toLowerCase().includes(term))?.id_medio_pago;
     if (metodoPago === 'pos') return buscar('pos');
     if (metodoPago === 'tarjeta_hijo') return buscar('tarjeta');
     if (metodoPago === 'transferencia') return buscar('transf') ?? buscar('transfer');
     return undefined;
   };
 
-  const medioPagoPos = mediosPago.find(m => m.nombre.toLowerCase().includes('pos')) ?? null;
+  const medioPagoPos = mediosPago.find(m => m.nombre?.toLowerCase().includes('pos')) ?? null;
   const posGeneraComision = metodoPago === 'pos' && (medioPagoPos?.genera_comision ?? false);
   const totalConDescuento = promoValidada ? total - promoValidada.descuento_calculado : total;
 
