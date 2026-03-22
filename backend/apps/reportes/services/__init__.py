@@ -383,6 +383,83 @@ class ReporteService:
             raise ValidationError(f"Error: {str(e)}")
 
     @staticmethod
+    def generar_reporte_consumos_hijo(
+        id_hijo: int, fecha_inicio: date, fecha_fin: date
+    ) -> Dict:
+        """
+        Genera reporte de consumos de un hijo por su id_hijo.
+
+        Args:
+            id_hijo: ID del hijo
+            fecha_inicio: Fecha inicio
+            fecha_fin: Fecha fin
+
+        Returns:
+            Reporte con datos del estudiante, tarjeta, lista de consumos y totales.
+        """
+        try:
+            try:
+                tarjeta = Tarjetas.objects.select_related("id_hijo").get(id_hijo=id_hijo)
+            except Tarjetas.DoesNotExist:
+                return {
+                    "id_hijo": id_hijo,
+                    "tiene_tarjeta": False,
+                    "periodo": {"fecha_inicio": fecha_inicio, "fecha_fin": fecha_fin},
+                    "total_consumos": 0,
+                    "total_gastado": Decimal("0.00"),
+                    "consumos": [],
+                }
+
+            consumos = ConsumosTarjeta.objects.filter(
+                nro_tarjeta=tarjeta,
+                fecha_consumo__date__gte=fecha_inicio,
+                fecha_consumo__date__lte=fecha_fin,
+            )
+
+            stats = consumos.aggregate(
+                total_consumos=Count("id_consumo"), monto_total=Sum("monto_consumido")
+            )
+
+            primer_consumo = consumos.order_by("fecha_consumo").first()
+            saldo_inicial = (
+                primer_consumo.saldo_anterior if primer_consumo else tarjeta.saldo_actual
+            )
+
+            consumos_detalle = list(
+                consumos.values(
+                    "id_consumo",
+                    "fecha_consumo",
+                    "monto_consumido",
+                    "detalle",
+                    "saldo_anterior",
+                    "saldo_posterior",
+                ).order_by("-fecha_consumo")
+            )
+
+            total_gastado = abs(stats["monto_total"] or Decimal("0.00"))
+            hijo = tarjeta.id_hijo
+
+            return {
+                "id_hijo": id_hijo,
+                "tiene_tarjeta": True,
+                "nro_tarjeta": tarjeta.nro_tarjeta,
+                "estudiante": f"{hijo.nombre} {hijo.apellido}",
+                "grado": hijo.grado or "",
+                "saldo_actual": tarjeta.saldo_actual,
+                "periodo": {"fecha_inicio": fecha_inicio, "fecha_fin": fecha_fin},
+                "total_consumos": stats["total_consumos"] or 0,
+                "total_gastado": total_gastado,
+                "monto_total_consumido": total_gastado,
+                "saldo_inicial": saldo_inicial,
+                "saldo_final": tarjeta.saldo_actual,
+                "consumos": consumos_detalle,
+            }
+
+        except Exception as e:
+            logger.error(f"Error generando reporte consumos por hijo: {str(e)}")
+            raise ValidationError(f"Error: {str(e)}")
+
+    @staticmethod
     def generar_reporte_financiero(fecha_inicio: date, fecha_fin: date) -> Dict:
         """
         Genera reporte financiero consolidado.

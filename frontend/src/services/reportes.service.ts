@@ -20,6 +20,8 @@ import type {
   ReporteTopProductosParams,
   ReporteConsumosTarjeta,
   ReporteConsumosTarjetaParams,
+  ReporteConsumosHijo,
+  ReporteConsumosHijoParams,
   ReporteFinanciero,
   ReporteFinancieroParams,
   DashboardKPIs,
@@ -64,6 +66,14 @@ export async function getReporteTopProductos(params: ReporteTopProductosParams):
  */
 export async function getReporteConsumosTarjeta(params: ReporteConsumosTarjetaParams): Promise<ReporteConsumosTarjeta> {
   const response = await api.get<ReporteConsumosTarjeta>(`/reportes/consumos-tarjeta/`, { params });
+  return response.data;
+}
+
+/**
+ * Genera reporte de consumos de un hijo específico
+ */
+export async function getReporteConsumosHijo(params: ReporteConsumosHijoParams): Promise<ReporteConsumosHijo> {
+  const response = await api.get<ReporteConsumosHijo>(`/reportes/consumos-hijo/`, { params });
   return response.data;
 }
 

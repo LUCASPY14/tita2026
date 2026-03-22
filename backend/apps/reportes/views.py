@@ -212,6 +212,53 @@ class ReportesViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=["get"], url_path="consumos-hijo")
+    def reporte_consumos_hijo(self, request):
+        """
+        GET /api/v1/reportes/consumos-hijo/
+
+        Parámetros:
+        - id_hijo (required): int
+        - fecha_inicio (required): YYYY-MM-DD
+        - fecha_fin (required): YYYY-MM-DD
+        """
+        try:
+            id_hijo_str = request.query_params.get("id_hijo")
+            fecha_inicio_str = request.query_params.get("fecha_inicio")
+            fecha_fin_str = request.query_params.get("fecha_fin")
+
+            if not all([id_hijo_str, fecha_inicio_str, fecha_fin_str]):
+                return Response(
+                    {"error": "Parámetros id_hijo, fecha_inicio y fecha_fin son requeridos"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            try:
+                id_hijo = int(id_hijo_str)
+            except ValueError:
+                return Response(
+                    {"error": "id_hijo debe ser un número entero"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            fecha_inicio = parse_date(fecha_inicio_str)
+            fecha_fin = parse_date(fecha_fin_str)
+
+            if not fecha_inicio or not fecha_fin:
+                return Response(
+                    {"error": "Formato de fecha inválido. Use YYYY-MM-DD"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            reporte = ReporteService.generar_reporte_consumos_hijo(
+                id_hijo=id_hijo, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin
+            )
+
+            return Response(reporte, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=False, methods=["get"], url_path="financiero")
     def reporte_financiero(self, request):
         """

@@ -675,6 +675,37 @@ export interface ReporteConsumosTarjetaParams {
   fecha_fin: string;
 }
 
+export interface ConsumoHijoDetalle {
+  id_consumo: number;
+  fecha_consumo: string;
+  monto_consumido: number;
+  detalle: string | null;
+  saldo_anterior: number;
+  saldo_posterior: number;
+}
+
+export interface ReporteConsumosHijo {
+  id_hijo: number;
+  tiene_tarjeta: boolean;
+  nro_tarjeta?: string;
+  estudiante?: string;
+  grado?: string;
+  saldo_actual?: number;
+  periodo: { fecha_inicio: string; fecha_fin: string };
+  total_consumos: number;
+  total_gastado: number;
+  monto_total_consumido: number;
+  saldo_inicial?: number;
+  saldo_final?: number;
+  consumos: ConsumoHijoDetalle[];
+}
+
+export interface ReporteConsumosHijoParams {
+  id_hijo: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+}
+
 export interface ReporteFinancieroParams {
   fecha_inicio: string;
   fecha_fin: string;
