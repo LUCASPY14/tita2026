@@ -26,6 +26,7 @@ from apps.ventas.models import Ventas, DetallesVenta
 from apps.productos.models import Productos
 from apps.inventario.models import StockUnico, MovimientosStock
 from apps.reportes.models import PlantillasReporte
+from django.utils.timezone import make_aware
 
 logger = logging.getLogger(__name__)
 
@@ -341,8 +342,10 @@ class ReporteService:
                 }
 
             # Obtener consumos
+            fecha_inicio_dt = make_aware(datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0))
+            fecha_fin_dt = make_aware(datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59))
             consumos = ConsumosTarjeta.objects.filter(
-                nro_tarjeta=tarjeta, fecha_consumo__date__gte=fecha_inicio, fecha_consumo__date__lte=fecha_fin
+                nro_tarjeta=tarjeta, fecha_consumo__gte=fecha_inicio_dt, fecha_consumo__lte=fecha_fin_dt
             )
 
             # Estadísticas
@@ -410,10 +413,12 @@ class ReporteService:
                     "consumos": [],
                 }
 
+            fecha_inicio_dt = make_aware(datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0))
+            fecha_fin_dt = make_aware(datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59))
             consumos = ConsumosTarjeta.objects.filter(
                 nro_tarjeta=tarjeta,
-                fecha_consumo__date__gte=fecha_inicio,
-                fecha_consumo__date__lte=fecha_fin,
+                fecha_consumo__gte=fecha_inicio_dt,
+                fecha_consumo__lte=fecha_fin_dt,
             )
 
             stats = consumos.aggregate(
