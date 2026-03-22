@@ -31,10 +31,26 @@ class ProductosSerializer(serializers.ModelSerializer):
     stock_actual = serializers.SerializerMethodField()
     requiere_reposicion = serializers.SerializerMethodField()
     precio = serializers.SerializerMethodField()
+    categoria_nombre = serializers.SerializerMethodField()
+    impuesto_nombre = serializers.SerializerMethodField()
+    id_impuesto = serializers.PrimaryKeyRelatedField(
+        queryset=__import__('apps.contabilidad.models', fromlist=['Impuestos']).Impuestos.objects.all(),
+        required=False,
+    )
 
     class Meta:
         model = Productos
         fields = "__all__"
+
+    def create(self, validated_data):
+        if 'id_impuesto' not in validated_data:
+            from apps.contabilidad.models import Impuestos
+            impuesto, _ = Impuestos.objects.get_or_create(
+                nombre_impuesto='IVA 10%',
+                defaults={'porcentaje': 10, 'estado': True},
+            )
+            validated_data['id_impuesto'] = impuesto
+        return super().create(validated_data)
 
     def get_stock_actual(self, obj):
         try:
@@ -47,6 +63,18 @@ class ProductosSerializer(serializers.ModelSerializer):
             return obj.stock.cantidad <= obj.stock_minimo
         except Exception:
             return False
+
+    def get_categoria_nombre(self, obj):
+        try:
+            return obj.id_categoria.nombre if obj.id_categoria else None
+        except Exception:
+            return None
+
+    def get_impuesto_nombre(self, obj):
+        try:
+            return obj.id_impuesto.nombre_impuesto if obj.id_impuesto else None
+        except Exception:
+            return None
 
     def get_precio(self, obj):
         try:

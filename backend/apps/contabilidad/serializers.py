@@ -1,3 +1,8 @@
 from rest_framework import serializers
+from .models import Impuestos
 
-# Create your serializers here.
+
+class ImpuestosSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Impuestos
+        fields = "__all__"

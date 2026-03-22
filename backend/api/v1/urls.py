@@ -7,6 +7,7 @@ from rest_framework.routers import DefaultRouter
 # Import ViewSets
 from apps.clientes.views import ClientesViewSet, HijosViewSet, TiposClienteViewSet, GradosViewSet
 from apps.productos.views import ProductosViewSet, CategoriasViewSet, UnidadesMedidaViewSet, ListasPreciosViewSet, PreciosPorListaViewSet
+from apps.contabilidad.views import ImpuestosViewSet
 from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaViewSet, NotasCreditoClienteViewSet, PromocionesViewSet
 from apps.compras.views import ProveedoresViewSet, ComprasViewSet, DetallesCompraViewSet, PagosProveedoresViewSet, NotasCreditoProveedorViewSet
 from apps.core.views import TarjetasViewSet, CargasSaldoViewSet, ConsumosTarjetaViewSet, MediosPagoViewSet, ConfiguracionSistemaViewSet
@@ -37,6 +38,7 @@ router.register(r'categorias', CategoriasViewSet)
 router.register(r'unidades-medida', UnidadesMedidaViewSet)
 router.register(r'listas-precios', ListasPreciosViewSet)
 router.register(r'precios-por-lista', PreciosPorListaViewSet)
+router.register(r'impuestos', ImpuestosViewSet, basename='impuestos')
 
 # Register Ventas ViewSets
 router.register(r'ventas', VentasViewSet)

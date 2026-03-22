@@ -3,10 +3,7 @@ from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db import transaction
-from django.db.models import F
-from django.utils import timezone
 from datetime import datetime
-from decimal import Decimal
 from .models import (
     PlanesAlmuerzo,
     TiposAlmuerzo,
@@ -53,14 +50,14 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
     """
     ViewSet para registrar consumos de almuerzo.
 
-    REGLA DE NEGOCIO (Nuevo sistema con saldo prepago):
-    - Máximo 2 registros por alumno por día
-    - Primer registro: desccuenta saldo (ya_cobrado=True)
-    - Segundo registro: NO descuenta saldo (ya_cobrado=False, solo operativo)
-    - Tercer intento: BLOQUEADO
-
-    El cobro se realiza con saldo prepago de la tarjeta (como cantina).
-    La facturación ya fue realizada al recargar la tarjeta.
+    REGLA DE NEGOCIO:
+    - La tarjeta se usa SOLO como identificación de acceso al comedor.
+    - NO se descuenta saldo de la tarjeta (el saldo es exclusivo para la cantina/POS).
+    - El costo del almuerzo se acumula en CuentasAlmuerzoMensual para facturación mensual.
+    - Máximo 2 registros por alumno por día:
+        · Primer registro: ya_cobrado=True (se contabiliza en la cuenta mensual)
+        · Segundo registro: ya_cobrado=False, costo=0 (solo operativo, e.g. postre/reingreso)
+        · Tercer intento: BLOQUEADO
     """
 
     queryset = RegistrosConsumoAlmuerzo.objects.all()
@@ -71,11 +68,10 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Registra el consumo de almuerzo con lógica de doble registro.
+        Registra el ingreso al almuerzo.
 
-        - Valida límite de 2 registros por día
-        - Determina si el registro debe generar cobro (ya_cobrado)
-        - Descuenta saldo de la tarjeta solo en el primer registro del día
+        La tarjeta identifica al alumno pero NO se descuenta saldo.
+        El costo se acumula en la cuenta mensual del hijo.
         """
         from .validators import validar_limite_registros_diarios, determinar_si_cobra
 
@@ -86,21 +82,20 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         id_tipo_almuerzo = registro_data.get("id_tipo_almuerzo")
         id_suscripcion = registro_data.get("id_suscripcion")
 
-        # Validar tarjeta presente
+        # Tarjeta requerida como identificación
         if not nro_tarjeta:
             raise ValidationError(
-                {"error": "Debe especificar la tarjeta para registrar el almuerzo"}
+                {"error": "Debe especificar la tarjeta para registrar el ingreso al almuerzo"}
             )
 
         # Validar límite de 2 registros por día (lanza excepción si excede)
         validar_limite_registros_diarios(id_hijo, fecha_consumo)
 
-        # Determinar si este registro debe cobrar
-        debe_cobrar = determinar_si_cobra(id_hijo, fecha_consumo)
+        # Determinar si este registro se contabiliza en cuenta mensual
+        debe_contabilizar = determinar_si_cobra(id_hijo, fecha_consumo)
 
-        # Calcular costo según suscripción o tipo de almuerzo
+        # Calcular costo según suscripción o tipo de almuerzo (para cuenta mensual)
         if id_suscripcion:
-            # Con suscripción: validar que esté activa
             if id_suscripcion.estado != "Activa":
                 raise ValidationError(
                     {
@@ -108,66 +103,30 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                         "estado_suscripcion": id_suscripcion.estado,
                     }
                 )
-            # Suscripción activa: usar precio del plan mensual
-            costo_calculado = id_suscripcion.id_plan_almuerzo.precio_mensual / 30  # Aproximado  # pragma: no cover
+            costo_calculado = id_suscripcion.id_plan_almuerzo.precio_mensual / 30  # pragma: no cover
         elif id_tipo_almuerzo:
-            # Sin suscripción: precio unitario
             costo_calculado = id_tipo_almuerzo.precio_unitario
         else:
             raise ValidationError(
                 {"error": "Debe especificar una suscripción o un tipo de almuerzo"}
             )
 
-        # Guardar el registro
         with transaction.atomic():
-            # Si debe cobrar, descontar saldo de la tarjeta
-            if debe_cobrar:
-                # Verificar saldo suficiente
-                if nro_tarjeta.saldo_actual < costo_calculado:
-                    raise ValidationError(
-                        {
-                            "error": "Saldo insuficiente en la tarjeta",
-                            "saldo_actual": float(nro_tarjeta.saldo_actual),
-                            "costo_almuerzo": float(costo_calculado),
-                            "faltante": float(costo_calculado - nro_tarjeta.saldo_actual),
-                        }
-                    )
-
-                # Descontar saldo
-                nro_tarjeta.saldo_actual = F("saldo_actual") - costo_calculado
-                nro_tarjeta.save(update_fields=["saldo_actual"])
-                nro_tarjeta.refresh_from_db()
-
-                # Guardar registro con ya_cobrado=True
+            if debe_contabilizar:
+                # Primer ingreso del día: registrar con costo para facturación mensual
                 registro = serializer.save(
-                    costo_almuerzo=costo_calculado, ya_cobrado=True, estado="Confirmado"
-                )
-
-                # Actualizar cuenta mensual
-                self._agregar_a_cuenta_mensual(registro)
-
-                # Registrar movimiento en historial de tarjeta
-                from apps.core.models import ConsumosTarjeta
-                saldo_anterior = nro_tarjeta.saldo_actual + costo_calculado
-                ConsumosTarjeta.objects.create(
-                    fecha_consumo=timezone.now(),
-                    monto_consumido=costo_calculado,
-                    detalle=f"Almuerzo registrado (ID {registro.pk})",
-                    saldo_anterior=saldo_anterior,
-                    saldo_posterior=nro_tarjeta.saldo_actual,
-                    nro_tarjeta=nro_tarjeta,
-                )
-
-            else:
-                # Segundo registro del día: NO cobrar
-                registro = serializer.save(
-                    costo_almuerzo=0,  # No genera costo
-                    ya_cobrado=False,  # Marcado como NO cobrado
+                    costo_almuerzo=costo_calculado,
+                    ya_cobrado=True,
                     estado="Confirmado",
                 )
-                registro.save()
-
-                # Actualizar cuenta mensual (aunque sea con costo 0)
+                self._agregar_a_cuenta_mensual(registro)
+            else:
+                # Segundo ingreso del día: sin costo (postre, reingreso, etc.)
+                registro = serializer.save(
+                    costo_almuerzo=0,
+                    ya_cobrado=False,
+                    estado="Confirmado",
+                )
                 self._agregar_a_cuenta_mensual(registro)
 
     def _agregar_a_cuenta_mensual(self, registro):
