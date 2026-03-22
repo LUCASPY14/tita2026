@@ -1034,11 +1034,19 @@ export interface SaldoTarjeta {
   alertaBajo: boolean;
 }
 
+export interface RestriccionHijo {
+  tipo_restriccion: string;
+  descripcion?: string;
+  severidad: string;
+  requiere_autorizacion: boolean;
+}
+
 export interface TarjetaEscaneada {
   numero: string;
   hijo: Hijo;
   saldo: SaldoTarjeta;
   estado: string;
   timestamp: Date;
+  restricciones?: RestriccionHijo[];
 }
 

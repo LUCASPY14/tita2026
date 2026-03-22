@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from decimal import Decimal, InvalidOperation
 from .models import Tarjetas, CargasSaldo, ConsumosTarjeta, MediosPago, ConfiguracionSistema
+from apps.clientes.models import RestriccionesHijos
 from .serializers import (
     TarjetasSerializer,
     CargasSaldoSerializer,
@@ -58,14 +59,23 @@ class TarjetasViewSet(viewsets.ModelViewSet):
                 )
             
             # Retornar información completa
-            serializer = self.get_serializer(tarjeta)
+            serializer = self.get_serializer(tarjeta, context={'request': request})
+            
+            # Obtener restricciones activas del hijo
+            restricciones = list(
+                RestriccionesHijos.objects
+                .filter(id_hijo=tarjeta.id_hijo, estado=True)
+                .values('tipo_restriccion', 'descripcion', 'severidad', 'requiere_autorizacion')
+            )
+            
             return Response({
                 'tarjeta': serializer.data,
                 'verificacion': {
                     'estado_ok': True,
                     'saldo_disponible': tarjeta.saldo_disponible,
                     'alerta_saldo_bajo': tarjeta.esta_en_alerta,
-                    'timestamp': timezone.now()
+                    'timestamp': timezone.now(),
+                    'restricciones': restricciones,
                 }
             })
             

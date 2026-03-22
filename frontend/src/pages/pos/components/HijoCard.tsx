@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, CreditCard, AlertTriangle, DollarSign, Camera } from 'lucide-react';
+import { User, CreditCard, AlertTriangle, Camera, ShieldAlert } from 'lucide-react';
 import { Card } from '../../../components/common';
 import type { TarjetaEscaneada } from '../../../types';
 
@@ -18,12 +18,8 @@ const HijoCard: React.FC<HijoCardProps> = ({
 }) => {
   const { hijo, saldo, numero, estado } = tarjeta;
   
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-PY', {
-      style: 'currency',
-      currency: 'PYG',
-      minimumFractionDigits: 0,
-    }).format(amount);
+  const formatCurrency = (amount: number | string) => {
+    return `Gs. ${Number(amount).toLocaleString('es-PY', { minimumFractionDigits: 0 })}`;
   };
 
   const formatDateTime = (date: Date) => {
@@ -44,7 +40,7 @@ const HijoCard: React.FC<HijoCardProps> = ({
 
   const getSaldoIcon = () => {
     if (saldo.alertaBajo) return <AlertTriangle className="h-4 w-4" />;
-    return <DollarSign className="h-4 w-4" />;
+    return <span className="text-xs font-bold leading-none">Gs.</span>;
   };
 
   return (
@@ -103,7 +99,7 @@ const HijoCard: React.FC<HijoCardProps> = ({
             
             {/* Estado de la tarjeta */}
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-              estado === 'ACTIVA' 
+              estado.toUpperCase() === 'ACTIVA'
                 ? 'bg-green-100 text-green-800' 
                 : 'bg-red-100 text-red-800'
             }`}>
@@ -155,6 +151,43 @@ const HijoCard: React.FC<HijoCardProps> = ({
                 {formatDateTime(tarjeta.timestamp)}
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restricciones del estudiante */}
+      {tarjeta.restricciones && tarjeta.restricciones.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-red-200">
+          <div className="flex items-center gap-2 mb-2">
+            <ShieldAlert className="h-4 w-4 text-red-600" />
+            <p className="text-sm font-semibold text-red-700">Restricciones del alumno</p>
+          </div>
+          <div className="space-y-2">
+            {tarjeta.restricciones.map((r, i) => (
+              <div
+                key={i}
+                className={`flex items-start gap-2 px-3 py-2 rounded-lg text-sm ${
+                  r.severidad.toLowerCase() === 'crítica' || r.severidad.toLowerCase() === 'critica'
+                    ? 'bg-red-100 text-red-800 border border-red-300'
+                    : r.severidad.toLowerCase() === 'alta'
+                    ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                    : 'bg-yellow-50 text-yellow-800 border border-yellow-200'
+                }`}
+              >
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <span className="font-medium">{r.tipo_restriccion}</span>
+                  {r.descripcion && <span className="ml-1">— {r.descripcion}</span>}
+                  <span className={`ml-2 text-xs px-1.5 py-0.5 rounded font-semibold ${
+                    r.severidad.toLowerCase() === 'crítica' || r.severidad.toLowerCase() === 'critica'
+                      ? 'bg-red-200 text-red-900'
+                      : r.severidad.toLowerCase() === 'alta'
+                      ? 'bg-orange-200 text-orange-900'
+                      : 'bg-yellow-200 text-yellow-900'
+                  }`}>{r.severidad}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

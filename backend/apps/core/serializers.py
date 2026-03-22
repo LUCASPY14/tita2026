@@ -5,8 +5,17 @@ from .models import Tarjetas, CargasSaldo, ConsumosTarjeta, MediosPago, Configur
 class TarjetasSerializer(serializers.ModelSerializer):
     hijo_nombre = serializers.CharField(source="id_hijo.nombre", read_only=True)
     hijo_apellido = serializers.CharField(source="id_hijo.apellido", read_only=True)
-    hijo_foto = serializers.CharField(source="id_hijo.foto_perfil", read_only=True)
+    hijo_foto = serializers.SerializerMethodField()
     hijo_fecha_foto = serializers.CharField(source="id_hijo.fecha_foto", read_only=True)
+
+    def get_hijo_foto(self, obj):
+        """Retorna la URL completa de la foto del hijo."""
+        if obj.id_hijo and obj.id_hijo.foto_perfil:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.id_hijo.foto_perfil.url)
+            return obj.id_hijo.foto_perfil.url
+        return None
     saldo_disponible = serializers.SerializerMethodField()
 
     class Meta:

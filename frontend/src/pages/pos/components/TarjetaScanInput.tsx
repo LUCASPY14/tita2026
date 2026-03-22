@@ -83,6 +83,7 @@ const TarjetaScanInput: React.FC<TarjetaScanInputProps> = ({
         },
         estado: tarjeta.estado,
         timestamp: new Date(verificacion.timestamp),
+        restricciones: verificacion.restricciones || [],
       };
 
       setSuccess(true);
