@@ -151,7 +151,7 @@ const FormularioRecarga: React.FC<FormularioRecargaProps> = ({
     return `Gs. ${numero.toLocaleString('es-PY', { minimumFractionDigits: 0 })}`;
   };
 
-  const calcularNuevoSaldo = (): number => (tarjeta.saldo_actual + (parseFloat(monto) || 0));
+  const calcularNuevoSaldo = (): number => (Number(tarjeta.saldo_actual) + (parseFloat(monto) || 0));
 
   const copiarAlPortapapeles = (texto: string, etiqueta: string) => {
     navigator.clipboard.writeText(texto).then(() => toast.success(`${etiqueta} copiado`));
