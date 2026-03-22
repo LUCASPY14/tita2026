@@ -410,38 +410,38 @@ class VentasViewSet(viewsets.ModelViewSet):
             from apps.core.models import Tarjetas
 
             try:
-                tarjeta = Tarjetas.objects.select_for_update().get(id_hijo=id_hijo)
+                # select_for_update MUST be inside atomic block
+                with transaction.atomic():
+                    tarjeta = Tarjetas.objects.select_for_update().get(id_hijo=id_hijo)
 
-                # Validar saldo disponible
-                if tarjeta.saldo_actual < monto_total:
-                    if not tarjeta.permite_saldo_negativo:
-                        raise ValidationError(
-                            {
-                                "error": "Saldo insuficiente en la tarjeta",
-                                "saldo_actual": str(tarjeta.saldo_actual),
-                                "monto_requerido": str(monto_total),
-                                "faltante": str(monto_total - tarjeta.saldo_actual),
-                                "requiere_autorizacion": True,
-                                "mensaje": "Se requiere autorización con tarjeta de supervisor para permitir saldo negativo",
-                            }
-                        )
-                    else:
-                        # Validar límite de crédito
-                        saldo_negativo_proyectado = monto_total - tarjeta.saldo_actual
-                        if saldo_negativo_proyectado > tarjeta.limite_credito:
+                    # Validar saldo disponible
+                    if tarjeta.saldo_actual < monto_total:
+                        if not tarjeta.permite_saldo_negativo:
                             raise ValidationError(
                                 {
-                                    "error": "Excede el límite de crédito permitido",
-                                    "limite_credito": str(tarjeta.limite_credito),
-                                    "saldo_negativo_proyectado": str(saldo_negativo_proyectado),
-                                    "excedente": str(
-                                        saldo_negativo_proyectado - tarjeta.limite_credito
-                                    ),
+                                    "error": "Saldo insuficiente en la tarjeta",
+                                    "saldo_actual": str(tarjeta.saldo_actual),
+                                    "monto_requerido": str(monto_total),
+                                    "faltante": str(monto_total - tarjeta.saldo_actual),
+                                    "requiere_autorizacion": True,
+                                    "mensaje": "Se requiere autorización con tarjeta de supervisor para permitir saldo negativo",
                                 }
                             )
+                        else:
+                            # Validar límite de crédito
+                            saldo_negativo_proyectado = monto_total - tarjeta.saldo_actual
+                            if saldo_negativo_proyectado > tarjeta.limite_credito:
+                                raise ValidationError(
+                                    {
+                                        "error": "Excede el límite de crédito permitido",
+                                        "limite_credito": str(tarjeta.limite_credito),
+                                        "saldo_negativo_proyectado": str(saldo_negativo_proyectado),
+                                        "excedente": str(
+                                            saldo_negativo_proyectado - tarjeta.limite_credito
+                                        ),
+                                    }
+                                )
 
-                # Guardar venta y descontar saldo en transacción atómica
-                with transaction.atomic():
                     venta_obj = serializer.save()
                     self._crear_detalles_venta(venta_obj, detalles)
                     self._descontar_saldo_tarjeta(tarjeta, monto_total, venta_obj)
