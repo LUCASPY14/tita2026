@@ -154,6 +154,75 @@ class VentasViewSet(viewsets.ModelViewSet):
 
         return pago
 
+    def create(self, request, *args, **kwargs):
+        """
+        Override para inyectar campos servidor-side antes de validar serializer:
+        - monto_total: calculado desde los detalles enviados
+        - id_cliente: tomado del hijo (si aplica) o cliente genérico de cantina
+        - id_empleado_cajero: el usuario autenticado (o cajero sistema como fallback)
+        - estado: 'Activa'
+        - estado_pago: 'Pagada'
+        """
+        from decimal import Decimal as D
+        from apps.clientes.models import Clientes, Hijos, TiposCliente
+        from apps.productos.models import ListasPrecios
+        from apps.usuarios.models import Empleados
+        from django.utils import timezone as tz
+
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+
+        # 1. monto_total desde detalles
+        detalles = data.get('detalles', [])
+        monto_total = sum(
+            D(str(d.get('precio_unitario', 0))) * D(str(d.get('cantidad', 1)))
+            for d in detalles
+        )
+        data['monto_total'] = str(monto_total)
+
+        # 2. id_empleado_cajero desde el usuario autenticado
+        empleado_cajero = getattr(request.user, 'empleado', None)
+        if empleado_cajero:
+            data['id_empleado_cajero'] = empleado_cajero.id_empleado
+        else:
+            emp, _ = Empleados.objects.get_or_create(
+                email='cajero@sistema.com',
+                defaults={
+                    'nombre': 'Cajero', 'apellido': 'Sistema',
+                    'fecha_ingreso': tz.now(), 'contrasena_hash': '',
+                },
+            )
+            data['id_empleado_cajero'] = emp.id_empleado
+
+        # 3. id_cliente desde el hijo (si aplica) o cliente genérico
+        id_hijo = data.get('id_hijo')
+        if id_hijo:
+            try:
+                hijo = Hijos.objects.get(id_hijo=id_hijo)
+                data['id_cliente'] = hijo.id_cliente_responsable_id
+            except Hijos.DoesNotExist:
+                pass
+        if 'id_cliente' not in data or not data['id_cliente']:
+            lista, _ = ListasPrecios.objects.get_or_create(nombre_lista='General')
+            tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo='General')
+            cliente, _ = Clientes.objects.get_or_create(
+                ruc_ci='0000000',
+                defaults={
+                    'nombres': 'Cliente', 'apellidos': 'Genérico',
+                    'id_lista': lista, 'id_tipo_cliente': tipo,
+                },
+            )
+            data['id_cliente'] = cliente.id_cliente
+
+        # 4. estado / estado_pago defaults
+        data.setdefault('estado', 'Activa')
+        data.setdefault('estado_pago', 'Pagada')
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
     def perform_create(self, serializer):
         """
         Valida stock y saldo antes de crear venta.
@@ -374,6 +443,7 @@ class VentasViewSet(viewsets.ModelViewSet):
                 # Guardar venta y descontar saldo en transacción atómica
                 with transaction.atomic():
                     venta_obj = serializer.save()
+                    self._crear_detalles_venta(venta_obj, detalles)
                     self._descontar_saldo_tarjeta(tarjeta, monto_total, venta_obj)
 
                     # NUEVO: Descontar stock usando StockService (ACID)
@@ -415,6 +485,7 @@ class VentasViewSet(viewsets.ModelViewSet):
             # Venta sin tarjeta (pago directo)
             with transaction.atomic():
                 venta_obj = serializer.save()
+                self._crear_detalles_venta(venta_obj, detalles)
 
                 # NUEVO: Descontar stock usando StockService (ACID)
                 self._descontar_stock_venta(venta_obj, detalles)
@@ -472,6 +543,23 @@ class VentasViewSet(viewsets.ModelViewSet):
             saldo_posterior=tarjeta.saldo_actual,
             id_empleado_registro=venta.id_empleado_cajero,
         )
+
+    def _crear_detalles_venta(self, venta, detalles):
+        """Crea los registros DetallesVenta para la venta recién creada."""
+        from apps.productos.models import Productos
+
+        for detalle in detalles:
+            try:
+                producto = Productos.objects.get(id_producto=detalle.get('id_producto'))
+                DetallesVenta.objects.create(
+                    id_venta=venta,
+                    id_producto=producto,
+                    cantidad=Decimal(str(detalle.get('cantidad', 1))),
+                    precio_unitario=Decimal(str(detalle.get('precio_unitario', 0))),
+                    subtotal=Decimal(str(detalle.get('precio_unitario', 0))) * Decimal(str(detalle.get('cantidad', 1))),
+                )
+            except Productos.DoesNotExist:
+                raise ValidationError({'error': f"Producto {detalle.get('id_producto')} no encontrado"})
 
     def _descontar_stock_venta(self, venta, detalles):
         """
