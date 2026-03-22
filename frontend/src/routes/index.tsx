@@ -10,6 +10,7 @@ import Ventas from '../pages/ventas';
 import Clientes from '../pages/clientes';
 import Productos from '../pages/productos';
 import Compras from '../pages/compras';
+import Proveedores from '../pages/compras/Proveedores';
 import Almuerzos from '../pages/almuerzos';
 import Reportes from '../pages/Reportes';
 import Inventario from '../pages/inventario/Inventario';
@@ -108,6 +109,16 @@ const AppRoutes: React.FC = () => {
                   element={
                     <ProtectedRoute requiredRoles={['admin', 'gerente']}>
                       <Compras />
+                    </ProtectedRoute>
+                  } 
+                />
+
+                {/* Módulo de Proveedores - Admin, Gerente */}
+                <Route 
+                  path="/proveedores" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                      <Proveedores />
                     </ProtectedRoute>
                   } 
                 />

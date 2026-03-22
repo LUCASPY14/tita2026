@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CreditCard, ArrowLeftRight, ShieldCheck } from 'lucide-react';
 import { Card } from '../../components/common';
 import { BusquedaHijo, FormularioRecarga, HistorialRecargas, MovimientosSaldo, AprobacionRecargas } from './components';
+import { recargasService } from '../../services/recargas.service';
 import type { Hijo, Tarjeta } from '../../types';
 
 type Vista = 'recargas' | 'movimientos' | 'aprobacion';
@@ -17,8 +18,17 @@ const Recargas: React.FC = () => {
     setTarjetaSeleccionada(tarjeta);
   };
 
-  const handleRecargaExitosa = () => {
+  const handleRecargaExitosa = async () => {
     setActualizarHistorial(prev => prev + 1);
+    // Re-fetch tarjeta to show updated saldo
+    if (hijoSeleccionado) {
+      try {
+        const tarjetaActualizada = await recargasService.getTarjetaByHijo(hijoSeleccionado.id_hijo);
+        setTarjetaSeleccionada(tarjetaActualizada);
+      } catch {
+        // silently ignore — historial was still refreshed
+      }
+    }
   };
 
   return (

@@ -416,7 +416,7 @@ const FormularioRecarga: React.FC<FormularioRecargaProps> = ({
                     : 'border-gray-200 bg-white text-gray-700 hover:border-amber-300 hover:bg-amber-50'
                 }`}
               >
-                {montoRapido >= 1000 ? `${montoRapido / 1000}k` : montoRapido}
+                {montoRapido.toLocaleString('es-PY')} Gs.
               </button>
             ))}
           </div>

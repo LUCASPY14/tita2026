@@ -64,7 +64,7 @@ const HijoFormModal: React.FC<HijoFormModalProps> = ({
   const cargarGrados = async () => {
     try {
       const resp = await api.get('/grados/', { params: { page_size: 100 } });
-      setGrados(resp.data.results || []);
+      setGrados(resp.data.results || resp.data || []);
     } catch (error) {
       console.error('Error al cargar grados:', error);
     }
@@ -276,7 +276,7 @@ const HijoFormModal: React.FC<HijoFormModalProps> = ({
                   <p><span className="font-medium">Estado:</span> {tarjeta.estado}</p>
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">Sin tarjeta asignada. Se puede asignar desde el detalle del cliente.</p>
+                <p className="text-sm text-gray-500">Sin tarjeta asignada. Usá el botón <strong>Asignar Tarjeta</strong> en la tarjeta del hijo.</p>
               )}
             </div>
           )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { productosService, ProductoData } from '../../../services/productos.service';
-import { Producto, Categoria, UnidadMedida } from '../../../types';
+import { Producto, Categoria, UnidadMedida, Impuesto } from '../../../types';
 import { Card, Spinner } from '../../../components/common';
 import toast from 'react-hot-toast';
 
@@ -23,12 +23,13 @@ const FormularioProducto: React.FC<FormularioProductoProps> = ({
     permite_stock_negativo: false,
     estado: true,
     id_categoria: 0,
-    id_impuesto: 1, // IVA 10% por defecto
+    id_impuesto: 2, // IVA 10% por defecto (id=2 en DB)
     id_unidad_medida: undefined,
   });
 
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
+  const [impuestos, setImpuestos] = useState<Impuesto[]>([]);
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
   const [cargando, setCargando] = useState(true);
@@ -54,13 +55,15 @@ const FormularioProducto: React.FC<FormularioProductoProps> = ({
 
   const cargarDatosIniciales = async () => {
     try {
-      const [responseCategorias, responseUnidades] = await Promise.all([
+      const [responseCategorias, responseUnidades, responseImpuestos] = await Promise.all([
         productosService.getCategorias({ estado: true }),
         productosService.getUnidadesMedida(),
+        productosService.getImpuestos(),
       ]);
 
       setCategorias(responseCategorias.results);
       setUnidades(responseUnidades);
+      setImpuestos(responseImpuestos);
     } catch (error) {
       toast.error('Error al cargar datos iniciales');
       console.error('Error:', error);
@@ -278,6 +281,32 @@ const FormularioProducto: React.FC<FormularioProductoProps> = ({
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Impuesto */}
+              <div>
+                <label htmlFor="id_impuesto" className="block text-sm font-medium text-gray-700">
+                  Impuesto <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="id_impuesto"
+                  name="id_impuesto"
+                  value={formData.id_impuesto}
+                  onChange={handleChange}
+                  required
+                  className={`mt-1 block w-full rounded-lg border ${
+                    errores.id_impuesto ? 'border-red-500' : 'border-gray-300'
+                  } px-3 py-2 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500`}
+                >
+                  {impuestos.map((imp) => (
+                    <option key={imp.id_impuesto} value={imp.id_impuesto}>
+                      {imp.nombre_impuesto}
+                    </option>
+                  ))}
+                </select>
+                {errores.id_impuesto && (
+                  <p className="mt-1 text-sm text-red-600">{errores.id_impuesto}</p>
+                )}
               </div>
             </div>
           </div>

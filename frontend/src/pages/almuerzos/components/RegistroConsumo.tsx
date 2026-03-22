@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Spinner } from '../../../components/common';
-import { Search, CheckCircle, AlertCircle, Clock, User, CreditCard, DollarSign } from 'lucide-react';
+import { Search, CheckCircle, AlertCircle, Clock, User, CreditCard } from 'lucide-react';
 import { recargasService } from '../../../services/recargas.service';
 import { almuerzosService } from '../../../services/almuerzos.service';
 import toast from 'react-hot-toast';
@@ -161,17 +161,6 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
       
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
-        
-        // Mostrar información adicional si hay saldo insuficiente
-        if (error.response.data.saldo_actual !== undefined) {
-          const { saldo_actual, costo_almuerzo, faltante } = error.response.data;
-          toast.error(
-            `Saldo insuficiente. Saldo: Gs. ${formatearMoneda(saldo_actual)} | ` +
-            `Costo: Gs. ${formatearMoneda(costo_almuerzo)} | ` +
-            `Falta: Gs. ${formatearMoneda(faltante)}`,
-            { duration: 5000 }
-          );
-        }
       } else {
         toast.error('Error al registrar el consumo');
       }
@@ -264,18 +253,6 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-full bg-green-100 p-2">
-                      <DollarSign className="h-5 w-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Saldo Disponible</p>
-                      <p className="font-semibold text-green-600">
-                        {formatearMoneda(tarjetaSeleccionada.saldo_actual)}
-                      </p>
-                    </div>
-                  </div>
-
                   {suscripcionActiva && (
                     <div className="flex items-start gap-3">
                       <div className="rounded-full bg-purple-100 p-2">
@@ -340,16 +317,17 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
                 </div>
               )}
 
-              {/* Información sobre el cobro */}
+              {/* Información sobre el registro */}
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
                 <div className="flex gap-2">
                   <AlertCircle className="h-5 w-5 flex-shrink-0 text-blue-600" />
                   <div className="text-sm text-blue-800">
-                    <p className="font-medium">Importante:</p>
+                    <p className="font-medium">Reglas de registro:</p>
                     <ul className="mt-1 list-inside list-disc space-y-1">
-                      <li>El primer registro del día descuenta saldo de la tarjeta</li>
-                      <li>El segundo registro no genera cobro (solo operativo)</li>
-                      <li>Máximo 2 registros por alumno por día</li>
+                      <li>La tarjeta es solo para identificación de ingreso al comedor</li>
+                      <li>El costo se registra en la cuenta mensual del alumno</li>
+                      <li>Máximo 2 registros por alumno por día (ej: almuerzo + postre)</li>
+                      <li>El segundo registro no genera costo adicional</li>
                     </ul>
                   </div>
                 </div>

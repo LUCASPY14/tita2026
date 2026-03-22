@@ -19,7 +19,8 @@ import {
   Shield,
   KeyRound,
   Warehouse,
-  Tag
+  Tag,
+  Truck
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useHasRole } from '../hooks/usePermissions';
@@ -49,6 +50,7 @@ const BASE_NAVIGATION: NavItem[] = [
   { name: 'Reportes', path: '/reportes', icon: BarChart3, roles: ['admin', 'gerente'] },
   { name: 'Notificaciones', path: '/notificaciones', icon: Bell },
   { name: 'Compras', path: '/compras', icon: FileText, roles: ['admin', 'gerente'] },
+  { name: 'Proveedores', path: '/proveedores', icon: Truck, roles: ['admin', 'gerente'] },
   { name: 'Configuración', path: '/configuracion', icon: Settings },
   { name: 'Usuarios', path: '/admin/usuarios', icon: UserCog, adminOnly: true },
   { name: 'Permisos', path: '/admin/permisos', icon: KeyRound, adminOnly: true },

@@ -5,3 +5,4 @@ export { default as DetalleCliente } from './DetalleCliente';
 export { default as ListaHijos } from './ListaHijos';
 export { default as PhotoUploadModal } from './PhotoUploadModal';
 export { default as HijoFormModal } from './HijoFormModal';
+export { default as TarjetaFormModal } from './TarjetaFormModal';

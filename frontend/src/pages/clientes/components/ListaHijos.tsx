@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { User, Plus, Edit, Camera, Trash2 } from 'lucide-react';
+import { User, Plus, Edit, Camera, Trash2, CreditCard } from 'lucide-react';
 import { Card, Button, Avatar, Badge, Spinner } from '../../../components/common';
-import { PhotoUploadModal, HijoFormModal } from '../components';
+import { PhotoUploadModal, HijoFormModal, TarjetaFormModal } from '../components';
 import api from '../../../services/api';
-import type { Hijo } from '../../../types';
+import type { Hijo, Tarjeta } from '../../../types';
 
 interface ListaHijosProps {
   clienteId: number;
@@ -17,6 +17,9 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
   const [hijoFormModalOpen, setHijoFormModalOpen] = useState(false);
   const [hijoSeleccionado, setHijoSeleccionado] = useState<Hijo | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [tarjetaModalOpen, setTarjetaModalOpen] = useState(false);
+  const [hijoParaTarjeta, setHijoParaTarjeta] = useState<Hijo | null>(null);
+  const [tarjetasPorHijo, setTarjetasPorHijo] = useState<Record<number, Tarjeta | null>>({});
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -29,7 +32,21 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
       const response = await api.get('/hijos/', {
         params: { id_cliente_responsable: clienteId }
       });
-      setHijos(response.data?.results || response.data || []);
+      const lista: Hijo[] = response.data?.results || response.data || [];
+      setHijos(lista);
+      // Cargar tarjetas de todos los hijos en paralelo
+      const entries = await Promise.all(
+        lista.map(async (h) => {
+          try {
+            const resp = await api.get('/tarjetas/', { params: { id_hijo: h.id_hijo } });
+            const results: Tarjeta[] = resp.data.results || resp.data || [];
+            return [h.id_hijo, results[0] ?? null] as [number, Tarjeta | null];
+          } catch {
+            return [h.id_hijo, null] as [number, Tarjeta | null];
+          }
+        })
+      );
+      setTarjetasPorHijo(Object.fromEntries(entries));
     } catch (error) {
       console.error('Error al cargar hijos:', error);
     } finally {
@@ -64,6 +81,11 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
         alert('Error al eliminar el hijo');
       }
     }
+  };
+
+  const handleGestionarTarjeta = (hijo: Hijo) => {
+    setHijoParaTarjeta(hijo);
+    setTarjetaModalOpen(true);
   };
 
   const handleHijoGuardado = () => {
@@ -200,10 +222,22 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleGestionarTarjeta(hijo)}
+                      leftIcon={<CreditCard className="h-3 w-3" />}
+                      className={`flex-1 ${
+                        tarjetasPorHijo[hijo.id_hijo]
+                          ? 'border-green-400 text-green-700 hover:bg-green-50'
+                          : 'border-amber-400 text-amber-700 hover:bg-amber-50'
+                      }`}
+                    >
+                      {tarjetasPorHijo[hijo.id_hijo] ? 'Tarjeta' : 'Asignar Tarjeta'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       color="danger"
                       onClick={() => handleEliminarHijo(hijo)}
                       leftIcon={<Trash2 className="h-3 w-3" />}
-                      className="flex-1"
                     >
                       Eliminar
                     </Button>
@@ -224,6 +258,22 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
             setHijoSeleccionado(null);
           }}
           onPhotoUpdated={handleFotoActualizada}
+        />
+      )}
+
+      {tarjetaModalOpen && hijoParaTarjeta && (
+        <TarjetaFormModal
+          hijo={hijoParaTarjeta}
+          tarjeta={tarjetasPorHijo[hijoParaTarjeta.id_hijo] ?? null}
+          onClose={() => {
+            setTarjetaModalOpen(false);
+            setHijoParaTarjeta(null);
+          }}
+          onSave={() => {
+            setTarjetaModalOpen(false);
+            setHijoParaTarjeta(null);
+            cargarHijos();
+          }}
         />
       )}
 

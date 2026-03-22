@@ -159,6 +159,13 @@ export interface ListaPrecio {
   estado: boolean;
 }
 
+export interface Impuesto {
+  id_impuesto: number;
+  nombre_impuesto: string;
+  porcentaje: number;
+  estado: boolean;
+}
+
 export interface PrecioPorLista {
   id_precio: number;
   precio_unitario: number;

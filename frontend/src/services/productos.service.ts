@@ -3,7 +3,8 @@ import {
   Producto, 
   PaginatedResponse, 
   Categoria, 
-  UnidadMedida, 
+  UnidadMedida,
+  Impuesto,
   ListaPrecio, 
   PrecioPorLista 
 } from '../types';
@@ -109,6 +110,13 @@ export const productosService = {
   
   getUnidadesMedida: async (): Promise<UnidadMedida[]> => {
     const response = await api.get<UnidadMedida[]>('/unidades-medida/');
+    return response.data;
+  },
+
+  // === IMPUESTOS ===
+
+  getImpuestos: async (): Promise<Impuesto[]> => {
+    const response = await api.get<Impuesto[]>('/impuestos/');
     return response.data;
   },
 
