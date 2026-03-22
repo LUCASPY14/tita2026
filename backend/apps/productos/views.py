@@ -29,7 +29,7 @@ class ProductosViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["estado", "id_categoria"]
+    filterset_fields = ["estado", "id_categoria", "es_servicio"]
     search_fields = ["codigo_barra", "descripcion"]
     ordering_fields = ["descripcion", "stock_minimo"]
     ordering = ["descripcion"]

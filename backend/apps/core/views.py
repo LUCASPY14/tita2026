@@ -46,8 +46,8 @@ class TarjetasViewSet(viewsets.ModelViewSet):
         try:
             tarjeta = Tarjetas.objects.select_related('id_hijo').get(codigo_barras=codigo_barras)
             
-            # Verificar estado de la tarjeta
-            if tarjeta.estado != 'ACTIVA':
+            # Verificar estado de la tarjeta (case-insensitive)
+            if tarjeta.estado.upper() != 'ACTIVA':
                 return Response(
                     {
                         'error': 'Tarjeta inactiva',

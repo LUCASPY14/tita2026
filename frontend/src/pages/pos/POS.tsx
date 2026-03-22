@@ -117,14 +117,12 @@ const POS: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Punto de Venta</h1>
-          <p className="mt-2 text-gray-600">
-            Gestiona las ventas de productos de la cantina
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Punto de Venta</h1>
+          <p className="mt-1 text-gray-600">Gestiona las ventas de productos de la cantina</p>
           <div className="mt-1 flex gap-3 text-xs text-gray-400">
-            <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">Enter</span> Procesar venta
-            <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">F2</span> Vaciar carrito
-            <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">Esc</span> Cerrar modal
+            <span><kbd className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">Enter</kbd> Procesar venta</span>
+            <span><kbd className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">F2</kbd> Vaciar carrito</span>
+            <span><kbd className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">Esc</kbd> Cerrar modal</span>
           </div>
         </div>
         
@@ -189,65 +187,48 @@ const POS: React.FC = () => {
 
       {/* Vista: POS */}
       {vista === 'pos' && (
-        <div className="space-y-6">
-          {/* Escaneo de tarjeta */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <TarjetaScanInput 
-              onTarjetaEscaneada={handleTarjetaEscaneada}
-              disabled={mostrarProcesar}
-            />
-            
-            {tarjetaActual && (
-              <HijoCard 
-                tarjeta={tarjetaActual}
-                onCerrar={cerrarHijo}
-                compactMode={true}
+        <div className="space-y-4">
+          {/* Escaneo de tarjeta: se expande cuando no hay tarjeta, se comparte cuando sí */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className={tarjetaActual ? 'lg:col-span-2' : 'lg:col-span-3'}>
+              <TarjetaScanInput 
+                onTarjetaEscaneada={handleTarjetaEscaneada}
+                disabled={mostrarProcesar}
               />
+            </div>
+            {tarjetaActual && (
+              <div className="lg:col-span-1">
+                <HijoCard 
+                  tarjeta={tarjetaActual}
+                  onCerrar={cerrarHijo}
+                  compactMode={true}
+                />
+              </div>
             )}
           </div>
 
           {/* Catálogo y Carrito */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Columna izquierda: Catálogo */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {/* Catálogo */}
             <div className="lg:col-span-2">
               <Card title="Catálogo de Productos" subtitle="Selecciona productos para agregar a la venta">
                 <CatalogoProductos onAgregarProducto={agregarAlCarrito} />
               </Card>
             </div>
 
-            {/* Columna derecha: Carrito */}
+            {/* Carrito */}
             <div className="lg:col-span-1">
-              <div className="space-y-4">
-                <Card 
-                  title="Carrito de Compras" 
-                  subtitle={`${cantidadItems} producto${cantidadItems !== 1 ? 's' : ''}`}
-                >
-                  <CarritoCompras
-                    items={carrito}
-                    onActualizarCantidad={actualizarCantidad}
-                    onRemoverItem={eliminarDelCarrito}
+              <CarritoCompras
+                items={carrito}
+                onActualizarCantidad={actualizarCantidad}
+                onRemoverItem={eliminarDelCarrito}
                 onLimpiar={vaciarCarrito}
                 onProcesar={() => setMostrarProcesar(true)}
               />
-            </Card>
-
-            {/* Resumen Total */}
-            {carrito.length > 0 && (
-              <div className="rounded-lg bg-gradient-to-r from-amber-50 to-yellow-50 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-semibold text-gray-700">Total a Pagar:</span>
-                  <span className="text-2xl font-bold text-amber-600">
-                    Gs. {totalCarrito.toLocaleString('es-PY')}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
           </div>
         </div>
       )}
-
       {/* Vista: Historial */}
       {vista === 'historial' && (
         <Card title="Historial de Ventas" subtitle="Consulta y filtra todas las ventas realizadas">

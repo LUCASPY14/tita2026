@@ -135,6 +135,8 @@ const CarritoCompras: React.FC<CarritoComprasProps> = ({
                 fullWidth
                 onClick={onProcesar}
                 disabled={items.length === 0}
+                className="h-12 text-base font-bold"
+                leftIcon={<ShoppingCart className="h-5 w-5" />}
               >
                 Procesar Venta
               </Button>

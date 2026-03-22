@@ -48,6 +48,7 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
     try {
       const params: any = {
         estado: true,
+        es_servicio: false,
         page_size: 50,
       };
 
