@@ -248,6 +248,7 @@ const POS: React.FC = () => {
         <ProcesarVenta
           items={carrito}
           total={totalCarrito}
+          tarjetaEscaneada={tarjetaActual ?? undefined}
           onCerrar={() => setMostrarProcesar(false)}
           onVentaExitosa={handleVentaExitosa}
         />

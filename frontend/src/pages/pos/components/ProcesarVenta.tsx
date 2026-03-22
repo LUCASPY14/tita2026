@@ -3,7 +3,7 @@ import { X, CreditCard, Wallet, DollarSign, AlertTriangle, CheckCircle, Tag, Loa
 import { Button, Card } from '../../../components/common';
 import { BusquedaHijo } from '../../recargas/components';
 import { posService } from '../../../services/pos.service';
-import type { Producto, Hijo, Tarjeta, MedioPago, VentaData, Venta } from '../../../types';
+import type { Producto, Hijo, Tarjeta, MedioPago, VentaData, Venta, TarjetaEscaneada } from '../../../types';
 import ReciboVenta from './ReciboVenta';
 import toast from 'react-hot-toast';
 
@@ -17,6 +17,7 @@ interface ItemCarrito {
 interface ProcesarVentaProps {
   items: ItemCarrito[];
   total: number;
+  tarjetaEscaneada?: TarjetaEscaneada;
   onCerrar: () => void;
   onVentaExitosa: () => void;
 }
@@ -26,10 +27,11 @@ type MetodoPago = 'efectivo' | 'tarjeta_hijo' | 'pos' | 'transferencia';
 const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
   items,
   total,
+  tarjetaEscaneada,
   onCerrar,
   onVentaExitosa,
 }) => {
-  const [metodoPago, setMetodoPago] = useState<MetodoPago>('efectivo');
+  const [metodoPago, setMetodoPago] = useState<MetodoPago>(tarjetaEscaneada ? 'tarjeta_hijo' : 'efectivo');
   const [refPagoPos, setRefPagoPos] = useState('');
   const [refPgTransf, setRefPgTransf] = useState('');
   const [bancoEmisor, setBancoEmisor] = useState('');
@@ -49,6 +51,27 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
 
   useEffect(() => {
     cargarMediosPago();
+    if (tarjetaEscaneada) {
+      // Pre-cargar datos del hijo ya escaneado
+      setHijoSeleccionado({
+        id_hijo: tarjetaEscaneada.hijo.id,
+        nombre: tarjetaEscaneada.hijo.nombre,
+        apellido: tarjetaEscaneada.hijo.apellido,
+        estado: true,
+        id_cliente_responsable: 0,
+      } as Hijo);
+      setTarjetaSeleccionada({
+        nro_tarjeta: tarjetaEscaneada.numero,
+        saldo_actual: tarjetaEscaneada.saldo.actual,
+        estado: tarjetaEscaneada.estado as Tarjeta['estado'],
+        fecha_creacion: '',
+        permite_saldo_negativo: false,
+        limite_credito: 0,
+        notificar_saldo_bajo: false,
+        id_hijo: tarjetaEscaneada.hijo.id,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cargarMediosPago = async () => {
@@ -143,7 +166,7 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
     setProcesando(true);
     try {
       const ventaData: VentaData = {
-        tipo_venta: metodoPago === 'tarjeta_hijo' && tarjetaSeleccionada ? 'Credito' : 'Contado',
+        tipo_venta: 'Contado',
         detalles: items.map(item => ({
           id_producto: item.producto.id_producto,
           cantidad: item.cantidad,
@@ -221,15 +244,33 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
           {/* Selección Cliente/Hijo */}
           {metodoPago === 'tarjeta_hijo' && (
             <Card>
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                Seleccionar Hijo
-              </h3>
-              <BusquedaHijo
-                onHijoSeleccionado={(hijo, tarjeta) => {
-                  setHijoSeleccionado(hijo);
-                  setTarjetaSeleccionada(tarjeta);
-                }}
-              />
+              {tarjetaEscaneada ? (
+                // Tarjeta ya escaneada en el POS — mostrar info, no pedir búsqueda
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+                    <CreditCard className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {tarjetaEscaneada.hijo.nombre} {tarjetaEscaneada.hijo.apellido}
+                    </p>
+                    <p className="text-sm text-gray-500 font-mono">{tarjetaEscaneada.numero}</p>
+                    <p className="text-sm text-blue-600 font-medium">
+                      Saldo: Gs. {Number(tarjetaEscaneada.saldo.disponible).toLocaleString('es-PY')}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h3 className="mb-4 text-lg font-semibold text-gray-900">Seleccionar Hijo</h3>
+                  <BusquedaHijo
+                    onHijoSeleccionado={(hijo, tarjeta) => {
+                      setHijoSeleccionado(hijo);
+                      setTarjetaSeleccionada(tarjeta);
+                    }}
+                  />
+                </>
+              )}
             </Card>
           )}
 
