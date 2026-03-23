@@ -46,8 +46,35 @@ export interface PlanData {
   nombre_plan: string;
   descripcion?: string;
   precio_mensual: number;
+  tipo_plan?: 'cantidad' | 'sin_limite';
+  cantidad_almuerzos_mes?: number | null;
+  limite_credito_mensual?: number | null;
   dias_semana_incluidos: string;
   estado?: boolean;
+}
+
+export interface PrecioAlmuerzoData {
+  precio_unitario: number;
+  fecha_inicio_vigencia: string;
+  fecha_fin_vigencia?: string | null;
+  descripcion?: string;
+  activo?: boolean;
+}
+
+export interface PrecioAlmuerzoParams {
+  activo?: boolean;
+  ordering?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface ActualizarCuentaData {
+  estado?: string;
+  forma_pago?: string;
+  comprobante_pago?: string;
+  fecha_pago?: string;
+  monto_pagado?: number;
+  observaciones?: string;
 }
 
 export interface TipoData {
@@ -216,13 +243,44 @@ export const almuerzosService = {
   },
 
   // === CUENTAS MENSUALES ===
-  async getCuentasMensuales(params?: { id_hijo?: number; anio?: number; mes?: number; estado?: string }) {
+  async getCuentasMensuales(params?: { id_hijo?: number; anio?: number; mes?: number; estado?: string; page_size?: number }) {
     const response = await api.get('/cuentas-almuerzo-mensual/', { params });
     return response.data;
   },
 
   async getCuentaMensualById(id: number) {
     const response = await api.get(`/cuentas-almuerzo-mensual/${id}/`);
+    return response.data;
+  },
+
+  async actualizarCuenta(id: number, data: ActualizarCuentaData) {
+    const response = await api.patch(`/cuentas-almuerzo-mensual/${id}/`, data);
+    return response.data;
+  },
+
+  // === PRECIOS DE ALMUERZO ===
+  async getPrecios(params?: PrecioAlmuerzoParams) {
+    const response = await api.get('/precios-almuerzo/', { params });
+    return response.data;
+  },
+
+  async getPrecioActual() {
+    const response = await api.get('/precios-almuerzo/precio-actual/');
+    return response.data;
+  },
+
+  async crearPrecio(data: PrecioAlmuerzoData) {
+    const response = await api.post('/precios-almuerzo/', data);
+    return response.data;
+  },
+
+  async actualizarPrecio(id: number, data: Partial<PrecioAlmuerzoData>) {
+    const response = await api.patch(`/precios-almuerzo/${id}/`, data);
+    return response.data;
+  },
+
+  async eliminarPrecio(id: number) {
+    const response = await api.delete(`/precios-almuerzo/${id}/`);
     return response.data;
   },
 
@@ -262,5 +320,26 @@ export const almuerzosService = {
     };
     const response = await api.get('/registros-consumo-almuerzo/', { params });
     return response.data;
-  }
+  },
+
+  // === DOCUMENTOS TRIBUTARIOS ===
+  async getReciboPago(idCuenta: number) {
+    const response = await api.get(`/cuentas-almuerzo-mensual/${idCuenta}/recibo-pago/`);
+    return response.data;
+  },
+
+  async generarFactura(idCuenta: number) {
+    const response = await api.post(`/cuentas-almuerzo-mensual/${idCuenta}/generar-factura/`);
+    return response.data;
+  },
+
+  async getTimbradoVigente() {
+    const response = await api.get('/timbrados/vigente/');
+    return response.data;
+  },
+
+  async getDatosEmpresa() {
+    const response = await api.get('/datos-empresa/activa/');
+    return response.data;
+  },
 };
