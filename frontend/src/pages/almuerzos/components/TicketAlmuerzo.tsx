@@ -109,9 +109,13 @@ const TicketAlmuerzo: React.FC<TicketAlmuerzoProps> = ({
     // Small delay so the browser renders the HTML before showing the print dialog
     setTimeout(() => {
       pw.print();
-      pw.onafterprint = () => pw.close();
+      // onafterprint fires when the print dialog is dismissed (whether printed or cancelled)
+      pw.onafterprint = () => {
+        pw.close();
+        onClose(); // auto-clear the form for the next student
+      };
     }, 300);
-  }, [buildTicketHTML]);
+  }, [buildTicketHTML, onClose]);
 
   // Auto-print on mount
   useEffect(() => {
