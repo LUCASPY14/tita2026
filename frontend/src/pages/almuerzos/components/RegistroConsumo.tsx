@@ -1,17 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Button, Input, Spinner } from '../../../components/common';
 import { Search, CheckCircle, AlertCircle, Clock, User, CreditCard } from 'lucide-react';
 import { recargasService } from '../../../services/recargas.service';
 import { almuerzosService } from '../../../services/almuerzos.service';
 import toast from 'react-hot-toast';
 import type { Hijo, Tarjeta, TipoAlmuerzo, SuscripcionAlmuerzo, RegistroConsumoAlmuerzo, Alergeno } from '../../../types';
+import TicketAlmuerzo from './TicketAlmuerzo';
 
 interface RegistroConsumoProps {
   onRegistroExitoso: () => void;
   actualizarClave: number;
 }
 
+interface TicketData {
+  registro: RegistroConsumoAlmuerzo;
+  hijo: Hijo;
+  tarjeta: Tarjeta;
+  suscripcionActiva: SuscripcionAlmuerzo | null;
+  tipoAlmuerzoNombre: string;
+}
+
 const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, actualizarClave }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [busqueda, setBusqueda] = useState('');
   const [buscando, setBuscando] = useState(false);
   const [hijoSeleccionado, setHijoSeleccionado] = useState<Hijo | null>(null);
@@ -23,6 +33,7 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
   const [registrosHoy, setRegistrosHoy] = useState<RegistroConsumoAlmuerzo[]>([]);
   const [cargandoRegistros, setCargandoRegistros] = useState(false);
   const [alergenos, setAlergenos] = useState<Alergeno[]>([]);
+  const [ticketData, setTicketData] = useState<TicketData | null>(null);
 
   useEffect(() => {
     cargarTiposAlmuerzo();
@@ -32,7 +43,6 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (hijoSeleccionado) {
-      verificarSuscripcionActiva();
       cargarAlergenos();
     } else {
       setAlergenos([]);
@@ -58,20 +68,6 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
       console.error('Error al cargar registros del día:', error);
     } finally {
       setCargandoRegistros(false);
-    }
-  };
-
-  const verificarSuscripcionActiva = async () => {
-    if (!hijoSeleccionado) return;
-    
-    try {
-      const response = await almuerzosService.getSuscripcionesPorHijo(hijoSeleccionado.id_hijo);
-      const suscripciones = response.results || response;
-      const activa = suscripciones.find((s: SuscripcionAlmuerzo) => s.estado === 'Activa');
-      setSuscripcionActiva(activa || null);
-    } catch (error) {
-      console.error('Error al verificar suscripción:', error);
-      setSuscripcionActiva(null);
     }
   };
 
@@ -101,23 +97,83 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
         
         if (tarjeta.estado !== 'Activa') {
           toast.error('La tarjeta está inactiva');
+          setBusqueda('');
+          inputRef.current?.focus();
           return;
         }
 
         // Obtener datos completos del hijo
         const hijo = await recargasService.getHijoById(tarjeta.id_hijo);
-        
+
+        // Verificar suscripción activa
+        let suscripcion: SuscripcionAlmuerzo | null = null;
+        try {
+          const respSusc = await almuerzosService.getSuscripcionesPorHijo(hijo.id_hijo);
+          const suscripciones = respSusc.results || respSusc;
+          suscripcion = suscripciones.find((s: SuscripcionAlmuerzo) => s.estado === 'Activa') || null;
+        } catch {
+          suscripcion = null;
+        }
+
+        setSuscripcionActiva(suscripcion);
         setHijoSeleccionado(hijo);
         setTarjetaSeleccionada(tarjeta);
-        toast.success(`Hijo encontrado: ${hijo.nombre} ${hijo.apellido}`);
+
+        // Auto-registro si tiene suscripción activa
+        if (suscripcion) {
+          await handleRegistrarAuto(hijo, tarjeta, suscripcion);
+        } else {
+          toast.success(`Alumno: ${hijo.nombre} ${hijo.apellido} — selecciona tipo de almuerzo`);
+        }
       } else {
         toast.error('No se encontró ninguna tarjeta con ese número');
+        setBusqueda('');
+        inputRef.current?.focus();
       }
     } catch (error: any) {
       console.error('Error en búsqueda:', error);
       toast.error(error.response?.data?.error || 'Error al buscar');
+      setBusqueda('');
+      inputRef.current?.focus();
     } finally {
       setBuscando(false);
+    }
+  };
+
+  /** Auto-registro inmediato cuando hay suscripción activa */
+  const handleRegistrarAuto = async (
+    hijo: Hijo,
+    tarjeta: Tarjeta,
+    suscripcion: SuscripcionAlmuerzo
+  ) => {
+    setRegistrando(true);
+    try {
+      const data = {
+        fecha_consumo: new Date().toISOString().split('T')[0],
+        id_hijo: hijo.id_hijo,
+        nro_tarjeta: tarjeta.nro_tarjeta,
+        id_suscripcion: suscripcion.id_suscripcion,
+      };
+
+      const registro: RegistroConsumoAlmuerzo = await almuerzosService.registrarConsumo(data);
+
+      // Mostrar ticket
+      setTicketData({
+        registro,
+        hijo,
+        tarjeta,
+        suscripcionActiva: suscripcion,
+        tipoAlmuerzoNombre: suscripcion.plan_nombre || 'Almuerzo',
+      });
+
+      onRegistroExitoso();
+      cargarRegistrosDelDia();
+    } catch (error: any) {
+      console.error('Error al registrar consumo:', error);
+      toast.error(error.response?.data?.error || 'Error al registrar el consumo');
+      // Dejar el formulario abierto para que el operador pueda actuar
+    } finally {
+      setRegistrando(false);
     }
   };
 
@@ -143,17 +199,20 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
         ...(!suscripcionActiva && tipoSeleccionado > 0 && { id_tipo_almuerzo: tipoSeleccionado })
       };
 
-      await almuerzosService.registrarConsumo(data);
-      toast.success('Consumo registrado exitosamente');
-      
-      // Limpiar formulario
-      setBusqueda('');
-      setHijoSeleccionado(null);
-      setTarjetaSeleccionada(null);
-      setTipoSeleccionado(0);
-      setSuscripcionActiva(null);
-      
-      // Notificar registro exitoso y recargar datos
+      const registro: RegistroConsumoAlmuerzo = await almuerzosService.registrarConsumo(data);
+
+      const tipoNombre =
+        tiposAlmuerzo.find((t) => t.id_tipo_almuerzo === tipoSeleccionado)?.nombre || 'Almuerzo';
+
+      // Mostrar ticket
+      setTicketData({
+        registro,
+        hijo: hijoSeleccionado,
+        tarjeta: tarjetaSeleccionada,
+        suscripcionActiva,
+        tipoAlmuerzoNombre: tipoNombre,
+      });
+
       onRegistroExitoso();
       cargarRegistrosDelDia();
     } catch (error: any) {
@@ -176,6 +235,19 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
     setTipoSeleccionado(0);
     setSuscripcionActiva(null);
     setAlergenos([]);
+    setTicketData(null);
+  };
+
+  const handleCerrarTicket = () => {
+    setTicketData(null);
+    setBusqueda('');
+    setHijoSeleccionado(null);
+    setTarjetaSeleccionada(null);
+    setTipoSeleccionado(0);
+    setSuscripcionActiva(null);
+    setAlergenos([]);
+    // Refocus input for next student
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const formatearMoneda = (valor: number) => {
@@ -192,6 +264,18 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      {/* Ticket de impresión */}
+      {ticketData && (
+        <TicketAlmuerzo
+          registro={ticketData.registro}
+          hijo={ticketData.hijo}
+          tarjeta={ticketData.tarjeta}
+          suscripcionActiva={ticketData.suscripcionActiva}
+          tipoAlmuerzoNombre={ticketData.tipoAlmuerzoNombre}
+          onClose={handleCerrarTicket}
+        />
+      )}
+
       {/* Columna izquierda: Búsqueda y Registro */}
       <div className="space-y-6 lg:col-span-2">
         {/* Card de Búsqueda */}
@@ -200,18 +284,20 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
             <div className="flex gap-2">
               <div className="flex-1">
                 <Input
+                  ref={inputRef}
+                  autoFocus
                   type="text"
                   placeholder="Número de tarjeta..."
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
-                  disabled={buscando}
+                  disabled={buscando || registrando}
                 />
               </div>
-              <Button type="submit" disabled={buscando || !busqueda.trim()}>
-                {buscando ? (
+              <Button type="submit" disabled={buscando || registrando || !busqueda.trim()}>
+                {buscando || registrando ? (
                   <>
                     <Spinner className="h-4 w-4" />
-                    Buscando...
+                    {registrando ? 'Registrando...' : 'Buscando...'}
                   </>
                 ) : (
                   <>
