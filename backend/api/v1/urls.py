@@ -7,11 +7,11 @@ from rest_framework.routers import DefaultRouter
 # Import ViewSets
 from apps.clientes.views import ClientesViewSet, HijosViewSet, TiposClienteViewSet, GradosViewSet, RestriccionesHijosViewSet
 from apps.productos.views import ProductosViewSet, CategoriasViewSet, UnidadesMedidaViewSet, ListasPreciosViewSet, PreciosPorListaViewSet
-from apps.contabilidad.views import ImpuestosViewSet
+from apps.contabilidad.views import ImpuestosViewSet, DatosEmpresaViewSet, TimbradosViewSet, DocumentosTributariosViewSet
 from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaViewSet, NotasCreditoClienteViewSet, PromocionesViewSet
 from apps.compras.views import ProveedoresViewSet, ComprasViewSet, DetallesCompraViewSet, PagosProveedoresViewSet, NotasCreditoProveedorViewSet
 from apps.core.views import TarjetasViewSet, CargasSaldoViewSet, ConsumosTarjetaViewSet, MediosPagoViewSet, ConfiguracionSistemaViewSet
-from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, SuscripcionesAlmuerzoViewSet, RegistrosConsumoAlmuerzoViewSet, AlergenosViewSet, CuentasAlmuerzoMensualViewSet
+from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, SuscripcionesAlmuerzoViewSet, RegistrosConsumoAlmuerzoViewSet, AlergenosViewSet, CuentasAlmuerzoMensualViewSet, PrecioAlmuerzoViewSet
 from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet, AuthViewSet, PermisosViewSet, AuditoriaOperacionesViewSet
 from apps.inventario.views import StockUnicoViewSet, MovimientosStockViewSet, AjustesInventarioViewSet
 from apps.reportes.views import (
@@ -40,6 +40,9 @@ router.register(r'unidades-medida', UnidadesMedidaViewSet)
 router.register(r'listas-precios', ListasPreciosViewSet)
 router.register(r'precios-por-lista', PreciosPorListaViewSet)
 router.register(r'impuestos', ImpuestosViewSet, basename='impuestos')
+router.register(r'datos-empresa', DatosEmpresaViewSet, basename='datos-empresa')
+router.register(r'timbrados', TimbradosViewSet, basename='timbrados')
+router.register(r'documentos-tributarios', DocumentosTributariosViewSet, basename='documentos-tributarios')
 
 # Register Ventas ViewSets
 router.register(r'ventas', VentasViewSet)
@@ -70,6 +73,7 @@ router.register(r'suscripciones-almuerzo', SuscripcionesAlmuerzoViewSet)
 router.register(r'registros-consumo-almuerzo', RegistrosConsumoAlmuerzoViewSet)
 router.register(r'alergenos', AlergenosViewSet)
 router.register(r'cuentas-almuerzo-mensual', CuentasAlmuerzoMensualViewSet)
+router.register(r'precios-almuerzo', PrecioAlmuerzoViewSet)
 
 # Register Usuarios ViewSets
 router.register(r'auth', AuthViewSet, basename='auth')
