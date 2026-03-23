@@ -7,3 +7,4 @@ export { default as PhotoUploadModal } from './PhotoUploadModal';
 export { default as HijoFormModal } from './HijoFormModal';
 export { default as TarjetaFormModal } from './TarjetaFormModal';
 export { default as ConsumosHijoModal } from './ConsumosHijoModal';
+export { default as AlmuerzosHijoModal } from './AlmuerzosHijoModal';

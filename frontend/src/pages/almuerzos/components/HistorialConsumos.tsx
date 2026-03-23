@@ -12,7 +12,8 @@ const HistorialConsumos: React.FC = () => {
     busqueda: '',
     fecha_desde: '',
     fecha_hasta: '',
-    estado: ''
+    estado: '',
+    alumno: '',
   });
   const [paginaActual, setPaginaActual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
@@ -30,15 +31,10 @@ const HistorialConsumos: React.FC = () => {
         ordering: '-fecha_consumo,-hora_registro'
       };
 
-      if (filtros.fecha_desde) {
-        params.fecha_desde = filtros.fecha_desde;
-      }
-      if (filtros.fecha_hasta) {
-        params.fecha_hasta = filtros.fecha_hasta;
-      }
-      if (filtros.estado) {
-        params.estado = filtros.estado;
-      }
+      if (filtros.fecha_desde) params.fecha_desde = filtros.fecha_desde;
+      if (filtros.fecha_hasta) params.fecha_hasta = filtros.fecha_hasta;
+      if (filtros.estado) params.estado = filtros.estado;
+      if (filtros.alumno.trim()) params.search = filtros.alumno.trim();
 
       const response = await almuerzosService.getRegistros(params);
       setRegistros(response.results || response);
@@ -103,6 +99,18 @@ const HistorialConsumos: React.FC = () => {
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
+              Buscar Alumno
+            </label>
+            <Input
+              type="text"
+              placeholder="Nombre o apellido..."
+              value={filtros.alumno}
+              onChange={(e) => handleFiltroChange('alumno', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Fecha Desde
             </label>
             <Input
@@ -146,7 +154,8 @@ const HistorialConsumos: React.FC = () => {
                   busqueda: '',
                   fecha_desde: '',
                   fecha_hasta: '',
-                  estado: ''
+                  estado: '',
+                  alumno: '',
                 });
                 setPaginaActual(1);
               }}
@@ -291,10 +300,10 @@ const HistorialConsumos: React.FC = () => {
             description={filtros.fecha_desde || filtros.fecha_hasta || filtros.estado
               ? "Intenta cambiar los filtros"
               : "No hay consumos registrados en el sistema"}
-            action={filtros.fecha_desde || filtros.fecha_hasta || filtros.estado ? {
+            action={filtros.fecha_desde || filtros.fecha_hasta || filtros.estado || filtros.alumno ? {
               label: "Limpiar filtros",
               onClick: () => {
-                setFiltros({ busqueda: '', fecha_desde: '', fecha_hasta: '', estado: '' });
+                setFiltros({ busqueda: '', fecha_desde: '', fecha_hasta: '', estado: '', alumno: '' });
                 setPaginaActual(1);
               }
             } : undefined}

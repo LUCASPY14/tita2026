@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { User, Plus, Edit, Camera, Trash2, CreditCard, BarChart2 } from 'lucide-react';
+import { User, Plus, Edit, Camera, Trash2, CreditCard, BarChart2, UtensilsCrossed } from 'lucide-react';
 import { Card, Button, Avatar, Badge, Spinner } from '../../../components/common';
-import { PhotoUploadModal, HijoFormModal, TarjetaFormModal, ConsumosHijoModal } from '../components';
+import { PhotoUploadModal, HijoFormModal, TarjetaFormModal, ConsumosHijoModal, AlmuerzosHijoModal } from '../components';
 import api from '../../../services/api';
 import type { Hijo, Tarjeta } from '../../../types';
 
@@ -22,6 +22,8 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
   const [tarjetasPorHijo, setTarjetasPorHijo] = useState<Record<number, Tarjeta | null>>({});
   const [consumosModalOpen, setConsumosModalOpen] = useState(false);
   const [hijoParaConsumos, setHijoParaConsumos] = useState<Hijo | null>(null);
+  const [almuerzosModalOpen, setAlmuerzosModalOpen] = useState(false);
+  const [hijoParaAlmuerzos, setHijoParaAlmuerzos] = useState<Hijo | null>(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -93,6 +95,11 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
   const handleVerConsumos = (hijo: Hijo) => {
     setHijoParaConsumos(hijo);
     setConsumosModalOpen(true);
+  };
+
+  const handleVerAlmuerzos = (hijo: Hijo) => {
+    setHijoParaAlmuerzos(hijo);
+    setAlmuerzosModalOpen(true);
   };
 
   const handleHijoGuardado = () => {
@@ -253,6 +260,15 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleVerAlmuerzos(hijo)}
+                      leftIcon={<UtensilsCrossed className="h-3 w-3" />}
+                      className="flex-1 border-amber-400 text-amber-700 hover:bg-amber-50"
+                    >
+                      Almuerzos
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       color="danger"
                       onClick={() => handleEliminarHijo(hijo)}
                       leftIcon={<Trash2 className="h-3 w-3" />}
@@ -302,6 +318,17 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
           onClose={() => {
             setConsumosModalOpen(false);
             setHijoParaConsumos(null);
+          }}
+        />
+      )}
+
+      {almuerzosModalOpen && hijoParaAlmuerzos && (
+        <AlmuerzosHijoModal
+          hijo={hijoParaAlmuerzos}
+          tarjeta={tarjetasPorHijo[hijoParaAlmuerzos.id_hijo] ?? null}
+          onClose={() => {
+            setAlmuerzosModalOpen(false);
+            setHijoParaAlmuerzos(null);
           }}
         />
       )}

@@ -61,10 +61,11 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         · Tercer intento: BLOQUEADO
     """
 
-    queryset = RegistrosConsumoAlmuerzo.objects.all()
+    queryset = RegistrosConsumoAlmuerzo.objects.select_related("id_hijo").all()
     serializer_class = RegistrosConsumoAlmuerzoSerializer
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["estado", "id_hijo", "fecha_consumo", "ya_cobrado"]
+    search_fields = ["id_hijo__nombre", "id_hijo__apellido", "nro_tarjeta"]
     ordering = ["-fecha_consumo", "-hora_registro"]
 
     def perform_create(self, serializer):
