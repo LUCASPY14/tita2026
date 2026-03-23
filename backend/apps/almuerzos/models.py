@@ -6,11 +6,67 @@ Auto-generados desde la base de datos y organizados por funcionalidad
 from django.db import models
 
 
+class PrecioAlmuerzo(models.Model):
+    """Historial de precios unitarios del almuerzo con vigencia."""
+
+    TIPO_CHOICES = [
+        ("precio_unitario", "Precio Unitario"),
+    ]
+
+    id_precio = models.AutoField(primary_key=True)
+    precio_unitario = models.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Precio por almuerzo en guaraníes"
+    )
+    fecha_inicio_vigencia = models.DateField(help_text="Fecha desde la cual aplica este precio")
+    fecha_fin_vigencia = models.DateField(
+        blank=True, null=True, help_text="Fecha hasta la cual aplica (vacío = sin vencimiento)"
+    )
+    descripcion = models.CharField(
+        max_length=200, blank=True, help_text="Ej: Ajuste por inflación 2026"
+    )
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Precio almuerzo: Gs {self.precio_unitario} ({self.fecha_inicio_vigencia})"
+
+    class Meta:
+        managed = True
+        db_table = "precios_almuerzo"
+        ordering = ["-fecha_inicio_vigencia"]
+
+
 class PlanesAlmuerzo(models.Model):
+    TIPO_PLAN_CHOICES = [
+        ("cantidad", "Mensual con cantidad de almuerzos"),
+        ("sin_limite", "Mensual sin límite (cuenta corriente)"),
+    ]
+
     id_plan_almuerzo = models.AutoField(primary_key=True)
     nombre_plan = models.CharField(unique=True, max_length=100)
     descripcion = models.TextField(blank=True, null=True)
-    precio_mensual = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_mensual = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        help_text="Precio mensual fijo (solo referencia para facturación global)"
+    )
+    tipo_plan = models.CharField(
+        max_length=20,
+        choices=TIPO_PLAN_CHOICES,
+        default="sin_limite",
+        help_text="sin_limite: se registra consumo y se cobra al final del mes. cantidad: tiene cuota mensual de almuerzos.",
+    )
+    cantidad_almuerzos_mes = models.IntegerField(
+        blank=True,
+        null=True,
+        help_text="Solo para tipo=cantidad: máximo de almuerzos incluidos por mes",
+    )
+    limite_credito_mensual = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Monto máximo acumulable en la cuenta corriente por mes. Null = sin límite.",
+    )
     dias_semana_incluidos = models.CharField(max_length=60)
     fecha_creacion = models.DateTimeField(blank=True, null=True)
     estado = models.BooleanField(default=True)
@@ -107,6 +163,21 @@ class RegistrosConsumoAlmuerzo(models.Model):
 
 
 class CuentasAlmuerzoMensual(models.Model):
+    ESTADO_CHOICES = [
+        ("pendiente", "Pendiente"),
+        ("validacion_pendiente", "Validación Pendiente"),
+        ("pagado", "Pagado"),
+        ("parcial", "Parcial"),
+        ("anulado", "Anulado"),
+    ]
+
+    FORMA_PAGO_CHOICES = [
+        ("efectivo", "Efectivo"),
+        ("transferencia", "Transferencia bancaria"),
+        ("online", "Pago online"),
+        ("debito_automatico", "Débito automático"),
+    ]
+
     id_cuenta = models.BigAutoField(primary_key=True)
     anio = models.IntegerField()
     mes = models.SmallIntegerField()
@@ -114,11 +185,37 @@ class CuentasAlmuerzoMensual(models.Model):
     monto_total = models.DecimalField(max_digits=10, decimal_places=2)
     forma_cobro = models.CharField(max_length=20)
     monto_pagado = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=10)
+    estado = models.CharField(max_length=25, default="pendiente")
     fecha_generacion = models.DateField()
     fecha_actualizacion = models.DateTimeField()
     observaciones = models.TextField(blank=True, null=True)
+    # Campos de pago
+    forma_pago = models.CharField(
+        max_length=25, blank=True, choices=FORMA_PAGO_CHOICES,
+        help_text="Método de pago utilizado"
+    )
+    comprobante_pago = models.TextField(
+        blank=True,
+        help_text="Referencia, URL o descripción del comprobante de pago"
+    )
+    fecha_pago = models.DateField(
+        blank=True, null=True, help_text="Fecha efectiva del pago"
+    )
     id_hijo = models.ForeignKey("clientes.Hijos", models.DO_NOTHING, db_column="id_hijo")
+    # Documento tributario generado (factura física o electrónica)
+    id_documento = models.ForeignKey(
+        "contabilidad.DocumentosTributarios",
+        models.SET_NULL,
+        db_column="id_documento",
+        blank=True,
+        null=True,
+        help_text="Factura/comprobante tributario emitido para esta cuenta",
+    )
+    nro_comprobante = models.CharField(
+        max_length=30,
+        blank=True,
+        help_text="Número de comprobante formateado (ej: 001-001-0000001)",
+    )
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
