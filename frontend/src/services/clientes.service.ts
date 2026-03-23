@@ -1,6 +1,28 @@
 import api from './api';
 import type { Cliente, TipoCliente, CuentaCorriente, PaginatedResponse } from '../types';
 
+export interface RestriccionHijoDetalle {
+  id_restriccion: number;
+  tipo_restriccion: string;
+  descripcion?: string;
+  observaciones?: string;
+  severidad: string;
+  requiere_autorizacion: boolean;
+  estado: boolean;
+  fecha_registro: string;
+  fecha_ultima_actualizacion: string;
+  id_hijo: number;
+}
+
+export interface RestriccionHijoData {
+  id_hijo: number;
+  tipo_restriccion: string;
+  descripcion?: string;
+  observaciones?: string;
+  severidad: string;
+  requiere_autorizacion?: boolean;
+  estado?: boolean;
+}
 export interface ClienteParams {
   page?: number;
   page_size?: number;
@@ -113,5 +135,28 @@ export const clientesService = {
   }> => {
     const response = await api.get('/clientes/estadisticas/');
     return response.data;
+  },
+};
+
+export const restriccionesService = {
+  getByHijo: async (idHijo: number): Promise<RestriccionHijoDetalle[]> => {
+    const response = await api.get<PaginatedResponse<RestriccionHijoDetalle>>('/restricciones-hijos/', {
+      params: { id_hijo: idHijo, page_size: 100 },
+    });
+    return response.data.results || [];
+  },
+
+  crear: async (data: RestriccionHijoData): Promise<RestriccionHijoDetalle> => {
+    const response = await api.post<RestriccionHijoDetalle>('/restricciones-hijos/', data);
+    return response.data;
+  },
+
+  actualizar: async (id: number, data: Partial<RestriccionHijoData>): Promise<RestriccionHijoDetalle> => {
+    const response = await api.patch<RestriccionHijoDetalle>(`/restricciones-hijos/${id}/`, data);
+    return response.data;
+  },
+
+  eliminar: async (id: number): Promise<void> => {
+    await api.delete(`/restricciones-hijos/${id}/`);
   },
 };

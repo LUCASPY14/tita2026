@@ -5,8 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.common.permissions import IsAdminOrReadOnly, IsClienteOrAdmin
 from apps.common.throttling import BurstRateThrottle, SustainedRateThrottle
-from .models import Clientes, Hijos, TiposCliente, Grados
-from .serializers import ClientesSerializer, HijosSerializer, TiposClienteSerializer, GradosSerializer
+from .models import Clientes, Hijos, TiposCliente, Grados, RestriccionesHijos
+from .serializers import ClientesSerializer, HijosSerializer, TiposClienteSerializer, GradosSerializer, RestriccionesHijosSerializer
 
 
 # Create your views here.
@@ -79,3 +79,19 @@ class HijosViewSet(viewsets.ModelViewSet):
     filterset_fields = ["estado", "grado", "id_cliente_responsable"]
     search_fields = ["nombre", "apellido", "tarjetas__nro_tarjeta", "tarjetas__codigo_barras"]
     ordering = ["apellido", "nombre"]
+
+
+class RestriccionesHijosViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar restricciones de compra de los hijos.
+    Accesible por administradores y por el cliente (padre) responsable del hijo.
+    """
+
+    queryset = RestriccionesHijos.objects.all()
+    serializer_class = RestriccionesHijosSerializer
+    permission_classes = [IsAuthenticated, IsClienteOrAdmin]
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["id_hijo", "estado", "severidad"]
+    search_fields = ["tipo_restriccion", "descripcion"]
+    ordering = ["-severidad", "tipo_restriccion"]

@@ -113,6 +113,27 @@ export const usePermissions = (): Permissions => {
       canViewFinancialReports: true,
       canManageRecharges: true,
     },
+    supervisor: {
+      // Supervisor puede ver reportes y supervisar operaciones
+      canViewReports: true,
+      canManageUsers: false,
+      canManageConfiguration: false,
+      canProcessSales: true,
+      canProcessReturns: true,
+      canViewSalesHistory: true,
+      canManageInventory: false,
+      canViewInventory: true,
+      canManageProducts: false,
+      canManagePurchases: false,
+      canViewPurchases: true,
+      canManageClients: false,
+      canViewClients: true,
+      canManageAccountBalance: false,
+      canManageLunchSubscriptions: false,
+      canRegisterLunchConsumption: true,
+      canViewFinancialReports: false,
+      canManageRecharges: true,
+    },
     cajero: {
       // Cajero puede hacer operaciones de venta y recargas
       canViewReports: false,

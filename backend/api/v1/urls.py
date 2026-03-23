@@ -5,7 +5,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 # Import ViewSets
-from apps.clientes.views import ClientesViewSet, HijosViewSet, TiposClienteViewSet, GradosViewSet
+from apps.clientes.views import ClientesViewSet, HijosViewSet, TiposClienteViewSet, GradosViewSet, RestriccionesHijosViewSet
 from apps.productos.views import ProductosViewSet, CategoriasViewSet, UnidadesMedidaViewSet, ListasPreciosViewSet, PreciosPorListaViewSet
 from apps.contabilidad.views import ImpuestosViewSet
 from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaViewSet, NotasCreditoClienteViewSet, PromocionesViewSet
@@ -31,6 +31,7 @@ router.register(r'clientes', ClientesViewSet)
 router.register(r'hijos', HijosViewSet)
 router.register(r'tipos-cliente', TiposClienteViewSet)
 router.register(r'grados', GradosViewSet)
+router.register(r'restricciones-hijos', RestriccionesHijosViewSet)
 
 # Register Productos ViewSets
 router.register(r'productos', ProductosViewSet)

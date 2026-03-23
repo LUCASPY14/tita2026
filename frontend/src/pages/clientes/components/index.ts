@@ -8,3 +8,4 @@ export { default as HijoFormModal } from './HijoFormModal';
 export { default as TarjetaFormModal } from './TarjetaFormModal';
 export { default as ConsumosHijoModal } from './ConsumosHijoModal';
 export { default as AlmuerzosHijoModal } from './AlmuerzosHijoModal';
+export { default as RestriccionesHijoModal } from './RestriccionesHijoModal';

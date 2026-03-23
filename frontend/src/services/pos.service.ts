@@ -41,6 +41,7 @@ export interface ProductoParams {
   search?: string;
   estado?: boolean;
   id_categoria?: number;
+  es_servicio?: boolean;
 }
 
 export interface CategoriaParams {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { User, Plus, Edit, Camera, Trash2, CreditCard, BarChart2, UtensilsCrossed } from 'lucide-react';
+import { User, Plus, Edit, Camera, Trash2, CreditCard, BarChart2, UtensilsCrossed, ShieldAlert } from 'lucide-react';
 import { Card, Button, Avatar, Badge, Spinner } from '../../../components/common';
 import { PhotoUploadModal, HijoFormModal, TarjetaFormModal, ConsumosHijoModal, AlmuerzosHijoModal } from '../components';
+import RestriccionesHijoModal from './RestriccionesHijoModal';
 import api from '../../../services/api';
 import type { Hijo, Tarjeta } from '../../../types';
 
@@ -24,10 +25,13 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
   const [hijoParaConsumos, setHijoParaConsumos] = useState<Hijo | null>(null);
   const [almuerzosModalOpen, setAlmuerzosModalOpen] = useState(false);
   const [hijoParaAlmuerzos, setHijoParaAlmuerzos] = useState<Hijo | null>(null);
+  const [restriccionesModalOpen, setRestriccionesModalOpen] = useState(false);
+  const [hijoParaRestricciones, setHijoParaRestricciones] = useState<Hijo | null>(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarHijos();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteId]);
 
   const cargarHijos = async () => {
@@ -100,6 +104,11 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
   const handleVerAlmuerzos = (hijo: Hijo) => {
     setHijoParaAlmuerzos(hijo);
     setAlmuerzosModalOpen(true);
+  };
+
+  const handleVerRestricciones = (hijo: Hijo) => {
+    setHijoParaRestricciones(hijo);
+    setRestriccionesModalOpen(true);
   };
 
   const handleHijoGuardado = () => {
@@ -223,13 +232,12 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEditarHijo(hijo)}
                       leftIcon={<Edit className="h-3 w-3" />}
-                      className="flex-1"
                     >
                       Editar
                     </Button>
@@ -238,11 +246,11 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
                       size="sm"
                       onClick={() => handleGestionarTarjeta(hijo)}
                       leftIcon={<CreditCard className="h-3 w-3" />}
-                      className={`flex-1 ${
+                      className={
                         tarjetasPorHijo[hijo.id_hijo]
                           ? 'border-green-400 text-green-700 hover:bg-green-50'
                           : 'border-amber-400 text-amber-700 hover:bg-amber-50'
-                      }`}
+                      }
                     >
                       {tarjetasPorHijo[hijo.id_hijo] ? 'Tarjeta' : 'Asignar Tarjeta'}
                     </Button>
@@ -252,7 +260,7 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
                         size="sm"
                         onClick={() => handleVerConsumos(hijo)}
                         leftIcon={<BarChart2 className="h-3 w-3" />}
-                        className="flex-1 border-blue-400 text-blue-700 hover:bg-blue-50"
+                        className="border-blue-400 text-blue-700 hover:bg-blue-50"
                       >
                         Consumos
                       </Button>
@@ -262,9 +270,18 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
                       size="sm"
                       onClick={() => handleVerAlmuerzos(hijo)}
                       leftIcon={<UtensilsCrossed className="h-3 w-3" />}
-                      className="flex-1 border-amber-400 text-amber-700 hover:bg-amber-50"
+                      className="border-amber-400 text-amber-700 hover:bg-amber-50"
                     >
                       Almuerzos
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleVerRestricciones(hijo)}
+                      leftIcon={<ShieldAlert className="h-3 w-3" />}
+                      className="border-red-400 text-red-600 hover:bg-red-50"
+                    >
+                      Restricciones
                     </Button>
                     <Button
                       variant="outline"
@@ -329,6 +346,16 @@ const ListaHijos: React.FC<ListaHijosProps> = ({ clienteId, clienteNombre }) => 
           onClose={() => {
             setAlmuerzosModalOpen(false);
             setHijoParaAlmuerzos(null);
+          }}
+        />
+      )}
+
+      {restriccionesModalOpen && hijoParaRestricciones && (
+        <RestriccionesHijoModal
+          hijo={hijoParaRestricciones}
+          onClose={() => {
+            setRestriccionesModalOpen(false);
+            setHijoParaRestricciones(null);
           }}
         />
       )}
