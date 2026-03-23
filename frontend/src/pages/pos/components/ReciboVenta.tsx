@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Printer, CheckCircle } from 'lucide-react';
+import { X, Printer, CheckCircle, Receipt } from 'lucide-react';
 
 interface ItemRecibo {
   descripcion: string;
@@ -27,6 +27,7 @@ interface ReciboVentaProps {
   refPagoPos?: string;
   refPgTransf?: string;
   bancoEmisor?: string;
+  onReciboCobro?: () => void;
   onCerrar: () => void;
 }
 
@@ -54,6 +55,7 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
   refPagoPos,
   refPgTransf,
   bancoEmisor,
+  onReciboCobro,
   onCerrar,
 }) => {
   const tieneIVA = (iva10 ?? 0) > 0 || (iva5 ?? 0) > 0 || (montoExenta ?? 0) > 0;
@@ -261,6 +263,15 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
           >
             Cerrar
           </button>
+          {onReciboCobro && (
+            <button
+              onClick={onReciboCobro}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-green-600 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50"
+            >
+              <Receipt className="h-4 w-4" />
+              Recibo
+            </button>
+          )}
           <button
             onClick={handleImprimir}
             className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-amber-600 py-2 text-sm font-semibold text-white transition hover:bg-amber-700"

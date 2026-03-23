@@ -5,6 +5,9 @@ import { BusquedaHijo } from '../../recargas/components';
 import { posService } from '../../../services/pos.service';
 import type { Producto, Hijo, Tarjeta, MedioPago, VentaData, Venta, TarjetaEscaneada } from '../../../types';
 import ReciboVenta from './ReciboVenta';
+import ReciboCobro from '../../almuerzos/components/ReciboCobro';
+import type { ReciboData } from '../../almuerzos/components/ReciboCobro';
+import { almuerzosService } from '../../../services/almuerzos.service';
 import toast from 'react-hot-toast';
 
 interface ItemCarrito {
@@ -48,6 +51,7 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
   } | null>(null);
   const [ventaRealizada, setVentaRealizada] = useState<Venta | null>(null);
   const [mostrarRecibo, setMostrarRecibo] = useState(false);
+  const [reciboCobroData, setReciboCobroData] = useState<ReciboData | null>(null);
 
   useEffect(() => {
     cargarMediosPago();
@@ -207,6 +211,38 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
     } finally {
       setProcesando(false);
     }
+  };
+
+  const handleImprimirReciboCobro = async () => {
+    if (!ventaRealizada) return;
+    let empresa: ReciboData['empresa'] = { razon_social: 'CANTINA TITA' };
+    try { empresa = await almuerzosService.getDatosEmpresa(); } catch { /* usar nombre por defecto */ }
+    const concepto = items.length === 1
+      ? `${items[0].cantidad}× ${items[0].producto.descripcion}`
+      : `Venta N° ${ventaRealizada.nro_factura_venta ?? ventaRealizada.id_venta} · ${items.length} productos`;
+    const nombreCliente = hijoSeleccionado
+      ? `${hijoSeleccionado.nombre} ${hijoSeleccionado.apellido}`
+      : ventaRealizada.cliente_nombre || 'Consumidor final';
+    const ref = [refPagoPos, refPgTransf, bancoEmisor].filter(Boolean).join(' · ');
+    setReciboCobroData({
+      tipo: 'recibo_cobro',
+      empresa,
+      recibo: {
+        nro_interno: `RC-POS-${String(ventaRealizada.id_venta).padStart(6, '0')}`,
+        fecha_emision: ventaRealizada.fecha.substring(0, 10),
+        alumno: nombreCliente,
+        concepto,
+        cantidad_almuerzos: 0,
+        monto_total: String(ventaRealizada.monto_total),
+        monto_cobrado: String(totalConDescuento),
+        saldo_pendiente: String(ventaRealizada.saldo_pendiente ?? 0),
+        forma_pago: metodoPago,
+        comprobante_ref: ref,
+        estado: ventaRealizada.estado_pago,
+        mes_nombre: '',
+        anio: new Date(ventaRealizada.fecha).getFullYear(),
+      },
+    });
   };
 
   const calcularNuevoSaldo = (): number => {
@@ -559,11 +595,21 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
           montoExenta={ventaRealizada.monto_exenta}
           montoGravada10={ventaRealizada.monto_gravada_10}
           montoGravada5={ventaRealizada.monto_gravada_5}
+          onReciboCobro={handleImprimirReciboCobro}
           onCerrar={() => {
             setMostrarRecibo(false);
             onCerrar();
           }}
         />
+      )}
+      {reciboCobroData && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#fff', overflowY: 'auto' }}>
+          <ReciboCobro
+            data={reciboCobroData}
+            onClose={() => setReciboCobroData(null)}
+            autoImprimir={false}
+          />
+        </div>
       )}
     </div>
   );
