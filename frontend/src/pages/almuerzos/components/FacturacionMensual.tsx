@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   RefreshCw, ChevronLeft, ChevronRight, FileText,
-  DollarSign, Users, AlertCircle,
+  DollarSign, Users, AlertCircle, Receipt, Printer,
 } from 'lucide-react';
 import { Button, Spinner, Badge } from '../../../components/common';
 import { almuerzosService } from '../../../services/almuerzos.service';
+import toast from 'react-hot-toast';
+import ReciboCobro from './ReciboCobro';
+import FacturaImpresa from './FacturaImpresa';
 
 interface CuentaMensual {
   id_cuenta: number;
@@ -36,6 +39,12 @@ const FacturacionMensual: React.FC = () => {
   const [cargando, setCargando] = useState(true);
   const [totalRegistros, setTotalRegistros] = useState(0);
   const [pagina, setPagina] = useState(1);
+
+  // Documentos para imprimir
+  const [reciboData, setReciboData] = useState<any>(null);
+  const [facturaData, setFacturaData] = useState<any>(null);
+  const [procesando, setProcesando] = useState<number | null>(null);
+
   const PAGE_SIZE = 20;
 
   const cargar = useCallback(async (p = 1) => {
@@ -65,6 +74,38 @@ const FacturacionMensual: React.FC = () => {
 
   const totalPaginas = Math.ceil(totalRegistros / PAGE_SIZE);
 
+  const handleVerRecibo = async (idCuenta: number) => {
+    setProcesando(idCuenta);
+    try {
+      const data = await almuerzosService.getReciboPago(idCuenta);
+      setReciboData(data);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Error al obtener el recibo de cobro';
+      toast.error(msg);
+    } finally {
+      setProcesando(null);
+    }
+  };
+
+  const handleGenerarFactura = async (idCuenta: number) => {
+    setProcesando(idCuenta);
+    try {
+      const data = await almuerzosService.generarFactura(idCuenta);
+      setFacturaData(data);
+      if (data.es_nueva) {
+        toast.success('Factura generada exitosamente');
+        cargar(pagina); // recargar para mostrar nro_comprobante en tabla
+      } else {
+        toast('Mostrando factura ya emitida', { icon: 'ℹ️' });
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Error al generar la factura';
+      toast.error(msg);
+    } finally {
+      setProcesando(null);
+    }
+  };
+
   const formatGS = (val: string | number) =>
     `Gs. ${Number(val).toLocaleString('es-PY', { minimumFractionDigits: 0 })}`;
 
@@ -93,6 +134,19 @@ const FacturacionMensual: React.FC = () => {
   const pendientesCount = cuentas.filter(c => c.estado.toLowerCase() === 'pendiente').length;
 
   return (
+    <>
+      {/* Overlays de impresión */}
+      {reciboData && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#fff', overflowY: 'auto' }}>
+          <ReciboCobro data={reciboData} onClose={() => setReciboData(null)} />
+        </div>
+      )}
+      {facturaData && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#fff', overflowY: 'auto' }}>
+          <FacturaImpresa data={facturaData} onClose={() => setFacturaData(null)} />
+        </div>
+      )}
+
     <div className="space-y-4">
       {/* Filtros */}
       <div className="flex flex-wrap items-end gap-3">
@@ -220,6 +274,9 @@ const FacturacionMensual: React.FC = () => {
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
@@ -253,6 +310,35 @@ const FacturacionMensual: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-center">
                       {getEstadoBadge(cuenta.estado)}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {(cuenta as any).nro_comprobante && (
+                          <span className="text-xs font-mono text-blue-600 mr-0.5">
+                            {(cuenta as any).nro_comprobante}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleVerRecibo(cuenta.id_cuenta)}
+                          disabled={procesando === cuenta.id_cuenta || Number(cuenta.monto_pagado) <= 0}
+                          title="Recibo de cobro"
+                          className="rounded p-1.5 text-green-600 hover:bg-green-50 disabled:opacity-40 transition-colors"
+                        >
+                          {procesando === cuenta.id_cuenta
+                            ? <Spinner className="h-4 w-4" />
+                            : <Receipt className="h-4 w-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleGenerarFactura(cuenta.id_cuenta)}
+                          disabled={procesando === cuenta.id_cuenta}
+                          title={(cuenta as any).nro_comprobante ? 'Ver factura emitida' : 'Generar factura'}
+                          className="rounded p-1.5 text-blue-600 hover:bg-blue-50 disabled:opacity-40 transition-colors"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -290,6 +376,7 @@ const FacturacionMensual: React.FC = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

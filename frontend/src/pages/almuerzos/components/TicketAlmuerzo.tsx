@@ -30,15 +30,13 @@ const TicketAlmuerzo: React.FC<TicketAlmuerzoProps> = ({
       minimumFractionDigits: 0,
     }).format(valor);
 
-  const esSegundoServicio = !registro.ya_cobrado;
+  const esSegundoServicio = (registro as any).nro_registro_hoy === 2;
   const planNombre = suscripcionActiva?.plan_nombre || tipoAlmuerzoNombre;
 
   const buildTicketHTML = useCallback(() => {
     const colorServicio = esSegundoServicio ? '#ea580c' : '#15803d';
-    const costoHTML = esSegundoServicio
-      ? `<p style="font-size:14px;font-weight:bold;color:#ea580c;">SIN COSTO</p>`
-      : suscripcionActiva
-      ? `<p style="font-size:14px;font-weight:bold;color:#7c3aed;">PLAN MENSUAL</p>`
+    const costoHTML = suscripcionActiva
+      ? `<p style="font-size:14px;font-weight:bold;color:#7c3aed;">PLAN MENSUAL<br/>${formatearMoneda(registro.costo_almuerzo || 0)}</p>`
       : `<p style="font-size:14px;font-weight:bold;color:#111;">${formatearMoneda(registro.costo_almuerzo || 0)}</p>`;
 
     return `<!DOCTYPE html>

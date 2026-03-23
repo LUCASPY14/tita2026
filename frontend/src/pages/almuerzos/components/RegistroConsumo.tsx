@@ -34,10 +34,12 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
   const [cargandoRegistros, setCargandoRegistros] = useState(false);
   const [alergenos, setAlergenos] = useState<Alergeno[]>([]);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
+  const [precioActual, setPrecioActual] = useState<{ precio_unitario: string } | null>(null);
 
   useEffect(() => {
     cargarTiposAlmuerzo();
     cargarRegistrosDelDia();
+    cargarPrecioActual();
   }, [actualizarClave]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -48,6 +50,15 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
       setAlergenos([]);
     }
   }, [hijoSeleccionado]);
+
+  const cargarPrecioActual = async () => {
+    try {
+      const precio = await almuerzosService.getPrecioActual();
+      if (precio?.precio_unitario) setPrecioActual(precio);
+    } catch {
+      // Sin precio configurado — no es crítico
+    }
+  };
 
   const cargarTiposAlmuerzo = async () => {
     try {
@@ -280,6 +291,14 @@ const RegistroConsumo: React.FC<RegistroConsumoProps> = ({ onRegistroExitoso, ac
       <div className="space-y-6 lg:col-span-2">
         {/* Card de Búsqueda */}
         <Card title="Buscar Hijo" subtitle="Ingresa el número de tarjeta">
+          {precioActual && (
+            <div className="mb-3 inline-flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-1.5 text-sm">
+              <span className="text-amber-700 font-medium">
+                Precio vigente: Gs {new Intl.NumberFormat('es-PY').format(parseFloat(precioActual.precio_unitario))} / almuerzo
+              </span>
+              <span className="text-amber-500 text-xs">(se factura 1 almuerzo por día — el 2do registro no genera costo)</span>
+            </div>
+          )}
           <form onSubmit={handleBuscar} className="space-y-4">
             <div className="flex gap-2">
               <div className="flex-1">

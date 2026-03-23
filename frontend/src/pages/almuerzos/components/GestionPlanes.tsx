@@ -14,6 +14,9 @@ const GestionPlanes: React.FC = () => {
     nombre_plan: '',
     descripcion: '',
     precio_mensual: '',
+    tipo_plan: 'sin_limite' as 'cantidad' | 'sin_limite',
+    cantidad_almuerzos_mes: '' as string | number,
+    limite_credito_mensual: '' as string | number,
     dias_semana_incluidos: '',
     estado: true
   });
@@ -41,6 +44,9 @@ const GestionPlanes: React.FC = () => {
       nombre_plan: '',
       descripcion: '',
       precio_mensual: '',
+      tipo_plan: 'sin_limite',
+      cantidad_almuerzos_mes: '',
+      limite_credito_mensual: '',
       dias_semana_incluidos: '',
       estado: true
     });
@@ -53,6 +59,9 @@ const GestionPlanes: React.FC = () => {
       nombre_plan: plan.nombre_plan,
       descripcion: plan.descripcion || '',
       precio_mensual: plan.precio_mensual.toString(),
+      tipo_plan: (plan as any).tipo_plan || 'sin_limite',
+      cantidad_almuerzos_mes: (plan as any).cantidad_almuerzos_mes ?? '',
+      limite_credito_mensual: (plan as any).limite_credito_mensual ?? '',
       dias_semana_incluidos: plan.dias_semana_incluidos,
       estado: plan.estado
     });
@@ -75,10 +84,19 @@ const GestionPlanes: React.FC = () => {
 
     setGuardando(true);
     try {
-      const data = {
+      const data: any = {
         nombre_plan: formData.nombre_plan,
         descripcion: formData.descripcion || undefined,
         precio_mensual: parseFloat(formData.precio_mensual),
+        tipo_plan: formData.tipo_plan,
+        cantidad_almuerzos_mes:
+          formData.tipo_plan === 'cantidad' && formData.cantidad_almuerzos_mes !== ''
+            ? parseInt(String(formData.cantidad_almuerzos_mes))
+            : null,
+        limite_credito_mensual:
+          formData.limite_credito_mensual !== ''
+            ? parseFloat(String(formData.limite_credito_mensual))
+            : null,
         dias_semana_incluidos: formData.dias_semana_incluidos,
         estado: formData.estado
       };
@@ -197,6 +215,59 @@ const GestionPlanes: React.FC = () => {
             </div>
 
             <div className="col-span-2">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Tipo de suscripción *
+              </label>
+              <select
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                value={formData.tipo_plan}
+                onChange={(e) => setFormData({ ...formData, tipo_plan: e.target.value as 'cantidad' | 'sin_limite', cantidad_almuerzos_mes: '' })}
+              >
+                <option value="sin_limite">Mensual sin límite (cuenta corriente)</option>
+                <option value="cantidad">Mensual con cantidad de almuerzos</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                {formData.tipo_plan === 'sin_limite'
+                  ? 'Se registra cada consumo y al cierre del mes se factura el total.'
+                  : 'El plan incluye un máximo de almuerzos por mes incluidos en el precio mensual.'}
+              </p>
+            </div>
+
+            {formData.tipo_plan === 'cantidad' && (
+              <div className="col-span-2">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Cantidad de almuerzos incluidos por mes *
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="31"
+                  placeholder="Ej: 20"
+                  value={formData.cantidad_almuerzos_mes}
+                  onChange={(e) => setFormData({ ...formData, cantidad_almuerzos_mes: e.target.value })}
+                  required={formData.tipo_plan === 'cantidad'}
+                />
+              </div>
+            )}
+
+            <div className="col-span-2">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Límite de crédito mensual (Gs) — opcional
+              </label>
+              <Input
+                type="number"
+                min="0"
+                step="1000"
+                placeholder="Dejar vacío para sin límite"
+                value={formData.limite_credito_mensual}
+                onChange={(e) => setFormData({ ...formData, limite_credito_mensual: e.target.value })}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Si se define, el sistema bloqueará nuevos registros cuando el saldo pendiente supere este monto.
+              </p>
+            </div>
+
+            <div className="col-span-2">
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -273,6 +344,9 @@ const GestionPlanes: React.FC = () => {
                     Días Incluidos
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Tipo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Precio Mensual
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -296,6 +370,17 @@ const GestionPlanes: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {plan.dias_semana_incluidos || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                        (plan as any).tipo_plan === 'cantidad'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-purple-100 text-purple-700'
+                      }`}>
+                        {(plan as any).tipo_plan === 'cantidad'
+                          ? `Fijo (${(plan as any).cantidad_almuerzos_mes ?? '?'} alm/mes)`
+                          : 'Cta. Corriente'}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-semibold text-green-600">
