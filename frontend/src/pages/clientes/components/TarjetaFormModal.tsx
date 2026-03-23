@@ -28,6 +28,75 @@ const generarNroTarjeta = (hijoId: number): string => {
   return `TRJ-${String(hijoId).padStart(4, '0')}-${timestamp}`;
 };
 
+const imprimirTicketTarjeta = (nroTarjeta: string, hijo: Hijo) => {
+  const fecha = new Date();
+  const fechaStr = fecha.toLocaleDateString('es-PY');
+  const horaStr = fecha.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' });
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Tarjeta ${nroTarjeta}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: monospace; width: 280px; padding: 10px; }
+    .hr   { border: none; border-top: 1px dashed #888; margin: 8px 0; }
+    .c    { text-align: center; }
+    .l    { text-align: left; }
+    .bold { font-weight: bold; }
+    .title { font-size: 16px; font-weight: bold; letter-spacing: 2px; }
+    .name  { font-size: 14px; font-weight: bold; margin-bottom: 3px; }
+    .row   { font-size: 12px; color: #444; margin-bottom: 2px; }
+    .card  { font-size: 15px; font-weight: bold; letter-spacing: 1px; margin: 4px 0; }
+    .ok    { font-size: 13px; font-weight: bold; color: #15803d; }
+    .xs    { font-size: 10px; color: #aaa; }
+    @media print {
+      @page { margin: 0; size: 80mm auto; }
+      body  { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="c" style="padding-bottom:8px;">
+    <p class="title">CANTINA TITA</p>
+    <p class="xs">Comprobante de Tarjeta</p>
+  </div>
+  <hr class="hr" />
+  <div class="l">
+    <p class="row"><span class="bold">Fecha:</span> ${fechaStr}</p>
+    <p class="row"><span class="bold">Hora:</span>  ${horaStr}</p>
+  </div>
+  <hr class="hr" />
+  <div class="l">
+    <p class="name">${hijo.nombre} ${hijo.apellido}</p>
+    ${hijo.grado ? `<p class="row"><span class="bold">Curso:</span> ${hijo.grado}</p>` : ''}
+  </div>
+  <hr class="hr" />
+  <div class="c">
+    <p class="xs">Número de Tarjeta</p>
+    <p class="card">${nroTarjeta}</p>
+    <p class="ok">TARJETA ACTIVA</p>
+  </div>
+  <hr class="hr" />
+  <div class="c xs">
+    <p>Saldo inicial: Gs. 0</p>
+    <p style="margin-top:4px;">Buen provecho!</p>
+  </div>
+</body>
+</html>`;
+
+  const pw = window.open('', '_blank', 'width=380,height=480,toolbar=0,menubar=0,location=0,scrollbars=0');
+  if (!pw) return;
+  pw.document.write(html);
+  pw.document.close();
+  pw.focus();
+  setTimeout(() => {
+    pw.print();
+    pw.onafterprint = () => pw.close();
+  }, 300);
+};
+
 const TarjetaFormModal: React.FC<TarjetaFormModalProps> = ({ hijo, tarjeta, onClose, onSave }) => {
   const isEditing = !!tarjeta;
 
@@ -118,6 +187,8 @@ const TarjetaFormModal: React.FC<TarjetaFormModalProps> = ({ hijo, tarjeta, onCl
         payload.saldo_actual = 0;
         payload.fecha_creacion = new Date().toISOString();
         await api.post('/tarjetas/', payload);
+        // Imprimir comprobante automáticamente
+        imprimirTicketTarjeta(formData.nro_tarjeta, hijo);
       }
       onSave();
     } catch (error: any) {
