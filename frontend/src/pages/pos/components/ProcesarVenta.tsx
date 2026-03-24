@@ -233,26 +233,44 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
       // Pago mixto: enviar array de pagos al backend
       if (metodoPago === 'mixto' && pagosMixtos.length > 0) {
         ventaData.pagos_data = pagosMixtos.map(pago => {
-          const buscar = (term: string) => mediosPago.find(m => m.nombre?.toLowerCase().includes(term))?.id_medio_pago;
+          // Buscar en nombre o descripcion (campo legacy vs campo real del modelo)
+          const buscar = (term: string) => mediosPago.find(m => 
+            m.nombre?.toLowerCase().includes(term) || 
+            (m as any).descripcion?.toLowerCase().includes(term)
+          )?.id_medio_pago;
+          
           let id_medio_pago: number | undefined;
           
           if (pago.metodo === 'efectivo') {
-            // No hay medio de pago específico para efectivo en muchos sistemas, usar genérico
-            id_medio_pago = mediosPago.find(m => !m.genera_comision)?.id_medio_pago;
+            // Buscar medio de pago para efectivo: puede ser "Efectivo", "Caja", "Cash"
+            id_medio_pago = buscar('efectivo') ?? buscar('caja') ?? buscar('cash');
+            if (!id_medio_pago) {
+              // Si no existe, buscar cualquier medio que no genere comisión
+              const sinComision = mediosPago.find(m => !m.genera_comision);
+              if (sinComision) {
+                id_medio_pago = sinComision.id_medio_pago;
+              }
+            }
           } else if (pago.metodo === 'pos') {
-            id_medio_pago = buscar('pos');
+            id_medio_pago = buscar('pos') ?? buscar('tarjeta');
           } else if (pago.metodo === 'tarjeta_hijo') {
-            id_medio_pago = buscar('tarjeta');
+            id_medio_pago = buscar('tarjeta') ?? buscar('crédito') ?? buscar('débito');
             // Si es el primer pago con tarjeta hijo, asignar el hijo
             if (hijoSeleccionado && !ventaData.id_hijo) {
               ventaData.id_hijo = hijoSeleccionado.id_hijo;
             }
           } else if (pago.metodo === 'transferencia') {
-            id_medio_pago = buscar('transf') ?? buscar('transfer');
+            id_medio_pago = buscar('transf') ?? buscar('bancaria');
+          }
+
+          // Validar que se encontró un medio de pago válido
+          if (!id_medio_pago) {
+            console.error(`No se encontró medio de pago para "${pago.metodo}". Medios disponibles:`, mediosPago);
+            throw new Error(`No se encontró un medio de pago para: ${pago.metodo}. Verifica que exista en el sistema.`);
           }
 
           return {
-            id_medio_pago: id_medio_pago || mediosPago[0]?.id_medio_pago || 1,
+            id_medio_pago,
             monto: pago.monto,
             ref_pago_pos: pago.metodo === 'pos' ? pago.ref : undefined,
             ref_pg_transf: pago.metodo === 'transferencia' ? pago.ref : undefined,
@@ -269,7 +287,19 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
       onVentaExitosa();
     } catch (error: any) {
       console.error('Error al procesar venta:', error);
-      toast.error(error.response?.data?.detail || 'Error al procesar la venta');
+      const mensaje = error.response?.data?.error 
+        || error.response?.data?.detail 
+        || error.response?.data?.message
+        || error.message
+        || 'Error al procesar la venta';
+      toast.error(mensaje);
+      
+      // Mostrar errores de validación si existen
+      if (error.response?.data?.productos_faltantes) {
+        error.response.data.productos_faltantes.forEach((p: any) => {
+          toast.error(`${p.producto}: Stock insuficiente (falta ${p.faltante})`);
+        });
+      }
     } finally {
       setProcesando(false);
     }

@@ -104,7 +104,7 @@ class VentasViewSet(viewsets.ModelViewSet):
 
         Args:
             venta: Instancia de Ventas
-            medio_pago: Instancia de MediosPago
+            medio_pago: Instancia de MediosPago o ID
             monto_base: Monto de productos (sin comisión)
             referencias: Dict con ref_pago_pos, ref_pg_transf, banco_emisor (opcional)
 
@@ -112,8 +112,13 @@ class VentasViewSet(viewsets.ModelViewSet):
             PagosVenta: Instancia del pago creado
         """
         from apps.contabilidad.models import MovimientosCaja
+        from apps.core.models import MediosPago
 
         referencias = referencias or {}
+        
+        # Asegurar que medio_pago sea un objeto MediosPago
+        if isinstance(medio_pago, int):
+            medio_pago = MediosPago.objects.get(id_medio_pago=medio_pago)
         
         # Calcular comisión
         monto_comision, tarifa = self._calcular_comision(medio_pago, monto_base)
@@ -175,10 +180,13 @@ class VentasViewSet(viewsets.ModelViewSet):
             ValidationError: Si la suma de pagos no coincide con el total de la venta
         """
         from apps.core.models import MediosPago
+        import logging
+        logger = logging.getLogger(__name__)
         
         # Validar que la suma de pagos coincida con el total
         total_pagos = sum(Decimal(str(p['monto'])) for p in pagos_data)
         if total_pagos != venta.monto_total:
+            logger.warning(f"Venta #{venta.id_venta}: suma de pagos no coincide ({total_pagos} vs {venta.monto_total})")
             raise ValidationError({
                 'error': 'La suma de pagos no coincide con el total de la venta',
                 'total_venta': str(venta.monto_total),
@@ -187,10 +195,18 @@ class VentasViewSet(viewsets.ModelViewSet):
             })
         
         pagos_creados = []
-        for pago_data in pagos_data:
-            medio_pago = MediosPago.objects.get(id_medio_pago=pago_data['id_medio_pago'])
-            monto = Decimal(str(pago_data['monto']))
+        for idx, pago_data in enumerate(pagos_data):
+            try:
+                medio_pago = MediosPago.objects.get(id_medio_pago=pago_data['id_medio_pago'])
+            except MediosPago.DoesNotExist:
+                logger.error(f"Medio de pago no encontrado: {pago_data['id_medio_pago']}")
+                raise ValidationError({
+                    'error': f'Medio de pago no encontrado en pago #{idx + 1}',
+                    'id_medio_pago_invalido': pago_data['id_medio_pago'],
+                    'mensaje': 'El medio de pago especificado no existe en el sistema'
+                })
             
+            monto = Decimal(str(pago_data['monto']))
             referencias = {
                 'ref_pago_pos': pago_data.get('ref_pago_pos'),
                 'ref_pg_transf': pago_data.get('ref_pg_transf'),
@@ -200,6 +216,7 @@ class VentasViewSet(viewsets.ModelViewSet):
             pago = self._registrar_pago_con_comision(venta, medio_pago, monto, referencias)
             pagos_creados.append(pago)
         
+        logger.info(f"Venta #{venta.id_venta}: {len(pagos_creados)} pagos registrados (pago mixto)")
         return pagos_creados
 
     def create(self, request, *args, **kwargs):

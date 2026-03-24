@@ -78,9 +78,11 @@ class ConsumosTarjetaSerializer(serializers.ModelSerializer):
 
 
 class MediosPagoSerializer(serializers.ModelSerializer):
+    nombre = serializers.CharField(source='descripcion', read_only=True)
+    
     class Meta:
         model = MediosPago
-        fields = "__all__"
+        fields = ['id_medio_pago', 'descripcion', 'nombre', 'genera_comision', 'requiere_validacion', 'estado']
 
 
 class ConfiguracionSistemaSerializer(serializers.ModelSerializer):

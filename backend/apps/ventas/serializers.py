@@ -45,6 +45,15 @@ class VentasSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ventas
         fields = "__all__"
+    
+    def create(self, validated_data):
+        """
+        Sobrescribir create para remover pagos_data de validated_data.
+        Los pagos se manejan en perform_create() del ViewSet.
+        """
+        # Remover pagos_data si existe (no es campo del modelo)
+        validated_data.pop('pagos_data', None)
+        return super().create(validated_data)
 
 
 class NotasCreditoClienteSerializer(serializers.ModelSerializer):
