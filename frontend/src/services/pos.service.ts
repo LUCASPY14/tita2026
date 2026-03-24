@@ -128,23 +128,6 @@ export const posService = {
     return response.data;
   },
 
-  // Promociones
-  validarCodigoPromo: async (data: {
-    codigo_promocion: string;
-    monto_total: number;
-    productos: Array<{ id_producto: number; cantidad: number }>;
-  }): Promise<{
-    valido: boolean;
-    descuento_calculado: number;
-    tipo_descuento: string;
-    descripcion: string;
-    productos_afectados: number[];
-    mensaje: string;
-  }> => {
-    const response = await api.post('/promociones/validar_codigo/', data);
-    return response.data;
-  },
-
   // Pagos de venta (cobros de crédito)
   registrarPago: async (data: {
     id_venta: number;

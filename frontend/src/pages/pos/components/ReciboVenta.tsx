@@ -13,7 +13,6 @@ interface ReciboVentaProps {
   fecha: string;
   items: ItemRecibo[];
   total: number;
-  descuento?: number;
   metodoPago: string;
   clienteNombre?: string;
   tarjetaNro?: string;
@@ -43,7 +42,6 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
   fecha,
   items,
   total,
-  descuento,
   metodoPago,
   clienteNombre,
   tarjetaNro,
@@ -105,8 +103,6 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
     `);
     ventana.document.close();
   };
-
-  const totalFinal = descuento ? total - descuento : total;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
@@ -175,16 +171,9 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
 
             <div className="separador" />
 
-            {descuento && descuento > 0 && (
-              <div className="fila" style={{ color: '#16a34a' }}>
-                <span>Descuento (promo):</span>
-                <span>- {formatearPrecio(descuento)}</span>
-              </div>
-            )}
-
             <div className="total-fila">
               <span>TOTAL:</span>
-              <span>{formatearPrecio(totalFinal)}</span>
+              <span>{formatearPrecio(total)}</span>
             </div>
 
             {tieneIVA && (
