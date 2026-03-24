@@ -204,6 +204,14 @@ export interface MedioPago {
   estado: boolean;
 }
 
+export interface PagoData {
+  id_medio_pago: number;
+  monto: number;
+  ref_pago_pos?: string;
+  ref_pg_transf?: string;
+  banco_emisor?: string;
+}
+
 export interface VentaData {
   id_cliente?: number;
   id_hijo?: number;
@@ -214,8 +222,7 @@ export interface VentaData {
   ref_pago_pos?: string;     // Referencia del terminal POS
   ref_pg_transf?: string;   // Referencia de transferencia bancaria
   banco_emisor?: string;    // Banco emisor (transferencias)
-  codigo_promocion?: string;
-  aplicar_promociones?: boolean;
+  pagos_data?: PagoData[];  // Array de pagos para pago mixto
   detalles: {
     id_producto: number;
     cantidad: number;

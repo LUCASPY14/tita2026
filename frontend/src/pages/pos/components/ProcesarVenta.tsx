@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Wallet, DollarSign, AlertTriangle, CheckCircle, Tag, Loader2, Banknote } from 'lucide-react';
+import { X, CreditCard, Wallet, DollarSign, AlertTriangle, CheckCircle, Banknote, Calculator, Plus, Trash2 } from 'lucide-react';
 import { Button, Card } from '../../../components/common';
 import { BusquedaHijo } from '../../recargas/components';
 import { posService } from '../../../services/pos.service';
@@ -25,7 +25,14 @@ interface ProcesarVentaProps {
   onVentaExitosa: () => void;
 }
 
-type MetodoPago = 'efectivo' | 'tarjeta_hijo' | 'pos' | 'transferencia';
+type MetodoPago = 'efectivo' | 'tarjeta_hijo' | 'pos' | 'transferencia' | 'mixto';
+
+interface PagoMixtoItem {
+  metodo: Exclude<MetodoPago, 'mixto'>;
+  monto: number;
+  ref?: string;
+  bancoEmisor?: string;
+}
 
 const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
   items,
@@ -42,13 +49,10 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
   const [mediosPago, setMediosPago] = useState<MedioPago[]>([]);
   const [hijoSeleccionado, setHijoSeleccionado] = useState<Hijo | null>(null);
   const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState<Tarjeta | null>(null);
-  const [codigoPromo, setCodigoPromo] = useState('');
-  const [validandoPromo, setValidandoPromo] = useState(false);
-  const [promoValidada, setPromoValidada] = useState<{
-    descuento_calculado: number;
-    tipo_descuento: string;
-    descripcion: string;
-  } | null>(null);
+  const [montoRecibido, setMontoRecibido] = useState<string>(''); // Para efectivo
+  const [pagosMixtos, setPagosMixtos] = useState<PagoMixtoItem[]>([]);
+  const [nuevoMetodoMixto, setNuevoMetodoMixto] = useState<Exclude<MetodoPago, 'mixto'>>('efectivo');
+  const [nuevoMontoMixto, setNuevoMontoMixto] = useState<string>('');
   const [ventaRealizada, setVentaRealizada] = useState<Venta | null>(null);
   const [mostrarRecibo, setMostrarRecibo] = useState(false);
   const [reciboCobroData, setReciboCobroData] = useState<ReciboData | null>(null);
@@ -97,37 +101,59 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
 
   const medioPagoPos = mediosPago.find(m => m.nombre?.toLowerCase().includes('pos')) ?? null;
   const posGeneraComision = metodoPago === 'pos' && (medioPagoPos?.genera_comision ?? false);
-  const totalConDescuento = promoValidada ? total - promoValidada.descuento_calculado : total;
-
-  const handleValidarPromo = async () => {
-    if (!codigoPromo.trim()) return;
-    setValidandoPromo(true);
-    try {
-      const result = await posService.validarCodigoPromo({
-        codigo_promocion: codigoPromo.trim(),
-        monto_total: total,
-        productos: items.map(i => ({ id_producto: i.producto.id_producto, cantidad: i.cantidad })),
-      });
-      if (result.valido) {
-        setPromoValidada({
-          descuento_calculado: result.descuento_calculado,
-          tipo_descuento: result.tipo_descuento,
-          descripcion: result.descripcion,
-        });
-        toast.success(`Promoción aplicada: ${result.descripcion}`);
-      } else {
-        toast.error(result.mensaje || 'Código de promoción inválido');
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Error al validar la promoción');
-    } finally {
-      setValidandoPromo(false);
-    }
-  };
-
   const formatearPrecio = (precio?: number): string => {
     if (!precio) return 'Gs. 0';
     return `Gs. ${precio.toLocaleString('es-PY')}`;
+  };
+
+  const calcularVuelto = (): number => {
+    if (metodoPago !== 'efectivo' || !montoRecibido) return 0;
+    const recibido = Number(montoRecibido);
+    return recibido > total ? recibido - total : 0;
+  };
+
+  const calcularTotalPagosMixtos = (): number => {
+    return pagosMixtos.reduce((sum, p) => sum + p.monto, 0);
+  };
+
+  const calcularFaltanteMixto = (): number => {
+    return total - calcularTotalPagosMixtos();
+  };
+
+  const agregarPagoMixto = () => {
+    const monto = Number(nuevoMontoMixto);
+    if (!monto || monto <= 0) {
+      toast.error('Ingresá un monto válido');
+      return;
+    }
+    const faltante = calcularFaltanteMixto();
+    if (monto > faltante) {
+      toast.error(`El monto supera el faltante (${formatearPrecio(faltante)})`);
+      return;
+    }
+    if (nuevoMetodoMixto === 'pos' && !refPagoPos.trim()) {
+      toast.error('Ingresá la referencia POS');
+      return;
+    }
+    if (nuevoMetodoMixto === 'transferencia' && !refPgTransf.trim()) {
+      toast.error('Ingresá la referencia de transferencia');
+      return;
+    }
+    const nuevoPago: PagoMixtoItem = {
+      metodo: nuevoMetodoMixto,
+      monto,
+      ref: nuevoMetodoMixto === 'pos' ? refPagoPos : nuevoMetodoMixto === 'transferencia' ? refPgTransf : undefined,
+      bancoEmisor: nuevoMetodoMixto === 'transferencia' ? bancoEmisor : undefined,
+    };
+    setPagosMixtos([...pagosMixtos, nuevoPago]);
+    setNuevoMontoMixto('');
+    setRefPagoPos('');
+    setRefPgTransf('');
+    setBancoEmisor('');
+  };
+
+  const eliminarPagoMixto = (index: number) => {
+    setPagosMixtos(pagosMixtos.filter((_, i) => i !== index));
   };
 
   const validarVenta = (): string | null => {
@@ -144,7 +170,7 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
         return 'La tarjeta seleccionada no está activa';
       }
 
-      if (tarjetaSeleccionada.saldo_actual < totalConDescuento) {
+      if (tarjetaSeleccionada.saldo_actual < total) {
         return `Saldo insuficiente. Disponible: ${formatearPrecio(tarjetaSeleccionada.saldo_actual)}`;
       }
     }
@@ -155,6 +181,16 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
 
     if (metodoPago === 'transferencia' && !refPgTransf.trim()) {
       return 'Debes ingresar el número de referencia de la transferencia';
+    }
+
+    if (metodoPago === 'mixto') {
+      const totalMixto = calcularTotalPagosMixtos();
+      if (pagosMixtos.length === 0) {
+        return 'Agregá al menos un método de pago';
+      }
+      if (totalMixto < total) {
+        return `Falta cubrir ${formatearPrecio(total - totalMixto)}`;
+      }
     }
 
     return null;
@@ -194,9 +230,35 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
         if (bancoEmisor.trim()) ventaData.banco_emisor = bancoEmisor.trim();
       }
 
-      if (promoValidada && codigoPromo.trim()) {
-        ventaData.codigo_promocion = codigoPromo.trim();
-        ventaData.aplicar_promociones = true;
+      // Pago mixto: enviar array de pagos al backend
+      if (metodoPago === 'mixto' && pagosMixtos.length > 0) {
+        ventaData.pagos_data = pagosMixtos.map(pago => {
+          const buscar = (term: string) => mediosPago.find(m => m.nombre?.toLowerCase().includes(term))?.id_medio_pago;
+          let id_medio_pago: number | undefined;
+          
+          if (pago.metodo === 'efectivo') {
+            // No hay medio de pago específico para efectivo en muchos sistemas, usar genérico
+            id_medio_pago = mediosPago.find(m => !m.genera_comision)?.id_medio_pago;
+          } else if (pago.metodo === 'pos') {
+            id_medio_pago = buscar('pos');
+          } else if (pago.metodo === 'tarjeta_hijo') {
+            id_medio_pago = buscar('tarjeta');
+            // Si es el primer pago con tarjeta hijo, asignar el hijo
+            if (hijoSeleccionado && !ventaData.id_hijo) {
+              ventaData.id_hijo = hijoSeleccionado.id_hijo;
+            }
+          } else if (pago.metodo === 'transferencia') {
+            id_medio_pago = buscar('transf') ?? buscar('transfer');
+          }
+
+          return {
+            id_medio_pago: id_medio_pago || mediosPago[0]?.id_medio_pago || 1,
+            monto: pago.monto,
+            ref_pago_pos: pago.metodo === 'pos' ? pago.ref : undefined,
+            ref_pg_transf: pago.metodo === 'transferencia' ? pago.ref : undefined,
+            banco_emisor: pago.metodo === 'transferencia' ? pago.bancoEmisor : undefined,
+          };
+        });
       }
 
       const ventaCreada = await posService.crearVenta(ventaData);
@@ -234,7 +296,7 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
         concepto,
         cantidad_almuerzos: 0,
         monto_total: String(ventaRealizada.monto_total),
-        monto_cobrado: String(totalConDescuento),
+        monto_cobrado: String(total),
         saldo_pendiente: String(ventaRealizada.saldo_pendiente ?? 0),
         forma_pago: metodoPago,
         comprobante_ref: ref,
@@ -247,14 +309,14 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
 
   const calcularNuevoSaldo = (): number => {
     if (metodoPago === 'tarjeta_hijo' && tarjetaSeleccionada) {
-      return tarjetaSeleccionada.saldo_actual - totalConDescuento;
+      return tarjetaSeleccionada.saldo_actual - total;
     }
     return 0;
   };
 
   const saldoInsuficiente = metodoPago === 'tarjeta_hijo' && 
     tarjetaSeleccionada ? 
-    tarjetaSeleccionada.saldo_actual < totalConDescuento :
+    tarjetaSeleccionada.saldo_actual < total :
     false;
 
   return (
@@ -315,7 +377,7 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
             <h3 className="mb-4 text-lg font-semibold text-gray-900">
               Método de Pago
             </h3>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
               <button
                 onClick={() => setMetodoPago('efectivo')}
                 className={`flex items-center gap-3 rounded-lg border-2 p-4 transition-all ${
@@ -375,7 +437,47 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
                   <p className="text-xs text-gray-500">Bancaria / digital</p>
                 </div>
               </button>
+
+              <button
+                onClick={() => setMetodoPago('mixto')}
+                className={`flex items-center gap-3 rounded-lg border-2 p-4 transition-all ${
+                  metodoPago === 'mixto'
+                    ? 'border-amber-600 bg-amber-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <Calculator className="h-6 w-6 text-indigo-600" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">Mixto</p>
+                  <p className="text-xs text-gray-500">Varios métodos</p>
+                </div>
+              </button>
             </div>
+
+            {metodoPago === 'efectivo' && (
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Monto recibido
+                  </label>
+                  <input
+                    type="number"
+                    value={montoRecibido}
+                    onChange={(e) => setMontoRecibido(e.target.value)}
+                    placeholder={`Total: ${formatearPrecio(total)}`}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                </div>
+                {calcularVuelto() > 0 && (
+                  <div className="flex items-center justify-between rounded-lg border-2 border-green-200 bg-green-50 p-4">
+                    <span className="text-sm font-medium text-gray-700">Vuelto:</span>
+                    <span className="text-xl font-bold text-green-700">
+                      {formatearPrecio(calcularVuelto())}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {metodoPago === 'pos' && (
               <div className="mt-4 space-y-3">
@@ -428,6 +530,104 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
                 </div>
               </div>
             )}
+
+            {metodoPago === 'mixto' && (
+              <div className="mt-4 space-y-4">
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-indigo-900">
+                    <Plus className="h-4 w-4" />
+                    Agregar método de pago
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={nuevoMetodoMixto}
+                        onChange={(e) => setNuevoMetodoMixto(e.target.value as Exclude<MetodoPago, 'mixto'>)}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                      >
+                        <option value="efectivo">Efectivo</option>
+                        <option value="pos">POS</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="tarjeta_hijo">Tarjeta Hijo</option>
+                      </select>
+                      <input
+                        type="number"
+                        value={nuevoMontoMixto}
+                        onChange={(e) => setNuevoMontoMixto(e.target.value)}
+                        placeholder="Monto"
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+                    {nuevoMetodoMixto === 'pos' && (
+                      <input
+                        type="text"
+                        value={refPagoPos}
+                        onChange={(e) => setRefPagoPos(e.target.value)}
+                        placeholder="Referencia POS"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                      />
+                    )}
+                    {nuevoMetodoMixto === 'transferencia' && (
+                      <>
+                        <input
+                          type="text"
+                          value={refPgTransf}
+                          onChange={(e) => setRefPgTransf(e.target.value)}
+                          placeholder="Referencia transferencia"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                        />
+                        <input
+                          type="text"
+                          value={bancoEmisor}
+                          onChange={(e) => setBancoEmisor(e.target.value)}
+                          placeholder="Banco emisor"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                        />
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={agregarPagoMixto}
+                      className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                </div>
+
+                {pagosMixtos.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-gray-700">Pagos agregados:</h4>
+                    {pagosMixtos.map((pago, idx) => (
+                      <div key={idx} className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {pago.metodo === 'efectivo' ? 'Efectivo' : pago.metodo === 'pos' ? 'POS' : pago.metodo === 'transferencia' ? 'Transferencia' : 'Tarjeta Hijo'}
+                          </p>
+                          {pago.ref && <p className="text-xs text-gray-500">Ref: {pago.ref}</p>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-900">{formatearPrecio(pago.monto)}</span>
+                          <button
+                            type="button"
+                            onClick={() => eliminarPagoMixto(idx)}
+                            className="rounded p-1 text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between rounded-lg border-2 border-indigo-200 bg-indigo-50 p-3">
+                      <span className="text-sm font-semibold text-indigo-900">Faltante:</span>
+                      <span className={`text-lg font-bold ${calcularFaltanteMixto() === 0 ? 'text-green-700' : 'text-indigo-700'}`}>
+                        {formatearPrecio(calcularFaltanteMixto())}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* Resumen de Venta */}
@@ -455,62 +655,10 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
 
             <div className="border-t pt-4">
               <div className="flex items-center justify-between text-lg font-bold">
-                <span>{promoValidada ? 'Subtotal' : 'Total'}</span>
-                <span className={promoValidada ? 'text-gray-500 line-through' : 'text-amber-600'}>
+                <span>Total</span>
+                <span className="text-amber-600">
                   {formatearPrecio(total)}
                 </span>
-              </div>
-
-              {promoValidada && (
-                <div className="mt-1 flex items-center justify-between text-sm text-green-700">
-                  <span className="flex items-center gap-1">
-                    <Tag className="h-3.5 w-3.5" />
-                    Descuento ({promoValidada.descripcion})
-                  </span>
-                  <span className="font-medium">- {formatearPrecio(promoValidada.descuento_calculado)}</span>
-                </div>
-              )}
-
-              {promoValidada && (
-                <div className="mt-2 flex items-center justify-between text-lg font-bold text-green-700">
-                  <span>Total final</span>
-                  <span>{formatearPrecio(totalConDescuento)}</span>
-                </div>
-              )}
-
-              {/* Código de Promoción */}
-              <div className="mt-4 rounded-lg border border-gray-200 p-3">
-                <p className="mb-2 flex items-center gap-1 text-sm font-medium text-gray-700">
-                  <Tag className="h-4 w-4" />
-                  Código de Promoción
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={codigoPromo}
-                    onChange={(e) => {
-                      setCodigoPromo(e.target.value);
-                      if (promoValidada) setPromoValidada(null);
-                    }}
-                    placeholder="Ingresá el código"
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
-                    disabled={validandoPromo}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleValidarPromo}
-                    disabled={!codigoPromo.trim() || validandoPromo}
-                    className="flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-700 disabled:opacity-50"
-                  >
-                    {validandoPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
-                  </button>
-                </div>
-                {promoValidada && (
-                  <p className="mt-1.5 flex items-center gap-1 text-xs text-green-700">
-                    <CheckCircle className="h-3.5 w-3.5" />
-                    Promoción aplicada correctamente
-                  </p>
-                )}
               </div>
 
               {metodoPago === 'tarjeta_hijo' && tarjetaSeleccionada && (
@@ -583,7 +731,6 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
             subtotal: i.subtotal,
           }))}
           total={total}
-          descuento={promoValidada?.descuento_calculado}
           metodoPago={metodoPago}
           refPagoPos={refPagoPos || undefined}
           refPgTransf={refPgTransf || undefined}

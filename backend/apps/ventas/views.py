@@ -92,7 +92,7 @@ class VentasViewSet(viewsets.ModelViewSet):
         # Redondear a 2 decimales
         return comision.quantize(Decimal("0.01")), tarifa
 
-    def _registrar_pago_con_comision(self, venta, medio_pago, monto_base):
+    def _registrar_pago_con_comision(self, venta, medio_pago, monto_base, referencias=None):
         """
         Registra el pago con comisión separada.
 
@@ -106,12 +106,15 @@ class VentasViewSet(viewsets.ModelViewSet):
             venta: Instancia de Ventas
             medio_pago: Instancia de MediosPago
             monto_base: Monto de productos (sin comisión)
+            referencias: Dict con ref_pago_pos, ref_pg_transf, banco_emisor (opcional)
 
         Returns:
             PagosVenta: Instancia del pago creado
         """
         from apps.contabilidad.models import MovimientosCaja
 
+        referencias = referencias or {}
+        
         # Calcular comisión
         monto_comision, tarifa = self._calcular_comision(medio_pago, monto_base)
 
@@ -124,6 +127,9 @@ class VentasViewSet(viewsets.ModelViewSet):
             id_medio_pago=medio_pago,
             id_venta=venta,
             referencia_transaccion=f"POS-{timezone.now().strftime('%Y%m%d%H%M%S')}",
+            ref_pago_pos=referencias.get('ref_pago_pos'),
+            ref_pg_transf=referencias.get('ref_pg_transf'),
+            banco_emisor=referencias.get('banco_emisor'),
         )
 
         # Registrar en MovimientosCaja
@@ -153,6 +159,48 @@ class VentasViewSet(viewsets.ModelViewSet):
             )
 
         return pago
+
+    def _registrar_pagos_multiples(self, venta, pagos_data):
+        """
+        Registra múltiples pagos para una venta (pago mixto).
+        
+        Args:
+            venta: Instancia de Ventas
+            pagos_data: Lista de dicts con {id_medio_pago, monto, ref_pago_pos?, ref_pg_transf?, banco_emisor?}
+        
+        Returns:
+            list: Lista de PagosVenta creados
+        
+        Raises:
+            ValidationError: Si la suma de pagos no coincide con el total de la venta
+        """
+        from apps.core.models import MediosPago
+        
+        # Validar que la suma de pagos coincida con el total
+        total_pagos = sum(Decimal(str(p['monto'])) for p in pagos_data)
+        if total_pagos != venta.monto_total:
+            raise ValidationError({
+                'error': 'La suma de pagos no coincide con el total de la venta',
+                'total_venta': str(venta.monto_total),
+                'total_pagos': str(total_pagos),
+                'diferencia': str(abs(venta.monto_total - total_pagos))
+            })
+        
+        pagos_creados = []
+        for pago_data in pagos_data:
+            medio_pago = MediosPago.objects.get(id_medio_pago=pago_data['id_medio_pago'])
+            monto = Decimal(str(pago_data['monto']))
+            
+            referencias = {
+                'ref_pago_pos': pago_data.get('ref_pago_pos'),
+                'ref_pg_transf': pago_data.get('ref_pg_transf'),
+                'banco_emisor': pago_data.get('banco_emisor'),
+            }
+            
+            pago = self._registrar_pago_con_comision(venta, medio_pago, monto, referencias)
+            pagos_creados.append(pago)
+        
+        return pagos_creados
 
     def create(self, request, *args, **kwargs):
         """
@@ -457,10 +505,20 @@ class VentasViewSet(viewsets.ModelViewSet):
                             empleado=empleado_cajero,
                         )
 
-                    # Registrar pago con comisión (si tiene medio de pago)
-                    if id_medio_pago:
+                    # Registrar pago(s) con comisión
+                    pagos_data = self.request.data.get('pagos_data')
+                    if pagos_data and len(pagos_data) > 0:
+                        # Pago múltiple (mixto)
+                        self._registrar_pagos_multiples(venta_obj, pagos_data)
+                    elif id_medio_pago:
+                        # Pago simple (compatibilidad con flujo anterior)
+                        referencias = {
+                            'ref_pago_pos': self.request.data.get('ref_pago_pos'),
+                            'ref_pg_transf': self.request.data.get('ref_pg_transf'),
+                            'banco_emisor': self.request.data.get('banco_emisor'),
+                        }
                         self._registrar_pago_con_comision(
-                            venta_obj, id_medio_pago, venta_data["monto_total"]
+                            venta_obj, id_medio_pago, venta_data["monto_total"], referencias
                         )
 
                     # Registrar autorización si hubo (auditoría)
@@ -498,10 +556,20 @@ class VentasViewSet(viewsets.ModelViewSet):
                         empleado=empleado_cajero,
                     )
 
-                # Registrar pago con comisión (si tiene medio de pago)
-                if id_medio_pago:
+                # Registrar pago(s) con comisión
+                pagos_data = self.request.data.get('pagos_data')
+                if pagos_data and len(pagos_data) > 0:
+                    # Pago múltiple (mixto)
+                    self._registrar_pagos_multiples(venta_obj, pagos_data)
+                elif id_medio_pago:
+                    # Pago simple (compatibilidad con flujo anterior)
+                    referencias = {
+                        'ref_pago_pos': self.request.data.get('ref_pago_pos'),
+                        'ref_pg_transf': self.request.data.get('ref_pg_transf'),
+                        'banco_emisor': self.request.data.get('banco_emisor'),
+                    }
                     self._registrar_pago_con_comision(
-                        venta_obj, id_medio_pago, venta_data["monto_total"]
+                        venta_obj, id_medio_pago, venta_data["monto_total"], referencias
                     )
 
                 # Registrar autorización si hubo (auditoría)

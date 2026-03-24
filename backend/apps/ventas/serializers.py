@@ -20,12 +20,27 @@ class PagosVentaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class PagoDataSerializer(serializers.Serializer):
+    """
+    Serializer para datos de pago en el POST de venta (pago mixto).
+    No crea el modelo directamente, solo valida los datos de entrada.
+    """
+    id_medio_pago = serializers.IntegerField(required=True)
+    monto = serializers.DecimalField(max_digits=12, decimal_places=2, required=True)
+    ref_pago_pos = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    ref_pg_transf = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    banco_emisor = serializers.CharField(max_length=100, required=False, allow_blank=True)
+
+
 class VentasSerializer(serializers.ModelSerializer):
     detalles = DetallesVentaSerializer(many=True, read_only=True, source="detallesventa_set")
     pagos = PagosVentaSerializer(many=True, read_only=True, source="pagosventa_set")
     cliente_nombre = serializers.CharField(source="id_cliente.nombres", read_only=True)
     cliente_apellido = serializers.CharField(source="id_cliente.apellidos", read_only=True)
     cajero_nombre = serializers.CharField(source="id_empleado_cajero.nombre", read_only=True)
+    
+    # Campo write-only para recibir array de pagos en POST
+    pagos_data = PagoDataSerializer(many=True, required=False, write_only=True)
 
     class Meta:
         model = Ventas
