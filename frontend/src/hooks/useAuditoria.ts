@@ -135,6 +135,7 @@ export const useAuditoria = (): UseAuditoriaReturn => {
       
       const filtrosFinales = { ...filtros, ...filtrosAdicionales };
       // Excluir parámetros de paginación para estadísticas
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { page: _page, page_size: _pageSize, ...filtrosStats } = filtrosFinales;
       
       const stats = await auditoriaService.getEstadisticasAuditoria(filtrosStats);
@@ -157,6 +158,7 @@ export const useAuditoria = (): UseAuditoriaReturn => {
       setError(null);
       
       const filtrosFinales = { ...filtros, ...filtrosAdicionales };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { page: _page, page_size: _pageSize, ...filtrosTimeline } = filtrosFinales;
       
       const timelineData = await auditoriaService.getTimelineAuditoria(filtrosTimeline);
@@ -182,6 +184,7 @@ export const useAuditoria = (): UseAuditoriaReturn => {
       setError(null);
       
       const filtrosFinales = { ...filtrosAdicionales };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { page: _page, page_size: _pageSize, ...filtrosActividad } = filtrosFinales;
       
       const actividad = await auditoriaService.getActividadUsuario(idUsuario, filtrosActividad);

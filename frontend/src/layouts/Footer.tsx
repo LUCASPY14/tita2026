@@ -27,27 +27,27 @@ const Footer: React.FC = () => {
               Sistema de gestión integral para cantinas escolares. Administra recargas, ventas, inventario y más de manera eficiente y profesional.
             </p>
             <div className="mt-4 flex gap-3">
-              <a
-                href="#"
+              <button
+                type="button"
                 className="rounded-full bg-gray-100 p-2 text-gray-600 transition-colors hover:bg-amber-100 hover:text-amber-600"
                 aria-label="Facebook"
               >
                 <Facebook className="h-4 w-4" />
-              </a>
-              <a
-                href="#"
+              </button>
+              <button
+                type="button"
                 className="rounded-full bg-gray-100 p-2 text-gray-600 transition-colors hover:bg-amber-100 hover:text-amber-600"
                 aria-label="Instagram"
               >
                 <Instagram className="h-4 w-4" />
-              </a>
-              <a
-                href="#"
+              </button>
+              <button
+                type="button"
                 className="rounded-full bg-gray-100 p-2 text-gray-600 transition-colors hover:bg-amber-100 hover:text-amber-600"
                 aria-label="Twitter"
               >
                 <Twitter className="h-4 w-4" />
-              </a>
+              </button>
             </div>
           </div>
 

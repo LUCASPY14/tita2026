@@ -17,14 +17,32 @@
     "e2e": "cypress run --spec \"cypress/e2e/**/*.cy.{js,ts}\"",
     "e2e:open": "cypress open --e2e",
     "test:e2e": "start-server-and-test start http://localhost:3000 cypress:run",
-    "test:e2e:ci": "start-server-and-test start http://localhost:3000 \"cypress run --browser chrome --headless\""
+    "test:e2e:ci": "start-server-and-test start http://localhost:3000 \"cypress run --browser chrome --headless\"",
+    "lighthouse": "node scripts/lighthouse-audit.js",
+    "audit:performance": "start-server-and-test start http://localhost:3000 lighthouse",
+    "cypress:pwa": "cypress run --config-file cypress.pwa.json",
+    "cypress:pwa:open": "cypress open --config-file cypress.pwa.json",
+    "test:pwa": "start-server-and-test start http://localhost:3000 cypress:pwa",
+    "test:pwa:mobile": "cypress run --config-file cypress.pwa.json --spec \"cypress/e2e/pwa/pwa-mobile.cy.ts\" --viewport 375,667",
+    "test:mobile": "node scripts/mobile-device-test.js",
+    "test:mobile:simple": "node scripts/mobile-test-simple.js",
+    "audit:mobile": "lighthouse --preset=desktop --view --output=html --output-path=./lighthouse-mobile-report.html",
+    "test:all": "npm run test:coverage && npm run test:e2e && npm run test:pwa",
+    "audit:full": "start-server-and-test start http://localhost:3000 \"npm run lighthouse && npm run cypress:pwa\""
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
+    "@playwright/test": "^1.58.2",
+    "@types/file-saver": "^2.0.7",
+    "@types/jspdf": "^1.3.3",
     "@types/recharts": "^1.8.29",
     "axios": "^1.6.2",
     "clsx": "^2.1.1",
     "date-fns": "^2.30.0",
+    "express": "^5.2.1",
+    "file-saver": "^2.0.5",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.576.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -34,7 +52,10 @@
     "react-scripts": "5.0.1",
     "recharts": "^3.8.0",
     "typescript": "^4.9.5",
+    "web-push": "^3.6.7",
     "web-vitals": "^2.1.4",
+    "workbox-window": "^7.4.0",
+    "xlsx": "^0.18.5",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
@@ -50,11 +71,14 @@
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "autoprefixer": "^10.4.16",
+    "chrome-launcher": "^1.2.1",
+    "cli-progress": "^3.12.0",
     "cypress": "^15.11.0",
     "eslint": "^8.55.0",
     "eslint-config-react-app": "^7.0.1",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "lighthouse": "^13.0.3",
     "postcss": "^8.4.32",
     "prettier": "^3.1.1",
     "prettier-plugin-tailwindcss": "^0.5.9",
@@ -83,5 +107,13 @@
     "flatted": "^3.4.0",
     "underscore": "^1.13.8",
     "serialize-javascript": "^6.0.2"
-  }
+  },
+  "main": ".eslintrc.js",
+  "directories": {
+    "test": "tests"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }

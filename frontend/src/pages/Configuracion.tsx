@@ -20,6 +20,7 @@ const Configuracion: React.FC = () => {
 
   useEffect(() => {
     cargarConfiguraciones();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cargarConfiguraciones = async () => {

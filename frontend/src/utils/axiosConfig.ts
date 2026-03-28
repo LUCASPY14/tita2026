@@ -61,7 +61,7 @@ const extraerTabla = (url: string): string | null => {
   const cleanUrl = url.replace(API_URL, '');
   
   // Extrar el primer segmento después de /api/v1/
-  const match = cleanUrl.match(/\/([^\/]+)/);
+  const match = cleanUrl.match(/\/([^/]+)/);
   return match ? match[1] : null;
 };
 

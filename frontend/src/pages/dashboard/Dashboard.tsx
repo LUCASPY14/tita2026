@@ -5,6 +5,9 @@ import {
   Area,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -15,6 +18,9 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useDashboard } from '../../hooks/useDashboard';
 import { Card, Badge, Button } from '../../components/common';
+import { exportToPDF } from '../../utils/pdfExporter';
+import { exportToExcel } from '../../utils/excelExporter';
+import toast from 'react-hot-toast';
 import {
   TrendingUp,
   Users,
@@ -27,6 +33,7 @@ import {
   Calendar,
   RefreshCw,
   AlertTriangle,
+  Download,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -162,14 +169,58 @@ const Dashboard: React.FC = () => {
             {new Date().toLocaleDateString('es-PY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={refrescarTodo}
-          leftIcon={<RefreshCw className={`h-4 w-4 ${cargando ? 'animate-spin' : ''}`} />}
-          disabled={cargando}
-        >
-          Actualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (dashboardVentas) {
+                try {
+                  exportToExcel.dashboardVentas(dashboardVentas, kpis || undefined);
+                  toast.success('Reporte Excel generado exitosamente');
+                } catch (error) {
+                  console.error('Error generando Excel:', error);
+                  toast.error('Error al generar el reporte Excel');
+                }
+              } else {
+                toast.error('No hay datos de ventas para exportar');
+              }
+            }}
+            leftIcon={<Download className="h-4 w-4" />}
+            disabled={cargando || !dashboardVentas}
+            className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+          >
+            Excel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (dashboardVentas) {
+                try {
+                  exportToPDF.dashboardVentas(dashboardVentas, kpis || undefined);
+                  toast.success('Reporte PDF generado exitosamente');
+                } catch (error) {
+                  console.error('Error generando PDF:', error);
+                  toast.error('Error al generar el reporte PDF');
+                }
+              } else {
+                toast.error('No hay datos de ventas para exportar');
+              }
+            }}
+            leftIcon={<Download className="h-4 w-4" />}
+            disabled={cargando || !dashboardVentas}
+            className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+          >
+            PDF
+          </Button>
+          <Button
+            variant="outline"
+            onClick={refrescarTodo}
+            leftIcon={<RefreshCw className={`h-4 w-4 ${cargando ? 'animate-spin' : ''}`} />}
+            disabled={cargando}
+          >
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -296,6 +347,46 @@ const Dashboard: React.FC = () => {
                 <Bar yAxisId="left" dataKey="Monto (Gs.)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 <Bar yAxisId="right" dataKey="Cantidad" fill="#93c5fd" radius={[4, 4, 0, 0]} />
               </BarChart>
+            </ResponsiveContainer>
+          )}
+        </Card>
+
+        {/* Métodos de Pago */}
+        <Card title="Distribución por Método de Pago" subtitle="Últimos 7 días">
+          {!dashboardVentas?.ventas_por_metodo_pago || dashboardVentas.ventas_por_metodo_pago.length === 0 ? (
+            <div className="flex h-48 items-center justify-center text-gray-400 text-sm">
+              {cargando ? 'Cargando datos...' : 'Sin datos de métodos de pago'}
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={dashboardVentas.ventas_por_metodo_pago.map(item => ({
+                    name: item.metodo_pago,
+                    value: item.total,
+                    cantidad: item.cantidad,
+                  }))}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent ? percent * 100 : 0).toFixed(1)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {dashboardVentas.ventas_por_metodo_pago.map((_, index) => {
+                    const colors = ['#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#f97316'];
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  })}
+                </Pie>
+                <Tooltip
+                  formatter={(value: any, name: any, props: any) => [
+                    `${formatGs(Number(value) || 0)} (${props.payload?.cantidad || 0} ventas)`,
+                    String(name) || 'Sin nombre'
+                  ]}
+                />
+                <Legend />
+              </PieChart>
             </ResponsiveContainer>
           )}
         </Card>

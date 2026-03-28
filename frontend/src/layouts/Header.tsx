@@ -16,6 +16,8 @@ import { useUIStore } from '../store/uiStore';
 import { useNotificationsByRole } from '../hooks/useNotificationsByRole';
 import clsx from 'clsx';
 import { Avatar, Badge, SearchBar } from '../components/common';
+import NotificationStreamIndicator from '../components/common/NotificationStreamIndicator';
+import PWAStatus from '../components/common/PWAStatus';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuthContext();
@@ -125,6 +127,12 @@ const Header: React.FC = () => {
           <button className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 md:hidden">
             <Search className="h-5 w-5" />
           </button>
+
+          {/* PWA Status - desktop only */}
+          <PWAStatus className="hidden lg:flex" />
+
+          {/* Stream Connection Status */}
+          <NotificationStreamIndicator className="hidden md:flex" />
 
           {/* Notifications */}
           <div className="relative">

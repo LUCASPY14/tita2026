@@ -138,7 +138,7 @@ export const rolTienePermiso = (
   return permisosRol.some((p) => p.id_permiso__codigo_permiso === codigoPermiso);
 };
 
-export default {
+const permisosService = {
   listarPermisos,
   inicializarPermisos,
   asignarPermisoARol,
@@ -149,3 +149,5 @@ export default {
   agruparPermisosPorModulo,
   rolTienePermiso,
 };
+
+export default permisosService;
