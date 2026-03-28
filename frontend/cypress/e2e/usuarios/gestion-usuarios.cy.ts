@@ -55,11 +55,11 @@ describe('Gestión de Usuarios', () => {
   ];
 
   function interceptDefaults() {
-    cy.intercept('GET', `${API}/empleados/**`, {
+    cy.intercept('GET', /\/api\/v1\/empleados/, {
       statusCode: 200,
       body: { count: 3, next: null, previous: null, results: mockUsuarios },
     }).as('getUsuarios');
-    cy.intercept('GET', `${API}/roles/**`, {
+    cy.intercept('GET', /\/api\/v1\/roles/, {
       statusCode: 200,
       body: { count: 3, next: null, previous: null, results: mockRoles },
     }).as('getRoles');
@@ -75,6 +75,13 @@ describe('Gestión de Usuarios', () => {
     });
     cy.wait('@getUsuarios');
   }
+
+  beforeEach(() => {
+    cy.intercept('GET', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('POST', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('PATCH', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('DELETE', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+  });
 
   afterEach(() => {
     cy.clearLocalStorage();
@@ -173,7 +180,7 @@ describe('Gestión de Usuarios', () => {
       fecha_ingreso: '2026-03-16',
     };
 
-    cy.intercept('POST', `${API}/empleados/`, {
+    cy.intercept('POST', /\/api\/v1\/empleados\//, {
       statusCode: 201,
       body: { success: true, empleado: nuevoUsuario, mensaje: 'Usuario creado' },
     }).as('crearUsuario');
@@ -193,8 +200,11 @@ describe('Gestión de Usuarios', () => {
     cy.get('input[name="nombre"]').type('Pedro');
     cy.get('input[name="apellido"]').type('López');
     cy.get('input[name="usuario"]').type('plopez');
+    cy.get('input[name="email"]').type('pedro@cantina.com');
+    cy.get('input[name="password"]').type('Password1');
+    cy.get('input[name="confirmarPassword"]').type('Password1');
 
-    cy.intercept('GET', `${API}/empleados/**`, {
+    cy.intercept('GET', /\/api\/v1\/empleados/, {
       statusCode: 200,
       body: { count: 4, next: null, previous: null, results: [...mockUsuarios, nuevoUsuario] },
     });
@@ -206,7 +216,7 @@ describe('Gestión de Usuarios', () => {
   // ── Toggle de estado ──────────────────────────────────────────────────────
 
   it('desactiva un usuario activo', () => {
-    cy.intercept('PATCH', `${API}/empleados/**`, {
+    cy.intercept('PATCH', /\/api\/v1\/empleados/, {
       statusCode: 200,
       body: { ...mockUsuarios[0], estado: false },
     }).as('desactivar');
@@ -226,7 +236,7 @@ describe('Gestión de Usuarios', () => {
   });
 
   it('activa un usuario inactivo', () => {
-    cy.intercept('PATCH', `${API}/empleados/**`, {
+    cy.intercept('PATCH', /\/api\/v1\/empleados/, {
       statusCode: 200,
       body: { ...mockUsuarios[2], estado: true },
     }).as('activar');
@@ -247,11 +257,11 @@ describe('Gestión de Usuarios', () => {
   // ── Estado vacío ──────────────────────────────────────────────────────────
 
   it('muestra estado vacío cuando no hay usuarios cargados', () => {
-    cy.intercept('GET', `${API}/empleados/**`, {
+    cy.intercept('GET', /\/api\/v1\/empleados/, {
       statusCode: 200,
       body: { count: 0, next: null, previous: null, results: [] },
     }).as('emptyUsuarios');
-    cy.intercept('GET', `${API}/roles/**`, {
+    cy.intercept('GET', /\/api\/v1\/roles/, {
       statusCode: 200,
       body: { count: 3, next: null, previous: null, results: mockRoles },
     });
@@ -263,7 +273,7 @@ describe('Gestión de Usuarios', () => {
     });
     cy.wait('@emptyUsuarios');
     // No hay filas en la tabla o mensaje vacío
-    cy.get('tbody tr, [class*="empty"]').should('exist');
+    cy.contains(/no se encontraron usuarios/i).should('be.visible');
   });
 
   // ── Auth guard ────────────────────────────────────────────────────────────

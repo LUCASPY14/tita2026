@@ -1,6 +1,7 @@
 // cypress/support/e2e.ts
 // Comando para cargar comandos comunes de Cypress
 import './commands'
+import './pwa-commands'
 
 // Configuraciones globales
 Cypress.on('uncaught:exception', (err, runnable) => {

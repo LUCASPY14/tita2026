@@ -76,9 +76,16 @@ describe('Gestión de Ventas - Historial', () => {
     { id_medio_pago: 3, nombre: 'Transferencia Bancaria', genera_comision: false, estado: true },
   ];
 
+  beforeEach(() => {
+    cy.intercept('GET', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('POST', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('PATCH', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('DELETE', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+  });
+
   function interceptDefaults() {
-    cy.intercept('GET', `${API}/ventas/**`, { statusCode: 200, body: mockVentas }).as('getVentas');
-    cy.intercept('GET', `${API}/medios-pago/**`, {
+    cy.intercept('GET', /\/api\/v1\/ventas\//, { statusCode: 200, body: mockVentas }).as('getVentas');
+    cy.intercept('GET', /\/api\/v1\/medios-pago\//, {
       statusCode: 200,
       body: { count: 3, next: null, previous: null, results: mockMediosPago },
     }).as('getMediosPago');
@@ -164,14 +171,14 @@ describe('Gestión de Ventas - Historial', () => {
   });
 
   it('filtra por estado de pago Pendiente', () => {
-    cy.intercept('GET', `${API}/ventas/**`, (req) => {
+    cy.intercept('GET', /\/api\/v1\/ventas\//, (req) => {
       if (req.query.estado_pago === 'Pendiente') {
         req.reply({ statusCode: 200, body: { count: 1, next: null, previous: null, results: [mockVentas.results[1]] } });
       } else {
         req.reply({ statusCode: 200, body: mockVentas });
       }
     }).as('filtradoPendiente');
-    cy.intercept('GET', `${API}/medios-pago/**`, {
+    cy.intercept('GET', /\/api\/v1\/medios-pago\//, {
       statusCode: 200,
       body: { count: 3, next: null, previous: null, results: mockMediosPago },
     });
@@ -259,7 +266,7 @@ describe('Gestión de Ventas - Historial', () => {
   });
 
   it('registra el pago correctamente y recarga la lista', () => {
-    cy.intercept('POST', `${API}/pagos-venta/`, {
+    cy.intercept('POST', /\/api\/v1\/pagos-venta\//, {
       statusCode: 201,
       body: {
         id_pago: 50,
@@ -269,8 +276,8 @@ describe('Gestión de Ventas - Historial', () => {
         fecha_pago: '2026-03-16T10:00:00Z',
       },
     }).as('registrarPago');
-    cy.intercept('GET', `${API}/ventas/**`, { statusCode: 200, body: mockVentas }).as('getVentasPost');
-    cy.intercept('GET', `${API}/medios-pago/**`, {
+    cy.intercept('GET', /\/api\/v1\/ventas\//, { statusCode: 200, body: mockVentas }).as('getVentasPost');
+    cy.intercept('GET', /\/api\/v1\/medios-pago\//, {
       statusCode: 200,
       body: { count: 3, next: null, previous: null, results: mockMediosPago },
     });

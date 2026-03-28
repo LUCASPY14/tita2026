@@ -13,7 +13,6 @@ export default defineConfig({
     viewportHeight: 720,
     video: true,
     chromeWebSecurity: false,
-    experimentalStudio: true,
     env: {
       API_BASE_URL: 'http://localhost:8000/api/v1',
       COVERAGE: true,

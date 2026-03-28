@@ -58,12 +58,12 @@ describe('Gestión de Clientes', () => {
   };
 
   function visitClientes() {
-    cy.intercept('GET', `${API}/clientes/**`, { statusCode: 200, body: mockClientes }).as('getClientes');
-    cy.intercept('GET', `${API}/tipos-cliente/**`, {
+    cy.intercept('GET', /\/api\/v1\/clientes/, { statusCode: 200, body: mockClientes }).as('getClientes');
+    cy.intercept('GET', /\/api\/v1\/tipos-cliente/, {
       statusCode: 200,
       body: { count: 1, next: null, previous: null, results: [{ id_tipo_cliente: 1, nombre: 'Regular', estado: true }] },
     }).as('getTipos');
-    cy.intercept('GET', `${API}/listas-precio/**`, {
+    cy.intercept('GET', /\/api\/v1\/listas-precio/, {
       statusCode: 200,
       body: { count: 1, next: null, previous: null, results: [{ id_lista: 1, nombre_lista: 'Lista General', estado: true }] },
     }).as('getListas');
@@ -76,6 +76,13 @@ describe('Gestión de Clientes', () => {
     });
     cy.wait('@getClientes');
   }
+
+  beforeEach(() => {
+    cy.intercept('GET', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('POST', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('PATCH', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('DELETE', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+  });
 
   afterEach(() => {
     cy.clearLocalStorage();
@@ -121,12 +128,12 @@ describe('Gestión de Clientes', () => {
   });
 
   it('lanza búsqueda al enviar el formulario', () => {
-    cy.intercept('GET', `${API}/clientes/**`, {
+    cy.intercept('GET', /\/api\/v1\/clientes/, {
       statusCode: 200,
       body: { count: 1, next: null, previous: null, results: [mockClientes.results[0]] },
     }).as('busqueda');
-    cy.intercept('GET', `${API}/tipos-cliente/**`, { statusCode: 200, body: { count: 0, next: null, previous: null, results: [] } });
-    cy.intercept('GET', `${API}/listas-precio/**`, { statusCode: 200, body: { count: 0, next: null, previous: null, results: [] } });
+    cy.intercept('GET', /\/api\/v1\/tipos-cliente/, { statusCode: 200, body: { count: 0, next: null, previous: null, results: [] } });
+    cy.intercept('GET', /\/api\/v1\/listas-precio/, { statusCode: 200, body: { count: 0, next: null, previous: null, results: [] } });
 
     cy.visit('/clientes', {
       onBeforeLoad(win) {
@@ -137,7 +144,6 @@ describe('Gestión de Clientes', () => {
     cy.wait('@busqueda');
 
     cy.get('input[type="text"]').first().type('Ana');
-    cy.get('button[type="submit"]').first().click();
     cy.wait('@busqueda');
   });
 
@@ -153,39 +159,30 @@ describe('Gestión de Clientes', () => {
   });
 
   it('puede desactivar un cliente activo', () => {
-    cy.intercept('PATCH', `${API}/clientes/1/**`, {
+    cy.intercept('PATCH', /\/api\/v1\/clientes\/1/, {
       statusCode: 200,
       body: { ...mockClientes.results[0], estado: false },
     }).as('desactivar');
 
     visitClientes();
 
-    // Buscar el botón de toggle del primer cliente activo
-    cy.contains('Ana García')
-      .closest('tr, [class*="row"], [class*="item"]')
-      .within(() => {
-        cy.get('button').filter('[title*="desactivar" i], [title*="inactivar" i], [aria-label*="desactivar" i]')
-          .first()
-          .click({ force: true });
-      });
+    cy.contains('tr', 'Ana García')
+      .find('button[title="Desactivar"]')
+      .click({ force: true });
     cy.wait('@desactivar');
   });
 
   it('puede activar un cliente inactivo', () => {
-    cy.intercept('PATCH', `${API}/clientes/2/**`, {
+    cy.intercept('PATCH', /\/api\/v1\/clientes\/2/, {
       statusCode: 200,
       body: { ...mockClientes.results[1], estado: true },
     }).as('activar');
 
     visitClientes();
 
-    cy.contains('Carlos López')
-      .closest('tr, [class*="row"], [class*="item"]')
-      .within(() => {
-        cy.get('button').filter('[title*="activar" i], [aria-label*="activar" i]')
-          .first()
-          .click({ force: true });
-      });
+    cy.contains('tr', 'Carlos López')
+      .find('button[title="Activar"]')
+      .click({ force: true });
     cy.wait('@activar');
   });
 
@@ -217,7 +214,7 @@ describe('Gestión de Clientes', () => {
       id_tipo_cliente: 1,
     };
 
-    cy.intercept('POST', `${API}/clientes/`, {
+    cy.intercept('POST', /\/api\/v1\/clientes\//, {
       statusCode: 201,
       body: nuevoCliente,
     }).as('crearCliente');
@@ -237,12 +234,12 @@ describe('Gestión de Clientes', () => {
   // ── Manejo de errores ─────────────────────────────────────────────────────
 
   it('muestra estado vacío cuando no hay clientes', () => {
-    cy.intercept('GET', `${API}/clientes/**`, {
+    cy.intercept('GET', /\/api\/v1\/clientes/, {
       statusCode: 200,
       body: { count: 0, next: null, previous: null, results: [] },
     }).as('empty');
-    cy.intercept('GET', `${API}/tipos-cliente/**`, { statusCode: 200, body: { count: 0, next: null, previous: null, results: [] } });
-    cy.intercept('GET', `${API}/listas-precio/**`, { statusCode: 200, body: { count: 0, next: null, previous: null, results: [] } });
+    cy.intercept('GET', /\/api\/v1\/tipos-cliente/, { statusCode: 200, body: { count: 0, next: null, previous: null, results: [] } });
+    cy.intercept('GET', /\/api\/v1\/listas-precio/, { statusCode: 200, body: { count: 0, next: null, previous: null, results: [] } });
 
     cy.visit('/clientes', {
       onBeforeLoad(win) {
@@ -252,7 +249,7 @@ describe('Gestión de Clientes', () => {
     });
     cy.wait('@empty');
 
-    cy.contains(/no hay clientes|sin clientes|vacío|empty/i).should('be.visible');
+    cy.contains(/no se encontraron clientes/i).should('be.visible');
   });
 
   it('redirecciona a /login si no hay sesión activa', () => {

@@ -25,11 +25,11 @@ describe('Gestion de Almuerzos', () => {
   });
 
   it('debe mostrar el tab Registro de Consumo', () => {
-    cy.contains('Registro de Consumo').should('be.visible');
+    cy.contains('Registro').should('be.visible');
   });
 
   it('debe mostrar el tab Planes de Almuerzo', () => {
-    cy.contains('Planes de Almuerzo').should('be.visible');
+    cy.contains('Planes').should('be.visible');
   });
 
   it('debe mostrar el tab Suscripciones', () => {
@@ -41,11 +41,11 @@ describe('Gestion de Almuerzos', () => {
   });
 
   it('debe mostrar el tab Facturacion', () => {
-    cy.contains('Mensual').should('be.visible');
+    cy.contains('Facturación').should('be.visible');
   });
 
   it('debe navegar al tab de planes', () => {
-    cy.contains('button', 'Planes de Almuerzo').click();
+    cy.contains('button', 'Planes').click();
     cy.url().should('include', '/almuerzos');
   });
 

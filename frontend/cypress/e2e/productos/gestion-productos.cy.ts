@@ -69,9 +69,10 @@ describe('Gestión de Productos', () => {
   };
 
   function interceptDefaults() {
-    cy.intercept('GET', `${API}/productos/**`, { statusCode: 200, body: mockProductos }).as('getProductos');
-    cy.intercept('GET', `${API}/categorias/**`, { statusCode: 200, body: mockCategorias }).as('getCategorias');
-    cy.intercept('GET', `${API}/unidades-medida/**`, { statusCode: 200, body: { count: 0, results: [] } });
+    cy.intercept('GET', /\/api\/v1\/productos/, { statusCode: 200, body: mockProductos }).as('getProductos');
+    cy.intercept('GET', /\/api\/v1\/categorias/, { statusCode: 200, body: mockCategorias }).as('getCategorias');
+    cy.intercept('GET', /\/api\/v1\/unidades-medida/, { statusCode: 200, body: [] });
+    cy.intercept('GET', /\/api\/v1\/impuestos/, { statusCode: 200, body: [] });
   }
 
   function visitProductos() {
@@ -84,6 +85,13 @@ describe('Gestión de Productos', () => {
     });
     cy.wait('@getProductos');
   }
+
+  beforeEach(() => {
+    cy.intercept('GET', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('POST', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('PATCH', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+    cy.intercept('DELETE', 'http://localhost:8000/**', { statusCode: 200, body: {} });
+  });
 
   afterEach(() => {
     cy.clearLocalStorage();
@@ -139,7 +147,7 @@ describe('Gestión de Productos', () => {
   });
 
   it('filtro Activos limita los resultados', () => {
-    cy.intercept('GET', `${API}/productos/**`, (req) => {
+    cy.intercept('GET', /\/api\/v1\/productos/, (req) => {
       if (req.query.estado === 'true') {
         req.reply({
           statusCode: 200,
@@ -149,8 +157,8 @@ describe('Gestión de Productos', () => {
         req.reply({ statusCode: 200, body: mockProductos });
       }
     }).as('filtroActivos');
-    cy.intercept('GET', `${API}/categorias/**`, { statusCode: 200, body: mockCategorias });
-    cy.intercept('GET', `${API}/unidades-medida/**`, { statusCode: 200, body: { count: 0, results: [] } });
+    cy.intercept('GET', /\/api\/v1\/categorias/, { statusCode: 200, body: mockCategorias });
+    cy.intercept('GET', /\/api\/v1\/unidades-medida/, { statusCode: 200, body: [] });
     cy.visit('/productos', {
       onBeforeLoad(win) {
         win.localStorage.setItem('token', 'fake-access-token');
@@ -196,13 +204,14 @@ describe('Gestión de Productos', () => {
       id_impuesto: 1,
     };
 
-    cy.intercept('POST', `${API}/productos/`, {
+    cy.intercept('POST', /\/api\/v1\/productos\//, {
       statusCode: 201,
       body: nuevoProducto,
     }).as('crearProducto');
-    cy.intercept('GET', `${API}/productos/**`, { statusCode: 200, body: mockProductos }).as('getProductos2');
-    cy.intercept('GET', `${API}/categorias/**`, { statusCode: 200, body: mockCategorias });
-    cy.intercept('GET', `${API}/unidades-medida/**`, { statusCode: 200, body: { count: 0, results: [] } });
+    cy.intercept('GET', /\/api\/v1\/productos/, { statusCode: 200, body: mockProductos }).as('getProductos2');
+    cy.intercept('GET', /\/api\/v1\/categorias/, { statusCode: 200, body: mockCategorias });
+    cy.intercept('GET', /\/api\/v1\/unidades-medida/, { statusCode: 200, body: [] });
+    cy.intercept('GET', /\/api\/v1\/impuestos/, { statusCode: 200, body: [{ id_impuesto: 2, nombre_impuesto: 'IVA 10%', valor: 10 }] });
 
     cy.visit('/productos', {
       onBeforeLoad(win) {
@@ -215,13 +224,13 @@ describe('Gestión de Productos', () => {
 
     // Llenar formulario
     cy.get('input[name="descripcion"]').type('Producto nuevo');
-    cy.get('select').first().select('1'); // categoría
+    cy.get('select[name="id_categoria"]').select('Bebidas');
 
-    cy.intercept('GET', `${API}/productos/**`, { statusCode: 200, body: mockProductos });
+    cy.intercept('GET', /\/api\/v1\/productos/, { statusCode: 200, body: mockProductos });
     cy.get('button[type="submit"]').click();
     cy.wait('@crearProducto');
     // Debe volver al listado
-    cy.contains('Gestión de Productos').should('be.visible');
+    cy.contains('h1', 'Gestión de Productos').scrollIntoView().should('be.visible');
   });
 
   // ── Toggle de estado ──────────────────────────────────────────────────────
@@ -233,7 +242,7 @@ describe('Gestión de Productos', () => {
   });
 
   it('cambia el estado de un producto al hacer toggle', () => {
-    cy.intercept('PATCH', `${API}/productos/**`, {
+    cy.intercept('PATCH', /\/api\/v1\/productos/, {
       statusCode: 200,
       body: { ...mockProductos.results[0], estado: false },
     }).as('toggleEstado');
@@ -254,12 +263,12 @@ describe('Gestión de Productos', () => {
   // ── Estado vacío ──────────────────────────────────────────────────────────
 
   it('muestra estado vacío cuando no hay productos', () => {
-    cy.intercept('GET', `${API}/productos/**`, {
+    cy.intercept('GET', /\/api\/v1\/productos/, {
       statusCode: 200,
       body: { count: 0, next: null, previous: null, results: [] },
     }).as('empty');
-    cy.intercept('GET', `${API}/categorias/**`, { statusCode: 200, body: mockCategorias });
-    cy.intercept('GET', `${API}/unidades-medida/**`, { statusCode: 200, body: { count: 0, results: [] } });
+    cy.intercept('GET', /\/api\/v1\/categorias/, { statusCode: 200, body: mockCategorias });
+    cy.intercept('GET', /\/api\/v1\/unidades-medida/, { statusCode: 200, body: [] });
     cy.visit('/productos', {
       onBeforeLoad(win) {
         win.localStorage.setItem('token', 'fake-access-token');

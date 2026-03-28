@@ -42,7 +42,7 @@ describe('Punto de Venta', () => {
   });
 
   it('debe mostrar el catalogo de productos vacio', () => {
-    cy.contains('No hay productos disponibles').should('be.visible');
+    cy.contains('No hay productos disponibles').scrollIntoView().should('be.visible');
   });
 
   it('debe mantener sesion activa', () => {
