@@ -18,21 +18,41 @@ app.autodiscover_tasks()
 
 # Configuración de tareas periódicas (Celery Beat)
 app.conf.beat_schedule = {
+    # ── Core ──────────────────────────────────────────────────────────
     'expirar-recargas-pendientes': {
         'task': 'apps.core.tasks.expirar_recargas_pendientes',
-        'schedule': crontab(hour=2, minute=0),  # Todos los días a las 2 AM
+        'schedule': crontab(hour=2, minute=0),          # Todos los días 02:00
     },
+    # ── Notificaciones ────────────────────────────────────────────────
     'alertas-saldo-bajo': {
         'task': 'apps.notificaciones.tasks.generar_alertas_saldo_bajo',
-        'schedule': crontab(hour=8, minute=0),  # Todos los días a las 8 AM
-    },
-    'alertas-vencimiento-productos': {
-        'task': 'apps.inventario.tasks.verificar_vencimientos',
-        'schedule': crontab(hour=9, minute=0),  # Todos los días a las 9 AM
+        'schedule': crontab(hour=8, minute=0),          # Todos los días 08:00
     },
     'limpiar-notificaciones-antiguas': {
         'task': 'apps.notificaciones.tasks.limpiar_notificaciones_antiguas',
-        'schedule': crontab(hour=3, minute=0, day_of_week=0),  # Domingos a las 3 AM
+        'schedule': crontab(hour=3, minute=0, day_of_week=0),  # Domingos 03:00
+    },
+    # ── Inventario ────────────────────────────────────────────────────
+    'alertar-stock-minimo': {
+        'task': 'apps.inventario.tasks.alertar_stock_minimo',
+        'schedule': crontab(hour=7, minute=0),          # Todos los días 07:00
+    },
+    'verificar-vencimientos-productos': {
+        'task': 'apps.inventario.tasks.verificar_vencimientos',
+        'schedule': crontab(hour=9, minute=0),          # Todos los días 09:00
+    },
+    'resumen-diario-stock': {
+        'task': 'apps.inventario.tasks.generar_resumen_diario_stock',
+        'schedule': crontab(hour=23, minute=55),        # Todos los días 23:55
+    },
+    # ── Ventas ────────────────────────────────────────────────────────
+    'resumen-diario-ventas': {
+        'task': 'apps.ventas.tasks.generar_resumen_diario_ventas',
+        'schedule': crontab(hour=23, minute=50),        # Todos los días 23:50
+    },
+    'cierre-automatico-cajas': {
+        'task': 'apps.ventas.tasks.cerrar_cajas_automatico',
+        'schedule': crontab(minute=0),                  # Cada hora en punto
     },
 }
 

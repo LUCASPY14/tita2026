@@ -1,0 +1,348 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { DollarSign, LogIn, LogOut, Clock, AlertTriangle, CheckCircle, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+interface Caja {
+  id_caja: number;
+  nombre_caja: string;
+  ubicacion: string | null;
+  estado: boolean;
+}
+
+interface Empleado {
+  id_empleado: number;
+  nombre: string;
+  apellido: string;
+}
+
+interface TurnoActivo {
+  id_cierre: number;
+  caja_nombre: string;
+  empleado_nombre: string;
+  fecha_hora_apertura: string;
+  monto_inicial: string;
+  estado: string;
+  total_ingresos: number;
+  total_egresos: number;
+  total_ventas: number;
+  movimientos: Movimiento[];
+}
+
+interface Movimiento {
+  id_movimiento: number;
+  tipo_movimiento: string;
+  monto: string;
+  descripcion: string;
+  fecha_movimiento: string;
+  medio_pago_descripcion: string;
+  venta_nro: string | null;
+}
+
+const API = '/api/v1';
+
+const GestionCaja: React.FC = () => {
+  const [cajas, setCajas] = useState<Caja[]>([]);
+  const [empleados, setEmpleados] = useState<Empleado[]>([]);
+  const [turnoActivo, setTurnoActivo] = useState<TurnoActivo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [vista, setVista] = useState<'principal' | 'abrir' | 'cerrar'>('principal');
+
+  // Form apertura
+  const [cajaSeleccionada, setCajaSeleccionada] = useState('');
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState('');
+  const [montoInicial, setMontoInicial] = useState('');
+
+  // Form cierre
+  const [montoContado, setMontoContado] = useState('');
+
+  const cargarDatos = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [cajasRes, empleadosRes] = await Promise.all([
+        axios.get(`${API}/cajas/`),
+        axios.get(`${API}/empleados/`),
+      ]);
+      setCajas(cajasRes.data.results ?? cajasRes.data);
+      setEmpleados(empleadosRes.data.results ?? empleadosRes.data);
+
+      try {
+        const turnoRes = await axios.get(`${API}/cierres-caja/turno-activo/`);
+        setTurnoActivo(turnoRes.data);
+      } catch {
+        setTurnoActivo(null);
+      }
+    } catch (err) {
+      toast.error('Error cargando datos de caja');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { cargarDatos(); }, [cargarDatos]);
+
+  const abrirCaja = async () => {
+    if (!cajaSeleccionada || !empleadoSeleccionado || !montoInicial) {
+      toast.error('Complete todos los campos');
+      return;
+    }
+    try {
+      await axios.post(`${API}/cierres-caja/abrir/`, {
+        id_caja: parseInt(cajaSeleccionada),
+        id_empleado: parseInt(empleadoSeleccionado),
+        monto_inicial: parseFloat(montoInicial),
+      });
+      toast.success('Caja abierta correctamente');
+      setVista('principal');
+      cargarDatos();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail ?? 'Error al abrir caja');
+    }
+  };
+
+  const cerrarCaja = async () => {
+    if (!turnoActivo || !montoContado) {
+      toast.error('Ingrese el monto contado físicamente');
+      return;
+    }
+    try {
+      await axios.post(`${API}/cierres-caja/${turnoActivo.id_cierre}/cerrar/`, {
+        monto_contado_fisico: parseFloat(montoContado),
+      });
+      toast.success('Caja cerrada correctamente');
+      setVista('principal');
+      setMontoContado('');
+      cargarDatos();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail ?? 'Error al cerrar caja');
+    }
+  };
+
+  const formatGs = (val: string | number) =>
+    `Gs. ${Number(val).toLocaleString('es-PY')}`;
+
+  const formatFecha = (iso: string) =>
+    new Date(iso).toLocaleString('es-PY', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="animate-spin text-blue-500 w-8 h-8" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <DollarSign className="w-8 h-8 text-green-600" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Gestión de Caja</h1>
+            <p className="text-sm text-gray-500">Control de apertura, cierre y movimientos de caja</p>
+          </div>
+        </div>
+        <button
+          onClick={cargarDatos}
+          className="flex items-center gap-2 px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50"
+        >
+          <RefreshCw className="w-4 h-4" /> Actualizar
+        </button>
+      </div>
+
+      {/* Estado turno activo */}
+      {turnoActivo ? (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span className="font-semibold text-green-800">Turno activo: {turnoActivo.caja_nombre}</span>
+            </div>
+            <span className="text-sm text-green-700 flex items-center gap-1">
+              <Clock className="w-4 h-4" /> Abierto: {formatFecha(turnoActivo.fecha_hora_apertura)}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+              <p className="text-xs text-gray-500">Fondo inicial</p>
+              <p className="font-bold text-gray-800">{formatGs(turnoActivo.monto_inicial)}</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+              <p className="text-xs text-green-600 flex items-center justify-center gap-1">
+                <TrendingUp className="w-3 h-3" /> Ingresos
+              </p>
+              <p className="font-bold text-green-700">{formatGs(turnoActivo.total_ingresos)}</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+              <p className="text-xs text-blue-600 flex items-center justify-center gap-1">
+                <DollarSign className="w-3 h-3" /> Ventas
+              </p>
+              <p className="font-bold text-blue-700">{formatGs(turnoActivo.total_ventas)}</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+              <p className="text-xs text-red-600 flex items-center justify-center gap-1">
+                <TrendingDown className="w-3 h-3" /> Egresos
+              </p>
+              <p className="font-bold text-red-700">{formatGs(turnoActivo.total_egresos)}</p>
+            </div>
+          </div>
+
+          {vista === 'cerrar' ? (
+            <div className="bg-white rounded-lg p-4 space-y-3">
+              <p className="font-medium text-gray-700">Cierre de turno</p>
+              <label className="block text-sm text-gray-600">
+                Monto contado físicamente (Gs.)
+                <input
+                  type="number"
+                  value={montoContado}
+                  onChange={e => setMontoContado(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="0"
+                />
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={cerrarCaja}
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 font-medium"
+                >
+                  <LogOut className="w-4 h-4 inline mr-1" /> Confirmar cierre
+                </button>
+                <button
+                  onClick={() => setVista('principal')}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setVista('cerrar')}
+              className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+            >
+              <LogOut className="w-4 h-4" /> Cerrar turno
+            </button>
+          )}
+
+          {/* Movimientos del turno */}
+          {turnoActivo.movimientos?.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Últimos movimientos</p>
+              <div className="max-h-64 overflow-y-auto space-y-1">
+                {turnoActivo.movimientos.slice(-10).reverse().map(mov => (
+                  <div key={mov.id_movimiento} className="flex justify-between text-sm bg-white px-3 py-2 rounded-lg">
+                    <span className="text-gray-600">{mov.descripcion} — {mov.medio_pago_descripcion}</span>
+                    <span className={`font-medium ${mov.tipo_movimiento === 'Egreso' ? 'text-red-600' : 'text-green-600'}`}>
+                      {mov.tipo_movimiento === 'Egreso' ? '−' : '+'}{formatGs(mov.monto)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            <span className="font-semibold text-yellow-800">No hay turno activo</span>
+          </div>
+
+          {vista === 'abrir' ? (
+            <div className="bg-white rounded-lg p-4 space-y-3">
+              <p className="font-medium text-gray-700">Apertura de turno</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <label className="block text-sm text-gray-600">
+                  Caja
+                  <select
+                    value={cajaSeleccionada}
+                    onChange={e => setCajaSeleccionada(e.target.value)}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="">Seleccionar caja...</option>
+                    {cajas.filter(c => c.estado).map(c => (
+                      <option key={c.id_caja} value={c.id_caja}>{c.nombre_caja}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm text-gray-600">
+                  Cajero
+                  <select
+                    value={empleadoSeleccionado}
+                    onChange={e => setEmpleadoSeleccionado(e.target.value)}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="">Seleccionar cajero...</option>
+                    {empleados.map(e => (
+                      <option key={e.id_empleado} value={e.id_empleado}>{e.nombre} {e.apellido}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm text-gray-600">
+                  Fondo inicial (Gs.)
+                  <input
+                    type="number"
+                    value={montoInicial}
+                    onChange={e => setMontoInicial(e.target.value)}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="0"
+                  />
+                </label>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={abrirCaja}
+                  className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 font-medium"
+                >
+                  <LogIn className="w-4 h-4 inline mr-1" /> Abrir caja
+                </button>
+                <button
+                  onClick={() => setVista('principal')}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setVista('abrir')}
+              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+            >
+              <LogIn className="w-4 h-4" /> Abrir turno
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Lista de cajas registradas */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-800 mb-3">Cajas registradas</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {cajas.map(caja => (
+            <div key={caja.id_caja} className="bg-white border rounded-xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-gray-800">{caja.nombre_caja}</span>
+                <span className={`text-xs px-2 py-1 rounded-full ${caja.estado ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {caja.estado ? 'Activa' : 'Inactiva'}
+                </span>
+              </div>
+              {caja.ubicacion && (
+                <p className="text-sm text-gray-500">{caja.ubicacion}</p>
+              )}
+            </div>
+          ))}
+          {cajas.length === 0 && (
+            <p className="text-gray-400 col-span-3 text-center py-8">No hay cajas configuradas.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default GestionCaja;

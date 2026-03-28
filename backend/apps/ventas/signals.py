@@ -8,7 +8,7 @@ from django.dispatch import receiver
 from django.db import transaction
 from decimal import Decimal
 
-from .models import AplicacionPagosVentas, NotasCreditoCliente
+from .models import AplicacionPagosVentas, NotasCreditoCliente, Ventas
 
 
 @receiver(post_save, sender=AplicacionPagosVentas)
@@ -87,3 +87,67 @@ def aplicar_nota_credito_cliente(sender, instance, created, **kwargs):
             venta.estado_pago = "Parcial"
 
         venta.save(update_fields=["saldo_pendiente", "estado_pago"])
+
+
+@receiver(post_save, sender=Ventas)
+def emitir_documento_tributario(sender, instance, created, **kwargs):
+    """
+    Emite automáticamente un DocumentoTributario (factura) cuando se crea
+    una venta en estado pagado o contado.
+
+    - Busca el timbrado vigente.
+    - Asigna el próximo número secuencial disponible de forma atómica.
+    - Si no hay timbrado vigente, la venta igual se guarda (documento queda pendiente).
+    - También registra el movimiento en la caja activa si existe turno abierto.
+    """
+    if not created:
+        return
+    if instance.estado not in ("activa", "completada", "Completada", "activo"):
+        return
+
+    from datetime import date
+    from django.utils import timezone
+    from apps.contabilidad.models import Timbrados, DocumentosTributarios, CierresCaja, MovimientosCaja
+
+    hoy = date.today()
+    timbrado = Timbrados.objects.filter(
+        estado=True,
+        es_electronico=0,
+        fecha_inicio__lte=hoy,
+        fecha_fin__gte=hoy,
+    ).order_by("-fecha_inicio").first()
+
+    if timbrado:
+        try:
+            with transaction.atomic():
+                usados = DocumentosTributarios.objects.filter(
+                    nro_timbrado=timbrado
+                ).select_for_update().count()
+                nro = timbrado.nro_inicial + usados
+                if nro <= timbrado.nro_final:
+                    DocumentosTributarios.objects.create(
+                        nro_timbrado=timbrado,
+                        nro_secuencial=nro,
+                        tipo_documento="FACTURA",
+                        monto_total=instance.monto_total,
+                        fecha_emision=timezone.now(),
+                    )
+        except Exception:
+            # No interrumpir la venta si falla generación de factura
+            pass
+
+    # Registrar movimiento en caja activa
+    try:
+        turno = CierresCaja.objects.filter(estado="abierto").order_by("-fecha_hora_apertura").first()
+        if turno and instance.id_medio_pago_id:
+            MovimientosCaja.objects.create(
+                id_cierre=turno,
+                id_venta=instance,
+                tipo_movimiento="Venta",
+                monto=instance.monto_total,
+                fecha_movimiento=timezone.now(),
+                descripcion=f"Venta #{instance.nro_factura_venta}",
+                id_medio_pago=instance.id_medio_pago,
+            )
+    except Exception:
+        pass

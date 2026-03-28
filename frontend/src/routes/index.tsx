@@ -21,6 +21,8 @@ import GestionPermisos from '../pages/permisos';
 import { UserManagement } from '../pages/usuarios';
 import Categorias from '../pages/categorias';
 import Perfil from '../pages/Perfil';
+import GestionCaja from '../pages/caja/GestionCaja';
+import GestionTimbrado from '../pages/timbrado/GestionTimbrado';
 import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -188,6 +190,26 @@ const AppRoutes: React.FC = () => {
                   element={
                     <ProtectedRoute requiredRoles={['admin']}>
                       <GestionPermisos />
+                    </ProtectedRoute>
+                  } 
+                />
+
+                {/* Módulo de Caja - Admin, Gerente, Cajero */}
+                <Route 
+                  path="/caja" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'cajero']}>
+                      <GestionCaja />
+                    </ProtectedRoute>
+                  } 
+                />
+
+                {/* Módulo de Timbrado / Documentos Tributarios - Solo Admin */}
+                <Route 
+                  path="/timbrado" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <GestionTimbrado />
                     </ProtectedRoute>
                   } 
                 />

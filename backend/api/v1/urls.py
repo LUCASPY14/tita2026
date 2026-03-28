@@ -7,7 +7,11 @@ from rest_framework.routers import DefaultRouter
 # Import ViewSets
 from apps.clientes.views import ClientesViewSet, HijosViewSet, TiposClienteViewSet, GradosViewSet, RestriccionesHijosViewSet
 from apps.productos.views import ProductosViewSet, CategoriasViewSet, UnidadesMedidaViewSet, ListasPreciosViewSet, PreciosPorListaViewSet
-from apps.contabilidad.views import ImpuestosViewSet, DatosEmpresaViewSet, TimbradosViewSet, DocumentosTributariosViewSet
+from apps.contabilidad.views import (
+    ImpuestosViewSet, DatosEmpresaViewSet, TimbradosViewSet,
+    DocumentosTributariosViewSet, PuntosExpedicionViewSet,
+    CajasViewSet, CierresCajaViewSet, MovimientosCajaViewSet,
+)
 from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaViewSet, NotasCreditoClienteViewSet, PromocionesViewSet
 from apps.compras.views import ProveedoresViewSet, ComprasViewSet, DetallesCompraViewSet, PagosProveedoresViewSet, NotasCreditoProveedorViewSet
 from apps.core.views import TarjetasViewSet, CargasSaldoViewSet, ConsumosTarjetaViewSet, MediosPagoViewSet, ConfiguracionSistemaViewSet
@@ -42,7 +46,12 @@ router.register(r'precios-por-lista', PreciosPorListaViewSet)
 router.register(r'impuestos', ImpuestosViewSet, basename='impuestos')
 router.register(r'datos-empresa', DatosEmpresaViewSet, basename='datos-empresa')
 router.register(r'timbrados', TimbradosViewSet, basename='timbrados')
+router.register(r'puntos-expedicion', PuntosExpedicionViewSet, basename='puntos-expedicion')
 router.register(r'documentos-tributarios', DocumentosTributariosViewSet, basename='documentos-tributarios')
+# Caja
+router.register(r'cajas', CajasViewSet, basename='cajas')
+router.register(r'cierres-caja', CierresCajaViewSet, basename='cierres-caja')
+router.register(r'movimientos-caja', MovimientosCajaViewSet, basename='movimientos-caja')
 
 # Register Ventas ViewSets
 router.register(r'ventas', VentasViewSet)
