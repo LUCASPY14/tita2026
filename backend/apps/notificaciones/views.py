@@ -2,9 +2,12 @@
 Views para app de Notificaciones
 """
 
+import json
+import time
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.http import StreamingHttpResponse
 from django.utils import timezone
 from django.db.models import Q, Count
 from datetime import datetime, timedelta
@@ -133,6 +136,156 @@ class NotificacionesPortalViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:  # pragma: no cover
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["get"])
+    def stream(self, request):
+        """Endpoint SSE para notificaciones en tiempo real"""
+        id_usuario = request.query_params.get("id_usuario_portal")
+        if not id_usuario:
+            return Response(
+                {"error": "id_usuario_portal es requerido"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        def notification_stream():
+            """Generador de eventos SSE para notificaciones"""
+            # Headers SSE
+            yield "data: {\"type\": \"connected\", \"message\": \"Conectado al stream de notificaciones\"}\n\n"
+            
+            last_check = timezone.now()
+            
+            while True:
+                try:
+                    # Buscar notificaciones nuevas desde la última verificación
+                    nuevas_notificaciones = NotificacionesPortal.objects.filter(
+                        id_usuario_portal=id_usuario,
+                        fecha_envio__gt=last_check
+                    ).order_by('-fecha_envio')[:10]
+                    
+                    if nuevas_notificaciones:
+                        notifications_data = []
+                        for notif in nuevas_notificaciones:
+                            notifications_data.append({
+                                'id': notif.id_notificacion,
+                                'tipo': notif.tipo,
+                                'titulo': notif.titulo,
+                                'mensaje': notif.mensaje,
+                                'leida': bool(notif.leida),
+                                'fecha_envio': notif.fecha_envio.isoformat(),
+                                'prioridad': getattr(notif, 'prioridad', 'normal')
+                            })
+                        
+                        event_data = {
+                            'type': 'new_notifications',
+                            'count': len(notifications_data),
+                            'notifications': notifications_data
+                        }
+                        
+                        yield f"data: {json.dumps(event_data)}\n\n"
+                    
+                    # Enviar heartbeat cada 30 segundos
+                    heartbeat_data = {
+                        'type': 'heartbeat',
+                        'timestamp': timezone.now().isoformat()
+                    }
+                    yield f"data: {json.dumps(heartbeat_data)}\n\n"
+                    
+                    last_check = timezone.now()
+                    time.sleep(10)  # Verificar cada 10 segundos
+                    
+                except Exception as e:
+                    error_data = {
+                        'type': 'error',
+                        'message': str(e)
+                    }
+                    yield f"data: {json.dumps(error_data)}\n\n"
+                    break
+        
+        response = StreamingHttpResponse(
+            notification_stream(),
+            content_type='text/event-stream'
+        )
+        response['Cache-Control'] = 'no-cache'
+        response['Connection'] = 'keep-alive'
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Headers'] = 'Cache-Control'
+        
+        return response
+
+    @action(detail=False, methods=["get"])
+    def stream(self, request):
+        """Endpoint SSE para notificaciones en tiempo real"""
+        id_usuario = request.query_params.get("id_usuario_portal")
+        if not id_usuario:
+            return Response(
+                {"error": "id_usuario_portal es requerido"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        def notification_stream():
+            """Generador de eventos SSE para notificaciones"""
+            # Headers SSE
+            yield "data: {\"type\": \"connected\", \"message\": \"Conectado al stream de notificaciones\"}\n\n"
+            
+            last_check = timezone.now()
+            
+            while True:
+                try:
+                    # Buscar notificaciones nuevas desde la última verificación
+                    nuevas_notificaciones = NotificacionesPortal.objects.filter(
+                        id_usuario_portal=id_usuario,
+                        fecha_envio__gt=last_check
+                    ).order_by('-fecha_envio')[:10]
+                    
+                    if nuevas_notificaciones:
+                        notifications_data = []
+                        for notif in nuevas_notificaciones:
+                            notifications_data.append({
+                                'id': notif.id_notificacion,
+                                'tipo': notif.tipo,
+                                'titulo': notif.titulo,
+                                'mensaje': notif.mensaje,
+                                'leida': bool(notif.leida),
+                                'fecha_envio': notif.fecha_envio.isoformat(),
+                                'prioridad': getattr(notif, 'prioridad', 'normal')
+                            })
+                        
+                        event_data = {
+                            'type': 'new_notifications',
+                            'count': len(notifications_data),
+                            'notifications': notifications_data
+                        }
+                        
+                        yield f"data: {json.dumps(event_data)}\n\n"
+                    
+                    # Enviar heartbeat cada 30 segundos
+                    heartbeat_data = {
+                        'type': 'heartbeat',
+                        'timestamp': timezone.now().isoformat()
+                    }
+                    yield f"data: {json.dumps(heartbeat_data)}\n\n"
+                    
+                    last_check = timezone.now()
+                    time.sleep(10)  # Verificar cada 10 segundos
+                    
+                except Exception as e:
+                    error_data = {
+                        'type': 'error',
+                        'message': str(e)
+                    }
+                    yield f"data: {json.dumps(error_data)}\n\n"
+                    break
+        
+        response = StreamingHttpResponse(
+            notification_stream(),
+            content_type='text/event-stream'
+        )
+        response['Cache-Control'] = 'no-cache'
+        response['Connection'] = 'keep-alive'
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Headers'] = 'Cache-Control'
+        
+        return response
 
 
 class NotificacionesSaldoViewSet(viewsets.ReadOnlyModelViewSet):
