@@ -53,8 +53,15 @@ app.conf.beat_schedule = {
     'cierre-automatico-cajas': {
         'task': 'apps.ventas.tasks.cerrar_cajas_automatico',
         'schedule': crontab(minute=0),                  # Cada hora en punto
+    },    # ── Almuerzos ─────────────────────────────────────────────────
+    'generar-cuentas-almuerzos-mensuales': {
+        'task': 'apps.almuerzos.tasks.generar_cuentas_mensuales',
+        'schedule': crontab(hour=6, minute=0, day_of_month=1),  # Día 1 de cada mes 06:00
     },
-}
+    'alertar-cuentas-almuerzos-vencidas': {
+        'task': 'apps.almuerzos.tasks.alertar_cuentas_vencidas',
+        'schedule': crontab(hour=8, minute=0, day_of_month=10), # Día 10 de cada mes 08:00
+    },}
 
 app.conf.timezone = 'America/Asuncion'  # Paraguay timezone
 

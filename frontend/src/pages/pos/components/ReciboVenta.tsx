@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Printer, CheckCircle, Receipt } from 'lucide-react';
+import { X, Printer, CheckCircle, Receipt, FileText } from 'lucide-react';
 
 interface ItemRecibo {
   descripcion: string;
@@ -10,6 +10,7 @@ interface ItemRecibo {
 
 interface ReciboVentaProps {
   nroFactura?: number;
+  nroDocumentoTributario?: number | null;
   fecha: string;
   items: ItemRecibo[];
   total: number;
@@ -39,6 +40,7 @@ const METODO_LABELS: Record<string, string> = {
 
 const ReciboVenta: React.FC<ReciboVentaProps> = ({
   nroFactura,
+  nroDocumentoTributario,
   fecha,
   items,
   total,
@@ -136,6 +138,12 @@ const ReciboVenta: React.FC<ReciboVentaProps> = ({
               <div className="fila negrita">
                 <span>Factura N°:</span>
                 <span>{nroFactura}</span>
+              </div>
+            )}
+            {nroDocumentoTributario && (
+              <div className="fila" style={{ fontSize: '10px', color: '#555' }}>
+                <span>Doc. Tributario N°:</span>
+                <span>{nroDocumentoTributario}</span>
               </div>
             )}
             {clienteNombre && (

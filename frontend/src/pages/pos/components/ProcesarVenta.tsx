@@ -772,6 +772,7 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
           montoExenta={ventaRealizada.monto_exenta}
           montoGravada10={ventaRealizada.monto_gravada_10}
           montoGravada5={ventaRealizada.monto_gravada_5}
+          nroDocumentoTributario={(ventaRealizada as any).nro_documento_tributario ?? null}
           onReciboCobro={handleImprimirReciboCobro}
           onCerrar={() => {
             setMostrarRecibo(false);

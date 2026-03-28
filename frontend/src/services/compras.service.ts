@@ -81,6 +81,23 @@ export const comprasService = {
     return response.data;
   },
 
+  registrarPagoProveedor: async (data: {
+    id_proveedor: number;
+    monto: number;
+    id_medio_pago: number;
+    nro_comprobante?: string;
+    observaciones?: string;
+  }): Promise<unknown> => {
+    const response = await api.post('/pagos-proveedores/', data);
+    return response.data;
+  },
+
+  getMediosPago: async (): Promise<{ id_medio_pago: number; nombre: string }[]> => {
+    const response = await api.get('/medios-pago/');
+    const data = response.data;
+    return Array.isArray(data) ? data : data.results || [];
+  },
+
   // === COMPRAS ===
   
   getCompras: async (params?: CompraParams): Promise<PaginatedResponse<Compra>> => {

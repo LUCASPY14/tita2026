@@ -62,8 +62,19 @@ PERIODIC_TASKS = [
         'task': 'apps.ventas.tasks.cerrar_cajas_automatico',
         'crontab': dict(minute='0'),
         'description': 'Cierre automático de cajas abiertas >24h – cada hora',
+    },    # ── Almuerzos ─────────────────────────────────────────────────
+    {
+        'name': 'generar-cuentas-almuerzos-mensuales',
+        'task': 'apps.almuerzos.tasks.generar_cuentas_mensuales',
+        'crontab': dict(hour='6', minute='0', day_of_month='1'),
+        'description': 'Genera cuentas mensuales de almuerzos – día 1 de cada mes 06:00',
     },
-]
+    {
+        'name': 'alertar-cuentas-almuerzos-vencidas',
+        'task': 'apps.almuerzos.tasks.alertar_cuentas_vencidas',
+        'crontab': dict(hour='8', minute='0', day_of_month='10'),
+        'description': 'Alerta deudas de almuerzos vencidas – día 10 de cada mes 08:00',
+    },]
 
 
 class Command(BaseCommand):

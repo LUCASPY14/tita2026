@@ -131,6 +131,8 @@ def emitir_documento_tributario(sender, instance, created, **kwargs):
                         tipo_documento="FACTURA",
                         monto_total=instance.monto_total,
                         fecha_emision=timezone.now(),
+                        # Referencia cruzada: permite recuperar el doc desde la venta
+                        nro_preimpreso_interno=str(instance.pk),
                     )
         except Exception:
             # No interrumpir la venta si falla generación de factura

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Edit, Trash2, Building2, Phone, Mail, MapPin, CheckCircle, XCircle, X, Save } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Building2, Phone, Mail, MapPin, CheckCircle, XCircle, X, Save, TrendingDown, DollarSign, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, Button, Badge, Spinner } from '../../components/common';
 import { comprasService, ProveedorData, ProveedorParams } from '../../services/compras.service';
-import type { Proveedor } from '../../types';
+import type { Proveedor, CuentaCorrienteProveedor } from '../../types';
 import toast from 'react-hot-toast';
 
 // ── Modal de formulario ────────────────────────────────────────────────────────
@@ -239,6 +239,221 @@ const ProveedorModal: React.FC<ModalProps> = ({ proveedor, onClose, onSave }) =>
   );
 };
 
+// ── Modal Cuenta Corriente Proveedor ──────────────────────────────────────────
+
+interface CuentaCorrienteModalProps {
+  proveedor: Proveedor;
+  onClose: () => void;
+}
+
+const CuentaCorrienteModal: React.FC<CuentaCorrienteModalProps> = ({ proveedor, onClose }) => {
+  const [cuenta, setCuenta] = useState<CuentaCorrienteProveedor | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expandidas, setExpandidas] = useState(false);
+  const [pagando, setPagando] = useState(false);
+  const [mediosPago, setMediosPago] = useState<{ id_medio_pago: number; nombre: string }[]>([]);
+  const [formPago, setFormPago] = useState({ monto: '', id_medio_pago: '', nro_comprobante: '', observaciones: '' });
+
+  useEffect(() => {
+    cargar();
+  }, [proveedor.id_proveedor]);
+
+  const cargar = async () => {
+    setLoading(true);
+    try {
+      const [cuentaData, medios] = await Promise.all([
+        comprasService.getCuentaCorrienteProveedor(proveedor.id_proveedor),
+        comprasService.getMediosPago(),
+      ]);
+      setCuenta(cuentaData);
+      setMediosPago(medios);
+      if (medios.length > 0) setFormPago(f => ({ ...f, id_medio_pago: String(medios[0].id_medio_pago) }));
+    } catch {
+      toast.error('Error al cargar cuenta corriente');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePagar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const monto = Number(formPago.monto);
+    if (!monto || monto <= 0) { toast.error('Ingresá un monto válido'); return; }
+    if (!formPago.id_medio_pago) { toast.error('Seleccioná un medio de pago'); return; }
+    setPagando(true);
+    try {
+      await comprasService.registrarPagoProveedor({
+        id_proveedor: proveedor.id_proveedor,
+        monto,
+        id_medio_pago: Number(formPago.id_medio_pago),
+        nro_comprobante: formPago.nro_comprobante || undefined,
+        observaciones: formPago.observaciones || undefined,
+      });
+      toast.success('Pago registrado correctamente');
+      setFormPago(f => ({ ...f, monto: '', nro_comprobante: '', observaciones: '' }));
+      await cargar();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Error al registrar pago');
+    } finally {
+      setPagando(false);
+    }
+  };
+
+  const fmt = (v: unknown) => `Gs. ${Number(v).toLocaleString('es-PY')}`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+      <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl my-4">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+              <TrendingDown className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Cuenta Corriente</h3>
+              <p className="text-sm text-gray-500">{proveedor.razon_social} · RUC {proveedor.ruc}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {loading ? (
+            <div className="flex justify-center py-10"><Spinner size="lg" /></div>
+          ) : !cuenta ? (
+            <p className="text-center text-gray-500 py-8">No se pudo cargar la cuenta</p>
+          ) : (
+            <>
+              {/* Resumen */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-lg bg-blue-50 p-4 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Total comprado</p>
+                  <p className="text-lg font-bold text-blue-700">{fmt(cuenta.total_compras)}</p>
+                  <p className="text-xs text-gray-400">{cuenta.cantidad_compras} compra(s)</p>
+                </div>
+                <div className="rounded-lg bg-green-50 p-4 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Total pagado</p>
+                  <p className="text-lg font-bold text-green-700">{fmt(cuenta.total_pagado)}</p>
+                </div>
+                <div className={`rounded-lg p-4 text-center ${Number(cuenta.saldo_pendiente) > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                  <p className="text-xs text-gray-500 mb-1">Saldo pendiente</p>
+                  <p className={`text-lg font-bold ${Number(cuenta.saldo_pendiente) > 0 ? 'text-red-700' : 'text-gray-700'}`}>
+                    {fmt(cuenta.saldo_pendiente)}
+                  </p>
+                  <p className="text-xs text-gray-400">{cuenta.cantidad_pendientes} pendiente(s)</p>
+                </div>
+              </div>
+
+              {/* Alerta saldo */}
+              {Number(cuenta.saldo_pendiente) > 0 && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span>Este proveedor tiene saldo pendiente. Podés registrar un pago abajo.</span>
+                </div>
+              )}
+
+              {/* Compras con deuda */}
+              {cuenta.compras_pendientes && cuenta.compras_pendientes.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setExpandidas(!expandidas)}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    {expandidas ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    Ver compras con saldo pendiente ({cuenta.compras_pendientes.length})
+                  </button>
+                  {expandidas && (
+                    <div className="mt-3 overflow-x-auto rounded-lg border">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                          <tr>
+                            <th className="px-4 py-2 text-left">Factura</th>
+                            <th className="px-4 py-2 text-right">Total</th>
+                            <th className="px-4 py-2 text-right">Saldo</th>
+                            <th className="px-4 py-2 text-right">Días</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {cuenta.compras_pendientes.map((c: any) => (
+                            <tr key={c.id_compra} className="hover:bg-gray-50">
+                              <td className="px-4 py-2 font-mono">{c.nro_factura || `#${c.id_compra}`}</td>
+                              <td className="px-4 py-2 text-right">{fmt(c.monto_total)}</td>
+                              <td className="px-4 py-2 text-right text-red-600 font-medium">{fmt(c.saldo_pendiente)}</td>
+                              <td className="px-4 py-2 text-right text-gray-500">{c.dias_vencimiento ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Formulario pago */}
+              {Number(cuenta.saldo_pendiente) > 0 && (
+                <form onSubmit={handlePagar} className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-3">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold text-green-800">
+                    <DollarSign className="h-4 w-4" />
+                    Registrar pago
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">Monto <span className="text-red-500">*</span></label>
+                      <input
+                        type="number"
+                        value={formPago.monto}
+                        onChange={e => setFormPago(f => ({ ...f, monto: e.target.value }))}
+                        max={Number(cuenta.saldo_pendiente)}
+                        placeholder={`Máx. ${fmt(cuenta.saldo_pendiente)}`}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">Medio de pago</label>
+                      <select
+                        value={formPago.id_medio_pago}
+                        onChange={e => setFormPago(f => ({ ...f, id_medio_pago: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                      >
+                        {mediosPago.map(m => <option key={m.id_medio_pago} value={m.id_medio_pago}>{m.nombre}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">N° comprobante</label>
+                      <input
+                        type="text"
+                        value={formPago.nro_comprobante}
+                        onChange={e => setFormPago(f => ({ ...f, nro_comprobante: e.target.value }))}
+                        placeholder="Opcional"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">Observaciones</label>
+                      <input
+                        type="text"
+                        value={formPago.observaciones}
+                        onChange={e => setFormPago(f => ({ ...f, observaciones: e.target.value }))}
+                        placeholder="Opcional"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" disabled={pagando} leftIcon={pagando ? <Spinner size="sm" /> : <DollarSign className="h-4 w-4" />}>
+                    {pagando ? 'Registrando...' : 'Confirmar Pago'}
+                  </Button>
+                </form>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Página principal ───────────────────────────────────────────────────────────
 
 const Proveedores: React.FC = () => {
@@ -248,6 +463,7 @@ const Proveedores: React.FC = () => {
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'inactivos'>('activos');
   const [modalOpen, setModalOpen] = useState(false);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState<Proveedor | null>(null);
+  const [cuentaCorrienteProveedor, setCuentaCorrienteProveedor] = useState<Proveedor | null>(null);
   const [totalCount, setTotalCount] = useState(0);
 
   const cargarProveedores = useCallback(async () => {
@@ -413,6 +629,13 @@ const Proveedores: React.FC = () => {
                   {/* Acciones */}
                   <div className="flex flex-shrink-0 items-center gap-2">
                     <button
+                      onClick={() => setCuentaCorrienteProveedor(p)}
+                      className="flex items-center gap-1 rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors"
+                    >
+                      <TrendingDown className="h-3.5 w-3.5" />
+                      Cuenta
+                    </button>
+                    <button
                       onClick={() => handleEditar(p)}
                       className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                     >
@@ -454,6 +677,13 @@ const Proveedores: React.FC = () => {
           proveedor={proveedorSeleccionado}
           onClose={() => { setModalOpen(false); setProveedorSeleccionado(null); }}
           onSave={() => { setModalOpen(false); setProveedorSeleccionado(null); cargarProveedores(); }}
+        />
+      )}
+
+      {cuentaCorrienteProveedor && (
+        <CuentaCorrienteModal
+          proveedor={cuentaCorrienteProveedor}
+          onClose={() => setCuentaCorrienteProveedor(null)}
         />
       )}
     </div>

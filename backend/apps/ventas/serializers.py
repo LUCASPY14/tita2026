@@ -38,13 +38,27 @@ class VentasSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.CharField(source="id_cliente.nombres", read_only=True)
     cliente_apellido = serializers.CharField(source="id_cliente.apellidos", read_only=True)
     cajero_nombre = serializers.CharField(source="id_empleado_cajero.nombre", read_only=True)
-    
+
+    # Número de documento tributario (factura) auto-generado por signal
+    nro_documento_tributario = serializers.SerializerMethodField(read_only=True)
+
     # Campo write-only para recibir array de pagos en POST
     pagos_data = PagoDataSerializer(many=True, required=False, write_only=True)
 
     class Meta:
         model = Ventas
         fields = "__all__"
+
+    def get_nro_documento_tributario(self, obj):
+        """Retorna el nro_secuencial del DocumentoTributario asociado a esta venta."""
+        try:
+            from apps.contabilidad.models import DocumentosTributarios
+            doc = DocumentosTributarios.objects.filter(
+                nro_preimpreso_interno=str(obj.pk)
+            ).order_by("-id_documento").first()
+            return doc.nro_secuencial if doc else None
+        except Exception:
+            return None
     
     def create(self, validated_data):
         """
