@@ -1,0 +1,19 @@
+{
+  "name": "cantina-tita-backend",
+  "version": "1.0.0",
+  "description": "Push notification service for Cantina Tita",
+  "main": "push-notification-service.js",
+  "scripts": {
+    "start": "node push-notification-service.js",
+    "test": "node test-push-service.js",
+    "server": "node test-push-service.js --server"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {},
+  "keywords": ["push-notifications", "pwa", "vapid"],
+  "author": "Cantina Tita",
+  "license": "ISC"
+}
