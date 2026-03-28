@@ -25,9 +25,9 @@ const CatalogoProductos: React.FC<CatalogoProductosProps> = ({ onAgregarProducto
     cargarCategorias();
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarProductos();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busquedaDebounced, categoriaSeleccionada]);
 
   const cargarCategorias = async () => {

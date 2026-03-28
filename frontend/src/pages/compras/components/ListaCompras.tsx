@@ -24,9 +24,9 @@ const ListaCompras: React.FC<ListaComprasProps> = ({ onEditar, onVerDetalle }) =
     cargarProveedores();
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarCompras();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busqueda, filtroEstado, filtroProveedor, paginaActual]);
 
   const cargarProveedores = async () => {

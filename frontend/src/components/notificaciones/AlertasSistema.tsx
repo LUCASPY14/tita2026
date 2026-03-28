@@ -34,6 +34,7 @@ const AlertasSistemaComponent: React.FC<AlertasSistemaProps> = ({
 
   useEffect(() => {
     cargarAlertas();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroEstado]);
 
   const cargarAlertas = async () => {

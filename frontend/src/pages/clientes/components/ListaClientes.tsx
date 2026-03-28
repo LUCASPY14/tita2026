@@ -22,9 +22,9 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
 
   const busquedaDebounced = useDebounce(busqueda);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarClientes();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busquedaDebounced, filtroActivo, paginaActual]);
 
   const cargarClientes = async () => {

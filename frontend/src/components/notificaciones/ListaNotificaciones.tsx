@@ -34,6 +34,7 @@ const ListaNotificaciones: React.FC<ListaNotificacionesProps> = ({
 
   useEffect(() => {
     cargarNotificaciones();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroLeida]);
 
   const cargarNotificaciones = async () => {

@@ -23,6 +23,7 @@ export default function DashboardRecargas() {
 
   useEffect(() => {
     cargarDashboard();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diasSeleccionados]);
 
   const cargarDashboard = async () => {

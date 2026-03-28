@@ -24,11 +24,11 @@ const GestionSuscripciones: React.FC = () => {
   });
   const [guardando, setGuardando] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarSuscripciones();
     cargarPlanes();
     cargarHijos();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroEstado]);
 
   const cargarSuscripciones = async () => {

@@ -26,12 +26,14 @@ export default function DashboardVentas() {
 
   useEffect(() => {
     cargarDashboard();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diasSeleccionados]);
 
   // Auto-refresh cada 5 minutos
   useEffect(() => {
     intervalRef.current = setInterval(() => cargarDashboard(true), 5 * 60 * 1000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diasSeleccionados]);
 
   const cargarDashboard = async (silencioso = false) => {

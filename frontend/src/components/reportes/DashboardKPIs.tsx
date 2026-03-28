@@ -35,6 +35,7 @@ export default function DashboardKPIs() {
 
   useEffect(() => {
     cargarKPIs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fechaSeleccionada]);
 
   // Auto-refresh cada 5 minutos sólo si es el día actual
@@ -49,6 +50,7 @@ export default function DashboardKPIs() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fechaSeleccionada]);
 
   const cargarKPIs = async (silencioso = false) => {

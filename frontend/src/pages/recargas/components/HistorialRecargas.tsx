@@ -15,6 +15,7 @@ const HistorialRecargas: React.FC<HistorialRecargasProps> = ({ tarjetaNumero }) 
 
   useEffect(() => {
     cargarHistorial();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tarjetaNumero]);
 
   const cargarHistorial = async () => {

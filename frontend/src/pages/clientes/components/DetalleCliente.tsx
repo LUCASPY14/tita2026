@@ -24,9 +24,9 @@ const DetalleCliente: React.FC<DetalleClienteProps> = ({ cliente, onEditar }) =>
   const [cuentaCorriente, setCuentaCorriente] = useState<CuentaCorriente | null>(null);
   const [cargandoCuenta, setCargandoCuenta] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarCuentaCorriente();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cliente.id_cliente]);
 
   const cargarCuentaCorriente = async () => {

@@ -21,9 +21,9 @@ const DetalleProducto: React.FC<DetalleProductoProps> = ({ producto, onEditar, o
   const [formNuevo, setFormNuevo] = useState({ id_lista: '', precio_unitario: '' });
   const [guardandoNuevo, setGuardandoNuevo] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarDatos();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [producto.id_producto]);
 
   const cargarDatos = async () => {

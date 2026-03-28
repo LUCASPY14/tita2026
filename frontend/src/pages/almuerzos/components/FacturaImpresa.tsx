@@ -1,4 +1,4 @@
-﻿/**
+/**
  * FacturaImpresa - Factura fisica timbrada (documento tributario formal).
  * Formato optimizado para impresora termica 80mm.
  * Requiere timbrado vigente configurado en el sistema.

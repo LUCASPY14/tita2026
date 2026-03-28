@@ -20,9 +20,9 @@ const ListaCategorias: React.FC<ListaCategoriasProps> = ({ onEditar, actualizarC
 
   const busquedaDebounced = useDebounce(busqueda);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarCategorias();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busquedaDebounced, filtroActivo, actualizarClave]);
 
   const cargarCategorias = async () => {

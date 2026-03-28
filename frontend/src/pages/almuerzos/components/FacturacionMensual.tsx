@@ -70,6 +70,7 @@ const FacturacionMensual: React.FC = () => {
   useEffect(() => {
     setPagina(1);
     cargar(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anio, mes, estado]);
 
   const totalPaginas = Math.ceil(totalRegistros / PAGE_SIZE);

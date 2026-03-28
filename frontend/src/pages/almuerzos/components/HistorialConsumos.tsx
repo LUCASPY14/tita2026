@@ -20,6 +20,7 @@ const HistorialConsumos: React.FC = () => {
 
   useEffect(() => {
     cargarRegistros();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtros, paginaActual]);
 
   const cargarRegistros = async () => {

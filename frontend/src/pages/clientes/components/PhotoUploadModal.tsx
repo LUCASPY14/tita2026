@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Trash2, AlertCircle, CheckCircle, Camera, RefreshCw } from 'lucide-react';
 import { Button, Avatar, Spinner, Modal } from '../../../components/common';
 import api from '../../../services/api';

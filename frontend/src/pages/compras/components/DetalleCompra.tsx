@@ -18,6 +18,7 @@ const DetalleCompra: React.FC<DetalleCompraProps> = ({ compra, onEditar, onVolve
     if (compra.id_proveedor) {
       cargarCuentaCorriente();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compra.id_proveedor]);
 
   const cargarCuentaCorriente = async () => {

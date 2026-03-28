@@ -262,9 +262,11 @@ const NotasCredito: React.FC = () => {
     }
   }, [busquedaVenta]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { cargarNotas(paginaNotas); }, [paginaNotas, estadoFiltro]);
   useEffect(() => {
     if (tabActiva === 'nueva') cargarVentas();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabActiva, busquedaVenta]);
 
   const totalPaginasNotas = Math.ceil(totalNotas / PAGE_SIZE);

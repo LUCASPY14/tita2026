@@ -30,6 +30,7 @@ const Preferencias: React.FC<PreferenciasProps> = ({ idUsuario }) => {
 
   useEffect(() => {
     cargarPreferencias();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cargarPreferencias = async () => {
