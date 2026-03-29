@@ -138,3 +138,18 @@ backend/gunicorn.ctl
 # Cypress test artifacts
 frontend/cypress/screenshots/
 frontend/cypress/videos/
+
+# Test run output files (backend)
+backend/*_result.txt
+backend/*_results.txt
+backend/fresh_*.txt
+backend/integration_*.txt
+backend/alm_*.txt
+backend/pv_*.txt
+
+# Test run output files (frontend / raíz)
+frontend/*_results.txt
+frontend/*_result.txt
+frontend/alm_*.txt
+frontend/almuerzos_*.txt
+frontend/pv_*.txt
