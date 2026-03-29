@@ -74,6 +74,13 @@ PERIODIC_TASKS = [
         'task': 'apps.almuerzos.tasks.alertar_cuentas_vencidas',
         'crontab': dict(hour='8', minute='0', day_of_month='10'),
         'description': 'Alerta deudas de almuerzos vencidas – día 10 de cada mes 08:00',
+    },
+    # ── Reportes / KPIs ──────────────────────────────────────────────────────
+    {
+        'name': 'calcular-kpis-diarios',
+        'task': 'apps.reportes.tasks.calcular_y_guardar_kpis_diarios',
+        'crontab': dict(hour='23', minute='45'),
+        'description': 'Calcula y guarda KPIs del día – todos los días 23:45',
     },]
 
 

@@ -25,7 +25,7 @@ def generar_cuentas_mensuales():
 
     suscripciones_activas = SuscripcionesAlmuerzo.objects.filter(
         estado='activo'
-    ).select_related('id_hijo', 'id_plan')
+    ).select_related('id_hijo', 'id_plan_almuerzo')
 
     creadas = 0
     for suscripcion in suscripciones_activas:

@@ -15,7 +15,8 @@ except ImportError:
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-cantina-tita-2026-change-this-in-production'
+# In production, set the SECRET_KEY env var to a strong random value.
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-cantina-tita-2026-change-this-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

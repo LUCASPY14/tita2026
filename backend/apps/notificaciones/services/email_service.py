@@ -301,6 +301,127 @@ Gracias por confiar en Cantina Tita.
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    def enviar_resumen_mensual_almuerzos(
+        email_destinatario: str,
+        nombre_destinatario: str,
+        nombre_hijo: str,
+        mes: int,
+        anio: int,
+        monto_total: Decimal,
+        monto_pagado: Decimal,
+        estado: str,
+    ) -> Dict:
+        """
+        Envía el resumen mensual de almuerzos a un apoderado.
+
+        Args:
+            email_destinatario: Email del apoderado
+            nombre_destinatario: Nombre del apoderado
+            nombre_hijo: Nombre del estudiante
+            mes: Número de mes (1-12)
+            anio: Año
+            monto_total: Monto total de la cuenta
+            monto_pagado: Monto abonado
+            estado: Estado de la cuenta ('pendiente', 'pagado', 'vencido')
+
+        Returns:
+            {'success': bool, 'id_email': int}
+        """
+        import calendar
+        nombre_mes = calendar.month_name[mes]
+        saldo = monto_total - monto_pagado
+        estado_label = {'pendiente': 'Pendiente', 'pagado': 'Pagado', 'vencido': '⚠️ Vencido'}.get(
+            estado, estado.capitalize()
+        )
+
+        asunto = f"Resumen de Almuerzos {nombre_mes} {anio} — {nombre_hijo}"
+
+        cuerpo_html = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #f59e0b; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .content {{ padding: 20px; background-color: #fffbeb; }}
+                .table {{ width: 100%; border-collapse: collapse; margin-top: 12px; }}
+                .table th, .table td {{ padding: 10px 14px; text-align: left; border-bottom: 1px solid #fde68a; }}
+                .table th {{ background-color: #fef3c7; font-weight: bold; }}
+                .saldo {{ font-size: 1.2em; font-weight: bold; color: {'#ef4444' if saldo > 0 else '#22c55e'}; }}
+                .footer {{ text-align: center; padding: 16px; color: #999; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header"><h2>🍽️ Resumen de Almuerzos — {nombre_mes} {anio}</h2></div>
+                <div class="content">
+                    <p>Estimado/a <strong>{nombre_destinatario}</strong>,</p>
+                    <p>A continuación le presentamos el resumen de la cuenta de almuerzos
+                       de <strong>{nombre_hijo}</strong> correspondiente a {nombre_mes} {anio}:</p>
+                    <table class="table">
+                        <tr><th>Concepto</th><th>Monto</th></tr>
+                        <tr><td>Total del mes</td><td>₲{monto_total:,.0f}</td></tr>
+                        <tr><td>Pagado</td><td>₲{monto_pagado:,.0f}</td></tr>
+                        <tr><td><strong>Saldo pendiente</strong></td>
+                            <td class="saldo">₲{saldo:,.0f}</td></tr>
+                        <tr><td>Estado</td><td>{estado_label}</td></tr>
+                    </table>
+                    {'<p><strong>Por favor regularice el saldo lo antes posible.</strong></p>' if saldo > 0 else '<p>¡Gracias por mantener la cuenta al día!</p>'}
+                </div>
+                <div class="footer">
+                    <p>Cantina Tita — Sistema de Gestión</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        cuerpo_texto = (
+            f"RESUMEN DE ALMUERZOS — {nombre_mes.upper()} {anio}\n\n"
+            f"Estimado/a {nombre_destinatario},\n\n"
+            f"Estudiante : {nombre_hijo}\n"
+            f"Total mes  : ₲{monto_total:,.0f}\n"
+            f"Pagado     : ₲{monto_pagado:,.0f}\n"
+            f"Saldo      : ₲{saldo:,.0f}\n"
+            f"Estado     : {estado_label}\n\n"
+            f"Cantina Tita — Sistema de Gestión"
+        )
+
+        try:
+            email_msg = EmailMultiAlternatives(
+                subject=asunto,
+                body=cuerpo_texto,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[email_destinatario],
+            )
+            email_msg.attach_alternative(cuerpo_html, "text/html")
+            email_msg.send(fail_silently=False)
+
+            email_enviado = EmailsEnviados.objects.create(
+                email_destinatario=email_destinatario,
+                nombre_destinatario=nombre_destinatario,
+                asunto=asunto,
+                cuerpo=cuerpo_texto,
+                estado="enviado",
+                fecha_envio=timezone.now(),
+            )
+
+            logger.info(f"Resumen mensual almuerzos enviado a {email_destinatario} ({mes}/{anio})")
+            return {"success": True, "id_email": email_enviado.id_email}
+
+        except Exception as e:
+            logger.error(f"Error enviando resumen mensual almuerzos: {str(e)}")
+            EmailsEnviados.objects.create(
+                email_destinatario=email_destinatario,
+                nombre_destinatario=nombre_destinatario,
+                asunto=asunto,
+                cuerpo=f"Error: {str(e)}",
+                estado="error",
+                fecha_envio=timezone.now(),
+            )
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
     def enviar_email_generico(
         email_destinatario: str,
         nombre_destinatario: str,

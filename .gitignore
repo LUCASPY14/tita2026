@@ -134,3 +134,7 @@ backend/coverage_final.txt
 backend/fresh_coverage.txt
 backend/coverage.json
 backend/gunicorn.ctl
+
+# Cypress test artifacts
+frontend/cypress/screenshots/
+frontend/cypress/videos/
