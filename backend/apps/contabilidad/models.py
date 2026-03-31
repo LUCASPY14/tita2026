@@ -145,7 +145,7 @@ class DocumentosTributarios(models.Model):
     fecha_emision = models.DateTimeField()
     monto_total = models.DecimalField(max_digits=12, decimal_places=2)
     nro_timbrado = models.ForeignKey("Timbrados", models.DO_NOTHING, db_column="nro_timbrado")
-    tipo_documento = models.CharField(max_length=11)
+    tipo_documento = models.CharField(max_length=20, default='Factura')
     nro_preimpreso_interno = models.CharField(
         max_length=20,
         blank=True,
