@@ -277,9 +277,23 @@ interface ModalImprimirProps {
 }
 
 const ModalImprimir: React.FC<ModalImprimirProps> = ({ doc, onClose }) => {
-  const handleImprimir = () => {
-    const url = facturacionService.getImprimirUrl(doc.id_documento);
-    window.open(url, '_blank', 'noopener,noreferrer');
+  const [printing, setPrinting] = useState(false);
+
+  const handleImprimir = async () => {
+    setPrinting(true);
+    try {
+      const texto = await facturacionService.fetchTextoImpresion(doc.id_documento);
+      const blob = new Blob([texto], { type: 'text/plain; charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank', 'noopener,noreferrer');
+      // Revocar el object URL después de que la ventana lo cargue
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      if (!win) toast.error('El navegador bloqueó la ventana emergente. Permitila e intentá de nuevo.');
+    } catch {
+      toast.error('Error al obtener el texto de impresión.');
+    } finally {
+      setPrinting(false);
+    }
   };
 
   return (
@@ -304,11 +318,13 @@ const ModalImprimir: React.FC<ModalImprimirProps> = ({ doc, onClose }) => {
           </button>
           <button
             onClick={handleImprimir}
+            disabled={printing}
             className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-lg font-semibold
-                       hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                       hover:bg-gray-800 transition-colors flex items-center justify-center gap-2
+                       disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Printer className="w-4 h-4" />
-            Imprimir
+            {printing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+            {printing ? 'Generando...' : 'Imprimir'}
           </button>
         </div>
       </div>

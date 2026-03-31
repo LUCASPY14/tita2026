@@ -52,9 +52,11 @@ const facturacionService = {
   emitir: (dto: EmitirFacturaDto): Promise<DocumentoEmitido> =>
     api.post('/facturacion/emitir/', dto).then((r) => r.data),
 
-  /** URL del endpoint de impresión para abrir en nueva pestaña. */
-  getImprimirUrl: (idDocumento: number): string =>
-    `${api.defaults.baseURL}/facturacion/${idDocumento}/imprimir/`,
+  /** Obtiene el texto de impresión (80 col) con autenticación y lo abre como Blob. */
+  fetchTextoImpresion: (idDocumento: number): Promise<string> =>
+    api
+      .get(`/facturacion/${idDocumento}/imprimir/`, { responseType: 'text' })
+      .then((r) => r.data as string),
 
   /** Anula una factura y devuelve los items a la cola. */
   anular: (idDocumento: number): Promise<void> =>
