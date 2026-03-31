@@ -87,8 +87,8 @@ class FacturacionService:
                 id_documento__isnull=True,
                 monto_pagado__gt=0,
             )
-            .select_related("id_hijo__id_cliente")
-            .order_by("id_hijo__id_cliente", "anio", "mes")
+            .select_related("id_hijo__id_cliente_responsable")
+            .order_by("id_hijo__id_cliente_responsable", "anio", "mes")
         )
 
         clientes: dict = {}
@@ -108,9 +108,9 @@ class FacturacionService:
 
         for cuenta in almuerzos_qs:
             hijo = cuenta.id_hijo
-            cid = hijo.id_cliente_id
+            cid = hijo.id_cliente_responsable_id
             if cid not in clientes:
-                clientes[cid] = _init_cliente(hijo.id_cliente)
+                clientes[cid] = _init_cliente(hijo.id_cliente_responsable)
             desc = (
                 f"Almuerzos {MESES_CORTO[cuenta.mes]} {cuenta.anio}"
                 f" – {hijo.nombre} {hijo.apellido}"
