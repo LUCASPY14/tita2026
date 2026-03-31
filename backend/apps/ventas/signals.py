@@ -140,7 +140,17 @@ def emitir_documento_tributario(sender, instance, created, **kwargs):
 
     # Registrar movimiento en caja activa
     try:
-        turno = CierresCaja.objects.filter(estado="abierto").order_by("-fecha_hora_apertura").first()
+        # Filtrar por la caja específica que procesó esta venta para evitar
+        # asignar el movimiento al turno equivocado cuando hay múltiples cajas abiertas
+        if instance.id_caja_id:
+            turno = CierresCaja.objects.filter(
+                estado="abierto",
+                id_caja_id=instance.id_caja_id,
+            ).order_by("-fecha_hora_apertura").first()
+        else:
+            turno = CierresCaja.objects.filter(
+                estado="abierto"
+            ).order_by("-fecha_hora_apertura").first()
         if turno and instance.id_medio_pago_id:
             MovimientosCaja.objects.create(
                 id_cierre=turno,

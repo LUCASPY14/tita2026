@@ -191,22 +191,10 @@ class ComisionesBancardTest(TestCase):
         self.assertEqual(pago.id_medio_pago, self.debito)
         self.assertEqual(pago.estado, "confirmado")
 
-        # Verificar MovimientosCaja (2 movimientos)
+        # MovimientosCaja ya NO los crea _registrar_pago_con_comision directamente;
+        # los crea la señal post_save de Ventas (cuando hay turno abierto en la caja).
         movimientos = MovimientosCaja.objects.filter(id_venta=venta)
-        self.assertEqual(movimientos.count(), 2)
-
-        # Movimiento 1: Venta productos
-        mov_productos = movimientos.filter(monto__gt=0).first()
-        self.assertEqual(mov_productos.monto, Decimal("10000.00"))
-        self.assertEqual(mov_productos.monto_comision, Decimal("0.00"))
-        self.assertIn("Productos", mov_productos.descripcion)
-
-        # Movimiento 2: Recargo POS
-        mov_comision = movimientos.filter(monto_comision__gt=0).first()
-        self.assertEqual(mov_comision.monto, Decimal("0.00"))
-        self.assertEqual(mov_comision.monto_comision, Decimal("340.00"))
-        self.assertIn("Recargo POS", mov_comision.descripcion)
-        self.assertIn("3.4", mov_comision.descripcion)
+        self.assertEqual(movimientos.count(), 0)
 
     def test_registro_pago_con_comision_credito(self):
         """Test: Registro completo de pago con comisión crédito"""
@@ -384,9 +372,7 @@ class IntegracionComisionesTest(TestCase):
         self.assertEqual(pago.monto_comision, Decimal("510.00"))  # 15000 * 3.4%
         self.assertEqual(pago.total_cobrado, Decimal("15510.00"))
 
-        # Verificar movimientos de caja
+        # MovimientosCaja los crea la señal post_save de Ventas (cuando hay turno abierto).
+        # Sin turno abierto en el test → 0 movimientos desde esta llamada directa.
         movimientos = MovimientosCaja.objects.filter(id_venta=venta)
-        self.assertEqual(movimientos.count(), 2)
-
-        total_ingresos = sum([m.monto + m.monto_comision for m in movimientos])
-        self.assertEqual(total_ingresos, Decimal("15510.00"))
+        self.assertEqual(movimientos.count(), 0)

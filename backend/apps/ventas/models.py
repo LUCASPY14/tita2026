@@ -160,6 +160,15 @@ class Ventas(models.Model):
         null=True,
         related_name="ventas",
     )
+    id_caja = models.ForeignKey(
+        "contabilidad.Cajas",
+        models.SET_NULL,
+        db_column="id_caja",
+        blank=True,
+        null=True,
+        related_name="ventas",
+        help_text="Caja (terminal POS) que procesó esta venta",
+    )
 
     objects = VentasManager()
 

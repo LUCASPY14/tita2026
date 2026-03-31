@@ -111,7 +111,6 @@ class VentasViewSet(viewsets.ModelViewSet):
         Returns:
             PagosVenta: Instancia del pago creado
         """
-        from apps.contabilidad.models import MovimientosCaja
         from apps.core.models import MediosPago
 
         referencias = referencias or {}
@@ -136,32 +135,6 @@ class VentasViewSet(viewsets.ModelViewSet):
             ref_pg_transf=referencias.get('ref_pg_transf'),
             banco_emisor=referencias.get('banco_emisor'),
         )
-
-        # Registrar en MovimientosCaja
-        # Movimiento 1: Ingreso por venta de productos
-        MovimientosCaja.objects.create(
-            tipo_movimiento="ingreso",
-            monto=monto_base,
-            monto_comision=Decimal("0.00"),
-            fecha_movimiento=timezone.now(),
-            descripcion=f"Venta #{venta.id_venta} - Productos",
-            id_medio_pago=medio_pago,
-            id_venta=venta,
-            id_cierre=None,  # Se asigna al cerrar caja
-        )
-
-        # Movimiento 2: Ingreso por recargo POS (si aplica)
-        if monto_comision > 0 and tarifa:
-            MovimientosCaja.objects.create(
-                tipo_movimiento="ingreso",
-                monto=Decimal("0.00"),
-                monto_comision=monto_comision,
-                fecha_movimiento=timezone.now(),
-                descripcion=f"Venta #{venta.id_venta} - Recargo POS ({tarifa.porcentaje_comision * 100}%)",
-                id_medio_pago=medio_pago,
-                id_venta=venta,
-                id_cierre=None,
-            )
 
         return pago
 
@@ -281,6 +254,12 @@ class VentasViewSet(viewsets.ModelViewSet):
         # 4. estado / estado_pago defaults
         data.setdefault('estado', 'Activa')
         data.setdefault('estado_pago', 'Pagada')
+
+        # 5. id_caja: inyectar desde el request para vincular la venta al terminal POS correcto
+        if 'id_caja' not in data or not data['id_caja']:
+            id_caja_request = request.data.get('id_caja')
+            if id_caja_request:
+                data['id_caja'] = id_caja_request
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
