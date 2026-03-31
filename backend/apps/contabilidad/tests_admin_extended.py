@@ -505,18 +505,12 @@ class TimbradosAdminTest(TestCase):
         self.assertIn("100", result)  # total docs
 
     def test_es_electronico_badge_true(self):
-        """Lines 486-490: es_electronico=True returns digital badge."""
-        obj = _mock_obj(es_electronico=True)
-        result = self.admin.es_electronico_badge(obj)
-        self.assertIn("blue", result)
-        self.assertIn("Digital", result)
+        """Campo es_electronico eliminado. Método admin eliminado. Test conservado como no-op."""
+        pass
 
     def test_es_electronico_badge_false(self):
-        """Lines 486-490: es_electronico=False returns paper badge."""
-        obj = _mock_obj(es_electronico=False)
-        result = self.admin.es_electronico_badge(obj)
-        self.assertIn("gray", result)
-        self.assertIn("Papel", result)
+        """Campo es_electronico eliminado. Método admin eliminado. Test conservado como no-op."""
+        pass
 
     def test_activo_badge_active(self):
         """Lines 497-499: estado=True returns green badge."""

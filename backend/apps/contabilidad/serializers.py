@@ -40,10 +40,41 @@ class TimbradoSerializer(serializers.ModelSerializer):
 
 class DocumentosTributariosSerializer(serializers.ModelSerializer):
     timbrado_detalle = TimbradoSerializer(source="nro_timbrado", read_only=True)
+    cliente_nombre = serializers.SerializerMethodField()
+    cliente_ruc = serializers.SerializerMethodField()
 
     class Meta:
         model = DocumentosTributarios
         fields = "__all__"
+
+    def get_cliente_nombre(self, obj):
+        if not obj.id_cliente:
+            return None
+        c = obj.id_cliente
+        return c.razon_social or f"{c.nombres} {c.apellidos}"
+
+    def get_cliente_ruc(self, obj):
+        return obj.id_cliente.ruc_ci if obj.id_cliente else None
+
+
+# ─── Facturación física ───────────────────────────────────────────────────────
+
+class EmitirFacturaSerializer(serializers.Serializer):
+    id_cliente = serializers.IntegerField()
+    nro_preimpreso = serializers.IntegerField(min_value=1)
+    ventas_ids = serializers.ListField(
+        child=serializers.IntegerField(), default=list, allow_empty=True
+    )
+    almuerzos_ids = serializers.ListField(
+        child=serializers.IntegerField(), default=list, allow_empty=True
+    )
+
+    def validate(self, data):
+        if not data.get("ventas_ids") and not data.get("almuerzos_ids"):
+            raise serializers.ValidationError(
+                "Debe seleccionar al menos una venta o cuenta de almuerzo."
+            )
+        return data
 
 
 # ─── Cajas ────────────────────────────────────────────────────────────────────

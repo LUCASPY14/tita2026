@@ -468,10 +468,9 @@ class TimbradosAdmin(admin.ModelAdmin):
         "fecha_inicio",
         "fecha_fin",
         "numeros_display",
-        "es_electronico_badge",
         "activo_badge",
     ]
-    list_filter = ["estado", "tipo_documento", "es_electronico"]
+    list_filter = ["estado", "tipo_documento"]
     search_fields = ["nro_timbrado"]
     ordering = ["-fecha_inicio"]
     readonly_fields = ["nro_timbrado", "disponibles_display"]
@@ -479,7 +478,7 @@ class TimbradosAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             "Información del Timbrado",
-            {"fields": ("nro_timbrado", "tipo_documento", "id_punto", "es_electronico")},
+            {"fields": ("nro_timbrado", "tipo_documento", "id_punto")},
         ),
         ("Vigencia", {"fields": ("fecha_inicio", "fecha_fin")}),
         ("Numeración", {"fields": ("nro_inicial", "nro_final", "disponibles_display")}),
@@ -492,17 +491,6 @@ class TimbradosAdmin(admin.ModelAdmin):
         return format_html("{} - {} ({} docs)", obj.nro_inicial, obj.nro_final, total_formateado)
 
     numeros_display.short_description = "Rango"
-
-    def es_electronico_badge(self, obj):
-        if obj.es_electronico:
-            return format_html(
-                '<span style="background-color: blue; color: white; padding: 3px 8px; border-radius: 3px;">📱 Digital</span>'
-            )
-        return format_html(
-            '<span style="background-color: gray; color: white; padding: 3px 8px; border-radius: 3px;">📄 Papel</span>'
-        )
-
-    es_electronico_badge.short_description = "Tipo"
 
     def activo_badge(self, obj):
         if obj.estado:

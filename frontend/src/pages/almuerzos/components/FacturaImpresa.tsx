@@ -36,8 +36,6 @@ interface FacturaData {
     cantidad_almuerzos: number;
     precio_unitario_promedio: string;
     iva: IvaData;
-    estado_sifen: string;
-    cdc: string | null;
     mes_nombre: string;
     anio: number;
     id_cuenta: number;
@@ -201,13 +199,6 @@ const FacturaImpresa: React.FC<Props> = ({ data, onClose }) => {
           <div className="ft-firma">Firma vendedor</div>
           <div className="ft-firma">Firma comprador</div>
         </div>
-
-        {factura.cdc && <div className="ft-cdc">CDC: {factura.cdc}</div>}
-        {factura.estado_sifen === 'pendiente_envio' && (
-          <div className="ft-center" style={{ fontSize: 8, color: '#b45309', marginTop: 4 }}>
-            Envio SIFEN pendiente
-          </div>
-        )}
 
         <div className="ft-foot">
           --------------------------------<br />

@@ -23,6 +23,7 @@ import Categorias from '../pages/categorias';
 import Perfil from '../pages/Perfil';
 import GestionCaja from '../pages/caja/GestionCaja';
 import GestionTimbrado from '../pages/timbrado/GestionTimbrado';
+import ColaFacturacion from '../pages/facturacion/ColaFacturacion';
 import LoginPortal from '../pages/portal/LoginPortal';
 import DashboardPortal from '../pages/portal/DashboardPortal';
 import MainLayout from '../layouts/MainLayout';
@@ -217,6 +218,16 @@ const AppRoutes: React.FC = () => {
                       <GestionCaja />
                     </ProtectedRoute>
                   } 
+                />
+
+                {/* Facturación física – Cola e impresión (PC central, Admin + Cajero) */}
+                <Route
+                  path="/facturacion"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'cajero']}>
+                      <ColaFacturacion />
+                    </ProtectedRoute>
+                  }
                 />
 
                 {/* Módulo de Timbrado / Documentos Tributarios - Solo Admin */}

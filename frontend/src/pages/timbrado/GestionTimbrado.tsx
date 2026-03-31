@@ -18,7 +18,6 @@ interface Timbrado {
   fecha_fin: string;
   nro_inicial: number;
   nro_final: number;
-  es_electronico: number;
   estado: boolean;
   id_punto: number;
   punto_detalle: PuntoExpedicion | null;
@@ -28,10 +27,11 @@ interface Timbrado {
 interface DocumentoTributario {
   id_documento: number;
   nro_secuencial: number;
+  nro_preimpreso_interno: string | null;
   tipo_documento: string;
   monto_total: string;
   fecha_emision: string;
-  estado_sifen: string | null;
+  cliente_nombre: string | null;
 }
 
 interface NuevoTimbrado {
@@ -41,7 +41,6 @@ interface NuevoTimbrado {
   fecha_fin: string;
   nro_inicial: string;
   nro_final: string;
-  es_electronico: number;
   id_punto: string;
 }
 
@@ -53,7 +52,6 @@ const EMPTY_TIMBRADO: NuevoTimbrado = {
   fecha_fin: '',
   nro_inicial: '1',
   nro_final: '999',
-  es_electronico: 0,
   id_punto: '',
 };
 
@@ -129,7 +127,7 @@ const GestionTimbrado: React.FC = () => {
 
   const hoy = new Date().toISOString().split('T')[0];
   const timbradoVigente = timbrados.find(
-    t => t.estado && !t.es_electronico && t.fecha_inicio <= hoy && t.fecha_fin >= hoy
+    t => t.estado && t.fecha_inicio <= hoy && t.fecha_fin >= hoy
   );
 
   const porcentajeUsado = (t: Timbrado) => {
@@ -320,7 +318,7 @@ const GestionTimbrado: React.FC = () => {
         <div className="space-y-3">
           {timbrados.map(t => {
             const usado = porcentajeUsado(t);
-            const vigente = t.estado && !t.es_electronico && t.fecha_inicio <= hoy && t.fecha_fin >= hoy;
+            const vigente = t.estado && t.fecha_inicio <= hoy && t.fecha_fin >= hoy;
             return (
               <div key={t.nro_timbrado} className={`bg-white border rounded-xl p-4 shadow-sm ${vigente ? 'border-green-300' : ''}`}>
                 <div className="flex items-center justify-between">
@@ -329,7 +327,6 @@ const GestionTimbrado: React.FC = () => {
                     <span className="text-sm text-gray-500">{t.tipo_documento}</span>
                     {vigente && <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Vigente</span>}
                     {!t.estado && <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Inactivo</span>}
-                    {t.es_electronico === 1 && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Electrónico</span>}
                   </div>
                   <span className="text-sm text-gray-500 flex items-center gap-1">
                     <Calendar className="w-4 h-4" /> {t.fecha_inicio} → {t.fecha_fin}
@@ -364,25 +361,21 @@ const GestionTimbrado: React.FC = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 text-gray-600">
-                <th className="px-4 py-2 text-left">N° Sec.</th>
+                <th className="px-4 py-2 text-left">N° Comprobante</th>
                 <th className="px-4 py-2 text-left">Tipo</th>
+                <th className="px-4 py-2 text-left">Cliente</th>
                 <th className="px-4 py-2 text-left">Monto</th>
                 <th className="px-4 py-2 text-left">Fecha</th>
-                <th className="px-4 py-2 text-left">Estado SIFEN</th>
               </tr>
             </thead>
             <tbody>
               {documentos.map(doc => (
                 <tr key={doc.id_documento} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-2 font-mono">{String(doc.nro_secuencial).padStart(7, '0')}</td>
+                  <td className="px-4 py-2 font-mono">{doc.nro_preimpreso_interno ?? String(doc.nro_secuencial).padStart(7, '0')}</td>
                   <td className="px-4 py-2">{doc.tipo_documento}</td>
+                  <td className="px-4 py-2 text-sm text-gray-600">{doc.cliente_nombre ?? '–'}</td>
                   <td className="px-4 py-2">Gs. {Number(doc.monto_total).toLocaleString('es-PY')}</td>
                   <td className="px-4 py-2">{new Date(doc.fecha_emision).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                  <td className="px-4 py-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${doc.estado_sifen === 'Aprobado' ? 'bg-green-100 text-green-700' : doc.estado_sifen ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {doc.estado_sifen ?? 'Física'}
-                    </span>
-                  </td>
                 </tr>
               ))}
               {documentos.length === 0 && (

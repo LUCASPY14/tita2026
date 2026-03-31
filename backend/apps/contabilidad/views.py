@@ -60,61 +60,30 @@ class TimbradosViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="vigente")
     def vigente(self, request):
-        """Devuelve el timbrado físico vigente a hoy."""
+        """Devuelve el timbrado vigente a hoy."""
         hoy = date.today()
         timbrado = Timbrados.objects.filter(
             estado=True,
-            es_electronico=0,
             fecha_inicio__lte=hoy,
             fecha_fin__gte=hoy,
         ).order_by("-fecha_inicio").first()
         if not timbrado:
             return Response(
-                {"detail": "No hay timbrado físico vigente configurado."}, status=404
+                {"detail": "No hay timbrado vigente configurado."}, status=404
             )
         return Response(TimbradoSerializer(timbrado).data)
 
 
 class DocumentosTributariosViewSet(viewsets.ModelViewSet):
-    """Documentos tributarios emitidos (facturas físicas y electrónicas)."""
-    queryset = DocumentosTributarios.objects.select_related("nro_timbrado").order_by("-fecha_emision")
+    """Documentos tributarios emitidos (facturas físicas)."""
+    queryset = (
+        DocumentosTributarios.objects
+        .select_related("nro_timbrado", "id_cliente")
+        .order_by("-fecha_emision")
+    )
     serializer_class = DocumentosTributariosSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ["tipo_documento", "estado_sifen"]
-
-    @action(detail=False, methods=["post"], url_path="emitir")
-    def emitir(self, request):
-        """
-        Emite un documento tributario ocupando el próximo número secuencial
-        del timbrado vigente. Body esperado: {id_venta, monto_total, tipo_documento}.
-        """
-        from .models import Timbrados
-        hoy = date.today()
-        timbrado = Timbrados.objects.filter(
-            estado=True,
-            es_electronico=0,
-            fecha_inicio__lte=hoy,
-            fecha_fin__gte=hoy,
-        ).order_by("-fecha_inicio").first()
-        if not timbrado:
-            return Response({"detail": "No hay timbrado vigente."}, status=400)
-
-        with transaction.atomic():
-            usados = DocumentosTributarios.objects.filter(
-                nro_timbrado=timbrado
-            ).select_for_update().count()
-            nro = timbrado.nro_inicial + usados
-            if nro > timbrado.nro_final:
-                return Response({"detail": "Timbrado agotado. Configure un nuevo timbrado."}, status=400)
-
-            doc = DocumentosTributarios.objects.create(
-                nro_timbrado=timbrado,
-                nro_secuencial=nro,
-                tipo_documento=request.data.get("tipo_documento", "FACTURA"),
-                monto_total=request.data.get("monto_total", 0),
-                fecha_emision=timezone.now(),
-            )
-        return Response(DocumentosTributariosSerializer(doc).data, status=status.HTTP_201_CREATED)
+    filterset_fields = ["tipo_documento"]
 
 
 # ─── Cajas ────────────────────────────────────────────────────────────────────
@@ -265,3 +234,73 @@ class MovimientosCajaViewSet(viewsets.ModelViewSet):
     serializer_class = MovimientosCajaSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["tipo_movimiento", "id_cierre"]
+
+
+# ─── Facturación física ───────────────────────────────────────────────────────
+
+class FacturacionViewSet(viewsets.ViewSet):
+    """
+    Cola de facturación y emisión de facturas físicas preimpresas.
+
+    GET  /facturacion/cola/           → items pagados sin factura, por cliente
+    POST /facturacion/emitir/         → emite factura vinculando ventas/almuerzos
+    GET  /facturacion/{id}/imprimir/  → texto 80 col para Epson LX-50
+    POST /facturacion/{id}/anular/    → anula factura y devuelve items a la cola
+    """
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=["get"], url_path="cola")
+    def cola(self, request):
+        """Items pagados sin facturar, agrupados por cliente."""
+        from .facturacion_service import FacturacionService
+        return Response(FacturacionService.get_cola())
+
+    @action(detail=False, methods=["post"], url_path="emitir")
+    def emitir(self, request):
+        """Emite una factura física vinculando las ventas/almuerzos seleccionados."""
+        from .facturacion_service import FacturacionService
+        from .serializers import EmitirFacturaSerializer
+
+        ser = EmitirFacturaSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+
+        try:
+            doc = FacturacionService.emitir(
+                id_cliente=d["id_cliente"],
+                nro_preimpreso=d["nro_preimpreso"],
+                ventas_ids=d.get("ventas_ids", []),
+                almuerzos_ids=d.get("almuerzos_ids", []),
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            DocumentosTributariosSerializer(doc).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=["get"], url_path="imprimir")
+    def imprimir(self, request, pk=None):
+        """Texto 80 columnas para Epson LX-50 (Content-Type: text/plain)."""
+        from .facturacion_service import FacturacionService
+        from django.http import HttpResponse
+
+        try:
+            texto = FacturacionService.texto_impresion(int(pk))
+        except DocumentosTributarios.DoesNotExist:
+            return Response({"detail": "Documento no encontrado."}, status=404)
+
+        return HttpResponse(texto, content_type="text/plain; charset=utf-8")
+
+    @action(detail=True, methods=["post"], url_path="anular")
+    def anular(self, request, pk=None):
+        """Anula una factura y devuelve los items a la cola de pendientes."""
+        from .facturacion_service import FacturacionService
+
+        try:
+            FacturacionService.anular(int(pk))
+        except DocumentosTributarios.DoesNotExist:
+            return Response({"detail": "Documento no encontrado."}, status=404)
+
+        return Response({"detail": "Factura anulada correctamente."})

@@ -139,17 +139,28 @@ class ConciliacionPagos(models.Model):
 
 class DocumentosTributarios(models.Model):
     id_documento = models.BigAutoField(primary_key=True)
-    nro_secuencial = models.IntegerField()
+    nro_secuencial = models.IntegerField(
+        help_text="Número secuencial fiscal dentro del rango del timbrado"
+    )
     fecha_emision = models.DateTimeField()
     monto_total = models.DecimalField(max_digits=12, decimal_places=2)
     nro_timbrado = models.ForeignKey("Timbrados", models.DO_NOTHING, db_column="nro_timbrado")
     tipo_documento = models.CharField(max_length=11)
-    cdc = models.CharField(max_length=44, blank=True, null=True)
-    url_kude = models.CharField(max_length=255, blank=True, null=True)
-    estado_sifen = models.CharField(max_length=9, blank=True, null=True)
-    fecha_envio = models.DateTimeField(blank=True, null=True)
-    fecha_respuesta = models.DateTimeField(blank=True, null=True)
-    nro_preimpreso_interno = models.CharField(max_length=20, blank=True, null=True)
+    nro_preimpreso_interno = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Número de formulario preimpreso (ej: 001-001-0000123)",
+    )
+    id_cliente = models.ForeignKey(
+        "clientes.Clientes",
+        models.SET_NULL,
+        db_column="id_cliente",
+        blank=True,
+        null=True,
+        related_name="documentos",
+        help_text="Cliente al que se emite la factura",
+    )
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -186,7 +197,6 @@ class Timbrados(models.Model):
     fecha_fin = models.DateField()
     nro_inicial = models.IntegerField()
     nro_final = models.IntegerField()
-    es_electronico = models.IntegerField()
     estado = models.BooleanField(default=True)
     id_punto = models.ForeignKey("PuntosExpedicion", models.DO_NOTHING, db_column="id_punto")
 

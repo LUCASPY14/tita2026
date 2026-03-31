@@ -112,7 +112,6 @@ def emitir_documento_tributario(sender, instance, created, **kwargs):
     hoy = date.today()
     timbrado = Timbrados.objects.filter(
         estado=True,
-        es_electronico=0,
         fecha_inicio__lte=hoy,
         fecha_fin__gte=hoy,
     ).order_by("-fecha_inicio").first()

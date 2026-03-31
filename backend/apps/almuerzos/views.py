@@ -385,18 +385,17 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
                 "factura": self._build_factura_payload(cuenta, doc, timbrado, iva),
             })
 
-        # Buscar timbrado físico vigente
+        # Buscar timbrado vigente
         hoy = date.today()
         timbrado = Timbrados.objects.filter(
             estado=True,
-            es_electronico=0,
             fecha_inicio__lte=hoy,
             fecha_fin__gte=hoy,
         ).order_by("-fecha_inicio").first()
 
         if not timbrado:
             return Response(
-                {"error": "No hay timbrado físico vigente. Configurá un timbrado en el sistema."},
+                {"error": "No hay timbrado vigente. Configurá uno en Gestión de Timbrado."},
                 status=400,
             )
 

@@ -11,6 +11,7 @@ from apps.contabilidad.views import (
     ImpuestosViewSet, DatosEmpresaViewSet, TimbradosViewSet,
     DocumentosTributariosViewSet, PuntosExpedicionViewSet,
     CajasViewSet, CierresCajaViewSet, MovimientosCajaViewSet,
+    FacturacionViewSet,
 )
 from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaViewSet, NotasCreditoClienteViewSet, PromocionesViewSet
 from apps.compras.views import ProveedoresViewSet, ComprasViewSet, DetallesCompraViewSet, PagosProveedoresViewSet, NotasCreditoProveedorViewSet
@@ -48,6 +49,7 @@ router.register(r'datos-empresa', DatosEmpresaViewSet, basename='datos-empresa')
 router.register(r'timbrados', TimbradosViewSet, basename='timbrados')
 router.register(r'puntos-expedicion', PuntosExpedicionViewSet, basename='puntos-expedicion')
 router.register(r'documentos-tributarios', DocumentosTributariosViewSet, basename='documentos-tributarios')
+router.register(r'facturacion', FacturacionViewSet, basename='facturacion')
 # Caja
 router.register(r'cajas', CajasViewSet, basename='cajas')
 router.register(r'cierres-caja', CierresCajaViewSet, basename='cierres-caja')
