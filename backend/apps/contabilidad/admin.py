@@ -372,26 +372,24 @@ class DocumentosTributariosAdmin(admin.ModelAdmin):
     list_display = [
         "id_documento",
         "nro_secuencial",
+        "nro_preimpreso_interno",
         "tipo_documento_badge",
         "monto_total_display",
         "fecha_emision",
-        "estado_sifen_badge",
         "nro_timbrado",
     ]
-    list_filter = ["tipo_documento", "estado_sifen", "fecha_emision"]
-    search_fields = ["cdc", "nro_secuencial", "nro_preimpreso_interno"]
+    list_filter = ["tipo_documento", "fecha_emision"]
+    search_fields = ["nro_secuencial", "nro_preimpreso_interno"]
     ordering = ["-fecha_emision"]
     readonly_fields = ["id_documento"]
 
     fieldsets = (
         (
             "Información General",
-            {"fields": ("id_documento", "nro_secuencial", "tipo_documento", "nro_timbrado")},
+            {"fields": ("id_documento", "nro_secuencial", "nro_preimpreso_interno", "tipo_documento", "nro_timbrado", "id_cliente")},
         ),
         ("Montos", {"fields": ("monto_total",)}),
-        ("Documentación Electrónica", {"fields": ("cdc", "url_kude", "estado_sifen")}),
-        ("Fechas", {"fields": ("fecha_emision", "fecha_envio", "fecha_respuesta")}),
-        ("Otros", {"fields": ("nro_preimpreso_interno",)}),
+        ("Fechas", {"fields": ("fecha_emision",)}),
     )
 
     def tipo_documento_badge(self, obj):
@@ -400,6 +398,7 @@ class DocumentosTributariosAdmin(admin.ModelAdmin):
             "NotaCredito": "orange",
             "NotaDebito": "red",
             "Recibo": "blue",
+            "Factura-Anulada": "red",
         }
         color = colores.get(obj.tipo_documento, "gray")
         return format_html(
@@ -409,32 +408,6 @@ class DocumentosTributariosAdmin(admin.ModelAdmin):
         )
 
     tipo_documento_badge.short_description = "Tipo"
-
-    def estado_sifen_badge(self, obj):
-        if not obj.estado_sifen:
-            return format_html('<span style="color: gray;">Pendiente</span>')
-
-        colores = {
-            "Aprobado": "green",
-            "Rechazado": "red",
-            "Pendiente": "orange",
-        }
-        color = colores.get(obj.estado_sifen, "gray")
-        iconos = {
-            "Aprobado": "✓",
-            "Rechazado": "✗",
-            "Pendiente": "⏳",
-        }
-        icono = iconos.get(obj.estado_sifen, "?")
-
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{} {}</span>',
-            color,
-            icono,
-            obj.estado_sifen,
-        )
-
-    estado_sifen_badge.short_description = "Estado SIFEN"
 
     def monto_total_display(self, obj):
         monto_formateado = f"{obj.monto_total:,.0f}"
