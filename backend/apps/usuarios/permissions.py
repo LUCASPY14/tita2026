@@ -444,6 +444,17 @@ def requiere_permiso(codigo_permiso: str):
     return decorator
 
 
+class IsPortalAuthenticated(permissions.BasePermission):
+    """
+    Permite acceso solo a usuarios autenticados del portal (clientes).
+    Requiere que el request haya pasado por PortalJWTAuthentication.
+    """
+
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        from apps.usuarios.authentication import PortalUserProxy
+        return isinstance(request.user, PortalUserProxy)
+
+
 def requiere_algunos_permisos(*codigos_permisos):
     """
     Decorador para funciones que requieren AL MENOS UNO de los permisos.

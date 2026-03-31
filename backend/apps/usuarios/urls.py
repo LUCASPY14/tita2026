@@ -17,6 +17,7 @@ from .views import (
     EmpleadosViewSet,
     PerfilesUsuarioViewSet,
     UsuariosPortalViewSet,
+    PortalAuthViewSet,
     AuditoriaOperacionesViewSet,
 )
 
@@ -41,6 +42,7 @@ router.register(r"roles", PublicRolesViewSet, basename="usuarios-roles")
 router.register(r"empleados", PublicEmpleadosViewSet, basename="usuarios-empleados")
 router.register(r"perfiles", PerfilesUsuarioViewSet, basename="perfiles")
 router.register(r"portal", UsuariosPortalViewSet, basename="portal")
+router.register(r"portal-auth", PortalAuthViewSet, basename="portal-auth")
 
 # Registrar ViewSets de funcionalidad
 router.register(r"auth", AuthViewSet, basename="auth")

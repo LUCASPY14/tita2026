@@ -16,7 +16,7 @@ from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaVie
 from apps.compras.views import ProveedoresViewSet, ComprasViewSet, DetallesCompraViewSet, PagosProveedoresViewSet, NotasCreditoProveedorViewSet
 from apps.core.views import TarjetasViewSet, CargasSaldoViewSet, ConsumosTarjetaViewSet, MediosPagoViewSet, ConfiguracionSistemaViewSet
 from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, SuscripcionesAlmuerzoViewSet, RegistrosConsumoAlmuerzoViewSet, AlergenosViewSet, CuentasAlmuerzoMensualViewSet, PrecioAlmuerzoViewSet
-from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet, AuthViewSet, PermisosViewSet, AuditoriaOperacionesViewSet
+from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet, PortalAuthViewSet, AuthViewSet, PermisosViewSet, AuditoriaOperacionesViewSet
 from apps.inventario.views import StockUnicoViewSet, MovimientosStockViewSet, AjustesInventarioViewSet
 from apps.reportes.views import (
     ReportesViewSet,
@@ -90,6 +90,7 @@ router.register(r'roles', RolesViewSet)
 router.register(r'empleados', EmpleadosViewSet)
 router.register(r'perfiles-usuario', PerfilesUsuarioViewSet)
 router.register(r'usuarios-portal', UsuariosPortalViewSet)
+router.register(r'portal-auth', PortalAuthViewSet, basename='portal-auth')
 router.register(r'permisos', PermisosViewSet, basename='permisos')
 router.register(r'usuarios/auditoria', AuditoriaOperacionesViewSet, basename='auditoria')
 

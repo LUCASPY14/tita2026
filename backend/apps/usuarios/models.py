@@ -470,37 +470,32 @@ class UsuariosPortal(models.Model):
     id_usuario_portal = models.AutoField(primary_key=True)
     email = models.CharField(unique=True, max_length=255)
     password_hash = models.CharField(max_length=255)
-    email_verificado = models.IntegerField()
-    fecha_registro = models.DateTimeField()
+    email_verificado = models.BooleanField(default=False)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
     ultimo_acceso = models.DateTimeField(blank=True, null=True)
     estado = models.BooleanField(default=True)
     id_cliente = models.OneToOneField(
         "clientes.Clientes", models.DO_NOTHING, db_column="id_cliente"
     )
 
+    def set_password(self, raw_password: str) -> None:
+        """Hash and store a password using Django's password hasher."""
+        from django.contrib.auth.hashers import make_password
+        self.password_hash = make_password(raw_password)
+
+    def check_password(self, raw_password: str) -> bool:
+        """Verify a raw password against the stored hash."""
+        from django.contrib.auth.hashers import check_password as django_check
+        return django_check(raw_password, self.password_hash)
+
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+        return f"Portal: {self.email}"
 
     class Meta:
         managed = True
         db_table = "usuarios_portal"
-
-
-class UsuariosWebClientes(models.Model):
-    id_cliente = models.OneToOneField(
-        "clientes.Clientes", models.DO_NOTHING, db_column="id_cliente", primary_key=True
-    )
-    usuario = models.CharField(unique=True, max_length=50)
-    contrasena_hash = models.CharField(max_length=128)
-    ultimo_acceso = models.DateTimeField(blank=True, null=True)
-    estado = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "usuarios_web_clientes"
+        verbose_name = "Usuario Portal"
+        verbose_name_plural = "Usuarios Portal"
 
 
 class AuditoriaEmpleados(models.Model):

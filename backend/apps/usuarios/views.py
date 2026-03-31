@@ -39,7 +39,9 @@ from .services import (
     SessionService,
     PasswordRecoveryService,
 )
-from .permissions import PermissionService, TienePermiso, EsAdministrador, Permisos, RolesPermisos
+from .permissions import PermissionService, TienePermiso, EsAdministrador, IsPortalAuthenticated, Permisos, RolesPermisos
+from .authentication import PortalJWTAuthentication, PortalUserProxy
+from .services.portal_service import PortalAuthService
 
 # ==================== AUTENTICACIÓN ====================
 
@@ -864,7 +866,8 @@ class PerfilesUsuarioViewSet(viewsets.ModelViewSet):
 
 class UsuariosPortalViewSet(viewsets.ModelViewSet):
     """
-    CRUD de usuarios del portal (clientes).
+    CRUD de usuarios del portal (clientes). Requiere ser empleado autenticado.
+    Al crear o actualizar, la contraseña se hashea automáticamente.
     """
 
     queryset = UsuariosPortal.objects.all()
@@ -873,6 +876,173 @@ class UsuariosPortalViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["estado", "id_cliente"]
     search_fields = ["email"]
+
+    def perform_create(self, serializer):
+        """Hash the password before saving a new portal user."""
+        raw_password = self.request.data.get("password")
+        instance = serializer.save(
+            email_verificado=False,
+        )
+        if raw_password:
+            instance.set_password(raw_password)
+            instance.save(update_fields=["password_hash"])
+
+    def perform_update(self, serializer):
+        """If password is provided in the update, hash it."""
+        raw_password = self.request.data.get("password")
+        instance = serializer.save()
+        if raw_password:
+            instance.set_password(raw_password)
+            instance.save(update_fields=["password_hash"])
+
+
+class PortalAuthViewSet(viewsets.ViewSet):
+    """
+    Autenticación y datos del portal para clientes.
+
+    Endpoints públicos:
+      POST /portal-auth/login/      → email + password → token
+
+    Endpoints protegidos (requieren token de portal):
+      GET  /portal-auth/perfil/     → datos del cliente autenticado
+      GET  /portal-auth/dashboard/  → hijos + saldos + consumos recientes
+      POST /portal-auth/cambiar-password/
+    """
+
+    authentication_classes = [PortalJWTAuthentication]
+
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
+    @method_decorator(ratelimit(key="ip", rate="10/m", method="POST", block=True))
+    def login(self, request):
+        email = request.data.get("email", "").strip()
+        password = request.data.get("password", "")
+
+        if not email or not password:
+            return Response(
+                {"detail": "Email y contraseña son requeridos"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = PortalAuthService.login(email, password)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_401_UNAUTHORIZED)
+
+        return Response(
+            {"token": result["token"], "usuario": result["portal_user"]},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["get"], permission_classes=[IsPortalAuthenticated])
+    def perfil(self, request):
+        proxy: PortalUserProxy = request.user
+        pu = proxy.portal_user
+        cliente = pu.id_cliente
+        return Response(
+            {
+                "id_usuario_portal": pu.id_usuario_portal,
+                "email": pu.email,
+                "email_verificado": pu.email_verificado,
+                "ultimo_acceso": pu.ultimo_acceso,
+                "cliente": {
+                    "id_cliente": cliente.id_cliente,
+                    "nombre_completo": cliente.nombre_completo,
+                    "ruc_ci": cliente.ruc_ci,
+                    "email": cliente.email,
+                    "telefono": cliente.telefono,
+                    "limite_credito": str(cliente.limite_credito),
+                    "credito_disponible": str(cliente.credito_disponible),
+                },
+            }
+        )
+
+    @action(detail=False, methods=["get"], permission_classes=[IsPortalAuthenticated])
+    def dashboard(self, request):
+        from apps.core.models import Tarjetas, ConsumosTarjeta
+
+        proxy: PortalUserProxy = request.user
+        cliente = proxy.portal_user.id_cliente
+
+        hijos_data = []
+        for hijo in cliente.hijos.filter(estado=True).order_by("apellido", "nombre"):
+            tarjeta_data = None
+            try:
+                tarjeta = Tarjetas.objects.get(id_hijo=hijo.id_hijo)
+                consumos = (
+                    ConsumosTarjeta.objects.filter(nro_tarjeta=tarjeta)
+                    .order_by("-fecha_consumo")[:10]
+                    .values(
+                        "id_consumo",
+                        "fecha_consumo",
+                        "monto_consumido",
+                        "detalle",
+                        "saldo_posterior",
+                    )
+                )
+                tarjeta_data = {
+                    "nro_tarjeta": tarjeta.nro_tarjeta,
+                    "saldo_actual": str(tarjeta.saldo_actual),
+                    "estado": tarjeta.estado,
+                    "esta_en_alerta": tarjeta.esta_en_alerta,
+                    "ultimos_consumos": list(consumos),
+                }
+            except Tarjetas.DoesNotExist:
+                pass
+
+            hijos_data.append(
+                {
+                    "id_hijo": hijo.id_hijo,
+                    "nombre": hijo.nombre,
+                    "apellido": hijo.apellido,
+                    "nombre_completo": hijo.nombre_completo,
+                    "grado": hijo.grado,
+                    "tarjeta": tarjeta_data,
+                }
+            )
+
+        return Response(
+            {
+                "cliente": {
+                    "nombre_completo": cliente.nombre_completo,
+                    "ruc_ci": cliente.ruc_ci,
+                    "email": cliente.email,
+                    "limite_credito": str(cliente.limite_credito),
+                    "credito_disponible": str(cliente.credito_disponible),
+                },
+                "hijos": hijos_data,
+            }
+        )
+
+    @action(detail=False, methods=["post"], permission_classes=[IsPortalAuthenticated])
+    def cambiar_password(self, request):
+        proxy: PortalUserProxy = request.user
+        pu = proxy.portal_user
+
+        password_actual = request.data.get("password_actual", "")
+        password_nuevo = request.data.get("password_nuevo", "")
+
+        if not password_actual or not password_nuevo:
+            return Response(
+                {"detail": "password_actual y password_nuevo son requeridos"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not pu.check_password(password_actual):
+            return Response(
+                {"detail": "La contraseña actual es incorrecta"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(password_nuevo) < 8:
+            return Response(
+                {"detail": "La contraseña nueva debe tener al menos 8 caracteres"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        pu.set_password(password_nuevo)
+        pu.save(update_fields=["password_hash"])
+
+        return Response({"detail": "Contraseña actualizada correctamente"})
 
 
 class AuditoriaOperacionesViewSet(viewsets.ReadOnlyModelViewSet):
