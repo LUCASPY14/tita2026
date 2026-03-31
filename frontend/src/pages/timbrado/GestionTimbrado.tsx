@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 import { FileText, Plus, CheckCircle, AlertTriangle, RefreshCw, Hash, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -45,7 +45,7 @@ interface NuevoTimbrado {
   id_punto: string;
 }
 
-const API = '/api/v1';
+
 const EMPTY_TIMBRADO: NuevoTimbrado = {
   nro_timbrado: '',
   tipo_documento: 'FACTURA',
@@ -71,9 +71,9 @@ const GestionTimbrado: React.FC = () => {
     setLoading(true);
     try {
       const [timbresRes, puntosRes, docsRes] = await Promise.all([
-        axios.get(`${API}/timbrados/`),
-        axios.get(`${API}/puntos-expedicion/`),
-        axios.get(`${API}/documentos-tributarios/?limit=20`),
+        api.get('/timbrados/'),
+        api.get('/puntos-expedicion/'),
+        api.get('/documentos-tributarios/?limit=20'),
       ]);
       setTimbrados(timbresRes.data.results ?? timbresRes.data);
       setPuntos(puntosRes.data.results ?? puntosRes.data);
@@ -93,7 +93,7 @@ const GestionTimbrado: React.FC = () => {
       return;
     }
     try {
-      await axios.post(`${API}/timbrados/`, {
+      await api.post('/timbrados/', {
         ...form,
         nro_timbrado: parseInt(form.nro_timbrado),
         nro_inicial: parseInt(form.nro_inicial),
@@ -117,7 +117,7 @@ const GestionTimbrado: React.FC = () => {
       return;
     }
     try {
-      await axios.post(`${API}/puntos-expedicion/`, { ...formPunto, estado: true });
+      await api.post('/puntos-expedicion/', { ...formPunto, estado: true });
       toast.success('Punto de expedición creado');
       setMostrarFormPunto(false);
       setFormPunto({ codigo_establecimiento: '001', codigo_punto_expedicion: '001', descripcion_ubicacion: '' });

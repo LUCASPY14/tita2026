@@ -128,7 +128,7 @@ export function PushNotificationManager({
       const registration = await navigator.serviceWorker.ready;
       const pushSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
+        applicationServerKey: urlBase64ToUint8Array(publicKey) as Uint8Array<ArrayBuffer>
       });
 
       // Enviar suscripción al backend

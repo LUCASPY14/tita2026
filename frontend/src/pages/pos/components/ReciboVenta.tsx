@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Printer, CheckCircle, Receipt, FileText } from 'lucide-react';
+import { X, Printer, CheckCircle, Receipt } from 'lucide-react';
 
 interface ItemRecibo {
   descripcion: string;

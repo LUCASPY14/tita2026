@@ -312,7 +312,7 @@ const DetalleCompra: React.FC<DetalleCompraProps> = ({ compra, onEditar, onVolve
                   <div className="flex justify-between border-t border-gray-200 pt-2">
                     <span className="text-gray-600">Compras Pendientes:</span>
                     <span className="font-medium text-gray-900">
-                      {cuentaCorriente.compras_pendientes}
+                      {cuentaCorriente.compras_pendientes.length}
                     </span>
                   </div>
                 </div>

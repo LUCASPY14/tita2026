@@ -214,6 +214,12 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
         })),
       };
 
+      // Vincular la venta al terminal POS (caja) configurado en este equipo
+      const idCajaStr = localStorage.getItem('pos_caja_id');
+      if (idCajaStr) {
+        ventaData.id_caja = parseInt(idCajaStr, 10);
+      }
+
       if (metodoPago === 'tarjeta_hijo' && hijoSeleccionado) {
         ventaData.id_hijo = hijoSeleccionado.id_hijo;
       }
