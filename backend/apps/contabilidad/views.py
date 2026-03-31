@@ -144,40 +144,49 @@ class CierresCajaViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="abrir")
     def abrir(self, request):
-        """Abre un nuevo turno de caja."""
+        """Abre un nuevo turno de caja.
+
+        Usa SELECT FOR UPDATE dentro de una transacción atómica para evitar
+        que dos requests simultáneos sobre la misma caja creen dos turnos abiertos.
+        """
         ser = AbrirCajaSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
 
-        # Verificar que no haya turno abierto en esa caja
-        turno_existente = CierresCaja.objects.filter(
-            id_caja=data["id_caja"], estado="abierto"
-        ).first()
-        if turno_existente:
-            return Response(
-                {"detail": f"La caja ya tiene un turno abierto (ID {turno_existente.pk})."},
-                status=status.HTTP_400_BAD_REQUEST,
+        with transaction.atomic():
+            # Lock a nivel de fila: si otro request llega al mismo tiempo para
+            # la misma caja, esperará hasta que esta transacción termine.
+            turno_existente = (
+                CierresCaja.objects
+                .select_for_update()
+                .filter(id_caja=data["id_caja"], estado="abierto")
+                .first()
             )
+            if turno_existente:
+                return Response(
+                    {"detail": f"La caja ya tiene un turno abierto (ID {turno_existente.pk})."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        turno = CierresCaja.objects.create(
-            id_caja_id=data["id_caja"],
-            id_empleado_id=data["id_empleado"],
-            monto_inicial=data["monto_inicial"],
-            fecha_hora_apertura=timezone.now(),
-            estado="abierto",
-        )
-        # Registrar movimiento de fondo inicial
-        from apps.core.models import MediosPago
-        efectivo = MediosPago.objects.filter(descripcion__icontains="efectivo").first()
-        if efectivo and data["monto_inicial"] > 0:
-            MovimientosCaja.objects.create(
-                id_cierre=turno,
-                tipo_movimiento="Ingreso",
-                monto=data["monto_inicial"],
-                fecha_movimiento=timezone.now(),
-                descripcion="Fondo inicial de caja",
-                id_medio_pago=efectivo,
+            turno = CierresCaja.objects.create(
+                id_caja_id=data["id_caja"],
+                id_empleado_id=data["id_empleado"],
+                monto_inicial=data["monto_inicial"],
+                fecha_hora_apertura=timezone.now(),
+                estado="abierto",
             )
+            # Registrar movimiento de fondo inicial
+            from apps.core.models import MediosPago
+            efectivo = MediosPago.objects.filter(descripcion__icontains="efectivo").first()
+            if efectivo and data["monto_inicial"] > 0:
+                MovimientosCaja.objects.create(
+                    id_cierre=turno,
+                    tipo_movimiento="Ingreso",
+                    monto=data["monto_inicial"],
+                    fecha_movimiento=timezone.now(),
+                    descripcion="Fondo inicial de caja",
+                    id_medio_pago=efectivo,
+                )
         return Response(CierresCajaSerializer(turno).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="cerrar")
@@ -213,8 +222,21 @@ class CierresCajaViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="turno-activo")
     def turno_activo(self, request):
-        """Devuelve el turno abierto actualmente (cualquier caja)."""
-        turno = CierresCaja.objects.filter(estado="abierto").order_by("-fecha_hora_apertura").first()
+        """Devuelve el turno abierto de UNA caja específica.
+
+        Query param obligatorio: ?id_caja=<int>
+        Sin él devuelve el turno más reciente de cualquier caja (compatibilidad).
+        """
+        qs = CierresCaja.objects.filter(estado="abierto").order_by("-fecha_hora_apertura")
+
+        id_caja = request.query_params.get("id_caja")
+        if id_caja:
+            try:
+                qs = qs.filter(id_caja=int(id_caja))
+            except (ValueError, TypeError):
+                return Response({"detail": "id_caja debe ser un número entero."}, status=400)
+
+        turno = qs.first()
         if not turno:
             return Response({"detail": "No hay turno activo."}, status=404)
         return Response(CierresCajaSerializer(turno).data)
