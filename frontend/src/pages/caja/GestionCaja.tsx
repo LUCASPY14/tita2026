@@ -1,7 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { DollarSign, LogIn, LogOut, Clock, AlertTriangle, CheckCircle, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
+import api from '../../services/api';
+import {
+  DollarSign, LogIn, LogOut, Clock, AlertTriangle, CheckCircle,
+  RefreshCw, TrendingUp, TrendingDown, Settings, Monitor,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+
+const CAJA_CONFIG_KEY = 'pos_caja_id';
 
 interface Caja {
   id_caja: number;
@@ -39,7 +44,61 @@ interface Movimiento {
   venta_nro: string | null;
 }
 
-const API = '/api/v1';
+/** Lee el id_caja configurado para este terminal desde localStorage. */
+function getCajaConfigurada(): number | null {
+  const v = localStorage.getItem(CAJA_CONFIG_KEY);
+  const n = v ? parseInt(v, 10) : NaN;
+  return isNaN(n) ? null : n;
+}
+
+// â”€â”€ Subcomponente: pantalla de configuraciÃ³n inicial â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+interface ConfigPanelProps {
+  cajas: Caja[];
+  onConfirmar: (idCaja: number) => void;
+}
+
+const ConfigPanel: React.FC<ConfigPanelProps> = ({ cajas, onConfirmar }) => {
+  const [seleccionado, setSeleccionado] = useState('');
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="bg-white border-2 border-blue-200 rounded-2xl p-8 max-w-md w-full shadow-lg">
+        <div className="flex items-center gap-3 mb-5">
+          <Monitor className="w-8 h-8 text-blue-600" />
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Configurar este terminal</h2>
+            <p className="text-sm text-gray-500">Â¿QuÃ© caja registradora es este punto de venta?</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          Esta configuraciÃ³n se guarda en este navegador y no necesita repetirse cada vez.
+        </p>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Caja asignada a este terminal</label>
+        <select
+          value={seleccionado}
+          onChange={e => setSeleccionado(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2 mb-4 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        >
+          <option value="">Seleccionar caja...</option>
+          {cajas.filter(c => c.estado).map(c => (
+            <option key={c.id_caja} value={c.id_caja}>
+              {c.nombre_caja}{c.ubicacion ? ` â€” ${c.ubicacion}` : ''}
+            </option>
+          ))}
+        </select>
+        <button
+          disabled={!seleccionado}
+          onClick={() => onConfirmar(parseInt(seleccionado, 10))}
+          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-40 font-medium"
+        >
+          Confirmar y continuar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// â”€â”€ Componente principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const GestionCaja: React.FC = () => {
   const [cajas, setCajas] = useState<Caja[]>([]);
@@ -48,52 +107,69 @@ const GestionCaja: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [vista, setVista] = useState<'principal' | 'abrir' | 'cerrar'>('principal');
 
+  // Caja de ESTE terminal (persistida en localStorage)
+  const [cajaId, setCajaId] = useState<number | null>(getCajaConfigurada);
+  const [mostrarConfig, setMostrarConfig] = useState(false);
+
   // Form apertura
-  const [cajaSeleccionada, setCajaSeleccionada] = useState('');
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState('');
   const [montoInicial, setMontoInicial] = useState('');
 
   // Form cierre
   const [montoContado, setMontoContado] = useState('');
 
-  const cargarDatos = useCallback(async () => {
+  const cajaActual = cajas.find(c => c.id_caja === cajaId) ?? null;
+
+  const cargarDatos = useCallback(async (idCaja?: number) => {
+    const targetId = idCaja ?? cajaId;
     setLoading(true);
     try {
       const [cajasRes, empleadosRes] = await Promise.all([
-        axios.get(`${API}/cajas/`),
-        axios.get(`${API}/empleados/`),
+        api.get('/cajas/'),
+        api.get('/empleados/'),
       ]);
       setCajas(cajasRes.data.results ?? cajasRes.data);
       setEmpleados(empleadosRes.data.results ?? empleadosRes.data);
 
-      try {
-        const turnoRes = await axios.get(`${API}/cierres-caja/turno-activo/`);
-        setTurnoActivo(turnoRes.data);
-      } catch {
-        setTurnoActivo(null);
+      if (targetId) {
+        try {
+          const turnoRes = await api.get(`/cierres-caja/turno-activo/?id_caja=${targetId}`);
+          setTurnoActivo(turnoRes.data);
+        } catch {
+          setTurnoActivo(null);
+        }
       }
-    } catch (err) {
+    } catch {
       toast.error('Error cargando datos de caja');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cajaId]);
 
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
+  const confirmarCaja = (id: number) => {
+    localStorage.setItem(CAJA_CONFIG_KEY, String(id));
+    setCajaId(id);
+    setMostrarConfig(false);
+    cargarDatos(id);
+  };
+
   const abrirCaja = async () => {
-    if (!cajaSeleccionada || !empleadoSeleccionado || !montoInicial) {
+    if (!cajaId || !empleadoSeleccionado || !montoInicial) {
       toast.error('Complete todos los campos');
       return;
     }
     try {
-      await axios.post(`${API}/cierres-caja/abrir/`, {
-        id_caja: parseInt(cajaSeleccionada),
+      await api.post('/cierres-caja/abrir/', {
+        id_caja: cajaId,
         id_empleado: parseInt(empleadoSeleccionado),
         monto_inicial: parseFloat(montoInicial),
       });
       toast.success('Caja abierta correctamente');
       setVista('principal');
+      setMontoInicial('');
+      setEmpleadoSeleccionado('');
       cargarDatos();
     } catch (err: any) {
       toast.error(err.response?.data?.detail ?? 'Error al abrir caja');
@@ -102,11 +178,11 @@ const GestionCaja: React.FC = () => {
 
   const cerrarCaja = async () => {
     if (!turnoActivo || !montoContado) {
-      toast.error('Ingrese el monto contado físicamente');
+      toast.error('Ingrese el monto contado fÃ­sicamente');
       return;
     }
     try {
-      await axios.post(`${API}/cierres-caja/${turnoActivo.id_cierre}/cerrar/`, {
+      await api.post(`/cierres-caja/${turnoActivo.id_cierre}/cerrar/`, {
         monto_contado_fisico: parseFloat(montoContado),
       });
       toast.success('Caja cerrada correctamente');
@@ -135,6 +211,15 @@ const GestionCaja: React.FC = () => {
     );
   }
 
+  // Primera vez: terminal sin caja asignada
+  if (!cajaId || mostrarConfig) {
+    return (
+      <div className="p-6">
+        <ConfigPanel cajas={cajas} onConfirmar={confirmarCaja} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -142,16 +227,29 @@ const GestionCaja: React.FC = () => {
         <div className="flex items-center gap-3">
           <DollarSign className="w-8 h-8 text-green-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Caja</h1>
-            <p className="text-sm text-gray-500">Control de apertura, cierre y movimientos de caja</p>
+            <h1 className="text-2xl font-bold text-gray-900">GestiÃ³n de Caja</h1>
+            <p className="text-sm text-gray-500 flex items-center gap-1">
+              <Monitor className="w-3 h-3" />
+              Terminal asignado a: <strong className="ml-1">{cajaActual?.nombre_caja ?? `Caja ${cajaId}`}</strong>
+              {cajaActual?.ubicacion && <span className="text-gray-400"> â€” {cajaActual.ubicacion}</span>}
+            </p>
           </div>
         </div>
-        <button
-          onClick={cargarDatos}
-          className="flex items-center gap-2 px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50"
-        >
-          <RefreshCw className="w-4 h-4" /> Actualizar
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setMostrarConfig(true)}
+            title="Cambiar caja de este terminal"
+            className="flex items-center gap-1 px-3 py-2 text-gray-500 border rounded-lg hover:bg-gray-50 text-sm"
+          >
+            <Settings className="w-4 h-4" /> Cambiar caja
+          </button>
+          <button
+            onClick={() => cargarDatos()}
+            className="flex items-center gap-2 px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50"
+          >
+            <RefreshCw className="w-4 h-4" /> Actualizar
+          </button>
+        </div>
       </div>
 
       {/* Estado turno activo */}
@@ -161,6 +259,7 @@ const GestionCaja: React.FC = () => {
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-600" />
               <span className="font-semibold text-green-800">Turno activo: {turnoActivo.caja_nombre}</span>
+              <span className="text-sm text-green-600">â€” {turnoActivo.empleado_nombre}</span>
             </div>
             <span className="text-sm text-green-700 flex items-center gap-1">
               <Clock className="w-4 h-4" /> Abierto: {formatFecha(turnoActivo.fecha_hora_apertura)}
@@ -195,7 +294,7 @@ const GestionCaja: React.FC = () => {
             <div className="bg-white rounded-lg p-4 space-y-3">
               <p className="font-medium text-gray-700">Cierre de turno</p>
               <label className="block text-sm text-gray-600">
-                Monto contado físicamente (Gs.)
+                Monto contado fÃ­sicamente (Gs.)
                 <input
                   type="number"
                   value={montoContado}
@@ -231,13 +330,13 @@ const GestionCaja: React.FC = () => {
           {/* Movimientos del turno */}
           {turnoActivo.movimientos?.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm font-medium text-gray-700 mb-2">Últimos movimientos</p>
+              <p className="text-sm font-medium text-gray-700 mb-2">Ãšltimos movimientos</p>
               <div className="max-h-64 overflow-y-auto space-y-1">
                 {turnoActivo.movimientos.slice(-10).reverse().map(mov => (
                   <div key={mov.id_movimiento} className="flex justify-between text-sm bg-white px-3 py-2 rounded-lg">
-                    <span className="text-gray-600">{mov.descripcion} — {mov.medio_pago_descripcion}</span>
+                    <span className="text-gray-600">{mov.descripcion} â€” {mov.medio_pago_descripcion}</span>
                     <span className={`font-medium ${mov.tipo_movimiento === 'Egreso' ? 'text-red-600' : 'text-green-600'}`}>
-                      {mov.tipo_movimiento === 'Egreso' ? '−' : '+'}{formatGs(mov.monto)}
+                      {mov.tipo_movimiento === 'Egreso' ? 'âˆ’' : '+'}{formatGs(mov.monto)}
                     </span>
                   </div>
                 ))}
@@ -249,26 +348,13 @@ const GestionCaja: React.FC = () => {
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-5 h-5 text-yellow-600" />
-            <span className="font-semibold text-yellow-800">No hay turno activo</span>
+            <span className="font-semibold text-yellow-800">No hay turno activo en {cajaActual?.nombre_caja ?? `Caja ${cajaId}`}</span>
           </div>
 
           {vista === 'abrir' ? (
             <div className="bg-white rounded-lg p-4 space-y-3">
-              <p className="font-medium text-gray-700">Apertura de turno</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <label className="block text-sm text-gray-600">
-                  Caja
-                  <select
-                    value={cajaSeleccionada}
-                    onChange={e => setCajaSeleccionada(e.target.value)}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    <option value="">Seleccionar caja...</option>
-                    {cajas.filter(c => c.estado).map(c => (
-                      <option key={c.id_caja} value={c.id_caja}>{c.nombre_caja}</option>
-                    ))}
-                  </select>
-                </label>
+              <p className="font-medium text-gray-700">Apertura de turno â€” {cajaActual?.nombre_caja}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label className="block text-sm text-gray-600">
                   Cajero
                   <select
