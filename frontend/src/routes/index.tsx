@@ -23,12 +23,27 @@ import Categorias from '../pages/categorias';
 import Perfil from '../pages/Perfil';
 import GestionCaja from '../pages/caja/GestionCaja';
 import GestionTimbrado from '../pages/timbrado/GestionTimbrado';
+import LoginPortal from '../pages/portal/LoginPortal';
+import DashboardPortal from '../pages/portal/DashboardPortal';
 import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
+import PortalRoute from './PortalRoute';
 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
+      {/* Portal de Clientes — rutas independientes del sistema de empleados */}
+      <Route path="/portal/login" element={<LoginPortal />} />
+      <Route
+        path="/portal/dashboard"
+        element={
+          <PortalRoute>
+            <DashboardPortal />
+          </PortalRoute>
+        }
+      />
+      <Route path="/portal" element={<Navigate to="/portal/login" replace />} />
+
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/verificar-2fa" element={<Verify2FA />} />

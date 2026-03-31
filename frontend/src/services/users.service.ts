@@ -77,8 +77,9 @@ export const usersService = {
    * Obtener lista de todos los usuarios
    */
   getAll: async (): Promise<Usuario[]> => {
-    const response = await api.get<{count: number; next: string | null; previous: string | null; results: Usuario[]}>('/empleados/');
-    return response.data.results;
+    const response = await api.get<{count: number; next: string | null; previous: string | null; results: Usuario[]} | Usuario[]>('/empleados/');
+    const data = response.data as any;
+    return Array.isArray(data) ? data : (data.results ?? []);
   },
 
   /**
@@ -153,16 +154,18 @@ export const rolesService = {
    * Obtener lista de todos los roles
    */
   getAll: async (): Promise<Rol[]> => {
-    const response = await api.get<{count: number; next: string | null; previous: string | null; results: Rol[]}>('/roles/');
-    return response.data.results;
+    const response = await api.get<{count: number; next: string | null; previous: string | null; results: Rol[]} | Rol[]>('/roles/');
+    const data = response.data as any;
+    return Array.isArray(data) ? data : (data.results ?? []);
   },
 
   /**
    * Obtener roles activos
    */
   getActive: async (): Promise<Rol[]> => {
-    const response = await api.get<{count: number; next: string | null; previous: string | null; results: Rol[]}>('/roles/?estado=true');
-    return response.data.results;
+    const response = await api.get<{count: number; next: string | null; previous: string | null; results: Rol[]} | Rol[]>('/roles/?estado=true');
+    const data = response.data as any;
+    return Array.isArray(data) ? data : (data.results ?? []);
   },
 
   /**

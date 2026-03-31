@@ -218,6 +218,7 @@ export interface VentaData {
   nro_tarjeta?: string;
   tipo_venta: 'Contado' | 'Credito';
   id_medio_pago?: number;
+  id_caja?: number;          // Terminal POS / caja que procesa esta venta
   numero_comprobante?: string;
   ref_pago_pos?: string;     // Referencia del terminal POS
   ref_pg_transf?: string;   // Referencia de transferencia bancaria
@@ -349,7 +350,17 @@ export interface CuentaCorrienteProveedor {
   total_compras: number;
   total_pagado: number;
   saldo_pendiente: number;
-  compras_pendientes: number;
+  cantidad_compras: number;
+  cantidad_pendientes: number;
+  compras_pendientes: Array<{
+    id_compra: number;
+    nro_factura?: string;
+    monto_total: number;
+    monto_pagado: number;
+    saldo_pendiente: number;
+    fecha_compra: string;
+    dias_vencimiento?: number;
+  }>;
   notas_credito: number;
   proveedor?: {
     id: number;
