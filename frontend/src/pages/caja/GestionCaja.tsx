@@ -2,9 +2,11 @@
 import api from '../../services/api';
 import {
   DollarSign, LogIn, LogOut, Clock, AlertTriangle, CheckCircle,
-  RefreshCw, TrendingUp, TrendingDown, Settings, Monitor,
+  RefreshCw, TrendingUp, TrendingDown, Settings, Monitor, Plus,
+  Pencil, ToggleLeft, ToggleRight, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../hooks/useAuth';
 
 const CAJA_CONFIG_KEY = 'pos_caja_id';
 
@@ -98,7 +100,179 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ cajas, onConfirmar }) => {
   );
 };
 
-// â”€â”€ Componente principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Panel de administración de cajas (solo admin) ────────────────────────────
+
+interface AdminCajasProps {
+  cajas: Caja[];
+  onRefresh: () => void;
+}
+
+const AdminCajas: React.FC<AdminCajasProps> = ({ cajas, onRefresh }) => {
+  const [mostrarForm, setMostrarForm] = useState(false);
+  const [editando, setEditando] = useState<Caja | null>(null);
+  const [nombre, setNombre] = useState('');
+  const [ubicacion, setUbicacion] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const abrirNueva = () => {
+    setEditando(null);
+    setNombre('');
+    setUbicacion('');
+    setMostrarForm(true);
+  };
+
+  const abrirEditar = (caja: Caja) => {
+    setEditando(caja);
+    setNombre(caja.nombre_caja);
+    setUbicacion(caja.ubicacion ?? '');
+    setMostrarForm(true);
+  };
+
+  const cancelar = () => { setMostrarForm(false); setEditando(null); };
+
+  const guardar = async () => {
+    if (!nombre.trim()) { toast.error('El nombre es obligatorio.'); return; }
+    setSaving(true);
+    try {
+      if (editando) {
+        await api.patch(`/cajas/${editando.id_caja}/`, { nombre_caja: nombre.trim(), ubicacion: ubicacion.trim() || null });
+        toast.success('Caja actualizada.');
+      } else {
+        await api.post('/cajas/', { nombre_caja: nombre.trim(), ubicacion: ubicacion.trim() || null, estado: true });
+        toast.success('Caja creada.');
+      }
+      setMostrarForm(false);
+      setEditando(null);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail ?? 'Error al guardar.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleEstado = async (caja: Caja) => {
+    try {
+      await api.patch(`/cajas/${caja.id_caja}/`, { estado: !caja.estado });
+      toast.success(caja.estado ? 'Caja desactivada.' : 'Caja activada.');
+      onRefresh();
+    } catch {
+      toast.error('Error al cambiar estado.');
+    }
+  };
+
+  return (
+    <div className="bg-white border rounded-xl p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">Administrar Cajas</h2>
+        <button
+          onClick={abrirNueva}
+          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+        >
+          <Plus className="w-4 h-4" /> Nueva caja
+        </button>
+      </div>
+
+      {mostrarForm && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+          <p className="font-medium text-blue-900 text-sm">
+            {editando ? `Editar: ${editando.nombre_caja}` : 'Nueva caja'}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
+              <input
+                type="text"
+                value={nombre}
+                onChange={e => setNombre(e.target.value)}
+                placeholder="Ej: Caja Principal"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Ubicación</label>
+              <input
+                type="text"
+                value={ubicacion}
+                onChange={e => setUbicacion(e.target.value)}
+                placeholder="Ej: Salón principal"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={guardar}
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+            >
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+            <button
+              onClick={cancelar}
+              className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1"
+            >
+              <X className="w-3.5 h-3.5" /> Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-gray-500">
+              <th className="pb-2 pr-4">Nombre</th>
+              <th className="pb-2 pr-4">Ubicación</th>
+              <th className="pb-2 pr-4">Estado</th>
+              <th className="pb-2 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cajas.length === 0 && (
+              <tr><td colSpan={4} className="py-6 text-center text-gray-400">No hay cajas registradas. Creá una con "Nueva caja".</td></tr>
+            )}
+            {cajas.map(caja => (
+              <tr key={caja.id_caja} className="border-b last:border-0 hover:bg-gray-50">
+                <td className="py-2.5 pr-4 font-medium text-gray-800">{caja.nombre_caja}</td>
+                <td className="py-2.5 pr-4 text-gray-500">{caja.ubicacion ?? '—'}</td>
+                <td className="py-2.5 pr-4">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                    ${caja.estado ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {caja.estado ? 'Activa' : 'Inactiva'}
+                  </span>
+                </td>
+                <td className="py-2.5 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => abrirEditar(caja)}
+                      title="Editar"
+                      className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => toggleEstado(caja)}
+                      title={caja.estado ? 'Desactivar' : 'Activar'}
+                      className={`p-1.5 rounded-lg transition-colors
+                        ${caja.estado
+                          ? 'text-green-600 hover:text-red-600 hover:bg-red-50'
+                          : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
+                    >
+                      {caja.estado ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// ── Componente principal ──────────────────────────────────────────────────────
 
 const GestionCaja: React.FC = () => {
   const [cajas, setCajas] = useState<Caja[]>([]);
@@ -110,6 +284,9 @@ const GestionCaja: React.FC = () => {
   // Caja de ESTE terminal (persistida en localStorage)
   const [cajaId, setCajaId] = useState<number | null>(getCajaConfigurada);
   const [mostrarConfig, setMostrarConfig] = useState(false);
+
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   // Form apertura
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState('');
@@ -405,28 +582,30 @@ const GestionCaja: React.FC = () => {
         </div>
       )}
 
-      {/* Lista de cajas registradas */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-3">Cajas registradas</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {cajas.map(caja => (
-            <div key={caja.id_caja} className="bg-white border rounded-xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-medium text-gray-800">{caja.nombre_caja}</span>
-                <span className={`text-xs px-2 py-1 rounded-full ${caja.estado ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {caja.estado ? 'Activa' : 'Inactiva'}
-                </span>
+      {/* Panel según rol */}
+      {isAdmin ? (
+        <AdminCajas cajas={cajas} onRefresh={cargarDatos} />
+      ) : (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">Cajas registradas</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {cajas.map(caja => (
+              <div key={caja.id_caja} className="bg-white border rounded-xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium text-gray-800">{caja.nombre_caja}</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${caja.estado ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {caja.estado ? 'Activa' : 'Inactiva'}
+                  </span>
+                </div>
+                {caja.ubicacion && <p className="text-sm text-gray-500">{caja.ubicacion}</p>}
               </div>
-              {caja.ubicacion && (
-                <p className="text-sm text-gray-500">{caja.ubicacion}</p>
-              )}
-            </div>
-          ))}
-          {cajas.length === 0 && (
-            <p className="text-gray-400 col-span-3 text-center py-8">No hay cajas configuradas.</p>
-          )}
+            ))}
+            {cajas.length === 0 && (
+              <p className="text-gray-400 col-span-3 text-center py-8">No hay cajas configuradas.</p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
