@@ -391,8 +391,11 @@ const GestionCaja: React.FC = () => {
   // Primera vez: terminal sin caja asignada
   if (!cajaId || mostrarConfig) {
     return (
-      <div className="p-6">
+      <div className="p-6 space-y-6">
         <ConfigPanel cajas={cajas} onConfirmar={confirmarCaja} />
+        {isAdmin && (
+          <AdminCajas cajas={cajas} onRefresh={cargarDatos} />
+        )}
       </div>
     );
   }
