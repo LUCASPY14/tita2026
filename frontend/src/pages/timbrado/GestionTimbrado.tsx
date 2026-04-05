@@ -130,6 +130,11 @@ const GestionTimbrado: React.FC = () => {
     t => t.estado && t.fecha_inicio <= hoy && t.fecha_fin >= hoy
   );
 
+  // Días hasta el vencimiento del timbrado vigente
+  const diasParaVencer = timbradoVigente
+    ? Math.ceil((new Date(timbradoVigente.fecha_fin).getTime() - new Date(hoy).getTime()) / 86400000)
+    : null;
+
   const porcentajeUsado = (t: Timbrado) => {
     const total = t.nro_final - t.nro_inicial + 1;
     const usados = total - t.nro_disponibles;
@@ -170,6 +175,25 @@ const GestionTimbrado: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Alerta vencimiento próximo */}
+      {timbradoVigente && diasParaVencer !== null && diasParaVencer <= 30 && (
+        <div className={`border rounded-xl p-4 flex items-center gap-3 ${diasParaVencer <= 5 ? 'bg-red-50 border-red-300' : 'bg-orange-50 border-orange-300'}`}>
+          <AlertTriangle className={`w-6 h-6 flex-shrink-0 ${diasParaVencer <= 5 ? 'text-red-600' : 'text-orange-500'}`} />
+          <div>
+            <p className={`font-semibold ${diasParaVencer <= 5 ? 'text-red-800' : 'text-orange-800'}`}>
+              {diasParaVencer <= 0
+                ? 'Timbrado vencido hoy — registrá el nuevo timbrado SET urgente'
+                : diasParaVencer === 1
+                  ? 'El timbrado vence mañana — registrá el nuevo timbrado SET'
+                  : `El timbrado vence en ${diasParaVencer} días (${timbradoVigente.fecha_fin})`}
+            </p>
+            <p className={`text-sm ${diasParaVencer <= 5 ? 'text-red-700' : 'text-orange-700'}`}>
+              Solicitá el nuevo timbrado ante la SET y regístralo con el botón "Nuevo timbrado".
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Timbrado vigente banner */}
       {timbradoVigente ? (

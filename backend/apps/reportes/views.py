@@ -475,3 +475,72 @@ def reportes_export_view(request, **kwargs):
     """Stub view para endpoints de exportación de reportes."""
     return Response({'status': 'ok'})
 
+
+class TareasProgradasViewSet(viewsets.ViewSet):
+    """
+    ViewSet para ver y modificar las tareas programadas de Celery Beat.
+    Solo permite listar, activar/desactivar y cambiar el horario (crontab).
+    """
+    from rest_framework.permissions import IsAuthenticated
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        """GET /tareas-programadas/ — lista todas las tareas con su crontab."""
+        try:
+            from django_celery_beat.models import PeriodicTask
+            tasks = (
+                PeriodicTask.objects
+                .select_related('crontab')
+                .order_by('name')
+            )
+            data = []
+            for t in tasks:
+                cron = t.crontab
+                data.append({
+                    'id': t.id,
+                    'name': t.name,
+                    'task': t.task,
+                    'enabled': t.enabled,
+                    'last_run_at': t.last_run_at,
+                    'total_run_count': t.total_run_count,
+                    'crontab': {
+                        'id': cron.id if cron else None,
+                        'minute': cron.minute if cron else '*',
+                        'hour': cron.hour if cron else '*',
+                        'day_of_week': cron.day_of_week if cron else '*',
+                        'day_of_month': cron.day_of_month if cron else '*',
+                        'month_of_year': cron.month_of_year if cron else '*',
+                    } if cron else None,
+                })
+            return Response(data)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def partial_update(self, request, pk=None):
+        """
+        PATCH /tareas-programadas/{id}/ — activa/desactiva o modifica el crontab.
+        Payload: { enabled: bool } o { minute, hour, day_of_week, day_of_month, month_of_year }
+        """
+        try:
+            from django_celery_beat.models import PeriodicTask, CrontabSchedule
+            task = PeriodicTask.objects.get(pk=pk)
+
+            if 'enabled' in request.data:
+                task.enabled = bool(request.data['enabled'])
+                task.save(update_fields=['enabled'])
+
+            cron_fields = {'minute', 'hour', 'day_of_week', 'day_of_month', 'month_of_year'}
+            if cron_fields & set(request.data.keys()):
+                cron = task.crontab
+                if cron:
+                    for field in cron_fields:
+                        if field in request.data:
+                            setattr(cron, field, str(request.data[field]))
+                    cron.save()
+
+            return Response({'status': 'ok', 'id': task.id, 'enabled': task.enabled})
+        except PeriodicTask.DoesNotExist:
+            return Response({'detail': 'Tarea no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+

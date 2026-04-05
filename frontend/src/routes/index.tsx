@@ -24,6 +24,10 @@ import Perfil from '../pages/Perfil';
 import GestionCaja from '../pages/caja/GestionCaja';
 import GestionTimbrado from '../pages/timbrado/GestionTimbrado';
 import ColaFacturacion from '../pages/facturacion/ColaFacturacion';
+import GestionMediosPago from '../pages/configuracion/GestionMediosPago';
+import GestionImpuestos from '../pages/configuracion/GestionImpuestos';
+import GestionPlantillasEmail from '../pages/configuracion/GestionPlantillasEmail';
+import GestionTareasProgramadas from '../pages/configuracion/GestionTareasProgramadas';
 import LoginPortal from '../pages/portal/LoginPortal';
 import DashboardPortal from '../pages/portal/DashboardPortal';
 import MainLayout from '../layouts/MainLayout';
@@ -238,6 +242,40 @@ const AppRoutes: React.FC = () => {
                       <GestionTimbrado />
                     </ProtectedRoute>
                   } 
+                />
+
+                {/* Configuración: tablas paramétricas */}
+                <Route
+                  path="/configuracion/medios-pago"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <GestionMediosPago />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/configuracion/impuestos"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <GestionImpuestos />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/configuracion/plantillas-email"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <GestionPlantillasEmail />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/configuracion/tareas-programadas"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <GestionTareasProgramadas />
+                    </ProtectedRoute>
+                  }
                 />
               </Routes>
             </MainLayout>

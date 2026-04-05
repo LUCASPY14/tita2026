@@ -10,7 +10,22 @@ from .models import (
     PreferenciasNotificacion,
     EmailsEnviados,
     SmsEnviados,
+    PlantillasEmail,
 )
+
+
+class PlantillasEmailSerializer(serializers.ModelSerializer):
+    """Serializer para plantillas de email transaccional."""
+
+    class Meta:
+        model = PlantillasEmail
+        fields = [
+            'id_template', 'codigo', 'nombre', 'descripcion',
+            'asunto', 'cuerpo_html', 'cuerpo_texto',
+            'variables', 'categoria', 'estado',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id_template', 'created_at', 'updated_at']
 
 
 class NotificacionPortalSerializer(serializers.ModelSerializer):

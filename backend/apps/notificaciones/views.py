@@ -17,13 +17,50 @@ from .models import (
     NotificacionesSaldo,
     AlertasSistema,
     PreferenciasNotificacion,
+    PlantillasEmail,
 )
 from .serializers import (
     NotificacionPortalSerializer,
     NotificacionSaldoSerializer,
     AlertaSistemaSerializer,
     PreferenciasNotificacionSerializer,
+    PlantillasEmailSerializer,
 )
+
+
+class PlantillasEmailViewSet(viewsets.ModelViewSet):
+    """CRUD de plantillas de email (transaccionales, alertas, etc.)."""
+    queryset = PlantillasEmail.objects.all().order_by('categoria', 'nombre')
+    serializer_class = PlantillasEmailSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = PlantillasEmail.objects.all().order_by('categoria', 'nombre')
+        categoria = self.request.query_params.get('categoria')
+        estado = self.request.query_params.get('estado')
+        if categoria:
+            qs = qs.filter(categoria=categoria)
+        if estado is not None:
+            qs = qs.filter(estado=estado.lower() != 'false')
+        return qs
+
+    def perform_create(self, serializer):
+        from django.utils import timezone
+        now = timezone.now()
+        serializer.save(created_at=now, updated_at=now, created_by=None)
+
+    def perform_update(self, serializer):
+        from django.utils import timezone
+        serializer.save(updated_at=timezone.now())
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft-delete."""
+        from rest_framework.response import Response
+        from rest_framework import status
+        instance = self.get_object()
+        instance.estado = False
+        instance.save(update_fields=['estado'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class NotificacionesPortalViewSet(viewsets.ModelViewSet):

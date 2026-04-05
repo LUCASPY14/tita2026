@@ -19,12 +19,26 @@ from datetime import date
 from decimal import Decimal
 
 
-class ImpuestosViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet de solo lectura para impuestos/tasas (IVA 10%, IVA 5%, Exenta)."""
-    queryset = Impuestos.objects.filter(estado=True).order_by('nombre_impuesto')
+class ImpuestosViewSet(viewsets.ModelViewSet):
+    """CRUD de impuestos/tasas (IVA 10%, IVA 5%, Exenta)."""
+    queryset = Impuestos.objects.all().order_by('nombre_impuesto')
     serializer_class = ImpuestosSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
+
+    def get_queryset(self):
+        qs = Impuestos.objects.all().order_by('nombre_impuesto')
+        solo_activos = self.request.query_params.get('activos', None)
+        if solo_activos is not None:
+            qs = qs.filter(estado=solo_activos.lower() != 'false')
+        return qs
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft-delete: marca estado=False en lugar de eliminar."""
+        instance = self.get_object()
+        instance.estado = False
+        instance.save(update_fields=['estado'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class DatosEmpresaViewSet(viewsets.ReadOnlyModelViewSet):

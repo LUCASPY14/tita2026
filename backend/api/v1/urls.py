@@ -23,9 +23,10 @@ from apps.reportes.views import (
     ReportesViewSet,
     PlantillasReporteViewSet, DashboardsViewSet, KpiMetricasViewSet,
     PlantillasTareaViewSet, EjecucionesTareaViewSet,
+    TareasProgradasViewSet,
     reportes_util_view, reportes_export_view,
 )
-from apps.notificaciones.views import NotificacionesPortalViewSet, NotificacionesSaldoViewSet, AlertasSistemaViewSet, PreferenciasNotificacionViewSet
+from apps.notificaciones.views import NotificacionesPortalViewSet, NotificacionesSaldoViewSet, AlertasSistemaViewSet, PreferenciasNotificacionViewSet, PlantillasEmailViewSet
 from apps.api_integrations.views import bancard_webhook, webhook_test
 
 # Create a router for ViewSets
@@ -108,12 +109,14 @@ router.register(r'reportes/dashboards', DashboardsViewSet, basename='dashboards'
 router.register(r'reportes/kpis', KpiMetricasViewSet, basename='kpi-metricas')
 router.register(r'reportes/tareas', PlantillasTareaViewSet, basename='plantillas-tarea')
 router.register(r'reportes/ejecuciones', EjecucionesTareaViewSet, basename='ejecuciones-tarea')
+router.register(r'tareas-programadas', TareasProgradasViewSet, basename='tareas-programadas')
 
 # Register Notificaciones ViewSets
 router.register(r'notificaciones-portal', NotificacionesPortalViewSet, basename='notificaciones-portal')
 router.register(r'notificaciones-saldo', NotificacionesSaldoViewSet, basename='notificaciones-saldo')
 router.register(r'alertas-sistema', AlertasSistemaViewSet, basename='alertas-sistema')
 router.register(r'preferencias-notificacion', PreferenciasNotificacionViewSet, basename='preferencias-notificacion')
+router.register(r'plantillas-email', PlantillasEmailViewSet, basename='plantillas-email')
 
 urlpatterns = [
     path('', include(router.urls)),
