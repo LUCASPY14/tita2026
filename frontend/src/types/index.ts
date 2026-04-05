@@ -244,6 +244,8 @@ export interface Venta {
   id_hijo?: number;
   cliente_nombre?: string;
   hijo_nombre?: string;
+  genera_factura_legal?: boolean;
+  id_documento?: number | null;
   // Campos IVA fiscales
   iva_10?: number;
   iva_5?: number;

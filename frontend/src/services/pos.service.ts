@@ -147,4 +147,17 @@ export const posService = {
     });
     return response.data.results || [];
   },
+
+  emitirFactura: async (
+    idVenta: number,
+    dto: { nro_preimpreso: number; condicion_venta: 'CONTADO' | 'CREDITO'; plazo_dias?: number | null }
+  ): Promise<{ exito: boolean; id_documento: number; nro_preimpreso_interno: string; mensaje: string }> => {
+    const response = await api.post(`/ventas/${idVenta}/emitir_factura/`, dto);
+    return response.data;
+  },
+
+  getSinFacturar: async (params?: { id_cliente?: number; fecha_desde?: string; fecha_hasta?: string }): Promise<{ count: number; results: Venta[] }> => {
+    const response = await api.get('/ventas/sin_facturar/', { params });
+    return response.data;
+  },
 };

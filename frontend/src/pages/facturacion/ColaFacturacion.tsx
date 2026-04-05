@@ -9,6 +9,8 @@ import facturacionService, {
   ItemPendiente,
   DocumentoEmitido,
 } from '../../services/facturacion.service';
+import posService from '../../services/pos.service';
+import type { Venta } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -258,6 +260,159 @@ const ModalEmitir: React.FC<ModalEmitirProps> = ({ cliente, onClose, onEmitido }
   );
 };
 
+// ─── Modal de emisión individual ────────────────────────────────────────────
+
+interface ModalEmitirVentaProps {
+  venta: Venta;
+  onClose: () => void;
+  onEmitido: (doc: DocumentoEmitido) => void;
+}
+
+const ModalEmitirVenta: React.FC<ModalEmitirVentaProps> = ({ venta, onClose, onEmitido }) => {
+  const [nroPreimpreso, setNroPreimpreso] = useState('');
+  const [condicionVenta, setCondicionVenta] = useState<'CONTADO' | 'CREDITO'>('CONTADO');
+  const [plazoDias, setPlazoDias] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleEmitir = async () => {
+    const nro = parseInt(nroPreimpreso, 10);
+    if (!nroPreimpreso || isNaN(nro) || nro <= 0) {
+      toast.error('Ingresá el número del formulario preimpreso.');
+      return;
+    }
+    if (condicionVenta === 'CREDITO') {
+      const plazo = parseInt(plazoDias, 10);
+      if (!plazoDias || isNaN(plazo) || plazo < 1) {
+        toast.error('Para Crédito debés indicar el plazo en días.');
+        return;
+      }
+    }
+    setLoading(true);
+    try {
+      const result = await posService.emitirFactura(venta.id_venta, {
+        nro_preimpreso: nro,
+        condicion_venta: condicionVenta,
+        plazo_dias: condicionVenta === 'CREDITO' ? parseInt(plazoDias, 10) : null,
+      });
+      const doc: DocumentoEmitido = {
+        id_documento: result.id_documento,
+        nro_preimpreso_interno: result.nro_preimpreso_interno,
+        fecha_emision: new Date().toISOString(),
+        monto_total: String(venta.monto_total),
+        tipo_documento: 'FACTURA',
+        nro_secuencial: 0,
+        nro_timbrado: 0,
+        id_cliente: venta.id_cliente || 0,
+        cliente_nombre: venta.cliente_nombre || '',
+        cliente_ruc: '',
+        condicion_venta: condicionVenta,
+        condicion_venta_display: condicionVenta,
+        plazo_dias: condicionVenta === 'CREDITO' ? parseInt(plazoDias, 10) : null,
+      };
+      toast.success(`Factura ${result.nro_preimpreso_interno} emitida.`);
+      onEmitido(doc);
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || 'Error al emitir la factura.';
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Emitir Factura</h2>
+            <p className="text-sm text-gray-500">
+              {venta.cliente_nombre || 'Consumidor Final'} · Gs {fmt(venta.monto_total)}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nº Formulario preimpreso
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={nroPreimpreso}
+              onChange={(e) => setNroPreimpreso(e.target.value)}
+              placeholder="ej: 1"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Condición de venta
+            </label>
+            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setCondicionVenta('CONTADO')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                  condicionVenta === 'CONTADO' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Contado
+              </button>
+              <button
+                type="button"
+                onClick={() => setCondicionVenta('CREDITO')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                  condicionVenta === 'CREDITO' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Crédito
+              </button>
+            </div>
+          </div>
+
+          {condicionVenta === 'CREDITO' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Plazo en días
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={plazoDias}
+                onChange={(e) => setPlazoDias(e.target.value)}
+                placeholder="30"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleEmitir}
+            disabled={loading}
+            className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+            {loading ? 'Emitiendo…' : 'Emitir Factura'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Tarjeta de cliente ───────────────────────────────────────────────────────
 
 interface TarjetaClienteProps {
@@ -400,6 +555,10 @@ const ColaFacturacion: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [clienteModal, setClienteModal] = useState<ClienteConPendientes | null>(null);
   const [docEmitido, setDocEmitido] = useState<DocumentoEmitido | null>(null);
+  const [activeTab, setActiveTab] = useState<'cola' | 'sin_facturar'>('cola');
+  const [sinFacturar, setSinFacturar] = useState<Venta[]>([]);
+  const [sinFacturarLoading, setSinFacturarLoading] = useState(false);
+  const [ventaModal, setVentaModal] = useState<Venta | null>(null);
 
   const cargarCola = useCallback(async () => {
     setLoading(true);
@@ -414,15 +573,29 @@ const ColaFacturacion: React.FC = () => {
     }
   }, []);
 
+  const cargarSinFacturar = useCallback(async () => {
+    setSinFacturarLoading(true);
+    try {
+      const data = await posService.getSinFacturar();
+      setSinFacturar(data.results);
+    } catch {
+      // no-op
+    } finally {
+      setSinFacturarLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     cargarCola();
-  }, [cargarCola]);
+    cargarSinFacturar();
+  }, [cargarCola, cargarSinFacturar]);
 
   const handleEmitido = (doc: DocumentoEmitido) => {
     setClienteModal(null);
+    setVentaModal(null);
     setDocEmitido(doc);
-    // Remover cliente de la cola (o recargar)
     cargarCola();
+    cargarSinFacturar();
   };
 
   const totalPendiente = cola.reduce((acc, c) => acc + c.total_pendiente, 0);
@@ -441,76 +614,173 @@ const ColaFacturacion: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={cargarCola}
-          disabled={loading}
+          onClick={() => { cargarCola(); cargarSinFacturar(); }}
+          disabled={loading || sinFacturarLoading}
           className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg
                      text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${loading || sinFacturarLoading ? 'animate-spin' : ''}`} />
           Actualizar
         </button>
       </div>
 
-      {/* Resumen */}
-      {!loading && !error && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-            <p className="text-sm text-blue-600 font-medium">Clientes pendientes</p>
-            <p className="text-3xl font-bold text-blue-700 mt-1">{cola.length}</p>
-          </div>
-          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-            <p className="text-sm text-amber-600 font-medium">Total a facturar</p>
-            <p className="text-3xl font-bold text-amber-700 mt-1">Gs {fmt(totalPendiente)}</p>
-          </div>
-        </div>
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 -mt-2">
+        <button
+          onClick={() => setActiveTab('cola')}
+          className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'cola'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Cola de Facturación
+          {cola.length > 0 && (
+            <span className="ml-2 bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">
+              {cola.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('sin_facturar')}
+          className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'sin_facturar'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Sin Facturar
+          {sinFacturar.length > 0 && (
+            <span className="ml-2 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">
+              {sinFacturar.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ── Tab: Cola de Facturación ─────────────────────────────────────── */}
+      {activeTab === 'cola' && (
+        <>
+          {/* Resumen */}
+          {!loading && !error && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                <p className="text-sm text-blue-600 font-medium">Clientes pendientes</p>
+                <p className="text-3xl font-bold text-blue-700 mt-1">{cola.length}</p>
+              </div>
+              <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                <p className="text-sm text-amber-600 font-medium">Total a facturar</p>
+                <p className="text-3xl font-bold text-amber-700 mt-1">Gs {fmt(totalPendiente)}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Estado de carga */}
+          {loading && (
+            <div className="flex items-center justify-center py-16 text-gray-400">
+              <Loader2 className="w-8 h-8 animate-spin mr-3" />
+              Cargando cola…
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200 text-red-700">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span>{error}</span>
+              <button onClick={cargarCola} className="ml-auto flex items-center gap-1 underline text-sm">
+                <RotateCcw className="w-3 h-3" /> Reintentar
+              </button>
+            </div>
+          )}
+
+          {/* Lista vacía */}
+          {!loading && !error && cola.length === 0 && (
+            <div className="text-center py-16 text-gray-400">
+              <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
+              <p className="text-lg font-medium text-gray-600">Todo al día</p>
+              <p className="text-sm">No hay ventas ni almuerzos pendientes de facturación.</p>
+            </div>
+          )}
+
+          {/* Cola */}
+          {!loading && !error && cola.length > 0 && (
+            <div className="space-y-3">
+              {cola.map((cliente) => (
+                <TarjetaCliente
+                  key={cliente.id_cliente}
+                  cliente={cliente}
+                  onFacturar={setClienteModal}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Estado de carga */}
-      {loading && (
-        <div className="flex items-center justify-center py-16 text-gray-400">
-          <Loader2 className="w-8 h-8 animate-spin mr-3" />
-          Cargando cola…
-        </div>
+      {/* ── Tab: Sin Facturar ────────────────────────────────────────────── */}
+      {activeTab === 'sin_facturar' && (
+        <>
+          {sinFacturarLoading && (
+            <div className="flex items-center justify-center py-16 text-gray-400">
+              <Loader2 className="w-8 h-8 animate-spin mr-3" />
+              Cargando ventas…
+            </div>
+          )}
+
+          {!sinFacturarLoading && sinFacturar.length === 0 && (
+            <div className="text-center py-16 text-gray-400">
+              <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
+              <p className="text-lg font-medium text-gray-600">Sin pendientes</p>
+              <p className="text-sm">No hay ventas pagadas sin factura física asignada.</p>
+            </div>
+          )}
+
+          {!sinFacturarLoading && sinFacturar.length > 0 && (
+            <div className="space-y-2">
+              {sinFacturar.map((venta) => (
+                <div
+                  key={venta.id_venta}
+                  className="bg-white rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 p-4"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">
+                      {venta.cliente_nombre || 'Consumidor Final'}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(venta.fecha).toLocaleDateString('es-PY')} · Venta #{venta.nro_factura_venta ?? venta.id_venta}
+                    </p>
+                  </div>
+                  <p className="font-bold text-gray-900 mr-2">Gs {fmt(venta.monto_total)}</p>
+                  <button
+                    onClick={() => setVentaModal(venta)}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg
+                               hover:bg-blue-700 transition-colors flex items-center gap-1.5 flex-shrink-0"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Facturar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Error */}
-      {error && (
-        <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200 text-red-700">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <span>{error}</span>
-          <button onClick={cargarCola} className="ml-auto flex items-center gap-1 underline text-sm">
-            <RotateCcw className="w-3 h-3" /> Reintentar
-          </button>
-        </div>
-      )}
-
-      {/* Lista vacía */}
-      {!loading && !error && cola.length === 0 && (
-        <div className="text-center py-16 text-gray-400">
-          <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
-          <p className="text-lg font-medium text-gray-600">Todo al día</p>
-          <p className="text-sm">No hay ventas ni almuerzos pendientes de facturación.</p>
-        </div>
-      )}
-
-      {/* Cola */}
-      {!loading && !error && cola.length > 0 && (
-        <div className="space-y-3">
-          {cola.map((cliente) => (
-            <TarjetaCliente
-              key={cliente.id_cliente}
-              cliente={cliente}
-              onFacturar={setClienteModal}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Modal emisión */}
+      {/* Modal emisión grupal */}
       {clienteModal && (
         <ModalEmitir
           cliente={clienteModal}
           onClose={() => setClienteModal(null)}
+          onEmitido={handleEmitido}
+        />
+      )}
+
+      {/* Modal emisión individual */}
+      {ventaModal && (
+        <ModalEmitirVenta
+          venta={ventaModal}
+          onClose={() => setVentaModal(null)}
           onEmitido={handleEmitido}
         />
       )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Filter, RefreshCw, Eye, Calendar, TrendingUp,
-  ChevronLeft, ChevronRight, DollarSign, ShoppingBag, Banknote,
+  ChevronLeft, ChevronRight, DollarSign, ShoppingBag, Banknote, FileText,
 } from 'lucide-react';
 import { Input, Button, Spinner, Badge, EmptyState } from '../../../components/common';
 import { posService } from '../../../services/pos.service';
@@ -37,6 +37,14 @@ const HistorialVentas: React.FC = () => {
   const [bancoEmisor, setBancoEmisor] = useState('');
   const [procesandoPago, setProcesandoPago] = useState(false);
   const [errorPago, setErrorPago] = useState('');
+
+  // Estado para emitir factura individual
+  const [ventaFacturar, setVentaFacturar] = useState<Venta | null>(null);
+  const [nroFactura, setNroFactura] = useState('');
+  const [condicionVenta, setCondicionVenta] = useState<'CONTADO' | 'CREDITO'>('CONTADO');
+  const [plazoDias, setPlazoDias] = useState('');
+  const [emitiendo, setEmitiendo] = useState(false);
+  const [errorFactura, setErrorFactura] = useState('');
 
   const cargarVentas = useCallback(async (pagina = 1, resetear = false) => {
     setCargando(true);
@@ -79,6 +87,54 @@ const HistorialVentas: React.FC = () => {
     setRefPgTransf('');
     setBancoEmisor('');
     setErrorPago('');
+  };
+
+  const abrirModalFactura = (venta: Venta) => {
+    setVentaFacturar(venta);
+    setNroFactura('');
+    setCondicionVenta('CONTADO');
+    setPlazoDias('');
+    setErrorFactura('');
+  };
+
+  const handleEmitirFactura = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ventaFacturar) return;
+    const nro = parseInt(nroFactura, 10);
+    if (!nroFactura || isNaN(nro) || nro < 1) {
+      setErrorFactura('Ingresá un número de formulario válido.');
+      return;
+    }
+    if (condicionVenta === 'CREDITO') {
+      const plazo = parseInt(plazoDias, 10);
+      if (!plazoDias || isNaN(plazo) || plazo < 1) {
+        setErrorFactura('Para Crédito indicá el plazo en días.');
+        return;
+      }
+    }
+    setEmitiendo(true);
+    setErrorFactura('');
+    try {
+      const res = await posService.emitirFactura(ventaFacturar.id_venta, {
+        nro_preimpreso: nro,
+        condicion_venta: condicionVenta,
+        plazo_dias: condicionVenta === 'CREDITO' ? parseInt(plazoDias, 10) : null,
+      });
+      // Marcar la venta como facturada en la lista local
+      setVentas(prev => prev.map(v =>
+        v.id_venta === ventaFacturar.id_venta
+          ? { ...v, id_documento: res.id_documento }
+          : v
+      ));
+      setVentaFacturar(null);
+      // Recargar para reflejar estado actualizado
+      cargarVentas(paginaActual);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.response?.data?.detail || 'Error al emitir factura.';
+      setErrorFactura(String(msg));
+    } finally {
+      setEmitiendo(false);
+    }
   };
 
   const handleRegistrarPago = async (e: React.FormEvent) => {
@@ -378,6 +434,16 @@ const HistorialVentas: React.FC = () => {
                       >
                         <Eye className="h-4 w-4" />
                       </button>
+                      {venta.genera_factura_legal && !venta.id_documento && venta.estado_pago.toLowerCase() === 'pagada' && (
+                        <button
+                          type="button"
+                          onClick={() => abrirModalFactura(venta)}
+                          className="rounded-lg p-1.5 text-blue-400 hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                          title="Emitir factura timbrada"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </button>
+                      )}
                       {venta.saldo_pendiente > 0 && (
                         <button
                           type="button"
@@ -668,6 +734,84 @@ const HistorialVentas: React.FC = () => {
                 </Button>
                 <Button type="submit" variant="primary" className="flex-1" disabled={procesandoPago}>
                   {procesandoPago ? <Spinner size="sm" /> : 'Registrar Pago'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Emitir Factura */}
+      {ventaFacturar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setVentaFacturar(null)}>
+          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Emitir Factura Timbrada</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Venta {ventaFacturar.nro_factura_venta ? `#${ventaFacturar.nro_factura_venta}` : `ID ${ventaFacturar.id_venta}`}
+                  {' · '}{ventaFacturar.cliente_nombre || ventaFacturar.hijo_nombre || '—'}
+                </p>
+              </div>
+              <button type="button" onClick={() => setVentaFacturar(null)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100">✕</button>
+            </div>
+            <form onSubmit={handleEmitirFactura} className="space-y-4 p-6">
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 flex justify-between text-sm">
+                <span className="text-amber-700 font-medium">Monto a facturar:</span>
+                <span className="font-bold text-amber-800">{formatearMoneda(ventaFacturar.monto_total)}</span>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Nro. formulario preimpreso *</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={nroFactura}
+                  onChange={(e) => setNroFactura(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 font-mono text-xl tracking-widest focus:border-amber-500 focus:outline-none"
+                  placeholder="Ej: 123"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Condición de venta *</label>
+                <div className="flex gap-3">
+                  {(['CONTADO', 'CREDITO'] as const).map((op) => (
+                    <button
+                      key={op}
+                      type="button"
+                      onClick={() => { setCondicionVenta(op); if (op === 'CONTADO') setPlazoDias(''); }}
+                      className={`flex-1 rounded-lg border py-2.5 text-sm font-semibold transition-colors ${
+                        condicionVenta === op
+                          ? op === 'CONTADO' ? 'bg-green-600 border-green-600 text-white' : 'bg-amber-500 border-amber-500 text-white'
+                          : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {op === 'CONTADO' ? 'Contado' : 'Crédito'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {condicionVenta === 'CREDITO' && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Plazo (días) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={plazoDias}
+                    onChange={(e) => setPlazoDias(e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                    placeholder="Ej: 30"
+                  />
+                </div>
+              )}
+              {errorFactura && (
+                <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{errorFactura}</p>
+              )}
+              <div className="flex gap-3 pt-1">
+                <Button type="button" variant="secondary" onClick={() => setVentaFacturar(null)} className="flex-1">Cancelar</Button>
+                <Button type="submit" variant="primary" className="flex-1" disabled={emitiendo}>
+                  {emitiendo ? <Spinner size="sm" /> : 'Emitir Factura'}
                 </Button>
               </div>
             </form>

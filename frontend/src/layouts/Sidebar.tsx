@@ -43,33 +43,49 @@ interface NavItem {
   end?: boolean;
 }
 
-const BASE_NAVIGATION: NavItem[] = [
+type NavigationEntry = NavItem | { type: 'section'; name: string };
+
+const BASE_NAVIGATION: NavigationEntry[] = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, end: true },
+
+  { type: 'section', name: 'Ventas & Cobros' },
   { name: 'Recargas', path: '/recargas', icon: CreditCard, roles: ['admin', 'gerente', 'cajero', 'cobrador'] },
   { name: 'Punto de Venta', path: '/ventas', icon: ShoppingCart, end: true, roles: ['admin', 'gerente', 'cajero'] },
   { name: 'Gestión Ventas', path: '/ventas/gestion', icon: TrendingUp, roles: ['admin', 'gerente', 'cobrador'] },
+  { name: 'Caja', path: '/caja', icon: DollarSign, roles: ['admin', 'gerente', 'cajero'] },
+  { name: 'Almuerzos', path: '/almuerzos', icon: Utensils },
+
+  { type: 'section', name: 'Clientes' },
   { name: 'Clientes', path: '/clientes', icon: Users, roles: ['admin', 'gerente', 'cobrador'] },
+
+  { type: 'section', name: 'Inventario' },
   { name: 'Productos', path: '/productos', icon: Package, roles: ['admin', 'gerente', 'supervisor'] },
   { name: 'Categorías', path: '/categorias', icon: Tag, roles: ['admin', 'gerente', 'supervisor'] },
   { name: 'Inventario', path: '/inventario', icon: Warehouse, roles: ['admin', 'gerente', 'supervisor'] },
-  { name: 'Almuerzos', path: '/almuerzos', icon: Utensils },
-  { name: 'Reportes', path: '/reportes', icon: BarChart3, roles: ['admin', 'gerente'] },
-  { name: 'Notificaciones', path: '/notificaciones', icon: Bell },
   { name: 'Compras', path: '/compras', icon: FileText, roles: ['admin', 'gerente'] },
   { name: 'Proveedores', path: '/proveedores', icon: Truck, roles: ['admin', 'gerente'] },
-  { name: 'Caja', path: '/caja', icon: DollarSign, roles: ['admin', 'gerente', 'cajero'] },
+
+  { type: 'section', name: 'Facturación' },
   { name: 'Facturación', path: '/facturacion', icon: FileText, roles: ['admin', 'cajero'] },
   { name: 'Hist. Facturas', path: '/facturacion/historial', icon: FileText, roles: ['admin', 'cajero'] },
   { name: 'Timbrado', path: '/timbrado', icon: Stamp, adminOnly: true },
+
+  { type: 'section', name: 'Informes' },
+  { name: 'Reportes', path: '/reportes', icon: BarChart3, roles: ['admin', 'gerente'] },
+  { name: 'Notificaciones', path: '/notificaciones', icon: Bell },
+
+  { type: 'section', name: 'Administración' },
+  { name: 'Usuarios', path: '/admin/usuarios', icon: UserCog, adminOnly: true },
+  { name: 'Permisos', path: '/admin/permisos', icon: KeyRound, adminOnly: true },
+  { name: 'Auditoría', path: '/admin/auditoria', icon: Shield, adminOnly: true },
+  { name: 'Configuración', path: '/configuracion', icon: Settings },
+
+  { type: 'section', name: 'Config. Sistema' },
   { name: 'Datos de Empresa', path: '/configuracion/datos-empresa', icon: Building2, adminOnly: true },
   { name: 'Medios de Pago', path: '/configuracion/medios-pago', icon: CreditCard, adminOnly: true },
   { name: 'Impuestos', path: '/configuracion/impuestos', icon: Percent, adminOnly: true },
   { name: 'Plantillas Email', path: '/configuracion/plantillas-email', icon: Mail, adminOnly: true },
   { name: 'Tareas Programadas', path: '/configuracion/tareas-programadas', icon: Clock, adminOnly: true },
-  { name: 'Configuración', path: '/configuracion', icon: Settings },
-  { name: 'Usuarios', path: '/admin/usuarios', icon: UserCog, adminOnly: true },
-  { name: 'Permisos', path: '/admin/permisos', icon: KeyRound, adminOnly: true },
-  { name: 'Auditoría', path: '/admin/auditoria', icon: Shield, adminOnly: true },
 ];
 
 const Sidebar: React.FC = () => {
@@ -81,17 +97,19 @@ const Sidebar: React.FC = () => {
 
   const notifBadge = (resumen?.no_leidas || 0) + (resumenCriticidad.criticas + resumenCriticidad.altas);
 
-  const navigation = BASE_NAVIGATION.map(item =>
-    item.path === '/notificaciones' ? { ...item, badge: notifBadge } : item
-  );
+  const navigation: NavigationEntry[] = BASE_NAVIGATION.map(entry => {
+    if ('type' in entry) return entry;
+    return entry.path === '/notificaciones' ? { ...entry, badge: notifBadge } : entry;
+  });
 
   // Filtrar navegación según permisos
-  const filteredNavigation = navigation.filter(item => {
-    if (item.adminOnly) {
+  const filteredNavigation = navigation.filter(entry => {
+    if ('type' in entry) return true; // section headers always shown
+    if (entry.adminOnly) {
       return isAdmin;
     }
-    if (item.roles && item.roles.length > 0) {
-      return user?.role ? (item.roles as string[]).includes(user.role) : false;
+    if (entry.roles && entry.roles.length > 0) {
+      return user?.role ? (entry.roles as string[]).includes(user.role) : false;
     }
     return true;
   });
@@ -155,7 +173,18 @@ const Sidebar: React.FC = () => {
 
         {/* Navegación */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4">
-          {filteredNavigation.map((item) => {
+          {filteredNavigation.map((entry, idx) => {
+            if ('type' in entry) {
+              return sidebarOpen ? (
+                <p
+                  key={`section-${idx}`}
+                  className="px-3 pt-4 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider truncate select-none"
+                >
+                  {entry.name}
+                </p>
+              ) : null;
+            }
+            const item = entry;
             const isActive = item.end
               ? location.pathname === item.path
               : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
