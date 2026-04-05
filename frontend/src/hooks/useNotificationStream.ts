@@ -76,7 +76,7 @@ export const useNotificationStream = (): UseNotificationStreamReturn => {
     setIsConnecting(true);
     setError(null);
 
-    const url = `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api/v1'}/notificaciones-portal/stream/?id_usuario_portal=${user.id}`;
+    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/notificaciones-portal/stream/?id_usuario_portal=${user.id}`;
     
     try {
       const eventSource = new EventSource(url);

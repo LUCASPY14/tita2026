@@ -153,3 +153,7 @@ frontend/*_result.txt
 frontend/alm_*.txt
 frontend/almuerzos_*.txt
 frontend/pv_*.txt
+
+test_factura_out.txt
+
+test_factura_out.txt

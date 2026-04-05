@@ -15,7 +15,7 @@ root.render(
 );
 
 // Registrar Service Worker para PWA
-if (process.env.NODE_ENV === 'production') {
+if (import.meta.env.PROD) {
   swManager.register().then((result) => {
     if (result.isSupported && result.registration) {
       console.log('🚀 PWA Service Worker registrado exitosamente');

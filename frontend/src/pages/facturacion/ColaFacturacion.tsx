@@ -9,7 +9,7 @@ import facturacionService, {
   ItemPendiente,
   DocumentoEmitido,
 } from '../../services/facturacion.service';
-import posService from '../../services/pos.service';
+import { posService } from '../../services/pos.service';
 import type { Venta } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

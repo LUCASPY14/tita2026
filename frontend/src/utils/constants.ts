@@ -1,5 +1,5 @@
-export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
-export const APP_NAME = process.env.REACT_APP_NAME || 'Cantina Tita';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Cantina Tita';
 
 export const PAGINATION_SIZE = 10;
 export const MAX_PAGE_SIZE = 100;

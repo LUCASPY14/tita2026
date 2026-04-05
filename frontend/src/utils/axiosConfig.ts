@@ -5,7 +5,7 @@
 
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 // Operaciones a trackear automáticamente (métodos HTTP que modifican datos)
 const OPERACIONES_TRACKEADAS = ['POST', 'PUT', 'PATCH', 'DELETE'];
