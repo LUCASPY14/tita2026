@@ -24,6 +24,7 @@ import Perfil from '../pages/Perfil';
 import GestionCaja from '../pages/caja/GestionCaja';
 import GestionTimbrado from '../pages/timbrado/GestionTimbrado';
 import ColaFacturacion from '../pages/facturacion/ColaFacturacion';
+import GestionDatosEmpresa from '../pages/configuracion/GestionDatosEmpresa';
 import GestionMediosPago from '../pages/configuracion/GestionMediosPago';
 import GestionImpuestos from '../pages/configuracion/GestionImpuestos';
 import GestionPlantillasEmail from '../pages/configuracion/GestionPlantillasEmail';
@@ -245,6 +246,14 @@ const AppRoutes: React.FC = () => {
                 />
 
                 {/* Configuración: tablas paramétricas */}
+                <Route
+                  path="/configuracion/datos-empresa"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <GestionDatosEmpresa />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/configuracion/medios-pago"
                   element={

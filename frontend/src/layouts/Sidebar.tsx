@@ -25,7 +25,8 @@ import {
   Stamp,
   Percent,
   Mail,
-  Clock
+  Clock,
+  Building2
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useHasRole } from '../hooks/usePermissions';
@@ -59,6 +60,7 @@ const BASE_NAVIGATION: NavItem[] = [
   { name: 'Caja', path: '/caja', icon: DollarSign, roles: ['admin', 'gerente', 'cajero'] },
   { name: 'Facturación', path: '/facturacion', icon: FileText, roles: ['admin', 'cajero'] },
   { name: 'Timbrado', path: '/timbrado', icon: Stamp, adminOnly: true },
+  { name: 'Datos de Empresa', path: '/configuracion/datos-empresa', icon: Building2, adminOnly: true },
   { name: 'Medios de Pago', path: '/configuracion/medios-pago', icon: CreditCard, adminOnly: true },
   { name: 'Impuestos', path: '/configuracion/impuestos', icon: Percent, adminOnly: true },
   { name: 'Plantillas Email', path: '/configuracion/plantillas-email', icon: Mail, adminOnly: true },

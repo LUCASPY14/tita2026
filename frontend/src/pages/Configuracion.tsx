@@ -4,13 +4,22 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Settings, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Settings, RefreshCw, AlertTriangle, Building2, CreditCard, Percent, Mail, Clock, ExternalLink } from 'lucide-react';
 import { PanelConfiguracion } from '../components/configuracion';
 import configuracionService from '../services/configuracion.service';
 import { ConfiguracionSistema } from '../types';
 import toast from 'react-hot-toast';
 
 type TabType = 'configuracion';
+
+const QUICK_LINKS = [
+  { to: '/configuracion/datos-empresa',      icon: Building2,  label: 'Datos de Empresa',      desc: 'RUC, razón social, dirección' },
+  { to: '/configuracion/medios-pago',         icon: CreditCard, label: 'Medios de Pago',         desc: 'Efectivo, tarjetas, transferencias' },
+  { to: '/configuracion/impuestos',           icon: Percent,    label: 'Impuestos',              desc: 'IVA 10%, IVA 5%, Exenta' },
+  { to: '/configuracion/plantillas-email',    icon: Mail,       label: 'Plantillas Email',       desc: 'Asunto y cuerpo HTML/texto' },
+  { to: '/configuracion/tareas-programadas',  icon: Clock,      label: 'Tareas Programadas',     desc: 'Celery Beat — horarios y estado' },
+];
 
 const Configuracion: React.FC = () => {
   const [tabActiva] = useState<TabType>('configuracion');
@@ -68,6 +77,31 @@ const Configuracion: React.FC = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
             Actualizar
           </button>
+        </div>
+      </div>
+
+      {/* Accesos rápidos a páginas de configuración */}
+      <div className="mb-6">
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          Tablas paramétricas
+        </h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {QUICK_LINKS.map(({ to, icon: Icon, label, desc }) => (
+            <Link
+              key={to}
+              to={to}
+              className="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all group"
+            >
+              <Icon className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0 group-hover:text-blue-600" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-800 group-hover:text-blue-700 flex items-center gap-1">
+                  {label}
+                  <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5 truncate">{desc}</p>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
 

@@ -41,7 +41,7 @@ class ImpuestosViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class DatosEmpresaViewSet(viewsets.ReadOnlyModelViewSet):
+class DatosEmpresaViewSet(viewsets.ModelViewSet):
     """Datos de la empresa emisora (RUC, razón social, dirección)."""
     queryset = DatosEmpresa.objects.filter(estado=True)
     serializer_class = DatosEmpresaSerializer
