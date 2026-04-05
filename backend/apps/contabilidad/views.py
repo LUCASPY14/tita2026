@@ -285,6 +285,8 @@ class FacturacionViewSet(viewsets.ViewSet):
                 nro_preimpreso=d["nro_preimpreso"],
                 ventas_ids=d.get("ventas_ids", []),
                 almuerzos_ids=d.get("almuerzos_ids", []),
+                condicion_venta=d.get("condicion_venta", "CONTADO"),
+                plazo_dias=d.get("plazo_dias"),
             )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)

@@ -32,6 +32,9 @@ export interface DocumentoEmitido {
   id_cliente: number;
   cliente_nombre: string;
   cliente_ruc: string;
+  condicion_venta: 'CONTADO' | 'CREDITO';
+  condicion_venta_display: string;
+  plazo_dias: number | null;
 }
 
 export interface EmitirFacturaDto {
@@ -39,6 +42,8 @@ export interface EmitirFacturaDto {
   nro_preimpreso: number;
   ventas_ids: number[];
   almuerzos_ids: number[];
+  condicion_venta: 'CONTADO' | 'CREDITO';
+  plazo_dias?: number | null;
 }
 
 // ─── API calls ────────────────────────────────────────────────────────────────

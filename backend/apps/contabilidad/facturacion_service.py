@@ -140,6 +140,8 @@ class FacturacionService:
         nro_preimpreso: int,
         ventas_ids: list,
         almuerzos_ids: list,
+        condicion_venta: str = 'CONTADO',
+        plazo_dias: int | None = None,
     ) -> DocumentosTributarios:
         """
         Crea un DocumentosTributarios físico vinculando las ventas y almuerzos indicados.
@@ -215,6 +217,8 @@ class FacturacionService:
                 tipo_documento="Factura",
                 nro_preimpreso_interno=nro_fmt,
                 id_cliente=cliente,
+                condicion_venta=condicion_venta,
+                plazo_dias=plazo_dias,
             )
 
             # Vincular ventas → FK apunta al documento
@@ -304,6 +308,12 @@ class FacturacionService:
             lines.append(f"RUC/CI  : {cliente.ruc_ci}")
             if cliente.direccion:
                 lines.append(f"Direcc. : {cliente.direccion}")
+
+        # ── Condición de venta ────────────────────────────────────────────────
+        condicion_label = doc.get_condicion_venta_display()
+        if doc.condicion_venta == 'CREDITO' and doc.plazo_dias:
+            condicion_label += f" – {doc.plazo_dias} días"
+        lines.append(f"Condición: {condicion_label}")
         lines.append(sep)
 
         # ── Detalle ───────────────────────────────────────────────────────────

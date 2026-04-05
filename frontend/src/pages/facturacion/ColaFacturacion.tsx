@@ -32,6 +32,8 @@ const ModalEmitir: React.FC<ModalEmitirProps> = ({ cliente, onClose, onEmitido }
     new Set(todosLosItems.map((i) => `${i.tipo}:${i.id}`))
   );
   const [nroPreimpreso, setNroPreimpreso] = useState('');
+  const [condicionVenta, setCondicionVenta] = useState<'CONTADO' | 'CREDITO'>('CONTADO');
+  const [plazoDias, setPlazoDias] = useState('');
   const [loading, setLoading] = useState(false);
 
   const toggleItem = (key: string) => {
@@ -56,6 +58,13 @@ const ModalEmitir: React.FC<ModalEmitirProps> = ({ cliente, onClose, onEmitido }
       toast.error('Seleccioná al menos un item.');
       return;
     }
+    if (condicionVenta === 'CREDITO') {
+      const plazo = parseInt(plazoDias, 10);
+      if (!plazoDias || isNaN(plazo) || plazo < 1) {
+        toast.error('Para Crédito debés indicar el plazo en días.');
+        return;
+      }
+    }
 
     const ventas_ids = todosLosItems
       .filter((i) => i.tipo === 'venta' && seleccionados.has(`venta:${i.id}`))
@@ -71,6 +80,8 @@ const ModalEmitir: React.FC<ModalEmitirProps> = ({ cliente, onClose, onEmitido }
         nro_preimpreso: nro,
         ventas_ids,
         almuerzos_ids,
+        condicion_venta: condicionVenta,
+        plazo_dias: condicionVenta === 'CREDITO' ? parseInt(plazoDias, 10) : null,
       });
       toast.success(`Factura ${doc.nro_preimpreso_interno} emitida.`);
       onEmitido(doc);
@@ -167,6 +178,55 @@ const ModalEmitir: React.FC<ModalEmitirProps> = ({ cliente, onClose, onEmitido }
               Ingresá el número del formulario que vas a utilizar.
             </p>
           </div>
+
+          {/* Condición de venta */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Condición de venta *
+            </label>
+            <div className="flex gap-3">
+              {(['CONTADO', 'CREDITO'] as const).map((opcion) => (
+                <button
+                  key={opcion}
+                  type="button"
+                  onClick={() => {
+                    setCondicionVenta(opcion);
+                    if (opcion === 'CONTADO') setPlazoDias('');
+                  }}
+                  className={`flex-1 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
+                    condicionVenta === opcion
+                      ? opcion === 'CONTADO'
+                        ? 'bg-green-600 border-green-600 text-white'
+                        : 'bg-amber-500 border-amber-500 text-white'
+                      : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                  }`}
+                >
+                  {opcion === 'CONTADO' ? 'Contado' : 'Crédito'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Plazo días — solo visible cuando es Crédito */}
+          {condicionVenta === 'CREDITO' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Plazo en días *
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={plazoDias}
+                onChange={(e) => setPlazoDias(e.target.value)}
+                placeholder="Ej: 30"
+                className="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-gray-900
+                           focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Cantidad de días para el vencimiento del crédito.
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-3">
             <button

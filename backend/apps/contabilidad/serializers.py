@@ -42,6 +42,9 @@ class DocumentosTributariosSerializer(serializers.ModelSerializer):
     timbrado_detalle = TimbradoSerializer(source="nro_timbrado", read_only=True)
     cliente_nombre = serializers.SerializerMethodField()
     cliente_ruc = serializers.SerializerMethodField()
+    condicion_venta_display = serializers.CharField(
+        source='get_condicion_venta_display', read_only=True
+    )
 
     class Meta:
         model = DocumentosTributarios
@@ -68,12 +71,29 @@ class EmitirFacturaSerializer(serializers.Serializer):
     almuerzos_ids = serializers.ListField(
         child=serializers.IntegerField(), default=list, allow_empty=True
     )
+    condicion_venta = serializers.ChoiceField(
+        choices=['CONTADO', 'CREDITO'],
+        default='CONTADO',
+    )
+    plazo_dias = serializers.IntegerField(
+        min_value=1,
+        max_value=3650,
+        required=False,
+        allow_null=True,
+        default=None,
+    )
 
     def validate(self, data):
         if not data.get("ventas_ids") and not data.get("almuerzos_ids"):
             raise serializers.ValidationError(
                 "Debe seleccionar al menos una venta o cuenta de almuerzo."
             )
+        if data.get('condicion_venta') == 'CREDITO' and not data.get('plazo_dias'):
+            raise serializers.ValidationError(
+                "Para condición Crédito debe indicar el plazo en días."
+            )
+        if data.get('condicion_venta') == 'CONTADO':
+            data['plazo_dias'] = None
         return data
 
 

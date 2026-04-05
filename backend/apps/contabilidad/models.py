@@ -138,6 +138,11 @@ class ConciliacionPagos(models.Model):
 
 
 class DocumentosTributarios(models.Model):
+    CONDICION_CHOICES = [
+        ('CONTADO', 'Contado'),
+        ('CREDITO', 'Crédito'),
+    ]
+
     id_documento = models.BigAutoField(primary_key=True)
     nro_secuencial = models.IntegerField(
         help_text="Número secuencial fiscal dentro del rango del timbrado"
@@ -160,6 +165,17 @@ class DocumentosTributarios(models.Model):
         null=True,
         related_name="documentos",
         help_text="Cliente al que se emite la factura",
+    )
+    condicion_venta = models.CharField(
+        max_length=7,
+        choices=CONDICION_CHOICES,
+        default='CONTADO',
+        help_text='Condición de venta exigida por la SET',
+    )
+    plazo_dias = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True,
+        help_text='Plazo en días para condición Crédito (obligatorio si CREDITO)',
     )
 
     def __str__(self):
