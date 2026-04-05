@@ -59,6 +59,7 @@ const BASE_NAVIGATION: NavItem[] = [
   { name: 'Proveedores', path: '/proveedores', icon: Truck, roles: ['admin', 'gerente'] },
   { name: 'Caja', path: '/caja', icon: DollarSign, roles: ['admin', 'gerente', 'cajero'] },
   { name: 'Facturación', path: '/facturacion', icon: FileText, roles: ['admin', 'cajero'] },
+  { name: 'Hist. Facturas', path: '/facturacion/historial', icon: FileText, roles: ['admin', 'cajero'] },
   { name: 'Timbrado', path: '/timbrado', icon: Stamp, adminOnly: true },
   { name: 'Datos de Empresa', path: '/configuracion/datos-empresa', icon: Building2, adminOnly: true },
   { name: 'Medios de Pago', path: '/configuracion/medios-pago', icon: CreditCard, adminOnly: true },

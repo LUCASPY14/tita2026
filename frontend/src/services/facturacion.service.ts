@@ -66,6 +66,16 @@ const facturacionService = {
   /** Anula una factura y devuelve los items a la cola. */
   anular: (idDocumento: number): Promise<void> =>
     api.post(`/facturacion/${idDocumento}/anular/`).then(() => undefined),
+
+  /** Historial de facturas emitidas con filtros opcionales. */
+  getHistorial: (params?: {
+    fecha_desde?: string;
+    fecha_hasta?: string;
+    id_cliente?: number;
+    condicion_venta?: 'CONTADO' | 'CREDITO';
+    page?: number;
+  }): Promise<{ count: number; next: string | null; previous: string | null; results: DocumentoEmitido[] }> =>
+    api.get('/documentos-tributarios/', { params }).then((r) => r.data),
 };
 
 export default facturacionService;

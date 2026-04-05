@@ -97,7 +97,18 @@ class DocumentosTributariosViewSet(viewsets.ModelViewSet):
     )
     serializer_class = DocumentosTributariosSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ["tipo_documento"]
+    filterset_fields = ["tipo_documento", "condicion_venta", "id_cliente"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        params = self.request.query_params
+        fecha_desde = params.get("fecha_desde")
+        fecha_hasta = params.get("fecha_hasta")
+        if fecha_desde:
+            qs = qs.filter(fecha_emision__date__gte=fecha_desde)
+        if fecha_hasta:
+            qs = qs.filter(fecha_emision__date__lte=fecha_hasta)
+        return qs
 
 
 # ─── Cajas ────────────────────────────────────────────────────────────────────

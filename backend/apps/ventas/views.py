@@ -625,6 +625,121 @@ class VentasViewSet(viewsets.ModelViewSet):
             except Productos.DoesNotExist:
                 raise ValidationError({'error': f"Producto {detalle.get('id_producto')} no encontrado"})
 
+    @action(detail=True, methods=["post"], url_path="emitir_factura")
+    def emitir_factura(self, request, pk=None):
+        """
+        Emite una factura timbrada para una venta pagada sin documento.
+
+        POST /api/v1/ventas/{id}/emitir_factura/
+
+        Body:
+        {
+            "nro_preimpreso": 123,
+            "condicion_venta": "CONTADO",   // opcional, default CONTADO
+            "plazo_dias": null               // opcional, para CREDITO
+        }
+        """
+        from apps.contabilidad.facturacion_service import FacturacionService
+
+        venta = self.get_object()
+
+        # Validaciones previas
+        if not venta.genera_factura_legal:
+            return Response(
+                {"error": "Esta venta no requiere factura timbrada."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if venta.id_documento_id:
+            return Response(
+                {"error": "Esta venta ya tiene factura emitida."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if venta.estado_pago.lower() != "pagada":
+            return Response(
+                {"error": "Solo se pueden facturar ventas con estado_pago 'pagada'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        nro_preimpreso = request.data.get("nro_preimpreso")
+        if not nro_preimpreso:
+            return Response(
+                {"error": "Se requiere nro_preimpreso."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            nro_preimpreso = int(nro_preimpreso)
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "nro_preimpreso debe ser un número entero."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        condicion_venta = request.data.get("condicion_venta", "CONTADO")
+        plazo_dias = request.data.get("plazo_dias")
+
+        try:
+            documento = FacturacionService.emitir(
+                id_cliente=venta.id_cliente_id,
+                nro_preimpreso=nro_preimpreso,
+                ventas_ids=[venta.id_venta],
+                almuerzos_ids=[],
+                condicion_venta=condicion_venta,
+                plazo_dias=plazo_dias,
+            )
+            return Response(
+                {
+                    "exito": True,
+                    "id_documento": documento.id_documento,
+                    "nro_preimpreso_interno": documento.nro_preimpreso_interno,
+                    "mensaje": f"Factura {documento.nro_preimpreso_interno} emitida correctamente.",
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response(
+                {"error": "Error al emitir factura.", "detalle": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(detail=False, methods=["get"], url_path="sin_facturar")
+    def sin_facturar(self, request):
+        """
+        Lista ventas pagadas que requieren factura y aún no la tienen.
+
+        GET /api/v1/ventas/sin_facturar/
+
+        Query params:
+          - id_cliente: filtrar por cliente (opcional)
+          - fecha_desde: YYYY-MM-DD (opcional)
+          - fecha_hasta: YYYY-MM-DD (opcional)
+        """
+        qs = Ventas.objects.filter(
+            genera_factura_legal=True,
+            id_documento__isnull=True,
+            estado_pago__iexact="pagada",
+            estado__iexact="activa",
+        ).select_related("id_cliente", "id_medio_pago")
+
+        id_cliente = request.query_params.get("id_cliente")
+        if id_cliente:
+            qs = qs.filter(id_cliente=id_cliente)
+
+        fecha_desde = request.query_params.get("fecha_desde")
+        if fecha_desde:
+            qs = qs.filter(fecha__date__gte=fecha_desde)
+
+        fecha_hasta = request.query_params.get("fecha_hasta")
+        if fecha_hasta:
+            qs = qs.filter(fecha__date__lte=fecha_hasta)
+
+        qs = qs.order_by("id_cliente", "fecha")
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response({"count": qs.count(), "results": serializer.data})
+
     def _descontar_stock_venta(self, venta, detalles):
         """
         Descuenta stock usando StockService (centralizado y ACID).

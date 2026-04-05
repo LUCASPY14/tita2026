@@ -15,13 +15,15 @@ except ImportError:
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# In production, set the SECRET_KEY env var to a strong random value.
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-cantina-tita-2026-change-this-in-production')
+# Must be set via SECRET_KEY environment variable; insecure fallback only for local dev.
+_SECRET_KEY_DEFAULT = 'django-insecure-cantina-tita-dev-only-do-not-use-in-production'
+SECRET_KEY = os.environ.get('SECRET_KEY', _SECRET_KEY_DEFAULT)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Set DEBUG=True in env only for local development.
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Application definition
 INSTALLED_APPS = [

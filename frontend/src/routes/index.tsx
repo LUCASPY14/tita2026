@@ -24,6 +24,7 @@ import Perfil from '../pages/Perfil';
 import GestionCaja from '../pages/caja/GestionCaja';
 import GestionTimbrado from '../pages/timbrado/GestionTimbrado';
 import ColaFacturacion from '../pages/facturacion/ColaFacturacion';
+import HistorialFacturas from '../pages/facturacion/HistorialFacturas';
 import GestionDatosEmpresa from '../pages/configuracion/GestionDatosEmpresa';
 import GestionMediosPago from '../pages/configuracion/GestionMediosPago';
 import GestionImpuestos from '../pages/configuracion/GestionImpuestos';
@@ -231,6 +232,16 @@ const AppRoutes: React.FC = () => {
                   element={
                     <ProtectedRoute requiredRoles={['admin', 'cajero']}>
                       <ColaFacturacion />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Historial de facturas emitidas */}
+                <Route
+                  path="/facturacion/historial"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'cajero']}>
+                      <HistorialFacturas />
                     </ProtectedRoute>
                   }
                 />
