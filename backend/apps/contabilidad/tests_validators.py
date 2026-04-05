@@ -601,17 +601,17 @@ class ValidarNumerosTimbradoTest(TestCase):
 
 
 class ValidarEsElectronicoTimbradoTest(TestCase):
-    """Validator DEPRECADO – el campo fue eliminado. Tests conservados como no-op."""
+    """Validator activo: 0 y 1 son válidos, el resto lanza ValidationError."""
 
     def test_es_electronico_cero(self):
-        validar_es_electronico_timbrado(0)  # ahora es no-op
+        validar_es_electronico_timbrado(0)  # OK
 
     def test_es_electronico_uno(self):
-        validar_es_electronico_timbrado(1)  # ahora es no-op
+        validar_es_electronico_timbrado(1)  # OK
 
     def test_es_electronico_invalido(self):
-        # El validator fue deprecado; ya no lanza excepción
-        validar_es_electronico_timbrado(2)  # no-op
+        with self.assertRaises(ValidationError):
+            validar_es_electronico_timbrado(2)  # no es 0 ni 1
 
 
 class ValidarActivoTimbradoTest(TestCase):

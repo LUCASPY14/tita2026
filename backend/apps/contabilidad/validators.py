@@ -700,8 +700,11 @@ def validar_numeros_timbrado(nro_inicial, nro_final):
 
 
 def validar_es_electronico_timbrado(value):
-    """DEPRECADO – el campo es_electronico fue eliminado (facturación solo física)."""
-    pass
+    """Valida que es_electronico sea 0 o 1 (entero)."""
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValidationError("El campo es_electronico debe ser 0 o 1.")
+    if value not in (0, 1):
+        raise ValidationError("El campo es_electronico debe ser 0 o 1.")
 
 
 def validar_activo_timbrado(value):

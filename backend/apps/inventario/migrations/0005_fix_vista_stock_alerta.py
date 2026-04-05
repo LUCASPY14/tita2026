@@ -54,6 +54,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('inventario', '0004_lotesproducto_alertasvencimiento_and_more'),
+        ('core', '0008_rename_activo_to_estado'),
+        ('productos', '0005_rename_activo_to_estado'),
     ]
 
     operations = [

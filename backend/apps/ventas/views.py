@@ -211,7 +211,11 @@ class VentasViewSet(viewsets.ModelViewSet):
 
         # 1. monto_total desde detalles
         detalles = data.get('detalles', [])
+        if not detalles:
+            from rest_framework.exceptions import ValidationError as DRFValidationError
+            raise DRFValidationError({'detalles': 'Se requiere al menos un producto.'})
         monto_total = sum(
+            D(str(d['total'])) if d.get('total') else
             D(str(d.get('precio_unitario', 0))) * D(str(d.get('cantidad', 1)))
             for d in detalles
         )

@@ -214,6 +214,7 @@ class Timbrados(models.Model):
     nro_inicial = models.IntegerField()
     nro_final = models.IntegerField()
     estado = models.BooleanField(default=True)
+    es_electronico = models.SmallIntegerField(default=0, help_text="0=impreso, 1=electrónico")
     id_punto = models.ForeignKey("PuntosExpedicion", models.DO_NOTHING, db_column="id_punto")
 
     def __str__(self):

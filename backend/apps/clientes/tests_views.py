@@ -341,7 +341,7 @@ class HijosViewSetTest(APITestCase):
         
         # Verificar filtros
         self.assertEqual(viewset.filterset_fields, ["estado", "grado", "id_cliente_responsable"])
-        self.assertEqual(viewset.search_fields, ["nombre", "apellido"])
+        self.assertEqual(viewset.search_fields, ["nombre", "apellido", "tarjetas__nro_tarjeta", "tarjetas__codigo_barras"])
         self.assertEqual(viewset.ordering, ["apellido", "nombre"])
 
     def test_hijos_list_authentication_required(self):

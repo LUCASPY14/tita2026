@@ -409,6 +409,22 @@ class DocumentosTributariosAdmin(admin.ModelAdmin):
 
     tipo_documento_badge.short_description = "Tipo"
 
+    def estado_sifen_badge(self, obj):
+        estado = getattr(obj, 'estado_sifen', None)
+        mapa = {
+            'Aprobado':  ('green',  '✓'),
+            'Rechazado': ('red',    '✗'),
+            'Pendiente': ('orange', '⏳'),
+        }
+        color, icono = mapa.get(estado, ('gray', '?')) if estado else ('gray', 'Pendiente')
+        texto = estado if estado else 'Pendiente'
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px">{} {}</span>',
+            color, icono, texto,
+        )
+
+    estado_sifen_badge.short_description = 'Estado SIFEN'
+
     def monto_total_display(self, obj):
         monto_formateado = f"{obj.monto_total:,.0f}"
         return format_html("<strong>₲{}</strong>", monto_formateado)
