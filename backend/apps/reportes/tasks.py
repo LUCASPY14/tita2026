@@ -96,8 +96,9 @@ def calcular_y_guardar_kpis_diarios():
         }
     """
     from apps.reportes.services.dashboard_service import DashboardService
+    from datetime import date as _date
 
-    fecha_hoy = timezone.localdate()
+    fecha_hoy = _date.today()
     logger.info(f"[KPIs] Calculando KPIs para {fecha_hoy}")
 
     try:

@@ -130,13 +130,30 @@ class AlmuerzosViewSetSuscripcionNoActivaTest(AlmuerzosViewSetCreateBaseFixture)
 
 
 class AlmuerzosViewSetSaldoInsuficienteTest(AlmuerzosViewSetCreateBaseFixture):
-    """Saldo insuficiente → ValidationError"""
+    """Tarjeta con saldo bajo → el registro igual se crea (tarjeta es sólo identificación,
+    no se descuenta saldo según la regla de negocio actual)"""
 
-    def test_saldo_insuficiente_lanza_error(self):
+    def test_saldo_insuficiente_no_lanza_error(self):
+        """El saldo de la tarjeta no se descuenta, por lo que saldo bajo no bloquea el registro"""
         self.tarjeta.saldo_actual = Decimal('1.00')
         self.tarjeta.save()
 
         vs = _make_viewset()
+
+        def mock_save(**kwargs):
+            return RegistrosConsumoAlmuerzo.objects.create(
+                fecha_consumo=date.today(),
+                hora_registro=timezone.now().time(),
+                costo_almuerzo=kwargs.get('costo_almuerzo', Decimal('10.00')),
+                marcado_en_cuenta=False,
+                ya_cobrado=kwargs.get('ya_cobrado', True),
+                estado='Confirmado',
+                id_hijo=self.hijo,
+                id_tipo_almuerzo=self.tipo_almuerzo,
+                nro_tarjeta=self.tarjeta,
+                id_empleado_registro=self.empleado,
+            )
+
         serializer = MagicMock()
         serializer.validated_data = {
             'id_hijo': self.hijo,
@@ -145,10 +162,14 @@ class AlmuerzosViewSetSaldoInsuficienteTest(AlmuerzosViewSetCreateBaseFixture):
             'id_tipo_almuerzo': self.tipo_almuerzo,
             'id_suscripcion': None,
         }
+        serializer.save.side_effect = mock_save
         with patch('apps.almuerzos.validators.validar_limite_registros_diarios', return_value=None):
-            with patch('apps.almuerzos.validators.determinar_si_cobra', return_value=True):
-                with self.assertRaises(ValidationError):
-                    vs.perform_create(serializer)
+            # Should not raise — saldo is not checked per current business rule
+            vs.perform_create(serializer)
+
+        self.tarjeta.refresh_from_db()
+        # Saldo unchanged: tarjeta is only used for identification
+        self.assertEqual(self.tarjeta.saldo_actual, Decimal('1.00'))
 
 
 class AlmuerzosViewSetConTipoAlmuerzoCobraTest(AlmuerzosViewSetCreateBaseFixture):
@@ -186,7 +207,8 @@ class AlmuerzosViewSetConTipoAlmuerzoCobraTest(AlmuerzosViewSetCreateBaseFixture
                 vs.perform_create(serializer)
 
         self.tarjeta.refresh_from_db()
-        self.assertLess(self.tarjeta.saldo_actual, Decimal('500.00'))
+        # Saldo unchanged: tarjeta is only used for identification, not debited
+        self.assertEqual(self.tarjeta.saldo_actual, Decimal('500.00'))
 
 
 class AlmuerzosViewSetSegundoRegistroNoCobra(AlmuerzosViewSetCreateBaseFixture):

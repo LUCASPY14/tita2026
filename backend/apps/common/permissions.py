@@ -8,7 +8,8 @@ from rest_framework import permissions
 def _get_empleado_from_request(request):
     """
     Obtiene el Empleado a partir de los claims del JWT en el token de acceso.
-    Retorna None si no está disponible o no es un empleado.
+    Si no hay JWT, intenta usar request.user.empleado (session auth / tests).
+    Retorna None si no está disponible.
     """
     try:
         if request.auth and hasattr(request.auth, "payload"):
@@ -16,6 +17,13 @@ def _get_empleado_from_request(request):
             if id_empleado:
                 from apps.usuarios.models import Empleados
                 return Empleados.objects.select_related("id_rol").get(pk=id_empleado)
+    except Exception:
+        pass
+    # Fallback: user.empleado attribute (session auth / test mocks)
+    try:
+        emp = getattr(request.user, 'empleado', None)
+        if emp is not None and hasattr(emp, 'id_rol'):
+            return emp
     except Exception:
         pass
     return None

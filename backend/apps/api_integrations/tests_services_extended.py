@@ -23,6 +23,7 @@ class BancardServiceGetConfigExceptionTest(TestCase):
     """Tests for _get_config exception branch (lines 82-83)."""
 
     def setUp(self):
+        ConfiguracionSistema.objects.filter(clave__in=["BANCARD_PUBLIC_KEY", "BANCARD_PRIVATE_KEY"]).delete()
         ConfiguracionSistema.objects.create(
             clave="BANCARD_PUBLIC_KEY",
             valor_texto="pub_key_test",
@@ -52,6 +53,7 @@ class BancardServiceWebhookProcessingTest(TestCase):
     """Tests for procesar_webhook method (lines 374-455)."""
 
     def setUp(self):
+        ConfiguracionSistema.objects.filter(clave__in=["BANCARD_PUBLIC_KEY", "BANCARD_PRIVATE_KEY"]).delete()
         ConfiguracionSistema.objects.create(
             clave="BANCARD_PUBLIC_KEY",
             valor_texto="pub_key_test",
@@ -233,6 +235,7 @@ class BancardServiceConfirmarTransaccionTest(TestCase):
     """Tests for confirmar_transaccion method (lines 468-489)."""
 
     def setUp(self):
+        ConfiguracionSistema.objects.filter(clave__in=["BANCARD_PUBLIC_KEY", "BANCARD_PRIVATE_KEY"]).delete()
         ConfiguracionSistema.objects.create(
             clave="BANCARD_PUBLIC_KEY",
             valor_texto="pub_key_test",
@@ -293,6 +296,7 @@ class BancardServiceRollbackTransaccionTest(TestCase):
     """Tests for rollback_transaccion method (lines 501-522)."""
 
     def setUp(self):
+        ConfiguracionSistema.objects.filter(clave__in=["BANCARD_PUBLIC_KEY", "BANCARD_PRIVATE_KEY"]).delete()
         ConfiguracionSistema.objects.create(
             clave="BANCARD_PUBLIC_KEY",
             valor_texto="pub_key_test",

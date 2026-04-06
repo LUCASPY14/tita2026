@@ -73,12 +73,17 @@ class DashboardService:
         """
         try:
             if not fecha:
-                fecha = timezone.localdate()
+                fecha = date.today()
 
-            # Rango del día en zona horaria local (evita CONVERT_TZ de MySQL)
-            tz = get_current_timezone()
-            inicio_dia = make_aware(datetime.combine(fecha, time.min), tz)
-            fin_dia = make_aware(datetime.combine(fecha + timedelta(days=1), time.min), tz)
+            # Rango del día — usar datetimes naive cuando USE_TZ=False
+            from django.conf import settings as _settings
+            if getattr(_settings, 'USE_TZ', True):
+                tz = get_current_timezone()
+                inicio_dia = make_aware(datetime.combine(fecha, time.min), tz)
+                fin_dia = make_aware(datetime.combine(fecha + timedelta(days=1), time.min), tz)
+            else:
+                inicio_dia = datetime.combine(fecha, time.min)
+                fin_dia = datetime.combine(fecha + timedelta(days=1), time.min)
 
             # Ventas del día
             ventas_stats = Ventas.objects.filter(

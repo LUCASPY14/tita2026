@@ -343,8 +343,13 @@ class ReporteService:
                 }
 
             # Obtener consumos
-            fecha_inicio_dt = make_aware(datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0))
-            fecha_fin_dt = make_aware(datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59))
+            from django.conf import settings as _s
+            if getattr(_s, 'USE_TZ', True):
+                fecha_inicio_dt = make_aware(datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0))
+                fecha_fin_dt = make_aware(datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59))
+            else:
+                fecha_inicio_dt = datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0)
+                fecha_fin_dt = datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59)
             consumos = ConsumosTarjeta.objects.filter(
                 nro_tarjeta=tarjeta, fecha_consumo__gte=fecha_inicio_dt, fecha_consumo__lte=fecha_fin_dt
             )
@@ -414,8 +419,13 @@ class ReporteService:
                     "consumos": [],
                 }
 
-            fecha_inicio_dt = make_aware(datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0))
-            fecha_fin_dt = make_aware(datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59))
+            from django.conf import settings as _s
+            if getattr(_s, 'USE_TZ', True):
+                fecha_inicio_dt = make_aware(datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0))
+                fecha_fin_dt = make_aware(datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59))
+            else:
+                fecha_inicio_dt = datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0)
+                fecha_fin_dt = datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59)
             consumos = ConsumosTarjeta.objects.filter(
                 nro_tarjeta=tarjeta,
                 fecha_consumo__gte=fecha_inicio_dt,

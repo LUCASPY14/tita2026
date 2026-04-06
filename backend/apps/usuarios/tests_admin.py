@@ -178,12 +178,14 @@ class EmpleadosAdminTest(TestCase):
     def test_empleados_admin_create(self):
         """Debe crear nuevo empleado desde admin"""
         url = reverse('admin:usuarios_empleados_add')
+        now = timezone.now()
         data = {
             'nombre': 'Carlos',
             'apellido': 'López',
             'usuario': 'clopez',
             'contrasena_hash': '$2b$12$newhash',
-            'fecha_ingreso': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'fecha_ingreso_0': now.strftime('%Y-%m-%d'),
+            'fecha_ingreso_1': now.strftime('%H:%M:%S'),
             'email': 'carlos@company.com',
             'estado': True,
             'id_rol': self.rol.id_rol
@@ -256,12 +258,14 @@ class EmpleadosAdminTest(TestCase):
         """Debe actualizar empleado existente"""
         empleado = self.empleados[0]
         url = reverse('admin:usuarios_empleados_change', args=[empleado.id_empleado])
+        fi = empleado.fecha_ingreso
         data = {
             'nombre': 'Juan Carlos',
             'apellido': 'Pérez Actualizado',
             'usuario': 'jcperez',
             'contrasena_hash': empleado.contrasena_hash,
-            'fecha_ingreso': empleado.fecha_ingreso.strftime('%Y-%m-%d %H:%M:%S'),
+            'fecha_ingreso_0': fi.strftime('%Y-%m-%d') if hasattr(fi, 'strftime') else str(fi)[:10],
+            'fecha_ingreso_1': fi.strftime('%H:%M:%S') if hasattr(fi, 'strftime') else '00:00:00',
             'email': 'juan.carlos@company.com',
             'estado': True,
             'id_rol': self.rol.id_rol

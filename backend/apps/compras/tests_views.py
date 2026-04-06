@@ -49,7 +49,7 @@ class ComprasViewSetPerformCreateTest(TestCase):
 
         serializer = MagicMock()
         vs.perform_create(serializer)
-        serializer.save.assert_called_once_with(estado='Pendiente')
+        serializer.save.assert_called_once_with(estado_pago='Pendiente')
 
     def test_perform_create_con_detalles_validos(self):
         """Con detalles válidos, calcula totales y guarda"""
@@ -64,12 +64,17 @@ class ComprasViewSetPerformCreateTest(TestCase):
                    return_value={'valido': True, 'errores': [], 'warnings': []}):
             with patch('apps.compras.views.CompraService.calcular_totales_compra',
                        return_value={'total': Decimal('10000.00')}):
-                vs.perform_create(serializer)
+                with patch('apps.productos.models.Productos.objects.get') as mock_get:
+                    mock_producto = MagicMock()
+                    mock_producto.id_impuesto.porcentaje = Decimal('10')
+                    mock_get.return_value = mock_producto
+                    with patch('apps.compras.views.DetallesCompra.objects.create'):
+                        vs.perform_create(serializer)
 
         serializer.save.assert_called_once_with(
             monto_total=Decimal('10000.00'),
             saldo_pendiente=Decimal('10000.00'),
-            estado='Pendiente',
+            estado_pago='Pendiente',
         )
 
     def test_perform_create_con_detalles_invalidos_lanza_error(self):

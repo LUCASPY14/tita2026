@@ -58,14 +58,15 @@ class PortalAuthService:
 
     @staticmethod
     def _generar_token(portal_user: UsuariosPortal) -> str:
-        now = timezone.now()
+        import time as _time
+        now_ts = int(_time.time())
         payload = {
             "token_type": PORTAL_TOKEN_TYPE,
             "id_usuario_portal": portal_user.id_usuario_portal,
             "id_cliente": portal_user.id_cliente_id,
             "email": portal_user.email,
-            "exp": now + PORTAL_TOKEN_LIFETIME,
-            "iat": now,
+            "exp": now_ts + int(PORTAL_TOKEN_LIFETIME.total_seconds()),
+            "iat": now_ts,
         }
         return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 

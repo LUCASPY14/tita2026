@@ -27,6 +27,8 @@ class BancardServiceTest(TestCase):
 
     def setUp(self):
         """Configurar datos de prueba"""
+        # Limpiar claves semilla de migraciones para evitar IntegrityError
+        ConfiguracionSistema.objects.filter(clave__in=['BANCARD_PUBLIC_KEY', 'BANCARD_PRIVATE_KEY']).delete()
         # Configuración de sistema
         ConfiguracionSistema.objects.create(
             clave='BANCARD_PUBLIC_KEY',

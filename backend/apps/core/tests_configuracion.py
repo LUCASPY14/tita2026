@@ -17,6 +17,8 @@ class ConfiguracionSistemaModelTest(TestCase):
 
     def test_crear_configuracion(self):
         """Test: Crear configuración del sistema"""
+        # Use a key guaranteed not to exist in migration seed data
+        ConfiguracionSistema.objects.filter(clave="MAX_INTENTOS_LOGIN").delete()
         config = ConfiguracionSistema.objects.create(
             clave="MAX_INTENTOS_LOGIN",
             valor="3",
@@ -115,6 +117,8 @@ class ConfiguracionSistemaViewSetTest(APITestCase):
         self.normal_user.save()
 
         # Crear configuraciones de prueba
+        # Limpiar datos semilla de migraciones para que los conteos sean predecibles
+        ConfiguracionSistema.objects.all().delete()
         self.config1 = ConfiguracionSistema.objects.create(
             clave="TIMEOUT_SESSION",
             valor="30",
