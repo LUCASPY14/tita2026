@@ -26,7 +26,7 @@ class StockUnicoViewSet(viewsets.ModelViewSet):
     - Otros: Solo lectura
     """
 
-    queryset = StockUnico.objects.all()
+    queryset = StockUnico.objects.all().order_by('id_stock')
     serializer_class = StockUnicoSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     throttle_classes = [BurstRateThrottle]

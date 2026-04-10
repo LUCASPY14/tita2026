@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Settings, RefreshCw, AlertTriangle, Building2, CreditCard, Percent, Mail, Clock, ExternalLink } from 'lucide-react';
+import { Settings, RefreshCw, AlertTriangle, Building2, CreditCard, Percent, Mail, Clock, ExternalLink, Smartphone } from 'lucide-react';
 import { PanelConfiguracion } from '../components/configuracion';
 import configuracionService from '../services/configuracion.service';
 import { ConfiguracionSistema } from '../types';
@@ -18,7 +18,8 @@ const QUICK_LINKS = [
   { to: '/configuracion/medios-pago',         icon: CreditCard, label: 'Medios de Pago',         desc: 'Efectivo, tarjetas, transferencias' },
   { to: '/configuracion/impuestos',           icon: Percent,    label: 'Impuestos',              desc: 'IVA 10%, IVA 5%, Exenta' },
   { to: '/configuracion/plantillas-email',    icon: Mail,       label: 'Plantillas Email',       desc: 'Asunto y cuerpo HTML/texto' },
-  { to: '/configuracion/tareas-programadas',  icon: Clock,      label: 'Tareas Programadas',     desc: 'Celery Beat — horarios y estado' },
+  { to: '/configuracion/tareas-programadas',  icon: Clock,       label: 'Tareas Programadas',     desc: 'Celery Beat — horarios y estado' },
+  { to: '/configuracion/pwa',                  icon: Smartphone,  label: 'PWA / App Móvil',         desc: 'Caché, notificaciones push, íconos' },
 ];
 
 const Configuracion: React.FC = () => {

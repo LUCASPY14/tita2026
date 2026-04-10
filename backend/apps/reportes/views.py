@@ -400,7 +400,7 @@ class PlantillasReporteViewSet(ModelViewSet):
 
 
 class DashboardsViewSet(ModelViewSet):
-    queryset = Dashboards.objects.all()
+    queryset = Dashboards.objects.all().order_by('id_dashboard')
     serializer_class = DashboardsSerializer
 
     @action(detail=True, methods=['get', 'post'], url_path='exportar', url_name='exportar')
