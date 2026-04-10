@@ -1,7 +1,7 @@
 /**
  * Tests para el componente DashboardKPIs
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DashboardKPIs from './DashboardKPIs';
 import reportesService from '../../services/reportes.service';
@@ -103,7 +103,6 @@ describe('DashboardKPIs Component', () => {
   });
 
   test('permite cambiar fecha seleccionada', async () => {
-    const user = userEvent.setup();
     render(<DashboardKPIs />);
     
     await waitFor(() => {
@@ -111,8 +110,7 @@ describe('DashboardKPIs Component', () => {
     });
 
     const dateInput = screen.getByDisplayValue(/\d{4}-\d{2}-\d{2}/);
-    await user.clear(dateInput);
-    await user.type(dateInput, '2026-03-01');
+    fireEvent.change(dateInput, { target: { value: '2026-03-01' } });
 
     await waitFor(() => {
       expect(reportesService.getKPIsPrincipales).toHaveBeenCalledWith('2026-03-01');
