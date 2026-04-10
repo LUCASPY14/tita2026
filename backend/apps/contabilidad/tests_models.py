@@ -746,7 +746,6 @@ class ContabilidadModelsIntegrationTest(TestCase):
             fecha_fin=date.today() + timedelta(days=365),
             nro_inicial=1,
             nro_final=10000,
-            es_electronico=1,
             estado=True,
             id_punto=self.punto_expedicion
         )
@@ -764,7 +763,6 @@ class ContabilidadModelsIntegrationTest(TestCase):
             fecha_fin=date.today() + timedelta(days=365),
             nro_inicial=1,
             nro_final=5000,
-            es_electronico=1,
             id_punto=self.punto_expedicion
         )
         
@@ -789,7 +787,6 @@ class ContabilidadModelsIntegrationTest(TestCase):
             fecha_fin=date.today() + timedelta(days=365),
             nro_inicial=1,
             nro_final=1000,
-            es_electronico=0,
             id_punto=self.punto_expedicion
         )
         
@@ -822,7 +819,6 @@ class ContabilidadModelsIntegrationTest(TestCase):
             fecha_fin=date.today() + timedelta(days=365),
             nro_inicial=1,
             nro_final=100,
-            es_electronico=1,
             id_punto=self.punto_expedicion
         )
         
@@ -857,7 +853,6 @@ class ContabilidadModelsStrTest(TestCase):
             fecha_fin=date.today() + timedelta(days=365),
             nro_inicial=1,
             nro_final=9999,
-            es_electronico=1,
             estado=True,
             id_punto=self.punto_expedicion,
         )

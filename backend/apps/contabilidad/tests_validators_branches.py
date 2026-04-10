@@ -20,11 +20,9 @@ from apps.contabilidad.validators import (
     validar_fechas_conciliacion_consistencia,
     validar_cdc_documento,
     validar_url_kude_documento,
-    validar_estado_sifen_documento,
     validar_nro_preimpreso_documento,
     validar_fechas_envio_respuesta_documento,
     validar_numeros_timbrado,
-    validar_es_electronico_timbrado,
     validar_codigo_establecimiento,
     validar_codigo_punto_expedicion,
     validar_descripcion_punto_expedicion,
@@ -283,35 +281,6 @@ class TestValidarCdcDocumento:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# validar_estado_sifen_documento
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-class TestValidarEstadoSifenDocumento:
-    def test_too_long_raises(self):
-        """Line 547: len > 9 raises"""
-        with pytest.raises(ValidationError):
-            validar_estado_sifen_documento("X" * 10)
-
-    def test_invalid_estado_raises(self):
-        """Line 556: not in estados_validos raises"""
-        with pytest.raises(ValidationError):
-            validar_estado_sifen_documento("Invalido")
-
-    def test_none_returns(self):
-        validar_estado_sifen_documento(None)
-
-    def test_empty_returns(self):
-        validar_estado_sifen_documento("")
-
-    def test_valid_aprobado(self):
-        validar_estado_sifen_documento("Aprobado")
-
-    def test_valid_rechazado(self):
-        validar_estado_sifen_documento("Rechazado")
-
-
-# ──────────────────────────────────────────────────────────────────────────────
 # validar_nro_preimpreso_documento
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -384,34 +353,6 @@ class TestValidarNumerosTimbrado:
     def test_exceeds_max_raises(self):
         with pytest.raises(ValidationError):
             validar_numeros_timbrado(1, 1000000001)
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# validar_es_electronico_timbrado
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-class TestValidarEsElectronicoTimbrado:
-    def test_string_raises(self):
-        """Line 717: not isinstance(value, int) raises"""
-        with pytest.raises(ValidationError):
-            validar_es_electronico_timbrado("1")
-
-    def test_bool_raises(self):
-        """bool is subclass of int BUT Python's isinstance(True, int) is True,
-        so True/False pass the int check — test with float instead"""
-        with pytest.raises(ValidationError):
-            validar_es_electronico_timbrado(2)  # not 0 or 1
-
-    def test_none_raises(self):
-        with pytest.raises(ValidationError):
-            validar_es_electronico_timbrado(None)
-
-    def test_zero_valid(self):
-        validar_es_electronico_timbrado(0)
-
-    def test_one_valid(self):
-        validar_es_electronico_timbrado(1)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

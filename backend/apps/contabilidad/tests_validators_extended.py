@@ -39,7 +39,6 @@ from apps.contabilidad.validators import (
     validar_tipo_documento_tributario,
     validar_cdc_documento,
     validar_url_kude_documento,
-    validar_estado_sifen_documento,
     validar_nro_preimpreso_documento,
     validar_fechas_envio_respuesta_documento,
     validar_base_imponible,
@@ -48,7 +47,6 @@ from apps.contabilidad.validators import (
     validar_tipo_documento_timbrado,
     validar_fechas_timbrado,
     validar_numeros_timbrado,
-    validar_es_electronico_timbrado,
     validar_activo_timbrado,
     validar_codigo_establecimiento,
     validar_codigo_punto_expedicion,
@@ -425,14 +423,6 @@ class TipoDocumentoTributarioExtendedTest(TestCase):
             validar_tipo_documento_tributario("A" * 15)
 
 
-class EstadoSifenDocumentoExtendedTest(TestCase):
-    """Cover line 527 - estado too long"""
-
-    def test_estado_demasiado_largo(self):
-        with self.assertRaises(ValidationError):
-            validar_estado_sifen_documento("A" * 12)
-
-
 class FechasEnvioRespuestaDocumentoExtendedTest(TestCase):
     """Cover lines 569, 572, 574 - not datetime type checks"""
 
@@ -555,18 +545,6 @@ class NumerosTimbradoExtendedTest(TestCase):
     def test_final_no_es_int(self):
         with self.assertRaises(ValidationError):
             validar_numeros_timbrado(1, "100")
-
-
-class EsElectronicoTimbradoExtendedTest(TestCase):
-    """Cover line 699 - None"""
-
-    def test_none(self):
-        with self.assertRaises(ValidationError):
-            validar_es_electronico_timbrado(None)
-
-    def test_no_es_int(self):
-        with self.assertRaises(ValidationError):
-            validar_es_electronico_timbrado("1")
 
 
 class CodigoEstablecimientoExtendedTest(TestCase):

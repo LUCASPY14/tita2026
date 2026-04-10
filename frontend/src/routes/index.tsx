@@ -1,43 +1,50 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Login from '../pages/auth/Login';
-import Verify2FA from '../pages/auth/Verify2FA';
-import RecuperarPassword from '../pages/auth/RecuperarPassword';
-import DashboardMejorado from '../pages/dashboard/DashboardMejorado';
-import Recargas from '../pages/recargas';
-import POS from '../pages/pos';
-import Ventas from '../pages/ventas';
-import Clientes from '../pages/clientes';
-import Productos from '../pages/productos';
-import Compras from '../pages/compras';
-import Proveedores from '../pages/compras/Proveedores';
-import Almuerzos from '../pages/almuerzos';
-import Reportes from '../pages/Reportes';
-import Inventario from '../pages/inventario/Inventario';
-import Notificaciones from '../pages/Notificaciones';
-import Configuracion from '../pages/Configuracion';
-import Auditoria from '../pages/Auditoria';
-import GestionPermisos from '../pages/permisos';
-import { UserManagement } from '../pages/usuarios';
-import Categorias from '../pages/categorias';
-import Perfil from '../pages/Perfil';
-import GestionCaja from '../pages/caja/GestionCaja';
-import GestionTimbrado from '../pages/timbrado/GestionTimbrado';
-import ColaFacturacion from '../pages/facturacion/ColaFacturacion';
-import HistorialFacturas from '../pages/facturacion/HistorialFacturas';
-import GestionDatosEmpresa from '../pages/configuracion/GestionDatosEmpresa';
-import GestionMediosPago from '../pages/configuracion/GestionMediosPago';
-import GestionImpuestos from '../pages/configuracion/GestionImpuestos';
-import GestionPlantillasEmail from '../pages/configuracion/GestionPlantillasEmail';
-import GestionTareasProgramadas from '../pages/configuracion/GestionTareasProgramadas';
-import LoginPortal from '../pages/portal/LoginPortal';
-import DashboardPortal from '../pages/portal/DashboardPortal';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import MainLayout from '../layouts/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 import PortalRoute from './PortalRoute';
 
+// Lazy-loaded pages (code splitting — reduces initial bundle from ~1.2MB)
+const Login = React.lazy(() => import('../pages/auth/Login'));
+const Verify2FA = React.lazy(() => import('../pages/auth/Verify2FA'));
+const RecuperarPassword = React.lazy(() => import('../pages/auth/RecuperarPassword'));
+const DashboardMejorado = React.lazy(() => import('../pages/dashboard/DashboardMejorado'));
+const Recargas = React.lazy(() => import('../pages/recargas'));
+const POS = React.lazy(() => import('../pages/pos'));
+const Ventas = React.lazy(() => import('../pages/ventas'));
+const Clientes = React.lazy(() => import('../pages/clientes'));
+const Productos = React.lazy(() => import('../pages/productos'));
+const Compras = React.lazy(() => import('../pages/compras'));
+const Proveedores = React.lazy(() => import('../pages/compras/Proveedores'));
+const Almuerzos = React.lazy(() => import('../pages/almuerzos'));
+const Reportes = React.lazy(() => import('../pages/Reportes'));
+const Inventario = React.lazy(() => import('../pages/inventario/Inventario'));
+const Notificaciones = React.lazy(() => import('../pages/Notificaciones'));
+const Configuracion = React.lazy(() => import('../pages/Configuracion'));
+const Auditoria = React.lazy(() => import('../pages/Auditoria'));
+const GestionPermisos = React.lazy(() => import('../pages/permisos'));
+const UserManagement = React.lazy(() =>
+  import('../pages/usuarios').then(m => ({ default: m.UserManagement }))
+);
+const Categorias = React.lazy(() => import('../pages/categorias'));
+const Perfil = React.lazy(() => import('../pages/Perfil'));
+const GestionCaja = React.lazy(() => import('../pages/caja/GestionCaja'));
+const GestionTimbrado = React.lazy(() => import('../pages/timbrado/GestionTimbrado'));
+const ColaFacturacion = React.lazy(() => import('../pages/facturacion/ColaFacturacion'));
+const HistorialFacturas = React.lazy(() => import('../pages/facturacion/HistorialFacturas'));
+const GestionDatosEmpresa = React.lazy(() => import('../pages/configuracion/GestionDatosEmpresa'));
+const GestionMediosPago = React.lazy(() => import('../pages/configuracion/GestionMediosPago'));
+const GestionImpuestos = React.lazy(() => import('../pages/configuracion/GestionImpuestos'));
+const GestionPlantillasEmail = React.lazy(() => import('../pages/configuracion/GestionPlantillasEmail'));
+const GestionTareasProgramadas = React.lazy(() => import('../pages/configuracion/GestionTareasProgramadas'));
+const LoginPortal = React.lazy(() => import('../pages/portal/LoginPortal'));
+const DashboardPortal = React.lazy(() => import('../pages/portal/DashboardPortal'));
+const PWAConfigPage = React.lazy(() => import('../pages/PWAConfigPage'));
+
 const AppRoutes: React.FC = () => {
   return (
+    <Suspense fallback={<LoadingSpinner size="lg" />}>
     <Routes>
       {/* Portal de Clientes — rutas independientes del sistema de empleados */}
       <Route path="/portal/login" element={<LoginPortal />} />
@@ -297,12 +304,23 @@ const AppRoutes: React.FC = () => {
                     </ProtectedRoute>
                   }
                 />
+
+                {/* Configuración: PWA - Solo Admin */}
+                <Route
+                  path="/configuracion/pwa"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <PWAConfigPage />
+                    </ProtectedRoute>
+                  }
+                />
               </Routes>
             </MainLayout>
           </ProtectedRoute>
         }
       />
     </Routes>
+    </Suspense>
   );
 };
 

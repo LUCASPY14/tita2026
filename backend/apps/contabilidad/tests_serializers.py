@@ -463,7 +463,6 @@ class DocumentosTributariosSerializerTest(BaseContabilidadSerializerTest):
             fecha_fin=date.today() + timedelta(days=365),
             nro_inicial=1,
             nro_final=10000,
-            es_electronico=1,
             id_punto=self.punto
         )
 
@@ -728,7 +727,6 @@ class SerializersIntegrationTest(BaseContabilidadSerializerTest):
             fecha_fin=date.today() + timedelta(days=180),
             nro_inicial=1000,
             nro_final=5000,
-            es_electronico=0,
             id_punto=punto
         )
         

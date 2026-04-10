@@ -504,14 +504,6 @@ class TimbradosAdminTest(TestCase):
         self.assertIn("100", result)
         self.assertIn("100", result)  # total docs
 
-    def test_es_electronico_badge_true(self):
-        """Campo es_electronico eliminado. Método admin eliminado. Test conservado como no-op."""
-        pass
-
-    def test_es_electronico_badge_false(self):
-        """Campo es_electronico eliminado. Método admin eliminado. Test conservado como no-op."""
-        pass
-
     def test_activo_badge_active(self):
         """Lines 497-499: estado=True returns green badge."""
         obj = _mock_obj(estado=True)

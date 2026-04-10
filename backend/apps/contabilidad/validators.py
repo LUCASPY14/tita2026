@@ -534,19 +534,6 @@ def validar_url_kude_documento(value):
         raise ValidationError("La URL del KUDE no tiene un formato válido.")
 
 
-def validar_estado_sifen_documento(value):
-    """Valida estado SIFEN (Sistema Integrado de Facturación Electrónica Nacional)"""
-    if value is None or value == "":
-        return  # Estado es opcional
-
-    if len(value) > 9:
-        raise ValidationError("El estado SIFEN no puede exceder 9 caracteres.")
-
-    estados_validos = ["Aprobado", "Rechazado", "Pendiente"]
-    if value not in estados_validos:
-        raise ValidationError(f'El estado SIFEN debe ser: {", ".join(estados_validos)}')
-
-
 def validar_nro_preimpreso_documento(value):
     """Valida número preimpreso interno (formato XXX-XXX-XXXXXXX)"""
     if value is None or value == "":
@@ -697,14 +684,6 @@ def validar_numeros_timbrado(nro_inicial, nro_final):
     cantidad = nro_final - nro_inicial + 1
     if cantidad > 999999999:
         raise ValidationError("La cantidad de documentos no puede exceder 999,999,999")
-
-
-def validar_es_electronico_timbrado(value):
-    """Valida que es_electronico sea 0 o 1 (entero)."""
-    if not isinstance(value, int) or isinstance(value, bool):
-        raise ValidationError("El campo es_electronico debe ser 0 o 1.")
-    if value not in (0, 1):
-        raise ValidationError("El campo es_electronico debe ser 0 o 1.")
 
 
 def validar_activo_timbrado(value):

@@ -469,21 +469,6 @@ class ValidarUrlKudeDocumentoTest(TestCase):
             validar_url_kude_documento("no-es-una-url")
 
 
-class ValidarEstadoSifenDocumentoTest(TestCase):
-    def test_estado_aprobado(self):
-        validar_estado_sifen_documento("Aprobado")  # OK
-
-    def test_estado_rechazado(self):
-        validar_estado_sifen_documento("Rechazado")  # OK
-
-    def test_estado_opcional(self):
-        validar_estado_sifen_documento(None)  # OK
-
-    def test_estado_invalido(self):
-        with self.assertRaises(ValidationError):
-            validar_estado_sifen_documento("Procesando")
-
-
 class ValidarNroPreimpresoDocumentoTest(TestCase):
     def test_nro_preimpreso_valido(self):
         validar_nro_preimpreso_documento("001-001-0000001")  # OK
@@ -598,20 +583,6 @@ class ValidarNumerosTimbradoTest(TestCase):
     def test_nro_inicial_cero(self):
         with self.assertRaises(ValidationError):
             validar_numeros_timbrado(0, 100)
-
-
-class ValidarEsElectronicoTimbradoTest(TestCase):
-    """Validator activo: 0 y 1 son válidos, el resto lanza ValidationError."""
-
-    def test_es_electronico_cero(self):
-        validar_es_electronico_timbrado(0)  # OK
-
-    def test_es_electronico_uno(self):
-        validar_es_electronico_timbrado(1)  # OK
-
-    def test_es_electronico_invalido(self):
-        with self.assertRaises(ValidationError):
-            validar_es_electronico_timbrado(2)  # no es 0 ni 1
 
 
 class ValidarActivoTimbradoTest(TestCase):
