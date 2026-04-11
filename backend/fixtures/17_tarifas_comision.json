@@ -1,0 +1,38 @@
+[
+  {
+    "model": "contabilidad.tarifascomision",
+    "pk": 1,
+    "fields": {
+      "fecha_inicio_vigencia": "2026-01-01T00:00:00Z",
+      "fecha_fin_vigencia": null,
+      "porcentaje_comision": "1.50",
+      "monto_fijo_comision": null,
+      "estado": true,
+      "id_medio_pago": 2
+    }
+  },
+  {
+    "model": "contabilidad.tarifascomision",
+    "pk": 2,
+    "fields": {
+      "fecha_inicio_vigencia": "2026-01-01T00:00:00Z",
+      "fecha_fin_vigencia": null,
+      "porcentaje_comision": "3.00",
+      "monto_fijo_comision": null,
+      "estado": true,
+      "id_medio_pago": 3
+    }
+  },
+  {
+    "model": "contabilidad.tarifascomision",
+    "pk": 3,
+    "fields": {
+      "fecha_inicio_vigencia": "2026-01-01T00:00:00Z",
+      "fecha_fin_vigencia": null,
+      "porcentaje_comision": "2.00",
+      "monto_fijo_comision": null,
+      "estado": true,
+      "id_medio_pago": 5
+    }
+  }
+]

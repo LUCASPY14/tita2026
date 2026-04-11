@@ -1,0 +1,42 @@
+[
+  {
+    "model": "productos.listasprecios",
+    "pk": 1,
+    "fields": {
+      "nombre_lista": "Lista General",
+      "fecha_vigencia": "2026-01-01",
+      "moneda": "PYG",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.listasprecios",
+    "pk": 2,
+    "fields": {
+      "nombre_lista": "Lista VIP",
+      "fecha_vigencia": "2026-01-01",
+      "moneda": "PYG",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.listasprecios",
+    "pk": 3,
+    "fields": {
+      "nombre_lista": "Lista Estudiante",
+      "fecha_vigencia": "2026-01-01",
+      "moneda": "PYG",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.listasprecios",
+    "pk": 4,
+    "fields": {
+      "nombre_lista": "Lista Personal Docente",
+      "fecha_vigencia": "2026-01-01",
+      "moneda": "PYG",
+      "estado": true
+    }
+  }
+]

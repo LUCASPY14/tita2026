@@ -1,0 +1,92 @@
+[
+  {
+    "model": "notificaciones.plantillasemail",
+    "pk": 1,
+    "fields": {
+      "codigo": "BIENVENIDA",
+      "nombre": "Bienvenida al Portal",
+      "descripcion": "Email de bienvenida al registrarse en el portal",
+      "asunto": "Bienvenido al Portal Cantina - {{nombre_cliente}}",
+      "cuerpo_html": "<h2>Bienvenido, {{nombre_cliente}}!</h2><p>Tu cuenta en el portal de la cantina ha sido creada exitosamente.</p><p>Ya podes acceder con tu email: <strong>{{email}}</strong></p><p>Gracias por registrarte.</p>",
+      "cuerpo_texto": "Bienvenido, {{nombre_cliente}}! Tu cuenta en el portal de la cantina ha sido creada exitosamente. Ya podes acceder con tu email: {{email}}",
+      "variables": ["nombre_cliente", "email"],
+      "categoria": "cuenta",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z",
+      "created_by": null
+    }
+  },
+  {
+    "model": "notificaciones.plantillasemail",
+    "pk": 2,
+    "fields": {
+      "codigo": "SALDO_BAJO",
+      "nombre": "Alerta Saldo Bajo",
+      "descripcion": "Notificacion cuando el saldo de la tarjeta esta proximo al limite de alerta",
+      "asunto": "Alerta: Saldo bajo en tarjeta de {{nombre_hijo}}",
+      "cuerpo_html": "<h3>Alerta de Saldo Bajo</h3><p>Estimado/a {{nombre_cliente}},</p><p>El saldo de la tarjeta de <strong>{{nombre_hijo}}</strong> es de <strong>Gs {{saldo_actual}}</strong>, por debajo del limite de alerta configurado.</p><p>Podes recargar desde el portal o en la cantina.</p>",
+      "cuerpo_texto": "Estimado/a {{nombre_cliente}}, el saldo de la tarjeta de {{nombre_hijo}} es de Gs {{saldo_actual}}, por debajo del limite de alerta. Podes recargar en la cantina o por el portal.",
+      "variables": ["nombre_cliente", "nombre_hijo", "saldo_actual", "saldo_alerta"],
+      "categoria": "saldo",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z",
+      "created_by": null
+    }
+  },
+  {
+    "model": "notificaciones.plantillasemail",
+    "pk": 3,
+    "fields": {
+      "codigo": "FACTURA_EMITIDA",
+      "nombre": "Factura Emitida",
+      "descripcion": "Notificacion de factura emitida al cliente",
+      "asunto": "Factura N° {{nro_factura}} - Cantina",
+      "cuerpo_html": "<h3>Factura Emitida</h3><p>Estimado/a {{nombre_cliente}},</p><p>Se ha emitido la factura N° <strong>{{nro_factura}}</strong> por un monto de <strong>Gs {{monto_total}}</strong> el {{fecha}}.</p><p>Gracias por su compra.</p>",
+      "cuerpo_texto": "Estimado/a {{nombre_cliente}}, se ha emitido la factura N° {{nro_factura}} por Gs {{monto_total}} el {{fecha}}. Gracias por su compra.",
+      "variables": ["nombre_cliente", "nro_factura", "monto_total", "fecha"],
+      "categoria": "facturacion",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z",
+      "created_by": null
+    }
+  },
+  {
+    "model": "notificaciones.plantillasemail",
+    "pk": 4,
+    "fields": {
+      "codigo": "RECUPERACION_CONTRASENA",
+      "nombre": "Recuperacion de Contrasena",
+      "descripcion": "Email con enlace para restablecer la contrasena del portal",
+      "asunto": "Restablecer contrasena - Portal Cantina",
+      "cuerpo_html": "<h3>Recuperacion de Contrasena</h3><p>Hola {{nombre_cliente}},</p><p>Recibimos una solicitud para restablecer tu contrasena. Hace clic en el siguiente enlace:</p><p><a href='{{link_recuperacion}}'>Restablecer contrasena</a></p><p>Este enlace expira en {{minutos_expiracion}} minutos. Si no solicitaste esto, ignora este email.</p>",
+      "cuerpo_texto": "Hola {{nombre_cliente}}, para restablecer tu contrasena ingresa a: {{link_recuperacion}} (expira en {{minutos_expiracion}} minutos). Si no solicitaste esto, ignora este email.",
+      "variables": ["nombre_cliente", "link_recuperacion", "minutos_expiracion"],
+      "categoria": "seguridad",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z",
+      "created_by": null
+    }
+  },
+  {
+    "model": "notificaciones.plantillasemail",
+    "pk": 5,
+    "fields": {
+      "codigo": "RECARGA_CONFIRMADA",
+      "nombre": "Recarga de Saldo Confirmada",
+      "descripcion": "Confirmacion de recarga exitosa en la tarjeta",
+      "asunto": "Recarga exitosa - Tarjeta de {{nombre_hijo}}",
+      "cuerpo_html": "<h3>Recarga Exitosa</h3><p>Estimado/a {{nombre_cliente}},</p><p>Se recargo exitosamente <strong>Gs {{monto_recarga}}</strong> en la tarjeta de <strong>{{nombre_hijo}}</strong>.</p><p>Saldo actual: <strong>Gs {{saldo_nuevo}}</strong></p>",
+      "cuerpo_texto": "Estimado/a {{nombre_cliente}}, se recargo Gs {{monto_recarga}} en la tarjeta de {{nombre_hijo}}. Saldo actual: Gs {{saldo_nuevo}}.",
+      "variables": ["nombre_cliente", "nombre_hijo", "monto_recarga", "saldo_nuevo"],
+      "categoria": "saldo",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z",
+      "created_by": null
+    }
+  }
+]

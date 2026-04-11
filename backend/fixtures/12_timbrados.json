@@ -1,0 +1,41 @@
+[
+  {
+    "model": "contabilidad.timbrados",
+    "pk": 15001234,
+    "fields": {
+      "tipo_documento": "FC",
+      "fecha_inicio": "2026-01-01",
+      "fecha_fin": "2026-12-31",
+      "nro_inicial": 1,
+      "nro_final": 999,
+      "estado": true,
+      "id_punto": 1
+    }
+  },
+  {
+    "model": "contabilidad.timbrados",
+    "pk": 15001235,
+    "fields": {
+      "tipo_documento": "NC",
+      "fecha_inicio": "2026-01-01",
+      "fecha_fin": "2026-12-31",
+      "nro_inicial": 1,
+      "nro_final": 999,
+      "estado": true,
+      "id_punto": 1
+    }
+  },
+  {
+    "model": "contabilidad.timbrados",
+    "pk": 15001236,
+    "fields": {
+      "tipo_documento": "FC",
+      "fecha_inicio": "2026-01-01",
+      "fecha_fin": "2026-12-31",
+      "nro_inicial": 1,
+      "nro_final": 999,
+      "estado": true,
+      "id_punto": 2
+    }
+  }
+]

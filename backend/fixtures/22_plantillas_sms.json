@@ -1,0 +1,54 @@
+[
+  {
+    "model": "notificaciones.plantillassms",
+    "pk": 1,
+    "fields": {
+      "codigo": "SMS_SALDO_BAJO",
+      "nombre": "Alerta SMS Saldo Bajo",
+      "mensaje": "CANTINA: Saldo bajo en tarjeta de {{nombre_hijo}}. Saldo: Gs {{saldo_actual}}. Recargue en la cantina o en el portal.",
+      "variables": ["nombre_hijo", "saldo_actual"],
+      "categoria": "saldo",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "notificaciones.plantillassms",
+    "pk": 2,
+    "fields": {
+      "codigo": "SMS_CODIGO_2FA",
+      "nombre": "Codigo Verificacion 2FA",
+      "mensaje": "CANTINA: Tu codigo de verificacion es {{codigo}}. Expira en {{minutos}} minutos. No compartir.",
+      "variables": ["codigo", "minutos"],
+      "categoria": "seguridad",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "notificaciones.plantillassms",
+    "pk": 3,
+    "fields": {
+      "codigo": "SMS_RECARGA",
+      "nombre": "Confirmacion Recarga SMS",
+      "mensaje": "CANTINA: Recarga de Gs {{monto}} exitosa para {{nombre_hijo}}. Saldo nuevo: Gs {{saldo_nuevo}}.",
+      "variables": ["monto", "nombre_hijo", "saldo_nuevo"],
+      "categoria": "saldo",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "notificaciones.plantillassms",
+    "pk": 4,
+    "fields": {
+      "codigo": "SMS_BIENVENIDA",
+      "nombre": "Bienvenida SMS",
+      "mensaje": "CANTINA: Bienvenido/a {{nombre_cliente}}! Tu cuenta fue creada. Accede al portal con tu email registrado.",
+      "variables": ["nombre_cliente"],
+      "categoria": "cuenta",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  }
+]

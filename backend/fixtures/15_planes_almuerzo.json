@@ -1,0 +1,47 @@
+[
+  {
+    "model": "almuerzos.planesalmuerzo",
+    "pk": 1,
+    "fields": {
+      "nombre_plan": "Plan Mensual Completo",
+      "descripcion": "Almuerzo completo de lunes a viernes, con postre y bebida",
+      "precio_mensual": "300000.00",
+      "tipo_plan": "cantidad",
+      "cantidad_almuerzos_mes": 20,
+      "limite_credito_mensual": null,
+      "dias_semana_incluidos": "Lunes-Viernes",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "estado": true
+    }
+  },
+  {
+    "model": "almuerzos.planesalmuerzo",
+    "pk": 2,
+    "fields": {
+      "nombre_plan": "Plan Mensual Simple",
+      "descripcion": "Almuerzo basico de lunes a viernes, solo plato principal",
+      "precio_mensual": "200000.00",
+      "tipo_plan": "cantidad",
+      "cantidad_almuerzos_mes": 20,
+      "limite_credito_mensual": null,
+      "dias_semana_incluidos": "Lunes-Viernes",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "estado": true
+    }
+  },
+  {
+    "model": "almuerzos.planesalmuerzo",
+    "pk": 3,
+    "fields": {
+      "nombre_plan": "Plan Cuenta Corriente",
+      "descripcion": "Consumo libre con limite mensual, se factura al cierre del mes",
+      "precio_mensual": "0.00",
+      "tipo_plan": "sin_limite",
+      "cantidad_almuerzos_mes": null,
+      "limite_credito_mensual": "500000.00",
+      "dias_semana_incluidos": "Lunes-Viernes",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "estado": true
+    }
+  }
+]

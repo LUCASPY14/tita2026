@@ -1,0 +1,114 @@
+[
+  {
+    "model": "almuerzos.alergenos",
+    "pk": 1,
+    "fields": {
+      "nombre": "Gluten",
+      "descripcion": "Presente en trigo, cebada, centeno y avena",
+      "palabras_clave": ["trigo", "harina", "pan", "pasta", "galleta", "cebada", "centeno"],
+      "nivel_severidad": "alto",
+      "icono": "🌾",
+      "estado": true,
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "usuario_creacion": "sistema"
+    }
+  },
+  {
+    "model": "almuerzos.alergenos",
+    "pk": 2,
+    "fields": {
+      "nombre": "Lactosa",
+      "descripcion": "Presente en leche y derivados lacteos",
+      "palabras_clave": ["leche", "queso", "yogurt", "manteca", "crema", "lacteo"],
+      "nivel_severidad": "medio",
+      "icono": "🥛",
+      "estado": true,
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "usuario_creacion": "sistema"
+    }
+  },
+  {
+    "model": "almuerzos.alergenos",
+    "pk": 3,
+    "fields": {
+      "nombre": "Huevo",
+      "descripcion": "Presente en huevo y productos con huevo",
+      "palabras_clave": ["huevo", "mayonesa", "tortilla", "merengue"],
+      "nivel_severidad": "alto",
+      "icono": "🥚",
+      "estado": true,
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "usuario_creacion": "sistema"
+    }
+  },
+  {
+    "model": "almuerzos.alergenos",
+    "pk": 4,
+    "fields": {
+      "nombre": "Mani",
+      "descripcion": "Presente en mani, mantequilla de mani y derivados",
+      "palabras_clave": ["mani", "cacahuate", "mantequilla de mani"],
+      "nivel_severidad": "critico",
+      "icono": "🥜",
+      "estado": true,
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "usuario_creacion": "sistema"
+    }
+  },
+  {
+    "model": "almuerzos.alergenos",
+    "pk": 5,
+    "fields": {
+      "nombre": "Soja",
+      "descripcion": "Presente en soja, tofu, leche de soja y derivados",
+      "palabras_clave": ["soja", "soya", "tofu", "edamame", "miso"],
+      "nivel_severidad": "medio",
+      "icono": "🫘",
+      "estado": true,
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "usuario_creacion": "sistema"
+    }
+  },
+  {
+    "model": "almuerzos.alergenos",
+    "pk": 6,
+    "fields": {
+      "nombre": "Mariscos",
+      "descripcion": "Presente en camaron, langosta, cangrejo y otros mariscos",
+      "palabras_clave": ["camaron", "langosta", "cangrejo", "marisco", "calamares"],
+      "nivel_severidad": "critico",
+      "icono": "🦐",
+      "estado": true,
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "usuario_creacion": "sistema"
+    }
+  },
+  {
+    "model": "almuerzos.alergenos",
+    "pk": 7,
+    "fields": {
+      "nombre": "Frutos Secos",
+      "descripcion": "Presente en nueces, almendras, castanas y similares",
+      "palabras_clave": ["nuez", "almendra", "castana", "avellana", "pistacho", "pecana"],
+      "nivel_severidad": "critico",
+      "icono": "🌰",
+      "estado": true,
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "usuario_creacion": "sistema"
+    }
+  },
+  {
+    "model": "almuerzos.alergenos",
+    "pk": 8,
+    "fields": {
+      "nombre": "Pescado",
+      "descripcion": "Presente en todo tipo de pescado y productos derivados",
+      "palabras_clave": ["pescado", "salmon", "atun", "sardina", "merluza", "bacalao"],
+      "nivel_severidad": "alto",
+      "icono": "🐟",
+      "estado": true,
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "usuario_creacion": "sistema"
+    }
+  }
+]

@@ -157,7 +157,7 @@ class Empleados(models.Model):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
     usuario = models.CharField(unique=True, max_length=50)
-    contrasena_hash = models.CharField(max_length=60)
+    contrasena_hash = models.CharField(max_length=256)
     fecha_ingreso = models.DateTimeField()
     direccion = models.CharField(max_length=255, blank=True, null=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True)

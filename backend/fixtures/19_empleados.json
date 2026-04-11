@@ -1,0 +1,97 @@
+[
+  {
+    "model": "usuarios.empleados",
+    "pk": 1,
+    "fields": {
+      "nombre": "Admin",
+      "apellido": "Sistema",
+      "usuario": "admin",
+      "contrasena_hash": "pbkdf2_sha256$1200000$mGqk841GgJTn4PiP5m6eFt$in/qUzheoYFYfFMWOuYO0IxqEgmRClktE/4Gj2nhMds=",
+      "fecha_ingreso": "2026-01-01T00:00:00Z",
+      "direccion": null,
+      "ciudad": "Asuncion",
+      "pais": "Paraguay",
+      "telefono": null,
+      "email": "admin@cantina.edu.py",
+      "estado": true,
+      "fecha_baja": null,
+      "id_rol": 1
+    }
+  },
+  {
+    "model": "usuarios.empleados",
+    "pk": 2,
+    "fields": {
+      "nombre": "Maria",
+      "apellido": "Gonzalez",
+      "usuario": "cajero1",
+      "contrasena_hash": "pbkdf2_sha256$1200000$DsBCnXz2AB2g1U3JH0do26$a7MkAniSsfNIcargPu1IhQ8ZNUHsf/Bgy87b9FfRJ0s=",
+      "fecha_ingreso": "2026-01-01T00:00:00Z",
+      "direccion": "Calle San Martin 123",
+      "ciudad": "Asuncion",
+      "pais": "Paraguay",
+      "telefono": "0981-111222",
+      "email": "maria.gonzalez@cantina.edu.py",
+      "estado": true,
+      "fecha_baja": null,
+      "id_rol": 2
+    }
+  },
+  {
+    "model": "usuarios.empleados",
+    "pk": 3,
+    "fields": {
+      "nombre": "Carlos",
+      "apellido": "Lopez",
+      "usuario": "cajero2",
+      "contrasena_hash": "pbkdf2_sha256$1200000$DsBCnXz2AB2g1U3JH0do26$a7MkAniSsfNIcargPu1IhQ8ZNUHsf/Bgy87b9FfRJ0s=",
+      "fecha_ingreso": "2026-01-01T00:00:00Z",
+      "direccion": "Av. Brasil 456",
+      "ciudad": "San Lorenzo",
+      "pais": "Paraguay",
+      "telefono": "0985-333444",
+      "email": "carlos.lopez@cantina.edu.py",
+      "estado": true,
+      "fecha_baja": null,
+      "id_rol": 2
+    }
+  },
+  {
+    "model": "usuarios.empleados",
+    "pk": 4,
+    "fields": {
+      "nombre": "Ana",
+      "apellido": "Martinez",
+      "usuario": "supervisor1",
+      "contrasena_hash": "pbkdf2_sha256$1200000$M17YchorYvSeVe9jIHXpbz$/YczAzesZKO58+gRp3AVxVmEG9arugO9hUw/usgVuww=",
+      "fecha_ingreso": "2026-01-01T00:00:00Z",
+      "direccion": "Av. Mcal. Lopez 789",
+      "ciudad": "Asuncion",
+      "pais": "Paraguay",
+      "telefono": "0992-555666",
+      "email": "ana.martinez@cantina.edu.py",
+      "estado": true,
+      "fecha_baja": null,
+      "id_rol": 5
+    }
+  },
+  {
+    "model": "usuarios.empleados",
+    "pk": 5,
+    "fields": {
+      "nombre": "Juan",
+      "apellido": "Benitez",
+      "usuario": "compras1",
+      "contrasena_hash": "pbkdf2_sha256$1200000$3qBJv0AYYfI4YSCFIAytOY$k1zIdZZxtTlc31UPE6WBAlXedT8TGDF5UMt6Ks4X5xk=",
+      "fecha_ingreso": "2026-01-01T00:00:00Z",
+      "direccion": null,
+      "ciudad": "Luque",
+      "pais": "Paraguay",
+      "telefono": "0991-777888",
+      "email": "juan.benitez@cantina.edu.py",
+      "estado": true,
+      "fecha_baja": null,
+      "id_rol": 4
+    }
+  }
+]

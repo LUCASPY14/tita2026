@@ -1,0 +1,29 @@
+[
+  {
+    "model": "contabilidad.cajas",
+    "pk": 1,
+    "fields": {
+      "nombre_caja": "Caja Principal",
+      "ubicacion": "Planta baja - cantina",
+      "estado": true
+    }
+  },
+  {
+    "model": "contabilidad.cajas",
+    "pk": 2,
+    "fields": {
+      "nombre_caja": "Caja Secundaria",
+      "ubicacion": "Pasillo central",
+      "estado": true
+    }
+  },
+  {
+    "model": "contabilidad.cajas",
+    "pk": 3,
+    "fields": {
+      "nombre_caja": "Caja Almuerzo",
+      "ubicacion": "Comedor - area almuerzos",
+      "estado": true
+    }
+  }
+]

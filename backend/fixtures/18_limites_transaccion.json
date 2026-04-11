@@ -1,0 +1,137 @@
+[
+  {
+    "model": "core.limitestransaccion",
+    "pk": 1,
+    "fields": {
+      "tipo_operacion": "venta",
+      "monto_maximo_sin_autorizacion": "999999999.00",
+      "requiere_autorizacion_doble": false,
+      "estado": true,
+      "observaciones": "Administrador sin limite de monto",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "fecha_modificacion": "2026-01-01T00:00:00Z",
+      "id_rol": 1,
+      "id_empleado_configurador": null
+    }
+  },
+  {
+    "model": "core.limitestransaccion",
+    "pk": 2,
+    "fields": {
+      "tipo_operacion": "anular_venta",
+      "monto_maximo_sin_autorizacion": "999999999.00",
+      "requiere_autorizacion_doble": false,
+      "estado": true,
+      "observaciones": "Administrador puede anular cualquier venta",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "fecha_modificacion": "2026-01-01T00:00:00Z",
+      "id_rol": 1,
+      "id_empleado_configurador": null
+    }
+  },
+  {
+    "model": "core.limitestransaccion",
+    "pk": 3,
+    "fields": {
+      "tipo_operacion": "retiro_caja",
+      "monto_maximo_sin_autorizacion": "999999999.00",
+      "requiere_autorizacion_doble": false,
+      "estado": true,
+      "observaciones": "Administrador puede hacer retiros sin limite",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "fecha_modificacion": "2026-01-01T00:00:00Z",
+      "id_rol": 1,
+      "id_empleado_configurador": null
+    }
+  },
+  {
+    "model": "core.limitestransaccion",
+    "pk": 4,
+    "fields": {
+      "tipo_operacion": "venta",
+      "monto_maximo_sin_autorizacion": "500000.00",
+      "requiere_autorizacion_doble": false,
+      "estado": true,
+      "observaciones": "Cajero: ventas hasta Gs 500.000 sin autorizacion",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "fecha_modificacion": "2026-01-01T00:00:00Z",
+      "id_rol": 2,
+      "id_empleado_configurador": null
+    }
+  },
+  {
+    "model": "core.limitestransaccion",
+    "pk": 5,
+    "fields": {
+      "tipo_operacion": "descuento",
+      "monto_maximo_sin_autorizacion": "50000.00",
+      "requiere_autorizacion_doble": false,
+      "estado": true,
+      "observaciones": "Cajero: descuento maximo Gs 50.000 sin autorizacion",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "fecha_modificacion": "2026-01-01T00:00:00Z",
+      "id_rol": 2,
+      "id_empleado_configurador": null
+    }
+  },
+  {
+    "model": "core.limitestransaccion",
+    "pk": 6,
+    "fields": {
+      "tipo_operacion": "anular_venta",
+      "monto_maximo_sin_autorizacion": "100000.00",
+      "requiere_autorizacion_doble": false,
+      "estado": true,
+      "observaciones": "Cajero: puede anular ventas hasta Gs 100.000",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "fecha_modificacion": "2026-01-01T00:00:00Z",
+      "id_rol": 2,
+      "id_empleado_configurador": null
+    }
+  },
+  {
+    "model": "core.limitestransaccion",
+    "pk": 7,
+    "fields": {
+      "tipo_operacion": "retiro_caja",
+      "monto_maximo_sin_autorizacion": "200000.00",
+      "requiere_autorizacion_doble": false,
+      "estado": true,
+      "observaciones": "Cajero: retiro de caja maximo Gs 200.000",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "fecha_modificacion": "2026-01-01T00:00:00Z",
+      "id_rol": 2,
+      "id_empleado_configurador": null
+    }
+  },
+  {
+    "model": "core.limitestransaccion",
+    "pk": 8,
+    "fields": {
+      "tipo_operacion": "venta",
+      "monto_maximo_sin_autorizacion": "999999999.00",
+      "requiere_autorizacion_doble": false,
+      "estado": true,
+      "observaciones": "Supervisor: sin limite para supervision",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "fecha_modificacion": "2026-01-01T00:00:00Z",
+      "id_rol": 5,
+      "id_empleado_configurador": null
+    }
+  },
+  {
+    "model": "core.limitestransaccion",
+    "pk": 9,
+    "fields": {
+      "tipo_operacion": "anular_venta",
+      "monto_maximo_sin_autorizacion": "500000.00",
+      "requiere_autorizacion_doble": true,
+      "estado": true,
+      "observaciones": "Supervisor: anulacion de ventas mayores requiere autorizacion doble",
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "fecha_modificacion": "2026-01-01T00:00:00Z",
+      "id_rol": 5,
+      "id_empleado_configurador": null
+    }
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "model": "almuerzos.precioalmuerzo",
+    "pk": 1,
+    "fields": {
+      "precio_unitario": "15000.00",
+      "fecha_inicio_vigencia": "2026-01-01",
+      "fecha_fin_vigencia": null,
+      "descripcion": "Precio vigente 2026",
+      "activo": true,
+      "fecha_creacion": "2026-01-01T00:00:00Z"
+    }
+  }
+]

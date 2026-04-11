@@ -1,0 +1,72 @@
+[
+  {
+    "model": "compras.proveedores",
+    "pk": 1,
+    "fields": {
+      "ruc": "80012345-1",
+      "razon_social": "Distribuidora Alimentos SA",
+      "telefono": "0981-123456",
+      "email": "ventas@distribuidora.com.py",
+      "direccion": "Av. Eusebio Ayala 1234",
+      "ciudad": "Asuncion",
+      "estado": true,
+      "fecha_registro": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "compras.proveedores",
+    "pk": 2,
+    "fields": {
+      "ruc": "80023456-2",
+      "razon_social": "Bebidas y Refrescos SRL",
+      "telefono": "0985-234567",
+      "email": "pedidos@bebidas.com.py",
+      "direccion": "Ruta 2 km 12",
+      "ciudad": "San Lorenzo",
+      "estado": true,
+      "fecha_registro": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "compras.proveedores",
+    "pk": 3,
+    "fields": {
+      "ruc": "80034567-3",
+      "razon_social": "Panaderia La Esperanza",
+      "telefono": "0991-345678",
+      "email": "laesperanza@gmail.com",
+      "direccion": "Calle Mariscal Lopez 567",
+      "ciudad": "Asuncion",
+      "estado": true,
+      "fecha_registro": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "compras.proveedores",
+    "pk": 4,
+    "fields": {
+      "ruc": "80045678-4",
+      "razon_social": "Lacteos del Sur SA",
+      "telefono": "0992-456789",
+      "email": "delsur@lacteos.com.py",
+      "direccion": "Av. Artigas 890",
+      "ciudad": "Luque",
+      "estado": true,
+      "fecha_registro": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "compras.proveedores",
+    "pk": 5,
+    "fields": {
+      "ruc": "80056789-5",
+      "razon_social": "Snacks y Golosinas SRL",
+      "telefono": "0982-567890",
+      "email": "contacto@snacks.com.py",
+      "direccion": "Av. Republica Argentina 234",
+      "ciudad": "Asuncion",
+      "estado": true,
+      "fecha_registro": "2026-01-01T00:00:00Z"
+    }
+  }
+]

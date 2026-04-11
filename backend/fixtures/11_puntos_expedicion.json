@@ -1,0 +1,22 @@
+[
+  {
+    "model": "contabilidad.puntosexpedicion",
+    "pk": 1,
+    "fields": {
+      "codigo_establecimiento": "001",
+      "codigo_punto_expedicion": "001",
+      "descripcion_ubicacion": "Cantina Principal - Planta Baja",
+      "estado": true
+    }
+  },
+  {
+    "model": "contabilidad.puntosexpedicion",
+    "pk": 2,
+    "fields": {
+      "codigo_establecimiento": "001",
+      "codigo_punto_expedicion": "002",
+      "descripcion_ubicacion": "Cantina Secundaria - Comedor",
+      "estado": true
+    }
+  }
+]
