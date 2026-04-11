@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones
+from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones, CondicionVenta
 
 
 class DetallesVentaSerializer(serializers.ModelSerializer):
@@ -75,6 +75,12 @@ class NotasCreditoClienteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = NotasCreditoCliente
+        fields = "__all__"
+
+
+class CondicionVentaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CondicionVenta
         fields = "__all__"
 
 

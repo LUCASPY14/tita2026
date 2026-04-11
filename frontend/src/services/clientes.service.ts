@@ -1,5 +1,5 @@
 import api from './api';
-import type { Cliente, TipoCliente, CuentaCorriente, PaginatedResponse } from '../types';
+import type { Cliente, TipoCliente, CuentaCorriente, PaginatedResponse, Pais, Ciudad } from '../types';
 
 export interface RestriccionHijoDetalle {
   id_restriccion: number;
@@ -39,6 +39,7 @@ export interface ClienteData {
   ruc_ci: string;
   direccion?: string;
   ciudad?: string;
+  id_ciudad?: number | null;
   telefono?: string;
   email?: string;
   limite_credito?: number;
@@ -158,5 +159,41 @@ export const restriccionesService = {
 
   eliminar: async (id: number): Promise<void> => {
     await api.delete(`/restricciones-hijos/${id}/`);
+  },
+};
+
+export const paisesService = {
+  getPaises: async (): Promise<Pais[]> => {
+    const response = await api.get<PaginatedResponse<Pais>>('/paises/', { params: { page_size: 500 } });
+    return response.data.results || [];
+  },
+  crear: async (nombre: string): Promise<Pais> => {
+    const response = await api.post<Pais>('/paises/', { nombre });
+    return response.data;
+  },
+  actualizar: async (id: number, nombre: string): Promise<Pais> => {
+    const response = await api.patch<Pais>(`/paises/${id}/`, { nombre });
+    return response.data;
+  },
+  eliminar: async (id: number): Promise<void> => {
+    await api.delete(`/paises/${id}/`);
+  },
+};
+
+export const ciudadesService = {
+  getCiudades: async (): Promise<Ciudad[]> => {
+    const response = await api.get<PaginatedResponse<Ciudad>>('/ciudades/', { params: { page_size: 500 } });
+    return response.data.results || [];
+  },
+  crear: async (nombre: string): Promise<Ciudad> => {
+    const response = await api.post<Ciudad>('/ciudades/', { nombre });
+    return response.data;
+  },
+  actualizar: async (id: number, nombre: string): Promise<Ciudad> => {
+    const response = await api.patch<Ciudad>(`/ciudades/${id}/`, { nombre });
+    return response.data;
+  },
+  eliminar: async (id: number): Promise<void> => {
+    await api.delete(`/ciudades/${id}/`);
   },
 };

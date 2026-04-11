@@ -1,5 +1,5 @@
 import api from './api';
-import { Venta, PaginatedResponse } from '../types';
+import { Venta, PaginatedResponse, CondicionVenta } from '../types';
 
 export interface VentaCreateData {
   cliente_id: number;
@@ -50,5 +50,24 @@ export const ventasService = {
   cancel: async (id: number): Promise<CancelarVentaResponse> => {
     const response = await api.post<CancelarVentaResponse>(`/ventas/${id}/cancelar/`);
     return response.data;
+  },
+};
+
+
+export const condicionesVentaService = {
+  getCondicionesVenta: async (): Promise<CondicionVenta[]> => {
+    const response = await api.get<PaginatedResponse<CondicionVenta>>('/condiciones-venta/', { params: { page_size: 100 } });
+    return response.data.results || [];
+  },
+  crear: async (nombre: string): Promise<CondicionVenta> => {
+    const response = await api.post<CondicionVenta>('/condiciones-venta/', { nombre });
+    return response.data;
+  },
+  actualizar: async (id: number, nombre: string): Promise<CondicionVenta> => {
+    const response = await api.patch<CondicionVenta>(`/condiciones-venta/${id}/`, { nombre });
+    return response.data;
+  },
+  eliminar: async (id: number): Promise<void> => {
+    await api.delete(`/condiciones-venta/${id}/`);
   },
 };

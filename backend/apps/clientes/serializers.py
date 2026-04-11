@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Clientes, Hijos, TiposCliente, Grados, RestriccionesHijos
+from .models import Clientes, Hijos, TiposCliente, Grados, RestriccionesHijos, Pais, Ciudad
 
 
 # Create your serializers here.
@@ -47,3 +47,15 @@ class RestriccionesHijosSerializer(serializers.ModelSerializer):
         model = RestriccionesHijos
         fields = "__all__"
         read_only_fields = ["fecha_registro", "fecha_ultima_actualizacion"]
+
+
+class PaisSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pais
+        fields = "__all__"
+
+
+class CiudadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ciudad
+        fields = "__all__"

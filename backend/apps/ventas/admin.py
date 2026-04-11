@@ -1,5 +1,5 @@
 ﻿from django.contrib import admin
-from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones
+from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones, CondicionVenta
 
 
 @admin.register(Ventas)
@@ -56,3 +56,9 @@ class PromocionesAdmin(admin.ModelAdmin):
     list_filter = ["estado", "tipo_promocion"]
     search_fields = ["nombre", "codigo_promocion"]
     ordering = ["-fecha_inicio"]
+
+
+@admin.register(CondicionVenta)
+class CondicionVentaAdmin(admin.ModelAdmin):
+    list_display = ['id_condicion_venta', 'nombre']
+    search_fields = ['nombre']

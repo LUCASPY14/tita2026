@@ -12,6 +12,8 @@ from .models import (
     RestriccionesHijos,
     AutorizacionesSaldoNegativo,
     LogsAutorizaciones,
+    Pais,
+    Ciudad,
 )
 
 
@@ -97,3 +99,15 @@ class LogsAutorizacionesAdmin(admin.ModelAdmin):
     list_filter = ["tipo_operacion", "resultado"]
     search_fields = ["codigo_barra"]
     readonly_fields = ["id_log", "fecha_hora"]
+
+
+@admin.register(Pais)
+class PaisAdmin(admin.ModelAdmin):
+    list_display = ['id_pais', 'nombre']
+    search_fields = ['nombre']
+
+
+@admin.register(Ciudad)
+class CiudadAdmin(admin.ModelAdmin):
+    list_display = ['id_ciudad', 'nombre']
+    search_fields = ['nombre']

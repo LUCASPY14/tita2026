@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Save, X } from 'lucide-react';
 import { Input, Button, Select } from '../../../components/common';
-import { clientesService, ClienteData } from '../../../services/clientes.service';
-import type { Cliente, TipoCliente } from '../../../types';
+import { clientesService, ciudadesService, ClienteData } from '../../../services/clientes.service';
+import type { Cliente, TipoCliente, Ciudad } from '../../../types';
 import toast from 'react-hot-toast';
 
 interface FormularioClienteProps {
@@ -18,6 +18,7 @@ const FormularioCliente: React.FC<FormularioClienteProps> = ({
 }) => {
   const [guardando, setGuardando] = useState(false);
   const [tiposCliente, setTiposCliente] = useState<TipoCliente[]>([]);
+  const [ciudades, setCiudades] = useState<Ciudad[]>([]);
   const [formData, setFormData] = useState<ClienteData>({
     nombres: '',
     apellidos: '',
@@ -25,6 +26,7 @@ const FormularioCliente: React.FC<FormularioClienteProps> = ({
     ruc_ci: '',
     direccion: '',
     ciudad: '',
+    id_ciudad: null,
     telefono: '',
     email: '',
     limite_credito: 0,
@@ -37,6 +39,7 @@ const FormularioCliente: React.FC<FormularioClienteProps> = ({
 
   useEffect(() => {
     cargarTiposCliente();
+    cargarCiudades();
     if (cliente) {
       setFormData({
         nombres: cliente.nombres,
@@ -45,6 +48,7 @@ const FormularioCliente: React.FC<FormularioClienteProps> = ({
         ruc_ci: cliente.ruc_ci,
         direccion: cliente.direccion || '',
         ciudad: cliente.ciudad || '',
+        id_ciudad: cliente.id_ciudad ?? null,
         telefono: cliente.telefono || '',
         email: cliente.email || '',
         limite_credito: cliente.limite_credito || 0,
@@ -54,6 +58,14 @@ const FormularioCliente: React.FC<FormularioClienteProps> = ({
       });
     }
   }, [cliente]);
+
+  const cargarCiudades = async () => {
+    try {
+      setCiudades(await ciudadesService.getCiudades());
+    } catch {
+      console.error('Error al cargar ciudades');
+    }
+  };
 
   const cargarTiposCliente = async () => {
     try {
@@ -194,7 +206,30 @@ const FormularioCliente: React.FC<FormularioClienteProps> = ({
             name="ciudad"
             value={formData.ciudad}
             onChange={handleChange}
+            helperText="Texto libre o seleccione del catálogo"
           />
+
+          {ciudades.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Ciudad (catálogo)
+              </label>
+              <select
+                name="id_ciudad"
+                value={formData.id_ciudad ?? ''}
+                onChange={e => setFormData(prev => ({
+                  ...prev,
+                  id_ciudad: e.target.value ? Number(e.target.value) : null,
+                }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+              >
+                <option value="">— Sin selección —</option>
+                {ciudades.map(c => (
+                  <option key={c.id_ciudad} value={c.id_ciudad}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <Input
             label="Teléfono"

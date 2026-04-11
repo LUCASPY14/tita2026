@@ -5,7 +5,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 # Import ViewSets
-from apps.clientes.views import ClientesViewSet, HijosViewSet, TiposClienteViewSet, GradosViewSet, RestriccionesHijosViewSet
+from apps.clientes.views import ClientesViewSet, HijosViewSet, TiposClienteViewSet, GradosViewSet, RestriccionesHijosViewSet, PaisViewSet, CiudadViewSet
 from apps.productos.views import ProductosViewSet, CategoriasViewSet, UnidadesMedidaViewSet, ListasPreciosViewSet, PreciosPorListaViewSet
 from apps.contabilidad.views import (
     ImpuestosViewSet, DatosEmpresaViewSet, TimbradosViewSet,
@@ -13,11 +13,11 @@ from apps.contabilidad.views import (
     CajasViewSet, CierresCajaViewSet, MovimientosCajaViewSet,
     FacturacionViewSet,
 )
-from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaViewSet, NotasCreditoClienteViewSet, PromocionesViewSet
+from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaViewSet, NotasCreditoClienteViewSet, PromocionesViewSet, CondicionVentaViewSet
 from apps.compras.views import ProveedoresViewSet, ComprasViewSet, DetallesCompraViewSet, PagosProveedoresViewSet, NotasCreditoProveedorViewSet
 from apps.core.views import TarjetasViewSet, CargasSaldoViewSet, ConsumosTarjetaViewSet, MediosPagoViewSet, ConfiguracionSistemaViewSet
 from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, SuscripcionesAlmuerzoViewSet, RegistrosConsumoAlmuerzoViewSet, AlergenosViewSet, CuentasAlmuerzoMensualViewSet, PrecioAlmuerzoViewSet
-from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet, PortalAuthViewSet, AuthViewSet, PermisosViewSet, AuditoriaOperacionesViewSet
+from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet, PortalAuthViewSet, AuthViewSet, PermisosViewSet, AuditoriaOperacionesViewSet, TwoFactorViewSet, SesionesViewSet, PasswordRecoveryViewSet
 from apps.inventario.views import StockUnicoViewSet, MovimientosStockViewSet, AjustesInventarioViewSet
 from apps.reportes.views import (
     ReportesViewSet,
@@ -38,6 +38,8 @@ router.register(r'hijos', HijosViewSet)
 router.register(r'tipos-cliente', TiposClienteViewSet)
 router.register(r'grados', GradosViewSet)
 router.register(r'restricciones-hijos', RestriccionesHijosViewSet)
+router.register(r'paises', PaisViewSet, basename='paises')
+router.register(r'ciudades', CiudadViewSet, basename='ciudades')
 
 # Register Productos ViewSets
 router.register(r'productos', ProductosViewSet)
@@ -62,12 +64,7 @@ router.register(r'detalles-venta', DetallesVentaViewSet)
 router.register(r'pagos-venta', PagosVentaViewSet)
 router.register(r'notas-credito-cliente', NotasCreditoClienteViewSet)
 router.register(r'promociones', PromocionesViewSet)
-
-# Register Compras ViewSets
-router.register(r'proveedores', ProveedoresViewSet)
-router.register(r'compras', ComprasViewSet)
-router.register(r'detalles-compra', DetallesCompraViewSet)
-router.register(r'pagos-proveedores', PagosProveedoresViewSet)
+router.register(r'condiciones-venta', CondicionVentaViewSet, basename='condiciones-venta')
 router.register(r'notas-credito-proveedor', NotasCreditoProveedorViewSet)
 
 # Register Core ViewSets
@@ -96,15 +93,9 @@ router.register(r'usuarios-portal', UsuariosPortalViewSet)
 router.register(r'portal-auth', PortalAuthViewSet, basename='portal-auth')
 router.register(r'permisos', PermisosViewSet, basename='permisos')
 router.register(r'usuarios/auditoria', AuditoriaOperacionesViewSet, basename='auditoria')
-
-# Register Inventario ViewSets
-router.register(r'stock', StockUnicoViewSet)
-router.register(r'movimientos-stock', MovimientosStockViewSet)
-router.register(r'ajustes-inventario', AjustesInventarioViewSet)
-
-# Register Reportes ViewSets
-router.register(r'reportes', ReportesViewSet, basename='reportes')
-router.register(r'reportes/plantillas', PlantillasReporteViewSet, basename='plantillas-reporte')
+router.register(r'2fa', TwoFactorViewSet, basename='2fa')
+router.register(r'sesiones', SesionesViewSet, basename='sesiones')
+router.register(r'password', PasswordRecoveryViewSet, basename='password')
 router.register(r'reportes/dashboards', DashboardsViewSet, basename='dashboards')
 router.register(r'reportes/kpis', KpiMetricasViewSet, basename='kpi-metricas')
 router.register(r'reportes/tareas', PlantillasTareaViewSet, basename='plantillas-tarea')

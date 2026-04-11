@@ -11,13 +11,14 @@ from django.utils import timezone
 from decimal import Decimal
 from apps.common.permissions import CanManageVentas, IsAdminOrReadOnly
 from apps.common.throttling import VentasRateThrottle, BurstRateThrottle
-from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones
+from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones, CondicionVenta
 from .serializers import (
     VentasSerializer,
     DetallesVentaSerializer,
     PagosVentaSerializer,
     NotasCreditoClienteSerializer,
     PromocionesSerializer,
+    CondicionVentaSerializer,
 )
 from .services import PromocionService, DevolucionService
 
@@ -1291,3 +1292,14 @@ class PromocionesViewSet(viewsets.ModelViewSet):
                 ],
             }
         )
+
+
+class CondicionVentaViewSet(viewsets.ModelViewSet):
+    """ViewSet para gestionar condiciones de venta (contado, credito, etc.)."""
+    queryset = CondicionVenta.objects.all().order_by('nombre')
+    serializer_class = CondicionVentaSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['nombre']
+    ordering_fields = ['nombre']
+    ordering = ['nombre']

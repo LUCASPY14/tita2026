@@ -18,6 +18,7 @@ export interface Cliente {
   ruc_ci: string;
   direccion?: string;
   ciudad?: string;
+  id_ciudad?: number | null;
   telefono?: string;
   email?: string;
   limite_credito?: number;
@@ -1107,3 +1108,20 @@ export interface TarjetaEscaneada {
   restricciones?: RestriccionHijo[];
 }
 
+
+
+// Cat\u00e1logos geogr\u00e1ficos y comerciales
+export interface Pais {
+  id_pais: number;
+  nombre: string;
+}
+
+export interface Ciudad {
+  id_ciudad: number;
+  nombre: string;
+}
+
+export interface CondicionVenta {
+  id_condicion_venta: number;
+  nombre: string;
+}

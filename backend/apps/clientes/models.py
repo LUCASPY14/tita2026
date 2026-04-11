@@ -41,6 +41,10 @@ class Clientes(models.Model):
     ruc_ci = models.CharField(unique=True, max_length=20, help_text="RUC o Cédula de Identidad")
     direccion = models.CharField(max_length=255, blank=True, null=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True)
+    id_ciudad = models.ForeignKey(
+        "Ciudad", models.SET_NULL, db_column="id_ciudad", blank=True, null=True,
+        help_text="Ciudad del catálogo (opcional)",
+    )
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.CharField(max_length=254, blank=True, null=True, validators=[EmailValidator()])
     limite_credito = models.DecimalField(
@@ -439,3 +443,33 @@ class LogsAutorizaciones(models.Model):
 
     def __str__(self):
         return f"Log {self.id_log} - {self.tipo_operacion} ({self.resultado})"
+
+
+class Pais(models.Model):
+    id_pais = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        managed = True
+        db_table = "pais"
+        verbose_name = "País"
+        verbose_name_plural = "Países"
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return self.nombre
+
+
+class Ciudad(models.Model):
+    id_ciudad = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100)
+
+    class Meta:
+        managed = True
+        db_table = "ciudad"
+        verbose_name = "Ciudad"
+        verbose_name_plural = "Ciudades"
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return self.nombre

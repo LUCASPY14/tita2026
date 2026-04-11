@@ -480,3 +480,18 @@ class PromocionesAplicadas(models.Model):
         verbose_name_plural = "Promociones Aplicadas"
         verbose_name = "Promoción Aplicada"
         verbose_name_plural = "Promociones Aplicadas"
+
+
+class CondicionVenta(models.Model):
+    id_condicion_venta = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        managed = True
+        db_table = "condicion_venta"
+        verbose_name = "Condición de Venta"
+        verbose_name_plural = "Condiciones de Venta"
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return self.nombre

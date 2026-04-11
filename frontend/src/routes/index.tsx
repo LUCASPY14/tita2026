@@ -38,6 +38,9 @@ const GestionMediosPago = React.lazy(() => import('../pages/configuracion/Gestio
 const GestionImpuestos = React.lazy(() => import('../pages/configuracion/GestionImpuestos'));
 const GestionPlantillasEmail = React.lazy(() => import('../pages/configuracion/GestionPlantillasEmail'));
 const GestionTareasProgramadas = React.lazy(() => import('../pages/configuracion/GestionTareasProgramadas'));
+const GestionPaises = React.lazy(() => import('../pages/configuracion/GestionPaises'));
+const GestionCiudades = React.lazy(() => import('../pages/configuracion/GestionCiudades'));
+const GestionCondicionesVenta = React.lazy(() => import('../pages/configuracion/GestionCondicionesVenta'));
 const LoginPortal = React.lazy(() => import('../pages/portal/LoginPortal'));
 const DashboardPortal = React.lazy(() => import('../pages/portal/DashboardPortal'));
 const PWAConfigPage = React.lazy(() => import('../pages/PWAConfigPage'));
@@ -301,6 +304,32 @@ const AppRoutes: React.FC = () => {
                   element={
                     <ProtectedRoute requiredRoles={['admin']}>
                       <GestionTareasProgramadas />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Catálogos geográficos y comerciales - Solo Admin */}
+                <Route
+                  path="/configuracion/paises"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <GestionPaises />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/configuracion/ciudades"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <GestionCiudades />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/configuracion/condiciones-venta"
+                  element={
+                    <ProtectedRoute requiredRoles={['admin']}>
+                      <GestionCondicionesVenta />
                     </ProtectedRoute>
                   }
                 />
