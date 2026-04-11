@@ -126,10 +126,12 @@ describe('Gestión de Ventas - Historial', () => {
 
   it('muestra las columnas de la tabla', () => {
     visitGestion();
-    cy.contains(/factura/i).should('be.visible');
-    cy.contains(/cliente/i).should('be.visible');
-    cy.contains(/total/i).should('be.visible');
-    cy.contains(/estado/i).should('be.visible');
+    cy.get('table thead').within(() => {
+      cy.contains(/factura/i).should('be.visible');
+      cy.contains(/cliente/i).should('be.visible');
+      cy.contains(/^total$/i).should('be.visible');
+      cy.contains(/estado de pago|estado/i).scrollIntoView().should('be.visible');
+    });
   });
 
   // ── Listado de ventas ─────────────────────────────────────────────────────

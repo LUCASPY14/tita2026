@@ -96,7 +96,7 @@ describe('Gestión de Usuarios', () => {
 
   it('muestra la descripción del módulo', () => {
     visitUsuarios();
-    cy.contains(/usuarios|roles|permisos/i).should('be.visible');
+    cy.contains('Administra usuarios, roles y permisos del sistema').should('be.visible');
   });
 
   it('muestra el botón Nuevo Usuario', () => {

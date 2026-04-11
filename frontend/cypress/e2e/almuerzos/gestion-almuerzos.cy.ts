@@ -41,7 +41,7 @@ describe('Gestion de Almuerzos', () => {
   });
 
   it('debe mostrar el tab Facturacion', () => {
-    cy.contains('Facturación').should('be.visible');
+    cy.contains('button', 'Facturación').scrollIntoView().should('be.visible');
   });
 
   it('debe navegar al tab de planes', () => {
