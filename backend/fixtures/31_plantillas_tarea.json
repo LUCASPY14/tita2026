@@ -1,0 +1,112 @@
+[
+  {
+    "model": "reportes.plantillastarea",
+    "pk": 1,
+    "fields": {
+      "nombre": "Cierre Mensual de Cuentas Almuerzo",
+      "descripcion": "Genera las cuentas de almuerzo mensual para todos los hijos activos con suscripcion vigente",
+      "tipo_tarea": "proceso",
+      "comando": "python manage.py generar_cuentas_almuerzo",
+      "parametros": {"mes": "auto", "anio": "auto"},
+      "frecuencia": "mensual",
+      "cron": "0 7 1 * *",
+      "timeout": 300,
+      "max_reintentos": 1,
+      "notif_exito": 1,
+      "notif_error": 1,
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "created_by": null,
+      "configuracion_programacion": {"dia_del_mes": 1, "hora": "07:00"},
+      "configuracion_envio": null
+    }
+  },
+  {
+    "model": "reportes.plantillastarea",
+    "pk": 2,
+    "fields": {
+      "nombre": "Alerta de Stock Bajo",
+      "descripcion": "Revisa todos los productos y genera alertas para aquellos cuyo stock esta por debajo del minimo",
+      "tipo_tarea": "alerta",
+      "comando": "python manage.py verificar_stock_minimo",
+      "parametros": {},
+      "frecuencia": "diaria",
+      "cron": "0 8 * * 1-5",
+      "timeout": 120,
+      "max_reintentos": 2,
+      "notif_exito": 0,
+      "notif_error": 1,
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "created_by": null,
+      "configuracion_programacion": {"hora": "08:00", "dias": "lunes-viernes"},
+      "configuracion_envio": null
+    }
+  },
+  {
+    "model": "reportes.plantillastarea",
+    "pk": 3,
+    "fields": {
+      "nombre": "Resumen de Ventas Diario",
+      "descripcion": "Genera y envia por email el resumen de ventas del dia a los supervisores",
+      "tipo_tarea": "reporte",
+      "comando": "python manage.py enviar_resumen_ventas",
+      "parametros": {"destinatarios": ["supervisores"]},
+      "frecuencia": "diaria",
+      "cron": "0 18 * * 1-5",
+      "timeout": 180,
+      "max_reintentos": 2,
+      "notif_exito": 0,
+      "notif_error": 1,
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "created_by": null,
+      "configuracion_programacion": {"hora": "18:00", "dias": "lunes-viernes"},
+      "configuracion_envio": {"formato": "pdf", "incluir_detalle": true}
+    }
+  },
+  {
+    "model": "reportes.plantillastarea",
+    "pk": 4,
+    "fields": {
+      "nombre": "Limpieza de Sesiones Expiradas",
+      "descripcion": "Elimina sesiones de empleados inactivas hace mas de 24 horas para liberar espacio",
+      "tipo_tarea": "mantenimiento",
+      "comando": "python manage.py limpiar_sesiones_expiradas",
+      "parametros": {"horas_inactividad": 24},
+      "frecuencia": "diaria",
+      "cron": "0 2 * * *",
+      "timeout": 60,
+      "max_reintentos": 1,
+      "notif_exito": 0,
+      "notif_error": 1,
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "created_by": null,
+      "configuracion_programacion": {"hora": "02:00"},
+      "configuracion_envio": null
+    }
+  },
+  {
+    "model": "reportes.plantillastarea",
+    "pk": 5,
+    "fields": {
+      "nombre": "Alerta Vencimiento de Productos",
+      "descripcion": "Revisa lotes de productos y genera alertas para los que vencen en los proximos 7 dias",
+      "tipo_tarea": "alerta",
+      "comando": "python manage.py verificar_vencimientos",
+      "parametros": {"dias_alerta": 7},
+      "frecuencia": "diaria",
+      "cron": "0 9 * * 1-5",
+      "timeout": 120,
+      "max_reintentos": 2,
+      "notif_exito": 0,
+      "notif_error": 1,
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "created_by": null,
+      "configuracion_programacion": {"hora": "09:00", "dias": "lunes-viernes"},
+      "configuracion_envio": null
+    }
+  }
+]

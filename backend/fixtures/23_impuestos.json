@@ -1,0 +1,35 @@
+[
+  {
+    "model": "contabilidad.impuestos",
+    "pk": 1,
+    "fields": {
+      "nombre_impuesto": "IVA 10%",
+      "porcentaje": "10.00",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": null,
+      "estado": true
+    }
+  },
+  {
+    "model": "contabilidad.impuestos",
+    "pk": 2,
+    "fields": {
+      "nombre_impuesto": "IVA 5%",
+      "porcentaje": "5.00",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": null,
+      "estado": true
+    }
+  },
+  {
+    "model": "contabilidad.impuestos",
+    "pk": 3,
+    "fields": {
+      "nombre_impuesto": "Exento (0%)",
+      "porcentaje": "0.00",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": null,
+      "estado": true
+    }
+  }
+]

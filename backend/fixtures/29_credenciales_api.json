@@ -1,0 +1,32 @@
+[
+  {
+    "model": "api_integrations.credencialesapi",
+    "pk": 1,
+    "fields": {
+      "ambiente": "sandbox",
+      "api_key": "BANCARD_SANDBOX_PUBLIC_KEY",
+      "secret": "BANCARD_SANDBOX_PRIVATE_KEY",
+      "token": null,
+      "configuracion": {"commerce_id": "123456789"},
+      "fecha_expiracion": null,
+      "updated_at": "2026-01-01T00:00:00Z",
+      "estado": true,
+      "id_proveedor": 1
+    }
+  },
+  {
+    "model": "api_integrations.credencialesapi",
+    "pk": 2,
+    "fields": {
+      "ambiente": "sandbox",
+      "api_key": "TIGO_SANDBOX_CLIENT_ID",
+      "secret": "TIGO_SANDBOX_CLIENT_SECRET",
+      "token": null,
+      "configuracion": {"merchant_code": "TITA_TEST"},
+      "fecha_expiracion": null,
+      "updated_at": "2026-01-01T00:00:00Z",
+      "estado": true,
+      "id_proveedor": 2
+    }
+  }
+]

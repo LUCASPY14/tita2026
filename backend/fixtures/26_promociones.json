@@ -1,0 +1,29 @@
+[
+  {
+    "model": "ventas.promociones",
+    "pk": 1,
+    "fields": {
+      "nombre": "Descuento Cumpleanos",
+      "descripcion": "20% de descuento en el total de la compra el dia del cumpleanos del alumno. Se aplica automaticamente al validar la tarjeta.",
+      "tipo_promocion": "porcentaje",
+      "valor_descuento": "20.00",
+      "fecha_inicio": "2026-01-01",
+      "fecha_fin": null,
+      "hora_inicio": null,
+      "hora_fin": null,
+      "dias_semana": null,
+      "aplica_a": "todos",
+      "min_cantidad": 1,
+      "monto_minimo": "0.00",
+      "max_usos_cliente": 1,
+      "max_usos_total": null,
+      "usos_actuales": 0,
+      "requiere_codigo": false,
+      "codigo_promocion": null,
+      "prioridad": 1,
+      "estado": true,
+      "fecha_creacion": "2026-01-01T00:00:00Z",
+      "usuario_creacion": "sistema"
+    }
+  }
+]

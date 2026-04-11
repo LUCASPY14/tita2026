@@ -1,0 +1,128 @@
+[
+  {
+    "model": "reportes.kpimetricas",
+    "pk": 1,
+    "fields": {
+      "nombre": "Ventas Totales del Dia",
+      "nombre_kpi": "ventas_dia",
+      "descripcion": "Suma del monto total de todas las ventas realizadas en el dia actual",
+      "formula": "SUM(monto_total) WHERE fecha = TODAY()",
+      "query_sql": "SELECT COALESCE(SUM(monto_total), 0) FROM ventas WHERE CAST(fecha AS DATE) = CAST(GETDATE() AS DATE) AND estado != 'anulada'",
+      "unidad": "PYG",
+      "unidad_medida": "Guaranies",
+      "valor_objetivo": "1000000.00",
+      "meta_valor": "2000000.00",
+      "categoria": "ventas",
+      "frecuencia": "diaria",
+      "frecuencia_actualizacion": "diaria",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "id_empleado": null
+    }
+  },
+  {
+    "model": "reportes.kpimetricas",
+    "pk": 2,
+    "fields": {
+      "nombre": "Almuerzos del Mes",
+      "nombre_kpi": "almuerzos_mes",
+      "descripcion": "Total de almuerzos consumidos en el mes actual",
+      "formula": "COUNT(*) WHERE mes = CURRENT_MONTH",
+      "query_sql": "SELECT COUNT(*) FROM registros_consumo_almuerzo WHERE MONTH(fecha_consumo) = MONTH(GETDATE()) AND YEAR(fecha_consumo) = YEAR(GETDATE()) AND estado = 'consumido'",
+      "unidad": "unidades",
+      "unidad_medida": "Almuerzos",
+      "valor_objetivo": "400.00",
+      "meta_valor": "500.00",
+      "categoria": "almuerzos",
+      "frecuencia": "mensual",
+      "frecuencia_actualizacion": "diaria",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "id_empleado": null
+    }
+  },
+  {
+    "model": "reportes.kpimetricas",
+    "pk": 3,
+    "fields": {
+      "nombre": "Productos con Stock Bajo",
+      "nombre_kpi": "stock_bajo",
+      "descripcion": "Cantidad de productos cuyo stock actual esta por debajo del minimo configurado",
+      "formula": "COUNT(*) WHERE stock_actual < stock_minimo",
+      "query_sql": "SELECT COUNT(*) FROM stock_unico su JOIN productos p ON su.id_producto = p.id_producto WHERE su.cantidad < p.stock_minimo AND p.estado = 1 AND p.requiere_stock = 1",
+      "unidad": "productos",
+      "unidad_medida": "Productos",
+      "valor_objetivo": "0.00",
+      "meta_valor": "0.00",
+      "categoria": "inventario",
+      "frecuencia": "diaria",
+      "frecuencia_actualizacion": "diaria",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "id_empleado": null
+    }
+  },
+  {
+    "model": "reportes.kpimetricas",
+    "pk": 4,
+    "fields": {
+      "nombre": "Ticket Promedio de Venta",
+      "nombre_kpi": "ticket_promedio",
+      "descripcion": "Monto promedio por venta del dia actual",
+      "formula": "AVG(monto_total) WHERE fecha = TODAY()",
+      "query_sql": "SELECT COALESCE(AVG(monto_total), 0) FROM ventas WHERE CAST(fecha AS DATE) = CAST(GETDATE() AS DATE) AND estado != 'anulada'",
+      "unidad": "PYG",
+      "unidad_medida": "Guaranies",
+      "valor_objetivo": "10000.00",
+      "meta_valor": "15000.00",
+      "categoria": "ventas",
+      "frecuencia": "diaria",
+      "frecuencia_actualizacion": "diaria",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "id_empleado": null
+    }
+  },
+  {
+    "model": "reportes.kpimetricas",
+    "pk": 5,
+    "fields": {
+      "nombre": "Clientes Activos del Mes",
+      "nombre_kpi": "clientes_activos_mes",
+      "descripcion": "Cantidad de clientes distintos que realizaron al menos una compra en el mes",
+      "formula": "COUNT(DISTINCT id_cliente) WHERE mes = CURRENT_MONTH",
+      "query_sql": "SELECT COUNT(DISTINCT id_cliente) FROM ventas WHERE MONTH(fecha) = MONTH(GETDATE()) AND YEAR(fecha) = YEAR(GETDATE()) AND estado != 'anulada'",
+      "unidad": "clientes",
+      "unidad_medida": "Clientes",
+      "valor_objetivo": "100.00",
+      "meta_valor": "200.00",
+      "categoria": "clientes",
+      "frecuencia": "mensual",
+      "frecuencia_actualizacion": "diaria",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "id_empleado": null
+    }
+  },
+  {
+    "model": "reportes.kpimetricas",
+    "pk": 6,
+    "fields": {
+      "nombre": "Recaudacion Mensual Almuerzos",
+      "nombre_kpi": "recaudacion_almuerzos_mes",
+      "descripcion": "Monto total facturado por almuerzos en el mes actual",
+      "formula": "SUM(monto_total) WHERE mes = CURRENT_MONTH AND tipo = almuerzos",
+      "query_sql": "SELECT COALESCE(SUM(cam.monto_total), 0) FROM cuentas_almuerzo_mensual cam WHERE MONTH(cam.fecha_generacion) = MONTH(GETDATE()) AND YEAR(cam.fecha_generacion) = YEAR(GETDATE())",
+      "unidad": "PYG",
+      "unidad_medida": "Guaranies",
+      "valor_objetivo": "5000000.00",
+      "meta_valor": "8000000.00",
+      "categoria": "almuerzos",
+      "frecuencia": "mensual",
+      "frecuencia_actualizacion": "diaria",
+      "estado": true,
+      "created_at": "2026-01-01T00:00:00Z",
+      "id_empleado": null
+    }
+  }
+]
