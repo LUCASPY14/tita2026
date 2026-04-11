@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
         ),
         # Establecer ya_cobrado=True para registros existentes (backward compatibility)
         migrations.RunSQL(
-            sql="UPDATE registros_consumo_almuerzo SET ya_cobrado = TRUE WHERE ya_cobrado IS NULL;",
+            sql="UPDATE registros_consumo_almuerzo SET ya_cobrado = 1 WHERE ya_cobrado IS NULL;",
             reverse_sql="UPDATE registros_consumo_almuerzo SET ya_cobrado = NULL;"
         ),
     ]

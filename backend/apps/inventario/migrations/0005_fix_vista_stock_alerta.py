@@ -6,7 +6,7 @@ referenced the old column name, causing MySQL error 1356.
 from django.db import migrations
 
 _SQL_FIX = """
-CREATE OR REPLACE VIEW vista_stock_alerta AS
+CREATE OR ALTER VIEW vista_stock_alerta AS
 SELECT
     p.id_producto,
     p.codigo_barra,
@@ -30,7 +30,7 @@ WHERE p.estado = 1
 """
 
 _SQL_REVERSE = """
-CREATE OR REPLACE VIEW vista_stock_alerta AS
+CREATE OR ALTER VIEW vista_stock_alerta AS
 SELECT
     p.id_producto, p.codigo_barra, p.descripcion,
     c.nombre AS categoria, s.cantidad AS stock_actual,

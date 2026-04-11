@@ -19,8 +19,19 @@ class Migration(migrations.Migration):
         # 1. Convertir la columna a VARCHAR(20) y migrar valores existentes
         migrations.RunSQL(
             sql="""
+                DECLARE @df_name NVARCHAR(200);
+                SELECT @df_name = dc.name
+                FROM sys.default_constraints dc
+                    JOIN sys.columns c ON dc.parent_object_id = c.object_id
+                        AND dc.parent_column_id = c.column_id
+                    JOIN sys.tables t ON c.object_id = t.object_id
+                WHERE t.name = 'documentos_tributarios'
+                    AND c.name = 'tipo_documento';
+                IF @df_name IS NOT NULL
+                    EXEC('ALTER TABLE documentos_tributarios DROP CONSTRAINT ' + @df_name);
+
                 ALTER TABLE documentos_tributarios
-                MODIFY COLUMN tipo_documento VARCHAR(20) NOT NULL DEFAULT 'Factura';
+                ALTER COLUMN tipo_documento VARCHAR(20) NOT NULL;
 
                 UPDATE documentos_tributarios
                 SET tipo_documento = 'Factura'
@@ -31,9 +42,19 @@ class Migration(migrations.Migration):
                 SET tipo_documento = 'FISICO'
                 WHERE tipo_documento NOT IN ('FISICO', 'ELECTRONICO');
 
+                DECLARE @df_name NVARCHAR(200);
+                SELECT @df_name = dc.name
+                FROM sys.default_constraints dc
+                    JOIN sys.columns c ON dc.parent_object_id = c.object_id
+                        AND dc.parent_column_id = c.column_id
+                    JOIN sys.tables t ON c.object_id = t.object_id
+                WHERE t.name = 'documentos_tributarios'
+                    AND c.name = 'tipo_documento';
+                IF @df_name IS NOT NULL
+                    EXEC('ALTER TABLE documentos_tributarios DROP CONSTRAINT ' + @df_name);
+
                 ALTER TABLE documentos_tributarios
-                MODIFY COLUMN tipo_documento ENUM('FISICO','ELECTRONICO')
-                NOT NULL DEFAULT 'FISICO';
+                ALTER COLUMN tipo_documento VARCHAR(20) NOT NULL;
             """,
         ),
         # 2. Sincronizar el estado de Django con el nuevo CharField(max_length=20)
