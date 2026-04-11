@@ -1,0 +1,47 @@
+[
+  {
+    "model": "clientes.restriccioneshijos",
+    "pk": 1,
+    "fields": {
+      "tipo_restriccion": "Alergia",
+      "descripcion": "Alergia al Gluten (Celiaca) — evitar trigo, cebada, centeno y avena",
+      "observaciones": "No puede consumir productos con harina de trigo. Verificar etiquetas.",
+      "severidad": "Alta",
+      "requiere_autorizacion": true,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "fecha_ultima_actualizacion": "2026-01-15T08:00:00Z",
+      "estado": true,
+      "id_hijo": 2
+    }
+  },
+  {
+    "model": "clientes.restriccioneshijos",
+    "pk": 2,
+    "fields": {
+      "tipo_restriccion": "Intolerancia",
+      "descripcion": "Intolerancia a la Lactosa — evitar productos lacteos",
+      "observaciones": "Puede consumir productos sin lactosa o con bajo contenido.",
+      "severidad": "Media",
+      "requiere_autorizacion": false,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "fecha_ultima_actualizacion": "2026-01-15T08:00:00Z",
+      "estado": true,
+      "id_hijo": 3
+    }
+  },
+  {
+    "model": "clientes.restriccioneshijos",
+    "pk": 3,
+    "fields": {
+      "tipo_restriccion": "Medica",
+      "descripcion": "Diabetes Tipo 1 — control estricto de azucares y carbohidratos",
+      "observaciones": "Requiere conteo de carbohidratos. Informar a los padres antes de cada consumo fuera de dieta.",
+      "severidad": "Critica",
+      "requiere_autorizacion": true,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "fecha_ultima_actualizacion": "2026-01-15T08:00:00Z",
+      "estado": true,
+      "id_hijo": 4
+    }
+  }
+]

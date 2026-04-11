@@ -1,0 +1,67 @@
+[
+  {
+    "model": "usuarios.usuariosportal",
+    "pk": 1,
+    "fields": {
+      "email": "jgarcia@demo.tita",
+      "password_hash": "pbkdf2_sha256$1200000$dJ1Oxr54fwg6iem4dLa9Xx$OJblhhNwlQ1/fEcBC1E7UbS/FeYnFYiO9PzzFOGXwyw=",
+      "email_verificado": true,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "ultimo_acceso": null,
+      "estado": true,
+      "id_cliente": 1
+    }
+  },
+  {
+    "model": "usuarios.usuariosportal",
+    "pk": 2,
+    "fields": {
+      "email": "mramirez@demo.tita",
+      "password_hash": "pbkdf2_sha256$1200000$dJ1Oxr54fwg6iem4dLa9Xx$OJblhhNwlQ1/fEcBC1E7UbS/FeYnFYiO9PzzFOGXwyw=",
+      "email_verificado": true,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "ultimo_acceso": null,
+      "estado": true,
+      "id_cliente": 2
+    }
+  },
+  {
+    "model": "usuarios.usuariosportal",
+    "pk": 3,
+    "fields": {
+      "email": "clopez@demo.tita",
+      "password_hash": "pbkdf2_sha256$1200000$dJ1Oxr54fwg6iem4dLa9Xx$OJblhhNwlQ1/fEcBC1E7UbS/FeYnFYiO9PzzFOGXwyw=",
+      "email_verificado": true,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "ultimo_acceso": null,
+      "estado": true,
+      "id_cliente": 3
+    }
+  },
+  {
+    "model": "usuarios.usuariosportal",
+    "pk": 4,
+    "fields": {
+      "email": "amartinez@demo.tita",
+      "password_hash": "pbkdf2_sha256$1200000$dJ1Oxr54fwg6iem4dLa9Xx$OJblhhNwlQ1/fEcBC1E7UbS/FeYnFYiO9PzzFOGXwyw=",
+      "email_verificado": false,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "ultimo_acceso": null,
+      "estado": true,
+      "id_cliente": 4
+    }
+  },
+  {
+    "model": "usuarios.usuariosportal",
+    "pk": 5,
+    "fields": {
+      "email": "rfernandez@demo.tita",
+      "password_hash": "pbkdf2_sha256$1200000$dJ1Oxr54fwg6iem4dLa9Xx$OJblhhNwlQ1/fEcBC1E7UbS/FeYnFYiO9PzzFOGXwyw=",
+      "email_verificado": false,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "ultimo_acceso": null,
+      "estado": true,
+      "id_cliente": 5
+    }
+  }
+]

@@ -1,0 +1,121 @@
+[
+  {
+    "model": "core.tarjetas",
+    "pk": "TAR-000001",
+    "fields": {
+      "saldo_actual": "150000.00",
+      "estado": "activa",
+      "fecha_vencimiento": "2027-12-31",
+      "saldo_alerta": "20000.00",
+      "fecha_creacion": "2026-01-15T08:00:00Z",
+      "permite_saldo_negativo": false,
+      "limite_credito": "0.00",
+      "notificar_saldo_bajo": true,
+      "ultima_notificacion_saldo": null,
+      "id_hijo": 1,
+      "codigo_barras": "CB-000001"
+    }
+  },
+  {
+    "model": "core.tarjetas",
+    "pk": "TAR-000002",
+    "fields": {
+      "saldo_actual": "200000.00",
+      "estado": "activa",
+      "fecha_vencimiento": "2027-12-31",
+      "saldo_alerta": "20000.00",
+      "fecha_creacion": "2026-01-15T08:00:00Z",
+      "permite_saldo_negativo": false,
+      "limite_credito": "0.00",
+      "notificar_saldo_bajo": true,
+      "ultima_notificacion_saldo": null,
+      "id_hijo": 2,
+      "codigo_barras": "CB-000002"
+    }
+  },
+  {
+    "model": "core.tarjetas",
+    "pk": "TAR-000003",
+    "fields": {
+      "saldo_actual": "80000.00",
+      "estado": "activa",
+      "fecha_vencimiento": "2027-12-31",
+      "saldo_alerta": "20000.00",
+      "fecha_creacion": "2026-01-15T08:00:00Z",
+      "permite_saldo_negativo": false,
+      "limite_credito": "0.00",
+      "notificar_saldo_bajo": true,
+      "ultima_notificacion_saldo": null,
+      "id_hijo": 3,
+      "codigo_barras": "CB-000003"
+    }
+  },
+  {
+    "model": "core.tarjetas",
+    "pk": "TAR-000004",
+    "fields": {
+      "saldo_actual": "120000.00",
+      "estado": "activa",
+      "fecha_vencimiento": "2027-12-31",
+      "saldo_alerta": "20000.00",
+      "fecha_creacion": "2026-01-15T08:00:00Z",
+      "permite_saldo_negativo": false,
+      "limite_credito": "0.00",
+      "notificar_saldo_bajo": true,
+      "ultima_notificacion_saldo": null,
+      "id_hijo": 4,
+      "codigo_barras": "CB-000004"
+    }
+  },
+  {
+    "model": "core.tarjetas",
+    "pk": "TAR-000005",
+    "fields": {
+      "saldo_actual": "95000.00",
+      "estado": "activa",
+      "fecha_vencimiento": "2027-12-31",
+      "saldo_alerta": "20000.00",
+      "fecha_creacion": "2026-01-15T08:00:00Z",
+      "permite_saldo_negativo": false,
+      "limite_credito": "0.00",
+      "notificar_saldo_bajo": true,
+      "ultima_notificacion_saldo": null,
+      "id_hijo": 5,
+      "codigo_barras": "CB-000005"
+    }
+  },
+  {
+    "model": "core.tarjetas",
+    "pk": "TAR-000006",
+    "fields": {
+      "saldo_actual": "50000.00",
+      "estado": "activa",
+      "fecha_vencimiento": "2027-12-31",
+      "saldo_alerta": "20000.00",
+      "fecha_creacion": "2026-01-15T08:00:00Z",
+      "permite_saldo_negativo": false,
+      "limite_credito": "0.00",
+      "notificar_saldo_bajo": true,
+      "ultima_notificacion_saldo": null,
+      "id_hijo": 6,
+      "codigo_barras": "CB-000006"
+    }
+  },
+  {
+    "model": "core.tarjetas",
+    "pk": "TAR-000007",
+    "fields": {
+      "saldo_actual": "75000.00",
+      "estado": "activa",
+      "fecha_vencimiento": "2027-12-31",
+      "saldo_alerta": "20000.00",
+      "fecha_creacion": "2026-01-15T08:00:00Z",
+      "permite_saldo_negativo": false,
+      "limite_credito": "0.00",
+      "notificar_saldo_bajo": true,
+      "ultima_notificacion_saldo": null,
+      "id_hijo": 7,
+      "codigo_barras": "CB-000007"
+    }
+  }
+]

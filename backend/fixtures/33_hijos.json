@@ -1,0 +1,100 @@
+[
+  {
+    "model": "clientes.hijos",
+    "pk": 1,
+    "fields": {
+      "nombre": "Mateo",
+      "apellido": "Garcia",
+      "fecha_nacimiento": "2017-03-15",
+      "grado": "3er Grado",
+      "foto_perfil": null,
+      "fecha_foto": null,
+      "estado": true,
+      "id_cliente_responsable": 1
+    }
+  },
+  {
+    "model": "clientes.hijos",
+    "pk": 2,
+    "fields": {
+      "nombre": "Valentina",
+      "apellido": "Garcia",
+      "fecha_nacimiento": "2019-08-22",
+      "grado": "1er Grado",
+      "foto_perfil": null,
+      "fecha_foto": null,
+      "estado": true,
+      "id_cliente_responsable": 1
+    }
+  },
+  {
+    "model": "clientes.hijos",
+    "pk": 3,
+    "fields": {
+      "nombre": "Lucia",
+      "apellido": "Ramirez",
+      "fecha_nacimiento": "2015-05-10",
+      "grado": "5to Grado",
+      "foto_perfil": null,
+      "fecha_foto": null,
+      "estado": true,
+      "id_cliente_responsable": 2
+    }
+  },
+  {
+    "model": "clientes.hijos",
+    "pk": 4,
+    "fields": {
+      "nombre": "Tomas",
+      "apellido": "Lopez",
+      "fecha_nacimiento": "2013-11-03",
+      "grado": "7mo Grado",
+      "foto_perfil": null,
+      "fecha_foto": null,
+      "estado": true,
+      "id_cliente_responsable": 3
+    }
+  },
+  {
+    "model": "clientes.hijos",
+    "pk": 5,
+    "fields": {
+      "nombre": "Sofia",
+      "apellido": "Martinez",
+      "fecha_nacimiento": "2016-07-18",
+      "grado": "4to Grado",
+      "foto_perfil": null,
+      "fecha_foto": null,
+      "estado": true,
+      "id_cliente_responsable": 4
+    }
+  },
+  {
+    "model": "clientes.hijos",
+    "pk": 6,
+    "fields": {
+      "nombre": "Diego",
+      "apellido": "Fernandez",
+      "fecha_nacimiento": "2011-02-28",
+      "grado": "9no Grado",
+      "foto_perfil": null,
+      "fecha_foto": null,
+      "estado": true,
+      "id_cliente_responsable": 5
+    }
+  },
+  {
+    "model": "clientes.hijos",
+    "pk": 7,
+    "fields": {
+      "nombre": "Isabella",
+      "apellido": "Fernandez",
+      "fecha_nacimiento": "2014-09-12",
+      "grado": "6to Grado",
+      "foto_perfil": null,
+      "fecha_foto": null,
+      "estado": true,
+      "id_cliente_responsable": 5
+    }
+  }
+]

@@ -1,0 +1,102 @@
+[
+  {
+    "model": "clientes.clientes",
+    "pk": 1,
+    "fields": {
+      "nombres": "Juan",
+      "apellidos": "Garcia",
+      "ruc_ci": "1234567",
+      "razon_social": null,
+      "direccion": "Av. Mariscal Lopez 123",
+      "ciudad": "Asuncion",
+      "id_ciudad": 1,
+      "telefono": "0981-111-001",
+      "email": "jgarcia@demo.tita",
+      "limite_credito": "50000.00",
+      "estado": true,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "id_lista": 1,
+      "id_tipo_cliente": 1
+    }
+  },
+  {
+    "model": "clientes.clientes",
+    "pk": 2,
+    "fields": {
+      "nombres": "Maria",
+      "apellidos": "Ramirez",
+      "ruc_ci": "2345678",
+      "razon_social": null,
+      "direccion": "Calle Eusebio Ayala 456",
+      "ciudad": "Asuncion",
+      "id_ciudad": 1,
+      "telefono": "0981-222-002",
+      "email": "mramirez@demo.tita",
+      "limite_credito": "50000.00",
+      "estado": true,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "id_lista": 1,
+      "id_tipo_cliente": 1
+    }
+  },
+  {
+    "model": "clientes.clientes",
+    "pk": 3,
+    "fields": {
+      "nombres": "Carlos",
+      "apellidos": "Lopez",
+      "ruc_ci": "3456789",
+      "razon_social": null,
+      "direccion": "Calle Palma 789",
+      "ciudad": "Ciudad del Este",
+      "id_ciudad": 2,
+      "telefono": "0981-333-003",
+      "email": "clopez@demo.tita",
+      "limite_credito": "100000.00",
+      "estado": true,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "id_lista": 2,
+      "id_tipo_cliente": 2
+    }
+  },
+  {
+    "model": "clientes.clientes",
+    "pk": 4,
+    "fields": {
+      "nombres": "Ana",
+      "apellidos": "Martinez",
+      "ruc_ci": "4567890",
+      "razon_social": null,
+      "direccion": "Av. Espana 321",
+      "ciudad": "Asuncion",
+      "id_ciudad": 1,
+      "telefono": "0981-444-004",
+      "email": "amartinez@demo.tita",
+      "limite_credito": "0.00",
+      "estado": true,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "id_lista": 4,
+      "id_tipo_cliente": 5
+    }
+  },
+  {
+    "model": "clientes.clientes",
+    "pk": 5,
+    "fields": {
+      "nombres": "Roberto",
+      "apellidos": "Fernandez",
+      "ruc_ci": "5678901",
+      "razon_social": null,
+      "direccion": "Calle General Diaz 654",
+      "ciudad": "Asuncion",
+      "id_ciudad": 1,
+      "telefono": "0981-555-005",
+      "email": "rfernandez@demo.tita",
+      "limite_credito": "30000.00",
+      "estado": true,
+      "fecha_registro": "2026-01-15T08:00:00Z",
+      "id_lista": 1,
+      "id_tipo_cliente": 1
+    }
+  }
+]
