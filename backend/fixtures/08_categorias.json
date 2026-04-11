@@ -1,0 +1,82 @@
+[
+  {
+    "model": "productos.categorias",
+    "pk": 1,
+    "fields": {
+      "nombre": "Bebidas",
+      "descripcion": "Gaseosas, jugos, agua y otras bebidas",
+      "estado": true,
+      "id_categoria_padre": null
+    }
+  },
+  {
+    "model": "productos.categorias",
+    "pk": 2,
+    "fields": {
+      "nombre": "Comidas",
+      "descripcion": "Almuerzos, sandwiches y comidas preparadas",
+      "estado": true,
+      "id_categoria_padre": null
+    }
+  },
+  {
+    "model": "productos.categorias",
+    "pk": 3,
+    "fields": {
+      "nombre": "Snacks",
+      "descripcion": "Papas fritas, golosinas y aperitivos",
+      "estado": true,
+      "id_categoria_padre": null
+    }
+  },
+  {
+    "model": "productos.categorias",
+    "pk": 4,
+    "fields": {
+      "nombre": "Panaderia",
+      "descripcion": "Pan, facturas y productos de panaderia",
+      "estado": true,
+      "id_categoria_padre": null
+    }
+  },
+  {
+    "model": "productos.categorias",
+    "pk": 5,
+    "fields": {
+      "nombre": "Lacteos",
+      "descripcion": "Leche, yogurt, queso y derivados",
+      "estado": true,
+      "id_categoria_padre": null
+    }
+  },
+  {
+    "model": "productos.categorias",
+    "pk": 6,
+    "fields": {
+      "nombre": "Frutas",
+      "descripcion": "Frutas frescas y de temporada",
+      "estado": true,
+      "id_categoria_padre": null
+    }
+  },
+  {
+    "model": "productos.categorias",
+    "pk": 7,
+    "fields": {
+      "nombre": "Utiles Escolares",
+      "descripcion": "Lapices, cuadernos y materiales escolares",
+      "estado": true,
+      "id_categoria_padre": null
+    }
+  },
+  {
+    "model": "productos.categorias",
+    "pk": 8,
+    "fields": {
+      "nombre": "Otros",
+      "descripcion": "Productos miscelaneos",
+      "estado": true,
+      "id_categoria_padre": null
+    }
+  }
+]

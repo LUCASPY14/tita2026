@@ -1,0 +1,9 @@
+[
+  {"model": "ventas.condicionventa", "pk": 1, "fields": {"nombre": "Contado"}},
+  {"model": "ventas.condicionventa", "pk": 2, "fields": {"nombre": "Credito 30 dias"}},
+  {"model": "ventas.condicionventa", "pk": 3, "fields": {"nombre": "Credito 60 dias"}},
+  {"model": "ventas.condicionventa", "pk": 4, "fields": {"nombre": "Credito 90 dias"}},
+  {"model": "ventas.condicionventa", "pk": 5, "fields": {"nombre": "Credito 120 dias"}},
+  {"model": "ventas.condicionventa", "pk": 6, "fields": {"nombre": "Cuotas"}},
+  {"model": "ventas.condicionventa", "pk": 7, "fields": {"nombre": "Consignacion"}}
+]

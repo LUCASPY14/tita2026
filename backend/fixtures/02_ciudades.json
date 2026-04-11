@@ -1,0 +1,22 @@
+[
+  {"model": "clientes.ciudad", "pk": 1, "fields": {"nombre": "Asuncion"}},
+  {"model": "clientes.ciudad", "pk": 2, "fields": {"nombre": "Ciudad del Este"}},
+  {"model": "clientes.ciudad", "pk": 3, "fields": {"nombre": "San Lorenzo"}},
+  {"model": "clientes.ciudad", "pk": 4, "fields": {"nombre": "Luque"}},
+  {"model": "clientes.ciudad", "pk": 5, "fields": {"nombre": "Capiata"}},
+  {"model": "clientes.ciudad", "pk": 6, "fields": {"nombre": "Lambare"}},
+  {"model": "clientes.ciudad", "pk": 7, "fields": {"nombre": "Fernando de la Mora"}},
+  {"model": "clientes.ciudad", "pk": 8, "fields": {"nombre": "Limpio"}},
+  {"model": "clientes.ciudad", "pk": 9, "fields": {"nombre": "Ita"}},
+  {"model": "clientes.ciudad", "pk": 10, "fields": {"nombre": "Encarnacion"}},
+  {"model": "clientes.ciudad", "pk": 11, "fields": {"nombre": "Coronel Oviedo"}},
+  {"model": "clientes.ciudad", "pk": 12, "fields": {"nombre": "Pedro Juan Caballero"}},
+  {"model": "clientes.ciudad", "pk": 13, "fields": {"nombre": "Concepcion"}},
+  {"model": "clientes.ciudad", "pk": 14, "fields": {"nombre": "Villarrica"}},
+  {"model": "clientes.ciudad", "pk": 15, "fields": {"nombre": "Mariano Roque Alonso"}},
+  {"model": "clientes.ciudad", "pk": 16, "fields": {"nombre": "Itaugua"}},
+  {"model": "clientes.ciudad", "pk": 17, "fields": {"nombre": "Caaguazu"}},
+  {"model": "clientes.ciudad", "pk": 18, "fields": {"nombre": "Nemby"}},
+  {"model": "clientes.ciudad", "pk": 19, "fields": {"nombre": "Hernandarias"}},
+  {"model": "clientes.ciudad", "pk": 20, "fields": {"nombre": "Presidente Franco"}}
+]

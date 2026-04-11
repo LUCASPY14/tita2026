@@ -1,0 +1,83 @@
+[
+  {
+    "model": "productos.unidadesmedida",
+    "pk": 1,
+    "fields": {
+      "nombre": "Unidad",
+      "abreviatura": "u",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.unidadesmedida",
+    "pk": 2,
+    "fields": {
+      "nombre": "Kilogramo",
+      "abreviatura": "kg",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.unidadesmedida",
+    "pk": 3,
+    "fields": {
+      "nombre": "Gramo",
+      "abreviatura": "g",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.unidadesmedida",
+    "pk": 4,
+    "fields": {
+      "nombre": "Litro",
+      "abreviatura": "L",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.unidadesmedida",
+    "pk": 5,
+    "fields": {
+      "nombre": "Mililitro",
+      "abreviatura": "ml",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.unidadesmedida",
+    "pk": 6,
+    "fields": {
+      "nombre": "Docena",
+      "abreviatura": "doc",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.unidadesmedida",
+    "pk": 7,
+    "fields": {
+      "nombre": "Caja",
+      "abreviatura": "cj",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.unidadesmedida",
+    "pk": 8,
+    "fields": {
+      "nombre": "Paquete",
+      "abreviatura": "paq",
+      "estado": true
+    }
+  },
+  {
+    "model": "productos.unidadesmedida",
+    "pk": 9,
+    "fields": {
+      "nombre": "Porcion",
+      "abreviatura": "por",
+      "estado": true
+    }
+  }
+]

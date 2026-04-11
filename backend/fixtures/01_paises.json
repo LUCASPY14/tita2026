@@ -1,0 +1,9 @@
+[
+  {"model": "clientes.pais", "pk": 1, "fields": {"nombre": "Paraguay"}},
+  {"model": "clientes.pais", "pk": 2, "fields": {"nombre": "Argentina"}},
+  {"model": "clientes.pais", "pk": 3, "fields": {"nombre": "Brasil"}},
+  {"model": "clientes.pais", "pk": 4, "fields": {"nombre": "Uruguay"}},
+  {"model": "clientes.pais", "pk": 5, "fields": {"nombre": "Bolivia"}},
+  {"model": "clientes.pais", "pk": 6, "fields": {"nombre": "Chile"}},
+  {"model": "clientes.pais", "pk": 7, "fields": {"nombre": "Peru"}}
+]

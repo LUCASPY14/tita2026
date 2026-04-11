@@ -1,0 +1,50 @@
+[
+  {
+    "model": "clientes.tiposcliente",
+    "pk": 1,
+    "fields": {
+      "nombre_tipo": "Regular",
+      "estado": true
+    }
+  },
+  {
+    "model": "clientes.tiposcliente",
+    "pk": 2,
+    "fields": {
+      "nombre_tipo": "VIP",
+      "estado": true
+    }
+  },
+  {
+    "model": "clientes.tiposcliente",
+    "pk": 3,
+    "fields": {
+      "nombre_tipo": "Empresa",
+      "estado": true
+    }
+  },
+  {
+    "model": "clientes.tiposcliente",
+    "pk": 4,
+    "fields": {
+      "nombre_tipo": "Estudiante",
+      "estado": true
+    }
+  },
+  {
+    "model": "clientes.tiposcliente",
+    "pk": 5,
+    "fields": {
+      "nombre_tipo": "Personal Docente",
+      "estado": true
+    }
+  },
+  {
+    "model": "clientes.tiposcliente",
+    "pk": 6,
+    "fields": {
+      "nombre_tipo": "Personal Administrativo",
+      "estado": true
+    }
+  }
+]

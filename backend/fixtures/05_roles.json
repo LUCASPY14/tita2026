@@ -1,0 +1,56 @@
+[
+  {
+    "model": "usuarios.roles",
+    "pk": 1,
+    "fields": {
+      "nombre_rol": "Administrador",
+      "descripcion": "Acceso completo al sistema",
+      "estado": true
+    }
+  },
+  {
+    "model": "usuarios.roles",
+    "pk": 2,
+    "fields": {
+      "nombre_rol": "Cajero",
+      "descripcion": "Gestion de ventas y caja",
+      "estado": true
+    }
+  },
+  {
+    "model": "usuarios.roles",
+    "pk": 3,
+    "fields": {
+      "nombre_rol": "Vendedor",
+      "descripcion": "Registro de ventas",
+      "estado": true
+    }
+  },
+  {
+    "model": "usuarios.roles",
+    "pk": 4,
+    "fields": {
+      "nombre_rol": "Gestor de Compras",
+      "descripcion": "Gestion de proveedores y compras",
+      "estado": true
+    }
+  },
+  {
+    "model": "usuarios.roles",
+    "pk": 5,
+    "fields": {
+      "nombre_rol": "Supervisor",
+      "descripcion": "Supervision y reportes",
+      "estado": true
+    }
+  },
+  {
+    "model": "usuarios.roles",
+    "pk": 6,
+    "fields": {
+      "nombre_rol": "Solo Lectura",
+      "descripcion": "Acceso de solo lectura a reportes",
+      "estado": true
+    }
+  }
+]

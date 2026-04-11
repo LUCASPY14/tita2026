@@ -1,0 +1,72 @@
+[
+  {
+    "model": "core.mediospago",
+    "pk": 1,
+    "fields": {
+      "descripcion": "Efectivo",
+      "genera_comision": false,
+      "requiere_validacion": false,
+      "estado": true
+    }
+  },
+  {
+    "model": "core.mediospago",
+    "pk": 2,
+    "fields": {
+      "descripcion": "Tarjeta de Debito",
+      "genera_comision": true,
+      "requiere_validacion": false,
+      "estado": true
+    }
+  },
+  {
+    "model": "core.mediospago",
+    "pk": 3,
+    "fields": {
+      "descripcion": "Tarjeta de Credito",
+      "genera_comision": true,
+      "requiere_validacion": false,
+      "estado": true
+    }
+  },
+  {
+    "model": "core.mediospago",
+    "pk": 4,
+    "fields": {
+      "descripcion": "Transferencia Bancaria",
+      "genera_comision": false,
+      "requiere_validacion": true,
+      "estado": true
+    }
+  },
+  {
+    "model": "core.mediospago",
+    "pk": 5,
+    "fields": {
+      "descripcion": "Billetera Digital",
+      "genera_comision": false,
+      "requiere_validacion": false,
+      "estado": true
+    }
+  },
+  {
+    "model": "core.mediospago",
+    "pk": 6,
+    "fields": {
+      "descripcion": "Cheque",
+      "genera_comision": false,
+      "requiere_validacion": true,
+      "estado": true
+    }
+  },
+  {
+    "model": "core.mediospago",
+    "pk": 7,
+    "fields": {
+      "descripcion": "Credito Interno",
+      "genera_comision": false,
+      "requiere_validacion": false,
+      "estado": true
+    }
+  }
+]

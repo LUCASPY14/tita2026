@@ -1,0 +1,170 @@
+[
+  {
+    "model": "clientes.grados",
+    "pk": 1,
+    "fields": {
+      "nombre_grado": "Maternal",
+      "nivel": 0,
+      "orden_visualizacion": 1,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 2,
+    "fields": {
+      "nombre_grado": "Preescolar",
+      "nivel": 0,
+      "orden_visualizacion": 2,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 3,
+    "fields": {
+      "nombre_grado": "1er Grado",
+      "nivel": 1,
+      "orden_visualizacion": 3,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 4,
+    "fields": {
+      "nombre_grado": "2do Grado",
+      "nivel": 1,
+      "orden_visualizacion": 4,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 5,
+    "fields": {
+      "nombre_grado": "3er Grado",
+      "nivel": 1,
+      "orden_visualizacion": 5,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 6,
+    "fields": {
+      "nombre_grado": "4to Grado",
+      "nivel": 1,
+      "orden_visualizacion": 6,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 7,
+    "fields": {
+      "nombre_grado": "5to Grado",
+      "nivel": 1,
+      "orden_visualizacion": 7,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 8,
+    "fields": {
+      "nombre_grado": "6to Grado",
+      "nivel": 1,
+      "orden_visualizacion": 8,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 9,
+    "fields": {
+      "nombre_grado": "7mo Grado",
+      "nivel": 2,
+      "orden_visualizacion": 9,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 10,
+    "fields": {
+      "nombre_grado": "8vo Grado",
+      "nivel": 2,
+      "orden_visualizacion": 10,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 11,
+    "fields": {
+      "nombre_grado": "9no Grado",
+      "nivel": 2,
+      "orden_visualizacion": 11,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 12,
+    "fields": {
+      "nombre_grado": "1er Bachillerato",
+      "nivel": 3,
+      "orden_visualizacion": 12,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 13,
+    "fields": {
+      "nombre_grado": "2do Bachillerato",
+      "nivel": 3,
+      "orden_visualizacion": 13,
+      "es_ultimo_grado": false,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "clientes.grados",
+    "pk": 14,
+    "fields": {
+      "nombre_grado": "3er Bachillerato",
+      "nivel": 3,
+      "orden_visualizacion": 14,
+      "es_ultimo_grado": true,
+      "estado": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z"
+    }
+  }
+]
