@@ -177,11 +177,16 @@ class Ventas(models.Model):
         db_table = "ventas"
         verbose_name = "Venta"
         verbose_name_plural = "Ventas"
-        verbose_name = "Venta"
-        verbose_name_plural = "Ventas"
-        verbose_name = "Venta"
-        verbose_name_plural = "Ventas"
         ordering = ["-fecha"]
+        indexes = [
+            models.Index(fields=['fecha', 'id_empleado_cajero'], name='idx_ventas_fecha_emp'),
+            models.Index(fields=['nro_factura_venta'], name='idx_ventas_nro_factura'),
+            models.Index(fields=['id_cliente', 'fecha'], name='idx_ventas_cliente_fecha'),
+            models.Index(fields=['estado', 'fecha'], name='idx_ventas_estado_fecha'),
+            models.Index(fields=['id_caja', 'fecha'], name='idx_ventas_caja_fecha'),
+            models.Index(fields=['fecha'], name='idx_ventas_fecha'),
+            models.Index(fields=['id_hijo', 'fecha'], name='idx_ventas_hijo_fecha'),
+        ]
 
     def __str__(self):
         return f"Venta #{self.id_venta} - {self.id_cliente} (${self.monto_total})"
@@ -256,9 +261,11 @@ class DetallesVenta(models.Model):
         db_table = "detalles_venta"
         verbose_name = "Detalle de Venta"
         verbose_name_plural = "Detalles de Venta"
-        verbose_name = "Detalle de Venta"
-        verbose_name_plural = "Detalles de Venta"
         unique_together = (("id_venta", "id_producto"),)
+        indexes = [
+            models.Index(fields=['id_venta'], name='idx_detalles_venta_venta'),
+            models.Index(fields=['id_producto'], name='idx_detalles_venta_prod'),
+        ]
 
 
 class PagosVenta(models.Model):
@@ -318,6 +325,13 @@ class PagosVenta(models.Model):
         db_table = "pagos_venta"
         verbose_name = "Pago de Venta"
         verbose_name_plural = "Pagos de Venta"
+        ordering = ["-fecha_pago"]
+        indexes = [
+            models.Index(fields=['id_venta', 'fecha_pago'], name='idx_pagos_venta_venta'),
+            models.Index(fields=['fecha_pago'], name='idx_pagos_venta_fecha'),
+            models.Index(fields=['id_medio_pago', 'fecha_pago'], name='idx_pagos_venta_medio'),
+            models.Index(fields=['estado', 'fecha_pago'], name='idx_pagos_venta_estado'),
+        ]
 
 
 class AplicacionPagosVentas(models.Model):

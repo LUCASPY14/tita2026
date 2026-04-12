@@ -80,6 +80,14 @@ class Compras(models.Model):
         db_table = "compras"
         verbose_name = "Compra"
         verbose_name_plural = "Compras"
+        ordering = ["-fecha"]
+        indexes = [
+            models.Index(fields=['fecha', 'id_proveedor'], name='idx_compras_fecha_prov'),
+            models.Index(fields=['estado_pago', 'fecha'], name='idx_compras_estado_fecha'),
+            models.Index(fields=['nro_factura'], name='idx_compras_nro_factura'),
+            models.Index(fields=['id_proveedor', 'fecha'], name='idx_compras_prov_fecha'),
+            models.Index(fields=['fecha'], name='idx_compras_fecha'),
+        ]
 
 
 class DetallesCompra(models.Model):

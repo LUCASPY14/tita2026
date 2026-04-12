@@ -43,6 +43,13 @@ class CierresCaja(models.Model):
     class Meta:
         managed = True
         db_table = "cierres_caja"
+        ordering = ["-fecha_hora_apertura"]
+        indexes = [
+            models.Index(fields=['id_caja', 'fecha_hora_apertura'], name='idx_cierres_caja_fecha'),
+            models.Index(fields=['id_empleado', 'fecha_hora_apertura'], name='idx_cierres_emp_fecha'),
+            models.Index(fields=['estado', 'fecha_hora_cierre'], name='idx_cierres_estado'),
+            models.Index(fields=['fecha_hora_apertura'], name='idx_cierres_apertura'),
+        ]
 
 
 class MovimientosCaja(models.Model):
@@ -68,6 +75,13 @@ class MovimientosCaja(models.Model):
     class Meta:
         managed = True
         db_table = "movimientos_caja"
+        ordering = ["-fecha_movimiento"]
+        indexes = [
+            models.Index(fields=['id_cierre', 'fecha_movimiento'], name='idx_mov_caja_cierre'),
+            models.Index(fields=['id_venta'], name='idx_mov_caja_venta'),
+            models.Index(fields=['fecha_movimiento', 'tipo_movimiento'], name='idx_mov_caja_fecha_tipo'),
+            models.Index(fields=['id_medio_pago', 'fecha_movimiento'], name='idx_mov_caja_medio'),
+        ]
 
 
 class TarifasComision(models.Model):

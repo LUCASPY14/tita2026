@@ -178,6 +178,13 @@ class Empleados(models.Model):
         db_table = "empleados"
         verbose_name = "Empleado"
         verbose_name_plural = "Empleados"
+        ordering = ["apellido", "nombre"]
+        indexes = [
+            models.Index(fields=['usuario'], name='idx_empleados_usuario'),
+            models.Index(fields=['email'], name='idx_empleados_email'),
+            models.Index(fields=['estado', 'id_rol'], name='idx_empleados_estado_rol'),
+            models.Index(fields=['apellido', 'nombre'], name='idx_empleados_nombre'),
+        ]
 
 
 class RolesManager(models.Manager):

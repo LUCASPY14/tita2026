@@ -100,9 +100,14 @@ class Productos(models.Model):
         db_table = "productos"
         verbose_name = "Producto"
         verbose_name_plural = "Productos"
-        verbose_name = "Producto"
-        verbose_name_plural = "Productos"
-        verbose_name = "Producto"
+        ordering = ["descripcion"]
+        indexes = [
+            models.Index(fields=['codigo_barra'], name='idx_productos_cod_barra'),
+            models.Index(fields=['codigo'], name='idx_productos_codigo'),
+            models.Index(fields=['descripcion'], name='idx_productos_desc'),
+            models.Index(fields=['estado', 'id_categoria'], name='idx_productos_estado_cat'),
+            models.Index(fields=['id_categoria'], name='idx_productos_categoria'),
+        ]
         verbose_name_plural = "Productos"
         ordering = ["descripcion"]
 

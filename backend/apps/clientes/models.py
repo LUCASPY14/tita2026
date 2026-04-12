@@ -64,11 +64,13 @@ class Clientes(models.Model):
         db_table = "clientes"
         verbose_name = "Cliente"
         verbose_name_plural = "Clientes"
-        verbose_name = "Cliente"
-        verbose_name_plural = "Clientes"
-        verbose_name = "Cliente"
-        verbose_name_plural = "Clientes"
         ordering = ["apellidos", "nombres"]
+        indexes = [
+            models.Index(fields=['email'], name='idx_clientes_email'),
+            models.Index(fields=['estado', 'fecha_registro'], name='idx_clientes_estado_fecha'),
+            models.Index(fields=['apellidos', 'nombres'], name='idx_clientes_nombre'),
+            models.Index(fields=['ciudad'], name='idx_clientes_ciudad'),
+        ]
 
     def __str__(self):
         return f"{self.apellidos}, {self.nombres}"
