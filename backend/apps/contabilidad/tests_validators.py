@@ -684,14 +684,14 @@ class ValidarDireccionEmpresaTest(TestCase):
 
 class ValidarCiudadEmpresaTest(TestCase):
     def test_ciudad_valida(self):
-        validar_ciudad_empresa("Asunci�n")  # OK
+        validar_ciudad_empresa("Asuncion")  # OK
 
     def test_ciudad_opcional(self):
         validar_ciudad_empresa(None)  # OK
 
     def test_ciudad_con_numeros(self):
         with self.assertRaises(ValidationError):
-            validar_ciudad_empresa("Asunci�n123")
+            validar_ciudad_empresa("Asuncion123")
 
 
 class ValidarPaisEmpresaTest(TestCase):

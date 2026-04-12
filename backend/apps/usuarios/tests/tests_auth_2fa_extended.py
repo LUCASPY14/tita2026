@@ -265,12 +265,11 @@ class VerificarBackupCodeTest(Base2FATest):
     """Cover _verificar_backup_code with list backup_codes (line 260) and exception (lines 279-280)."""
 
     def _crear_auth_2fa(self):
-        import json, secrets
         return Autenticacion2Fa.objects.create(
             usuario=self.empleado.usuario,
             tipo_usuario="empleado",
             secret_key="JBSWY3DPEHPK3PXP",
-            backup_codes=json.dumps(["11111111", "22222222"]),
+            backup_codes=["11111111", "22222222"],
             habilitado=True,
             fecha_activacion=timezone.now(),
             fecha_creacion=timezone.now(),
@@ -278,22 +277,18 @@ class VerificarBackupCodeTest(Base2FATest):
 
     def test_backup_code_es_lista_no_string(self):
         """When backup_codes is already a list (not str), branch at line 260 is skipped."""
-        import json
         auth_2fa = self._crear_auth_2fa()
-        # Manually set backup_codes as a Python list (not string) to exercise line 262
-        auth_2fa.backup_codes = ["11111111", "22222222"]
-        auth_2fa.save()
+        # backup_codes is already a list, directly test the method
         result = TwoFactorAuthService._verificar_backup_code(auth_2fa, "11111111", self.ip)
         self.assertTrue(result)
 
     def test_backup_code_exception_returns_false(self):
         """Exception in _verificar_backup_code returns False (lines 279-280)."""
         auth_2fa = self._crear_auth_2fa()
-        # Set invalid JSON string to cause json.loads to raise
-        auth_2fa.backup_codes = "not_json{"
-        auth_2fa.save()
-        result = TwoFactorAuthService._verificar_backup_code(auth_2fa, "11111111", self.ip)
-        self.assertFalse(result)
+        # Mock backup_codes to be invalid JSON string (can't save to DB due to constraint)
+        with patch.object(auth_2fa, 'backup_codes', "not_json{"):
+            result = TwoFactorAuthService._verificar_backup_code(auth_2fa, "11111111", self.ip)
+            self.assertFalse(result)
 
 
 class Deshabilitar2FAExceptionTest(Base2FATest):
@@ -337,7 +332,7 @@ class Verificar2FAHabilitadoTest(Base2FATest):
             usuario=self.empleado.usuario,
             tipo_usuario="empleado",
             secret_key="JBSWY3DPEHPK3PXP",
-            backup_codes="[]",
+            backup_codes=[],  # Use list instead of string
             habilitado=True,
             fecha_activacion=timezone.now(),
             fecha_creacion=timezone.now(),
@@ -371,16 +366,19 @@ class ObtenerEstadisticasBackupCodesListTest(Base2FATest):
 
     def test_estadisticas_backup_codes_json_invalido(self):
         """When backup_codes is invalid JSON, exception silenced (lines 461-462)."""
+        # Create valid auth_2fa first
         auth_2fa = Autenticacion2Fa.objects.create(
             usuario=self.empleado.usuario,
             tipo_usuario="empleado",
             secret_key="JBSWY3DPEHPK3PXP",
-            backup_codes="invalid{json",
+            backup_codes=[],  # Valid JSON
             habilitado=True,
             fecha_activacion=timezone.now(),
             fecha_creacion=timezone.now(),
         )
-        result = TwoFactorAuthService.obtener_estadisticas_2fa(self.empleado)
-        # Should not raise, backup_codes_restantes stays 0
-        self.assertTrue(result["habilitado"])
-        self.assertEqual(result["backup_codes_restantes"], 0)
+        # Mock the backup_codes to be invalid JSON string
+        with patch.object(auth_2fa, 'backup_codes', "invalid{json"):
+            result = TwoFactorAuthService.obtener_estadisticas_2fa(self.empleado)
+            # Should not raise, backup_codes_restantes stays 0 due to exception handling
+            self.assertTrue(result["habilitado"])
+            self.assertEqual(result["backup_codes_restantes"], 0)

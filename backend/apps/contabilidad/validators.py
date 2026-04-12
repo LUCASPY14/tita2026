@@ -217,7 +217,9 @@ def validar_fecha_movimiento_caja(value):
 
     # Convertir a datetime si es date
     if isinstance(value, date) and not isinstance(value, datetime):
+        # Convertir a datetime y hacerlo timezone-aware
         value_dt = datetime.combine(value, datetime.min.time())
+        value_dt = timezone.make_aware(value_dt)
     else:
         value_dt = value
 
