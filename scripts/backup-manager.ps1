@@ -52,7 +52,7 @@ function Test-SqlServerConnection {
     }
 }
 
-function Setup-Backups {
+function Initialize-Backups {
     Write-Header "CONFIGURAR BACKUPS AUTOMÁTICOS"
     
     if (-not (Test-SqlServerConnection)) {
@@ -83,7 +83,7 @@ function Setup-Backups {
     }
 }
 
-function Run-ManualBackup {
+function Invoke-ManualBackup {
     Write-Header "EJECUTAR BACKUP MANUAL"
     
     if (-not (Test-SqlServerConnection)) {
@@ -133,7 +133,7 @@ PRINT 'Backup completado en ' + CAST(@Duration AS VARCHAR) + ' segundos';
     }
 }
 
-function Verify-Backups {
+function Test-Backups {
     Write-Header "VERIFICAR HISTORIAL DE BACKUPS"
     
     if (-not (Test-SqlServerConnection)) {
@@ -184,7 +184,7 @@ ORDER BY backup_start_date DESC;
     }
 }
 
-function List-BackupFiles {
+function Get-BackupFiles {
     Write-Header "LISTAR ARCHIVOS DE BACKUP"
     
     $basePath = "D:\SQLBackups\$DatabaseName\"
@@ -266,19 +266,19 @@ Write-Host "   Base de datos: $DatabaseName`n" -ForegroundColor Gray
 try {
     switch ($Action) {
         'setup' {
-            Setup-Backups
+            Initialize-Backups
         }
         'backup' {
-            Run-ManualBackup
+            Invoke-ManualBackup
         }
         'restore' {
             Restore-Database
         }
         'verify' {
-            Verify-Backups
+            Test-Backups
         }
         'list' {
-            List-BackupFiles
+            Get-BackupFiles
         }
     }
     
