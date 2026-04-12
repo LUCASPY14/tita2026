@@ -96,11 +96,26 @@ router.register(r'usuarios/auditoria', AuditoriaOperacionesViewSet, basename='au
 router.register(r'2fa', TwoFactorViewSet, basename='2fa')
 router.register(r'sesiones', SesionesViewSet, basename='sesiones')
 router.register(r'password', PasswordRecoveryViewSet, basename='password')
+
+# Register Reportes ViewSets
+router.register(r'reportes', ReportesViewSet, basename='reportes')
+router.register(r'reportes/plantillas', PlantillasReporteViewSet, basename='plantillas-reporte')
 router.register(r'reportes/dashboards', DashboardsViewSet, basename='dashboards')
 router.register(r'reportes/kpis', KpiMetricasViewSet, basename='kpi-metricas')
 router.register(r'reportes/tareas', PlantillasTareaViewSet, basename='plantillas-tarea')
 router.register(r'reportes/ejecuciones', EjecucionesTareaViewSet, basename='ejecuciones-tarea')
 router.register(r'tareas-programadas', TareasProgradasViewSet, basename='tareas-programadas')
+
+# Register Inventario ViewSets
+router.register(r'stock', StockUnicoViewSet, basename='stock')
+router.register(r'movimientos-stock', MovimientosStockViewSet, basename='movimientos-stock')
+router.register(r'ajustes-inventario', AjustesInventarioViewSet, basename='ajustes-inventario')
+
+# Register Compras ViewSets
+router.register(r'proveedores', ProveedoresViewSet, basename='proveedores')
+router.register(r'compras', ComprasViewSet, basename='compras')
+router.register(r'detalles-compra', DetallesCompraViewSet, basename='detalles-compra')
+router.register(r'pagos-proveedores', PagosProveedoresViewSet, basename='pagos-proveedores')
 
 # Register Notificaciones ViewSets
 router.register(r'notificaciones-portal', NotificacionesPortalViewSet, basename='notificaciones-portal')

@@ -1,5 +1,5 @@
 """
-Tests de validadores del módulo de Contabilidad
+Tests de validadores del mÃ³dulo de Contabilidad
 Cobertura completa: 62 validadores, ~186 tests
 """
 
@@ -135,7 +135,7 @@ class ValidarConsistenciaCierreTest(TestCase):
     def test_consistencia_incorrecta(self):
         monto_inicial = Decimal("10000")
         monto_contado = Decimal("12000")
-        diferencia = Decimal("500")  # Debería ser 2000
+        diferencia = Decimal("500")  # Deberï¿½a ser 2000
         with self.assertRaises(ValidationError):
             validar_consistencia_cierre(monto_inicial, monto_contado, diferencia)
 
@@ -196,7 +196,7 @@ class ValidarFechaMovimientoCajaTest(TestCase):
 
 class ValidarDescripcionMovimientoTest(TestCase):
     def test_descripcion_valida(self):
-        validar_descripcion_movimiento("Venta de almuerzos del día")  # OK
+        validar_descripcion_movimiento("Venta de almuerzos del dï¿½a")  # OK
 
     def test_descripcion_opcional(self):
         validar_descripcion_movimiento(None)  # OK
@@ -207,7 +207,7 @@ class ValidarDescripcionMovimientoTest(TestCase):
 
 
 # =============================================================================
-# 4. TESTS DE TARIFAS DE COMISIÓN (15 tests)
+# 4. TESTS DE TARIFAS DE COMISIï¿½N (15 tests)
 # =============================================================================
 
 
@@ -264,7 +264,7 @@ class ValidarActivoTarifaTest(TestCase):
 
 
 # =============================================================================
-# 5. TESTS DE AUDITORÍA DE COMISIONES (12 tests)
+# 5. TESTS DE AUDITORï¿½A DE COMISIONES (12 tests)
 # =============================================================================
 
 
@@ -314,7 +314,7 @@ class ValidarValorNuevoAuditoriaTest(TestCase):
 
 
 # =============================================================================
-# 6. TESTS DE CONCILIACIÓN DE PAGOS (18 tests)
+# 6. TESTS DE CONCILIACIï¿½N DE PAGOS (18 tests)
 # =============================================================================
 
 
@@ -531,15 +531,15 @@ class ValidarMontoImpuestoTest(TestCase):
 
 class ValidarNroTimbradoTest(TestCase):
     def test_nro_timbrado_valido(self):
-        validar_nro_timbrado(12345678)  # 8 dígitos
+        validar_nro_timbrado(12345678)  # 8 dï¿½gitos
 
     def test_nro_timbrado_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_nro_timbrado(1234567)  # 7 dígitos
+            validar_nro_timbrado(1234567)  # 7 dï¿½gitos
 
     def test_nro_timbrado_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_nro_timbrado(123456789012)  # 12 dígitos
+            validar_nro_timbrado(123456789012)  # 12 dï¿½gitos
 
 
 class ValidarTipoDocumentoTimbradoTest(TestCase):
@@ -595,7 +595,7 @@ class ValidarActivoTimbradoTest(TestCase):
 
 
 # =============================================================================
-# 10. TESTS DE PUNTOS DE EXPEDICIÓN (9 tests)
+# 10. TESTS DE PUNTOS DE EXPEDICIï¿½N (9 tests)
 # =============================================================================
 
 
@@ -672,7 +672,7 @@ class ValidarRazonSocialEmpresaTest(TestCase):
 
 class ValidarDireccionEmpresaTest(TestCase):
     def test_direccion_valida(self):
-        validar_direccion_empresa("Av. España 1234")  # OK
+        validar_direccion_empresa("Av. Espaï¿½a 1234")  # OK
 
     def test_direccion_opcional(self):
         validar_direccion_empresa(None)  # OK
@@ -684,14 +684,14 @@ class ValidarDireccionEmpresaTest(TestCase):
 
 class ValidarCiudadEmpresaTest(TestCase):
     def test_ciudad_valida(self):
-        validar_ciudad_empresa("Asunción")  # OK
+        validar_ciudad_empresa("Asunciï¿½n")  # OK
 
     def test_ciudad_opcional(self):
         validar_ciudad_empresa(None)  # OK
 
     def test_ciudad_con_numeros(self):
         with self.assertRaises(ValidationError):
-            validar_ciudad_empresa("Asunción123")
+            validar_ciudad_empresa("Asunciï¿½n123")
 
 
 class ValidarPaisEmpresaTest(TestCase):
