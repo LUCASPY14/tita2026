@@ -126,7 +126,7 @@ class ReporteService:
 
             # Ventas por día
             ventas_por_dia = (
-                ventas_query.extra(select={"fecha_dia": "DATE(fecha)"})
+                ventas_query.extra(select={"fecha_dia": "CAST(fecha AS DATE)"})
                 .values("fecha_dia")
                 .annotate(cantidad=Count("id_venta"), monto_total=Sum("monto_total"))
                 .order_by("fecha_dia")
@@ -219,7 +219,7 @@ class ReporteService:
 
             # Estadísticas diarias
             estadisticas_diarias = (
-                recargas_query.extra(select={"fecha_dia": "DATE(fecha_carga)"})
+                recargas_query.extra(select={"fecha_dia": "CAST(fecha_carga AS DATE)"})
                 .values("fecha_dia")
                 .annotate(
                     cantidad_recargas=Count("id_carga"), monto_acreditado=Sum("monto_cargado")

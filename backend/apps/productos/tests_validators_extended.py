@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch, PropertyMock
 
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from apps.productos.validators import (
     validar_stock_minimo,
@@ -333,8 +334,7 @@ class ValidarFechaCambioPrecioExtendedTest(TestCase):
 
     def test_fecha_valida(self):
         """Valid datetime passes."""
-        from datetime import datetime
-        validar_fecha_cambio_precio(datetime.now())  # Should not raise
+        validar_fecha_cambio_precio(timezone.now())  # Should not raise
 
 
 # ==============================================================================

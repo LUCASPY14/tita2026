@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.utils import timezone
 
 from apps.contabilidad.validators import (
     validar_nombre_caja,
@@ -90,15 +91,15 @@ class FechaAperturaCierreExtendedTest(TestCase):
 
     def test_apertura_no_es_datetime(self):
         with self.assertRaises(ValidationError):
-            validar_fecha_apertura_cierre("2024-01-01", datetime.now())
+            validar_fecha_apertura_cierre("2024-01-01", timezone.now())
 
     def test_cierre_no_es_datetime(self):
         with self.assertRaises(ValidationError):
-            validar_fecha_apertura_cierre(datetime.now(), "2024-01-01")
+            validar_fecha_apertura_cierre(timezone.now(), "2024-01-01")
 
     def test_cierre_es_none(self):
         # Should not raise - cierre can be null
-        validar_fecha_apertura_cierre(datetime.now(), None)
+        validar_fecha_apertura_cierre(timezone.now(), None)
 
 
 class MontoInicialCajaExtendedTest(TestCase):
@@ -212,11 +213,11 @@ class FechaVigenciaTarifaExtendedTest(TestCase):
 
     def test_inicio_no_es_datetime(self):
         with self.assertRaises(ValidationError):
-            validar_fecha_vigencia_tarifa("2024-01-01", datetime.now())
+            validar_fecha_vigencia_tarifa("2024-01-01", timezone.now())
 
     def test_fin_no_es_datetime(self):
         with self.assertRaises(ValidationError):
-            validar_fecha_vigencia_tarifa(datetime.now(), "2024-01-01")
+            validar_fecha_vigencia_tarifa(timezone.now(), "2024-01-01")
 
 
 class PorcentajeComisionExtendedTest(TestCase):
@@ -360,11 +361,11 @@ class FechasConciliacionConsistenciaExtendedTest(TestCase):
 
     def test_creacion_no_datetime(self):
         with self.assertRaises(ValidationError):
-            validar_fechas_conciliacion_consistencia("2024-01-01", datetime.now())
+            validar_fechas_conciliacion_consistencia("2024-01-01", timezone.now())
 
     def test_actualizacion_no_datetime(self):
         with self.assertRaises(ValidationError):
-            validar_fechas_conciliacion_consistencia(datetime.now(), "2024-01-01")
+            validar_fechas_conciliacion_consistencia(timezone.now(), "2024-01-01")
 
 
 class NroSecuencialDocumentoExtendedTest(TestCase):
@@ -428,11 +429,11 @@ class FechasEnvioRespuestaDocumentoExtendedTest(TestCase):
 
     def test_envio_no_datetime(self):
         with self.assertRaises(ValidationError):
-            validar_fechas_envio_respuesta_documento("2024-01-01", datetime.now())
+            validar_fechas_envio_respuesta_documento("2024-01-01", timezone.now())
 
     def test_respuesta_no_datetime(self):
         with self.assertRaises(ValidationError):
-            validar_fechas_envio_respuesta_documento(datetime.now(), "2024-01-01")
+            validar_fechas_envio_respuesta_documento(timezone.now(), "2024-01-01")
 
 
 class BaseImponibleExtendedTest(TestCase):

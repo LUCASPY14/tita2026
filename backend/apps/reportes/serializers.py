@@ -7,6 +7,7 @@ from decimal import Decimal
 from datetime import date, datetime
 from rest_framework import serializers
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
 
 from .models import (
     PlantillasReporte,
@@ -467,7 +468,7 @@ class PlantillasTareaSerializer(serializers.ModelSerializer):
         ).order_by('-fecha_ejecucion').first()
         
         if not ultima_ejecucion:
-            return datetime.now()
+            return timezone.now()
         
         from datetime import timedelta
         fecha_base = ultima_ejecucion.fecha_ejecucion

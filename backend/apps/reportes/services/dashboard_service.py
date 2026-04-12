@@ -156,7 +156,7 @@ class DashboardService:
             # Ventas por día
             ventas_por_dia = (
                 Ventas.objects.filter(fecha__gte=fecha_inicio, fecha__lte=fecha_fin)
-                .extra(select={"fecha_dia": "DATE(fecha)"})
+                .extra(select={"fecha_dia": "CAST(fecha AS DATE)"})
                 .values("fecha_dia")
                 .annotate(
                     cantidad_ventas=Count("id_venta"),
@@ -273,7 +273,7 @@ class DashboardService:
                 CargasSaldo.objects.filter(
                     fecha_carga__gte=fecha_inicio, fecha_carga__lte=fecha_fin
                 )
-                .extra(select={"fecha_dia": "DATE(fecha_carga)"})
+                .extra(select={"fecha_dia": "CAST(fecha_carga AS DATE)"})
                 .values("fecha_dia")
                 .annotate(cantidad_recargas=Count("id_carga"), monto_total=Sum("monto_cargado"))
                 .order_by("fecha_dia")

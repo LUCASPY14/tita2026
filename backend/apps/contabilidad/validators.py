@@ -5,8 +5,9 @@ Sistema completo de validación para facturación electrónica, cajas, comisione
 
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator, URLValidator
+from django.utils import timezone
 from decimal import Decimal, InvalidOperation
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import re
 
 # =============================================================================
@@ -221,9 +222,7 @@ def validar_fecha_movimiento_caja(value):
         value_dt = value
 
     # No puede ser más de 1 hora en el futuro (tolerancia por diferencias de servidor)
-    from datetime import timedelta
-
-    ahora = datetime.now()
+    ahora = timezone.now()
     if value_dt > ahora + timedelta(hours=1):
         raise ValidationError("La fecha de movimiento no puede ser futura.")
 
@@ -315,7 +314,7 @@ def validar_fecha_cambio_auditoria(value):
         raise ValidationError("La fecha de cambio debe ser un datetime válido.")
 
     # No puede ser futura
-    if value > datetime.now():
+    if value > timezone.now():
         raise ValidationError("La fecha de cambio no puede ser futura.")
 
 
@@ -467,9 +466,7 @@ def validar_fecha_emision_documento(value):
         raise ValidationError("La fecha de emisión debe ser un datetime válido.")
 
     # No puede ser más de 24 horas en el futuro
-    from datetime import timedelta
-
-    if value > datetime.now() + timedelta(hours=24):
+    if value > timezone.now() + timedelta(hours=24):
         raise ValidationError("La fecha de emisión no puede ser más de 24 horas en el futuro.")
 
 

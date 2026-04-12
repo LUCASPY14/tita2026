@@ -1,10 +1,11 @@
 """
-Tests de validadores del mÃ³dulo de Contabilidad
+Tests de validadores del módulo de Contabilidad
 Cobertura completa: 62 validadores, ~186 tests
 """
 
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from decimal import Decimal
 from datetime import datetime, date, timedelta
 from .validators import *
@@ -58,19 +59,19 @@ class ValidarActivoCajaTest(TestCase):
 
 class ValidarFechaAperturaCierreTest(TestCase):
     def test_fechas_validas(self):
-        apertura = datetime.now() - timedelta(hours=5)
-        cierre = datetime.now()
+        apertura = timezone.now() - timedelta(hours=5)
+        cierre = timezone.now()
         validar_fecha_apertura_cierre(apertura, cierre)  # OK
 
     def test_cierre_antes_apertura(self):
-        apertura = datetime.now()
+        apertura = timezone.now()
         cierre = apertura - timedelta(hours=1)
         with self.assertRaises(ValidationError):
             validar_fecha_apertura_cierre(apertura, cierre)
 
     def test_cierre_mas_48_horas(self):
-        apertura = datetime.now() - timedelta(hours=50)
-        cierre = datetime.now()
+        apertura = timezone.now() - timedelta(hours=50)
+        cierre = timezone.now()
         with self.assertRaises(ValidationError):
             validar_fecha_apertura_cierre(apertura, cierre)
 
@@ -134,7 +135,7 @@ class ValidarConsistenciaCierreTest(TestCase):
     def test_consistencia_incorrecta(self):
         monto_inicial = Decimal("10000")
         monto_contado = Decimal("12000")
-        diferencia = Decimal("500")  # DeberÃ­a ser 2000
+        diferencia = Decimal("500")  # Debería ser 2000
         with self.assertRaises(ValidationError):
             validar_consistencia_cierre(monto_inicial, monto_contado, diferencia)
 
@@ -183,19 +184,19 @@ class ValidarMontoComisionMovimientoTest(TestCase):
 
 class ValidarFechaMovimientoCajaTest(TestCase):
     def test_fecha_actual(self):
-        validar_fecha_movimiento_caja(datetime.now())  # OK
+        validar_fecha_movimiento_caja(timezone.now())  # OK
 
     def test_fecha_pasada(self):
-        validar_fecha_movimiento_caja(datetime.now() - timedelta(days=5))  # OK
+        validar_fecha_movimiento_caja(timezone.now() - timedelta(days=5))  # OK
 
     def test_fecha_futura(self):
         with self.assertRaises(ValidationError):
-            validar_fecha_movimiento_caja(datetime.now() + timedelta(hours=2))
+            validar_fecha_movimiento_caja(timezone.now() + timedelta(hours=2))
 
 
 class ValidarDescripcionMovimientoTest(TestCase):
     def test_descripcion_valida(self):
-        validar_descripcion_movimiento("Venta de almuerzos del dÃ­a")  # OK
+        validar_descripcion_movimiento("Venta de almuerzos del día")  # OK
 
     def test_descripcion_opcional(self):
         validar_descripcion_movimiento(None)  # OK
@@ -206,24 +207,24 @@ class ValidarDescripcionMovimientoTest(TestCase):
 
 
 # =============================================================================
-# 4. TESTS DE TARIFAS DE COMISIÃ“N (15 tests)
+# 4. TESTS DE TARIFAS DE COMISIÓN (15 tests)
 # =============================================================================
 
 
 class ValidarFechaVigenciaTarifaTest(TestCase):
     def test_fechas_validas(self):
-        inicio = datetime.now()
+        inicio = timezone.now()
         fin = inicio + timedelta(days=30)
         validar_fecha_vigencia_tarifa(inicio, fin)  # OK
 
     def test_fecha_fin_antes_inicio(self):
-        inicio = datetime.now()
+        inicio = timezone.now()
         fin = inicio - timedelta(days=1)
         with self.assertRaises(ValidationError):
             validar_fecha_vigencia_tarifa(inicio, fin)
 
     def test_fecha_fin_opcional(self):
-        inicio = datetime.now()
+        inicio = timezone.now()
         validar_fecha_vigencia_tarifa(inicio, None)  # OK
 
 
@@ -263,20 +264,20 @@ class ValidarActivoTarifaTest(TestCase):
 
 
 # =============================================================================
-# 5. TESTS DE AUDITORÃA DE COMISIONES (12 tests)
+# 5. TESTS DE AUDITORÍA DE COMISIONES (12 tests)
 # =============================================================================
 
 
 class ValidarFechaCambioAuditoriaTest(TestCase):
     def test_fecha_actual(self):
-        validar_fecha_cambio_auditoria(datetime.now())  # OK
+        validar_fecha_cambio_auditoria(timezone.now())  # OK
 
     def test_fecha_pasada(self):
-        validar_fecha_cambio_auditoria(datetime.now() - timedelta(days=10))  # OK
+        validar_fecha_cambio_auditoria(timezone.now() - timedelta(days=10))  # OK
 
     def test_fecha_futura(self):
         with self.assertRaises(ValidationError):
-            validar_fecha_cambio_auditoria(datetime.now() + timedelta(hours=1))
+            validar_fecha_cambio_auditoria(timezone.now() + timedelta(hours=1))
 
 
 class ValidarCampoModificadoAuditoriaTest(TestCase):
@@ -313,13 +314,13 @@ class ValidarValorNuevoAuditoriaTest(TestCase):
 
 
 # =============================================================================
-# 6. TESTS DE CONCILIACIÃ“N DE PAGOS (18 tests)
+# 6. TESTS DE CONCILIACIÓN DE PAGOS (18 tests)
 # =============================================================================
 
 
 class ValidarFechaAcreditacionConciliacionTest(TestCase):
     def test_fecha_acreditacion_valida(self):
-        validar_fecha_acreditacion_conciliacion(datetime.now())  # OK
+        validar_fecha_acreditacion_conciliacion(timezone.now())  # OK
 
     def test_fecha_acreditacion_opcional(self):
         validar_fecha_acreditacion_conciliacion(None)  # OK
@@ -327,7 +328,7 @@ class ValidarFechaAcreditacionConciliacionTest(TestCase):
 
 class ValidarFechaConciliacionTest(TestCase):
     def test_fecha_conciliacion_valida(self):
-        validar_fecha_conciliacion(datetime.now())  # OK
+        validar_fecha_conciliacion(timezone.now())  # OK
 
     def test_fecha_conciliacion_requerida(self):
         with self.assertRaises(ValidationError):
@@ -372,12 +373,12 @@ class ValidarObservacionesConciliacionTest(TestCase):
 
 class ValidarFechasConciliacionConsistenciaTest(TestCase):
     def test_fechas_consistentes(self):
-        creacion = datetime.now() - timedelta(days=5)
-        actualizacion = datetime.now()
+        creacion = timezone.now() - timedelta(days=5)
+        actualizacion = timezone.now()
         validar_fechas_conciliacion_consistencia(creacion, actualizacion)  # OK
 
     def test_actualizacion_antes_creacion(self):
-        creacion = datetime.now()
+        creacion = timezone.now()
         actualizacion = creacion - timedelta(hours=1)
         with self.assertRaises(ValidationError):
             validar_fechas_conciliacion_consistencia(creacion, actualizacion)
@@ -406,14 +407,14 @@ class ValidarNroSecuencialDocumentoTest(TestCase):
 
 class ValidarFechaEmisionDocumentoTest(TestCase):
     def test_fecha_emision_actual(self):
-        validar_fecha_emision_documento(datetime.now())  # OK
+        validar_fecha_emision_documento(timezone.now())  # OK
 
     def test_fecha_emision_pasada(self):
-        validar_fecha_emision_documento(datetime.now() - timedelta(days=30))  # OK
+        validar_fecha_emision_documento(timezone.now() - timedelta(days=30))  # OK
 
     def test_fecha_emision_muy_futura(self):
         with self.assertRaises(ValidationError):
-            validar_fecha_emision_documento(datetime.now() + timedelta(hours=25))
+            validar_fecha_emision_documento(timezone.now() + timedelta(hours=25))
 
 
 class ValidarMontoTotalDocumentoTest(TestCase):
@@ -483,12 +484,12 @@ class ValidarNroPreimpresoDocumentoTest(TestCase):
 
 class ValidarFechasEnvioRespuestaDocumentoTest(TestCase):
     def test_fechas_validas(self):
-        envio = datetime.now() - timedelta(hours=2)
-        respuesta = datetime.now()
+        envio = timezone.now() - timedelta(hours=2)
+        respuesta = timezone.now()
         validar_fechas_envio_respuesta_documento(envio, respuesta)  # OK
 
     def test_respuesta_antes_envio(self):
-        envio = datetime.now()
+        envio = timezone.now()
         respuesta = envio - timedelta(hours=1)
         with self.assertRaises(ValidationError):
             validar_fechas_envio_respuesta_documento(envio, respuesta)
@@ -530,15 +531,15 @@ class ValidarMontoImpuestoTest(TestCase):
 
 class ValidarNroTimbradoTest(TestCase):
     def test_nro_timbrado_valido(self):
-        validar_nro_timbrado(12345678)  # 8 dÃ­gitos
+        validar_nro_timbrado(12345678)  # 8 dígitos
 
     def test_nro_timbrado_muy_corto(self):
         with self.assertRaises(ValidationError):
-            validar_nro_timbrado(1234567)  # 7 dÃ­gitos
+            validar_nro_timbrado(1234567)  # 7 dígitos
 
     def test_nro_timbrado_muy_largo(self):
         with self.assertRaises(ValidationError):
-            validar_nro_timbrado(123456789012)  # 12 dÃ­gitos
+            validar_nro_timbrado(123456789012)  # 12 dígitos
 
 
 class ValidarTipoDocumentoTimbradoTest(TestCase):
@@ -594,7 +595,7 @@ class ValidarActivoTimbradoTest(TestCase):
 
 
 # =============================================================================
-# 10. TESTS DE PUNTOS DE EXPEDICIÃ“N (9 tests)
+# 10. TESTS DE PUNTOS DE EXPEDICIÓN (9 tests)
 # =============================================================================
 
 
@@ -671,7 +672,7 @@ class ValidarRazonSocialEmpresaTest(TestCase):
 
 class ValidarDireccionEmpresaTest(TestCase):
     def test_direccion_valida(self):
-        validar_direccion_empresa("Av. EspaÃ±a 1234")  # OK
+        validar_direccion_empresa("Av. España 1234")  # OK
 
     def test_direccion_opcional(self):
         validar_direccion_empresa(None)  # OK
@@ -683,14 +684,14 @@ class ValidarDireccionEmpresaTest(TestCase):
 
 class ValidarCiudadEmpresaTest(TestCase):
     def test_ciudad_valida(self):
-        validar_ciudad_empresa("AsunciÃ³n")  # OK
+        validar_ciudad_empresa("Asunción")  # OK
 
     def test_ciudad_opcional(self):
         validar_ciudad_empresa(None)  # OK
 
     def test_ciudad_con_numeros(self):
         with self.assertRaises(ValidationError):
-            validar_ciudad_empresa("AsunciÃ³n123")
+            validar_ciudad_empresa("Asunción123")
 
 
 class ValidarPaisEmpresaTest(TestCase):
