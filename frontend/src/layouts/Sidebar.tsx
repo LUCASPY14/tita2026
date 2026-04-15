@@ -62,8 +62,8 @@ const BASE_NAVIGATION: NavigationEntry[] = [
   { name: 'Productos', path: '/productos', icon: Package, roles: ['admin', 'gerente', 'supervisor'] },
   { name: 'Categorías', path: '/categorias', icon: Tag, roles: ['admin', 'gerente', 'supervisor'] },
   { name: 'Inventario', path: '/inventario', icon: Warehouse, roles: ['admin', 'gerente', 'supervisor'] },
-  { name: 'Compras', path: '/compras', icon: FileText, roles: ['admin', 'gerente'] },
-  { name: 'Proveedores', path: '/proveedores', icon: Truck, roles: ['admin', 'gerente'] },
+  { name: 'Compras', path: '/compras', icon: FileText, roles: ['admin', 'gerente', 'compras'] },
+  { name: 'Proveedores', path: '/proveedores', icon: Truck, roles: ['admin', 'gerente', 'compras'] },
 
   { type: 'section', name: 'Facturación' },
   { name: 'Facturación', path: '/facturacion', icon: FileText, roles: ['admin', 'cajero'] },
