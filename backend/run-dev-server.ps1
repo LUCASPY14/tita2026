@@ -6,7 +6,6 @@ Write-Host "🚀 Iniciando servidor Django (rama desarrollo)..." -ForegroundColo
 Write-Host ""
 
 # Verificar que estamos en el directorio correcto
-$currentDir = Get-Location
 if (-not (Test-Path ".\manage.py")) {
     Write-Host "❌ Error: manage.py no encontrado en el directorio actual" -ForegroundColor Red
     Write-Host "   Asegúrate de ejecutar este script desde: D:\tita2026\backend\" -ForegroundColor Yellow
