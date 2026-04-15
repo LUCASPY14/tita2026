@@ -8,6 +8,7 @@
 tita2026/
 ├── backend/              ← Django está AQUÍ (no en cantina_tita/backend/)
 │   ├── manage.py        ✅ Archivo principal de Django
+│   ├── venv/            ← Entorno virtual de desarrollo
 │   ├── apps/
 │   ├── backend/
 │   └── ...
@@ -16,7 +17,7 @@ tita2026/
 │   ├── src/
 │   └── ...
 └── cantina_tita/        ⚠️ Esta carpeta está IGNORADA en .gitignore
-    └── venv/            ← Entorno virtual compartido
+    └── (archivos de rama main)
 ```
 
 ### Diferencias entre ramas:
@@ -46,7 +47,7 @@ cd D:\tita2026\frontend
 **Backend:**
 ```powershell
 cd D:\tita2026\backend
-..\cantina_tita\venv\Scripts\Activate.ps1
+.\venv\Scripts\Activate.ps1
 python manage.py migrate
 python manage.py runserver
 ```
@@ -94,14 +95,14 @@ D:\tita2026\cantina_tita\venv\Scripts\Activate.ps1
 
 1. **Crear entorno virtual** (si no existe):
 ```powershell
-cd D:\tita2026
-python -m venv cantina_tita\venv
+cd D:\tita2026\backend
+python -m venv venv
 ```
 
 2. **Instalar dependencias backend**:
 ```powershell
-cd backend
-..\cantina_tita\venv\Scripts\Activate.ps1
+cd D:\tita2026\backend
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
@@ -127,9 +128,9 @@ npm install
 
 ## 📝 Notas Adicionales
 
-- El entorno virtual (`venv`) está en `cantina_tita/venv/` para compatibilidad con rama `main`
-- La carpeta `cantina_tita/` completa está en `.gitignore` para evitar conflictos
+- El entorno virtual (`venv`) está en `backend/venv/` específico para rama desarrollo
 - Los scripts `run-dev-*.ps1` activan automáticamente el entorno virtual correcto
+- La carpeta `cantina_tita/` completa está en `.gitignore` para evitar conflictos
 
 ---
 

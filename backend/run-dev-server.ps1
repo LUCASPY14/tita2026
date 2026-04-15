@@ -12,12 +12,13 @@ if (-not (Test-Path ".\manage.py")) {
     exit 1
 }
 
-# Activar entorno virtual de cantina_tita
-$venvPath = "..\cantina_tita\venv"
+# Activar entorno virtual local
+$venvPath = ".\venv"
 if (-not (Test-Path "$venvPath\Scripts\Activate.ps1")) {
     Write-Host "❌ Error: Entorno virtual no encontrado en $venvPath" -ForegroundColor Red
     Write-Host "   Crea el entorno virtual ejecutando:" -ForegroundColor Yellow
-    Write-Host "   python -m venv ..\cantina_tita\venv" -ForegroundColor White
+    Write-Host "   python -m venv venv" -ForegroundColor White
+    Write-Host "   pip install -r requirements.txt" -ForegroundColor White
     exit 1
 }
 
