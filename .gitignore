@@ -97,7 +97,10 @@ CREDENCIALES_LOGIN.txt
 .env.docker
 docker-compose.override.yml
 *.log
-logs/
+logs/*.log
+logs/**/*.log
+!logs/.gitkeep
+!**/logs/.gitkeep
 
 # Test output and temporary report files
 backend/full_test_output.txt
