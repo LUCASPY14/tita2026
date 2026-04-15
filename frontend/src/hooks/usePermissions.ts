@@ -176,6 +176,27 @@ export const usePermissions = (): Permissions => {
       canViewFinancialReports: false,
       canManageRecharges: true,
     },
+    compras: {
+      // Compras gestiona productos, inventario, compras y proveedores
+      canViewReports: true,
+      canManageUsers: false,
+      canManageConfiguration: false,
+      canProcessSales: false,
+      canProcessReturns: false,
+      canViewSalesHistory: false,
+      canManageInventory: true,
+      canViewInventory: true,
+      canManageProducts: true,
+      canManagePurchases: true,
+      canViewPurchases: true,
+      canManageClients: false,
+      canViewClients: false,
+      canManageAccountBalance: false,
+      canManageLunchSubscriptions: false,
+      canRegisterLunchConsumption: false,
+      canViewFinancialReports: false,
+      canManageRecharges: false,
+    },
     empleado: {
       // Empleado tiene permisos muy limitados
       canViewReports: false,

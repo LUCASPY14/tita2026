@@ -85,6 +85,7 @@ const Header: React.FC = () => {
     supervisor: { label: 'Supervisor', color: 'bg-indigo-100 text-indigo-700' },
     cajero: { label: 'Cajero', color: 'bg-green-100 text-green-700' },
     cobrador: { label: 'Cobrador', color: 'bg-orange-100 text-orange-700' },
+    compras: { label: 'Compras', color: 'bg-teal-100 text-teal-700' },
     empleado: { label: 'Empleado', color: 'bg-gray-100 text-gray-700' },
   };
 

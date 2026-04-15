@@ -207,7 +207,10 @@ export const mapRolToUserRole = (nombreRol: string): UserRole => {
   const mapping: Record<string, UserRole> = {
     'Administrador': 'admin',
     'Gerente': 'gerente',
+    'Supervisor': 'supervisor',
     'Cajero': 'cajero',
+    'Cobrador': 'cobrador',
+    'Gestor de Compras': 'compras',
     'Empleado': 'empleado',
   };
   
@@ -224,6 +227,7 @@ export const mapUserRoleToRolNombre = (role: UserRole): string => {
     'supervisor': 'Supervisor',
     'cajero': 'Cajero',
     'cobrador': 'Cobrador',
+    'compras': 'Gestor de Compras',
     'empleado': 'Empleado',
   };
   
