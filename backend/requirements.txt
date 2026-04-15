@@ -1,52 +1,8 @@
 ﻿# Core Django y dependencias
 asgiref==3.11.1
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-sentry-sdk==2.22.0# grafana-api>=1.0.3# prometheus-client>=0.17.0# Optional: Advanced Monitoringpython-dotenv>=1.0.0# Environment Managementsphinx-autodoc-typehints>=1.23.0sphinx>=7.0.0# Documentationdjango-extensions>=3.2.0django-debug-toolbar>=4.1.0# Debug Toolspre-commit>=3.3.0isort>=5.12.0flake8>=6.0.0black>=23.0.0# Development Toolsseaborn>=0.12.0pandas>=2.0.0numpy>=1.24.0matplotlib>=3.7.0# Data Analysis & Visualizationline-profiler>=4.0.0memory-profiler>=0.61.0psutil>=5.9.0# Performance Monitoringlocust>=2.17.0# Load Testingpytest-timeout>=2.1.0pytest-xdist>=3.3.0pytest-benchmark>=4.0.0pytest-html>=3.2.0# Advanced Testing-r requirements.txt# Include base requirements# Install with: pip install -r requirements-dev.txtDjango==6.0.2
+sentry-sdk==2.22.0
+Django==6.0.2
 sqlparse==0.5.5
 tzdata==2025.3
 
