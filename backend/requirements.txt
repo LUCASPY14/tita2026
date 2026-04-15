@@ -1,7 +1,12 @@
-﻿# Core Django y dependencias
-asgiref==3.11.1
+﻿# ============================================================================
+# Backend Requirements - Django Application
+# Rama: desarrollo
+# Python: 3.14.3
+# Django: 6.0.2
+# ============================================================================
 
-sentry-sdk==2.22.0
+# Core Django
+asgiref==3.11.1
 Django==6.0.2
 sqlparse==0.5.5
 tzdata==2025.3
@@ -10,13 +15,15 @@ tzdata==2025.3
 django-cors-headers==4.9.0
 django-filter==25.2
 django-ratelimit==4.1.0
+django-redis==5.4.0
+django-timezone-field==7.2.1
 
 # Django REST Framework
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
 drf-yasg==1.21.15
 
-# Database
+# Database Drivers
 mssql-django>=1.5
 pyodbc>=5.0.0
 psycopg2-binary>=2.9.7
@@ -26,18 +33,7 @@ PyJWT==2.11.0
 pyotp==2.9.0
 bcrypt==5.0.0
 
-# Utilidades
-numpy==2.4.2
-pillow==12.1.1
-qrcode==8.2
-requests==2.32.3
-inflection==0.5.1
-packaging==26.0
-pytz==2025.2
-PyYAML==6.0.3
-uritemplate==4.2.0
-
-# Celery y dependencias
+# Celery (Task Queue)
 celery==5.5.0
 redis==7.2.1
 django-celery-beat==2.9.0
@@ -51,15 +47,27 @@ kombu==5.5.4
 vine==5.1.0
 prompt-toolkit==3.0.52
 python-crontab==3.3.0
-python-dateutil==2.9.0.post0
-django-timezone-field==7.2.1
 cron-descriptor==1.4.5
 
-# Requests y dependencias
+# HTTP Requests
+requests==2.32.3
 certifi==2026.2.25
 charset-normalizer==3.4.4
 idna==3.11
 urllib3==2.6.3
+
+# Utilidades
+numpy==2.4.2
+pillow==12.1.1
+qrcode==8.2
+inflection==0.5.1
+packaging==26.0
+pytz==2025.2
+PyYAML==6.0.3
+uritemplate==4.2.0
+python-dateutil==2.9.0.post0
+six==1.17.0
+colorama==0.4.6
 
 # Testing
 coverage==7.13.4
@@ -69,16 +77,26 @@ pytest-cov==6.0.0
 pytest-mock==3.14.0
 pytest-html>=3.2.0
 factory-boy==3.3.1
+iniconfig==2.3.0
 
-# Performance Testing & Monitoring
+# Performance Testing (Locust)
 locust>=2.17.0
+Flask>=3.1.0
+flask-cors>=6.0.0
+Flask-Login>=0.6.3
+gevent>=25.9.0
+geventhttpclient>=2.3.0
+greenlet>=3.4.0
+ConfigArgParse>=1.7.0
+brotli>=1.2.0
+
+# Performance Monitoring
 psutil>=5.9.0
 matplotlib>=3.7.0
 memory-profiler>=0.61.0
 
-# Utilidades Python
-six==1.17.0
-colorama==0.4.6
+# Monitoring
+sentry-sdk==2.22.0
 
 # ============================================================================
 # Paquetes OPCIONALES - Descomentar según necesidad
@@ -91,8 +109,3 @@ colorama==0.4.6
 # Email Providers alternativos
 # sendgrid==6.11.0  # Email via SendGrid (alternativa a SMTP Django)
 
-
-
-# Monitoring y Caching
-sentry-sdk==2.22.0
-django-redis==5.4.0
