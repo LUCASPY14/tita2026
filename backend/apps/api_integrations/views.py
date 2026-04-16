@@ -140,9 +140,140 @@ def webhook_test(request):
     return Response(
         {
             "status": "ok",
-            "message": "Webhook endpoint de Bancard está estado",
+            "message": "Webhook endpoint está activo",
             "método": "POST",
-            "path": "/api/webhooks/bancard/",
+            "paths": {
+                "sipap": "/api/v1/webhooks/sipap/"
+            }
         },
         status=status.HTTP_200_OK,
     )
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def sipap_webhook(request):
+    """
+    Webhook para recibir confirmaciones de pago de SIPAP QR.
+
+    Red SIPAP envía una notificación POST cuando un pago QR es completado.
+
+    Body esperado:
+    {
+        "txn_id": "COB-123-1713308400",
+        "estado": "aprobado",  // aprobado, rechazado, expirado
+        "monto": "14402000.00",
+        "moneda": "PYG",
+        "banco_origen": "Banco Continental",
+        "referencia_bancaria": "TXN-987654321",
+        "fecha_pago": "2026-04-16T14:30:00Z",
+        "metadata": {
+            "id_cobro": 123,
+            "id_cliente": 456
+        }
+    }
+
+    Headers esperados:
+    X-SIPAP-Signature: Firma RSA-2048 del banco en base64
+
+    Validaciones:
+    1. Verificar firma RSA con clave pública del banco
+    2. Validar IP whitelist
+    3. Prevenir duplicados (idempotencia)
+    4. Aplicar pago a facturas (FIFO)
+    5. Actualizar saldos
+
+    Returns:
+        200: Webhook procesado correctamente
+        400: Error en validación
+        403: IP no autorizada o firma inválida
+        500: Error interno
+    """
+    try:
+        # Parsear JSON del body
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except json.JSONDecodeError:
+            return Response(
+                {"error": "JSON inválido en el body"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Extraer firma del header
+        firma = request.headers.get('X-SIPAP-Signature', '')
+        
+        if not firma:
+            return Response(
+                {"error": "Header X-SIPAP-Signature requerido"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Obtener IP de origen
+        ip_origen = request.META.get('HTTP_X_FORWARDED_FOR', '')
+        if ip_origen:
+            # Si viene de proxy, tomar primera IP
+            ip_origen = ip_origen.split(',')[0].strip()
+        else:
+            ip_origen = request.META.get('REMOTE_ADDR', '')
+
+        # Procesar webhook con SIPAPService
+        from apps.api_integrations.services.sipap_service import SIPAPService
+
+        sipap_service = SIPAPService()
+        resultado = sipap_service.procesar_webhook(
+            payload=data,
+            firma=firma,
+            ip_origen=ip_origen
+        )
+
+        # Loguear webhook en LogsWebhooks
+        from apps.api_integrations.models import LogsWebhooks
+        from django.utils import timezone
+
+        try:
+            LogsWebhooks.objects.create(
+                timestamp=timezone.now(),
+                evento_tipo="sipap_payment_confirmation",
+                payload=json.dumps(data),
+                headers=dict(request.headers),
+                verificacion_ok=1 if resultado.get("success", False) else 0,
+                procesado_ok=1 if resultado.get("success", False) else 0,
+                ip_origen=ip_origen,
+            )
+        except Exception as log_error:  # pragma: no cover
+            # No fallar si falla el logging
+            print(f"Error logging webhook SIPAP: {log_error}")
+
+        # Retornar respuesta
+        if resultado.get("success"):
+            return Response(
+                {
+                    "success": True,
+                    "message": resultado.get("mensaje", "Webhook procesado correctamente"),
+                    "txn_id": resultado.get("txn_id"),
+                    "id_pago_cliente": resultado.get("id_pago_cliente"),
+                    "monto": resultado.get("monto"),
+                    "facturas_aplicadas": resultado.get("facturas_aplicadas", 0)
+                },
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                {
+                    "success": False, 
+                    "error": resultado.get("mensaje", "Error desconocido")
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    except Exception as e:
+        # Error inesperado
+        return Response(
+            {
+                "success": False, 
+                "error": f"Error interno al procesar webhook SIPAP: {str(e)}"
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+

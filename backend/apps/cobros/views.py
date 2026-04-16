@@ -211,3 +211,140 @@ class PagosClientesViewSet(viewsets.ModelViewSet):
             monto_restante -= monto_a_aplicar
         
         return aplicaciones
+    
+    @action(detail=False, methods=['post'])
+    def generar_qr_sipap(self, request):
+        """
+        Genera un QR SIPAP para pago de deuda de cliente.
+        
+        POST /api/v1/cobros/generar_qr_sipap/
+        
+        Body:
+        {
+            "id_cliente": 1,
+            "monto": 14402000,  // Monto a pagar en Guaraníes (opcional, si no se envía usa total deuda)
+            "descripcion": "Pago de 92 facturas"  // Opcional
+        }
+        
+        Response:
+        {
+            "success": true,
+            "qr_data": {
+                "qr_image": "data:image/png;base64,...",
+                "qr_string": "00020126...",
+                "txn_id": "COB-123-1713308400",
+                "expira_en": 900,
+                "expira_at": "2026-04-16T15:30:00Z",
+                "banco": "continental",
+                "ambiente": "sandbox"
+            },
+            "cliente": {
+                "id_cliente": 1,
+                "nombre_completo": "Juan Garcia",
+                "total_deuda": 14402000,
+                "cantidad_facturas": 92
+            }
+        }
+        """
+        # Validar datos
+        id_cliente = request.data.get('id_cliente')
+        monto = request.data.get('monto')
+        descripcion = request.data.get('descripcion', '')
+        
+        if not id_cliente:
+            return Response(
+                {'detail': 'id_cliente es requerido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Verificar que el cliente existe
+        try:
+            cliente = Clientes.objects.get(id_cliente=id_cliente)
+        except Clientes.DoesNotExist:
+            return Response(
+                {'detail': 'Cliente no encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Obtener facturas pendientes
+        facturas_pendientes = Ventas.objects.filter(
+            id_cliente=cliente,
+            saldo_pendiente__gt=0
+        ).order_by('fecha')
+        
+        total_deuda = sum(f.saldo_pendiente for f in facturas_pendientes)
+        
+        if total_deuda <= 0:
+            return Response(
+                {'detail': 'Cliente no tiene deuda pendiente'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Si no se especificó monto, usar total de deuda
+        if not monto:
+            monto = total_deuda
+        else:
+            monto = Decimal(str(monto))
+        
+        # Validar que el monto sea positivo
+        if monto <= 0:
+            return Response(
+                {'detail': 'El monto debe ser mayor a cero'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generar descripción si no se proporcionó
+        if not descripcion:
+            cantidad_facturas = facturas_pendientes.count()
+            if cantidad_facturas == 1:
+                descripcion = f"Pago factura #{facturas_pendientes.first().id_venta}"
+            else:
+                descripcion = f"Pago de {cantidad_facturas} facturas"
+        
+        # Crear registro temporal de cobro (lo completaremos con el webhook)
+        pago_pendiente = PagosClientes.objects.create(
+            id_cliente=cliente,
+            monto_total=monto,
+            estado='Pendiente',
+            observaciones=f'QR SIPAP generado - {descripcion}'
+        )
+        
+        # Generar QR SIPAP
+        try:
+            from apps.api_integrations.services.sipap_service import SIPAPService
+            
+            sipap = SIPAPService()
+            qr_data = sipap.generar_qr_dinamico(
+                id_cobro=pago_pendiente.id_pago_cliente,
+                monto=monto,
+                descripcion=descripcion,
+                id_cliente=id_cliente
+            )
+            
+            # Actualizar referencia del pago con el txn_id
+            pago_pendiente.referencia = qr_data['txn_id']
+            pago_pendiente.save(update_fields=['referencia'])
+            
+            return Response({
+                'success': True,
+                'qr_data': qr_data,
+                'cliente': {
+                    'id_cliente': cliente.id_cliente,
+                    'nombre_completo': cliente.nombre_completo,
+                    'ruc_ci': cliente.ruc_ci,
+                    'total_deuda': float(total_deuda),
+                    'cantidad_facturas': facturas_pendientes.count(),
+                    'monto_a_pagar': float(monto)
+                },
+                'id_pago_pendiente': pago_pendiente.id_pago_cliente
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            # Si falla la generación del QR, eliminar el pago pendiente
+            pago_pendiente.delete()
+            
+            return Response(
+                {'detail': f'Error al generar QR SIPAP: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+

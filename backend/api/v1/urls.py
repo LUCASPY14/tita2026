@@ -28,7 +28,9 @@ from apps.reportes.views import (
     reportes_util_view, reportes_export_view,
 )
 from apps.notificaciones.views import NotificacionesPortalViewSet, NotificacionesSaldoViewSet, AlertasSistemaViewSet, PreferenciasNotificacionViewSet, PlantillasEmailViewSet
-from apps.api_integrations.views import bancard_webhook, webhook_test
+# BANCARD REMOVIDO - Usando SIPAP QR nativo de Paraguay
+# from apps.api_integrations.views import bancard_webhook, webhook_test
+from apps.api_integrations.views import sipap_webhook, webhook_test
 
 # Create a router for ViewSets
 router = DefaultRouter()
@@ -131,7 +133,9 @@ router.register(r'plantillas-email', PlantillasEmailViewSet, basename='plantilla
 urlpatterns = [
     path('', include(router.urls)),
     # Webhook endpoints (no auth required)
-    path('webhooks/bancard/', bancard_webhook, name='bancard-webhook'),
+    # BANCARD REMOVIDO - Usando SIPAP QR
+    # path('webhooks/bancard/', bancard_webhook, name='bancard-webhook'),
+    path('webhooks/sipap/', sipap_webhook, name='sipap-webhook'),
     path('webhooks/test/', webhook_test, name='webhook-test'),
     # Reportes utility endpoints
     path('reportes/utils/validar_cron/', reportes_util_view, name='reportes-validar-cron'),

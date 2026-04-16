@@ -315,13 +315,46 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
 
 # ==============================================================================
-# BANCARD CONFIGURATION (Pasarela de pagos)
+# BANCARD CONFIGURATION (REMOVIDO - Usando SIPAP QR)
+# ==============================================================================
+# BANCARD_AMBIENTE = os.environ.get('BANCARD_AMBIENTE', 'staging')
+# BANCARD_PUBLIC_KEY = os.environ.get('BANCARD_PUBLIC_KEY', '')
+# BANCARD_PRIVATE_KEY = os.environ.get('BANCARD_PRIVATE_KEY', '')
+# BANCARD_IP_WHITELIST = ['190.105.242.0/24', '127.0.0.1']
+
+# ==============================================================================
+# SIPAP CONFIGURATION (Sistema de Pagos QR Nativo de Paraguay - BCP)
 # ==============================================================================
 
-BANCARD_AMBIENTE = os.environ.get('BANCARD_AMBIENTE', 'staging')  # 'staging' o 'production'
-BANCARD_PUBLIC_KEY = os.environ.get('BANCARD_PUBLIC_KEY', '')
-BANCARD_PRIVATE_KEY = os.environ.get('BANCARD_PRIVATE_KEY', '')
-BANCARD_IP_WHITELIST = ['190.105.242.0/24', '127.0.0.1']  # IPs permitidas para webhooks
+SIPAP_AMBIENTE = os.environ.get('SIPAP_AMBIENTE', 'sandbox')  # 'sandbox' o 'produccion'
+SIPAP_MERCHANT_ID = os.environ.get('SIPAP_MERCHANT_ID', '')
+SIPAP_API_KEY = os.environ.get('SIPAP_API_KEY', '')
+SIPAP_API_SECRET = os.environ.get('SIPAP_API_SECRET', '')
+SIPAP_BANCO_AGREGADOR = os.environ.get('SIPAP_BANCO_AGREGADOR', 'continental')  # continental, atlas, itau, etc.
+
+# Clave pública RSA del banco para validar webhooks (PEM format)
+SIPAP_BANCO_PUBLIC_KEY = os.environ.get('SIPAP_BANCO_PUBLIC_KEY', '')
+
+# IPs permitidas para webhooks (actualizar con IPs reales del banco)
+SIPAP_IP_WHITELIST = ['127.0.0.1', '::1']  # Actualizar en producción
+
+# URLs de API según ambiente
+SIPAP_API_URLS = {
+    'sandbox': {
+        'continental': 'https://sandbox-api.bancontinental.com.py/sipap/v1',
+        'atlas': 'https://sandbox-api.atlaspy.com/sipap/v1',
+        'itau': 'https://sandbox-api.itau.com.py/sipap/v1',
+    },
+    'produccion': {
+        'continental': 'https://api.bancontinental.com.py/sipap/v1',
+        'atlas': 'https://api.atlaspy.com/sipap/v1',
+        'itau': 'https://api.itau.com.py/sipap/v1',
+    }
+}
+
+# Configuración de QR
+SIPAP_QR_EXPIRACION_MINUTOS = 15  # QR expira en 15 minutos
+SIPAP_QR_SIZE = 300  # Tamaño del QR en píxeles
 
 # ==============================================================================
 # EMAIL CONFIGURATION

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePortalAuth } from '../../contexts/PortalAuthContext';
 import { portalAuthService, DashboardData } from '../../services/portalAuth.service';
 import toast from 'react-hot-toast';
+import PagoSIPAP from '../../components/cobros/PagoSIPAP';
 
 const formatGs = (val: string | number) =>
   `Gs. ${Number(val).toLocaleString('es-PY')}`;
@@ -19,6 +20,7 @@ const DashboardPortal: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [hijoExpandido, setHijoExpandido] = useState<number | null>(null);
+  const [modalSIPAPVisible, setModalSIPAPVisible] = useState(false);
 
   useEffect(() => {
     portalAuthService
@@ -129,6 +131,34 @@ const DashboardPortal: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Botón Pagar con SIPAP QR */}
+            {Number(data.cuenta_corriente.total_deuda) > 0 && (
+              <div className="mb-4">
+                <button
+                  onClick={() => setModalSIPAPVisible(true)}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <svg 
+                    className="w-5 h-5" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" 
+                    />
+                  </svg>
+                  Pagar con QR SIPAP
+                </button>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  🇵🇾 Paga con tu app bancaria (Zimple, Continental, Atlas, Itaú...)
+                </p>
+              </div>
+            )}
 
             {/* Facturas Recientes */}
             {data.cuenta_corriente.facturas_recientes.length > 0 && (
@@ -263,6 +293,27 @@ const DashboardPortal: React.FC = () => {
           ))
         )}
       </main>
+
+      {/* Modal de Pago SIPAP QR */}
+      {data && data.cliente && (
+        <PagoSIPAP
+          idCliente={data.cliente.id_cliente}
+          visible={modalSIPAPVisible}
+          onClose={() => setModalSIPAPVisible(false)}
+          onPagoConfirmado={(txnId, monto) => {
+            toast.success(`¡Pago confirmado! Monto: ${formatGs(monto)}`);
+            setModalSIPAPVisible(false);
+            // Recargar dashboard para mostrar nuevo saldo
+            portalAuthService
+              .getDashboard()
+              .then(setData)
+              .catch(() => toast.error('Error recargando datos'));
+          }}
+          onError={(error) => {
+            toast.error(`Error: ${error}`);
+          }}
+        />
+      )}
     </div>
   );
 };
