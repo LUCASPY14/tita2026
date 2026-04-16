@@ -53,6 +53,7 @@ const BASE_NAVIGATION: NavigationEntry[] = [
   { name: 'Punto de Venta', path: '/ventas', icon: ShoppingCart, end: true, roles: ['admin', 'gerente', 'cajero'] },
   { name: 'Gestión Ventas', path: '/ventas/gestion', icon: TrendingUp, roles: ['admin', 'gerente', 'cobrador'] },
   { name: 'Caja', path: '/caja', icon: DollarSign, roles: ['admin', 'gerente', 'cajero'] },
+  { name: 'Cobros', path: '/cobros', icon: DollarSign, roles: ['admin', 'gerente', 'cajero'] },
   { name: 'Almuerzos', path: '/almuerzos', icon: Utensils, roles: ['admin', 'gerente', 'cajero'] },
 
   { type: 'section', name: 'Clientes' },

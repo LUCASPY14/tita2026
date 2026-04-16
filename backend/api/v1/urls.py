@@ -15,6 +15,7 @@ from apps.contabilidad.views import (
 )
 from apps.ventas.views import VentasViewSet, DetallesVentaViewSet, PagosVentaViewSet, NotasCreditoClienteViewSet, PromocionesViewSet, CondicionVentaViewSet
 from apps.compras.views import ProveedoresViewSet, ComprasViewSet, DetallesCompraViewSet, PagosProveedoresViewSet, NotasCreditoProveedorViewSet
+from apps.cobros.views import PagosClientesViewSet
 from apps.core.views import TarjetasViewSet, CargasSaldoViewSet, ConsumosTarjetaViewSet, MediosPagoViewSet, ConfiguracionSistemaViewSet
 from apps.almuerzos.views import PlanesAlmuerzoViewSet, TiposAlmuerzoViewSet, SuscripcionesAlmuerzoViewSet, RegistrosConsumoAlmuerzoViewSet, AlergenosViewSet, CuentasAlmuerzoMensualViewSet, PrecioAlmuerzoViewSet
 from apps.usuarios.views import RolesViewSet, EmpleadosViewSet, PerfilesUsuarioViewSet, UsuariosPortalViewSet, PortalAuthViewSet, AuthViewSet, PermisosViewSet, AuditoriaOperacionesViewSet, TwoFactorViewSet, SesionesViewSet, PasswordRecoveryViewSet
@@ -116,6 +117,9 @@ router.register(r'proveedores', ProveedoresViewSet, basename='proveedores')
 router.register(r'compras', ComprasViewSet, basename='compras')
 router.register(r'detalles-compra', DetallesCompraViewSet, basename='detalles-compra')
 router.register(r'pagos-proveedores', PagosProveedoresViewSet, basename='pagos-proveedores')
+
+# Register Cobros ViewSets
+router.register(r'cobros', PagosClientesViewSet, basename='cobros')
 
 # Register Notificaciones ViewSets
 router.register(r'notificaciones-portal', NotificacionesPortalViewSet, basename='notificaciones-portal')

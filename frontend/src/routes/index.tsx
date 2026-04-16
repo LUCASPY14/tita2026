@@ -17,6 +17,7 @@ const Clientes = React.lazy(() => import('../pages/clientes'));
 const Productos = React.lazy(() => import('../pages/productos'));
 const Compras = React.lazy(() => import('../pages/compras'));
 const Proveedores = React.lazy(() => import('../pages/compras/Proveedores'));
+const Cobros = React.lazy(() => import('../pages/cobros/Cobros'));
 const Almuerzos = React.lazy(() => import('../pages/almuerzos'));
 const Reportes = React.lazy(() => import('../pages/Reportes'));
 const Inventario = React.lazy(() => import('../pages/inventario/Inventario'));
@@ -143,6 +144,16 @@ const AppRoutes: React.FC = () => {
                   element={
                     <ProtectedRoute requiredRoles={['admin', 'gerente', 'compras']}>
                       <Compras />
+                    </ProtectedRoute>
+                  } 
+                />
+
+                {/* Módulo de Cobros - Admin, Gerente, Cajero */}
+                <Route 
+                  path="/cobros" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'cajero']}>
+                      <Cobros />
                     </ProtectedRoute>
                   } 
                 />
