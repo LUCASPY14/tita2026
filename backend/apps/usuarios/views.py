@@ -959,6 +959,8 @@ class PortalAuthViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["get"], permission_classes=[IsPortalAuthenticated])
     def dashboard(self, request):
         from apps.core.models import Tarjetas, ConsumosTarjeta
+        from apps.ventas.models import Ventas
+        from decimal import Decimal
 
         proxy: PortalUserProxy = request.user
         cliente = proxy.portal_user.id_cliente
@@ -1000,6 +1002,29 @@ class PortalAuthViewSet(viewsets.ViewSet):
                 }
             )
 
+        # Obtener información de cuenta corriente (facturas pendientes)
+        facturas_pendientes = Ventas.objects.filter(
+            id_cliente=cliente,
+            saldo_pendiente__gt=0
+        ).order_by('-fecha')[:10]  # Últimas 10 facturas pendientes
+        
+        total_deuda = sum(f.saldo_pendiente for f in facturas_pendientes)
+        cantidad_facturas_pendientes = Ventas.objects.filter(
+            id_cliente=cliente,
+            saldo_pendiente__gt=0
+        ).count()
+        
+        facturas_data = [
+            {
+                "id_venta": f.id_venta,
+                "nro_factura_venta": f.nro_factura_venta,
+                "fecha": f.fecha.isoformat() if f.fecha else None,
+                "total_venta": str(f.total_venta),
+                "saldo_pendiente": str(f.saldo_pendiente),
+            }
+            for f in facturas_pendientes
+        ]
+
         return Response(
             {
                 "cliente": {
@@ -1010,6 +1035,11 @@ class PortalAuthViewSet(viewsets.ViewSet):
                     "credito_disponible": str(cliente.credito_disponible),
                 },
                 "hijos": hijos_data,
+                "cuenta_corriente": {
+                    "total_deuda": str(total_deuda),
+                    "cantidad_facturas_pendientes": cantidad_facturas_pendientes,
+                    "facturas_recientes": facturas_data,
+                },
             }
         )
 

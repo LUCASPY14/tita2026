@@ -42,6 +42,20 @@ export interface HijoPortal {
   tarjeta: TarjetaPortal | null;
 }
 
+export interface FacturaPendientePortal {
+  id_venta: number;
+  nro_factura_venta: string;
+  fecha: string;
+  total_venta: string;
+  saldo_pendiente: string;
+}
+
+export interface CuentaCorriente {
+  total_deuda: string;
+  cantidad_facturas_pendientes: number;
+  facturas_recientes: FacturaPendientePortal[];
+}
+
 export interface DashboardData {
   cliente: {
     nombre_completo: string;
@@ -51,6 +65,7 @@ export interface DashboardData {
     credito_disponible: string;
   };
   hijos: HijoPortal[];
+  cuenta_corriente: CuentaCorriente;
 }
 
 // Axios instance exclusiva del portal
