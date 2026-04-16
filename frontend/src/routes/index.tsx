@@ -137,31 +137,31 @@ const AppRoutes: React.FC = () => {
                   }
                 />
                 
-                {/* Módulo de Compras - Admin, Gerente */}
+                {/* Módulo de Compras - Admin, Gerente, Compras */}
                 <Route 
                   path="/compras" 
                   element={
-                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'compras']}>
                       <Compras />
                     </ProtectedRoute>
                   } 
                 />
 
-                {/* Módulo de Proveedores - Admin, Gerente */}
+                {/* Módulo de Proveedores - Admin, Gerente, Compras */}
                 <Route 
                   path="/proveedores" 
                   element={
-                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'compras']}>
                       <Proveedores />
                     </ProtectedRoute>
                   } 
                 />
 
-                {/* Módulo de Inventario - Admin, Gerente */}
+                {/* Módulo de Inventario - Admin, Gerente, Compras */}
                 <Route 
                   path="/inventario" 
                   element={
-                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'compras']}>
                       <Inventario />
                     </ProtectedRoute>
                   } 
