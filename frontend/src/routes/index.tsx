@@ -117,21 +117,21 @@ const AppRoutes: React.FC = () => {
                   } 
                 />
                 
-                {/* Módulo de Productos - Admin, Gerente, Supervisor */}
+                {/* Módulo de Productos - Admin, Gerente, Supervisor, Compras */}
                 <Route 
                   path="/productos" 
                   element={
-                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'supervisor']}>
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'supervisor', 'compras']}>
                       <Productos />
                     </ProtectedRoute>
                   } 
                 />
 
-                {/* Módulo de Categorías - Admin, Gerente, Supervisor */}
+                {/* Módulo de Categorías - Admin, Gerente, Supervisor, Compras */}
                 <Route
                   path="/categorias"
                   element={
-                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'supervisor']}>
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'supervisor', 'compras']}>
                       <Categorias />
                     </ProtectedRoute>
                   }
@@ -167,14 +167,21 @@ const AppRoutes: React.FC = () => {
                   } 
                 />
                 
-                {/* Módulo de Almuerzos - Todos */}
-                <Route path="/almuerzos" element={<Almuerzos />} />
+                {/* Módulo de Almuerzos - Admin, Gerente, Cajero */}
+                <Route 
+                  path="/almuerzos" 
+                  element={
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'cajero']}>
+                      <Almuerzos />
+                    </ProtectedRoute>
+                  } 
+                />
                 
-                {/* Módulo de Reportes - Solo Admin y Gerente */}
+                {/* Módulo de Reportes - Admin, Gerente, Compras */}
                 <Route 
                   path="/reportes" 
                   element={
-                    <ProtectedRoute requiredRoles={['admin', 'gerente']}>
+                    <ProtectedRoute requiredRoles={['admin', 'gerente', 'compras']}>
                       <Reportes />
                     </ProtectedRoute>
                   } 

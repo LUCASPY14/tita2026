@@ -59,9 +59,9 @@ const BASE_NAVIGATION: NavigationEntry[] = [
   { name: 'Clientes', path: '/clientes', icon: Users, roles: ['admin', 'gerente', 'cobrador'] },
 
   { type: 'section', name: 'Inventario' },
-  { name: 'Productos', path: '/productos', icon: Package, roles: ['admin', 'gerente', 'supervisor'] },
-  { name: 'Categorías', path: '/categorias', icon: Tag, roles: ['admin', 'gerente', 'supervisor'] },
-  { name: 'Inventario', path: '/inventario', icon: Warehouse, roles: ['admin', 'gerente', 'supervisor'] },
+  { name: 'Productos', path: '/productos', icon: Package, roles: ['admin', 'gerente', 'supervisor', 'compras'] },
+  { name: 'Categorías', path: '/categorias', icon: Tag, roles: ['admin', 'gerente', 'supervisor', 'compras'] },
+  { name: 'Inventario', path: '/inventario', icon: Warehouse, roles: ['admin', 'gerente', 'supervisor', 'compras'] },
   { name: 'Compras', path: '/compras', icon: FileText, roles: ['admin', 'gerente', 'compras'] },
   { name: 'Proveedores', path: '/proveedores', icon: Truck, roles: ['admin', 'gerente', 'compras'] },
 
@@ -71,7 +71,7 @@ const BASE_NAVIGATION: NavigationEntry[] = [
   { name: 'Timbrado', path: '/timbrado', icon: Stamp, adminOnly: true },
 
   { type: 'section', name: 'Informes' },
-  { name: 'Reportes', path: '/reportes', icon: BarChart3, roles: ['admin', 'gerente'] },
+  { name: 'Reportes', path: '/reportes', icon: BarChart3, roles: ['admin', 'gerente', 'compras'] },
   { name: 'Notificaciones', path: '/notificaciones', icon: Bell },
 
   { type: 'section', name: 'Administración' },
