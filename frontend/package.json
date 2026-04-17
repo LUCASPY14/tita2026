@@ -33,11 +33,13 @@
     "audit:full": "start-server-and-test start http://localhost:3000 \"npm run lighthouse && npm run cypress:pwa\""
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.1",
     "@headlessui/react": "^2.2.9",
     "@playwright/test": "^1.58.2",
     "@types/file-saver": "^2.0.7",
     "@types/jspdf": "^1.3.3",
     "@types/recharts": "^1.8.29",
+    "antd": "^6.3.5",
     "axios": "^1.6.2",
     "clsx": "^2.1.1",
     "date-fns": "^2.30.0",
@@ -112,7 +114,7 @@
     "moduleNameMapper": {
       "@testing-library/dom": "<rootDir>/node_modules/@testing-library/dom/dist/index.js",
       "^.+/services/api$": "<rootDir>/src/services/__mocks__/api.ts",
-      "^\\.\/api$": "<rootDir>/src/services/__mocks__/api.ts"
+      "^\\./api$": "<rootDir>/src/services/__mocks__/api.ts"
     }
   },
   "overrides": {
