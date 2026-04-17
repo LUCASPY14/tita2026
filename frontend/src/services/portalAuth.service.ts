@@ -68,6 +68,44 @@ export interface DashboardData {
   cuenta_corriente: CuentaCorriente;
 }
 
+// Interfaces SIPAP para el portal
+export interface QRSIPAPData {
+  qr_image: string;
+  qr_string: string;
+  txn_id: string;
+  expira_en: number;
+  expira_at: string;
+  banco: string;
+  ambiente: string;
+}
+
+export interface GenerarQRSIPAPRequest {
+  id_cliente: number;
+  monto?: number;
+  descripcion?: string;
+}
+
+export interface GenerarQRSIPAPResponse {
+  success: boolean;
+  qr_data: QRSIPAPData;
+  cliente: {
+    id_cliente: number;
+    nombre_completo: string;
+    ruc_ci: string;
+    total_deuda: number;
+    cantidad_facturas: number;
+    monto_a_pagar: number;
+  };
+  id_pago_pendiente: number;
+}
+
+export interface EstadoPagoSIPAP {
+  txn_id: string;
+  estado: 'pendiente' | 'aprobado' | 'rechazado' | 'expirado';
+  monto: number;
+  fecha_pago?: string;
+}
+
 // Axios instance exclusiva del portal
 const portalApi: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -123,5 +161,74 @@ export const portalAuthService = {
       password_actual,
       password_nuevo,
     });
+  },
+
+  // Métodos SIPAP para el portal
+  generarQRSIPAP: async (request: GenerarQRSIPAPRequest): Promise<GenerarQRSIPAPResponse> => {
+    const response = await portalApi.post('/cobros/generar_qr_sipap/', request);
+    return response.data;
+  },
+
+  consultarEstadoSIPAP: async (txnId: string): Promise<EstadoPagoSIPAP> => {
+    const response = await portalApi.get(`/cobros/estado_pago_sipap/${txnId}/`);
+    return response.data;
+  },
+
+  esperarConfirmacionSIPAP: async (
+    txnId: string,
+    onUpdate?: (estado: EstadoPagoSIPAP) => void,
+    intervalo: number = 3000,
+    maxIntentos: number = 300
+  ): Promise<EstadoPagoSIPAP> => {
+    let intentos = 0;
+
+    while (intentos < maxIntentos) {
+      try {
+        const estado = await portalAuthService.consultarEstadoSIPAP(txnId);
+        onUpdate?.(estado);
+
+        if (estado.estado === 'aprobado') {
+          return estado;
+        }
+
+        if (estado.estado === 'rechazado') {
+          throw new Error('El pago fue rechazado');
+        }
+
+        if (estado.estado === 'expirado') {
+          throw new Error('El QR ha expirado');
+        }
+
+        await new Promise(resolve => setTimeout(resolve, intervalo));
+        intentos++;
+      } catch (error: any) {
+        if (error.message.includes('rechazado') || error.message.includes('expirado')) {
+          throw error;
+        }
+        throw new Error(`Error consultando estado: ${error.message}`);
+      }
+    }
+
+    throw new Error('Tiempo de espera agotado');
+  },
+};
+
+// Utilidades SIPAP
+export const sipapUtils = {
+  formatearMonto(monto: number): string {
+    return `Gs. ${monto.toLocaleString('es-PY')}`;
+  },
+
+  calcularTiempoRestante(expiraAt: string): number {
+    const ahora = new Date().getTime();
+    const expiracion = new Date(expiraAt).getTime();
+    const diferencia = Math.floor((expiracion - ahora) / 1000);
+    return Math.max(0, diferencia);
+  },
+
+  formatearTiempo(segundos: number): string {
+    const minutos = Math.floor(segundos / 60);
+    const segs = segundos % 60;
+    return `${minutos.toString().padStart(2, '0')}:${segs.toString().padStart(2, '0')}`;
   },
 };

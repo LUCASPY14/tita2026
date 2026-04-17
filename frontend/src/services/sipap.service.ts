@@ -3,7 +3,7 @@
  * Sistema de Pagos QR Nativo de Paraguay - Banco Central
  */
 
-import apiClient from './api.service';
+import api from './api';
 
 /**
  * Datos del QR SIPAP generado
@@ -81,7 +81,7 @@ class SIPAPService {
    * ```
    */
   async generarQR(request: GenerarQRSIPAPRequest): Promise<GenerarQRSIPAPResponse> {
-    const response = await apiClient.post('/cobros/generar_qr_sipap/', request);
+    const response = await api.post('/cobros/generar_qr_sipap/', request);
     return response.data;
   }
 
@@ -101,7 +101,7 @@ class SIPAPService {
    * ```
    */
   async consultarEstado(txnId: string): Promise<EstadoPagoSIPAP> {
-    const response = await apiClient.get(`/cobros/estado_pago_sipap/${txnId}/`);
+    const response = await api.get(`/cobros/estado_pago_sipap/${txnId}/`);
     return response.data;
   }
 

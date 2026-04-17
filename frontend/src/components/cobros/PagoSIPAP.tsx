@@ -29,10 +29,12 @@ import {
   ReloadOutlined,
   BankOutlined
 } from '@ant-design/icons';
-import sipapService, { 
+import { 
+  portalAuthService,
+  sipapUtils,
   GenerarQRSIPAPResponse, 
   EstadoPagoSIPAP 
-} from '../../services/sipap.service';
+} from '../../services/portalAuth.service';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -71,7 +73,7 @@ const PagoSIPAP: React.FC<PagoSIPAPProps> = ({
     setErrorMsg('');
 
     try {
-      const response = await sipapService.generarQR({
+      const response = await portalAuthService.generarQRSIPAP({
         id_cliente: idCliente,
         monto,
         descripcion
@@ -97,7 +99,7 @@ const PagoSIPAP: React.FC<PagoSIPAPProps> = ({
    */
   const iniciarPolling = async (txnId: string) => {
     try {
-      await sipapService.esperarConfirmacion(
+      await portalAuthService.esperarConfirmacionSIPAP(
         txnId,
         (estado) => {
           setEstadoPago(estado);
@@ -198,7 +200,7 @@ const PagoSIPAP: React.FC<PagoSIPAPProps> = ({
               <Row gutter={16}>
                 <Col span={12}>
                   <Text strong>Deuda Total:</Text><br />
-                  <Text>{sipapService.formatearMonto(qrData?.cliente.total_deuda || 0)}</Text>
+                  <Text>{sipapUtils.formatearMonto(qrData?.cliente.total_deuda || 0)}</Text>
                 </Col>
                 <Col span={12}>
                   <Text strong>Facturas:</Text><br />
@@ -210,7 +212,7 @@ const PagoSIPAP: React.FC<PagoSIPAPProps> = ({
             {/* Monto a pagar */}
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <Title level={3} style={{ margin: 0, color: '#1890ff' }}>
-                {sipapService.formatearMonto(qrData?.cliente.monto_a_pagar || 0)}
+                {sipapUtils.formatearMonto(qrData?.cliente.monto_a_pagar || 0)}
               </Title>
               <Text type="secondary">Monto a pagar</Text>
             </div>
@@ -245,7 +247,7 @@ const PagoSIPAP: React.FC<PagoSIPAPProps> = ({
                   <ClockCircleOutlined />
                   <span>
                     Expira en: <strong style={{ fontSize: 18, color: tiempoRestante < 60 ? '#ff4d4f' : '#1890ff' }}>
-                      {sipapService.formatearTiempo(tiempoRestante)}
+                      {sipapUtils.formatearTiempo(tiempoRestante)}
                     </strong>
                   </span>
                 </Space>
@@ -285,7 +287,7 @@ const PagoSIPAP: React.FC<PagoSIPAPProps> = ({
               ¡Pago Confirmado!
             </Title>
             <Paragraph>
-              Monto: <strong>{sipapService.formatearMonto(qrData?.cliente.monto_a_pagar || 0)}</strong>
+              Monto: <strong>{sipapUtils.formatearMonto(qrData?.cliente.monto_a_pagar || 0)}</strong>
             </Paragraph>
             <Paragraph type="secondary">
               El pago fue aplicado automáticamente a las facturas pendientes.
