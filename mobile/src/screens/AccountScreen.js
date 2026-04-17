@@ -116,6 +116,32 @@ export default function AccountScreen({ route, navigation }) {
         )}
       </View>
 
+      {/* Botón Cargar Saldo con QR SIPAP */}
+      {tarjeta && (
+        <TouchableOpacity
+          style={styles.cargarSaldoButton}
+          onPress={() => {
+            // Obtener ID de cliente desde AsyncStorage o props
+            navigation.navigate('SIPAPPayment', {
+              idCliente: tarjeta.id_cliente || 1, // Ajustar según tu modelo
+              tipo: 'carga',
+              onExito: () => {
+                Alert.alert('Éxito', 'Saldo cargado correctamente');
+                cargarDatos();
+              }
+            });
+          }}
+        >
+          <View style={styles.buttonContent}>
+            <Text style={styles.buttonIcon}>📱</Text>
+            <View style={styles.buttonTextContainer}>
+              <Text style={styles.buttonTitle}>Cargar Saldo con QR</Text>
+              <Text style={styles.buttonSubtitle}>🇵🇾 Paga desde cualquier banco</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      )}
+
       {/* Resumen */}
       <View style={styles.resumenRow}>
         <View style={[styles.resumenItem, { backgroundColor: '#ECFDF5' }]}>
@@ -199,6 +225,39 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 8,
     fontFamily: 'monospace',
+  },
+  cargarSaldoButton: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    backgroundColor: '#10B981',
+    padding: 16,
+    elevation: 3,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buttonIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  buttonTextContainer: {
+    flex: 1,
+  },
+  buttonTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  buttonSubtitle: {
+    fontSize: 12,
+    color: '#D1FAE5',
   },
   resumenRow: {
     flexDirection: 'row',

@@ -11,6 +11,7 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import RestrictionsScreen from './src/screens/RestrictionsScreen';
 import AddRestrictionScreen from './src/screens/AddRestrictionScreen';
 import AccountScreen from './src/screens/AccountScreen';
+import SIPAPPaymentScreen from './src/screens/SIPAPPaymentScreen';
 import { isAuthenticated } from './src/services/auth.service';
 
 const Stack = createNativeStackNavigator();
@@ -79,6 +80,11 @@ export default function App() {
           name="Account"
           component={AccountScreen}
           options={{ title: 'Mi Cuenta', headerBackTitle: 'Volver' }}
+        />
+        <Stack.Screen
+          name="SIPAPPayment"
+          component={SIPAPPaymentScreen}
+          options={{ title: 'Pago SIPAP QR', headerBackTitle: 'Volver' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
