@@ -21,6 +21,9 @@ const DashboardPortal: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [hijoExpandido, setHijoExpandido] = useState<number | null>(null);
   const [modalSIPAPVisible, setModalSIPAPVisible] = useState(false);
+  const [modalCargaSaldoVisible, setModalCargaSaldoVisible] = useState(false);
+  const [montoCarga, setMontoCarga] = useState<string>('');
+  const [hijoSeleccionado, setHijoSeleccionado] = useState<number | null>(null);
 
   useEffect(() => {
     portalAuthService
@@ -33,6 +36,32 @@ const DashboardPortal: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/portal/login');
+  };
+
+  const handleAbrirCargaSaldo = (idHijo: number) => {
+    setHijoSeleccionado(idHijo);
+    setMontoCarga('');
+    setModalCargaSaldoVisible(true);
+  };
+
+  const handleConfirmarCarga = () => {
+    const monto = parseInt(montoCarga.replace(/\D/g, ''), 10);
+    if (!monto || monto <= 0) {
+      toast.error('Ingresa un monto válido');
+      return;
+    }
+    if (monto < 10000) {
+      toast.error('El monto mínimo es Gs. 10.000');
+      return;
+    }
+    setModalCargaSaldoVisible(false);
+    setModalSIPAPVisible(true);
+  };
+
+  const formatearMontoInput = (value: string) => {
+    const numero = value.replace(/\D/g, '');
+    if (!numero) return '';
+    return parseInt(numero, 10).toLocaleString('es-PY');
   };
 
   if (loading) {
@@ -243,6 +272,34 @@ const DashboardPortal: React.FC = () => {
                 </div>
               </div>
 
+              {/* Botón Cargar Saldo con QR SIPAP */}
+              {hijo.tarjeta && (
+                <div className="px-5 pb-3">
+                  <button
+                    onClick={() => handleAbrirCargaSaldo(hijo.id_hijo)}
+                    className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 text-sm"
+                  >
+                    <svg 
+                      className="w-4 h-4" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" 
+                      />
+                    </svg>
+                    Cargar Saldo con QR
+                  </button>
+                  <p className="text-xs text-gray-500 text-center mt-1.5">
+                    🇵🇾 Carga desde cualquier banco
+                  </p>
+                </div>
+              )}
+
               {/* Movimientos */}
               {hijo.tarjeta && hijo.tarjeta.ultimos_consumos.length > 0 && (
                 <>
@@ -298,11 +355,26 @@ const DashboardPortal: React.FC = () => {
       {data && data.cliente && (
         <PagoSIPAP
           idCliente={data.cliente.id_cliente}
+          monto={montoCarga ? parseInt(montoCarga.replace(/\D/g, ''), 10) : undefined}
+          descripcion={
+            hijoSeleccionado 
+              ? `Carga de saldo - ${data.hijos.find(h => h.id_hijo === hijoSeleccionado)?.nombre_completo || 'Estudiante'}`
+              : undefined
+          }
           visible={modalSIPAPVisible}
-          onClose={() => setModalSIPAPVisible(false)}
-          onPagoConfirmado={(txnId, monto) => {
-            toast.success(`¡Pago confirmado! Monto: ${formatGs(monto)}`);
+          onClose={() => {
             setModalSIPAPVisible(false);
+            setMontoCarga('');
+            setHijoSeleccionado(null);
+          }}
+          onPagoConfirmado={(txnId, monto) => {
+            const mensaje = hijoSeleccionado 
+              ? `¡Carga confirmada! Monto: ${formatGs(monto)}`
+              : `¡Pago confirmado! Monto: ${formatGs(monto)}`;
+            toast.success(mensaje);
+            setModalSIPAPVisible(false);
+            setMontoCarga('');
+            setHijoSeleccionado(null);
             // Recargar dashboard para mostrar nuevo saldo
             portalAuthService
               .getDashboard()
@@ -313,6 +385,101 @@ const DashboardPortal: React.FC = () => {
             toast.error(`Error: ${error}`);
           }}
         />
+      )}
+
+      {/* Modal de Confirmación de Carga */}
+      {modalCargaSaldoVisible && hijoSeleccionado && data && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <svg 
+                  className="w-6 h-6 text-green-600" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" 
+                  />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Cargar Saldo</h3>
+                <p className="text-sm text-gray-600">
+                  {data.hijos.find(h => h.id_hijo === hijoSeleccionado)?.nombre_completo}
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Monto a cargar
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                  Gs.
+                </span>
+                <input
+                  type="text"
+                  value={montoCarga}
+                  onChange={(e) => setMontoCarga(formatearMontoInput(e.target.value))}
+                  placeholder="0"
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg font-semibold"
+                  autoFocus
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Mínimo: Gs. 10.000 • Sugerido: Gs. 50.000 - 100.000
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+              <div className="flex gap-2">
+                <svg 
+                  className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" 
+                  fill="currentColor" 
+                  viewBox="0 0 20 20"
+                >
+                  <path 
+                    fillRule="evenodd" 
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
+                    clipRule="evenodd" 
+                  />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-blue-900">Pago con QR SIPAP</p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Escaneá el QR desde tu app bancaria (Zimple, Continental, Atlas, Itaú, BNF, etc.)
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setModalCargaSaldoVisible(false);
+                  setMontoCarga('');
+                  setHijoSeleccionado(null);
+                }}
+                className="flex-1 px-4 py-2.5 border-2 border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarCarga}
+                disabled={!montoCarga || parseInt(montoCarga.replace(/\D/g, ''), 10) < 10000}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                Generar QR
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
