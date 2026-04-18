@@ -96,10 +96,10 @@ class CategoriasAdmin(admin.ModelAdmin):
         """Badge coloreado de estado"""
         if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">estado</span>'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'estado'
             )
         return format_html(
-            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">INACTIVO</span>'
+            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'INACTIVO'
         )
 
     estado_badge.short_description = "Estado"
@@ -202,10 +202,10 @@ class UnidadesMedidaAdmin(admin.ModelAdmin):
         """Badge de estado"""
         if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">estado</span>'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'estado'
             )
         return format_html(
-            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">INACTIVO</span>'
+            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'INACTIVO'
         )
 
     estado_badge.short_description = "Estado"
@@ -260,7 +260,7 @@ class ProductosAdmin(admin.ModelAdmin):
                 '<code style="background-color: #e9ecef; padding: 3px 8px; border-radius: 3px; font-family: monospace; font-size: 12px;">{}</code>',
                 obj.codigo_barra,
             )
-        return format_html('<span style="color: #6c757d; font-style: italic;">Sin código</span>')
+        return format_html('<span style="color: #6c757d; font-style: italic;">{}</span>', 'Sin código')
 
     codigo_barra_badge.short_description = "Código"
 
@@ -306,20 +306,19 @@ class ProductosAdmin(admin.ModelAdmin):
     def permite_stock_neg(self, obj):
         """Icono para stock negativo permitido"""
         if obj.permite_stock_negativo:
-            return format_html("✅")
-        return format_html("❌")
+            return format_html('{}', '✅')
+        return format_html('{}', '❌')
 
     permite_stock_neg.short_description = "Stock -"
-    permite_stock_neg.boolean = True
 
     def estado_badge(self, obj):
         """Badge de estado"""
         if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">estado</span>'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'estado'
             )
         return format_html(
-            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">INACTIVO</span>'
+            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'INACTIVO'
         )
 
     estado_badge.short_description = "Estado"
@@ -477,10 +476,10 @@ class ListasPreciosAdmin(admin.ModelAdmin):
         """Badge de estado"""
         if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">ACTIVA</span>'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'ACTIVA'
             )
         return format_html(
-            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">INACTIVA</span>'
+            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'INACTIVA'
         )
 
     estado_badge.short_description = "Estado"
@@ -671,7 +670,7 @@ class HistoricoPreciosAdmin(admin.ModelAdmin):
 
     def flecha(self, obj):
         """Flecha indicando cambio"""
-        return format_html("→")
+        return format_html('{}', '→')
 
     flecha.short_description = ""
 
@@ -715,6 +714,6 @@ class HistoricoPreciosAdmin(admin.ModelAdmin):
                 obj.id_empleado.nombre,
                 obj.id_empleado.apellido,
             )
-        return format_html('<span style="color: #6c757d; font-style: italic;">Sistema</span>')
+        return format_html('<span style="color: #6c757d; font-style: italic;">{}</span>', 'Sistema')
 
     empleado_info.short_description = "Registrado por"

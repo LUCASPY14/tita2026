@@ -86,14 +86,16 @@ class TarjetasAdmin(admin.ModelAdmin):
     def saldo_display(self, obj):
         """Saldo actual formateado"""
         color = "#28a745" if obj.saldo_actual >= 0 else "#dc3545"
-        return format_html('<strong style="color:{};">₲{:,.2f}</strong>', color, obj.saldo_actual)
+        saldo_formateado = f"{obj.saldo_actual:,.2f}"
+        return format_html('<strong style="color:{};">₲{}</strong>', color, saldo_formateado)
 
     saldo_display.short_description = "Saldo Actual"
 
     def saldo_disponible_display(self, obj):
         """Saldo disponible considerando límite de crédito"""
         saldo_disp = obj.saldo_disponible
-        return format_html("₲{:,.2f}", saldo_disp)
+        saldo_formateado = f"{saldo_disp:,.2f}"
+        return format_html("₲{}", saldo_formateado)
 
     saldo_disponible_display.short_description = "Saldo Disponible"
 
@@ -118,8 +120,8 @@ class TarjetasAdmin(admin.ModelAdmin):
     def alerta_saldo(self, obj):
         """Indicador de alerta de saldo"""
         if obj.esta_en_alerta:
-            return format_html('<span style="color:#dc3545;">⚠️ Saldo bajo</span>')
-        return format_html('<span style="color:#28a745;">✓ OK</span>')
+            return format_html('<span style="color:#dc3545;">{}</span>', '⚠️ Saldo bajo')
+        return format_html('<span style="color:#28a745;">{}</span>', '✓ OK')
 
     alerta_saldo.short_description = "Alerta"
 
@@ -241,7 +243,7 @@ class TarjetasAutorizacionAdmin(admin.ModelAdmin):
 
         if permisos:
             return format_html("<small>{}</small>", ", ".join(permisos))
-        return format_html('<small style="color:#6c757d;">Sin permisos</small>')
+        return format_html('<small style="color:#6c757d;">{}</small>', 'Sin permisos')
 
     permisos_badge.short_description = "Permisos"
 
@@ -249,10 +251,10 @@ class TarjetasAutorizacionAdmin(admin.ModelAdmin):
         """Estado estado/inactivo"""
         if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">ACTIVA</span>'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'ACTIVA'
             )
         return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">INACTIVA</span>'
+            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'INACTIVA'
         )
 
     estado_badge.short_description = "Estado"
@@ -276,7 +278,7 @@ class TarjetasAutorizacionAdmin(admin.ModelAdmin):
                 obj.fecha_vencimiento.strftime("%d/%m/%Y"),
                 estado,
             )
-        return format_html('<small style="color:#6c757d;">Sin vencimiento</small>')
+        return format_html('<small style="color:#6c757d;">{}</small>', 'Sin vencimiento')
 
     fecha_vencimiento_display.short_description = "Vencimiento"
 
@@ -312,7 +314,8 @@ class CargasSaldoAdmin(admin.ModelAdmin):
 
     def monto_display(self, obj):
         """Monto formateado"""
-        return format_html('<strong style="color:#28a745;">₲{:,.2f}</strong>', obj.monto_cargado)
+        monto_formateado = f"{obj.monto_cargado:,.2f}"
+        return format_html('<strong style="color:#28a745;">₲{}</strong>', monto_formateado)
 
     monto_display.short_description = "Monto"
 
@@ -357,7 +360,7 @@ class CargasSaldoAdmin(admin.ModelAdmin):
             return format_html(
                 "{} {}", obj.id_cliente_origen.nombre, obj.id_cliente_origen.apellido
             )
-        return format_html('<small style="color:#6c757d;">-</small>')
+        return format_html('<small style="color:#6c757d;">{}</small>', '-')
 
     cliente_info.short_description = "Cliente"
 
@@ -393,7 +396,8 @@ class ConsumosTarjetaAdmin(admin.ModelAdmin):
 
     def monto_display(self, obj):
         """Monto consumido formateado"""
-        return format_html('<strong style="color:#dc3545;">-₲{:,.2f}</strong>', obj.monto_consumido)
+        monto_formateado = f"{obj.monto_consumido:,.2f}"
+        return format_html('<strong style="color:#dc3545;">-₲{}</strong>', monto_formateado)
 
     monto_display.short_description = "Monto"
 
@@ -409,8 +413,10 @@ class ConsumosTarjetaAdmin(admin.ModelAdmin):
 
     def saldos_display(self, obj):
         """Saldos anterior y posterior"""
+        saldo_ant_formateado = f"{obj.saldo_anterior:,.2f}"
+        saldo_post_formateado = f"{obj.saldo_posterior:,.2f}"
         return format_html(
-            "<small>₲{:,.2f} → ₲{:,.2f}</small>", obj.saldo_anterior, obj.saldo_posterior
+            "<small>₲{} → ₲{}</small>", saldo_ant_formateado, saldo_post_formateado
         )
 
     saldos_display.short_description = "Saldos"
@@ -429,7 +435,7 @@ class ConsumosTarjetaAdmin(admin.ModelAdmin):
                 obj.id_empleado_registro.nombre,
                 obj.id_empleado_registro.apellido,
             )
-        return format_html('<small style="color:#6c757d;">Sistema</small>')
+        return format_html('<small style="color:#6c757d;">{}</small>', 'Sistema')
 
     empleado_registro.short_description = "Registrado por"
 
@@ -455,7 +461,8 @@ class TransaccionesOnlineAdmin(admin.ModelAdmin):
 
     def monto_display(self, obj):
         """Monto formateado"""
-        return format_html('<strong style="color:#0d6efd;">₲{:,.2f}</strong>', obj.monto)
+        monto_formateado = f"{obj.monto:,.2f}"
+        return format_html('<strong style="color:#0d6efd;">₲{}</strong>', monto_formateado)
 
     monto_display.short_description = "Monto"
 
@@ -549,16 +556,16 @@ class MediosPagoAdmin(admin.ModelAdmin):
     def genera_comision_badge(self, obj):
         """Indicador de comisión"""
         if obj.genera_comision:
-            return format_html('<span style="color:#fd7e14;">✓ Cobra comisión</span>')
-        return format_html('<span style="color:#6c757d;">-</span>')
+            return format_html('<span style="color:#fd7e14;">{}</span>', '✓ Cobra comisión')
+        return format_html('<span style="color:#6c757d;">{}</span>', '-')
 
     genera_comision_badge.short_description = "Comisión"
 
     def requiere_validacion_badge(self, obj):
         """Indicador de validación"""
         if obj.requiere_validacion:
-            return format_html('<span style="color:#0d6efd;">✓ Requiere validación</span>')
-        return format_html('<span style="color:#6c757d;">-</span>')
+            return format_html('<span style="color:#0d6efd;">{}</span>', '✓ Requiere validación')
+        return format_html('<span style="color:#6c757d;">{}</span>', '-')
 
     requiere_validacion_badge.short_description = "Validación"
 
@@ -566,10 +573,10 @@ class MediosPagoAdmin(admin.ModelAdmin):
         """Estado estado/inactivo"""
         if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">estado</span>'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'ACTIVO'
             )
         return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">INACTIVO</span>'
+            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'INACTIVO'
         )
 
     estado_badge.short_description = "Estado"
@@ -660,8 +667,8 @@ class ConfiguracionSistemaAdmin(admin.ModelAdmin):
     def requerido_badge(self, obj):
         """Indicador de requerido"""
         if obj.requerido:
-            return format_html('<span style="color:#dc3545;">✓ Obligatorio</span>')
-        return format_html('<span style="color:#6c757d;">Opcional</span>')
+            return format_html('<span style="color:#dc3545;">{}</span>', '✓ Obligatorio')
+        return format_html('<span style="color:#6c757d;">{}</span>', 'Opcional')
 
     requerido_badge.short_description = "Requerido"
 
@@ -744,8 +751,9 @@ class CacheConfiguracionAdmin(admin.ModelAdmin):
         if total > 0:
             hit_rate = (obj.hits / total) * 100
             color = "#28a745" if hit_rate >= 80 else "#ffc107" if hit_rate >= 60 else "#dc3545"
+            hit_rate_formateado = f"{hit_rate:.1f}"
             return format_html(
-                '<span style="color:{};">{:.1f}% ({}/{})</span>', color, hit_rate, obj.hits, total
+                '<span style="color:{};">{}% ({}/{})</span>', color, hit_rate_formateado, obj.hits, total
             )
         return "-"
 
@@ -755,10 +763,10 @@ class CacheConfiguracionAdmin(admin.ModelAdmin):
         """Estado estado"""
         if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">estado</span>'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'ACTIVO'
             )
         return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">INACTIVO</span>'
+            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'INACTIVO'
         )
 
     activo_badge.short_description = "Estado"
@@ -829,8 +837,9 @@ class LimitesTransaccionAdmin(admin.ModelAdmin):
 
     def monto_limite_display(self, obj):
         """Monto límite formateado"""
+        monto_formateado = f"{obj.monto_maximo_sin_autorizacion:,.2f}"
         return format_html(
-            '<strong style="color:#0d6efd;">₲{:,.2f}</strong>', obj.monto_maximo_sin_autorizacion
+            '<strong style="color:#0d6efd;">₲{}</strong>', monto_formateado
         )
 
     monto_limite_display.short_description = "Monto Límite"
@@ -838,8 +847,8 @@ class LimitesTransaccionAdmin(admin.ModelAdmin):
     def doble_autorizacion_badge(self, obj):
         """Indicador de doble autorización"""
         if obj.requiere_autorizacion_doble:
-            return format_html('<span style="color:#dc3545;">⚠️ Requiere doble autorización</span>')
-        return format_html('<span style="color:#6c757d;">Autorización simple</span>')
+            return format_html('<span style="color:#dc3545;">{}</span>', '⚠️ Requiere doble autorización')
+        return format_html('<span style="color:#6c757d;">{}</span>', 'Autorización simple')
 
     doble_autorizacion_badge.short_description = "Autorización"
 
@@ -847,10 +856,10 @@ class LimitesTransaccionAdmin(admin.ModelAdmin):
         """Estado estado"""
         if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">estado</span>'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'ACTIVO'
             )
         return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">INACTIVO</span>'
+            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'INACTIVO'
         )
 
     activo_badge.short_description = "Estado"
@@ -912,7 +921,8 @@ class RegistroAutorizacionesAdmin(admin.ModelAdmin):
 
     def monto_display(self, obj):
         """Monto formateado"""
-        return format_html('<strong style="color:#dc3545;">₲{:,.2f}</strong>', obj.monto)
+        monto_formateado = f"{obj.monto:,.2f}"
+        return format_html('<strong style="color:#dc3545;">₲{}</strong>', monto_formateado)
 
     monto_display.short_description = "Monto"
 
@@ -946,7 +956,7 @@ class RegistroAutorizacionesAdmin(admin.ModelAdmin):
                 obj.id_empleado_autorizador_2.nombre,
                 obj.id_empleado_autorizador_2.apellido,
             )
-        return format_html('<small style="color:#6c757d;">-</small>')
+        return format_html('<small style="color:#6c757d;">{}</small>', '-')
 
     autorizador2_info.short_description = "Autorizador 2"
 

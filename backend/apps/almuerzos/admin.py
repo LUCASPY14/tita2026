@@ -36,8 +36,9 @@ class PlanesAlmuerzoAdmin(admin.ModelAdmin):
 
     def precio_mensual_badge(self, obj):
         color = "#4CAF50" if obj.precio_mensual < 500000 else "#FF9800"
+        precio_formateado = f"{obj.precio_mensual:,.0f}"
         return format_html(
-            '<strong style="color: {};">₲{:,.0f}</strong>', color, obj.precio_mensual
+            '<strong style="color: {};">₲{}</strong>', color, precio_formateado
         )
 
     precio_mensual_badge.short_description = "Precio Mensual"
@@ -45,10 +46,12 @@ class PlanesAlmuerzoAdmin(admin.ModelAdmin):
     def estado_badge(self, obj):
         if obj.estado:
             return format_html(
-                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">estado</span>'
+                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+                'ACTIVO'
             )
         return format_html(
-            '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">INACTIVO</span>'
+            '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            'INACTIVO'
         )
 
     estado_badge.short_description = "Estado"
@@ -84,8 +87,9 @@ class TiposAlmuerzoAdmin(admin.ModelAdmin):
 
     def precio_unitario_badge(self, obj):
         color = "#2196F3" if obj.precio_unitario < 50000 else "#FF9800"
+        precio_formateado = f"{obj.precio_unitario:,.0f}"
         return format_html(
-            '<strong style="color: {};">₲{:,.0f}</strong>', color, obj.precio_unitario
+            '<strong style="color: {};">₲{}</strong>', color, precio_formateado
         )
 
     precio_unitario_badge.short_description = "Precio"
@@ -93,10 +97,12 @@ class TiposAlmuerzoAdmin(admin.ModelAdmin):
     def estado_badge(self, obj):
         if obj.estado:
             return format_html(
-                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">estado</span>'
+                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+                'ACTIVO'
             )
         return format_html(
-            '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">INACTIVO</span>'
+            '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            'INACTIVO'
         )
 
     estado_badge.short_description = "Estado"
@@ -176,7 +182,7 @@ class RegistrosConsumoAlmuerzoAdmin(admin.ModelAdmin):
 
     def costo_badge(self, obj):
         if not obj.costo_almuerzo:
-            return format_html('<span style="color: #999;">N/A</span>')
+            return format_html('<span style="color: #999;">{}</span>', 'N/A')
         costo_formateado = f"{obj.costo_almuerzo:,.0f}"
         return format_html("<strong>₲{}</strong>", costo_formateado)
 
@@ -263,7 +269,7 @@ class CuentasAlmuerzoMensualAdmin(admin.ModelAdmin):
 
     def monto_total_badge(self, obj):
         if obj.monto_total is None:
-            return format_html('<span style="color: #999;">N/A</span>')
+            return format_html('<span style="color: #999;">{}</span>', 'N/A')
         monto_formateado = f"{obj.monto_total:,.0f}"
         return format_html("<strong>₲{}</strong>", monto_formateado)
 
@@ -271,7 +277,7 @@ class CuentasAlmuerzoMensualAdmin(admin.ModelAdmin):
 
     def monto_pagado_badge(self, obj):
         if obj.monto_pagado is None or obj.monto_total is None:
-            return format_html('<span style="color: #999;">N/A</span>')
+            return format_html('<span style="color: #999;">{}</span>', 'N/A')
         color = "#4CAF50" if obj.monto_pagado >= obj.monto_total else "#FF9800"
         monto_formateado = f"{obj.monto_pagado:,.0f}"
         return format_html('<strong style="color: {};">₲{}</strong>', color, monto_formateado)
@@ -280,7 +286,7 @@ class CuentasAlmuerzoMensualAdmin(admin.ModelAdmin):
 
     def saldo_badge(self, obj):
         if obj.monto_total is None or obj.monto_pagado is None:
-            return format_html('<span style="color: #999;">N/A</span>')
+            return format_html('<span style="color: #999;">{}</span>', 'N/A')
         saldo = obj.monto_total - obj.monto_pagado
         color = "#4CAF50" if saldo <= 0 else "#F44336"
         saldo_formateado = f"{saldo:,.0f}"
@@ -290,7 +296,7 @@ class CuentasAlmuerzoMensualAdmin(admin.ModelAdmin):
 
     def saldo_pendiente_display(self, obj):
         if obj.monto_total is None or obj.monto_pagado is None:
-            return format_html('<span style="color: #999;">N/A</span>')
+            return format_html('<span style="color: #999;">{}</span>', 'N/A')
         saldo = obj.monto_total - obj.monto_pagado
         saldo_formateado = f"{saldo:,.2f}"
         return format_html("<strong>₲{}</strong>", saldo_formateado)
@@ -342,7 +348,7 @@ class PagosAlmuerzoMensualAdmin(admin.ModelAdmin):
 
     def estado_badge(self, obj):
         if not obj.estado:
-            return format_html('<span style="color: #999;">N/A</span>')
+            return format_html('<span style="color: #999;">{}</span>', 'N/A')
         colores = {"Pendiente": "#FF9800", "Confirmado": "#4CAF50", "Rechazado": "#F44336"}
         color = colores.get(obj.estado, "#607D8B")
         return format_html(
@@ -430,10 +436,12 @@ class AlergenosAdmin(admin.ModelAdmin):
     def estado_badge(self, obj):
         if obj.estado:
             return format_html(
-                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">estado</span>'
+                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+                'ACTIVO'
             )
         return format_html(
-            '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">INACTIVO</span>'
+            '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            'INACTIVO'
         )
 
     estado_badge.short_description = "Estado"

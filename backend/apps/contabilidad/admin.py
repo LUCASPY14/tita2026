@@ -115,10 +115,11 @@ class CierresCajaAdmin(admin.ModelAdmin):
                 if obj.diferencia_efectivo < 0
                 else ("green" if obj.diferencia_efectivo > 0 else "gray")
             )
+            diferencia_formateada = f"{obj.diferencia_efectivo:,.0f}"
             return format_html(
-                '<span style="color: {}; font-weight: bold;">₲{:,.0f}</span>',
+                '<span style="color: {}; font-weight: bold;">₲{}</span>',
                 color,
-                obj.diferencia_efectivo,
+                diferencia_formateada,
             )
         return "-"
 
@@ -224,9 +225,11 @@ class TarifasComisionAdmin(admin.ModelAdmin):
     )
 
     def porcentaje_display(self, obj):
+        porcentaje_valor = obj.porcentaje_comision * 100 if obj.porcentaje_comision else 0
+        porcentaje_formateado = f"{porcentaje_valor:.2f}"
         return format_html(
-            "<strong>{:.2f}%</strong>",
-            obj.porcentaje_comision * 100 if obj.porcentaje_comision else 0,
+            "<strong>{}%</strong>",
+            porcentaje_formateado,
         )
 
     porcentaje_display.short_description = "Porcentaje"
@@ -241,8 +244,8 @@ class TarifasComisionAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Activa</span>')
-        return format_html('<span style="color: red;">✗ Inactiva</span>')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ Activa')
+        return format_html('<span style="color: red;">{}</span>', '✗ Inactiva')
 
     activo_badge.short_description = "Estado"
 
@@ -483,8 +486,8 @@ class TimbradosAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
-        return format_html('<span style="color: red;">✗ Inactivo</span>')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ Activo')
+        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"
 
@@ -535,8 +538,8 @@ class PuntosExpedicionAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
-        return format_html('<span style="color: red;">✗ Inactivo</span>')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ Activo')
+        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"
 
@@ -571,8 +574,8 @@ class DatosEmpresaAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Activa</span>')
-        return format_html('<span style="color: red;">✗ Inactiva</span>')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ Activa')
+        return format_html('<span style="color: red;">{}</span>', '✗ Inactiva')
 
     activo_badge.short_description = "Estado"
 
@@ -604,14 +607,17 @@ class ImpuestosAdmin(admin.ModelAdmin):
     )
 
     def porcentaje_display(self, obj):
-        porcentaje_formateado = f"{obj.porcentaje if obj.porcentaje else 0:.2f}"
+        if obj and obj.porcentaje is not None:
+            porcentaje_formateado = f"{obj.porcentaje:.2f}"
+        else:
+            porcentaje_formateado = "0.00"
         return format_html("<strong>{}%</strong>", porcentaje_formateado)
 
     porcentaje_display.short_description = "Porcentaje"
 
     def activo_badge(self, obj):
-        if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
-        return format_html('<span style="color: red;">✗ Inactivo</span>')
+        if obj and obj.estado:
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ Activo')
+        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"

@@ -68,8 +68,8 @@ class NotificacionesPortalAdmin(admin.ModelAdmin):
 
     def leida_badge(self, obj):
         if obj.leida == 1:
-            return format_html('<span style="color: green;">✓ Leída</span>')
-        return format_html('<span style="color: orange;">○ No Leída</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ Leída')
+        return format_html('<span style="color: orange;">{}</span>', '○ No Leída')
 
     leida_badge.short_description = "Estado Lectura"
 
@@ -130,8 +130,8 @@ class NotificacionesSaldoAdmin(admin.ModelAdmin):
 
     def leida_badge(self, obj):
         if obj.leida == 1:
-            return format_html('<span style="color: green;">✓ Leída</span>')
-        return format_html('<span style="color: orange;">○ No Leída</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ Leída')
+        return format_html('<span style="color: orange;">{}</span>', '○ No Leída')
 
     leida_badge.short_description = "Estado"
 
@@ -209,15 +209,15 @@ class PreferenciasNotificacionAdmin(admin.ModelAdmin):
 
     def email_activo_badge(self, obj):
         if obj.email_activo == 1:
-            return format_html('<span style="color: green;">✓ estado</span>')
-        return format_html('<span style="color: gray;">✗ Inactivo</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ estado')
+        return format_html('<span style="color: gray;">{}</span>', '✗ Inactivo')
 
     email_activo_badge.short_description = "Email"
 
     def push_activo_badge(self, obj):
         if obj.push_activo == 1:
-            return format_html('<span style="color: green;">✓ estado</span>')
-        return format_html('<span style="color: gray;">✗ Inactivo</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ estado')
+        return format_html('<span style="color: gray;">{}</span>', '✗ Inactivo')
 
     push_activo_badge.short_description = "Push"
 
@@ -378,8 +378,8 @@ class PlantillasEmailAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green;">✓ estado</span>')
-        return format_html('<span style="color: red;">✗ Inactivo</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ estado')
+        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"
 
@@ -426,8 +426,8 @@ class PlantillasSmsAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green;">✓ estado</span>')
-        return format_html('<span style="color: red;">✗ Inactivo</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ estado')
+        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"
 
@@ -570,8 +570,8 @@ class AlertasAutomaticasAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green;">✓ estado</span>')
-        return format_html('<span style="color: red;">✗ Inactivo</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ estado')
+        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"
 
@@ -604,22 +604,22 @@ class AlertaDestinatariosAdmin(admin.ModelAdmin):
 
     def via_email_badge(self, obj):
         if obj.via_email == 1:
-            return format_html('<span style="color: green;">✓ Email</span>')
-        return format_html('<span style="color: gray;">✗ Email</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ Email')
+        return format_html('<span style="color: gray;">{}</span>', '✗ Email')
 
     via_email_badge.short_description = "Email"
 
     def via_sistema_badge(self, obj):
         if obj.via_sistema == 1:
-            return format_html('<span style="color: green;">✓ Sistema</span>')
-        return format_html('<span style="color: gray;">✗ Sistema</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ Sistema')
+        return format_html('<span style="color: gray;">{}</span>', '✗ Sistema')
 
     via_sistema_badge.short_description = "Sistema"
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green;">✓ estado</span>')
-        return format_html('<span style="color: red;">✗ Inactivo</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ estado')
+        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"
 
@@ -714,8 +714,8 @@ class HistorialAlertasAdmin(admin.ModelAdmin):
 
     def resuelto_badge(self, obj):
         if obj.resuelto == 1:
-            return format_html('<span style="color: green;">✓ Resuelto</span>')
-        return format_html('<span style="color: orange;">○ Pendiente</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ Resuelto')
+        return format_html('<span style="color: orange;">{}</span>', '○ Pendiente')
 
     resuelto_badge.short_description = "Estado"
 
@@ -784,8 +784,8 @@ class AnomaliasDetectadasAdmin(admin.ModelAdmin):
 
     def notificado_badge(self, obj):
         if obj.notificado == 1:
-            return format_html('<span style="color: green;">✓ Notificado</span>')
-        return format_html('<span style="color: orange;">○ Sin Notificar</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ Notificado')
+        return format_html('<span style="color: orange;">{}</span>', '○ Sin Notificar')
 
     notificado_badge.short_description = "Notificado"
 
@@ -828,7 +828,7 @@ class RestriccionesHorariasAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green;">✓ estado</span>')
-        return format_html('<span style="color: red;">✗ Inactivo</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓ estado')
+        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"

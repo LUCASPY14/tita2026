@@ -96,8 +96,8 @@ class ProveedoresApiAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
-        return format_html('<span style="color: red; font-weight: bold;">✗ Inactivo</span>')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ estado')
+        return format_html('<span style="color: red; font-weight: bold;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"
 
@@ -160,16 +160,16 @@ class EndpointsApiAdmin(admin.ModelAdmin):
     def requiere_auth_badge(self, obj):
         if obj.requiere_auth:
             return format_html(
-                '<span style="color: #dc3545; font-weight: bold;">🔒 Requiere Auth</span>'
+                '<span style="color: #dc3545; font-weight: bold;">{}</span>', '🔒 Requiere Auth'
             )
-        return format_html('<span style="color: #6c757d;">🔓 Público</span>')
+        return format_html('<span style="color: #6c757d;">{}</span>', '🔓 Público')
 
     requiere_auth_badge.short_description = "Autenticación"
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
-        return format_html('<span style="color: red; font-weight: bold;">✗ Inactivo</span>')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ estado')
+        return format_html('<span style="color: red; font-weight: bold;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"
 
@@ -268,8 +268,8 @@ class LogsLlamadasApiAdmin(admin.ModelAdmin):
 
     def exitoso_badge(self, obj):
         if obj.exitoso:
-            return format_html('<span style="color: green; font-weight: bold;">✓ OK</span>')
-        return format_html('<span style="color: red; font-weight: bold;">✗ Error</span>')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ OK')
+        return format_html('<span style="color: red; font-weight: bold;">{}</span>', '✗ Error')
 
     exitoso_badge.short_description = "Resultado"
 
@@ -339,29 +339,29 @@ class CredencialesApiAdmin(admin.ModelAdmin):
 
     def tiene_api_key(self, obj):
         if obj.api_key:
-            return format_html('<span style="color: green;">✓</span>')
-        return format_html('<span style="color: #ccc;">—</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓')
+        return format_html('<span style="color: #ccc;">{}</span>', '—')
 
     tiene_api_key.short_description = "API Key"
 
     def tiene_secret(self, obj):
         if obj.secret:
-            return format_html('<span style="color: green;">✓</span>')
-        return format_html('<span style="color: #ccc;">—</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓')
+        return format_html('<span style="color: #ccc;">{}</span>', '—')
 
     tiene_secret.short_description = "Secret"
 
     def tiene_token(self, obj):
         if obj.token:
-            return format_html('<span style="color: green;">✓</span>')
-        return format_html('<span style="color: #ccc;">—</span>')
+            return format_html('<span style="color: green;">{}</span>', '✓')
+        return format_html('<span style="color: #ccc;">{}</span>', '—')
 
     tiene_token.short_description = "Token"
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
-        return format_html('<span style="color: red; font-weight: bold;">✗ Inactivo</span>')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ estado')
+        return format_html('<span style="color: red; font-weight: bold;">{}</span>', '✗ Inactivo')
 
     activo_badge.short_description = "Estado"
 

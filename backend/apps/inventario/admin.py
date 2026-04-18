@@ -44,10 +44,10 @@ class StockUnicoAdmin(admin.ModelAdmin):
     def estado_stock(self, obj):
         if obj.requiere_reposicion:
             return format_html(
-                '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px;">⚠️ BAJO</span>'
+                '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>', '⚠️ BAJO'
             )
         return format_html(
-            '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px;">✓ OK</span>'
+            '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>', '✓ OK'
         )
 
     estado_stock.short_description = "Estado"

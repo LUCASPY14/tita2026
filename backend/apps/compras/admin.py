@@ -49,10 +49,12 @@ class ProveedoresAdmin(admin.ModelAdmin):
         """Badge coloreado para estado estado/inactivo"""
         if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">estado</span>'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+                'ACTIVO'
             )
         return format_html(
-            '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">INACTIVO</span>'
+            '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+            'INACTIVO'
         )
 
     estado_badge.short_description = "Estado"
@@ -98,7 +100,7 @@ class ComprasAdmin(admin.ModelAdmin):
         """Muestra número de factura con formato"""
         if obj.nro_factura:
             return format_html("<strong>{}</strong>", obj.nro_factura)
-        return format_html('<em style="color: #999;">Sin factura</em>')
+        return format_html('<em style="color: #999;">{}</em>', 'Sin factura')
 
     nro_factura_display.short_description = "Nro. Factura"
     
@@ -106,11 +108,13 @@ class ComprasAdmin(admin.ModelAdmin):
         """Badge para tipo de pago"""
         if obj.tipo_pago == "Contado":
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">CONTADO</span>'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+                'CONTADO'
             )
         else:
             return format_html(
-                '<span style="background-color: #ffc107; color: black; padding: 3px 10px; border-radius: 3px; font-weight: bold;">CRÉDITO</span>'
+                '<span style="background-color: #ffc107; color: black; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+                'CRÉDITO'
             )
     
     tipo_pago_badge.short_description = "Tipo Pago"
@@ -119,7 +123,7 @@ class ComprasAdmin(admin.ModelAdmin):
         """Muestra el medio de pago"""
         if obj.id_medio_pago:
             return obj.id_medio_pago.descripcion
-        return format_html('<em style="color: #999;">No especificado</em>')
+        return format_html('<em style="color: #999;">{}</em>', 'No especificado')
     
     medio_pago_display.short_description = "Medio de Pago"
 
@@ -132,7 +136,8 @@ class ComprasAdmin(admin.ModelAdmin):
 
     def monto_display(self, obj):
         """Muestra monto total formateado"""
-        return format_html("₲ {:,.0f}", obj.monto_total)
+        monto_formateado = f"{obj.monto_total:,.0f}"
+        return format_html("₲ {}", monto_formateado)
 
     monto_display.short_description = "Monto Total"
     monto_display.admin_order_field = "monto_total"
@@ -141,12 +146,13 @@ class ComprasAdmin(admin.ModelAdmin):
         """Muestra saldo pendiente formateado"""
         if obj.saldo_pendiente and obj.saldo_pendiente > 0:
             color = "#dc3545" if obj.saldo_pendiente == obj.monto_total else "#fd7e14"
+            saldo_formateado = f"{obj.saldo_pendiente:,.0f}"
             return format_html(
-                '<span style="color: {}; font-weight: bold;">₲ {:,.0f}</span>',
+                '<span style="color: {}; font-weight: bold;">₲ {}</span>',
                 color,
-                obj.saldo_pendiente,
+                saldo_formateado,
             )
-        return format_html('<span style="color: #28a745;">₲ 0</span>')
+        return format_html('<span style="color: #28a745;">{}</span>', '₲ 0')
 
     saldo_display.short_description = "Saldo Pendiente"
     saldo_display.admin_order_field = "saldo_pendiente"
@@ -219,14 +225,16 @@ class DetallesCompraAdmin(admin.ModelAdmin):
 
     def costo_display(self, obj):
         """Muestra costo unitario formateado"""
-        return format_html("₲ {:,.2f}", obj.costo_unitario)
+        costo_formateado = f"{obj.costo_unitario:,.2f}"
+        return format_html("₲ {}", costo_formateado)
 
     costo_display.short_description = "Costo Unit."
     costo_display.admin_order_field = "costo_unitario"
 
     def subtotal_display(self, obj):
         """Muestra subtotal formateado"""
-        return format_html("<strong>₲ {:,.2f}</strong>", obj.subtotal)
+        subtotal_formateado = f"{obj.subtotal:,.2f}"
+        return format_html("<strong>₲ {}</strong>", subtotal_formateado)
 
     subtotal_display.short_description = "Subtotal"
     subtotal_display.admin_order_field = "subtotal"
@@ -234,7 +242,8 @@ class DetallesCompraAdmin(admin.ModelAdmin):
     def iva_display(self, obj):
         """Muestra IVA formateado"""
         if obj.monto_iva:
-            return format_html("₲ {:,.2f}", obj.monto_iva)
+            iva_formateado = f"{obj.monto_iva:,.2f}"
+            return format_html("₲ {}", iva_formateado)
         return "-"
 
     iva_display.short_description = "IVA"
@@ -271,10 +280,11 @@ class PagosProveedoresAdmin(admin.ModelAdmin):
         )["total"] or Decimal("0.00")
 
         if total > 0:
+            total_formateado = f"{total:,.2f}"
             return format_html(
-                '<span style="color: #28a745; font-weight: bold;">₲ {:,.2f}</span>', total
+                '<span style="color: #28a745; font-weight: bold;">₲ {}</span>', total_formateado
             )
-        return format_html('<em style="color: #999;">₲ 0.00</em>')
+        return format_html('<em style="color: #999;">{}</em>', '₲ 0.00')
 
     monto_total_aplicado.short_description = "Monto Aplicado"
 
@@ -305,7 +315,8 @@ class AplicacionPagosComprasAdmin(admin.ModelAdmin):
 
     def monto_display(self, obj):
         """Muestra monto aplicado formateado"""
-        return format_html('<strong style="color: #28a745;">₲ {:,.2f}</strong>', obj.monto_aplicado)
+        monto_formateado = f"{obj.monto_aplicado:,.2f}"
+        return format_html('<strong style="color: #28a745;">₲ {}</strong>', monto_formateado)
 
     monto_display.short_description = "Monto Aplicado"
     monto_display.admin_order_field = "monto_aplicado"
@@ -346,7 +357,7 @@ class NotasCreditoProveedorAdmin(admin.ModelAdmin):
         """Muestra número de factura con formato"""
         if obj.nro_factura_compra:
             return format_html("<code>{}</code>", obj.nro_factura_compra)
-        return format_html('<em style="color: #999;">S/F</em>')
+        return format_html('<em style="color: #999;">{}</em>', 'S/F')
 
     nro_factura_display.short_description = "Nro. Factura"
 
@@ -359,8 +370,9 @@ class NotasCreditoProveedorAdmin(admin.ModelAdmin):
 
     def monto_display(self, obj):
         """Muestra monto total formateado"""
+        monto_formateado = f"{obj.monto_total:,.2f}"
         return format_html(
-            '<span style="color: #dc3545; font-weight: bold;">₲ {:,.2f}</span>', obj.monto_total
+            '<span style="color: #dc3545; font-weight: bold;">₲ {}</span>', monto_formateado
         )
 
     monto_display.short_description = "Monto NC"
@@ -432,14 +444,16 @@ class DetallesNotaCreditoProveedorAdmin(admin.ModelAdmin):
 
     def precio_display(self, obj):
         """Muestra precio unitario formateado"""
-        return format_html("₲ {:,.2f}", obj.precio_unitario)
+        precio_formateado = f"{obj.precio_unitario:,.2f}"
+        return format_html("₲ {}", precio_formateado)
 
     precio_display.short_description = "Precio Unit."
     precio_display.admin_order_field = "precio_unitario"
 
     def subtotal_display(self, obj):
         """Muestra subtotal formateado"""
-        return format_html('<strong style="color: #dc3545;">₲ {:,.2f}</strong>', obj.subtotal)
+        subtotal_formateado = f"{obj.subtotal:,.2f}"
+        return format_html('<strong style="color: #dc3545;">₲ {}</strong>', subtotal_formateado)
 
     subtotal_display.short_description = "Subtotal"
     subtotal_display.admin_order_field = "subtotal"
