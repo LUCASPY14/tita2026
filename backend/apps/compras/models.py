@@ -7,15 +7,17 @@ from django.db import models
 
 
 class Proveedores(models.Model):
+    """Proveedores de productos para la cantina"""
+    
     id_proveedor = models.AutoField(primary_key=True)
-    ruc = models.CharField(unique=True, max_length=20)
-    razon_social = models.CharField(max_length=255)
-    telefono = models.CharField(max_length=20, blank=True, null=True)
-    email = models.CharField(max_length=254, blank=True, null=True)
-    direccion = models.CharField(max_length=255, blank=True, null=True)
-    ciudad = models.CharField(max_length=100, blank=True, null=True)
-    estado = models.BooleanField(default=True)
-    fecha_registro = models.DateTimeField(auto_now_add=True)
+    ruc = models.CharField(unique=True, max_length=20, help_text="RUC del proveedor (único)")
+    razon_social = models.CharField(max_length=255, help_text="Razón social o nombre comercial del proveedor")
+    telefono = models.CharField(max_length=20, blank=True, null=True, help_text="Teléfono de contacto")
+    email = models.CharField(max_length=254, blank=True, null=True, help_text="Email de contacto")
+    direccion = models.CharField(max_length=255, blank=True, null=True, help_text="Dirección física del proveedor")
+    ciudad = models.CharField(max_length=100, blank=True, null=True, help_text="Ciudad donde opera el proveedor")
+    estado = models.BooleanField(default=True, help_text="True=Activo, False=Inactivo")
+    fecha_registro = models.DateTimeField(auto_now_add=True, help_text="Fecha de registro del proveedor en el sistema")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -91,12 +93,14 @@ class Compras(models.Model):
 
 
 class DetallesCompra(models.Model):
+    """Detalles de productos incluidos en una compra"""
+    
     id_detalle = models.BigAutoField(primary_key=True)
-    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    cantidad = models.DecimalField(max_digits=8, decimal_places=3)
-    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
-    monto_iva = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    id_compra = models.ForeignKey("Compras", models.DO_NOTHING, db_column="id_compra")
+    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, help_text="Costo por unidad del producto")
+    cantidad = models.DecimalField(max_digits=8, decimal_places=3, help_text="Cantidad de unidades compradas")
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, help_text="Subtotal (cantidad × costo_unitario)")
+    monto_iva = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Monto de IVA aplicado al producto")
+    id_compra = models.ForeignKey("Compras", models.DO_NOTHING, db_column="id_compra", help_text="Compra a la que pertenece este detalle")
     id_producto = models.ForeignKey(
         "productos.Productos", models.DO_NOTHING, db_column="id_producto"
     )

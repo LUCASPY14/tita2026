@@ -62,21 +62,21 @@ class Productos(models.Model):
 
     id_producto = models.AutoField(primary_key=True)
     codigo_barra = models.CharField(
-        unique=True, max_length=50, blank=True, null=True, help_text="Código de barras del producto"
+        unique=True, max_length=50, blank=True, null=True, help_text="Código de barras del producto para escaneo"
     )
     codigo = models.CharField(
-        unique=True, max_length=50, blank=True, null=True, help_text="Código interno del producto"
+        unique=True, max_length=50, blank=True, null=True, help_text="Código interno del producto para identificación"
     )
-    descripcion = models.CharField(max_length=255, help_text="Nombre/descripción del producto")
+    descripcion = models.CharField(max_length=255, help_text="Nombre descriptivo del producto")
     stock_minimo = models.DecimalField(
-        max_digits=10, decimal_places=3, default=0, help_text="Stock mínimo para alertas"
+        max_digits=10, decimal_places=3, default=0, help_text="Cantidad mínima en stock antes de generar alerta"
     )
     permite_stock_negativo = models.BooleanField(
-        default=False, help_text="1 si permite vender sin stock"
+        default=False, help_text="True si permite vender aún sin stock disponible"
     )
-    estado = models.BooleanField(default=True, help_text="1=estado, 0=Inactivo")
-    es_servicio = models.BooleanField(default=False, help_text="True si es un servicio (no requiere stock físico)")
-    requiere_stock = models.BooleanField(default=True, help_text="False si no gestiona stock")
+    estado = models.BooleanField(default=True, help_text="True=Activo, False=Inactivo")
+    es_servicio = models.BooleanField(default=False, help_text="True si es un servicio (no requiere control de stock físico)")
+    requiere_stock = models.BooleanField(default=True, help_text="True si debe controlar stock, False si es producto sin gestión de inventario")
     id_categoria = models.ForeignKey(
         "Categorias", models.DO_NOTHING, db_column="id_categoria", related_name="productos"
     )

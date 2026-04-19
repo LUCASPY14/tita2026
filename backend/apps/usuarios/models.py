@@ -153,20 +153,22 @@ class EmpleadosManager(models.Manager):
 
 
 class Empleados(models.Model):
+    """Modelo para empleados del sistema que pueden acceder a la aplicación"""
+    
     id_empleado = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-    apellido = models.CharField(max_length=100)
-    usuario = models.CharField(unique=True, max_length=50)
-    contrasena_hash = models.CharField(max_length=256)
-    fecha_ingreso = models.DateTimeField()
-    direccion = models.CharField(max_length=255, blank=True, null=True)
-    ciudad = models.CharField(max_length=100, blank=True, null=True)
-    pais = models.CharField(max_length=100, blank=True, null=True)
-    telefono = models.CharField(max_length=20, blank=True, null=True)
-    email = models.CharField(max_length=254, blank=True, null=True)
-    estado = models.BooleanField(default=True)
-    fecha_baja = models.DateTimeField(blank=True, null=True)
-    id_rol = models.ForeignKey("Roles", models.DO_NOTHING, db_column="id_rol")
+    nombre = models.CharField(max_length=100, help_text="Nombre(s) del empleado")
+    apellido = models.CharField(max_length=100, help_text="Apellido(s) del empleado")
+    usuario = models.CharField(unique=True, max_length=50, help_text="Nombre de usuario para login")
+    contrasena_hash = models.CharField(max_length=256, help_text="Hash de la contraseña")
+    fecha_ingreso = models.DateTimeField(help_text="Fecha de ingreso del empleado a la empresa")
+    direccion = models.CharField(max_length=255, blank=True, null=True, help_text="Dirección de domicilio")
+    ciudad = models.CharField(max_length=100, blank=True, null=True, help_text="Ciudad de residencia")
+    pais = models.CharField(max_length=100, blank=True, null=True, help_text="País de residencia")
+    telefono = models.CharField(max_length=20, blank=True, null=True, help_text="Número de teléfono de contacto")
+    email = models.CharField(max_length=254, blank=True, null=True, help_text="Correo electrónico")
+    estado = models.BooleanField(default=True, help_text="True=Activo, False=Inactivo")
+    fecha_baja = models.DateTimeField(blank=True, null=True, help_text="Fecha en que el empleado dejó la empresa")
+    id_rol = models.ForeignKey("Roles", models.DO_NOTHING, db_column="id_rol", help_text="Rol asignado al empleado")
 
     objects = EmpleadosManager()
 
@@ -196,6 +198,8 @@ class RolesManager(models.Manager):
 
 
 class Roles(models.Model):
+    """Roles del sistema que definen permisos y accesos"""
+    
     objects = RolesManager()
 
     id_rol = models.AutoField(primary_key=True)

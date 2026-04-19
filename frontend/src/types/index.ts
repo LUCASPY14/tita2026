@@ -37,8 +37,6 @@ export interface Cliente {
 export interface TipoCliente {
   id_tipo_cliente: number;
   nombre_tipo: string;
-  nombre?: string;
-  descripcion?: string;
   estado: boolean;
 }
 
@@ -74,6 +72,7 @@ export interface Hijo {
   fecha_nacimiento?: string;
   grado?: string;
   foto_perfil?: string;
+  fecha_foto?: string;
   estado: boolean;
   id_cliente_responsable: number;
   nombre_completo?: string;
@@ -118,11 +117,14 @@ export interface CargaSaldo {
 // Tipos para módulo de POS y Productos
 export interface Producto {
   id_producto: number;
+  codigo?: string;
   codigo_barra?: string;
   descripcion: string;
   stock_minimo: number;
   permite_stock_negativo: boolean;
   estado: boolean;
+  es_servicio: boolean;
+  requiere_stock: boolean;
   id_categoria: number;
   id_impuesto: number;
   id_unidad_medida?: number;
@@ -138,6 +140,7 @@ export interface Producto {
 export interface Categoria {
   id_categoria: number;
   nombre: string;
+  descripcion?: string;
   estado: boolean;
   id_categoria_padre?: number;
   // Propiedades calculadas
@@ -164,6 +167,8 @@ export interface Impuesto {
   id_impuesto: number;
   nombre_impuesto: string;
   porcentaje: number;
+  vigente_desde?: string;
+  vigente_hasta?: string;
   estado: boolean;
 }
 
@@ -200,8 +205,9 @@ export interface ItemCarrito {
 
 export interface MedioPago {
   id_medio_pago: number;
-  nombre: string;
+  descripcion: string;
   genera_comision: boolean;
+  requiere_validacion: boolean;
   estado: boolean;
 }
 
@@ -241,8 +247,13 @@ export interface Venta {
   estado_pago: string;
   estado: string;
   tipo_venta: string;
+  motivo_credito?: string;
+  autorizado_por?: string;
   id_cliente?: number;
   id_hijo?: number;
+  id_empleado_cajero?: number;
+  id_medio_pago?: number;
+  id_caja?: number;
   cliente_nombre?: string;
   hijo_nombre?: string;
   genera_factura_legal?: boolean;
@@ -267,7 +278,27 @@ export interface PagoVenta {
   medio_pago_nombre?: string;
 }
 
-
+/**
+ * Detalle de una venta - items individuales
+ */
+export interface DetalleVenta {
+  id_detalle: number;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  // Campos de IVA y montos fiscales
+  monto_gravada_10: number;
+  monto_gravada_5: number;
+  monto_exenta: number;
+  iva_10: number;
+  iva_5: number;
+  id_venta: number;
+  id_producto: number;
+  // Propiedades relacionadas
+  producto_nombre?: string;
+  producto_descripcion?: string;
+  producto_codigo?: string;
+}
 
 // Tipos para módulo de Compras
 export interface Proveedor {
@@ -378,6 +409,9 @@ export interface PlanAlmuerzo {
   nombre_plan: string;
   descripcion?: string;
   precio_mensual: number;
+  tipo_plan: 'cantidad' | 'sin_limite';
+  cantidad_almuerzos_mes?: number;
+  limite_credito_mensual?: number;
   dias_semana_incluidos: string;
   fecha_creacion?: string;
   estado: boolean;
@@ -424,6 +458,40 @@ export interface RegistroConsumoAlmuerzo {
   // Propiedades relacionadas
   hijo_nombre?: string;
   tipo_almuerzo_nombre?: string;
+}
+
+// Tipos para módulo de Cobros
+export interface PagoCliente {
+  id_pago_cliente: number;
+  id_cliente: number;
+  monto_total: number;
+  fecha_pago: string;
+  id_medio_pago: number;
+  referencia?: string;
+  banco_emisor?: string;
+  observaciones?: string;
+  id_empleado_cajero: number;
+  estado: 'Confirmado' | 'Anulado';
+  id_cierre?: number;
+  // Propiedades calculadas (desde backend)
+  monto_aplicado?: number;
+  monto_pendiente_aplicar?: number;
+  // Propiedades relacionadas
+  cliente_nombre?: string;
+  medio_pago_descripcion?: string;
+  empleado_nombre?: string;
+}
+
+export interface AplicacionPagoCliente {
+  id_aplicacion: number;
+  id_pago_cliente: number;
+  id_venta: number;
+  monto_aplicado: number;
+  fecha_aplicacion: string;
+  // Propiedades relacionadas
+  nro_factura?: string;
+  monto_factura?: number;
+  saldo_factura?: number;
 }
 
 export interface CuentaAlmuerzoMensual {
@@ -1124,4 +1192,92 @@ export interface Ciudad {
 export interface CondicionVenta {
   id_condicion_venta: number;
   nombre: string;
+}
+
+// Tipos para módulo de Usuarios y Roles
+export interface Empleado {
+  id_empleado: number;
+  usuario: string;
+  nombre: string;
+  apellido: string;
+  email?: string;
+  telefono?: string;
+  direccion?: string;
+  ciudad?: string;
+  pais?: string;
+  fecha_ingreso: string;
+  fecha_baja?: string;
+  estado: boolean;
+  activo: boolean;
+  ultimo_acceso?: string;
+  requiere_2fa: boolean;
+  id_rol: number;
+  // Propiedades relacionadas
+  rol_nombre?: string;
+  nombre_completo?: string;
+}
+
+export interface Rol {
+  id_rol: number;
+  nombre_rol: string;
+  descripcion?: string;
+  estado: boolean;
+}
+
+// Tipos para módulo de Inventario
+export interface MovimientoStock {
+  id_movimiento_stock: number;
+  tipo_movimiento: 'Ingreso' | 'Egreso';
+  motivo: string;
+  cantidad: number;
+  stock_resultante: number;
+  fecha_hora: string;
+  observaciones?: string;
+  id_producto: number;
+  id_empleado_autoriza?: number;
+  id_compra?: number;
+  id_venta?: number;
+  id_ajuste?: number;
+  // Propiedades relacionadas
+  producto_descripcion?: string;
+  empleado_nombre?: string;
+}
+
+export interface StockUnico {
+  id_stock: number;
+  cantidad: number;
+  fecha_ultima_actualizacion: string;
+  id_producto: number;
+  // Propiedades calculadas (desde backend)
+  costo_promedio_ponderado?: number;
+  valor_inventario?: number;
+  requiere_reposicion?: boolean;
+  dias_stock_disponible?: number;
+  producto_descripcion?: string;
+  producto_codigo?: string;
+}
+
+// Tipos para módulo de Contabilidad
+export interface CierreCaja {
+  id_cierre: number;
+  fecha_hora_apertura: string;
+  fecha_hora_cierre?: string;
+  monto_inicial?: number;
+  monto_contado_fisico?: number;
+  diferencia_efectivo?: number;
+  estado?: string;
+  id_caja: number;
+  id_empleado: number;
+  // Propiedades relacionadas
+  caja_nombre?: string;
+  empleado_nombre?: string;
+}
+
+export interface DocumentoTributario {
+  id_documento: number;
+  nombre_documento: string;
+  codigo_set: string;
+  requiere_timbrado: boolean;
+  tipo_documento: 'Factura' | 'NotaCredito' | 'NotaDebito' | 'Recibo';
+  estado: boolean;
 }
