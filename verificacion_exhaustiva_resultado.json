@@ -1,0 +1,80 @@
+{
+  "clientes.TiposCliente": [
+    {
+      "tipo": "interface_no_encontrada",
+      "mensaje": "No hay interface TypeScript para TiposCliente"
+    }
+  ],
+  "ventas.DetallesVenta": [
+    {
+      "tipo": "interface_no_encontrada",
+      "mensaje": "No hay interface TypeScript para DetallesVenta"
+    }
+  ],
+  "productos.PreciosPorLista": [
+    {
+      "tipo": "interface_no_encontrada",
+      "mensaje": "No hay interface TypeScript para PreciosPorLista"
+    }
+  ],
+  "compras.DetallesCompra": [
+    {
+      "tipo": "interface_no_encontrada",
+      "mensaje": "No hay interface TypeScript para DetallesCompra"
+    }
+  ],
+  "cobros.Tarjetas": [
+    {
+      "tipo": "modelo_no_encontrado",
+      "mensaje": "No se encontró el modelo Tarjetas en cobros"
+    }
+  ],
+  "cobros.CargasSaldo": [
+    {
+      "tipo": "modelo_no_encontrado",
+      "mensaje": "No se encontró el modelo CargasSaldo en cobros"
+    }
+  ],
+  "cobros.PagosClientes": [
+    {
+      "tipo": "campos_faltantes_serializer",
+      "campos": [
+        "total"
+      ]
+    },
+    {
+      "tipo": "interface_no_encontrada",
+      "mensaje": "No hay interface TypeScript para PagosClientes"
+    }
+  ],
+  "inventario.MovimientosStock": [
+    {
+      "tipo": "interface_no_encontrada",
+      "mensaje": "No hay interface TypeScript para MovimientosStock"
+    }
+  ],
+  "contabilidad.CierresCaja": [
+    {
+      "tipo": "interface_no_encontrada",
+      "mensaje": "No hay interface TypeScript para CierresCaja"
+    }
+  ],
+  "core.MediosPago": [
+    {
+      "tipo": "interface_no_encontrada",
+      "mensaje": "No hay interface TypeScript para MediosPago"
+    }
+  ],
+  "almuerzos.PlanesAlmuerzo": [
+    {
+      "tipo": "interface_no_encontrada",
+      "mensaje": "No hay interface TypeScript para PlanesAlmuerzo"
+    }
+  ],
+  "almuerzos.SuscripcionesAlmuerzo": [
+    {
+      "tipo": "interface_no_encontrada",
+      "mensaje": "No hay interface TypeScript para SuscripcionesAlmuerzo"
+    }
+  ]
+}
