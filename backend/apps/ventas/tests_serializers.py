@@ -210,3 +210,220 @@ class DetallesVentaSerializerTest(TestCase):
 
         serializer = DetallesVentaSerializer(data=data)
         self.assertFalse(serializer.is_valid())
+
+
+class VentasSerializerGetNroDocumentoTest(TestCase):
+    """Tests para get_nro_documento_tributario en VentasSerializer"""
+
+    def setUp(self):
+        """Configuración inicial"""
+        # Crear rol y empleado
+        self.rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
+        self.empleado = Empleados.objects.create(
+            nombre="Juan",
+            apellido="Cajero",
+            usuario="jcajero_doc",
+            email="cajero_doc@test.com",
+            fecha_ingreso=timezone.now().date(),
+            estado=True,
+            id_rol=self.rol,
+        )
+
+        # Crear medio de pago
+        self.medio_pago = MediosPago.objects.create(descripcion="Efectivo Doc", estado=True)
+
+        # Crear tipo de cliente y lista de precios
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Doc", estado=True)
+        self.lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista Doc", estado=True)
+
+        # Crear cliente
+        self.cliente = Clientes.objects.create(
+            nombres="Cliente",
+            apellidos="Documento",
+            ruc_ci="98765432",
+            estado=True,
+            id_lista=self.lista_precio,
+            id_tipo_cliente=self.tipo_cliente,
+        )
+
+    def test_get_nro_documento_tributario_con_documento(self):
+        """Test: Obtener nro_secuencial cuando existe documento tributario"""
+        from apps.contabilidad.models import DocumentosTributarios, Timbrados, PuntosExpedicion
+
+        # Crear venta
+        venta = Ventas.objects.create(
+            tipo_venta="contado",
+            id_cliente=self.cliente,
+            id_empleado_cajero=self.empleado,
+            id_medio_pago=self.medio_pago,
+            fecha=timezone.now(),
+            monto_total=Decimal("10000.00"),
+            estado="completada",
+            estado_pago="pagada",
+        )
+
+        # Crear punto de expedición
+        punto = PuntosExpedicion.objects.create(
+            codigo_establecimiento="001",
+            codigo_punto_expedicion="001",
+            estado=True,
+        )
+
+        # Crear timbrado
+        timbrado = Timbrados.objects.create(
+            nro_timbrado=12345678,
+            tipo_documento="Factura",
+            fecha_inicio=timezone.now().date(),
+            fecha_fin=(timezone.now() + timezone.timedelta(days=365)).date(),
+            nro_inicial=1,
+            nro_final=999999,
+            estado=True,
+            id_punto=punto,
+        )
+
+        # Crear documento tributario asociado
+        doc_tributario = DocumentosTributarios.objects.create(
+            nro_secuencial=123,
+            nro_preimpreso_interno=str(venta.pk),
+            fecha_emision=timezone.now(),
+            monto_total=Decimal("10000.00"),
+            nro_timbrado=timbrado,
+            tipo_documento="Factura",
+            id_cliente=self.cliente,
+            condicion_venta="CONTADO",
+        )
+
+        # Serializar y verificar
+        serializer = VentasSerializer(venta)
+        data = serializer.data
+        
+        self.assertEqual(data["nro_documento_tributario"], 123)
+
+    def test_get_nro_documento_tributario_sin_documento(self):
+        """Test: Retornar None cuando no existe documento tributario"""
+        # Crear venta sin documento tributario
+        venta = Ventas.objects.create(
+            tipo_venta="contado",
+            id_cliente=self.cliente,
+            id_empleado_cajero=self.empleado,
+            id_medio_pago=self.medio_pago,
+            fecha=timezone.now(),
+            monto_total=Decimal("5000.00"),
+            estado="completada",
+            estado_pago="pagada",
+        )
+
+        # Serializar y verificar
+        serializer = VentasSerializer(venta)
+        data = serializer.data
+        
+        self.assertIsNone(data["nro_documento_tributario"])
+
+    def test_get_nro_documento_tributario_con_excepcion(self):
+        """Test: Retornar None cuando ocurre excepción"""
+        from unittest.mock import patch
+
+        # Crear venta
+        venta = Ventas.objects.create(
+            tipo_venta="contado",
+            id_cliente=self.cliente,
+            id_empleado_cajero=self.empleado,
+            id_medio_pago=self.medio_pago,
+            fecha=timezone.now(),
+            monto_total=Decimal("3000.00"),
+            estado="completada",
+            estado_pago="pagada",
+        )
+
+        # Mockear para que lance excepción
+        with patch('apps.contabilidad.models.DocumentosTributarios.objects.filter') as mock_filter:
+            mock_filter.side_effect = Exception("Error de prueba")
+            
+            # Serializar y verificar que retorna None
+            serializer = VentasSerializer(venta)
+            data = serializer.data
+            
+            self.assertIsNone(data["nro_documento_tributario"])
+
+
+class VentasSerializerCreateTest(TestCase):
+    """Tests para método create en VentasSerializer"""
+
+    def setUp(self):
+        """Configuración inicial"""
+        # Crear rol y empleado
+        self.rol = Roles.objects.create(nombre_rol="Cajero Create", estado=True)
+        self.empleado = Empleados.objects.create(
+            nombre="Cajero",
+            apellido="Create",
+            usuario="jcajero_create",
+            email="cajero_create@test.com",
+            fecha_ingreso=timezone.now().date(),
+            estado=True,
+            id_rol=self.rol,
+        )
+
+        # Crear medio de pago
+        self.medio_pago = MediosPago.objects.create(descripcion="Efectivo Create", estado=True)
+
+        # Crear tipo de cliente y lista de precios
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Create", estado=True)
+        self.lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista Create", estado=True)
+
+        # Crear cliente
+        self.cliente = Clientes.objects.create(
+            nombres="Cliente",
+            apellidos="Create Test",
+            ruc_ci="11223344",
+            estado=True,
+            id_lista=self.lista_precio,
+            id_tipo_cliente=self.tipo_cliente,
+        )
+
+    def test_create_con_pagos_data_remueve_campo(self):
+        """Test: create() remueve pagos_data antes de crear venta"""
+        data = {
+            "tipo_venta": "contado",
+            "id_cliente": self.cliente.id_cliente,
+            "id_empleado_cajero": self.empleado.id_empleado,
+            "id_medio_pago": self.medio_pago.id_medio_pago,
+            "monto_total": "8000.00",
+            "estado": "completada",
+            "estado_pago": "pagada",
+            "pagos_data": [
+                {
+                    "id_medio_pago": self.medio_pago.id_medio_pago,
+                    "monto": "8000.00"
+                }
+            ]
+        }
+
+        serializer = VentasSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+        
+        # Crear y verificar que se creó correctamente
+        venta = serializer.save()
+        self.assertIsNotNone(venta.id_venta)
+        self.assertEqual(venta.tipo_venta, "contado")
+        self.assertEqual(venta.monto_total, Decimal("8000.00"))
+
+    def test_create_sin_pagos_data(self):
+        """Test: create() funciona correctamente sin pagos_data"""
+        data = {
+            "tipo_venta": "credito",
+            "id_cliente": self.cliente.id_cliente,
+            "id_empleado_cajero": self.empleado.id_empleado,
+            "id_medio_pago": self.medio_pago.id_medio_pago,
+            "monto_total": "6000.00",
+            "estado": "pendiente",
+            "estado_pago": "pendiente",
+        }
+
+        serializer = VentasSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+        
+        # Crear y verificar
+        venta = serializer.save()
+        self.assertIsNotNone(venta.id_venta)
+        self.assertEqual(venta.tipo_venta, "credito")
+        self.assertEqual(venta.estado_pago, "pendiente")
