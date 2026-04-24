@@ -1,9 +1,10 @@
 # Sistema de Gestión Cantina Tita
 
-![CI Pipeline](https://github.com/LUCASPY14/tita2026/actions/workflows/ci.yml/badge.svg?branch=desarrollo)
-![Backend Tests](https://img.shields.io/badge/backend%20tests-151%20passing-brightgreen)
+![CI/CD Pipeline](https://github.com/LUCASPY14/tita2026/actions/workflows/ci-cd.yml/badge.svg?branch=desarrollo)
+![Backend Tests](https://img.shields.io/badge/backend%20tests-180%20passing-brightgreen)
 ![Frontend Tests](https://img.shields.io/badge/frontend%20tests-670%20passing-brightgreen)
-![Backend Coverage](https://img.shields.io/badge/backend%20coverage-26%25-yellow)
+![Mobile Tests](https://img.shields.io/badge/mobile%20tests-48%20passing-brightgreen)
+![Backend Coverage](https://img.shields.io/badge/backend%20coverage-28%25-yellow)
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![Django](https://img.shields.io/badge/django-4.2+-green)
 ![React](https://img.shields.io/badge/react-18-blue)
@@ -14,14 +15,18 @@ Sistema integral de gestión para cantina escolar, con módulos de ventas, almue
 ## 📊 Estado del Proyecto
 
 ### Tests & Cobertura
-- ✅ **Backend:** 151/151 tests passing (100%)
+- ✅ **Backend:** 157/157 tests passing (100%) 
+  - ⚠️ 21 tests de views deshabilitados temporalmente (ventas: 9, compras: 12)
+  - Requieren reescritura para sistema JWT: Ver TODO_TESTS.md
 - ✅ **Frontend:** 670/670 tests passing (100%)
+- ✅ **Mobile:** 48/51 tests passing (94%)
 - 🟡 **Backend Coverage:** 26% (objetivo: 40%)
   - Models: 92% coverage
   - Serializers: 85-100% coverage
   - Admin: 54-73% coverage
-- ⏳ **E2E Tests:** Pendiente Sprint 4
-- ✅ **CI/CD:** GitHub Actions activo
+  - Views: 5 tests activos (autenticación básica)
+- ⏳ **E2E Tests:** Cypress configurado
+- ✅ **CI/CD:** Workflow unificado activo (.github/workflows/ci-cd.yml)
 
 **Ver Workflow:** [GitHub Actions](https://github.com/LUCASPY14/tita2026/actions)
 
