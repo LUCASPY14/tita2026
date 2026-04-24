@@ -72,6 +72,19 @@ class CompraService:
             producto_id = detalle.get("id_producto")
             cantidad = detalle.get("cantidad")
             precio_unitario = detalle.get("costo_unitario") or detalle.get("precio_unitario")
+            
+            # Convertir a Decimal si vienen como strings
+            if isinstance(cantidad, str):
+                try:
+                    cantidad = Decimal(cantidad)
+                except (ValueError, TypeError):
+                    cantidad = None
+            
+            if isinstance(precio_unitario, str):
+                try:
+                    precio_unitario = Decimal(precio_unitario)
+                except (ValueError, TypeError):
+                    precio_unitario = None
 
             # Validar producto existe
             try:
@@ -289,12 +302,12 @@ class CompraService:
         Retorna lista de compras pendientes de confirmación.
 
         Returns:
-            QuerySet de Compras con estado='Pendiente'
+            QuerySet de Compras con estado_pago='Pendiente'
         """
         return (
-            Compras.objects.filter(estado="Pendiente")
-            .select_related("id_proveedor", "id_empleado_solicita")
-            .order_by("fecha_compra")
+            Compras.objects.filter(estado_pago="Pendiente")
+            .select_related("id_proveedor")
+            .order_by("fecha")
         )
 
     @staticmethod
@@ -315,8 +328,8 @@ class CompraService:
         from django.db.models import Sum
         from .models import AplicacionPagosCompras
 
-        # Total de compras confirmadas
-        compras = Compras.objects.filter(id_proveedor=id_proveedor, estado="Confirmado")
+        # Total de compras (todas las compras del proveedor)
+        compras = Compras.objects.filter(id_proveedor=id_proveedor)
 
         total_compras = compras.aggregate(total=Sum("monto_total"))["total"] or Decimal("0.00")
 
@@ -336,13 +349,13 @@ class CompraService:
             compras_pendientes.append(
                 {
                     "id_compra": compra.id_compra,
-                    "fecha": compra.fecha_compra,
-                    "nro_factura": compra.nro_factura_compra,
+                    "fecha": compra.fecha,
+                    "nro_factura": compra.nro_factura,
                     "monto_total": str(compra.monto_total),
                     "saldo_pendiente": str(compra.saldo_pendiente),
                     "dias_vencimiento": (
-                        (timezone.now().date() - compra.fecha_compra).days
-                        if compra.fecha_compra
+                        (timezone.now().date() - compra.fecha.date()).days
+                        if compra.fecha
                         else None
                     ),
                 }

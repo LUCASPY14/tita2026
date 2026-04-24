@@ -62,7 +62,7 @@ class ProveedoresAdminTest(TestCase):
         """Lines 50-54: estado=True returns green estado badge."""
         obj = _mock_obj(estado=True)
         result = self.admin.estado_badge(obj)
-        self.assertIn("estado", result)
+        self.assertIn("ACTIVO", result)
         self.assertIn("#28a745", result)
 
     def test_estado_badge_inactivo(self):

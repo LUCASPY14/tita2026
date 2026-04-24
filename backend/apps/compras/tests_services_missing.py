@@ -31,9 +31,9 @@ class ObtenerComprasPendientesTest(TestCase):
 
         result = CompraService.obtener_compras_pendientes_confirmacion()
 
-        MockCompras.objects.filter.assert_called_once_with(estado="Pendiente")
-        mock_qs.select_related.assert_called_once_with("id_proveedor", "id_empleado_solicita")
-        mock_qs.order_by.assert_called_once_with("fecha_compra")
+        MockCompras.objects.filter.assert_called_once_with(estado_pago="Pendiente")
+        mock_qs.select_related.assert_called_once_with("id_proveedor")
+        mock_qs.order_by.assert_called_once_with("fecha")
         self.assertEqual(result, mock_qs)
 
 
@@ -123,8 +123,8 @@ class ObtenerCuentaCorrienteProveedorTest(TestCase):
 
         mock_compra = MagicMock()
         mock_compra.id_compra = 2
-        mock_compra.fecha_compra = None   # None → dias_vencimiento = None
-        mock_compra.nro_factura_compra = None
+        mock_compra.fecha = None   # None → dias_vencimiento = None
+        mock_compra.nro_factura = None
         mock_compra.monto_total = Decimal("5000.00")
         mock_compra.saldo_pendiente = Decimal("5000.00")
 
