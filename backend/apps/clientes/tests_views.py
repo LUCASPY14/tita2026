@@ -281,6 +281,28 @@ class ClientesViewSetTest(APITestCase):
         queryset = viewset.get_queryset()
         self.assertEqual(queryset.model, Clientes)
 
+    def test_clientes_cuenta_corriente_action(self):
+        """Debe retornar cuenta corriente del cliente con sus datos"""
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('clientes-cuenta-corriente', kwargs={'pk': self.cliente.pk})
+        
+        response = self.client.get(url)
+        
+        # Verificar respuesta exitosa
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verificar estructura de respuesta
+        self.assertIn('cliente', response.data)
+        self.assertIn('total_debe', response.data)
+        self.assertIn('total_haber', response.data)
+        self.assertIn('saldo_neto', response.data)
+        
+        # Verificar datos del cliente
+        cliente_data = response.data['cliente']
+        self.assertEqual(cliente_data['id'], self.cliente.id_cliente)
+        self.assertEqual(cliente_data['nombre'], f"{self.cliente.nombres} {self.cliente.apellidos}")
+        self.assertEqual(cliente_data['ruc_ci'], self.cliente.ruc_ci)
+
 
 class HijosViewSetTest(APITestCase):
     """Tests para HijosViewSet"""
