@@ -111,7 +111,7 @@ def cerrar_cajas_automatico():
         cerrados = 0
         for turno in turnos_viejos:
             turno.fecha_hora_cierre = timezone.now()
-            turno.estado = "cerrado_automatico"
+            turno.estado = "cerrado"
             # Calcular diferencia con lo que hay registrado
             total_ing = turno.movimientoscaja_set.filter(
                 tipo_movimiento__in=["Ingreso", "VentaEfectivo"]
