@@ -109,16 +109,30 @@ def api_client():
 
 
 @pytest.fixture
-def authenticated_client(db, usuario_portal_test):
-    """Cliente API autenticado con JWT token"""
+def authenticated_client(db, empleado_test):
+    """Cliente API autenticado con JWT token (empleado)"""
+    from django.contrib.auth.models import User
     from rest_framework_simplejwt.tokens import RefreshToken
     
     client = APIClient()
     
-    # Crear token JWT
-    refresh = RefreshToken()
-    refresh['user_id'] = usuario_portal_test.id_usuario_portal
-    refresh['email'] = usuario_portal_test.email
+    # Crear User de Django para el empleado
+    django_user, _ = User.objects.get_or_create(
+        username=empleado_test.usuario,
+        defaults={
+            'first_name': empleado_test.nombre,
+            'last_name': empleado_test.apellido,
+            'email': empleado_test.email or '',
+            'is_active': empleado_test.estado,
+        }
+    )
+    
+    # Generar token JWT
+    refresh = RefreshToken.for_user(django_user)
+    refresh['id_empleado'] = empleado_test.id_empleado
+    refresh['usuario'] = empleado_test.usuario
+    refresh['id_rol'] = empleado_test.id_rol.id_rol if empleado_test.id_rol else None
+    refresh['nombre_completo'] = f'{empleado_test.nombre} {empleado_test.apellido}'
     
     # Autenticar usando el token
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
@@ -127,22 +141,64 @@ def authenticated_client(db, usuario_portal_test):
 
 
 @pytest.fixture
-def admin_client(db, usuario_portal_admin):
-    """Cliente API autenticado como admin"""
+def admin_client(db):
+    """Cliente API autenticado como admin (empleado con rol Admin)"""
+    from django.contrib.auth.models import User
     from rest_framework_simplejwt.tokens import RefreshToken
+    from apps.usuarios.models import Empleados, Roles
+    from django.utils import timezone
     
     client = APIClient()
     
-    # Crear token JWT
-    refresh = RefreshToken()
-    refresh['user_id'] = usuario_portal_admin.id_usuario_portal
-    refresh['email'] = usuario_portal_admin.email
-    refresh['is_admin'] = True
+    # Crear rol Admin
+    rol_admin, _ = Roles.objects.get_or_create(
+        nombre_rol='Admin',
+        defaults={'descripcion': 'Administrador del sistema'}
+    )
+    
+    # Crear empleado admin
+    empleado_admin, _ = Empleados.objects.get_or_create(
+        usuario='admin_test',
+        defaults={
+            'nombre': 'Admin',
+            'apellido': 'Test',
+            'email': 'admin@test.com',
+            'fecha_ingreso': timezone.now(),
+            'estado': True,
+            'id_rol': rol_admin,
+            'contrasena_hash': ''
+        }
+    )
+    
+    # Crear User de Django
+    django_user, _ = User.objects.get_or_create(
+        username=empleado_admin.usuario,
+        defaults={
+            'first_name': empleado_admin.nombre,
+            'last_name': empleado_admin.apellido,
+            'email': empleado_admin.email or '',
+            'is_active': True,
+            'is_staff': True,
+            'is_superuser': True,
+        }
+    )
+    
+    # Generar token JWT
+    refresh = RefreshToken.for_user(django_user)
+    refresh['id_empleado'] = empleado_admin.id_empleado
+    refresh['usuario'] = empleado_admin.usuario
+    refresh['id_rol'] = rol_admin.id_rol
+    refresh['nombre_completo'] = f'{empleado_admin.nombre} {empleado_admin.apellido}'
     
     # Autenticar usando el token
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
     
     return client
+
+
+# ============================================================================
+# FIXTURES DE MODELOS BASE - PRODUCTOS
+# ============================================================================
 
 
 # ============================================================================
@@ -167,7 +223,7 @@ def unidad_medida_test(db):
     from apps.productos.models import UnidadesMedida
     
     return UnidadesMedida.objects.create(
-        nombre_unidad='Unidad',
+        nombre='Unidad',
         abreviatura='Un',
         estado=True
     )
@@ -177,50 +233,88 @@ def unidad_medida_test(db):
 def impuesto_test(db):
     """Impuesto IVA 10%"""
     from apps.contabilidad.models import Impuestos
+    from django.utils import timezone
     
     return Impuestos.objects.create(
         nombre_impuesto='IVA 10%',
         porcentaje=Decimal('10.00'),
+        vigente_desde=timezone.now().date(),
         estado=True
     )
 
 
 @pytest.fixture
 def producto_test(db, categoria_test, unidad_medida_test, impuesto_test):
-    """Producto de prueba"""
-    from apps.productos.models import Productos
+    """Producto de prueba con stock y precio"""
+    from apps.productos.models import Productos, PreciosPorLista, ListasPrecios
+    from apps.inventario.models import StockUnico
     
-    return Productos.objects.create(
+    producto = Productos.objects.create(
         descripcion='Coca Cola 500ml',
         codigo_barra='7891234567890',
-        precio_compra=Decimal('5000.00'),
-        precio_venta=Decimal('8000.00'),
-        stock_actual=Decimal('100.00'),
         stock_minimo=Decimal('10.00'),
         id_categoria=categoria_test,
         id_unidad_medida=unidad_medida_test,
         id_impuesto=impuesto_test,
-        estado=True
+        estado=True,
+        requiere_stock=True
     )
+    
+    # Crear stock
+    StockUnico.objects.create(
+        id_producto=producto,
+        cantidad=Decimal('100.00')
+    )
+    
+    # Crear precio en lista por defecto
+    lista_default, _ = ListasPrecios.objects.get_or_create(
+        nombre_lista='Lista General',
+        defaults={'estado': True}
+    )
+    PreciosPorLista.objects.create(
+        id_producto=producto,
+        id_lista=lista_default,
+        precio_unitario=Decimal('8000.00')
+    )
+    
+    return producto
 
 
 @pytest.fixture
 def producto_sin_stock(db, categoria_test, unidad_medida_test, impuesto_test):
     """Producto sin stock disponible"""
-    from apps.productos.models import Productos
+    from apps.productos.models import Productos, PreciosPorLista, ListasPrecios
+    from apps.inventario.models import StockUnico
     
-    return Productos.objects.create(
+    producto = Productos.objects.create(
         descripcion='Producto Agotado',
         codigo_barra='7891111111111',
-        precio_compra=Decimal('3000.00'),
-        precio_venta=Decimal('5000.00'),
-        stock_actual=Decimal('0.00'),
         stock_minimo=Decimal('5.00'),
         id_categoria=categoria_test,
         id_unidad_medida=unidad_medida_test,
         id_impuesto=impuesto_test,
-        estado=True
+        estado=True,
+        requiere_stock=True
     )
+    
+    # Crear stock en cero
+    StockUnico.objects.create(
+        id_producto=producto,
+        cantidad=Decimal('0.00')
+    )
+    
+    # Crear precio
+    lista_default, _ = ListasPrecios.objects.get_or_create(
+        nombre_lista='Lista General',
+        defaults={'estado': True}
+    )
+    PreciosPorLista.objects.create(
+        id_producto=producto,
+        id_lista=lista_default,
+        precio_unitario=Decimal('5000.00')
+    )
+    
+    return producto
 
 
 # ============================================================================
@@ -236,7 +330,7 @@ def medio_pago_efectivo(db):
         descripcion='Efectivo',
         estado=True,
         genera_comision=False,
-        requiere_cuenta=False
+        requiere_validacion=False
     )
 
 
@@ -249,7 +343,7 @@ def medio_pago_tarjeta(db):
         descripcion='Tarjeta Débito',
         estado=True,
         genera_comision=True,
-        requiere_cuenta=True
+        requiere_validacion=True
     )
 
 
@@ -271,7 +365,7 @@ def empleado_test(db):
         contrasena_hash='hashed_password',
         fecha_ingreso=timezone.now(),
         email='empleado@test.com',
-        estado='Activo',
+        estado=True,  # Boolean, not string
         id_rol=rol
     )
 
@@ -333,4 +427,3 @@ def django_admin_user(db):
         password='adminpass123',
         email='admin@test.com'
     )
-

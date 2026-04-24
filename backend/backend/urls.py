@@ -19,13 +19,57 @@ schema_view = get_schema_view(
     openapi.Info(
         title="Cantina Tita API",
         default_version='v1',
-        description="API REST para el sistema de gestión de cantina escolar",
+        description="""
+        ## Sistema de Gestión de Cantina Escolar
+        
+        API REST completa para la gestión de cantina escolar con los siguientes módulos:
+        
+        ### 📦 Módulos Disponibles
+        - **Ventas:** Gestión de ventas y transacciones
+        - **Compras:** Gestión de compras a proveedores
+        - **Inventario:** Control de stock y movimientos
+        - **Almuerzos:** Planes y suscripciones de almuerzos
+        - **Clientes:** Gestión de clientes e hijos
+        - **Productos:** Catálogo de productos
+        - **Usuarios:** Gestión de empleados y roles
+        - **Reportes:** Generación de reportes y estadísticas
+        - **Notificaciones:** Sistema de notificaciones
+        - **Contabilidad:** Cajas, cierres y documentos tributarios
+        
+        ### 🔐 Autenticación
+        Esta API usa JWT (JSON Web Tokens) para autenticación. 
+        
+        **Obtener token:**
+        ```
+        POST /api/auth/login/
+        {
+            "username": "tu_usuario",
+            "password": "tu_contraseña"
+        }
+        ```
+        
+        **Usar token:** Incluir en headers: `Authorization: Bearer {token}`
+        
+        ### 📚 Documentación
+        - **Swagger UI:** [/swagger/](/swagger/)
+        - **ReDoc:** [/redoc/](/redoc/)
+        - **OpenAPI Schema:** [/swagger.json](/swagger.json)
+        
+        ### 🔗 Links Útiles
+        - [GitHub Repository](https://github.com/LUCASPY14/tita2026)
+        - [Documentación Completa](https://github.com/LUCASPY14/tita2026/tree/main/docs)
+        """,
         terms_of_service="https://www.cantinatita.com/terms/",
-        contact=openapi.Contact(email="lucas@cantinatita.com"),
-        license=openapi.License(name="Proprietary"),
+        contact=openapi.Contact(
+            name="Equipo de Desarrollo",
+            email="lucas@cantinatita.com",
+            url="https://github.com/LUCASPY14/tita2026"
+        ),
+        license=openapi.License(name="Proprietary License"),
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
+    authentication_classes=[],
 )
 
 def api_root(request):

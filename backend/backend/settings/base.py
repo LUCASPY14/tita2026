@@ -244,44 +244,137 @@ SWAGGER_SETTINGS = {
     'DEFAULT_MODEL_RENDERING': 'example',
 }
 
-# Logging
+# ==============================================================================
+# LOGGING CONFIGURATION
+# ==============================================================================
+
+# Crear directorio de logs si no existe
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'format': '[{levelname}] {asctime} | {name} | {module}:{funcName}:{lineno} | {message}',
             'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
         },
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '[{levelname}] {asctime} | {message}',
             'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'format': '%(asctime)s %(name)s %(levelname)s %(message)s',
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
         },
     },
     'handlers': {
         'console': {
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'filters': ['require_debug_true'],
+        },
+        'file_general': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'cantina.log',
+            'maxBytes': 1024 * 1024 * 15,  # 15 MB
+            'backupCount': 10,
             'formatter': 'verbose',
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
+        'file_errors': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'errors.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'file_security': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'security.log',
+            'maxBytes': 1024 * 1024 * 5,  # 5 MB
+            'backupCount': 20,
+            'formatter': 'verbose',
+        },
+        'file_performance': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'performance.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'filters': ['require_debug_false'],
             'formatter': 'verbose',
         },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['console', 'file_general'],
         'level': 'INFO',
     },
     'loggers': {
+        # Django core
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'file_general'],
             'level': 'INFO',
             'propagate': False,
         },
         'django.request': {
-            'handlers': ['console', 'file'],
+            'handlers': ['file_errors', 'mail_admins'],
             'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['file_security', 'mail_admins'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['file_performance'],
+            'level': 'WARNING',  # Cambiar a DEBUG para ver queries SQL
+            'propagate': False,
+        },
+        # Aplicaciones del proyecto
+        'apps': {
+            'handlers': ['console', 'file_general', 'file_errors'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'apps.ventas': {
+            'handlers': ['console', 'file_general'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.compras': {
+            'handlers': ['console', 'file_general'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.inventario': {
+            'handlers': ['console', 'file_general'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.notificaciones': {
+            'handlers': ['console', 'file_general'],
+            'level': 'INFO',
             'propagate': False,
         },
     },

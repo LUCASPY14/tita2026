@@ -91,7 +91,17 @@ test_*.py
 
 # Archivos de credenciales locales
 CREDENCIALES_LOGIN.txt
+CREDENCIALES_PORTAL.md
 *.credentials.txt
+*.credentials.md
+**/credenciales*.txt
+**/credenciales*.md
+
+# Archivos de debug y logs temporales
+temp_logs/
+*.txt
+!requirements.txt
+!README*.txt
 
 # Docker
 .env.docker
