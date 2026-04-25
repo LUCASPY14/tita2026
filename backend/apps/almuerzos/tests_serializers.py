@@ -312,3 +312,164 @@ class CuentasAlmuerzoMensualSerializerTest(TestCase):
         ):
             serializer = CuentasAlmuerzoMensualSerializer(cuenta)
             self.assertIsNone(serializer.data["hijo_nombre"])
+
+
+class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
+    """Tests para RegistrosConsumoAlmuerzoSerializer - método get_nro_registro_hoy"""
+
+    def setUp(self):
+        """Setup inicial para tests de RegistrosConsumoAlmuerzo"""
+        self.lista = ListasPrecios.objects.create(
+            nombre_lista="Lista Registro", moneda="PYG", estado=True
+        )
+        self.tipo_cliente = TiposCliente.objects.create(
+            nombre_tipo="Padre Registro", estado=True
+        )
+        self.cliente = Clientes.objects.create(
+            nombres="Registro",
+            apellidos="Padre",
+            ruc_ci="9999999-9",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cliente,
+        )
+        self.hijo = Hijos.objects.create(
+            nombre="RegistroHijo",
+            apellido="Test",
+            fecha_nacimiento="2015-03-15",
+            grado="Segundo",
+            estado=True,
+            id_cliente_responsable=self.cliente,
+        )
+        self.tipo_almuerzo = TiposAlmuerzo.objects.create(
+            nombre="Almuerzo Registro",
+            descripcion="Test",
+            precio_unitario=Decimal("20000.00"),
+            fecha_creacion=timezone.now(),
+            estado=True,
+        )
+
+    def test_get_nro_registro_hoy_primer_registro(self):
+        """get_nro_registro_hoy debe retornar 1 para el primer registro del día"""
+        from apps.almuerzos.models import RegistrosConsumoAlmuerzo
+        from apps.almuerzos.serializers import RegistrosConsumoAlmuerzoSerializer
+        
+        hoy = timezone.now().date()
+        registro = RegistrosConsumoAlmuerzo.objects.create(
+            fecha_consumo=hoy,
+            hora_registro=timezone.now().time(),
+            costo_almuerzo=Decimal("20000.00"),
+            ya_cobrado=False,
+            estado="Registrado",
+            marcado_en_cuenta=False,
+            id_hijo=self.hijo,
+            id_tipo_almuerzo=self.tipo_almuerzo,
+        )
+        
+        serializer = RegistrosConsumoAlmuerzoSerializer(registro)
+        self.assertEqual(serializer.data["nro_registro_hoy"], 1)
+
+    def test_get_nro_registro_hoy_segundo_registro(self):
+        """get_nro_registro_hoy debe retornar 2 para el segundo registro del día"""
+        from apps.almuerzos.models import RegistrosConsumoAlmuerzo
+        from apps.almuerzos.serializers import RegistrosConsumoAlmuerzoSerializer
+        
+        hoy = timezone.now().date()
+        
+        # Crear primer registro
+        registro1 = RegistrosConsumoAlmuerzo.objects.create(
+            fecha_consumo=hoy,
+            hora_registro=timezone.now().time(),
+            costo_almuerzo=Decimal("20000.00"),
+            ya_cobrado=False,
+            estado="Registrado",
+            marcado_en_cuenta=False,
+            id_hijo=self.hijo,
+            id_tipo_almuerzo=self.tipo_almuerzo,
+        )
+        
+        # Crear segundo registro
+        registro2 = RegistrosConsumoAlmuerzo.objects.create(
+            fecha_consumo=hoy,
+            hora_registro=timezone.now().time(),
+            costo_almuerzo=Decimal("20000.00"),
+            ya_cobrado=False,
+            estado="Confirmado",
+            marcado_en_cuenta=False,
+            id_hijo=self.hijo,
+            id_tipo_almuerzo=self.tipo_almuerzo,
+        )
+        
+        serializer = RegistrosConsumoAlmuerzoSerializer(registro2)
+        self.assertEqual(serializer.data["nro_registro_hoy"], 2)
+
+    def test_get_nro_registro_hoy_ignora_otros_dias(self):
+        """get_nro_registro_hoy no debe contar registros de otros días"""
+        from apps.almuerzos.models import RegistrosConsumoAlmuerzo
+        from apps.almuerzos.serializers import RegistrosConsumoAlmuerzoSerializer
+        
+        hoy = timezone.now().date()
+        ayer = hoy - timezone.timedelta(days=1)
+        
+        # Crear registro de ayer
+        RegistrosConsumoAlmuerzo.objects.create(
+            fecha_consumo=ayer,
+            hora_registro=timezone.now().time(),
+            costo_almuerzo=Decimal("20000.00"),
+            ya_cobrado=False,
+            estado="Registrado",
+            marcado_en_cuenta=False,
+            id_hijo=self.hijo,
+            id_tipo_almuerzo=self.tipo_almuerzo,
+        )
+        
+        # Crear registro de hoy
+        registro_hoy = RegistrosConsumoAlmuerzo.objects.create(
+            fecha_consumo=hoy,
+            hora_registro=timezone.now().time(),
+            costo_almuerzo=Decimal("20000.00"),
+            ya_cobrado=False,
+            estado="Registrado",
+            marcado_en_cuenta=False,
+            id_hijo=self.hijo,
+            id_tipo_almuerzo=self.tipo_almuerzo,
+        )
+        
+        serializer = RegistrosConsumoAlmuerzoSerializer(registro_hoy)
+        # Debe ser 1 porque el de ayer no cuenta
+        self.assertEqual(serializer.data["nro_registro_hoy"], 1)
+
+    def test_get_nro_registro_hoy_solo_estados_validos(self):
+        """get_nro_registro_hoy solo debe contar estados 'Registrado' y 'Confirmado'"""
+        from apps.almuerzos.models import RegistrosConsumoAlmuerzo
+        from apps.almuerzos.serializers import RegistrosConsumoAlmuerzoSerializer
+        
+        hoy = timezone.now().date()
+        
+        # Crear registros con estados no válidos (cancelado, otros)
+        RegistrosConsumoAlmuerzo.objects.create(
+            fecha_consumo=hoy,
+            hora_registro=timezone.now().time(),
+            costo_almuerzo=Decimal("20000.00"),
+            ya_cobrado=False,
+            estado="Cancelado",  # No debe contarse
+            marcado_en_cuenta=False,
+            id_hijo=self.hijo,
+            id_tipo_almuerzo=self.tipo_almuerzo,
+        )
+        
+        # Crear registro con estado válido
+        registro_valido = RegistrosConsumoAlmuerzo.objects.create(
+            fecha_consumo=hoy,
+            hora_registro=timezone.now().time(),
+            costo_almuerzo=Decimal("20000.00"),
+            ya_cobrado=False,
+            estado="Registrado",  # Este sí cuenta
+            marcado_en_cuenta=False,
+            id_hijo=self.hijo,
+            id_tipo_almuerzo=self.tipo_almuerzo,
+        )
+        
+        serializer = RegistrosConsumoAlmuerzoSerializer(registro_valido)
+        # Debe ser 1 porque el cancelado no cuenta
+        self.assertEqual(serializer.data["nro_registro_hoy"], 1)
