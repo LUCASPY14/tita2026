@@ -10,6 +10,7 @@ from .models import (
     Ventas, DetallesVenta, PagosVenta, AplicacionPagosVentas,
     NotasCreditoCliente, DetallesNotaCredito,
     Promociones, CategoriasPromocion, ProductosPromocion, PromocionesAplicadas,
+    CondicionVenta,
 )
 from apps.clientes.models import Clientes, TiposCliente
 from apps.productos.models import ListasPrecios, Productos, Categorias
@@ -401,3 +402,8 @@ class VentasModelsAdicionalesTest(TestCase):
             id_venta=self.venta,
         )
         self.assertIn('#', str(pa))
+    
+    def test_str_condicion_venta(self):
+        """Test para __str__ de CondicionVenta - Cubrir línea 511"""
+        condicion = CondicionVenta.objects.create(nombre='Contado')
+        self.assertEqual(str(condicion), 'Contado')
