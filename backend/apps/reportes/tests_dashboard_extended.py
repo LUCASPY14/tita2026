@@ -317,3 +317,57 @@ class DashboardGuardarKpiTest(TestCase):
                     valor=Decimal("50.00"),
                 )
             self.assertIn("update_or_create failed", str(ctx.exception))
+
+
+class DashboardKpisWithTimezoneTest(TestCase):
+    """Tests for calcular_kpis_principales with USE_TZ=True (lines 81-83)."""
+
+    @patch("apps.reportes.services.dashboard_service.Ventas.objects.filter")
+    @patch("apps.reportes.services.dashboard_service.CargasSaldo.objects.filter")
+    @patch("apps.reportes.services.dashboard_service.Tarjetas.objects.filter")
+    @patch("apps.reportes.services.dashboard_service.StockUnico.objects.filter")
+    def test_calcular_kpis_con_use_tz_true(
+        self, mock_stock, mock_tarjetas, mock_recargas, mock_ventas
+    ):
+        """
+        Test calcular_kpis_principales with USE_TZ=True.
+        This covers lines 81-83 where timezone-aware datetimes are created.
+        """
+        from django.test import override_settings
+
+        # Mock aggregate responses
+        mock_agg_ventas = MagicMock()
+        mock_agg_ventas.aggregate.return_value = {
+            "total_ventas": Decimal("1000.00"),
+            "cantidad_ventas": 5,
+            "ticket_promedio": Decimal("200.00"),
+        }
+        mock_ventas.return_value = mock_agg_ventas
+
+        mock_agg_recargas = MagicMock()
+        mock_agg_recargas.aggregate.return_value = {
+            "total_recargas": Decimal("500.00"),
+            "cantidad_recargas": 3,
+        }
+        mock_recargas.return_value = mock_agg_recargas
+
+        mock_tarjetas_active = MagicMock()
+        mock_tarjetas_active.count.return_value = 10
+        mock_tarjetas_active.aggregate.return_value = {"saldo_total": Decimal("300.00")}
+        mock_tarjetas.return_value = mock_tarjetas_active
+
+        mock_stock_bajo = MagicMock()
+        mock_stock_bajo.count.return_value = 2
+        mock_stock.return_value = mock_stock_bajo
+
+        with override_settings(USE_TZ=True):
+            kpis = DashboardService.calcular_kpis_principales(fecha=date.today())
+
+        # Verify results
+        self.assertIsNotNone(kpis)
+        self.assertIn("kpis", kpis)
+        self.assertEqual(kpis["kpis"]["ventas_del_dia"], Decimal("1000.00"))
+        self.assertEqual(kpis["kpis"]["cantidad_ventas"], 5)
+        self.assertEqual(kpis["kpis"]["recargas_del_dia"], Decimal("500.00"))
+        self.assertEqual(kpis["kpis"]["tarjetas_activas"], 10)
+        self.assertEqual(kpis["kpis"]["productos_bajo_stock"], 2)
