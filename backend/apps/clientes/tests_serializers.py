@@ -139,6 +139,30 @@ class ClientesSerializerTest(TestCase):
         self.assertEqual(cliente.nombres, "Ana")
         self.assertEqual(cliente.limite_credito, Decimal("4000.00"))
 
+    def test_crear_cliente_sin_lista_asigna_general(self):
+        """Test: Crear cliente sin id_lista asigna lista 'General' por defecto"""
+        data = {
+            "nombres": "Pedro",
+            "apellidos": "González",
+            "ruc_ci": "3333333333",
+            "direccion": "Avenida Principal 456",
+            "telefono": "0987654321",
+            "limite_credito": "5000.00",
+            "estado": True,
+            "id_tipo_cliente": self.tipo_cliente.id_tipo_cliente,
+            # NO incluye id_lista → debe asignar 'General' automáticamente
+        }
+
+        serializer = ClientesSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        cliente = serializer.save()
+        self.assertIsNotNone(cliente.id_cliente)
+        self.assertIsNotNone(cliente.id_lista)
+        self.assertEqual(cliente.id_lista.nombre_lista, "General")
+        self.assertEqual(cliente.id_lista.moneda, "PYG")
+        self.assertTrue(cliente.id_lista.estado)
+
 
 class HijosSerializerTest(TestCase):
     """Tests para HijosSerializer"""
