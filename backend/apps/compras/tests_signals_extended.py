@@ -240,3 +240,25 @@ class AplicarNotaCreditoSignalTest(TransactionTestCase):
         compra.refresh_from_db()
         self.assertEqual(compra.saldo_pendiente, Decimal("0.00"))
         self.assertEqual(compra.estado_pago, "Pagada")
+
+    def test_nota_deja_saldo_igual_monto_total(self):
+        """Branch 84->87: nota deja saldo >= monto_total (elif falla, no cambia estado)"""
+        # Create compra with saldo_pendiente = monto_total (full pending)
+        compra = make_compra(self.proveedor, monto_total=Decimal("100000.00"), saldo=Decimal("100000.00"))
+        
+        # Apply nota of 0 to keep saldo = monto_total
+        NotasCreditoProveedor.objects.create(
+            fecha=timezone.now(),
+            fecha_creacion=timezone.now(),
+            monto_total=Decimal("0.00"),  # no reduction
+            estado="Aplicada",
+            id_compra_original=compra,
+            id_proveedor=self.proveedor,
+        )
+
+        compra.refresh_from_db()
+        # saldo = 100000 - 0 = 100000 (== monto_total)
+        # Neither if (saldo == 0) nor elif (saldo < monto_total) execute
+        self.assertEqual(compra.saldo_pendiente, Decimal("100000.00"))
+        # estado_pago remains unchanged (no if/elif match)
+        self.assertIn(compra.estado_pago, ["Pendiente", "Parcial"])
