@@ -234,6 +234,35 @@ class AplicarNotaCreditoClienteSignalTest(TestCase):
         self.assertEqual(venta.saldo_pendiente, Decimal("50000"))
         self.assertEqual(venta.estado_pago, "Parcial")
 
+    def test_signal_nota_reduce_saldo_no_cero_estado_parcial_explicit(self):
+        """Line 88-89: explicit test for elif branch (saldo > 0 and < monto_total)."""
+        # Create venta: total 200000, pendiente 150000
+        venta = self._crear_venta(200000, 150000, "Parcial")
+        # Apply nota for 100000, leaving saldo = 50000
+        self._crear_nota(venta, 100000)
+        venta.refresh_from_db()
+        # Verify: saldo_pendiente = 50000 (not 0, but < 200000)
+        self.assertEqual(venta.saldo_pendiente, Decimal("50000"))
+        # Verify: estado_pago = "Parcial" (from elif branch line 88-89)
+        self.assertEqual(venta.estado_pago, "Parcial")
+        # Explicitly check: 0 < saldo < monto_total
+        self.assertGreater(venta.saldo_pendiente, Decimal("0"))
+        self.assertLess(venta.saldo_pendiente, venta.monto_total)
+
+    def test_signal_nota_deja_saldo_igual_monto_total(self):
+        """Branch 86->89: saldo_pendiente >= monto_total después de nota (elif falla)."""
+        # Create venta with saldo_pendiente = monto_total (escenario de venta con saldo completo)
+        venta = self._crear_venta(100000, 100000, "Pendiente")
+        # Apply nota of 0 (or very small) to keep saldo >= monto_total
+        # Actually, let's apply 0 - this tests edge case
+        self._crear_nota(venta, 0)
+        venta.refresh_from_db()
+        # After nota: saldo = 100000 - 0 = 100000
+        # Check: saldo == monto_total, so elif (saldo < monto_total) is False
+        self.assertEqual(venta.saldo_pendiente, Decimal("100000"))
+        # Estado should remain "Pendiente" (neither if nor elif execute)
+        self.assertEqual(venta.estado_pago, "Pendiente")
+
     def test_signal_nota_mayor_saldo_ajusta_a_cero(self):
         """Lines 77-79: nota > saldo_pendiente clamps to 0."""
         venta = self._crear_venta(100000, 30000, "Parcial")
