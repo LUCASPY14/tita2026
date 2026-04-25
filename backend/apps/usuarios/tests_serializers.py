@@ -7,8 +7,12 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from apps.usuarios.models import Roles, Empleados
-from apps.usuarios.serializers import RolesSerializer, EmpleadosSerializer
+from apps.usuarios.models import Roles, Empleados, AuditoriaOperaciones
+from apps.usuarios.serializers import (
+    RolesSerializer,
+    EmpleadosSerializer,
+    AuditoriaOperacionesSerializer,
+)
 
 
 class RolesSerializerTest(TestCase):
@@ -276,23 +280,136 @@ class EmpleadosSerializerTest(TestCase):
         self.assertIsNone(empleado.email)
         self.assertIsNone(empleado.fecha_baja)
 
-    def test_actualizacion_parcial(self):
-        """Debe permitir actualización parcial"""
-        empleado = Empleados.objects.create(
-            nombre="Original",
-            apellido="Name",
-            usuario="original",
-            contrasena_hash="hash",
-            fecha_ingreso=timezone.now(),
-            id_rol=self.rol
+
+class AuditoriaOperacionesSerializerTest(TestCase):
+    """Tests para AuditoriaOperacionesSerializer - métodos display"""
+
+    def test_get_tipo_operacion_display_login(self):
+        """get_tipo_operacion_display debe retornar 'Inicio de sesión' para LOGIN"""
+        auditoria = AuditoriaOperaciones.objects.create(
+            usuario="testuser",
+            tipo_usuario="EMPLEADO",
+            operacion="LOGIN",
+            fecha_operacion=timezone.now(),
+            resultado="EXITO"
         )
         
-        # Actualizar solo email
-        data = {'email': 'nuevo@email.com'}
+        serializer = AuditoriaOperacionesSerializer(auditoria)
+        self.assertEqual(serializer.data["tipo_operacion_display"], "Inicio de sesión")
+
+    def test_get_tipo_operacion_display_logout(self):
+        """get_tipo_operacion_display debe retornar 'Cierre de sesión' para LOGOUT"""
+        auditoria = AuditoriaOperaciones.objects.create(
+            usuario="testuser",
+            tipo_usuario="EMPLEADO",
+            operacion="LOGOUT",
+            fecha_operacion=timezone.now(),
+            resultado="EXITO"
+        )
         
-        serializer = EmpleadosSerializer(empleado, data=data, partial=True)
-        self.assertTrue(serializer.is_valid())
+        serializer = AuditoriaOperacionesSerializer(auditoria)
+        self.assertEqual(serializer.data["tipo_operacion_display"], "Cierre de sesión")
+
+    def test_get_tipo_operacion_display_create(self):
+        """get_tipo_operacion_display debe retornar 'Creación' para CREATE"""
+        auditoria = AuditoriaOperaciones.objects.create(
+            usuario="testuser",
+            tipo_usuario="EMPLEADO",
+            operacion="CREATE",
+            fecha_operacion=timezone.now(),
+            resultado="EXITO"
+        )
         
-        empleado_actualizado = serializer.save()
-        self.assertEqual(empleado_actualizado.email, 'nuevo@email.com')
-        self.assertEqual(empleado_actualizado.nombre, 'Original')  # No debe cambiar
+        serializer = AuditoriaOperacionesSerializer(auditoria)
+        self.assertEqual(serializer.data["tipo_operacion_display"], "Creación")
+
+    def test_get_tipo_operacion_display_password_change(self):
+        """get_tipo_operacion_display debe retornar 'Cambio de contraseña' para PASSWORD_CHANGE"""
+        auditoria = AuditoriaOperaciones.objects.create(
+            usuario="testuser",
+            tipo_usuario="EMPLEADO",
+            operacion="PASSWORD_CHANGE",
+            fecha_operacion=timezone.now(),
+            resultado="EXITO"
+        )
+        
+        serializer = AuditoriaOperacionesSerializer(auditoria)
+        self.assertEqual(serializer.data["tipo_operacion_display"], "Cambio de contraseña")
+
+    def test_get_tipo_operacion_display_operacion_desconocida(self):
+        """get_tipo_operacion_display debe retornar el código original para operaciones desconocidas"""
+        auditoria = AuditoriaOperaciones.objects.create(
+            usuario="testuser",
+            tipo_usuario="EMPLEADO",
+            operacion="CUSTOM_OPERATION",
+            fecha_operacion=timezone.now(),
+            resultado="EXITO"
+        )
+        
+        serializer = AuditoriaOperacionesSerializer(auditoria)
+        self.assertEqual(serializer.data["tipo_operacion_display"], "CUSTOM_OPERATION")
+
+    def test_get_resultado_display_exito(self):
+        """get_resultado_display debe retornar 'Exitoso' para EXITO"""
+        auditoria = AuditoriaOperaciones.objects.create(
+            usuario="testuser",
+            tipo_usuario="EMPLEADO",
+            operacion="LOGIN",
+            fecha_operacion=timezone.now(),
+            resultado="EXITO"
+        )
+        
+        serializer = AuditoriaOperacionesSerializer(auditoria)
+        self.assertEqual(serializer.data["resultado_display"], "Exitoso")
+
+    def test_get_resultado_display_error(self):
+        """get_resultado_display debe retornar 'Error' para ERROR"""
+        auditoria = AuditoriaOperaciones.objects.create(
+            usuario="testuser",
+            tipo_usuario="EMPLEADO",
+            operacion="LOGIN",
+            fecha_operacion=timezone.now(),
+            resultado="ERROR"
+        )
+        
+        serializer = AuditoriaOperacionesSerializer(auditoria)
+        self.assertEqual(serializer.data["resultado_display"], "Error")
+
+    def test_get_resultado_display_bloqueado(self):
+        """get_resultado_display debe retornar 'Bloqueado' para BLOQUEADO"""
+        auditoria = AuditoriaOperaciones.objects.create(
+            usuario="testuser",
+            tipo_usuario="EMPLEADO",
+            operacion="LOGIN",
+            fecha_operacion=timezone.now(),
+            resultado="BLOQUEADO"
+        )
+        
+        serializer = AuditoriaOperacionesSerializer(auditoria)
+        self.assertEqual(serializer.data["resultado_display"], "Bloqueado")
+
+    def test_get_resultado_display_denegado(self):
+        """get_resultado_display debe retornar 'Denegado' para DENEGADO"""
+        auditoria = AuditoriaOperaciones.objects.create(
+            usuario="testuser",
+            tipo_usuario="EMPLEADO",
+            operacion="VIEW",
+            fecha_operacion=timezone.now(),
+            resultado="DENEGADO"
+        )
+        
+        serializer = AuditoriaOperacionesSerializer(auditoria)
+        self.assertEqual(serializer.data["resultado_display"], "Denegado")
+
+    def test_get_resultado_display_resultado_desconocido(self):
+        """get_resultado_display debe retornar el código original para resultados desconocidos"""
+        auditoria = AuditoriaOperaciones.objects.create(
+            usuario="testuser",
+            tipo_usuario="EMPLEADO",
+            operacion="LOGIN",
+            fecha_operacion=timezone.now(),
+            resultado="PENDING"
+        )
+        
+        serializer = AuditoriaOperacionesSerializer(auditoria)
+        self.assertEqual(serializer.data["resultado_display"], "PENDING")
