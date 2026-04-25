@@ -3,9 +3,10 @@ Tests para serializers de la app core
 Sprint 2 - Backend Coverage Improvement
 """
 
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.utils import timezone
 from decimal import Decimal
+from unittest.mock import Mock, PropertyMock, patch
 from .models import Tarjetas, MediosPago, CargasSaldo
 from .serializers import TarjetasSerializer, MediosPagoSerializer, CargasSaldoSerializer
 from apps.clientes.models import Clientes, Hijos, TiposCliente
@@ -102,6 +103,97 @@ class TarjetasSerializerTest(TestCase):
 
         serializer = TarjetasSerializer(data=data)
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_get_hijo_foto_con_foto_y_request(self):
+        """Test get_hijo_foto retorna URL absoluta cuando hay foto y request en context"""
+        # Crear hijo con foto_perfil mockeada
+        hijo_con_foto = Hijos.objects.create(
+            nombre="Pedro",
+            apellido="García",
+            fecha_nacimiento="2013-03-15",
+            grado="Quinto Grado",
+            estado=True,
+            id_cliente_responsable=self.cliente,
+        )
+        
+        tarjeta = Tarjetas.objects.create(
+            nro_tarjeta="TFOTO001",
+            saldo_actual=Decimal("40000.00"),
+            estado="ACTIVA",
+            fecha_creacion=timezone.now(),
+            permite_saldo_negativo=False,
+            limite_credito=Decimal("0.00"),
+            id_hijo=hijo_con_foto,
+        )
+        
+        # Mockear foto_perfil en el hijo
+        mock_foto = Mock()
+        mock_foto.url = "/media/fotos/test.jpg"
+        hijo_con_foto.foto_perfil = mock_foto
+        
+        # Crear request mock
+        factory = RequestFactory()
+        request = factory.get('/api/tarjetas/')
+        
+        # Serializar con request en context
+        serializer = TarjetasSerializer(tarjeta, context={'request': request})
+        data = serializer.data
+        
+        # Debe retornar URL absoluta
+        self.assertIsNotNone(data['hijo_foto'])
+        self.assertIn('http', data['hijo_foto'])
+        self.assertIn('/media/fotos/test.jpg', data['hijo_foto'])
+
+    def test_get_hijo_foto_con_foto_sin_request(self):
+        """Test get_hijo_foto retorna URL relativa cuando hay foto pero no request"""
+        hijo_con_foto = Hijos.objects.create(
+            nombre="Ana",
+            apellido="López",
+            fecha_nacimiento="2012-08-20",
+            grado="Sexto Grado",
+            estado=True,
+            id_cliente_responsable=self.cliente,
+        )
+        
+        tarjeta = Tarjetas.objects.create(
+            nro_tarjeta="TFOTO002",
+            saldo_actual=Decimal("35000.00"),
+            estado="ACTIVA",
+            fecha_creacion=timezone.now(),
+            permite_saldo_negativo=False,
+            limite_credito=Decimal("0.00"),
+            id_hijo=hijo_con_foto,
+        )
+        
+        # Mockear foto_perfil
+        mock_foto = Mock()
+        mock_foto.url = "/media/fotos/ana.jpg"
+        hijo_con_foto.foto_perfil = mock_foto
+        
+        # Serializar SIN request en context
+        serializer = TarjetasSerializer(tarjeta)
+        data = serializer.data
+        
+        # Debe retornar URL relativa
+        self.assertEqual(data['hijo_foto'], "/media/fotos/ana.jpg")
+
+    def test_get_hijo_foto_sin_foto(self):
+        """Test get_hijo_foto retorna None cuando el hijo no tiene foto"""
+        tarjeta = Tarjetas.objects.create(
+            nro_tarjeta="TNOFOTO",
+            saldo_actual=Decimal("25000.00"),
+            estado="ACTIVA",
+            fecha_creacion=timezone.now(),
+            permite_saldo_negativo=False,
+            limite_credito=Decimal("0.00"),
+            id_hijo=self.hijo,  # self.hijo no tiene foto_perfil
+        )
+        
+        serializer = TarjetasSerializer(tarjeta)
+        data = serializer.data
+        
+        # Debe retornar None
+        self.assertIsNone(data['hijo_foto'])
 
     def test_validar_tarjeta_sin_nro_invalida(self):
         """Test que valida que una tarjeta sin número es inválida"""
