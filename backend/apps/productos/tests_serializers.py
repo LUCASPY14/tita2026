@@ -6,6 +6,7 @@ Objetivo: Aumentar cobertura de serializers
 from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
+from unittest.mock import patch
 
 from apps.productos.models import (
     Productos,
@@ -112,6 +113,82 @@ class ProductosSerializerTest(TestCase):
         producto.refresh_from_db()
         self.assertEqual(producto.descripcion, "Producto Modificado")
         self.assertEqual(producto.codigo_barra, "PART001")  # No cambió
+
+    def test_crear_producto_sin_impuesto_asigna_default(self):
+        """Test: Crear producto sin impuesto asigna IVA 10% por defecto"""
+        data = {
+            "codigo_barra": "NOIMP001",
+            "descripcion": "Producto sin impuesto",
+            "id_categoria": self.categoria.id_categoria,
+            "id_unidad_medida": self.unidad.id_unidad_medida,
+            "stock_minimo": "5",
+            "estado": True,
+        }
+
+        serializer = ProductosSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+        
+        producto = serializer.save()
+        self.assertIsNotNone(producto.id_impuesto)
+        self.assertEqual(producto.id_impuesto.nombre_impuesto, "IVA 10%")
+        self.assertEqual(producto.id_impuesto.porcentaje, Decimal("10.00"))
+
+    def test_get_categoria_nombre_con_excepcion(self):
+        """Test: get_categoria_nombre maneja excepciones retornando None"""
+        producto = Productos.objects.create(
+            codigo_barra="EXC001",
+            descripcion="Producto test",
+            id_categoria=self.categoria,
+            id_unidad_medida=self.unidad,
+            id_impuesto=self.impuesto,
+            stock_minimo=Decimal("5"),
+            estado=True,
+        )
+        
+        serializer = ProductosSerializer(producto)
+        
+        # Patchear acceso a nombre para provocar excepción
+        with patch.object(type(producto.id_categoria), 'nombre', property(lambda self: (_ for _ in ()).throw(Exception("Error")))):
+            result = serializer.get_categoria_nombre(producto)
+            self.assertIsNone(result)
+
+    def test_get_impuesto_nombre_con_excepcion(self):
+        """Test: get_impuesto_nombre maneja excepciones retornando None"""
+        producto = Productos.objects.create(
+            codigo_barra="EXCIMP001",
+            descripcion="Producto test impuesto",
+            id_categoria=self.categoria,
+            id_unidad_medida=self.unidad,
+            id_impuesto=self.impuesto,
+            stock_minimo=Decimal("5"),
+            estado=True,
+        )
+        
+        serializer = ProductosSerializer(producto)
+        
+        # Patchear acceso a nombre_impuesto para provocar excepción
+        with patch.object(type(producto.id_impuesto), 'nombre_impuesto', property(lambda self: (_ for _ in ()).throw(Exception("Error")))):
+            result = serializer.get_impuesto_nombre(producto)
+            self.assertIsNone(result)
+
+    def test_get_precio_con_excepcion(self):
+        """Test: get_precio maneja excepciones retornando None"""
+        producto = Productos.objects.create(
+            codigo_barra="EXCPRE001",
+            descripcion="Producto test precio",
+            id_categoria=self.categoria,
+            id_unidad_medida=self.unidad,
+            id_impuesto=self.impuesto,
+            stock_minimo=Decimal("5"),
+            estado=True,
+        )
+        
+        serializer = ProductosSerializer(producto)
+        
+        # Patchear el manager precios para provocar excepción
+        with patch.object(type(producto), 'precios', property(lambda self: (_ for _ in ()).throw(Exception("Error")))):
+            result = serializer.get_precio(producto)
+            self.assertIsNone(result)
 
 
 class CategoriasSerializerTest(TestCase):
