@@ -51,7 +51,7 @@ class TestIsCajeroOrAdminPermission:
         return Roles.objects.create(
             nombre_rol="Cajero",
             descripcion="Rol de cajero del sistema",
-            activo=True
+            estado=True
         )
     
     @pytest.fixture
@@ -60,7 +60,7 @@ class TestIsCajeroOrAdminPermission:
         return Roles.objects.create(
             nombre_rol="Administrador",
             descripcion="Rol administrativo",
-            activo=True
+            estado=True
         )
     
     @pytest.fixture
@@ -69,43 +69,49 @@ class TestIsCajeroOrAdminPermission:
         return Roles.objects.create(
             nombre_rol="Vendedor",
             descripcion="Rol de vendedor",
-            activo=True
+            estado=True
         )
     
     @pytest.fixture
     def empleado_cajero(self, rol_cajero):
         """Fixture: Empleado con rol cajero"""
+        from datetime import datetime, timezone
         return Empleados.objects.create(
             nombre="Pedro",
             apellido="Cajero",
-            ci="12345678",
-            correo="pedro.cajero@test.com",
+            usuario="pcajero",
+            contrasena_hash="hash123",
+            fecha_ingreso=datetime.now(timezone.utc),
             id_rol=rol_cajero,
-            activo=True
+            estado=True
         )
     
     @pytest.fixture
     def empleado_admin(self, rol_administrador):
         """Fixture: Empleado con rol administrador"""
+        from datetime import datetime, timezone
         return Empleados.objects.create(
             nombre="Ana",
             apellido="Admin",
-            ci="87654321",
-            correo="ana.admin@test.com",
+            usuario="aadmin",
+            contrasena_hash="hash456",
+            fecha_ingreso=datetime.now(timezone.utc),
             id_rol=rol_administrador,
-            activo=True
+            estado=True
         )
     
     @pytest.fixture
     def empleado_vendedor(self, rol_vendedor):
         """Fixture: Empleado con rol vendedor"""
+        from datetime import datetime, timezone
         return Empleados.objects.create(
             nombre="Luis",
             apellido="Vendedor",
-            ci="11111111",
-            correo="luis.vendedor@test.com",
+            usuario="lvendedor",
+            contrasena_hash="hash789",
+            fecha_ingreso=datetime.now(timezone.utc),
             id_rol=rol_vendedor,
-            activo=True
+            estado=True
         )
     
     def test_permiso_staff_tiene_acceso(self, factory, user_staff):
