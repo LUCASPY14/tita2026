@@ -90,6 +90,36 @@ class ComprasViewSetPerformCreateTest(TestCase):
                    return_value={'valido': False, 'errores': ['cantidad inválida'], 'warnings': []}):
             with self.assertRaises(ValidationError):
                 vs.perform_create(serializer)
+    
+    def test_perform_create_producto_sin_impuesto_usa_iva_cero(self):
+        """
+        Cubrir líneas 124-125: cuando producto.id_impuesto.porcentaje lanza excepción,
+        se usa monto_iva=0.00
+        """
+        vs = ComprasViewSet()
+        request = MagicMock()
+        request.data = {'detalles': [{'id_producto': 1, 'cantidad': 5, 'precio_unitario': 2000}]}
+        vs.request = request
+        
+        serializer = MagicMock()
+        
+        with patch('apps.compras.views.CompraService.validar_compra',
+                   return_value={'valido': True, 'errores': [], 'warnings': []}):
+            with patch('apps.compras.views.CompraService.calcular_totales_compra',
+                       return_value={'total': Decimal('10000.00')}):
+                with patch('apps.productos.models.Productos.objects.get') as mock_get:
+                    # Mock producto sin impuesto (id_impuesto=None)
+                    mock_producto = MagicMock()
+                    mock_producto.id_impuesto = None
+                    mock_get.return_value = mock_producto
+                    
+                    with patch('apps.compras.views.DetallesCompra.objects.create') as mock_create:
+                        vs.perform_create(serializer)
+                        
+                        # Verificar que se llamó create con monto_iva=Decimal("0.00")
+                        mock_create.assert_called_once()
+                        call_kwargs = mock_create.call_args[1]
+                        self.assertEqual(call_kwargs['monto_iva'], Decimal("0.00"))
 
 
 class ComprasViewSetConfirmarTest(TestCase):
