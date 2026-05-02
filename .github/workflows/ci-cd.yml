@@ -83,20 +83,19 @@ jobs:
     runs-on: ubuntu-latest
     
     services:
-      mysql:
-        image: mysql:8.0
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
         env:
-          MYSQL_ROOT_PASSWORD: test_root_password
-          MYSQL_DATABASE: test_dbcantinatita
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          ACCEPT_EULA: Y
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: Test_StrongPassw0rd!
         ports:
-          - 3306:3306
+          - 1433:1433
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root --password=test_root_password"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Test_StrongPassw0rd!' -Q 'SELECT 1' -C || exit 1"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=10
       
       redis:
         image: redis:7-alpine
@@ -123,6 +122,8 @@ jobs:
         run: |
           cd backend
           python -m pip install --upgrade pip
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
           pip install -r requirements.txt
       
       - name: Run tests with coverage
@@ -131,10 +132,10 @@ jobs:
           SECRET_KEY: test-secret-key-for-ci-${{ github.run_id }}
           DEBUG: 'True'
           DB_HOST: 127.0.0.1
-          DB_PORT: '3306'
-          DB_NAME: test_dbcantinatita
-          DB_USER: root
-          DB_PASSWORD: test_root_password
+          DB_PORT: '1433'
+          DB_NAME: titadb
+          DB_USER: sa
+          DB_PASSWORD: Test_StrongPassw0rd!
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: '6379'
         run: |
@@ -520,6 +521,10 @@ jobs:
     environment:
       name: staging
       url: https://staging.cantinatita.com
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
     
     steps:
       - name: Checkout code
@@ -540,12 +545,10 @@ jobs:
       - name: Configure AWS credentials
         if: env.AWS_ACCESS_KEY_ID != ''
         uses: aws-actions/configure-aws-credentials@v4
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION || 'us-east-1' }}
       
       - name: Deploy to staging (Docker Compose)
         continue-on-error: true
@@ -590,6 +593,10 @@ jobs:
     environment:
       name: production
       url: https://cantinatita.com
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
     
     steps:
       - name: Checkout code
@@ -610,12 +617,10 @@ jobs:
       - name: Configure AWS credentials
         if: env.AWS_ACCESS_KEY_ID != ''
         uses: aws-actions/configure-aws-credentials@v4
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION || 'us-east-1' }}
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -642,7 +647,8 @@ jobs:
             docker-compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
             docker-compose -f docker-compose.prod.yml exec -T backend python manage.py collectstatic --noinput
             # Create backup
-            docker-compose -f docker-compose.prod.yml exec -T db mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" dbcantinatita > backup_$(date +%Y%m%d_%H%M%S).sql
+            docker-compose -f docker-compose.prod.yml exec -T db sh -c '/opt/mssql-tools18/bin/sqlcmd \
+              -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "BACKUP DATABASE [titadb] TO DISK = '\''/var/opt/mssql/backup_titadb.bak'\'' WITH INIT, COMPRESSION" -C'
             echo "✅ Production deployment completed"
       
       - name: Health check

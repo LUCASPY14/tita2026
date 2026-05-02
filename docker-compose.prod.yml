@@ -14,7 +14,7 @@ networks:
 
 # Persistent volumes for data storage
 volumes:
-  postgres_data:
+  mssql_data:
     driver: local
   redis_data:
     driver: local
@@ -33,24 +33,22 @@ services:
   # ================================
   # DATABASE SERVICES
   # ================================
-  postgres:
-    image: postgres:15-alpine
-    container_name: cantina-postgres
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: cantina-mssql
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-cantina_tita}
-      POSTGRES_USER: ${POSTGRES_USER:-cantina_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: ${MSSQL_PID:-Developer}
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-ChangeThis_StrongPassw0rd!}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mssql_data:/var/opt/mssql
     networks:
       - cantina-network
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${DB_PORT:-1433}:1433"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cantina_user} -d ${POSTGRES_DB:-cantina_tita}"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q \"SELECT 1\" -C || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -105,7 +103,7 @@ services:
     container_name: cantina-backend
     restart: unless-stopped
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -116,8 +114,12 @@ services:
       DEBUG: "False"
       ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
       
-      # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-cantina_user}:${POSTGRES_PASSWORD:-secure_password}@postgres:5432/${POSTGRES_DB:-cantina_tita}
+      # Database (SQL Server)
+      DB_NAME: ${DB_NAME:-titadb}
+      DB_USER: ${DB_USER:-sa}
+      DB_PASSWORD: ${DB_PASSWORD:-ChangeThis_StrongPassw0rd!}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-1433}
       
       # Cache
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secure_password}@redis:6379/1
@@ -181,12 +183,17 @@ services:
     container_name: cantina-celery-worker
     restart: unless-stopped
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
+      DB_NAME: ${DB_NAME:-titadb}
+      DB_USER: ${DB_USER:-sa}
+      DB_PASSWORD: ${DB_PASSWORD:-ChangeThis_StrongPassw0rd!}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-1433}
       CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-redis_secure_password}@redis:6379/0
       CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-redis_secure_password}@redis:6379/0
     command: celery -A backend worker -l info --concurrency=4
@@ -214,12 +221,17 @@ services:
     container_name: cantina-celery-beat
     restart: unless-stopped
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
+      DB_NAME: ${DB_NAME:-titadb}
+      DB_USER: ${DB_USER:-sa}
+      DB_PASSWORD: ${DB_PASSWORD:-ChangeThis_StrongPassw0rd!}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-1433}
       CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-redis_secure_password}@redis:6379/0
       CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-redis_secure_password}@redis:6379/0
     command: celery -A backend beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler

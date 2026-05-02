@@ -5,22 +5,23 @@ from .base import *
 
 DEBUG = True
 
-# Deshabilitar soporte de zona horaria en tests para evitar dependencia
-# de tablas mysql_tzinfo (CONVERT_TZ retorna NULL si no están instaladas)
+# Deshabilitar soporte de zona horaria en tests para simplificar la ejecución
+# y evitar dependencias de configuración del motor SQL.
 USE_TZ = False
 TIME_ZONE = 'UTC'
 
-# Base de datos MySQL para tests (igual que producción)
 # Base de datos SQL Server para tests
 DATABASES = {
     'default': {
         'ENGINE': 'mssql',
         'NAME': os.environ.get('DB_NAME', 'titadb'),
         'HOST': os.environ.get('DB_HOST', 'np:localhost'),
+        'PORT': os.environ.get('DB_PORT', '1433'),
+        'USER': os.environ.get('DB_USER', ''),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'ATOMIC_REQUESTS': False,
         'OPTIONS': {
             'driver': 'ODBC Driver 18 for SQL Server',
-            'trusted_connection': 'yes',
             'extra_params': 'TrustServerCertificate=yes;MARS_Connection=yes',
         },
         'TEST': {

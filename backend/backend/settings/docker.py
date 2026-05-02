@@ -14,20 +14,22 @@ ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',')]
 # SECRET KEY desde variable de entorno
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-key')
 
-# Base de datos MySQL
+# Base de datos SQL Server
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
-        'NAME': os.getenv('DB_NAME', 'cantina_tita_db'),
-        'USER': os.getenv('DB_USER', 'cantina_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'cantina_password'),
+        'ENGINE': os.getenv('DB_ENGINE', 'mssql'),
+        'NAME': os.getenv('DB_NAME', 'titadb'),
+        'USER': os.getenv('DB_USER', ''),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', 'db'),
-        'PORT': os.getenv('DB_PORT', '3306'),
+        'PORT': os.getenv('DB_PORT', '1433'),
         'CONN_MAX_AGE': 600,  # Mantener conexiones abiertas por 10 minutos
         'OPTIONS': {
-            'charset': 'utf8mb4',
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'connect_timeout': 10,
+            'driver': os.getenv('DB_DRIVER', 'ODBC Driver 18 for SQL Server'),
+            'extra_params': os.getenv(
+                'DB_EXTRA_PARAMS',
+                'TrustServerCertificate=yes;MARS_Connection=yes;Encrypt=yes;Connection Timeout=30;'
+            ),
         },
     }
 }

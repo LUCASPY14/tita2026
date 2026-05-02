@@ -1,14 +1,14 @@
 services:
   db:
-    image: postgres:15
+    image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
-      POSTGRES_DB: cantina_db
-      POSTGRES_USER: cantina_user
-      POSTGRES_PASSWORD: cantina_pass
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ChangeThis_StrongPassw0rd!
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mssql_data:/var/opt/mssql
     ports:
-      - "5432:5432"
+      - "1433:1433"
     networks:
       - cantina-network
 
@@ -23,7 +23,12 @@ services:
       - "8000:8000"
     environment:
       - DEBUG=True
-      - DATABASE_URL=postgresql://cantina_user:cantina_pass@db:5432/cantina_db
+      - DB_ENGINE=mssql
+      - DB_NAME=titadb
+      - DB_USER=sa
+      - DB_PASSWORD=ChangeThis_StrongPassw0rd!
+      - DB_HOST=db
+      - DB_PORT=1433
       - SECRET_KEY=dev-secret-key-change-in-production
     depends_on:
       - db
@@ -61,7 +66,7 @@ services:
       - cantina-network
 
 volumes:
-  postgres_data:
+  mssql_data:
 
 networks:
   cantina-network:
