@@ -84,7 +84,7 @@ jobs:
     
     services:
       mssql:
-        image: mcr.microsoft.com/mssql/server:2022-latest
+        image: mcr.microsoft.com/mssql/server:2025-latest
         env:
           ACCEPT_EULA: Y
           MSSQL_PID: Developer
@@ -369,14 +369,10 @@ jobs:
       
       - name: Collect static files
         env:
-          DJANGO_SETTINGS_MODULE: backend.settings.production
+          DJANGO_SETTINGS_MODULE: backend.settings.base
           SECRET_KEY: build-secret-key-${{ github.run_id }}
           DEBUG: 'False'
           ALLOWED_HOSTS: localhost,127.0.0.1
-          DB_HOST: localhost
-          DB_NAME: build_db
-          DB_USER: build_user
-          DB_PASSWORD: build_pass
         run: |
           cd backend
           python manage.py collectstatic --noinput
