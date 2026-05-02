@@ -8,17 +8,17 @@ import reportesService from '../../services/reportes.service';
 import toast from 'react-hot-toast';
 
 // Mock de servicios
-jest.mock('../../services/reportes.service', () => ({
+vi.mock('../../services/reportes.service', () => ({
   __esModule: true,
   default: {
-    getKPIsPrincipales: jest.fn(),
+    getKPIsPrincipales: vi.fn(),
   },
 }));
 
-jest.mock('react-hot-toast', () => ({
+vi.mock('react-hot-toast', () => ({
   __esModule: true,
   default: {
-    error: jest.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -35,8 +35,8 @@ const mockKPIs = {
 
 describe('DashboardKPIs Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    (reportesService.getKPIsPrincipales as jest.Mock).mockResolvedValue(mockKPIs);
+    vi.clearAllMocks();
+    (reportesService.getKPIsPrincipales as vi.Mock).mockResolvedValue(mockKPIs);
   });
 
   test('renderiza correctamente', async () => {
@@ -135,7 +135,7 @@ describe('DashboardKPIs Component', () => {
   });
 
   test('maneja error al cargar KPIs', async () => {
-    (reportesService.getKPIsPrincipales as jest.Mock).mockRejectedValue(
+    (reportesService.getKPIsPrincipales as vi.Mock).mockRejectedValue(
       new Error('Error de red')
     );
 
@@ -147,7 +147,7 @@ describe('DashboardKPIs Component', () => {
   });
 
   test('muestra mensaje cuando no hay datos', async () => {
-    (reportesService.getKPIsPrincipales as jest.Mock).mockResolvedValue(null);
+    (reportesService.getKPIsPrincipales as vi.Mock).mockResolvedValue(null);
 
     render(<DashboardKPIs />);
 

@@ -15,12 +15,12 @@ import {
   PaginatedResponse
 } from '../types';
 
-jest.mock('./api');
-const mockedApi = api as jest.Mocked<typeof api>;
+vi.mock('./api');
+const mockedApi = api as vi.Mocked<typeof api>;
 
 describe('Productos Service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getProductos', () => {

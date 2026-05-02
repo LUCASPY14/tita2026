@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import Modal from './Modal';
 
 describe('Modal Component', () => {
-  const mockOnClose = jest.fn();
+  const mockOnClose = vi.fn();
 
   beforeEach(() => {
     mockOnClose.mockClear();

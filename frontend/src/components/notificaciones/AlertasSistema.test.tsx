@@ -5,25 +5,25 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Mock de los servicios ANTES de importar el componente
-jest.mock('../../services/notificaciones.service', () => ({
+vi.mock('../../services/notificaciones.service', () => ({
   __esModule: true,
   default: {
-    getAlertas: jest.fn(),
-    resolverAlerta: jest.fn(),
-    formatearFecha: jest.fn(() => 'hace 2 horas'),
+    getAlertas: vi.fn(),
+    resolverAlerta: vi.fn(),
+    formatearFecha: vi.fn(() => 'hace 2 horas'),
   },
 }));
 
-jest.mock('react-hot-toast', () => ({
+vi.mock('react-hot-toast', () => ({
   __esModule: true,
   default: {
-    success: jest.fn(),
-    error: jest.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
 // Mock del AuthContext
-jest.mock('../../contexts/AuthContext', () => ({
+vi.mock('../../contexts/AuthContext', () => ({
   useAuthContext: () => ({
     user: { id: 1, username: 'testuser' },
     isAuthenticated: true,
@@ -58,8 +58,8 @@ const mockAlertas = [
 
 describe('AlertasSistema Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    (notificacionesService.getAlertas as jest.Mock).mockResolvedValue(mockAlertas);
+    vi.clearAllMocks();
+    (notificacionesService.getAlertas as vi.Mock).mockResolvedValue(mockAlertas);
   });
 
   test('renderiza correctamente', async () => {
@@ -112,8 +112,8 @@ describe('AlertasSistema Component', () => {
 
   test('resuelve alerta exitosamente', async () => {
     const user = userEvent.setup();
-    const mockOnAlertaResuelta = jest.fn();
-    (notificacionesService.resolverAlerta as jest.Mock).mockResolvedValue({});
+    const mockOnAlertaResuelta = vi.fn();
+    (notificacionesService.resolverAlerta as vi.Mock).mockResolvedValue({});
     
     render(<AlertasSistema onAlertaResuelta={mockOnAlertaResuelta} />);
     
@@ -140,7 +140,7 @@ describe('AlertasSistema Component', () => {
   });
 
   test('maneja error al cargar alertas', async () => {
-    (notificacionesService.getAlertas as jest.Mock).mockRejectedValue(
+    (notificacionesService.getAlertas as vi.Mock).mockRejectedValue(
       new Error('Error de red')
     );
 
@@ -152,7 +152,7 @@ describe('AlertasSistema Component', () => {
   });
 
   test('muestra mensaje cuando no hay alertas', async () => {
-    (notificacionesService.getAlertas as jest.Mock).mockResolvedValue([]);
+    (notificacionesService.getAlertas as vi.Mock).mockResolvedValue([]);
 
     render(<AlertasSistema />);
 

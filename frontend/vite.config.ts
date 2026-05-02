@@ -28,4 +28,17 @@ export default defineConfig({
     outDir: 'build',
     sourcemap: false,
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts',
+    include: ['src/**/*.{test,spec}.{ts,tsx,js,jsx}'],
+    exclude: ['tests/**', 'cypress/**', 'node_modules/**'],
+    css: true,
+    coverage: {
+      provider: 'v8',
+      reportsDirectory: './coverage',
+      reporter: ['text', 'json', 'html'],
+    },
+  },
 });

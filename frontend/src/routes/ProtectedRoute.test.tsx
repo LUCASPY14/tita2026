@@ -8,17 +8,17 @@ import { useAuthContext } from '../contexts/AuthContext';
 import { useHasRole } from '../hooks/usePermissions';
 
 // Mocks
-jest.mock('../contexts/AuthContext');
-jest.mock('../hooks/usePermissions');
+vi.mock('../contexts/AuthContext');
+vi.mock('../hooks/usePermissions');
 
-const mockedUseAuthContext = useAuthContext as jest.MockedFunction<typeof useAuthContext>;
-const mockedUseHasRole = useHasRole as jest.MockedFunction<typeof useHasRole>;
+const mockedUseAuthContext = useAuthContext as vi.MockedFunction<typeof useAuthContext>;
+const mockedUseHasRole = useHasRole as vi.MockedFunction<typeof useHasRole>;
 
 const TestComponent = () => <div>Protected Content</div>;
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Loading state', () => {
@@ -27,9 +27,9 @@ describe('ProtectedRoute', () => {
         user: null,
         isAuthenticated: false,
         isLoading: true,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       render(
@@ -50,9 +50,9 @@ describe('ProtectedRoute', () => {
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       render(
@@ -80,9 +80,9 @@ describe('ProtectedRoute', () => {
         user: { id: 1, username: 'test', email: 'test@test.com', role: 'admin' },
         isAuthenticated: true,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       mockedUseHasRole.mockReturnValue(true);
@@ -105,9 +105,9 @@ describe('ProtectedRoute', () => {
         user: { id: 1, username: 'admin', email: 'admin@test.com', role: 'admin' },
         isAuthenticated: true,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       mockedUseHasRole.mockReturnValue(true);
@@ -128,9 +128,9 @@ describe('ProtectedRoute', () => {
         user: { id: 2, username: 'empleado', email: 'empleado@test.com', role: 'empleado' },
         isAuthenticated: true,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       mockedUseHasRole.mockReturnValue(false);
@@ -154,9 +154,9 @@ describe('ProtectedRoute', () => {
         user: { id: 2, username: 'cajero', email: 'cajero@test.com', role: 'cajero' },
         isAuthenticated: true,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       mockedUseHasRole.mockReturnValue(false);
@@ -185,9 +185,9 @@ describe('ProtectedRoute', () => {
         user: { id: 3, username: 'gerente', email: 'gerente@test.com', role: 'gerente' },
         isAuthenticated: true,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       mockedUseHasRole.mockReturnValue(true);

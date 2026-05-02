@@ -8,17 +8,17 @@ import reportesService from '../../services/reportes.service';
 import toast from 'react-hot-toast';
 
 // Mock de servicios
-jest.mock('../../services/reportes.service', () => ({
+vi.mock('../../services/reportes.service', () => ({
   __esModule: true,
   default: {
-    getDashboardRecargas: jest.fn(),
+    getDashboardRecargas: vi.fn(),
   },
 }));
 
-jest.mock('react-hot-toast', () => ({
+vi.mock('react-hot-toast', () => ({
   __esModule: true,
   default: {
-    error: jest.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -42,8 +42,8 @@ const mockDashboard = {
 
 describe('DashboardRecargas Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    (reportesService.getDashboardRecargas as jest.Mock).mockResolvedValue(mockDashboard);
+    vi.clearAllMocks();
+    (reportesService.getDashboardRecargas as vi.Mock).mockResolvedValue(mockDashboard);
   });
 
   test('renderiza correctamente', async () => {
@@ -143,7 +143,7 @@ describe('DashboardRecargas Component', () => {
   });
 
   test('maneja error al cargar dashboard', async () => {
-    (reportesService.getDashboardRecargas as jest.Mock).mockRejectedValue(
+    (reportesService.getDashboardRecargas as vi.Mock).mockRejectedValue(
       new Error('Error de red')
     );
 
@@ -155,7 +155,7 @@ describe('DashboardRecargas Component', () => {
   });
 
   test('muestra mensaje cuando no hay datos', async () => {
-    (reportesService.getDashboardRecargas as jest.Mock).mockResolvedValue(null);
+    (reportesService.getDashboardRecargas as vi.Mock).mockResolvedValue(null);
 
     render(<DashboardRecargas />);
 
@@ -184,7 +184,7 @@ describe('DashboardRecargas Component', () => {
       recargas_exitosas: 50,
       tasa_exito: 50.0,
     };
-    (reportesService.getDashboardRecargas as jest.Mock).mockResolvedValue(mockBajaTasa);
+    (reportesService.getDashboardRecargas as vi.Mock).mockResolvedValue(mockBajaTasa);
 
     render(<DashboardRecargas />);
     

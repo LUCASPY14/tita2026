@@ -10,12 +10,12 @@ import {
 } from './recargas.service';
 import { Hijo, Tarjeta, CargaSaldo, PaginatedResponse } from '../types';
 
-jest.mock('./api');
-const mockedApi = api as jest.Mocked<typeof api>;
+vi.mock('./api');
+const mockedApi = api as vi.Mocked<typeof api>;
 
 describe('Recargas Service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('buscarHijos', () => {

@@ -34,7 +34,7 @@ describe('SearchBar Component', () => {
 
   test('llama onSearch cuando el usuario escribe', async () => {
     const user = userEvent.setup();
-    const handleSearch = jest.fn();
+    const handleSearch = vi.fn();
     render(<SearchBar onSearch={handleSearch} />);
     const input = screen.getByRole('searchbox');
     
@@ -74,7 +74,7 @@ describe('SearchBar Component', () => {
 
   test('llama onClear cuando se limpia el input', async () => {
     const user = userEvent.setup();
-    const handleClear = jest.fn();
+    const handleClear = vi.fn();
     render(<SearchBar onClear={handleClear} />);
     const input = screen.getByRole('searchbox');
     

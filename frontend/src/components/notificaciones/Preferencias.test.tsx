@@ -5,19 +5,19 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Mock de los servicios ANTES de importar el componente
-jest.mock('../../services/notificaciones.service', () => ({
+vi.mock('../../services/notificaciones.service', () => ({
   __esModule: true,
   default: {
-    getPreferencias: jest.fn(),
-    actualizarPreferencias: jest.fn(),
+    getPreferencias: vi.fn(),
+    actualizarPreferencias: vi.fn(),
   },
 }));
 
-jest.mock('react-hot-toast', () => ({
+vi.mock('react-hot-toast', () => ({
   __esModule: true,
   default: {
-    success: jest.fn(),
-    error: jest.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -44,9 +44,9 @@ const mockPreferencias = [
 
 describe('Preferencias Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    (notificacionesService.getPreferencias as jest.Mock).mockResolvedValue(mockPreferencias);
-    (notificacionesService.actualizarPreferencias as jest.Mock).mockResolvedValue({});
+    vi.clearAllMocks();
+    (notificacionesService.getPreferencias as vi.Mock).mockResolvedValue(mockPreferencias);
+    (notificacionesService.actualizarPreferencias as vi.Mock).mockResolvedValue({});
   });
 
   test('renderiza correctamente', async () => {
@@ -149,7 +149,7 @@ describe('Preferencias Component', () => {
   });
 
   test('maneja error al cargar preferencias', async () => {
-    (notificacionesService.getPreferencias as jest.Mock).mockRejectedValue(
+    (notificacionesService.getPreferencias as vi.Mock).mockRejectedValue(
       new Error('Error de red')
     );
 
@@ -162,7 +162,7 @@ describe('Preferencias Component', () => {
 
   test('maneja error al actualizar preferencias', async () => {
     const user = userEvent.setup();
-    (notificacionesService.actualizarPreferencias as jest.Mock).mockRejectedValue(
+    (notificacionesService.actualizarPreferencias as vi.Mock).mockRejectedValue(
       new Error('Error al actualizar')
     );
 
@@ -185,7 +185,7 @@ describe('Preferencias Component', () => {
   test('deshabilita checkboxes mientras guarda', async () => {
     const user = userEvent.setup();
     // Hacer que la actualización tarde un poco
-    (notificacionesService.actualizarPreferencias as jest.Mock).mockImplementation(
+    (notificacionesService.actualizarPreferencias as vi.Mock).mockImplementation(
       () => new Promise(resolve => setTimeout(resolve, 100))
     );
 

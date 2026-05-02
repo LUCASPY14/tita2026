@@ -15,12 +15,12 @@ import {
   getColorCriticidad
 } from './notificaciones.service';
 
-jest.mock('./api');
-const mockedApi = api as jest.Mocked<typeof api>;
+vi.mock('./api');
+const mockedApi = api as vi.Mocked<typeof api>;
 
 describe('Notificaciones Service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('API Functions', () => {

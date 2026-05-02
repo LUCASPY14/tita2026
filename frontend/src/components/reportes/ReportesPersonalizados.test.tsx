@@ -8,22 +8,22 @@ import reportesService from '../../services/reportes.service';
 import toast from 'react-hot-toast';
 
 // Mock de servicios
-jest.mock('../../services/reportes.service', () => ({
+vi.mock('../../services/reportes.service', () => ({
   __esModule: true,
   default: {
-    getReporteVentas: jest.fn(),
-    getReporteRecargas: jest.fn(),
-    getReporteTopProductos: jest.fn(),
-    getReporteConsumosTarjeta: jest.fn(),
-    getReporteFinanciero: jest.fn(),
+    getReporteVentas: vi.fn(),
+    getReporteRecargas: vi.fn(),
+    getReporteTopProductos: vi.fn(),
+    getReporteConsumosTarjeta: vi.fn(),
+    getReporteFinanciero: vi.fn(),
   },
 }));
 
-jest.mock('react-hot-toast', () => ({
+vi.mock('react-hot-toast', () => ({
   __esModule: true,
   default: {
-    success: jest.fn(),
-    error: jest.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -43,12 +43,12 @@ const mockReporteFinanciero = {
 
 describe('ReportesPersonalizados Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    (reportesService.getReporteVentas as jest.Mock).mockResolvedValue(mockReporteVentas);
-    (reportesService.getReporteFinanciero as jest.Mock).mockResolvedValue(mockReporteFinanciero);
-    (reportesService.getReporteRecargas as jest.Mock).mockResolvedValue({});
-    (reportesService.getReporteTopProductos as jest.Mock).mockResolvedValue({});
-    (reportesService.getReporteConsumosTarjeta as jest.Mock).mockResolvedValue({});
+    vi.clearAllMocks();
+    (reportesService.getReporteVentas as vi.Mock).mockResolvedValue(mockReporteVentas);
+    (reportesService.getReporteFinanciero as vi.Mock).mockResolvedValue(mockReporteFinanciero);
+    (reportesService.getReporteRecargas as vi.Mock).mockResolvedValue({});
+    (reportesService.getReporteTopProductos as vi.Mock).mockResolvedValue({});
+    (reportesService.getReporteConsumosTarjeta as vi.Mock).mockResolvedValue({});
   });
 
   test('renderiza correctamente', () => {
@@ -134,7 +134,7 @@ describe('ReportesPersonalizados Component', () => {
 
   test('maneja error al generar reporte', async () => {
     const user = userEvent.setup();
-    (reportesService.getReporteVentas as jest.Mock).mockRejectedValue(
+    (reportesService.getReporteVentas as vi.Mock).mockRejectedValue(
       new Error('Error de red')
     );
 

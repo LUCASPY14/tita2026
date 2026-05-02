@@ -8,28 +8,28 @@ import { authService, UserRole } from '../services/auth.service';
 import toast from 'react-hot-toast';
 
 // Mock del servicio de autenticación
-jest.mock('../services/auth.service', () => ({
+vi.mock('../services/auth.service', () => ({
   authService: {
-    login: jest.fn(),
-    logout: jest.fn(),
-    getCurrentUser: jest.fn(),
-    isAuthenticated: jest.fn(),
-    refreshToken: jest.fn(),
-    getToken: jest.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
+    getCurrentUser: vi.fn(),
+    isAuthenticated: vi.fn(),
+    refreshToken: vi.fn(),
+    getToken: vi.fn(),
   },
 }));
 
 // Mock de react-hot-toast
-jest.mock('react-hot-toast', () => ({
+vi.mock('react-hot-toast', () => ({
   __esModule: true,
   default: {
-    success: jest.fn(),
-    error: jest.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
-const mockedAuthService = authService as jest.Mocked<typeof authService>;
-const mockedToast = toast as jest.Mocked<typeof toast>;
+const mockedAuthService = authService as vi.Mocked<typeof authService>;
+const mockedToast = toast as vi.Mocked<typeof toast>;
 
 // Componente de prueba para testing
 const TestComponent = () => {
@@ -62,7 +62,7 @@ const TestComponent = () => {
 
 describe('AuthContext', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('inicializa con estado no autenticado cuando no hay usuario', async () => {
@@ -210,7 +210,7 @@ describe('AuthContext', () => {
 
   test('lanza error cuando se usa fuera del provider', () => {
     // Capturar error de consola
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(() => {
       render(<TestComponent />);

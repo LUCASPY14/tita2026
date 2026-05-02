@@ -112,7 +112,7 @@ describe('Checkbox Component', () => {
 
   test('llama onChange cuando cambia el estado', async () => {
     const user = userEvent.setup();
-    const handleChange = jest.fn();
+    const handleChange = vi.fn();
     render(<Checkbox name="test" onChange={handleChange} />);
     const checkbox = screen.getByRole('checkbox');
 

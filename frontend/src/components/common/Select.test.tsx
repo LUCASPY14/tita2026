@@ -133,7 +133,7 @@ describe('Select Component', () => {
 
   test('llama onChange cuando cambia la selección', async () => {
     const user = userEvent.setup();
-    const handleChange = jest.fn();
+    const handleChange = vi.fn();
     render(<Select name="test" options={mockOptions} onChange={handleChange} />);
     const select = screen.getByRole('combobox');
     

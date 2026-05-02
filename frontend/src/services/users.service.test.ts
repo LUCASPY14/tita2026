@@ -2,12 +2,12 @@
 import { usersService, rolesService, mapRolToUserRole, mapUserRoleToRolNombre } from './users.service';
 import type { Usuario, Rol, CreateUsuarioDto, UpdateUsuarioDto } from './users.service';
 
-jest.mock('./api');
-const mockedApi = api as jest.Mocked<typeof api>;
+vi.mock('./api');
+const mockedApi = api as vi.Mocked<typeof api>;
 
 describe('Users Service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('usersService.getAll', () => {
@@ -282,7 +282,7 @@ describe('Users Service', () => {
 
 describe('Roles Service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('rolesService.getAll', () => {

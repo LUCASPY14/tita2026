@@ -5,10 +5,10 @@ import notificacionesService from '../services/notificaciones.service';
 import type { NotificacionPortal, AlertaSistema, ResumenNotificaciones } from '../types';
 
 // Mock de módulos
-jest.mock('../contexts/AuthContext');
-jest.mock('../services/notificaciones.service');
+vi.mock('../contexts/AuthContext');
+vi.mock('../services/notificaciones.service');
 
-const mockUseAuthContext = useAuthContext as jest.MockedFunction<typeof useAuthContext>;
+const mockUseAuthContext = useAuthContext as vi.MockedFunction<typeof useAuthContext>;
 
 describe('useNotificationsByRole', () => {
   // Mock data
@@ -73,14 +73,14 @@ describe('useNotificationsByRole', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Mock del servicio de notificaciones
-    jest.spyOn(notificacionesService, 'getNotificaciones').mockResolvedValue(mockNotificaciones);
-    jest.spyOn(notificacionesService, 'getAlertas').mockResolvedValue(mockAlertas);
-    jest.spyOn(notificacionesService, 'getResumenNotificaciones').mockResolvedValue(mockResumen);
-    jest.spyOn(notificacionesService, 'marcarNotificacionLeida').mockResolvedValue({} as any);
-    jest.spyOn(notificacionesService, 'marcarTodasLeidas').mockResolvedValue(undefined as any);
+    vi.spyOn(notificacionesService, 'getNotificaciones').mockResolvedValue(mockNotificaciones);
+    vi.spyOn(notificacionesService, 'getAlertas').mockResolvedValue(mockAlertas);
+    vi.spyOn(notificacionesService, 'getResumenNotificaciones').mockResolvedValue(mockResumen);
+    vi.spyOn(notificacionesService, 'marcarNotificacionLeida').mockResolvedValue({} as any);
+    vi.spyOn(notificacionesService, 'marcarTodasLeidas').mockResolvedValue(undefined as any);
   });
 
   describe('Con usuario admin', () => {
@@ -93,10 +93,10 @@ describe('useNotificationsByRole', () => {
           role: 'admin',
         },
         isAuthenticated: true,
-        login: jest.fn(),
-        logout: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
         isLoading: false,
-        refreshUserData: jest.fn(),
+        refreshUserData: vi.fn(),
       });
     });
 
@@ -128,10 +128,10 @@ describe('useNotificationsByRole', () => {
           role: 'cajero',
         },
         isAuthenticated: true,
-        login: jest.fn(),
-        logout: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
         isLoading: false,
-        refreshUserData: jest.fn(),
+        refreshUserData: vi.fn(),
       });
     });
 
@@ -179,10 +179,10 @@ describe('useNotificationsByRole', () => {
           role: 'empleado',
         },
         isAuthenticated: true,
-        login: jest.fn(),
-        logout: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
         isLoading: false,
-        refreshUserData: jest.fn(),
+        refreshUserData: vi.fn(),
       });
     });
 
@@ -210,10 +210,10 @@ describe('useNotificationsByRole', () => {
           role: 'admin',
         },
         isAuthenticated: true,
-        login: jest.fn(),
-        logout: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
         isLoading: false,
-        refreshUserData: jest.fn(),
+        refreshUserData: vi.fn(),
       });
     });
 
@@ -289,15 +289,15 @@ describe('useNotificationsByRole', () => {
           role: 'admin',
         },
         isAuthenticated: true,
-        login: jest.fn(),
-        logout: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
         isLoading: false,
-        refreshUserData: jest.fn(),
+        refreshUserData: vi.fn(),
       });
     });
 
     test('debe manejar error al cargar notificaciones sin crashear', async () => {
-      jest.spyOn(notificacionesService, 'getNotificaciones').mockRejectedValue(
+      vi.spyOn(notificacionesService, 'getNotificaciones').mockRejectedValue(
         new Error('Error de red')
       );
 
@@ -312,7 +312,7 @@ describe('useNotificationsByRole', () => {
     });
 
     test('debe manejar error al cargar alertas sin crashear', async () => {
-      jest.spyOn(notificacionesService, 'getAlertas').mockRejectedValue(
+      vi.spyOn(notificacionesService, 'getAlertas').mockRejectedValue(
         new Error('Error de red')
       );
 
@@ -332,10 +332,10 @@ describe('useNotificationsByRole', () => {
       mockUseAuthContext.mockReturnValue({
         user: null,
         isAuthenticated: false,
-        login: jest.fn(),
-        logout: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
         isLoading: false,
-        refreshUserData: jest.fn(),
+        refreshUserData: vi.fn(),
       });
     });
 

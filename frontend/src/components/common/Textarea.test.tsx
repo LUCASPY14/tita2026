@@ -120,7 +120,7 @@ describe('Textarea Component', () => {
 
   test('llama onChange cuando cambia el texto', async () => {
     const user = userEvent.setup();
-    const handleChange = jest.fn();
+    const handleChange = vi.fn();
     render(<Textarea name="test" onChange={handleChange} />);
     const textarea = screen.getByRole('textbox');
     

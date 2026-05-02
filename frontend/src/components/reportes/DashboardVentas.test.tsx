@@ -8,17 +8,17 @@ import reportesService from '../../services/reportes.service';
 import toast from 'react-hot-toast';
 
 // Mock de servicios
-jest.mock('../../services/reportes.service', () => ({
+vi.mock('../../services/reportes.service', () => ({
   __esModule: true,
   default: {
-    getDashboardVentas: jest.fn(),
+    getDashboardVentas: vi.fn(),
   },
 }));
 
-jest.mock('react-hot-toast', () => ({
+vi.mock('react-hot-toast', () => ({
   __esModule: true,
   default: {
-    error: jest.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -47,8 +47,8 @@ const mockDashboard = {
 
 describe('DashboardVentas Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    (reportesService.getDashboardVentas as jest.Mock).mockResolvedValue(mockDashboard);
+    vi.clearAllMocks();
+    (reportesService.getDashboardVentas as vi.Mock).mockResolvedValue(mockDashboard);
   });
 
   test('renderiza correctamente', async () => {
@@ -117,7 +117,7 @@ describe('DashboardVentas Component', () => {
         variacion_porcentual: -33.3,
       },
     };
-    (reportesService.getDashboardVentas as jest.Mock).mockResolvedValue(mockDecrecimiento);
+    (reportesService.getDashboardVentas as vi.Mock).mockResolvedValue(mockDecrecimiento);
 
     render(<DashboardVentas />);
     
@@ -160,7 +160,7 @@ describe('DashboardVentas Component', () => {
   });
 
   test('maneja error al cargar dashboard', async () => {
-    (reportesService.getDashboardVentas as jest.Mock).mockRejectedValue(
+    (reportesService.getDashboardVentas as vi.Mock).mockRejectedValue(
       new Error('Error de red')
     );
 
@@ -172,7 +172,7 @@ describe('DashboardVentas Component', () => {
   });
 
   test('muestra mensaje cuando no hay datos', async () => {
-    (reportesService.getDashboardVentas as jest.Mock).mockResolvedValue(null);
+    (reportesService.getDashboardVentas as vi.Mock).mockResolvedValue(null);
 
     render(<DashboardVentas />);
 

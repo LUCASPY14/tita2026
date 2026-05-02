@@ -2,12 +2,12 @@
 import { ventasService, VentaCreateData, VentaParams, CancelarVentaResponse } from './ventas.service';
 import { Venta, PaginatedResponse } from '../types';
 
-jest.mock('./api');
-const mockedApi = api as jest.Mocked<typeof api>;
+vi.mock('./api');
+const mockedApi = api as vi.Mocked<typeof api>;
 
 describe('Ventas Service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getAll', () => {

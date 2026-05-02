@@ -12,7 +12,7 @@ describe('Button Component', () => {
   });
 
   test('ejecuta onClick cuando se hace clic', () => {
-    const handleClick = jest.fn();
+    const handleClick = vi.fn();
     render(<Button onClick={handleClick}>Click</Button>);
     
     const button = screen.getByRole('button');
@@ -47,7 +47,7 @@ describe('Button Component', () => {
   });
 
   test('no ejecuta onClick cuando está deshabilitado', () => {
-    const handleClick = jest.fn();
+    const handleClick = vi.fn();
     render(<Button disabled onClick={handleClick}>Disabled</Button>);
     
     const button = screen.getByRole('button');

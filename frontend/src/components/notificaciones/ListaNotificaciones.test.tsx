@@ -7,21 +7,21 @@ import ListaNotificaciones from './ListaNotificaciones';
 import notificacionesService from '../../services/notificaciones.service';
 
 // Mock del service
-jest.mock('../../services/notificaciones.service', () => ({
+vi.mock('../../services/notificaciones.service', () => ({
   __esModule: true,
   default: {
-    getNotificaciones: jest.fn(),
-    marcarNotificacionLeida: jest.fn(),
-    calcularTiempoTranscurrido: jest.fn(() => 'hace 2 horas'),
+    getNotificaciones: vi.fn(),
+    marcarNotificacionLeida: vi.fn(),
+    calcularTiempoTranscurrido: vi.fn(() => 'hace 2 horas'),
   },
 }));
 
 // Mock de react-hot-toast
-jest.mock('react-hot-toast', () => ({
+vi.mock('react-hot-toast', () => ({
   __esModule: true,
   default: {
-    error: jest.fn(),
-    success: jest.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
   },
 }));
 
@@ -71,9 +71,9 @@ const renderWithRouter = (component: React.ReactElement) => {
 
 describe('ListaNotificaciones Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // El servicio retorna array directo, no paginado
-    (notificacionesService.getNotificaciones as jest.Mock).mockResolvedValue(mockNotificaciones);
+    (notificacionesService.getNotificaciones as vi.Mock).mockResolvedValue(mockNotificaciones);
   });
 
   test('renderiza la lista de notificaciones', async () => {
@@ -90,7 +90,7 @@ describe('ListaNotificaciones Component', () => {
 
   test('muestra estado de cargando inicialmente', () => {
     // Mock no debería resolverse inmediatamente
-    (notificacionesService.getNotificaciones as jest.Mock).mockImplementation(
+    (notificacionesService.getNotificaciones as vi.Mock).mockImplementation(
       () => new Promise(() => {}) // Promise que nunca se resuelve
     );
 
@@ -121,7 +121,7 @@ describe('ListaNotificaciones Component', () => {
   });
 
   test('marca notificación como leída', async () => {
-    (notificacionesService.marcarNotificacionLeida as jest.Mock).mockResolvedValue({
+    (notificacionesService.marcarNotificacionLeida as vi.Mock).mockResolvedValue({
       ...mockNotificaciones[0],
       leida: true,
       fecha_lectura: new Date().toISOString()
@@ -171,7 +171,7 @@ describe('ListaNotificaciones Component', () => {
   });
 
   test('maneja error al cargar notificaciones', async () => {
-    (notificacionesService.getNotificaciones as jest.Mock).mockRejectedValue(
+    (notificacionesService.getNotificaciones as vi.Mock).mockRejectedValue(
       new Error('Error al cargar')
     );
 
@@ -184,7 +184,7 @@ describe('ListaNotificaciones Component', () => {
   });
 
   test('muestra mensaje cuando no hay notificaciones', async () => {
-    (notificacionesService.getNotificaciones as jest.Mock).mockResolvedValue(
+    (notificacionesService.getNotificaciones as vi.Mock).mockResolvedValue(
       []
     );
 

@@ -6,15 +6,15 @@ import { usePermissions, useHasRole, useHasPermission } from './usePermissions';
 import { useAuthContext } from '../contexts/AuthContext';
 
 // Mock de AuthContext
-jest.mock('../contexts/AuthContext', () => ({
-  useAuthContext: jest.fn(),
+vi.mock('../contexts/AuthContext', () => ({
+  useAuthContext: vi.fn(),
 }));
 
-const mockedUseAuthContext = useAuthContext as jest.MockedFunction<typeof useAuthContext>;
+const mockedUseAuthContext = useAuthContext as vi.MockedFunction<typeof useAuthContext>;
 
 describe('usePermissions', () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Admin permissions', () => {
@@ -23,9 +23,9 @@ describe('usePermissions', () => {
         user: { id: 1, username: 'admin', email: 'admin@test.com', role: 'admin' },
         isAuthenticated: true,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       const { result } = renderHook(() => usePermissions());
@@ -45,9 +45,9 @@ describe('usePermissions', () => {
         user: { id: 2, username: 'gerente', email: 'gerente@test.com', role: 'gerente' },
         isAuthenticated: true,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       const { result } = renderHook(() => usePermissions());
@@ -67,9 +67,9 @@ describe('usePermissions', () => {
         user: { id: 3, username: 'cajero', email: 'cajero@test.com', role: 'cajero' },
         isAuthenticated: true,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       const { result } = renderHook(() => usePermissions());
@@ -93,9 +93,9 @@ describe('usePermissions', () => {
         user: { id: 4, username: 'empleado', email: 'empleado@test.com', role: 'empleado' },
         isAuthenticated: true,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       const { result } = renderHook(() => usePermissions());
@@ -118,9 +118,9 @@ describe('usePermissions', () => {
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshUserData: jest.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshUserData: vi.fn(),
       });
 
       const { result } = renderHook(() => usePermissions());
@@ -139,9 +139,9 @@ describe('useHasRole', () => {
       user: { id: 1, username: 'admin', email: 'admin@test.com', role: 'admin' },
       isAuthenticated: true,
       isLoading: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      refreshUserData: jest.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUserData: vi.fn(),
     });
 
     const { result } = renderHook(() => useHasRole(['admin', 'gerente']));
@@ -153,9 +153,9 @@ describe('useHasRole', () => {
       user: { id: 2, username: 'empleado', email: 'empleado@test.com', role: 'empleado' },
       isAuthenticated: true,
       isLoading: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      refreshUserData: jest.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUserData: vi.fn(),
     });
 
     const { result } = renderHook(() => useHasRole(['admin', 'gerente']));
@@ -167,9 +167,9 @@ describe('useHasRole', () => {
       user: null,
       isAuthenticated: false,
       isLoading: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      refreshUserData: jest.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUserData: vi.fn(),
     });
 
     const { result } = renderHook(() => useHasRole(['admin']));
@@ -183,9 +183,9 @@ describe('useHasPermission', () => {
       user: { id: 1, username: 'cajero', email: 'cajero@test.com', role: 'cajero' },
       isAuthenticated: true,
       isLoading: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      refreshUserData: jest.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUserData: vi.fn(),
     });
 
     const { result } = renderHook(() => useHasPermission(['canProcessSales', 'canManageUsers']));
@@ -197,9 +197,9 @@ describe('useHasPermission', () => {
       user: { id: 1, username: 'empleado', email: 'empleado@test.com', role: 'empleado' },
       isAuthenticated: true,
       isLoading: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      refreshUserData: jest.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUserData: vi.fn(),
     });
 
     const { result } = renderHook(() => useHasPermission(['canManageUsers', 'canViewReports']));
