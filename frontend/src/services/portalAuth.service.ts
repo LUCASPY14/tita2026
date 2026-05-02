@@ -58,6 +58,7 @@ export interface CuentaCorriente {
 
 export interface DashboardData {
   cliente: {
+    id_cliente: number;
     nombre_completo: string;
     ruc_ci: string;
     email: string | null;

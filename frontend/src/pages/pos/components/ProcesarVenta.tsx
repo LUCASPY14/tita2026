@@ -92,14 +92,14 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
   };
 
   const getMedioPagoId = (): number | undefined => {
-    const buscar = (term: string) => mediosPago.find(m => m.nombre?.toLowerCase().includes(term))?.id_medio_pago;
+    const buscar = (term: string) => mediosPago.find(m => m.descripcion?.toLowerCase().includes(term))?.id_medio_pago;
     if (metodoPago === 'pos') return buscar('pos');
     if (metodoPago === 'tarjeta_hijo') return buscar('tarjeta');
     if (metodoPago === 'transferencia') return buscar('transf') ?? buscar('transfer');
     return undefined;
   };
 
-  const medioPagoPos = mediosPago.find(m => m.nombre?.toLowerCase().includes('pos')) ?? null;
+  const medioPagoPos = mediosPago.find(m => m.descripcion?.toLowerCase().includes('pos')) ?? null;
   const posGeneraComision = metodoPago === 'pos' && (medioPagoPos?.genera_comision ?? false);
   const formatearPrecio = (precio?: number): string => {
     if (!precio) return 'Gs. 0';
@@ -240,9 +240,8 @@ const ProcesarVenta: React.FC<ProcesarVentaProps> = ({
       if (metodoPago === 'mixto' && pagosMixtos.length > 0) {
         ventaData.pagos_data = pagosMixtos.map(pago => {
           // Buscar en nombre o descripcion (campo legacy vs campo real del modelo)
-          const buscar = (term: string) => mediosPago.find(m => 
-            m.nombre?.toLowerCase().includes(term) || 
-            (m as any).descripcion?.toLowerCase().includes(term)
+          const buscar = (term: string) => mediosPago.find(m =>
+            m.descripcion?.toLowerCase().includes(term)
           )?.id_medio_pago;
           
           let id_medio_pago: number | undefined;

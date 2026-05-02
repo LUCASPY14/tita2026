@@ -23,10 +23,9 @@ import {
 } from '@ant-design/icons';
 import cobrosService, {
   ResumenCobros,
-  FacturaPendiente,
   RegistrarPagoRequest,
 } from '../../services/cobros.service';
-import clientesService from '../../services/clientes.service';
+import { clientesService } from '../../services/clientes.service';
 import mediosPagoService from '../../services/mediosPago.service';
 
 const { Title, Text } = Typography;
@@ -74,10 +73,10 @@ const Cobros: React.FC = () => {
   const buscarCliente = async (values: { busqueda: string }) => {
     setSearchLoading(true);
     try {
-      const data = await clientesService.getAll({
+      const data = await clientesService.getClientes({
         search: values.busqueda,
       });
-      setClientes(data);
+      setClientes(data.results ?? []);
     } catch (error) {
       message.error('Error al buscar clientes');
     } finally {

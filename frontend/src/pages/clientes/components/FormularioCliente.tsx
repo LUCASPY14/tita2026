@@ -271,7 +271,7 @@ const FormularioCliente: React.FC<FormularioClienteProps> = ({
             onChange={handleChange}
             options={tiposCliente.map(tipo => ({
               value: tipo.id_tipo_cliente.toString(),
-              label: tipo.nombre_tipo || tipo.nombre || '',
+              label: tipo.nombre_tipo || '',
             }))}
             required
           />

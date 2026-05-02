@@ -150,14 +150,14 @@ const HistorialVentas: React.FC = () => {
       return;
     }
     const medioSeleccionado = mediosPago.find(m => m.id_medio_pago === Number(medioPagoId));
-    const esTransferencia = medioSeleccionado?.nombre.toLowerCase().includes('transfer');
+    const esTransferencia = medioSeleccionado?.descripcion.toLowerCase().includes('transfer');
     const esPOS = !esTransferencia && medioSeleccionado && (
-      medioSeleccionado.nombre.toLowerCase().includes('tarjeta') ||
-      medioSeleccionado.nombre.toLowerCase().includes('pos') ||
-      medioSeleccionado.nombre.toLowerCase().includes('débit') ||
-      medioSeleccionado.nombre.toLowerCase().includes('debit') ||
-      medioSeleccionado.nombre.toLowerCase().includes('crédit') ||
-      medioSeleccionado.nombre.toLowerCase().includes('credit')
+      medioSeleccionado.descripcion.toLowerCase().includes('tarjeta') ||
+      medioSeleccionado.descripcion.toLowerCase().includes('pos') ||
+      medioSeleccionado.descripcion.toLowerCase().includes('débit') ||
+      medioSeleccionado.descripcion.toLowerCase().includes('debit') ||
+      medioSeleccionado.descripcion.toLowerCase().includes('crédit') ||
+      medioSeleccionado.descripcion.toLowerCase().includes('credit')
     );
     if (esTransferencia && !refPgTransf.trim()) {
       setErrorPago('Ingrese el número de referencia de la transferencia.');
@@ -666,7 +666,7 @@ const HistorialVentas: React.FC = () => {
                 >
                   <option value="">Seleccionar...</option>
                   {mediosPago.map(m => (
-                    <option key={m.id_medio_pago} value={m.id_medio_pago}>{m.nombre}</option>
+                    <option key={m.id_medio_pago} value={m.id_medio_pago}>{m.descripcion}</option>
                   ))}
                 </select>
               </div>
@@ -675,7 +675,7 @@ const HistorialVentas: React.FC = () => {
               {(() => {
                 const medio = mediosPago.find(m => m.id_medio_pago === Number(medioPagoId));
                 if (!medio) return null;
-                const nombre = medio.nombre.toLowerCase();
+                const nombre = medio.descripcion.toLowerCase();
                 const esTransferencia = nombre.includes('transfer');
                 const esPOS = !esTransferencia && (nombre.includes('tarjeta') || nombre.includes('pos') || nombre.includes('debit') || nombre.includes('crédit') || nombre.includes('credit'));
                 return (

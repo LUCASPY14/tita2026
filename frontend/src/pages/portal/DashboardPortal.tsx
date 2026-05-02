@@ -367,7 +367,7 @@ const DashboardPortal: React.FC = () => {
             setMontoCarga('');
             setHijoSeleccionado(null);
           }}
-          onPagoConfirmado={(txnId, monto) => {
+          onPagoConfirmado={(_txnId, monto) => {
             const mensaje = hijoSeleccionado 
               ? `¡Carga confirmada! Monto: ${formatGs(monto)}`
               : `¡Pago confirmado! Monto: ${formatGs(monto)}`;
