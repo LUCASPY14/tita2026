@@ -309,7 +309,7 @@ package "Backend" {
     [Celery Workers]
 }
 
-database "MySQL" {
+database "SQL Server" {
     [Database]
 }
 
@@ -353,7 +353,7 @@ node "Web Server" {
 }
 
 node "DB Server" {
-    database [MySQL]
+    database [SQL Server]
 }
 
 cloud "CDN" {
@@ -361,7 +361,7 @@ cloud "CDN" {
 }
 
 [Nginx] --> [Django]
-[Django] --> [MySQL]
+[Django] --> [SQL Server]
 [CloudFlare] --> [Nginx]
 @enduml
 ```

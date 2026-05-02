@@ -556,7 +556,7 @@ POST /api/v1/tarjetas/
 ## 📝 Notas Importantes
 
 1. **Migraciones marcadas como fake**: La base de datos ya existe, solo se actualizaron tipos de datos en el código
-2. **Compatibilidad absoluta**: IntegerField(0/1) en MySQL sigue siendo TINYINT(1), compatible con BooleanField
+2. **Compatibilidad absoluta**: IntegerField(0/1) en SQL Server se representa como BIT (0/1), compatible con BooleanField
 3. **Sin cambios en schema**: No se modificó la estructura de las tablas
 4. **Validaciones en Python**: Toda la lógica está en el código Django, no en constraints de BD
 

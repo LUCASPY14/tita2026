@@ -54,7 +54,7 @@ Los diagramas cubren:
 ### Tecnologías Representadas
 
 - **Backend**: Django 6.0.2, Python 3.11+
-- **Base de Datos**: MySQL 8.0 (Master-Slave Replication)
+- **Base de Datos**: SQL Server 2025 (Primary + Read Replicas)
 - **Cache**: Redis 7.x (Master-Replica)
 - **Message Broker**: RabbitMQ / Celery
 - **Frontend**: React 18, TypeScript
@@ -591,7 +591,7 @@ Los diagramas de secuencia muestran la interacción temporal entre componentes d
 - Servicio Auth (JWT + 2FA)
 - Servicio Tarjetas
 - Gateway de Pago (externo)
-- Base de Datos MySQL
+- Base de Datos SQL Server
 - Cache Redis
 - Servicio Email
 
@@ -757,15 +757,15 @@ El diagrama de despliegue muestra la arquitectura física de producción del sis
   - Dead letter queue para errores
 
 #### 7. Capa de Datos - Base de Datos
-- **MySQL Master** (Write):
-  - MySQL 8.0 con InnoDB
-  - Binary logging habilitado
+- **SQL Server Primary** (Write):
+  - SQL Server 2025
+  - Transaction log habilitado
   - Backup diario a las 2 AM
   - Connection pooling (50 conexiones)
-- **2 MySQL Slaves** (Read):
-  - Replicación master-slave (asíncrona)
+- **2 SQL Server Read Replicas** (Read):
+  - Replicación asíncrona
   - Read-only para reportes y consultas
-  - Balanceo entre slaves para queries SELECT
+  - Balanceo entre réplicas para queries SELECT
 
 #### 8. Almacenamiento
 - **AWS S3** (Object Storage):
@@ -776,7 +776,7 @@ El diagrama de despliegue muestra la arquitectura física de producción del sis
   - Lifecycle policies (borrado automático tras 90 días)
 - **Backup Server**:
   - Snapshots diarios de BD
-  - Mysqldump completo + incremental
+  - Backup full + incremental
   - Retención: 30 días
   - Upload automático a S3
 
@@ -820,9 +820,9 @@ El diagrama de despliegue muestra la arquitectura física de producción del sis
 ```
 Cliente → CDN (cache) → Load Balancer → Frontend Server → API Server → Redis Cache (si existe)
                                                                ↓
-                                                          MySQL Slave (lectura)
+                                                   SQL Server Replica (lectura)
                                                                ↓
-                                                        MySQL Master (escritura)
+                                                    SQL Server Primary (escritura)
 ```
 
 ### Estrategia de Escalabilidad
@@ -830,7 +830,7 @@ Cliente → CDN (cache) → Load Balancer → Frontend Server → API Server →
 - **Vertical**: Aumentar CPU/RAM de servidores API
 - **Horizontal**: Agregar más servidores API (auto-scaling)
 - **Database Sharding**: Particionar BD por tipo de dato (futura implementación)
-- **Read Replicas**: Agregar más slaves MySQL según carga de reportes
+- **Read Replicas**: Agregar más réplicas SQL Server según carga de reportes
 
 ### Backup y Disaster Recovery
 
@@ -881,7 +881,7 @@ Cliente → CDN (cache) → Load Balancer → Frontend Server → API Server →
 - **Load Balancer**: Balanceador de carga
 - **CDN**: Content Delivery Network
 - **SSL/TLS**: Secure Sockets Layer / Transport Layer Security
-- **Binary Log**: Registro binario de MySQL para replicación
+- **Transaction Log**: Registro transaccional de SQL Server para recuperación
 - **Connection Pooling**: Reutilización de conexiones a BD
 
 ### Acrónimos del Proyecto

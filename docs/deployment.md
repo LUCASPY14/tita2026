@@ -7,7 +7,7 @@
 - Servidor Linux (Ubuntu 20.04+)
 - Python 3.11+
 - Node.js 18+
-- PostgreSQL 15+
+- SQL Server 2025
 - Nginx
 - Domain name (opcional)
 
@@ -18,26 +18,22 @@
 sudo apt update && sudo apt upgrade -y
 
 # Instalar dependencias
-sudo apt install -y python3-pip python3-venv postgresql postgresql-contrib nginx git
+sudo apt install -y python3-pip python3-venv nginx git curl gnupg2 unixodbc-dev
+curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+sudo apt update
+sudo ACCEPT_EULA=Y apt install -y msodbcsql18 mssql-tools18
 
 # Instalar Node.js
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
-### 2. Configurar PostgreSQL
+### 2. Configurar SQL Server
 
 ```bash
-# Crear usuario y base de datos
-sudo -u postgres psql
-
-CREATE DATABASE cantina_db;
-CREATE USER cantina_user WITH PASSWORD 'secure_password_here';
-ALTER ROLE cantina_user SET client_encoding TO 'utf8';
-ALTER ROLE cantina_user SET default_transaction_isolation TO 'read committed';
-ALTER ROLE cantina_user SET timezone TO 'America/Asuncion';
-GRANT ALL PRIVILEGES ON DATABASE cantina_db TO cantina_user;
-\q
+# Crear base de datos titadb
+/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'secure_password_here' -Q "IF DB_ID('titadb') IS NULL CREATE DATABASE [titadb]" -C
 ```
 
 ### 3. Clonar y Configurar Backend
@@ -64,7 +60,12 @@ Agregar en `.env`:
 ```
 DEBUG=False
 SECRET_KEY=generate_a_secure_secret_key_here
-DATABASE_URL=postgresql://cantina_user:secure_password_here@localhost/cantina_db
+DB_ENGINE=mssql
+DB_NAME=titadb
+DB_USER=sa
+DB_PASSWORD=secure_password_here
+DB_HOST=localhost
+DB_PORT=1433
 ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
 CORS_ALLOWED_ORIGINS=https://yourdomain.com
 ```
@@ -299,8 +300,8 @@ sudo chmod -R 755 /var/www/cantina_tita
 
 ### Base de datos no responde
 ```bash
-sudo systemctl status postgresql
-sudo systemctl restart postgresql
+sudo systemctl status mssql-server
+sudo systemctl restart mssql-server
 ```
 
 ## Seguridad Adicional

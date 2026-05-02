@@ -4,7 +4,7 @@
 
 - Python 3.14+
 - Node.js 18+
-- MySQL 8.0+
+- SQL Server 2025
 - Redis 6+ (para Celery)
 
 ---
@@ -41,11 +41,12 @@ cp .env.example .env
 ```env
 DJANGO_ENVIRONMENT=production
 DJANGO_SECRET_KEY=<genera-una-clave-segura-aqui>
-DB_NAME=dbcantinatita
-DB_USER=cantina_user
+DB_ENGINE=mssql
+DB_NAME=titadb
+DB_USER=sa
 DB_PASSWORD=<password-seguro>
 DB_HOST=localhost
-DB_PORT=3306
+DB_PORT=1433
 ALLOWED_HOSTS=tudominio.com,www.tudominio.com
 ```
 
@@ -122,7 +123,7 @@ docker-compose -f docker-compose.prod.yml up -d
 **Servicios incluidos:**
 - Backend (Django + Gunicorn)
 - Frontend (Nginx sirviendo build)
-- MySQL Database
+- SQL Server Database
 - Redis (Celery broker)
 
 ---
@@ -199,11 +200,10 @@ gunicorn backend.wsgi:application \
   --timeout 120
 ```
 
-### Database (MySQL)
+### Database (SQL Server)
 ```sql
--- Optimizar queries lentas
-SET GLOBAL slow_query_log = 'ON';
-SET GLOBAL long_query_time = 1;
+-- Query Store (recomendado para análisis de rendimiento)
+ALTER DATABASE [titadb] SET QUERY_STORE = ON;
 ```
 
 ### Frontend (Nginx)
@@ -218,13 +218,13 @@ gzip_min_length 1000;
 
 ## 🆘 Troubleshooting
 
-### Error: "Can't connect to MySQL"
+### Error: "Can't connect to SQL Server"
 ```bash
-# Verificar que MySQL esté corriendo
-systemctl status mysql
+# Verificar que SQL Server esté corriendo
+systemctl status mssql-server
 
 # Verificar credenciales
-mysql -u cantina_user -p
+/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '<tu-password>' -Q "SELECT 1" -C
 ```
 
 ### Error: "SECRET_KEY is insecure"

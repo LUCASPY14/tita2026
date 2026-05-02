@@ -1563,9 +1563,9 @@ graph TB
     end
     
     subgraph "Base de Datos"
-        DBM[(MySQL Master<br/>Write)]
-        DBS1[(MySQL Slave 1<br/>Read)]
-        DBS2[(MySQL Slave 2<br/>Read)]
+        DBM[(SQL Server Primary<br/>Write)]
+        DBS1[(SQL Server Replica 1<br/>Read)]
+        DBS2[(SQL Server Replica 2<br/>Read)]
     end
     
     subgraph "Monitoreo"
@@ -1616,7 +1616,7 @@ graph TB
 
 **Componentes**:
 - **3 API Servers**: Auto-scaling horizontal
-- **2 MySQL Replicas**: Lectura balanceada
+- **2 SQL Server Replicas**: Lectura balanceada
 - **Redis Master-Replica**: Cache de alta disponibilidad
 - **Celery Workers**: Procesamiento asíncrono
 - **Monitoreo**: Prometheus + Grafana + Sentry

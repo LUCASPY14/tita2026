@@ -284,6 +284,6 @@ README.md                             ✓ Creado
 
 4. **Deployment**:
    - Configurar servidor de producción
-   - Configurar base de datos PostgreSQL
+   - Configurar base de datos SQL Server
    - Configurar SSL/TLS
    - Implementar monitoreo

@@ -386,7 +386,7 @@ contiene = models.BooleanField(
 ### Si hay datos en la base de datos con valores `0` o `1`:
 
 ```sql
--- Los BooleanFields en MySQL usan TINYINT(1)
+-- Los BooleanFields en SQL Server usan BIT
 -- 0 = False
 -- 1 = True
 

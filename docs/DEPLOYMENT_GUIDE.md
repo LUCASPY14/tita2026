@@ -16,7 +16,7 @@
 
 ### Requisitos del Sistema
 - Python 3.10+
-- PostgreSQL 13+ / MySQL 8+ / MariaDB 10.5+
+- SQL Server 2025
 - Nginx / Apache
 - SSL/TLS Certificate
 - RAM:  mínimo (4GB+ recomendado)
@@ -41,12 +41,12 @@ ALLOWED_HOSTS=cantinatita.com,www.cantinatita.com,api.cantinatita.com
 CORS_ALLOWED_ORIGINS=https://cantinatita.com,https://www.cantinatita.com
 
 # Database
-DB_ENGINE=django.db.backends.postgresql
-DB_NAME=dbcantinatita
-DB_USER=cantina_user
+DB_ENGINE=mssql
+DB_NAME=titadb
+DB_USER=sa
 DB_PASSWORD=password_muy_segura
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=1433
 
 # Security
 SECURE_SSL_REDIRECT=True
@@ -103,7 +103,8 @@ DATABASES = {
         'HOST': config('DB_HOST'),
         'PORT': config('DB_PORT', cast=int),
         'OPTIONS': {
-            'charset': 'utf8mb4',
+            'driver': 'ODBC Driver 18 for SQL Server',
+            'extra_params': 'TrustServerCertificate=yes;MARS_Connection=yes;Encrypt=yes;Connection Timeout=30;',
         }
     }
 }
@@ -187,35 +188,19 @@ sudo apt update && sudo apt upgrade -y
 # Python y herramientas
 sudo apt install python3.10 python3.10-venv python3-pip nginx supervisor -y
 
-# Base de datos (PostgreSQL)
-sudo apt install postgresql postgresql-contrib -y
-
-# O para MySQL
-sudo apt install mysql-server -y
+# Drivers para SQL Server
+sudo apt install curl gnupg2 unixodbc-dev -y
+curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+sudo apt update
+sudo ACCEPT_EULA=Y apt install -y msodbcsql18 mssql-tools18
 ```
 
 ### 3. Crear Usuario y Base de Datos
 
-#### PostgreSQL:
+#### SQL Server:
 ```bash
-sudo -u postgres psql
-
-CREATE DATABASE dbcantinatita;
-CREATE USER cantina_user WITH PASSWORD 'password_segura';
-GRANT ALL PRIVILEGES ON DATABASE dbcantinatita TO cantina_user;
-ALTER USER cantina_user CREATEDB;  # Para tests
-\q
-```
-
-#### MySQL:
-```bash
-sudo mysql
-
-CREATE DATABASE dbcantinatita CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'cantina_user'@'localhost' IDENTIFIED BY 'password_segura';
-GRANT ALL PRIVILEGES ON dbcantinatita.* TO 'cantina_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
+/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'password_segura' -Q "IF DB_ID('titadb') IS NULL CREATE DATABASE [titadb]" -C
 ```
 
 ### 4. Clonar Proyecto y Configurar
@@ -406,8 +391,15 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
-    postgresql-client \
+    curl \
+    gnupg2 \
+    unixodbc-dev \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql18 mssql-tools18
 
 # Install Python dependencies
 COPY requirements.txt /app/
@@ -433,13 +425,13 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:13
+    image: mcr.microsoft.com/mssql/server:2022-latest
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mssql_data:/var/opt/mssql
     environment:
-      POSTGRES_DB: dbcantinatita
-      POSTGRES_USER: cantina_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD}
     restart: unless-stopped
 
   redis:
@@ -485,7 +477,7 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 volumes:
-  postgres_data:
+  mssql_data:
   static_volume:
   media_volume:
 ```
@@ -523,7 +515,7 @@ crontab -e
 0 2 * * * cd /var/www/cantinatita/backend && /var/www/cantinatita/backend/venv/bin/python manage.py cleanup_usuarios >> /var/log/cantinatita/cleanup.log 2>&1
 
 # Backup de base de datos (diario a las 3:00 AM)
-0 3 * * * /usr/bin/pg_dump -U cantina_user dbcantinatita > /backups/db_$(date +\%Y\%m\%d_\%H\%M\%S).sql
+0 3 * * * /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'password_segura' -Q "BACKUP DATABASE [titadb] TO DISK = '/backups/db_$(date +\%Y\%m\%d_\%H\%M\%S).bak' WITH INIT, COMPRESSION" -C
 
 # Rotación de logs (semanal, domingos a las 4:00 AM)
 0 4 * * 0 find /var/log/cantinatita/ -name "*.log" -mtime +30 -delete
@@ -541,20 +533,21 @@ Crear `/usr/local/bin/backup_cantinatita.sh`:
 
 BACKUP_DIR="/backups/cantinatita"
 DATE=$(date +%Y%m%d_%H%M%S)
-DB_NAME="dbcantinatita"
-DB_USER="cantina_user"
+DB_NAME="titadb"
+DB_USER="sa"
+DB_PASSWORD="password_segura"
 
 # Crear directorio de backup
 mkdir -p $BACKUP_DIR
 
 # Backup de base de datos
-pg_dump -U $DB_USER $DB_NAME | gzip > $BACKUP_DIR/db_$DATE.sql.gz
+/opt/mssql-tools18/bin/sqlcmd -S localhost -U $DB_USER -P "$DB_PASSWORD" -Q "BACKUP DATABASE [$DB_NAME] TO DISK = '$BACKUP_DIR/db_$DATE.bak' WITH INIT, COMPRESSION" -C
 
 # Backup de archivos media
 tar -czf $BACKUP_DIR/media_$DATE.tar.gz /var/www/cantinatita/media/
 
 # Mantener solo los últimos 30 días
-find $BACKUP_DIR -name "db_*.sql.gz" -mtime +30 -delete
+find $BACKUP_DIR -name "db_*.bak" -mtime +30 -delete
 find $BACKUP_DIR -name "media_*.tar.gz" -mtime +30 -delete
 
 echo "Backup completado: $DATE"

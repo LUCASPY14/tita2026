@@ -75,7 +75,7 @@ Usuario → Frontend → API REST → Backend → Base de Datos
 ## Base de Datos
 
 ### Consideraciones
-- PostgreSQL para producción
+- SQL Server para producción
 - SQLite para desarrollo
 - Migraciones versionadas
 - Índices en campos frecuentemente consultados
@@ -122,14 +122,14 @@ Usuario → Frontend → API REST → Backend → Base de Datos
 ```
 Backend: localhost:8000
 Frontend: localhost:3000
-PostgreSQL: localhost:5432
+SQL Server: localhost:1433
 ```
 
 ### Producción
 ```
 Backend: Gunicorn + Nginx
 Frontend: Build estático en CDN
-Base de Datos: PostgreSQL (managed)
+Base de Datos: SQL Server (managed)
 ```
 
 ## Escalabilidad

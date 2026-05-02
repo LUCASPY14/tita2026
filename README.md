@@ -182,7 +182,7 @@ Ver [VALIDATION_REPORT.md](VALIDATION_REPORT.md) para análisis detallado de tes
 ### Backend
 - Django 4.2+
 - Django REST Framework
-- PostgreSQL / SQLite
+- SQL Server 2025 (motor `mssql`)
 - Celery (tareas asíncronas)
 
 ### Frontend
@@ -216,12 +216,17 @@ Ver [VALIDATION_REPORT.md](VALIDATION_REPORT.md) para análisis detallado de tes
 ```
 DEBUG=True
 SECRET_KEY=your-secret-key
-DATABASE_URL=postgresql://user:password@localhost/dbname
+DB_ENGINE=mssql
+DB_NAME=titadb
+DB_USER=sa
+DB_PASSWORD=your-strong-password
+DB_HOST=localhost
+DB_PORT=1433
 ALLOWED_HOSTS=localhost,127.0.0.1
 ```
 
-REACT_APP_API_URL=http://localhost:8000/api/v1
-REACT
+### Frontend (.env)
+```
 VITE_API_URL=http://localhost:8000/api/v1
 VITE_APP_NAME=Cantina Tita
 ```

@@ -31,7 +31,7 @@
             <h3>Componentes de Infraestructura</h3>
             <ul>
                 <li><strong>3 API Servers</strong>: Auto-scaling horizontal con Django + Gunicorn</li>
-                <li><strong>2 MySQL Replicas</strong>: Lectura balanceada, replicación master-slave</li>
+                <li><strong>2 SQL Server Replicas</strong>: Lectura balanceada, replicación asíncrona</li>
                 <li><strong>Redis Master-Replica</strong>: Cache de alta disponibilidad</li>
                 <li><strong>Celery Workers</strong>: Procesamiento asíncrono de tareas</li>
                 <li><strong>Monitoreo</strong>: Prometheus + Grafana + Sentry</li>
@@ -76,9 +76,9 @@ graph TB
     end
     
     subgraph "Base de Datos"
-        DBM[(MySQL Master<br/>Write)]
-        DBS1[(MySQL Slave 1<br/>Read)]
-        DBS2[(MySQL Slave 2<br/>Read)]
+        DBM[(SQL Server Primary<br/>Write)]
+        DBS1[(SQL Server Replica 1<br/>Read)]
+        DBS2[(SQL Server Replica 2<br/>Read)]
     end
     
     subgraph "Monitoreo"

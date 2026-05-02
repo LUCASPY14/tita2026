@@ -205,12 +205,12 @@ package "Application Layer" #LightYellow {
 }
 
 package "Data Layer" #LightCoral {
-    database "MySQL\nMaster" as mysql_m
-    database "MySQL\nSlave 1" as mysql_s1
-    database "MySQL\nSlave 2" as mysql_s2
+    database "SQL Server\nPrimary" as sql_primary
+    database "SQL Server\nRead Replica 1" as sql_replica1
+    database "SQL Server\nRead Replica 2" as sql_replica2
     
-    mysql_m .down.> mysql_s1 : replication
-    mysql_m .down.> mysql_s2 : replication
+    sql_primary .down.> sql_replica1 : replication
+    sql_primary .down.> sql_replica2 : replication
 }
 
 package "Cache Layer" #LightPink {
@@ -237,13 +237,13 @@ lb --> gunicorn : HTTP
 
 api --> auth : validate
 api --> redis_m : cache
-api --> mysql_m : write
-api --> mysql_s1 : read
+api --> sql_primary : write
+api --> sql_replica1 : read
 
 celery --> rabbitmq : consume
 api --> rabbitmq : publish
 
-celery --> mysql_m : write
+celery --> sql_primary : write
 celery --> email : send
 celery --> sms : send
 celery --> payment : process
@@ -395,12 +395,12 @@ node "Worker Server\n(Ubuntu 22.04)" as worker {
 }
 
 node "Database Server\n(Ubuntu 22.04)" as db {
-    database "MySQL 8.0\nMaster" as mysql_m
-    database "MySQL 8.0\nSlave 1" as mysql_s1
-    database "MySQL 8.0\nSlave 2" as mysql_s2
+    database "SQL Server 2025\nPrimary" as sql_primary
+    database "SQL Server 2025\nRead Replica 1" as sql_replica1
+    database "SQL Server 2025\nRead Replica 2" as sql_replica2
     
-    mysql_m .> mysql_s1
-    mysql_m .> mysql_s2
+    sql_primary .> sql_replica1
+    sql_primary .> sql_replica2
 }
 
 node "Cache Server\n(Ubuntu 22.04)" as cache {
@@ -433,10 +433,10 @@ lb --> nginx2 : Round Robin
 nginx1 --> gun1
 nginx2 --> gun2
 
-django1 --> mysql_m : Write
-django1 --> mysql_s1 : Read
-django2 --> mysql_m : Write
-django2 --> mysql_s2 : Read
+django1 --> sql_primary : Write
+django1 --> sql_replica1 : Read
+django2 --> sql_primary : Write
+django2 --> sql_replica2 : Read
 
 django1 --> redis_m : Cache
 django2 --> redis_m : Cache
@@ -445,8 +445,8 @@ django1 --> rabbitmq : Publish
 cel1 --> rabbitmq : Consume
 cel2 --> rabbitmq : Consume
 
-cel1 --> mysql_m : Write
-cel2 --> mysql_m : Write
+cel1 --> sql_primary : Write
+cel2 --> sql_primary : Write
 
 django1 ..> prom : metrics
 django2 ..> prom : metrics

@@ -117,7 +117,7 @@ docker-compose logs -f
 Deberías ver algo como:
 ```
 NAME                  STATUS      PORTS
-cantina_db            Up          0.0.0.0:5432->5432/tcp
+cantina_db            Up          0.0.0.0:1433->1433/tcp
 cantina_redis         Up          0.0.0.0:6379->6379/tcp
 cantina_backend       Up          0.0.0.0:8000->8000/tcp
 cantina_celery        Up
@@ -236,14 +236,14 @@ docker-compose exec backend python manage.py collectstatic --noinput
 ### Comandos de Base de Datos
 
 ```powershell
-# Acceder a PostgreSQL
-docker-compose exec db psql -U cantina_user -d cantina_db
+# Verificar conexión a SQL Server
+docker-compose exec db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$env:DB_PASSWORD" -Q "SELECT name FROM sys.databases" -C
 
 # Backup de la base de datos
-docker-compose exec db pg_dump -U cantina_user cantina_db > backup.sql
+docker-compose exec db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$env:DB_PASSWORD" -Q "BACKUP DATABASE [titadb] TO DISK = '/var/opt/mssql/backup_titadb.bak' WITH INIT, COMPRESSION" -C
 
-# Restaurar backup
-Get-Content backup.sql | docker-compose exec -T db psql -U cantina_user cantina_db
+# Restaurar backup (ejemplo)
+docker-compose exec db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$env:DB_PASSWORD" -Q "RESTORE DATABASE [titadb] FROM DISK = '/var/opt/mssql/backup_titadb.bak' WITH REPLACE" -C
 ```
 
 ### Comandos de Redis
@@ -298,7 +298,7 @@ NGINX_PORT=8080
 docker-compose logs backend
 
 # Verificar configuración de la base de datos
-docker-compose exec db psql -U cantina_user -d cantina_db -c "\l"
+docker-compose exec db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$env:DB_PASSWORD" -Q "SELECT name FROM sys.databases" -C
 ```
 
 ### Problema 3: No se puede acceder desde otra PC
@@ -323,13 +323,13 @@ docker-compose exec db psql -U cantina_user -d cantina_db -c "\l"
 ### Problema 4: Base de datos no se conecta
 
 ```powershell
-# Verificar que PostgreSQL está corriendo
+# Verificar que SQL Server está corriendo
 docker-compose ps db
 
 # Reiniciar el servicio de base de datos
 docker-compose restart db
 
-# Ver logs de PostgreSQL
+# Ver logs de SQL Server
 docker-compose logs db
 ```
 
@@ -401,7 +401,7 @@ Para producción, **DEBES cambiar**:
 
 - **Docker Docs**: https://docs.docker.com
 - **Django Deployment**: https://docs.djangoproject.com/en/5.0/howto/deployment/
-- **PostgreSQL**: https://www.postgresql.org/docs/
+- **SQL Server on Linux**: https://learn.microsoft.com/sql/linux/
 - **Redis**: https://redis.io/docs/
 
 ---
