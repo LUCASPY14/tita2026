@@ -787,7 +787,7 @@ class DetallesVentaViewSet(viewsets.ModelViewSet):
     ViewSet para detalles de venta.
     """
 
-    queryset = DetallesVenta.objects.all()
+    queryset = DetallesVenta.objects.all().order_by("pk")
     serializer_class = DetallesVentaSerializer
     permission_classes = [IsAuthenticated, CanManageVentas]
     throttle_classes = [VentasRateThrottle]

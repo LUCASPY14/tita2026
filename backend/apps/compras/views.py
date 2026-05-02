@@ -219,7 +219,7 @@ class ComprasViewSet(viewsets.ModelViewSet):
 
 
 class DetallesCompraViewSet(viewsets.ModelViewSet):
-    queryset = DetallesCompra.objects.all()
+    queryset = DetallesCompra.objects.all().order_by("pk")
     serializer_class = DetallesCompraSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["id_compra", "id_producto"]
