@@ -425,7 +425,7 @@ version: '3.8'
 
 services:
   db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2025-latest
     volumes:
       - mssql_data:/var/opt/mssql
     environment:

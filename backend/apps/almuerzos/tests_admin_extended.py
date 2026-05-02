@@ -71,7 +71,7 @@ class PlanesAlmuerzoAdminTest(TestCase):
         obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("4CAF50", result)
-        self.assertIn("estado", result)
+        self.assertIn("ACTIVO", result)
 
     def test_estado_badge_inactivo(self):
         obj = _mock_obj(estado=False)
@@ -403,7 +403,7 @@ class AlergenosAdminTest(TestCase):
         obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
         self.assertIn("4CAF50", result)
-        self.assertIn("estado", result)
+        self.assertIn("ACTIVO", result)
 
     def test_estado_badge_inactivo(self):
         obj = _mock_obj(estado=False)
