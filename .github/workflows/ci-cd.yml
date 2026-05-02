@@ -126,6 +126,20 @@ jobs:
           sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
           pip install -r requirements.txt
       
+      - name: Check for missing migrations
+        env:
+          DJANGO_SETTINGS_MODULE: backend.settings.test
+          SECRET_KEY: test-secret-key-for-ci-${{ github.run_id }}
+          DEBUG: 'True'
+          DB_HOST: 127.0.0.1
+          DB_PORT: '1433'
+          DB_NAME: titadb
+          DB_USER: sa
+          DB_PASSWORD: Test_StrongPassw0rd!
+        run: |
+          cd backend
+          python manage.py makemigrations --check --dry-run
+
       - name: Run tests with coverage
         env:
           DJANGO_SETTINGS_MODULE: backend.settings.test
