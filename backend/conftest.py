@@ -1,6 +1,14 @@
 """
-Configuración compartida de pytest para todos los tests del backend.
-Incluye fixtures reutilizables para autenticación JWT, modelos base y API clients.
+Configuración base de pytest para todo el backend.
+
+Este conftest es la capa canónica para fixtures compartidas usadas por:
+- tests de apps (backend/apps/**)
+- tests legacy de backend/tests cuando no redefinen fixture local
+
+Nota sobre estabilidad:
+- backend/tests/conftest.py existe para compatibilidad legacy y puede
+  sobreescribir fixtures con el mismo nombre en ese subárbol.
+- Mantener las nuevas fixtures aquí reduce divergencias y flaky tests.
 """
 import pytest
 from decimal import Decimal

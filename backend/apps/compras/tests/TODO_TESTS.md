@@ -2,9 +2,9 @@
 
 ## Estado Actual
 
-**Tests activos:** 3/15 (20%)  
-**Tests deshabilitados:** 12/15 (80%)  
-**Razón:** Incompatibilidad con el sistema de autenticación real
+**Estado de ejecución actual:** ✅ Suite activa y ejecutándose en CI  
+**Tests deshabilitados por marca (`skip/xfail`):** 0  
+**Observación:** este documento quedó como registro histórico del rewrite JWT ya completado.
 
 ---
 

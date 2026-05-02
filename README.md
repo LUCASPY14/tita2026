@@ -6,9 +6,9 @@
 ![Mobile Tests](https://img.shields.io/badge/mobile%20tests-48%20passing-brightgreen)
 ![Backend Coverage](https://img.shields.io/badge/backend%20coverage-28%25-yellow)
 ![Python](https://img.shields.io/badge/python-3.11-blue)
-![Django](https://img.shields.io/badge/django-4.2+-green)
+![Django](https://img.shields.io/badge/django-6.0.2-green)
 ![React](https://img.shields.io/badge/react-18-blue)
-![TypeScript](https://img.shields.io/badge/typescript-4.9+-blue)
+![TypeScript](https://img.shields.io/badge/typescript-5.9-blue)
 
 Sistema integral de gestión para cantina escolar, con módulos de ventas, almuerzos, inventario, clientes y reportes.
 
@@ -180,19 +180,20 @@ Ver [VALIDATION_REPORT.md](VALIDATION_REPORT.md) para análisis detallado de tes
 ## 🔧 Tecnologías
 
 ### Backend
-- Django 4.2+
+- Django 6.0.2
 - Django REST Framework
 - SQL Server 2025 (motor `mssql`)
 - Celery (tareas asíncronas)
 
 ### Frontend
 - **React 18**
-- **TypeScript 4.9+**
+- **TypeScript 5.9**
+- **Vite 8**
 - **Tailwind CSS 3.4**
 - React Router
 - Axios
 - Zustand (estado global)
-- Create React App
+- Vitest (test runner)
 
 ### Mobile
 - React Native / Expo

@@ -1,6 +1,13 @@
 """
-Configuración compartida de pytest para todos los tests del backend.
-Incluye fixtures reutilizables para autenticación JWT, modelos base y API clients.
+Conftest de compatibilidad para backend/tests (suite legacy).
+
+Este archivo se mantiene intencionalmente separado de backend/conftest.py para:
+- no romper tests legacy que dependen de comportamientos/fixtures antiguas
+- permitir migración gradual hacia fixtures canónicas en backend/conftest.py
+
+Regla de mantenimiento:
+- Tests nuevos deben preferir fixtures de backend/conftest.py.
+- Cuando una fixture legacy quede sin uso, migrar y eliminar duplicación.
 """
 import pytest
 from decimal import Decimal

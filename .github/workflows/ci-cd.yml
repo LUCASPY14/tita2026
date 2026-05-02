@@ -140,7 +140,7 @@ jobs:
           REDIS_PORT: '6379'
         run: |
           cd backend
-          python -m pytest apps/ \
+          python -m pytest apps/ tests/ \
             --cov=apps \
             --cov-report=term-missing \
             --cov-report=xml \
