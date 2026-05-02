@@ -5,6 +5,7 @@ Missing lines targeted: 127, 131-132, 167, 171-172, 206-221, 245, 250-251, 254,
 299, 311, 343, 404, 421, 434-438, 467, 508, 513, 541, 577, 594, 619, 662, 673,
 692-701, 744-752, 778, 783-784, 787, 832, 837-838, 875
 """
+
 from decimal import Decimal
 from datetime import date
 from unittest.mock import MagicMock, patch, PropertyMock
@@ -341,6 +342,7 @@ class ValidarFechaCambioPrecioExtendedTest(TestCase):
 # Lines 131-132: except (ValueError, TypeError) in validar_stock_minimo
 # ==============================================================================
 
+
 class ValidarStockMinimoDecimalErrorTest(TestCase):
     """Cover the except (ValueError, TypeError) block (lines 131-132)."""
 
@@ -360,6 +362,7 @@ class ValidarStockMinimoDecimalErrorTest(TestCase):
 # ==============================================================================
 # Lines 171-172: except (ValueError, TypeError) in validar_precio_positivo
 # ==============================================================================
+
 
 class ValidarPrecioPositivoDecimalErrorTest(TestCase):
     """Cover the except (ValueError, TypeError) block (lines 171-172)."""
@@ -381,6 +384,7 @@ class ValidarPrecioPositivoDecimalErrorTest(TestCase):
 # Lines 250-251: except (ValueError, TypeError) in validar_margen_utilidad
 # ==============================================================================
 
+
 class ValidarMargenUtilidadDecimalErrorTest(TestCase):
     """Cover the except (ValueError, TypeError) block (lines 250-251)."""
 
@@ -400,6 +404,7 @@ class ValidarMargenUtilidadDecimalErrorTest(TestCase):
 # ==============================================================================
 # Lines 299, 308->exit, 311: validar_producto_unico with producto_id
 # ==============================================================================
+
 
 class ValidarProductoUnicoMockedTest(TestCase):
     """Cover branches in validar_producto_unico that require producto_id."""
@@ -434,6 +439,7 @@ class ValidarProductoUnicoMockedTest(TestCase):
 # Line 404: MAX_DEPTH exceeded in validar_jerarquia_categoria
 # ==============================================================================
 
+
 class ValidarJerarquiaCategoriaMaxDepthTest(TestCase):
     """Cover line 404: depth >= MAX_DEPTH raises ValidationError."""
 
@@ -455,6 +461,7 @@ class ValidarJerarquiaCategoriaMaxDepthTest(TestCase):
 # Line 421: validar_categoria_activa_con_productos — invalid object
 # Lines 434-438: subcategorias activas branch
 # ==============================================================================
+
 
 class ValidarCategoriaActivaConProductosExtendedTest(TestCase):
 
@@ -499,6 +506,7 @@ class ValidarCategoriaActivaConProductosExtendedTest(TestCase):
 # ==============================================================================
 # Remaining branch gaps: 546->exit, 698->exit, 748->751, 837-838
 # ==============================================================================
+
 
 class ValidarUnidadActivaSinProductosTest(TestCase):
     """546->exit: unidad with 0 active products — function completes without raising."""
@@ -566,6 +574,7 @@ class ValidarCambioPrecioHistoricoPequenioExplicitTest(TestCase):
 # Line 546->exit: with active products raises
 # ==============================================================================
 
+
 class ValidarUnidadActivaConProductosExtendedTest(TestCase):
 
     def test_unidad_invalida_sin_id(self):
@@ -591,6 +600,7 @@ class ValidarUnidadActivaConProductosExtendedTest(TestCase):
 # Line 594: invalid chars in validar_nombre_lista_precios
 # ==============================================================================
 
+
 class ValidarNombreListaPreciosInvalidCharTest(TestCase):
 
     def test_nombre_con_caracter_invalido(self):
@@ -604,6 +614,7 @@ class ValidarNombreListaPreciosInvalidCharTest(TestCase):
 # Line 619: validar_fecha_vigencia_lista(None) returns early
 # ==============================================================================
 
+
 class ValidarFechaVigenciaListaNoneTest(TestCase):
 
     def test_fecha_none_retorna_sin_error(self):
@@ -616,6 +627,7 @@ class ValidarFechaVigenciaListaNoneTest(TestCase):
 # Lines 692-701: validar_lista_activa_con_precios with precios_count > 0
 # ==============================================================================
 
+
 class ValidarListaActivaConPreciosExtendedTest(TestCase):
 
     def test_lista_invalida_sin_id(self):
@@ -627,6 +639,7 @@ class ValidarListaActivaConPreciosExtendedTest(TestCase):
     def test_lista_con_precios_emite_warning(self):
         """Lines 692-701: lista with precios > 0 emits UserWarning."""
         import warnings as _warnings
+
         lista = MagicMock()
         lista.id_lista = 1
         lista.nombre_lista = "Lista Mayorista"
@@ -643,6 +656,7 @@ class ValidarListaActivaConPreciosExtendedTest(TestCase):
 # ==============================================================================
 # Lines 744-752: validar_unicidad_precio_lista — with id_precio + duplicate
 # ==============================================================================
+
 
 class ValidarUnicidadPrecioListaExtendedTest(TestCase):
 
@@ -677,6 +691,7 @@ class ValidarUnicidadPrecioListaExtendedTest(TestCase):
 # Line 787: if anterior <= 0 returns
 # ==============================================================================
 
+
 class ValidarVariacionPrecioEdgeCasesTest(TestCase):
 
     @patch("apps.productos.validators.Decimal", side_effect=ValueError("bad"))
@@ -706,11 +721,13 @@ class ValidarVariacionPrecioEdgeCasesTest(TestCase):
 # Lines 837-838: warnings.warn for small difference in validar_cambio_precio_historico
 # ==============================================================================
 
+
 class ValidarCambioPrecioHistoricoPequenioTest(TestCase):
 
     def test_diferencia_menor_a_un_guarani(self):
         """Lines 837-838: diferencia < 1.00 emits UserWarning."""
         import warnings as _warnings
+
         with _warnings.catch_warnings(record=True) as w:
             _warnings.simplefilter("always")
             validar_cambio_precio_historico(Decimal("5000.00"), Decimal("5000.50"))

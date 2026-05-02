@@ -902,6 +902,7 @@ class ValidarRangoHorarioRestriccionTest(TestCase):
 # EXTRA TESTS for missing lines (None / invalid-type branches)
 # =============================================================================
 
+
 class ValidarTituloNoneTest(TestCase):
     def test_titulo_none(self):
         """Line 50: titulo=None."""
@@ -1220,4 +1221,3 @@ class ValidarDiaSemanaRestriccionNoneTest(TestCase):
         """Line 755: dia=None."""
         with self.assertRaises(ValidationError):
             validar_dia_semana_restriccion(None)
-

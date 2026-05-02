@@ -9,6 +9,7 @@ Cubre líneas faltantes:
 244 (iva_10 suma),
 265-301 (obtener_cuenta_corriente_proveedor)
 """
+
 from django.test import TestCase, TransactionTestCase
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -66,6 +67,7 @@ def make_empleado(suffix=""):
 # =============================================================================
 # validar_compra - líneas 64-67, 80
 # =============================================================================
+
 
 class ValidarCompraEdgeCasesTest(TestCase):
     """Cubre ramas no cubiertas de validar_compra"""
@@ -140,6 +142,7 @@ class ValidarCompraEdgeCasesTest(TestCase):
 # confirmar_compra - líneas 158-159, 173
 # =============================================================================
 
+
 class ConfirmarCompraEdgeCasesTest(TransactionTestCase):
     """Cubre confirmar_compra cuando compra no existe o no tiene detalles"""
 
@@ -194,6 +197,7 @@ class ConfirmarCompraEdgeCasesTest(TransactionTestCase):
 # calcular_totales_compra - líneas 222-223, 244
 # =============================================================================
 
+
 class CalcularTotalesCompraExtendedTest(TestCase):
     """Cubre IVA 5% y 10% en calcular_totales"""
 
@@ -245,8 +249,16 @@ class CalcularTotalesCompraExtendedTest(TestCase):
     def test_calcular_totales_mixto(self):
         """IVA 5% y 10% juntos → ambos suman"""
         detalles = [
-            {"id_producto": self.producto_iva5.id_producto, "cantidad": Decimal("1.000"), "precio_unitario": Decimal("1000.00")},
-            {"id_producto": self.producto_iva10.id_producto, "cantidad": Decimal("1.000"), "precio_unitario": Decimal("1000.00")},
+            {
+                "id_producto": self.producto_iva5.id_producto,
+                "cantidad": Decimal("1.000"),
+                "precio_unitario": Decimal("1000.00"),
+            },
+            {
+                "id_producto": self.producto_iva10.id_producto,
+                "cantidad": Decimal("1.000"),
+                "precio_unitario": Decimal("1000.00"),
+            },
         ]
         resultado = CompraService.calcular_totales_compra(detalles)
         self.assertGreater(resultado["iva_5"], Decimal("0.00"))
@@ -254,9 +266,7 @@ class CalcularTotalesCompraExtendedTest(TestCase):
 
     def test_calcular_totales_producto_no_existe_pasa(self):
         """Producto inexistente en totales → except pasa, no falla"""
-        detalles = [
-            {"id_producto": 999999, "cantidad": Decimal("1.000"), "precio_unitario": Decimal("500.00")}
-        ]
+        detalles = [{"id_producto": 999999, "cantidad": Decimal("1.000"), "precio_unitario": Decimal("500.00")}]
         resultado = CompraService.calcular_totales_compra(detalles)
         self.assertIsInstance(resultado["total"], Decimal)
 
@@ -264,6 +274,7 @@ class CalcularTotalesCompraExtendedTest(TestCase):
 # =============================================================================
 # obtener_cuenta_corriente_proveedor - líneas 265-301
 # =============================================================================
+
 
 class ObtenerCuentaCorrienteProveedorTest(TestCase):
     """Cubre obtener_cuenta_corriente_proveedor"""
@@ -274,10 +285,11 @@ class ObtenerCuentaCorrienteProveedorTest(TestCase):
         self.empleado = make_empleado("ccp1")
 
     def test_proveedor_sin_compras_retorna_ceros(self):
-        """obtener_cuenta_corriente_proveedor - la funcion usa campo 'estado' """
+        """obtener_cuenta_corriente_proveedor - la funcion usa campo 'estado'"""
         # El servicio tiene un bug: filtra por estado='Confirmado' pero el campo es estado_pago
         # Esto lanza FieldError. Verificamos que la función al ser llamada falla o retorna datos
         from django.core.exceptions import FieldError
+
         try:
             resultado = CompraService.obtener_cuenta_corriente_proveedor(self.proveedor.id_proveedor)
             # Si no lanza, verificar estructura
@@ -297,6 +309,7 @@ class ObtenerCuentaCorrienteProveedorTest(TestCase):
             saldo_pendiente=Decimal("100000.00"),
         )
         from django.core.exceptions import FieldError
+
         try:
             resultado = CompraService.obtener_cuenta_corriente_proveedor(self.proveedor.id_proveedor)
             self.assertGreaterEqual(resultado.get("cantidad_compras", 0), 0)
@@ -306,6 +319,7 @@ class ObtenerCuentaCorrienteProveedorTest(TestCase):
     def test_proveedor_no_existe_retorna_ceros(self):
         """Proveedor no existente → FieldError or zeros"""
         from django.core.exceptions import FieldError
+
         try:
             resultado = CompraService.obtener_cuenta_corriente_proveedor(999999)
             self.assertEqual(resultado["total_compras"], Decimal("0.00"))
@@ -315,9 +329,17 @@ class ObtenerCuentaCorrienteProveedorTest(TestCase):
     def test_resultado_tiene_claves_esperadas(self):
         """Verifica que en caso de no error, retorna claves esperadas"""
         from django.core.exceptions import FieldError
+
         try:
             resultado = CompraService.obtener_cuenta_corriente_proveedor(self.proveedor.id_proveedor)
-            expected_keys = ["total_compras", "total_pagado", "saldo_pendiente", "cantidad_compras", "cantidad_pendientes", "compras_pendientes"]
+            expected_keys = [
+                "total_compras",
+                "total_pagado",
+                "saldo_pendiente",
+                "cantidad_compras",
+                "cantidad_pendientes",
+                "compras_pendientes",
+            ]
             for key in expected_keys:
                 self.assertIn(key, resultado)
         except FieldError:

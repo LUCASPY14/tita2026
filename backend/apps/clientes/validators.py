@@ -36,9 +36,7 @@ def validar_nombres_cliente(nombres):
 
     # Solo letras, espacios, apóstrofes y guiones
     if not re.match(r"^[a-záéíóúñA-ZÁÉÍÓÚÑ\s'\-]+$", nombres):
-        raise ValidationError(
-            "Los nombres solo pueden contener letras, espacios, apóstrofes y guiones"
-        )
+        raise ValidationError("Los nombres solo pueden contener letras, espacios, apóstrofes y guiones")
 
 
 def validar_apellidos_cliente(apellidos):
@@ -63,9 +61,7 @@ def validar_apellidos_cliente(apellidos):
 
     # Solo letras, espacios, apóstrofes y guiones
     if not re.match(r"^[a-záéíóúñA-ZÁÉÍÓÚÑ\s'\-]+$", apellidos):
-        raise ValidationError(
-            "Los apellidos solo pueden contener letras, espacios, apóstrofes y guiones"
-        )
+        raise ValidationError("Los apellidos solo pueden contener letras, espacios, apóstrofes y guiones")
 
 
 def validar_razon_social(razon_social):
@@ -150,9 +146,7 @@ def validar_ruc_ci(ruc_ci):
     # Solo números (sin guion ni puntos)
     else:
         if not ruc_ci.isdigit():
-            raise ValidationError(
-                "RUC/CI debe ser numérico o tener formato válido (con guion o puntos)"
-            )
+            raise ValidationError("RUC/CI debe ser numérico o tener formato válido (con guion o puntos)")
 
         if len(ruc_ci) < 6 or len(ruc_ci) > 8:
             raise ValidationError("CI debe tener entre 6 y 8 dígitos")
@@ -205,9 +199,7 @@ def validar_telefono_cliente(telefono):
     telefono_limpio = re.sub(r"[\s\-\(\)]", "", telefono)
 
     if not telefono_limpio.isdigit():
-        raise ValidationError(
-            "El teléfono debe contener solo dígitos, espacios, guiones o paréntesis"
-        )
+        raise ValidationError("El teléfono debe contener solo dígitos, espacios, guiones o paréntesis")
 
     # Paraguay: móviles empiezan con 09, fijos con 0 + código de área (21, 61, etc.)
     if telefono_limpio.startswith("09"):
@@ -337,9 +329,7 @@ def validar_nombre_hijo(nombre):
         raise ValidationError("El nombre no puede exceder 100 caracteres")
 
     if not re.match(r"^[a-záéíóúñA-ZÁÉÍÓÚÑ\s'\-]+$", nombre):
-        raise ValidationError(
-            "El nombre solo puede contener letras, espacios, apóstrofes y guiones"
-        )
+        raise ValidationError("El nombre solo puede contener letras, espacios, apóstrofes y guiones")
 
 
 def validar_apellido_hijo(apellido):
@@ -363,9 +353,7 @@ def validar_apellido_hijo(apellido):
         raise ValidationError("El apellido no puede exceder 100 caracteres")
 
     if not re.match(r"^[a-záéíóúñA-ZÁÉÍÓÚÑ\s'\-]+$", apellido):
-        raise ValidationError(
-            "El apellido solo puede contener letras, espacios, apóstrofes y guiones"
-        )
+        raise ValidationError("El apellido solo puede contener letras, espacios, apóstrofes y guiones")
 
 
 def validar_fecha_nacimiento(fecha_nacimiento):
@@ -620,9 +608,7 @@ def validar_motivo_cambio_grado(motivo):
     motivo = motivo.strip()
 
     if motivo not in motivos_validos:
-        raise ValidationError(
-            f"Motivo inválido. Debe ser uno de: {', '.join(set(motivos_validos))}"
-        )
+        raise ValidationError(f"Motivo inválido. Debe ser uno de: {', '.join(set(motivos_validos))}")
 
 
 def validar_cambio_grado(grado_anterior, grado_nuevo):
@@ -906,9 +892,7 @@ def validar_resultado_log(resultado):
     resultado = resultado.strip()
 
     if resultado not in resultados_validos:
-        raise ValidationError(
-            f"Resultado inválido. Debe ser uno de: {', '.join(resultados_validos)}"
-        )
+        raise ValidationError(f"Resultado inválido. Debe ser uno de: {', '.join(resultados_validos)}")
 
 
 def validar_ip_origen(ip):

@@ -307,9 +307,7 @@ class AutorizacionServiceTest(TestCase):
 
         self.rol_cajero = Roles.objects.create(nombre_rol="Cajero", descripcion="Cajero de ventas")
 
-        self.rol_gerente = Roles.objects.create(
-            nombre_rol="Gerente", descripcion="Gerente de tienda"
-        )
+        self.rol_gerente = Roles.objects.create(nombre_rol="Gerente", descripcion="Gerente de tienda")
 
         # Crear empleados
         self.cajero = Empleados.objects.create(
@@ -429,6 +427,4 @@ class AutorizacionServiceTest(TestCase):
         self.assertEqual(registro.ip_address, "192.168.1.100")
 
         # Verificar que se guardó en la BD
-        self.assertTrue(
-            RegistroAutorizaciones.objects.filter(id_autorizacion=registro.id_autorizacion).exists()
-        )
+        self.assertTrue(RegistroAutorizaciones.objects.filter(id_autorizacion=registro.id_autorizacion).exists())

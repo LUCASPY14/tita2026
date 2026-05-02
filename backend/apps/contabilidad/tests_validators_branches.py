@@ -34,7 +34,6 @@ from apps.contabilidad.validators import (
     validar_fechas_timbrado,
 )
 
-
 # ──────────────────────────────────────────────────────────────────────────────
 # validar_estado_cierre_caja
 # ──────────────────────────────────────────────────────────────────────────────

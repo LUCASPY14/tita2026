@@ -95,9 +95,7 @@ def validar_stock_minimo_maximo(cantidad_minima, cantidad_maxima):
         raise ValidationError(f"El stock máximo debe ser mayor a cero: {cantidad_maxima}")
 
     if min_decimal >= max_decimal:
-        raise ValidationError(
-            f"El stock mínimo ({cantidad_minima}) debe ser menor que el máximo ({cantidad_maxima})"
-        )
+        raise ValidationError(f"El stock mínimo ({cantidad_minima}) debe ser menor que el máximo ({cantidad_maxima})")
 
 
 def validar_punto_reorden(punto_reorden, stock_minimo, stock_maximo):
@@ -209,8 +207,7 @@ def validar_tipo_movimiento(tipo_movimiento):
 
     if tipo_movimiento not in TIPOS_VALIDOS:
         raise ValidationError(
-            f"Tipo de movimiento inválido: '{tipo_movimiento}'. "
-            f"Valores permitidos: {', '.join(TIPOS_VALIDOS)}"
+            f"Tipo de movimiento inválido: '{tipo_movimiento}'. " f"Valores permitidos: {', '.join(TIPOS_VALIDOS)}"
         )
 
 
@@ -232,9 +229,7 @@ def validar_motivo_movimiento(motivo):
         raise ValidationError("El motivo del movimiento es requerido")
 
     if len(motivo.strip()) < 10:
-        raise ValidationError(
-            f"El motivo debe tener al menos 10 caracteres. Actual: {len(motivo.strip())}"
-        )
+        raise ValidationError(f"El motivo debe tener al menos 10 caracteres. Actual: {len(motivo.strip())}")
 
 
 def validar_referencia_movimiento(tipo_referencia, id_referencia):
@@ -261,8 +256,7 @@ def validar_referencia_movimiento(tipo_referencia, id_referencia):
 
     if tipo_referencia not in TIPOS_REFERENCIA:
         raise ValidationError(
-            f"Tipo de referencia inválido: '{tipo_referencia}'. "
-            f"Valores permitidos: {', '.join(TIPOS_REFERENCIA)}"
+            f"Tipo de referencia inválido: '{tipo_referencia}'. " f"Valores permitidos: {', '.join(TIPOS_REFERENCIA)}"
         )
 
     if id_referencia is not None and id_referencia <= 0:
@@ -291,8 +285,7 @@ def validar_tipo_ajuste(tipo_ajuste):
 
     if tipo_ajuste not in TIPOS_VALIDOS:
         raise ValidationError(
-            f"Tipo de ajuste inválido: '{tipo_ajuste}'. "
-            f"Valores permitidos: {', '.join(TIPOS_VALIDOS)}"
+            f"Tipo de ajuste inválido: '{tipo_ajuste}'. " f"Valores permitidos: {', '.join(TIPOS_VALIDOS)}"
         )
 
 
@@ -312,9 +305,7 @@ def validar_estado_ajuste(estado):
         raise ValidationError("El estado del ajuste es requerido")
 
     if estado not in ESTADOS_VALIDOS:
-        raise ValidationError(
-            f"Estado inválido: '{estado}'. " f"Valores permitidos: {', '.join(ESTADOS_VALIDOS)}"
-        )
+        raise ValidationError(f"Estado inválido: '{estado}'. " f"Valores permitidos: {', '.join(ESTADOS_VALIDOS)}")
 
 
 def validar_cantidad_ajuste(cantidad_ajuste, tipo_ajuste):
@@ -347,16 +338,14 @@ def validar_cantidad_ajuste(cantidad_ajuste, tipo_ajuste):
     if tipo_ajuste in ["Merma", "Vencimiento", "Deterioro"]:
         if cantidad > 0:
             raise ValidationError(
-                f"Los ajustes de tipo '{tipo_ajuste}' deben tener cantidad negativa. "
-                f"Valor recibido: {cantidad}"
+                f"Los ajustes de tipo '{tipo_ajuste}' deben tener cantidad negativa. " f"Valor recibido: {cantidad}"
             )
 
     # Sobrantes deben ser positivos
     if tipo_ajuste == "Sobrante":
         if cantidad < 0:
             raise ValidationError(
-                f"Los ajustes de tipo 'Sobrante' deben tener cantidad positiva. "
-                f"Valor recibido: {cantidad}"
+                f"Los ajustes de tipo 'Sobrante' deben tener cantidad positiva. " f"Valor recibido: {cantidad}"
             )
 
 
@@ -419,9 +408,7 @@ def validar_fecha_vencimiento(fecha_vencimiento):
         fecha_vencimiento = fecha_vencimiento.date()
 
     if fecha_vencimiento < hoy:
-        raise ValidationError(
-            f"La fecha de vencimiento no puede estar en el pasado: {fecha_vencimiento}"
-        )
+        raise ValidationError(f"La fecha de vencimiento no puede estar en el pasado: {fecha_vencimiento}")
 
 
 def validar_numero_lote(numero_lote):
@@ -447,9 +434,7 @@ def validar_numero_lote(numero_lote):
         raise ValidationError(f"El número de lote debe tener al menos 3 caracteres: '{lote}'")
 
     if not re.match(r"^[A-Za-z0-9\-]+$", lote):
-        raise ValidationError(
-            f"El número de lote solo puede contener letras, números y guiones: '{lote}'"
-        )
+        raise ValidationError(f"El número de lote solo puede contener letras, números y guiones: '{lote}'")
 
 
 def validar_cantidad_lote(cantidad_lote, cantidad_movimiento):
@@ -504,9 +489,7 @@ def validar_dias_historico(dias):
         raise ValidationError("Los días deben ser un número entero")
 
     if dias_int < 7:
-        raise ValidationError(
-            f"El análisis requiere mínimo 7 días de histórico. Valor recibido: {dias}"
-        )
+        raise ValidationError(f"El análisis requiere mínimo 7 días de histórico. Valor recibido: {dias}")
 
     if dias_int > 365:
         raise ValidationError(f"El análisis no puede superar 365 días. Valor recibido: {dias}")
@@ -676,8 +659,7 @@ def validar_nivel_alerta(nivel):
 
     if nivel not in NIVELES_VALIDOS:
         raise ValidationError(
-            f"Nivel de alerta inválido: '{nivel}'. "
-            f"Valores permitidos: {', '.join(NIVELES_VALIDOS)}"
+            f"Nivel de alerta inválido: '{nivel}'. " f"Valores permitidos: {', '.join(NIVELES_VALIDOS)}"
         )
 
 

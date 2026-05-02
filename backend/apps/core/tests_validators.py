@@ -337,9 +337,7 @@ class ValidadoresSaldoAlertaTestCase(TestCase):
     def test_saldo_alerta_excede_maximo(self):
         """Saldo de alerta mayor a ₲1M debe fallar"""
         with self.assertRaises(ValidationError):
-            validar_saldo_alerta(
-                saldo_alerta=Decimal("1500000.00"), saldo_actual=Decimal("2000000.00")
-            )
+            validar_saldo_alerta(saldo_alerta=Decimal("1500000.00"), saldo_actual=Decimal("2000000.00"))
 
     def test_saldo_alerta_mayor_igual_saldo_actual(self):
         """Saldo de alerta >= saldo actual debe generar warning"""
@@ -832,18 +830,14 @@ class ValidadoresValorConfiguracionTestCase(TestCase):
     def test_valor_en_lista_permitidos(self):
         """Valor en lista de valores permitidos debe ser válido"""
         try:
-            validar_valor_configuracion(
-                "opcion1", "string", valores_permitidos=["opcion1", "opcion2", "opcion3"]
-            )
+            validar_valor_configuracion("opcion1", "string", valores_permitidos=["opcion1", "opcion2", "opcion3"])
         except ValidationError:  # pragma: no cover
             self.fail("Valor en lista permitidos generó ValidationError")
 
     def test_valor_fuera_lista_permitidos(self):
         """Valor fuera de lista de valores permitidos debe fallar"""
         with self.assertRaises(ValidationError):
-            validar_valor_configuracion(
-                "opcion4", "string", valores_permitidos=["opcion1", "opcion2", "opcion3"]
-            )
+            validar_valor_configuracion("opcion4", "string", valores_permitidos=["opcion1", "opcion2", "opcion3"])
 
 
 class ValidadoresValoresPermitidosTestCase(TestCase):
@@ -960,18 +954,14 @@ class ValidadoresUnicidadRolOperacionTestCase(TestCase):
     def test_unicidad_nuevo_limite_diferente_operacion(self):
         """Nuevo límite con diferente operación no debe fallar"""
         try:
-            validar_unicidad_rol_operacion(
-                id_rol=self.rol, tipo_operacion="descuento", id_limite_actual=None
-            )
+            validar_unicidad_rol_operacion(id_rol=self.rol, tipo_operacion="descuento", id_limite_actual=None)
         except ValidationError:  # pragma: no cover
             self.fail("Límite con diferente operación generó ValidationError")
 
     def test_unicidad_limite_duplicado(self):
         """Nuevo límite con misma combinación rol-operación debe fallar"""
         with self.assertRaises(ValidationError):
-            validar_unicidad_rol_operacion(
-                id_rol=self.rol, tipo_operacion="venta", id_limite_actual=None
-            )
+            validar_unicidad_rol_operacion(id_rol=self.rol, tipo_operacion="venta", id_limite_actual=None)
 
     def test_unicidad_editar_mismo_limite(self):
         """Editar el mismo límite no debe generar error"""
@@ -994,9 +984,7 @@ class ValidadoresMotivoAutorizacionTestCase(TestCase):
     def test_motivo_autorizacion_valido(self):
         """Motivo válido no debe generar error"""
         try:
-            validar_motivo_autorizacion(
-                "Cliente especial requiere descuento por volumen de compras recurrentes"
-            )
+            validar_motivo_autorizacion("Cliente especial requiere descuento por volumen de compras recurrentes")
         except ValidationError:  # pragma: no cover
             self.fail("Motivo válido generó ValidationError")
 

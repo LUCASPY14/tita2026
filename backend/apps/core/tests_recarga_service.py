@@ -30,9 +30,7 @@ class RecargaServiceCalcularMontosTest(TestCase):
 
     def test_efectivo_sin_comision(self):
         """Efectivo no debe tener comisión (0%)"""
-        resultado = RecargaService.calcular_montos(
-            monto_recarga=Decimal("100000"), metodo_pago="efectivo"
-        )
+        resultado = RecargaService.calcular_montos(monto_recarga=Decimal("100000"), metodo_pago="efectivo")
 
         self.assertEqual(resultado["monto_recarga"], Decimal("100000"))
         self.assertEqual(resultado["comision_porcentaje"], Decimal("0.0"))
@@ -41,9 +39,7 @@ class RecargaServiceCalcularMontosTest(TestCase):
 
     def test_bancard_con_comision_3_4_porciento(self):
         """Bancard debe aplicar comisión de 3.4%"""
-        resultado = RecargaService.calcular_montos(
-            monto_recarga=Decimal("100000"), metodo_pago="bancard"
-        )
+        resultado = RecargaService.calcular_montos(monto_recarga=Decimal("100000"), metodo_pago="bancard")
 
         self.assertEqual(resultado["monto_recarga"], Decimal("100000"))
         self.assertEqual(resultado["comision_porcentaje"], Decimal("3.4"))
@@ -52,9 +48,7 @@ class RecargaServiceCalcularMontosTest(TestCase):
 
     def test_tarjeta_pos_con_comision_3_4_porciento(self):
         """POS debe aplicar comisión de 3.4%"""
-        resultado = RecargaService.calcular_montos(
-            monto_recarga=Decimal("100000"), metodo_pago="tarjeta_pos"
-        )
+        resultado = RecargaService.calcular_montos(monto_recarga=Decimal("100000"), metodo_pago="tarjeta_pos")
 
         self.assertEqual(resultado["monto_recarga"], Decimal("100000"))
         self.assertEqual(resultado["comision_porcentaje"], Decimal("3.4"))
@@ -63,9 +57,7 @@ class RecargaServiceCalcularMontosTest(TestCase):
 
     def test_transferencia_sin_comision(self):
         """Transferencia no debe tener comisión (0%)"""
-        resultado = RecargaService.calcular_montos(
-            monto_recarga=Decimal("100000"), metodo_pago="transferencia"
-        )
+        resultado = RecargaService.calcular_montos(monto_recarga=Decimal("100000"), metodo_pago="transferencia")
 
         self.assertEqual(resultado["monto_recarga"], Decimal("100000"))
         self.assertEqual(resultado["comision_porcentaje"], Decimal("0.0"))
@@ -74,9 +66,7 @@ class RecargaServiceCalcularMontosTest(TestCase):
 
     def test_monto_con_decimales(self):
         """Calcular comisión con montos decimales"""
-        resultado = RecargaService.calcular_montos(
-            monto_recarga=Decimal("50000.50"), metodo_pago="bancard"
-        )
+        resultado = RecargaService.calcular_montos(monto_recarga=Decimal("50000.50"), metodo_pago="bancard")
 
         self.assertEqual(resultado["monto_recarga"], Decimal("50000.50"))
         self.assertEqual(resultado["comision_monto"], Decimal("1700.02"))  # 3.4% de 50000.50
@@ -84,9 +74,7 @@ class RecargaServiceCalcularMontosTest(TestCase):
 
     def test_metodo_pago_invalido(self):
         """Método de pago no existente debe usar comisión 0%"""
-        resultado = RecargaService.calcular_montos(
-            monto_recarga=Decimal("100000"), metodo_pago="metodo_inexistente"
-        )
+        resultado = RecargaService.calcular_montos(monto_recarga=Decimal("100000"), metodo_pago="metodo_inexistente")
 
         # Debería default a 0% si el método no existe
         self.assertEqual(resultado["comision_porcentaje"], Decimal("0.0"))
@@ -156,19 +144,17 @@ class RecargaServiceValidarIdempotenciaTest(TransactionTestCase):
             nombre="Test", apellido="Hijo", grado="1ro", id_cliente_responsable=self.cliente
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="T001", 
-            saldo_actual=Decimal("0"), 
-            estado="activa", 
+            nro_tarjeta="T001",
+            saldo_actual=Decimal("0"),
+            estado="activa",
             fecha_creacion=timezone.now(),
             limite_credito=Decimal("1000.00"),
-            id_hijo=self.hijo
+            id_hijo=self.hijo,
         )
 
     def test_comprobante_nuevo_retorna_false(self):
         """Comprobante que no existe debe retornar False"""
-        es_duplicado = RecargaService.validar_idempotencia(
-            numero_comprobante="COMP-001", referencia_externa=None
-        )
+        es_duplicado = RecargaService.validar_idempotencia(numero_comprobante="COMP-001", referencia_externa=None)
 
         self.assertFalse(es_duplicado)
 
@@ -185,9 +171,7 @@ class RecargaServiceValidarIdempotenciaTest(TransactionTestCase):
         )
 
         # Validar idempotencia
-        es_duplicado = RecargaService.validar_idempotencia(
-            numero_comprobante="COMP-001", referencia_externa=None
-        )
+        es_duplicado = RecargaService.validar_idempotencia(numero_comprobante="COMP-001", referencia_externa=None)
 
         self.assertTrue(es_duplicado)
 
@@ -204,17 +188,13 @@ class RecargaServiceValidarIdempotenciaTest(TransactionTestCase):
         )
 
         # Validar idempotencia
-        es_duplicado = RecargaService.validar_idempotencia(
-            numero_comprobante=None, referencia_externa="BANC-123456"
-        )
+        es_duplicado = RecargaService.validar_idempotencia(numero_comprobante=None, referencia_externa="BANC-123456")
 
         self.assertTrue(es_duplicado)
 
     def test_ambos_none_retorna_false(self):
         """Si ambos parámetros son None debe retornar False"""
-        es_duplicado = RecargaService.validar_idempotencia(
-            numero_comprobante=None, referencia_externa=None
-        )
+        es_duplicado = RecargaService.validar_idempotencia(numero_comprobante=None, referencia_externa=None)
 
         self.assertFalse(es_duplicado)
 
@@ -238,12 +218,12 @@ class RecargaServiceAcreditarSaldoTest(TransactionTestCase):
             nombre="Test", apellido="Hijo", grado="1ro", id_cliente_responsable=self.cliente
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="T001", 
-            saldo_actual=Decimal("0"), 
-            estado="activa", 
+            nro_tarjeta="T001",
+            saldo_actual=Decimal("0"),
+            estado="activa",
             fecha_creacion=timezone.now(),
             limite_credito=Decimal("1000.00"),
-            id_hijo=self.hijo
+            id_hijo=self.hijo,
         )
         self.recarga = CargasSaldo.objects.create(
             nro_tarjeta=self.tarjeta,
@@ -332,12 +312,12 @@ class RecargaServiceGenerarFacturaTest(TransactionTestCase):
             nombre="Test", apellido="Hijo", grado="1ro", id_cliente_responsable=self.cliente
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="T001", 
-            saldo_actual=Decimal("0"), 
-            estado="activa", 
+            nro_tarjeta="T001",
+            saldo_actual=Decimal("0"),
+            estado="activa",
             fecha_creacion=timezone.now(),
             limite_credito=Decimal("1000.00"),
-            id_hijo=self.hijo
+            id_hijo=self.hijo,
         )
 
         # Crear categoría
@@ -418,12 +398,12 @@ class RecargaServiceProcesarRecargaCajaTest(TransactionTestCase):
             nombre="Test", apellido="Hijo", grado="1ro", id_cliente_responsable=self.cliente
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="T001", 
-            saldo_actual=Decimal("0"), 
-            estado="activa", 
+            nro_tarjeta="T001",
+            saldo_actual=Decimal("0"),
+            estado="activa",
             fecha_creacion=timezone.now(),
             limite_credito=Decimal("1000.00"),
-            id_hijo=self.hijo
+            id_hijo=self.hijo,
         )
 
         # Crear empleado
@@ -504,12 +484,12 @@ class RecargaServiceTransferenciaTest(TransactionTestCase):
             nombre="Test", apellido="Hijo", grado="1ro", id_cliente_responsable=self.cliente
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="T001", 
-            saldo_actual=Decimal("0"), 
-            estado="activa", 
+            nro_tarjeta="T001",
+            saldo_actual=Decimal("0"),
+            estado="activa",
             fecha_creacion=timezone.now(),
             limite_credito=Decimal("1000.00"),
-            id_hijo=self.hijo
+            id_hijo=self.hijo,
         )
         self.rol = Roles.objects.create(nombre_rol="Cajero", estado=True)
         self.empleado = Empleados.objects.create(
@@ -524,9 +504,7 @@ class RecargaServiceTransferenciaTest(TransactionTestCase):
 
     def test_iniciar_transferencia_genera_codigo(self):
         """Debe generar código de referencia único"""
-        resultado = RecargaService.iniciar_recarga_transferencia(
-            hijo_id=self.hijo.id_hijo, monto=Decimal("200000")
-        )
+        resultado = RecargaService.iniciar_recarga_transferencia(hijo_id=self.hijo.id_hijo, monto=Decimal("200000"))
 
         self.assertTrue(resultado["success"])
         self.assertIn("codigo_referencia", resultado)
@@ -536,9 +514,7 @@ class RecargaServiceTransferenciaTest(TransactionTestCase):
     def test_validar_transferencia_monto_bajo(self):
         """Transferencia <500K debe completarse automáticamente"""
         # Iniciar
-        init_result = RecargaService.iniciar_recarga_transferencia(
-            hijo_id=self.hijo.id_hijo, monto=Decimal("100000")
-        )
+        init_result = RecargaService.iniciar_recarga_transferencia(hijo_id=self.hijo.id_hijo, monto=Decimal("100000"))
 
         # Validar
         resultado = RecargaService.validar_transferencia(
@@ -555,9 +531,7 @@ class RecargaServiceTransferenciaTest(TransactionTestCase):
     def test_validar_transferencia_monto_alto_requiere_supervisor(self):
         """Transferencia >500K debe quedar pendiente de aprobación"""
         # Iniciar
-        init_result = RecargaService.iniciar_recarga_transferencia(
-            hijo_id=self.hijo.id_hijo, monto=Decimal("600000")
-        )
+        init_result = RecargaService.iniciar_recarga_transferencia(hijo_id=self.hijo.id_hijo, monto=Decimal("600000"))
 
         # Validar
         resultado = RecargaService.validar_transferencia(
@@ -649,9 +623,7 @@ class RecargaServiceEdgeCasesTest(TransactionTestCase):
         """Montos cero o negativos no son válidos"""
         # Este test podría fallar si no hay validación,
         # indicando que se necesita agregar validación
-        resultado = RecargaService.calcular_montos(
-            monto_recarga=Decimal("0"), metodo_pago="efectivo"
-        )
+        resultado = RecargaService.calcular_montos(monto_recarga=Decimal("0"), metodo_pago="efectivo")
 
         # Debería retornar error o montos en cero
         self.assertEqual(resultado["total_cobrado"], Decimal("0"))

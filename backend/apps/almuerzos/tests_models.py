@@ -7,9 +7,15 @@ from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
 from .models import (
-    PlanesAlmuerzo, TiposAlmuerzo, SuscripcionesAlmuerzo,
-    RegistrosConsumoAlmuerzo, CuentasAlmuerzoMensual,
-    PagosAlmuerzoMensual, PagosCuentasAlmuerzo, Alergenos, ProductosAlergenos,
+    PlanesAlmuerzo,
+    TiposAlmuerzo,
+    SuscripcionesAlmuerzo,
+    RegistrosConsumoAlmuerzo,
+    CuentasAlmuerzoMensual,
+    PagosAlmuerzoMensual,
+    PagosCuentasAlmuerzo,
+    Alergenos,
+    ProductosAlergenos,
 )
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios, Productos, Categorias, UnidadesMedida
@@ -117,9 +123,7 @@ class SuscripcionesAlmuerzoModelTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Estudiantes", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Estudiantes", moneda="PYG", estado=True)
 
         # Crear tipo de cliente
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
@@ -212,9 +216,7 @@ class RegistrosConsumoAlmuerzoModelTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista General", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista General", moneda="PYG", estado=True)
 
         # Crear tipo de cliente
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
@@ -340,86 +342,110 @@ class ModelosAlmuerzosAdicionalesTest(TestCase):
     """Tests __str__ para modelos adicionales de almuerzos."""
 
     def setUp(self):
-        self.lista = ListasPrecios.objects.create(nombre_lista='Lista Str Test', moneda='PYG', estado=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Tipo Str', estado=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Str Test", moneda="PYG", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Tipo Str", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres='Test', apellidos='Str', ruc_ci='9000001',
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
+            nombres="Test",
+            apellidos="Str",
+            ruc_ci="9000001",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cliente,
         )
         self.hijo = Hijos.objects.create(
-            nombre='Hijo', apellido='Str',
+            nombre="Hijo",
+            apellido="Str",
             fecha_nacimiento=timezone.now().date(),
-            estado=True, id_cliente_responsable=self.cliente,
+            estado=True,
+            id_cliente_responsable=self.cliente,
         )
         self.plan = PlanesAlmuerzo.objects.create(
-            nombre_plan='Plan Str', precio_mensual=Decimal('400000'), dias_semana_incluidos='L-V', estado=True,
+            nombre_plan="Plan Str",
+            precio_mensual=Decimal("400000"),
+            dias_semana_incluidos="L-V",
+            estado=True,
         )
         self.suscripcion = SuscripcionesAlmuerzo.objects.create(
-            fecha_inicio=timezone.now().date(), estado='Activa',
-            id_hijo=self.hijo, id_plan_almuerzo=self.plan,
+            fecha_inicio=timezone.now().date(),
+            estado="Activa",
+            id_hijo=self.hijo,
+            id_plan_almuerzo=self.plan,
         )
 
     def test_str_cuentas_almuerzo_mensual(self):
         cuenta = CuentasAlmuerzoMensual.objects.create(
-            anio=2026, mes=3, cantidad_almuerzos=20,
-            monto_total=Decimal('500000'), forma_cobro='debito',
-            monto_pagado=Decimal('0'), estado='Pendiente',
+            anio=2026,
+            mes=3,
+            cantidad_almuerzos=20,
+            monto_total=Decimal("500000"),
+            forma_cobro="debito",
+            monto_pagado=Decimal("0"),
+            estado="Pendiente",
             fecha_generacion=timezone.now().date(),
             fecha_actualizacion=timezone.now(),
             id_hijo=self.hijo,
         )
-        self.assertIn('#', str(cuenta))
+        self.assertIn("#", str(cuenta))
 
     def test_str_pagos_almuerzo_mensual(self):
         pago = PagosAlmuerzoMensual.objects.create(
             fecha_pago=timezone.now(),
-            monto_pagado=Decimal('400000'),
+            monto_pagado=Decimal("400000"),
             mes_pagado=timezone.now().date(),
             id_suscripcion=self.suscripcion,
         )
-        self.assertIn('#', str(pago))
+        self.assertIn("#", str(pago))
 
     def test_str_pagos_cuentas_almuerzo(self):
         cuenta = CuentasAlmuerzoMensual.objects.create(
-            anio=2026, mes=4, cantidad_almuerzos=15,
-            monto_total=Decimal('375000'), forma_cobro='efectivo',
-            monto_pagado=Decimal('0'), estado='Pendiente',
+            anio=2026,
+            mes=4,
+            cantidad_almuerzos=15,
+            monto_total=Decimal("375000"),
+            forma_cobro="efectivo",
+            monto_pagado=Decimal("0"),
+            estado="Pendiente",
             fecha_generacion=timezone.now().date(),
             fecha_actualizacion=timezone.now(),
             id_hijo=self.hijo,
         )
         pago_cuenta = PagosCuentasAlmuerzo.objects.create(
             fecha_pago=timezone.now(),
-            medio_pago='efectivo',
-            monto=Decimal('375000'),
+            medio_pago="efectivo",
+            monto=Decimal("375000"),
             id_cuenta=cuenta,
         )
-        self.assertIn('#', str(pago_cuenta))
+        self.assertIn("#", str(pago_cuenta))
 
     def test_str_alergenos(self):
         alergeno = Alergenos.objects.create(
-            nombre='Gluten Str',
-            palabras_clave=['trigo', 'harina'],
-            nivel_severidad='Alto',
+            nombre="Gluten Str",
+            palabras_clave=["trigo", "harina"],
+            nivel_severidad="Alto",
             estado=True,
             fecha_creacion=timezone.now(),
         )
-        self.assertIn('#', str(alergeno))
+        self.assertIn("#", str(alergeno))
 
     def test_str_productos_alergenos(self):
         impuesto = Impuestos.objects.create(
-            nombre_impuesto='IVA Str', porcentaje=10,
-            vigente_desde=timezone.now().date(), estado=True,
+            nombre_impuesto="IVA Str",
+            porcentaje=10,
+            vigente_desde=timezone.now().date(),
+            estado=True,
         )
-        cat = Categorias.objects.create(nombre='Cat Str', estado=True)
+        cat = Categorias.objects.create(nombre="Cat Str", estado=True)
         prod = Productos.objects.create(
-            descripcion='Producto Str', stock_minimo=0,
-            estado=True, id_categoria=cat, id_impuesto=impuesto,
+            descripcion="Producto Str",
+            stock_minimo=0,
+            estado=True,
+            id_categoria=cat,
+            id_impuesto=impuesto,
         )
         alergeno = Alergenos.objects.create(
-            nombre='Lactosa Str',
-            palabras_clave=['leche'],
-            nivel_severidad='Medio',
+            nombre="Lactosa Str",
+            palabras_clave=["leche"],
+            nivel_severidad="Medio",
             estado=True,
             fecha_creacion=timezone.now(),
         )
@@ -429,4 +455,4 @@ class ModelosAlmuerzosAdicionalesTest(TestCase):
             id_alergeno=alergeno,
             id_producto=prod,
         )
-        self.assertIn('#', str(prod_alerg))
+        self.assertIn("#", str(prod_alerg))

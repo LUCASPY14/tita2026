@@ -9,10 +9,10 @@ from django.utils import timezone
 
 class ProveedoresApiManager(models.Manager):
     def create(self, **kwargs):
-        kwargs.setdefault('config_auth', {})
-        kwargs.setdefault('timeout', 30)
-        kwargs.setdefault('max_reintentos', 3)
-        kwargs.setdefault('created_at', timezone.now())
+        kwargs.setdefault("config_auth", {})
+        kwargs.setdefault("timeout", 30)
+        kwargs.setdefault("max_reintentos", 3)
+        kwargs.setdefault("created_at", timezone.now())
         return super().create(**kwargs)
 
 
@@ -43,12 +43,12 @@ class ProveedoresApi(models.Model):
 
 class EndpointsApiManager(models.Manager):
     def create(self, **kwargs):
-        kwargs.setdefault('headers', {})
-        kwargs.setdefault('parametros', {})
-        kwargs.setdefault('schema_request', {})
-        kwargs.setdefault('schema_response', {})
-        kwargs.setdefault('cache_segundos', 0)
-        kwargs.setdefault('requiere_auth', 1)
+        kwargs.setdefault("headers", {})
+        kwargs.setdefault("parametros", {})
+        kwargs.setdefault("schema_request", {})
+        kwargs.setdefault("schema_response", {})
+        kwargs.setdefault("cache_segundos", 0)
+        kwargs.setdefault("requiere_auth", 1)
         return super().create(**kwargs)
 
 
@@ -79,16 +79,16 @@ class EndpointsApi(models.Model):
 
 class LogsLlamadasApiManager(models.Manager):
     def create(self, **kwargs):
-        kwargs.setdefault('timestamp', timezone.now())
-        kwargs.setdefault('metodo', 'GET')
-        kwargs.setdefault('url', '')
-        kwargs.setdefault('headers_req', {})
-        kwargs.setdefault('status_code', 200)
-        kwargs.setdefault('headers_res', {})
-        kwargs.setdefault('tiempo_ms', 0)
-        kwargs.setdefault('exitoso', 1)
-        kwargs.setdefault('intento', 1)
-        kwargs.setdefault('contexto', {})
+        kwargs.setdefault("timestamp", timezone.now())
+        kwargs.setdefault("metodo", "GET")
+        kwargs.setdefault("url", "")
+        kwargs.setdefault("headers_req", {})
+        kwargs.setdefault("status_code", 200)
+        kwargs.setdefault("headers_res", {})
+        kwargs.setdefault("tiempo_ms", 0)
+        kwargs.setdefault("exitoso", 1)
+        kwargs.setdefault("intento", 1)
+        kwargs.setdefault("contexto", {})
         return super().create(**kwargs)
 
 
@@ -110,9 +110,7 @@ class LogsLlamadasApi(models.Model):
     intento = models.IntegerField()
     ip_origen = models.CharField(max_length=39, blank=True, null=True)
     contexto = models.JSONField()
-    id_endpoint = models.ForeignKey(
-        "EndpointsApi", models.DO_NOTHING, db_column="id_endpoint", blank=True, null=True
-    )
+    id_endpoint = models.ForeignKey("EndpointsApi", models.DO_NOTHING, db_column="id_endpoint", blank=True, null=True)
     id_empleado = models.ForeignKey(
         "usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado", blank=True, null=True
     )
@@ -160,9 +158,7 @@ class LogsWebhooks(models.Model):
     error_msg = models.TextField(blank=True, null=True)
     ip_origen = models.CharField(max_length=39)
     user_agent = models.TextField(blank=True, null=True)
-    id_webhook = models.ForeignKey(
-        "WebhookEndpoints", models.DO_NOTHING, db_column="id_webhook", blank=True, null=True
-    )
+    id_webhook = models.ForeignKey("WebhookEndpoints", models.DO_NOTHING, db_column="id_webhook", blank=True, null=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"

@@ -2,6 +2,7 @@
 Tests de ramas faltantes en core/signals.py
 Cubre branches: 39->-12 (consumo_existe True) and 100->-94 (created=False).
 """
+
 import pytest
 from unittest.mock import MagicMock, patch
 from django.test import TestCase
@@ -19,7 +20,7 @@ class ActualizarSaldoRecargaBranchTest(TestCase):
 
         # Create a mock instance with estado='confirmado' and no _saldo_actualizado
         mock_carga = MagicMock(spec=CargasSaldo)
-        mock_carga.estado = 'confirmado'
+        mock_carga.estado = "confirmado"
         del mock_carga._saldo_actualizado  # ensure hasattr returns False
         mock_carga.id_carga = 9999
         mock_carga.nro_tarjeta.nro_tarjeta = "0000999"
@@ -27,8 +28,10 @@ class ActualizarSaldoRecargaBranchTest(TestCase):
         mock_tarjeta = MagicMock()
         mock_tarjeta.saldo_actual = 100
 
-        with patch.object(Tarjetas.objects, 'select_for_update') as mock_sfu, \
-             patch.object(ConsumosTarjeta.objects, 'filter') as mock_filter:
+        with (
+            patch.object(Tarjetas.objects, "select_for_update") as mock_sfu,
+            patch.object(ConsumosTarjeta.objects, "filter") as mock_filter,
+        ):
             # Make Tarjetas.objects.select_for_update().get() return mock_tarjeta
             mock_sfu.return_value.get.return_value = mock_tarjeta
             # Make filter(...).exists() return True → consumo_existe = True

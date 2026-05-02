@@ -11,11 +11,12 @@ class TarjetasSerializer(serializers.ModelSerializer):
     def get_hijo_foto(self, obj):
         """Retorna la URL completa de la foto del hijo."""
         if obj.id_hijo and obj.id_hijo.foto_perfil:
-            request = self.context.get('request')
+            request = self.context.get("request")
             if request:
                 return request.build_absolute_uri(obj.id_hijo.foto_perfil.url)
             return obj.id_hijo.foto_perfil.url
         return None
+
     saldo_disponible = serializers.SerializerMethodField()
 
     class Meta:
@@ -78,11 +79,11 @@ class ConsumosTarjetaSerializer(serializers.ModelSerializer):
 
 
 class MediosPagoSerializer(serializers.ModelSerializer):
-    nombre = serializers.CharField(source='descripcion', read_only=True)
-    
+    nombre = serializers.CharField(source="descripcion", read_only=True)
+
     class Meta:
         model = MediosPago
-        fields = ['id_medio_pago', 'descripcion', 'nombre', 'genera_comision', 'requiere_validacion', 'estado']
+        fields = ["id_medio_pago", "descripcion", "nombre", "genera_comision", "requiere_validacion", "estado"]
 
 
 class ConfiguracionSistemaSerializer(serializers.ModelSerializer):

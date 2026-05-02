@@ -6,6 +6,7 @@ Missing lines targeted: 90-91, 205, 209-210, 281-284, 309, 332, 362-365, 404-405
 718-719, 732, 781, 785-786, 792, 799, 817, 840, 845-846, 877, 881, 883-886, 911,
 915-916, 929, 947, 1039, 1066-1067, 1070, 1080
 """
+
 import json
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -35,7 +36,6 @@ from apps.almuerzos.validators import (
     validar_nombre_alergeno,
     validar_palabras_clave_alergeno,
 )
-
 
 # ==============================================================================
 # Plan validators
@@ -323,6 +323,7 @@ class ValidarFechaPagoExtendedTest(TestCase):
     def test_fecha_pago_datetime_object(self):
         """Line 881: datetime object is converted to date."""
         from datetime import datetime as dt
+
         dt_object = dt.now()
         validar_fecha_pago(dt_object)  # Should not raise (today's datetime)
 

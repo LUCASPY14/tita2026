@@ -43,9 +43,7 @@ class StockUnicoModelTest(TestCase):
         self.categoria = Categorias.objects.create(nombre="Snacks", estado=True)
 
         # Crear unidad de medida
-        self.unidad = UnidadesMedida.objects.create(
-            nombre="Unidad", abreviatura="Unid", estado=True
-        )
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="Unid", estado=True)
 
         # Crear producto
         self.producto = Productos.objects.create(
@@ -148,9 +146,7 @@ class MovimientosStockModelTest(TestCase):
         )
 
         # Crear stock
-        self.stock = StockUnico.objects.create(
-            cantidad=Decimal("100.000"), id_producto=self.producto
-        )
+        self.stock = StockUnico.objects.create(cantidad=Decimal("100.000"), id_producto=self.producto)
 
     def test_crear_movimiento_ingreso(self):
         """Test de creación de movimiento de ingreso"""

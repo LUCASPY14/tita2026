@@ -6,6 +6,7 @@ Cubre:
   - emitir(): sin timbrado, nro fuera de rango, nro duplicado, emisión exitosa
   - anular(): desvincula ventas y marca como Factura-Anulada
 """
+
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -19,8 +20,8 @@ from apps.productos.models import ListasPrecios
 from apps.usuarios.models import Empleados, Roles
 from apps.ventas.models import Ventas
 
-
 # ─── setUp compartido ─────────────────────────────────────────────────────────
+
 
 class FacturacionServiceBaseTest(TestCase):
     """Configura los datos base reutilizados por todos los tests."""
@@ -75,6 +76,7 @@ class FacturacionServiceBaseTest(TestCase):
 
 
 # ─── get_cola() ──────────────────────────────────────────────────────────────
+
 
 class GetColaVaciaTest(FacturacionServiceBaseTest):
     """get_cola retorna lista vacía cuando no hay ventas elegibles."""
@@ -216,6 +218,7 @@ class GetColaConVentasTest(FacturacionServiceBaseTest):
 
 # ─── emitir() ────────────────────────────────────────────────────────────────
 
+
 class EmitirSinTimbradoTest(FacturacionServiceBaseTest):
     """emitir() falla cuando no hay timbrado vigente."""
 
@@ -250,7 +253,7 @@ class EmitirValidacionesTest(FacturacionServiceBaseTest):
         with self.assertRaises(ValueError) as ctx:
             FacturacionService.emitir(
                 id_cliente=self.cliente.id_cliente,
-                nro_preimpreso=9999,          # fuera del rango 1-999
+                nro_preimpreso=9999,  # fuera del rango 1-999
                 ventas_ids=[],
                 almuerzos_ids=[],
             )
@@ -346,6 +349,7 @@ class EmitirExitosoTest(FacturacionServiceBaseTest):
 
 
 # ─── anular() ────────────────────────────────────────────────────────────────
+
 
 class AnularTest(FacturacionServiceBaseTest):
     """anular() desvincula ventas y marca el documento como Factura-Anulada."""

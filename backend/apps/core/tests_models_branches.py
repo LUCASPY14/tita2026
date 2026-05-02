@@ -6,7 +6,6 @@ Cubre branches en LegacyCompatCoreMixin._rewrite y LegacyCompatQuerySet.
 import pytest
 from django.test import TestCase
 
-
 # ──────────────────────────────────────────────────────────────────────────────
 # LegacyCompatCoreMixin._rewrite  (branches 23->24, 24->23, 24->25, 32->33, 35->36)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -20,8 +19,8 @@ class LegacyCompatCoreMixinRewriteTest(TestCase):
 
         class TestMixin(LegacyCompatCoreMixin):
             LEGACY_FIELD_MAP = {
-                "old_name": "new_name",   # normal mapping
-                "dep_field": None,         # deprecated → skip
+                "old_name": "new_name",  # normal mapping
+                "dep_field": None,  # deprecated → skip
             }
             LEGACY_VALUE_RESOLVERS = {
                 "old_name": lambda x: x.upper() if isinstance(x, str) else x,
@@ -125,7 +124,7 @@ class TarjetasCleanBranchesTest(TestCase):
         from apps.core.models import Tarjetas
 
         # Create a tarjeta (TarjetasManager auto-creates id_hijo)
-        t1 = Tarjetas.objects.create(nro_tarjeta='br_clean_nodup_01')
+        t1 = Tarjetas.objects.create(nro_tarjeta="br_clean_nodup_01")
         # calling clean() on t1: filter(id_hijo=t1.id_hijo).exclude(nro_tarjeta='br_clean_nodup_01')
         # → empty queryset → 164->-154 (exits without raising)
         result = t1.clean()
@@ -139,15 +138,15 @@ class TarjetasCleanBranchesTest(TestCase):
         from apps.core.models import Tarjetas
 
         # Create T1 with auto-created id_hijo
-        t1 = Tarjetas.objects.create(nro_tarjeta='br_clean_dup_01')
+        t1 = Tarjetas.objects.create(nro_tarjeta="br_clean_dup_01")
         # Build T2 as Python object (NOT saved) pointing to the SAME id_hijo
         t2 = Tarjetas(
-            nro_tarjeta='br_clean_dup_02',
+            nro_tarjeta="br_clean_dup_02",
             id_hijo=t1.id_hijo,
-            saldo_actual=Decimal('0'),
-            estado='activa',
+            saldo_actual=Decimal("0"),
+            estado="activa",
             fecha_creacion=timezone.now(),
-            limite_credito=Decimal('0'),
+            limite_credito=Decimal("0"),
         )
         # clean() should raise because T1 already owns id_hijo
         with self.assertRaises(ValidationError):
@@ -167,8 +166,8 @@ class CargasSaldoFechaCargaDefaultBranchTest(TestCase):
 
         # CargasSaldo has nro_tarjeta nullable, so FK is not required
         carga = CargasSaldo.objects.create(
-            monto_cargado=Decimal('5.00'),
-            estado='pendiente',
+            monto_cargado=Decimal("5.00"),
+            estado="pendiente",
             # NOT providing fecha_carga or fecha_creacion → triggers branch 241->242
         )
         self.assertIsNotNone(carga.fecha_carga)
@@ -186,9 +185,7 @@ class LimitesTransaccionBranchesTest(TestCase):
         from apps.usuarios.models import Roles
         from decimal import Decimal
 
-        rol, _ = Roles.objects.get_or_create(
-            nombre_rol="TestLimiteRol", defaults={"descripcion": "test"}
-        )
+        rol, _ = Roles.objects.get_or_create(nombre_rol="TestLimiteRol", defaults={"descripcion": "test"})
         # No LimitesTransaccion for this rol → obtener_limite returns None → 632->634
         result = LimitesTransaccion.requiere_autorizacion(rol, "venta_sin_limite", Decimal("100"))
         self.assertFalse(result["requiere"])

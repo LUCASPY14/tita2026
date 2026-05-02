@@ -25,9 +25,7 @@ class BaseAuthTest(TransactionTestCase):
     password = "SecurePass123!@#"
 
     def setUp(self):
-        self.rol = Roles.objects.create(
-            nombre_rol="TestRolAuth", descripcion="Test", estado=True
-        )
+        self.rol = Roles.objects.create(nombre_rol="TestRolAuth", descripcion="Test", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="Auth",
             apellido="Test",
@@ -51,6 +49,7 @@ class BaseAuthTest(TransactionTestCase):
 # AuthenticationService - missing lines coverage
 # ============================================================================
 
+
 class VerifyPasswordExceptionTest(BaseAuthTest):
     """Cover exception path in _verify_password (lines 70-71)."""
 
@@ -68,6 +67,7 @@ class GenerarTokensExistingUserTest(BaseAuthTest):
     def test_generar_tokens_syncs_is_active_si_django_user_existente(self):
         """When django_user already exists with different is_active, syncs it (lines 249-250)."""
         from django.contrib.auth.models import User
+
         # Pre-create django User with is_active=False
         User.objects.filter(username=self.empleado.usuario).delete()
         User.objects.create_user(
@@ -87,9 +87,7 @@ class LoginExceptionTest(BaseAuthTest):
 
     def test_login_outer_exception_returns_error(self):
         """Outer exception in login returns error dict (lines 394-397)."""
-        with patch(
-            "apps.usuarios.services.auth_service.Empleados"
-        ) as mock_emp:
+        with patch("apps.usuarios.services.auth_service.Empleados") as mock_emp:
             mock_emp.objects.filter.side_effect = Exception("DB fail")
             result = AuthenticationService.login(
                 usuario="authtestuser",
@@ -106,9 +104,7 @@ class LogoutExceptionTest(BaseAuthTest):
 
     def test_logout_outer_exception_returns_error(self):
         """Outer exception in logout returns error dict (lines 439-441)."""
-        with patch(
-            "apps.usuarios.services.auth_service.SesionesActivas"
-        ) as mock_ses:
+        with patch("apps.usuarios.services.auth_service.SesionesActivas") as mock_ses:
             mock_ses.objects.filter.side_effect = Exception("DB fail")
             result = AuthenticationService.logout(
                 empleado=self.empleado,
@@ -138,9 +134,7 @@ class CambiarPasswordExceptionTest(BaseAuthTest):
 
     def test_cambiar_password_outer_exception(self):
         """Outer exception in cambiar_password returns error dict (lines 508-510)."""
-        with patch(
-            "apps.usuarios.services.auth_service.AuthenticationService._verify_password"
-        ) as mock_verify:
+        with patch("apps.usuarios.services.auth_service.AuthenticationService._verify_password") as mock_verify:
             mock_verify.side_effect = Exception("Unexpected")
             result = AuthenticationService.cambiar_password(
                 empleado=self.empleado,
@@ -172,17 +166,21 @@ class CrearEmpleadoTest(BaseAuthTest):
 
     def test_crear_empleado_outer_exception(self):
         """Outer exception in crear_empleado returns error (lines 588-590)."""
-        with patch(
-            "apps.usuarios.services.auth_service.Empleados"
-        ) as mock_emp:
+        with patch("apps.usuarios.services.auth_service.Empleados") as mock_emp:
             # Let filter().exists() pass normally for usuario/email checks, but
             # make create() raise to trigger the outer except Exception
             mock_emp.objects.filter.return_value.exists.return_value = False
             mock_emp.objects.create.side_effect = Exception("Unexpected DB error")
             # We need Roles to work, so import it separately
             from apps.usuarios.models import Roles as RolesModel
-            with patch("apps.usuarios.services.auth_service.AuthenticationService._hash_password", return_value="hashedpw"):
-                with patch("apps.usuarios.services.auth_service.AuthenticationService.validar_fortaleza_password", return_value=(True, "")):
+
+            with patch(
+                "apps.usuarios.services.auth_service.AuthenticationService._hash_password", return_value="hashedpw"
+            ):
+                with patch(
+                    "apps.usuarios.services.auth_service.AuthenticationService.validar_fortaleza_password",
+                    return_value=(True, ""),
+                ):
                     result = AuthenticationService.crear_empleado(
                         nombre="Test",
                         apellido="Emp",
@@ -201,13 +199,12 @@ class CrearEmpleadoTest(BaseAuthTest):
 # TwoFactorAuthService - missing lines coverage
 # ============================================================================
 
+
 class Base2FATest(TransactionTestCase):
     """Base setup for 2FA tests."""
 
     def setUp(self):
-        self.rol = Roles.objects.create(
-            nombre_rol="TestRol2FA", descripcion="Test", estado=True
-        )
+        self.rol = Roles.objects.create(nombre_rol="TestRol2FA", descripcion="Test", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="TwoFA",
             apellido="Test",
@@ -232,13 +229,9 @@ class Habilitar2FAExceptionTest(Base2FATest):
 
     def test_habilitar_2fa_outer_exception(self):
         """Outer exception in habilitar_2fa_empleado returns error (lines 153-155)."""
-        with patch(
-            "apps.usuarios.services.two_factor_service.TwoFactorAuthService._generar_secret_key"
-        ) as mock_key:
+        with patch("apps.usuarios.services.two_factor_service.TwoFactorAuthService._generar_secret_key") as mock_key:
             mock_key.side_effect = Exception("Key gen failed")
-            result = TwoFactorAuthService.habilitar_2fa_empleado(
-                empleado=self.empleado, ip_address=self.ip
-            )
+            result = TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip)
         self.assertFalse(result["success"])
         self.assertIn("Error al habilitar 2FA", result["mensaje"])
 
@@ -248,9 +241,7 @@ class Verificar2FAExceptionTest(Base2FATest):
 
     def test_verificar_2fa_outer_exception(self):
         """Outer exception in verificar_codigo_2fa returns error (lines 246-248)."""
-        with patch(
-            "apps.usuarios.services.two_factor_service.Autenticacion2Fa"
-        ) as mock_auth:
+        with patch("apps.usuarios.services.two_factor_service.Autenticacion2Fa") as mock_auth:
             mock_auth.objects.filter.side_effect = Exception("DB fail")
             result = TwoFactorAuthService.verificar_codigo_2fa(
                 empleado=self.empleado,
@@ -286,7 +277,7 @@ class VerificarBackupCodeTest(Base2FATest):
         """Exception in _verificar_backup_code returns False (lines 279-280)."""
         auth_2fa = self._crear_auth_2fa()
         # Mock backup_codes to be invalid JSON string (can't save to DB due to constraint)
-        with patch.object(auth_2fa, 'backup_codes', "not_json{"):
+        with patch.object(auth_2fa, "backup_codes", "not_json{"):
             result = TwoFactorAuthService._verificar_backup_code(auth_2fa, "11111111", self.ip)
             self.assertFalse(result)
 
@@ -296,13 +287,9 @@ class Deshabilitar2FAExceptionTest(Base2FATest):
 
     def test_deshabilitar_2fa_outer_exception(self):
         """Outer exception in deshabilitar_2fa_empleado returns error (lines 354-356)."""
-        with patch(
-            "apps.usuarios.services.two_factor_service.Autenticacion2Fa"
-        ) as mock_auth:
+        with patch("apps.usuarios.services.two_factor_service.Autenticacion2Fa") as mock_auth:
             mock_auth.objects.filter.side_effect = Exception("DB fail")
-            result = TwoFactorAuthService.deshabilitar_2fa_empleado(
-                empleado=self.empleado, ip_address=self.ip
-            )
+            result = TwoFactorAuthService.deshabilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip)
         self.assertFalse(result["success"])
         self.assertIn("Error al deshabilitar 2FA", result["mensaje"])
 
@@ -312,13 +299,9 @@ class RegenBackupCodesExceptionTest(Base2FATest):
 
     def test_regenerar_backup_codes_outer_exception(self):
         """Outer exception in regenerar_backup_codes returns error (lines 403-405)."""
-        with patch(
-            "apps.usuarios.services.two_factor_service.Autenticacion2Fa"
-        ) as mock_auth:
+        with patch("apps.usuarios.services.two_factor_service.Autenticacion2Fa") as mock_auth:
             mock_auth.objects.filter.side_effect = Exception("DB fail")
-            result = TwoFactorAuthService.regenerar_backup_codes(
-                empleado=self.empleado, ip_address=self.ip
-            )
+            result = TwoFactorAuthService.regenerar_backup_codes(empleado=self.empleado, ip_address=self.ip)
         self.assertFalse(result["success"])
         self.assertIn("Error al regenerar", result["mensaje"])
 
@@ -377,7 +360,7 @@ class ObtenerEstadisticasBackupCodesListTest(Base2FATest):
             fecha_creacion=timezone.now(),
         )
         # Mock the backup_codes to be invalid JSON string
-        with patch.object(auth_2fa, 'backup_codes', "invalid{json"):
+        with patch.object(auth_2fa, "backup_codes", "invalid{json"):
             result = TwoFactorAuthService.obtener_estadisticas_2fa(self.empleado)
             # Should not raise, backup_codes_restantes stays 0 due to exception handling
             self.assertTrue(result["habilitado"])

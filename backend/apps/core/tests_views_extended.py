@@ -7,6 +7,7 @@ Cubre las líneas faltantes en core/views.py:
 457-473 (decimal validation), 476-477 (boolean), 480-483 (json),
 487-489 (valores_permitidos), 507-508 (resetear_default exception)
 """
+
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -17,10 +18,10 @@ from django.contrib.auth.models import User
 from apps.core.models import ConfiguracionSistema
 from apps.core.views import ConfiguracionSistemaViewSet
 
-
 # =============================================================================
 # TESTS iniciar_recarga_bancard - líneas faltantes 244-245, 263-265, 335-336
 # =============================================================================
+
 
 class IniciarRecargaBancardEdgeCasesTest(TestCase):
     """Cubre casos de borde en iniciar_recarga_bancard"""
@@ -31,17 +32,11 @@ class IniciarRecargaBancardEdgeCasesTest(TestCase):
         from apps.core.models import Tarjetas
 
         self.client = APIClient()
-        self.auth_user = User.objects.create_user(
-            username="bancard_ext_user", password="testpass123"
-        )
+        self.auth_user = User.objects.create_user(username="bancard_ext_user", password="testpass123")
         self.client.force_authenticate(user=self.auth_user)
 
-        self.tipo_cliente = TiposCliente.objects.create(
-            nombre_tipo="Standard Bancard", estado=True
-        )
-        self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Bancard", estado=True
-        )
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Standard Bancard", estado=True)
+        self.lista_precios = ListasPrecios.objects.create(nombre_lista="Lista Bancard", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Ana",
             apellidos="Lopez",
@@ -60,6 +55,7 @@ class IniciarRecargaBancardEdgeCasesTest(TestCase):
         )
         # Hijo con tarjeta
         from datetime import datetime
+
         self.hijo_con_tarjeta = Hijos.objects.create(
             nombre="Maria",
             apellido="Lopez",
@@ -163,6 +159,7 @@ class IniciarRecargaBancardEdgeCasesTest(TestCase):
 # =============================================================================
 # TESTS ConfiguracionSistemaViewSet._validar_valor_config - líneas 421-489
 # =============================================================================
+
 
 class ValidarValorConfigTest(TestCase):
     """Cubre _validar_valor_config con distintos tipos"""
@@ -329,14 +326,13 @@ class ValidarValorConfigTest(TestCase):
 # TESTS ConfiguracionSistemaViewSet endpoints - líneas 389-390, 400, 407
 # =============================================================================
 
+
 class ConfiguracionSistemaActualizarValorTest(TestCase):
     """Cubre actualizar_valor y resetear_default con DB real"""
 
     def setUp(self):
         self.client = APIClient()
-        self.auth_user = User.objects.create_superuser(
-            username="config_ext_user", password="testpass123"
-        )
+        self.auth_user = User.objects.create_superuser(username="config_ext_user", password="testpass123")
         self.client.force_authenticate(user=self.auth_user)
 
         self.config = ConfiguracionSistema.objects.create(

@@ -55,9 +55,7 @@ def bancard_webhook(request):
         try:
             data = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:
-            return Response(
-                {"error": "JSON inválido en el body"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "JSON inválido en el body"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Extraer datos
         operation = data.get("operation", {})
@@ -142,9 +140,7 @@ def webhook_test(request):
             "status": "ok",
             "message": "Webhook endpoint está activo",
             "método": "POST",
-            "paths": {
-                "sipap": "/api/v1/webhooks/sipap/"
-            }
+            "paths": {"sipap": "/api/v1/webhooks/sipap/"},
         },
         status=status.HTTP_200_OK,
     )
@@ -195,37 +191,27 @@ def sipap_webhook(request):
         try:
             data = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:
-            return Response(
-                {"error": "JSON inválido en el body"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "JSON inválido en el body"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Extraer firma del header
-        firma = request.headers.get('X-SIPAP-Signature', '')
-        
+        firma = request.headers.get("X-SIPAP-Signature", "")
+
         if not firma:
-            return Response(
-                {"error": "Header X-SIPAP-Signature requerido"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Header X-SIPAP-Signature requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Obtener IP de origen
-        ip_origen = request.META.get('HTTP_X_FORWARDED_FOR', '')
+        ip_origen = request.META.get("HTTP_X_FORWARDED_FOR", "")
         if ip_origen:
             # Si viene de proxy, tomar primera IP
-            ip_origen = ip_origen.split(',')[0].strip()
+            ip_origen = ip_origen.split(",")[0].strip()
         else:
-            ip_origen = request.META.get('REMOTE_ADDR', '')
+            ip_origen = request.META.get("REMOTE_ADDR", "")
 
         # Procesar webhook con SIPAPService
         from apps.api_integrations.services.sipap_service import SIPAPService
 
         sipap_service = SIPAPService()
-        resultado = sipap_service.procesar_webhook(
-            payload=data,
-            firma=firma,
-            ip_origen=ip_origen
-        )
+        resultado = sipap_service.procesar_webhook(payload=data, firma=firma, ip_origen=ip_origen)
 
         # Loguear webhook en LogsWebhooks
         from apps.api_integrations.models import LogsWebhooks
@@ -254,26 +240,19 @@ def sipap_webhook(request):
                     "txn_id": resultado.get("txn_id"),
                     "id_pago_cliente": resultado.get("id_pago_cliente"),
                     "monto": resultado.get("monto"),
-                    "facturas_aplicadas": resultado.get("facturas_aplicadas", 0)
+                    "facturas_aplicadas": resultado.get("facturas_aplicadas", 0),
                 },
                 status=status.HTTP_200_OK,
             )
         else:
             return Response(
-                {
-                    "success": False, 
-                    "error": resultado.get("mensaje", "Error desconocido")
-                },
+                {"success": False, "error": resultado.get("mensaje", "Error desconocido")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
     except Exception as e:
         # Error inesperado
         return Response(
-            {
-                "success": False, 
-                "error": f"Error interno al procesar webhook SIPAP: {str(e)}"
-            },
+            {"success": False, "error": f"Error interno al procesar webhook SIPAP: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-

@@ -137,9 +137,7 @@ class IndependenciaAlmuerzoCantinaTest(TestCase):
         )
 
         # Verificar que NO se creó consumo en ConsumosTarjeta
-        consumos_cantina = ConsumosTarjeta.objects.filter(
-            nro_tarjeta=self.tarjeta, detalle__contains="almuerzo"
-        )
+        consumos_cantina = ConsumosTarjeta.objects.filter(nro_tarjeta=self.tarjeta, detalle__contains="almuerzo")
         self.assertEqual(
             consumos_cantina.count(),
             0,

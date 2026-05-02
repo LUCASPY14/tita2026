@@ -69,7 +69,9 @@ class PrecioAlmuerzoViewSet(viewsets.ModelViewSet):
         precio = get_precio_almuerzo_activo()
         if precio:
             return Response(PrecioAlmuerzoSerializer(precio).data)
-        return Response({"precio_unitario": "25000.00", "mensaje": "Sin precio configurado — usando valor predeterminado"})
+        return Response(
+            {"precio_unitario": "25000.00", "mensaje": "Sin precio configurado — usando valor predeterminado"}
+        )
 
 
 class TiposAlmuerzoViewSet(viewsets.ModelViewSet):
@@ -123,9 +125,7 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 
         # Tarjeta requerida como identificación
         if not nro_tarjeta:
-            raise ValidationError(
-                {"error": "Debe especificar la tarjeta para registrar el ingreso al almuerzo"}
-            )
+            raise ValidationError({"error": "Debe especificar la tarjeta para registrar el ingreso al almuerzo"})
 
         # Validar límite de 2 registros por día (lanza excepción si excede)
         validar_limite_registros_diarios(id_hijo, fecha_consumo)
@@ -234,7 +234,6 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         registro._nro_registro_hoy = nro_registro_hoy
         registro._precio_usado = float(costo_calculado)
 
-
     def _agregar_a_cuenta_mensual(self, registro):
         """
         Agrega el consumo a la cuenta mensual de almuerzo del hijo.
@@ -269,7 +268,6 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         cuenta.refresh_from_db()
 
 
-
 class AlergenosViewSet(viewsets.ModelViewSet):
     queryset = Alergenos.objects.all()
     serializer_class = AlergenosSerializer
@@ -292,6 +290,7 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
     def _get_datos_empresa():
         from apps.contabilidad.models import DatosEmpresa
         from apps.contabilidad.serializers import DatosEmpresaSerializer
+
         empresa = DatosEmpresa.objects.filter(estado=True).first()
         return DatosEmpresaSerializer(empresa).data if empresa else {}
 
@@ -299,6 +298,7 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
     def _calcular_iva(monto_total):
         """Calcula IVA 10% incluido (los almuerzos tributan IVA 10%)."""
         from decimal import Decimal
+
         monto = Decimal(str(monto_total))
         iva_10 = (monto * Decimal("10") / Decimal("110")).quantize(Decimal("1"))
         base_10 = monto - iva_10
@@ -327,30 +327,44 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
             )
         hijo = cuenta.id_hijo
         from apps.contabilidad.serializers import DatosEmpresaSerializer
+
         empresa = self._get_datos_empresa()
         meses_nombre = [
-            "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+            "",
+            "Enero",
+            "Febrero",
+            "Marzo",
+            "Abril",
+            "Mayo",
+            "Junio",
+            "Julio",
+            "Agosto",
+            "Septiembre",
+            "Octubre",
+            "Noviembre",
+            "Diciembre",
         ]
-        return Response({
-            "tipo": "recibo_cobro",
-            "empresa": empresa,
-            "recibo": {
-                "nro_interno": f"RC-{cuenta.id_cuenta:06d}",
-                "fecha_emision": cuenta.fecha_pago.isoformat() if cuenta.fecha_pago else date.today().isoformat(),
-                "alumno": f"{hijo.nombre} {hijo.apellido}",
-                "concepto": f"Almuerzos escolares – {meses_nombre[cuenta.mes]} {cuenta.anio}",
-                "cantidad_almuerzos": cuenta.cantidad_almuerzos,
-                "monto_total": str(cuenta.monto_total),
-                "monto_cobrado": str(cuenta.monto_pagado),
-                "saldo_pendiente": str(cuenta.monto_total - cuenta.monto_pagado),
-                "forma_pago": cuenta.forma_pago or cuenta.forma_cobro,
-                "comprobante_ref": cuenta.comprobante_pago or "",
-                "estado": cuenta.estado,
-                "mes_nombre": meses_nombre[cuenta.mes],
-                "anio": cuenta.anio,
-            },
-        })
+        return Response(
+            {
+                "tipo": "recibo_cobro",
+                "empresa": empresa,
+                "recibo": {
+                    "nro_interno": f"RC-{cuenta.id_cuenta:06d}",
+                    "fecha_emision": cuenta.fecha_pago.isoformat() if cuenta.fecha_pago else date.today().isoformat(),
+                    "alumno": f"{hijo.nombre} {hijo.apellido}",
+                    "concepto": f"Almuerzos escolares – {meses_nombre[cuenta.mes]} {cuenta.anio}",
+                    "cantidad_almuerzos": cuenta.cantidad_almuerzos,
+                    "monto_total": str(cuenta.monto_total),
+                    "monto_cobrado": str(cuenta.monto_pagado),
+                    "saldo_pendiente": str(cuenta.monto_total - cuenta.monto_pagado),
+                    "forma_pago": cuenta.forma_pago or cuenta.forma_cobro,
+                    "comprobante_ref": cuenta.comprobante_pago or "",
+                    "estado": cuenta.estado,
+                    "mes_nombre": meses_nombre[cuenta.mes],
+                    "anio": cuenta.anio,
+                },
+            }
+        )
 
     @action(detail=True, methods=["post"], url_path="generar-factura")
     def generar_factura(self, request, pk=None):
@@ -366,7 +380,8 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
         """
         from apps.contabilidad.models import Timbrados, DocumentosTributarios
         from apps.contabilidad.serializers import (
-            DocumentosTributariosSerializer, TimbradoSerializer,
+            DocumentosTributariosSerializer,
+            TimbradoSerializer,
         )
         from django.db.models import Max
 
@@ -378,20 +393,26 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
             doc = cuenta.id_documento
             timbrado = doc.nro_timbrado
             iva = self._calcular_iva(cuenta.monto_total)
-            return Response({
-                "tipo": "factura_fisica",
-                "es_nueva": False,
-                "empresa": empresa,
-                "factura": self._build_factura_payload(cuenta, doc, timbrado, iva),
-            })
+            return Response(
+                {
+                    "tipo": "factura_fisica",
+                    "es_nueva": False,
+                    "empresa": empresa,
+                    "factura": self._build_factura_payload(cuenta, doc, timbrado, iva),
+                }
+            )
 
         # Buscar timbrado vigente
         hoy = date.today()
-        timbrado = Timbrados.objects.filter(
-            estado=True,
-            fecha_inicio__lte=hoy,
-            fecha_fin__gte=hoy,
-        ).order_by("-fecha_inicio").first()
+        timbrado = (
+            Timbrados.objects.filter(
+                estado=True,
+                fecha_inicio__lte=hoy,
+                fecha_fin__gte=hoy,
+            )
+            .order_by("-fecha_inicio")
+            .first()
+        )
 
         if not timbrado:
             return Response(
@@ -400,9 +421,7 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
             )
 
         # Calcular siguiente secuencial
-        ultimo = DocumentosTributarios.objects.filter(
-            nro_timbrado=timbrado
-        ).aggregate(maximo=Max("nro_secuencial"))
+        ultimo = DocumentosTributarios.objects.filter(nro_timbrado=timbrado).aggregate(maximo=Max("nro_secuencial"))
         siguiente = (ultimo["maximo"] or timbrado.nro_inicial - 1) + 1
 
         if siguiente > timbrado.nro_final:
@@ -413,11 +432,7 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
 
         # Formatear nro de comprobante: "001-001-0000001"
         punto = timbrado.id_punto
-        nro_fmt = (
-            f"{punto.codigo_establecimiento}-"
-            f"{punto.codigo_punto_expedicion}-"
-            f"{siguiente:07d}"
-        )
+        nro_fmt = f"{punto.codigo_establecimiento}-" f"{punto.codigo_punto_expedicion}-" f"{siguiente:07d}"
 
         # Crear el documento tributario
         with transaction.atomic():
@@ -435,18 +450,32 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
 
         empresa = self._get_datos_empresa()
         iva = self._calcular_iva(cuenta.monto_total)
-        return Response({
-            "tipo": "factura_fisica",
-            "es_nueva": True,
-            "empresa": empresa,
-            "factura": self._build_factura_payload(cuenta, doc, timbrado, iva),
-        }, status=201)
+        return Response(
+            {
+                "tipo": "factura_fisica",
+                "es_nueva": True,
+                "empresa": empresa,
+                "factura": self._build_factura_payload(cuenta, doc, timbrado, iva),
+            },
+            status=201,
+        )
 
     @staticmethod
     def _build_factura_payload(cuenta, doc, timbrado, iva):
         meses_nombre = [
-            "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+            "",
+            "Enero",
+            "Febrero",
+            "Marzo",
+            "Abril",
+            "Mayo",
+            "Junio",
+            "Julio",
+            "Agosto",
+            "Septiembre",
+            "Octubre",
+            "Noviembre",
+            "Diciembre",
         ]
         hijo = cuenta.id_hijo
         return {
@@ -459,8 +488,7 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
             "concepto": f"Almuerzos escolares – {meses_nombre[cuenta.mes]} {cuenta.anio}",
             "cantidad_almuerzos": cuenta.cantidad_almuerzos,
             "precio_unitario_promedio": (
-                str(cuenta.monto_total / cuenta.cantidad_almuerzos)
-                if cuenta.cantidad_almuerzos else "0"
+                str(cuenta.monto_total / cuenta.cantidad_almuerzos) if cuenta.cantidad_almuerzos else "0"
             ),
             "iva": iva,
             "estado_sifen": doc.estado_sifen or "no_aplica",

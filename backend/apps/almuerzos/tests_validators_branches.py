@@ -22,7 +22,6 @@ from apps.almuerzos.validators import (
     validar_limite_registros_diarios,
 )
 
-
 # ──────────────────────────────────────────────────────────────────────────────
 # validar_precio_unitario_tipo
 # ──────────────────────────────────────────────────────────────────────────────
@@ -265,6 +264,7 @@ class TestValidarPalabrasClave:
 
     def test_valid_json_string(self):
         import json
+
         validar_palabras_clave_alergeno(json.dumps(["gluten", "lactosa"]))
 
 

@@ -92,8 +92,7 @@ def validar_descripcion_producto(descripcion):
 
     if len(descripcion) > 255:
         raise ValidationError(
-            f"La descripción del producto no puede exceder 255 caracteres. "
-            f"Recibido: {len(descripcion)} caracteres."
+            f"La descripción del producto no puede exceder 255 caracteres. " f"Recibido: {len(descripcion)} caracteres."
         )
 
     # Validar caracteres permitidos
@@ -135,9 +134,7 @@ def validar_stock_minimo(stock_minimo):
         raise ValidationError("El stock mínimo no puede ser negativo.")
 
     if stock > 100000:
-        raise ValidationError(
-            f"El stock mínimo no puede exceder 100,000 unidades. " f"Recibido: {stock}."
-        )
+        raise ValidationError(f"El stock mínimo no puede exceder 100,000 unidades. " f"Recibido: {stock}.")
 
     # Validar máximo 3 decimales
     if stock.as_tuple().exponent < -3:
@@ -175,9 +172,7 @@ def validar_precio_positivo(precio):
         raise ValidationError("El precio debe ser mayor a cero.")
 
     if precio_decimal > 100000000:
-        raise ValidationError(
-            f"El precio no puede exceder ₲100,000,000. " f"Recibido: ₲{precio_decimal:,.2f}."
-        )
+        raise ValidationError(f"El precio no puede exceder ₲100,000,000. " f"Recibido: ₲{precio_decimal:,.2f}.")
 
     # Validar máximo 2 decimales
     if precio_decimal.as_tuple().exponent < -2:
@@ -273,8 +268,7 @@ def validar_margen_utilidad(precio_venta, costo_compra, margen_minimo=10):
         import warnings
 
         warnings.warn(
-            f"El margen de utilidad ({margen:.1f}%) es muy alto. "
-            f"Verifique que el precio y costo sean correctos.",
+            f"El margen de utilidad ({margen:.1f}%) es muy alto. " f"Verifique que el precio y costo sean correctos.",
             UserWarning,
         )
 
@@ -300,8 +294,7 @@ def validar_producto_unico(descripcion, codigo_barra=None, producto_id=None):
 
     if query_desc.exists():
         raise ValidationError(
-            f'Ya existe un producto con la descripción "{descripcion}". '
-            "Use una descripción diferente."
+            f'Ya existe un producto con la descripción "{descripcion}". ' "Use una descripción diferente."
         )
 
     # Validar código de barras único (si se proporciona)
@@ -346,20 +339,16 @@ def validar_nombre_categoria(nombre):
 
     if len(nombre) < 3:
         raise ValidationError(
-            f"El nombre de la categoría debe tener al menos 3 caracteres. "
-            f"Recibido: {len(nombre)} caracteres."
+            f"El nombre de la categoría debe tener al menos 3 caracteres. " f"Recibido: {len(nombre)} caracteres."
         )
 
     if len(nombre) > 100:
         raise ValidationError(
-            f"El nombre de la categoría no puede exceder 100 caracteres. "
-            f"Recibido: {len(nombre)} caracteres."
+            f"El nombre de la categoría no puede exceder 100 caracteres. " f"Recibido: {len(nombre)} caracteres."
         )
 
     if not re.match(r"^[A-Za-z0-9\sáéíóúÁÉÍÓÚñÑ\-]+$", nombre):
-        raise ValidationError(
-            "El nombre de la categoría solo puede contener letras, números, espacios y guiones."
-        )
+        raise ValidationError("El nombre de la categoría solo puede contener letras, números, espacios y guiones.")
 
 
 def validar_jerarquia_categoria(categoria_padre, categoria_actual_id=None):
@@ -470,14 +459,12 @@ def validar_nombre_unidad(nombre):
 
     if len(nombre) < 2:
         raise ValidationError(
-            f"El nombre de la unidad debe tener al menos 2 caracteres. "
-            f"Recibido: {len(nombre)} caracteres."
+            f"El nombre de la unidad debe tener al menos 2 caracteres. " f"Recibido: {len(nombre)} caracteres."
         )
 
     if len(nombre) > 50:
         raise ValidationError(
-            f"El nombre de la unidad no puede exceder 50 caracteres. "
-            f"Recibido: {len(nombre)} caracteres."
+            f"El nombre de la unidad no puede exceder 50 caracteres. " f"Recibido: {len(nombre)} caracteres."
         )
 
     if not re.match(r"^[A-Za-záéíóúÁÉÍÓÚñÑ\s]+$", nombre):
@@ -514,17 +501,14 @@ def validar_abreviatura_unidad(abreviatura):
 
     if len(abreviatura) > 10:
         raise ValidationError(
-            f"La abreviatura no puede exceder 10 caracteres. "
-            f"Recibido: {len(abreviatura)} caracteres."
+            f"La abreviatura no puede exceder 10 caracteres. " f"Recibido: {len(abreviatura)} caracteres."
         )
 
     if " " in abreviatura:
         raise ValidationError("La abreviatura no puede contener espacios.")
 
     if not re.match(r"^[A-Za-z0-9²³°]+$", abreviatura):
-        raise ValidationError(
-            "La abreviatura solo puede contener letras, números y símbolos básicos (², ³, °)."
-        )
+        raise ValidationError("La abreviatura solo puede contener letras, números y símbolos básicos (², ³, °).")
 
 
 def validar_unidad_activa_con_productos(unidad):
@@ -580,14 +564,12 @@ def validar_nombre_lista_precios(nombre):
 
     if len(nombre) < 3:
         raise ValidationError(
-            f"El nombre de la lista debe tener al menos 3 caracteres. "
-            f"Recibido: {len(nombre)} caracteres."
+            f"El nombre de la lista debe tener al menos 3 caracteres. " f"Recibido: {len(nombre)} caracteres."
         )
 
     if len(nombre) > 100:
         raise ValidationError(
-            f"El nombre de la lista no puede exceder 100 caracteres. "
-            f"Recibido: {len(nombre)} caracteres."
+            f"El nombre de la lista no puede exceder 100 caracteres. " f"Recibido: {len(nombre)} caracteres."
         )
 
     if not re.match(r"^[A-Za-z0-9\sáéíóúÁÉÍÓÚñÑ\-\(\)\+]+$", nombre):
@@ -665,8 +647,7 @@ def validar_moneda_lista(moneda):
 
     if len(moneda) != 3:
         raise ValidationError(
-            f"El código de moneda debe tener exactamente 3 caracteres. "
-            f"Recibido: {len(moneda)} caracteres."
+            f"El código de moneda debe tener exactamente 3 caracteres. " f"Recibido: {len(moneda)} caracteres."
         )
 
     if not moneda.isalpha():
@@ -674,8 +655,7 @@ def validar_moneda_lista(moneda):
 
     if moneda not in MONEDAS_VALIDAS:
         raise ValidationError(
-            f'Código de moneda no soportado: "{moneda}". '
-            f'Monedas válidas: {", ".join(MONEDAS_VALIDAS)}.'
+            f'Código de moneda no soportado: "{moneda}". ' f'Monedas válidas: {", ".join(MONEDAS_VALIDAS)}.'
         )
 
 
@@ -841,9 +821,7 @@ def validar_cambio_precio_historico(precio_anterior, precio_nuevo):
         raise ValidationError("Los precios deben ser mayores a cero.")
 
     if anterior == nuevo:
-        raise ValidationError(
-            "El precio anterior y el nuevo son iguales. " "No hay cambio para registrar."
-        )
+        raise ValidationError("El precio anterior y el nuevo son iguales. " "No hay cambio para registrar.")
 
     # Validar que la diferencia sea significativa (>₲1)
     diferencia = abs(nuevo - anterior)

@@ -120,8 +120,8 @@ class TarjetasAdmin(admin.ModelAdmin):
     def alerta_saldo(self, obj):
         """Indicador de alerta de saldo"""
         if obj.esta_en_alerta:
-            return format_html('<span style="color:#dc3545;">{}</span>', '⚠️ Saldo bajo')
-        return format_html('<span style="color:#28a745;">{}</span>', '✓ OK')
+            return format_html('<span style="color:#dc3545;">{}</span>', "⚠️ Saldo bajo")
+        return format_html('<span style="color:#28a745;">{}</span>', "✓ OK")
 
     alerta_saldo.short_description = "Alerta"
 
@@ -243,7 +243,7 @@ class TarjetasAutorizacionAdmin(admin.ModelAdmin):
 
         if permisos:
             return format_html("<small>{}</small>", ", ".join(permisos))
-        return format_html('<small style="color:#6c757d;">{}</small>', 'Sin permisos')
+        return format_html('<small style="color:#6c757d;">{}</small>', "Sin permisos")
 
     permisos_badge.short_description = "Permisos"
 
@@ -251,10 +251,12 @@ class TarjetasAutorizacionAdmin(admin.ModelAdmin):
         """Estado estado/inactivo"""
         if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'ACTIVA'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+                "ACTIVA",
             )
         return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'INACTIVA'
+            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            "INACTIVA",
         )
 
     estado_badge.short_description = "Estado"
@@ -278,7 +280,7 @@ class TarjetasAutorizacionAdmin(admin.ModelAdmin):
                 obj.fecha_vencimiento.strftime("%d/%m/%Y"),
                 estado,
             )
-        return format_html('<small style="color:#6c757d;">{}</small>', 'Sin vencimiento')
+        return format_html('<small style="color:#6c757d;">{}</small>', "Sin vencimiento")
 
     fecha_vencimiento_display.short_description = "Vencimiento"
 
@@ -357,10 +359,8 @@ class CargasSaldoAdmin(admin.ModelAdmin):
     def cliente_info(self, obj):
         """Información del cliente origen"""
         if obj.id_cliente_origen:
-            return format_html(
-                "{} {}", obj.id_cliente_origen.nombre, obj.id_cliente_origen.apellido
-            )
-        return format_html('<small style="color:#6c757d;">{}</small>', '-')
+            return format_html("{} {}", obj.id_cliente_origen.nombre, obj.id_cliente_origen.apellido)
+        return format_html('<small style="color:#6c757d;">{}</small>', "-")
 
     cliente_info.short_description = "Cliente"
 
@@ -415,9 +415,7 @@ class ConsumosTarjetaAdmin(admin.ModelAdmin):
         """Saldos anterior y posterior"""
         saldo_ant_formateado = f"{obj.saldo_anterior:,.2f}"
         saldo_post_formateado = f"{obj.saldo_posterior:,.2f}"
-        return format_html(
-            "<small>₲{} → ₲{}</small>", saldo_ant_formateado, saldo_post_formateado
-        )
+        return format_html("<small>₲{} → ₲{}</small>", saldo_ant_formateado, saldo_post_formateado)
 
     saldos_display.short_description = "Saldos"
 
@@ -435,7 +433,7 @@ class ConsumosTarjetaAdmin(admin.ModelAdmin):
                 obj.id_empleado_registro.nombre,
                 obj.id_empleado_registro.apellido,
             )
-        return format_html('<small style="color:#6c757d;">{}</small>', 'Sistema')
+        return format_html('<small style="color:#6c757d;">{}</small>', "Sistema")
 
     empleado_registro.short_description = "Registrado por"
 
@@ -520,11 +518,7 @@ class TransaccionesOnlineAdmin(admin.ModelAdmin):
         if obj.referencia_pago:
             return format_html(
                 '<code style="background:#e9ecef;padding:2px 6px;border-radius:3px;">{}</code>',
-                (
-                    obj.referencia_pago[:20] + "..."
-                    if len(obj.referencia_pago) > 20
-                    else obj.referencia_pago
-                ),
+                (obj.referencia_pago[:20] + "..." if len(obj.referencia_pago) > 20 else obj.referencia_pago),
             )
         return "-"
 
@@ -556,16 +550,16 @@ class MediosPagoAdmin(admin.ModelAdmin):
     def genera_comision_badge(self, obj):
         """Indicador de comisión"""
         if obj.genera_comision:
-            return format_html('<span style="color:#fd7e14;">{}</span>', '✓ Cobra comisión')
-        return format_html('<span style="color:#6c757d;">{}</span>', '-')
+            return format_html('<span style="color:#fd7e14;">{}</span>', "✓ Cobra comisión")
+        return format_html('<span style="color:#6c757d;">{}</span>', "-")
 
     genera_comision_badge.short_description = "Comisión"
 
     def requiere_validacion_badge(self, obj):
         """Indicador de validación"""
         if obj.requiere_validacion:
-            return format_html('<span style="color:#0d6efd;">{}</span>', '✓ Requiere validación')
-        return format_html('<span style="color:#6c757d;">{}</span>', '-')
+            return format_html('<span style="color:#0d6efd;">{}</span>', "✓ Requiere validación")
+        return format_html('<span style="color:#6c757d;">{}</span>', "-")
 
     requiere_validacion_badge.short_description = "Validación"
 
@@ -573,10 +567,12 @@ class MediosPagoAdmin(admin.ModelAdmin):
         """Estado estado/inactivo"""
         if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'ACTIVO'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+                "ACTIVO",
             )
         return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'INACTIVO'
+            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            "INACTIVO",
         )
 
     estado_badge.short_description = "Estado"
@@ -667,8 +663,8 @@ class ConfiguracionSistemaAdmin(admin.ModelAdmin):
     def requerido_badge(self, obj):
         """Indicador de requerido"""
         if obj.requerido:
-            return format_html('<span style="color:#dc3545;">{}</span>', '✓ Obligatorio')
-        return format_html('<span style="color:#6c757d;">{}</span>', 'Opcional')
+            return format_html('<span style="color:#dc3545;">{}</span>', "✓ Obligatorio")
+        return format_html('<span style="color:#6c757d;">{}</span>', "Opcional")
 
     requerido_badge.short_description = "Requerido"
 
@@ -763,10 +759,12 @@ class CacheConfiguracionAdmin(admin.ModelAdmin):
         """Estado estado"""
         if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'ACTIVO'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+                "ACTIVO",
             )
         return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'INACTIVO'
+            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            "INACTIVO",
         )
 
     activo_badge.short_description = "Estado"
@@ -838,17 +836,15 @@ class LimitesTransaccionAdmin(admin.ModelAdmin):
     def monto_limite_display(self, obj):
         """Monto límite formateado"""
         monto_formateado = f"{obj.monto_maximo_sin_autorizacion:,.2f}"
-        return format_html(
-            '<strong style="color:#0d6efd;">₲{}</strong>', monto_formateado
-        )
+        return format_html('<strong style="color:#0d6efd;">₲{}</strong>', monto_formateado)
 
     monto_limite_display.short_description = "Monto Límite"
 
     def doble_autorizacion_badge(self, obj):
         """Indicador de doble autorización"""
         if obj.requiere_autorizacion_doble:
-            return format_html('<span style="color:#dc3545;">{}</span>', '⚠️ Requiere doble autorización')
-        return format_html('<span style="color:#6c757d;">{}</span>', 'Autorización simple')
+            return format_html('<span style="color:#dc3545;">{}</span>', "⚠️ Requiere doble autorización")
+        return format_html('<span style="color:#6c757d;">{}</span>', "Autorización simple")
 
     doble_autorizacion_badge.short_description = "Autorización"
 
@@ -856,10 +852,12 @@ class LimitesTransaccionAdmin(admin.ModelAdmin):
         """Estado estado"""
         if obj.estado:
             return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'ACTIVO'
+                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+                "ACTIVO",
             )
         return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>', 'INACTIVO'
+            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            "INACTIVO",
         )
 
     activo_badge.short_description = "Estado"
@@ -929,9 +927,7 @@ class RegistroAutorizacionesAdmin(admin.ModelAdmin):
     def solicitante_info(self, obj):
         """Empleado solicitante"""
         if obj.id_empleado_solicitante:
-            return format_html(
-                "{} {}", obj.id_empleado_solicitante.nombre, obj.id_empleado_solicitante.apellido
-            )
+            return format_html("{} {}", obj.id_empleado_solicitante.nombre, obj.id_empleado_solicitante.apellido)
         return "-"
 
     solicitante_info.short_description = "Solicitante"
@@ -956,7 +952,7 @@ class RegistroAutorizacionesAdmin(admin.ModelAdmin):
                 obj.id_empleado_autorizador_2.nombre,
                 obj.id_empleado_autorizador_2.apellido,
             )
-        return format_html('<small style="color:#6c757d;">{}</small>', '-')
+        return format_html('<small style="color:#6c757d;">{}</small>', "-")
 
     autorizador2_info.short_description = "Autorizador 2"
 

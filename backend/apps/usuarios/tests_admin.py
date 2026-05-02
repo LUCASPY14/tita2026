@@ -17,14 +17,10 @@ class RolesAdminTest(TestCase):
 
     def setUp(self):
         """Configurar usuario admin y datos de prueba"""
-        self.user = User.objects.create_superuser(
-            username='admin',
-            email='admin@test.com',
-            password='adminpass123'
-        )
+        self.user = User.objects.create_superuser(username="admin", email="admin@test.com", password="adminpass123")
         self.client = Client()
         self.client.force_login(self.user)
-        
+
         self.roles = [
             Roles.objects.create(nombre_rol="Administrador", estado=True),
             Roles.objects.create(nombre_rol="Cajero", estado=True),
@@ -33,9 +29,9 @@ class RolesAdminTest(TestCase):
 
     def test_admin_list_view(self):
         """Debe mostrar lista de roles en admin"""
-        url = reverse('admin:usuarios_roles_changelist')
+        url = reverse("admin:usuarios_roles_changelist")
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Administrador")
         self.assertContains(response, "Cajero")
@@ -43,70 +39,62 @@ class RolesAdminTest(TestCase):
 
     def test_admin_add_view(self):
         """Debe mostrar formulario de añadir rol"""
-        url = reverse('admin:usuarios_roles_add')
+        url = reverse("admin:usuarios_roles_add")
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'nombre_rol')
-        self.assertContains(response, 'descripcion')
-        self.assertContains(response, 'estado')
+        self.assertContains(response, "nombre_rol")
+        self.assertContains(response, "descripcion")
+        self.assertContains(response, "estado")
 
     def test_admin_create_role(self):
         """Debe crear nuevo rol desde admin"""
-        url = reverse('admin:usuarios_roles_add')
-        data = {
-            'nombre_rol': 'Nuevo Rol Admin',
-            'descripcion': 'Rol creado desde admin',
-            'estado': True
-        }
-        
+        url = reverse("admin:usuarios_roles_add")
+        data = {"nombre_rol": "Nuevo Rol Admin", "descripcion": "Rol creado desde admin", "estado": True}
+
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 302)  # Redirect after success
-        
-        nuevo_rol = Roles.objects.get(nombre_rol='Nuevo Rol Admin')
-        self.assertEqual(nuevo_rol.descripcion, 'Rol creado desde admin')
+
+        nuevo_rol = Roles.objects.get(nombre_rol="Nuevo Rol Admin")
+        self.assertEqual(nuevo_rol.descripcion, "Rol creado desde admin")
         self.assertTrue(nuevo_rol.estado)
 
     def test_admin_edit_view(self):
         """Debe mostrar formulario de edición"""
         rol = self.roles[0]
-        url = reverse('admin:usuarios_roles_change', args=[rol.id_rol])
+        url = reverse("admin:usuarios_roles_change", args=[rol.id_rol])
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, rol.nombre_rol)
 
     def test_admin_update_role(self):
         """Debe actualizar rol existente"""
         rol = self.roles[0]
-        url = reverse('admin:usuarios_roles_change', args=[rol.id_rol])
-        data = {
-            'nombre_rol': 'Admin Actualizado',
-            'descripcion': 'Descripción actualizada',
-            'estado': False
-        }
-        
+        url = reverse("admin:usuarios_roles_change", args=[rol.id_rol])
+        data = {"nombre_rol": "Admin Actualizado", "descripcion": "Descripción actualizada", "estado": False}
+
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 302)
-        
+
         rol.refresh_from_db()
-        self.assertEqual(rol.nombre_rol, 'Admin Actualizado')
+        self.assertEqual(rol.nombre_rol, "Admin Actualizado")
         self.assertFalse(rol.estado)
 
     def test_admin_search_functionality(self):
         """Debe permitir búsqueda en admin"""
-        url = reverse('admin:usuarios_roles_changelist')
-        response = self.client.get(url, {'q': 'Admin'})
-        
+        url = reverse("admin:usuarios_roles_changelist")
+        response = self.client.get(url, {"q": "Admin"})
+
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Administrador")
         self.assertNotContains(response, "Cajero")
 
     def test_admin_filter_by_activo(self):
         """Debe filtrar por estado estado"""
-        url = reverse('admin:usuarios_roles_changelist')
-        response = self.client.get(url, {'estado__exact': '1'})  # Activos
-        
+        url = reverse("admin:usuarios_roles_changelist")
+        response = self.client.get(url, {"estado__exact": "1"})  # Activos
+
         self.assertEqual(response.status_code, 200)
         # Debe mostrar solo roles activos
         self.assertContains(response, "Administrador")
@@ -118,19 +106,12 @@ class EmpleadosAdminTest(TestCase):
 
     def setUp(self):
         """Configurar datos de prueba"""
-        self.user = User.objects.create_superuser(
-            username='admin',
-            email='admin@test.com',
-            password='adminpass123'
-        )
+        self.user = User.objects.create_superuser(username="admin", email="admin@test.com", password="adminpass123")
         self.client = Client()
         self.client.force_login(self.user)
-        
-        self.rol = Roles.objects.create(
-            nombre_rol="Manager",
-            estado=True
-        )
-        
+
+        self.rol = Roles.objects.create(nombre_rol="Manager", estado=True)
+
         self.empleados = [
             Empleados.objects.create(
                 nombre="Juan",
@@ -140,7 +121,7 @@ class EmpleadosAdminTest(TestCase):
                 fecha_ingreso=timezone.now(),
                 email="juan@company.com",
                 estado=True,
-                id_rol=self.rol
+                id_rol=self.rol,
             ),
             Empleados.objects.create(
                 nombre="María",
@@ -149,15 +130,15 @@ class EmpleadosAdminTest(TestCase):
                 contrasena_hash="$2b$12$hash2",
                 fecha_ingreso=timezone.now(),
                 estado=False,
-                id_rol=self.rol
-            )
+                id_rol=self.rol,
+            ),
         ]
 
     def test_empleados_admin_list_view(self):
         """Debe mostrar lista de empleados en admin"""
-        url = reverse('admin:usuarios_empleados_changelist')
+        url = reverse("admin:usuarios_empleados_changelist")
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Juan")
         self.assertContains(response, "Pérez")
@@ -166,59 +147,59 @@ class EmpleadosAdminTest(TestCase):
 
     def test_empleados_admin_add_view(self):
         """Debe mostrar formulario de añadir empleado"""
-        url = reverse('admin:usuarios_empleados_add')
+        url = reverse("admin:usuarios_empleados_add")
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'nombre')
-        self.assertContains(response, 'apellido')
-        self.assertContains(response, 'usuario')
-        self.assertContains(response, 'id_rol')
+        self.assertContains(response, "nombre")
+        self.assertContains(response, "apellido")
+        self.assertContains(response, "usuario")
+        self.assertContains(response, "id_rol")
 
     def test_empleados_admin_create(self):
         """Debe crear nuevo empleado desde admin"""
-        url = reverse('admin:usuarios_empleados_add')
+        url = reverse("admin:usuarios_empleados_add")
         now = timezone.now()
         data = {
-            'nombre': 'Carlos',
-            'apellido': 'López',
-            'usuario': 'clopez',
-            'contrasena_hash': '$2b$12$newhash',
-            'fecha_ingreso_0': now.strftime('%Y-%m-%d'),
-            'fecha_ingreso_1': now.strftime('%H:%M:%S'),
-            'email': 'carlos@company.com',
-            'estado': True,
-            'id_rol': self.rol.id_rol
+            "nombre": "Carlos",
+            "apellido": "López",
+            "usuario": "clopez",
+            "contrasena_hash": "$2b$12$newhash",
+            "fecha_ingreso_0": now.strftime("%Y-%m-%d"),
+            "fecha_ingreso_1": now.strftime("%H:%M:%S"),
+            "email": "carlos@company.com",
+            "estado": True,
+            "id_rol": self.rol.id_rol,
         }
-        
+
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 302)
-        
-        nuevo_empleado = Empleados.objects.get(usuario='clopez')
-        self.assertEqual(nuevo_empleado.nombre, 'Carlos')
-        self.assertEqual(nuevo_empleado.email, 'carlos@company.com')
+
+        nuevo_empleado = Empleados.objects.get(usuario="clopez")
+        self.assertEqual(nuevo_empleado.nombre, "Carlos")
+        self.assertEqual(nuevo_empleado.email, "carlos@company.com")
 
     def test_empleados_admin_search(self):
         """Debe permitir búsqueda por nombre, apellido, usuario"""
-        url = reverse('admin:usuarios_empleados_changelist')
-        
+        url = reverse("admin:usuarios_empleados_changelist")
+
         # Buscar por nombre
-        response = self.client.get(url, {'q': 'Juan'})
+        response = self.client.get(url, {"q": "Juan"})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Juan")
         self.assertNotContains(response, "María")
-        
+
         # Buscar por usuario
-        response = self.client.get(url, {'q': 'mgarcia'})
+        response = self.client.get(url, {"q": "mgarcia"})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "María")
         self.assertNotContains(response, "Juan")
 
     def test_empleados_admin_filter_by_activo(self):
         """Debe filtrar empleados por estado estado"""
-        url = reverse('admin:usuarios_empleados_changelist')
-        response = self.client.get(url, {'estado__exact': '1'})
-        
+        url = reverse("admin:usuarios_empleados_changelist")
+        response = self.client.get(url, {"estado__exact": "1"})
+
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Juan")  # estado
         # María (inactiva) no debería aparecer
@@ -233,12 +214,12 @@ class EmpleadosAdminTest(TestCase):
             usuario="aruiz",
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
-            id_rol=otro_rol
+            id_rol=otro_rol,
         )
-        
-        url = reverse('admin:usuarios_empleados_changelist')
-        response = self.client.get(url, {'id_rol__exact': self.rol.id_rol})
-        
+
+        url = reverse("admin:usuarios_empleados_changelist")
+        response = self.client.get(url, {"id_rol__exact": self.rol.id_rol})
+
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Juan")
         self.assertContains(response, "María")
@@ -247,9 +228,9 @@ class EmpleadosAdminTest(TestCase):
     def test_empleados_admin_edit_view(self):
         """Debe mostrar formulario de edición de empleado"""
         empleado = self.empleados[0]
-        url = reverse('admin:usuarios_empleados_change', args=[empleado.id_empleado])
+        url = reverse("admin:usuarios_empleados_change", args=[empleado.id_empleado])
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, empleado.nombre)
         self.assertContains(response, empleado.usuario)
@@ -257,34 +238,34 @@ class EmpleadosAdminTest(TestCase):
     def test_empleados_admin_update(self):
         """Debe actualizar empleado existente"""
         empleado = self.empleados[0]
-        url = reverse('admin:usuarios_empleados_change', args=[empleado.id_empleado])
+        url = reverse("admin:usuarios_empleados_change", args=[empleado.id_empleado])
         fi = empleado.fecha_ingreso
         data = {
-            'nombre': 'Juan Carlos',
-            'apellido': 'Pérez Actualizado',
-            'usuario': 'jcperez',
-            'contrasena_hash': empleado.contrasena_hash,
-            'fecha_ingreso_0': fi.strftime('%Y-%m-%d') if hasattr(fi, 'strftime') else str(fi)[:10],
-            'fecha_ingreso_1': fi.strftime('%H:%M:%S') if hasattr(fi, 'strftime') else '00:00:00',
-            'email': 'juan.carlos@company.com',
-            'estado': True,
-            'id_rol': self.rol.id_rol
+            "nombre": "Juan Carlos",
+            "apellido": "Pérez Actualizado",
+            "usuario": "jcperez",
+            "contrasena_hash": empleado.contrasena_hash,
+            "fecha_ingreso_0": fi.strftime("%Y-%m-%d") if hasattr(fi, "strftime") else str(fi)[:10],
+            "fecha_ingreso_1": fi.strftime("%H:%M:%S") if hasattr(fi, "strftime") else "00:00:00",
+            "email": "juan.carlos@company.com",
+            "estado": True,
+            "id_rol": self.rol.id_rol,
         }
-        
+
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 302)
-        
+
         empleado.refresh_from_db()
-        self.assertEqual(empleado.nombre, 'Juan Carlos')
-        self.assertEqual(empleado.apellido, 'Pérez Actualizado')
-        self.assertEqual(empleado.usuario, 'jcperez')
+        self.assertEqual(empleado.nombre, "Juan Carlos")
+        self.assertEqual(empleado.apellido, "Pérez Actualizado")
+        self.assertEqual(empleado.usuario, "jcperez")
 
     def test_admin_readonly_fields(self):
         """Debe manejar campos de solo lectura apropiados"""
         empleado = self.empleados[0]
-        url = reverse('admin:usuarios_empleados_change', args=[empleado.id_empleado])
+        url = reverse("admin:usuarios_empleados_change", args=[empleado.id_empleado])
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 200)
         # Verificar que ciertos campos sensibles tienen tratamiento especial
         # (esto dependería de la configuración específica del admin)
@@ -293,17 +274,14 @@ class EmpleadosAdminTest(TestCase):
         """Debe requerir permisos de admin"""
         # Cerrar sesión de admin
         self.client.logout()
-        
+
         # Crear usuario normal sin permisos
-        normal_user = User.objects.create_user(
-            username='normal',
-            password='normalpass'
-        )
+        normal_user = User.objects.create_user(username="normal", password="normalpass")
         self.client.force_login(normal_user)
-        
+
         # Intentar acceder al admin
-        url = reverse('admin:usuarios_roles_changelist')
+        url = reverse("admin:usuarios_roles_changelist")
         response = self.client.get(url)
-        
+
         # Debe redirigir o mostrar error de permisos
         self.assertNotEqual(response.status_code, 200)

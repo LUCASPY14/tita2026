@@ -33,9 +33,7 @@ class ClientesModelTest(TestCase):
         )
 
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Minorista", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Minorista", moneda="PYG", estado=True)
 
         # Crear tipo de cliente
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Mayorista", estado=True)
@@ -165,9 +163,7 @@ class HijosModelTest(TestCase):
 
     def setUp(self):
         """Configuración inicial"""
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Estudiantes", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Estudiantes", moneda="PYG", estado=True)
 
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
 
@@ -229,32 +225,44 @@ class ClientesEdgeCasesTest(TestCase):
     """Tests para casos borde de las propiedades de Clientes."""
 
     def setUp(self):
-        self.lista = ListasPrecios.objects.create(nombre_lista='Lista Edge', moneda='PYG', estado=True)
-        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo='Tipo Edge', estado=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Edge", moneda="PYG", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Tipo Edge", estado=True)
 
     def test_credito_disponible_sin_limite(self):
         """credito_disponible retorna 0 cuando limite_credito es None."""
         cliente = Clientes.objects.create(
-            nombres='Sin', apellidos='Limite', ruc_ci='9000001',
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
+            nombres="Sin",
+            apellidos="Limite",
+            ruc_ci="9000001",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cliente,
         )
-        self.assertEqual(cliente.credito_disponible, Decimal('0.00'))
+        self.assertEqual(cliente.credito_disponible, Decimal("0.00"))
         # porcentaje_credito_usado también retorna 0.00 cuando no hay limite
-        self.assertEqual(cliente.porcentaje_credito_usado, Decimal('0.00'))
+        self.assertEqual(cliente.porcentaje_credito_usado, Decimal("0.00"))
 
     def test_tiene_credito_disponible_false(self):
         """tiene_credito_disponible es False si no hay limite_credito."""
         cliente = Clientes.objects.create(
-            nombres='Sin', apellidos='Credito', ruc_ci='9000002',
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
+            nombres="Sin",
+            apellidos="Credito",
+            ruc_ci="9000002",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cliente,
         )
         self.assertFalse(cliente.tiene_credito_disponible)
 
     def test_esta_activo_property(self):
         """esta_activo retorna True cuando estado=True."""
         cliente = Clientes.objects.create(
-            nombres='Act', apellidos='Ivo', ruc_ci='9000003',
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cliente,
+            nombres="Act",
+            apellidos="Ivo",
+            ruc_ci="9000003",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cliente,
         )
         self.assertTrue(cliente.esta_activo)
 
@@ -263,29 +271,39 @@ class RestriccionesHijosTest(TestCase):
     """Tests para la propiedad es_critica de RestriccionesHijos."""
 
     def setUp(self):
-        self.lista = ListasPrecios.objects.create(nombre_lista='Lista RH', moneda='PYG', estado=True)
-        self.tipo = TiposCliente.objects.create(nombre_tipo='Tipo RH', estado=True)
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista RH", moneda="PYG", estado=True)
+        self.tipo = TiposCliente.objects.create(nombre_tipo="Tipo RH", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres='Rest', apellidos='HijosTest', ruc_ci='9100001',
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo,
+            nombres="Rest",
+            apellidos="HijosTest",
+            ruc_ci="9100001",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo,
         )
         self.hijo = Hijos.objects.create(
-            nombre='Hijo', apellido='RH', estado=True,
+            nombre="Hijo",
+            apellido="RH",
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
 
     def test_es_critica_true(self):
         """es_critica retorna True cuando severidad es critica."""
         r = RestriccionesHijos.objects.create(
-            tipo_restriccion='Alergia', severidad='critica',
-            estado=True, id_hijo=self.hijo,
+            tipo_restriccion="Alergia",
+            severidad="critica",
+            estado=True,
+            id_hijo=self.hijo,
         )
         self.assertTrue(r.es_critica)
 
     def test_es_critica_false(self):
         """es_critica retorna False cuando severidad es Baja."""
         r = RestriccionesHijos.objects.create(
-            tipo_restriccion='Intolerancia', severidad='Baja',
-            estado=True, id_hijo=self.hijo,
+            tipo_restriccion="Intolerancia",
+            severidad="Baja",
+            estado=True,
+            id_hijo=self.hijo,
         )
         self.assertFalse(r.es_critica)

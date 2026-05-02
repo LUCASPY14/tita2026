@@ -17,7 +17,7 @@ class GradosSerializer(serializers.ModelSerializer):
 
 class ClientesSerializer(serializers.ModelSerializer):
     id_lista = serializers.PrimaryKeyRelatedField(
-        queryset=__import__('apps.productos.models', fromlist=['ListasPrecios']).ListasPrecios.objects.all(),
+        queryset=__import__("apps.productos.models", fromlist=["ListasPrecios"]).ListasPrecios.objects.all(),
         required=False,
     )
 
@@ -26,13 +26,14 @@ class ClientesSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def create(self, validated_data):
-        if 'id_lista' not in validated_data:
+        if "id_lista" not in validated_data:
             from apps.productos.models import ListasPrecios
+
             lista, _ = ListasPrecios.objects.get_or_create(
-                nombre_lista='General',
-                defaults={'estado': True, 'moneda': 'PYG'},
+                nombre_lista="General",
+                defaults={"estado": True, "moneda": "PYG"},
             )
-            validated_data['id_lista'] = lista
+            validated_data["id_lista"] = lista
         return super().create(validated_data)
 
 

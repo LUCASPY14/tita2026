@@ -1,4 +1,5 @@
 ﻿"""Tests for apps/core/admin.py - covers custom display methods in all ModelAdmin classes."""
+
 from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -33,13 +34,11 @@ def _mock_obj(**kwargs):
     return obj
 
 
-@patch('apps.core.admin.format_html', _plain_format_html)
+@patch("apps.core.admin.format_html", _plain_format_html)
 class TarjetasAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
-        self.admin = TarjetasAdmin(
-            __import__("apps.core.models", fromlist=["Tarjetas"]).Tarjetas, self.site
-        )
+        self.admin = TarjetasAdmin(__import__("apps.core.models", fromlist=["Tarjetas"]).Tarjetas, self.site)
 
     def test_nro_tarjeta_badge(self):
         obj = _mock_obj(nro_tarjeta="T001")
@@ -129,11 +128,12 @@ class TarjetasAdminTest(TestCase):
         self.assertEqual(result, "-")
 
 
-@patch('apps.core.admin.format_html', _plain_format_html)
+@patch("apps.core.admin.format_html", _plain_format_html)
 class TarjetasAutorizacionAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.core.models import TarjetasAutorizacion
+
         self.admin = TarjetasAutorizacionAdmin(TarjetasAutorizacion, self.site)
 
     def test_codigo_barra_badge(self):
@@ -217,11 +217,12 @@ class TarjetasAutorizacionAdminTest(TestCase):
         self.assertIn("Sin vencimiento", result)
 
 
-@patch('apps.core.admin.format_html', _plain_format_html)
+@patch("apps.core.admin.format_html", _plain_format_html)
 class CargasSaldoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.core.models import CargasSaldo
+
         self.admin = CargasSaldoAdmin(CargasSaldo, self.site)
 
     def test_nro_tarjeta_link_con_tarjeta(self):
@@ -265,6 +266,7 @@ class CargasSaldoAdminTest(TestCase):
 
     def test_fecha_carga_display(self):
         import datetime
+
         obj = _mock_obj(fecha_carga=datetime.datetime(2024, 3, 15, 10, 30))
         result = self.admin.fecha_carga_display(obj)
         self.assertIn("15/03/2024", result)
@@ -296,11 +298,12 @@ class CargasSaldoAdminTest(TestCase):
         self.assertIn("-", result)
 
 
-@patch('apps.core.admin.format_html', _plain_format_html)
+@patch("apps.core.admin.format_html", _plain_format_html)
 class ConsumosTarjetaAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.core.models import ConsumosTarjeta
+
         self.admin = ConsumosTarjetaAdmin(ConsumosTarjeta, self.site)
 
     def test_nro_tarjeta_link_con_tarjeta(self):
@@ -345,6 +348,7 @@ class ConsumosTarjetaAdminTest(TestCase):
 
     def test_fecha_consumo_display(self):
         import datetime
+
         obj = _mock_obj(fecha_consumo=datetime.datetime(2024, 5, 20, 14, 00))
         result = self.admin.fecha_consumo_display(obj)
         self.assertIn("20/05/2024", result)
@@ -361,11 +365,12 @@ class ConsumosTarjetaAdminTest(TestCase):
         self.assertIn("Sistema", result)
 
 
-@patch('apps.core.admin.format_html', _plain_format_html)
+@patch("apps.core.admin.format_html", _plain_format_html)
 class TransaccionesOnlineAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.core.models import TransaccionesOnline
+
         self.admin = TransaccionesOnlineAdmin(TransaccionesOnline, self.site)
 
     def test_monto_display(self):
@@ -400,6 +405,7 @@ class TransaccionesOnlineAdminTest(TestCase):
 
     def test_fecha_transaccion_display(self):
         import datetime
+
         obj = _mock_obj(fecha_transaccion=datetime.datetime(2024, 1, 10, 9, 0))
         result = self.admin.fecha_transaccion_display(obj)
         self.assertIn("10/01/2024", result)
@@ -420,11 +426,12 @@ class TransaccionesOnlineAdminTest(TestCase):
         self.assertEqual(result, "-")
 
 
-@patch('apps.core.admin.format_html', _plain_format_html)
+@patch("apps.core.admin.format_html", _plain_format_html)
 class MediosPagoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.core.models import MediosPago
+
         self.admin = MediosPagoAdmin(MediosPago, self.site)
 
     def test_descripcion_badge(self):
@@ -463,11 +470,12 @@ class MediosPagoAdminTest(TestCase):
         self.assertIn("INACTIVO", result)
 
 
-@patch('apps.core.admin.format_html', _plain_format_html)
+@patch("apps.core.admin.format_html", _plain_format_html)
 class ConfiguracionSistemaAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.core.models import ConfiguracionSistema
+
         self.admin = ConfiguracionSistemaAdmin(ConfiguracionSistema, self.site)
 
     def test_clave_badge(self):
@@ -522,6 +530,7 @@ class ConfiguracionSistemaAdminTest(TestCase):
 
     def test_updated_info_con_usuario(self):
         import datetime
+
         empleado = _mock_obj(nombre="Carlos", apellido="Diaz")
         obj = _mock_obj(
             updated_by=empleado,
@@ -532,6 +541,7 @@ class ConfiguracionSistemaAdminTest(TestCase):
 
     def test_updated_info_sin_usuario(self):
         import datetime
+
         obj = _mock_obj(
             updated_by=None,
             updated_at=datetime.datetime(2024, 6, 1, 12, 0),
@@ -540,11 +550,12 @@ class ConfiguracionSistemaAdminTest(TestCase):
         self.assertIn("01/06/2024", result)
 
 
-@patch('apps.core.admin.format_html', _plain_format_html)
+@patch("apps.core.admin.format_html", _plain_format_html)
 class CacheConfiguracionAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.core.models import CacheConfiguracion
+
         self.admin = CacheConfiguracionAdmin(CacheConfiguracion, self.site)
 
     def test_clave_badge(self):
@@ -624,11 +635,12 @@ class CacheConfiguracionAdminTest(TestCase):
         self.assertIn("INACTIVO", result)
 
 
-@patch('apps.core.admin.format_html', _plain_format_html)
+@patch("apps.core.admin.format_html", _plain_format_html)
 class LimitesTransaccionAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.core.models import LimitesTransaccion
+
         self.admin = LimitesTransaccionAdmin(LimitesTransaccion, self.site)
 
     def test_rol_badge(self):
@@ -681,11 +693,12 @@ class LimitesTransaccionAdminTest(TestCase):
         self.assertIn("INACTIVO", result)
 
 
-@patch('apps.core.admin.format_html', _plain_format_html)
+@patch("apps.core.admin.format_html", _plain_format_html)
 class RegistroAutorizacionesAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.core.models import RegistroAutorizaciones
+
         self.admin = RegistroAutorizacionesAdmin(RegistroAutorizaciones, self.site)
 
     def test_operacion_badge(self):
@@ -740,6 +753,7 @@ class RegistroAutorizacionesAdminTest(TestCase):
 
     def test_fecha_autorizacion_display(self):
         import datetime
+
         obj = _mock_obj(fecha_autorizacion=datetime.datetime(2024, 4, 8, 16, 45))
         result = self.admin.fecha_autorizacion_display(obj)
         self.assertIn("08/04/2024", result)

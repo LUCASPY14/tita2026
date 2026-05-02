@@ -199,9 +199,7 @@ class ValidadoresStockDisponibleTestCase(TestCase):
 
         self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="u", estado=True)
 
-        self.lista_precio = ListasPrecios.objects.create(
-            nombre_lista="Minorista", moneda="PYG", estado=True
-        )
+        self.lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista", moneda="PYG", estado=True)
 
         # Producto con stock
         self.producto = Productos.objects.create(
@@ -694,6 +692,7 @@ class ValidadoresAlertasTestCase(TestCase):
 # ---------------------------------------------------------------------------
 # Tests adicionales para cubrir líneas faltantes
 # ---------------------------------------------------------------------------
+
 
 class ValidarStockDisponibleLineasFaltantesTest(TestCase):
     """Cubre línea 166 (id_producto como objeto) y línea 187 (StockUnico.DoesNotExist)"""

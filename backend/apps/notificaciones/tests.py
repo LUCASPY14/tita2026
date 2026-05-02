@@ -29,8 +29,11 @@ class NotificacionesPortalTest(TestCase):
         """Configuración inicial para los tests"""
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Portal", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="Test", apellidos="Portal", ruc_ci="11111111",
-            estado=True, id_tipo_cliente=self.tipo_cliente,
+            nombres="Test",
+            apellidos="Portal",
+            ruc_ci="11111111",
+            estado=True,
+            id_tipo_cliente=self.tipo_cliente,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
             email="testportal@cantina.com",
@@ -42,8 +45,12 @@ class NotificacionesPortalTest(TestCase):
 
     def _make_notif(self, **kwargs):
         defaults = dict(
-            tipo="info", titulo="Notif", mensaje="Mensaje",
-            leida=0, fecha_envio=timezone.now(), creado_en=timezone.now(),
+            tipo="info",
+            titulo="Notif",
+            mensaje="Mensaje",
+            leida=0,
+            fecha_envio=timezone.now(),
+            creado_en=timezone.now(),
             id_usuario_portal=self.usuario_portal,
         )
         defaults.update(kwargs)
@@ -51,8 +58,7 @@ class NotificacionesPortalTest(TestCase):
 
     def test_crear_notificacion_portal(self):
         """Test: Crear notificación del portal"""
-        notificacion = self._make_notif(tipo="info", titulo="Test Notificación",
-                                        mensaje="Este es un mensaje de prueba")
+        notificacion = self._make_notif(tipo="info", titulo="Test Notificación", mensaje="Este es un mensaje de prueba")
         self.assertEqual(notificacion.tipo, "info")
         self.assertEqual(notificacion.titulo, "Test Notificación")
         self.assertEqual(notificacion.leida, 0)
@@ -175,9 +181,7 @@ class AlertasSistemaTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         # Crear rol
-        self.rol = Roles.objects.create(
-            nombre_rol="Administrador", descripcion="Rol de prueba", estado=True
-        )
+        self.rol = Roles.objects.create(nombre_rol="Administrador", descripcion="Rol de prueba", estado=True)
 
         self.empleado = Empleados.objects.create(
             nombre="Juan",
@@ -222,12 +226,16 @@ class AlertasSistemaTest(TestCase):
     def test_filtrar_alertas_pendientes(self):
         """Test: Filtrar alertas pendientes"""
         AlertasSistema.objects.create(
-            tipo="stock_critico", mensaje="Alerta 1",
-            fecha_creacion=timezone.now(), estado="pendiente",
+            tipo="stock_critico",
+            mensaje="Alerta 1",
+            fecha_creacion=timezone.now(),
+            estado="pendiente",
         )
         AlertasSistema.objects.create(
-            tipo="anomalia_venta", mensaje="Alerta 2",
-            fecha_creacion=timezone.now(), estado="resuelta",
+            tipo="anomalia_venta",
+            mensaje="Alerta 2",
+            fecha_creacion=timezone.now(),
+            estado="resuelta",
             fecha_resolucion=timezone.now(),
         )
 
@@ -242,8 +250,11 @@ class PreferenciasNotificacionTest(TestCase):
         """Configuración inicial"""
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Prefs", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="Prefs", apellidos="User", ruc_ci="22222222",
-            estado=True, id_tipo_cliente=self.tipo_cliente,
+            nombres="Prefs",
+            apellidos="User",
+            ruc_ci="22222222",
+            estado=True,
+            id_tipo_cliente=self.tipo_cliente,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
             email="prefs@cantina.com",
@@ -345,7 +356,9 @@ class TestSmsEnviados:
     def test_sms_pendiente(self):
         """Test: SMS en estado pendiente"""
         sms = SmsEnviados.objects.create(
-            telefono="+595981111111", mensaje="Pending SMS", estado="pendiente",
+            telefono="+595981111111",
+            mensaje="Pending SMS",
+            estado="pendiente",
             fecha_envio=timezone.now(),
         )
 
@@ -358,10 +371,18 @@ class NotificacionesModelsStrTest(TestCase):
 
     def setUp(self):
         from apps.notificaciones.models import (
-            PlantillasEmail, PlantillasSms, CampanasComunicacion,
-            AlertasAutomaticas, AlertaDestinatarios, AlertasSistema,
-            HistorialAlertas, AnomaliasDetectadas, RestriccionesHorarias,
-            SolicitudesNotificacion, NotificacionesSaldo, PreferenciasNotificacion,
+            PlantillasEmail,
+            PlantillasSms,
+            CampanasComunicacion,
+            AlertasAutomaticas,
+            AlertaDestinatarios,
+            AlertasSistema,
+            HistorialAlertas,
+            AnomaliasDetectadas,
+            RestriccionesHorarias,
+            SolicitudesNotificacion,
+            NotificacionesSaldo,
+            PreferenciasNotificacion,
         )
         from apps.clientes.models import Clientes, TiposCliente, Hijos
         from apps.usuarios.models import UsuariosPortal, Empleados, Roles
@@ -372,161 +393,257 @@ class NotificacionesModelsStrTest(TestCase):
         self.lista = ListasPrecios.objects.create(nombre_lista="Minorista Str", estado=True)
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Str Test", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="Str", apellidos="Test", ruc_ci="Str001", estado=True,
+            nombres="Str",
+            apellidos="Test",
+            ruc_ci="Str001",
+            estado=True,
             id_tipo_cliente=self.tipo_cliente,
         )
         self.hijo = Hijos.objects.create(
-            nombre="StrHijo", apellido="Test", grado="1ro", estado=True,
+            nombre="StrHijo",
+            apellido="Test",
+            grado="1ro",
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta="STR001", saldo_actual=Decimal("0.00"), estado="activa",
-            fecha_creacion=timezone.now(), limite_credito=Decimal("0.00"),
+            nro_tarjeta="STR001",
+            saldo_actual=Decimal("0.00"),
+            estado="activa",
+            fecha_creacion=timezone.now(),
+            limite_credito=Decimal("0.00"),
             id_hijo=self.hijo,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
-            email="str_test@cantina.com", password_hash="x", email_verificado=0,
-            fecha_registro=timezone.now(), id_cliente=self.cliente,
+            email="str_test@cantina.com",
+            password_hash="x",
+            email_verificado=0,
+            fecha_registro=timezone.now(),
+            id_cliente=self.cliente,
         )
         self.rol = Roles.objects.create(nombre_rol="StrRol Emp", descripcion="x", estado=True)
         self.empleado = Empleados.objects.create(
-            nombre="StrE", apellido="Emp", usuario="str_emp_notif", contrasena_hash="x",
-            fecha_ingreso=timezone.now(), estado=True, id_rol=self.rol,
+            nombre="StrE",
+            apellido="Emp",
+            usuario="str_emp_notif",
+            contrasena_hash="x",
+            fecha_ingreso=timezone.now(),
+            estado=True,
+            id_rol=self.rol,
         )
 
     def test_notificaciones_portal_str(self):
         from apps.notificaciones.models import NotificacionesPortal
+
         n = NotificacionesPortal.objects.create(
-            tipo="alerta", titulo="T", mensaje="M", leida=0,
-            fecha_envio=timezone.now(), creado_en=timezone.now(),
+            tipo="alerta",
+            titulo="T",
+            mensaje="M",
+            leida=0,
+            fecha_envio=timezone.now(),
+            creado_en=timezone.now(),
             id_usuario_portal=self.usuario_portal,
         )
         self.assertIn("NotificacionesPortal", str(n))
 
     def test_notificaciones_saldo_str(self):
         from apps.notificaciones.models import NotificacionesSaldo
+
         n = NotificacionesSaldo.objects.create(
-            tipo_notificacion="saldo", saldo_actual=Decimal("0.00"),
-            mensaje="M", enviada_email=0, enviada_sms=0, leida=0,
-            fecha_creacion=timezone.now(), nro_tarjeta=self.tarjeta,
+            tipo_notificacion="saldo",
+            saldo_actual=Decimal("0.00"),
+            mensaje="M",
+            enviada_email=0,
+            enviada_sms=0,
+            leida=0,
+            fecha_creacion=timezone.now(),
+            nro_tarjeta=self.tarjeta,
         )
         self.assertIn("NotificacionesSaldo", str(n))
 
     def test_solicitudes_notificacion_str(self):
         from apps.notificaciones.models import SolicitudesNotificacion
+
         n = SolicitudesNotificacion.objects.create(
-            saldo_alerta=Decimal("100.00"), mensaje="M", destino="Email",
-            fecha_solicitud=timezone.now(), id_cliente=self.cliente,
+            saldo_alerta=Decimal("100.00"),
+            mensaje="M",
+            destino="Email",
+            fecha_solicitud=timezone.now(),
+            id_cliente=self.cliente,
             nro_tarjeta=self.tarjeta,
         )
         self.assertIn("SolicitudesNotificacion", str(n))
 
     def test_preferencias_notificacion_str(self):
         from apps.notificaciones.models import PreferenciasNotificacion
+
         n = PreferenciasNotificacion.objects.create(
-            tipo_notificacion="ventas", email_activo=1, push_activo=0,
-            creado_en=timezone.now(), actualizado_en=timezone.now(),
+            tipo_notificacion="ventas",
+            email_activo=1,
+            push_activo=0,
+            creado_en=timezone.now(),
+            actualizado_en=timezone.now(),
             id_usuario_portal=self.usuario_portal,
         )
         self.assertIn("PreferenciasNotificacion", str(n))
 
     def test_emails_enviados_str(self):
         from apps.notificaciones.models import EmailsEnviados
+
         n = EmailsEnviados.objects.create(
-            email_destinatario="s@s.com", nombre_destinatario="Test",
-            asunto="A", cuerpo="B", estado="Enviado",
-            fecha_envio=timezone.now(), intentos=1,
+            email_destinatario="s@s.com",
+            nombre_destinatario="Test",
+            asunto="A",
+            cuerpo="B",
+            estado="Enviado",
+            fecha_envio=timezone.now(),
+            intentos=1,
         )
         self.assertIn("EmailsEnviados", str(n))
 
     def test_sms_enviados_str(self):
         n = SmsEnviados.objects.create(
-            telefono="0981000000", mensaje="Test SMS str",
-            estado="Enviado", fecha_envio=timezone.now(),
+            telefono="0981000000",
+            mensaje="Test SMS str",
+            estado="Enviado",
+            fecha_envio=timezone.now(),
         )
         self.assertIn("SmsEnviados", str(n))
 
     def test_plantillas_email_str(self):
         from apps.notificaciones.models import PlantillasEmail
+
         n = PlantillasEmail.objects.create(
-            codigo="STR_TPL_01", nombre="Str Tpl", asunto="A",
-            cuerpo_html="<p>Hi</p>", variables=[], categoria="Ventas",
-            estado=True, created_at=timezone.now(), updated_at=timezone.now(),
+            codigo="STR_TPL_01",
+            nombre="Str Tpl",
+            asunto="A",
+            cuerpo_html="<p>Hi</p>",
+            variables=[],
+            categoria="Ventas",
+            estado=True,
+            created_at=timezone.now(),
+            updated_at=timezone.now(),
         )
         self.assertIn("PlantillasEmail", str(n))
 
     def test_plantillas_sms_str(self):
         from apps.notificaciones.models import PlantillasSms
+
         n = PlantillasSms.objects.create(
-            codigo="STR_SMS_01", nombre="Str SMS Tpl", mensaje="Test mensaje SMS",
-            variables=[], categoria="Ventas", estado=True, created_at=timezone.now(),
+            codigo="STR_SMS_01",
+            nombre="Str SMS Tpl",
+            mensaje="Test mensaje SMS",
+            variables=[],
+            categoria="Ventas",
+            estado=True,
+            created_at=timezone.now(),
         )
         self.assertIn("PlantillasSms", str(n))
 
     def test_campanas_comunicacion_str(self):
         from apps.notificaciones.models import CampanasComunicacion
+
         n = CampanasComunicacion.objects.create(
-            nombre="Campaña Str", descripcion="Desc", tipo="Email",
-            segmentacion="Todos", estado="Borrador",
-            total_destinatarios=0, total_enviados=0, total_entregados=0,
+            nombre="Campaña Str",
+            descripcion="Desc",
+            tipo="Email",
+            segmentacion="Todos",
+            estado="Borrador",
+            total_destinatarios=0,
+            total_enviados=0,
+            total_entregados=0,
             created_at=timezone.now(),
         )
         self.assertIn("CampanasComunicacion", str(n))
 
     def test_alertas_automaticas_str(self):
         from apps.notificaciones.models import AlertasAutomaticas
+
         n = AlertasAutomaticas.objects.create(
-            nombre="Alerta Str", descripcion="Desc", condicion="cond",
-            tipo_alerta="Inventario", criticidad="Baja", frecuencia_min=30, estado=True,
+            nombre="Alerta Str",
+            descripcion="Desc",
+            condicion="cond",
+            tipo_alerta="Inventario",
+            criticidad="Baja",
+            frecuencia_min=30,
+            estado=True,
         )
         self.assertIn("AlertasAutomaticas", str(n))
 
     def test_alerta_destinatarios_str(self):
         from apps.notificaciones.models import AlertasAutomaticas, AlertaDestinatarios
+
         alerta = AlertasAutomaticas.objects.create(
-            nombre="AlertaD Str", descripcion="D", condicion="c",
-            tipo_alerta="Ventas", criticidad="Media", frecuencia_min=60, estado=True,
+            nombre="AlertaD Str",
+            descripcion="D",
+            condicion="c",
+            tipo_alerta="Ventas",
+            criticidad="Media",
+            frecuencia_min=60,
+            estado=True,
         )
         n = AlertaDestinatarios.objects.create(
-            via_email=1, via_sistema=1, estado=True,
-            id_alerta=alerta, id_empleado=self.empleado,
+            via_email=1,
+            via_sistema=1,
+            estado=True,
+            id_alerta=alerta,
+            id_empleado=self.empleado,
         )
         self.assertIn("AlertaDestinatarios", str(n))
 
     def test_alertas_sistema_str(self):
         from apps.notificaciones.models import AlertasSistema
+
         n = AlertasSistema.objects.create(
-            tipo="warning", mensaje="Str test alerta", fecha_creacion=timezone.now(),
+            tipo="warning",
+            mensaje="Str test alerta",
+            fecha_creacion=timezone.now(),
         )
         self.assertIn("AlertasSistema", str(n))
 
     def test_historial_alertas_str(self):
         from apps.notificaciones.models import AlertasAutomaticas, HistorialAlertas
+
         alerta = AlertasAutomaticas.objects.create(
-            nombre="AlertaH Str", descripcion="D", condicion="c",
-            tipo_alerta="Sistema", criticidad="Alta", frecuencia_min=5, estado=True,
+            nombre="AlertaH Str",
+            descripcion="D",
+            condicion="c",
+            tipo_alerta="Sistema",
+            criticidad="Alta",
+            frecuencia_min=5,
+            estado=True,
         )
         n = HistorialAlertas.objects.create(
-            fecha_disparada=timezone.now(), mensaje="M",
-            datos_contexto={}, resuelto=0, id_alerta=alerta,
+            fecha_disparada=timezone.now(),
+            mensaje="M",
+            datos_contexto={},
+            resuelto=0,
+            id_alerta=alerta,
         )
         self.assertIn("HistorialAlertas", str(n))
 
     def test_anomalias_detectadas_str(self):
         from apps.notificaciones.models import AnomaliasDetectadas
+
         n = AnomaliasDetectadas.objects.create(
-            usuario="admin", tipo_anomalia="acceso_inusual",
-            fecha_deteccion=timezone.now(), nivel_riesgo="Bajo", notificado=0,
+            usuario="admin",
+            tipo_anomalia="acceso_inusual",
+            fecha_deteccion=timezone.now(),
+            nivel_riesgo="Bajo",
+            notificado=0,
         )
         self.assertIn("AnomaliasDetectadas", str(n))
 
     def test_restricciones_horarias_str(self):
         from datetime import time
         from apps.notificaciones.models import RestriccionesHorarias
+
         n = RestriccionesHorarias.objects.create(
-            tipo_usuario="Empleado", dia_semana="Lunes",
-            hora_inicio=time(8, 0), hora_fin=time(18, 0),
-            estado=True, fecha_creacion=timezone.now(),
+            tipo_usuario="Empleado",
+            dia_semana="Lunes",
+            hora_inicio=time(8, 0),
+            hora_fin=time(18, 0),
+            estado=True,
+            fecha_creacion=timezone.now(),
         )
         self.assertIn("RestriccionesHorarias", str(n))
-

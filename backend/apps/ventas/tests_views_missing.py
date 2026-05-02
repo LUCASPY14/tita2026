@@ -10,6 +10,7 @@ Missing lines:
   431->437, 438 — autorizado_por + requiere_autorizacion in no-tarjeta path
   860-865  — reporte_efectividad for-loop body (Alta/Media/Baja classification)
 """
+
 from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
@@ -46,9 +47,7 @@ class EfectividadLoopTest(TestCase):
 
     def setUp(self):
         User = get_user_model()
-        self.auth_user = User.objects.create_user(
-            username="reporte_user", password="testpass", is_staff=True
-        )
+        self.auth_user = User.objects.create_user(username="reporte_user", password="testpass", is_staff=True)
         self.client = APIClient()
         self.client.force_authenticate(user=self.auth_user)
 
@@ -166,18 +165,18 @@ class EfectividadLoopTest(TestCase):
 # Shared setup helper
 # ---------------------------------------------------------------------------
 
+
 def _make_full_setup(test_case, prefix):
     """Create the standard set of DB objects needed for perform_create tests."""
     User = get_user_model()
-    test_case.auth_user = User.objects.create_user(
-        username=f"{prefix}_user", password="testpass", is_staff=True
-    )
+    test_case.auth_user = User.objects.create_user(username=f"{prefix}_user", password="testpass", is_staff=True)
     test_case.client = APIClient()
     test_case.client.force_authenticate(user=test_case.auth_user)
 
     test_case.rol = Roles.objects.create(nombre_rol=f"{prefix}_rol", estado=True)
     test_case.empleado = Empleados.objects.create(
-        nombre=prefix, apellido="Test",
+        nombre=prefix,
+        apellido="Test",
         usuario=f"{prefix.lower()}_emp",
         email=f"{prefix.lower()}@test.com",
         fecha_ingreso=timezone.now(),
@@ -218,9 +217,7 @@ def _make_full_setup(test_case, prefix):
         precio_unitario=Decimal("1000.00"),
     )
     StockUnico.objects.create(id_producto=test_case.prod, cantidad=Decimal("100.00"))
-    test_case.medio = MediosPago.objects.create(
-        descripcion=f"{prefix}_Medio", estado=True, genera_comision=False
-    )
+    test_case.medio = MediosPago.objects.create(descripcion=f"{prefix}_Medio", estado=True, genera_comision=False)
 
 
 def _venta_payload(test_case, extra=None):
@@ -282,8 +279,10 @@ class TarjetaNegativaOverLimitTest(TestCase):
     def setUp(self):
         _make_full_setup(self, "TN")
         self.hijo = Hijos.objects.create(
-            nombre="TNHijo", apellido="T",
-            id_cliente_responsable=self.cliente, estado=True,
+            nombre="TNHijo",
+            apellido="T",
+            id_cliente_responsable=self.cliente,
+            estado=True,
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="TN0001",
@@ -291,7 +290,7 @@ class TarjetaNegativaOverLimitTest(TestCase):
             estado="activa",
             fecha_creacion=timezone.now(),
             permite_saldo_negativo=True,
-            limite_credito=Decimal("50.00"),   # very small limit
+            limite_credito=Decimal("50.00"),  # very small limit
             id_hijo=self.hijo,
         )
 
@@ -381,7 +380,8 @@ class AuthorizationNoTarjetaTest(TestCase):
         _make_full_setup(self, "ANT")
         # Create a supervisor empleado to serve as "autorizado_por"
         self.supervisor = Empleados.objects.create(
-            nombre="Supervisor", apellido="ANT",
+            nombre="Supervisor",
+            apellido="ANT",
             usuario="ant_supervisor",
             email="ant_sup@test.com",
             fecha_ingreso=timezone.now(),
@@ -421,23 +421,27 @@ class AuthorizationNoTarjetaTest(TestCase):
             ],
             "autorizado_por": self.supervisor.id_empleado,
         }
-        with patch(
-            "apps.core.services.AutorizacionService.validar_operacion",
-            return_value={
-                "puede_ejecutar": True,
-                "requiere_autorizacion": True,
-                "limite": Decimal("500"),
-                "excedente": Decimal("500"),
-                "mensaje": "requiere auth",
-                "errores": [],
-                "doble_autorizacion": False,
-            },
-        ), patch(
-            "apps.core.services.AutorizacionService.registrar_autorizacion",
-            return_value=None,
-        ) as mock_reg, patch(
-            "apps.ventas.views.VentasViewSet._descontar_stock_venta",
-            return_value=None,
+        with (
+            patch(
+                "apps.core.services.AutorizacionService.validar_operacion",
+                return_value={
+                    "puede_ejecutar": True,
+                    "requiere_autorizacion": True,
+                    "limite": Decimal("500"),
+                    "excedente": Decimal("500"),
+                    "mensaje": "requiere auth",
+                    "errores": [],
+                    "doble_autorizacion": False,
+                },
+            ),
+            patch(
+                "apps.core.services.AutorizacionService.registrar_autorizacion",
+                return_value=None,
+            ) as mock_reg,
+            patch(
+                "apps.ventas.views.VentasViewSet._descontar_stock_venta",
+                return_value=None,
+            ),
         ):
             response = self.client.post(url, data, format="json")
 
@@ -454,7 +458,8 @@ class CreditWithAuthOverLimitTest(TestCase):
         self.cliente.save()
         # Supervisor to authorize
         self.supervisor = Empleados.objects.create(
-            nombre="Sup", apellido="CAOL",
+            nombre="Sup",
+            apellido="CAOL",
             usuario="caol_sup",
             email="caol_sup@test.com",
             fecha_ingreso=timezone.now(),
@@ -477,12 +482,15 @@ class CreditWithAuthOverLimitTest(TestCase):
                 "estado_pago": "Pendiente",
             },
         )
-        with patch(
-            "apps.ventas.views.VentasViewSet._descontar_stock_venta",
-            return_value=None,
-        ), patch(
-            "apps.ventas.views.VentasViewSet._registrar_pago_con_comision",
-            return_value=MagicMock(),
+        with (
+            patch(
+                "apps.ventas.views.VentasViewSet._descontar_stock_venta",
+                return_value=None,
+            ),
+            patch(
+                "apps.ventas.views.VentasViewSet._registrar_pago_con_comision",
+                return_value=MagicMock(),
+            ),
         ):
             response = self.client.post(url, data, format="json")
         self.assertIn(response.status_code, [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
@@ -497,8 +505,10 @@ class TarjetaNegativaOKRangeTest(TestCase):
     def setUp(self):
         _make_full_setup(self, "TNOK")
         self.hijo = Hijos.objects.create(
-            nombre="TNOKHijo", apellido="T",
-            id_cliente_responsable=self.cliente, estado=True,
+            nombre="TNOKHijo",
+            apellido="T",
+            id_cliente_responsable=self.cliente,
+            estado=True,
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="TNOK001",
@@ -521,15 +531,19 @@ class TarjetaNegativaOKRangeTest(TestCase):
             self,
             {"id_hijo": self.hijo.id_hijo, "monto_total": "1000.00"},
         )
-        with patch(
-            "apps.ventas.views.VentasViewSet._descontar_saldo_tarjeta",
-            return_value=None,
-        ), patch(
-            "apps.ventas.views.VentasViewSet._descontar_stock_venta",
-            return_value=None,
-        ), patch(
-            "apps.ventas.views.VentasViewSet._registrar_pago_con_comision",
-            return_value=MagicMock(),
+        with (
+            patch(
+                "apps.ventas.views.VentasViewSet._descontar_saldo_tarjeta",
+                return_value=None,
+            ),
+            patch(
+                "apps.ventas.views.VentasViewSet._descontar_stock_venta",
+                return_value=None,
+            ),
+            patch(
+                "apps.ventas.views.VentasViewSet._registrar_pago_con_comision",
+                return_value=MagicMock(),
+            ),
         ):
             response = self.client.post(url, data, format="json")
         self.assertIn(response.status_code, [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
@@ -579,8 +593,10 @@ class PromocionesAplicadasEnTransaccionTest(TestCase):
     def setUp(self):
         _make_full_setup(self, "PAT")
         self.hijo = Hijos.objects.create(
-            nombre="PATHijo", apellido="T",
-            id_cliente_responsable=self.cliente, estado=True,
+            nombre="PATHijo",
+            apellido="T",
+            id_cliente_responsable=self.cliente,
+            estado=True,
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="PAT001",
@@ -604,21 +620,27 @@ class PromocionesAplicadasEnTransaccionTest(TestCase):
         """Line 411: else path — if promociones_a_aplicar: True → aplicar called."""
         url = reverse("ventas-list")
         data = _venta_payload(self)
-        with patch(
-            "apps.ventas.services.PromocionService.obtener_promociones_aplicables",
-            return_value=self._promo_aplicables_mock(),
-        ), patch(
-            "apps.ventas.services.PromocionService.calcular_descuento",
-            return_value=self._descuento_mock(),
-        ), patch(
-            "apps.ventas.services.PromocionService.aplicar_promociones_a_venta",
-            return_value=None,
-        ), patch(
-            "apps.ventas.views.VentasViewSet._descontar_stock_venta",
-            return_value=None,
-        ), patch(
-            "apps.ventas.views.VentasViewSet._registrar_pago_con_comision",
-            return_value=MagicMock(),
+        with (
+            patch(
+                "apps.ventas.services.PromocionService.obtener_promociones_aplicables",
+                return_value=self._promo_aplicables_mock(),
+            ),
+            patch(
+                "apps.ventas.services.PromocionService.calcular_descuento",
+                return_value=self._descuento_mock(),
+            ),
+            patch(
+                "apps.ventas.services.PromocionService.aplicar_promociones_a_venta",
+                return_value=None,
+            ),
+            patch(
+                "apps.ventas.views.VentasViewSet._descontar_stock_venta",
+                return_value=None,
+            ),
+            patch(
+                "apps.ventas.views.VentasViewSet._registrar_pago_con_comision",
+                return_value=MagicMock(),
+            ),
         ):
             response = self.client.post(url, data, format="json")
         self.assertIn(response.status_code, [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
@@ -630,24 +652,31 @@ class PromocionesAplicadasEnTransaccionTest(TestCase):
             self,
             {"id_hijo": self.hijo.id_hijo, "monto_total": "1000.00"},
         )
-        with patch(
-            "apps.ventas.services.PromocionService.obtener_promociones_aplicables",
-            return_value=self._promo_aplicables_mock(),
-        ), patch(
-            "apps.ventas.services.PromocionService.calcular_descuento",
-            return_value=self._descuento_mock(),
-        ), patch(
-            "apps.ventas.services.PromocionService.aplicar_promociones_a_venta",
-            return_value=None,
-        ), patch(
-            "apps.ventas.views.VentasViewSet._descontar_saldo_tarjeta",
-            return_value=None,
-        ), patch(
-            "apps.ventas.views.VentasViewSet._descontar_stock_venta",
-            return_value=None,
-        ), patch(
-            "apps.ventas.views.VentasViewSet._registrar_pago_con_comision",
-            return_value=MagicMock(),
+        with (
+            patch(
+                "apps.ventas.services.PromocionService.obtener_promociones_aplicables",
+                return_value=self._promo_aplicables_mock(),
+            ),
+            patch(
+                "apps.ventas.services.PromocionService.calcular_descuento",
+                return_value=self._descuento_mock(),
+            ),
+            patch(
+                "apps.ventas.services.PromocionService.aplicar_promociones_a_venta",
+                return_value=None,
+            ),
+            patch(
+                "apps.ventas.views.VentasViewSet._descontar_saldo_tarjeta",
+                return_value=None,
+            ),
+            patch(
+                "apps.ventas.views.VentasViewSet._descontar_stock_venta",
+                return_value=None,
+            ),
+            patch(
+                "apps.ventas.views.VentasViewSet._registrar_pago_con_comision",
+                return_value=MagicMock(),
+            ),
         ):
             response = self.client.post(url, data, format="json")
         self.assertIn(response.status_code, [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
@@ -662,8 +691,10 @@ class TarjetaAuthorizationTest(TestCase):
     def setUp(self):
         _make_full_setup(self, "TAUTH")
         self.hijo = Hijos.objects.create(
-            nombre="TAUTHHijo", apellido="T",
-            id_cliente_responsable=self.cliente, estado=True,
+            nombre="TAUTHHijo",
+            apellido="T",
+            id_cliente_responsable=self.cliente,
+            estado=True,
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="TAUTH001",
@@ -675,7 +706,8 @@ class TarjetaAuthorizationTest(TestCase):
             id_hijo=self.hijo,
         )
         self.supervisor = Empleados.objects.create(
-            nombre="Sup", apellido="TAUTH",
+            nombre="Sup",
+            apellido="TAUTH",
             usuario="tauth_sup",
             email="tauth_sup@test.com",
             fecha_ingreso=timezone.now(),
@@ -715,26 +747,31 @@ class TarjetaAuthorizationTest(TestCase):
             ],
             "autorizado_por": self.supervisor.id_empleado,
         }
-        with patch(
-            "apps.core.services.AutorizacionService.validar_operacion",
-            return_value={
-                "puede_ejecutar": True,
-                "requiere_autorizacion": True,
-                "limite": Decimal("500"),
-                "excedente": Decimal("0"),
-                "mensaje": "ok",
-                "errores": [],
-                "doble_autorizacion": False,
-            },
-        ), patch(
-            "apps.core.services.AutorizacionService.registrar_autorizacion",
-            return_value=None,
-        ), patch(
-            "apps.ventas.views.VentasViewSet._descontar_saldo_tarjeta",
-            return_value=None,
-        ), patch(
-            "apps.ventas.views.VentasViewSet._descontar_stock_venta",
-            return_value=None,
+        with (
+            patch(
+                "apps.core.services.AutorizacionService.validar_operacion",
+                return_value={
+                    "puede_ejecutar": True,
+                    "requiere_autorizacion": True,
+                    "limite": Decimal("500"),
+                    "excedente": Decimal("0"),
+                    "mensaje": "ok",
+                    "errores": [],
+                    "doble_autorizacion": False,
+                },
+            ),
+            patch(
+                "apps.core.services.AutorizacionService.registrar_autorizacion",
+                return_value=None,
+            ),
+            patch(
+                "apps.ventas.views.VentasViewSet._descontar_saldo_tarjeta",
+                return_value=None,
+            ),
+            patch(
+                "apps.ventas.views.VentasViewSet._descontar_stock_venta",
+                return_value=None,
+            ),
         ):
             response = self.client.post(url, data, format="json")
         self.assertIn(response.status_code, [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
@@ -750,8 +787,10 @@ class TarjetaDoesNotExistTest(TestCase):
         _make_full_setup(self, "TDNE")
         # Create a Hijo WITHOUT an associated Tarjeta
         self.hijo_sin_tarjeta = Hijos.objects.create(
-            nombre="TDNEHijo", apellido="T",
-            id_cliente_responsable=self.cliente, estado=True,
+            nombre="TDNEHijo",
+            apellido="T",
+            id_cliente_responsable=self.cliente,
+            estado=True,
         )
 
     def test_hijo_sin_tarjeta_devuelve_error(self):

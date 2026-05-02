@@ -17,9 +17,7 @@ class PasswordRecoveryServiceTest(TransactionTestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol de prueba
-        self.rol_test = Roles.objects.create(
-            nombre_rol="Test Role", descripcion="Rol para testing", estado=True
-        )
+        self.rol_test = Roles.objects.create(nombre_rol="Test Role", descripcion="Rol para testing", estado=True)
 
         # Crear empleado de prueba
         self.empleado = Empleados.objects.create(
@@ -154,16 +152,12 @@ class RequestPasswordRecoveryTest(PasswordRecoveryServiceTest):
             email="test@cantinatita.com", ip_address=self.ip_address
         )
 
-        token_db = TokensRecuperacion.objects.get(
-            id_empleado=self.empleado, tipo="password_recovery"
-        )
+        token_db = TokensRecuperacion.objects.get(id_empleado=self.empleado, tipo="password_recovery")
 
         tiempo_expiracion = token_db.fecha_expiracion - token_db.fecha_creacion
 
         # Debe ser aproximadamente 2 horas
-        self.assertAlmostEqual(
-            tiempo_expiracion.total_seconds(), 2 * 3600, delta=60  # +/- 1 minuto
-        )
+        self.assertAlmostEqual(tiempo_expiracion.total_seconds(), 2 * 3600, delta=60)  # +/- 1 minuto
 
 
 class ValidateRecoveryTokenTest(PasswordRecoveryServiceTest):
@@ -181,9 +175,7 @@ class ValidateRecoveryTokenTest(PasswordRecoveryServiceTest):
 
     def test_validar_token_valido(self):
         """Validar token correcto"""
-        resultado = PasswordRecoveryService.validar_token_recuperacion(
-            token=self.token_valido, tipo_usuario="empleado"
-        )
+        resultado = PasswordRecoveryService.validar_token_recuperacion(token=self.token_valido, tipo_usuario="empleado")
 
         self.assertTrue(resultado["success"])
         self.assertIn("empleado", resultado)
@@ -212,9 +204,7 @@ class ValidateRecoveryTokenTest(PasswordRecoveryServiceTest):
             usado=False,
         )
 
-        resultado = PasswordRecoveryService.validar_token_recuperacion(
-            token=token_expirado, tipo_usuario="empleado"
-        )
+        resultado = PasswordRecoveryService.validar_token_recuperacion(token=token_expirado, tipo_usuario="empleado")
 
         self.assertFalse(resultado["success"])
         self.assertIn("expirado", resultado["mensaje"].lower())
@@ -222,15 +212,11 @@ class ValidateRecoveryTokenTest(PasswordRecoveryServiceTest):
     def test_validar_token_ya_usado(self):
         """Token usado no puede reutilizarse"""
         # Marcar token como usado
-        token_db = TokensRecuperacion.objects.get(
-            token_hash=PasswordRecoveryService._hash_token(self.token_valido)
-        )
+        token_db = TokensRecuperacion.objects.get(token_hash=PasswordRecoveryService._hash_token(self.token_valido))
         token_db.usado = True
         token_db.save()
 
-        resultado = PasswordRecoveryService.validar_token_recuperacion(
-            token=self.token_valido, tipo_usuario="empleado"
-        )
+        resultado = PasswordRecoveryService.validar_token_recuperacion(token=self.token_valido, tipo_usuario="empleado")
 
         self.assertFalse(resultado["success"])
         self.assertIn("usado", resultado["mensaje"].lower())
@@ -260,9 +246,7 @@ class ResetPasswordWithTokenTest(PasswordRecoveryServiceTest):
         self.assertTrue(resultado["success"])
 
         # Verificar que el token se marcó como usado
-        token_db = TokensRecuperacion.objects.get(
-            token_hash=PasswordRecoveryService._hash_token(self.token_valido)
-        )
+        token_db = TokensRecuperacion.objects.get(token_hash=PasswordRecoveryService._hash_token(self.token_valido))
         self.assertTrue(token_db.usado)
         self.assertIsNotNone(token_db.fecha_uso)
 
@@ -288,9 +272,7 @@ class ResetPasswordWithTokenTest(PasswordRecoveryServiceTest):
         )
 
         # Verificar que todas las sesiones están cerradas
-        sesiones_activas = SesionesActivas.objects.filter(
-            id_empleado=self.empleado, activa=True
-        ).count()
+        sesiones_activas = SesionesActivas.objects.filter(id_empleado=self.empleado, activa=True).count()
 
         self.assertEqual(sesiones_activas, 0)
 
@@ -335,9 +317,7 @@ class EmailVerificationTest(PasswordRecoveryServiceTest):
             empleado=self.empleado, ip_address=self.ip_address
         )
 
-        token_db = TokensRecuperacion.objects.get(
-            id_empleado=self.empleado, tipo="email_verification"
-        )
+        token_db = TokensRecuperacion.objects.get(id_empleado=self.empleado, tipo="email_verification")
 
         tiempo_expiracion = token_db.fecha_expiracion - token_db.fecha_creacion
 
@@ -359,16 +339,12 @@ class EmailVerificationTest(PasswordRecoveryServiceTest):
         self.assertTrue(resultado["success"])
 
         # Verificar que el token se marcó como usado
-        token_db = TokensRecuperacion.objects.get(
-            token_hash=PasswordRecoveryService._hash_token(token)
-        )
+        token_db = TokensRecuperacion.objects.get(token_hash=PasswordRecoveryService._hash_token(token))
         self.assertTrue(token_db.usado)
 
     def test_verificar_email_token_invalido(self):
         """Verificar email con token inválido"""
-        resultado = PasswordRecoveryService.verificar_email(
-            token="token_invalido", ip_address=self.ip_address
-        )
+        resultado = PasswordRecoveryService.verificar_email(token="token_invalido", ip_address=self.ip_address)
 
         self.assertFalse(resultado["success"])
 

@@ -17,9 +17,7 @@ class ClientesAdminTest(TestCase):
 
     def setUp(self):
         """Configuración inicial"""
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista General", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista General", moneda="PYG", estado=True)
 
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
 

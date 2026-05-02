@@ -356,9 +356,7 @@ class IntegracionRegistrosConsumoTest(TestCase):
         self.assertEqual(registro2.costo_almuerzo, Decimal("0"))
 
         # Verificar que hay exactamente 2 registros
-        registros_dia = RegistrosConsumoAlmuerzo.objects.filter(
-            id_hijo=self.hijo, fecha_consumo=self.fecha
-        ).count()
+        registros_dia = RegistrosConsumoAlmuerzo.objects.filter(id_hijo=self.hijo, fecha_consumo=self.fecha).count()
         self.assertEqual(registros_dia, 2)
 
         # Verificar que solo 1 tiene ya_cobrado=True

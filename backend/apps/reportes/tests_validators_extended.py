@@ -25,10 +25,10 @@ from apps.reportes.validators import (
     validar_formato_datos_json,
 )
 
-
 # =============================================================================
 # validar_parametros_reporte — lines 81, 83
 # =============================================================================
+
 
 class ValidarParametrosReporteExtendedTest(TestCase):
     """Cover lines 81 (non-str key) and 83 (key too short/long)."""
@@ -57,6 +57,7 @@ class ValidarParametrosReporteExtendedTest(TestCase):
 # =============================================================================
 # validar_configuracion_dashboard — lines 158-159, 162
 # =============================================================================
+
 
 class ValidarConfiguracionDashboardExtendedTest(TestCase):
     """Cover invalid JSON string (158-159) and non-dict value (162)."""
@@ -88,6 +89,7 @@ class ValidarConfiguracionDashboardExtendedTest(TestCase):
 # validar_parametros_tarea — lines 442-443, 446
 # =============================================================================
 
+
 class ValidarParametrosTareaExtendedTest(TestCase):
     """Cover invalid JSON string (442-443) and non-dict value but not None (446)."""
 
@@ -117,6 +119,7 @@ class ValidarParametrosTareaExtendedTest(TestCase):
 # validar_pid_ejecucion — line 589
 # =============================================================================
 
+
 class ValidarPidEjecucionExtendedTest(TestCase):
     """Cover line 589: PID > 2,147,483,647."""
 
@@ -145,6 +148,7 @@ class ValidarPidEjecucionExtendedTest(TestCase):
 # =============================================================================
 # validar_configuracion_json — lines 647-656
 # =============================================================================
+
 
 class ValidarConfiguracionJsonTest(TestCase):
     """Cover all branches of validar_configuracion_json."""
@@ -181,6 +185,7 @@ class ValidarConfiguracionJsonTest(TestCase):
 # validar_frecuencia_ejecucion — lines 661-666
 # =============================================================================
 
+
 class ValidarFrecuenciaEjecucionTest(TestCase):
     """Cover invalid frequency path (lines 662-665) and return (666)."""
 
@@ -210,6 +215,7 @@ class ValidarFrecuenciaEjecucionTest(TestCase):
 # validar_formato_datos_json — lines 671-680
 # =============================================================================
 
+
 class ValidarFormatoDatosJsonTest(TestCase):
     """Cover all branches of validar_formato_datos_json."""
 
@@ -225,7 +231,7 @@ class ValidarFormatoDatosJsonTest(TestCase):
 
     def test_string_json_lista_valida(self):
         """Lines 673-675: valid JSON list string parsed and returned."""
-        result = validar_formato_datos_json('[1, 2, 3]')
+        result = validar_formato_datos_json("[1, 2, 3]")
         self.assertEqual(result, [1, 2, 3])
 
     def test_string_json_invalido(self):

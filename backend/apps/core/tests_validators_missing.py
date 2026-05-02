@@ -24,6 +24,7 @@ Strategy for except (ValueError, TypeError) blocks:
   so these branches are unreachable with plain strings.  We instead pass an object
   whose __str__ raises ValueError, which IS caught by the except clause.
 """
+
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -243,9 +244,7 @@ class ValidarSaldosCoherentesConversionErrorTest(TestCase):
         # saldo_anterior is not Decimal → all(isinstance...) is False → try block
         # str(RaisesValueError()) raises ValueError on line 670 → caught → ValidationError
         with self.assertRaises(ValidationError) as ctx:
-            validar_saldos_coherentes(
-                _RaisesValueErrorOnStr(), Decimal("100"), Decimal("50")
-            )
+            validar_saldos_coherentes(_RaisesValueErrorOnStr(), Decimal("100"), Decimal("50"))
         self.assertIn("numéricos", str(ctx.exception))
 
     def test_monto_consumido_str_raises_valueerror(self):

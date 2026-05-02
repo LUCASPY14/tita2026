@@ -36,17 +36,11 @@ class Command(BaseCommand):
         resultado = PermissionService.inicializar_permisos()
 
         if resultado["permisos_creados"] > 0:
-            self.stdout.write(
-                self.style.SUCCESS(f'   ✓ {resultado["permisos_creados"]} permisos creados')
-            )
+            self.stdout.write(self.style.SUCCESS(f'   ✓ {resultado["permisos_creados"]} permisos creados'))
         if resultado["permisos_existentes"] > 0:
-            self.stdout.write(
-                self.style.WARNING(f'   ⚠ {resultado["permisos_existentes"]} permisos ya existían')
-            )
+            self.stdout.write(self.style.WARNING(f'   ⚠ {resultado["permisos_existentes"]} permisos ya existían'))
 
-        self.stdout.write(
-            self.style.SUCCESS(f'   ✓ Total de permisos en el sistema: {resultado["total"]}\n')
-        )
+        self.stdout.write(self.style.SUCCESS(f'   ✓ Total de permisos en el sistema: {resultado["total"]}\n'))
 
         # 2. Crear roles base
         self.stdout.write("2. Creando roles base...")
@@ -131,9 +125,7 @@ class Command(BaseCommand):
 
                 self.stdout.write(f'     - {len(rol_data["permisos"])} permisos asignados')
             else:
-                self.stdout.write(
-                    self.style.WARNING(f'   ⚠ Rol ya existía: {rol_data["nombre_rol"]}')
-                )
+                self.stdout.write(self.style.WARNING(f'   ⚠ Rol ya existía: {rol_data["nombre_rol"]}'))
 
         self.stdout.write("")
 
@@ -164,9 +156,7 @@ class Command(BaseCommand):
                     self.stdout.write(f'     - Password: {options["admin_password"]}')
                     self.stdout.write(f"     - Email: admin@cantinatita.com\n")
                 else:  # pragma: no cover
-                    self.stdout.write(
-                        self.style.ERROR(f'   ✗ Error al crear admin: {resultado["mensaje"]}\n')
-                    )
+                    self.stdout.write(self.style.ERROR(f'   ✗ Error al crear admin: {resultado["mensaje"]}\n'))
 
         # 4. Resumen
         self.stdout.write(self.style.MIGRATE_HEADING("=== Resumen de Inicialización ===\n"))
@@ -185,9 +175,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.MIGRATE_HEADING("=== Próximos Pasos ===\n"))
         self.stdout.write("1. Iniciar sesión con el usuario admin:")
         self.stdout.write("   POST /api/v1/usuarios/auth/login/")
-        self.stdout.write(
-            '   {"usuario": "admin", "password": "' + options["admin_password"] + '"}\n'
-        )
+        self.stdout.write('   {"usuario": "admin", "password": "' + options["admin_password"] + '"}\n')
         self.stdout.write("2. Cambiar la contraseña del admin:")
         self.stdout.write("   POST /api/v1/usuarios/auth/cambiar_password/\n")
         self.stdout.write("3. Habilitar 2FA para mayor seguridad:")

@@ -18,19 +18,14 @@ class SetupLimitesInicialCommandTest(TestCase):
 
     def setUp(self):
         # Create the three required roles
-        self.rol_admin = Roles.objects.create(
-            nombre_rol="Admin", descripcion="Admin role", estado=True
-        )
-        self.rol_gerente = Roles.objects.create(
-            nombre_rol="Gerente", descripcion="Gerente role", estado=True
-        )
-        self.rol_cajero = Roles.objects.create(
-            nombre_rol="Cajero", descripcion="Cajero role", estado=True
-        )
+        self.rol_admin = Roles.objects.create(nombre_rol="Admin", descripcion="Admin role", estado=True)
+        self.rol_gerente = Roles.objects.create(nombre_rol="Gerente", descripcion="Gerente role", estado=True)
+        self.rol_cajero = Roles.objects.create(nombre_rol="Cajero", descripcion="Cajero role", estado=True)
 
     def test_command_creates_limits(self):
         """Running command creates LimitesTransaccion records (happy path)."""
         from apps.core.models import LimitesTransaccion
+
         out = StringIO()
         call_command("setup_limites_inicial", stdout=out)
         output = out.getvalue()
@@ -53,6 +48,7 @@ class SetupLimitesInicialCommandTest(TestCase):
     def test_command_idempotent_update(self):
         """Running command twice updates (not recreates) the limits."""
         from apps.core.models import LimitesTransaccion
+
         out1 = StringIO()
         call_command("setup_limites_inicial", stdout=out1)
         count_after_first = LimitesTransaccion.objects.count()
@@ -125,6 +121,7 @@ class CrearRolesInicialesCommandTest(TestCase):
     def test_command_recrear_confirmado(self):
         """Lines 63-74: recrear=True with 'SI' confirmation deletes and recreates roles."""
         from unittest.mock import patch
+
         # First create some roles
         call_command("crear_roles_iniciales", stdout=StringIO())
 
@@ -136,6 +133,7 @@ class CrearRolesInicialesCommandTest(TestCase):
         self.assertIn("RECREAR", output)
         # Roles should still exist after recreation
         from apps.usuarios.models import Roles
+
         self.assertGreater(Roles.objects.count(), 0)
 
 
@@ -146,6 +144,7 @@ class MonitorDatabaseCommandImportTest(TestCase):
         """Importing the module executes lines 8-14 (os, sys imports + sys.path.insert + re-export)."""
         import importlib
         import sys
+
         # Remove cached module so it re-executes all module-level lines
         mod_name = "apps.core.management.commands.monitor_database"
         sys.modules.pop(mod_name, None)
@@ -157,11 +156,13 @@ class MonitorDatabaseCommandImportTest(TestCase):
         """Command re-exported from monitoring is a valid Django management command."""
         from django.core.management.base import BaseCommand
         from apps.core.management.commands.monitor_database import Command
+
         self.assertTrue(issubclass(Command, BaseCommand))
 
     def test_command_recrear_cancelado(self):
         """Lines 63-70: recrear=True with non-'SI' answer cancels the operation."""
         from unittest.mock import patch
+
         out = StringIO()
         with patch("builtins.input", return_value="no"):
             call_command("crear_roles_iniciales", "--recrear", stdout=out)

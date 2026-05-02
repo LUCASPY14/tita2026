@@ -15,9 +15,7 @@ class NotificacionesPortal(models.Model):
     fecha_envio = models.DateTimeField()
     fecha_lectura = models.DateTimeField(blank=True, null=True)
     creado_en = models.DateTimeField()
-    id_usuario_portal = models.ForeignKey(
-        "usuarios.UsuariosPortal", models.DO_NOTHING, db_column="id_usuario_portal"
-    )
+    id_usuario_portal = models.ForeignKey("usuarios.UsuariosPortal", models.DO_NOTHING, db_column="id_usuario_portal")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -74,9 +72,7 @@ class PreferenciasNotificacion(models.Model):
     push_activo = models.IntegerField()
     creado_en = models.DateTimeField()
     actualizado_en = models.DateTimeField()
-    id_usuario_portal = models.ForeignKey(
-        "usuarios.UsuariosPortal", models.DO_NOTHING, db_column="id_usuario_portal"
-    )
+    id_usuario_portal = models.ForeignKey("usuarios.UsuariosPortal", models.DO_NOTHING, db_column="id_usuario_portal")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -135,9 +131,7 @@ class SmsEnviados(models.Model):
     enviado_por = models.ForeignKey(
         "usuarios.Empleados", models.DO_NOTHING, db_column="enviado_por", blank=True, null=True
     )
-    id_template = models.ForeignKey(
-        "PlantillasSms", models.DO_NOTHING, db_column="id_template", blank=True, null=True
-    )
+    id_template = models.ForeignKey("PlantillasSms", models.DO_NOTHING, db_column="id_template", blank=True, null=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -248,9 +242,7 @@ class AlertaDestinatarios(models.Model):
     via_sistema = models.IntegerField()
     estado = models.BooleanField(default=True)
     id_alerta = models.ForeignKey("AlertasAutomaticas", models.DO_NOTHING, db_column="id_alerta")
-    id_empleado = models.ForeignKey(
-        "usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado"
-    )
+    id_empleado = models.ForeignKey("usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"

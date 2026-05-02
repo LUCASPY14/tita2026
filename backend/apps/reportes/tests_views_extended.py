@@ -53,9 +53,7 @@ from apps.reportes.models import (
 
 class BaseReportesExtTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username="reports_ext", password="testpass"
-        )
+        self.user = User.objects.create_user(username="reports_ext", password="testpass")
         self.client.force_authenticate(user=self.user)
 
 
@@ -63,15 +61,14 @@ class BaseReportesExtTest(APITestCase):
 # reporte_ventas
 # ─────────────────────────────────────────────────────────────
 
+
 class ReportesVentasBranchTest(BaseReportesExtTest):
     """Cover the branch where fecha_inicio is valid but fecha_fin is invalid (line 109 branch)."""
 
     def test_reporte_ventas_fecha_fin_invalida_400(self):
         """fecha_inicio valid but fecha_fin invalid → 400 (line 109 branch)."""
         url = reverse("reportes-reporte-ventas")
-        response = self.client.get(
-            url, {"fecha_inicio": "2026-01-01", "fecha_fin": "not-a-date"}
-        )
+        response = self.client.get(url, {"fecha_inicio": "2026-01-01", "fecha_fin": "not-a-date"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
@@ -88,9 +85,7 @@ class ReportesRecargasBranchTest(BaseReportesExtTest):
     def test_recargas_fecha_fin_invalida_400(self):
         """fecha_inicio valid but fecha_fin invalid → 400."""
         url = reverse("reportes-reporte-recargas")
-        response = self.client.get(
-            url, {"fecha_inicio": "2026-01-01", "fecha_fin": "not-a-date"}
-        )
+        response = self.client.get(url, {"fecha_inicio": "2026-01-01", "fecha_fin": "not-a-date"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
@@ -123,9 +118,7 @@ class ReportesFinancieroBranchTest(BaseReportesExtTest):
     def test_financiero_fecha_fin_invalida_400(self):
         """fecha_inicio valid but fecha_fin invalid → 400 (line 229 branch)."""
         url = reverse("reportes-reporte-financiero")
-        response = self.client.get(
-            url, {"fecha_inicio": "2026-01-01", "fecha_fin": "not-a-date"}
-        )
+        response = self.client.get(url, {"fecha_inicio": "2026-01-01", "fecha_fin": "not-a-date"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
@@ -159,23 +152,20 @@ class ReportesVentasTest(BaseReportesExtTest):
                 url,
                 {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"},
             )
-            self.assertEqual(
-                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ─────────────────────────────────────────────────────────────
 # reporte_recargas
 # ─────────────────────────────────────────────────────────────
 
+
 class ReportesRecargasTest(BaseReportesExtTest):
 
     def test_recargas_fecha_invalida_400(self):
         """Invalid date → 400 (lines 134-135)."""
         url = reverse("reportes-reporte-recargas")
-        response = self.client.get(
-            url, {"fecha_inicio": "not-a-date", "fecha_fin": "2026-01-31"}
-        )
+        response = self.client.get(url, {"fecha_inicio": "not-a-date", "fecha_fin": "2026-01-31"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_recargas_success_200(self):
@@ -185,9 +175,7 @@ class ReportesRecargasTest(BaseReportesExtTest):
             return_value={"total": 0},
         ):
             url = reverse("reportes-reporte-recargas")
-            response = self.client.get(
-                url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"}
-            )
+            response = self.client.get(url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"})
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_recargas_exception_500(self):
@@ -197,26 +185,21 @@ class ReportesRecargasTest(BaseReportesExtTest):
             side_effect=Exception("recargas error"),
         ):
             url = reverse("reportes-reporte-recargas")
-            response = self.client.get(
-                url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"}
-            )
-            self.assertEqual(
-                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            response = self.client.get(url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"})
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ─────────────────────────────────────────────────────────────
 # reporte_top_productos
 # ─────────────────────────────────────────────────────────────
 
+
 class ReportesTopProductosTest(BaseReportesExtTest):
 
     def test_top_productos_fecha_invalida_400(self):
         """Invalid fecha → 400 (lines 174-175)."""
         url = reverse("reportes-reporte-top-productos")
-        response = self.client.get(
-            url, {"fecha_inicio": "bad", "fecha_fin": "2026-01-31"}
-        )
+        response = self.client.get(url, {"fecha_inicio": "bad", "fecha_fin": "2026-01-31"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_top_productos_success_200(self):
@@ -226,9 +209,7 @@ class ReportesTopProductosTest(BaseReportesExtTest):
             return_value={"productos": []},
         ):
             url = reverse("reportes-reporte-top-productos")
-            response = self.client.get(
-                url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"}
-            )
+            response = self.client.get(url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"})
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_top_productos_exception_500(self):
@@ -238,17 +219,14 @@ class ReportesTopProductosTest(BaseReportesExtTest):
             side_effect=Exception("top productos error"),
         ):
             url = reverse("reportes-reporte-top-productos")
-            response = self.client.get(
-                url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"}
-            )
-            self.assertEqual(
-                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            response = self.client.get(url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"})
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ─────────────────────────────────────────────────────────────
 # reporte_consumos_tarjeta
 # ─────────────────────────────────────────────────────────────
+
 
 class ReportesConsumosTarjetaTest(BaseReportesExtTest):
 
@@ -297,23 +275,20 @@ class ReportesConsumosTarjetaTest(BaseReportesExtTest):
                     "fecha_fin": "2026-01-31",
                 },
             )
-            self.assertEqual(
-                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ─────────────────────────────────────────────────────────────
 # reporte_financiero
 # ─────────────────────────────────────────────────────────────
 
+
 class ReportesFinancieroTest(BaseReportesExtTest):
 
     def test_financiero_fecha_invalida_400(self):
         """Invalid fecha → 400."""
         url = reverse("reportes-reporte-financiero")
-        response = self.client.get(
-            url, {"fecha_inicio": "bad", "fecha_fin": "2026-01-31"}
-        )
+        response = self.client.get(url, {"fecha_inicio": "bad", "fecha_fin": "2026-01-31"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_financiero_success_200(self):
@@ -323,9 +298,7 @@ class ReportesFinancieroTest(BaseReportesExtTest):
             return_value={"ingresos": 0},
         ):
             url = reverse("reportes-reporte-financiero")
-            response = self.client.get(
-                url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"}
-            )
+            response = self.client.get(url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"})
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_financiero_exception_500(self):
@@ -335,17 +308,14 @@ class ReportesFinancieroTest(BaseReportesExtTest):
             side_effect=Exception("financiero error"),
         ):
             url = reverse("reportes-reporte-financiero")
-            response = self.client.get(
-                url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"}
-            )
-            self.assertEqual(
-                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            response = self.client.get(url, {"fecha_inicio": "2026-01-01", "fecha_fin": "2026-01-31"})
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ─────────────────────────────────────────────────────────────
 # kpis_principales
 # ─────────────────────────────────────────────────────────────
+
 
 class KpisPrincipalesTest(BaseReportesExtTest):
 
@@ -367,14 +337,13 @@ class KpisPrincipalesTest(BaseReportesExtTest):
         ):
             url = reverse("reportes-kpis-principales")
             response = self.client.get(url)
-            self.assertEqual(
-                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ─────────────────────────────────────────────────────────────
 # dashboard_ventas
 # ─────────────────────────────────────────────────────────────
+
 
 class DashboardVentasTest(BaseReportesExtTest):
 
@@ -396,14 +365,13 @@ class DashboardVentasTest(BaseReportesExtTest):
         ):
             url = reverse("reportes-dashboard-ventas")
             response = self.client.get(url)
-            self.assertEqual(
-                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ─────────────────────────────────────────────────────────────
 # dashboard_recargas
 # ─────────────────────────────────────────────────────────────
+
 
 class DashboardRecargasTest(BaseReportesExtTest):
 
@@ -425,14 +393,13 @@ class DashboardRecargasTest(BaseReportesExtTest):
         ):
             url = reverse("reportes-dashboard-recargas")
             response = self.client.get(url)
-            self.assertEqual(
-                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ─────────────────────────────────────────────────────────────
 # dashboard_financiero
 # ─────────────────────────────────────────────────────────────
+
 
 class DashboardFinancieroTest(BaseReportesExtTest):
 
@@ -466,20 +433,20 @@ class DashboardFinancieroTest(BaseReportesExtTest):
         ):
             url = reverse("reportes-dashboard-financiero")
             response = self.client.get(url)
-            self.assertEqual(
-                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ─────────────────────────────────────────────────────────────
 # CRUD ViewSet action methods
 # ─────────────────────────────────────────────────────────────
 
+
 class PlantillasReporteActionsTest(BaseReportesExtTest):
 
     def setUp(self):
         super().setUp()
         from django.utils import timezone
+
         self.plantilla = PlantillasReporte.objects.create(
             nombre="Test Plantilla",
             tipo_reporte="ventas",
@@ -492,25 +459,19 @@ class PlantillasReporteActionsTest(BaseReportesExtTest):
 
     def test_ejecutar(self):
         """POST ejecutar action (line ~387)."""
-        url = reverse(
-            "plantillas-reporte-ejecutar", kwargs={"pk": self.plantilla.pk}
-        )
+        url = reverse("plantillas-reporte-ejecutar", kwargs={"pk": self.plantilla.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_preview(self):
         """GET preview action (line ~396)."""
-        url = reverse(
-            "plantillas-reporte-preview", kwargs={"pk": self.plantilla.pk}
-        )
+        url = reverse("plantillas-reporte-preview", kwargs={"pk": self.plantilla.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_validar_sql(self):
         """POST validar_sql action (line ~400)."""
-        url = reverse(
-            "plantillas-reporte-validar-sql", kwargs={"pk": self.plantilla.pk}
-        )
+        url = reverse("plantillas-reporte-validar-sql", kwargs={"pk": self.plantilla.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -520,6 +481,7 @@ class DashboardsActionsTest(BaseReportesExtTest):
     def setUp(self):
         super().setUp()
         from apps.usuarios.models import Roles, Empleados
+
         rol, _ = Roles.objects.get_or_create(nombre_rol="TestDashboardRol")
         empleado, _ = Empleados.objects.get_or_create(
             usuario="dashboard_test_emp",
@@ -607,25 +569,19 @@ class PlantillasTareaActionsTest(BaseReportesExtTest):
 
     def test_ejecutar(self):
         """POST ejecutar action (line ~361)."""
-        url = reverse(
-            "plantillas-tarea-ejecutar", kwargs={"pk": self.tarea.pk}
-        )
+        url = reverse("plantillas-tarea-ejecutar", kwargs={"pk": self.tarea.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_ejecuciones(self):
         """GET ejecuciones action (line ~370)."""
-        url = reverse(
-            "plantillas-tarea-ejecuciones", kwargs={"pk": self.tarea.pk}
-        )
+        url = reverse("plantillas-tarea-ejecuciones", kwargs={"pk": self.tarea.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_toggle_activo(self):
         """POST toggle_activo action (line ~379)."""
-        url = reverse(
-            "plantillas-tarea-toggle-estado", kwargs={"pk": self.tarea.pk}
-        )
+        url = reverse("plantillas-tarea-toggle-estado", kwargs={"pk": self.tarea.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -646,17 +602,13 @@ class EjecucionesTareaActionsTest(BaseReportesExtTest):
 
     def test_cancelar(self):
         """POST cancelar action (line ~352 area)."""
-        url = reverse(
-            "ejecuciones-tarea-cancelar", kwargs={"pk": self.ejecucion.pk}
-        )
+        url = reverse("ejecuciones-tarea-cancelar", kwargs={"pk": self.ejecucion.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_logs(self):
         """GET logs action."""
-        url = reverse(
-            "ejecuciones-tarea-logs", kwargs={"pk": self.ejecucion.pk}
-        )
+        url = reverse("ejecuciones-tarea-logs", kwargs={"pk": self.ejecucion.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 

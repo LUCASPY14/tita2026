@@ -126,16 +126,17 @@ class EmpleadosManager(models.Manager):
 
     def _prepare_kwargs(self, kwargs):
         from django.utils import timezone as tz
-        kwargs.setdefault('fecha_ingreso', tz.now())
-        kwargs.setdefault('contrasena_hash', '')
-        if 'usuario' not in kwargs:
-            kwargs['usuario'] = kwargs.get('email', '') or f"user_{tz.now().timestamp()}"
-        if 'id_rol' not in kwargs and 'id_rol_id' not in kwargs:
+
+        kwargs.setdefault("fecha_ingreso", tz.now())
+        kwargs.setdefault("contrasena_hash", "")
+        if "usuario" not in kwargs:
+            kwargs["usuario"] = kwargs.get("email", "") or f"user_{tz.now().timestamp()}"
+        if "id_rol" not in kwargs and "id_rol_id" not in kwargs:
             rol, _ = Roles.objects.get_or_create(
-                nombre_rol='Cajero',
-                defaults={'descripcion': 'Cajero por defecto'},
+                nombre_rol="Cajero",
+                defaults={"descripcion": "Cajero por defecto"},
             )
-            kwargs['id_rol'] = rol
+            kwargs["id_rol"] = rol
         return kwargs
 
     def create(self, **kwargs):
@@ -154,7 +155,7 @@ class EmpleadosManager(models.Manager):
 
 class Empleados(models.Model):
     """Modelo para empleados del sistema que pueden acceder a la aplicación"""
-    
+
     id_empleado = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, help_text="Nombre(s) del empleado")
     apellido = models.CharField(max_length=100, help_text="Apellido(s) del empleado")
@@ -182,24 +183,25 @@ class Empleados(models.Model):
         verbose_name_plural = "Empleados"
         ordering = ["apellido", "nombre"]
         indexes = [
-            models.Index(fields=['usuario'], name='idx_empleados_usuario'),
-            models.Index(fields=['email'], name='idx_empleados_email'),
-            models.Index(fields=['estado', 'id_rol'], name='idx_empleados_estado_rol'),
-            models.Index(fields=['apellido', 'nombre'], name='idx_empleados_nombre'),
+            models.Index(fields=["usuario"], name="idx_empleados_usuario"),
+            models.Index(fields=["email"], name="idx_empleados_email"),
+            models.Index(fields=["estado", "id_rol"], name="idx_empleados_estado_rol"),
+            models.Index(fields=["apellido", "nombre"], name="idx_empleados_nombre"),
         ]
 
 
 class RolesManager(models.Manager):
     """Manager que ignora kwargs legacy no existentes en el modelo Roles."""
+
     def create(self, **kwargs):
-        for campo in ['fecha_creacion', 'fecha_actualizacion', 'creado_por']:
+        for campo in ["fecha_creacion", "fecha_actualizacion", "creado_por"]:
             kwargs.pop(campo, None)
         return super().create(**kwargs)
 
 
 class Roles(models.Model):
     """Roles del sistema que definen permisos y accesos"""
-    
+
     objects = RolesManager()
 
     id_rol = models.AutoField(primary_key=True)
@@ -401,9 +403,7 @@ class TokensVerificacion(models.Model):
     usado = models.IntegerField()
     fecha_creacion = models.DateTimeField()
     fecha_uso = models.DateTimeField(blank=True, null=True)
-    id_usuario_portal = models.ForeignKey(
-        "UsuariosPortal", models.DO_NOTHING, db_column="id_usuario_portal"
-    )
+    id_usuario_portal = models.ForeignKey("UsuariosPortal", models.DO_NOTHING, db_column="id_usuario_portal")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -485,18 +485,18 @@ class UsuariosPortal(models.Model):
     fecha_registro = models.DateTimeField(auto_now_add=True)
     ultimo_acceso = models.DateTimeField(blank=True, null=True)
     estado = models.BooleanField(default=True)
-    id_cliente = models.OneToOneField(
-        "clientes.Clientes", models.DO_NOTHING, db_column="id_cliente"
-    )
+    id_cliente = models.OneToOneField("clientes.Clientes", models.DO_NOTHING, db_column="id_cliente")
 
     def set_password(self, raw_password: str) -> None:
         """Hash and store a password using Django's password hasher."""
         from django.contrib.auth.hashers import make_password
+
         self.password_hash = make_password(raw_password)
 
     def check_password(self, raw_password: str) -> bool:
         """Verify a raw password against the stored hash."""
         from django.contrib.auth.hashers import check_password as django_check
+
         return django_check(raw_password, self.password_hash)
 
     def __str__(self):
@@ -516,9 +516,7 @@ class AuditoriaEmpleados(models.Model):
     valor_anterior = models.TextField(blank=True, null=True)
     valor_nuevo = models.TextField(blank=True, null=True)
     ip_origen = models.CharField(max_length=45, blank=True, null=True)
-    id_empleado = models.ForeignKey(
-        "Empleados", models.DO_NOTHING, db_column="id_empleado", blank=True, null=True
-    )
+    id_empleado = models.ForeignKey("Empleados", models.DO_NOTHING, db_column="id_empleado", blank=True, null=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"

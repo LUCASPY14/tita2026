@@ -39,14 +39,21 @@ from .services import (
     SessionService,
     PasswordRecoveryService,
 )
-from .permissions import PermissionService, TienePermiso, EsAdministrador, IsPortalAuthenticated, Permisos, RolesPermisos
+from .permissions import (
+    PermissionService,
+    TienePermiso,
+    EsAdministrador,
+    IsPortalAuthenticated,
+    Permisos,
+    RolesPermisos,
+)
 from .authentication import PortalJWTAuthentication, PortalUserProxy
 from .services.portal_service import PortalAuthService
 
 # ==================== AUTENTICACIÓN ====================
 
 
-@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name="dispatch")
 class AuthViewSet(viewsets.ViewSet):
     """
     ViewSet para autenticación (login, logout, cambio de contraseña).
@@ -114,10 +121,7 @@ class AuthViewSet(viewsets.ViewSet):
                 )
         else:
             status_code = status.HTTP_401_UNAUTHORIZED
-            if (
-                resultado["codigo"] == "CUENTA_BLOQUEADA"
-                or resultado["codigo"] == "CUENTA_BLOQUEADA_INTENTOS"
-            ):
+            if resultado["codigo"] == "CUENTA_BLOQUEADA" or resultado["codigo"] == "CUENTA_BLOQUEADA_INTENTOS":
                 status_code = status.HTTP_403_FORBIDDEN
 
             return Response(resultado, status=status_code)
@@ -172,9 +176,7 @@ class AuthViewSet(viewsets.ViewSet):
 
         ip_address = self._get_client_ip(request)
 
-        resultado = AuthenticationService.cambiar_password(
-            empleado, password_actual, password_nueva, ip_address
-        )
+        resultado = AuthenticationService.cambiar_password(empleado, password_actual, password_nueva, ip_address)
 
         if resultado["success"]:
             return Response(resultado, status=status.HTTP_200_OK)
@@ -495,9 +497,7 @@ class PasswordRecoveryViewSet(viewsets.ViewSet):
 
         ip_address = self._get_client_ip(request)
 
-        resultado = PasswordRecoveryService.restablecer_password_con_token(
-            token, nueva_password, ip_address
-        )
+        resultado = PasswordRecoveryService.restablecer_password_con_token(token, nueva_password, ip_address)
 
         if resultado["success"]:
             return Response(resultado, status=status.HTTP_200_OK)
@@ -596,9 +596,7 @@ class PermisosViewSet(viewsets.ViewSet):
                 return Response(resultado, status=status.HTTP_400_BAD_REQUEST)
 
         except Roles.DoesNotExist:
-            return Response(
-                {"success": False, "mensaje": "Rol no encontrado"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"success": False, "mensaje": "Rol no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=False, methods=["post"])
     def remover_de_rol(self, request):
@@ -632,9 +630,7 @@ class PermisosViewSet(viewsets.ViewSet):
                 return Response(resultado, status=status.HTTP_400_BAD_REQUEST)
 
         except Roles.DoesNotExist:
-            return Response(
-                {"success": False, "mensaje": "Rol no encontrado"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"success": False, "mensaje": "Rol no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
 
 # ==================== CRUD BÁSICOS ====================
@@ -1003,17 +999,13 @@ class PortalAuthViewSet(viewsets.ViewSet):
             )
 
         # Obtener información de cuenta corriente (facturas pendientes)
-        facturas_pendientes = Ventas.objects.filter(
-            id_cliente=cliente,
-            saldo_pendiente__gt=0
-        ).order_by('-fecha')[:10]  # Últimas 10 facturas pendientes
-        
+        facturas_pendientes = Ventas.objects.filter(id_cliente=cliente, saldo_pendiente__gt=0).order_by("-fecha")[
+            :10
+        ]  # Últimas 10 facturas pendientes
+
         total_deuda = sum(f.saldo_pendiente for f in facturas_pendientes)
-        cantidad_facturas_pendientes = Ventas.objects.filter(
-            id_cliente=cliente,
-            saldo_pendiente__gt=0
-        ).count()
-        
+        cantidad_facturas_pendientes = Ventas.objects.filter(id_cliente=cliente, saldo_pendiente__gt=0).count()
+
         facturas_data = [
             {
                 "id_venta": f.id_venta,
@@ -1133,11 +1125,7 @@ class AuditoriaOperacionesViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = self.get_queryset()
 
         # Operaciones por tipo
-        ops_por_tipo = (
-            queryset.values("operacion")
-            .annotate(total=Count("id_auditoria"))
-            .order_by("-total")[:10]
-        )
+        ops_por_tipo = queryset.values("operacion").annotate(total=Count("id_auditoria")).order_by("-total")[:10]
 
         # Operaciones por resultado
         ops_por_resultado = queryset.values("resultado").annotate(total=Count("id_auditoria"))
@@ -1196,9 +1184,7 @@ class AuditoriaOperacionesViewSet(viewsets.ReadOnlyModelViewSet):
         id_usuario = request.query_params.get("id_usuario", None)
 
         if not id_usuario:
-            return Response(
-                {"error": "Se requiere el parámetro id_usuario"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Se requiere el parámetro id_usuario"}, status=status.HTTP_400_BAD_REQUEST)
 
         queryset = self.queryset.filter(id_usuario=id_usuario)
 
@@ -1206,9 +1192,7 @@ class AuditoriaOperacionesViewSet(viewsets.ReadOnlyModelViewSet):
         total_operaciones = queryset.count()
         ultima_actividad = queryset.first()
 
-        ops_por_tipo = (
-            queryset.values("operacion").annotate(total=Count("id_auditoria")).order_by("-total")
-        )
+        ops_por_tipo = queryset.values("operacion").annotate(total=Count("id_auditoria")).order_by("-total")
 
         ops_exitosas = queryset.filter(resultado="EXITO").count()
         ops_fallidas = queryset.exclude(resultado="EXITO").count()
@@ -1218,17 +1202,11 @@ class AuditoriaOperacionesViewSet(viewsets.ReadOnlyModelViewSet):
                 "id_usuario": id_usuario,
                 "total_operaciones": total_operaciones,
                 "ultima_actividad": (
-                    AuditoriaOperacionesSerializer(ultima_actividad).data
-                    if ultima_actividad
-                    else None
+                    AuditoriaOperacionesSerializer(ultima_actividad).data if ultima_actividad else None
                 ),
                 "operaciones_por_tipo": ops_por_tipo,
                 "operaciones_exitosas": ops_exitosas,
                 "operaciones_fallidas": ops_fallidas,
-                "tasa_exito": (
-                    round((ops_exitosas / total_operaciones * 100), 2)
-                    if total_operaciones > 0
-                    else 0
-                ),
+                "tasa_exito": (round((ops_exitosas / total_operaciones * 100), 2) if total_operaciones > 0 else 0),
             }
         )

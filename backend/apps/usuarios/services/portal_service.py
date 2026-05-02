@@ -4,6 +4,7 @@ Servicio de autenticación para usuarios del portal (clientes).
 Usa PyJWT directamente (no SimpleJWT) para emitir tokens con claim
 `token_type: "portal"`, completamente separados del sistema de empleados.
 """
+
 from datetime import timedelta
 
 import jwt
@@ -26,9 +27,7 @@ class PortalAuthService:
         Lanza ValueError si las credenciales son inválidas.
         """
         try:
-            portal_user = UsuariosPortal.objects.select_related("id_cliente").get(
-                email__iexact=email.strip()
-            )
+            portal_user = UsuariosPortal.objects.select_related("id_cliente").get(email__iexact=email.strip())
         except UsuariosPortal.DoesNotExist:
             raise ValueError("Credenciales incorrectas")
 
@@ -59,6 +58,7 @@ class PortalAuthService:
     @staticmethod
     def _generar_token(portal_user: UsuariosPortal) -> str:
         import time as _time
+
         now_ts = int(_time.time())
         payload = {
             "token_type": PORTAL_TOKEN_TYPE,

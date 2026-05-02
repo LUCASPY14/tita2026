@@ -102,8 +102,7 @@ def validar_saldo_tarjeta(saldo_actual, limite_credito, permite_negativo=False):
         saldo_minimo = -limite_credito
         if saldo_actual < saldo_minimo:
             raise ValidationError(
-                f"El saldo no puede ser menor a ₲{saldo_minimo:,.2f} "
-                f"(límite de crédito: ₲{limite_credito:,.2f})"
+                f"El saldo no puede ser menor a ₲{saldo_minimo:,.2f} " f"(límite de crédito: ₲{limite_credito:,.2f})"
             )
 
 
@@ -130,9 +129,7 @@ def validar_estado_tarjeta(estado):
         raise ValidationError("El estado de la tarjeta es obligatorio")
 
     if estado not in ESTADOS_VALIDOS:
-        raise ValidationError(
-            f"Estado '{estado}' no válido. Estados permitidos: {', '.join(ESTADOS_VALIDOS)}"
-        )
+        raise ValidationError(f"Estado '{estado}' no válido. Estados permitidos: {', '.join(ESTADOS_VALIDOS)}")
 
 
 def validar_codigo_barras_tarjeta(codigo_barras):
@@ -165,15 +162,11 @@ def validar_codigo_barras_tarjeta(codigo_barras):
     # Si es numérico, validar que sea EAN-13 o EAN-8
     if codigo_limpio.isdigit():
         if len(codigo_limpio) not in [8, 13]:
-            raise ValidationError(
-                "Código de barras numérico debe tener 8 (EAN-8) o 13 (EAN-13) dígitos"
-            )
+            raise ValidationError("Código de barras numérico debe tener 8 (EAN-8) o 13 (EAN-13) dígitos")
     else:
         # Código 128: alfanumérico
         if not re.match(r"^[A-Za-z0-9\-]+$", codigo_limpio):
-            raise ValidationError(
-                "El código de barras solo puede contener letras, números y guiones"
-            )
+            raise ValidationError("El código de barras solo puede contener letras, números y guiones")
 
 
 def validar_fecha_vencimiento_tarjeta(fecha_vencimiento):
@@ -361,10 +354,7 @@ def validar_tipo_autorizacion(tipo_autorizacion):
         raise ValidationError("El tipo de autorización es obligatorio")
 
     if tipo_autorizacion not in TIPOS_VALIDOS:
-        raise ValidationError(
-            f"Tipo '{tipo_autorizacion}' no válido. "
-            f"Tipos permitidos: {', '.join(TIPOS_VALIDOS)}"
-        )
+        raise ValidationError(f"Tipo '{tipo_autorizacion}' no válido. " f"Tipos permitidos: {', '.join(TIPOS_VALIDOS)}")
 
 
 def validar_fecha_vencimiento_autorizacion(fecha_vencimiento, tipo_autorizacion):
@@ -489,9 +479,7 @@ def validar_estado_carga(estado):
         raise ValidationError("El estado de la carga es obligatorio")
 
     if estado.lower() not in ESTADOS_VALIDOS and estado not in ESTADOS_VALIDOS:
-        raise ValidationError(
-            f"Estado '{estado}' no válido. Estados permitidos: {', '.join(ESTADOS_VALIDOS)}"
-        )
+        raise ValidationError(f"Estado '{estado}' no válido. Estados permitidos: {', '.join(ESTADOS_VALIDOS)}")
 
 
 def validar_referencia_pago(referencia):
@@ -522,9 +510,7 @@ def validar_referencia_pago(referencia):
 
     # Validar formato alfanumérico
     if not re.match(r"^[A-Za-z0-9\-_]+$", referencia_limpia):
-        raise ValidationError(
-            "La referencia solo puede contener letras, números, guiones y guiones bajos"
-        )
+        raise ValidationError("La referencia solo puede contener letras, números, guiones y guiones bajos")
 
 
 def validar_metodo_pago_recarga(metodo_pago):
@@ -549,9 +535,7 @@ def validar_metodo_pago_recarga(metodo_pago):
         raise ValidationError("El método de pago es obligatorio")
 
     if metodo_pago not in METODOS_VALIDOS:
-        raise ValidationError(
-            f"Método '{metodo_pago}' no válido. Métodos permitidos: {', '.join(METODOS_VALIDOS)}"
-        )
+        raise ValidationError(f"Método '{metodo_pago}' no válido. Métodos permitidos: {', '.join(METODOS_VALIDOS)}")
 
 
 def validar_numero_comprobante(numero_comprobante):
@@ -753,10 +737,7 @@ def validar_metodo_pago_online(metodo_pago):
         raise ValidationError("El método de pago es obligatorio")
 
     if metodo_pago not in METODOS_VALIDOS:
-        raise ValidationError(
-            f"Método '{metodo_pago}' no válido. "
-            f"Métodos permitidos: {', '.join(METODOS_VALIDOS)}"
-        )
+        raise ValidationError(f"Método '{metodo_pago}' no válido. " f"Métodos permitidos: {', '.join(METODOS_VALIDOS)}")
 
 
 # =============================================================================
@@ -825,9 +806,7 @@ def validar_clave_configuracion(clave):
 
     # Validar formato snake_case
     if not re.match(r"^[a-z0-9_]+$", clave_limpia):
-        raise ValidationError(
-            "La clave debe estar en formato snake_case (minúsculas, números y guiones bajos)"
-        )
+        raise ValidationError("La clave debe estar en formato snake_case (minúsculas, números y guiones bajos)")
 
     # No debe empezar o terminar con guion bajo
     if clave_limpia.startswith("_") or clave_limpia.endswith("_"):
@@ -860,14 +839,10 @@ def validar_tipo_configuracion(tipo):
         raise ValidationError("El tipo de configuración es obligatorio")
 
     if tipo not in TIPOS_VALIDOS:
-        raise ValidationError(
-            f"Tipo '{tipo}' no válido. Tipos permitidos: {', '.join(TIPOS_VALIDOS)}"
-        )
+        raise ValidationError(f"Tipo '{tipo}' no válido. Tipos permitidos: {', '.join(TIPOS_VALIDOS)}")
 
 
-def validar_valor_configuracion(
-    valor, tipo, valores_permitidos=None, valor_min=None, valor_max=None
-):
+def validar_valor_configuracion(valor, tipo, valores_permitidos=None, valor_min=None, valor_max=None):
     """
     Valida el valor de configuración según su tipo.
 
@@ -997,8 +972,7 @@ def validar_tipo_operacion_limite(tipo_operacion):
 
     if tipo_operacion not in TIPOS_VALIDOS:
         raise ValidationError(
-            f"Tipo de operación '{tipo_operacion}' no válido. "
-            f"Operaciones permitidas: {', '.join(TIPOS_VALIDOS)}"
+            f"Tipo de operación '{tipo_operacion}' no válido. " f"Operaciones permitidas: {', '.join(TIPOS_VALIDOS)}"
         )
 
 
@@ -1054,9 +1028,7 @@ def validar_unicidad_rol_operacion(id_rol, tipo_operacion, id_limite_actual=None
         return
 
     # Buscar límite existente
-    query = LimitesTransaccion.objects.filter(
-        id_rol=id_rol, tipo_operacion=tipo_operacion, estado=True
-    )
+    query = LimitesTransaccion.objects.filter(id_rol=id_rol, tipo_operacion=tipo_operacion, estado=True)
 
     # Excluir el límite actual si estamos editando
     if id_limite_actual:
@@ -1097,17 +1069,13 @@ def validar_motivo_autorizacion(motivo):
 
     # Validar longitud (mínimo 20 caracteres para contexto adecuado)
     if len(motivo_limpio) < 20:
-        raise ValidationError(
-            "El motivo debe tener al menos 20 caracteres para proporcionar contexto adecuado"
-        )
+        raise ValidationError("El motivo debe tener al menos 20 caracteres para proporcionar contexto adecuado")
 
     if len(motivo_limpio) > 500:
         raise ValidationError("El motivo no puede exceder 500 caracteres")
 
 
-def validar_autorizadores_diferentes(
-    id_empleado_solicitante, id_empleado_autorizador, id_empleado_autorizador_2=None
-):
+def validar_autorizadores_diferentes(id_empleado_solicitante, id_empleado_autorizador, id_empleado_autorizador_2=None):
     """
     Valida que los autorizadores sean diferentes al solicitante y entre sí.
 
@@ -1129,8 +1097,7 @@ def validar_autorizadores_diferentes(
     # El autorizador no puede ser el mismo que el solicitante
     if id_empleado_solicitante == id_empleado_autorizador:
         raise ValidationError(
-            "El empleado no puede autorizar su propia solicitud. "
-            "Debe ser autorizada por un supervisor o gerente."
+            "El empleado no puede autorizar su propia solicitud. " "Debe ser autorizada por un supervisor o gerente."
         )
 
     # Si hay doble autorización, los dos autorizadores deben ser diferentes

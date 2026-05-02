@@ -27,13 +27,9 @@ class Command(BaseCommand):
         verbose = options["verbose"]
 
         if dry_run:
-            self.stdout.write(
-                self.style.WARNING("=== MODO DRY RUN - No se harán cambios reales ===\n")
-            )
+            self.stdout.write(self.style.WARNING("=== MODO DRY RUN - No se harán cambios reales ===\n"))
 
-        self.stdout.write(
-            self.style.MIGRATE_HEADING("=== Ejecutando Limpieza del Sistema de Usuarios ===\n")
-        )
+        self.stdout.write(self.style.MIGRATE_HEADING("=== Ejecutando Limpieza del Sistema de Usuarios ===\n"))
 
         total_limpiados = 0
         errores = []
@@ -46,18 +42,14 @@ class Command(BaseCommand):
                 if resultado_sesiones["success"]:
                     sesiones_cerradas = resultado_sesiones["sesiones_cerradas"]
                     total_limpiados += sesiones_cerradas
-                    self.stdout.write(
-                        self.style.SUCCESS(f"   ✓ {sesiones_cerradas} sesiones cerradas")
-                    )
+                    self.stdout.write(self.style.SUCCESS(f"   ✓ {sesiones_cerradas} sesiones cerradas"))
 
                     if verbose and sesiones_cerradas > 0:
                         self.stdout.write(f"     - Sesiones expiradas (>24h): cerradas")
                         self.stdout.write(f"     - Sesiones inactivas (>30min): cerradas\n")
                 else:
                     errores.append(f'Sesiones: {resultado_sesiones["mensaje"]}')
-                    self.stdout.write(
-                        self.style.ERROR(f'   ✗ Error: {resultado_sesiones["mensaje"]}')
-                    )
+                    self.stdout.write(self.style.ERROR(f'   ✗ Error: {resultado_sesiones["mensaje"]}'))
             else:
                 # En dry-run, consultar cuántas se limpiarían
                 from apps.usuarios.models import SesionesActivas
@@ -92,9 +84,7 @@ class Command(BaseCommand):
                 if resultado_tokens["success"]:
                     tokens_eliminados = resultado_tokens["tokens_eliminados"]
                     total_limpiados += tokens_eliminados
-                    self.stdout.write(
-                        self.style.SUCCESS(f"   ✓ {tokens_eliminados} tokens eliminados")
-                    )
+                    self.stdout.write(self.style.SUCCESS(f"   ✓ {tokens_eliminados} tokens eliminados"))
 
                     if verbose and tokens_eliminados > 0:
                         self.stdout.write(f"     - Tokens de password recovery: eliminados")
@@ -102,9 +92,7 @@ class Command(BaseCommand):
                         self.stdout.write(f"     - Criterio: expirados hace >7 días\n")
                 else:
                     errores.append(f'Tokens: {resultado_tokens["mensaje"]}')
-                    self.stdout.write(
-                        self.style.ERROR(f'   ✗ Error: {resultado_tokens["mensaje"]}')
-                    )
+                    self.stdout.write(self.style.ERROR(f'   ✗ Error: {resultado_tokens["mensaje"]}'))
             else:
                 # En dry-run, consultar cuántos se eliminarían
                 from apps.usuarios.models import TokensRecuperacion
@@ -116,9 +104,7 @@ class Command(BaseCommand):
                     fecha_expiracion__lt=ahora - timedelta(days=7)
                 ).count()
 
-                self.stdout.write(
-                    self.style.WARNING(f"   → Se eliminarían {tokens_a_eliminar} tokens\n")
-                )
+                self.stdout.write(self.style.WARNING(f"   → Se eliminarían {tokens_a_eliminar} tokens\n"))
 
         except Exception as e:
             errores.append(f"Tokens: {str(e)}")
@@ -134,17 +120,13 @@ class Command(BaseCommand):
 
                 # Eliminar intentos de más de 30 días
                 ahora = timezone.now()
-                intentos_antiguos = IntentosLogin.objects.filter(
-                    fecha_intento__lt=ahora - timedelta(days=30)
-                )
+                intentos_antiguos = IntentosLogin.objects.filter(fecha_intento__lt=ahora - timedelta(days=30))
 
                 cantidad = intentos_antiguos.count()
                 intentos_antiguos.delete()
 
                 total_limpiados += cantidad
-                self.stdout.write(
-                    self.style.SUCCESS(f"   ✓ {cantidad} intentos de login eliminados")
-                )
+                self.stdout.write(self.style.SUCCESS(f"   ✓ {cantidad} intentos de login eliminados"))
 
                 if verbose and cantidad > 0:
                     self.stdout.write(f"     - Criterio: >30 días de antigüedad\n")
@@ -154,13 +136,9 @@ class Command(BaseCommand):
                 from datetime import timedelta
 
                 ahora = timezone.now()
-                cantidad = IntentosLogin.objects.filter(
-                    fecha_intento__lt=ahora - timedelta(days=30)
-                ).count()
+                cantidad = IntentosLogin.objects.filter(fecha_intento__lt=ahora - timedelta(days=30)).count()
 
-                self.stdout.write(
-                    self.style.WARNING(f"   → Se eliminarían {cantidad} intentos de login\n")
-                )
+                self.stdout.write(self.style.WARNING(f"   → Se eliminarían {cantidad} intentos de login\n"))
 
         except Exception as e:
             errores.append(f"Intentos login: {str(e)}")
@@ -176,9 +154,7 @@ class Command(BaseCommand):
 
                 # Eliminar intentos de más de 30 días
                 ahora = timezone.now()
-                intentos_2fa_antiguos = Intentos2Fa.objects.filter(
-                    fecha_intento__lt=ahora - timedelta(days=30)
-                )
+                intentos_2fa_antiguos = Intentos2Fa.objects.filter(fecha_intento__lt=ahora - timedelta(days=30))
 
                 cantidad = intentos_2fa_antiguos.count()
                 intentos_2fa_antiguos.delete()
@@ -194,13 +170,9 @@ class Command(BaseCommand):
                 from datetime import timedelta
 
                 ahora = timezone.now()
-                cantidad = Intentos2Fa.objects.filter(
-                    fecha_intento__lt=ahora - timedelta(days=30)
-                ).count()
+                cantidad = Intentos2Fa.objects.filter(fecha_intento__lt=ahora - timedelta(days=30)).count()
 
-                self.stdout.write(
-                    self.style.WARNING(f"   → Se eliminarían {cantidad} intentos 2FA\n")
-                )
+                self.stdout.write(self.style.WARNING(f"   → Se eliminarían {cantidad} intentos 2FA\n"))
 
         except Exception as e:
             errores.append(f"Intentos 2FA: {str(e)}")
@@ -213,18 +185,14 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("Modo dry-run: No se realizaron cambios reales\n"))
         else:
             if errores:
-                self.stdout.write(
-                    self.style.WARNING(f"Total de elementos limpiados: {total_limpiados}")
-                )
+                self.stdout.write(self.style.WARNING(f"Total de elementos limpiados: {total_limpiados}"))
                 self.stdout.write(self.style.ERROR(f"Errores encontrados: {len(errores)}\n"))
                 for error in errores:
                     self.stdout.write(self.style.ERROR(f"  - {error}"))
                 self.stdout.write("")
             else:
                 self.stdout.write(self.style.SUCCESS(f"✅ Limpieza completada exitosamente"))
-                self.stdout.write(
-                    self.style.SUCCESS(f"   Total de elementos limpiados: {total_limpiados}\n")
-                )
+                self.stdout.write(self.style.SUCCESS(f"   Total de elementos limpiados: {total_limpiados}\n"))
 
         # Recomendaciones
         if not dry_run and total_limpiados > 0:

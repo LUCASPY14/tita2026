@@ -6,14 +6,26 @@ from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum
 from .models import (
-    Impuestos, DatosEmpresa, Timbrados, DocumentosTributarios,
-    PuntosExpedicion, Cajas, CierresCaja, MovimientosCaja,
+    Impuestos,
+    DatosEmpresa,
+    Timbrados,
+    DocumentosTributarios,
+    PuntosExpedicion,
+    Cajas,
+    CierresCaja,
+    MovimientosCaja,
 )
 from .serializers import (
-    ImpuestosSerializer, DatosEmpresaSerializer,
-    TimbradoSerializer, DocumentosTributariosSerializer, PuntosExpedicionSerializer,
-    CajaSerializer, CierresCajaSerializer, MovimientosCajaSerializer,
-    AbrirCajaSerializer, CerrarCajaSerializer,
+    ImpuestosSerializer,
+    DatosEmpresaSerializer,
+    TimbradoSerializer,
+    DocumentosTributariosSerializer,
+    PuntosExpedicionSerializer,
+    CajaSerializer,
+    CierresCajaSerializer,
+    MovimientosCajaSerializer,
+    AbrirCajaSerializer,
+    CerrarCajaSerializer,
 )
 from datetime import date
 from decimal import Decimal
@@ -21,28 +33,30 @@ from decimal import Decimal
 
 class ImpuestosViewSet(viewsets.ModelViewSet):
     """CRUD de impuestos/tasas (IVA 10%, IVA 5%, Exenta)."""
-    queryset = Impuestos.objects.all().order_by('nombre_impuesto')
+
+    queryset = Impuestos.objects.all().order_by("nombre_impuesto")
     serializer_class = ImpuestosSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
 
     def get_queryset(self):
-        qs = Impuestos.objects.all().order_by('nombre_impuesto')
-        solo_activos = self.request.query_params.get('activos', None)
+        qs = Impuestos.objects.all().order_by("nombre_impuesto")
+        solo_activos = self.request.query_params.get("activos", None)
         if solo_activos is not None:
-            qs = qs.filter(estado=solo_activos.lower() != 'false')
+            qs = qs.filter(estado=solo_activos.lower() != "false")
         return qs
 
     def destroy(self, request, *args, **kwargs):
         """Soft-delete: marca estado=False en lugar de eliminar."""
         instance = self.get_object()
         instance.estado = False
-        instance.save(update_fields=['estado'])
+        instance.save(update_fields=["estado"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class DatosEmpresaViewSet(viewsets.ModelViewSet):
     """Datos de la empresa emisora (RUC, razón social, dirección)."""
+
     queryset = DatosEmpresa.objects.filter(estado=True)
     serializer_class = DatosEmpresaSerializer
     permission_classes = [IsAuthenticated]
@@ -59,6 +73,7 @@ class DatosEmpresaViewSet(viewsets.ModelViewSet):
 
 class PuntosExpedicionViewSet(viewsets.ModelViewSet):
     """CRUD de puntos de expedición (establecimiento + punto)."""
+
     queryset = PuntosExpedicion.objects.filter(estado=True).order_by("codigo_establecimiento")
     serializer_class = PuntosExpedicionSerializer
     permission_classes = [IsAuthenticated]
@@ -67,6 +82,7 @@ class PuntosExpedicionViewSet(viewsets.ModelViewSet):
 
 class TimbradosViewSet(viewsets.ModelViewSet):
     """Timbrados registrados ante la SET (lectura y alta)."""
+
     queryset = Timbrados.objects.order_by("-fecha_inicio")
     serializer_class = TimbradoSerializer
     permission_classes = [IsAuthenticated]
@@ -76,25 +92,24 @@ class TimbradosViewSet(viewsets.ModelViewSet):
     def vigente(self, request):
         """Devuelve el timbrado vigente a hoy."""
         hoy = date.today()
-        timbrado = Timbrados.objects.filter(
-            estado=True,
-            fecha_inicio__lte=hoy,
-            fecha_fin__gte=hoy,
-        ).order_by("-fecha_inicio").first()
-        if not timbrado:
-            return Response(
-                {"detail": "No hay timbrado vigente configurado."}, status=404
+        timbrado = (
+            Timbrados.objects.filter(
+                estado=True,
+                fecha_inicio__lte=hoy,
+                fecha_fin__gte=hoy,
             )
+            .order_by("-fecha_inicio")
+            .first()
+        )
+        if not timbrado:
+            return Response({"detail": "No hay timbrado vigente configurado."}, status=404)
         return Response(TimbradoSerializer(timbrado).data)
 
 
 class DocumentosTributariosViewSet(viewsets.ModelViewSet):
     """Documentos tributarios emitidos (facturas físicas)."""
-    queryset = (
-        DocumentosTributarios.objects
-        .select_related("nro_timbrado", "id_cliente")
-        .order_by("-fecha_emision")
-    )
+
+    queryset = DocumentosTributarios.objects.select_related("nro_timbrado", "id_cliente").order_by("-fecha_emision")
     serializer_class = DocumentosTributariosSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["tipo_documento", "condicion_venta", "id_cliente"]
@@ -113,8 +128,10 @@ class DocumentosTributariosViewSet(viewsets.ModelViewSet):
 
 # ─── Cajas ────────────────────────────────────────────────────────────────────
 
+
 class CajasViewSet(viewsets.ModelViewSet):
     """CRUD de cajas registradoras."""
+
     queryset = Cajas.objects.all().order_by("nombre_caja")
     serializer_class = CajaSerializer
     permission_classes = [IsAuthenticated]
@@ -131,6 +148,7 @@ class CierresCajaViewSet(viewsets.ModelViewSet):
       GET  /cierres-caja/turno-activo/    → turno abierto del cajero en sesión
       GET  /cierres-caja/{id}/resumen/    → detalle con movimientos y totales
     """
+
     queryset = CierresCaja.objects.select_related("id_caja", "id_empleado").order_by("-fecha_hora_apertura")
     serializer_class = CierresCajaSerializer
     permission_classes = [IsAuthenticated]
@@ -151,10 +169,7 @@ class CierresCajaViewSet(viewsets.ModelViewSet):
             # Lock a nivel de fila: si otro request llega al mismo tiempo para
             # la misma caja, esperará hasta que esta transacción termine.
             turno_existente = (
-                CierresCaja.objects
-                .select_for_update()
-                .filter(id_caja=data["id_caja"], estado="abierto")
-                .first()
+                CierresCaja.objects.select_for_update().filter(id_caja=data["id_caja"], estado="abierto").first()
             )
             if turno_existente:
                 return Response(
@@ -171,6 +186,7 @@ class CierresCajaViewSet(viewsets.ModelViewSet):
             )
             # Registrar movimiento de fondo inicial
             from apps.core.models import MediosPago
+
             efectivo = MediosPago.objects.filter(descripcion__icontains="efectivo").first()
             if efectivo and data["monto_inicial"] > 0:
                 MovimientosCaja.objects.create(
@@ -198,12 +214,12 @@ class CierresCajaViewSet(viewsets.ModelViewSet):
         data = ser.validated_data
 
         # Calcular total efectivo esperado
-        total_ingresos = turno.movimientoscaja_set.filter(
-            tipo_movimiento__in=["Ingreso", "VentaEfectivo"]
-        ).aggregate(t=Sum("monto"))["t"] or Decimal("0")
-        total_egresos = turno.movimientoscaja_set.filter(
-            tipo_movimiento="Egreso"
-        ).aggregate(t=Sum("monto"))["t"] or Decimal("0")
+        total_ingresos = turno.movimientoscaja_set.filter(tipo_movimiento__in=["Ingreso", "VentaEfectivo"]).aggregate(
+            t=Sum("monto")
+        )["t"] or Decimal("0")
+        total_egresos = turno.movimientoscaja_set.filter(tipo_movimiento="Egreso").aggregate(t=Sum("monto"))[
+            "t"
+        ] or Decimal("0")
         efectivo_esperado = total_ingresos - total_egresos
 
         turno.fecha_hora_cierre = timezone.now()
@@ -239,29 +255,34 @@ class CierresCajaViewSet(viewsets.ModelViewSet):
     def resumen(self, request, pk=None):
         """Detalle completo del turno con movimientos y totales por medio de pago."""
         turno = self.get_object()
-        movimientos = MovimientosCaja.objects.filter(
-            id_cierre=turno
-        ).values("tipo_movimiento", "id_medio_pago__descripcion").annotate(
-            total=Sum("monto")
-        ).order_by("tipo_movimiento")
+        movimientos = (
+            MovimientosCaja.objects.filter(id_cierre=turno)
+            .values("tipo_movimiento", "id_medio_pago__descripcion")
+            .annotate(total=Sum("monto"))
+            .order_by("tipo_movimiento")
+        )
 
-        return Response({
-            "turno": CierresCajaSerializer(turno).data,
-            "resumen_medios_pago": list(movimientos),
-        })
+        return Response(
+            {
+                "turno": CierresCajaSerializer(turno).data,
+                "resumen_medios_pago": list(movimientos),
+            }
+        )
 
 
 class MovimientosCajaViewSet(viewsets.ModelViewSet):
     """Ingresos y egresos manuales de caja (fondos, gastos, etc.)."""
-    queryset = MovimientosCaja.objects.select_related(
-        "id_cierre", "id_medio_pago", "id_venta"
-    ).order_by("-fecha_movimiento")
+
+    queryset = MovimientosCaja.objects.select_related("id_cierre", "id_medio_pago", "id_venta").order_by(
+        "-fecha_movimiento"
+    )
     serializer_class = MovimientosCajaSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["tipo_movimiento", "id_cierre"]
 
 
 # ─── Facturación física ───────────────────────────────────────────────────────
+
 
 class FacturacionViewSet(viewsets.ViewSet):
     """
@@ -272,12 +293,14 @@ class FacturacionViewSet(viewsets.ViewSet):
     GET  /facturacion/{id}/imprimir/  → texto 80 col para Epson LX-50
     POST /facturacion/{id}/anular/    → anula factura y devuelve items a la cola
     """
+
     permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=["get"], url_path="cola")
     def cola(self, request):
         """Items pagados sin facturar, agrupados por cliente."""
         from .facturacion_service import FacturacionService
+
         return Response(FacturacionService.get_cola())
 
     @action(detail=False, methods=["post"], url_path="emitir")

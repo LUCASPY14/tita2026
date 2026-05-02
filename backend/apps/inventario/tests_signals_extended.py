@@ -11,6 +11,7 @@ Cubre líneas faltantes:
 379, 392, 428 (LotesProducto signal branches),
 483-510, 523-524 (enviar_notificacion_vencimiento)
 """
+
 from datetime import date, timedelta
 from unittest.mock import patch, MagicMock
 
@@ -19,16 +20,20 @@ from django.utils import timezone
 from decimal import Decimal
 
 from apps.inventario.models import (
-    StockUnico, MovimientosStock, AlertasStock, CostosHistoricos,
-    LotesProducto, AlertasVencimiento,
+    StockUnico,
+    MovimientosStock,
+    AlertasStock,
+    CostosHistoricos,
+    LotesProducto,
+    AlertasVencimiento,
 )
 from apps.compras.models import Compras, Proveedores, DetallesCompra
 from apps.productos.models import Productos, Categorias, UnidadesMedida
 from apps.contabilidad.models import Impuestos
 from apps.usuarios.models import Empleados, Roles
 
-
 # ─── fixture helpers ────────────────────────────────────────────────────────
+
 
 def _make_rol(suffix=""):
     return Roles.objects.create(nombre_rol=f"RolSig{suffix}", estado=True)
@@ -51,9 +56,7 @@ def _make_categoria(suffix=""):
 
 
 def _make_unidad(suffix=""):
-    return UnidadesMedida.objects.create(
-        nombre=f"UndSig{suffix}", abreviatura=f"S{suffix[:2]}", estado=True
-    )
+    return UnidadesMedida.objects.create(nombre=f"UndSig{suffix}", abreviatura=f"S{suffix[:2]}", estado=True)
 
 
 def _make_impuesto(suffix=""):
@@ -101,12 +104,14 @@ def _make_compra(proveedor, estado_pago="Pendiente", suffix=""):
 
 # ─── actualizar_stock_compra ──────────────────────────────────────────────────
 
+
 class ValidarStockVentaSignalTest(TestCase):
     """Tests para el signal validar_stock_venta (pre_save Ventas)"""
 
     def test_pk_set_returns_early(self):
         """Line 113: instance.pk is set → signal returns early (updating existing venta)."""
         from apps.inventario import signals as inv_signals
+
         mock_instance = MagicMock()
         mock_instance.pk = 99  # existing venta (not new)
         # Signal should return without doing anything
@@ -116,6 +121,7 @@ class ValidarStockVentaSignalTest(TestCase):
     def test_nuevo_pass_no_error(self):
         """Line 221->exit: new venta (pk=None) → signal hits pass (no ValidationError thrown)."""
         from apps.inventario import signals as inv_signals
+
         mock_instance = MagicMock()
         mock_instance.pk = None  # new venta
         # Actually validar_stock_venta just passes when pk=None
@@ -135,6 +141,7 @@ class ResolverAlertasStockBranchTest(TestCase):
     def test_stock_below_minimo_no_resolved(self):
         """Line 221->exit: stock_actual <= stock_minimo → no alerts resolved."""
         from apps.inventario.signals import _resolver_alertas_stock
+
         # Create active alert
         AlertasStock.objects.create(
             tipo_alerta="stock_minimo",
@@ -152,6 +159,7 @@ class ResolverAlertasStockBranchTest(TestCase):
     def test_stock_above_minimo_resolves_alerts(self):
         """Line 221: stock_actual > minimo → resolves active alerts."""
         from apps.inventario.signals import _resolver_alertas_stock
+
         AlertasStock.objects.create(
             tipo_alerta="stock_minimo",
             stock_actual=Decimal("5.000"),
@@ -211,7 +219,7 @@ class ActualizarStockCompraSignalTest(TransactionTestCase):
             Categorias.objects.filter(nombre__startswith="CatSig").first(),
             UnidadesMedida.objects.filter(nombre__startswith="UndSig").first(),
             Impuestos.objects.filter(nombre_impuesto__startswith="IVASig").first(),
-            "cs2"
+            "cs2",
         )
         compra3 = _make_compra(self.proveedor, estado_pago="Parcial", suffix="parc")
         DetallesCompra.objects.create(
@@ -299,6 +307,7 @@ class ActualizarStockCompraSignalTest(TransactionTestCase):
 
 # ─── descontar_stock_venta ─────────────────────────────────────────────────
 
+
 class DescontarStockVentaSignalTest(TransactionTestCase):
     """Tests para signal descontar_stock_venta (post_save DetallesVenta)"""
 
@@ -315,10 +324,7 @@ class DescontarStockVentaSignalTest(TransactionTestCase):
         from apps.productos.models import ListasPrecios
 
         tipo_cliente, _ = TiposCliente.objects.get_or_create(nombre_tipo="Normal")
-        lista, _ = ListasPrecios.objects.get_or_create(
-            nombre_lista="Lista General DSV",
-            defaults={"estado": True}
-        )
+        lista, _ = ListasPrecios.objects.get_or_create(nombre_lista="Lista General DSV", defaults={"estado": True})
         self.cliente = Clientes.objects.create(
             nombres="Cliente",
             apellidos="SignalVtaTest",
@@ -328,6 +334,7 @@ class DescontarStockVentaSignalTest(TransactionTestCase):
             id_tipo_cliente=tipo_cliente,
         )
         from apps.ventas.models import Ventas
+
         self.venta = Ventas.objects.create(
             monto_total=Decimal("5000.00"),
             estado_pago="Pendiente",
@@ -340,6 +347,7 @@ class DescontarStockVentaSignalTest(TransactionTestCase):
     def test_sin_stock_crea_stock_cero(self):
         """Línea 135: Sin StockUnico existente → crea stock con 0 y lo descuenta."""
         from apps.ventas.models import DetallesVenta
+
         # No existe StockUnico para el producto → signal crea uno
         # permite_stock_negativo=False + no hay stock → genera ValueError
         with self.assertRaises(Exception):
@@ -353,6 +361,7 @@ class DescontarStockVentaSignalTest(TransactionTestCase):
     def test_stock_insuficiente_raises_valueerror(self):
         """Línea 153: Stock insuficiente para producto sin permite_stock_negativo → ValueError."""
         from apps.ventas.models import DetallesVenta
+
         # Crear stock insuficiente
         StockUnico.objects.create(
             id_producto=self.producto,
@@ -377,6 +386,7 @@ class DescontarStockVentaSignalTest(TransactionTestCase):
             cantidad=Decimal("10.000"),
         )
         from apps.ventas.models import DetallesVenta
+
         DetallesVenta.objects.create(
             id_venta=self.venta,
             id_producto=producto2,
@@ -385,9 +395,7 @@ class DescontarStockVentaSignalTest(TransactionTestCase):
         )
         stock = StockUnico.objects.get(id_producto=producto2)
         self.assertEqual(stock.cantidad, Decimal("7.000"))
-        self.assertEqual(
-            MovimientosStock.objects.filter(id_producto=producto2, motivo="venta").count(), 1
-        )
+        self.assertEqual(MovimientosStock.objects.filter(id_producto=producto2, motivo="venta").count(), 1)
 
     def test_suficiente_no_negativo_branch_151_to_159(self):
         """Lines 151->159: permite_stock_negativo=False + stock sufficient → no ValueError."""
@@ -401,6 +409,7 @@ class DescontarStockVentaSignalTest(TransactionTestCase):
             cantidad=Decimal("20.000"),
         )
         from apps.ventas.models import DetallesVenta
+
         # Stock=20 >= cantidad=5 → no ValueError, goes through 151->159 branch
         DetallesVenta.objects.create(
             id_venta=self.venta,
@@ -414,15 +423,16 @@ class DescontarStockVentaSignalTest(TransactionTestCase):
     def test_descontar_update_no_created(self):
         """Line 135: Signal returns early when created=False (update, not insert)."""
         from apps.inventario import signals as inv_signals
+
         mock_instance = MagicMock()
         initial_count = MovimientosStock.objects.count()
-        inv_signals.descontar_stock_venta(
-            sender=None, instance=mock_instance, created=False
-        )
+        inv_signals.descontar_stock_venta(sender=None, instance=mock_instance, created=False)
         # No new stock movements created
         self.assertEqual(MovimientosStock.objects.count(), initial_count)
 
+
 # ─── _generar_alerta_stock_bajo ───────────────────────────────────────────────
+
 
 class GenerarAlertaStockBajoTest(TestCase):
     """Tests para los branches de _generar_alerta_stock_bajo"""
@@ -435,6 +445,7 @@ class GenerarAlertaStockBajoTest(TestCase):
 
     def _call(self, stock_actual):
         from apps.inventario.signals import _generar_alerta_stock_bajo
+
         _generar_alerta_stock_bajo(self.producto, stock_actual)
 
     def test_stock_cero_crea_alerta_cero(self):
@@ -477,6 +488,7 @@ class GenerarAlertaStockBajoTest(TestCase):
 
 
 # ─── enviar_notificacion_alerta ──────────────────────────────────────────────
+
 
 class EnviarNotificacionAlertaTest(TransactionTestCase):
     """Tests para signal enviar_notificacion_alerta (post_save AlertasStock)"""
@@ -577,6 +589,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         """Lines 286-331: Call signal directly; with Gerente employee the loop body executes."""
         import sys
         from apps.inventario import signals as inv_signals
+
         gerente = self._make_gerente("loop")
         cat2 = _make_categoria("ena2")
         und2 = _make_unidad("ena2")
@@ -601,13 +614,14 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         mock_tasks_module = MagicMock()
         mock_tasks_module.enviar_email_async = MagicMock()
         mock_tasks_module.enviar_email_async.delay = MagicMock()
-        with patch.dict(sys.modules, {
-            "apps.notificaciones.models": mock_notif_module,
-            "apps.notificaciones.tasks": mock_tasks_module,
-        }):
-            inv_signals.enviar_notificacion_alerta(
-                sender=AlertasStock, instance=alerta, created=True
-            )
+        with patch.dict(
+            sys.modules,
+            {
+                "apps.notificaciones.models": mock_notif_module,
+                "apps.notificaciones.tasks": mock_tasks_module,
+            },
+        ):
+            inv_signals.enviar_notificacion_alerta(sender=AlertasStock, instance=alerta, created=True)
         alerta.refresh_from_db()
         self.assertTrue(alerta.notificacion_enviada)
 
@@ -615,6 +629,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         """Lines 287-302: Employee with perfilesusuario triggers portal notification."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat3 = _make_categoria("ena5")
         und3 = _make_unidad("ena5")
         imp3 = _make_impuesto("ena5")
@@ -649,15 +664,19 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         mock_empleados_qs = MagicMock()
         mock_empleados_qs.__iter__ = MagicMock(return_value=iter([mock_emp]))
         mock_roles_qs = MagicMock()
-        with patch.dict(sys.modules, {
-            "apps.notificaciones.models": mock_notif_module,
-            "apps.notificaciones.tasks": mock_tasks_module,
-        }), patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs), \
-           patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter:
+        with (
+            patch.dict(
+                sys.modules,
+                {
+                    "apps.notificaciones.models": mock_notif_module,
+                    "apps.notificaciones.tasks": mock_tasks_module,
+                },
+            ),
+            patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs),
+            patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter,
+        ):
             mock_emp_filter.return_value.select_related.return_value = mock_empleados_qs
-            inv_signals.enviar_notificacion_alerta(
-                sender=AlertasStock, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_alerta(sender=AlertasStock, instance=alerta, created=True)
         alerta.refresh_from_db()
         self.assertTrue(alerta.notificacion_enviada)
         # NotificacionesPortal.objects.create was called for the employee with perfilesusuario
@@ -667,6 +686,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         """Line 305->284: Employee with no email skips email sending (covers False branch)."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat4 = _make_categoria("ena6")
         und4 = _make_unidad("ena6")
         imp4 = _make_impuesto("ena6")
@@ -696,15 +716,19 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         mock_qs = MagicMock()
         mock_qs.__iter__ = MagicMock(return_value=iter([mock_emp_no_email]))
         mock_roles_qs = MagicMock()
-        with patch.dict(sys.modules, {
-            "apps.notificaciones.models": mock_notif_module,
-            "apps.notificaciones.tasks": mock_tasks_module,
-        }), patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs), \
-           patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter:
+        with (
+            patch.dict(
+                sys.modules,
+                {
+                    "apps.notificaciones.models": mock_notif_module,
+                    "apps.notificaciones.tasks": mock_tasks_module,
+                },
+            ),
+            patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs),
+            patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter,
+        ):
             mock_emp_filter.return_value.select_related.return_value = mock_qs
-            inv_signals.enviar_notificacion_alerta(
-                sender=AlertasStock, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_alerta(sender=AlertasStock, instance=alerta, created=True)
         alerta.refresh_from_db()
         self.assertTrue(alerta.notificacion_enviada)
         # EmailsEnviados should NOT have been called (no email)
@@ -714,6 +738,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         """Lines 300-302: Exception in portal notification create → caught and logged."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat7 = _make_categoria("ena7")
         und7 = _make_unidad("ena7")
         imp7 = _make_impuesto("ena7")
@@ -747,16 +772,20 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         mock_qs = MagicMock()
         mock_qs.__iter__ = MagicMock(return_value=iter([mock_emp]))
         mock_roles_qs = MagicMock()
-        with patch.dict(sys.modules, {
-            "apps.notificaciones.models": mock_notif_module,
-            "apps.notificaciones.tasks": mock_tasks_module,
-        }), patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs), \
-           patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter:
+        with (
+            patch.dict(
+                sys.modules,
+                {
+                    "apps.notificaciones.models": mock_notif_module,
+                    "apps.notificaciones.tasks": mock_tasks_module,
+                },
+            ),
+            patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs),
+            patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter,
+        ):
             mock_emp_filter.return_value.select_related.return_value = mock_qs
             # Should not raise - exception caught at lines 300-302
-            inv_signals.enviar_notificacion_alerta(
-                sender=AlertasStock, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_alerta(sender=AlertasStock, instance=alerta, created=True)
         alerta.refresh_from_db()
         self.assertTrue(alerta.notificacion_enviada)
 
@@ -764,6 +793,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         """Lines 327-328: Exception importing Celery tasks → caught silently (pass)."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat8 = _make_categoria("ena8")
         und8 = _make_unidad("ena8")
         imp8 = _make_impuesto("ena8")
@@ -796,15 +826,19 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         mock_qs = MagicMock()
         mock_qs.__iter__ = MagicMock(return_value=iter([mock_emp]))
         mock_roles_qs = MagicMock()
-        with patch.dict(sys.modules, {
-            "apps.notificaciones.models": mock_notif_module,
-            "apps.notificaciones.tasks": mock_broken_tasks,
-        }), patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs), \
-           patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter:
+        with (
+            patch.dict(
+                sys.modules,
+                {
+                    "apps.notificaciones.models": mock_notif_module,
+                    "apps.notificaciones.tasks": mock_broken_tasks,
+                },
+            ),
+            patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs),
+            patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter,
+        ):
             mock_emp_filter.return_value.select_related.return_value = mock_qs
-            inv_signals.enviar_notificacion_alerta(
-                sender=AlertasStock, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_alerta(sender=AlertasStock, instance=alerta, created=True)
         alerta.refresh_from_db()
         self.assertTrue(alerta.notificacion_enviada)
 
@@ -812,6 +846,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         """Lines 347-348: Outer Exception handler in enviar_notificacion_alerta."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat9 = _make_categoria("ena9")
         und9 = _make_unidad("ena9")
         imp9 = _make_impuesto("ena9")
@@ -833,14 +868,15 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
         mock_broken_usuarios = MagicMock()
         mock_broken_usuarios.Roles.objects.filter.side_effect = Exception("db error")
         mock_broken_usuarios.Empleados = MagicMock()
-        with patch.dict(sys.modules, {
-            "apps.notificaciones.models": mock_notif_module,
-            "apps.usuarios.models": mock_broken_usuarios,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "apps.notificaciones.models": mock_notif_module,
+                "apps.usuarios.models": mock_broken_usuarios,
+            },
+        ):
             # Exception inside → gets caught at line 347-348, no crash
-            inv_signals.enviar_notificacion_alerta(
-                sender=AlertasStock, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_alerta(sender=AlertasStock, instance=alerta, created=True)
         # notificacion_enviada stays False (outer exception: no update)
         alerta.refresh_from_db()
         # Signal didn't update in the except Exception path (only ImportError path updates)
@@ -849,6 +885,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
     def test_import_error_marks_notificacion_enviada(self):
         """Lines 343-346: ImportError during notifications import → marks as enviada."""
         import sys
+
         cat3 = _make_categoria("ena3")
         und3 = _make_unidad("ena3")
         imp3 = _make_impuesto("ena3")
@@ -948,6 +985,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
 
 # ─── verificar_alertas_vencimiento ───────────────────────────────────────────
 
+
 class VerificarAlertasVencimientoTest(TestCase):
     """Tests para signal verificar_alertas_vencimiento (post_save LotesProducto)"""
 
@@ -1042,27 +1080,25 @@ class VerificarAlertasVencimientoTest(TestCase):
     def test_lote_sin_fecha_vencimiento_no_genera_alerta(self):
         """Línea 379: dias_hasta_vencimiento=None → return sin crear alerta."""
         from apps.inventario import signals as inv_signals
+
         # Call signal directly with a mock whose dias_hasta_vencimiento is None
         mock_lote = MagicMock()
         mock_lote.bloqueado = False
         mock_lote.dias_hasta_vencimiento = None
         initial_count = AlertasVencimiento.objects.count()
-        inv_signals.verificar_alertas_vencimiento(
-            sender=LotesProducto, instance=mock_lote, created=True
-        )
+        inv_signals.verificar_alertas_vencimiento(sender=LotesProducto, instance=mock_lote, created=True)
         # No alert created = returned early at line 379
         self.assertEqual(AlertasVencimiento.objects.count(), initial_count)
 
     def test_lote_vencido_ya_bloqueado_no_actualiza(self):
         """Línea 387->400: Lote vencido pero ya bloqueado → signal no actualiza bloqueado."""
         from apps.inventario import signals as inv_signals
+
         mock_instance = MagicMock()
         mock_instance.bloqueado = True  # Already blocked → line 373 returns early
         mock_instance.dias_hasta_vencimiento = -5
         # Call signal with bloqueado=True → returns at line 374
-        inv_signals.verificar_alertas_vencimiento(
-            sender=LotesProducto, instance=mock_instance, created=False
-        )
+        inv_signals.verificar_alertas_vencimiento(sender=LotesProducto, instance=mock_instance, created=False)
         # No AlertasVencimiento should be created
         self.assertEqual(AlertasVencimiento.objects.count(), 0)
 
@@ -1070,6 +1106,7 @@ class VerificarAlertasVencimientoTest(TestCase):
         """Línea 387 branch covered: dias_restantes<0 + instance.bloqueado=False → update called."""
         from apps.inventario import signals as inv_signals
         from unittest.mock import patch, MagicMock
+
         mock_instance = MagicMock()
         mock_instance.bloqueado = False
         mock_instance.dias_hasta_vencimiento = -1
@@ -1090,6 +1127,7 @@ class VerificarAlertasVencimientoTest(TestCase):
 
 
 # ─── enviar_notificacion_vencimiento ─────────────────────────────────────────
+
 
 class EnviarNotificacionVencimientoTest(TestCase):
     """Tests para signal enviar_notificacion_vencimiento (post_save AlertasVencimiento)"""
@@ -1199,6 +1237,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
         """Lines 483-510: Call signal directly with Gerente employee so loop body executes."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat_e2 = _make_categoria("env2")
         und_e2 = _make_unidad("env2")
         imp_e2 = _make_impuesto("env2")
@@ -1231,9 +1270,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
             alerta.save()
             AlertasVencimiento.objects.filter(pk=alerta.pk).update(notificacion_enviada=False)
             alerta.refresh_from_db()
-            inv_signals.enviar_notificacion_vencimiento(
-                sender=AlertasVencimiento, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_vencimiento(sender=AlertasVencimiento, instance=alerta, created=True)
             alerta.refresh_from_db()
             self.assertTrue(alerta.notificacion_enviada)
 
@@ -1241,6 +1278,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
         """Lines 484-496: Employee with perfilesusuario triggers portal notification for vencimiento."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat_ep = _make_categoria("envp")
         und_ep = _make_unidad("envp")
         imp_ep = _make_impuesto("envp")
@@ -1281,13 +1319,13 @@ class EnviarNotificacionVencimientoTest(TestCase):
         mock_qs = MagicMock()
         mock_qs.__iter__ = MagicMock(return_value=iter([mock_emp]))
         mock_roles_qs = MagicMock()
-        with patch.dict(sys.modules, {"apps.notificaciones.models": mock_notif_module}), \
-             patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs), \
-             patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter:
+        with (
+            patch.dict(sys.modules, {"apps.notificaciones.models": mock_notif_module}),
+            patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs),
+            patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter,
+        ):
             mock_emp_filter.return_value.select_related.return_value = mock_qs
-            inv_signals.enviar_notificacion_vencimiento(
-                sender=AlertasVencimiento, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_vencimiento(sender=AlertasVencimiento, instance=alerta, created=True)
         alerta.refresh_from_db()
         self.assertTrue(alerta.notificacion_enviada)
         mock_portal.objects.create.assert_called_once()
@@ -1296,6 +1334,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
         """Line 499->482: Employee without email skips email sending."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat_ne = _make_categoria("envne")
         und_ne = _make_unidad("envne")
         imp_ne = _make_impuesto("envne")
@@ -1328,13 +1367,13 @@ class EnviarNotificacionVencimientoTest(TestCase):
         mock_qs = MagicMock()
         mock_qs.__iter__ = MagicMock(return_value=iter([mock_emp]))
         mock_roles_qs = MagicMock()
-        with patch.dict(sys.modules, {"apps.notificaciones.models": mock_notif_module}), \
-             patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs), \
-             patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter:
+        with (
+            patch.dict(sys.modules, {"apps.notificaciones.models": mock_notif_module}),
+            patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs),
+            patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter,
+        ):
             mock_emp_filter.return_value.select_related.return_value = mock_qs
-            inv_signals.enviar_notificacion_vencimiento(
-                sender=AlertasVencimiento, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_vencimiento(sender=AlertasVencimiento, instance=alerta, created=True)
         alerta.refresh_from_db()
         self.assertTrue(alerta.notificacion_enviada)
         mock_notif_module.EmailsEnviados.objects.create.assert_not_called()
@@ -1343,6 +1382,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
         """Lines 509-510: Exception during email write → caught and logged."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat_ee = _make_categoria("envee")
         und_ee = _make_unidad("envee")
         imp_ee = _make_impuesto("envee")
@@ -1381,14 +1421,14 @@ class EnviarNotificacionVencimientoTest(TestCase):
         mock_qs = MagicMock()
         mock_qs.__iter__ = MagicMock(return_value=iter([mock_emp]))
         mock_roles_qs = MagicMock()
-        with patch.dict(sys.modules, {"apps.notificaciones.models": mock_notif_module}), \
-             patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs), \
-             patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter:
+        with (
+            patch.dict(sys.modules, {"apps.notificaciones.models": mock_notif_module}),
+            patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs),
+            patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter,
+        ):
             mock_emp_filter.return_value.select_related.return_value = mock_qs
             # Exception in email create is caught at 509-510, no crash
-            inv_signals.enviar_notificacion_vencimiento(
-                sender=AlertasVencimiento, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_vencimiento(sender=AlertasVencimiento, instance=alerta, created=True)
         alerta.refresh_from_db()
         self.assertTrue(alerta.notificacion_enviada)
 
@@ -1396,6 +1436,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
         """Lines 495-496: Exception during portal notification create for vencimiento → caught."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat_pce = _make_categoria("vpce")
         und_pce = _make_unidad("vpce")
         imp_pce = _make_impuesto("vpce")
@@ -1434,13 +1475,13 @@ class EnviarNotificacionVencimientoTest(TestCase):
         mock_qs = MagicMock()
         mock_qs.__iter__ = MagicMock(return_value=iter([mock_emp]))
         mock_roles_qs = MagicMock()
-        with patch.dict(sys.modules, {"apps.notificaciones.models": mock_notif_module}), \
-             patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs), \
-             patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter:
+        with (
+            patch.dict(sys.modules, {"apps.notificaciones.models": mock_notif_module}),
+            patch("apps.usuarios.models.Roles.objects.filter", return_value=mock_roles_qs),
+            patch("apps.usuarios.models.Empleados.objects.filter") as mock_emp_filter,
+        ):
             mock_emp_filter.return_value.select_related.return_value = mock_qs
-            inv_signals.enviar_notificacion_vencimiento(
-                sender=AlertasVencimiento, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_vencimiento(sender=AlertasVencimiento, instance=alerta, created=True)
         alerta.refresh_from_db()
         self.assertTrue(alerta.notificacion_enviada)
         mock_portal.objects.create.assert_called_once()
@@ -1469,13 +1510,12 @@ class EnviarNotificacionVencimientoTest(TestCase):
 
         mock_alerta_qs = MagicMock()
         mock_alerta_qs.exists.return_value = True
-        with patch("apps.inventario.signals.LotesProducto.objects.filter") as mock_lf, \
-             patch("apps.inventario.signals.AlertasVencimiento.objects.filter",
-                   return_value=mock_alerta_qs), \
-             patch("apps.inventario.signals.AlertasVencimiento.objects.create"):
-            inv_signals.verificar_alertas_vencimiento(
-                sender=LotesProducto, instance=instance, created=False
-            )
+        with (
+            patch("apps.inventario.signals.LotesProducto.objects.filter") as mock_lf,
+            patch("apps.inventario.signals.AlertasVencimiento.objects.filter", return_value=mock_alerta_qs),
+            patch("apps.inventario.signals.AlertasVencimiento.objects.create"),
+        ):
+            inv_signals.verificar_alertas_vencimiento(sender=LotesProducto, instance=instance, created=False)
         # bloqueado was True at line 387 → LotesProducto.objects.filter NOT called
         mock_lf.assert_not_called()
 
@@ -1483,6 +1523,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
         """Lines 523-524: Exception during notification → prints error but doesn't crash."""
         import sys
         from apps.inventario import signals as inv_signals
+
         cat_e3 = _make_categoria("env3")
         und_e3 = _make_unidad("env3")
         imp_e3 = _make_impuesto("env3")
@@ -1514,14 +1555,15 @@ class EnviarNotificacionVencimientoTest(TestCase):
         mock_broken_usuarios = MagicMock()
         mock_broken_usuarios.Roles.objects.filter.side_effect = Exception("forced error")
         mock_broken_usuarios.Empleados = MagicMock()
-        with patch.dict(sys.modules, {
-            "apps.notificaciones.models": mock_broken_module,
-            "apps.usuarios.models": mock_broken_usuarios,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "apps.notificaciones.models": mock_broken_module,
+                "apps.usuarios.models": mock_broken_usuarios,
+            },
+        ):
             # Call signal directly - exception should be caught by line 523-524
-            inv_signals.enviar_notificacion_vencimiento(
-                sender=AlertasVencimiento, instance=alerta, created=True
-            )
+            inv_signals.enviar_notificacion_vencimiento(sender=AlertasVencimiento, instance=alerta, created=True)
         # No crash = exception was caught at 523-524
 
     def test_alerta_vencimiento_dispara_signal(self):

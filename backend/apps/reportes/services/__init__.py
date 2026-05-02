@@ -96,17 +96,17 @@ class ReporteService:
             )
 
             # Ventas por método de pago
-            ventas_efectivo = ventas_query.filter(
-                id_medio_pago__descripcion__icontains="efectivo"
-            ).aggregate(total=Sum("monto_total"))["total"] or Decimal("0.00")
+            ventas_efectivo = ventas_query.filter(id_medio_pago__descripcion__icontains="efectivo").aggregate(
+                total=Sum("monto_total")
+            )["total"] or Decimal("0.00")
 
-            ventas_tarjeta = ventas_query.filter(
-                id_medio_pago__descripcion__icontains="tarjeta"
-            ).aggregate(total=Sum("monto_total"))["total"] or Decimal("0.00")
+            ventas_tarjeta = ventas_query.filter(id_medio_pago__descripcion__icontains="tarjeta").aggregate(
+                total=Sum("monto_total")
+            )["total"] or Decimal("0.00")
 
-            ventas_online = ventas_query.filter(
-                id_medio_pago__descripcion__icontains="online"
-            ).aggregate(total=Sum("monto_total"))["total"] or Decimal("0.00")
+            ventas_online = ventas_query.filter(id_medio_pago__descripcion__icontains="online").aggregate(
+                total=Sum("monto_total")
+            )["total"] or Decimal("0.00")
 
             # Top 10 productos más vendidos
             top_productos_qs = (
@@ -120,8 +120,7 @@ class ReporteService:
             )
             # Añadir alias id_producto__nombre para compatibilidad con tests
             top_productos = [
-                {**item, "id_producto__nombre": item.get("id_producto__descripcion")}
-                for item in top_productos_qs
+                {**item, "id_producto__nombre": item.get("id_producto__descripcion")} for item in top_productos_qs
             ]
 
             # Ventas por día
@@ -221,9 +220,7 @@ class ReporteService:
             estadisticas_diarias = (
                 recargas_query.extra(select={"fecha_dia": "CAST(fecha_carga AS DATE)"})
                 .values("fecha_dia")
-                .annotate(
-                    cantidad_recargas=Count("id_carga"), monto_acreditado=Sum("monto_cargado")
-                )
+                .annotate(cantidad_recargas=Count("id_carga"), monto_acreditado=Sum("monto_cargado"))
                 .order_by("fecha_dia")
             )
 
@@ -244,9 +241,7 @@ class ReporteService:
             raise ValidationError(f"Error: {str(e)}")
 
     @staticmethod
-    def generar_reporte_top_productos(
-        fecha_inicio: date, fecha_fin: date, limite: int = 20
-    ) -> Dict:
+    def generar_reporte_top_productos(fecha_inicio: date, fecha_fin: date, limite: int = 20) -> Dict:
         """
         Genera reporte de productos más vendidos.
 
@@ -284,15 +279,10 @@ class ReporteService:
             )
 
             # Totales
-            totales = top_productos.aggregate(
-                total_productos=Sum("cantidad_vendida"), monto_total=Sum("total_vendido")
-            )
+            totales = top_productos.aggregate(total_productos=Sum("cantidad_vendida"), monto_total=Sum("total_vendido"))
 
             # Añadir alias 'nombre' para compatibilidad con tests
-            top_productos_list = [
-                {**item, "nombre": item.get("id_producto__descripcion")}
-                for item in top_productos
-            ]
+            top_productos_list = [{**item, "nombre": item.get("id_producto__descripcion")} for item in top_productos]
 
             return {
                 "fecha_inicio": fecha_inicio,
@@ -308,9 +298,7 @@ class ReporteService:
             raise ValidationError(f"Error: {str(e)}")
 
     @staticmethod
-    def generar_reporte_consumos_tarjeta(
-        nro_tarjeta: str, fecha_inicio: date, fecha_fin: date
-    ) -> Dict:
+    def generar_reporte_consumos_tarjeta(nro_tarjeta: str, fecha_inicio: date, fecha_fin: date) -> Dict:
         """
         Genera reporte de consumos de una tarjeta.
 
@@ -344,7 +332,8 @@ class ReporteService:
 
             # Obtener consumos
             from django.conf import settings as _s
-            if getattr(_s, 'USE_TZ', True):
+
+            if getattr(_s, "USE_TZ", True):
                 fecha_inicio_dt = make_aware(datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0))
                 fecha_fin_dt = make_aware(datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59))
             else:
@@ -355,15 +344,11 @@ class ReporteService:
             )
 
             # Estadísticas
-            stats = consumos.aggregate(
-                total_consumos=Count("id_consumo"), monto_total=Sum("monto_consumido")
-            )
+            stats = consumos.aggregate(total_consumos=Count("id_consumo"), monto_total=Sum("monto_consumido"))
 
             # Saldo inicial (primer consumo del período)
             primer_consumo = consumos.order_by("fecha_consumo").first()
-            saldo_inicial = (
-                primer_consumo.saldo_anterior if primer_consumo else tarjeta.saldo_actual
-            )
+            saldo_inicial = primer_consumo.saldo_anterior if primer_consumo else tarjeta.saldo_actual
 
             # Detalles de consumos
             consumos_detalle = consumos.values(
@@ -392,9 +377,7 @@ class ReporteService:
             raise ValidationError(f"Error: {str(e)}")
 
     @staticmethod
-    def generar_reporte_consumos_hijo(
-        id_hijo: int, fecha_inicio: date, fecha_fin: date
-    ) -> Dict:
+    def generar_reporte_consumos_hijo(id_hijo: int, fecha_inicio: date, fecha_fin: date) -> Dict:
         """
         Genera reporte de consumos de un hijo por su id_hijo.
 
@@ -420,7 +403,8 @@ class ReporteService:
                 }
 
             from django.conf import settings as _s
-            if getattr(_s, 'USE_TZ', True):
+
+            if getattr(_s, "USE_TZ", True):
                 fecha_inicio_dt = make_aware(datetime(fecha_inicio.year, fecha_inicio.month, fecha_inicio.day, 0, 0, 0))
                 fecha_fin_dt = make_aware(datetime(fecha_fin.year, fecha_fin.month, fecha_fin.day, 23, 59, 59))
             else:
@@ -432,14 +416,10 @@ class ReporteService:
                 fecha_consumo__lte=fecha_fin_dt,
             )
 
-            stats = consumos.aggregate(
-                total_consumos=Count("id_consumo"), monto_total=Sum("monto_consumido")
-            )
+            stats = consumos.aggregate(total_consumos=Count("id_consumo"), monto_total=Sum("monto_consumido"))
 
             primer_consumo = consumos.order_by("fecha_consumo").first()
-            saldo_inicial = (
-                primer_consumo.saldo_anterior if primer_consumo else tarjeta.saldo_actual
-            )
+            saldo_inicial = primer_consumo.saldo_anterior if primer_consumo else tarjeta.saldo_actual
 
             consumos_detalle = list(
                 consumos.values(
@@ -455,35 +435,40 @@ class ReporteService:
             # Adjuntar productos de cada venta --------------------------------
             venta_ids = []
             for c in consumos_detalle:
-                match = re.search(r'Venta #(\d+)', c.get('detalle') or '')
+                match = re.search(r"Venta #(\d+)", c.get("detalle") or "")
                 if match:
                     venta_ids.append(int(match.group(1)))
 
             detalles_por_venta: Dict[int, list] = {}
             if venta_ids:
                 from apps.ventas.models import DetallesVenta
-                filas = DetallesVenta.objects.filter(
-                    id_venta__in=venta_ids
-                ).select_related('id_producto').values(
-                    'id_venta_id',
-                    'id_producto__descripcion',
-                    'cantidad',
-                    'precio_unitario',
-                    'subtotal',
+
+                filas = (
+                    DetallesVenta.objects.filter(id_venta__in=venta_ids)
+                    .select_related("id_producto")
+                    .values(
+                        "id_venta_id",
+                        "id_producto__descripcion",
+                        "cantidad",
+                        "precio_unitario",
+                        "subtotal",
+                    )
                 )
                 for fila in filas:
-                    vid = fila['id_venta_id']
-                    detalles_por_venta.setdefault(vid, []).append({
-                        'descripcion': fila['id_producto__descripcion'],
-                        'cantidad': fila['cantidad'],
-                        'precio_unitario': fila['precio_unitario'],
-                        'subtotal': fila['subtotal'],
-                    })
+                    vid = fila["id_venta_id"]
+                    detalles_por_venta.setdefault(vid, []).append(
+                        {
+                            "descripcion": fila["id_producto__descripcion"],
+                            "cantidad": fila["cantidad"],
+                            "precio_unitario": fila["precio_unitario"],
+                            "subtotal": fila["subtotal"],
+                        }
+                    )
 
             for c in consumos_detalle:
-                match = re.search(r'Venta #(\d+)', c.get('detalle') or '')
+                match = re.search(r"Venta #(\d+)", c.get("detalle") or "")
                 vid = int(match.group(1)) if match else None
-                c['productos'] = detalles_por_venta.get(vid, [])
+                c["productos"] = detalles_por_venta.get(vid, [])
             # -----------------------------------------------------------------
 
             total_gastado = abs(stats["monto_total"] or Decimal("0.00"))
@@ -537,9 +522,9 @@ class ReporteService:
         """
         try:
             # Ingresos por ventas
-            ventas_stats = Ventas.objects.filter(
-                fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin
-            ).aggregate(total_ventas=Sum("monto_total"))
+            ventas_stats = Ventas.objects.filter(fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin).aggregate(
+                total_ventas=Sum("monto_total")
+            )
 
             ingresos_ventas = ventas_stats["total_ventas"] or Decimal("0.00")
 
@@ -563,14 +548,16 @@ class ReporteService:
 
             # Ventas por método de pago
             ventas_efectivo_stats = Ventas.objects.filter(
-                fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin,
-                id_medio_pago__descripcion__icontains='efectivo'
+                fecha__date__gte=fecha_inicio,
+                fecha__date__lte=fecha_fin,
+                id_medio_pago__descripcion__icontains="efectivo",
             ).aggregate(total=Sum("monto_total"))
             ventas_efectivo_monto = ventas_efectivo_stats["total"] or Decimal("0.00")
 
             ventas_tarjeta_stats = Ventas.objects.filter(
-                fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin,
-                id_medio_pago__descripcion__icontains='tarjeta'
+                fecha__date__gte=fecha_inicio,
+                fecha__date__lte=fecha_fin,
+                id_medio_pago__descripcion__icontains="tarjeta",
             ).aggregate(total=Sum("monto_total"))
             ventas_tarjeta_monto = ventas_tarjeta_stats["total"] or Decimal("0.00")
 
@@ -594,9 +581,7 @@ class ReporteService:
                 "utilidad_neta": margen_bruto,
                 "costo_inventario": costo_inventario,
                 "margen_bruto": margen_bruto,
-                "porcentaje_margen": (
-                    (margen_bruto / ingreso_total * 100) if ingreso_total > 0 else Decimal("0.00")
-                ),
+                "porcentaje_margen": ((margen_bruto / ingreso_total * 100) if ingreso_total > 0 else Decimal("0.00")),
             }
 
         except Exception as e:

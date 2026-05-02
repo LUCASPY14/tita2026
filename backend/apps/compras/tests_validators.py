@@ -406,9 +406,7 @@ class ValidadoresSaldoCompraTestCase(TestCase):
     def test_saldo_compra_valido(self):
         """Saldo válido dentro del rango debe pasar"""
         try:
-            validar_saldo_compra(
-                saldo_pendiente=Decimal("500000.00"), monto_total=Decimal("1000000.00")
-            )
+            validar_saldo_compra(saldo_pendiente=Decimal("500000.00"), monto_total=Decimal("1000000.00"))
         except ValidationError:  # pragma: no cover
             self.fail("Saldo válido no debería fallar")
 
@@ -422,17 +420,13 @@ class ValidadoresSaldoCompraTestCase(TestCase):
     def test_saldo_compra_negativo_invalido(self):
         """Saldo negativo debe fallar"""
         with self.assertRaises(ValidationError) as context:
-            validar_saldo_compra(
-                saldo_pendiente=Decimal("-100.00"), monto_total=Decimal("1000000.00")
-            )
+            validar_saldo_compra(saldo_pendiente=Decimal("-100.00"), monto_total=Decimal("1000000.00"))
         self.assertIn("negativo", str(context.exception).lower())
 
     def test_saldo_mayor_que_total_invalido(self):
         """Saldo > monto total debe fallar"""
         with self.assertRaises(ValidationError) as context:
-            validar_saldo_compra(
-                saldo_pendiente=Decimal("2000000.00"), monto_total=Decimal("1000000.00")
-            )
+            validar_saldo_compra(saldo_pendiente=Decimal("2000000.00"), monto_total=Decimal("1000000.00"))
         self.assertIn("mayor al total", str(context.exception).lower())
 
 
@@ -577,42 +571,32 @@ class ValidadoresAplicacionPagoTestCase(TestCase):
     def test_aplicacion_pago_valida(self):
         """Aplicación válida dentro del saldo debe pasar"""
         try:
-            validar_aplicacion_pago(
-                monto_aplicado=Decimal("300000.00"), saldo_compra=Decimal("500000.00")
-            )
+            validar_aplicacion_pago(monto_aplicado=Decimal("300000.00"), saldo_compra=Decimal("500000.00"))
         except ValidationError:  # pragma: no cover
             self.fail("Aplicación válida no debería fallar")
 
     def test_aplicacion_pago_total_valida(self):
         """Aplicación por el total del saldo debe pasar"""
         try:
-            validar_aplicacion_pago(
-                monto_aplicado=Decimal("500000.00"), saldo_compra=Decimal("500000.00")
-            )
+            validar_aplicacion_pago(monto_aplicado=Decimal("500000.00"), saldo_compra=Decimal("500000.00"))
         except ValidationError:  # pragma: no cover
             self.fail("Aplicación total debería ser válida")
 
     def test_aplicacion_pago_excede_saldo(self):
         """Aplicación que excede el saldo debe fallar"""
         with self.assertRaises(ValidationError) as context:
-            validar_aplicacion_pago(
-                monto_aplicado=Decimal("600000.00"), saldo_compra=Decimal("500000.00")
-            )
+            validar_aplicacion_pago(monto_aplicado=Decimal("600000.00"), saldo_compra=Decimal("500000.00"))
         self.assertIn("excede", str(context.exception).lower())
 
     def test_aplicacion_pago_cero_invalida(self):
         """Aplicación de cero debe fallar"""
         with self.assertRaises(ValidationError):
-            validar_aplicacion_pago(
-                monto_aplicado=Decimal("0.00"), saldo_compra=Decimal("500000.00")
-            )
+            validar_aplicacion_pago(monto_aplicado=Decimal("0.00"), saldo_compra=Decimal("500000.00"))
 
     def test_aplicacion_pago_negativa_invalida(self):
         """Aplicación negativa debe fallar"""
         with self.assertRaises(ValidationError):
-            validar_aplicacion_pago(
-                monto_aplicado=Decimal("-100000.00"), saldo_compra=Decimal("500000.00")
-            )
+            validar_aplicacion_pago(monto_aplicado=Decimal("-100000.00"), saldo_compra=Decimal("500000.00"))
 
 
 class ValidadoresSumaAplicacionesTestCase(TestCase):
@@ -621,27 +605,21 @@ class ValidadoresSumaAplicacionesTestCase(TestCase):
     def test_suma_aplicaciones_valida(self):
         """Suma de aplicaciones menor al pago debe pasar"""
         try:
-            validar_suma_aplicaciones(
-                aplicaciones_totales=Decimal("800000.00"), monto_pago=Decimal("1000000.00")
-            )
+            validar_suma_aplicaciones(aplicaciones_totales=Decimal("800000.00"), monto_pago=Decimal("1000000.00"))
         except ValidationError:  # pragma: no cover
             self.fail("Suma válida no debería fallar")
 
     def test_suma_aplicaciones_exacta_valida(self):
         """Suma exacta al monto del pago debe pasar"""
         try:
-            validar_suma_aplicaciones(
-                aplicaciones_totales=Decimal("1000000.00"), monto_pago=Decimal("1000000.00")
-            )
+            validar_suma_aplicaciones(aplicaciones_totales=Decimal("1000000.00"), monto_pago=Decimal("1000000.00"))
         except ValidationError:  # pragma: no cover
             self.fail("Suma exacta debería ser válida")
 
     def test_suma_aplicaciones_excede_pago(self):
         """Suma que excede el pago debe fallar"""
         with self.assertRaises(ValidationError) as context:
-            validar_suma_aplicaciones(
-                aplicaciones_totales=Decimal("1200000.00"), monto_pago=Decimal("1000000.00")
-            )
+            validar_suma_aplicaciones(aplicaciones_totales=Decimal("1200000.00"), monto_pago=Decimal("1000000.00"))
         self.assertIn("excede", str(context.exception).lower())
 
 
@@ -651,27 +629,21 @@ class ValidadoresNotaCreditoTestCase(TestCase):
     def test_monto_nota_credito_valido(self):
         """Monto de NC válido debe pasar"""
         try:
-            validar_monto_nota_credito(
-                monto_nc=Decimal("200000.00"), monto_compra=Decimal("1000000.00")
-            )
+            validar_monto_nota_credito(monto_nc=Decimal("200000.00"), monto_compra=Decimal("1000000.00"))
         except ValidationError:  # pragma: no cover
             self.fail("Monto de NC válido no debería fallar")
 
     def test_monto_nota_credito_total_valido(self):
         """NC por el total de la compra debe pasar"""
         try:
-            validar_monto_nota_credito(
-                monto_nc=Decimal("1000000.00"), monto_compra=Decimal("1000000.00")
-            )
+            validar_monto_nota_credito(monto_nc=Decimal("1000000.00"), monto_compra=Decimal("1000000.00"))
         except ValidationError:  # pragma: no cover
             self.fail("NC total debería ser válida")
 
     def test_monto_nota_credito_excede_compra(self):
         """NC que excede la compra debe fallar"""
         with self.assertRaises(ValidationError) as context:
-            validar_monto_nota_credito(
-                monto_nc=Decimal("1500000.00"), monto_compra=Decimal("1000000.00")
-            )
+            validar_monto_nota_credito(monto_nc=Decimal("1500000.00"), monto_compra=Decimal("1000000.00"))
         self.assertIn("exceder", str(context.exception).lower())
 
     def test_monto_nota_credito_cero_invalido(self):

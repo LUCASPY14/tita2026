@@ -28,61 +28,55 @@ class TarjetasViewSet(viewsets.ModelViewSet):
     ordering_fields = ["fecha_creacion"]
     ordering = ["nro_tarjeta"]
 
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
     def scan(self, request):
         """
         Endpoint para escaneo de código de barras en POS.
-        
+
         POST: { "codigo_barras": "ABC123456" }
         Returns: Información completa de la tarjeta incluyendo foto del hijo
         """
-        codigo_barras = request.data.get('codigo_barras', '').strip()
-        
+        codigo_barras = request.data.get("codigo_barras", "").strip()
+
         if not codigo_barras:
-            return Response(
-                {'error': 'Código de barras requerido'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+            return Response({"error": "Código de barras requerido"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            tarjeta = Tarjetas.objects.select_related('id_hijo').get(codigo_barras=codigo_barras)
-            
+            tarjeta = Tarjetas.objects.select_related("id_hijo").get(codigo_barras=codigo_barras)
+
             # Verificar estado de la tarjeta (case-insensitive)
-            if tarjeta.estado.upper() != 'ACTIVA':
+            if tarjeta.estado.upper() != "ACTIVA":
                 return Response(
-                    {
-                        'error': 'Tarjeta inactiva',
-                        'estado': tarjeta.estado,
-                        'codigo_barras': codigo_barras
-                    },
-                    status=status.HTTP_403_FORBIDDEN
+                    {"error": "Tarjeta inactiva", "estado": tarjeta.estado, "codigo_barras": codigo_barras},
+                    status=status.HTTP_403_FORBIDDEN,
                 )
-            
+
             # Retornar información completa
-            serializer = self.get_serializer(tarjeta, context={'request': request})
-            
+            serializer = self.get_serializer(tarjeta, context={"request": request})
+
             # Obtener restricciones activas del hijo
             restricciones = list(
-                RestriccionesHijos.objects
-                .filter(id_hijo=tarjeta.id_hijo, estado=True)
-                .values('tipo_restriccion', 'descripcion', 'severidad', 'requiere_autorizacion')
+                RestriccionesHijos.objects.filter(id_hijo=tarjeta.id_hijo, estado=True).values(
+                    "tipo_restriccion", "descripcion", "severidad", "requiere_autorizacion"
+                )
             )
-            
-            return Response({
-                'tarjeta': serializer.data,
-                'verificacion': {
-                    'estado_ok': True,
-                    'saldo_disponible': tarjeta.saldo_disponible,
-                    'alerta_saldo_bajo': tarjeta.esta_en_alerta,
-                    'timestamp': timezone.now(),
-                    'restricciones': restricciones,
+
+            return Response(
+                {
+                    "tarjeta": serializer.data,
+                    "verificacion": {
+                        "estado_ok": True,
+                        "saldo_disponible": tarjeta.saldo_disponible,
+                        "alerta_saldo_bajo": tarjeta.esta_en_alerta,
+                        "timestamp": timezone.now(),
+                        "restricciones": restricciones,
+                    },
                 }
-            })
-            
+            )
+
         except Tarjetas.DoesNotExist:
             return Response(
-                {'error': 'Tarjeta no encontrada', 'codigo_barras': codigo_barras}, 
-                status=status.HTTP_404_NOT_FOUND
+                {"error": "Tarjeta no encontrada", "codigo_barras": codigo_barras}, status=status.HTTP_404_NOT_FOUND
             )
 
 
@@ -239,9 +233,7 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
             # supervisor_id = request.user.empleado.id_empleado
             supervisor_id = request.data.get("supervisor_id", 2)
 
-            resultado = RecargaService.aprobar_recarga_supervisor(
-                recarga_id=recarga_id, supervisor_id=supervisor_id
-            )
+            resultado = RecargaService.aprobar_recarga_supervisor(recarga_id=recarga_id, supervisor_id=supervisor_id)
 
             return Response(resultado, status=status.HTTP_200_OK)
 
@@ -321,14 +313,10 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
                 if monto_decimal <= 0:
                     raise ValueError("Monto debe ser mayor a cero")
             except (ValueError, InvalidOperation) as e:  # pragma: no cover
-                return Response(
-                    {"error": f"Monto inválido: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({"error": f"Monto inválido: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Calcular montos
-            resultado_montos = RecargaService.calcular_montos(
-                monto_recarga=monto_decimal, metodo_pago="bancard"
-            )
+            resultado_montos = RecargaService.calcular_montos(monto_recarga=monto_decimal, metodo_pago="bancard")
 
             # Crear recarga en estado pendiente
             recarga = CargasSaldo.objects.create(
@@ -356,9 +344,7 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
             if not resultado_bancard.get("success"):
                 # Cancelar recarga si Bancard falló
                 recarga.estado = "rechazada"
-                recarga.referencia = str(
-                    resultado_bancard.get("error", "Error desconocido de Bancard")
-                )[:100]
+                recarga.referencia = str(resultado_bancard.get("error", "Error desconocido de Bancard"))[:100]
                 recarga.save()
 
                 return Response(
@@ -433,9 +419,7 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
     def por_categoria(self, request):
         """Obtiene configuraciones agrupadas por categoría"""
         try:
-            configuraciones = ConfiguracionSistema.objects.filter(estado=True).order_by(
-                "categoria", "clave"
-            )
+            configuraciones = ConfiguracionSistema.objects.filter(estado=True).order_by("categoria", "clave")
 
             # Agrupar por categoría
             por_categoria = {}
@@ -456,9 +440,7 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
             nuevo_valor = request.data.get("valor")
 
             if nuevo_valor is None:
-                return Response(
-                    {"error": "El campo valor es requerido"}, status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({"error": "El campo valor es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Validar el valor según el tipo y restricciones de la configuración
             error_validacion = self._validar_valor_config(config, nuevo_valor)
@@ -515,6 +497,7 @@ class ConfiguracionSistemaViewSet(viewsets.ModelViewSet):
         elif tipo == "decimal":
             try:
                 from decimal import Decimal, InvalidOperation
+
                 valor_num = Decimal(valor_str)
             except (InvalidOperation, TypeError):
                 return f"El valor debe ser un número decimal (tipo: {tipo})"

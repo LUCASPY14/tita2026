@@ -57,14 +57,10 @@ class StockForecastingServiceTest(TestCase):
         )
 
         # Crear stock
-        self.stock = StockUnico.objects.create(
-            id_producto=self.producto, cantidad=Decimal("9999.00")
-        )
+        self.stock = StockUnico.objects.create(id_producto=self.producto, cantidad=Decimal("9999.00"))
 
         # Crear rol para empleado
-        self.rol = Roles.objects.create(
-            nombre_rol="Vendedor", descripcion="Rol de vendedor", estado=True
-        )
+        self.rol = Roles.objects.create(nombre_rol="Vendedor", descripcion="Rol de vendedor", estado=True)
 
         # Crear empleado para ventas
         self.empleado = Empleados.objects.create(
@@ -117,9 +113,9 @@ class StockForecastingServiceTest(TestCase):
             )
 
             # Backdate the signal-created movement for ML historical queries
-            MovimientosStock.objects.filter(
-                id_venta=venta, tipo_movimiento="Egreso", motivo="venta"
-            ).update(fecha_hora=fecha)
+            MovimientosStock.objects.filter(id_venta=venta, tipo_movimiento="Egreso", motivo="venta").update(
+                fecha_hora=fecha
+            )
 
     def test_obtener_datos_historicos(self):
         """Test: obtener datos históricos de ventas"""
@@ -136,9 +132,7 @@ class StockForecastingServiceTest(TestCase):
         """Test: cálculo de estadísticas básicas"""
         self._crear_ventas_historicas(dias=30, cantidad_diaria=10)
 
-        stats = StockForecastingService.calcular_estadisticas_basicas(
-            self.producto.id_producto, dias=30
-        )
+        stats = StockForecastingService.calcular_estadisticas_basicas(self.producto.id_producto, dias=30)
 
         self.assertIn("demanda_promedio_diaria", stats)
         self.assertIn("demanda_maxima", stats)
@@ -154,9 +148,7 @@ class StockForecastingServiceTest(TestCase):
         """Test: predicción de demanda usando promedio móvil"""
         self._crear_ventas_historicas(dias=30, cantidad_diaria=10)
 
-        predicciones = StockForecastingService.predecir_demanda_simple(
-            self.producto.id_producto, dias_adelante=7
-        )
+        predicciones = StockForecastingService.predecir_demanda_simple(self.producto.id_producto, dias_adelante=7)
 
         self.assertEqual(len(predicciones), 7)
 
@@ -178,9 +170,7 @@ class StockForecastingServiceTest(TestCase):
         """Test: cálculo de punto de reorden"""
         self._crear_ventas_historicas(dias=30, cantidad_diaria=10)
 
-        resultado = StockForecastingService.calcular_punto_reorden(
-            self.producto.id_producto, lead_time_dias=7
-        )
+        resultado = StockForecastingService.calcular_punto_reorden(self.producto.id_producto, lead_time_dias=7)
 
         self.assertIn("punto_reorden", resultado)
         self.assertIn("stock_seguridad", resultado)
@@ -213,9 +203,9 @@ class StockForecastingServiceTest(TestCase):
             precio_unitario=Decimal("80.00"),
             subtotal=Decimal("4000.00"),
         )
-        MovimientosStock.objects.filter(
-            id_venta=venta_pico, tipo_movimiento="Egreso", motivo="venta"
-        ).update(fecha_hora=fecha_pico)
+        MovimientosStock.objects.filter(id_venta=venta_pico, tipo_movimiento="Egreso", motivo="venta").update(
+            fecha_hora=fecha_pico
+        )
 
         anomalias = StockForecastingService.detectar_anomalias(self.producto.id_producto, dias=30)
 
@@ -258,9 +248,9 @@ class StockForecastingServiceTest(TestCase):
                 precio_unitario=Decimal("80.00"),
                 subtotal=Decimal(str(cantidad * 80)),
             )
-            MovimientosStock.objects.filter(
-                id_venta=venta, tipo_movimiento="Egreso", motivo="venta"
-            ).update(fecha_hora=fecha)
+            MovimientosStock.objects.filter(id_venta=venta, tipo_movimiento="Egreso", motivo="venta").update(
+                fecha_hora=fecha
+            )
 
         patron = StockForecastingService.analizar_estacionalidad(self.producto.id_producto, dias=60)
 
@@ -321,16 +311,12 @@ class StockForecastingServiceTest(TestCase):
         """Test: manejo de productos sin datos históricos"""
         # No crear ventas históricas
 
-        stats = StockForecastingService.calcular_estadisticas_basicas(
-            self.producto.id_producto, dias=30
-        )
+        stats = StockForecastingService.calcular_estadisticas_basicas(self.producto.id_producto, dias=30)
 
         # Debe retornar error o valores en cero
         self.assertIn("error", stats)
 
-        predicciones = StockForecastingService.predecir_demanda_simple(
-            self.producto.id_producto, dias_adelante=7
-        )
+        predicciones = StockForecastingService.predecir_demanda_simple(self.producto.id_producto, dias_adelante=7)
 
         # Sin datos, no debe haber predicciones
         self.assertEqual(len(predicciones), 0)
@@ -347,9 +333,7 @@ class StockForecastingServiceTest(TestCase):
             fecha = timezone.now() - timedelta(days=30 - dia)
             self._crear_venta_unitaria(fecha, cantidad=12)
 
-        stats = StockForecastingService.calcular_estadisticas_basicas(
-            self.producto.id_producto, dias=30
-        )
+        stats = StockForecastingService.calcular_estadisticas_basicas(self.producto.id_producto, dias=30)
 
         self.assertEqual(stats["tendencia"], "creciente")
 
@@ -365,9 +349,7 @@ class StockForecastingServiceTest(TestCase):
             fecha = timezone.now() - timedelta(days=30 - dia)
             self._crear_venta_unitaria(fecha, cantidad=8)
 
-        stats = StockForecastingService.calcular_estadisticas_basicas(
-            self.producto.id_producto, dias=30
-        )
+        stats = StockForecastingService.calcular_estadisticas_basicas(self.producto.id_producto, dias=30)
 
         self.assertEqual(stats["tendencia"], "decreciente")
 
@@ -386,9 +368,9 @@ class StockForecastingServiceTest(TestCase):
             precio_unitario=Decimal("80.00"),
             subtotal=Decimal(str(cantidad * 80)),
         )
-        MovimientosStock.objects.filter(
-            id_venta=venta, tipo_movimiento="Egreso", motivo="venta"
-        ).update(fecha_hora=fecha)
+        MovimientosStock.objects.filter(id_venta=venta, tipo_movimiento="Egreso", motivo="venta").update(
+            fecha_hora=fecha
+        )
 
     # ── New extended tests for branch coverage ──────────────────────────────
 
@@ -397,9 +379,7 @@ class StockForecastingServiceTest(TestCase):
         # Create just 1 sale so len(cantidades)=1 → mitad=0 → else: tendencia='estable'
         fecha = timezone.now() - timedelta(days=1)
         self._crear_venta_unitaria(fecha, cantidad=10)
-        stats = StockForecastingService.calcular_estadisticas_basicas(
-            self.producto.id_producto, dias=30
-        )
+        stats = StockForecastingService.calcular_estadisticas_basicas(self.producto.id_producto, dias=30)
         self.assertEqual(stats["tendencia"], "estable")
 
     def test_predecir_demanda_tendencia_creciente(self):
@@ -411,9 +391,7 @@ class StockForecastingServiceTest(TestCase):
         for dia in range(15, 30):
             fecha = timezone.now() - timedelta(days=30 - dia)
             self._crear_venta_unitaria(fecha, cantidad=8)  # 60% more → creciente
-        predicciones = StockForecastingService.predecir_demanda_simple(
-            self.producto.id_producto, dias_adelante=3
-        )
+        predicciones = StockForecastingService.predecir_demanda_simple(self.producto.id_producto, dias_adelante=3)
         self.assertEqual(len(predicciones), 3)
 
     def test_predecir_demanda_tendencia_decreciente(self):
@@ -424,9 +402,7 @@ class StockForecastingServiceTest(TestCase):
         for dia in range(15, 30):
             fecha = timezone.now() - timedelta(days=30 - dia)
             self._crear_venta_unitaria(fecha, cantidad=8)  # decreciente
-        predicciones = StockForecastingService.predecir_demanda_simple(
-            self.producto.id_producto, dias_adelante=3
-        )
+        predicciones = StockForecastingService.predecir_demanda_simple(self.producto.id_producto, dias_adelante=3)
         self.assertEqual(len(predicciones), 3)
 
     def test_predecir_demanda_dias_sin_venta(self):
@@ -438,17 +414,13 @@ class StockForecastingServiceTest(TestCase):
             while fecha.weekday() != 0:
                 fecha -= timedelta(days=1)
             self._crear_venta_unitaria(fecha, cantidad=10)
-        predicciones = StockForecastingService.predecir_demanda_simple(
-            self.producto.id_producto, dias_adelante=7
-        )
+        predicciones = StockForecastingService.predecir_demanda_simple(self.producto.id_producto, dias_adelante=7)
         # Should return predictions using fallback for days with no sales
         self.assertGreater(len(predicciones), 0)
 
     def test_calcular_punto_reorden_sin_datos(self):
         """Line 305: early return when no historical data."""
-        resultado = StockForecastingService.calcular_punto_reorden(
-            self.producto.id_producto, lead_time_dias=7
-        )
+        resultado = StockForecastingService.calcular_punto_reorden(self.producto.id_producto, lead_time_dias=7)
         self.assertIn("error", resultado)
         self.assertEqual(resultado["punto_reorden"], Decimal("0"))
 
@@ -459,9 +431,7 @@ class StockForecastingServiceTest(TestCase):
             fecha = timezone.now() - timedelta(days=30 - dia)
             self._crear_venta_unitaria(fecha, cantidad=1)  # 1 unit/day → reorden ≈ 7+small
         # stock_minimo is 10, so if calculated punto_reorden < 10, it should use 10
-        resultado = StockForecastingService.calcular_punto_reorden(
-            self.producto.id_producto, lead_time_dias=7
-        )
+        resultado = StockForecastingService.calcular_punto_reorden(self.producto.id_producto, lead_time_dias=7)
         # Regardless of which branch, resultado should have punto_reorden and recomendacion
         self.assertIn("punto_reorden", resultado)
         self.assertIn("recomendacion", resultado)
@@ -469,15 +439,14 @@ class StockForecastingServiceTest(TestCase):
     def test_calcular_punto_reorden_producto_inexistente(self):
         """Lines 341-342: bare except when Productos.get raises DoesNotExist."""
         from unittest.mock import patch
+
         # Need real historical data so we don't exit early at line 305
         for dia in range(30):
             fecha = timezone.now() - timedelta(days=30 - dia)
             self._crear_venta_unitaria(fecha, cantidad=10)
         # Patch Productos.objects.get (imported inside the method) to raise so except branch fires
         with patch("apps.productos.models.Productos.objects.get", side_effect=Exception("not found")):
-            resultado = StockForecastingService.calcular_punto_reorden(
-                self.producto.id_producto, lead_time_dias=7
-            )
+            resultado = StockForecastingService.calcular_punto_reorden(self.producto.id_producto, lead_time_dias=7)
         self.assertIn("recomendacion", resultado)
         self.assertIn("Configurar como nuevo stock m", resultado["recomendacion"])
 
@@ -487,9 +456,7 @@ class StockForecastingServiceTest(TestCase):
         for dia in range(3):
             fecha = timezone.now() - timedelta(days=3 - dia)
             self._crear_venta_unitaria(fecha, cantidad=10)
-        resultado = StockForecastingService.detectar_anomalias(
-            self.producto.id_producto, dias=30
-        )
+        resultado = StockForecastingService.detectar_anomalias(self.producto.id_producto, dias=30)
         self.assertEqual(resultado, [])
 
     def test_detectar_anomalias_caida(self):
@@ -507,6 +474,7 @@ class StockForecastingServiceTest(TestCase):
             estado="Activa",
         )
         from apps.ventas.models import DetallesVenta
+
         DetallesVenta.objects.create(
             id_venta=venta,
             id_producto=self.producto,
@@ -514,12 +482,10 @@ class StockForecastingServiceTest(TestCase):
             precio_unitario=Decimal("80.00"),
             subtotal=Decimal("8.00"),
         )
-        MovimientosStock.objects.filter(
-            id_venta=venta, tipo_movimiento="Egreso", motivo="venta"
-        ).update(fecha_hora=fecha_caida)
-        anomalias = StockForecastingService.detectar_anomalias(
-            self.producto.id_producto, dias=30
+        MovimientosStock.objects.filter(id_venta=venta, tipo_movimiento="Egreso", motivo="venta").update(
+            fecha_hora=fecha_caida
         )
+        anomalias = StockForecastingService.detectar_anomalias(self.producto.id_producto, dias=30)
         tipos = [a["tipo"] for a in anomalias]
         self.assertIn("caida", tipos)
 
@@ -529,9 +495,7 @@ class StockForecastingServiceTest(TestCase):
         for dia in range(10):
             fecha = timezone.now() - timedelta(days=10 - dia)
             self._crear_venta_unitaria(fecha, cantidad=5)
-        resultado = StockForecastingService.analizar_estacionalidad(
-            self.producto.id_producto, dias=30
-        )
+        resultado = StockForecastingService.analizar_estacionalidad(self.producto.id_producto, dias=30)
         self.assertFalse(resultado["tiene_estacionalidad"])
         self.assertIn("error", resultado)
 
@@ -543,9 +507,7 @@ class StockForecastingServiceTest(TestCase):
             for day_offset in range(5):  # 5 consecutive days each week
                 fecha = timezone.now() - timedelta(days=monday_offset - day_offset)
                 self._crear_venta_unitaria(fecha, cantidad=8)
-        resultado = StockForecastingService.analizar_estacionalidad(
-            self.producto.id_producto, dias=90
-        )
+        resultado = StockForecastingService.analizar_estacionalidad(self.producto.id_producto, dias=90)
         # Should complete without error; at least one day with 0 ventas should be covered
         self.assertIn("patron_semanal", resultado)
 
@@ -561,6 +523,7 @@ class StockForecastingServiceTest(TestCase):
         """Lines 542, 581: demanda_diaria=0 paths (dias_cobertura=999, agotamiento=None)."""
         # Create a product with exactly zero demand (movement saved but with qty 0 via mock)
         from unittest.mock import patch, MagicMock
+
         # Patch calcular_estadisticas_basicas to return demanda=0 but no error key
         stats_mock = {
             "demanda_promedio_diaria": Decimal("0"),
@@ -572,8 +535,10 @@ class StockForecastingServiceTest(TestCase):
             "total_dias_con_venta": 5,
         }
         punto_reorden_mock = {"punto_reorden": Decimal("10"), "error": "x"}
-        with patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock), \
-             patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock):
+        with (
+            patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock),
+            patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock),
+        ):
             resultado = StockForecastingService.obtener_recomendacion_compra(
                 self.producto.id_producto, stock_actual=Decimal("50.00")
             )
@@ -583,6 +548,7 @@ class StockForecastingServiceTest(TestCase):
     def test_recomendacion_compra_urgencia_alta(self):
         """Lines 564-565: urgencia='alta' when dias_cobertura in (2,5]."""
         from unittest.mock import patch
+
         stats_mock = {
             "demanda_promedio_diaria": Decimal("10"),
             "demanda_maxima": Decimal("15"),
@@ -593,8 +559,10 @@ class StockForecastingServiceTest(TestCase):
             "total_dias_con_venta": 30,
         }
         punto_reorden_mock = {"punto_reorden": Decimal("200")}
-        with patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock), \
-             patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock):
+        with (
+            patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock),
+            patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock),
+        ):
             # stock=40 → dias_cobertura = 40//10 = 4 → 'alta'
             resultado = StockForecastingService.obtener_recomendacion_compra(
                 self.producto.id_producto, stock_actual=Decimal("40")
@@ -604,6 +572,7 @@ class StockForecastingServiceTest(TestCase):
     def test_recomendacion_compra_urgencia_media(self):
         """Lines 567-568: urgencia='media' when dias_cobertura in (5,10]."""
         from unittest.mock import patch
+
         stats_mock = {
             "demanda_promedio_diaria": Decimal("10"),
             "demanda_maxima": Decimal("15"),
@@ -614,8 +583,10 @@ class StockForecastingServiceTest(TestCase):
             "total_dias_con_venta": 30,
         }
         punto_reorden_mock = {"punto_reorden": Decimal("200")}
-        with patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock), \
-             patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock):
+        with (
+            patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock),
+            patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock),
+        ):
             # stock=80 → dias_cobertura = 80//10 = 8 → 'media'
             resultado = StockForecastingService.obtener_recomendacion_compra(
                 self.producto.id_producto, stock_actual=Decimal("80")
@@ -625,6 +596,7 @@ class StockForecastingServiceTest(TestCase):
     def test_recomendacion_compra_urgencia_baja(self):
         """Lines 570-571: urgencia='baja' when dias_cobertura>10 but stock<punto_reorden."""
         from unittest.mock import patch
+
         stats_mock = {
             "demanda_promedio_diaria": Decimal("10"),
             "demanda_maxima": Decimal("15"),
@@ -636,10 +608,11 @@ class StockForecastingServiceTest(TestCase):
         }
         # punto_reorden=200, stock=120 → dias_cobertura=12>10, stock<punto_reorden → baja
         punto_reorden_mock = {"punto_reorden": Decimal("200")}
-        with patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock), \
-             patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock):
+        with (
+            patch.object(StockForecastingService, "calcular_estadisticas_basicas", return_value=stats_mock),
+            patch.object(StockForecastingService, "calcular_punto_reorden", return_value=punto_reorden_mock),
+        ):
             resultado = StockForecastingService.obtener_recomendacion_compra(
                 self.producto.id_producto, stock_actual=Decimal("120")
             )
         self.assertEqual(resultado["urgencia"], "baja")
-

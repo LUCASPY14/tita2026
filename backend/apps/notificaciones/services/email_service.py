@@ -328,9 +328,10 @@ Gracias por confiar en Cantina Tita.
             {'success': bool, 'id_email': int}
         """
         import calendar
+
         nombre_mes = calendar.month_name[mes]
         saldo = monto_total - monto_pagado
-        estado_label = {'pendiente': 'Pendiente', 'pagado': 'Pagado', 'vencido': '⚠️ Vencido'}.get(
+        estado_label = {"pendiente": "Pendiente", "pagado": "Pagado", "vencido": "⚠️ Vencido"}.get(
             estado, estado.capitalize()
         )
 

@@ -16,13 +16,14 @@ def _get_empleado_from_request(request):
             id_empleado = request.auth.payload.get("id_empleado")
             if id_empleado:
                 from apps.usuarios.models import Empleados
+
                 return Empleados.objects.select_related("id_rol").get(pk=id_empleado)
     except Exception:
         pass
     # Fallback: user.empleado attribute (session auth / test mocks)
     try:
-        emp = getattr(request.user, 'empleado', None)
-        if emp is not None and hasattr(emp, 'id_rol'):
+        emp = getattr(request.user, "empleado", None)
+        if emp is not None and hasattr(emp, "id_rol"):
             return emp
     except Exception:
         pass

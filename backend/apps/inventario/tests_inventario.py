@@ -205,15 +205,11 @@ class StockServiceTest(TestCase):
             id_unidad_medida=self.unidad,
         )
 
-        self.stock = StockUnico.objects.create(
-            cantidad=Decimal("100.000"), id_producto=self.producto
-        )
+        self.stock = StockUnico.objects.create(cantidad=Decimal("100.000"), id_producto=self.producto)
 
     def test_validar_disponibilidad_suficiente(self):
         """Validar que hay stock disponible"""
-        resultado = StockService.validar_disponibilidad(
-            self.producto.id_producto, Decimal("50.000")
-        )
+        resultado = StockService.validar_disponibilidad(self.producto.id_producto, Decimal("50.000"))
 
         self.assertTrue(resultado["disponible"])
         self.assertEqual(resultado["stock_actual"], Decimal("100.000"))
@@ -221,9 +217,7 @@ class StockServiceTest(TestCase):
 
     def test_validar_disponibilidad_insuficiente(self):
         """Validar que no hay stock suficiente"""
-        resultado = StockService.validar_disponibilidad(
-            self.producto.id_producto, Decimal("150.000")
-        )
+        resultado = StockService.validar_disponibilidad(self.producto.id_producto, Decimal("150.000"))
 
         self.assertFalse(resultado["disponible"])
         self.assertEqual(resultado["faltante"], Decimal("50.000"))
@@ -328,9 +322,7 @@ class ConcurrenciaStockTest(TransactionTestCase):
 
         def intentar_venta():
             try:
-                StockService.reservar_stock(
-                    self.producto.id_producto, Decimal("1.000"), self.empleado, "venta"
-                )
+                StockService.reservar_stock(self.producto.id_producto, Decimal("1.000"), self.empleado, "venta")
                 resultados["exitos"] += 1
             except ValidationError:
                 resultados["fallos"] += 1
@@ -374,9 +366,7 @@ class AlertasStockTest(TestCase):
             id_unidad_medida=self.unidad,
         )
 
-        self.stock = StockUnico.objects.create(
-            cantidad=Decimal("100.000"), id_producto=self.producto
-        )
+        self.stock = StockUnico.objects.create(cantidad=Decimal("100.000"), id_producto=self.producto)
 
     def test_generar_alerta_stock_minimo(self):
         """Generar alerta cuando stock pasa por debajo del mínimo"""
@@ -400,9 +390,7 @@ class AlertasStockTest(TestCase):
         _generar_alerta_stock_bajo(self.producto, Decimal("25.000"))
 
         # Debe haber solo 1 activa
-        alertas_activas = AlertasStock.objects.filter(
-            id_producto=self.producto, activa=True
-        ).count()
+        alertas_activas = AlertasStock.objects.filter(id_producto=self.producto, activa=True).count()
 
         self.assertEqual(alertas_activas, 1)
 
@@ -416,8 +404,6 @@ class AlertasStockTest(TestCase):
         # Resolver (stock vuelve arriba del mínimo)
         _resolver_alertas_stock(self.producto, Decimal("60.000"))
 
-        alertas_activas = AlertasStock.objects.filter(
-            id_producto=self.producto, activa=True
-        ).count()
+        alertas_activas = AlertasStock.objects.filter(id_producto=self.producto, activa=True).count()
 
         self.assertEqual(alertas_activas, 0)

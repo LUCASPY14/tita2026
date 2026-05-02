@@ -41,11 +41,7 @@ class ProductosViewSetAPITest(TestCase):
         self.client = APIClient()
 
         # Crear usuario admin Django
-        self.user = User.objects.create_user(
-            username='admin_prod_test',
-            password='testpass123',
-            is_staff=True
-        )
+        self.user = User.objects.create_user(username="admin_prod_test", password="testpass123", is_staff=True)
 
         # Crear rol admin
         self.rol_admin = Roles.objects.create(
@@ -300,11 +296,7 @@ class CategoriasViewSetAPITest(TestCase):
         self.client = APIClient()
 
         # Crear usuario admin Django
-        self.user = User.objects.create_user(
-            username='admin_cat_test',
-            password='testpass123',
-            is_staff=True
-        )
+        self.user = User.objects.create_user(username="admin_cat_test", password="testpass123", is_staff=True)
 
         # Crear empleado admin
         self.rol_admin = Roles.objects.create(nombre_rol="Administrador", estado=True)

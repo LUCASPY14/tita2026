@@ -181,9 +181,7 @@ class SMSService:
                 "Accept": "application/json",
             }
 
-            payload = {
-                "messages": [{"from": sender, "destinations": [{"to": telefono}], "text": mensaje}]
-            }
+            payload = {"messages": [{"from": sender, "destinations": [{"to": telefono}], "text": mensaje}]}
 
             # Enviar request
             response = requests.post(url, json=payload, headers=headers, timeout=10)

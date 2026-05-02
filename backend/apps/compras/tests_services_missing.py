@@ -10,6 +10,7 @@ Note: Both methods reference field names that differ from the actual model
       We use unittest.mock.patch to exercise these code paths without
       hitting the database field resolution error.
 """
+
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -51,9 +52,9 @@ class ObtenerCuentaCorrienteProveedorTest(TestCase):
 
         # aggregate calls
         mock_qs.aggregate.side_effect = [
-            {"total": None},          # total_compras aggregate
-            {"pagado": None},         # total_pagado aggregate
-            {"saldo": None},          # saldo_pendiente aggregate
+            {"total": None},  # total_compras aggregate
+            {"pagado": None},  # total_pagado aggregate
+            {"saldo": None},  # saldo_pendiente aggregate
         ]
 
         # filter for compras_pendientes loop (saldo_pendiente__gt=0)
@@ -123,7 +124,7 @@ class ObtenerCuentaCorrienteProveedorTest(TestCase):
 
         mock_compra = MagicMock()
         mock_compra.id_compra = 2
-        mock_compra.fecha = None   # None → dias_vencimiento = None
+        mock_compra.fecha = None  # None → dias_vencimiento = None
         mock_compra.nro_factura = None
         mock_compra.monto_total = Decimal("5000.00")
         mock_compra.saldo_pendiente = Decimal("5000.00")

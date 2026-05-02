@@ -29,9 +29,7 @@ class SessionService:
 
     @staticmethod
     @transaction.atomic
-    def crear_sesion(
-        empleado: Empleados, session_key: str, ip_address: str, user_agent: str = None
-    ) -> Dict:
+    def crear_sesion(empleado: Empleados, session_key: str, ip_address: str, user_agent: str = None) -> Dict:
         try:
             sesiones_activas = SesionesActivas.objects.filter(usuario=empleado.usuario, activa=True).count()
             sesiones_cerradas = 0
@@ -89,9 +87,7 @@ class SessionService:
 
     @staticmethod
     @transaction.atomic
-    def renovar_sesion(
-        empleado: Empleados, session_key_actual: str, nuevo_session_key: str, ip_address: str
-    ) -> Dict:
+    def renovar_sesion(empleado: Empleados, session_key_actual: str, nuevo_session_key: str, ip_address: str) -> Dict:
         try:
             sesion_actual = SesionesActivas.objects.filter(
                 usuario=empleado.usuario, session_key=session_key_actual[:255], activa=True
@@ -100,9 +96,7 @@ class SessionService:
                 return {"success": False, "mensaje": "Sesion no encontrada o ya expirada"}
 
             ultima_renovacion = (
-                RenovacionesSesion.objects.filter(usuario=empleado.usuario)
-                .order_by("-fecha_renovacion")
-                .first()
+                RenovacionesSesion.objects.filter(usuario=empleado.usuario).order_by("-fecha_renovacion").first()
             )
             if ultima_renovacion:
                 transcurrido = timezone.now() - ultima_renovacion.fecha_renovacion
@@ -214,9 +208,7 @@ class SessionService:
 
     @staticmethod
     @transaction.atomic
-    def cerrar_todas_sesiones(
-        empleado: Empleados, ip_address: str, excepto_session_key: str = None
-    ) -> Dict:
+    def cerrar_todas_sesiones(empleado: Empleados, ip_address: str, excepto_session_key: str = None) -> Dict:
         try:
             sesiones = SesionesActivas.objects.filter(usuario=empleado.usuario, activa=True)
             if excepto_session_key:
@@ -249,9 +241,7 @@ class SessionService:
 
     @staticmethod
     def listar_sesiones_activas(empleado: Empleados) -> List[Dict]:
-        sesiones = SesionesActivas.objects.filter(usuario=empleado.usuario, activa=True).order_by(
-            "-ultima_actividad"
-        )
+        sesiones = SesionesActivas.objects.filter(usuario=empleado.usuario, activa=True).order_by("-ultima_actividad")
         resultado = []
         for sesion in sesiones:
             tiempo_inactivo = timezone.now() - sesion.ultima_actividad
@@ -317,9 +307,7 @@ class SessionService:
             usuario=empleado.usuario, ip_address=ip_address, es_habitual=1
         ).first()
         if not patron_ip:
-            accesos_total_ip = SesionesActivas.objects.filter(
-                usuario=empleado.usuario, ip_address=ip_address
-            ).count()
+            accesos_total_ip = SesionesActivas.objects.filter(usuario=empleado.usuario, ip_address=ip_address).count()
             if accesos_total_ip == 0:
                 razones.append("Nueva IP")
             else:

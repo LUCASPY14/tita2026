@@ -127,7 +127,7 @@ class ProductosSerializerTest(TestCase):
 
         serializer = ProductosSerializer(data=data)
         self.assertTrue(serializer.is_valid())
-        
+
         producto = serializer.save()
         self.assertIsNotNone(producto.id_impuesto)
         self.assertEqual(producto.id_impuesto.nombre_impuesto, "IVA 10%")
@@ -144,11 +144,13 @@ class ProductosSerializerTest(TestCase):
             stock_minimo=Decimal("5"),
             estado=True,
         )
-        
+
         serializer = ProductosSerializer(producto)
-        
+
         # Patchear acceso a nombre para provocar excepción
-        with patch.object(type(producto.id_categoria), 'nombre', property(lambda self: (_ for _ in ()).throw(Exception("Error")))):
+        with patch.object(
+            type(producto.id_categoria), "nombre", property(lambda self: (_ for _ in ()).throw(Exception("Error")))
+        ):
             result = serializer.get_categoria_nombre(producto)
             self.assertIsNone(result)
 
@@ -163,11 +165,15 @@ class ProductosSerializerTest(TestCase):
             stock_minimo=Decimal("5"),
             estado=True,
         )
-        
+
         serializer = ProductosSerializer(producto)
-        
+
         # Patchear acceso a nombre_impuesto para provocar excepción
-        with patch.object(type(producto.id_impuesto), 'nombre_impuesto', property(lambda self: (_ for _ in ()).throw(Exception("Error")))):
+        with patch.object(
+            type(producto.id_impuesto),
+            "nombre_impuesto",
+            property(lambda self: (_ for _ in ()).throw(Exception("Error"))),
+        ):
             result = serializer.get_impuesto_nombre(producto)
             self.assertIsNone(result)
 
@@ -182,11 +188,11 @@ class ProductosSerializerTest(TestCase):
             stock_minimo=Decimal("5"),
             estado=True,
         )
-        
+
         serializer = ProductosSerializer(producto)
-        
+
         # Patchear el manager precios para provocar excepción
-        with patch.object(type(producto), 'precios', property(lambda self: (_ for _ in ()).throw(Exception("Error")))):
+        with patch.object(type(producto), "precios", property(lambda self: (_ for _ in ()).throw(Exception("Error")))):
             result = serializer.get_precio(producto)
             self.assertIsNone(result)
 

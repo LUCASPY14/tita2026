@@ -55,11 +55,7 @@ class BancardService:
         self.private_key = self._get_config("BANCARD_PRIVATE_KEY")
 
         # URL base según ambiente
-        self.base_url = (
-            self.BANCARD_PRODUCTION_URL
-            if self.ambiente == "production"
-            else self.BANCARD_STAGING_URL
-        )
+        self.base_url = self.BANCARD_PRODUCTION_URL if self.ambiente == "production" else self.BANCARD_STAGING_URL
 
         # Configuración de timeouts
         self.timeout = 30  # segundos
@@ -99,9 +95,7 @@ class BancardService:
         concatenacion = f"{self.private_key}{process_id}request_new_single_buy"
         return hashlib.md5(concatenacion.encode("utf-8")).hexdigest()
 
-    def _validar_webhook_signature(
-        self, shop_process_id: str, operation: Dict[str, Any], signature: str
-    ) -> bool:
+    def _validar_webhook_signature(self, shop_process_id: str, operation: Dict[str, Any], signature: str) -> bool:
         """
         Valida la firma HMAC-SHA256 del webhook de Bancard
 
@@ -292,9 +286,7 @@ class BancardService:
                 # Error de Bancard
                 error_messages = response_data.get("messages", [])
                 error_msg = (
-                    "; ".join([m.get("dsc", "") for m in error_messages])
-                    if error_messages
-                    else "Error desconocido"
+                    "; ".join([m.get("dsc", "") for m in error_messages]) if error_messages else "Error desconocido"
                 )
 
                 return {"success": False, "error": error_msg}
@@ -335,9 +327,7 @@ class BancardService:
             )
             return {"success": False, "error": f"Error inesperado: {str(e)}"}
 
-    def procesar_webhook(
-        self, shop_process_id: str, operation: Dict[str, Any], signature: str
-    ) -> Dict[str, Any]:
+    def procesar_webhook(self, shop_process_id: str, operation: Dict[str, Any], signature: str) -> Dict[str, Any]:
         """
         Procesa webhook de confirmación de Bancard
 
@@ -438,9 +428,7 @@ class BancardService:
                 else:
                     # Transacción rechazada
                     recarga.estado = "rechazada"
-                    recarga.motivo_rechazo = operation.get(
-                        "response_description", "Pago rechazado por Bancard"
-                    )
+                    recarga.motivo_rechazo = operation.get("response_description", "Pago rechazado por Bancard")
                     recarga.webhook_payload = json.dumps(operation)
                     recarga.save()
 

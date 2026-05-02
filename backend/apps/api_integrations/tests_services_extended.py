@@ -5,6 +5,7 @@ targeting uncovered branches.
 Missing lines (at baseline 57.78%):
 82-83, 374-455, 468-489, 501-522
 """
+
 import hashlib
 import hmac
 import json
@@ -40,9 +41,7 @@ class BancardServiceGetConfigExceptionTest(TestCase):
     def test_get_config_database_exception_falls_back_to_settings(self):
         """Lines 82-83: DB exception in _get_config falls back to settings."""
         service = BancardService(ambiente="staging")
-        with patch(
-            "apps.api_integrations.services.bancard_service.ConfiguracionSistema.objects.filter"
-        ) as mock_filter:
+        with patch("apps.api_integrations.services.bancard_service.ConfiguracionSistema.objects.filter") as mock_filter:
             mock_filter.side_effect = Exception("DB error")
             # Should not raise - falls back to settings or returns None
             result = service._get_config("SOME_KEY", "default_val")
@@ -167,15 +166,11 @@ class BancardServiceWebhookProcessingTest(TestCase):
                     "id_factura": 42,
                 }
 
-                with patch(
-                    "apps.api_integrations.services.bancard_service.transaction"
-                ) as mock_tx:
+                with patch("apps.api_integrations.services.bancard_service.transaction") as mock_tx:
                     mock_tx.atomic.return_value.__enter__ = lambda s: s
                     mock_tx.atomic.return_value.__exit__ = MagicMock(return_value=False)
 
-                    with patch(
-                        "apps.core.services.RecargaService", return_value=mock_recarga_service
-                    ):
+                    with patch("apps.core.services.RecargaService", return_value=mock_recarga_service):
                         result = self.service.procesar_webhook(
                             shop_process_id="REC-123-12345",
                             operation={
@@ -198,9 +193,7 @@ class BancardServiceWebhookProcessingTest(TestCase):
                 mock_qs.get.return_value = recarga
                 mock_sfu.return_value = mock_qs
 
-                with patch(
-                    "apps.api_integrations.services.bancard_service.transaction"
-                ) as mock_tx:
+                with patch("apps.api_integrations.services.bancard_service.transaction") as mock_tx:
                     mock_tx.atomic.return_value.__enter__ = lambda s: s
                     mock_tx.atomic.return_value.__exit__ = MagicMock(return_value=False)
 

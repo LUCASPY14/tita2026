@@ -8,7 +8,7 @@ from django.db import models
 
 class Proveedores(models.Model):
     """Proveedores de productos para la cantina"""
-    
+
     id_proveedor = models.AutoField(primary_key=True)
     ruc = models.CharField(unique=True, max_length=20, help_text="RUC del proveedor (único)")
     razon_social = models.CharField(max_length=255, help_text="Razón social o nombre comercial del proveedor")
@@ -31,29 +31,26 @@ class Proveedores(models.Model):
 
 class Compras(models.Model):
     TIPO_PAGO_CHOICES = [
-        ('Contado', 'Contado'),
-        ('Crédito', 'Crédito'),
+        ("Contado", "Contado"),
+        ("Crédito", "Crédito"),
     ]
-    
+
     id_compra = models.BigAutoField(primary_key=True)
     fecha = models.DateTimeField()
     monto_total = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0,
-        help_text="Monto total de la compra (calculado automáticamente)"
+        max_digits=12, decimal_places=2, default=0, help_text="Monto total de la compra (calculado automáticamente)"
     )
     saldo_pendiente = models.DecimalField(
-        max_digits=12, decimal_places=2, blank=True, null=True,
-        help_text="Saldo pendiente de pago"
+        max_digits=12, decimal_places=2, blank=True, null=True, help_text="Saldo pendiente de pago"
     )
     estado_pago = models.CharField(
-        max_length=10, default="Pendiente",
-        help_text="Estado del pago: Pendiente, Parcial, Pagado"
+        max_length=10, default="Pendiente", help_text="Estado del pago: Pendiente, Parcial, Pagado"
     )
     tipo_pago = models.CharField(
-        max_length=10, 
+        max_length=10,
         choices=TIPO_PAGO_CHOICES,
-        default='Contado',
-        help_text="Indica si la compra es al contado o a crédito"
+        default="Contado",
+        help_text="Indica si la compra es al contado o a crédito",
     )
     nro_factura = models.CharField(max_length=50, blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
@@ -64,7 +61,7 @@ class Compras(models.Model):
         db_column="id_medio_pago",
         blank=True,
         null=True,
-        help_text="Forma de pago utilizada (efectivo, transferencia, etc.)"
+        help_text="Forma de pago utilizada (efectivo, transferencia, etc.)",
     )
     id_documento = models.ForeignKey(
         "contabilidad.DocumentosTributarios",
@@ -84,26 +81,28 @@ class Compras(models.Model):
         verbose_name_plural = "Compras"
         ordering = ["-fecha"]
         indexes = [
-            models.Index(fields=['fecha', 'id_proveedor'], name='idx_compras_fecha_prov'),
-            models.Index(fields=['estado_pago', 'fecha'], name='idx_compras_estado_fecha'),
-            models.Index(fields=['nro_factura'], name='idx_compras_nro_factura'),
-            models.Index(fields=['id_proveedor', 'fecha'], name='idx_compras_prov_fecha'),
-            models.Index(fields=['fecha'], name='idx_compras_fecha'),
+            models.Index(fields=["fecha", "id_proveedor"], name="idx_compras_fecha_prov"),
+            models.Index(fields=["estado_pago", "fecha"], name="idx_compras_estado_fecha"),
+            models.Index(fields=["nro_factura"], name="idx_compras_nro_factura"),
+            models.Index(fields=["id_proveedor", "fecha"], name="idx_compras_prov_fecha"),
+            models.Index(fields=["fecha"], name="idx_compras_fecha"),
         ]
 
 
 class DetallesCompra(models.Model):
     """Detalles de productos incluidos en una compra"""
-    
+
     id_detalle = models.BigAutoField(primary_key=True)
     costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, help_text="Costo por unidad del producto")
     cantidad = models.DecimalField(max_digits=8, decimal_places=3, help_text="Cantidad de unidades compradas")
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, help_text="Subtotal (cantidad × costo_unitario)")
-    monto_iva = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Monto de IVA aplicado al producto")
-    id_compra = models.ForeignKey("Compras", models.DO_NOTHING, db_column="id_compra", help_text="Compra a la que pertenece este detalle")
-    id_producto = models.ForeignKey(
-        "productos.Productos", models.DO_NOTHING, db_column="id_producto"
+    monto_iva = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True, help_text="Monto de IVA aplicado al producto"
     )
+    id_compra = models.ForeignKey(
+        "Compras", models.DO_NOTHING, db_column="id_compra", help_text="Compra a la que pertenece este detalle"
+    )
+    id_producto = models.ForeignKey("productos.Productos", models.DO_NOTHING, db_column="id_producto")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -121,9 +120,7 @@ class DetallesCompra(models.Model):
 class PagosProveedores(models.Model):
     id_pago_proveedor = models.BigAutoField(primary_key=True)
     fecha_creacion = models.DateTimeField()
-    id_medio_pago = models.ForeignKey(
-        "core.MediosPago", models.DO_NOTHING, db_column="id_medio_pago"
-    )
+    id_medio_pago = models.ForeignKey("core.MediosPago", models.DO_NOTHING, db_column="id_medio_pago")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -141,9 +138,7 @@ class AplicacionPagosCompras(models.Model):
     id_aplicacion = models.BigAutoField(primary_key=True)
     monto_aplicado = models.DecimalField(max_digits=12, decimal_places=2)
     id_compra = models.ForeignKey("Compras", models.DO_NOTHING, db_column="id_compra")
-    id_pago_proveedor = models.ForeignKey(
-        "PagosProveedores", models.DO_NOTHING, db_column="id_pago_proveedor"
-    )
+    id_pago_proveedor = models.ForeignKey("PagosProveedores", models.DO_NOTHING, db_column="id_pago_proveedor")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -187,12 +182,8 @@ class DetallesNotaCreditoProveedor(models.Model):
     cantidad = models.DecimalField(max_digits=10, decimal_places=3)
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
-    id_nota_proveedor = models.ForeignKey(
-        "NotasCreditoProveedor", models.DO_NOTHING, db_column="id_nota_proveedor"
-    )
-    id_producto = models.ForeignKey(
-        "productos.Productos", models.DO_NOTHING, db_column="id_producto"
-    )
+    id_nota_proveedor = models.ForeignKey("NotasCreditoProveedor", models.DO_NOTHING, db_column="id_nota_proveedor")
+    id_producto = models.ForeignKey("productos.Productos", models.DO_NOTHING, db_column="id_producto")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"

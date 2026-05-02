@@ -71,11 +71,7 @@ class StockService:
             "disponible": disponible,
             "stock_actual": stock_actual,
             "faltante": faltante,
-            "mensaje": (
-                "Stock disponible"
-                if disponible
-                else f"Stock insuficiente. Faltan {faltante} unidades"
-            ),
+            "mensaje": ("Stock disponible" if disponible else f"Stock insuficiente. Faltan {faltante} unidades"),
             "permite_negativo": False,
         }
 
@@ -149,9 +145,7 @@ class StockService:
         """
         # Validar cantidad > 0
         if cantidad <= 0:
-            raise ValidationError(
-                {"error": "La cantidad debe ser mayor a 0", "cantidad": str(cantidad)}
-            )
+            raise ValidationError({"error": "La cantidad debe ser mayor a 0", "cantidad": str(cantidad)})
 
         # Validar primero (sin bloqueo)
         validacion = StockService.validar_disponibilidad(producto_id, cantidad)
@@ -295,9 +289,7 @@ class StockService:
 
         # Obtener ventas por producto
         movimientos_venta = (
-            MovimientosStock.objects.filter(
-                tipo_movimiento="Egreso", motivo="venta", fecha_hora__gte=fecha_desde
-            )
+            MovimientosStock.objects.filter(tipo_movimiento="Egreso", motivo="venta", fecha_hora__gte=fecha_desde)
             .values("id_producto")
             .annotate(total_vendido=Sum("cantidad"), stock_promedio=Avg("stock_resultante"))
         )
@@ -321,9 +313,7 @@ class StockService:
                         "stock_promedio": stock_promedio,
                         "rotacion": rotacion,
                         "dias_stock": (
-                            int(stock_promedio / (mov["total_vendido"] / dias))
-                            if mov["total_vendido"] > 0
-                            else 999
+                            int(stock_promedio / (mov["total_vendido"] / dias)) if mov["total_vendido"] > 0 else 999
                         ),
                     }
                 )

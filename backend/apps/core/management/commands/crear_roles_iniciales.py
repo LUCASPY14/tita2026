@@ -60,9 +60,7 @@ class Command(BaseCommand):
         ]
 
         if recrear:
-            self.stdout.write(
-                self.style.WARNING("⚠️  Modo RECREAR activado - Se eliminarán roles existentes")
-            )
+            self.stdout.write(self.style.WARNING("⚠️  Modo RECREAR activado - Se eliminarán roles existentes"))
             confirmar = input('¿Está seguro? (escriba "SI" para confirmar): ')
             if confirmar != "SI":
                 self.stdout.write(self.style.ERROR("Operación cancelada"))
@@ -110,9 +108,7 @@ class Command(BaseCommand):
         for rol in Roles.objects.all().order_by("nombre_rol"):
             icono = "✓" if rol.estado else "✗"
             estado = "estado" if rol.estado else "Inactivo"
-            self.stdout.write(
-                f"   {icono} [{rol.id_rol:2d}] {rol.nombre_rol:25s} - {rol.descripcion} ({estado})"
-            )
+            self.stdout.write(f"   {icono} [{rol.id_rol:2d}] {rol.nombre_rol:25s} - {rol.descripcion} ({estado})")
 
         self.stdout.write("")
         self.stdout.write(self.style.SUCCESS("=" * 70))

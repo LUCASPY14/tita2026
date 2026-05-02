@@ -18,9 +18,7 @@ class TwoFactorAuthServiceTest(TransactionTestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol de prueba
-        self.rol_test = Roles.objects.create(
-            nombre_rol="Test Role", descripcion="Rol para testing", estado=True
-        )
+        self.rol_test = Roles.objects.create(nombre_rol="Test Role", descripcion="Rol para testing", estado=True)
 
         # Crear empleado de prueba
         self.empleado = Empleados.objects.create(
@@ -102,9 +100,7 @@ class Enable2FATest(TwoFactorAuthServiceTest):
 
     def test_habilitar_2fa_exitoso(self):
         """Habilitar 2FA para un empleado"""
-        resultado = TwoFactorAuthService.habilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        resultado = TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
 
         self.assertTrue(resultado["success"])
         self.assertIn("secret_key", resultado)
@@ -121,9 +117,7 @@ class Enable2FATest(TwoFactorAuthServiceTest):
 
     def test_habilitar_2fa_crea_registro_db(self):
         """Verificar que se crea el registro en la base de datos"""
-        TwoFactorAuthService.habilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
 
         # Verificar registro en DB
         auth_2fa = Autenticacion2Fa.objects.filter(id_empleado=self.empleado).first()
@@ -136,23 +130,17 @@ class Enable2FATest(TwoFactorAuthServiceTest):
     def test_habilitar_2fa_ya_habilitado(self):
         """Intentar habilitar 2FA cuando ya está habilitado"""
         # Primera habilitación
-        TwoFactorAuthService.habilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
 
         # Segunda habilitación
-        resultado = TwoFactorAuthService.habilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        resultado = TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
 
         self.assertFalse(resultado["success"])
         self.assertIn("habilitado", resultado["mensaje"].lower())
 
     def test_provisioning_uri_formato_correcto(self):
         """Verificar formato del provisioning URI para apps TOTP"""
-        resultado = TwoFactorAuthService.habilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        resultado = TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
 
         uri = resultado["provisioning_uri"]
 
@@ -172,9 +160,7 @@ class Verify2FATest(TwoFactorAuthServiceTest):
         super().setUp()
 
         # Habilitar 2FA para el empleado
-        resultado = TwoFactorAuthService.habilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        resultado = TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
         self.secret_key = resultado["secret_key"]
         self.backup_codes = resultado["backup_codes"]
 
@@ -310,15 +296,11 @@ class Disable2FATest(TwoFactorAuthServiceTest):
         super().setUp()
 
         # Habilitar 2FA primero
-        TwoFactorAuthService.habilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
 
     def test_deshabilitar_2fa_exitoso(self):
         """Deshabilitar 2FA correctamente"""
-        resultado = TwoFactorAuthService.deshabilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        resultado = TwoFactorAuthService.deshabilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
 
         self.assertTrue(resultado["success"])
 
@@ -356,16 +338,12 @@ class RegenerateBackupCodesTest(TwoFactorAuthServiceTest):
         super().setUp()
 
         # Habilitar 2FA
-        resultado = TwoFactorAuthService.habilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        resultado = TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
         self.codigos_originales = resultado["backup_codes"]
 
     def test_regenerar_backup_codes_exitoso(self):
         """Regenerar códigos de respaldo"""
-        resultado = TwoFactorAuthService.regenerar_backup_codes(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        resultado = TwoFactorAuthService.regenerar_backup_codes(empleado=self.empleado, ip_address=self.ip_address)
 
         self.assertTrue(resultado["success"])
         self.assertIn("backup_codes", resultado)
@@ -373,9 +351,7 @@ class RegenerateBackupCodesTest(TwoFactorAuthServiceTest):
 
     def test_regenerar_backup_codes_diferentes(self):
         """Los nuevos códigos deben ser diferentes a los anteriores"""
-        resultado = TwoFactorAuthService.regenerar_backup_codes(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        resultado = TwoFactorAuthService.regenerar_backup_codes(empleado=self.empleado, ip_address=self.ip_address)
 
         codigos_nuevos = resultado["backup_codes"]
 
@@ -387,9 +363,7 @@ class RegenerateBackupCodesTest(TwoFactorAuthServiceTest):
         codigo_antiguo = self.codigos_originales[0]
 
         # Regenerar
-        TwoFactorAuthService.regenerar_backup_codes(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        TwoFactorAuthService.regenerar_backup_codes(empleado=self.empleado, ip_address=self.ip_address)
 
         # Intentar usar código antiguo (debe fallar)
         resultado = TwoFactorAuthService.verificar_codigo_2fa(
@@ -415,9 +389,7 @@ class RegenerateBackupCodesTest(TwoFactorAuthServiceTest):
             estado=True,
         )
 
-        resultado = TwoFactorAuthService.regenerar_backup_codes(
-            empleado=empleado_sin_2fa, ip_address=self.ip_address
-        )
+        resultado = TwoFactorAuthService.regenerar_backup_codes(empleado=empleado_sin_2fa, ip_address=self.ip_address)
 
         self.assertFalse(resultado["success"])
 
@@ -436,9 +408,7 @@ class Get2FAStatsTest(TwoFactorAuthServiceTest):
     def test_estadisticas_con_2fa_habilitado(self):
         """Estadísticas para empleado con 2FA habilitado"""
         # Habilitar 2FA
-        TwoFactorAuthService.habilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
 
         resultado = TwoFactorAuthService.obtener_estadisticas_2fa(empleado=self.empleado)
 
@@ -473,9 +443,7 @@ class Get2FAStatsTest(TwoFactorAuthServiceTest):
     def test_estadisticas_intentos_fallidos(self):
         """Estadísticas muestran intentos fallidos recientes"""
         # Habilitar 2FA
-        TwoFactorAuthService.habilitar_2fa_empleado(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        TwoFactorAuthService.habilitar_2fa_empleado(empleado=self.empleado, ip_address=self.ip_address)
 
         # Hacer 2 intentos fallidos
         for _ in range(2):

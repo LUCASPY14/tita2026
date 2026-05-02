@@ -36,12 +36,8 @@ def generar_resumen_diario_ventas():
 
     try:
         hoy = timezone.now().date()
-        inicio = timezone.make_aware(
-            timezone.datetime.combine(hoy, timezone.datetime.min.time())
-        )
-        fin = timezone.make_aware(
-            timezone.datetime.combine(hoy, timezone.datetime.max.time())
-        )
+        inicio = timezone.make_aware(timezone.datetime.combine(hoy, timezone.datetime.min.time()))
+        fin = timezone.make_aware(timezone.datetime.combine(hoy, timezone.datetime.max.time()))
 
         ventas_hoy = Ventas.objects.filter(
             fecha__range=(inicio, fin),
@@ -76,10 +72,7 @@ def generar_resumen_diario_ventas():
             "por_medio_pago": list(por_medio_pago),
         }
 
-        logger.info(
-            f"[Celery] Resumen ventas {hoy}: "
-            f"Gs. {total_monto:,.0f} en {total_cantidad} ventas"
-        )
+        logger.info(f"[Celery] Resumen ventas {hoy}: " f"Gs. {total_monto:,.0f} en {total_cantidad} ventas")
         return {"success": True, **resumen}
 
     except Exception as e:
@@ -113,12 +106,12 @@ def cerrar_cajas_automatico():
             turno.fecha_hora_cierre = timezone.now()
             turno.estado = "cerrado"
             # Calcular diferencia con lo que hay registrado
-            total_ing = turno.movimientoscaja_set.filter(
-                tipo_movimiento__in=["Ingreso", "VentaEfectivo"]
-            ).aggregate(t=Sum("monto"))["t"] or Decimal("0")
-            total_eg = turno.movimientoscaja_set.filter(
-                tipo_movimiento="Egreso"
-            ).aggregate(t=Sum("monto"))["t"] or Decimal("0")
+            total_ing = turno.movimientoscaja_set.filter(tipo_movimiento__in=["Ingreso", "VentaEfectivo"]).aggregate(
+                t=Sum("monto")
+            )["t"] or Decimal("0")
+            total_eg = turno.movimientoscaja_set.filter(tipo_movimiento="Egreso").aggregate(t=Sum("monto"))[
+                "t"
+            ] or Decimal("0")
             turno.diferencia_efectivo = total_ing - total_eg  # referencia parcial
             turno.save(update_fields=["fecha_hora_cierre", "estado", "diferencia_efectivo"])
             cerrados += 1

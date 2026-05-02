@@ -2,6 +2,7 @@
 Tests for apps/api_integrations/admin.py
 Covers all custom display methods across 6 admin classes.
 """
+
 from unittest.mock import MagicMock, patch
 from django.test import TestCase
 from django.contrib.admin.sites import AdminSite
@@ -37,7 +38,8 @@ def _mock_obj(**kwargs):
 # ProveedoresApiAdmin
 # =============================================================================
 
-@patch('apps.api_integrations.admin.format_html', _plain_format_html)
+
+@patch("apps.api_integrations.admin.format_html", _plain_format_html)
 class ProveedoresApiAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -145,7 +147,8 @@ class ProveedoresApiAdminTest(TestCase):
 # EndpointsApiAdmin
 # =============================================================================
 
-@patch('apps.api_integrations.admin.format_html', _plain_format_html)
+
+@patch("apps.api_integrations.admin.format_html", _plain_format_html)
 class EndpointsApiAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -229,7 +232,8 @@ class EndpointsApiAdminTest(TestCase):
 # LogsLlamadasApiAdmin
 # =============================================================================
 
-@patch('apps.api_integrations.admin.format_html', _plain_format_html)
+
+@patch("apps.api_integrations.admin.format_html", _plain_format_html)
 class LogsLlamadasApiAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -329,7 +333,8 @@ class LogsLlamadasApiAdminTest(TestCase):
 # CredencialesApiAdmin
 # =============================================================================
 
-@patch('apps.api_integrations.admin.format_html', _plain_format_html)
+
+@patch("apps.api_integrations.admin.format_html", _plain_format_html)
 class CredencialesApiAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -420,7 +425,8 @@ class CredencialesApiAdminTest(TestCase):
 # LogsWebhooksAdmin
 # =============================================================================
 
-@patch('apps.api_integrations.admin.format_html', _plain_format_html)
+
+@patch("apps.api_integrations.admin.format_html", _plain_format_html)
 class LogsWebhooksAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -471,7 +477,8 @@ class LogsWebhooksAdminTest(TestCase):
 # WebhookEndpointsAdmin
 # =============================================================================
 
-@patch('apps.api_integrations.admin.format_html', _plain_format_html)
+
+@patch("apps.api_integrations.admin.format_html", _plain_format_html)
 class WebhookEndpointsAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()

@@ -79,9 +79,7 @@ class NotificacionService:
         """
         try:
             # Validar tarjeta
-            tarjeta = Tarjetas.objects.select_related("id_hijo__id_cliente").get(
-                numero_tarjeta=nro_tarjeta
-            )
+            tarjeta = Tarjetas.objects.select_related("id_hijo__id_cliente").get(numero_tarjeta=nro_tarjeta)
 
             # Obtener cliente responsable
             hijo = tarjeta.id_hijo
@@ -149,9 +147,7 @@ class NotificacionService:
                         f"Estudiante: {hijo.nombre}"
                     )
 
-                    resultado_sms = SMSService.enviar_sms(
-                        telefono=cliente.telefono, mensaje=mensaje_sms
-                    )
+                    resultado_sms = SMSService.enviar_sms(telefono=cliente.telefono, mensaje=mensaje_sms)
 
                     sms_enviado = resultado_sms.get("success", False)
 
@@ -181,9 +177,7 @@ class NotificacionService:
             raise ValidationError(f"Error enviando notificación: {str(e)}")
 
     @staticmethod
-    def enviar_notificacion_recarga(
-        id_recarga: int, id_usuario_portal: Optional[int] = None
-    ) -> Dict:
+    def enviar_notificacion_recarga(id_recarga: int, id_usuario_portal: Optional[int] = None) -> Dict:
         """
         Envía notificación de recarga exitosa al portal del usuario.
 
@@ -202,9 +196,7 @@ class NotificacionService:
 
         try:
             # Obtener recarga
-            recarga = CargasSaldo.objects.select_related("nro_tarjeta__id_hijo__id_cliente").get(
-                id_recarga=id_recarga
-            )
+            recarga = CargasSaldo.objects.select_related("nro_tarjeta__id_hijo__id_cliente").get(id_recarga=id_recarga)
 
             # Verificar que esté completada
             if recarga.estado != "completada":
@@ -240,9 +232,7 @@ class NotificacionService:
                         "error": "Cliente no tiene usuario portal configurado",
                     }
             else:
-                id_usuario_portal_obj = UsuariosPortal.objects.get(
-                    id_usuario_portal=id_usuario_portal
-                )
+                id_usuario_portal_obj = UsuariosPortal.objects.get(id_usuario_portal=id_usuario_portal)
 
             # Crear notificación en portal
             notificacion = NotificacionesPortal.objects.create(
@@ -269,9 +259,7 @@ class NotificacionService:
             raise ValidationError(f"Error enviando notificación: {str(e)}")
 
     @staticmethod
-    def enviar_notificacion_consumo(
-        id_consumo: int, id_usuario_portal: Optional[int] = None
-    ) -> Dict:
+    def enviar_notificacion_consumo(id_consumo: int, id_usuario_portal: Optional[int] = None) -> Dict:
         """
         Envía notificación de consumo realizado.
 
@@ -289,9 +277,9 @@ class NotificacionService:
 
         try:
             # Obtener consumo
-            consumo = ConsumosTarjeta.objects.select_related(
-                "nro_tarjeta__id_hijo__id_cliente"
-            ).get(id_consumo=id_consumo)
+            consumo = ConsumosTarjeta.objects.select_related("nro_tarjeta__id_hijo__id_cliente").get(
+                id_consumo=id_consumo
+            )
 
             tarjeta = consumo.nro_tarjeta
             hijo = tarjeta.id_hijo
@@ -315,9 +303,7 @@ class NotificacionService:
                 except UsuariosPortal.DoesNotExist:
                     return {"success": False, "error": "Cliente no tiene usuario portal"}
             else:
-                id_usuario_portal_obj = UsuariosPortal.objects.get(
-                    id_usuario_portal=id_usuario_portal
-                )
+                id_usuario_portal_obj = UsuariosPortal.objects.get(id_usuario_portal=id_usuario_portal)
 
             # Crear notificación
             notificacion = NotificacionesPortal.objects.create(
@@ -426,9 +412,7 @@ class NotificacionService:
             }
         """
         try:
-            preferencias = PreferenciasNotificacion.objects.filter(
-                id_usuario_portal=id_usuario_portal
-            )
+            preferencias = PreferenciasNotificacion.objects.filter(id_usuario_portal=id_usuario_portal)
 
             return {
                 "preferencias": [

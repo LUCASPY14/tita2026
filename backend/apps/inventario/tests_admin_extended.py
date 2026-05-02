@@ -2,6 +2,7 @@
 Tests for apps/inventario/admin.py
 Covers all custom display methods across 8 admin classes.
 """
+
 from unittest.mock import MagicMock, patch, call
 from django.test import TestCase
 from django.contrib.admin.sites import AdminSite
@@ -41,7 +42,8 @@ def _mock_obj(**kwargs):
 # StockUnicoAdmin
 # =============================================================================
 
-@patch('apps.inventario.admin.format_html', _plain_format_html)
+
+@patch("apps.inventario.admin.format_html", _plain_format_html)
 class StockUnicoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -86,7 +88,8 @@ class StockUnicoAdminTest(TestCase):
 # MovimientosStockAdmin
 # =============================================================================
 
-@patch('apps.inventario.admin.format_html', _plain_format_html)
+
+@patch("apps.inventario.admin.format_html", _plain_format_html)
 class MovimientosStockAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -131,7 +134,8 @@ class MovimientosStockAdminTest(TestCase):
 # AjustesInventarioAdmin
 # =============================================================================
 
-@patch('apps.inventario.admin.format_html', _plain_format_html)
+
+@patch("apps.inventario.admin.format_html", _plain_format_html)
 class AjustesInventarioAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -235,6 +239,7 @@ class AjustesInventarioAdminTest(TestCase):
 # DetallesAjusteAdmin
 # =============================================================================
 
+
 class DetallesAjusteAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -250,6 +255,7 @@ class DetallesAjusteAdminTest(TestCase):
 # =============================================================================
 # CostosHistoricosAdmin
 # =============================================================================
+
 
 class CostosHistoricosAdminTest(TestCase):
     def setUp(self):
@@ -272,7 +278,8 @@ class CostosHistoricosAdminTest(TestCase):
 # AlertasStockAdmin
 # =============================================================================
 
-@patch('apps.inventario.admin.format_html', _plain_format_html)
+
+@patch("apps.inventario.admin.format_html", _plain_format_html)
 class AlertasStockAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -312,18 +319,19 @@ class AlertasStockAdminTest(TestCase):
         request = MagicMock()
         queryset = MagicMock()
         queryset.update.return_value = 1
-        with patch('django.utils.timezone.now', return_value="2024-01-01"):
+        with patch("django.utils.timezone.now", return_value="2024-01-01"):
             self.admin.marcar_como_resuelta(request, queryset)
         queryset.update.assert_called_once()
         args = queryset.update.call_args[1]
-        self.assertFalse(args['activa'])
+        self.assertFalse(args["activa"])
 
 
 # =============================================================================
 # LotesProductoAdmin
 # =============================================================================
 
-@patch('apps.inventario.admin.format_html', _plain_format_html)
+
+@patch("apps.inventario.admin.format_html", _plain_format_html)
 class LotesProductoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -386,19 +394,20 @@ class LotesProductoAdminTest(TestCase):
         request = MagicMock()
         queryset = MagicMock()
         queryset.update.return_value = 2
-        with patch('django.utils.timezone.now', return_value="2024-01-01"):
+        with patch("django.utils.timezone.now", return_value="2024-01-01"):
             self.admin.marcar_como_bloqueado(request, queryset)
         queryset.update.assert_called_once()
         args = queryset.update.call_args[1]
-        self.assertTrue(args['bloqueado'])
-        self.assertEqual(args['motivo_bloqueo'], 'vencido')
+        self.assertTrue(args["bloqueado"])
+        self.assertEqual(args["motivo_bloqueo"], "vencido")
 
 
 # =============================================================================
 # AlertasVencimientoAdmin
 # =============================================================================
 
-@patch('apps.inventario.admin.format_html', _plain_format_html)
+
+@patch("apps.inventario.admin.format_html", _plain_format_html)
 class AlertasVencimientoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -463,8 +472,8 @@ class AlertasVencimientoAdminTest(TestCase):
         request = MagicMock()
         queryset = MagicMock()
         queryset.update.return_value = 1
-        with patch('django.utils.timezone.now', return_value="2024-01-01"):
+        with patch("django.utils.timezone.now", return_value="2024-01-01"):
             self.admin.marcar_como_descartado(request, queryset)
         queryset.update.assert_called_once()
         args = queryset.update.call_args[1]
-        self.assertEqual(args['accion_tomada'], 'descartado')
+        self.assertEqual(args["accion_tomada"], "descartado")

@@ -90,9 +90,7 @@ def validar_version(valor):
     patron = re.compile(r"^v?\d+(\.\d+)*$")
 
     if not patron.match(valor):
-        raise ValidationError(
-            "La versión debe seguir el formato semantic versioning (ej: v1.0.0, 2.1, v3)."
-        )
+        raise ValidationError("La versión debe seguir el formato semantic versioning (ej: v1.0.0, 2.1, v3).")
 
     if len(valor) > 20:
         raise ValidationError("La versión no puede exceder 20 caracteres.")
@@ -131,9 +129,7 @@ def validar_tipo_auth(valor):
     tipos_validos = ["API_KEY", "OAuth2", "Bearer", "Basic", "JWT", "None", "HMAC", "Custom"]
 
     if valor not in tipos_validos:
-        raise ValidationError(
-            f'El tipo de autenticación debe ser uno de: {", ".join(tipos_validos)}.'
-        )
+        raise ValidationError(f'El tipo de autenticación debe ser uno de: {", ".join(tipos_validos)}.')
 
     return valor
 
@@ -154,9 +150,7 @@ def validar_config_auth(valor):
     try:
         json_str = json.dumps(valor)
         if len(json_str) > 10000:
-            raise ValidationError(
-                "La configuración de autenticación es demasiado grande (max 10000 caracteres)."
-            )
+            raise ValidationError("La configuración de autenticación es demasiado grande (max 10000 caracteres).")
     except (TypeError, ValueError) as e:  # pragma: no cover
         raise ValidationError(f"La configuración de autenticación no es JSON válido: {str(e)}")
 
@@ -806,9 +800,7 @@ def validar_evento_tipo(valor):
     # Validar formato: letras, números, puntos, guiones (snake_case o kebab-case o dot.notation)
     patron = re.compile(r"^[a-zA-Z0-9._\-]+$")
     if not patron.match(valor):
-        raise ValidationError(
-            "El tipo de evento solo puede contener letras, números, puntos, guiones y guiones bajos."
-        )
+        raise ValidationError("El tipo de evento solo puede contener letras, números, puntos, guiones y guiones bajos.")
 
     return valor
 
@@ -1007,9 +999,7 @@ def validar_handler_func(valor):
     patron = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)+$")
 
     if not patron.match(valor):
-        raise ValidationError(
-            "El handler function debe ser una ruta Python válida " "(ej: modulo.submodulo.funcion)."
-        )
+        raise ValidationError("El handler function debe ser una ruta Python válida " "(ej: modulo.submodulo.funcion).")
 
     if len(valor) > 200:
         raise ValidationError("El handler function no puede exceder 200 caracteres.")

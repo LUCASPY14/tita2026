@@ -24,9 +24,7 @@ class BaseUsuariosTest(TransactionTestCase):
     """Base setup for usuarios service tests."""
 
     def setUp(self):
-        self.rol = Roles.objects.create(
-            nombre_rol="TestRolExt", descripcion="Test", estado=True
-        )
+        self.rol = Roles.objects.create(nombre_rol="TestRolExt", descripcion="Test", estado=True)
         self.empleado = Empleados.objects.create(
             nombre="Ext",
             apellido="Test",
@@ -52,6 +50,7 @@ class BaseUsuariosTest(TransactionTestCase):
 # PasswordRecoveryService - exception paths
 # ============================================================================
 
+
 class SolicitarRecuperacionExceptionTest(BaseUsuariosTest):
     """Cover exception paths in solicitar_recuperacion_empleado."""
 
@@ -61,9 +60,7 @@ class SolicitarRecuperacionExceptionTest(BaseUsuariosTest):
         """
         # Patch AuditoriaOperaciones.objects.create to raise on the audit call
         # The audit is inside the inner try/except, so result is still success.
-        with patch(
-            "apps.usuarios.services.password_recovery_service.AuditoriaOperaciones"
-        ) as mock_auditoria:
+        with patch("apps.usuarios.services.password_recovery_service.AuditoriaOperaciones") as mock_auditoria:
             mock_auditoria.objects.create.side_effect = Exception("DB error")
             resultado = PasswordRecoveryService.solicitar_recuperacion_empleado(
                 email="ext@cantinatita.com", ip_address=self.ip
@@ -74,9 +71,7 @@ class SolicitarRecuperacionExceptionTest(BaseUsuariosTest):
 
     def test_solicitar_recuperacion_outer_exception(self):
         """Outer exception path returns error dict (lines 116-118)."""
-        with patch(
-            "apps.usuarios.services.password_recovery_service.TokensRecuperacion"
-        ) as mock_tokens:
+        with patch("apps.usuarios.services.password_recovery_service.TokensRecuperacion") as mock_tokens:
             mock_tokens.objects.filter.side_effect = Exception("DB fail")
             resultado = PasswordRecoveryService.solicitar_recuperacion_empleado(
                 email="ext@cantinatita.com", ip_address=self.ip
@@ -101,9 +96,7 @@ class ValidarTokenExceptionTest(BaseUsuariosTest):
         token_hash = PasswordRecoveryService._hash_token(token)
         token_db = TokensRecuperacion.objects.filter(token_hash=token_hash).first()
         # Patch Empleados.objects.filter to return None
-        with patch(
-            "apps.usuarios.services.password_recovery_service.Empleados"
-        ) as mock_emp:
+        with patch("apps.usuarios.services.password_recovery_service.Empleados") as mock_emp:
             mock_emp.objects.filter.return_value.first.return_value = None
             resultado = PasswordRecoveryService.validar_token_recuperacion(token)
         self.assertFalse(resultado["success"])
@@ -112,9 +105,7 @@ class ValidarTokenExceptionTest(BaseUsuariosTest):
 
     def test_validar_token_outer_exception(self):
         """Outer exception in validar_token_recuperacion (lines 141-143)."""
-        with patch(
-            "apps.usuarios.services.password_recovery_service.TokensRecuperacion"
-        ) as mock_tokens:
+        with patch("apps.usuarios.services.password_recovery_service.TokensRecuperacion") as mock_tokens:
             mock_tokens.objects.filter.side_effect = Exception("DB fail")
             resultado = PasswordRecoveryService.validar_token_recuperacion("sometoken")
         self.assertFalse(resultado["success"])
@@ -134,9 +125,7 @@ class RestablecerPasswordExceptionTest(BaseUsuariosTest):
     def test_restablecer_auditoria_exception_silenced(self):
         """Inner audit exception silenced in restablecer_password_con_token (lines 186-187)."""
         token = self._crea_token_valido()
-        with patch(
-            "apps.usuarios.services.password_recovery_service.AuditoriaOperaciones"
-        ) as mock_auditoria:
+        with patch("apps.usuarios.services.password_recovery_service.AuditoriaOperaciones") as mock_auditoria:
             mock_auditoria.objects.create.side_effect = Exception("DB error")
             resultado = PasswordRecoveryService.restablecer_password_con_token(
                 token=token, nueva_password="NewPass123!", ip_address=self.ip
@@ -161,25 +150,17 @@ class SolicitarVerificacionEmailExceptionTest(BaseUsuariosTest):
 
     def test_solicitar_verificacion_auditoria_exception_silenced(self):
         """Inner audit exception silenced (lines 237-238)."""
-        with patch(
-            "apps.usuarios.services.password_recovery_service.AuditoriaOperaciones"
-        ) as mock_auditoria:
+        with patch("apps.usuarios.services.password_recovery_service.AuditoriaOperaciones") as mock_auditoria:
             mock_auditoria.objects.create.side_effect = Exception("DB error")
-            resultado = PasswordRecoveryService.solicitar_verificacion_email(
-                empleado=self.empleado, ip_address=self.ip
-            )
+            resultado = PasswordRecoveryService.solicitar_verificacion_email(empleado=self.empleado, ip_address=self.ip)
         self.assertTrue(resultado["success"])
         self.assertIn("token", resultado)
 
     def test_solicitar_verificacion_outer_exception(self):
         """Outer exception in solicitar_verificacion_email (lines 242-244)."""
-        with patch(
-            "apps.usuarios.services.password_recovery_service.TokensRecuperacion"
-        ) as mock_tokens:
+        with patch("apps.usuarios.services.password_recovery_service.TokensRecuperacion") as mock_tokens:
             mock_tokens.objects.filter.side_effect = Exception("DB fail")
-            resultado = PasswordRecoveryService.solicitar_verificacion_email(
-                empleado=self.empleado, ip_address=self.ip
-            )
+            resultado = PasswordRecoveryService.solicitar_verificacion_email(empleado=self.empleado, ip_address=self.ip)
         self.assertFalse(resultado["success"])
         self.assertIn("Error al generar", resultado["mensaje"])
 
@@ -188,9 +169,7 @@ class VerificarEmailEdgeCasesTest(BaseUsuariosTest):
     """Cover edge cases in verificar_email."""
 
     def _crear_token_verificacion(self):
-        resultado = PasswordRecoveryService.solicitar_verificacion_email(
-            empleado=self.empleado, ip_address=self.ip
-        )
+        resultado = PasswordRecoveryService.solicitar_verificacion_email(empleado=self.empleado, ip_address=self.ip)
         return resultado["token"]
 
     def test_verificar_email_token_expirado(self):
@@ -208,9 +187,7 @@ class VerificarEmailEdgeCasesTest(BaseUsuariosTest):
     def test_verificar_email_empleado_no_disponible(self):
         """Empleado not found after token check (line 261)."""
         token = self._crear_token_verificacion()
-        with patch(
-            "apps.usuarios.services.password_recovery_service.Empleados"
-        ) as mock_emp:
+        with patch("apps.usuarios.services.password_recovery_service.Empleados") as mock_emp:
             mock_emp.objects.filter.return_value.first.return_value = None
             resultado = PasswordRecoveryService.verificar_email(token=token, ip_address=self.ip)
         self.assertFalse(resultado["success"])
@@ -219,18 +196,14 @@ class VerificarEmailEdgeCasesTest(BaseUsuariosTest):
     def test_verificar_email_auditoria_exception_silenced(self):
         """Inner audit exception silenced in verificar_email (lines 279-280)."""
         token = self._crear_token_verificacion()
-        with patch(
-            "apps.usuarios.services.password_recovery_service.AuditoriaOperaciones"
-        ) as mock_auditoria:
+        with patch("apps.usuarios.services.password_recovery_service.AuditoriaOperaciones") as mock_auditoria:
             mock_auditoria.objects.create.side_effect = Exception("DB error")
             resultado = PasswordRecoveryService.verificar_email(token=token, ip_address=self.ip)
         self.assertTrue(resultado["success"])
 
     def test_verificar_email_outer_exception(self):
         """Outer exception in verificar_email (lines 284-286)."""
-        with patch(
-            "apps.usuarios.services.password_recovery_service.TokensRecuperacion"
-        ) as mock_tokens:
+        with patch("apps.usuarios.services.password_recovery_service.TokensRecuperacion") as mock_tokens:
             mock_tokens.objects.filter.side_effect = Exception("DB fail")
             resultado = PasswordRecoveryService.verificar_email(token="sometoken", ip_address=self.ip)
         self.assertFalse(resultado["success"])
@@ -242,9 +215,7 @@ class LimpiarTokensExceptionTest(BaseUsuariosTest):
 
     def test_limpiar_tokens_outer_exception(self):
         """Outer exception returns error dict (lines 303-305)."""
-        with patch(
-            "apps.usuarios.services.password_recovery_service.TokensRecuperacion"
-        ) as mock_tokens:
+        with patch("apps.usuarios.services.password_recovery_service.TokensRecuperacion") as mock_tokens:
             mock_tokens.objects.filter.side_effect = Exception("DB fail")
             resultado = PasswordRecoveryService.limpiar_tokens_expirados()
         self.assertFalse(resultado["success"])
@@ -255,6 +226,7 @@ class LimpiarTokensExceptionTest(BaseUsuariosTest):
 # ============================================================================
 # SessionService - exception and branch paths
 # ============================================================================
+
 
 class BaseSessionTest(BaseUsuariosTest):
     """Base setup for session service tests."""
@@ -309,9 +281,7 @@ class CrearSesionExceptionTest(BaseSessionTest):
 
     def test_crear_sesion_outer_exception(self):
         """Outer exception in crear_sesion (lines 86-88)."""
-        with patch(
-            "apps.usuarios.services.session_service.SesionesActivas"
-        ) as mock_ses:
+        with patch("apps.usuarios.services.session_service.SesionesActivas") as mock_ses:
             mock_ses.objects.filter.side_effect = Exception("DB fail")
             resultado = SessionService.crear_sesion(
                 empleado=self.empleado,
@@ -349,9 +319,7 @@ class RenovarSesionExceptionTest(BaseSessionTest):
 
     def test_renovar_sesion_outer_exception(self):
         """Outer exception in renovar_sesion (lines 156-158)."""
-        with patch(
-            "apps.usuarios.services.session_service.SesionesActivas"
-        ) as mock_ses:
+        with patch("apps.usuarios.services.session_service.SesionesActivas") as mock_ses:
             mock_ses.objects.filter.side_effect = Exception("DB fail")
             resultado = SessionService.renovar_sesion(
                 empleado=self.empleado,
@@ -379,9 +347,7 @@ class ActualizarActividadExpiredSessionTest(BaseSessionTest):
             ultima_actividad=timezone.now(),
             activa=True,
         )
-        resultado = SessionService.actualizar_actividad_sesion(
-            empleado=self.empleado, session_key="old_age_sess"
-        )
+        resultado = SessionService.actualizar_actividad_sesion(empleado=self.empleado, session_key="old_age_sess")
         self.assertFalse(resultado["success"])
         self.assertIn("expirada", resultado["mensaje"])
         sesion = SesionesActivas.objects.filter(session_key="old_age_sess").first()
@@ -389,13 +355,9 @@ class ActualizarActividadExpiredSessionTest(BaseSessionTest):
 
     def test_actualizar_actividad_outer_exception(self):
         """Outer exception in actualizar_actividad_sesion (lines 180-182)."""
-        with patch(
-            "apps.usuarios.services.session_service.SesionesActivas"
-        ) as mock_ses:
+        with patch("apps.usuarios.services.session_service.SesionesActivas") as mock_ses:
             mock_ses.objects.filter.side_effect = Exception("DB fail")
-            resultado = SessionService.actualizar_actividad_sesion(
-                empleado=self.empleado, session_key="any_key"
-            )
+            resultado = SessionService.actualizar_actividad_sesion(empleado=self.empleado, session_key="any_key")
         self.assertFalse(resultado["success"])
         self.assertIn("Error al actualizar actividad", resultado["mensaje"])
 
@@ -405,13 +367,9 @@ class CerrarSesionExceptionTest(BaseSessionTest):
 
     def test_cerrar_sesion_outer_exception(self):
         """Outer exception in cerrar_sesion (lines 211-213)."""
-        with patch(
-            "apps.usuarios.services.session_service.SesionesActivas"
-        ) as mock_ses:
+        with patch("apps.usuarios.services.session_service.SesionesActivas") as mock_ses:
             mock_ses.objects.filter.side_effect = Exception("DB fail")
-            resultado = SessionService.cerrar_sesion(
-                empleado=self.empleado, session_key="any_key", ip_address=self.ip
-            )
+            resultado = SessionService.cerrar_sesion(empleado=self.empleado, session_key="any_key", ip_address=self.ip)
         self.assertFalse(resultado["success"])
         self.assertIn("Error al cerrar sesion", resultado["mensaje"])
 
@@ -421,13 +379,9 @@ class CerrarTodasSesionesExceptionTest(BaseSessionTest):
 
     def test_cerrar_todas_sesiones_outer_exception(self):
         """Outer exception in cerrar_todas_sesiones (lines 246-248)."""
-        with patch(
-            "apps.usuarios.services.session_service.SesionesActivas"
-        ) as mock_ses:
+        with patch("apps.usuarios.services.session_service.SesionesActivas") as mock_ses:
             mock_ses.objects.filter.side_effect = Exception("DB fail")
-            resultado = SessionService.cerrar_todas_sesiones(
-                empleado=self.empleado, ip_address=self.ip
-            )
+            resultado = SessionService.cerrar_todas_sesiones(empleado=self.empleado, ip_address=self.ip)
         self.assertFalse(resultado["success"])
         self.assertIn("Error al cerrar sesiones", resultado["mensaje"])
 
@@ -438,6 +392,7 @@ class AnalizarPatronAccesoTest(BaseSessionTest):
     def test_patron_existente_dia_nuevo_agrega(self):
         """Existing patron: new day is appended to dias_semana (line 287)."""
         import json
+
         # Create existing patron with all days except today
         dia_hoy = timezone.now().weekday()
         dias_iniciales = [d for d in range(7) if d != dia_hoy]
@@ -461,6 +416,7 @@ class AnalizarPatronAccesoTest(BaseSessionTest):
     def test_patron_existente_sin_dias_semana(self):
         """Existing patron with dias_semana=None gets initialized (line 290)."""
         import json
+
         PatronesAcceso.objects.create(
             usuario=self.empleado.usuario,
             tipo_usuario="empleado",
@@ -486,6 +442,7 @@ class DetectarAccesoInusualTest(BaseSessionTest):
     def test_ip_habitual_returns_no_inusual(self):
         """When ip is habitual, returns es_inusual=False immediately (lines 305-306)."""
         import json
+
         PatronesAcceso.objects.create(
             usuario=self.empleado.usuario,
             tipo_usuario="empleado",
@@ -505,6 +462,7 @@ class DetectarAccesoInusualTest(BaseSessionTest):
     def test_ip_no_habitual_con_accesos_previos(self):
         """IP not habitual but has previous sessions → 'IP no habitual' (line 326)."""
         import json
+
         # Create a habitual patron for a DIFFERENT IP so there's history
         PatronesAcceso.objects.create(
             usuario=self.empleado.usuario,
@@ -536,6 +494,7 @@ class DetectarAccesoInusualTest(BaseSessionTest):
         """Non-habitual IP + unusual time → nivel_riesgo='alto' (lines 331-343)."""
         import json
         from datetime import time as dt_time
+
         # Create a habitual patron for a different IP with a morning horario_inicio
         madrugada_inicio = dt_time(3, 0)  # 3 AM
         PatronesAcceso.objects.create(
@@ -562,6 +521,7 @@ class DetectarAccesoInusualTest(BaseSessionTest):
         """Single reason → nivel_riesgo='medio' (lines 342-343)."""
         import json
         from datetime import time as dt_time
+
         # Habitual patron for diff IP with horario_inicio close to now (< 4 hours diff)
         hora_cercana = dt_time(timezone.now().hour, 0)
         PatronesAcceso.objects.create(
@@ -587,9 +547,7 @@ class LimpiarSesionesExceptionTest(BaseSessionTest):
 
     def test_limpiar_sesiones_outer_exception(self):
         """Outer exception in limpiar_sesiones_expiradas (lines 371-373)."""
-        with patch(
-            "apps.usuarios.services.session_service.SesionesActivas"
-        ) as mock_ses:
+        with patch("apps.usuarios.services.session_service.SesionesActivas") as mock_ses:
             mock_ses.objects.filter.side_effect = Exception("DB fail")
             resultado = SessionService.limpiar_sesiones_expiradas()
         self.assertFalse(resultado["success"])

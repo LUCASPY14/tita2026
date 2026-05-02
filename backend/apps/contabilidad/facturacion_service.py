@@ -6,6 +6,7 @@ Flujo:
   2. emitir()           → crea DocumentosTributarios, vincula ventas y/o almuerzos
   3. texto_impresion()  → texto 80 columnas listo para la matricial
 """
+
 from datetime import datetime
 from decimal import Decimal
 
@@ -14,17 +15,38 @@ from django.db.models import Max, Sum
 
 from apps.contabilidad.models import DocumentosTributarios, Timbrados
 
-
 # ─── helpers ─────────────────────────────────────────────────────────────────
 
 MESES = [
-    "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+    "",
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
 ]
 
 MESES_CORTO = [
-    "", "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+    "",
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
 ]
 
 W = 80  # ancho de línea impresora
@@ -54,6 +76,7 @@ def _init_cliente(c) -> dict:
 
 # ─── servicio ─────────────────────────────────────────────────────────────────
 
+
 class FacturacionService:
 
     # ── cola ──────────────────────────────────────────────────────────────────
@@ -70,8 +93,7 @@ class FacturacionService:
         from apps.almuerzos.models import CuentasAlmuerzoMensual
 
         ventas_qs = (
-            Ventas.objects
-            .filter(
+            Ventas.objects.filter(
                 genera_factura_legal=True,
                 id_documento__isnull=True,
                 estado_pago__iexact="pagada",
@@ -82,8 +104,7 @@ class FacturacionService:
         )
 
         almuerzos_qs = (
-            CuentasAlmuerzoMensual.objects
-            .filter(
+            CuentasAlmuerzoMensual.objects.filter(
                 id_documento__isnull=True,
                 monto_pagado__gt=0,
             )
@@ -97,13 +118,15 @@ class FacturacionService:
             cid = venta.id_cliente_id
             if cid not in clientes:
                 clientes[cid] = _init_cliente(venta.id_cliente)
-            clientes[cid]["ventas"].append({
-                "id": venta.id_venta,
-                "tipo": "venta",
-                "fecha": venta.fecha.strftime("%d/%m/%Y %H:%M"),
-                "descripcion": f"Venta POS #{venta.id_venta}  ({venta.fecha.strftime('%d/%m/%Y')})",
-                "monto": float(venta.monto_total),
-            })
+            clientes[cid]["ventas"].append(
+                {
+                    "id": venta.id_venta,
+                    "tipo": "venta",
+                    "fecha": venta.fecha.strftime("%d/%m/%Y %H:%M"),
+                    "descripcion": f"Venta POS #{venta.id_venta}  ({venta.fecha.strftime('%d/%m/%Y')})",
+                    "monto": float(venta.monto_total),
+                }
+            )
             clientes[cid]["total_pendiente"] += venta.monto_total
 
         for cuenta in almuerzos_qs:
@@ -111,17 +134,16 @@ class FacturacionService:
             cid = hijo.id_cliente_responsable_id
             if cid not in clientes:
                 clientes[cid] = _init_cliente(hijo.id_cliente_responsable)
-            desc = (
-                f"Almuerzos {MESES_CORTO[cuenta.mes]} {cuenta.anio}"
-                f" – {hijo.nombre} {hijo.apellido}"
+            desc = f"Almuerzos {MESES_CORTO[cuenta.mes]} {cuenta.anio}" f" – {hijo.nombre} {hijo.apellido}"
+            clientes[cid]["almuerzos"].append(
+                {
+                    "id": cuenta.id_cuenta,
+                    "tipo": "almuerzo",
+                    "fecha": f"{MESES[cuenta.mes]} {cuenta.anio}",
+                    "descripcion": desc,
+                    "monto": float(cuenta.monto_pagado),
+                }
             )
-            clientes[cid]["almuerzos"].append({
-                "id": cuenta.id_cuenta,
-                "tipo": "almuerzo",
-                "fecha": f"{MESES[cuenta.mes]} {cuenta.anio}",
-                "descripcion": desc,
-                "monto": float(cuenta.monto_pagado),
-            })
             clientes[cid]["total_pendiente"] += cuenta.monto_pagado
 
         # Convertir Decimal a float para serialización y ordenar por apellido
@@ -140,7 +162,7 @@ class FacturacionService:
         nro_preimpreso: int,
         ventas_ids: list,
         almuerzos_ids: list,
-        condicion_venta: str = 'CONTADO',
+        condicion_venta: str = "CONTADO",
         plazo_dias: int | None = None,
     ) -> DocumentosTributarios:
         """
@@ -161,16 +183,13 @@ class FacturacionService:
         with transaction.atomic():
             # Timbrado vigente con lock para evitar race conditions
             timbrado = (
-                Timbrados.objects
-                .select_for_update()
+                Timbrados.objects.select_for_update()
                 .filter(estado=True, fecha_inicio__lte=hoy, fecha_fin__gte=hoy)
                 .order_by("-fecha_inicio")
                 .first()
             )
             if not timbrado:
-                raise ValueError(
-                    "No hay timbrado vigente. Configurá uno en Gestión de Timbrado."
-                )
+                raise ValueError("No hay timbrado vigente. Configurá uno en Gestión de Timbrado.")
 
             # Validar rango
             if not (timbrado.nro_inicial <= nro_preimpreso <= timbrado.nro_final):
@@ -180,31 +199,21 @@ class FacturacionService:
                 )
 
             # Validar que no esté ya emitido
-            if DocumentosTributarios.objects.filter(
-                nro_timbrado=timbrado, nro_secuencial=nro_preimpreso
-            ).exists():
-                raise ValueError(
-                    f"El número de factura {nro_preimpreso} ya fue emitido."
-                )
+            if DocumentosTributarios.objects.filter(nro_timbrado=timbrado, nro_secuencial=nro_preimpreso).exists():
+                raise ValueError(f"El número de factura {nro_preimpreso} ya fue emitido.")
 
             # Calcular monto total
-            monto_ventas = (
-                Ventas.objects.filter(id_venta__in=ventas_ids)
-                .aggregate(t=Sum("monto_total"))["t"] or Decimal("0")
-            )
-            monto_alm = (
-                CuentasAlmuerzoMensual.objects.filter(id_cuenta__in=almuerzos_ids)
-                .aggregate(t=Sum("monto_pagado"))["t"] or Decimal("0")
-            )
+            monto_ventas = Ventas.objects.filter(id_venta__in=ventas_ids).aggregate(t=Sum("monto_total"))[
+                "t"
+            ] or Decimal("0")
+            monto_alm = CuentasAlmuerzoMensual.objects.filter(id_cuenta__in=almuerzos_ids).aggregate(
+                t=Sum("monto_pagado")
+            )["t"] or Decimal("0")
             monto_total = monto_ventas + monto_alm
 
             # Formatear número de comprobante
             punto = timbrado.id_punto
-            nro_fmt = (
-                f"{punto.codigo_establecimiento}-"
-                f"{punto.codigo_punto_expedicion}-"
-                f"{nro_preimpreso:07d}"
-            )
+            nro_fmt = f"{punto.codigo_establecimiento}-" f"{punto.codigo_punto_expedicion}-" f"{nro_preimpreso:07d}"
 
             cliente = Clientes.objects.get(pk=id_cliente)
 
@@ -227,9 +236,9 @@ class FacturacionService:
 
             # Vincular cuentas almuerzo
             if almuerzos_ids:
-                CuentasAlmuerzoMensual.objects.filter(
-                    id_cuenta__in=almuerzos_ids
-                ).update(id_documento=doc, nro_comprobante=nro_fmt)
+                CuentasAlmuerzoMensual.objects.filter(id_cuenta__in=almuerzos_ids).update(
+                    id_documento=doc, nro_comprobante=nro_fmt
+                )
 
         return doc
 
@@ -247,9 +256,7 @@ class FacturacionService:
         with transaction.atomic():
             doc = DocumentosTributarios.objects.select_for_update().get(pk=id_documento)
             Ventas.objects.filter(id_documento=doc).update(id_documento=None)
-            CuentasAlmuerzoMensual.objects.filter(id_documento=doc).update(
-                id_documento=None, nro_comprobante=""
-            )
+            CuentasAlmuerzoMensual.objects.filter(id_documento=doc).update(id_documento=None, nro_comprobante="")
             doc.tipo_documento = "Factura-Anulada"
             doc.save(update_fields=["tipo_documento"])
 
@@ -265,11 +272,7 @@ class FacturacionService:
         from apps.almuerzos.models import CuentasAlmuerzoMensual
         from apps.contabilidad.models import DatosEmpresa
 
-        doc = (
-            DocumentosTributarios.objects
-            .select_related("nro_timbrado__id_punto", "id_cliente")
-            .get(pk=id_documento)
-        )
+        doc = DocumentosTributarios.objects.select_related("nro_timbrado__id_punto", "id_cliente").get(pk=id_documento)
         timbrado = doc.nro_timbrado
         empresa = DatosEmpresa.objects.filter(estado=True).first()
 
@@ -289,15 +292,19 @@ class FacturacionService:
 
         # ── Datos timbrado / factura ──────────────────────────────────────────
         nro_fac = doc.nro_preimpreso_interno or str(doc.nro_secuencial)
-        lines.append(_row(
-            f"TIMBRADO Nro: {timbrado.nro_timbrado}",
-            f"FACTURA Nro: {nro_fac}",
-        ))
-        lines.append(_row(
-            f"Vigencia: {timbrado.fecha_inicio.strftime('%d/%m/%Y')} – "
-            f"{timbrado.fecha_fin.strftime('%d/%m/%Y')}",
-            f"Fecha: {doc.fecha_emision.strftime('%d/%m/%Y %H:%M')}",
-        ))
+        lines.append(
+            _row(
+                f"TIMBRADO Nro: {timbrado.nro_timbrado}",
+                f"FACTURA Nro: {nro_fac}",
+            )
+        )
+        lines.append(
+            _row(
+                f"Vigencia: {timbrado.fecha_inicio.strftime('%d/%m/%Y')} – "
+                f"{timbrado.fecha_fin.strftime('%d/%m/%Y')}",
+                f"Fecha: {doc.fecha_emision.strftime('%d/%m/%Y %H:%M')}",
+            )
+        )
         lines.append(sep)
 
         # ── Datos cliente ─────────────────────────────────────────────────────
@@ -311,7 +318,7 @@ class FacturacionService:
 
         # ── Condición de venta ────────────────────────────────────────────────
         condicion_label = doc.get_condicion_venta_display()
-        if doc.condicion_venta == 'CREDITO' and doc.plazo_dias:
+        if doc.condicion_venta == "CREDITO" and doc.plazo_dias:
             condicion_label += f" – {doc.plazo_dias} días"
         lines.append(f"Condición: {condicion_label}")
         lines.append(sep)
@@ -324,28 +331,17 @@ class FacturacionService:
 
         subtotal = Decimal("0")
 
-        ventas = (
-            Ventas.objects
-            .filter(id_documento=doc)
-            .order_by("fecha")
-        )
+        ventas = Ventas.objects.filter(id_documento=doc).order_by("fecha")
         for v in ventas:
             desc = f"Venta POS #{v.id_venta}  {v.fecha.strftime('%d/%m/%Y')}"[:56]
             monto = v.monto_total
             subtotal += monto
             lines.append(f"{desc:<56}{monto:>22,.0f} ")
 
-        almuerzos = (
-            CuentasAlmuerzoMensual.objects
-            .filter(id_documento=doc)
-            .select_related("id_hijo")
-        )
+        almuerzos = CuentasAlmuerzoMensual.objects.filter(id_documento=doc).select_related("id_hijo")
         for cuenta in almuerzos:
             hijo = cuenta.id_hijo
-            desc = (
-                f"Almuerzos {MESES[cuenta.mes]} {cuenta.anio}"
-                f" – {hijo.nombre} {hijo.apellido}"
-            )[:56]
+            desc = (f"Almuerzos {MESES[cuenta.mes]} {cuenta.anio}" f" – {hijo.nombre} {hijo.apellido}")[:56]
             monto = cuenta.monto_pagado
             subtotal += monto
             lines.append(f"{desc:<56}{monto:>22,.0f} ")

@@ -69,9 +69,7 @@ class CategoriasAdmin(admin.ModelAdmin):
     def categoria_padre_link(self, obj):
         """Link a la categoría padre"""
         if obj.id_categoria_padre:
-            url = reverse(
-                "admin:productos_categorias_change", args=[obj.id_categoria_padre.id_categoria]
-            )
+            url = reverse("admin:productos_categorias_change", args=[obj.id_categoria_padre.id_categoria])
             return format_html('<a href="{}">{}</a>', url, obj.id_categoria_padre.nombre)
         return "-"
 
@@ -96,10 +94,12 @@ class CategoriasAdmin(admin.ModelAdmin):
         """Badge coloreado de estado"""
         if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'estado'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+                "estado",
             )
         return format_html(
-            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'INACTIVO'
+            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+            "INACTIVO",
         )
 
     estado_badge.short_description = "Estado"
@@ -202,10 +202,12 @@ class UnidadesMedidaAdmin(admin.ModelAdmin):
         """Badge de estado"""
         if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'estado'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+                "estado",
             )
         return format_html(
-            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'INACTIVO'
+            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+            "INACTIVO",
         )
 
     estado_badge.short_description = "Estado"
@@ -260,7 +262,7 @@ class ProductosAdmin(admin.ModelAdmin):
                 '<code style="background-color: #e9ecef; padding: 3px 8px; border-radius: 3px; font-family: monospace; font-size: 12px;">{}</code>',
                 obj.codigo_barra,
             )
-        return format_html('<span style="color: #6c757d; font-style: italic;">{}</span>', 'Sin código')
+        return format_html('<span style="color: #6c757d; font-style: italic;">{}</span>', "Sin código")
 
     codigo_barra_badge.short_description = "Código"
 
@@ -286,9 +288,7 @@ class ProductosAdmin(admin.ModelAdmin):
     def impuesto_info(self, obj):
         """Información del impuesto"""
         if obj.id_impuesto:
-            return format_html(
-                '<span style="font-weight: bold;">{}%</span>', obj.id_impuesto.porcentaje
-            )
+            return format_html('<span style="font-weight: bold;">{}%</span>', obj.id_impuesto.porcentaje)
         return "-"
 
     impuesto_info.short_description = "IVA"
@@ -306,8 +306,8 @@ class ProductosAdmin(admin.ModelAdmin):
     def permite_stock_neg(self, obj):
         """Icono para stock negativo permitido"""
         if obj.permite_stock_negativo:
-            return format_html('{}', '✅')
-        return format_html('{}', '❌')
+            return format_html("{}", "✅")
+        return format_html("{}", "❌")
 
     permite_stock_neg.short_description = "Stock -"
 
@@ -315,10 +315,12 @@ class ProductosAdmin(admin.ModelAdmin):
         """Badge de estado"""
         if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'estado'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+                "estado",
             )
         return format_html(
-            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'INACTIVO'
+            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+            "INACTIVO",
         )
 
     estado_badge.short_description = "Estado"
@@ -342,9 +344,7 @@ class ProductosAdmin(admin.ModelAdmin):
     def duplicar_producto(self, request, queryset):
         """Duplicar producto seleccionado (crea copia sin código de barras)"""
         if queryset.count() != 1:
-            self.message_user(
-                request, "Seleccione exactamente un producto para duplicar.", level="error"
-            )
+            self.message_user(request, "Seleccione exactamente un producto para duplicar.", level="error")
             return
 
         producto = queryset.first()
@@ -447,9 +447,7 @@ class ListasPreciosAdmin(admin.ModelAdmin):
                 color = "#17a2b8"  # Azul para pasado
                 label = obj.fecha_vigencia.strftime("%d/%m/%Y")
 
-            return format_html(
-                '<span style="color: {}; font-weight: bold;">{}</span>', color, label
-            )
+            return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, label)
         return "-"
 
     fecha_vigencia_display.short_description = "Vigencia"
@@ -459,9 +457,7 @@ class ListasPreciosAdmin(admin.ModelAdmin):
         total = obj.precios.count()
 
         if total > 0:
-            promedio = obj.precios.aggregate(Avg("precio_unitario"))[
-                "precio_unitario__avg"
-            ] or Decimal("0")
+            promedio = obj.precios.aggregate(Avg("precio_unitario"))["precio_unitario__avg"] or Decimal("0")
             promedio_formateado = f"{promedio:,.0f}"
             return format_html(
                 '<span style="font-weight: bold;">{}</span> precios<br><small style="color: #6c757d;">Promedio: ₲{}</small>',
@@ -476,10 +472,12 @@ class ListasPreciosAdmin(admin.ModelAdmin):
         """Badge de estado"""
         if obj.estado:
             return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'ACTIVA'
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+                "ACTIVA",
             )
         return format_html(
-            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>', 'INACTIVA'
+            '<span style="background-color: #6c757d; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+            "INACTIVA",
         )
 
     estado_badge.short_description = "Estado"
@@ -654,31 +652,25 @@ class HistoricoPreciosAdmin(admin.ModelAdmin):
     def producto_link(self, obj):
         """Link al producto"""
         url = reverse("admin:productos_productos_change", args=[obj.id_producto.id_producto])
-        return format_html(
-            '<a href="{}" style="font-weight: bold;">{}</a>', url, obj.id_producto.descripcion[:40]
-        )
+        return format_html('<a href="{}" style="font-weight: bold;">{}</a>', url, obj.id_producto.descripcion[:40])
 
     producto_link.short_description = "Producto"
 
     def precio_anterior_display(self, obj):
         """Precio anterior formateado"""
-        return format_html(
-            '<span style="color: #dc3545; font-weight: bold;">₲{:,.2f}</span>', obj.precio_anterior
-        )
+        return format_html('<span style="color: #dc3545; font-weight: bold;">₲{:,.2f}</span>', obj.precio_anterior)
 
     precio_anterior_display.short_description = "Precio Anterior"
 
     def flecha(self, obj):
         """Flecha indicando cambio"""
-        return format_html('{}', '→')
+        return format_html("{}", "→")
 
     flecha.short_description = ""
 
     def precio_nuevo_display(self, obj):
         """Precio nuevo formateado"""
-        return format_html(
-            '<span style="color: #28a745; font-weight: bold;">₲{:,.2f}</span>', obj.precio_nuevo
-        )
+        return format_html('<span style="color: #28a745; font-weight: bold;">₲{:,.2f}</span>', obj.precio_nuevo)
 
     precio_nuevo_display.short_description = "Precio Nuevo"
 
@@ -714,6 +706,6 @@ class HistoricoPreciosAdmin(admin.ModelAdmin):
                 obj.id_empleado.nombre,
                 obj.id_empleado.apellido,
             )
-        return format_html('<span style="color: #6c757d; font-style: italic;">{}</span>', 'Sistema')
+        return format_html('<span style="color: #6c757d; font-style: italic;">{}</span>', "Sistema")
 
     empleado_info.short_description = "Registrado por"

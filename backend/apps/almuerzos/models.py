@@ -14,16 +14,12 @@ class PrecioAlmuerzo(models.Model):
     ]
 
     id_precio = models.AutoField(primary_key=True)
-    precio_unitario = models.DecimalField(
-        max_digits=10, decimal_places=2, help_text="Precio por almuerzo en guaraníes"
-    )
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, help_text="Precio por almuerzo en guaraníes")
     fecha_inicio_vigencia = models.DateField(help_text="Fecha desde la cual aplica este precio")
     fecha_fin_vigencia = models.DateField(
         blank=True, null=True, help_text="Fecha hasta la cual aplica (vacío = sin vencimiento)"
     )
-    descripcion = models.CharField(
-        max_length=200, blank=True, help_text="Ej: Ajuste por inflación 2026"
-    )
+    descripcion = models.CharField(max_length=200, blank=True, help_text="Ej: Ajuste por inflación 2026")
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
@@ -46,8 +42,7 @@ class PlanesAlmuerzo(models.Model):
     nombre_plan = models.CharField(unique=True, max_length=100)
     descripcion = models.TextField(blank=True, null=True)
     precio_mensual = models.DecimalField(
-        max_digits=10, decimal_places=2,
-        help_text="Precio mensual fijo (solo referencia para facturación global)"
+        max_digits=10, decimal_places=2, help_text="Precio mensual fijo (solo referencia para facturación global)"
     )
     tipo_plan = models.CharField(
         max_length=20,
@@ -104,9 +99,7 @@ class SuscripcionesAlmuerzo(models.Model):
     fecha_fin = models.DateField(blank=True, null=True)
     estado = models.CharField(max_length=10, blank=True, null=True)
     id_hijo = models.ForeignKey("clientes.Hijos", models.DO_NOTHING, db_column="id_hijo")
-    id_plan_almuerzo = models.ForeignKey(
-        "PlanesAlmuerzo", models.DO_NOTHING, db_column="id_plan_almuerzo"
-    )
+    id_plan_almuerzo = models.ForeignKey("PlanesAlmuerzo", models.DO_NOTHING, db_column="id_plan_almuerzo")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -143,9 +136,7 @@ class RegistrosConsumoAlmuerzo(models.Model):
     id_tipo_almuerzo = models.ForeignKey(
         "TiposAlmuerzo", models.DO_NOTHING, db_column="id_tipo_almuerzo", blank=True, null=True
     )
-    nro_tarjeta = models.ForeignKey(
-        "core.Tarjetas", models.DO_NOTHING, db_column="nro_tarjeta", blank=True, null=True
-    )
+    nro_tarjeta = models.ForeignKey("core.Tarjetas", models.DO_NOTHING, db_column="nro_tarjeta", blank=True, null=True)
     id_empleado_registro = models.ForeignKey(
         "usuarios.Empleados",
         models.DO_NOTHING,
@@ -191,16 +182,10 @@ class CuentasAlmuerzoMensual(models.Model):
     observaciones = models.TextField(blank=True, null=True)
     # Campos de pago
     forma_pago = models.CharField(
-        max_length=25, blank=True, choices=FORMA_PAGO_CHOICES,
-        help_text="Método de pago utilizado"
+        max_length=25, blank=True, choices=FORMA_PAGO_CHOICES, help_text="Método de pago utilizado"
     )
-    comprobante_pago = models.TextField(
-        blank=True,
-        help_text="Referencia, URL o descripción del comprobante de pago"
-    )
-    fecha_pago = models.DateField(
-        blank=True, null=True, help_text="Fecha efectiva del pago"
-    )
+    comprobante_pago = models.TextField(blank=True, help_text="Referencia, URL o descripción del comprobante de pago")
+    fecha_pago = models.DateField(blank=True, null=True, help_text="Fecha efectiva del pago")
     id_hijo = models.ForeignKey("clientes.Hijos", models.DO_NOTHING, db_column="id_hijo")
     # Documento tributario generado (factura física o electrónica)
     id_documento = models.ForeignKey(
@@ -232,12 +217,8 @@ class PagosAlmuerzoMensual(models.Model):
     monto_pagado = models.DecimalField(max_digits=10, decimal_places=2)
     mes_pagado = models.DateField()
     estado = models.CharField(max_length=9, blank=True, null=True)
-    id_suscripcion = models.ForeignKey(
-        "SuscripcionesAlmuerzo", models.DO_NOTHING, db_column="id_suscripcion"
-    )
-    id_venta = models.OneToOneField(
-        "ventas.Ventas", models.DO_NOTHING, db_column="id_venta", blank=True, null=True
-    )
+    id_suscripcion = models.ForeignKey("SuscripcionesAlmuerzo", models.DO_NOTHING, db_column="id_suscripcion")
+    id_venta = models.OneToOneField("ventas.Ventas", models.DO_NOTHING, db_column="id_venta", blank=True, null=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -255,9 +236,7 @@ class PagosCuentasAlmuerzo(models.Model):
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     referencia = models.CharField(max_length=50, blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
-    id_cuenta = models.ForeignKey(
-        "CuentasAlmuerzoMensual", models.DO_NOTHING, db_column="id_cuenta"
-    )
+    id_cuenta = models.ForeignKey("CuentasAlmuerzoMensual", models.DO_NOTHING, db_column="id_cuenta")
     id_empleado_registro = models.ForeignKey(
         "usuarios.Empleados",
         models.DO_NOTHING,
@@ -295,16 +274,12 @@ class Alergenos(models.Model):
 
 class ProductosAlergenos(models.Model):
     id_producto_alergeno = models.AutoField(primary_key=True)
-    contiene = models.BooleanField(
-        default=True, help_text="True=Contiene el alérgeno, False=Puede contener trazas"
-    )
+    contiene = models.BooleanField(default=True, help_text="True=Contiene el alérgeno, False=Puede contener trazas")
     observaciones = models.TextField(blank=True, null=True)
     fecha_registro = models.DateTimeField()
     usuario_registro = models.CharField(max_length=100, blank=True, null=True)
     id_alergeno = models.ForeignKey("Alergenos", models.DO_NOTHING, db_column="id_alergeno")
-    id_producto = models.ForeignKey(
-        "productos.Productos", models.DO_NOTHING, db_column="id_producto"
-    )
+    id_producto = models.ForeignKey("productos.Productos", models.DO_NOTHING, db_column="id_producto")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"

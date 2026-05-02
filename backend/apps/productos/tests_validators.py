@@ -139,9 +139,7 @@ class ValidadoresDescripcionProductoTestCase(TestCase):
                 try:
                     validar_descripcion_producto(desc)
                 except ValidationError:  # pragma: no cover
-                    self.fail(
-                        f"validar_descripcion_producto() falló con descripción válida: {desc}"
-                    )
+                    self.fail(f"validar_descripcion_producto() falló con descripción válida: {desc}")
 
     def test_descripcion_muy_corta(self):
         """Test: Descripción muy corta (< 3 caracteres)"""

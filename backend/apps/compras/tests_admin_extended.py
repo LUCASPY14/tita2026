@@ -5,6 +5,7 @@ Missing lines: 44, 50-54, 93-95, 101, 108, 115-122, 129-137, 148-151, 157-158,
 181, 188, 195, 202, 209-211, 232, 242-250, 265, 275, 281, 320-322, 328, 335,
 344-350, 361-362, 368-369, 391, 401, 408, 415
 """
+
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -297,9 +298,7 @@ class PagosProveedoresAdminTest(TestCase):
     @patch("apps.compras.admin.AplicacionPagosCompras")
     def test_monto_total_aplicado_positive(self, mock_apc):
         """Lines 242-250: total > 0 returns green badge with amount."""
-        mock_apc.objects.filter.return_value.aggregate.return_value = {
-            "total": Decimal("75000.00")
-        }
+        mock_apc.objects.filter.return_value.aggregate.return_value = {"total": Decimal("75000.00")}
         obj = MagicMock()
         result = self.admin.monto_total_aplicado(obj)
         self.assertIn("#28a745", result)
@@ -328,6 +327,7 @@ class AplicacionPagosComprasAdminTest(TestCase):
     def test_pago_info(self):
         """Line 265: pago_info displays pago id and formatted date."""
         from datetime import date
+
         pago = MagicMock()
         pago.fecha_creacion = date(2024, 3, 15)
         obj = _mock_obj(id_pago_proveedor_id=10, id_pago_proveedor=pago)

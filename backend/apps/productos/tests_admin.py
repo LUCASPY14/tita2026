@@ -26,9 +26,7 @@ class ProductosAdminTest(TestCase):
 
         self.categoria = Categorias.objects.create(nombre="Bebidas", estado=True)
 
-        self.unidad = UnidadesMedida.objects.create(
-            nombre="Unidad", abreviatura="Unid", estado=True
-        )
+        self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="Unid", estado=True)
 
         self.producto = Productos.objects.create(
             codigo_barra="1234567890",

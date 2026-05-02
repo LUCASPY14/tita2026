@@ -180,8 +180,7 @@ class Cleanup2FAExceptionTest(TestCase):
             ):
                 with patch(
                     "apps.usuarios.models.IntentosLogin.objects.filter",
-                    return_value=MagicMock(count=MagicMock(return_value=0),
-                                          delete=MagicMock(return_value=(0, {}))),
+                    return_value=MagicMock(count=MagicMock(return_value=0), delete=MagicMock(return_value=(0, {}))),
                 ):
                     with patch(
                         "apps.usuarios.models.Intentos2Fa.objects.filter",

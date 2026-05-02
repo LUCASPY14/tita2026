@@ -17,6 +17,7 @@ Missing lines:
   393      — CategoriasPromocion.__str__
   413      — ProductosPromocion.__str__
 """
+
 from decimal import Decimal
 
 from django.test import TestCase
@@ -68,9 +69,7 @@ def _make_base_fixtures():
             "id_tipo_cliente": tipo_cliente,
         },
     )
-    rol, _ = Roles.objects.get_or_create(
-        nombre_rol="VM_Cajero", defaults={"estado": True}
-    )
+    rol, _ = Roles.objects.get_or_create(nombre_rol="VM_Cajero", defaults={"estado": True})
     empleado, _ = Empleados.objects.get_or_create(
         email="vm_cajero@test.com",
         defaults={
@@ -90,12 +89,8 @@ def _make_base_fixtures():
         vigente_desde=timezone.now().date(),
         estado=True,
     )
-    categoria, _ = Categorias.objects.get_or_create(
-        nombre="VM_Cat", defaults={"estado": True}
-    )
-    unidad, _ = UnidadesMedida.objects.get_or_create(
-        nombre="VM_UN", defaults={"abreviatura": "UN", "estado": True}
-    )
+    categoria, _ = Categorias.objects.get_or_create(nombre="VM_Cat", defaults={"estado": True})
+    unidad, _ = UnidadesMedida.objects.get_or_create(nombre="VM_UN", defaults={"abreviatura": "UN", "estado": True})
     producto = Productos.objects.create(
         descripcion=f"VM_Prod_{timezone.now().timestamp()}",
         estado=True,
@@ -230,12 +225,11 @@ class VentasManagerIdEmpleadoDefaultTest(TestCase):
         # Ensure we have id_cliente so only empleado uses the default path
         from apps.clientes.models import Clientes, TiposCliente
         from apps.productos.models import ListasPrecios
+
         lista, _ = ListasPrecios.objects.get_or_create(
             nombre_lista="General", defaults={"moneda": "PYG", "estado": True}
         )
-        tipo, _ = TiposCliente.objects.get_or_create(
-            nombre_tipo="General", defaults={"estado": True}
-        )
+        tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo="General", defaults={"estado": True})
         self.cliente, _ = Clientes.objects.get_or_create(
             ruc_ci="0000000",
             defaults={
@@ -299,6 +293,7 @@ class DetallesVentaManagerAutoSubtotalTest(TestCase):
         )
         # Create stock so the inventario signal doesn't raise ValueError
         from apps.inventario.models import StockUnico
+
         StockUnico.objects.get_or_create(
             id_producto=self.producto,
             defaults={"cantidad": Decimal("100.000")},
@@ -548,9 +543,7 @@ class CategoriasPromocionStrTest(_PromoFixtureMixin, TestCase):
         """Line 393: __str__ returns class name and pk."""
         from apps.productos.models import Categorias
 
-        cat, _ = Categorias.objects.get_or_create(
-            nombre="VM_CatPromo", defaults={"estado": True}
-        )
+        cat, _ = Categorias.objects.get_or_create(nombre="VM_CatPromo", defaults={"estado": True})
         promo = self._make_promo()
         cat_promo = CategoriasPromocion.objects.create(
             id_categoria=cat,

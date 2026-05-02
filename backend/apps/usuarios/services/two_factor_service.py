@@ -208,9 +208,7 @@ class TwoFactorAuthService:
 
             if totp.verify(codigo_limpio, valid_window=TwoFactorAuthService.CODIGO_VALIDO_VENTANA):
                 # Código TOTP válido
-                TwoFactorAuthService._registrar_intento_2fa(
-                    empleado, ip_address, True, None, ciudad, pais
-                )
+                TwoFactorAuthService._registrar_intento_2fa(empleado, ip_address, True, None, ciudad, pais)
 
                 return {
                     "success": True,
@@ -220,9 +218,7 @@ class TwoFactorAuthService:
 
             # Intentar verificar como código de respaldo
             if TwoFactorAuthService._verificar_backup_code(auth_2fa, codigo_limpio, ip_address):
-                TwoFactorAuthService._registrar_intento_2fa(
-                    empleado, ip_address, True, None, ciudad, pais
-                )
+                TwoFactorAuthService._registrar_intento_2fa(empleado, ip_address, True, None, ciudad, pais)
 
                 return {
                     "success": True,
@@ -231,9 +227,7 @@ class TwoFactorAuthService:
                 }
 
             # Código inválido
-            TwoFactorAuthService._registrar_intento_2fa(
-                empleado, ip_address, False, "Código inválido", ciudad, pais
-            )
+            TwoFactorAuthService._registrar_intento_2fa(empleado, ip_address, False, "Código inválido", ciudad, pais)
 
             intentos_restantes = TwoFactorAuthService.MAX_INTENTOS_2FA - intentos_recientes - 1
 
@@ -432,9 +426,7 @@ class TwoFactorAuthService:
                 'ultimo_uso': datetime
             }
         """
-        auth_2fa = Autenticacion2Fa.objects.filter(
-            usuario=empleado.usuario, tipo_usuario="empleado"
-        ).first()
+        auth_2fa = Autenticacion2Fa.objects.filter(usuario=empleado.usuario, tipo_usuario="empleado").first()
 
         if not auth_2fa:
             return {
@@ -462,9 +454,7 @@ class TwoFactorAuthService:
                 pass
 
         # Obtener estadísticas de intentos
-        total_intentos = Intentos2Fa.objects.filter(
-            usuario=empleado.usuario, tipo_usuario="empleado"
-        ).count()
+        total_intentos = Intentos2Fa.objects.filter(usuario=empleado.usuario, tipo_usuario="empleado").count()
 
         intentos_exitosos = Intentos2Fa.objects.filter(
             usuario=empleado.usuario, tipo_usuario="empleado", exitoso=True

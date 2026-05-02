@@ -32,10 +32,10 @@ from apps.usuarios.services.portal_service import (
     PortalAuthService,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_cliente(**kwargs):
     defaults = dict(
@@ -61,6 +61,7 @@ def _make_portal_user(cliente, email="juan@portal.com", raw_password="Pass1234!"
 # ---------------------------------------------------------------------------
 # PortalAuthService
 # ---------------------------------------------------------------------------
+
 
 class PortalAuthServiceLoginTest(TestCase):
 
@@ -122,6 +123,7 @@ class PortalAuthServiceTokenTest(TestCase):
 
     def test_token_expiracion_correcta(self):
         import time as _time
+
         before_ts = _time.time()
         token = PortalAuthService._generar_token(self.portal_user)
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
@@ -137,6 +139,7 @@ class PortalAuthServiceTokenTest(TestCase):
     def test_verificar_token_expirado(self):
         # Create an expired token directly with a past exp timestamp
         import time as _time
+
         expired_payload = {
             "token_type": PORTAL_TOKEN_TYPE,
             "id_usuario_portal": self.portal_user.id_usuario_portal,
@@ -159,6 +162,7 @@ class PortalAuthServiceTokenTest(TestCase):
         # A token with a different token_type claim
         # Use integer timestamps to avoid PyJWT naive/aware comparison issues
         import time as _time
+
         payload = {
             "token_type": "access",
             "id_usuario_portal": self.portal_user.id_usuario_portal,
@@ -184,6 +188,7 @@ class PortalAuthServiceTokenTest(TestCase):
 # PortalJWTAuthentication
 # ---------------------------------------------------------------------------
 
+
 class PortalJWTAuthenticationTest(TestCase):
 
     def setUp(self):
@@ -194,6 +199,7 @@ class PortalJWTAuthenticationTest(TestCase):
     def _make_request(self, token=None):
         from rest_framework.request import Request
         from django.test import RequestFactory
+
         factory = RequestFactory()
         req = factory.get("/")
         if token:
@@ -229,6 +235,7 @@ class PortalJWTAuthenticationTest(TestCase):
     def test_lanza_error_token_portal_expirado(self):
         from rest_framework.exceptions import AuthenticationFailed
         import time as _time
+
         # Create an expired portal token directly
         expired_payload = {
             "token_type": PORTAL_TOKEN_TYPE,
@@ -251,6 +258,7 @@ class PortalJWTAuthenticationTest(TestCase):
 # IsPortalAuthenticated
 # ---------------------------------------------------------------------------
 
+
 class IsPortalAuthenticatedTest(TestCase):
 
     def setUp(self):
@@ -260,6 +268,7 @@ class IsPortalAuthenticatedTest(TestCase):
 
     def _make_request(self, user):
         from django.test import RequestFactory
+
         factory = RequestFactory()
         req = factory.get("/")
         req.user = user
@@ -272,11 +281,13 @@ class IsPortalAuthenticatedTest(TestCase):
 
     def test_rechaza_usuario_anonimo(self):
         from django.contrib.auth.models import AnonymousUser
+
         request = self._make_request(AnonymousUser())
         self.assertFalse(self.permission.has_permission(request, None))
 
     def test_rechaza_usuario_django(self):
         from django.contrib.auth.models import User
+
         user = User(username="emp")
         # Django User.is_authenticated is always True for authenticated users but
         # it is NOT a PortalUserProxy, so IsPortalAuthenticated must reject it.
@@ -288,15 +299,14 @@ class IsPortalAuthenticatedTest(TestCase):
 # POST /portal-auth/login/
 # ---------------------------------------------------------------------------
 
+
 class PortalLoginEndpointTest(APITestCase):
 
     def setUp(self):
         self.client = APIClient()
         self.cliente = _make_cliente(ruc_ci="555555-5")
         self.password = "Portal1234!"
-        self.portal_user = _make_portal_user(
-            self.cliente, email="login_test@portal.com", raw_password=self.password
-        )
+        self.portal_user = _make_portal_user(self.cliente, email="login_test@portal.com", raw_password=self.password)
         self.url = "/api/v1/portal-auth/login/"
 
     def test_login_exitoso_devuelve_token_y_usuario(self):
@@ -359,14 +369,13 @@ class PortalLoginEndpointTest(APITestCase):
 # GET /portal-auth/perfil/
 # ---------------------------------------------------------------------------
 
+
 class PortalPerfilEndpointTest(APITestCase):
 
     def setUp(self):
         self.client = APIClient()
         self.cliente = _make_cliente(ruc_ci="666666-6", email="perfil_c@test.com")
-        self.portal_user = _make_portal_user(
-            self.cliente, email="perfil@portal.com", raw_password="Pass1234!"
-        )
+        self.portal_user = _make_portal_user(self.cliente, email="perfil@portal.com", raw_password="Pass1234!")
         self.url = "/api/v1/portal-auth/perfil/"
         token = PortalAuthService._generar_token(self.portal_user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
@@ -407,14 +416,13 @@ class PortalPerfilEndpointTest(APITestCase):
 # GET /portal-auth/dashboard/
 # ---------------------------------------------------------------------------
 
+
 class PortalDashboardEndpointTest(APITestCase):
 
     def setUp(self):
         self.client = APIClient()
         self.cliente = _make_cliente(ruc_ci="777777-7")
-        self.portal_user = _make_portal_user(
-            self.cliente, email="dash@portal.com", raw_password="Pass1234!"
-        )
+        self.portal_user = _make_portal_user(self.cliente, email="dash@portal.com", raw_password="Pass1234!")
         self.url = "/api/v1/portal-auth/dashboard/"
         token = PortalAuthService._generar_token(self.portal_user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
@@ -446,6 +454,7 @@ class PortalDashboardEndpointTest(APITestCase):
 # ---------------------------------------------------------------------------
 # POST /portal-auth/cambiar_password/
 # ---------------------------------------------------------------------------
+
 
 class PortalCambiarPasswordEndpointTest(APITestCase):
 
@@ -513,6 +522,7 @@ class PortalCambiarPasswordEndpointTest(APITestCase):
 # ---------------------------------------------------------------------------
 # UsuariosPortal model
 # ---------------------------------------------------------------------------
+
 
 class UsuariosPortalModelTest(TestCase):
 

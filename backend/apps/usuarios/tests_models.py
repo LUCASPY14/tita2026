@@ -17,12 +17,8 @@ class RolesModelTest(TestCase):
 
     def test_crear_rol_exitoso(self):
         """Debe crear un rol con datos válidos"""
-        rol = Roles.objects.create(
-            nombre_rol="Administrador",
-            descripcion="Rol con permisos completos",
-            estado=True
-        )
-        
+        rol = Roles.objects.create(nombre_rol="Administrador", descripcion="Rol con permisos completos", estado=True)
+
         self.assertEqual(rol.nombre_rol, "Administrador")
         self.assertEqual(rol.descripcion, "Rol con permisos completos")
         self.assertTrue(rol.estado)
@@ -37,7 +33,7 @@ class RolesModelTest(TestCase):
     def test_nombre_rol_unique(self):
         """Debe validar unicidad de nombre_rol"""
         Roles.objects.create(nombre_rol="Supervisor")
-        
+
         with self.assertRaises(IntegrityError):
             Roles.objects.create(nombre_rol="Supervisor")
 
@@ -55,7 +51,7 @@ class RolesModelTest(TestCase):
         """Debe validar longitud máxima de nombre_rol"""
         nombre_largo = "A" * 51  # Excede los 50 caracteres
         rol = Roles(nombre_rol=nombre_largo)
-        
+
         with self.assertRaises(ValidationError):
             rol.full_clean()
 
@@ -65,10 +61,7 @@ class EmpleadosModelTest(TestCase):
 
     def setUp(self):
         """Configurar datos de prueba"""
-        self.rol = Roles.objects.create(
-            nombre_rol="Tester",
-            descripcion="Rol para pruebas"
-        )
+        self.rol = Roles.objects.create(nombre_rol="Tester", descripcion="Rol para pruebas")
 
     def test_crear_empleado_exitoso(self):
         """Debe crear empleado con datos válidos"""
@@ -80,9 +73,9 @@ class EmpleadosModelTest(TestCase):
             fecha_ingreso=timezone.now(),
             email="juan@test.com",
             estado=True,
-            id_rol=self.rol
+            id_rol=self.rol,
         )
-        
+
         self.assertEqual(empleado.nombre, "Juan")
         self.assertEqual(empleado.apellido, "Pérez")
         self.assertEqual(empleado.usuario, "jperez")
@@ -98,7 +91,7 @@ class EmpleadosModelTest(TestCase):
             usuario="mgarcia",
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
-            id_rol=self.rol
+            id_rol=self.rol,
         )
         expected = f"Empleados #{empleado.id_empleado}"
         self.assertEqual(str(empleado), expected)
@@ -111,9 +104,9 @@ class EmpleadosModelTest(TestCase):
             usuario="usuario1",
             contrasena_hash="hash1",
             fecha_ingreso=timezone.now(),
-            id_rol=self.rol
+            id_rol=self.rol,
         )
-        
+
         with self.assertRaises(IntegrityError):
             Empleados.objects.create(
                 nombre="Pedro",
@@ -121,7 +114,7 @@ class EmpleadosModelTest(TestCase):
                 usuario="usuario1",  # Usuario duplicado
                 contrasena_hash="hash2",
                 fecha_ingreso=timezone.now(),
-                id_rol=self.rol
+                id_rol=self.rol,
             )
 
     def test_empleado_activo_por_defecto(self):
@@ -132,7 +125,7 @@ class EmpleadosModelTest(TestCase):
             usuario="lsanchez",
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
-            id_rol=self.rol
+            id_rol=self.rol,
         )
         self.assertTrue(empleado.estado)
 
@@ -144,9 +137,9 @@ class EmpleadosModelTest(TestCase):
             usuario="alopez",
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
-            id_rol=self.rol
+            id_rol=self.rol,
         )
-        
+
         # Campos opcionales deben ser None por defecto
         self.assertIsNone(empleado.direccion)
         self.assertIsNone(empleado.ciudad)
@@ -163,9 +156,9 @@ class EmpleadosModelTest(TestCase):
             usuario="rdiaz",
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
-            id_rol=self.rol
+            id_rol=self.rol,
         )
-        
+
         # Verificar acceso al rol relacionado
         self.assertEqual(empleado.id_rol.nombre_rol, "Tester")
         self.assertEqual(empleado.id_rol.descripcion, "Rol para pruebas")
@@ -178,12 +171,12 @@ class EmpleadosModelTest(TestCase):
             usuario="cvargas",
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
-            id_rol=self.rol
+            id_rol=self.rol,
         )
-        
+
         # Inicialmente sin fecha de baja
         self.assertIsNone(empleado.fecha_baja)
-        
+
         # Asignar fecha de baja
         empleado.fecha_baja = timezone.now()
         empleado.save()
@@ -198,7 +191,7 @@ class EmpleadosModelTest(TestCase):
                 usuario="test",
                 contrasena_hash="hash",
                 fecha_ingreso=timezone.now(),
-                id_rol=self.rol
+                id_rol=self.rol,
             )
             empleado.full_clean()
 
@@ -209,7 +202,7 @@ class EmpleadosModelTest(TestCase):
                 usuario="test",
                 contrasena_hash="hash",
                 fecha_ingreso=timezone.now(),
-                id_rol=self.rol
+                id_rol=self.rol,
             )
             empleado.full_clean()
 
@@ -222,7 +215,7 @@ class EmpleadosModelTest(TestCase):
                 usuario="A" * 51,  # Excede 50 caracteres
                 contrasena_hash="hash",
                 fecha_ingreso=timezone.now(),
-                id_rol=self.rol
+                id_rol=self.rol,
             )
             empleado.full_clean()
 
@@ -234,12 +227,12 @@ class EmpleadosModelTest(TestCase):
             usuario="testuser",
             contrasena_hash="hash",
             fecha_ingreso=timezone.now(),
-            id_rol=self.rol
+            id_rol=self.rol,
         )
-        
+
         # Eliminar rol debe fallar debido a DO_NOTHING
         with self.assertRaises(Exception):
             self.rol.delete()
-        
+
         # Empleado debe seguir existiendo
         self.assertTrue(Empleados.objects.filter(id_empleado=empleado.id_empleado).exists())

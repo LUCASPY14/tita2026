@@ -21,12 +21,8 @@ class StockUnico(models.Model):
     """
 
     id_stock = models.AutoField(primary_key=True)
-    cantidad = models.DecimalField(
-        max_digits=10, decimal_places=3, help_text="Stock actual disponible"
-    )
-    fecha_ultima_actualizacion = models.DateTimeField(
-        auto_now=True, help_text="Última modificación del stock"
-    )
+    cantidad = models.DecimalField(max_digits=10, decimal_places=3, help_text="Stock actual disponible")
+    fecha_ultima_actualizacion = models.DateTimeField(auto_now=True, help_text="Última modificación del stock")
     id_producto = models.OneToOneField(
         "productos.Productos", models.DO_NOTHING, db_column="id_producto", related_name="stock"
     )
@@ -159,9 +155,7 @@ class MovimientosStock(models.Model):
 
     id_movimiento_stock = models.BigAutoField(primary_key=True)
     fecha_hora = models.DateTimeField(auto_now_add=True, help_text="Fecha y hora del movimiento")
-    tipo_movimiento = models.CharField(
-        max_length=7, choices=TIPO_MOVIMIENTO_CHOICES, help_text="Ingreso o Egreso"
-    )
+    tipo_movimiento = models.CharField(max_length=7, choices=TIPO_MOVIMIENTO_CHOICES, help_text="Ingreso o Egreso")
     motivo = models.CharField(
         max_length=50,
         choices=MOTIVO_CHOICES,
@@ -174,12 +168,8 @@ class MovimientosStock(models.Model):
         validators=[MinValueValidator(Decimal("0.001"))],
         help_text="Cantidad del movimiento (siempre positiva)",
     )
-    stock_resultante = models.DecimalField(
-        max_digits=10, decimal_places=3, help_text="Stock después del movimiento"
-    )
-    observaciones = models.TextField(
-        blank=True, null=True, help_text="Notas adicionales sobre el movimiento"
-    )
+    stock_resultante = models.DecimalField(max_digits=10, decimal_places=3, help_text="Stock después del movimiento")
+    observaciones = models.TextField(blank=True, null=True, help_text="Notas adicionales sobre el movimiento")
     id_compra = models.ForeignKey(
         "compras.Compras",
         models.DO_NOTHING,
@@ -196,9 +186,7 @@ class MovimientosStock(models.Model):
         null=True,
         related_name="movimientos_stock",
     )
-    id_ajuste = models.BigIntegerField(
-        blank=True, null=True, help_text="ID del ajuste de inventario asociado"
-    )
+    id_ajuste = models.BigIntegerField(blank=True, null=True, help_text="ID del ajuste de inventario asociado")
     id_empleado_autoriza = models.ForeignKey(
         "usuarios.Empleados",
         models.DO_NOTHING,
@@ -226,9 +214,7 @@ class MovimientosStock(models.Model):
 
     def __str__(self):
         signo = "+" if self.tipo_movimiento == "Ingreso" else "-"
-        return (
-            f"{self.id_producto.descripcion}: {signo}{self.cantidad} ({self.get_motivo_display()})"
-        )
+        return f"{self.id_producto.descripcion}: {signo}{self.cantidad} ({self.get_motivo_display()})"
 
     def clean(self):
         """Validaciones de consistencia"""
@@ -253,14 +239,10 @@ class MovimientosStock(models.Model):
         ]
 
         if self.tipo_movimiento == "Ingreso" and self.motivo in motivos_egreso:
-            raise ValidationError(
-                {"motivo": f'El motivo "{self.get_motivo_display()}" no es válido para un Ingreso'}
-            )
+            raise ValidationError({"motivo": f'El motivo "{self.get_motivo_display()}" no es válido para un Ingreso'})
 
         if self.tipo_movimiento == "Egreso" and self.motivo in motivos_ingreso:
-            raise ValidationError(
-                {"motivo": f'El motivo "{self.get_motivo_display()}" no es válido para un Egreso'}
-            )
+            raise ValidationError({"motivo": f'El motivo "{self.get_motivo_display()}" no es válido para un Egreso'})
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -290,16 +272,10 @@ class AjustesInventario(models.Model):
 
     id_ajuste = models.BigAutoField(primary_key=True)
     fecha_hora = models.DateTimeField(auto_now_add=True, help_text="Fecha de creación del ajuste")
-    tipo_ajuste = models.CharField(
-        max_length=8, choices=TIPO_AJUSTE_CHOICES, help_text="Aumento o Merma"
-    )
+    tipo_ajuste = models.CharField(max_length=8, choices=TIPO_AJUSTE_CHOICES, help_text="Aumento o Merma")
     motivo = models.CharField(max_length=255, help_text="Razón del ajuste")
-    estado = models.CharField(
-        max_length=10, choices=ESTADO_CHOICES, default="Pendiente", help_text="Estado del ajuste"
-    )
-    fecha_aprobacion = models.DateTimeField(
-        blank=True, null=True, help_text="Cuándo fue aprobado/rechazado"
-    )
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default="Pendiente", help_text="Estado del ajuste")
+    fecha_aprobacion = models.DateTimeField(blank=True, null=True, help_text="Cuándo fue aprobado/rechazado")
     id_empleado_solicita = models.ForeignKey(
         "usuarios.Empleados",
         models.DO_NOTHING,
@@ -353,9 +329,7 @@ class DetallesAjuste(models.Model):
         null=True,
         help_text="Movimiento creado al aprobar",
     )
-    id_producto = models.ForeignKey(
-        "productos.Productos", models.DO_NOTHING, db_column="id_producto"
-    )
+    id_producto = models.ForeignKey("productos.Productos", models.DO_NOTHING, db_column="id_producto")
 
     class Meta:
         managed = True
@@ -376,9 +350,7 @@ class CostosHistoricos(models.Model):
     """
 
     id_costo_historico = models.BigAutoField(primary_key=True)
-    costo_unitario = models.DecimalField(
-        max_digits=10, decimal_places=2, help_text="Costo de compra por unidad"
-    )
+    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, help_text="Costo de compra por unidad")
     cantidad_comprada = models.DecimalField(
         max_digits=10,
         decimal_places=3,
@@ -437,23 +409,15 @@ class AlertasStock(models.Model):
     ]
 
     id_alerta = models.BigAutoField(primary_key=True)
-    tipo_alerta = models.CharField(
-        max_length=20, choices=TIPO_ALERTA_CHOICES, default="stock_minimo"
-    )
-    stock_actual = models.DecimalField(
-        max_digits=10, decimal_places=3, help_text="Stock cuando se generó la alerta"
-    )
-    stock_minimo = models.DecimalField(
-        max_digits=10, decimal_places=3, help_text="Stock mínimo configurado"
-    )
+    tipo_alerta = models.CharField(max_length=20, choices=TIPO_ALERTA_CHOICES, default="stock_minimo")
+    stock_actual = models.DecimalField(max_digits=10, decimal_places=3, help_text="Stock cuando se generó la alerta")
+    stock_minimo = models.DecimalField(max_digits=10, decimal_places=3, help_text="Stock mínimo configurado")
     fecha_generada = models.DateTimeField(auto_now_add=True)
     fecha_resuelta = models.DateTimeField(
         blank=True, null=True, help_text="Cuándo se resolvió (stock volvió arriba del mínimo)"
     )
     activa = models.BooleanField(default=True, help_text="False cuando se resuelve")
-    notificacion_enviada = models.BooleanField(
-        default=False, help_text="Si ya se envió notificación"
-    )
+    notificacion_enviada = models.BooleanField(default=False, help_text="Si ya se envió notificación")
     id_producto = models.ForeignKey(
         "productos.Productos",
         models.DO_NOTHING,
@@ -495,19 +459,13 @@ class LotesProducto(models.Model):
 
     id_lote = models.AutoField(primary_key=True)
     numero_lote = models.CharField(max_length=100, help_text="Número de lote del proveedor")
-    fecha_fabricacion = models.DateField(
-        blank=True, null=True, help_text="Fecha de fabricación (opcional)"
-    )
+    fecha_fabricacion = models.DateField(blank=True, null=True, help_text="Fecha de fabricación (opcional)")
     fecha_vencimiento = models.DateField(help_text="Fecha de vencimiento del producto")
-    cantidad_inicial = models.DecimalField(
-        max_digits=10, decimal_places=3, help_text="Cantidad original comprada"
-    )
+    cantidad_inicial = models.DecimalField(max_digits=10, decimal_places=3, help_text="Cantidad original comprada")
     cantidad_disponible = models.DecimalField(
         max_digits=10, decimal_places=3, help_text="Cantidad actual disponible en el lote"
     )
-    bloqueado = models.BooleanField(
-        default=False, help_text="True si está vencido o retirado del inventario"
-    )
+    bloqueado = models.BooleanField(default=False, help_text="True si está vencido o retirado del inventario")
     motivo_bloqueo = models.CharField(
         max_length=100,
         blank=True,
@@ -519,9 +477,7 @@ class LotesProducto(models.Model):
             ("otro", "Otro motivo"),
         ],
     )
-    fecha_bloqueo = models.DateTimeField(
-        blank=True, null=True, help_text="Cuándo se bloqueó el lote"
-    )
+    fecha_bloqueo = models.DateTimeField(blank=True, null=True, help_text="Cuándo se bloqueó el lote")
     observaciones = models.TextField(blank=True, null=True)
     id_producto = models.ForeignKey(
         "productos.Productos", models.DO_NOTHING, db_column="id_producto", related_name="lotes"
@@ -580,17 +536,13 @@ class LotesProducto(models.Model):
         if self.fecha_fabricacion and self.fecha_vencimiento:
             if self.fecha_vencimiento <= self.fecha_fabricacion:
                 raise ValidationError(
-                    {
-                        "fecha_vencimiento": "La fecha de vencimiento debe ser posterior a la fecha de fabricación"
-                    }
+                    {"fecha_vencimiento": "La fecha de vencimiento debe ser posterior a la fecha de fabricación"}
                 )
 
         # Validar cantidad disponible <= cantidad inicial
         if self.cantidad_disponible > self.cantidad_inicial:
             raise ValidationError(
-                {
-                    "cantidad_disponible": "La cantidad disponible no puede ser mayor a la cantidad inicial"
-                }
+                {"cantidad_disponible": "La cantidad disponible no puede ser mayor a la cantidad inicial"}
             )
 
         # Si está bloqueado, debe tener motivo
@@ -642,9 +594,7 @@ class AlertasVencimiento(models.Model):
         default="pendiente",
     )
     fecha_accion = models.DateTimeField(blank=True, null=True)
-    id_lote = models.ForeignKey(
-        LotesProducto, models.CASCADE, db_column="id_lote", related_name="alertas"
-    )
+    id_lote = models.ForeignKey(LotesProducto, models.CASCADE, db_column="id_lote", related_name="alertas")
     id_empleado_responsable = models.ForeignKey(
         "usuarios.Empleados",
         models.DO_NOTHING,

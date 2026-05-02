@@ -55,9 +55,7 @@ class InventarioModelsExtTestBase(TestCase):
             estado=True,
         )
         self.categoria = Categorias.objects.create(nombre="CatInvExt", estado=True)
-        self.unidad = UnidadesMedida.objects.create(
-            nombre="UnitInvExt", abreviatura="UIE", estado=True
-        )
+        self.unidad = UnidadesMedida.objects.create(nombre="UnitInvExt", abreviatura="UIE", estado=True)
         self.producto = Productos.objects.create(
             codigo_barra="EXTINV00001",
             descripcion="Producto ExtInv",
@@ -74,9 +72,7 @@ class DiasStockDisponibleTest(InventarioModelsExtTestBase):
 
     def test_dias_stock_con_egresos(self):
         """When there are egress movements, returns estimated days (lines 102-104)."""
-        stock = StockUnico.objects.create(
-            cantidad=Decimal("30.000"), id_producto=self.producto
-        )
+        stock = StockUnico.objects.create(cantidad=Decimal("30.000"), id_producto=self.producto)
         # Create an egress movement within last 30 days
         MovimientosStock.objects.create(
             tipo_movimiento="Egreso",
@@ -93,9 +89,7 @@ class DiasStockDisponibleTest(InventarioModelsExtTestBase):
 
     def test_dias_stock_sin_egresos(self):
         """When no egress movements, returns None."""
-        stock = StockUnico.objects.create(
-            cantidad=Decimal("10.000"), id_producto=self.producto
-        )
+        stock = StockUnico.objects.create(cantidad=Decimal("10.000"), id_producto=self.producto)
         result = stock.dias_stock_disponible
         self.assertIsNone(result)
 
@@ -108,7 +102,7 @@ class StockUnicoCleanTest(InventarioModelsExtTestBase):
         # producto.permite_stock_negativo defaults to False (not in model, check)
         # StockUnico.clean() checks: self.cantidad < 0 and not self.id_producto.permite_stock_negativo
         # If producto doesn't have permite_stock_negativo field, skip this test
-        if not hasattr(self.producto, 'permite_stock_negativo'):
+        if not hasattr(self.producto, "permite_stock_negativo"):
             self.skipTest("Producto does not have permite_stock_negativo field")
         stock = StockUnico(cantidad=Decimal("-5.000"), id_producto=self.producto)
         with self.assertRaises(ValidationError):
@@ -116,9 +110,7 @@ class StockUnicoCleanTest(InventarioModelsExtTestBase):
 
     def test_costo_promedio_ponderado_con_compras(self):
         """costo_promedio_ponderado returns correct value when there are historical costs (line 65)."""
-        stock = StockUnico.objects.create(
-            cantidad=Decimal("10.000"), id_producto=self.producto
-        )
+        stock = StockUnico.objects.create(cantidad=Decimal("10.000"), id_producto=self.producto)
         CostosHistoricos.objects.create(
             costo_unitario=Decimal("1000.00"),
             cantidad_comprada=Decimal("10.000"),
@@ -130,9 +122,7 @@ class StockUnicoCleanTest(InventarioModelsExtTestBase):
 
     def test_requiere_reposicion_property(self):
         """requiere_reposicion is True when cantidad <= stock_minimo (line 81)."""
-        stock = StockUnico.objects.create(
-            cantidad=Decimal("4.000"), id_producto=self.producto
-        )
+        stock = StockUnico.objects.create(cantidad=Decimal("4.000"), id_producto=self.producto)
         # stock_minimo = 5, cantidad = 4
         self.assertTrue(stock.requiere_reposicion)
 
@@ -210,6 +200,7 @@ class CostosHistoricosTest(InventarioModelsExtTestBase):
     def test_str_representation(self):
         """__str__ returns product description, cost and date (line 415)."""
         from apps.compras.models import Compras, Proveedores
+
         costo = CostosHistoricos.objects.create(
             costo_unitario=Decimal("1500.00"),
             cantidad_comprada=Decimal("10.000"),
@@ -345,16 +336,12 @@ class LotesProductoTest(InventarioModelsExtTestBase):
 
     def test_esta_vencido_true(self):
         """esta_vencido returns True when dias_hasta_vencimiento < 0."""
-        lote = self._make_lote(
-            fecha_vencimiento=date.today() - timedelta(days=5)
-        )
+        lote = self._make_lote(fecha_vencimiento=date.today() - timedelta(days=5))
         self.assertTrue(lote.esta_vencido)
 
     def test_proximo_a_vencer_true(self):
         """proximo_a_vencer returns True when days <= 30."""
-        lote = self._make_lote(
-            fecha_vencimiento=date.today() + timedelta(days=15)
-        )
+        lote = self._make_lote(fecha_vencimiento=date.today() + timedelta(days=15))
         self.assertTrue(lote.proximo_a_vencer)
 
     def test_clean_valid_lote_no_exception(self):

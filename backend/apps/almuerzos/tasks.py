@@ -1,6 +1,7 @@
 """
 Celery tasks para el módulo de Almuerzos
 """
+
 from celery import shared_task
 from django.utils import timezone
 from decimal import Decimal
@@ -9,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name='apps.almuerzos.tasks.generar_cuentas_mensuales')
+@shared_task(name="apps.almuerzos.tasks.generar_cuentas_mensuales")
 def generar_cuentas_mensuales():
     """
     Genera automáticamente las CuentasAlmuerzoMensual para el mes actual
@@ -23,9 +24,9 @@ def generar_cuentas_mensuales():
     anio = hoy.year
     mes = hoy.month
 
-    suscripciones_activas = SuscripcionesAlmuerzo.objects.filter(
-        estado='activo'
-    ).select_related('id_hijo', 'id_plan_almuerzo')
+    suscripciones_activas = SuscripcionesAlmuerzo.objects.filter(estado="activo").select_related(
+        "id_hijo", "id_plan_almuerzo"
+    )
 
     creadas = 0
     for suscripcion in suscripciones_activas:
@@ -40,19 +41,19 @@ def generar_cuentas_mensuales():
                     id_hijo=suscripcion.id_hijo,
                     anio=anio,
                     mes=mes,
-                    monto_total=Decimal('0.00'),
-                    monto_pagado=Decimal('0.00'),
-                    estado='pendiente',
+                    monto_total=Decimal("0.00"),
+                    monto_pagado=Decimal("0.00"),
+                    estado="pendiente",
                 )
                 creadas += 1
             except Exception as e:
                 logger.warning(f"Error creando cuenta almuerzo para hijo {suscripcion.id_hijo_id}: {e}")
 
     logger.info(f"generar_cuentas_mensuales: {creadas} cuentas creadas para {mes}/{anio}")
-    return {'creadas': creadas, 'mes': mes, 'anio': anio}
+    return {"creadas": creadas, "mes": mes, "anio": anio}
 
 
-@shared_task(name='apps.almuerzos.tasks.alertar_cuentas_vencidas')
+@shared_task(name="apps.almuerzos.tasks.alertar_cuentas_vencidas")
 def alertar_cuentas_vencidas():
     """
     Genera alertas para CuentasAlmuerzoMensual con estado 'pendiente' de
@@ -62,24 +63,28 @@ def alertar_cuentas_vencidas():
     from apps.notificaciones.models import AlertasSistema
 
     hoy = timezone.now().date()
-    cuentas_vencidas = CuentasAlmuerzoMensual.objects.filter(
-        estado='pendiente',
-    ).exclude(
-        anio=hoy.year,
-        mes=hoy.month,
-    ).select_related('id_hijo')
+    cuentas_vencidas = (
+        CuentasAlmuerzoMensual.objects.filter(
+            estado="pendiente",
+        )
+        .exclude(
+            anio=hoy.year,
+            mes=hoy.month,
+        )
+        .select_related("id_hijo")
+    )
 
     alertas = 0
     for cuenta in cuentas_vencidas:
         ya_existe = AlertasSistema.objects.filter(
-            tipo_alerta='deuda_almuerzo',
+            tipo_alerta="deuda_almuerzo",
             referencia_id=cuenta.pk,
         ).exists()
         if not ya_existe:
             try:
                 AlertasSistema.objects.create(
-                    tipo_alerta='deuda_almuerzo',
-                    nivel='alta',
+                    tipo_alerta="deuda_almuerzo",
+                    nivel="alta",
                     titulo=f"Deuda almuerzos pendiente — {cuenta.mes}/{cuenta.anio}",
                     descripcion=(
                         f"Hijo: {cuenta.id_hijo}\n"
@@ -94,4 +99,4 @@ def alertar_cuentas_vencidas():
                 logger.warning(f"Error creando alerta para cuenta {cuenta.pk}: {e}")
 
     logger.info(f"alertar_cuentas_vencidas: {alertas} alertas generadas")
-    return {'alertas': alertas}
+    return {"alertas": alertas}

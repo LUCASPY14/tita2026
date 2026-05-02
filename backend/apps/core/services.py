@@ -63,16 +63,12 @@ class AutorizacionService:
 
         # Obtener rol del empleado
         if not hasattr(empleado, "id_rol") or not empleado.id_rol:
-            raise ValidationError(
-                {"error": "El empleado no tiene rol asignado", "empleado": str(empleado)}
-            )
+            raise ValidationError({"error": "El empleado no tiene rol asignado", "empleado": str(empleado)})
 
         rol = empleado.id_rol
 
         # Verificar si existe lÃ­mite configurado para este rol
-        verificacion = LimitesTransaccion.requiere_autorizacion(
-            rol=rol, tipo_operacion=tipo_operacion, monto=monto
-        )
+        verificacion = LimitesTransaccion.requiere_autorizacion(rol=rol, tipo_operacion=tipo_operacion, monto=monto)
 
         # Si no requiere autorizaciÃ³n, permitir
         if not verificacion["requiere"]:
@@ -111,9 +107,7 @@ class AutorizacionService:
         if limite_obj and limite_obj.roles_autorizadores.exists():
             # Hay roles especÃ­ficos configurados
             if autorizador.id_rol not in limite_obj.roles_autorizadores.all():
-                errores.append(
-                    f"El rol {autorizador.id_rol.nombre_rol} no puede autorizar esta operaciÃ³n"
-                )
+                errores.append(f"El rol {autorizador.id_rol.nombre_rol} no puede autorizar esta operaciÃ³n")
 
         # Si requiere doble autorizaciÃ³n
         if verificacion["doble_autorizacion"]:
@@ -220,9 +214,7 @@ class AutorizacionService:
 
         return (
             RegistroAutorizaciones.objects.filter(filtros)
-            .select_related(
-                "id_empleado_solicitante", "id_empleado_autorizador", "id_empleado_autorizador_2"
-            )
+            .select_related("id_empleado_solicitante", "id_empleado_autorizador", "id_empleado_autorizador_2")
             .order_by("-fecha_autorizacion")
         )
 
@@ -293,9 +285,7 @@ class RecargaService:
 
         # Buscar último número del día en DB
         ultimo_codigo = (
-            CargasSaldo.objects.filter(referencia__startswith=f"REF-{fecha_str}")
-            .order_by("-referencia")
-            .first()
+            CargasSaldo.objects.filter(referencia__startswith=f"REF-{fecha_str}").order_by("-referencia").first()
         )
 
         if ultimo_codigo and ultimo_codigo.referencia:
@@ -313,9 +303,7 @@ class RecargaService:
         return f"REF-{fecha_str}-{nuevo_num:05d}"
 
     @classmethod
-    def validar_idempotencia(
-        cls, numero_comprobante: str = None, referencia_externa: str = None
-    ) -> bool:
+    def validar_idempotencia(cls, numero_comprobante: str = None, referencia_externa: str = None) -> bool:
         """
         Valida que no exista previamente el comprobante o referencia externa.
 
@@ -359,9 +347,7 @@ class RecargaService:
 
         with transaction.atomic():
             # Obtener tarjeta con lock
-            tarjeta = Tarjetas.objects.select_for_update().get(
-                nro_tarjeta=recarga.nro_tarjeta.nro_tarjeta
-            )
+            tarjeta = Tarjetas.objects.select_for_update().get(nro_tarjeta=recarga.nro_tarjeta.nro_tarjeta)
 
             saldo_anterior = tarjeta.saldo_actual
             tarjeta.saldo_actual += recarga.monto_cargado
@@ -611,9 +597,7 @@ class RecargaService:
 
         # Validar idempotencia
         if cls.validar_idempotencia(numero_comprobante=numero_comprobante):
-            raise ValidationError(
-                f"El comprobante {numero_comprobante} ya fue registrado previamente"
-            )
+            raise ValidationError(f"El comprobante {numero_comprobante} ya fue registrado previamente")
 
         empleado = Empleados.objects.get(id_empleado=empleado_id)
 
@@ -745,4 +729,3 @@ class RecargaService:
                 "id_factura": resultado_factura["id_factura"],
                 "mensaje": f"Recarga aprobada y procesada por supervisor {supervisor.nombre}",
             }
-

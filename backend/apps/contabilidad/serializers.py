@@ -1,8 +1,14 @@
 from rest_framework import serializers
 from django.utils import timezone
 from .models import (
-    Impuestos, DatosEmpresa, Timbrados, PuntosExpedicion, DocumentosTributarios,
-    Cajas, CierresCaja, MovimientosCaja,
+    Impuestos,
+    DatosEmpresa,
+    Timbrados,
+    PuntosExpedicion,
+    DocumentosTributarios,
+    Cajas,
+    CierresCaja,
+    MovimientosCaja,
 )
 
 
@@ -34,6 +40,7 @@ class TimbradoSerializer(serializers.ModelSerializer):
 
     def get_nro_disponibles(self, obj):
         from .models import DocumentosTributarios
+
         usados = DocumentosTributarios.objects.filter(nro_timbrado=obj).count()
         return max(0, obj.nro_final - obj.nro_inicial + 1 - usados)
 
@@ -42,9 +49,7 @@ class DocumentosTributariosSerializer(serializers.ModelSerializer):
     timbrado_detalle = TimbradoSerializer(source="nro_timbrado", read_only=True)
     cliente_nombre = serializers.SerializerMethodField()
     cliente_ruc = serializers.SerializerMethodField()
-    condicion_venta_display = serializers.CharField(
-        source='get_condicion_venta_display', read_only=True
-    )
+    condicion_venta_display = serializers.CharField(source="get_condicion_venta_display", read_only=True)
 
     class Meta:
         model = DocumentosTributarios
@@ -62,18 +67,15 @@ class DocumentosTributariosSerializer(serializers.ModelSerializer):
 
 # ─── Facturación física ───────────────────────────────────────────────────────
 
+
 class EmitirFacturaSerializer(serializers.Serializer):
     id_cliente = serializers.IntegerField()
     nro_preimpreso = serializers.IntegerField(min_value=1)
-    ventas_ids = serializers.ListField(
-        child=serializers.IntegerField(), default=list, allow_empty=True
-    )
-    almuerzos_ids = serializers.ListField(
-        child=serializers.IntegerField(), default=list, allow_empty=True
-    )
+    ventas_ids = serializers.ListField(child=serializers.IntegerField(), default=list, allow_empty=True)
+    almuerzos_ids = serializers.ListField(child=serializers.IntegerField(), default=list, allow_empty=True)
     condicion_venta = serializers.ChoiceField(
-        choices=['CONTADO', 'CREDITO'],
-        default='CONTADO',
+        choices=["CONTADO", "CREDITO"],
+        default="CONTADO",
     )
     plazo_dias = serializers.IntegerField(
         min_value=1,
@@ -85,19 +87,16 @@ class EmitirFacturaSerializer(serializers.Serializer):
 
     def validate(self, data):
         if not data.get("ventas_ids") and not data.get("almuerzos_ids"):
-            raise serializers.ValidationError(
-                "Debe seleccionar al menos una venta o cuenta de almuerzo."
-            )
-        if data.get('condicion_venta') == 'CREDITO' and not data.get('plazo_dias'):
-            raise serializers.ValidationError(
-                "Para condición Crédito debe indicar el plazo en días."
-            )
-        if data.get('condicion_venta') == 'CONTADO':
-            data['plazo_dias'] = None
+            raise serializers.ValidationError("Debe seleccionar al menos una venta o cuenta de almuerzo.")
+        if data.get("condicion_venta") == "CREDITO" and not data.get("plazo_dias"):
+            raise serializers.ValidationError("Para condición Crédito debe indicar el plazo en días.")
+        if data.get("condicion_venta") == "CONTADO":
+            data["plazo_dias"] = None
         return data
 
 
 # ─── Cajas ────────────────────────────────────────────────────────────────────
+
 
 class CajaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -106,12 +105,8 @@ class CajaSerializer(serializers.ModelSerializer):
 
 
 class MovimientosCajaSerializer(serializers.ModelSerializer):
-    medio_pago_descripcion = serializers.CharField(
-        source="id_medio_pago.descripcion", read_only=True
-    )
-    venta_nro = serializers.CharField(
-        source="id_venta.nro_factura_venta", read_only=True, default=None
-    )
+    medio_pago_descripcion = serializers.CharField(source="id_medio_pago.descripcion", read_only=True)
+    venta_nro = serializers.CharField(source="id_venta.nro_factura_venta", read_only=True, default=None)
 
     class Meta:
         model = MovimientosCaja
@@ -132,23 +127,22 @@ class CierresCajaSerializer(serializers.ModelSerializer):
 
     def get_total_ingresos(self, obj):
         from django.db.models import Sum
-        total = obj.movimientoscaja_set.filter(
-            tipo_movimiento__in=["Ingreso", "VentaEfectivo"]
-        ).aggregate(t=Sum("monto"))["t"]
+
+        total = obj.movimientoscaja_set.filter(tipo_movimiento__in=["Ingreso", "VentaEfectivo"]).aggregate(
+            t=Sum("monto")
+        )["t"]
         return total or 0
 
     def get_total_egresos(self, obj):
         from django.db.models import Sum
-        total = obj.movimientoscaja_set.filter(
-            tipo_movimiento="Egreso"
-        ).aggregate(t=Sum("monto"))["t"]
+
+        total = obj.movimientoscaja_set.filter(tipo_movimiento="Egreso").aggregate(t=Sum("monto"))["t"]
         return total or 0
 
     def get_total_ventas(self, obj):
         from django.db.models import Sum
-        total = obj.movimientoscaja_set.filter(
-            tipo_movimiento="Venta"
-        ).aggregate(t=Sum("monto"))["t"]
+
+        total = obj.movimientoscaja_set.filter(tipo_movimiento="Venta").aggregate(t=Sum("monto"))["t"]
         return total or 0
 
 

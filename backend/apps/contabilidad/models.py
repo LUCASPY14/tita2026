@@ -25,17 +25,11 @@ class CierresCaja(models.Model):
     fecha_hora_apertura = models.DateTimeField()
     fecha_hora_cierre = models.DateTimeField(blank=True, null=True)
     monto_inicial = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    monto_contado_fisico = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True
-    )
-    diferencia_efectivo = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True
-    )
+    monto_contado_fisico = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    diferencia_efectivo = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     estado = models.CharField(max_length=7, blank=True, null=True)
     id_caja = models.ForeignKey("Cajas", models.DO_NOTHING, db_column="id_caja")
-    id_empleado = models.ForeignKey(
-        "usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado"
-    )
+    id_empleado = models.ForeignKey("usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -45,10 +39,10 @@ class CierresCaja(models.Model):
         db_table = "cierres_caja"
         ordering = ["-fecha_hora_apertura"]
         indexes = [
-            models.Index(fields=['id_caja', 'fecha_hora_apertura'], name='idx_cierres_caja_fecha'),
-            models.Index(fields=['id_empleado', 'fecha_hora_apertura'], name='idx_cierres_emp_fecha'),
-            models.Index(fields=['estado', 'fecha_hora_cierre'], name='idx_cierres_estado'),
-            models.Index(fields=['fecha_hora_apertura'], name='idx_cierres_apertura'),
+            models.Index(fields=["id_caja", "fecha_hora_apertura"], name="idx_cierres_caja_fecha"),
+            models.Index(fields=["id_empleado", "fecha_hora_apertura"], name="idx_cierres_emp_fecha"),
+            models.Index(fields=["estado", "fecha_hora_cierre"], name="idx_cierres_estado"),
+            models.Index(fields=["fecha_hora_apertura"], name="idx_cierres_apertura"),
         ]
 
 
@@ -59,15 +53,9 @@ class MovimientosCaja(models.Model):
     monto_comision = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     fecha_movimiento = models.DateTimeField()
     descripcion = models.CharField(max_length=200, blank=True, null=True)
-    id_cierre = models.ForeignKey(
-        "CierresCaja", models.DO_NOTHING, db_column="id_cierre", blank=True, null=True
-    )
-    id_medio_pago = models.ForeignKey(
-        "core.MediosPago", models.DO_NOTHING, db_column="id_medio_pago"
-    )
-    id_venta = models.ForeignKey(
-        "ventas.Ventas", models.DO_NOTHING, db_column="id_venta", blank=True, null=True
-    )
+    id_cierre = models.ForeignKey("CierresCaja", models.DO_NOTHING, db_column="id_cierre", blank=True, null=True)
+    id_medio_pago = models.ForeignKey("core.MediosPago", models.DO_NOTHING, db_column="id_medio_pago")
+    id_venta = models.ForeignKey("ventas.Ventas", models.DO_NOTHING, db_column="id_venta", blank=True, null=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -77,10 +65,10 @@ class MovimientosCaja(models.Model):
         db_table = "movimientos_caja"
         ordering = ["-fecha_movimiento"]
         indexes = [
-            models.Index(fields=['id_cierre', 'fecha_movimiento'], name='idx_mov_caja_cierre'),
-            models.Index(fields=['id_venta'], name='idx_mov_caja_venta'),
-            models.Index(fields=['fecha_movimiento', 'tipo_movimiento'], name='idx_mov_caja_fecha_tipo'),
-            models.Index(fields=['id_medio_pago', 'fecha_movimiento'], name='idx_mov_caja_medio'),
+            models.Index(fields=["id_cierre", "fecha_movimiento"], name="idx_mov_caja_cierre"),
+            models.Index(fields=["id_venta"], name="idx_mov_caja_venta"),
+            models.Index(fields=["fecha_movimiento", "tipo_movimiento"], name="idx_mov_caja_fecha_tipo"),
+            models.Index(fields=["id_medio_pago", "fecha_movimiento"], name="idx_mov_caja_medio"),
         ]
 
 
@@ -89,13 +77,9 @@ class TarifasComision(models.Model):
     fecha_inicio_vigencia = models.DateTimeField()
     fecha_fin_vigencia = models.DateTimeField(blank=True, null=True)
     porcentaje_comision = models.DecimalField(max_digits=5, decimal_places=4)
-    monto_fijo_comision = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True
-    )
+    monto_fijo_comision = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     estado = models.BooleanField(default=True)
-    id_medio_pago = models.ForeignKey(
-        "core.MediosPago", models.DO_NOTHING, db_column="id_medio_pago"
-    )
+    id_medio_pago = models.ForeignKey("core.MediosPago", models.DO_NOTHING, db_column="id_medio_pago")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -118,9 +102,7 @@ class AuditoriaComisiones(models.Model):
         blank=True,
         null=True,
     )
-    id_tarifa = models.ForeignKey(
-        "TarifasComision", models.DO_NOTHING, db_column="id_tarifa", blank=True, null=True
-    )
+    id_tarifa = models.ForeignKey("TarifasComision", models.DO_NOTHING, db_column="id_tarifa", blank=True, null=True)
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -139,9 +121,7 @@ class ConciliacionPagos(models.Model):
     observaciones = models.TextField(blank=True, null=True)
     fecha_creacion = models.DateTimeField()
     fecha_actualizacion = models.DateTimeField()
-    id_pago_venta = models.OneToOneField(
-        "ventas.PagosVenta", models.DO_NOTHING, db_column="id_pago_venta"
-    )
+    id_pago_venta = models.OneToOneField("ventas.PagosVenta", models.DO_NOTHING, db_column="id_pago_venta")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -153,18 +133,16 @@ class ConciliacionPagos(models.Model):
 
 class DocumentosTributarios(models.Model):
     CONDICION_CHOICES = [
-        ('CONTADO', 'Contado'),
-        ('CREDITO', 'Crédito'),
+        ("CONTADO", "Contado"),
+        ("CREDITO", "Crédito"),
     ]
 
     id_documento = models.BigAutoField(primary_key=True)
-    nro_secuencial = models.IntegerField(
-        help_text="Número secuencial fiscal dentro del rango del timbrado"
-    )
+    nro_secuencial = models.IntegerField(help_text="Número secuencial fiscal dentro del rango del timbrado")
     fecha_emision = models.DateTimeField()
     monto_total = models.DecimalField(max_digits=12, decimal_places=2)
     nro_timbrado = models.ForeignKey("Timbrados", models.DO_NOTHING, db_column="nro_timbrado")
-    tipo_documento = models.CharField(max_length=20, default='Factura')
+    tipo_documento = models.CharField(max_length=20, default="Factura")
     nro_preimpreso_interno = models.CharField(
         max_length=20,
         blank=True,
@@ -183,13 +161,13 @@ class DocumentosTributarios(models.Model):
     condicion_venta = models.CharField(
         max_length=7,
         choices=CONDICION_CHOICES,
-        default='CONTADO',
-        help_text='Condición de venta exigida por la SET',
+        default="CONTADO",
+        help_text="Condición de venta exigida por la SET",
     )
     plazo_dias = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
-        help_text='Plazo en días para condición Crédito (obligatorio si CREDITO)',
+        help_text="Plazo en días para condición Crédito (obligatorio si CREDITO)",
     )
 
     def __str__(self):

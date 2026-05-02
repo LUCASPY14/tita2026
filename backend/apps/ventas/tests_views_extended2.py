@@ -36,15 +36,11 @@ class VentasViewsExtended2Test(TestCase):
 
     def setUp(self):
         User = get_user_model()
-        self.auth_user = User.objects.create_user(
-            username="cajero_extended", password="testpass123", is_staff=True
-        )
+        self.auth_user = User.objects.create_user(username="cajero_extended", password="testpass123", is_staff=True)
         self.client = APIClient()
         self.client.force_authenticate(user=self.auth_user)
 
-        self.rol_cajero = Roles.objects.create(
-            nombre_rol="CajeroExt", descripcion="Cajero", estado=True
-        )
+        self.rol_cajero = Roles.objects.create(nombre_rol="CajeroExt", descripcion="Cajero", estado=True)
         self.empleado_cajero = Empleados.objects.create(
             nombre="Cajero",
             apellido="Extended",
@@ -88,12 +84,8 @@ class VentasViewsExtended2Test(TestCase):
             id_lista=self.lista_precio,
             precio_unitario=Decimal("5000.00"),
         )
-        self.stock = StockUnico.objects.create(
-            id_producto=self.producto, cantidad=Decimal("50.00")
-        )
-        self.medio_pago = MediosPago.objects.create(
-            descripcion="EfectivoExt", estado=True, genera_comision=False
-        )
+        self.stock = StockUnico.objects.create(id_producto=self.producto, cantidad=Decimal("50.00"))
+        self.medio_pago = MediosPago.objects.create(descripcion="EfectivoExt", estado=True, genera_comision=False)
 
     def _venta_data(self, cantidad=1, tipo_venta="contado", extra=None):
         data = {
@@ -201,43 +193,53 @@ class VentasComisionTest(TestCase):
 
     def setUp(self):
         User = get_user_model()
-        self.auth_user = User.objects.create_user(
-            username="cajero_com", password="testpass", is_staff=True
-        )
+        self.auth_user = User.objects.create_user(username="cajero_com", password="testpass", is_staff=True)
         self.client = APIClient()
         self.client.force_authenticate(user=self.auth_user)
 
         self.rol = Roles.objects.create(nombre_rol="CajeroCom", descripcion="Test", estado=True)
         self.empleado = Empleados.objects.create(
-            nombre="CajeroCom", apellido="Test",
+            nombre="CajeroCom",
+            apellido="Test",
             usuario="cajerocom",
             email="cajerocom@test.com",
-            fecha_ingreso=timezone.now(), estado=True, id_rol=self.rol,
+            fecha_ingreso=timezone.now(),
+            estado=True,
+            id_rol=self.rol,
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="ListaCom", estado=True)
         self.tipo_cli = TiposCliente.objects.create(nombre_tipo="TipoCom", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="ClienteCom", apellidos="Test", ruc_ci="COM12345",
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cli,
+            nombres="ClienteCom",
+            apellidos="Test",
+            ruc_ci="COM12345",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cli,
         )
         self.cat = Categorias.objects.create(nombre="CatCom", estado=True)
         self.uni = UnidadesMedida.objects.create(nombre="UniCom", abreviatura="uc")
         self.imp = Impuestos.objects.create(
-            nombre_impuesto="IVA Com", porcentaje=Decimal("10.00"),
-            vigente_desde=timezone.now().date(), estado=True,
+            nombre_impuesto="IVA Com",
+            porcentaje=Decimal("10.00"),
+            vigente_desde=timezone.now().date(),
+            estado=True,
         )
         self.prod = Productos.objects.create(
-            codigo_barra="PRODCOM001", descripcion="ProdCom",
-            id_categoria=self.cat, id_unidad_medida=self.uni,
-            stock_minimo=Decimal("1"), id_impuesto=self.imp, estado=True,
+            codigo_barra="PRODCOM001",
+            descripcion="ProdCom",
+            id_categoria=self.cat,
+            id_unidad_medida=self.uni,
+            stock_minimo=Decimal("1"),
+            id_impuesto=self.imp,
+            estado=True,
         )
         self.lista_precio = PreciosPorLista.objects.create(
-            id_producto=self.prod, id_lista=self.lista,
+            id_producto=self.prod,
+            id_lista=self.lista,
             precio_unitario=Decimal("10000.00"),
         )
-        self.stock = StockUnico.objects.create(
-            id_producto=self.prod, cantidad=Decimal("100.00")
-        )
+        self.stock = StockUnico.objects.create(id_producto=self.prod, cantidad=Decimal("100.00"))
         # Medio de pago con comision (triggers _calcular_comision)
         self.medio_com = MediosPago.objects.create(
             descripcion="TarjetaComision",
@@ -287,28 +289,32 @@ class PromocionesEfectividadTest(TestCase):
 
     def setUp(self):
         User = get_user_model()
-        self.auth_user = User.objects.create_user(
-            username="prom_user", password="testpass", is_staff=True
-        )
+        self.auth_user = User.objects.create_user(username="prom_user", password="testpass", is_staff=True)
         self.client = APIClient()
         self.client.force_authenticate(user=self.auth_user)
 
         # Shared objects needed for Ventas FK
         self.rol = Roles.objects.create(nombre_rol="PromRol", descripcion="T", estado=True)
         self.empleado = Empleados.objects.create(
-            nombre="PromEmp", apellido="T", usuario="promemp",
-            email="promemp@test.com", fecha_ingreso=timezone.now(),
-            estado=True, id_rol=self.rol,
+            nombre="PromEmp",
+            apellido="T",
+            usuario="promemp",
+            email="promemp@test.com",
+            fecha_ingreso=timezone.now(),
+            estado=True,
+            id_rol=self.rol,
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="PromLista", estado=True)
         self.tipo_cli = TiposCliente.objects.create(nombre_tipo="PromTipo", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="PromCliente", apellidos="T", ruc_ci="PROM12345",
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cli,
+            nombres="PromCliente",
+            apellidos="T",
+            ruc_ci="PROM12345",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cli,
         )
-        self.medio = MediosPago.objects.create(
-            descripcion="PromMedio", estado=True, genera_comision=False
-        )
+        self.medio = MediosPago.objects.create(descripcion="PromMedio", estado=True, genera_comision=False)
 
     def _crear_venta(self):
         return Ventas.objects.create(
@@ -396,23 +402,29 @@ class MasUsadasPromoInactivaTest(TestCase):
 
     def setUp(self):
         User = get_user_model()
-        self.auth_user = User.objects.create_user(
-            username="mas_usadas_user", password="testpass", is_staff=True
-        )
+        self.auth_user = User.objects.create_user(username="mas_usadas_user", password="testpass", is_staff=True)
         self.client = APIClient()
         self.client.force_authenticate(user=self.auth_user)
 
         self.rol = Roles.objects.create(nombre_rol="MasRol", descripcion="T", estado=True)
         self.empleado = Empleados.objects.create(
-            nombre="MasEmp", apellido="T", usuario="masemp",
-            email="masemp@test.com", fecha_ingreso=timezone.now(),
-            estado=True, id_rol=self.rol,
+            nombre="MasEmp",
+            apellido="T",
+            usuario="masemp",
+            email="masemp@test.com",
+            fecha_ingreso=timezone.now(),
+            estado=True,
+            id_rol=self.rol,
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="MasLista", estado=True)
         self.tipo_cli = TiposCliente.objects.create(nombre_tipo="MasTipo", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="MasCliente", apellidos="T", ruc_ci="MAS12345",
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cli,
+            nombres="MasCliente",
+            apellidos="T",
+            ruc_ci="MAS12345",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cli,
         )
 
     def test_mas_usadas_promo_inactiva_estado_inactiva(self):
@@ -465,27 +477,35 @@ class VentasTarjetaHijoTest(TestCase):
 
     def setUp(self):
         User = get_user_model()
-        self.auth_user = User.objects.create_user(
-            username="cajero_tarjeta", password="testpass", is_staff=True
-        )
+        self.auth_user = User.objects.create_user(username="cajero_tarjeta", password="testpass", is_staff=True)
         self.client = APIClient()
         self.client.force_authenticate(user=self.auth_user)
 
         self.rol = Roles.objects.create(nombre_rol="CajeroTarjeta", descripcion="T", estado=True)
         self.empleado = Empleados.objects.create(
-            nombre="TarjetaCaj", apellido="T", usuario="tarjetacaj",
-            email="tarjetacaj@test.com", fecha_ingreso=timezone.now(),
-            estado=True, id_rol=self.rol,
+            nombre="TarjetaCaj",
+            apellido="T",
+            usuario="tarjetacaj",
+            email="tarjetacaj@test.com",
+            fecha_ingreso=timezone.now(),
+            estado=True,
+            id_rol=self.rol,
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="TarjetaLista", estado=True)
         self.tipo_cli = TiposCliente.objects.create(nombre_tipo="TarjetaTipo", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="TarjetaCliente", apellidos="T", ruc_ci="TAR12345",
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cli,
+            nombres="TarjetaCliente",
+            apellidos="T",
+            ruc_ci="TAR12345",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cli,
         )
         self.hijo = Hijos.objects.create(
-            nombre="TarjetaHijo", apellido="T",
-            id_cliente_responsable=self.cliente, estado=True,
+            nombre="TarjetaHijo",
+            apellido="T",
+            id_cliente_responsable=self.cliente,
+            estado=True,
         )
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="TAR0001",
@@ -500,24 +520,27 @@ class VentasTarjetaHijoTest(TestCase):
         self.cat = Categorias.objects.create(nombre="CatTar", estado=True)
         self.uni = UnidadesMedida.objects.create(nombre="UniTar", abreviatura="utar")
         self.imp = Impuestos.objects.create(
-            nombre_impuesto="IVA Tar", porcentaje=Decimal("10.00"),
-            vigente_desde=timezone.now().date(), estado=True,
+            nombre_impuesto="IVA Tar",
+            porcentaje=Decimal("10.00"),
+            vigente_desde=timezone.now().date(),
+            estado=True,
         )
         self.prod = Productos.objects.create(
-            codigo_barra="PRODTAR001", descripcion="ProdTar",
-            id_categoria=self.cat, id_unidad_medida=self.uni,
-            stock_minimo=Decimal("1"), id_impuesto=self.imp, estado=True,
+            codigo_barra="PRODTAR001",
+            descripcion="ProdTar",
+            id_categoria=self.cat,
+            id_unidad_medida=self.uni,
+            stock_minimo=Decimal("1"),
+            id_impuesto=self.imp,
+            estado=True,
         )
         self.lista_precio = PreciosPorLista.objects.create(
-            id_producto=self.prod, id_lista=self.lista,
+            id_producto=self.prod,
+            id_lista=self.lista,
             precio_unitario=Decimal("5000.00"),
         )
-        self.stock = StockUnico.objects.create(
-            id_producto=self.prod, cantidad=Decimal("100.00")
-        )
-        self.medio = MediosPago.objects.create(
-            descripcion="EfectivoTar", estado=True, genera_comision=False
-        )
+        self.stock = StockUnico.objects.create(id_producto=self.prod, cantidad=Decimal("100.00"))
+        self.medio = MediosPago.objects.create(descripcion="EfectivoTar", estado=True, genera_comision=False)
 
     def _venta_data_con_hijo(self, monto_total="5000.00"):
         return {
@@ -566,45 +589,54 @@ class VentasPromocionesApplicadasTest(TestCase):
 
     def setUp(self):
         User = get_user_model()
-        self.auth_user = User.objects.create_user(
-            username="cajero_promo", password="testpass", is_staff=True
-        )
+        self.auth_user = User.objects.create_user(username="cajero_promo", password="testpass", is_staff=True)
         self.client = APIClient()
         self.client.force_authenticate(user=self.auth_user)
 
         self.rol = Roles.objects.create(nombre_rol="CajeroPromo", descripcion="T", estado=True)
         self.empleado = Empleados.objects.create(
-            nombre="PromoCaj", apellido="T", usuario="promocaj",
-            email="promocaj@test.com", fecha_ingreso=timezone.now(),
-            estado=True, id_rol=self.rol,
+            nombre="PromoCaj",
+            apellido="T",
+            usuario="promocaj",
+            email="promocaj@test.com",
+            fecha_ingreso=timezone.now(),
+            estado=True,
+            id_rol=self.rol,
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="PromoLista2", estado=True)
         self.tipo_cli = TiposCliente.objects.create(nombre_tipo="PromoTipo2", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="PromoCliente2", apellidos="T", ruc_ci="PROMO2345",
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cli,
+            nombres="PromoCliente2",
+            apellidos="T",
+            ruc_ci="PROMO2345",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cli,
         )
         self.cat = Categorias.objects.create(nombre="CatProm", estado=True)
         self.uni = UnidadesMedida.objects.create(nombre="UniProm", abreviatura="uprom")
         self.imp = Impuestos.objects.create(
-            nombre_impuesto="IVA Prom", porcentaje=Decimal("10.00"),
-            vigente_desde=timezone.now().date(), estado=True,
+            nombre_impuesto="IVA Prom",
+            porcentaje=Decimal("10.00"),
+            vigente_desde=timezone.now().date(),
+            estado=True,
         )
         self.prod = Productos.objects.create(
-            codigo_barra="PRODPROM001", descripcion="ProdProm",
-            id_categoria=self.cat, id_unidad_medida=self.uni,
-            stock_minimo=Decimal("1"), id_impuesto=self.imp, estado=True,
+            codigo_barra="PRODPROM001",
+            descripcion="ProdProm",
+            id_categoria=self.cat,
+            id_unidad_medida=self.uni,
+            stock_minimo=Decimal("1"),
+            id_impuesto=self.imp,
+            estado=True,
         )
         self.lista_precio = PreciosPorLista.objects.create(
-            id_producto=self.prod, id_lista=self.lista,
+            id_producto=self.prod,
+            id_lista=self.lista,
             precio_unitario=Decimal("5000.00"),
         )
-        self.stock = StockUnico.objects.create(
-            id_producto=self.prod, cantidad=Decimal("100.00")
-        )
-        self.medio = MediosPago.objects.create(
-            descripcion="EfectivoProm", estado=True, genera_comision=False
-        )
+        self.stock = StockUnico.objects.create(id_producto=self.prod, cantidad=Decimal("100.00"))
+        self.medio = MediosPago.objects.create(descripcion="EfectivoProm", estado=True, genera_comision=False)
 
     def test_venta_con_promocion_aplicada(self):
         """Venta with promotions applied covers lines 279-290 and 424."""
@@ -618,15 +650,18 @@ class VentasPromocionesApplicadasTest(TestCase):
         }
 
         with patch.object(
-            PromocionService, "obtener_promociones_aplicables",
+            PromocionService,
+            "obtener_promociones_aplicables",
             return_value=[{"promocion": promo_mock, "codigo": "TEST10"}],
         ) as mock_get_promos:
             with patch.object(
-                PromocionService, "calcular_descuento",
+                PromocionService,
+                "calcular_descuento",
                 return_value=descuento_mock,
             ) as mock_calc:
                 with patch.object(
-                    PromocionService, "aplicar_promociones_a_venta",
+                    PromocionService,
+                    "aplicar_promociones_a_venta",
                     return_value=None,
                 ):
                     url = reverse("ventas-list")
@@ -649,10 +684,7 @@ class VentasPromocionesApplicadasTest(TestCase):
                     }
                     response = self.client.post(url, data, format="json")
 
-        self.assertIn(
-            response.status_code,
-            [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST]
-        )
+        self.assertIn(response.status_code, [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
 
 
 class VentasLimiteRolTest(TestCase):
@@ -660,45 +692,54 @@ class VentasLimiteRolTest(TestCase):
 
     def setUp(self):
         User = get_user_model()
-        self.auth_user = User.objects.create_user(
-            username="cajero_limite", password="testpass", is_staff=True
-        )
+        self.auth_user = User.objects.create_user(username="cajero_limite", password="testpass", is_staff=True)
         self.client = APIClient()
         self.client.force_authenticate(user=self.auth_user)
 
         self.rol = Roles.objects.create(nombre_rol="CajeroLimite", descripcion="T", estado=True)
         self.empleado = Empleados.objects.create(
-            nombre="LimiteCaj", apellido="T", usuario="limitecaj",
-            email="limitecaj@test.com", fecha_ingreso=timezone.now(),
-            estado=True, id_rol=self.rol,
+            nombre="LimiteCaj",
+            apellido="T",
+            usuario="limitecaj",
+            email="limitecaj@test.com",
+            fecha_ingreso=timezone.now(),
+            estado=True,
+            id_rol=self.rol,
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="LimiteLista", estado=True)
         self.tipo_cli = TiposCliente.objects.create(nombre_tipo="LimiteTipo", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="LimiteCliente", apellidos="T", ruc_ci="LIM12345",
-            estado=True, id_lista=self.lista, id_tipo_cliente=self.tipo_cli,
+            nombres="LimiteCliente",
+            apellidos="T",
+            ruc_ci="LIM12345",
+            estado=True,
+            id_lista=self.lista,
+            id_tipo_cliente=self.tipo_cli,
         )
         self.cat = Categorias.objects.create(nombre="CatLim", estado=True)
         self.uni = UnidadesMedida.objects.create(nombre="UniLim", abreviatura="ulim")
         self.imp = Impuestos.objects.create(
-            nombre_impuesto="IVA Lim", porcentaje=Decimal("10.00"),
-            vigente_desde=timezone.now().date(), estado=True,
+            nombre_impuesto="IVA Lim",
+            porcentaje=Decimal("10.00"),
+            vigente_desde=timezone.now().date(),
+            estado=True,
         )
         self.prod = Productos.objects.create(
-            codigo_barra="PRODLIM001", descripcion="ProdLim",
-            id_categoria=self.cat, id_unidad_medida=self.uni,
-            stock_minimo=Decimal("1"), id_impuesto=self.imp, estado=True,
+            codigo_barra="PRODLIM001",
+            descripcion="ProdLim",
+            id_categoria=self.cat,
+            id_unidad_medida=self.uni,
+            stock_minimo=Decimal("1"),
+            id_impuesto=self.imp,
+            estado=True,
         )
         self.lista_precio = PreciosPorLista.objects.create(
-            id_producto=self.prod, id_lista=self.lista,
+            id_producto=self.prod,
+            id_lista=self.lista,
             precio_unitario=Decimal("5000.00"),
         )
-        self.stock = StockUnico.objects.create(
-            id_producto=self.prod, cantidad=Decimal("100.00")
-        )
-        self.medio = MediosPago.objects.create(
-            descripcion="EfectivoLim", estado=True, genera_comision=False
-        )
+        self.stock = StockUnico.objects.create(id_producto=self.prod, cantidad=Decimal("100.00"))
+        self.medio = MediosPago.objects.create(descripcion="EfectivoLim", estado=True, genera_comision=False)
 
     def test_venta_excede_limite_rol_con_empleado(self):
         """
@@ -711,7 +752,8 @@ class VentasLimiteRolTest(TestCase):
         self.auth_user.empleado = self.empleado
 
         with patch.object(
-            AutorizacionService, "validar_operacion",
+            AutorizacionService,
+            "validar_operacion",
             return_value={
                 "puede_ejecutar": False,
                 "requiere_autorizacion": True,

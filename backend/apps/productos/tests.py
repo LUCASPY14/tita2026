@@ -219,13 +219,9 @@ class ListasPreciosTest(TestCase):
 
     def test_multiples_listas_precios(self):
         """Test: Crear múltiples listas de precios"""
-        lista_minorista = ListasPrecios.objects.create(
-            nombre_lista="Minorista", moneda="PYG", estado=True
-        )
+        lista_minorista = ListasPrecios.objects.create(nombre_lista="Minorista", moneda="PYG", estado=True)
 
-        lista_mayorista = ListasPrecios.objects.create(
-            nombre_lista="Mayorista", moneda="PYG", estado=True
-        )
+        lista_mayorista = ListasPrecios.objects.create(nombre_lista="Mayorista", moneda="PYG", estado=True)
 
         self.assertEqual(ListasPrecios.objects.count(), 2)
         self.assertNotEqual(lista_minorista.nombre_lista, lista_mayorista.nombre_lista)
@@ -264,13 +260,9 @@ class PreciosPorListaTest(TestCase):
         )
 
         # Listas de precios
-        self.lista_minorista = ListasPrecios.objects.create(
-            nombre_lista="Minorista", moneda="PYG", estado=True
-        )
+        self.lista_minorista = ListasPrecios.objects.create(nombre_lista="Minorista", moneda="PYG", estado=True)
 
-        self.lista_mayorista = ListasPrecios.objects.create(
-            nombre_lista="Mayorista", moneda="PYG", estado=True
-        )
+        self.lista_mayorista = ListasPrecios.objects.create(nombre_lista="Mayorista", moneda="PYG", estado=True)
 
     def test_crear_precio_producto(self):
         """Test: Asignar precio a producto en lista"""

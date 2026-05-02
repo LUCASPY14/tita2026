@@ -19,9 +19,7 @@ class TarjetasSerializerTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Estudiantes", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Estudiantes", moneda="PYG", estado=True)
 
         # Crear tipo de cliente
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
@@ -115,7 +113,7 @@ class TarjetasSerializerTest(TestCase):
             estado=True,
             id_cliente_responsable=self.cliente,
         )
-        
+
         tarjeta = Tarjetas.objects.create(
             nro_tarjeta="TFOTO001",
             saldo_actual=Decimal("40000.00"),
@@ -125,24 +123,24 @@ class TarjetasSerializerTest(TestCase):
             limite_credito=Decimal("0.00"),
             id_hijo=hijo_con_foto,
         )
-        
+
         # Mockear foto_perfil en el hijo
         mock_foto = Mock()
         mock_foto.url = "/media/fotos/test.jpg"
         hijo_con_foto.foto_perfil = mock_foto
-        
+
         # Crear request mock
         factory = RequestFactory()
-        request = factory.get('/api/tarjetas/')
-        
+        request = factory.get("/api/tarjetas/")
+
         # Serializar con request en context
-        serializer = TarjetasSerializer(tarjeta, context={'request': request})
+        serializer = TarjetasSerializer(tarjeta, context={"request": request})
         data = serializer.data
-        
+
         # Debe retornar URL absoluta
-        self.assertIsNotNone(data['hijo_foto'])
-        self.assertIn('http', data['hijo_foto'])
-        self.assertIn('/media/fotos/test.jpg', data['hijo_foto'])
+        self.assertIsNotNone(data["hijo_foto"])
+        self.assertIn("http", data["hijo_foto"])
+        self.assertIn("/media/fotos/test.jpg", data["hijo_foto"])
 
     def test_get_hijo_foto_con_foto_sin_request(self):
         """Test get_hijo_foto retorna URL relativa cuando hay foto pero no request"""
@@ -154,7 +152,7 @@ class TarjetasSerializerTest(TestCase):
             estado=True,
             id_cliente_responsable=self.cliente,
         )
-        
+
         tarjeta = Tarjetas.objects.create(
             nro_tarjeta="TFOTO002",
             saldo_actual=Decimal("35000.00"),
@@ -164,18 +162,18 @@ class TarjetasSerializerTest(TestCase):
             limite_credito=Decimal("0.00"),
             id_hijo=hijo_con_foto,
         )
-        
+
         # Mockear foto_perfil
         mock_foto = Mock()
         mock_foto.url = "/media/fotos/ana.jpg"
         hijo_con_foto.foto_perfil = mock_foto
-        
+
         # Serializar SIN request en context
         serializer = TarjetasSerializer(tarjeta)
         data = serializer.data
-        
+
         # Debe retornar URL relativa
-        self.assertEqual(data['hijo_foto'], "/media/fotos/ana.jpg")
+        self.assertEqual(data["hijo_foto"], "/media/fotos/ana.jpg")
 
     def test_get_hijo_foto_sin_foto(self):
         """Test get_hijo_foto retorna None cuando el hijo no tiene foto"""
@@ -188,12 +186,12 @@ class TarjetasSerializerTest(TestCase):
             limite_credito=Decimal("0.00"),
             id_hijo=self.hijo,  # self.hijo no tiene foto_perfil
         )
-        
+
         serializer = TarjetasSerializer(tarjeta)
         data = serializer.data
-        
+
         # Debe retornar None
-        self.assertIsNone(data['hijo_foto'])
+        self.assertIsNone(data["hijo_foto"])
 
     def test_validar_tarjeta_sin_nro_invalida(self):
         """Test que valida que una tarjeta sin número es inválida"""
@@ -311,9 +309,7 @@ class CargasSaldoSerializerTest(TestCase):
     """Tests for CargasSaldoSerializer missing except branches (lines 41-44, 48-51, 55-58)."""
 
     def setUp(self):
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Serializer", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Serializer", moneda="PYG", estado=True)
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Carga",

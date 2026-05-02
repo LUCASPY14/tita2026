@@ -26,9 +26,7 @@ class Permisos(models.Model):
         max_length=100, unique=True, help_text="Código único del permiso (ej: 'ventas.crear')"
     )
     nombre = models.CharField(max_length=100, help_text="Nombre descriptivo del permiso")
-    modulo = models.CharField(
-        max_length=50, help_text="Módulo al que pertenece (ventas, inventario, usuarios, etc)"
-    )
+    modulo = models.CharField(max_length=50, help_text="Módulo al que pertenece (ventas, inventario, usuarios, etc)")
     descripcion = models.TextField(blank=True, null=True)
     estado = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -281,9 +279,7 @@ class PermissionService:
             {'success': bool, 'mensaje': str}
         """
         try:
-            eliminados = RolesPermisos.objects.filter(
-                id_rol=rol, id_permiso__codigo_permiso=codigo_permiso
-            ).delete()[0]
+            eliminados = RolesPermisos.objects.filter(id_rol=rol, id_permiso__codigo_permiso=codigo_permiso).delete()[0]
 
             if eliminados > 0:
                 return {
@@ -452,6 +448,7 @@ class IsPortalAuthenticated(permissions.BasePermission):
 
     def has_permission(self, request: Request, view: APIView) -> bool:
         from apps.usuarios.authentication import PortalUserProxy
+
         return isinstance(request.user, PortalUserProxy)
 
 
@@ -475,9 +472,7 @@ def requiere_algunos_permisos(*codigos_permisos):
 
                 raise PermissionDenied("Usuario no encontrado")
 
-            if not PermissionService.empleado_tiene_algunos_permisos(
-                empleado, list(codigos_permisos)
-            ):
+            if not PermissionService.empleado_tiene_algunos_permisos(empleado, list(codigos_permisos)):
                 from rest_framework.exceptions import PermissionDenied
 
                 raise PermissionDenied(f"No tiene ninguno de los permisos requeridos")

@@ -100,9 +100,7 @@ def validar_tipo_reporte(value):
     ]
 
     if value not in TIPOS_VALIDOS:
-        raise ValidationError(
-            f'Tipo de reporte inválido. Debe ser uno de: {", ".join(TIPOS_VALIDOS)}'
-        )
+        raise ValidationError(f'Tipo de reporte inválido. Debe ser uno de: {", ".join(TIPOS_VALIDOS)}')
 
 
 def validar_frecuencia_reporte(value):
@@ -114,9 +112,7 @@ def validar_frecuencia_reporte(value):
     FRECUENCIAS_VALIDAS = ["Diario", "Semanal", "Mensual", "Trimestral", "Anual", "Manual"]
 
     if value not in FRECUENCIAS_VALIDAS:
-        raise ValidationError(
-            f'Frecuencia inválida. Debe ser una de: {", ".join(FRECUENCIAS_VALIDAS)}'
-        )
+        raise ValidationError(f'Frecuencia inválida. Debe ser una de: {", ".join(FRECUENCIAS_VALIDAS)}')
 
 
 # =============================================================================
@@ -296,9 +292,7 @@ def validar_categoria_kpi(value):
     ]
 
     if value not in CATEGORIAS_VALIDAS:
-        raise ValidationError(
-            f'Categoría inválida. Debe ser una de: {", ".join(CATEGORIAS_VALIDAS)}'
-        )
+        raise ValidationError(f'Categoría inválida. Debe ser una de: {", ".join(CATEGORIAS_VALIDAS)}')
 
 
 def validar_frecuencia_kpi(value):
@@ -310,9 +304,7 @@ def validar_frecuencia_kpi(value):
     FRECUENCIAS_VALIDAS = ["Diario", "Semanal", "Mensual", "Trimestral", "Anual"]
 
     if value not in FRECUENCIAS_VALIDAS:
-        raise ValidationError(
-            f'Frecuencia inválida. Debe ser una de: {", ".join(FRECUENCIAS_VALIDAS)}'
-        )
+        raise ValidationError(f'Frecuencia inválida. Debe ser una de: {", ".join(FRECUENCIAS_VALIDAS)}')
 
 
 # =============================================================================
@@ -364,9 +356,7 @@ def validar_nombre_plantilla_tarea(value):
     - Máximo 100 caracteres
     """
     if not value or len(value.strip()) < 3:
-        raise ValidationError(
-            "El nombre de la plantilla de tarea debe tener al menos 3 caracteres."
-        )
+        raise ValidationError("El nombre de la plantilla de tarea debe tener al menos 3 caracteres.")
 
     if len(value) > 100:
         raise ValidationError("El nombre de la plantilla de tarea no puede exceder 100 caracteres.")
@@ -404,9 +394,7 @@ def validar_tipo_tarea(value):
     ]
 
     if value not in TIPOS_VALIDOS:
-        raise ValidationError(
-            f'Tipo de tarea inválido. Debe ser uno de: {", ".join(TIPOS_VALIDOS)}'
-        )
+        raise ValidationError(f'Tipo de tarea inválido. Debe ser uno de: {", ".join(TIPOS_VALIDOS)}')
 
 
 def validar_comando_tarea(value):
@@ -458,9 +446,7 @@ def validar_frecuencia_tarea(value):
     FRECUENCIAS_VALIDAS = ["Cada hora", "Diario", "Semanal", "Mensual", "Personalizado"]
 
     if value not in FRECUENCIAS_VALIDAS:
-        raise ValidationError(
-            f'Frecuencia inválida. Debe ser una de: {", ".join(FRECUENCIAS_VALIDAS)}'
-        )
+        raise ValidationError(f'Frecuencia inválida. Debe ser una de: {", ".join(FRECUENCIAS_VALIDAS)}')
 
 
 def validar_cron_expresion(value):
@@ -480,9 +466,7 @@ def validar_cron_expresion(value):
     # Validar formato básico (5 campos)
     partes = value.split()
     if len(partes) != 5:
-        raise ValidationError(
-            "La expresión cron debe tener exactamente 5 campos separados por espacios."
-        )
+        raise ValidationError("La expresión cron debe tener exactamente 5 campos separados por espacios.")
 
 
 def validar_timeout_tarea(value):
@@ -660,9 +644,7 @@ def validar_frecuencia_ejecucion(value):
     """Valida la frecuencia de ejecución de tareas programadas."""
     FRECUENCIAS_VALIDAS = ["manual", "diaria", "semanal", "mensual", "personalizado"]
     if value and value.lower() not in FRECUENCIAS_VALIDAS:
-        raise ValidationError(
-            f'Frecuencia inválida. Debe ser una de: {", ".join(FRECUENCIAS_VALIDAS)}'
-        )
+        raise ValidationError(f'Frecuencia inválida. Debe ser una de: {", ".join(FRECUENCIAS_VALIDAS)}')
     return value
 
 

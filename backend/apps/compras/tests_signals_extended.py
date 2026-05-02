@@ -8,12 +8,16 @@ Cubre líneas faltantes:
 79 (saldo negativo → 0 en aplicar_nota_credito_proveedor),
 83 (saldo parcial en aplicar_nota_credito_proveedor)
 """
+
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 from decimal import Decimal
 
 from apps.compras.models import (
-    Compras, Proveedores, PagosProveedores, AplicacionPagosCompras,
+    Compras,
+    Proveedores,
+    PagosProveedores,
+    AplicacionPagosCompras,
     NotasCreditoProveedor,
 )
 from apps.core.models import MediosPago
@@ -65,6 +69,7 @@ def make_pago_proveedor():
 # =============================================================================
 # actualizar_saldo_compra signal - líneas 32, 40, 48
 # =============================================================================
+
 
 class ActualizarSaldoCompraSignalTest(TransactionTestCase):
     """Tests para signal actualizar_saldo_compra"""
@@ -144,6 +149,7 @@ class ActualizarSaldoCompraSignalTest(TransactionTestCase):
 # =============================================================================
 # aplicar_nota_credito_proveedor signal - líneas 69, 79, 83
 # =============================================================================
+
 
 class AplicarNotaCreditoSignalTest(TransactionTestCase):
     """Tests para signal aplicar_nota_credito_proveedor"""
@@ -245,7 +251,7 @@ class AplicarNotaCreditoSignalTest(TransactionTestCase):
         """Branch 84->87: nota deja saldo >= monto_total (elif falla, no cambia estado)"""
         # Create compra with saldo_pendiente = monto_total (full pending)
         compra = make_compra(self.proveedor, monto_total=Decimal("100000.00"), saldo=Decimal("100000.00"))
-        
+
         # Apply nota of 0 to keep saldo = monto_total
         NotasCreditoProveedor.objects.create(
             fecha=timezone.now(),

@@ -7,9 +7,13 @@ from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
 from apps.compras.models import (
-    Compras, DetallesCompra, Proveedores,
-    PagosProveedores, AplicacionPagosCompras,
-    NotasCreditoProveedor, DetallesNotaCreditoProveedor,
+    Compras,
+    DetallesCompra,
+    Proveedores,
+    PagosProveedores,
+    AplicacionPagosCompras,
+    NotasCreditoProveedor,
+    DetallesNotaCreditoProveedor,
 )
 from apps.productos.models import Productos, Categorias, UnidadesMedida
 from apps.contabilidad.models import Impuestos
@@ -100,45 +104,54 @@ class ModelosComprasAdicionalesTest(TestCase):
 
     def setUp(self):
         self.proveedor = Proveedores.objects.create(
-            razon_social='Prov Str Test', ruc='80077777-7',
-            fecha_registro=timezone.now(), estado=True,
+            razon_social="Prov Str Test",
+            ruc="80077777-7",
+            fecha_registro=timezone.now(),
+            estado=True,
         )
         self.compra = Compras.objects.create(
             fecha=timezone.now(),
-            monto_total=Decimal('100000'),
-            saldo_pendiente=Decimal('100000'),
-            estado_pago='pendiente',
+            monto_total=Decimal("100000"),
+            saldo_pendiente=Decimal("100000"),
+            estado_pago="pendiente",
             id_proveedor=self.proveedor,
         )
         self.impuesto = Impuestos.objects.create(
-            nombre_impuesto='IVA Compras', porcentaje=10,
-            vigente_desde=timezone.now().date(), estado=True,
+            nombre_impuesto="IVA Compras",
+            porcentaje=10,
+            vigente_desde=timezone.now().date(),
+            estado=True,
         )
-        self.cat = Categorias.objects.create(nombre='Cat Compras', estado=True)
+        self.cat = Categorias.objects.create(nombre="Cat Compras", estado=True)
         self.producto = Productos.objects.create(
-            descripcion='Prod Compras Str', stock_minimo=0,
-            estado=True, id_categoria=self.cat, id_impuesto=self.impuesto,
+            descripcion="Prod Compras Str",
+            stock_minimo=0,
+            estado=True,
+            id_categoria=self.cat,
+            id_impuesto=self.impuesto,
         )
         self.medio_pago = MediosPago.objects.create(
-            nombre='Efectivo Compras', genera_comision=False, estado=True,
+            nombre="Efectivo Compras",
+            genera_comision=False,
+            estado=True,
         )
 
     def test_str_detalles_compra(self):
         detalle = DetallesCompra.objects.create(
-            costo_unitario=Decimal('5000'),
-            cantidad=Decimal('10'),
-            subtotal=Decimal('50000'),
+            costo_unitario=Decimal("5000"),
+            cantidad=Decimal("10"),
+            subtotal=Decimal("50000"),
             id_compra=self.compra,
             id_producto=self.producto,
         )
-        self.assertIn('#', str(detalle))
+        self.assertIn("#", str(detalle))
 
     def test_str_pagos_proveedores(self):
         pago = PagosProveedores.objects.create(
             fecha_creacion=timezone.now(),
             id_medio_pago=self.medio_pago,
         )
-        self.assertIn('#', str(pago))
+        self.assertIn("#", str(pago))
 
     def test_str_aplicacion_pagos_compras(self):
         pago = PagosProveedores.objects.create(
@@ -146,35 +159,35 @@ class ModelosComprasAdicionalesTest(TestCase):
             id_medio_pago=self.medio_pago,
         )
         aplicacion = AplicacionPagosCompras.objects.create(
-            monto_aplicado=Decimal('50000'),
+            monto_aplicado=Decimal("50000"),
             id_compra=self.compra,
             id_pago_proveedor=pago,
         )
-        self.assertIn('#', str(aplicacion))
+        self.assertIn("#", str(aplicacion))
 
     def test_str_notas_credito_proveedor(self):
         nota = NotasCreditoProveedor.objects.create(
             fecha=timezone.now(),
-            monto_total=Decimal('30000'),
-            estado='Pendiente',
+            monto_total=Decimal("30000"),
+            estado="Pendiente",
             fecha_creacion=timezone.now(),
             id_proveedor=self.proveedor,
         )
-        self.assertIn('#', str(nota))
+        self.assertIn("#", str(nota))
 
     def test_str_detalles_nota_credito_proveedor(self):
         nota = NotasCreditoProveedor.objects.create(
             fecha=timezone.now(),
-            monto_total=Decimal('20000'),
-            estado='Pendiente',
+            monto_total=Decimal("20000"),
+            estado="Pendiente",
             fecha_creacion=timezone.now(),
             id_proveedor=self.proveedor,
         )
         detalle_nc = DetallesNotaCreditoProveedor.objects.create(
-            cantidad=Decimal('2'),
-            precio_unitario=Decimal('10000'),
-            subtotal=Decimal('20000'),
+            cantidad=Decimal("2"),
+            precio_unitario=Decimal("10000"),
+            subtotal=Decimal("20000"),
             id_nota_proveedor=nota,
             id_producto=self.producto,
         )
-        self.assertIn('#', str(detalle_nc))
+        self.assertIn("#", str(detalle_nc))

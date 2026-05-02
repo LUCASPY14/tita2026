@@ -20,21 +20,17 @@ def actualizar_saldo_recarga(sender, instance, created, **kwargs):
 
     Se mantiene el código por compatibilidad pero no se ejecuta.
     """
-    ESTADOS_ACREDITAR = {'confirmado'}
+    ESTADOS_ACREDITAR = {"confirmado"}
     if instance.estado not in ESTADOS_ACREDITAR:
         return
-    if hasattr(instance, '_saldo_actualizado'):
+    if hasattr(instance, "_saldo_actualizado"):
         return
 
     with transaction.atomic():
-        tarjeta = Tarjetas.objects.select_for_update().get(
-            nro_tarjeta=instance.nro_tarjeta.nro_tarjeta
-        )
+        tarjeta = Tarjetas.objects.select_for_update().get(nro_tarjeta=instance.nro_tarjeta.nro_tarjeta)
         saldo_anterior = tarjeta.saldo_actual
 
-        consumo_existe = ConsumosTarjeta.objects.filter(
-            detalle__contains=f"Recarga #{instance.id_carga}"
-        ).exists()
+        consumo_existe = ConsumosTarjeta.objects.filter(detalle__contains=f"Recarga #{instance.id_carga}").exists()
 
         if not consumo_existe:
             tarjeta.saldo_actual += instance.monto_cargado

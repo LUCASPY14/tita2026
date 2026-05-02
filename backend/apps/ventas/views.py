@@ -32,9 +32,9 @@ class VentasViewSet(viewsets.ModelViewSet):
     - Otros: Sin acceso
     """
 
-    queryset = Ventas.objects.select_related(
-        "id_cliente", "id_empleado_cajero", "id_medio_pago"
-    ).prefetch_related("detallesventa_set", "pagosventa_set")
+    queryset = Ventas.objects.select_related("id_cliente", "id_empleado_cajero", "id_medio_pago").prefetch_related(
+        "detallesventa_set", "pagosventa_set"
+    )
     serializer_class = VentasSerializer
     permission_classes = [IsAuthenticated, CanManageVentas]
     throttle_classes = [VentasRateThrottle, BurstRateThrottle]
@@ -69,12 +69,8 @@ class VentasViewSet(viewsets.ModelViewSet):
         # Buscar tarifa vigente
         now = timezone.now()
         tarifa = (
-            TarifasComision.objects.filter(
-                id_medio_pago=medio_pago, estado=True, fecha_inicio_vigencia__lte=now
-            )
-            .filter(
-                models.Q(fecha_fin_vigencia__isnull=True) | models.Q(fecha_fin_vigencia__gte=now)
-            )
+            TarifasComision.objects.filter(id_medio_pago=medio_pago, estado=True, fecha_inicio_vigencia__lte=now)
+            .filter(models.Q(fecha_fin_vigencia__isnull=True) | models.Q(fecha_fin_vigencia__gte=now))
             .order_by("-fecha_inicio_vigencia")
             .first()
         )
@@ -115,11 +111,11 @@ class VentasViewSet(viewsets.ModelViewSet):
         from apps.core.models import MediosPago
 
         referencias = referencias or {}
-        
+
         # Asegurar que medio_pago sea un objeto MediosPago
         if isinstance(medio_pago, int):
             medio_pago = MediosPago.objects.get(id_medio_pago=medio_pago)
-        
+
         # Calcular comisión
         monto_comision, tarifa = self._calcular_comision(medio_pago, monto_base)
 
@@ -132,9 +128,9 @@ class VentasViewSet(viewsets.ModelViewSet):
             id_medio_pago=medio_pago,
             id_venta=venta,
             referencia_transaccion=f"POS-{timezone.now().strftime('%Y%m%d%H%M%S')}",
-            ref_pago_pos=referencias.get('ref_pago_pos'),
-            ref_pg_transf=referencias.get('ref_pg_transf'),
-            banco_emisor=referencias.get('banco_emisor'),
+            ref_pago_pos=referencias.get("ref_pago_pos"),
+            ref_pg_transf=referencias.get("ref_pg_transf"),
+            banco_emisor=referencias.get("banco_emisor"),
         )
 
         return pago
@@ -142,54 +138,59 @@ class VentasViewSet(viewsets.ModelViewSet):
     def _registrar_pagos_multiples(self, venta, pagos_data):
         """
         Registra múltiples pagos para una venta (pago mixto).
-        
+
         Args:
             venta: Instancia de Ventas
             pagos_data: Lista de dicts con {id_medio_pago, monto, ref_pago_pos?, ref_pg_transf?, banco_emisor?}
-        
+
         Returns:
             list: Lista de PagosVenta creados
-        
+
         Raises:
             ValidationError: Si la suma de pagos no coincide con el total de la venta
         """
         from apps.core.models import MediosPago
         import logging
+
         logger = logging.getLogger(__name__)
-        
+
         # Validar que la suma de pagos coincida con el total
-        total_pagos = sum(Decimal(str(p['monto'])) for p in pagos_data)
+        total_pagos = sum(Decimal(str(p["monto"])) for p in pagos_data)
         if total_pagos != venta.monto_total:
             logger.warning(f"Venta #{venta.id_venta}: suma de pagos no coincide ({total_pagos} vs {venta.monto_total})")
-            raise ValidationError({
-                'error': 'La suma de pagos no coincide con el total de la venta',
-                'total_venta': str(venta.monto_total),
-                'total_pagos': str(total_pagos),
-                'diferencia': str(abs(venta.monto_total - total_pagos))
-            })
-        
+            raise ValidationError(
+                {
+                    "error": "La suma de pagos no coincide con el total de la venta",
+                    "total_venta": str(venta.monto_total),
+                    "total_pagos": str(total_pagos),
+                    "diferencia": str(abs(venta.monto_total - total_pagos)),
+                }
+            )
+
         pagos_creados = []
         for idx, pago_data in enumerate(pagos_data):
             try:
-                medio_pago = MediosPago.objects.get(id_medio_pago=pago_data['id_medio_pago'])
+                medio_pago = MediosPago.objects.get(id_medio_pago=pago_data["id_medio_pago"])
             except MediosPago.DoesNotExist:
                 logger.error(f"Medio de pago no encontrado: {pago_data['id_medio_pago']}")
-                raise ValidationError({
-                    'error': f'Medio de pago no encontrado en pago #{idx + 1}',
-                    'id_medio_pago_invalido': pago_data['id_medio_pago'],
-                    'mensaje': 'El medio de pago especificado no existe en el sistema'
-                })
-            
-            monto = Decimal(str(pago_data['monto']))
+                raise ValidationError(
+                    {
+                        "error": f"Medio de pago no encontrado en pago #{idx + 1}",
+                        "id_medio_pago_invalido": pago_data["id_medio_pago"],
+                        "mensaje": "El medio de pago especificado no existe en el sistema",
+                    }
+                )
+
+            monto = Decimal(str(pago_data["monto"]))
             referencias = {
-                'ref_pago_pos': pago_data.get('ref_pago_pos'),
-                'ref_pg_transf': pago_data.get('ref_pg_transf'),
-                'banco_emisor': pago_data.get('banco_emisor'),
+                "ref_pago_pos": pago_data.get("ref_pago_pos"),
+                "ref_pg_transf": pago_data.get("ref_pg_transf"),
+                "banco_emisor": pago_data.get("banco_emisor"),
             }
-            
+
             pago = self._registrar_pago_con_comision(venta, medio_pago, monto, referencias)
             pagos_creados.append(pago)
-        
+
         logger.info(f"Venta #{venta.id_venta}: {len(pagos_creados)} pagos registrados (pago mixto)")
         return pagos_creados
 
@@ -208,63 +209,67 @@ class VentasViewSet(viewsets.ModelViewSet):
         from apps.usuarios.models import Empleados
         from django.utils import timezone as tz
 
-        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        data = request.data.copy() if hasattr(request.data, "copy") else dict(request.data)
 
         # 1. monto_total desde detalles
-        detalles = data.get('detalles', [])
+        detalles = data.get("detalles", [])
         if not detalles:
             from rest_framework.exceptions import ValidationError as DRFValidationError
-            raise DRFValidationError({'detalles': 'Se requiere al menos un producto.'})
+
+            raise DRFValidationError({"detalles": "Se requiere al menos un producto."})
         monto_total = sum(
-            D(str(d['total'])) if d.get('total') else
-            D(str(d.get('precio_unitario', 0))) * D(str(d.get('cantidad', 1)))
+            D(str(d["total"])) if d.get("total") else D(str(d.get("precio_unitario", 0))) * D(str(d.get("cantidad", 1)))
             for d in detalles
         )
-        data['monto_total'] = str(monto_total)
+        data["monto_total"] = str(monto_total)
 
         # 2. id_empleado_cajero desde el usuario autenticado
-        empleado_cajero = getattr(request.user, 'empleado', None)
+        empleado_cajero = getattr(request.user, "empleado", None)
         if empleado_cajero:
-            data['id_empleado_cajero'] = empleado_cajero.id_empleado
+            data["id_empleado_cajero"] = empleado_cajero.id_empleado
         else:
             emp, _ = Empleados.objects.get_or_create(
-                email='cajero@sistema.com',
+                email="cajero@sistema.com",
                 defaults={
-                    'nombre': 'Cajero', 'apellido': 'Sistema',
-                    'fecha_ingreso': tz.now(), 'contrasena_hash': '',
+                    "nombre": "Cajero",
+                    "apellido": "Sistema",
+                    "fecha_ingreso": tz.now(),
+                    "contrasena_hash": "",
                 },
             )
-            data['id_empleado_cajero'] = emp.id_empleado
+            data["id_empleado_cajero"] = emp.id_empleado
 
         # 3. id_cliente desde el hijo (si aplica) o cliente genérico
-        id_hijo = data.get('id_hijo')
+        id_hijo = data.get("id_hijo")
         if id_hijo:
             try:
                 hijo = Hijos.objects.get(id_hijo=id_hijo)
-                data['id_cliente'] = hijo.id_cliente_responsable_id
+                data["id_cliente"] = hijo.id_cliente_responsable_id
             except Hijos.DoesNotExist:
                 pass
-        if 'id_cliente' not in data or not data['id_cliente']:
-            lista, _ = ListasPrecios.objects.get_or_create(nombre_lista='General')
-            tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo='General')
+        if "id_cliente" not in data or not data["id_cliente"]:
+            lista, _ = ListasPrecios.objects.get_or_create(nombre_lista="General")
+            tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo="General")
             cliente, _ = Clientes.objects.get_or_create(
-                ruc_ci='0000000',
+                ruc_ci="0000000",
                 defaults={
-                    'nombres': 'Cliente', 'apellidos': 'Genérico',
-                    'id_lista': lista, 'id_tipo_cliente': tipo,
+                    "nombres": "Cliente",
+                    "apellidos": "Genérico",
+                    "id_lista": lista,
+                    "id_tipo_cliente": tipo,
                 },
             )
-            data['id_cliente'] = cliente.id_cliente
+            data["id_cliente"] = cliente.id_cliente
 
         # 4. estado / estado_pago defaults
-        data.setdefault('estado', 'Activa')
-        data.setdefault('estado_pago', 'Pagada')
+        data.setdefault("estado", "Activa")
+        data.setdefault("estado_pago", "Pagada")
 
         # 5. id_caja: inyectar desde el request para vincular la venta al terminal POS correcto
-        if 'id_caja' not in data or not data['id_caja']:
-            id_caja_request = request.data.get('id_caja')
+        if "id_caja" not in data or not data["id_caja"]:
+            id_caja_request = request.data.get("id_caja")
             if id_caja_request:
-                data['id_caja'] = id_caja_request
+                data["id_caja"] = id_caja_request
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -308,9 +313,7 @@ class VentasViewSet(viewsets.ModelViewSet):
         autorizado_por = venta_data.get("autorizado_por")
 
         # VALIDACIÓN -1: LÍMITES POR ROL (NUEVO - Control de autorización)
-        empleado_cajero = (
-            self.request.user.empleado if hasattr(self.request.user, "empleado") else None
-        )
+        empleado_cajero = self.request.user.empleado if hasattr(self.request.user, "empleado") else None
         validacion_limite = {"puede_ejecutar": True, "requiere_autorizacion": False}
 
         if empleado_cajero:
@@ -485,9 +488,7 @@ class VentasViewSet(viewsets.ModelViewSet):
                                         "error": "Excede el límite de crédito permitido",
                                         "limite_credito": str(tarjeta.limite_credito),
                                         "saldo_negativo_proyectado": str(saldo_negativo_proyectado),
-                                        "excedente": str(
-                                            saldo_negativo_proyectado - tarjeta.limite_credito
-                                        ),
+                                        "excedente": str(saldo_negativo_proyectado - tarjeta.limite_credito),
                                     }
                                 )
 
@@ -507,16 +508,16 @@ class VentasViewSet(viewsets.ModelViewSet):
                         )
 
                     # Registrar pago(s) con comisión
-                    pagos_data = self.request.data.get('pagos_data')
+                    pagos_data = self.request.data.get("pagos_data")
                     if pagos_data and len(pagos_data) > 0:
                         # Pago múltiple (mixto)
                         self._registrar_pagos_multiples(venta_obj, pagos_data)
                     elif id_medio_pago:
                         # Pago simple (compatibilidad con flujo anterior)
                         referencias = {
-                            'ref_pago_pos': self.request.data.get('ref_pago_pos'),
-                            'ref_pg_transf': self.request.data.get('ref_pg_transf'),
-                            'banco_emisor': self.request.data.get('banco_emisor'),
+                            "ref_pago_pos": self.request.data.get("ref_pago_pos"),
+                            "ref_pg_transf": self.request.data.get("ref_pg_transf"),
+                            "banco_emisor": self.request.data.get("banco_emisor"),
                         }
                         self._registrar_pago_con_comision(
                             venta_obj, id_medio_pago, venta_data["monto_total"], referencias
@@ -529,17 +530,13 @@ class VentasViewSet(viewsets.ModelViewSet):
                             monto=monto_total,
                             solicitante=empleado_cajero,
                             autorizador=autorizado_por,
-                            motivo=self.request.data.get(
-                                "motivo_autorizacion", "Excede límite del rol"
-                            ),
+                            motivo=self.request.data.get("motivo_autorizacion", "Excede límite del rol"),
                             ip_address=self.request.META.get("REMOTE_ADDR"),
                             id_venta=venta_obj,
                         )
 
             except Tarjetas.DoesNotExist:
-                raise ValidationError(
-                    {"error": "El hijo no tiene tarjeta asociada", "id_hijo": id_hijo}
-                )
+                raise ValidationError({"error": "El hijo no tiene tarjeta asociada", "id_hijo": id_hijo})
         else:
             # Venta sin tarjeta (pago directo)
             with transaction.atomic():
@@ -558,20 +555,18 @@ class VentasViewSet(viewsets.ModelViewSet):
                     )
 
                 # Registrar pago(s) con comisión
-                pagos_data = self.request.data.get('pagos_data')
+                pagos_data = self.request.data.get("pagos_data")
                 if pagos_data and len(pagos_data) > 0:
                     # Pago múltiple (mixto)
                     self._registrar_pagos_multiples(venta_obj, pagos_data)
                 elif id_medio_pago:
                     # Pago simple (compatibilidad con flujo anterior)
                     referencias = {
-                        'ref_pago_pos': self.request.data.get('ref_pago_pos'),
-                        'ref_pg_transf': self.request.data.get('ref_pg_transf'),
-                        'banco_emisor': self.request.data.get('banco_emisor'),
+                        "ref_pago_pos": self.request.data.get("ref_pago_pos"),
+                        "ref_pg_transf": self.request.data.get("ref_pg_transf"),
+                        "banco_emisor": self.request.data.get("banco_emisor"),
                     }
-                    self._registrar_pago_con_comision(
-                        venta_obj, id_medio_pago, venta_data["monto_total"], referencias
-                    )
+                    self._registrar_pago_con_comision(venta_obj, id_medio_pago, venta_data["monto_total"], referencias)
 
                 # Registrar autorización si hubo (auditoría)
                 if autorizado_por and validacion_limite.get("requiere_autorizacion"):
@@ -580,9 +575,7 @@ class VentasViewSet(viewsets.ModelViewSet):
                         monto=monto_total,
                         solicitante=empleado_cajero,
                         autorizador=autorizado_por,
-                        motivo=self.request.data.get(
-                            "motivo_autorizacion", "Excede límite del rol"
-                        ),
+                        motivo=self.request.data.get("motivo_autorizacion", "Excede límite del rol"),
                         ip_address=self.request.META.get("REMOTE_ADDR"),
                         id_venta=venta_obj,
                     )
@@ -619,16 +612,16 @@ class VentasViewSet(viewsets.ModelViewSet):
 
         for detalle in detalles:
             try:
-                producto = Productos.objects.get(id_producto=detalle.get('id_producto'))
+                producto = Productos.objects.get(id_producto=detalle.get("id_producto"))
                 DetallesVenta.objects.create(
                     id_venta=venta,
                     id_producto=producto,
-                    cantidad=Decimal(str(detalle.get('cantidad', 1))),
-                    precio_unitario=Decimal(str(detalle.get('precio_unitario', 0))),
-                    subtotal=Decimal(str(detalle.get('precio_unitario', 0))) * Decimal(str(detalle.get('cantidad', 1))),
+                    cantidad=Decimal(str(detalle.get("cantidad", 1))),
+                    precio_unitario=Decimal(str(detalle.get("precio_unitario", 0))),
+                    subtotal=Decimal(str(detalle.get("precio_unitario", 0))) * Decimal(str(detalle.get("cantidad", 1))),
                 )
             except Productos.DoesNotExist:
-                raise ValidationError({'error': f"Producto {detalle.get('id_producto')} no encontrado"})
+                raise ValidationError({"error": f"Producto {detalle.get('id_producto')} no encontrado"})
 
     @action(detail=True, methods=["post"], url_path="emitir_factura")
     def emitir_factura(self, request, pk=None):
@@ -862,9 +855,7 @@ class NotasCreditoClienteViewSet(viewsets.ModelViewSet):
 
         empleado = getattr(request.user, "empleado", None)
         if not empleado:
-            return Response(
-                {"error": "Usuario no tiene empleado asociado"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Usuario no tiene empleado asociado"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             resultado = DevolucionService.crear_nota_credito(
@@ -911,9 +902,7 @@ class NotasCreditoClienteViewSet(viewsets.ModelViewSet):
         id_venta = request.data.get("id_venta")
         productos = request.data.get("productos", [])
 
-        validacion = DevolucionService.validar_productos_devolucion(
-            id_venta=id_venta, productos=productos
-        )
+        validacion = DevolucionService.validar_productos_devolucion(id_venta=id_venta, productos=productos)
 
         return Response(validacion)
 
@@ -932,9 +921,7 @@ class NotasCreditoClienteViewSet(viewsets.ModelViewSet):
         motivo = request.data.get("motivo_anulacion", "")
 
         if not motivo:
-            return Response(
-                {"error": "Se requiere motivo de anulación"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Se requiere motivo de anulación"}, status=status.HTTP_400_BAD_REQUEST)
 
         empleado = getattr(request.user, "empleado", None)
 
@@ -1004,9 +991,7 @@ class PromocionesViewSet(viewsets.ModelViewSet):
         id_cliente = request.data.get("id_cliente")
 
         if not codigo:
-            return Response(
-                {"error": "Se requiere código de promoción"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Se requiere código de promoción"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Buscar promociones aplicables con este código
         promociones = PromocionService.obtener_promociones_aplicables(
@@ -1014,18 +999,14 @@ class PromocionesViewSet(viewsets.ModelViewSet):
         )
 
         if not promociones:
-            return Response(
-                {"valido": False, "mensaje": "Código de promoción no válido o no aplicable"}
-            )
+            return Response({"valido": False, "mensaje": "Código de promoción no válido o no aplicable"})
 
         # Tomar la primera promoción (mayor prioridad)
         promo_dict = promociones[0]
         promo = promo_dict["promocion"]
 
         # Calcular descuento
-        descuento = PromocionService.calcular_descuento(
-            promocion=promo, items=productos, monto_total=monto_total
-        )
+        descuento = PromocionService.calcular_descuento(promocion=promo, items=productos, monto_total=monto_total)
 
         serializer = self.get_serializer(promo)
 
@@ -1116,9 +1097,7 @@ class PromocionesViewSet(viewsets.ModelViewSet):
 
         # Por promoción
         por_promocion = (
-            aplicaciones.values(
-                "id_promocion", "id_promocion__nombre", "id_promocion__tipo_promocion"
-            )
+            aplicaciones.values("id_promocion", "id_promocion__nombre", "id_promocion__tipo_promocion")
             .annotate(
                 usos=Count("id_aplicacion"),
                 total_descuentos=Sum("monto_descontado"),
@@ -1296,10 +1275,11 @@ class PromocionesViewSet(viewsets.ModelViewSet):
 
 class CondicionVentaViewSet(viewsets.ModelViewSet):
     """ViewSet para gestionar condiciones de venta (contado, credito, etc.)."""
-    queryset = CondicionVenta.objects.all().order_by('nombre')
+
+    queryset = CondicionVenta.objects.all().order_by("nombre")
     serializer_class = CondicionVentaSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['nombre']
-    ordering_fields = ['nombre']
-    ordering = ['nombre']
+    search_fields = ["nombre"]
+    ordering_fields = ["nombre"]
+    ordering = ["nombre"]

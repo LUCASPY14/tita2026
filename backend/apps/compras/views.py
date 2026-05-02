@@ -45,9 +45,7 @@ class ProveedoresViewSet(viewsets.ModelViewSet):
         """
         proveedor = self.get_object()
 
-        cuenta = CompraService.obtener_cuenta_corriente_proveedor(
-            id_proveedor=proveedor.id_proveedor
-        )
+        cuenta = CompraService.obtener_cuenta_corriente_proveedor(id_proveedor=proveedor.id_proveedor)
 
         # Agregar info del proveedor
         cuenta["proveedor"] = {
@@ -82,6 +80,7 @@ class ComprasViewSet(viewsets.ModelViewSet):
         Valida la compra antes de crearla y crea los detalles.
         """
         from decimal import Decimal
+
         # Obtener detalles del request
         detalles = self.request.data.get("detalles", [])
 
@@ -103,13 +102,12 @@ class ComprasViewSet(viewsets.ModelViewSet):
 
             # Guardar la compra con totales calculados
             compra = serializer.save(
-                monto_total=totales["total"],
-                saldo_pendiente=totales["total"],
-                estado_pago="Pendiente"
+                monto_total=totales["total"], saldo_pendiente=totales["total"], estado_pago="Pendiente"
             )
 
             # Crear los registros DetallesCompra
             from apps.productos.models import Productos
+
             for detalle in detalles:
                 costo = Decimal(str(detalle.get("costo_unitario") or detalle.get("precio_unitario", 0)))
                 cantidad = Decimal(str(detalle.get("cantidad", 0)))
@@ -160,9 +158,7 @@ class ComprasViewSet(viewsets.ModelViewSet):
                 compra = resultado
 
             serializer = self.get_serializer(compra)
-            return Response(
-                {"mensaje": "Compra confirmada exitosamente", "compra": serializer.data}
-            )
+            return Response({"mensaje": "Compra confirmada exitosamente", "compra": serializer.data})
 
         except ValidationError as e:
             return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
@@ -195,9 +191,7 @@ class ComprasViewSet(viewsets.ModelViewSet):
         detalles = request.data.get("detalles", [])
 
         if not detalles:
-            return Response(
-                {"error": "Debe proporcionar detalles"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Debe proporcionar detalles"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Validar primero
         validacion = CompraService.validar_compra(detalles)

@@ -7,6 +7,7 @@ Missing ranges:
   410-558 — DevolucionService.crear_nota_credito
   580-615 — DevolucionService.anular_nota_credito
 """
+
 from decimal import Decimal
 from datetime import timedelta
 
@@ -24,10 +25,10 @@ from apps.ventas.models import (
 )
 from apps.ventas.services import DevolucionService, PromocionService
 
-
 # ---------------------------------------------------------------------------
 # Shared fixture helper (same pattern as tests_models_missing.py)
 # ---------------------------------------------------------------------------
+
 
 def _make_base_fixtures():
     """Create minimum DB objects needed across all tests."""
@@ -41,9 +42,7 @@ def _make_base_fixtures():
         nombre_lista="SVC_General",
         defaults={"moneda": "PYG", "estado": True},
     )
-    tipo_cliente, _ = TiposCliente.objects.get_or_create(
-        nombre_tipo="SVC_Regular", defaults={"estado": True}
-    )
+    tipo_cliente, _ = TiposCliente.objects.get_or_create(nombre_tipo="SVC_Regular", defaults={"estado": True})
     cliente, _ = Clientes.objects.get_or_create(
         ruc_ci="SVC0000001",
         defaults={
@@ -75,12 +74,8 @@ def _make_base_fixtures():
         vigente_desde=timezone.now().date(),
         estado=True,
     )
-    categoria, _ = Categorias.objects.get_or_create(
-        nombre="SVC_Cat", defaults={"estado": True}
-    )
-    unidad, _ = UnidadesMedida.objects.get_or_create(
-        nombre="SVC_UN", defaults={"abreviatura": "UN", "estado": True}
-    )
+    categoria, _ = Categorias.objects.get_or_create(nombre="SVC_Cat", defaults={"estado": True})
+    unidad, _ = UnidadesMedida.objects.get_or_create(nombre="SVC_UN", defaults={"abreviatura": "UN", "estado": True})
     producto = Productos.objects.create(
         descripcion=f"SVC_Prod_{timezone.now().timestamp()}",
         estado=True,
@@ -131,6 +126,7 @@ def _make_promo(**overrides):
 # Lines 47-99: PromocionService.obtener_promociones_aplicables
 # ---------------------------------------------------------------------------
 
+
 class ObtenerPromocionesAplicablesTest(TestCase):
     """Lines 47-99: PromocionService.obtener_promociones_aplicables."""
 
@@ -165,9 +161,7 @@ class ObtenerPromocionesAplicablesTest(TestCase):
 
     def test_promo_sin_codigo_aparece_sin_code(self):
         """Lines 62-64: promo without code appears when no code given."""
-        result = PromocionService.obtener_promociones_aplicables(
-            items=self._items(), monto_total=Decimal("10000")
-        )
+        result = PromocionService.obtener_promociones_aplicables(items=self._items(), monto_total=Decimal("10000"))
         ids = [r["promocion"].pk for r in result]
         self.assertIn(self.promo_sin_codigo.pk, ids)
         self.assertNotIn(self.promo_con_codigo.pk, ids)
@@ -186,9 +180,7 @@ class ObtenerPromocionesAplicablesTest(TestCase):
         """Line 71-72: promo with monto_minimo > monto_total excluded."""
         self.promo_sin_codigo.monto_minimo = Decimal("999999.00")
         self.promo_sin_codigo.save()
-        result = PromocionService.obtener_promociones_aplicables(
-            items=self._items(), monto_total=Decimal("10000")
-        )
+        result = PromocionService.obtener_promociones_aplicables(items=self._items(), monto_total=Decimal("10000"))
         ids = [r["promocion"].pk for r in result]
         self.assertNotIn(self.promo_sin_codigo.pk, ids)
 
@@ -197,9 +189,7 @@ class ObtenerPromocionesAplicablesTest(TestCase):
         self.promo_sin_codigo.max_usos_total = 1
         self.promo_sin_codigo.usos_actuales = 1
         self.promo_sin_codigo.save()
-        result = PromocionService.obtener_promociones_aplicables(
-            items=self._items(), monto_total=Decimal("10000")
-        )
+        result = PromocionService.obtener_promociones_aplicables(items=self._items(), monto_total=Decimal("10000"))
         ids = [r["promocion"].pk for r in result]
         self.assertNotIn(self.promo_sin_codigo.pk, ids)
 
@@ -233,9 +223,7 @@ class ObtenerPromocionesAplicablesTest(TestCase):
     def test_resultado_ordenado_por_prioridad(self):
         """Line 97: results sorted by prioridad ascending."""
         _make_promo(requiere_codigo=False, prioridad=9)
-        result = PromocionService.obtener_promociones_aplicables(
-            items=self._items(), monto_total=Decimal("10000")
-        )
+        result = PromocionService.obtener_promociones_aplicables(items=self._items(), monto_total=Decimal("10000"))
         prios = [r["prioridad"] for r in result]
         self.assertEqual(prios, sorted(prios))
 
@@ -246,15 +234,14 @@ class ObtenerPromocionesAplicablesTest(TestCase):
         # Pick a day that is NOT today
         other_day = (today_dow % 7) + 1  # shifts by 1, wraps around 1-7
         promo_day = _make_promo(requiere_codigo=False, dias_semana=[other_day], prioridad=5)
-        result = PromocionService.obtener_promociones_aplicables(
-            items=self._items(), monto_total=Decimal("10000")
-        )
+        result = PromocionService.obtener_promociones_aplicables(items=self._items(), monto_total=Decimal("10000"))
         ids = [r["promocion"].pk for r in result]
         self.assertNotIn(promo_day.pk, ids)
 
     def test_con_fecha_hora_explicita(self):
         """Branch 49->53: fecha_hora provided (non-None) skips the default assignment."""
         import datetime as dt
+
         fecha_explicita = dt.datetime(2099, 6, 15, 12, 0, 0, tzinfo=dt.timezone.utc)
         promo_futuro = _make_promo(
             requiere_codigo=False,
@@ -273,6 +260,7 @@ class ObtenerPromocionesAplicablesTest(TestCase):
     def test_promo_horario_invalido_excluida(self):
         """Line 69: _validar_horario returns False → promo excluded via continue."""
         from datetime import time as dt_time
+
         # Create a promo with hora_inicio very far in the future (e.g., 23:59)
         # and hora_fin also at 23:59, so that current time is before it
         promo_horario = _make_promo(
@@ -283,11 +271,10 @@ class ObtenerPromocionesAplicablesTest(TestCase):
         )
         # Call without specifying time; if current time < 23:58, promo is excluded
         import datetime as dt
+
         now = timezone.now()
         if now.hour < 23:
-            result = PromocionService.obtener_promociones_aplicables(
-                items=self._items(), monto_total=Decimal("10000")
-            )
+            result = PromocionService.obtener_promociones_aplicables(items=self._items(), monto_total=Decimal("10000"))
             ids = [r["promocion"].pk for r in result]
             self.assertNotIn(promo_horario.pk, ids)
 
@@ -318,9 +305,7 @@ class ObtenerPromocionesAplicablesTest(TestCase):
         # Create promo with aplica_a='producto' but NO ProductosPromocion records
         promo_prod = _make_promo(requiere_codigo=False, aplica_a="producto", prioridad=3)
         # No ProductosPromocion added → set is empty → intersection with items is empty → excluded
-        result = PromocionService.obtener_promociones_aplicables(
-            items=self._items(), monto_total=Decimal("10000")
-        )
+        result = PromocionService.obtener_promociones_aplicables(items=self._items(), monto_total=Decimal("10000"))
         ids = [r["promocion"].pk for r in result]
         self.assertNotIn(promo_prod.pk, ids)
 
@@ -328,6 +313,7 @@ class ObtenerPromocionesAplicablesTest(TestCase):
 # ---------------------------------------------------------------------------
 # Lines 189-210: PromocionService.aplicar_promociones_a_venta
 # ---------------------------------------------------------------------------
+
 
 class AplicarPromocionesAVentaTest(TestCase):
     """Lines 189-210: PromocionService.aplicar_promociones_a_venta."""
@@ -381,6 +367,7 @@ class AplicarPromocionesAVentaTest(TestCase):
 # ---------------------------------------------------------------------------
 # Lines 410-558: DevolucionService.crear_nota_credito
 # ---------------------------------------------------------------------------
+
 
 class CrearNotaCreditoTest(TestCase):
     """Lines 410-558: DevolucionService.crear_nota_credito."""
@@ -475,11 +462,13 @@ class CrearNotaCreditoTest(TestCase):
         """Lines 466-558: success path creates NotasCreditoCliente and DetallesNotaCredito."""
         result = DevolucionService.crear_nota_credito(
             id_venta=self.venta.pk,
-            productos_devolucion=[{
-                "id_producto": self.producto.pk,
-                "cantidad": 1,
-                "motivo_item": "defecto",
-            }],
+            productos_devolucion=[
+                {
+                    "id_producto": self.producto.pk,
+                    "cantidad": 1,
+                    "motivo_item": "defecto",
+                }
+            ],
             motivo="Devolución TEST",
             empleado_autoriza=self.empleado,
         )
@@ -510,11 +499,13 @@ class CrearNotaCreditoTest(TestCase):
         )
         result = DevolucionService.crear_nota_credito(
             id_venta=venta_credito.pk,
-            productos_devolucion=[{
-                "id_producto": self.producto.pk,
-                "cantidad": 1,
-                "motivo_item": "",
-            }],
+            productos_devolucion=[
+                {
+                    "id_producto": self.producto.pk,
+                    "cantidad": 1,
+                    "motivo_item": "",
+                }
+            ],
             motivo="Devolución credito",
             empleado_autoriza=self.empleado,
         )
@@ -545,11 +536,13 @@ class CrearNotaCreditoTest(TestCase):
         )
         result = DevolucionService.crear_nota_credito(
             id_venta=venta_credito.pk,
-            productos_devolucion=[{
-                "id_producto": self.producto.pk,
-                "cantidad": 1,
-                "motivo_item": "",
-            }],
+            productos_devolucion=[
+                {
+                    "id_producto": self.producto.pk,
+                    "cantidad": 1,
+                    "motivo_item": "",
+                }
+            ],
             motivo="Devolución parcial credito",
             empleado_autoriza=self.empleado,
         )
@@ -562,6 +555,7 @@ class CrearNotaCreditoTest(TestCase):
 # ---------------------------------------------------------------------------
 # Lines 580-615: DevolucionService.anular_nota_credito
 # ---------------------------------------------------------------------------
+
 
 class AnularNotaCreditoTest(TestCase):
     """Lines 580-615: DevolucionService.anular_nota_credito."""

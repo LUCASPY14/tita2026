@@ -6,6 +6,7 @@ Missing lines (at baseline 84.62%):
 419, 469-470, 503-504, 528, 532-533, 555, 559-560, 582, 586-587,
 612, 616-617, 643-644, 700-701
 """
+
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
@@ -35,10 +36,10 @@ from apps.inventario.validators import (
     validar_variacion_costo,
 )
 
-
 # ---------------------------------------------------------------------------
 # validar_cantidad_no_negativa  (lines 61-62)
 # ---------------------------------------------------------------------------
+
 
 class ValidarCantidadNoNegativaExtendedTest(TestCase):
 
@@ -59,6 +60,7 @@ class ValidarCantidadNoNegativaExtendedTest(TestCase):
 # validar_stock_minimo_maximo  (lines 88-89, 125-126)
 # ---------------------------------------------------------------------------
 
+
 class ValidarStockMinimoMaximoExtendedTest(TestCase):
 
     def test_minimo_texto_invalido_raises(self):
@@ -77,6 +79,7 @@ class ValidarStockMinimoMaximoExtendedTest(TestCase):
 # ---------------------------------------------------------------------------
 # validar_punto_reorden  (lines 166, 187)
 # ---------------------------------------------------------------------------
+
 
 class ValidarPuntoReordenExtendedTest(TestCase):
 
@@ -105,6 +108,7 @@ class ValidarPuntoReordenExtendedTest(TestCase):
 # validar_tipo_ajuste  (line 290)
 # ---------------------------------------------------------------------------
 
+
 class ValidarTipoAjusteExtendedTest(TestCase):
 
     def test_tipo_invalido_raises(self):
@@ -128,6 +132,7 @@ class ValidarTipoAjusteExtendedTest(TestCase):
 # validar_estado_ajuste  (line 312)
 # ---------------------------------------------------------------------------
 
+
 class ValidarEstadoAjusteExtendedTest(TestCase):
 
     def test_estado_invalido_raises(self):
@@ -150,6 +155,7 @@ class ValidarEstadoAjusteExtendedTest(TestCase):
 # ---------------------------------------------------------------------------
 # validar_cantidad_ajuste  (lines 336, 340-341)
 # ---------------------------------------------------------------------------
+
 
 class ValidarCantidadAjusteExtendedTest(TestCase):
 
@@ -201,6 +207,7 @@ class ValidarCantidadAjusteExtendedTest(TestCase):
 # validar_merma_aceptable  (lines 385-386, 419)
 # ---------------------------------------------------------------------------
 
+
 class ValidarMermaAceptableExtendedTest(TestCase):
 
     def test_texto_invalido_raises(self):
@@ -235,6 +242,7 @@ class ValidarMermaAceptableExtendedTest(TestCase):
 # ---------------------------------------------------------------------------
 # validar_fecha_vencimiento  (lines 469-470)
 # ---------------------------------------------------------------------------
+
 
 class ValidarFechaVencimientoExtendedTest(TestCase):
 
@@ -272,6 +280,7 @@ class ValidarFechaVencimientoExtendedTest(TestCase):
 # validar_numero_lote  (lines 503-504)
 # ---------------------------------------------------------------------------
 
+
 class ValidarNumeroLoteExtendedTest(TestCase):
 
     def test_formato_invalido_raises(self):
@@ -306,6 +315,7 @@ class ValidarNumeroLoteExtendedTest(TestCase):
 # validar_cantidad_lote  (lines 528, 532-533)
 # ---------------------------------------------------------------------------
 
+
 class ValidarCantidadLoteExtendedTest(TestCase):
 
     def test_texto_invalido_raises(self):
@@ -334,6 +344,7 @@ class ValidarCantidadLoteExtendedTest(TestCase):
 # ---------------------------------------------------------------------------
 # validar_dias_historico  (lines 555, 559-560)
 # ---------------------------------------------------------------------------
+
 
 class ValidarDiasHistoricoExtendedTest(TestCase):
 
@@ -365,6 +376,7 @@ class ValidarDiasHistoricoExtendedTest(TestCase):
 # ---------------------------------------------------------------------------
 # validar_umbral_confianza  (lines 582, 586-587)
 # ---------------------------------------------------------------------------
+
 
 class ValidarUmbralConfianzaExtendedTest(TestCase):
 
@@ -403,6 +415,7 @@ class ValidarUmbralConfianzaExtendedTest(TestCase):
 # validar_lead_time  (lines 612, 616-617)
 # ---------------------------------------------------------------------------
 
+
 class ValidarLeadTimeExtendedTest(TestCase):
 
     def test_texto_invalido_raises(self):
@@ -434,6 +447,7 @@ class ValidarLeadTimeExtendedTest(TestCase):
 # validar_dias_cobertura  (lines 643-644)
 # ---------------------------------------------------------------------------
 
+
 class ValidarDiasCoberturaExtendedTest(TestCase):
 
     def test_texto_invalido_raises(self):
@@ -464,6 +478,7 @@ class ValidarDiasCoberturaExtendedTest(TestCase):
 # ---------------------------------------------------------------------------
 # validar_variacion_costo  (lines 700-701)
 # ---------------------------------------------------------------------------
+
 
 class ValidarVariacionCostoExtendedTest(TestCase):
 
@@ -501,6 +516,7 @@ class ValidarVariacionCostoExtendedTest(TestCase):
 # ---------------------------------------------------------------------------
 # Additional coverage: validar_nivel_alerta, validar_umbral_alerta
 # ---------------------------------------------------------------------------
+
 
 class ValidarNivelAlertaExtendedTest(TestCase):
 

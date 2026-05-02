@@ -8,6 +8,7 @@ Missing lines: 20, 34, 61, 77, 85, 109, 121, 144, 161, 169, 173-174, 187, 191-19
 786, 798, 804, 819, 823-824, 835, 839-840, 855-856, 859, 882, 913, 917-918, 929,
 945, 960, 968, 971, 986, 1001, 1031, 1034
 """
+
 from datetime import datetime, timezone, timedelta
 
 from django.test import TestCase
@@ -305,6 +306,7 @@ class ValidarSchemaJSONExtendedTest(TestCase):
         """Large non-serializable dict raises."""
         # Create a dict with a non-JSON-serializable value (set) to trigger TypeError
         import unittest
+
         # Instead trigger the "too large" check with a large dict
         big_dict = {str(i): "x" * 100 for i in range(600)}
         with self.assertRaises(ValidationError) as ctx:

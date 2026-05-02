@@ -6,7 +6,15 @@ from django_filters.rest_framework import DjangoFilterBackend
 from apps.common.permissions import IsAdminOrReadOnly, IsClienteOrAdmin
 from apps.common.throttling import BurstRateThrottle, SustainedRateThrottle
 from .models import Clientes, Hijos, TiposCliente, Grados, RestriccionesHijos, Pais, Ciudad
-from .serializers import ClientesSerializer, HijosSerializer, TiposClienteSerializer, GradosSerializer, RestriccionesHijosSerializer, PaisSerializer, CiudadSerializer
+from .serializers import (
+    ClientesSerializer,
+    HijosSerializer,
+    TiposClienteSerializer,
+    GradosSerializer,
+    RestriccionesHijosSerializer,
+    PaisSerializer,
+    CiudadSerializer,
+)
 
 
 # Create your views here.
@@ -49,6 +57,7 @@ class ClientesViewSet(viewsets.ModelViewSet):
 
 class TiposClienteViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet de solo lectura para tipos de cliente."""
+
     queryset = TiposCliente.objects.filter(estado=True)
     serializer_class = TiposClienteSerializer
     permission_classes = [IsAuthenticated]
@@ -56,7 +65,8 @@ class TiposClienteViewSet(viewsets.ReadOnlyModelViewSet):
 
 class GradosViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet de solo lectura para grados escolares."""
-    queryset = Grados.objects.filter(estado=True).order_by('orden_visualizacion')
+
+    queryset = Grados.objects.filter(estado=True).order_by("orden_visualizacion")
     serializer_class = GradosSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
@@ -99,21 +109,23 @@ class RestriccionesHijosViewSet(viewsets.ModelViewSet):
 
 class PaisViewSet(viewsets.ModelViewSet):
     """ViewSet para gestionar el catálogo de países."""
-    queryset = Pais.objects.all().order_by('nombre')
+
+    queryset = Pais.objects.all().order_by("nombre")
     serializer_class = PaisSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['nombre']
-    ordering_fields = ['nombre']
-    ordering = ['nombre']
+    search_fields = ["nombre"]
+    ordering_fields = ["nombre"]
+    ordering = ["nombre"]
 
 
 class CiudadViewSet(viewsets.ModelViewSet):
     """ViewSet para gestionar el catálogo de ciudades."""
-    queryset = Ciudad.objects.all().order_by('nombre')
+
+    queryset = Ciudad.objects.all().order_by("nombre")
     serializer_class = CiudadSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['nombre']
-    ordering_fields = ['nombre']
-    ordering = ['nombre']
+    search_fields = ["nombre"]
+    ordering_fields = ["nombre"]
+    ordering = ["nombre"]

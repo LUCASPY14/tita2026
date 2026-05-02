@@ -13,6 +13,7 @@ Signals:
   - Line 81: if saldo == 0: estado = "Pagada"
   - Line 85: elif saldo < monto_total: estado = "Parcial"
 """
+
 from decimal import Decimal
 
 from django.test import TestCase
@@ -35,6 +36,7 @@ class ActualizarSaldoVentaSignalTest(TestCase):
         )
         # PagosVenta requires id_medio_pago
         from apps.core.models import MediosPago
+
         medio, _ = MediosPago.objects.get_or_create(
             descripcion="Efectivo",
             defaults={"descripcion": "Efectivo"},
@@ -60,9 +62,7 @@ class ActualizarSaldoVentaSignalTest(TestCase):
         self.venta.refresh_from_db()
 
         # Now do an update - signal should NOT fire (line 32)
-        AplicacionPagosVentas.objects.filter(pk=aplicacion.pk).update(
-            monto_aplicado=Decimal("99999")
-        )
+        AplicacionPagosVentas.objects.filter(pk=aplicacion.pk).update(monto_aplicado=Decimal("99999"))
         # Refresh venta - saldo should NOT have changed from the update
         self.venta.refresh_from_db()
         # Estado remains what was set on create (Pagada since full payment was made)
@@ -114,6 +114,7 @@ class ActualizarSaldoVentaSignalTest(TestCase):
             estado="Activa",
         )
         from apps.core.models import MediosPago
+
         medio = MediosPago.objects.first()
         pago2 = PagosVenta.objects.create(
             monto=Decimal("200000"),
@@ -127,7 +128,7 @@ class ActualizarSaldoVentaSignalTest(TestCase):
         # Actually let's apply 0 - but that still triggers signal. Let's use a small amount
         # where saldo remains > monto_total is impossible (because saldo <= monto_total at start)
         # Line 48 covers when saldo > 0 but NOT < monto_total - meaning saldo == monto_total
-        # This happens if monto_aplicado = 0 which isn't valid. 
+        # This happens if monto_aplicado = 0 which isn't valid.
         # Actually line 48 (else: estado = Pendiente):
         # saldo_pendiente = original - monto_aplicado
         # saldo_pendiente == monto_total when monto_aplicado = 0
@@ -150,6 +151,7 @@ class AplicarNotaCreditoClienteSignalTest(TestCase):
 
     def setUp(self):
         from apps.usuarios.models import Empleados
+
         self.empleado, _ = Empleados.objects.get_or_create(
             email="sistema@test.com",
             defaults={
@@ -161,6 +163,7 @@ class AplicarNotaCreditoClienteSignalTest(TestCase):
         )
         from apps.clientes.models import Clientes, TiposCliente
         from apps.productos.models import ListasPrecios
+
         lista, _ = ListasPrecios.objects.get_or_create(nombre_lista="General")
         tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo="General")
         self.cliente, _ = Clientes.objects.get_or_create(

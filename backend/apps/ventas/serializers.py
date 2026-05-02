@@ -11,9 +11,7 @@ class DetallesVentaSerializer(serializers.ModelSerializer):
 
 
 class PagosVentaSerializer(serializers.ModelSerializer):
-    medio_pago_descripcion = serializers.CharField(
-        source="id_medio_pago.descripcion", read_only=True
-    )
+    medio_pago_descripcion = serializers.CharField(source="id_medio_pago.descripcion", read_only=True)
 
     class Meta:
         model = PagosVenta
@@ -25,6 +23,7 @@ class PagoDataSerializer(serializers.Serializer):
     Serializer para datos de pago en el POST de venta (pago mixto).
     No crea el modelo directamente, solo valida los datos de entrada.
     """
+
     id_medio_pago = serializers.IntegerField(required=True)
     monto = serializers.DecimalField(max_digits=12, decimal_places=2, required=True)
     ref_pago_pos = serializers.CharField(max_length=100, required=False, allow_blank=True)
@@ -53,20 +52,23 @@ class VentasSerializer(serializers.ModelSerializer):
         """Retorna el nro_secuencial del DocumentoTributario asociado a esta venta."""
         try:
             from apps.contabilidad.models import DocumentosTributarios
-            doc = DocumentosTributarios.objects.filter(
-                nro_preimpreso_interno=str(obj.pk)
-            ).order_by("-id_documento").first()
+
+            doc = (
+                DocumentosTributarios.objects.filter(nro_preimpreso_interno=str(obj.pk))
+                .order_by("-id_documento")
+                .first()
+            )
             return doc.nro_secuencial if doc else None
         except Exception:
             return None
-    
+
     def create(self, validated_data):
         """
         Sobrescribir create para remover pagos_data de validated_data.
         Los pagos se manejan en perform_create() del ViewSet.
         """
         # Remover pagos_data si existe (no es campo del modelo)
-        validated_data.pop('pagos_data', None)
+        validated_data.pop("pagos_data", None)
         return super().create(validated_data)
 
 

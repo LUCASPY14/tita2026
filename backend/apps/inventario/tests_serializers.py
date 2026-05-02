@@ -117,9 +117,7 @@ class MovimientosStockSerializerTest(TestCase):
         self.categoria = Categorias.objects.create(nombre="Snacks", estado=True)
 
         # Crear unidad de medida
-        self.unidad = UnidadesMedida.objects.create(
-            nombre="Paquete", abreviatura="PKT", estado=True
-        )
+        self.unidad = UnidadesMedida.objects.create(nombre="Paquete", abreviatura="PKT", estado=True)
 
         # Crear producto
         self.producto = Productos.objects.create(
@@ -211,9 +209,7 @@ class AjustesInventarioSerializerTest(TestCase):
         self.categoria = Categorias.objects.create(nombre="Alimentos", estado=True)
 
         # Crear unidad de medida
-        self.unidad = UnidadesMedida.objects.create(
-            nombre="Kilogramo", abreviatura="KG", estado=True
-        )
+        self.unidad = UnidadesMedida.objects.create(nombre="Kilogramo", abreviatura="KG", estado=True)
 
         # Crear producto
         self.producto = Productos.objects.create(

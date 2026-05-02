@@ -296,7 +296,7 @@ class VentasSerializerGetNroDocumentoTest(TestCase):
         # Serializar y verificar
         serializer = VentasSerializer(venta)
         data = serializer.data
-        
+
         self.assertEqual(data["nro_documento_tributario"], 123)
 
     def test_get_nro_documento_tributario_sin_documento(self):
@@ -316,7 +316,7 @@ class VentasSerializerGetNroDocumentoTest(TestCase):
         # Serializar y verificar
         serializer = VentasSerializer(venta)
         data = serializer.data
-        
+
         self.assertIsNone(data["nro_documento_tributario"])
 
     def test_get_nro_documento_tributario_con_excepcion(self):
@@ -336,13 +336,13 @@ class VentasSerializerGetNroDocumentoTest(TestCase):
         )
 
         # Mockear para que lance excepción
-        with patch('apps.contabilidad.models.DocumentosTributarios.objects.filter') as mock_filter:
+        with patch("apps.contabilidad.models.DocumentosTributarios.objects.filter") as mock_filter:
             mock_filter.side_effect = Exception("Error de prueba")
-            
+
             # Serializar y verificar que retorna None
             serializer = VentasSerializer(venta)
             data = serializer.data
-            
+
             self.assertIsNone(data["nro_documento_tributario"])
 
 
@@ -390,17 +390,12 @@ class VentasSerializerCreateTest(TestCase):
             "monto_total": "8000.00",
             "estado": "completada",
             "estado_pago": "pagada",
-            "pagos_data": [
-                {
-                    "id_medio_pago": self.medio_pago.id_medio_pago,
-                    "monto": "8000.00"
-                }
-            ]
+            "pagos_data": [{"id_medio_pago": self.medio_pago.id_medio_pago, "monto": "8000.00"}],
         }
 
         serializer = VentasSerializer(data=data)
         self.assertTrue(serializer.is_valid())
-        
+
         # Crear y verificar que se creó correctamente
         venta = serializer.save()
         self.assertIsNotNone(venta.id_venta)
@@ -421,7 +416,7 @@ class VentasSerializerCreateTest(TestCase):
 
         serializer = VentasSerializer(data=data)
         self.assertTrue(serializer.is_valid())
-        
+
         # Crear y verificar
         venta = serializer.save()
         self.assertIsNotNone(venta.id_venta)

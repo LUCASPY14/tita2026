@@ -45,14 +45,10 @@ class VentasViewSetAPITest(TestCase):
 
         # Crear usuario Django con permisos de staff para autenticación API
         User = get_user_model()
-        self.auth_user = User.objects.create_user(
-            username="cajero_test", password="testpass123", is_staff=True
-        )
+        self.auth_user = User.objects.create_user(username="cajero_test", password="testpass123", is_staff=True)
 
         # Crear rol y empleado (cajero)
-        self.rol_cajero = Roles.objects.create(
-            nombre_rol="Cajero", descripcion="Cajero de ventas", estado=True
-        )
+        self.rol_cajero = Roles.objects.create(nombre_rol="Cajero", descripcion="Cajero de ventas", estado=True)
 
         self.empleado_cajero = Empleados.objects.create(
             nombre="Juan",
@@ -68,9 +64,7 @@ class VentasViewSetAPITest(TestCase):
         self.client.force_authenticate(user=self.auth_user)
 
         # Crear medio de pago
-        self.medio_pago_efectivo = MediosPago.objects.create(
-            descripcion="Efectivo", estado=True, genera_comision=False
-        )
+        self.medio_pago_efectivo = MediosPago.objects.create(descripcion="Efectivo", estado=True, genera_comision=False)
 
         # Crear lista de precios
         self.lista_precio = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
@@ -121,9 +115,7 @@ class VentasViewSetAPITest(TestCase):
         )
 
         # Crear stock para el producto
-        self.stock = StockUnico.objects.create(
-            id_producto=self.producto, cantidad=Decimal("100.00")
-        )
+        self.stock = StockUnico.objects.create(id_producto=self.producto, cantidad=Decimal("100.00"))
 
     def test_listar_ventas_sin_autenticacion(self):
         """Test: Listar ventas sin autenticación debe retornar 401"""

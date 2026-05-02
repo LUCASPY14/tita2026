@@ -2,6 +2,7 @@
 Tests para apps/almuerzos/views.py
 Cubre RegistrosConsumoAlmuerzoViewSet.perform_create() y _agregar_a_cuenta_mensual()
 """
+
 from unittest.mock import MagicMock, patch
 from decimal import Decimal
 from datetime import date, time
@@ -36,11 +37,11 @@ class AlmuerzosViewSetPerformCreateSinTarjetaTest(TestCase):
         vs = _make_viewset()
         serializer = MagicMock()
         serializer.validated_data = {
-            'id_hijo': MagicMock(),
-            'fecha_consumo': date.today(),
-            'nro_tarjeta': None,
-            'id_tipo_almuerzo': MagicMock(),
-            'id_suscripcion': None,
+            "id_hijo": MagicMock(),
+            "fecha_consumo": date.today(),
+            "nro_tarjeta": None,
+            "id_tipo_almuerzo": MagicMock(),
+            "id_suscripcion": None,
         }
         with self.assertRaises(ValidationError):
             vs.perform_create(serializer)
@@ -50,40 +51,62 @@ class AlmuerzosViewSetCreateBaseFixture(TestCase):
     """Base fixture for perform_create tests that require real data"""
 
     def setUp(self):
-        lista = ListasPrecios.objects.create(nombre_lista='Minorista', estado=True)
-        tipo_c = TiposCliente.objects.create(nombre_tipo='Regular', estado=True)
+        lista = ListasPrecios.objects.create(nombre_lista="Minorista", estado=True)
+        tipo_c = TiposCliente.objects.create(nombre_tipo="Regular", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres='Rosa', apellidos='Test', ruc_ci='12345678',
-            limite_credito=Decimal('100.00'), estado=True,
-            id_lista=lista, id_tipo_cliente=tipo_c,
+            nombres="Rosa",
+            apellidos="Test",
+            ruc_ci="12345678",
+            limite_credito=Decimal("100.00"),
+            estado=True,
+            id_lista=lista,
+            id_tipo_cliente=tipo_c,
         )
         self.hijo = Hijos.objects.create(
-            nombre='Luisa', apellido='Test', grado='3ro', estado=True,
+            nombre="Luisa",
+            apellido="Test",
+            grado="3ro",
+            estado=True,
             id_cliente_responsable=self.cliente,
         )
         self.tarjeta = Tarjetas.objects.create(
-            nro_tarjeta='ALM001', saldo_actual=Decimal('500.00'),
-            estado='activa', fecha_creacion=timezone.now(),
-            permite_saldo_negativo=False, limite_credito=Decimal('0.00'),
-            notificar_saldo_bajo=True, id_hijo=self.hijo, codigo_barras='BARM001',
+            nro_tarjeta="ALM001",
+            saldo_actual=Decimal("500.00"),
+            estado="activa",
+            fecha_creacion=timezone.now(),
+            permite_saldo_negativo=False,
+            limite_credito=Decimal("0.00"),
+            notificar_saldo_bajo=True,
+            id_hijo=self.hijo,
+            codigo_barras="BARM001",
         )
         self.plan = PlanesAlmuerzo.objects.create(
-            nombre_plan='Plan Prueba', descripcion='Plan test',
-            precio_mensual=Decimal('120.00'),
-            dias_semana_incluidos='Lunes,Martes',
-            fecha_creacion=timezone.now(), estado=True,
+            nombre_plan="Plan Prueba",
+            descripcion="Plan test",
+            precio_mensual=Decimal("120.00"),
+            dias_semana_incluidos="Lunes,Martes",
+            fecha_creacion=timezone.now(),
+            estado=True,
         )
         self.tipo_almuerzo = TiposAlmuerzo.objects.create(
-            nombre='Almuerzo Std', descripcion='desc',
-            precio_unitario=Decimal('10.00'),
-            incluye_plato_principal=True, incluye_postre=False, incluye_bebida=False,
-            fecha_creacion=timezone.now(), estado=True,
+            nombre="Almuerzo Std",
+            descripcion="desc",
+            precio_unitario=Decimal("10.00"),
+            incluye_plato_principal=True,
+            incluye_postre=False,
+            incluye_bebida=False,
+            fecha_creacion=timezone.now(),
+            estado=True,
         )
-        rol = Roles.objects.create(nombre_rol='CocinaX', estado=True)
+        rol = Roles.objects.create(nombre_rol="CocinaX", estado=True)
         self.empleado = Empleados.objects.create(
-            nombre='Emp', apellido='Test', usuario='emptest',
-            contrasena_hash='hash', fecha_ingreso=timezone.now(),
-            estado=True, id_rol=rol,
+            nombre="Emp",
+            apellido="Test",
+            usuario="emptest",
+            contrasena_hash="hash",
+            fecha_ingreso=timezone.now(),
+            estado=True,
+            id_rol=rol,
         )
 
 
@@ -94,14 +117,14 @@ class AlmuerzosViewSetSinSuscripcionYSinTipoTest(AlmuerzosViewSetCreateBaseFixtu
         vs = _make_viewset()
         serializer = MagicMock()
         serializer.validated_data = {
-            'id_hijo': self.hijo,
-            'fecha_consumo': date.today(),
-            'nro_tarjeta': self.tarjeta,
-            'id_tipo_almuerzo': None,
-            'id_suscripcion': None,
+            "id_hijo": self.hijo,
+            "fecha_consumo": date.today(),
+            "nro_tarjeta": self.tarjeta,
+            "id_tipo_almuerzo": None,
+            "id_suscripcion": None,
         }
-        with patch('apps.almuerzos.validators.validar_limite_registros_diarios', return_value=None):
-            with patch('apps.almuerzos.validators.determinar_si_cobra', return_value=True):
+        with patch("apps.almuerzos.validators.validar_limite_registros_diarios", return_value=None):
+            with patch("apps.almuerzos.validators.determinar_si_cobra", return_value=True):
                 with self.assertRaises(ValidationError):
                     vs.perform_create(serializer)
 
@@ -111,20 +134,23 @@ class AlmuerzosViewSetSuscripcionNoActivaTest(AlmuerzosViewSetCreateBaseFixture)
 
     def test_suscripcion_no_activa_lanza_error(self):
         suscripcion = SuscripcionesAlmuerzo.objects.create(
-            fecha_inicio=date.today(), fecha_fin=None, estado='inactiva',
-            id_hijo=self.hijo, id_plan_almuerzo=self.plan,
+            fecha_inicio=date.today(),
+            fecha_fin=None,
+            estado="inactiva",
+            id_hijo=self.hijo,
+            id_plan_almuerzo=self.plan,
         )
         vs = _make_viewset()
         serializer = MagicMock()
         serializer.validated_data = {
-            'id_hijo': self.hijo,
-            'fecha_consumo': date.today(),
-            'nro_tarjeta': self.tarjeta,
-            'id_tipo_almuerzo': None,
-            'id_suscripcion': suscripcion,
+            "id_hijo": self.hijo,
+            "fecha_consumo": date.today(),
+            "nro_tarjeta": self.tarjeta,
+            "id_tipo_almuerzo": None,
+            "id_suscripcion": suscripcion,
         }
-        with patch('apps.almuerzos.validators.validar_limite_registros_diarios', return_value=None):
-            with patch('apps.almuerzos.validators.determinar_si_cobra', return_value=True):
+        with patch("apps.almuerzos.validators.validar_limite_registros_diarios", return_value=None):
+            with patch("apps.almuerzos.validators.determinar_si_cobra", return_value=True):
                 with self.assertRaises(ValidationError):
                     vs.perform_create(serializer)
 
@@ -135,7 +161,7 @@ class AlmuerzosViewSetSaldoInsuficienteTest(AlmuerzosViewSetCreateBaseFixture):
 
     def test_saldo_insuficiente_no_lanza_error(self):
         """El saldo de la tarjeta no se descuenta, por lo que saldo bajo no bloquea el registro"""
-        self.tarjeta.saldo_actual = Decimal('1.00')
+        self.tarjeta.saldo_actual = Decimal("1.00")
         self.tarjeta.save()
 
         vs = _make_viewset()
@@ -144,10 +170,10 @@ class AlmuerzosViewSetSaldoInsuficienteTest(AlmuerzosViewSetCreateBaseFixture):
             return RegistrosConsumoAlmuerzo.objects.create(
                 fecha_consumo=date.today(),
                 hora_registro=timezone.now().time(),
-                costo_almuerzo=kwargs.get('costo_almuerzo', Decimal('10.00')),
+                costo_almuerzo=kwargs.get("costo_almuerzo", Decimal("10.00")),
                 marcado_en_cuenta=False,
-                ya_cobrado=kwargs.get('ya_cobrado', True),
-                estado='Confirmado',
+                ya_cobrado=kwargs.get("ya_cobrado", True),
+                estado="Confirmado",
                 id_hijo=self.hijo,
                 id_tipo_almuerzo=self.tipo_almuerzo,
                 nro_tarjeta=self.tarjeta,
@@ -156,20 +182,20 @@ class AlmuerzosViewSetSaldoInsuficienteTest(AlmuerzosViewSetCreateBaseFixture):
 
         serializer = MagicMock()
         serializer.validated_data = {
-            'id_hijo': self.hijo,
-            'fecha_consumo': date.today(),
-            'nro_tarjeta': self.tarjeta,
-            'id_tipo_almuerzo': self.tipo_almuerzo,
-            'id_suscripcion': None,
+            "id_hijo": self.hijo,
+            "fecha_consumo": date.today(),
+            "nro_tarjeta": self.tarjeta,
+            "id_tipo_almuerzo": self.tipo_almuerzo,
+            "id_suscripcion": None,
         }
         serializer.save.side_effect = mock_save
-        with patch('apps.almuerzos.validators.validar_limite_registros_diarios', return_value=None):
+        with patch("apps.almuerzos.validators.validar_limite_registros_diarios", return_value=None):
             # Should not raise — saldo is not checked per current business rule
             vs.perform_create(serializer)
 
         self.tarjeta.refresh_from_db()
         # Saldo unchanged: tarjeta is only used for identification
-        self.assertEqual(self.tarjeta.saldo_actual, Decimal('1.00'))
+        self.assertEqual(self.tarjeta.saldo_actual, Decimal("1.00"))
 
 
 class AlmuerzosViewSetConTipoAlmuerzoCobraTest(AlmuerzosViewSetCreateBaseFixture):
@@ -182,10 +208,10 @@ class AlmuerzosViewSetConTipoAlmuerzoCobraTest(AlmuerzosViewSetCreateBaseFixture
             return RegistrosConsumoAlmuerzo.objects.create(
                 fecha_consumo=date.today(),
                 hora_registro=timezone.now().time(),
-                costo_almuerzo=Decimal('10.00'),
+                costo_almuerzo=Decimal("10.00"),
                 marcado_en_cuenta=False,
                 ya_cobrado=True,
-                estado='Confirmado',
+                estado="Confirmado",
                 id_hijo=self.hijo,
                 id_tipo_almuerzo=self.tipo_almuerzo,
                 nro_tarjeta=self.tarjeta,
@@ -194,21 +220,21 @@ class AlmuerzosViewSetConTipoAlmuerzoCobraTest(AlmuerzosViewSetCreateBaseFixture
 
         serializer = MagicMock()
         serializer.validated_data = {
-            'id_hijo': self.hijo,
-            'fecha_consumo': date.today(),
-            'nro_tarjeta': self.tarjeta,
-            'id_tipo_almuerzo': self.tipo_almuerzo,
-            'id_suscripcion': None,
+            "id_hijo": self.hijo,
+            "fecha_consumo": date.today(),
+            "nro_tarjeta": self.tarjeta,
+            "id_tipo_almuerzo": self.tipo_almuerzo,
+            "id_suscripcion": None,
         }
         serializer.save.side_effect = mock_save
 
-        with patch('apps.almuerzos.validators.validar_limite_registros_diarios', return_value=None):
-            with patch('apps.almuerzos.validators.determinar_si_cobra', return_value=True):
+        with patch("apps.almuerzos.validators.validar_limite_registros_diarios", return_value=None):
+            with patch("apps.almuerzos.validators.determinar_si_cobra", return_value=True):
                 vs.perform_create(serializer)
 
         self.tarjeta.refresh_from_db()
         # Saldo unchanged: tarjeta is only used for identification, not debited
-        self.assertEqual(self.tarjeta.saldo_actual, Decimal('500.00'))
+        self.assertEqual(self.tarjeta.saldo_actual, Decimal("500.00"))
 
 
 class AlmuerzosViewSetSegundoRegistroNoCobra(AlmuerzosViewSetCreateBaseFixture):
@@ -221,10 +247,10 @@ class AlmuerzosViewSetSegundoRegistroNoCobra(AlmuerzosViewSetCreateBaseFixture):
             r = RegistrosConsumoAlmuerzo.objects.create(
                 fecha_consumo=date.today(),
                 hora_registro=timezone.now().time(),
-                costo_almuerzo=Decimal('0.00'),
+                costo_almuerzo=Decimal("0.00"),
                 marcado_en_cuenta=False,
                 ya_cobrado=False,
-                estado='Confirmado',
+                estado="Confirmado",
                 id_hijo=self.hijo,
                 id_tipo_almuerzo=self.tipo_almuerzo,
                 nro_tarjeta=self.tarjeta,
@@ -235,17 +261,17 @@ class AlmuerzosViewSetSegundoRegistroNoCobra(AlmuerzosViewSetCreateBaseFixture):
 
         serializer = MagicMock()
         serializer.validated_data = {
-            'id_hijo': self.hijo,
-            'fecha_consumo': date.today(),
-            'nro_tarjeta': self.tarjeta,
-            'id_tipo_almuerzo': self.tipo_almuerzo,
-            'id_suscripcion': None,
+            "id_hijo": self.hijo,
+            "fecha_consumo": date.today(),
+            "nro_tarjeta": self.tarjeta,
+            "id_tipo_almuerzo": self.tipo_almuerzo,
+            "id_suscripcion": None,
         }
         serializer.save.side_effect = mock_save
 
-        with patch('apps.almuerzos.validators.validar_limite_registros_diarios', return_value=None):
-            with patch('apps.almuerzos.validators.determinar_si_cobra', return_value=False):
+        with patch("apps.almuerzos.validators.validar_limite_registros_diarios", return_value=None):
+            with patch("apps.almuerzos.validators.determinar_si_cobra", return_value=False):
                 vs.perform_create(serializer)
 
         self.tarjeta.refresh_from_db()
-        self.assertEqual(self.tarjeta.saldo_actual, Decimal('500.00'))
+        self.assertEqual(self.tarjeta.saldo_actual, Decimal("500.00"))

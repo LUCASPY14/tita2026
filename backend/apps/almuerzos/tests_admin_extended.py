@@ -2,6 +2,7 @@
 Tests for apps/almuerzos/admin.py
 Covers all custom display methods across 9 admin classes.
 """
+
 from unittest.mock import MagicMock, patch
 from django.test import TestCase
 from django.contrib.admin.sites import AdminSite
@@ -43,7 +44,8 @@ def _mock_obj(**kwargs):
 # PlanesAlmuerzoAdmin
 # =============================================================================
 
-@patch('apps.almuerzos.admin.format_html', _plain_format_html)
+
+@patch("apps.almuerzos.admin.format_html", _plain_format_html)
 class PlanesAlmuerzoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -84,7 +86,8 @@ class PlanesAlmuerzoAdminTest(TestCase):
 # TiposAlmuerzoAdmin
 # =============================================================================
 
-@patch('apps.almuerzos.admin.format_html', _plain_format_html)
+
+@patch("apps.almuerzos.admin.format_html", _plain_format_html)
 class TiposAlmuerzoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -121,7 +124,8 @@ class TiposAlmuerzoAdminTest(TestCase):
 # SuscripcionesAlmuerzoAdmin
 # =============================================================================
 
-@patch('apps.almuerzos.admin.format_html', _plain_format_html)
+
+@patch("apps.almuerzos.admin.format_html", _plain_format_html)
 class SuscripcionesAlmuerzoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -163,7 +167,8 @@ class SuscripcionesAlmuerzoAdminTest(TestCase):
 # RegistrosConsumoAlmuerzoAdmin
 # =============================================================================
 
-@patch('apps.almuerzos.admin.format_html', _plain_format_html)
+
+@patch("apps.almuerzos.admin.format_html", _plain_format_html)
 class RegistrosConsumoAlmuerzoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -215,7 +220,8 @@ class RegistrosConsumoAlmuerzoAdminTest(TestCase):
 # CuentasAlmuerzoMensualAdmin
 # =============================================================================
 
-@patch('apps.almuerzos.admin.format_html', _plain_format_html)
+
+@patch("apps.almuerzos.admin.format_html", _plain_format_html)
 class CuentasAlmuerzoMensualAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -308,7 +314,8 @@ class CuentasAlmuerzoMensualAdminTest(TestCase):
 # PagosAlmuerzoMensualAdmin
 # =============================================================================
 
-@patch('apps.almuerzos.admin.format_html', _plain_format_html)
+
+@patch("apps.almuerzos.admin.format_html", _plain_format_html)
 class PagosAlmuerzoMensualAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -350,7 +357,8 @@ class PagosAlmuerzoMensualAdminTest(TestCase):
 # PagosCuentasAlmuerzoAdmin
 # =============================================================================
 
-@patch('apps.almuerzos.admin.format_html', _plain_format_html)
+
+@patch("apps.almuerzos.admin.format_html", _plain_format_html)
 class PagosCuentasAlmuerzoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -367,7 +375,8 @@ class PagosCuentasAlmuerzoAdminTest(TestCase):
 # AlergenosAdmin
 # =============================================================================
 
-@patch('apps.almuerzos.admin.format_html', _plain_format_html)
+
+@patch("apps.almuerzos.admin.format_html", _plain_format_html)
 class AlergenosAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -416,7 +425,8 @@ class AlergenosAdminTest(TestCase):
 # ProductosAlergenosAdmin
 # =============================================================================
 
-@patch('apps.almuerzos.admin.format_html', _plain_format_html)
+
+@patch("apps.almuerzos.admin.format_html", _plain_format_html)
 class ProductosAlergenosAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()

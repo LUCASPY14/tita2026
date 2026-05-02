@@ -16,9 +16,7 @@ class SessionServiceTest(TransactionTestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol de prueba
-        self.rol_test = Roles.objects.create(
-            nombre_rol="Test Role", descripcion="Rol para testing", estado=True
-        )
+        self.rol_test = Roles.objects.create(nombre_rol="Test Role", descripcion="Rol para testing", estado=True)
 
         # Crear empleado de prueba
         self.empleado = Empleados.objects.create(
@@ -59,9 +57,7 @@ class CreateSessionTest(SessionServiceTest):
         self.assertIn("sesion", resultado)
 
         # Verificar en DB
-        sesion = SesionesActivas.objects.filter(
-            id_empleado=self.empleado, session_key="test_session_key_1"
-        ).first()
+        sesion = SesionesActivas.objects.filter(id_empleado=self.empleado, session_key="test_session_key_1").first()
 
         self.assertIsNotNone(sesion)
         self.assertTrue(sesion.activa)
@@ -88,16 +84,12 @@ class CreateSessionTest(SessionServiceTest):
         self.assertTrue(resultado["success"])
 
         # Verificar que solo hay 3 sesiones activas
-        sesiones_activas = SesionesActivas.objects.filter(
-            id_empleado=self.empleado, activa=True
-        ).count()
+        sesiones_activas = SesionesActivas.objects.filter(id_empleado=self.empleado, activa=True).count()
 
         self.assertEqual(sesiones_activas, 3)
 
         # Verificar que la primera sesión fue cerrada
-        primera_sesion = SesionesActivas.objects.get(
-            id_empleado=self.empleado, session_key="session_0"
-        )
+        primera_sesion = SesionesActivas.objects.get(id_empleado=self.empleado, session_key="session_0")
         self.assertFalse(primera_sesion.activa)
 
     def test_crear_sesion_analiza_patron(self):
@@ -146,9 +138,7 @@ class RenewSessionTest(SessionServiceTest):
         self.assertFalse(sesion_antigua.activa)
 
         # Verificar que existe la nueva sesión
-        sesion_nueva = SesionesActivas.objects.filter(
-            session_key="new_session", activa=True
-        ).first()
+        sesion_nueva = SesionesActivas.objects.filter(session_key="new_session", activa=True).first()
         self.assertIsNotNone(sesion_nueva)
 
     def test_renovar_sesion_muy_reciente(self):
@@ -207,9 +197,7 @@ class UpdateActivityTest(SessionServiceTest):
 
         time.sleep(1)
 
-        resultado = SessionService.actualizar_actividad_sesion(
-            empleado=self.empleado, session_key="test_session"
-        )
+        resultado = SessionService.actualizar_actividad_sesion(empleado=self.empleado, session_key="test_session")
 
         self.assertTrue(resultado["success"])
 
@@ -222,9 +210,7 @@ class UpdateActivityTest(SessionServiceTest):
 
     def test_actualizar_actividad_sesion_inexistente(self):
         """Actualizar sesión que no existe"""
-        resultado = SessionService.actualizar_actividad_sesion(
-            empleado=self.empleado, session_key="sesion_inexistente"
-        )
+        resultado = SessionService.actualizar_actividad_sesion(empleado=self.empleado, session_key="sesion_inexistente")
 
         self.assertFalse(resultado["success"])
 
@@ -284,17 +270,13 @@ class CloseAllSessionsTest(SessionServiceTest):
 
     def test_cerrar_todas_sesiones(self):
         """Cerrar todas las sesiones del empleado"""
-        resultado = SessionService.cerrar_todas_sesiones(
-            empleado=self.empleado, ip_address=self.ip_address
-        )
+        resultado = SessionService.cerrar_todas_sesiones(empleado=self.empleado, ip_address=self.ip_address)
 
         self.assertTrue(resultado["success"])
         self.assertEqual(resultado["sesiones_cerradas"], 3)
 
         # Verificar que todas están inactivas
-        sesiones_activas = SesionesActivas.objects.filter(
-            id_empleado=self.empleado, activa=True
-        ).count()
+        sesiones_activas = SesionesActivas.objects.filter(id_empleado=self.empleado, activa=True).count()
 
         self.assertEqual(sesiones_activas, 0)
 
@@ -308,9 +290,7 @@ class CloseAllSessionsTest(SessionServiceTest):
         self.assertEqual(resultado["sesiones_cerradas"], 2)
 
         # Verificar que solo queda una activa
-        sesiones_activas = SesionesActivas.objects.filter(
-            id_empleado=self.empleado, activa=True
-        ).count()
+        sesiones_activas = SesionesActivas.objects.filter(id_empleado=self.empleado, activa=True).count()
 
         self.assertEqual(sesiones_activas, 1)
 
@@ -347,9 +327,7 @@ class ListActiveSessionsTest(SessionServiceTest):
             ip_address="192.168.1.102",
             user_agent="Browser 3",
         )
-        SessionService.cerrar_sesion(
-            empleado=self.empleado, session_key="inactive", ip_address="192.168.1.102"
-        )
+        SessionService.cerrar_sesion(empleado=self.empleado, session_key="inactive", ip_address="192.168.1.102")
 
     def test_listar_sesiones_activas(self):
         """Listar solo sesiones activas"""
@@ -401,17 +379,13 @@ class DetectUnusualAccessTest(SessionServiceTest):
         )
 
         # Acceso desde IP habitual
-        resultado = SessionService.detectar_acceso_inusual(
-            empleado=self.empleado, ip_address="192.168.1.100"
-        )
+        resultado = SessionService.detectar_acceso_inusual(empleado=self.empleado, ip_address="192.168.1.100")
 
         self.assertFalse(resultado["es_inusual"])
 
     def test_detectar_primer_acceso_no_es_inusual(self):
         """Primer acceso sin patrón no es inusual"""
-        resultado = SessionService.detectar_acceso_inusual(
-            empleado=self.empleado, ip_address="192.168.1.100"
-        )
+        resultado = SessionService.detectar_acceso_inusual(empleado=self.empleado, ip_address="192.168.1.100")
 
         self.assertFalse(resultado["es_inusual"])
 

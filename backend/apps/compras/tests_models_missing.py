@@ -8,6 +8,7 @@ Missing lines:
   138 — NotasCreditoProveedor.__str__
   162 — DetallesNotaCreditoProveedor.__str__
 """
+
 from decimal import Decimal
 
 from django.test import TestCase
@@ -48,13 +49,10 @@ def _make_compras_fixtures():
         vigente_desde=timezone.now().date(),
         estado=True,
     )
-    categoria, _ = Categorias.objects.get_or_create(
-        nombre="CM_Cat", defaults={"estado": True}
-    )
-    unidad, _ = Categorias.objects.get_or_create(
-        nombre="CM_UN_Cat", defaults={"estado": True}
-    )
+    categoria, _ = Categorias.objects.get_or_create(nombre="CM_Cat", defaults={"estado": True})
+    unidad, _ = Categorias.objects.get_or_create(nombre="CM_UN_Cat", defaults={"estado": True})
     from apps.productos.models import UnidadesMedida
+
     unidad_medida, _ = UnidadesMedida.objects.get_or_create(
         nombre="CM_UN", defaults={"abreviatura": "UN", "estado": True}
     )

@@ -63,23 +63,21 @@ class CompraService:
         productos_vistos = set()
 
         if not detalles_compra or len(detalles_compra) == 0:
-            errores.append(
-                {"campo": "detalles", "mensaje": "La compra debe tener al menos un producto"}
-            )
+            errores.append({"campo": "detalles", "mensaje": "La compra debe tener al menos un producto"})
             return {"valido": False, "errores": errores, "warnings": warnings}
 
         for idx, detalle in enumerate(detalles_compra):
             producto_id = detalle.get("id_producto")
             cantidad = detalle.get("cantidad")
             precio_unitario = detalle.get("costo_unitario") or detalle.get("precio_unitario")
-            
+
             # Convertir a Decimal si vienen como strings
             if isinstance(cantidad, str):
                 try:
                     cantidad = Decimal(cantidad)
                 except (ValueError, TypeError):
                     cantidad = None
-            
+
             if isinstance(precio_unitario, str):
                 try:
                     precio_unitario = Decimal(precio_unitario)
@@ -271,9 +269,7 @@ class CompraService:
 
             # Obtener tipo de IVA del producto
             try:
-                producto = Productos.objects.select_related("id_impuesto").get(
-                    id_producto=detalle["id_producto"]
-                )
+                producto = Productos.objects.select_related("id_impuesto").get(id_producto=detalle["id_producto"])
                 porcentaje_iva = producto.id_impuesto.porcentaje
 
                 if porcentaje_iva == Decimal("5.00"):
@@ -304,11 +300,7 @@ class CompraService:
         Returns:
             QuerySet de Compras con estado_pago='Pendiente'
         """
-        return (
-            Compras.objects.filter(estado_pago="Pendiente")
-            .select_related("id_proveedor")
-            .order_by("fecha")
-        )
+        return Compras.objects.filter(estado_pago="Pendiente").select_related("id_proveedor").order_by("fecha")
 
     @staticmethod
     def obtener_cuenta_corriente_proveedor(id_proveedor: int) -> Dict:
@@ -334,14 +326,12 @@ class CompraService:
         total_compras = compras.aggregate(total=Sum("monto_total"))["total"] or Decimal("0.00")
 
         # Total pagado
-        total_pagado = compras.aggregate(pagado=Sum("monto_total") - Sum("saldo_pendiente"))[
-            "pagado"
-        ] or Decimal("0.00")
-
-        # Saldo pendiente total
-        saldo_pendiente = compras.aggregate(saldo=Sum("saldo_pendiente"))["saldo"] or Decimal(
+        total_pagado = compras.aggregate(pagado=Sum("monto_total") - Sum("saldo_pendiente"))["pagado"] or Decimal(
             "0.00"
         )
+
+        # Saldo pendiente total
+        saldo_pendiente = compras.aggregate(saldo=Sum("saldo_pendiente"))["saldo"] or Decimal("0.00")
 
         # Compras con saldo pendiente
         compras_pendientes = []
@@ -353,11 +343,7 @@ class CompraService:
                     "nro_factura": compra.nro_factura,
                     "monto_total": str(compra.monto_total),
                     "saldo_pendiente": str(compra.saldo_pendiente),
-                    "dias_vencimiento": (
-                        (timezone.now().date() - compra.fecha.date()).days
-                        if compra.fecha
-                        else None
-                    ),
+                    "dias_vencimiento": ((timezone.now().date() - compra.fecha.date()).days if compra.fecha else None),
                 }
             )
 

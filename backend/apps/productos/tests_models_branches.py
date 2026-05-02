@@ -19,6 +19,7 @@ class ProductosManagerBranchesTest(TestCase):
     def test_create_with_nombre_and_descripcion_both(self):
         """Branch 18->19: 'nombre' in kwargs AND 'descripcion' also in kwargs → pop nombre."""
         from apps.productos.models import Productos
+
         # When both 'nombre' and 'descripcion' provided → elif branch removes 'nombre'
         p = Productos.objects.create(
             nombre="ignored_name",
@@ -30,6 +31,7 @@ class ProductosManagerBranchesTest(TestCase):
     def test_get_or_create_without_defaults(self):
         """Branch 52->54: get_or_create called WITHOUT defaults → False arm taken."""
         from apps.productos.models import Productos
+
         # Call without defaults → defaults=None → False arm at 'if defaults:'
         p, created = Productos.objects.get_or_create(descripcion="TestProduct_NoDefaults_Branch_XYZ")
         self.assertIsNotNone(p)
@@ -86,6 +88,7 @@ class HistoricoPreciosBranchesTest(TestCase):
     def _make_historico(self, precio_anterior, precio_nuevo):
         """Create an unsaved HistoricoPrecios with given prices (property test only)."""
         from apps.productos.models import HistoricoPrecios, Productos
+
         p = Productos.objects.create(
             descripcion=f"TestHist_branch",
         )

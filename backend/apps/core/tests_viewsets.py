@@ -49,14 +49,10 @@ class RecargaCajaActionTest(TransactionTestCase):
         # Crear dependencias (TiposCliente, ListasPrecios)
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", estado=True)
 
-        self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Estándar", estado=True
-        )
+        self.lista_precios = ListasPrecios.objects.create(nombre_lista="Lista Estándar", estado=True)
 
         # Crear rol para empleado
-        self.rol_cajero = Roles.objects.create(
-            nombre_rol="Cajero", descripcion="Empleado de caja", estado=True
-        )
+        self.rol_cajero = Roles.objects.create(nombre_rol="Cajero", descripcion="Empleado de caja", estado=True)
 
         # Crear cliente de prueba
         self.cliente = Clientes.objects.create(
@@ -101,7 +97,7 @@ class RecargaCajaActionTest(TransactionTestCase):
         )
 
         # Autenticar cliente
-        self.auth_user = User.objects.create_user(username='viewset_auth_user', password='testpass123')
+        self.auth_user = User.objects.create_user(username="viewset_auth_user", password="testpass123")
         self.client.force_authenticate(user=self.auth_user)
 
     def test_recarga_caja_efectivo_exitosa(self):
@@ -198,9 +194,7 @@ class GenerarReferenciaTransferenciaActionTest(TestCase):
         # Crear dependencias
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", estado=True)
 
-        self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Estándar", estado=True
-        )
+        self.lista_precios = ListasPrecios.objects.create(nombre_lista="Lista Estándar", estado=True)
 
         # Crear cliente y hijo
         self.cliente = Clientes.objects.create(
@@ -230,7 +224,7 @@ class GenerarReferenciaTransferenciaActionTest(TestCase):
         )
 
         # Autenticar cliente
-        self.auth_user = User.objects.create_user(username='gen_ref_auth_user', password='testpass123')
+        self.auth_user = User.objects.create_user(username="gen_ref_auth_user", password="testpass123")
         self.client.force_authenticate(user=self.auth_user)
 
     def test_generar_referencia_transferencia_exitosa(self):
@@ -295,9 +289,7 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
         # Crear dependencias
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", estado=True)
 
-        self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Estándar", estado=True
-        )
+        self.lista_precios = ListasPrecios.objects.create(nombre_lista="Lista Estándar", estado=True)
 
         # Crear cliente y hijo
         self.cliente = Clientes.objects.create(
@@ -358,7 +350,7 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
         )
 
         # Autenticar cliente
-        self.auth_user = User.objects.create_user(username='validar_transf_auth_user', password='testpass123')
+        self.auth_user = User.objects.create_user(username="validar_transf_auth_user", password="testpass123")
         self.client.force_authenticate(user=self.auth_user)
 
     def test_validar_transferencia_con_codigo_monto_bajo_auto_aprueba(self):
@@ -495,9 +487,7 @@ class AprobarSupervisorActionTest(TransactionTestCase):
         # Crear dependencias
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", estado=True)
 
-        self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Estándar", estado=True
-        )
+        self.lista_precios = ListasPrecios.objects.create(nombre_lista="Lista Estándar", estado=True)
 
         # Crear cliente y hijo
         self.cliente = Clientes.objects.create(
@@ -558,7 +548,7 @@ class AprobarSupervisorActionTest(TransactionTestCase):
         )
 
         # Autenticar cliente
-        self.auth_user = User.objects.create_user(username='aprobar_auth_user', password='testpass123')
+        self.auth_user = User.objects.create_user(username="aprobar_auth_user", password="testpass123")
         self.client.force_authenticate(user=self.auth_user)
 
     def test_aprobar_supervisor_exitosa(self):
@@ -622,9 +612,7 @@ class IniciarRecargaBancardActionTest(TestCase):
         # Crear dependencias
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Cliente Regular", estado=True)
 
-        self.lista_precios = ListasPrecios.objects.create(
-            nombre_lista="Lista Estándar", estado=True
-        )
+        self.lista_precios = ListasPrecios.objects.create(nombre_lista="Lista Estándar", estado=True)
 
         # Crear cliente y hijo
         self.cliente = Clientes.objects.create(
@@ -654,7 +642,7 @@ class IniciarRecargaBancardActionTest(TestCase):
         )
 
         # Autenticar cliente
-        self.auth_user = User.objects.create_user(username='bancard_auth_user', password='testpass123')
+        self.auth_user = User.objects.create_user(username="bancard_auth_user", password="testpass123")
         self.client.force_authenticate(user=self.auth_user)
 
     @patch("apps.api_integrations.services.BancardService.iniciar_transaccion")

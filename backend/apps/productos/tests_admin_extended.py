@@ -1,4 +1,5 @@
 ﻿"""Extended tests for apps/productos/admin.py - covers custom display methods."""
+
 from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch, PropertyMock
@@ -29,12 +30,13 @@ def _mock_obj(**kwargs):
     return obj
 
 
-@patch('apps.productos.admin.format_html', _plain_format_html)
-@patch('apps.productos.admin.mark_safe', _plain_mark_safe)
+@patch("apps.productos.admin.format_html", _plain_format_html)
+@patch("apps.productos.admin.mark_safe", _plain_mark_safe)
 class CategoriasAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.productos.models import Categorias
+
         self.admin = CategoriasAdmin(Categorias, self.site)
 
     def test_nombre_con_jerarquia_raiz(self):
@@ -128,11 +130,12 @@ class CategoriasAdminTest(TestCase):
         cat1.save.assert_not_called()
 
 
-@patch('apps.productos.admin.format_html', _plain_format_html)
+@patch("apps.productos.admin.format_html", _plain_format_html)
 class UnidadesMedidaAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.productos.models import UnidadesMedida
+
         self.admin = UnidadesMedidaAdmin(UnidadesMedida, self.site)
 
     def test_abreviatura_badge(self):
@@ -165,11 +168,12 @@ class UnidadesMedidaAdminTest(TestCase):
         self.assertIn("INACTIVO", result)
 
 
-@patch('apps.productos.admin.format_html', _plain_format_html)
+@patch("apps.productos.admin.format_html", _plain_format_html)
 class ProductosAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.productos.models import Productos
+
         self.admin = ProductosAdmin(Productos, self.site)
 
     def test_codigo_barra_badge_con_codigo(self):
@@ -283,11 +287,12 @@ class ProductosAdminTest(TestCase):
         self.assertIsNone(producto.codigo_barra)
 
 
-@patch('apps.productos.admin.format_html', _plain_format_html)
+@patch("apps.productos.admin.format_html", _plain_format_html)
 class ListasPreciosAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.productos.models import ListasPrecios
+
         self.admin = ListasPreciosAdmin(ListasPrecios, self.site)
 
     def test_nombre_lista_badge(self):
@@ -356,12 +361,13 @@ class ListasPreciosAdminTest(TestCase):
         self.assertIn("INACTIVA", result)
 
 
-@patch('apps.productos.admin.format_html', _plain_format_html)
-@patch('apps.productos.admin.PreciosPorLista')
+@patch("apps.productos.admin.format_html", _plain_format_html)
+@patch("apps.productos.admin.PreciosPorLista")
 class PreciosPorListaAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.productos.models import PreciosPorLista
+
         self.admin = PreciosPorListaAdmin(PreciosPorLista, self.site)
 
     def test_producto_info_con_codigo(self, mock_ppl):
@@ -403,6 +409,7 @@ class PreciosPorListaAdminTest(TestCase):
 
     def test_fecha_vigencia_display(self, mock_ppl):
         import datetime
+
         obj = _mock_obj(fecha_vigencia=datetime.datetime(2024, 3, 15, 10, 30))
         result = self.admin.fecha_vigencia_display(obj)
         self.assertIn("15/03/2024", result)
@@ -411,8 +418,9 @@ class PreciosPorListaAdminTest(TestCase):
         anterior = _mock_obj(precio_unitario=Decimal("1000.00"))
         mock_ppl.objects.filter.return_value.order_by.return_value.first.return_value = anterior
         lista = _mock_obj(moneda="PYG")
-        obj = _mock_obj(id_lista=lista, id_producto=MagicMock(), precio_unitario=Decimal("1200.00"),
-                        fecha_vigencia=MagicMock())
+        obj = _mock_obj(
+            id_lista=lista, id_producto=MagicMock(), precio_unitario=Decimal("1200.00"), fecha_vigencia=MagicMock()
+        )
         result = str(self.admin.precio_anterior_info(obj))
         self.assertIn("dc3545", result)
         self.assertIn("▲", result)
@@ -421,8 +429,9 @@ class PreciosPorListaAdminTest(TestCase):
         anterior = _mock_obj(precio_unitario=Decimal("1000.00"))
         mock_ppl.objects.filter.return_value.order_by.return_value.first.return_value = anterior
         lista = _mock_obj(moneda="PYG")
-        obj = _mock_obj(id_lista=lista, id_producto=MagicMock(), precio_unitario=Decimal("800.00"),
-                        fecha_vigencia=MagicMock())
+        obj = _mock_obj(
+            id_lista=lista, id_producto=MagicMock(), precio_unitario=Decimal("800.00"), fecha_vigencia=MagicMock()
+        )
         result = str(self.admin.precio_anterior_info(obj))
         self.assertIn("28a745", result)
         self.assertIn("▼", result)
@@ -431,25 +440,28 @@ class PreciosPorListaAdminTest(TestCase):
         anterior = _mock_obj(precio_unitario=Decimal("1000.00"))
         mock_ppl.objects.filter.return_value.order_by.return_value.first.return_value = anterior
         lista = _mock_obj(moneda="PYG")
-        obj = _mock_obj(id_lista=lista, id_producto=MagicMock(), precio_unitario=Decimal("1000.00"),
-                        fecha_vigencia=MagicMock())
+        obj = _mock_obj(
+            id_lista=lista, id_producto=MagicMock(), precio_unitario=Decimal("1000.00"), fecha_vigencia=MagicMock()
+        )
         result = self.admin.precio_anterior_info(obj)
         self.assertEqual(result, "=")
 
     def test_precio_anterior_info_sin_anterior(self, mock_ppl):
         mock_ppl.objects.filter.return_value.order_by.return_value.first.return_value = None
         lista = _mock_obj(moneda="PYG")
-        obj = _mock_obj(id_lista=lista, id_producto=MagicMock(), precio_unitario=Decimal("1000.00"),
-                        fecha_vigencia=MagicMock())
+        obj = _mock_obj(
+            id_lista=lista, id_producto=MagicMock(), precio_unitario=Decimal("1000.00"), fecha_vigencia=MagicMock()
+        )
         result = self.admin.precio_anterior_info(obj)
         self.assertEqual(result, "-")
 
 
-@patch('apps.productos.admin.format_html', _plain_format_html)
+@patch("apps.productos.admin.format_html", _plain_format_html)
 class HistoricoPreciosAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
         from apps.productos.models import HistoricoPrecios
+
         self.admin = HistoricoPreciosAdmin(HistoricoPrecios, self.site)
 
     def test_producto_link(self):
@@ -491,6 +503,7 @@ class HistoricoPreciosAdminTest(TestCase):
 
     def test_fecha_cambio_display(self):
         import datetime
+
         obj = _mock_obj(fecha_cambio=datetime.datetime(2024, 7, 4, 9, 0))
         result = self.admin.fecha_cambio_display(obj)
         self.assertIn("04/07/2024", result)

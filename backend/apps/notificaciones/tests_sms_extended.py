@@ -2,6 +2,7 @@
 Extended tests for notificaciones/services/sms_service.py
 Targeting missing lines: 75, 78, 117-142, 218-220, 251-278, 330
 """
+
 import sys
 from unittest.mock import patch, MagicMock
 
@@ -10,9 +11,13 @@ from django.test import TestCase, override_settings
 from apps.notificaciones.services.sms_service import SMSService
 
 
-@override_settings(SMS_ENABLED=True, SMS_PROVIDER="infobip",
-                   INFOBIP_API_KEY="test-key", INFOBIP_BASE_URL="https://api.infobip.com",
-                   INFOBIP_SENDER="CantinaTest")
+@override_settings(
+    SMS_ENABLED=True,
+    SMS_PROVIDER="infobip",
+    INFOBIP_API_KEY="test-key",
+    INFOBIP_BASE_URL="https://api.infobip.com",
+    INFOBIP_SENDER="CantinaTest",
+)
 class SMSEnviarViaInfobipTest(TestCase):
     """Cover line 75: provider == 'infobip' branch in enviar_sms()."""
 
@@ -20,9 +25,7 @@ class SMSEnviarViaInfobipTest(TestCase):
     def test_enviar_sms_usando_provider_infobip(self, mock_post):
         """enviar_sms() with provider=infobip routes to enviar_sms_infobip (line 75)."""
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "messages": [{"messageId": "IB001", "status": {"name": "PENDING"}}]
-        }
+        mock_response.json.return_value = {"messages": [{"messageId": "IB001", "status": {"name": "PENDING"}}]}
         mock_response.raise_for_status.return_value = None
         mock_post.return_value = mock_response
 
@@ -32,9 +35,13 @@ class SMSEnviarViaInfobipTest(TestCase):
         self.assertEqual(result["provider"], "infobip")
 
 
-@override_settings(SMS_ENABLED=True, SMS_PROVIDER="aws_sns",
-                   AWS_ACCESS_KEY_ID="fake", AWS_SECRET_ACCESS_KEY="fake",
-                   AWS_REGION="us-east-1")
+@override_settings(
+    SMS_ENABLED=True,
+    SMS_PROVIDER="aws_sns",
+    AWS_ACCESS_KEY_ID="fake",
+    AWS_SECRET_ACCESS_KEY="fake",
+    AWS_REGION="us-east-1",
+)
 class SMSEnviarViaAWSTest(TestCase):
     """Cover line 78: provider == 'aws_sns' branch in enviar_sms()."""
 
@@ -52,9 +59,13 @@ class SMSEnviarViaAWSTest(TestCase):
         self.assertEqual(result["provider"], "aws_sns")
 
 
-@override_settings(SMS_ENABLED=True, SMS_PROVIDER="twilio",
-                   TWILIO_ACCOUNT_SID="ACtest123", TWILIO_AUTH_TOKEN="authtest",
-                   TWILIO_PHONE_NUMBER="+15551234567")
+@override_settings(
+    SMS_ENABLED=True,
+    SMS_PROVIDER="twilio",
+    TWILIO_ACCOUNT_SID="ACtest123",
+    TWILIO_AUTH_TOKEN="authtest",
+    TWILIO_PHONE_NUMBER="+15551234567",
+)
 class SMSTwilioSuccessTest(TestCase):
     """Cover lines 117-142: Twilio success path."""
 
@@ -91,8 +102,9 @@ class SMSTwilioSuccessTest(TestCase):
         self.assertEqual(result["provider"], "twilio")
 
 
-@override_settings(SMS_ENABLED=True, SMS_PROVIDER="infobip",
-                   INFOBIP_API_KEY="test-key", INFOBIP_BASE_URL="https://api.infobip.com")
+@override_settings(
+    SMS_ENABLED=True, SMS_PROVIDER="infobip", INFOBIP_API_KEY="test-key", INFOBIP_BASE_URL="https://api.infobip.com"
+)
 class SMSInfobipGenericExceptionTest(TestCase):
     """Cover lines 218-220: generic Exception handler in enviar_sms_infobip."""
 
@@ -110,9 +122,13 @@ class SMSInfobipGenericExceptionTest(TestCase):
         self.assertEqual(result["provider"], "infobip")
 
 
-@override_settings(SMS_ENABLED=True, SMS_PROVIDER="aws_sns",
-                   AWS_ACCESS_KEY_ID="fake", AWS_SECRET_ACCESS_KEY="fake",
-                   AWS_REGION="us-east-1")
+@override_settings(
+    SMS_ENABLED=True,
+    SMS_PROVIDER="aws_sns",
+    AWS_ACCESS_KEY_ID="fake",
+    AWS_SECRET_ACCESS_KEY="fake",
+    AWS_REGION="us-east-1",
+)
 class SMSAWSSuccessTest(TestCase):
     """Cover lines 251-278: AWS SNS success path."""
 
@@ -158,9 +174,13 @@ class SMSValidarFormatoTelefonoExtendedTest(TestCase):
         self.assertFalse(result)
 
 
-@override_settings(SMS_ENABLED=True, SMS_PROVIDER="twilio",
-                   TWILIO_ACCOUNT_SID="ACtest123", TWILIO_AUTH_TOKEN="authtest",
-                   TWILIO_PHONE_NUMBER="+15551234567")
+@override_settings(
+    SMS_ENABLED=True,
+    SMS_PROVIDER="twilio",
+    TWILIO_ACCOUNT_SID="ACtest123",
+    TWILIO_AUTH_TOKEN="authtest",
+    TWILIO_PHONE_NUMBER="+15551234567",
+)
 class SMSEnviarViaTwilioDispatchTest(TestCase):
     """Cover line 75: provider=='twilio' branch in enviar_sms() dispatcher."""
 
@@ -181,9 +201,9 @@ class SMSEnviarViaTwilioDispatchTest(TestCase):
         self.assertEqual(result["provider"], "twilio")
 
 
-@override_settings(SMS_ENABLED=True, SMS_PROVIDER="twilio",
-                   TWILIO_ACCOUNT_SID="", TWILIO_AUTH_TOKEN="",
-                   TWILIO_PHONE_NUMBER="")
+@override_settings(
+    SMS_ENABLED=True, SMS_PROVIDER="twilio", TWILIO_ACCOUNT_SID="", TWILIO_AUTH_TOKEN="", TWILIO_PHONE_NUMBER=""
+)
 class SMSTwilioCredencialesIncompletasTest(TestCase):
     """Cover lines 122-123: Twilio credentials missing → error dict."""
 

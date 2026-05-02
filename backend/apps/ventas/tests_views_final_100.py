@@ -12,6 +12,7 @@ Target missing lines:
 - 704-707: Exception in emitir_factura
 - 733, 737, 741: cuenta_corriente filter branches
 """
+
 from decimal import Decimal
 from unittest.mock import patch, MagicMock, Mock
 from django.contrib.auth import get_user_model
@@ -25,9 +26,7 @@ from apps.clientes.models import Clientes, TiposCliente, Hijos
 from apps.core.models import MediosPago, Tarjetas
 from apps.contabilidad.models import Impuestos
 from apps.inventario.models import StockUnico
-from apps.productos.models import (
-    Productos, Categorias, UnidadesMedida, PreciosPorLista, ListasPrecios
-)
+from apps.productos.models import Productos, Categorias, UnidadesMedida, PreciosPorLista, ListasPrecios
 from apps.usuarios.models import Empleados, Roles
 from apps.ventas.models import Ventas, DetallesVenta, PagosVenta
 from apps.ventas.views import VentasViewSet
@@ -45,31 +44,36 @@ class CrearPagosMixtosValidationTest(TestCase):
         # Setup data
         self.rol = Roles.objects.create(nombre_rol="Admin", estado=True)
         self.empleado = Empleados.objects.create(
-            usuario="test", nombre="Test", apellido="User", id_rol=self.rol, estado=True,
-            contrasena_hash="hash", fecha_ingreso="2026-01-01"
+            usuario="test",
+            nombre="Test",
+            apellido="User",
+            id_rol=self.rol,
+            estado=True,
+            contrasena_hash="hash",
+            fecha_ingreso="2026-01-01",
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="General")
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="General")
         self.cliente = Clientes.objects.create(
-            ruc_ci="123456", nombres="Test", apellidos="Cliente",
-            id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
+            ruc_ci="123456", nombres="Test", apellidos="Cliente", id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
         )
-        self.medio_pago = MediosPago.objects.create(
-            descripcion="Efectivo", genera_comision=False, estado=True
-        )
-        self.impuesto = Impuestos.objects.create(
-            nombre_impuesto="IVA 10%", porcentaje=Decimal("10"), vigente_desde="2026-01-01", estado=True
+        self.medio_pago = MediosPago.objects.create(descripcion="Efectivo", genera_comision=False, estado=True)
+        self.impuesto, _ = Impuestos.objects.get_or_create(
+            nombre_impuesto="IVA 10%",
+            defaults={"porcentaje": Decimal("10"), "vigente_desde": "2026-01-01", "estado": True},
         )
         self.categoria = Categorias.objects.create(nombre_categoria="Test")
         self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="Un")
         self.producto = Productos.objects.create(
-            codigo_barra="PROD001", descripcion="Producto Test",
-            id_categoria=self.categoria, id_unidad_medida=self.unidad,
-            id_impuesto=self.impuesto, estado=True
+            codigo_barra="PROD001",
+            descripcion="Producto Test",
+            id_categoria=self.categoria,
+            id_unidad_medida=self.unidad,
+            id_impuesto=self.impuesto,
+            estado=True,
         )
         PreciosPorLista.objects.create(
-            id_producto=self.producto, id_lista=self.lista,
-            precio_unitario=Decimal("1000.00")
+            id_producto=self.producto, id_lista=self.lista, precio_unitario=Decimal("1000.00")
         )
         StockUnico.objects.create(id_producto=self.producto, cantidad=100)
 
@@ -81,12 +85,14 @@ class CrearPagosMixtosValidationTest(TestCase):
             monto_total=Decimal("5000.00"),
             iva_10=Decimal("500.00"),
             estado="Activa",
-            estado_pago="Pendiente"
+            estado_pago="Pendiente",
         )
         DetallesVenta.objects.create(
-            id_venta=venta, id_producto=self.producto,
-            cantidad=5, precio_unitario=Decimal("1000.00"),
-            subtotal=Decimal("5000.00")
+            id_venta=venta,
+            id_producto=self.producto,
+            cantidad=5,
+            precio_unitario=Decimal("1000.00"),
+            subtotal=Decimal("5000.00"),
         )
 
         # Create viewset instance
@@ -96,7 +102,7 @@ class CrearPagosMixtosValidationTest(TestCase):
         # Pagos that don't sum to total
         pagos_data = [
             {"id_medio_pago": self.medio_pago.id_medio_pago, "monto": "3000.00"},
-            {"id_medio_pago": self.medio_pago.id_medio_pago, "monto": "1000.00"}
+            {"id_medio_pago": self.medio_pago.id_medio_pago, "monto": "1000.00"},
             # Sum = 4000, but venta.monto_total = 5000
         ]
 
@@ -114,16 +120,14 @@ class CrearPagosMixtosValidationTest(TestCase):
             monto_total=Decimal("1000.00"),
             iva_10=Decimal("100.00"),
             estado="Activa",
-            estado_pago="Pendiente"
+            estado_pago="Pendiente",
         )
 
         viewset = VentasViewSet()
         viewset.request = Mock()
 
         # Invalid medio_pago ID
-        pagos_data = [
-            {"id_medio_pago": 99999, "monto": "1000.00"}
-        ]
+        pagos_data = [{"id_medio_pago": 99999, "monto": "1000.00"}]
 
         with self.assertRaises(ValidationError) as ctx:
             viewset._registrar_pagos_multiples(venta, pagos_data)
@@ -144,26 +148,33 @@ class ClienteGenericoCreationTest(TestCase):
 
         self.rol = Roles.objects.create(nombre_rol="Admin", estado=True)
         self.empleado = Empleados.objects.create(
-            usuario="test", nombre="Test", apellido="User", id_rol=self.rol, estado=True,
-            contrasena_hash="hash", fecha_ingreso="2026-01-01"
+            usuario="test",
+            nombre="Test",
+            apellido="User",
+            id_rol=self.rol,
+            estado=True,
+            contrasena_hash="hash",
+            fecha_ingreso="2026-01-01",
         )
         self.impuesto = Impuestos.objects.create(
             nombre_impuesto="IVA", porcentaje=Decimal("10"), vigente_desde="2026-01-01", estado=True
         )
         self.categoria = Categorias.objects.create(nombre_categoria="Test")
         self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="Un")
-        
+
         # Create lista 'General' beforehand to test get_or_create
         self.lista = ListasPrecios.objects.create(nombre_lista="General")
-        
+
         self.producto = Productos.objects.create(
-            codigo_barra="PROD001", descripcion="Test",
-            id_categoria=self.categoria, id_unidad_medida=self.unidad,
-            id_impuesto=self.impuesto, estado=True
+            codigo_barra="PROD001",
+            descripcion="Test",
+            id_categoria=self.categoria,
+            id_unidad_medida=self.unidad,
+            id_impuesto=self.impuesto,
+            estado=True,
         )
         PreciosPorLista.objects.create(
-            id_producto=self.producto, id_lista=self.lista,
-            precio_unitario=Decimal("1000.00")
+            id_producto=self.producto, id_lista=self.lista, precio_unitario=Decimal("1000.00")
         )
         StockUnico.objects.create(id_producto=self.producto, cantidad=100)
 
@@ -172,9 +183,8 @@ class ClienteGenericoCreationTest(TestCase):
         url = reverse("ventas-list")
         data = {
             # NO id_cliente, NO id_hijo
-            "detalles": [
-                {"id_producto": self.producto.id_producto, "cantidad": 1, "precio_unitario": "1000.00"}
-            ]
+            "tipo_venta": "Contado",
+            "detalles": [{"id_producto": self.producto.id_producto, "cantidad": 1, "precio_unitario": "1000.00"}],
         }
 
         response = self.client.post(url, data, format="json")
@@ -182,7 +192,7 @@ class ClienteGenericoCreationTest(TestCase):
         # Should create successfully with cliente genérico
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         venta = Ventas.objects.get(id_venta=response.data["id_venta"])
-        
+
         # Verify cliente genérico was used
         self.assertEqual(venta.id_cliente.ruc_ci, "0000000")
         self.assertEqual(venta.id_cliente.nombres, "Cliente")
@@ -194,20 +204,24 @@ class StockInsuficienteMultipleProductosTest(TestCase):
 
     def setUp(self):
         User = get_user_model()
-        self.user = User.objects.create_user(username="test", password="test")
+        self.user = User.objects.create_user(username="test", password="test", is_staff=True)
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
         self.rol = Roles.objects.create(nombre_rol="Admin", estado=True)
         self.empleado = Empleados.objects.create(
-            usuario="test", nombre="Test", apellido="User", id_rol=self.rol, estado=True,
-            contrasena_hash="hash", fecha_ingreso="2026-01-01"
+            usuario="test",
+            nombre="Test",
+            apellido="User",
+            id_rol=self.rol,
+            estado=True,
+            contrasena_hash="hash",
+            fecha_ingreso="2026-01-01",
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="General")
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="General")
         self.cliente = Clientes.objects.create(
-            ruc_ci="123", nombres="Test", apellidos="Cliente",
-            id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
+            ruc_ci="123", nombres="Test", apellidos="Cliente", id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
         )
         self.impuesto = Impuestos.objects.create(
             nombre_impuesto="IVA", porcentaje=Decimal("10"), vigente_desde="2026-01-01", estado=True
@@ -217,13 +231,15 @@ class StockInsuficienteMultipleProductosTest(TestCase):
 
         # Product with insufficient stock
         self.producto = Productos.objects.create(
-            codigo_barra="PROD001", descripcion="Producto Test",
-            id_categoria=self.categoria, id_unidad_medida=self.unidad,
-            id_impuesto=self.impuesto, estado=True
+            codigo_barra="PROD001",
+            descripcion="Producto Test",
+            id_categoria=self.categoria,
+            id_unidad_medida=self.unidad,
+            id_impuesto=self.impuesto,
+            estado=True,
         )
         PreciosPorLista.objects.create(
-            id_producto=self.producto, id_lista=self.lista,
-            precio_unitario=Decimal("100.00")
+            id_producto=self.producto, id_lista=self.lista, precio_unitario=Decimal("100.00")
         )
         StockUnico.objects.create(id_producto=self.producto, cantidad=5)  # Only 5 in stock
 
@@ -235,22 +251,18 @@ class StockInsuficienteMultipleProductosTest(TestCase):
             "todo_disponible": False,
             "productos_faltantes": [
                 {
-                    "producto": {
-                        "descripcion": "Producto Test",
-                        "codigo_barra": "PROD001"
-                    },
+                    "producto": {"descripcion": "Producto Test", "codigo_barra": "PROD001"},
                     "stock_actual": 5,
-                    "faltante": 5
+                    "faltante": 5,
                 }
-            ]
+            ],
         }
 
         url = reverse("ventas-list")
         data = {
             "id_cliente": self.cliente.id_cliente,
-            "detalles": [
-                {"id_producto": self.producto.id_producto, "cantidad": 10, "precio_unitario": "100.00"}
-            ]
+            "tipo_venta": "Contado",
+            "detalles": [{"id_producto": self.producto.id_producto, "cantidad": 10, "precio_unitario": "100.00"}],
         }
 
         response = self.client.post(url, data, format="json")
@@ -273,34 +285,36 @@ class PagoMultipleSimplePathTest(TestCase):
 
         self.rol = Roles.objects.create(nombre_rol="Admin", estado=True)
         self.empleado = Empleados.objects.create(
-            usuario="test", nombre="Test", apellido="User", id_rol=self.rol, estado=True,
-            contrasena_hash="hash", fecha_ingreso="2026-01-01"
+            usuario="test",
+            nombre="Test",
+            apellido="User",
+            id_rol=self.rol,
+            estado=True,
+            contrasena_hash="hash",
+            fecha_ingreso="2026-01-01",
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="General")
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="General")
         self.cliente = Clientes.objects.create(
-            ruc_ci="123", nombres="Test", apellidos="Cliente",
-            id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
+            ruc_ci="123", nombres="Test", apellidos="Cliente", id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
         )
-        self.medio_efectivo = MediosPago.objects.create(
-            descripcion="Efectivo", genera_comision=False, estado=True
-        )
-        self.medio_tarjeta = MediosPago.objects.create(
-            descripcion="Tarjeta", genera_comision=True, estado=True
-        )
+        self.medio_efectivo = MediosPago.objects.create(descripcion="Efectivo", genera_comision=False, estado=True)
+        self.medio_tarjeta = MediosPago.objects.create(descripcion="Tarjeta", genera_comision=True, estado=True)
         self.impuesto = Impuestos.objects.create(
             nombre_impuesto="IVA", porcentaje=Decimal("10"), vigente_desde="2026-01-01", estado=True
         )
         self.categoria = Categorias.objects.create(nombre_categoria="Test")
         self.unidad = UnidadesMedida.objects.create(nombre="Unidad", abreviatura="Un")
         self.producto = Productos.objects.create(
-            codigo_barra="PROD001", descripcion="Test",
-            id_categoria=self.categoria, id_unidad_medida=self.unidad,
-            id_impuesto=self.impuesto, estado=True
+            codigo_barra="PROD001",
+            descripcion="Test",
+            id_categoria=self.categoria,
+            id_unidad_medida=self.unidad,
+            id_impuesto=self.impuesto,
+            estado=True,
         )
         PreciosPorLista.objects.create(
-            id_producto=self.producto, id_lista=self.lista,
-            precio_unitario=Decimal("1000.00")
+            id_producto=self.producto, id_lista=self.lista, precio_unitario=Decimal("1000.00")
         )
         StockUnico.objects.create(id_producto=self.producto, cantidad=100)
 
@@ -310,13 +324,12 @@ class PagoMultipleSimplePathTest(TestCase):
         url = reverse("ventas-list")
         data = {
             "id_cliente": self.cliente.id_cliente,
-            "detalles": [
-                {"id_producto": self.producto.id_producto, "cantidad": 2, "precio_unitario": "1000.00"}
-            ],
+            "tipo_venta": "Contado",
+            "detalles": [{"id_producto": self.producto.id_producto, "cantidad": 2, "precio_unitario": "1000.00"}],
             "pagos_data": [
                 {"id_medio_pago": self.medio_efectivo.id_medio_pago, "monto": "1000.00"},
-                {"id_medio_pago": self.medio_tarjeta.id_medio_pago, "monto": "1000.00"}
-            ]
+                {"id_medio_pago": self.medio_tarjeta.id_medio_pago, "monto": "1000.00"},
+            ],
         }
 
         response = self.client.post(url, data, format="json")
@@ -332,9 +345,8 @@ class PagoMultipleSimplePathTest(TestCase):
         data = {
             "id_cliente": self.cliente.id_cliente,
             "id_medio_pago": self.medio_efectivo.id_medio_pago,
-            "detalles": [
-                {"id_producto": self.producto.id_producto, "cantidad": 1, "precio_unitario": "1000.00"}
-            ]
+            "tipo_venta": "Contado",
+            "detalles": [{"id_producto": self.producto.id_producto, "cantidad": 1, "precio_unitario": "1000.00"}],
         }
 
         response = self.client.post(url, data, format="json")
@@ -350,35 +362,34 @@ class CreateDetallesProductoNotFoundTest(TestCase):
     def setUp(self):
         User = get_user_model()
         self.user = User.objects.create_user(username="test", password="test")
-        
+
         self.rol = Roles.objects.create(nombre_rol="Admin", estado=True)
         self.empleado = Empleados.objects.create(
-            usuario="test", nombre="Test", apellido="User", id_rol=self.rol, estado=True,
-            contrasena_hash="hash", fecha_ingreso="2026-01-01"
+            usuario="test",
+            nombre="Test",
+            apellido="User",
+            id_rol=self.rol,
+            estado=True,
+            contrasena_hash="hash",
+            fecha_ingreso="2026-01-01",
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="General")
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="General")
         self.cliente = Clientes.objects.create(
-            ruc_ci="123", nombres="Test", apellidos="Cliente",
-            id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
+            ruc_ci="123", nombres="Test", apellidos="Cliente", id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
         )
 
     def test_create_detalles_producto_no_existe_raises_validation_error(self):
         """Lines 630-631, 658: Raises ValidationError when producto doesn't exist."""
         venta = Ventas.objects.create(
-            id_cliente=self.cliente,
-            monto_total=Decimal("1000.00"),
-            iva_10=Decimal("100.00"),
-            estado="Activa"
+            id_cliente=self.cliente, monto_total=Decimal("1000.00"), iva_10=Decimal("100.00"), estado="Activa"
         )
 
         viewset = VentasViewSet()
         viewset.request = Mock()
 
         # Detalle with non-existent producto
-        detalles = [
-            {"id_producto": 99999, "cantidad": 1, "precio_unitario": "1000.00"}
-        ]
+        detalles = [{"id_producto": 99999, "cantidad": 1, "precio_unitario": "1000.00"}]
 
         with self.assertRaises(ValidationError) as ctx:
             viewset._crear_detalles_venta(venta, detalles)
@@ -398,14 +409,18 @@ class EmitirFacturaErrorHandlingTest(TestCase):
 
         self.rol = Roles.objects.create(nombre_rol="Admin", estado=True)
         self.empleado = Empleados.objects.create(
-            usuario="test", nombre="Test", apellido="User", id_rol=self.rol, estado=True,
-            contrasena_hash="hash", fecha_ingreso="2026-01-01"
+            usuario="test",
+            nombre="Test",
+            apellido="User",
+            id_rol=self.rol,
+            estado=True,
+            contrasena_hash="hash",
+            fecha_ingreso="2026-01-01",
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="General")
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="General")
         self.cliente = Clientes.objects.create(
-            ruc_ci="123456", nombres="Test", apellidos="Cliente",
-            id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
+            ruc_ci="123456", nombres="Test", apellidos="Cliente", id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
         )
         self.venta = Ventas.objects.create(
             id_cliente=self.cliente,
@@ -413,15 +428,13 @@ class EmitirFacturaErrorHandlingTest(TestCase):
             iva_10=Decimal("100.00"),
             estado="Activa",
             estado_pago="Pagada",
-            genera_factura_legal=True
+            genera_factura_legal=True,
         )
 
     def test_emitir_factura_nro_preimpreso_invalid_type(self):
         """Lines 677-678: Returns 400 when nro_preimpreso is invalid type."""
         url = reverse("ventas-emitir-factura", kwargs={"pk": self.venta.id_venta})
-        data = {
-            "nro_preimpreso": "invalid_number"  # String that can't be converted to int
-        }
+        data = {"nro_preimpreso": "invalid_number"}  # String that can't be converted to int
 
         response = self.client.post(url, data, format="json")
 
@@ -455,41 +468,64 @@ class CuentaCorrienteFiltersTest(TestCase):
 
         self.rol = Roles.objects.create(nombre_rol="Admin", estado=True)
         self.empleado = Empleados.objects.create(
-            usuario="test", nombre="Test", apellido="User", id_rol=self.rol, estado=True,
-            contrasena_hash="hash", fecha_ingreso="2026-01-01"
+            usuario="test",
+            nombre="Test",
+            apellido="User",
+            id_rol=self.rol,
+            estado=True,
+            contrasena_hash="hash",
+            fecha_ingreso="2026-01-01",
         )
         self.lista = ListasPrecios.objects.create(nombre_lista="General")
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="General")
         self.cliente1 = Clientes.objects.create(
-            ruc_ci="111", nombres="Cliente", apellidos="Uno",
-            id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
+            ruc_ci="111", nombres="Cliente", apellidos="Uno", id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
         )
         self.cliente2 = Clientes.objects.create(
-            ruc_ci="222", nombres="Cliente", apellidos="Dos",
-            id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
+            ruc_ci="222", nombres="Cliente", apellidos="Dos", id_lista=self.lista, id_tipo_cliente=self.tipo_cliente
         )
-        self.medio = MediosPago.objects.create(
-            descripcion="Efectivo", estado=True
-        )
+        self.medio = MediosPago.objects.create(descripcion="Efectivo", estado=True)
 
         # Ventas for filtering
         self.venta1 = Ventas.objects.create(
             id_cliente=self.cliente1,
-            monto_total=Decimal("1000"), iva_10=Decimal("100"),
-            estado="Activa", estado_pago="Pagada", id_medio_pago=self.medio,
-            genera_factura_legal=True
+            monto_total=Decimal("1000"),
+            iva_10=Decimal("100"),
+            estado="Activa",
+            estado_pago="Pagada",
+            id_medio_pago=self.medio,
+            genera_factura_legal=True,
         )
         self.venta2 = Ventas.objects.create(
             id_cliente=self.cliente2,
-            monto_total=Decimal("2000"), iva_10=Decimal("200"),
-            estado="Activa", estado_pago="Pagada", id_medio_pago=self.medio,
-            genera_factura_legal=True
+            monto_total=Decimal("2000"),
+            iva_10=Decimal("200"),
+            estado="Activa",
+            estado_pago="Pagada",
+            id_medio_pago=self.medio,
+            genera_factura_legal=True,
         )
         self.venta3 = Ventas.objects.create(
             id_cliente=self.cliente1,
-            monto_total=Decimal("500"), iva_10=Decimal("50"),
-            estado="Activa", estado_pago="Pagada", id_medio_pago=self.medio,
-            genera_factura_legal=True
+            monto_total=Decimal("500"),
+            iva_10=Decimal("50"),
+            estado="Activa",
+            estado_pago="Pagada",
+            id_medio_pago=self.medio,
+            genera_factura_legal=True,
+        )
+        # Set specific dates (bypass auto_now_add) to make date filter tests deterministic:
+        # venta1: Jan 1 2026 (before 2026-04-15), venta2: Apr 20 2026 (between dates), venta3: May 10 2026 (after 2026-04-30)
+        import datetime as dt
+
+        Ventas.objects.filter(id_venta=self.venta1.id_venta).update(
+            fecha=dt.datetime(2026, 1, 1, 12, 0, 0, tzinfo=dt.timezone.utc)
+        )
+        Ventas.objects.filter(id_venta=self.venta2.id_venta).update(
+            fecha=dt.datetime(2026, 4, 20, 12, 0, 0, tzinfo=dt.timezone.utc)
+        )
+        Ventas.objects.filter(id_venta=self.venta3.id_venta).update(
+            fecha=dt.datetime(2026, 5, 10, 12, 0, 0, tzinfo=dt.timezone.utc)
         )
 
     def test_cuenta_corriente_filter_by_id_cliente(self):

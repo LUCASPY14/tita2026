@@ -40,9 +40,7 @@ class Dashboards(models.Model):
     estado = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-    id_empleado = models.ForeignKey(
-        "usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado"
-    )
+    id_empleado = models.ForeignKey("usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado")
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.pk}"
@@ -55,17 +53,17 @@ class Dashboards(models.Model):
 class KpiMetricas(models.Model):
     id_kpi = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
-    nombre_kpi = models.CharField(max_length=100, blank=True, default='')
+    nombre_kpi = models.CharField(max_length=100, blank=True, default="")
     descripcion = models.TextField()
-    formula = models.TextField(blank=True, default='')
-    query_sql = models.TextField(blank=True, default='')
-    unidad = models.CharField(max_length=20, blank=True, default='')
-    unidad_medida = models.CharField(max_length=20, blank=True, default='')
+    formula = models.TextField(blank=True, default="")
+    query_sql = models.TextField(blank=True, default="")
+    unidad = models.CharField(max_length=20, blank=True, default="")
+    unidad_medida = models.CharField(max_length=20, blank=True, default="")
     valor_objetivo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     meta_valor = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     categoria = models.CharField(max_length=30)
-    frecuencia = models.CharField(max_length=20, blank=True, default='')
-    frecuencia_actualizacion = models.CharField(max_length=20, blank=True, default='')
+    frecuencia = models.CharField(max_length=20, blank=True, default="")
+    frecuencia_actualizacion = models.CharField(max_length=20, blank=True, default="")
     estado = models.BooleanField(default=True)
     created_at = models.DateTimeField(null=True, blank=True)
     id_empleado = models.ForeignKey(
@@ -101,12 +99,12 @@ class ValoresKpi(models.Model):
 class PlantillasTarea(models.Model):
     id_plantilla = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
-    descripcion = models.TextField(blank=True, default='')
-    tipo_tarea = models.CharField(max_length=30, blank=True, default='')
-    comando = models.TextField(blank=True, default='')
+    descripcion = models.TextField(blank=True, default="")
+    tipo_tarea = models.CharField(max_length=30, blank=True, default="")
+    comando = models.TextField(blank=True, default="")
     parametros = models.JSONField(default=dict)
-    frecuencia = models.CharField(max_length=20, blank=True, default='')
-    cron = models.CharField(max_length=100, blank=True, default='')
+    frecuencia = models.CharField(max_length=20, blank=True, default="")
+    cron = models.CharField(max_length=100, blank=True, default="")
     timeout = models.IntegerField(default=0)
     max_reintentos = models.IntegerField(default=0)
     notif_exito = models.IntegerField(default=0)
@@ -142,10 +140,10 @@ class EjecucionesTareaManager(models.Manager):
     """Manager que acepta kwargs alternativos en create()"""
 
     def create(self, **kwargs):
-        if 'id_plantilla_tarea' in kwargs:
-            kwargs['id_plantilla'] = kwargs.pop('id_plantilla_tarea')
-        if 'id_empleado' in kwargs:
-            kwargs['ejecutado_por'] = kwargs.pop('id_empleado')
+        if "id_plantilla_tarea" in kwargs:
+            kwargs["id_plantilla"] = kwargs.pop("id_plantilla_tarea")
+        if "id_empleado" in kwargs:
+            kwargs["ejecutado_por"] = kwargs.pop("id_empleado")
         return super().create(**kwargs)
 
 
@@ -180,16 +178,16 @@ class DestinatariosTareaManager(models.Manager):
     """Manager que acepta kwargs alternativos en create()"""
 
     def create(self, **kwargs):
-        if 'id_plantilla_tarea' in kwargs:
-            kwargs['id_plantilla'] = kwargs.pop('id_plantilla_tarea')
-        if 'notificar_inicio' in kwargs:
-            kwargs['notif_inicio'] = 1 if kwargs.pop('notificar_inicio') else 0
-        if 'notificar_fin' in kwargs:
-            kwargs['notif_fin'] = 1 if kwargs.pop('notificar_fin') else 0
-        if 'notificar_exito' in kwargs:
-            kwargs['notif_fin'] = 1 if kwargs.pop('notificar_exito') else 0
-        if 'notificar_error' in kwargs:
-            kwargs['notif_error'] = 1 if kwargs.pop('notificar_error') else 0
+        if "id_plantilla_tarea" in kwargs:
+            kwargs["id_plantilla"] = kwargs.pop("id_plantilla_tarea")
+        if "notificar_inicio" in kwargs:
+            kwargs["notif_inicio"] = 1 if kwargs.pop("notificar_inicio") else 0
+        if "notificar_fin" in kwargs:
+            kwargs["notif_fin"] = 1 if kwargs.pop("notificar_fin") else 0
+        if "notificar_exito" in kwargs:
+            kwargs["notif_fin"] = 1 if kwargs.pop("notificar_exito") else 0
+        if "notificar_error" in kwargs:
+            kwargs["notif_error"] = 1 if kwargs.pop("notificar_error") else 0
         return super().create(**kwargs)
 
 
@@ -199,9 +197,7 @@ class DestinatariosTarea(models.Model):
     notif_fin = models.IntegerField(default=0)
     notif_error = models.IntegerField(default=0)
     tipo_destinatario = models.CharField(max_length=30, blank=True, default="")
-    id_empleado = models.ForeignKey(
-        "usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado"
-    )
+    id_empleado = models.ForeignKey("usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado")
     id_plantilla = models.ForeignKey("PlantillasTarea", models.DO_NOTHING, db_column="id_plantilla")
 
     objects = DestinatariosTareaManager()

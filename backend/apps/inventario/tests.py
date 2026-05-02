@@ -83,9 +83,7 @@ class StockServiceTest(TransactionTestCase):
             id_producto=self.producto_con_stock, cantidad=Decimal("50.000")
         )
 
-        self.stock_cero = StockUnico.objects.create(
-            id_producto=self.producto_sin_stock, cantidad=Decimal("0.000")
-        )
+        self.stock_cero = StockUnico.objects.create(id_producto=self.producto_sin_stock, cantidad=Decimal("0.000"))
 
         self.stock_permite_negativo = StockUnico.objects.create(
             id_producto=self.producto_permite_negativo, cantidad=Decimal("5.000")
@@ -331,9 +329,7 @@ class LotesProductoTest(TestCase):
         )
 
         # Obtener lotes disponibles (ordenados por FIFO)
-        lotes = LotesProducto.objects.filter(id_producto=self.producto, bloqueado=False).order_by(
-            "fecha_vencimiento"
-        )
+        lotes = LotesProducto.objects.filter(id_producto=self.producto, bloqueado=False).order_by("fecha_vencimiento")
 
         # El primero debe ser LOT-002 (vence en 30 días)
         self.assertEqual(lotes[0].numero_lote, "LOT-002")

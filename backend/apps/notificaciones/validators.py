@@ -59,8 +59,7 @@ def validar_titulo_notificacion(value):
     patron = r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s.,;:¿?¡!()-]+$"
     if not re.match(patron, value):
         raise ValidationError(
-            "El título contiene caracteres no permitidos. "
-            "Solo se permiten letras, números y puntuación básica."
+            "El título contiene caracteres no permitidos. " "Solo se permiten letras, números y puntuación básica."
         )
 
 
@@ -458,9 +457,7 @@ def validar_categoria_template(value):
     ]
 
     if value not in categorias_validas:
-        raise ValidationError(
-            f"Categoría no válida. Debe ser una de: {', '.join(categorias_validas)}"
-        )
+        raise ValidationError(f"Categoría no válida. Debe ser una de: {', '.join(categorias_validas)}")
 
 
 def validar_cuerpo_html_template(value):
@@ -561,9 +558,7 @@ def validar_criticidad_alerta(value):
     criticidades_validas = ["Baja", "Media", "Alta", "Crítica"]
 
     if value not in criticidades_validas:
-        raise ValidationError(
-            f"Criticidad no válida. Debe ser una de: {', '.join(criticidades_validas)}"
-        )
+        raise ValidationError(f"Criticidad no válida. Debe ser una de: {', '.join(criticidades_validas)}")
 
 
 def validar_frecuencia_minutos(value):
@@ -718,17 +713,13 @@ def validar_nivel_riesgo_anomalia(value):
     niveles_validos = ["Bajo", "Medio", "Alto", "Crítico"]
 
     if value not in niveles_validos:
-        raise ValidationError(
-            f"Nivel de riesgo no válido. Debe ser uno de: {', '.join(niveles_validos)}"
-        )
+        raise ValidationError(f"Nivel de riesgo no válido. Debe ser uno de: {', '.join(niveles_validos)}")
 
 
 def validar_notificado_anomalia(value):
     """Valida si la anomalía fue notificada (0 o 1)"""
     if value not in [0, 1]:
-        raise ValidationError(
-            "El estado de notificación debe ser 0 (no notificado) o 1 (notificado)."
-        )
+        raise ValidationError("El estado de notificación debe ser 0 (no notificado) o 1 (notificado).")
 
 
 # =============================================================================
@@ -744,9 +735,7 @@ def validar_tipo_usuario_restriccion(value):
     tipos_validos = ["Empleado", "Cliente", "Proveedor", "Administrador", "Todos"]
 
     if value not in tipos_validos:
-        raise ValidationError(
-            f"Tipo de usuario no válido. Debe ser uno de: {', '.join(tipos_validos)}"
-        )
+        raise ValidationError(f"Tipo de usuario no válido. Debe ser uno de: {', '.join(tipos_validos)}")
 
 
 def validar_dia_semana_restriccion(value):
@@ -766,9 +755,7 @@ def validar_dia_semana_restriccion(value):
     ]
 
     if value not in dias_validos:
-        raise ValidationError(
-            f"Día de la semana no válido. Debe ser uno de: {', '.join(dias_validos)}"
-        )
+        raise ValidationError(f"Día de la semana no válido. Debe ser uno de: {', '.join(dias_validos)}")
 
 
 def validar_rango_horario_restriccion(hora_inicio, hora_fin):

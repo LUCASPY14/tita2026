@@ -42,9 +42,7 @@ class CajasAdmin(admin.ModelAdmin):
             icon = "✗"
             texto = "Inactiva"
 
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{} {}</span>', color, icon, texto
-        )
+        return format_html('<span style="color: {}; font-weight: bold;">{} {}</span>', color, icon, texto)
 
     activo_badge.short_description = "Estado"
 
@@ -110,11 +108,7 @@ class CierresCajaAdmin(admin.ModelAdmin):
 
     def diferencia_display(self, obj):
         if obj.diferencia_efectivo:
-            color = (
-                "red"
-                if obj.diferencia_efectivo < 0
-                else ("green" if obj.diferencia_efectivo > 0 else "gray")
-            )
+            color = "red" if obj.diferencia_efectivo < 0 else ("green" if obj.diferencia_efectivo > 0 else "gray")
             diferencia_formateada = f"{obj.diferencia_efectivo:,.0f}"
             return format_html(
                 '<span style="color: {}; font-weight: bold;">₲{}</span>',
@@ -244,8 +238,8 @@ class TarifasComisionAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ Activa')
-        return format_html('<span style="color: red;">{}</span>', '✗ Inactiva')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', "✓ Activa")
+        return format_html('<span style="color: red;">{}</span>', "✗ Inactiva")
 
     activo_badge.short_description = "Estado"
 
@@ -296,9 +290,7 @@ class AuditoriaComisionesAdmin(admin.ModelAdmin):
     def valor_nuevo_display(self, obj):
         if obj.valor_nuevo is not None:
             valor_formateado = f"{obj.valor_nuevo:.4f}"
-            return format_html(
-                '<span style="color: green; font-weight: bold;">{}</span>', valor_formateado
-            )
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', valor_formateado)
         return "-"
 
     valor_nuevo_display.short_description = "Valor Nuevo"
@@ -389,7 +381,16 @@ class DocumentosTributariosAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             "Información General",
-            {"fields": ("id_documento", "nro_secuencial", "nro_preimpreso_interno", "tipo_documento", "nro_timbrado", "id_cliente")},
+            {
+                "fields": (
+                    "id_documento",
+                    "nro_secuencial",
+                    "nro_preimpreso_interno",
+                    "tipo_documento",
+                    "nro_timbrado",
+                    "id_cliente",
+                )
+            },
         ),
         ("Montos", {"fields": ("monto_total",)}),
         ("Fechas", {"fields": ("fecha_emision",)}),
@@ -413,20 +414,22 @@ class DocumentosTributariosAdmin(admin.ModelAdmin):
     tipo_documento_badge.short_description = "Tipo"
 
     def estado_sifen_badge(self, obj):
-        estado = getattr(obj, 'estado_sifen', None)
+        estado = getattr(obj, "estado_sifen", None)
         mapa = {
-            'Aprobado':  ('green',  '✓'),
-            'Rechazado': ('red',    '✗'),
-            'Pendiente': ('orange', '⏳'),
+            "Aprobado": ("green", "✓"),
+            "Rechazado": ("red", "✗"),
+            "Pendiente": ("orange", "⏳"),
         }
-        color, icono = mapa.get(estado, ('gray', '?')) if estado else ('gray', 'Pendiente')
-        texto = estado if estado else 'Pendiente'
+        color, icono = mapa.get(estado, ("gray", "?")) if estado else ("gray", "Pendiente")
+        texto = estado if estado else "Pendiente"
         return format_html(
             '<span style="background:{};color:white;padding:2px 8px;border-radius:3px">{} {}</span>',
-            color, icono, texto,
+            color,
+            icono,
+            texto,
         )
 
-    estado_sifen_badge.short_description = 'Estado SIFEN'
+    estado_sifen_badge.short_description = "Estado SIFEN"
 
     def monto_total_display(self, obj):
         monto_formateado = f"{obj.monto_total:,.0f}"
@@ -486,8 +489,8 @@ class TimbradosAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ Activo')
-        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', "✓ Activo")
+        return format_html('<span style="color: red;">{}</span>', "✗ Inactivo")
 
     activo_badge.short_description = "Estado"
 
@@ -530,16 +533,14 @@ class PuntosExpedicionAdmin(admin.ModelAdmin):
     )
 
     def codigo_completo_display(self, obj):
-        return format_html(
-            "<strong>{}-{}</strong>", obj.codigo_establecimiento, obj.codigo_punto_expedicion
-        )
+        return format_html("<strong>{}-{}</strong>", obj.codigo_establecimiento, obj.codigo_punto_expedicion)
 
     codigo_completo_display.short_description = "Código Completo"
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ Activo')
-        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', "✓ Activo")
+        return format_html('<span style="color: red;">{}</span>', "✗ Inactivo")
 
     activo_badge.short_description = "Estado"
 
@@ -574,8 +575,8 @@ class DatosEmpresaAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ Activa')
-        return format_html('<span style="color: red;">{}</span>', '✗ Inactiva')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', "✓ Activa")
+        return format_html('<span style="color: red;">{}</span>', "✗ Inactiva")
 
     activo_badge.short_description = "Estado"
 
@@ -617,7 +618,7 @@ class ImpuestosAdmin(admin.ModelAdmin):
 
     def activo_badge(self, obj):
         if obj and obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">{}</span>', '✓ Activo')
-        return format_html('<span style="color: red;">{}</span>', '✗ Inactivo')
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', "✓ Activo")
+        return format_html('<span style="color: red;">{}</span>', "✗ Inactivo")
 
     activo_badge.short_description = "Estado"

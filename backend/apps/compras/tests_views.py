@@ -2,6 +2,7 @@
 Tests para apps/compras/views.py
 Cubre ComprasViewSet acciones personalizadas y ProveedoresViewSet
 """
+
 from unittest.mock import MagicMock, patch
 from decimal import Decimal
 from django.utils import timezone
@@ -18,8 +19,8 @@ from apps.compras.views import ComprasViewSet, ProveedoresViewSet
 
 def crear_proveedor():
     return Proveedores.objects.create(
-        razon_social='Proveedor Test',
-        ruc='80012345-0',
+        razon_social="Proveedor Test",
+        ruc="80012345-0",
         estado=True,
         fecha_registro=timezone.now(),
     )
@@ -36,7 +37,7 @@ class ComprasViewSetPerformCreateTest(TestCase):
         """Helper to make a POST request"""
         user = MagicMock()
         user.is_authenticated = True
-        request = self.factory.post('/compras/', data, format='json')
+        request = self.factory.post("/compras/", data, format="json")
         request.user = user
         return request
 
@@ -49,48 +50,53 @@ class ComprasViewSetPerformCreateTest(TestCase):
 
         serializer = MagicMock()
         vs.perform_create(serializer)
-        serializer.save.assert_called_once_with(estado_pago='Pendiente')
+        serializer.save.assert_called_once_with(estado_pago="Pendiente")
 
     def test_perform_create_con_detalles_validos(self):
         """Con detalles válidos, calcula totales y guarda"""
         vs = ComprasViewSet()
         request = MagicMock()
-        request.data = {'detalles': [{'id_producto': 1, 'cantidad': 10, 'precio_unitario': 1000}]}
+        request.data = {"detalles": [{"id_producto": 1, "cantidad": 10, "precio_unitario": 1000}]}
         vs.request = request
 
         serializer = MagicMock()
 
-        with patch('apps.compras.views.CompraService.validar_compra',
-                   return_value={'valido': True, 'errores': [], 'warnings': []}):
-            with patch('apps.compras.views.CompraService.calcular_totales_compra',
-                       return_value={'total': Decimal('10000.00')}):
-                with patch('apps.productos.models.Productos.objects.get') as mock_get:
+        with patch(
+            "apps.compras.views.CompraService.validar_compra",
+            return_value={"valido": True, "errores": [], "warnings": []},
+        ):
+            with patch(
+                "apps.compras.views.CompraService.calcular_totales_compra", return_value={"total": Decimal("10000.00")}
+            ):
+                with patch("apps.productos.models.Productos.objects.get") as mock_get:
                     mock_producto = MagicMock()
-                    mock_producto.id_impuesto.porcentaje = Decimal('10')
+                    mock_producto.id_impuesto.porcentaje = Decimal("10")
                     mock_get.return_value = mock_producto
-                    with patch('apps.compras.views.DetallesCompra.objects.create'):
+                    with patch("apps.compras.views.DetallesCompra.objects.create"):
                         vs.perform_create(serializer)
 
         serializer.save.assert_called_once_with(
-            monto_total=Decimal('10000.00'),
-            saldo_pendiente=Decimal('10000.00'),
-            estado_pago='Pendiente',
+            monto_total=Decimal("10000.00"),
+            saldo_pendiente=Decimal("10000.00"),
+            estado_pago="Pendiente",
         )
 
     def test_perform_create_con_detalles_invalidos_lanza_error(self):
         """Con detalles inválidos, lanza ValidationError"""
         vs = ComprasViewSet()
         request = MagicMock()
-        request.data = {'detalles': [{'id_producto': 1, 'cantidad': 0, 'precio_unitario': 0}]}
+        request.data = {"detalles": [{"id_producto": 1, "cantidad": 0, "precio_unitario": 0}]}
         vs.request = request
 
         serializer = MagicMock()
 
-        with patch('apps.compras.views.CompraService.validar_compra',
-                   return_value={'valido': False, 'errores': ['cantidad inválida'], 'warnings': []}):
+        with patch(
+            "apps.compras.views.CompraService.validar_compra",
+            return_value={"valido": False, "errores": ["cantidad inválida"], "warnings": []},
+        ):
             with self.assertRaises(ValidationError):
                 vs.perform_create(serializer)
-    
+
     def test_perform_create_producto_sin_impuesto_usa_iva_cero(self):
         """
         Cubrir líneas 124-125: cuando producto.id_impuesto.porcentaje lanza excepción,
@@ -98,28 +104,31 @@ class ComprasViewSetPerformCreateTest(TestCase):
         """
         vs = ComprasViewSet()
         request = MagicMock()
-        request.data = {'detalles': [{'id_producto': 1, 'cantidad': 5, 'precio_unitario': 2000}]}
+        request.data = {"detalles": [{"id_producto": 1, "cantidad": 5, "precio_unitario": 2000}]}
         vs.request = request
-        
+
         serializer = MagicMock()
-        
-        with patch('apps.compras.views.CompraService.validar_compra',
-                   return_value={'valido': True, 'errores': [], 'warnings': []}):
-            with patch('apps.compras.views.CompraService.calcular_totales_compra',
-                       return_value={'total': Decimal('10000.00')}):
-                with patch('apps.productos.models.Productos.objects.get') as mock_get:
+
+        with patch(
+            "apps.compras.views.CompraService.validar_compra",
+            return_value={"valido": True, "errores": [], "warnings": []},
+        ):
+            with patch(
+                "apps.compras.views.CompraService.calcular_totales_compra", return_value={"total": Decimal("10000.00")}
+            ):
+                with patch("apps.productos.models.Productos.objects.get") as mock_get:
                     # Mock producto sin impuesto (id_impuesto=None)
                     mock_producto = MagicMock()
                     mock_producto.id_impuesto = None
                     mock_get.return_value = mock_producto
-                    
-                    with patch('apps.compras.views.DetallesCompra.objects.create') as mock_create:
+
+                    with patch("apps.compras.views.DetallesCompra.objects.create") as mock_create:
                         vs.perform_create(serializer)
-                        
+
                         # Verificar que se llamó create con monto_iva=Decimal("0.00")
                         mock_create.assert_called_once()
                         call_kwargs = mock_create.call_args[1]
-                        self.assertEqual(call_kwargs['monto_iva'], Decimal("0.00"))
+                        self.assertEqual(call_kwargs["monto_iva"], Decimal("0.00"))
 
 
 class ComprasViewSetConfirmarTest(TestCase):
@@ -130,24 +139,24 @@ class ComprasViewSetConfirmarTest(TestCase):
         self.proveedor = crear_proveedor()
         self.compra = Compras.objects.create(
             fecha=timezone.now(),
-            monto_total=Decimal('50000.00'),
-            saldo_pendiente=Decimal('50000.00'),
-            estado_pago='pendiente',
+            monto_total=Decimal("50000.00"),
+            saldo_pendiente=Decimal("50000.00"),
+            estado_pago="pendiente",
             id_proveedor=self.proveedor,
         )
-        self.user = User.objects.create_user(username='testcompr', password='pass')
+        self.user = User.objects.create_user(username="testcompr", password="pass")
 
     def test_confirmar_sin_empleado_retorna_400(self):
         """Sin empleado asociado, retorna 400"""
-        request = self.factory.post(f'/compras/{self.compra.id_compra}/confirmar/')
+        request = self.factory.post(f"/compras/{self.compra.id_compra}/confirmar/")
         request.user = self.user
         request.user.empleado = None
 
         vs = ComprasViewSet()
         vs.request = request
-        vs.kwargs = {'pk': self.compra.id_compra}
+        vs.kwargs = {"pk": self.compra.id_compra}
         vs.format_kwarg = None
-        vs.action = 'confirmar'
+        vs.action = "confirmar"
         vs.get_object = lambda: self.compra
 
         response = vs.confirmar(request, pk=self.compra.id_compra)
@@ -156,7 +165,7 @@ class ComprasViewSetConfirmarTest(TestCase):
     def test_confirmar_exitoso(self):
         """Confirmar exitoso retorna 200"""
         empleado_mock = MagicMock()
-        request = self.factory.post(f'/compras/{self.compra.id_compra}/confirmar/')
+        request = self.factory.post(f"/compras/{self.compra.id_compra}/confirmar/")
         request.user = self.user
         request.user.empleado = empleado_mock
 
@@ -164,33 +173,31 @@ class ComprasViewSetConfirmarTest(TestCase):
 
         vs = ComprasViewSet()
         vs.request = request
-        vs.kwargs = {'pk': self.compra.id_compra}
+        vs.kwargs = {"pk": self.compra.id_compra}
         vs.format_kwarg = None
-        vs.action = 'confirmar'
+        vs.action = "confirmar"
         vs.get_object = lambda: self.compra
-        vs.get_serializer = MagicMock(return_value=MagicMock(data={'id': 1}))
+        vs.get_serializer = MagicMock(return_value=MagicMock(data={"id": 1}))
 
-        with patch('apps.compras.views.CompraService.confirmar_compra',
-                   return_value=compra_confirmada_mock):
+        with patch("apps.compras.views.CompraService.confirmar_compra", return_value=compra_confirmada_mock):
             response = vs.confirmar(request, pk=self.compra.id_compra)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_confirmar_lanza_validation_error_retorna_400(self):
         """Si CompraService.confirmar_compra lanza ValidationError, retorna 400"""
         empleado_mock = MagicMock()
-        request = self.factory.post(f'/compras/{self.compra.id_compra}/confirmar/')
+        request = self.factory.post(f"/compras/{self.compra.id_compra}/confirmar/")
         request.user = self.user
         request.user.empleado = empleado_mock
 
         vs = ComprasViewSet()
         vs.request = request
-        vs.kwargs = {'pk': self.compra.id_compra}
+        vs.kwargs = {"pk": self.compra.id_compra}
         vs.format_kwarg = None
-        vs.action = 'confirmar'
+        vs.action = "confirmar"
         vs.get_object = lambda: self.compra
 
-        with patch('apps.compras.views.CompraService.confirmar_compra',
-                   side_effect=ValidationError('error')):
+        with patch("apps.compras.views.CompraService.confirmar_compra", side_effect=ValidationError("error")):
             response = vs.confirmar(request, pk=self.compra.id_compra)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -202,7 +209,7 @@ class ComprasViewSetPendientesTest(TestCase):
         self.factory = APIRequestFactory()
 
     def test_pendientes_retorna_lista(self):
-        request = self.factory.get('/compras/pendientes/')
+        request = self.factory.get("/compras/pendientes/")
         request.user = MagicMock()
 
         compras_mock = MagicMock()
@@ -212,15 +219,16 @@ class ComprasViewSetPendientesTest(TestCase):
         vs.request = request
         vs.get_serializer = MagicMock(return_value=MagicMock(data=[]))
         vs.format_kwarg = None
-        vs.action = 'pendientes'
+        vs.action = "pendientes"
 
-        with patch('apps.compras.views.CompraService.obtener_compras_pendientes_confirmacion',
-                   return_value=compras_mock):
+        with patch(
+            "apps.compras.views.CompraService.obtener_compras_pendientes_confirmacion", return_value=compras_mock
+        ):
             response = vs.pendientes(request)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('count', response.data)
-        self.assertEqual(response.data['count'], 2)
+        self.assertIn("count", response.data)
+        self.assertEqual(response.data["count"], 2)
 
 
 class ComprasViewSetCalcularTotalesTest(TestCase):
@@ -230,7 +238,7 @@ class ComprasViewSetCalcularTotalesTest(TestCase):
         self.factory = APIRequestFactory()
 
     def test_sin_detalles_retorna_400(self):
-        request = self.factory.post('/compras/calcular_totales/', {}, format='json')
+        request = self.factory.post("/compras/calcular_totales/", {}, format="json")
         request.user = MagicMock()
         request.data = {}
 
@@ -242,39 +250,46 @@ class ComprasViewSetCalcularTotalesTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_detalles_invalidos_retorna_400(self):
-        request = self.factory.post('/compras/calcular_totales/', {'detalles': [{'x': 1}]}, format='json')
+        request = self.factory.post("/compras/calcular_totales/", {"detalles": [{"x": 1}]}, format="json")
         request.user = MagicMock()
-        request.data = {'detalles': [{'x': 1}]}
+        request.data = {"detalles": [{"x": 1}]}
 
         vs = ComprasViewSet()
         vs.request = request
         vs.format_kwarg = None
 
-        with patch('apps.compras.views.CompraService.validar_compra',
-                   return_value={'valido': False, 'errores': ['error'], 'warnings': []}):
+        with patch(
+            "apps.compras.views.CompraService.validar_compra",
+            return_value={"valido": False, "errores": ["error"], "warnings": []},
+        ):
             response = vs.calcular_totales(request)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_detalles_validos_retorna_totales(self):
-        request = self.factory.post('/compras/calcular_totales/',
-                                    {'detalles': [{'id_producto': 1, 'cantidad': 5, 'precio_unitario': 2000}]},
-                                    format='json')
+        request = self.factory.post(
+            "/compras/calcular_totales/",
+            {"detalles": [{"id_producto": 1, "cantidad": 5, "precio_unitario": 2000}]},
+            format="json",
+        )
         request.user = MagicMock()
-        request.data = {'detalles': [{'id_producto': 1, 'cantidad': 5, 'precio_unitario': 2000}]}
+        request.data = {"detalles": [{"id_producto": 1, "cantidad": 5, "precio_unitario": 2000}]}
 
         vs = ComprasViewSet()
         vs.request = request
         vs.format_kwarg = None
 
-        with patch('apps.compras.views.CompraService.validar_compra',
-                   return_value={'valido': True, 'errores': [], 'warnings': []}):
-            with patch('apps.compras.views.CompraService.calcular_totales_compra',
-                       return_value={'total': Decimal('10000.00')}):
+        with patch(
+            "apps.compras.views.CompraService.validar_compra",
+            return_value={"valido": True, "errores": [], "warnings": []},
+        ):
+            with patch(
+                "apps.compras.views.CompraService.calcular_totales_compra", return_value={"total": Decimal("10000.00")}
+            ):
                 response = vs.calcular_totales(request)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('totales', response.data)
+        self.assertIn("totales", response.data)
 
 
 class ProveedoresViewSetCuentaCorrienteTest(TestCase):
@@ -285,26 +300,25 @@ class ProveedoresViewSetCuentaCorrienteTest(TestCase):
         self.proveedor = crear_proveedor()
 
     def test_cuenta_corriente_retorna_datos(self):
-        request = self.factory.get(f'/proveedores/{self.proveedor.id_proveedor}/cuenta_corriente/')
+        request = self.factory.get(f"/proveedores/{self.proveedor.id_proveedor}/cuenta_corriente/")
         request.user = MagicMock()
 
         vs = ProveedoresViewSet()
         vs.request = request
-        vs.kwargs = {'pk': self.proveedor.id_proveedor}
+        vs.kwargs = {"pk": self.proveedor.id_proveedor}
         vs.format_kwarg = None
-        vs.action = 'cuenta_corriente'
+        vs.action = "cuenta_corriente"
         vs.get_object = lambda: self.proveedor
 
         cuenta_mock = {
-            'total_compras': Decimal('100000.00'),
-            'total_pagado': Decimal('50000.00'),
-            'saldo_pendiente': Decimal('50000.00'),
+            "total_compras": Decimal("100000.00"),
+            "total_pagado": Decimal("50000.00"),
+            "saldo_pendiente": Decimal("50000.00"),
         }
 
-        with patch('apps.compras.views.CompraService.obtener_cuenta_corriente_proveedor',
-                   return_value=cuenta_mock):
+        with patch("apps.compras.views.CompraService.obtener_cuenta_corriente_proveedor", return_value=cuenta_mock):
             response = vs.cuenta_corriente(request, pk=self.proveedor.id_proveedor)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('proveedor', response.data)
-        self.assertEqual(response.data['proveedor']['id'], self.proveedor.id_proveedor)
+        self.assertIn("proveedor", response.data)
+        self.assertEqual(response.data["proveedor"]["id"], self.proveedor.id_proveedor)

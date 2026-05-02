@@ -23,9 +23,7 @@ class AuthenticationServiceTest(TransactionTestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear rol de prueba
-        self.rol_test = Roles.objects.create(
-            nombre_rol="Test Role", descripcion="Rol para testing", estado=True
-        )
+        self.rol_test = Roles.objects.create(nombre_rol="Test Role", descripcion="Rol para testing", estado=True)
 
         # Crear empleado de prueba
         self.password = "TestPassword123!@#"
@@ -205,9 +203,7 @@ class LoginTest(AuthenticationServiceTest):
         self.assertIn("Credenciales", resultado["mensaje"])
 
         # Verificar que se registró el intento fallido
-        self.assertTrue(
-            IntentosLogin.objects.filter(id_empleado=self.empleado, exitoso=False).exists()
-        )
+        self.assertTrue(IntentosLogin.objects.filter(id_empleado=self.empleado, exitoso=False).exists())
 
     def test_login_empleado_inactivo(self):
         """Login con empleado inactivo"""
@@ -329,9 +325,7 @@ class ChangePasswordTest(AuthenticationServiceTest):
 
         # Verificar que la nueva password funciona
         self.empleado.refresh_from_db()
-        self.assertTrue(
-            AuthenticationService._verify_password(nueva_password, self.empleado.contrasena_hash)
-        )
+        self.assertTrue(AuthenticationService._verify_password(nueva_password, self.empleado.contrasena_hash))
 
     def test_cambiar_password_actual_incorrecta(self):
         """Cambio de contraseña con password actual incorrecta"""
@@ -379,9 +373,7 @@ class ChangePasswordTest(AuthenticationServiceTest):
         )
 
         # Verificar que todas las sesiones están inactivas
-        sesiones_activas = SesionesActivas.objects.filter(
-            id_empleado=self.empleado, activa=True
-        ).count()
+        sesiones_activas = SesionesActivas.objects.filter(id_empleado=self.empleado, activa=True).count()
 
         self.assertEqual(sesiones_activas, 0)
 

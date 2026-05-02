@@ -19,6 +19,7 @@ class GetClientIpForwardedForTest(TestCase):
 
     def setUp(self):
         from apps.usuarios.views import EmpleadosViewSet
+
         self.factory = RequestFactory()
         self.viewset = EmpleadosViewSet()
 
@@ -52,6 +53,7 @@ class OtherViewSetClientIpTest(TestCase):
 
     def _get_ip(self, viewset_class, forwarded=None):
         from django.test import RequestFactory
+
         factory = RequestFactory()
         request = factory.get("/")
         if forwarded:
@@ -63,28 +65,33 @@ class OtherViewSetClientIpTest(TestCase):
 
     def test_two_factor_viewset_forwarded_for(self):
         from apps.usuarios.views import TwoFactorViewSet
+
         ip = self._get_ip(TwoFactorViewSet, "1.2.3.4, 5.6.7.8")
         self.assertEqual(ip, "1.2.3.4")
 
     def test_sesiones_viewset_forwarded_for(self):
         from apps.usuarios.views import SesionesViewSet
+
         ip = self._get_ip(SesionesViewSet, "9.9.9.9")
         self.assertEqual(ip, "9.9.9.9")
 
     def test_password_recovery_viewset_forwarded_for(self):
         from apps.usuarios.views import PasswordRecoveryViewSet
+
         ip = self._get_ip(PasswordRecoveryViewSet, "100.100.100.100, 10.0.0.1")
         self.assertEqual(ip, "100.100.100.100")
 
     def test_auth_viewset_forwarded_for(self):
         """Branch 210->211: AuthViewSet._get_client_ip True arm (X-Forwarded-For present)."""
         from apps.usuarios.views import AuthViewSet
+
         ip = self._get_ip(AuthViewSet, "203.0.113.100, 10.10.0.1")
         self.assertEqual(ip, "203.0.113.100")
 
     def test_auth_viewset_no_forwarded_fallback(self):
         """AuthViewSet._get_client_ip False arm (REMOTE_ADDR fallback)."""
         from apps.usuarios.views import AuthViewSet
+
         ip = self._get_ip(AuthViewSet, None)
         self.assertIsNotNone(ip)
 
@@ -104,13 +111,10 @@ class CambiarPasswordBranchesTest(TestCase):
     def setUp(self):
         from django.utils import timezone
         from apps.usuarios.models import Empleados, Roles
+
         self.factory = RequestFactory()
-        self.rol_admin, _ = Roles.objects.get_or_create(
-            nombre_rol="Administrador", defaults={"descripcion": "Admin"}
-        )
-        self.rol_cajero, _ = Roles.objects.get_or_create(
-            nombre_rol="Cajero", defaults={"descripcion": "Cajero"}
-        )
+        self.rol_admin, _ = Roles.objects.get_or_create(nombre_rol="Administrador", defaults={"descripcion": "Admin"})
+        self.rol_cajero, _ = Roles.objects.get_or_create(nombre_rol="Cajero", defaults={"descripcion": "Cajero"})
         # Create Django admin user for authentication
         self.django_admin = User.objects.create_user(
             username="admin_view_branch_test",
@@ -146,6 +150,7 @@ class CambiarPasswordBranchesTest(TestCase):
     def _build_request(self, user, data):
         import json
         from django.test import RequestFactory
+
         rf = RequestFactory()
         request = rf.post("/", data=json.dumps(data), content_type="application/json")
         request.user = user
@@ -155,15 +160,14 @@ class CambiarPasswordBranchesTest(TestCase):
     def test_cambiar_password_empleado_no_encontrado(self):
         """Lines 821-822: Empleados.DoesNotExist → 404"""
         from apps.usuarios.views import EmpleadosViewSet
+
         # Create Django user but NO corresponding Empleados record
-        orphan_user = User.objects.create_user(
-            username="orphan_branch_test", password="orphanpass123"
-        )
+        orphan_user = User.objects.create_user(username="orphan_branch_test", password="orphanpass123")
         request = self._build_request(orphan_user, {"password": "NewPass1234!"})
         vs = EmpleadosViewSet()
         vs.kwargs = {}
         # Patch get_object to return the target empleado
-        with patch.object(EmpleadosViewSet, 'get_object', return_value=self.empleado_target):
+        with patch.object(EmpleadosViewSet, "get_object", return_value=self.empleado_target):
             response = vs.cambiar_password(request, pk=self.empleado_target.pk)
         # Should return 404 because orphan_user has no Empleados record
         self.assertEqual(response.status_code, 404)
@@ -172,52 +176,55 @@ class CambiarPasswordBranchesTest(TestCase):
     def test_cambiar_password_no_admin_role(self):
         """Lines 801-802: cajero doesn't have Admin role → 403"""
         from apps.usuarios.views import EmpleadosViewSet
+
         request = self._build_request(self.django_cajero, {"password": "NewPass1234!"})
         vs = EmpleadosViewSet()
-        with patch.object(EmpleadosViewSet, 'get_object', return_value=self.empleado_target):
+        with patch.object(EmpleadosViewSet, "get_object", return_value=self.empleado_target):
             response = vs.cambiar_password(request, pk=self.empleado_target.pk)
         self.assertEqual(response.status_code, 403)
 
     def test_cambiar_password_missing_password_field(self):
         """Lines 756: no password provided → 400"""
         from apps.usuarios.views import EmpleadosViewSet
+
         request = self._build_request(self.django_admin, {})
         vs = EmpleadosViewSet()
-        with patch.object(EmpleadosViewSet, 'get_object', return_value=self.empleado_target):
+        with patch.object(EmpleadosViewSet, "get_object", return_value=self.empleado_target):
             response = vs.cambiar_password(request, pk=self.empleado_target.pk)
         self.assertEqual(response.status_code, 400)
 
     def test_cambiar_password_too_short(self):
         """Short password → 400"""
         from apps.usuarios.views import EmpleadosViewSet
+
         request = self._build_request(self.django_admin, {"password": "abc"})
         vs = EmpleadosViewSet()
-        with patch.object(EmpleadosViewSet, 'get_object', return_value=self.empleado_target):
+        with patch.object(EmpleadosViewSet, "get_object", return_value=self.empleado_target):
             response = vs.cambiar_password(request, pk=self.empleado_target.pk)
         self.assertEqual(response.status_code, 400)
 
     def test_cambiar_password_success_no_django_user(self):
         """Lines 838-839: Django User.DoesNotExist is silently passed; success 200"""
         from apps.usuarios.views import EmpleadosViewSet
+
         # Ensure target has no Django User
         User.objects.filter(username=self.empleado_target.usuario).delete()
         request = self._build_request(self.django_admin, {"password": "ValidPass123!"})
         vs = EmpleadosViewSet()
-        with patch.object(EmpleadosViewSet, 'get_object', return_value=self.empleado_target):
+        with patch.object(EmpleadosViewSet, "get_object", return_value=self.empleado_target):
             response = vs.cambiar_password(request, pk=self.empleado_target.pk)
         self.assertEqual(response.status_code, 200)
 
     def test_cambiar_password_success_with_django_user(self):
         """Line 847: Django User exists and password is updated → 200"""
         from apps.usuarios.views import EmpleadosViewSet
+
         # Create Django user for target
         User.objects.filter(username=self.empleado_target.usuario).delete()
-        django_target = User.objects.create_user(
-            username=self.empleado_target.usuario, password="oldpass123"
-        )
+        django_target = User.objects.create_user(username=self.empleado_target.usuario, password="oldpass123")
         request = self._build_request(self.django_admin, {"password": "ValidPass456!"})
         vs = EmpleadosViewSet()
-        with patch.object(EmpleadosViewSet, 'get_object', return_value=self.empleado_target):
+        with patch.object(EmpleadosViewSet, "get_object", return_value=self.empleado_target):
             response = vs.cambiar_password(request, pk=self.empleado_target.pk)
         self.assertEqual(response.status_code, 200)
         django_target.delete()
@@ -231,9 +238,7 @@ class EmpleadosCreateSerializerInvalidTest(TestCase):
     """
 
     def setUp(self):
-        self.django_user = User.objects.create_user(
-            username="create_serial_test_user", password="test1234"
-        )
+        self.django_user = User.objects.create_user(username="create_serial_test_user", password="test1234")
 
     def test_create_invalid_serializer_returns_400(self):
         """Branch 753->756: valid manual checks but invalid serializer → 400."""
@@ -264,19 +269,19 @@ class PermisosViewSetBranchTest(TestCase):
 
     def setUp(self):
         from apps.usuarios.models import Roles
+
         self.factory = RequestFactory()
         self.rol, _ = Roles.objects.get_or_create(
             nombre_rol="Admin_perm_branch",
             defaults={"descripcion": "Admin"},
         )
-        self.django_user = User.objects.create_user(
-            username="perm_branch_test_user", password="test1234"
-        )
+        self.django_user = User.objects.create_user(username="perm_branch_test_user", password="test1234")
 
     def test_asignar_a_rol_not_found_returns_404(self):
         """Lines 538-541: Roles.DoesNotExist raises - 404 is returned"""
         from apps.usuarios.views import PermisosViewSet
         from rest_framework.test import APIRequestFactory
+
         factory = APIRequestFactory()
         request = factory.post("/", {"id_rol": 99999, "codigo_permiso": "ventas.crear"})
         request.user = self.django_user

@@ -3,6 +3,7 @@ Clase de autenticación DRF para usuarios del portal (clientes).
 
 Registrada junto a JWTAuthentication en la configuración de cada vista portal.
 """
+
 import jwt
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed

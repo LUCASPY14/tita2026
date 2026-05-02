@@ -489,9 +489,7 @@ def validar_motivo_rechazo(valor, estado):
     """
     if estado == "Rechazado":
         if valor is None or valor == "":
-            raise ValidationError(
-                "El motivo de rechazo es obligatorio cuando el estado es Rechazado."
-            )
+            raise ValidationError("El motivo de rechazo es obligatorio cuando el estado es Rechazado.")
 
         if len(str(valor)) < 10:
             raise ValidationError("El motivo de rechazo debe tener al menos 10 caracteres.")
@@ -501,9 +499,7 @@ def validar_motivo_rechazo(valor, estado):
     else:
         # Si el estado no es Rechazado, el motivo debe estar vacío
         if valor is not None and valor != "":
-            raise ValidationError(
-                "El motivo de rechazo solo debe proporcionarse cuando el estado es Rechazado."
-            )
+            raise ValidationError("El motivo de rechazo solo debe proporcionarse cuando el estado es Rechazado.")
 
 
 def validar_limite_registros_diarios(id_hijo, fecha_consumo, registro_actual_id=None):
@@ -758,9 +754,7 @@ def validar_forma_cobro(valor):
     ]
 
     if valor not in formas_validas:
-        raise ValidationError(
-            f'Forma de cobro inválida. Valores permitidos: {", ".join(formas_validas)}'
-        )
+        raise ValidationError(f'Forma de cobro inválida. Valores permitidos: {", ".join(formas_validas)}')
 
 
 def validar_monto_pagado_cuenta(valor):
@@ -949,9 +943,7 @@ def validar_medio_pago(valor):
     medios_validos = ["Efectivo", "Transferencia", "Tarjeta Débito", "Tarjeta Crédito", "Cheque"]
 
     if valor not in medios_validos:
-        raise ValidationError(
-            f'Medio de pago inválido. Valores permitidos: {", ".join(medios_validos)}'
-        )
+        raise ValidationError(f'Medio de pago inválido. Valores permitidos: {", ".join(medios_validos)}')
 
 
 def validar_referencia_pago(valor):
@@ -1106,9 +1098,7 @@ def validar_nivel_severidad_alergeno(valor):
     niveles_validos = ["Baja", "Media", "Alta", "Crítica"]
 
     if valor not in niveles_validos:
-        raise ValidationError(
-            f'Nivel de severidad inválido. Valores permitidos: {", ".join(niveles_validos)}'
-        )
+        raise ValidationError(f'Nivel de severidad inválido. Valores permitidos: {", ".join(niveles_validos)}')
 
 
 def validar_icono_alergeno(valor):

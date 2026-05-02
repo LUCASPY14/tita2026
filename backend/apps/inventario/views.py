@@ -26,7 +26,7 @@ class StockUnicoViewSet(viewsets.ModelViewSet):
     - Otros: Solo lectura
     """
 
-    queryset = StockUnico.objects.all().order_by('id_stock')
+    queryset = StockUnico.objects.all().order_by("id_stock")
     serializer_class = StockUnicoSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     throttle_classes = [BurstRateThrottle]
@@ -321,9 +321,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
         fecha_desde = timezone.now() - timedelta(days=periodo_dias)
 
         # Ajustes de merma
-        ajustes = AjustesInventario.objects.filter(
-            tipo_ajuste="Merma", estado="Aprobado", fecha_hora__gte=fecha_desde
-        )
+        ajustes = AjustesInventario.objects.filter(tipo_ajuste="Merma", estado="Aprobado", fecha_hora__gte=fecha_desde)
 
         total_mermas = ajustes.count()
 
@@ -361,9 +359,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
 
         # Ordenar por frecuencia
         causas = []
-        for motivo, datos in sorted(
-            motivos_clasificados.items(), key=lambda x: x[1]["frecuencia"], reverse=True
-        ):
+        for motivo, datos in sorted(motivos_clasificados.items(), key=lambda x: x[1]["frecuencia"], reverse=True):
             porcentaje = (datos["frecuencia"] / total_mermas * 100) if total_mermas > 0 else 0
 
             causas.append(
@@ -413,9 +409,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
         dias_adelante = int(request.query_params.get("dias", 7))
 
         if not id_producto:
-            return Response(
-                {"error": "Parámetro id_producto es requerido"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Parámetro id_producto es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             producto = Productos.objects.get(id_producto=id_producto)
@@ -423,19 +417,13 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
             return Response({"error": "Producto no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
         # Obtener estadísticas básicas
-        estadisticas = StockForecastingService.calcular_estadisticas_basicas(
-            int(id_producto), dias=30
-        )
+        estadisticas = StockForecastingService.calcular_estadisticas_basicas(int(id_producto), dias=30)
 
         # Generar predicciones
-        predicciones = StockForecastingService.predecir_demanda_simple(
-            int(id_producto), dias_adelante=dias_adelante
-        )
+        predicciones = StockForecastingService.predecir_demanda_simple(int(id_producto), dias_adelante=dias_adelante)
 
         # Analizar estacionalidad
-        patron_estacional = StockForecastingService.analizar_estacionalidad(
-            int(id_producto), dias=90
-        )
+        patron_estacional = StockForecastingService.analizar_estacionalidad(int(id_producto), dias=90)
 
         return Response(
             {
@@ -477,9 +465,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
         lead_time = int(request.query_params.get("lead_time", 7))
 
         if not id_producto:
-            return Response(
-                {"error": "Parámetro id_producto es requerido"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Parámetro id_producto es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             producto = Productos.objects.get(id_producto=id_producto)
@@ -490,9 +476,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
             stock_actual = Decimal("0")
 
         # Calcular punto de reorden
-        resultado = StockForecastingService.calcular_punto_reorden(
-            int(id_producto), lead_time_dias=lead_time
-        )
+        resultado = StockForecastingService.calcular_punto_reorden(int(id_producto), lead_time_dias=lead_time)
 
         # Determinar estado del stock
         if "error" not in resultado:
@@ -525,9 +509,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
                 "stock_actual": stock_actual,
                 "punto_reorden_calculado": resultado.get("punto_reorden", Decimal("0")),
                 "stock_seguridad": resultado.get("stock_seguridad", Decimal("0")),
-                "demanda_durante_lead_time": resultado.get(
-                    "demanda_durante_lead_time", Decimal("0")
-                ),
+                "demanda_durante_lead_time": resultado.get("demanda_durante_lead_time", Decimal("0")),
                 "lead_time_dias": lead_time,
                 "estado": estado,
                 "nivel_urgencia": nivel_urgencia,
@@ -568,9 +550,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
         dias = int(request.query_params.get("dias", 30))
 
         if not id_producto:
-            return Response(
-                {"error": "Parámetro id_producto es requerido"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Parámetro id_producto es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             producto = Productos.objects.get(id_producto=id_producto)
@@ -631,9 +611,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
         dias_cobertura = int(request.query_params.get("dias_cobertura", 14))
 
         if not id_producto:
-            return Response(
-                {"error": "Parámetro id_producto es requerido"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Parámetro id_producto es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             producto = Productos.objects.get(id_producto=id_producto)
@@ -671,9 +649,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
                 "dias_cobertura_actual": recomendacion.get("dias_cobertura_actual", 0),
                 "dias_cobertura_deseada": dias_cobertura,
                 "prediccion_agotamiento": recomendacion.get("prediccion_agotamiento"),
-                "demanda_diaria_estimada": recomendacion.get(
-                    "demanda_diaria_estimada", Decimal("0")
-                ),
+                "demanda_diaria_estimada": recomendacion.get("demanda_diaria_estimada", Decimal("0")),
                 "punto_reorden": recomendacion.get("punto_reorden", Decimal("0")),
                 "justificacion": recomendacion.get("justificacion", "Sin datos suficientes"),
             }
@@ -700,9 +676,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
         id_producto = request.query_params.get("id_producto")
 
         if not id_producto:
-            return Response(
-                {"error": "Parámetro id_producto es requerido"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Parámetro id_producto es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             producto = Productos.objects.get(id_producto=id_producto)
@@ -713,17 +687,11 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
             stock_actual = Decimal("0")
 
         # Ejecutar todos los análisis
-        estadisticas = StockForecastingService.calcular_estadisticas_basicas(
-            int(id_producto), dias=30
-        )
+        estadisticas = StockForecastingService.calcular_estadisticas_basicas(int(id_producto), dias=30)
 
-        predicciones = StockForecastingService.predecir_demanda_simple(
-            int(id_producto), dias_adelante=7
-        )
+        predicciones = StockForecastingService.predecir_demanda_simple(int(id_producto), dias_adelante=7)
 
-        punto_reorden_data = StockForecastingService.calcular_punto_reorden(
-            int(id_producto), lead_time_dias=7
-        )
+        punto_reorden_data = StockForecastingService.calcular_punto_reorden(int(id_producto), lead_time_dias=7)
 
         anomalias = StockForecastingService.detectar_anomalias(int(id_producto), dias=30)
 
@@ -731,14 +699,10 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
             int(id_producto), stock_actual=stock_actual, dias_cobertura_deseada=14
         )
 
-        patron_estacional = StockForecastingService.analizar_estacionalidad(
-            int(id_producto), dias=90
-        )
+        patron_estacional = StockForecastingService.analizar_estacionalidad(int(id_producto), dias=90)
 
         # Calcular demanda total predicha (7 días)
-        demanda_total_7dias = (
-            sum(p["demanda_predicha"] for p in predicciones) if predicciones else Decimal("0")
-        )
+        demanda_total_7dias = sum(p["demanda_predicha"] for p in predicciones) if predicciones else Decimal("0")
 
         return Response(
             {
@@ -750,9 +714,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
                     "stock_minimo": producto.stock_minimo,
                 },
                 "resumen": {
-                    "demanda_diaria_promedio": estadisticas.get(
-                        "demanda_promedio_diaria", Decimal("0")
-                    ),
+                    "demanda_diaria_promedio": estadisticas.get("demanda_promedio_diaria", Decimal("0")),
                     "demanda_predicha_7dias": demanda_total_7dias,
                     "tendencia": estadisticas.get("tendencia", "sin_datos"),
                     "tiene_estacionalidad": patron_estacional.get("tiene_estacionalidad", False),

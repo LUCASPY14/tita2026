@@ -9,6 +9,7 @@ Cubre líneas faltantes:
 290-333 (obtener_rotacion_inventario),
 356-372 (AjusteInventarioService.crear_ajuste)
 """
+
 from django.test import TestCase, TransactionTestCase
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -67,6 +68,7 @@ def make_empleado(suffix=""):
 # validar_disponibilidad - líneas 47-48, 53-54
 # =============================================================================
 
+
 class ValidarDisponibilidadEdgeCasesTest(TestCase):
     """Cubre casos de borde en validar_disponibilidad"""
 
@@ -99,6 +101,7 @@ class ValidarDisponibilidadEdgeCasesTest(TestCase):
 # reservar_stock - línea 175-176 (StockUnico.DoesNotExist → crea stock)
 # =============================================================================
 
+
 class ReservarStockCreaNuevoTest(TransactionTestCase):
     """Cubre reservar_stock cuando no existe StockUnico"""
 
@@ -108,9 +111,7 @@ class ReservarStockCreaNuevoTest(TransactionTestCase):
 
     def test_reservar_sin_stock_existente_falla_antes_de_lock(self):
         """Sin StockUnico con permite_negativo=False → ValidationError del primer check"""
-        producto = make_producto(
-            self.categoria, self.unidad, self.impuesto, "nostock2", permite_negativo=False
-        )
+        producto = make_producto(self.categoria, self.unidad, self.impuesto, "nostock2", permite_negativo=False)
         # validar_disponibilidad retorna disponible=False → ValidationError antes del lock
         with self.assertRaises(ValidationError):
             StockService.reservar_stock(
@@ -122,9 +123,7 @@ class ReservarStockCreaNuevoTest(TransactionTestCase):
 
     def test_reservar_con_stock_negativo_activa_crea_si_no_existe(self):
         """Producto permite_negativo=True sin StockUnico → crea uno con 0 y descuenta"""
-        producto = make_producto(
-            self.categoria, self.unidad, self.impuesto, "negrsrv", permite_negativo=True
-        )
+        producto = make_producto(self.categoria, self.unidad, self.impuesto, "negrsrv", permite_negativo=True)
         stock = StockService.reservar_stock(
             producto_id=producto.id_producto,
             cantidad=Decimal("3.000"),
@@ -140,6 +139,7 @@ class ReservarStockCreaNuevoTest(TransactionTestCase):
 # obtener_productos_bajo_stock - línea 225-226 (bare except)
 # =============================================================================
 
+
 class ObtenerProductosBajoStockEdgeCasesTest(TestCase):
     """Cubre obtener_productos_bajo_stock incluyendo except bare"""
 
@@ -148,9 +148,7 @@ class ObtenerProductosBajoStockEdgeCasesTest(TestCase):
 
     def test_producto_sin_stock_attr_usa_cero(self):
         """Líneas 225-226: bare except → stock = 0. Producto bajo stock sin StockUnico."""
-        producto = make_producto(
-            self.categoria, self.unidad, self.impuesto, "bajostk", stock_minimo=Decimal("10.000")
-        )
+        producto = make_producto(self.categoria, self.unidad, self.impuesto, "bajostk", stock_minimo=Decimal("10.000"))
         # Creamos StockUnico con cantidad menor al mínimo
         StockUnico.objects.create(id_producto=producto, cantidad=Decimal("2.000"))
 
@@ -161,9 +159,7 @@ class ObtenerProductosBajoStockEdgeCasesTest(TestCase):
 
     def test_sin_productos_bajo_stock_retorna_lista_vacia(self):
         """Sin productos bajo stock → lista vacía"""
-        producto = make_producto(
-            self.categoria, self.unidad, self.impuesto, "bienstk", stock_minimo=Decimal("5.000")
-        )
+        producto = make_producto(self.categoria, self.unidad, self.impuesto, "bienstk", stock_minimo=Decimal("5.000"))
         StockUnico.objects.create(id_producto=producto, cantidad=Decimal("100.000"))
         resultado = StockService.obtener_productos_bajo_stock()
         ids = [r["id_producto"] for r in resultado]
@@ -173,6 +169,7 @@ class ObtenerProductosBajoStockEdgeCasesTest(TestCase):
 # =============================================================================
 # calcular_valor_inventario - líneas 253-271
 # =============================================================================
+
 
 class CalcularValorInventarioTest(TestCase):
     """Cubre calcular_valor_inventario"""
@@ -226,6 +223,7 @@ class CalcularValorInventarioTest(TestCase):
 # obtener_rotacion_inventario - líneas 290-333
 # =============================================================================
 
+
 class ObtenerRotacionInventarioTest(TestCase):
     """Cubre obtener_rotacion_inventario"""
 
@@ -243,9 +241,7 @@ class ObtenerRotacionInventarioTest(TestCase):
     def test_con_movimientos_venta_calcula_rotacion(self):
         """Con movimientos de venta egreso → calcula rotación"""
         producto = make_producto(self.categoria, self.unidad, self.impuesto, "rot")
-        stock = StockUnico.objects.create(
-            id_producto=producto, cantidad=Decimal("50.000")
-        )
+        stock = StockUnico.objects.create(id_producto=producto, cantidad=Decimal("50.000"))
 
         # Crear movimiento de venta
         MovimientosStock.objects.create(
@@ -293,6 +289,7 @@ class ObtenerRotacionInventarioTest(TestCase):
 # =============================================================================
 # AjusteInventarioService.crear_ajuste - líneas 356-372
 # =============================================================================
+
 
 class AjusteInventarioServiceTest(TestCase):
     """Cubre AjusteInventarioService.crear_ajuste"""

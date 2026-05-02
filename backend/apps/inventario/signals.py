@@ -269,13 +269,11 @@ def enviar_notificacion_alerta(sender, instance, created, **kwargs):
         )
 
         # Obtener gerentes y administradores para notificar
-        roles_a_notificar = Roles.objects.filter(
-            nombre_rol__in=["Administrador", "Gerente", "Admin"]
-        )
+        roles_a_notificar = Roles.objects.filter(nombre_rol__in=["Administrador", "Gerente", "Admin"])
 
-        empleados_a_notificar = Empleados.objects.filter(
-            id_rol__in=roles_a_notificar, estado=True
-        ).select_related("perfilesusuario")
+        empleados_a_notificar = Empleados.objects.filter(id_rol__in=roles_a_notificar, estado=True).select_related(
+            "perfilesusuario"
+        )
 
         notificaciones_creadas = 0
         emails_enviados = 0
@@ -318,6 +316,7 @@ def enviar_notificacion_alerta(sender, instance, created, **kwargs):
                     # Envío asíncrono vía Celery
                     try:
                         from apps.notificaciones.tasks import enviar_email_async
+
                         enviar_email_async.delay(
                             email_destinatario=empleado.email,
                             nombre_destinatario=f"{empleado.nombre} {empleado.apellido}",
@@ -399,9 +398,7 @@ def verificar_alertas_vencimiento(sender, instance, created, **kwargs):
 
     if tipo_alerta:
         # Verificar si ya existe alerta de este tipo para este lote
-        alerta_existente = AlertasVencimiento.objects.filter(
-            id_lote=instance, tipo_alerta=tipo_alerta
-        ).exists()
+        alerta_existente = AlertasVencimiento.objects.filter(id_lote=instance, tipo_alerta=tipo_alerta).exists()
 
         if not alerta_existente:
             AlertasVencimiento.objects.create(
@@ -440,9 +437,7 @@ def enviar_notificacion_vencimiento(sender, instance, created, **kwargs):
             "30_dias": ("baja", "ℹ️ RECORDATORIO", "Vence en 30 días"),
         }
 
-        prioridad, prefijo, contexto = urgencia_map.get(
-            instance.tipo_alerta, ("baja", "ℹ️", "Próximo a vencer")
-        )
+        prioridad, prefijo, contexto = urgencia_map.get(instance.tipo_alerta, ("baja", "ℹ️", "Próximo a vencer"))
 
         # Construir mensaje
         lote = instance.id_lote
@@ -473,9 +468,9 @@ def enviar_notificacion_vencimiento(sender, instance, created, **kwargs):
             nombre_rol__in=["Administrador", "Gerente", "Encargado de Compras", "Admin"]
         )
 
-        empleados_a_notificar = Empleados.objects.filter(
-            id_rol__in=roles_a_notificar, estado=True
-        ).select_related("perfilesusuario")
+        empleados_a_notificar = Empleados.objects.filter(id_rol__in=roles_a_notificar, estado=True).select_related(
+            "perfilesusuario"
+        )
 
         notificaciones_creadas = 0
 
@@ -516,9 +511,7 @@ def enviar_notificacion_vencimiento(sender, instance, created, **kwargs):
         print(f"   - Notificaciones: {notificaciones_creadas}")
 
         # Marcar como enviada
-        AlertasVencimiento.objects.filter(id_alerta=instance.id_alerta).update(
-            notificacion_enviada=True
-        )
+        AlertasVencimiento.objects.filter(id_alerta=instance.id_alerta).update(notificacion_enviada=True)
 
     except Exception as e:
         print(f"Error enviando notificacion de vencimiento: {e}")

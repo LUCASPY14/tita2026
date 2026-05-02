@@ -118,9 +118,7 @@ class AuthenticationService:
             return True, "Cuenta inactiva"
 
         # Buscar bloqueos activos
-        bloqueo_activo = BloqueosCuenta.objects.filter(
-            usuario=empleado.usuario, estado=True
-        ).first()
+        bloqueo_activo = BloqueosCuenta.objects.filter(usuario=empleado.usuario, estado=True).first()
 
         if bloqueo_activo:
             # Verificar si el bloqueo temporal ha expirado
@@ -134,9 +132,7 @@ class AuthenticationService:
         return False, None
 
     @staticmethod
-    def _bloquear_cuenta(
-        empleado: Empleados, motivo: str, ip_address: str, temporal: bool = True
-    ) -> BloqueosCuenta:
+    def _bloquear_cuenta(empleado: Empleados, motivo: str, ip_address: str, temporal: bool = True) -> BloqueosCuenta:
         """
         Bloquea una cuenta de empleado.
 
@@ -151,9 +147,7 @@ class AuthenticationService:
         """
         fecha_desbloqueo = None
         if temporal:
-            fecha_desbloqueo = timezone.now() + timedelta(
-                minutes=AuthenticationService.TIEMPO_BLOQUEO_MINUTOS
-            )
+            fecha_desbloqueo = timezone.now() + timedelta(minutes=AuthenticationService.TIEMPO_BLOQUEO_MINUTOS)
 
         bloqueo = BloqueosCuenta.objects.create(
             usuario=empleado.usuario,
@@ -309,14 +303,10 @@ class AuthenticationService:
             # Verificar contraseña
             if not AuthenticationService._verify_password(password, empleado.contrasena_hash):
                 # Contraseña incorrecta
-                AuthenticationService._registrar_intento_login(
-                    empleado, ip_address, False, "Contraseña incorrecta"
-                )
+                AuthenticationService._registrar_intento_login(empleado, ip_address, False, "Contraseña incorrecta")
 
                 # Contar intentos fallidos recientes
-                intentos_fallidos = AuthenticationService._contar_intentos_fallidos_recientes(
-                    empleado
-                )
+                intentos_fallidos = AuthenticationService._contar_intentos_fallidos_recientes(empleado)
 
                 if intentos_fallidos >= AuthenticationService.MAX_LOGIN_INTENTOS - 1:
                     # Bloquear cuenta
@@ -336,9 +326,7 @@ class AuthenticationService:
                     "success": False,
                     "mensaje": "Credenciales inválidas",
                     "codigo": "CREDENCIALES_INVALIDAS",
-                    "intentos_restantes": AuthenticationService.MAX_LOGIN_INTENTOS
-                    - intentos_fallidos
-                    - 1,
+                    "intentos_restantes": AuthenticationService.MAX_LOGIN_INTENTOS - intentos_fallidos - 1,
                 }
 
             # Login exitoso
@@ -442,9 +430,7 @@ class AuthenticationService:
 
     @staticmethod
     @transaction.atomic
-    def cambiar_password(
-        empleado: Empleados, password_actual: str, password_nueva: str, ip_address: str
-    ) -> Dict:
+    def cambiar_password(empleado: Empleados, password_actual: str, password_nueva: str, ip_address: str) -> Dict:
         """
         Cambia la contraseña de un empleado.
 
@@ -453,15 +439,11 @@ class AuthenticationService:
         """
         try:
             # Verificar contraseña actual
-            if not AuthenticationService._verify_password(
-                password_actual, empleado.contrasena_hash
-            ):
+            if not AuthenticationService._verify_password(password_actual, empleado.contrasena_hash):
                 return {"success": False, "mensaje": "Contraseña actual incorrecta"}
 
             # Validar fortaleza de nueva contraseña
-            es_valida, mensaje_error = AuthenticationService.validar_fortaleza_password(
-                password_nueva
-            )
+            es_valida, mensaje_error = AuthenticationService.validar_fortaleza_password(password_nueva)
             if not es_valida:
                 return {"success": False, "mensaje": mensaje_error}
 
@@ -496,9 +478,7 @@ class AuthenticationService:
             )
 
             # Invalidar todas las sesiones activas (forzar re-login)
-            SesionesActivas.objects.filter(usuario=empleado.usuario, activa=True).update(
-                activa=False
-            )
+            SesionesActivas.objects.filter(usuario=empleado.usuario, activa=True).update(activa=False)
 
             return {
                 "success": True,

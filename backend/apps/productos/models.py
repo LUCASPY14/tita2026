@@ -12,32 +12,33 @@ class ProductosManager(models.Manager):
 
     def _prepare_kwargs(self, kwargs):
         """Normaliza kwargs para crear un Producto."""
-        is_legacy = 'nombre' in kwargs or 'codigo' in kwargs or 'precio_venta' in kwargs
-        if 'nombre' in kwargs and 'descripcion' not in kwargs:
-            kwargs['descripcion'] = kwargs.pop('nombre')
-        elif 'nombre' in kwargs:
-            kwargs.pop('nombre')
+        is_legacy = "nombre" in kwargs or "codigo" in kwargs or "precio_venta" in kwargs
+        if "nombre" in kwargs and "descripcion" not in kwargs:
+            kwargs["descripcion"] = kwargs.pop("nombre")
+        elif "nombre" in kwargs:
+            kwargs.pop("nombre")
         # precio_venta no existe en el modelo, ignorar
-        kwargs.pop('precio_venta', None)
+        kwargs.pop("precio_venta", None)
         # Si no se provee id_impuesto, crear/obtener uno por defecto
-        if 'id_impuesto' not in kwargs and 'id_impuesto_id' not in kwargs:
+        if "id_impuesto" not in kwargs and "id_impuesto_id" not in kwargs:
             from apps.contabilidad.models import Impuestos
             from datetime import date
+
             impuesto, _ = Impuestos.objects.get_or_create(
-                nombre_impuesto='IVA 0%',
-                defaults={'porcentaje': 0, 'vigente_desde': date(2020, 1, 1), 'estado': True},
+                nombre_impuesto="IVA 0%",
+                defaults={"porcentaje": 0, "vigente_desde": date(2020, 1, 1), "estado": True},
             )
-            kwargs['id_impuesto'] = impuesto
+            kwargs["id_impuesto"] = impuesto
         # Si no se provee id_categoria, crear/obtener una por defecto
-        if 'id_categoria' not in kwargs and 'id_categoria_id' not in kwargs:
+        if "id_categoria" not in kwargs and "id_categoria_id" not in kwargs:
             categoria, _ = Categorias.objects.get_or_create(
-                nombre='General',
-                defaults={'estado': True},
+                nombre="General",
+                defaults={"estado": True},
             )
-            kwargs['id_categoria'] = categoria
+            kwargs["id_categoria"] = categoria
         # Si es creación legacy, permitir stock negativo para evitar errores en tests
-        if is_legacy and 'permite_stock_negativo' not in kwargs:
-            kwargs['permite_stock_negativo'] = True
+        if is_legacy and "permite_stock_negativo" not in kwargs:
+            kwargs["permite_stock_negativo"] = True
         return kwargs
 
     def create(self, **kwargs):
@@ -75,8 +76,12 @@ class Productos(models.Model):
         default=False, help_text="True si permite vender aún sin stock disponible"
     )
     estado = models.BooleanField(default=True, help_text="True=Activo, False=Inactivo")
-    es_servicio = models.BooleanField(default=False, help_text="True si es un servicio (no requiere control de stock físico)")
-    requiere_stock = models.BooleanField(default=True, help_text="True si debe controlar stock, False si es producto sin gestión de inventario")
+    es_servicio = models.BooleanField(
+        default=False, help_text="True si es un servicio (no requiere control de stock físico)"
+    )
+    requiere_stock = models.BooleanField(
+        default=True, help_text="True si debe controlar stock, False si es producto sin gestión de inventario"
+    )
     id_categoria = models.ForeignKey(
         "Categorias", models.DO_NOTHING, db_column="id_categoria", related_name="productos"
     )
@@ -102,11 +107,11 @@ class Productos(models.Model):
         verbose_name_plural = "Productos"
         ordering = ["descripcion"]
         indexes = [
-            models.Index(fields=['codigo_barra'], name='idx_productos_cod_barra'),
-            models.Index(fields=['codigo'], name='idx_productos_codigo'),
-            models.Index(fields=['descripcion'], name='idx_productos_desc'),
-            models.Index(fields=['estado', 'id_categoria'], name='idx_productos_estado_cat'),
-            models.Index(fields=['id_categoria'], name='idx_productos_categoria'),
+            models.Index(fields=["codigo_barra"], name="idx_productos_cod_barra"),
+            models.Index(fields=["codigo"], name="idx_productos_codigo"),
+            models.Index(fields=["descripcion"], name="idx_productos_desc"),
+            models.Index(fields=["estado", "id_categoria"], name="idx_productos_estado_cat"),
+            models.Index(fields=["id_categoria"], name="idx_productos_categoria"),
         ]
         verbose_name_plural = "Productos"
         ordering = ["descripcion"]
@@ -130,10 +135,10 @@ class Productos(models.Model):
     @property
     def precio_venta(self):
         """Retorna precio de venta del primer precio disponible o 0"""
-        precio = self.precios.order_by('id_precio').first()
+        precio = self.precios.order_by("id_precio").first()
         if precio:
             return precio.precio_unitario
-        return Decimal('0.00')
+        return Decimal("0.00")
 
     @property
     def nombre(self):
@@ -144,10 +149,10 @@ class CategoriasManager(models.Manager):
     """Manager que maneja alias de campos legacy para Categorias."""
 
     def create(self, **kwargs):
-        if 'nombre_categoria' in kwargs and 'nombre' not in kwargs:
-            kwargs['nombre'] = kwargs.pop('nombre_categoria')
-        elif 'nombre_categoria' in kwargs:
-            kwargs.pop('nombre_categoria')
+        if "nombre_categoria" in kwargs and "nombre" not in kwargs:
+            kwargs["nombre"] = kwargs.pop("nombre_categoria")
+        elif "nombre_categoria" in kwargs:
+            kwargs.pop("nombre_categoria")
         return super().create(**kwargs)
 
 
@@ -224,12 +229,8 @@ class ListasPrecios(models.Model):
     """
 
     id_lista = models.AutoField(primary_key=True)
-    nombre_lista = models.CharField(
-        unique=True, max_length=100, help_text="Nombre de la lista de precios"
-    )
-    fecha_vigencia = models.DateField(
-        blank=True, null=True, help_text="Fecha desde la cual es válida"
-    )
+    nombre_lista = models.CharField(unique=True, max_length=100, help_text="Nombre de la lista de precios")
+    fecha_vigencia = models.DateField(blank=True, null=True, help_text="Fecha desde la cual es válida")
     moneda = models.CharField(max_length=3, default="PYG", help_text="Código de moneda (PYG, USD)")
     estado = models.BooleanField(default=True)
 
@@ -257,15 +258,9 @@ class PreciosPorLista(models.Model):
     precio_unitario = models.DecimalField(
         max_digits=12, decimal_places=2, help_text="Precio del producto en esta lista"
     )
-    fecha_vigencia = models.DateTimeField(
-        auto_now_add=True, help_text="Fecha desde la cual es válido este precio"
-    )
-    id_lista = models.ForeignKey(
-        "ListasPrecios", models.DO_NOTHING, db_column="id_lista", related_name="precios"
-    )
-    id_producto = models.ForeignKey(
-        "Productos", models.DO_NOTHING, db_column="id_producto", related_name="precios"
-    )
+    fecha_vigencia = models.DateTimeField(auto_now_add=True, help_text="Fecha desde la cual es válido este precio")
+    id_lista = models.ForeignKey("ListasPrecios", models.DO_NOTHING, db_column="id_lista", related_name="precios")
+    id_producto = models.ForeignKey("Productos", models.DO_NOTHING, db_column="id_producto", related_name="precios")
 
     class Meta:
         managed = True

@@ -72,8 +72,7 @@ class PlantillasReporteAdmin(admin.ModelAdmin):
         }
         color = colores.get(obj.frecuencia, "gray")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; '
-            'border-radius: 3px;">{}</span>',
+            '<span style="background-color: {}; color: white; padding: 3px 10px; ' 'border-radius: 3px;">{}</span>',
             color,
             obj.frecuencia,
         )
@@ -86,12 +85,11 @@ class PlantillasReporteAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
                 'border-radius: 3px;">{}</span>',
-                '✓ estado'
+                "✓ estado",
             )
         return format_html(
-            '<span style="background-color: red; color: white; padding: 3px 10px; '
-            'border-radius: 3px;">{}</span>',
-            '✗ Inactivo'
+            '<span style="background-color: red; color: white; padding: 3px 10px; ' 'border-radius: 3px;">{}</span>',
+            "✗ Inactivo",
         )
 
     activo_badge.short_description = "Estado"
@@ -129,12 +127,11 @@ class DashboardsAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
                 'border-radius: 3px;">{}</span>',
-                '🌐 Público'
+                "🌐 Público",
             )
         return format_html(
-            '<span style="background-color: gray; color: white; padding: 3px 10px; '
-            'border-radius: 3px;">{}</span>',
-            '🔒 Privado'
+            '<span style="background-color: gray; color: white; padding: 3px 10px; ' 'border-radius: 3px;">{}</span>',
+            "🔒 Privado",
         )
 
     es_publico_badge.short_description = "Acceso"
@@ -145,12 +142,12 @@ class DashboardsAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background-color: blue; color: white; padding: 3px 10px; '
                 'border-radius: 3px;">{}</span>',
-                '⭐ Predeterminado'
+                "⭐ Predeterminado",
             )
         return format_html(
             '<span style="background-color: lightgray; color: black; padding: 3px 10px; '
             'border-radius: 3px;">{}</span>',
-            'Normal'
+            "Normal",
         )
 
     predeterminado_badge.short_description = "Tipo"
@@ -161,12 +158,11 @@ class DashboardsAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
                 'border-radius: 3px;">{}</span>',
-                '✓ estado'
+                "✓ estado",
             )
         return format_html(
-            '<span style="background-color: red; color: white; padding: 3px 10px; '
-            'border-radius: 3px;">{}</span>',
-            '✗ Inactivo'
+            '<span style="background-color: red; color: white; padding: 3px 10px; ' 'border-radius: 3px;">{}</span>',
+            "✗ Inactivo",
         )
 
     activo_badge.short_description = "Estado"
@@ -221,8 +217,7 @@ class KpiMetricasAdmin(admin.ModelAdmin):
         }
         color = colores.get(obj.categoria, "gray")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; '
-            'border-radius: 3px;">{}</span>',
+            '<span style="background-color: {}; color: white; padding: 3px 10px; ' 'border-radius: 3px;">{}</span>',
             color,
             obj.categoria,
         )
@@ -240,8 +235,7 @@ class KpiMetricasAdmin(admin.ModelAdmin):
         }
         color = colores.get(obj.frecuencia, "gray")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; '
-            'border-radius: 3px;">{}</span>',
+            '<span style="background-color: {}; color: white; padding: 3px 10px; ' 'border-radius: 3px;">{}</span>',
             color,
             obj.frecuencia,
         )
@@ -254,12 +248,11 @@ class KpiMetricasAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
                 'border-radius: 3px;">{}</span>',
-                '✓ estado'
+                "✓ estado",
             )
         return format_html(
-            '<span style="background-color: red; color: white; padding: 3px 10px; '
-            'border-radius: 3px;">{}</span>',
-            '✗ Inactivo'
+            '<span style="background-color: red; color: white; padding: 3px 10px; ' 'border-radius: 3px;">{}</span>',
+            "✗ Inactivo",
         )
 
     activo_badge.short_description = "Estado"
@@ -296,12 +289,11 @@ class ValoresKpiAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background-color: blue; color: white; padding: 3px 10px; '
                 'border-radius: 3px;">{}</span>',
-                '🤖 Auto'
+                "🤖 Auto",
             )
         return format_html(
-            '<span style="background-color: gray; color: white; padding: 3px 10px; '
-            'border-radius: 3px;">{}</span>',
-            '👤 Manual'
+            '<span style="background-color: gray; color: white; padding: 3px 10px; ' 'border-radius: 3px;">{}</span>',
+            "👤 Manual",
         )
 
     auto_calc_badge.short_description = "Tipo"
@@ -379,8 +371,7 @@ class PlantillasTareaAdmin(admin.ModelAdmin):
         }
         color = colores.get(obj.frecuencia, "gray")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; '
-            'border-radius: 3px;">{}</span>',
+            '<span style="background-color: {}; color: white; padding: 3px 10px; ' 'border-radius: 3px;">{}</span>',
             color,
             obj.frecuencia,
         )
@@ -418,12 +409,11 @@ class PlantillasTareaAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
                 'border-radius: 3px;">{}</span>',
-                '✓ estado'
+                "✓ estado",
             )
         return format_html(
-            '<span style="background-color: red; color: white; padding: 3px 10px; '
-            'border-radius: 3px;">{}</span>',
-            '✗ Inactivo'
+            '<span style="background-color: red; color: white; padding: 3px 10px; ' 'border-radius: 3px;">{}</span>',
+            "✗ Inactivo",
         )
 
     activo_badge.short_description = "Estado"
@@ -535,12 +525,12 @@ class DestinatariosTareaAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
                 'border-radius: 3px;">{}</span>',
-                '✓'
+                "✓",
             )
         return format_html(
             '<span style="background-color: lightgray; color: black; padding: 3px 10px; '
             'border-radius: 3px;">{}</span>',
-            '✗'
+            "✗",
         )
 
     notif_inicio_badge.short_description = "Inicio"
@@ -551,12 +541,12 @@ class DestinatariosTareaAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background-color: green; color: white; padding: 3px 10px; '
                 'border-radius: 3px;">{}</span>',
-                '✓'
+                "✓",
             )
         return format_html(
             '<span style="background-color: lightgray; color: black; padding: 3px 10px; '
             'border-radius: 3px;">{}</span>',
-            '✗'
+            "✗",
         )
 
     notif_fin_badge.short_description = "Fin"
@@ -567,12 +557,12 @@ class DestinatariosTareaAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background-color: red; color: white; padding: 3px 10px; '
                 'border-radius: 3px;">{}</span>',
-                '✓'
+                "✓",
             )
         return format_html(
             '<span style="background-color: lightgray; color: black; padding: 3px 10px; '
             'border-radius: 3px;">{}</span>',
-            '✗'
+            "✗",
         )
 
     notif_error_badge.short_description = "Error"

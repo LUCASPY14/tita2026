@@ -17,9 +17,7 @@ class TarjetasModelTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Estudiantes", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Estudiantes", moneda="PYG", estado=True)
 
         # Crear tipo de cliente
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
@@ -205,10 +203,11 @@ class CargasSaldoModelTest(TestCase):
     def test_codigo_referencia_alias(self):
         """codigo_referencia es alias de custom_identifier."""
         from django.utils import timezone as tz
+
         carga = CargasSaldo.objects.create(
             fecha_carga=tz.now(),
-            monto_cargado=Decimal('50000'),
-            estado='Completado',
-            custom_identifier='REF-2026-001',
+            monto_cargado=Decimal("50000"),
+            estado="Completado",
+            custom_identifier="REF-2026-001",
         )
-        self.assertEqual(carga.codigo_referencia, 'REF-2026-001')
+        self.assertEqual(carga.codigo_referencia, "REF-2026-001")

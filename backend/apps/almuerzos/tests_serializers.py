@@ -138,9 +138,7 @@ class SuscripcionesAlmuerzoSerializerTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Estudiantes", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Estudiantes", moneda="PYG", estado=True)
 
         # Crear tipo de cliente
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
@@ -250,9 +248,7 @@ class CuentasAlmuerzoMensualSerializerTest(TestCase):
     """Tests for CuentasAlmuerzoMensualSerializer (lines 56-59: except Exception)."""
 
     def setUp(self):
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Almuerzo Cuenta", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Almuerzo Cuenta", moneda="PYG", estado=True)
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Cuenta",
@@ -274,6 +270,7 @@ class CuentasAlmuerzoMensualSerializerTest(TestCase):
     def test_get_hijo_nombre_returns_full_name(self):
         """get_hijo_nombre returns 'nombre apellido' when hijo exists."""
         from django.utils import timezone as tz
+
         cuenta = CuentasAlmuerzoMensual.objects.create(
             anio=2026,
             mes=3,
@@ -299,14 +296,16 @@ class CuentasAlmuerzoMensualSerializerTest(TestCase):
             forma_cobro="mensual",
             monto_pagado="0.00",
             estado="estado",
-            fecha_generacion=__import__('datetime').date.today(),
-            fecha_actualizacion=__import__('django.utils.timezone', fromlist=['timezone']).now(),
+            fecha_generacion=__import__("datetime").date.today(),
+            fecha_actualizacion=__import__("django.utils.timezone", fromlist=["timezone"]).now(),
             id_hijo=self.hijo,
         )
         # Mock id_hijo to raise on attribute access
         from unittest.mock import PropertyMock, patch
+
         with patch.object(
-            type(cuenta), "id_hijo",
+            type(cuenta),
+            "id_hijo",
             new_callable=PropertyMock,
             side_effect=Exception("hijo error"),
         ):
@@ -319,12 +318,8 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
 
     def setUp(self):
         """Setup inicial para tests de RegistrosConsumoAlmuerzo"""
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Registro", moneda="PYG", estado=True
-        )
-        self.tipo_cliente = TiposCliente.objects.create(
-            nombre_tipo="Padre Registro", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Registro", moneda="PYG", estado=True)
+        self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre Registro", estado=True)
         self.cliente = Clientes.objects.create(
             nombres="Registro",
             apellidos="Padre",
@@ -353,7 +348,7 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
         """get_nro_registro_hoy debe retornar 1 para el primer registro del día"""
         from apps.almuerzos.models import RegistrosConsumoAlmuerzo
         from apps.almuerzos.serializers import RegistrosConsumoAlmuerzoSerializer
-        
+
         hoy = timezone.now().date()
         registro = RegistrosConsumoAlmuerzo.objects.create(
             fecha_consumo=hoy,
@@ -365,7 +360,7 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
             id_hijo=self.hijo,
             id_tipo_almuerzo=self.tipo_almuerzo,
         )
-        
+
         serializer = RegistrosConsumoAlmuerzoSerializer(registro)
         self.assertEqual(serializer.data["nro_registro_hoy"], 1)
 
@@ -373,9 +368,9 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
         """get_nro_registro_hoy debe retornar 2 para el segundo registro del día"""
         from apps.almuerzos.models import RegistrosConsumoAlmuerzo
         from apps.almuerzos.serializers import RegistrosConsumoAlmuerzoSerializer
-        
+
         hoy = timezone.now().date()
-        
+
         # Crear primer registro
         registro1 = RegistrosConsumoAlmuerzo.objects.create(
             fecha_consumo=hoy,
@@ -387,7 +382,7 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
             id_hijo=self.hijo,
             id_tipo_almuerzo=self.tipo_almuerzo,
         )
-        
+
         # Crear segundo registro
         registro2 = RegistrosConsumoAlmuerzo.objects.create(
             fecha_consumo=hoy,
@@ -399,7 +394,7 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
             id_hijo=self.hijo,
             id_tipo_almuerzo=self.tipo_almuerzo,
         )
-        
+
         serializer = RegistrosConsumoAlmuerzoSerializer(registro2)
         self.assertEqual(serializer.data["nro_registro_hoy"], 2)
 
@@ -407,10 +402,10 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
         """get_nro_registro_hoy no debe contar registros de otros días"""
         from apps.almuerzos.models import RegistrosConsumoAlmuerzo
         from apps.almuerzos.serializers import RegistrosConsumoAlmuerzoSerializer
-        
+
         hoy = timezone.now().date()
         ayer = hoy - timezone.timedelta(days=1)
-        
+
         # Crear registro de ayer
         RegistrosConsumoAlmuerzo.objects.create(
             fecha_consumo=ayer,
@@ -422,7 +417,7 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
             id_hijo=self.hijo,
             id_tipo_almuerzo=self.tipo_almuerzo,
         )
-        
+
         # Crear registro de hoy
         registro_hoy = RegistrosConsumoAlmuerzo.objects.create(
             fecha_consumo=hoy,
@@ -434,7 +429,7 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
             id_hijo=self.hijo,
             id_tipo_almuerzo=self.tipo_almuerzo,
         )
-        
+
         serializer = RegistrosConsumoAlmuerzoSerializer(registro_hoy)
         # Debe ser 1 porque el de ayer no cuenta
         self.assertEqual(serializer.data["nro_registro_hoy"], 1)
@@ -443,9 +438,9 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
         """get_nro_registro_hoy solo debe contar estados 'Registrado' y 'Confirmado'"""
         from apps.almuerzos.models import RegistrosConsumoAlmuerzo
         from apps.almuerzos.serializers import RegistrosConsumoAlmuerzoSerializer
-        
+
         hoy = timezone.now().date()
-        
+
         # Crear registros con estados no válidos (cancelado, otros)
         RegistrosConsumoAlmuerzo.objects.create(
             fecha_consumo=hoy,
@@ -457,7 +452,7 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
             id_hijo=self.hijo,
             id_tipo_almuerzo=self.tipo_almuerzo,
         )
-        
+
         # Crear registro con estado válido
         registro_valido = RegistrosConsumoAlmuerzo.objects.create(
             fecha_consumo=hoy,
@@ -469,7 +464,7 @@ class RegistrosConsumoAlmuerzoSerializerTest(TestCase):
             id_hijo=self.hijo,
             id_tipo_almuerzo=self.tipo_almuerzo,
         )
-        
+
         serializer = RegistrosConsumoAlmuerzoSerializer(registro_valido)
         # Debe ser 1 porque el cancelado no cuenta
         self.assertEqual(serializer.data["nro_registro_hoy"], 1)

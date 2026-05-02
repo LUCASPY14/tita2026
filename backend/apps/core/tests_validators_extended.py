@@ -7,6 +7,7 @@ Missing lines (at baseline):
 715-718, 730, 815, 824, 885, 892, 896, 902, 904, 906, 948,
 1021-1024, 1036, 1054, 1127, 1137
 """
+
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
@@ -38,7 +39,6 @@ from apps.core.validators import (
     validar_valor_configuracion,
     validar_valores_permitidos,
 )
-
 
 # ---------------------------------------------------------------------------
 # validar_saldo_tarjeta  (lines 63-108)

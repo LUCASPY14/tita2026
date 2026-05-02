@@ -17,9 +17,7 @@ class ClientesSerializerTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Minorista", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Minorista", moneda="PYG", estado=True)
 
         # Crear tipo de cliente
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)
@@ -170,9 +168,7 @@ class HijosSerializerTest(TestCase):
     def setUp(self):
         """Configuración inicial para cada test"""
         # Crear lista de precios
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Minorista", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Minorista", moneda="PYG", estado=True)
 
         # Crear tipo de cliente
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Padre", estado=True)

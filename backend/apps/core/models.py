@@ -72,40 +72,42 @@ class TarjetasManager(models.Manager):
 
     def create(self, **kwargs):
         from django.utils import timezone as tz
+
         # Remap saldo → saldo_actual
-        if 'saldo' in kwargs:
-            kwargs.setdefault('saldo_actual', kwargs.pop('saldo'))
+        if "saldo" in kwargs:
+            kwargs.setdefault("saldo_actual", kwargs.pop("saldo"))
         else:
-            kwargs.pop('saldo', None)
+            kwargs.pop("saldo", None)
         # Ignorar estado booleano (legacy activo=True/False); preservar si es string
-        if isinstance(kwargs.get('estado'), bool):
-            kwargs.pop('estado', None)
+        if isinstance(kwargs.get("estado"), bool):
+            kwargs.pop("estado", None)
         # Defaults para campos requeridos
-        kwargs.setdefault('saldo_actual', Decimal('0.00'))
-        kwargs.setdefault('estado', 'activa')
-        kwargs.setdefault('fecha_creacion', tz.now())
-        kwargs.setdefault('limite_credito', Decimal('0.00'))
+        kwargs.setdefault("saldo_actual", Decimal("0.00"))
+        kwargs.setdefault("estado", "activa")
+        kwargs.setdefault("fecha_creacion", tz.now())
+        kwargs.setdefault("limite_credito", Decimal("0.00"))
         # Crear id_hijo por defecto si no se provee
-        if 'id_hijo' not in kwargs and 'id_hijo_id' not in kwargs:
+        if "id_hijo" not in kwargs and "id_hijo_id" not in kwargs:
             from apps.clientes.models import Clientes, TiposCliente, Hijos
             from apps.productos.models import ListasPrecios
-            lista, _ = ListasPrecios.objects.get_or_create(nombre_lista='General')
-            tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo='General')
+
+            lista, _ = ListasPrecios.objects.get_or_create(nombre_lista="General")
+            tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo="General")
             cliente, _ = Clientes.objects.get_or_create(
-                ruc_ci='0000001',
+                ruc_ci="0000001",
                 defaults={
-                    'nombres': 'Padre',
-                    'apellidos': 'Genérico',
-                    'id_lista': lista,
-                    'id_tipo_cliente': tipo,
+                    "nombres": "Padre",
+                    "apellidos": "Genérico",
+                    "id_lista": lista,
+                    "id_tipo_cliente": tipo,
                 },
             )
             hijo, _ = Hijos.objects.get_or_create(
-                nombre='Hijo',
-                apellido='Genérico',
+                nombre="Hijo",
+                apellido="Genérico",
                 id_cliente_responsable=cliente,
             )
-            kwargs['id_hijo'] = hijo
+            kwargs["id_hijo"] = hijo
         return super().create(**kwargs)
 
 
@@ -121,9 +123,7 @@ class Tarjetas(models.Model):
         help_text="Permite realizar compras con saldo negativo (requiere autorización)",
     )
     limite_credito = models.DecimalField(max_digits=12, decimal_places=2)
-    notificar_saldo_bajo = models.BooleanField(
-        default=True, help_text="Enviar notificación cuando el saldo esté bajo"
-    )
+    notificar_saldo_bajo = models.BooleanField(default=True, help_text="Enviar notificación cuando el saldo esté bajo")
     ultima_notificacion_saldo = models.DateTimeField(blank=True, null=True)
     id_hijo = models.OneToOneField("clientes.Hijos", models.DO_NOTHING, db_column="id_hijo")
     codigo_barras = models.CharField(unique=True, max_length=50, blank=True, null=True)
@@ -158,15 +158,11 @@ class Tarjetas(models.Model):
 
         if self.id_hijo:
             # Verificar si ya existe otra tarjeta para este hijo
-            tarjetas_existentes = Tarjetas.objects.filter(id_hijo=self.id_hijo).exclude(
-                nro_tarjeta=self.nro_tarjeta
-            )
+            tarjetas_existentes = Tarjetas.objects.filter(id_hijo=self.id_hijo).exclude(nro_tarjeta=self.nro_tarjeta)
 
             if tarjetas_existentes.exists():
                 raise ValidationError(
-                    {
-                        "id_hijo": "Este hijo ya tiene una tarjeta asociada. Solo se permite una tarjeta por hijo."
-                    }
+                    {"id_hijo": "Este hijo ya tiene una tarjeta asociada. Solo se permite una tarjeta por hijo."}
                 )
 
     class Meta:
@@ -180,13 +176,9 @@ class TarjetasAutorizacion(models.Model):
     id_tarjeta_autorizacion = models.AutoField(primary_key=True)
     codigo_barra = models.CharField(unique=True, max_length=50)
     tipo_autorizacion = models.CharField(max_length=15)
-    puede_anular_almuerzos = models.BooleanField(
-        default=False, help_text="Permite anular registros de almuerzo"
-    )
+    puede_anular_almuerzos = models.BooleanField(default=False, help_text="Permite anular registros de almuerzo")
     puede_anular_ventas = models.BooleanField(default=False, help_text="Permite anular ventas")
-    puede_anular_recargas = models.BooleanField(
-        default=False, help_text="Permite anular recargas de saldo"
-    )
+    puede_anular_recargas = models.BooleanField(default=False, help_text="Permite anular recargas de saldo")
     puede_modificar_precios = models.BooleanField(
         default=False, help_text="Permite modificar precios en punto de venta"
     )
@@ -213,10 +205,10 @@ class CargasSaldoManager(models.Manager):
 
     def _translate_kwargs(self, kwargs):
         """Map id_recarga → id_carga, codigo_referencia → custom_identifier, etc. for backwards compatibility."""
-        if 'id_recarga' in kwargs:
-            kwargs['id_carga'] = kwargs.pop('id_recarga')
-        if 'codigo_referencia' in kwargs:
-            kwargs['custom_identifier'] = kwargs.pop('codigo_referencia')
+        if "id_recarga" in kwargs:
+            kwargs["id_carga"] = kwargs.pop("id_recarga")
+        if "codigo_referencia" in kwargs:
+            kwargs["custom_identifier"] = kwargs.pop("codigo_referencia")
         return kwargs
 
     def get(self, *args, **kwargs):
@@ -229,32 +221,39 @@ class CargasSaldoManager(models.Manager):
 
     def create(self, **kwargs):
         # Mapear campo monto → monto_cargado
-        if 'monto' in kwargs and 'monto_cargado' not in kwargs:
-            kwargs['monto_cargado'] = kwargs.pop('monto')
+        if "monto" in kwargs and "monto_cargado" not in kwargs:
+            kwargs["monto_cargado"] = kwargs.pop("monto")
         else:
-            kwargs.pop('monto', None)
+            kwargs.pop("monto", None)
         # Mapear fecha_creacion → fecha_carga
-        if 'fecha_creacion' in kwargs and 'fecha_carga' not in kwargs:
-            kwargs['fecha_carga'] = kwargs.pop('fecha_creacion')
+        if "fecha_creacion" in kwargs and "fecha_carga" not in kwargs:
+            kwargs["fecha_carga"] = kwargs.pop("fecha_creacion")
         else:
-            kwargs.pop('fecha_creacion', None)
+            kwargs.pop("fecha_creacion", None)
         # Proveer fecha_carga por defecto si falta
-        if 'fecha_carga' not in kwargs:
+        if "fecha_carga" not in kwargs:
             from django.utils import timezone as tz
-            kwargs['fecha_carga'] = tz.now()
+
+            kwargs["fecha_carga"] = tz.now()
         # Mapear codigo_referencia → custom_identifier
-        cod_ref = kwargs.pop('codigo_referencia', None)
-        if cod_ref and 'custom_identifier' not in kwargs:
-            kwargs['custom_identifier'] = cod_ref
+        cod_ref = kwargs.pop("codigo_referencia", None)
+        if cod_ref and "custom_identifier" not in kwargs:
+            kwargs["custom_identifier"] = cod_ref
         # Mapear comision_aplicada → comision
-        if 'comision_aplicada' in kwargs and 'comision' not in kwargs:
-            kwargs['comision'] = kwargs.pop('comision_aplicada')
+        if "comision_aplicada" in kwargs and "comision" not in kwargs:
+            kwargs["comision"] = kwargs.pop("comision_aplicada")
         else:
-            kwargs.pop('comision_aplicada', None)
+            kwargs.pop("comision_aplicada", None)
         # Ignorar otros campos legacy que no existen en el modelo
-        for campo in ['porcentaje_comision', 'ip_origen',
-                      'motivo_rechazo', 'requiere_validacion_supervisor', 'imagen_comprobante',
-                      'id_factura_old', 'codigo_referencia_interno']:
+        for campo in [
+            "porcentaje_comision",
+            "ip_origen",
+            "motivo_rechazo",
+            "requiere_validacion_supervisor",
+            "imagen_comprobante",
+            "id_factura_old",
+            "codigo_referencia_interno",
+        ]:
             kwargs.pop(campo, None)
         return super().create(**kwargs)
 
@@ -336,14 +335,15 @@ class ConsumosTarjetaManager(models.Manager):
 
     def create(self, **kwargs):
         from django.utils import timezone as tz
-        if 'monto' in kwargs and 'monto_consumido' not in kwargs:
-            kwargs['monto_consumido'] = kwargs.pop('monto')
+
+        if "monto" in kwargs and "monto_consumido" not in kwargs:
+            kwargs["monto_consumido"] = kwargs.pop("monto")
         else:
-            kwargs.pop('monto', None)
-        kwargs.pop('establecimiento', None)
-        kwargs.setdefault('fecha_consumo', tz.now())
-        kwargs.setdefault('saldo_anterior', Decimal('0.00'))
-        kwargs.setdefault('saldo_posterior', Decimal('0.00'))
+            kwargs.pop("monto", None)
+        kwargs.pop("establecimiento", None)
+        kwargs.setdefault("fecha_consumo", tz.now())
+        kwargs.setdefault("saldo_anterior", Decimal("0.00"))
+        kwargs.setdefault("saldo_posterior", Decimal("0.00"))
         return super().create(**kwargs)
 
 
@@ -389,9 +389,7 @@ class TransaccionesOnline(models.Model):
     fecha_transaccion = models.DateTimeField()
     creado_en = models.DateTimeField()
     actualizado_en = models.DateTimeField()
-    nro_tarjeta = models.ForeignKey(
-        "Tarjetas", models.DO_NOTHING, db_column="nro_tarjeta", blank=True, null=True
-    )
+    nro_tarjeta = models.ForeignKey("Tarjetas", models.DO_NOTHING, db_column="nro_tarjeta", blank=True, null=True)
     id_usuario_portal = models.ForeignKey(
         "usuarios.UsuariosPortal",
         models.DO_NOTHING,
@@ -411,9 +409,7 @@ class TransaccionesOnline(models.Model):
 class MediosPago(LegacyCompatCoreMixin, models.Model):
     id_medio_pago = models.AutoField(primary_key=True)
     descripcion = models.CharField(unique=True, max_length=50)
-    genera_comision = models.BooleanField(
-        default=False, help_text="Si este medio de pago cobra comisión"
-    )
+    genera_comision = models.BooleanField(default=False, help_text="Si este medio de pago cobra comisión")
     requiere_validacion = models.BooleanField(
         default=False, help_text="Requiere validación externa (ej: tarjeta crédito)"
     )
@@ -437,21 +433,22 @@ class ConfiguracionSistemaManager(models.Manager):
 
     def create(self, **kwargs):
         from django.utils import timezone as tz
+
         # Mapear valor_texto → valor (campo legacy)
-        if 'valor_texto' in kwargs and 'valor' not in kwargs:
-            kwargs['valor'] = kwargs.pop('valor_texto')
+        if "valor_texto" in kwargs and "valor" not in kwargs:
+            kwargs["valor"] = kwargs.pop("valor_texto")
         else:
-            kwargs.pop('valor_texto', None)
-        kwargs.setdefault('valor', '')
-        kwargs.setdefault('tipo', 'texto')
-        kwargs.setdefault('categoria', 'general')
-        kwargs.setdefault('descripcion', '')
-        kwargs.setdefault('valor_defecto', '')
-        kwargs.setdefault('updated_at', tz.now())
-        kwargs.setdefault('valores_permitidos', [])
-        kwargs.setdefault('validacion', '')
-        kwargs.setdefault('valor_min', '')
-        kwargs.setdefault('valor_max', '')
+            kwargs.pop("valor_texto", None)
+        kwargs.setdefault("valor", "")
+        kwargs.setdefault("tipo", "texto")
+        kwargs.setdefault("categoria", "general")
+        kwargs.setdefault("descripcion", "")
+        kwargs.setdefault("valor_defecto", "")
+        kwargs.setdefault("updated_at", tz.now())
+        kwargs.setdefault("valores_permitidos", [])
+        kwargs.setdefault("validacion", "")
+        kwargs.setdefault("valor_min", "")
+        kwargs.setdefault("valor_max", "")
         return super().create(**kwargs)
 
 
@@ -468,17 +465,11 @@ class ConfiguracionSistema(models.Model):
     valores_permitidos = models.JSONField()
     valor_min = models.CharField(max_length=100)
     valor_max = models.CharField(max_length=100)
-    requiere_reinicio = models.BooleanField(
-        default=False, help_text="Requiere reiniciar el sistema al cambiar"
-    )
-    solo_superuser = models.BooleanField(
-        default=False, help_text="Solo superusuarios pueden modificar"
-    )
+    requiere_reinicio = models.BooleanField(default=False, help_text="Requiere reiniciar el sistema al cambiar")
+    solo_superuser = models.BooleanField(default=False, help_text="Solo superusuarios pueden modificar")
     estado = models.BooleanField(default=True)
     updated_at = models.DateTimeField()
-    updated_by = models.ForeignKey(
-        "auth.User", models.SET_NULL, db_column="updated_by", blank=True, null=True
-    )
+    updated_by = models.ForeignKey("auth.User", models.SET_NULL, db_column="updated_by", blank=True, null=True)
 
     objects = ConfiguracionSistemaManager()
 
@@ -502,9 +493,7 @@ class CacheConfiguracion(models.Model):
     ttl_segundos = models.IntegerField()
     max_size_mb = models.IntegerField()
     tipo_cache = models.CharField(max_length=20)
-    auto_invalidate = models.BooleanField(
-        default=True, help_text="Invalidar automáticamente el caché"
-    )
+    auto_invalidate = models.BooleanField(default=True, help_text="Invalidar automáticamente el caché")
     eventos_invalid = models.JSONField()
     estado = models.BooleanField(default=True)
     hits = models.BigIntegerField()
@@ -605,9 +594,7 @@ class LimitesTransaccion(models.Model):
             LimitesTransaccion o None si no hay límite configurado
         """
         try:
-            return LimitesTransaccion.objects.get(
-                id_rol=rol, tipo_operacion=tipo_operacion, estado=True
-            )
+            return LimitesTransaccion.objects.get(id_rol=rol, tipo_operacion=tipo_operacion, estado=True)
         except LimitesTransaccion.DoesNotExist:
             return None
 
@@ -650,9 +637,7 @@ class LimitesTransaccion(models.Model):
                 else "Operación dentro del límite"
             ),
             "doble_autorizacion": limite.requiere_autorizacion_doble,
-            "excedente": (
-                monto - limite.monto_maximo_sin_autorizacion if requiere else Decimal("0.00")
-            ),
+            "excedente": (monto - limite.monto_maximo_sin_autorizacion if requiere else Decimal("0.00")),
         }
 
 
@@ -697,12 +682,8 @@ class RegistroAutorizaciones(models.Model):
     )
 
     # Relaciones opcionales con operaciones específicas
-    id_venta = models.ForeignKey(
-        "ventas.Ventas", models.DO_NOTHING, db_column="id_venta", blank=True, null=True
-    )
-    id_compra = models.ForeignKey(
-        "compras.Compras", models.DO_NOTHING, db_column="id_compra", blank=True, null=True
-    )
+    id_venta = models.ForeignKey("ventas.Ventas", models.DO_NOTHING, db_column="id_venta", blank=True, null=True)
+    id_compra = models.ForeignKey("compras.Compras", models.DO_NOTHING, db_column="id_compra", blank=True, null=True)
     id_ajuste = models.ForeignKey(
         "inventario.AjustesInventario",
         models.DO_NOTHING,

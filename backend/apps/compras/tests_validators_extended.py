@@ -5,6 +5,7 @@ Missing lines targeted: 59, 98, 174-175, 189, 212-213, 281, 308-311, 361, 378,
 383-384, 415-416, 443-444, 474-475, 499-502, 527-528, 548-549, 574-575, 602-603,
 627, 654, 684-685, 715-716
 """
+
 from decimal import Decimal
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock
@@ -86,9 +87,7 @@ class ValidarLimiteCreditoExtendedTest(TestCase):
         # We can't actually trigger the except branch with Decimal safely,
         # but compras_pendientes > limite triggers ValidationError on line 184
         with self.assertRaises(ValidationError):
-            validar_limite_credito_proveedor(
-                Decimal("1000"), compras_pendientes=Decimal("2000")
-            )
+            validar_limite_credito_proveedor(Decimal("1000"), compras_pendientes=Decimal("2000"))
 
 
 class ValidarTransicionEstadoExtendedTest(TestCase):
@@ -231,16 +230,12 @@ class ValidarCompraLimiteCreditoExtendedTest(TestCase):
 
     def test_limite_none_returns_ok(self):
         """None limite_credito skips validation."""
-        validar_compra_dentro_limite_credito(
-            Decimal("50000"), Decimal("0"), None
-        )  # Should not raise
+        validar_compra_dentro_limite_credito(Decimal("50000"), Decimal("0"), None)  # Should not raise
 
     def test_saldo_proyectado_excede_limite(self):
         """Projected balance exceeding limit raises ValidationError."""
         with self.assertRaises(ValidationError):
-            validar_compra_dentro_limite_credito(
-                Decimal("600000"), Decimal("500000"), Decimal("1000000")
-            )
+            validar_compra_dentro_limite_credito(Decimal("600000"), Decimal("500000"), Decimal("1000000"))
 
     def test_compra_dentro_limite_ok(self):
         """Projected balance within limit passes."""
@@ -778,17 +773,11 @@ class ValidarCompraLimiteCreditoExtended2Test(TestCase):
 
     def test_excede_limite_raises(self):
         with self.assertRaises(ValidationError) as ctx:
-            validar_compra_dentro_limite_credito(
-                Decimal("8000"), Decimal("5000"), Decimal("10000")
-            )
+            validar_compra_dentro_limite_credito(Decimal("8000"), Decimal("5000"), Decimal("10000"))
         self.assertIn("excediendo el límite", str(ctx.exception))
 
     def test_dentro_limite_pasa(self):
-        validar_compra_dentro_limite_credito(
-            Decimal("3000"), Decimal("5000"), Decimal("10000")
-        )
+        validar_compra_dentro_limite_credito(Decimal("3000"), Decimal("5000"), Decimal("10000"))
 
     def test_exactamente_en_limite_pasa(self):
-        validar_compra_dentro_limite_credito(
-            Decimal("5000"), Decimal("5000"), Decimal("10000")
-        )
+        validar_compra_dentro_limite_credito(Decimal("5000"), Decimal("5000"), Decimal("10000"))

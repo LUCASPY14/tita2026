@@ -19,6 +19,7 @@ from apps.usuarios.models import (
     BloqueosCuenta,
 )
 
+
 # ==================== STUB ATTRIBUTES FOR TESTING ====================
 # These stubs allow tests to patch signals module attributes
 def audit_logger(*args, **kwargs):
@@ -59,6 +60,7 @@ def send_welcome_email(*args, **kwargs):
 
 def audit_log(*args, **kwargs):
     pass
+
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -409,9 +411,7 @@ def perfil_post_save(sender, instance, created, **kwargs):
         AuditoriaOperaciones.objects.create(
             usuario=empleado_actual.usuario if empleado_actual else instance.id_empleado.usuario,
             tipo_usuario="empleado",
-            id_usuario=(
-                empleado_actual.id_empleado if empleado_actual else instance.id_empleado.id_empleado
-            ),
+            id_usuario=(empleado_actual.id_empleado if empleado_actual else instance.id_empleado.id_empleado),
             operacion=operacion,
             tabla_afectada="PerfilesUsuario",
             id_registro=instance.id_perfil,

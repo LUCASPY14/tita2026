@@ -15,11 +15,11 @@ from .models import (
 class EmpleadosAdminForm(forms.ModelForm):
     fecha_ingreso = forms.SplitDateTimeField(
         required=True,
-        input_date_formats=['%d/%m/%Y', '%Y-%m-%d'],
-        input_time_formats=['%H:%M:%S', '%H:%M'],
+        input_date_formats=["%d/%m/%Y", "%Y-%m-%d"],
+        input_time_formats=["%H:%M:%S", "%H:%M"],
         widget=forms.SplitDateTimeWidget(
-            date_attrs={'type': 'date'},
-            time_attrs={'type': 'time'},
+            date_attrs={"type": "date"},
+            time_attrs={"type": "time"},
         ),
         initial=timezone.now,
     )

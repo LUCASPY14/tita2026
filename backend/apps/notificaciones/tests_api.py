@@ -36,8 +36,11 @@ class NotificacionesPortalViewSetTest(APITestCase):
         # Crear cadena: TiposCliente -> Clientes -> UsuariosPortal
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular NApi", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="Test", apellidos="NApi", ruc_ci="12340001",
-            estado=True, id_tipo_cliente=self.tipo_cliente,
+            nombres="Test",
+            apellidos="NApi",
+            ruc_ci="12340001",
+            estado=True,
+            id_tipo_cliente=self.tipo_cliente,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
             email="portal_napi@cantina.com",
@@ -53,13 +56,21 @@ class NotificacionesPortalViewSetTest(APITestCase):
 
         # Crear notificaciones de prueba
         self.notif1 = NotificacionesPortal.objects.create(
-            tipo="info", titulo="Notificación 1", mensaje="Mensaje 1",
-            leida=0, fecha_envio=timezone.now(), creado_en=timezone.now(),
+            tipo="info",
+            titulo="Notificación 1",
+            mensaje="Mensaje 1",
+            leida=0,
+            fecha_envio=timezone.now(),
+            creado_en=timezone.now(),
             id_usuario_portal=self.usuario_portal,
         )
         self.notif2 = NotificacionesPortal.objects.create(
-            tipo="warning", titulo="Notificación 2", mensaje="Mensaje 2",
-            leida=1, fecha_envio=timezone.now(), creado_en=timezone.now(),
+            tipo="warning",
+            titulo="Notificación 2",
+            mensaje="Mensaje 2",
+            leida=1,
+            fecha_envio=timezone.now(),
+            creado_en=timezone.now(),
             fecha_lectura=timezone.now(),
             id_usuario_portal=self.usuario_portal,
         )
@@ -103,9 +114,7 @@ class NotificacionesPortalViewSetTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        no_leidas = NotificacionesPortal.objects.filter(
-            id_usuario_portal=self.usuario_portal, leida=0
-        ).count()
+        no_leidas = NotificacionesPortal.objects.filter(id_usuario_portal=self.usuario_portal, leida=0).count()
         self.assertEqual(no_leidas, 0)
 
     def test_obtener_resumen(self):
@@ -124,8 +133,7 @@ class AlertasSistemaViewSetTest(APITestCase):
     def setUp(self):
         """Configuración inicial"""
         self.auth_user = User.objects.create_user(
-            username="admin_alert", email="admin_alert@cantina.com",
-            password="admin123", is_staff=True
+            username="admin_alert", email="admin_alert@cantina.com", password="admin123", is_staff=True
         )
 
         self.client = APIClient()
@@ -184,8 +192,11 @@ class PreferenciasNotificacionViewSetTest(APITestCase):
 
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Pref", estado=True)
         self.cliente = Clientes.objects.create(
-            nombres="User", apellidos="Pref", ruc_ci="11110002",
-            estado=True, id_tipo_cliente=self.tipo_cliente,
+            nombres="User",
+            apellidos="Pref",
+            ruc_ci="11110002",
+            estado=True,
+            id_tipo_cliente=self.tipo_cliente,
         )
         self.usuario_portal = UsuariosPortal.objects.create(
             email="portal_pref@cantina.com",
@@ -219,9 +230,7 @@ class PreferenciasNotificacionViewSetTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        prefs = PreferenciasNotificacion.objects.get(
-            id_usuario_portal=self.usuario_portal, tipo_notificacion="ventas"
-        )
+        prefs = PreferenciasNotificacion.objects.get(id_usuario_portal=self.usuario_portal, tipo_notificacion="ventas")
         self.assertEqual(prefs.email_activo, 0)
         self.assertEqual(prefs.push_activo, 1)
 
@@ -235,12 +244,13 @@ class TestNotificacionesSaldoViewSet:
         """Configuración para cada test"""
         tipo_cliente = TiposCliente.objects.create(nombre_tipo="Regular Saldo", estado=True)
         cliente = Clientes.objects.create(
-            nombres="Test", apellidos="Saldo", ruc_ci="99990001",
-            estado=True, id_tipo_cliente=tipo_cliente,
+            nombres="Test",
+            apellidos="Saldo",
+            ruc_ci="99990001",
+            estado=True,
+            id_tipo_cliente=tipo_cliente,
         )
-        hijo = Hijos.objects.create(
-            nombre="Test", apellido="Hijo", estado=True, id_cliente_responsable=cliente
-        )
+        hijo = Hijos.objects.create(nombre="Test", apellido="Hijo", estado=True, id_cliente_responsable=cliente)
         self.tarjeta = Tarjetas.objects.create(
             nro_tarjeta="9999001",
             saldo_actual=Decimal("5000.00"),
@@ -250,9 +260,7 @@ class TestNotificacionesSaldoViewSet:
             id_hijo=hijo,
         )
 
-        usuario = User.objects.create_user(
-            username="testapi_saldo", email="api_saldo@test.com", password="test123"
-        )
+        usuario = User.objects.create_user(username="testapi_saldo", email="api_saldo@test.com", password="test123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=usuario)

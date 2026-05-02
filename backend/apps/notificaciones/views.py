@@ -30,36 +30,40 @@ from .serializers import (
 
 class PlantillasEmailViewSet(viewsets.ModelViewSet):
     """CRUD de plantillas de email (transaccionales, alertas, etc.)."""
-    queryset = PlantillasEmail.objects.all().order_by('categoria', 'nombre')
+
+    queryset = PlantillasEmail.objects.all().order_by("categoria", "nombre")
     serializer_class = PlantillasEmailSerializer
     pagination_class = None
 
     def get_queryset(self):
-        qs = PlantillasEmail.objects.all().order_by('categoria', 'nombre')
-        categoria = self.request.query_params.get('categoria')
-        estado = self.request.query_params.get('estado')
+        qs = PlantillasEmail.objects.all().order_by("categoria", "nombre")
+        categoria = self.request.query_params.get("categoria")
+        estado = self.request.query_params.get("estado")
         if categoria:
             qs = qs.filter(categoria=categoria)
         if estado is not None:
-            qs = qs.filter(estado=estado.lower() != 'false')
+            qs = qs.filter(estado=estado.lower() != "false")
         return qs
 
     def perform_create(self, serializer):
         from django.utils import timezone
+
         now = timezone.now()
         serializer.save(created_at=now, updated_at=now, created_by=None)
 
     def perform_update(self, serializer):
         from django.utils import timezone
+
         serializer.save(updated_at=timezone.now())
 
     def destroy(self, request, *args, **kwargs):
         """Soft-delete."""
         from rest_framework.response import Response
         from rest_framework import status
+
         instance = self.get_object()
         instance.estado = False
-        instance.save(update_fields=['estado'])
+        instance.save(update_fields=["estado"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -120,9 +124,7 @@ class NotificacionesPortalViewSet(viewsets.ModelViewSet):
         try:
             id_usuario = request.data.get("id_usuario_portal")
             if not id_usuario:
-                return Response(
-                    {"error": "id_usuario_portal es requerido"}, status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({"error": "id_usuario_portal es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
             NotificacionesPortal.objects.filter(id_usuario_portal=id_usuario, leida=0).update(
                 leida=1, fecha_lectura=timezone.now()
@@ -138,9 +140,7 @@ class NotificacionesPortalViewSet(viewsets.ModelViewSet):
         try:
             id_usuario = request.query_params.get("id_usuario_portal")
             if not id_usuario:
-                return Response(
-                    {"error": "id_usuario_portal es requerido"}, status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({"error": "id_usuario_portal es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
             queryset = NotificacionesPortal.objects.filter(id_usuario_portal=id_usuario)
             total = queryset.count()
@@ -157,9 +157,7 @@ class NotificacionesPortalViewSet(viewsets.ModelViewSet):
             notificaciones_saldo = NotificacionesSaldo.objects.filter(leida=0).count()
 
             # Contar alertas del sistema
-            alertas_sistema = AlertasSistema.objects.filter(
-                Q(estado="Pendiente") | Q(estado__isnull=True)
-            ).count()
+            alertas_sistema = AlertasSistema.objects.filter(Q(estado="Pendiente") | Q(estado__isnull=True)).count()
 
             return Response(
                 {
@@ -179,74 +177,63 @@ class NotificacionesPortalViewSet(viewsets.ModelViewSet):
         """Endpoint SSE para notificaciones en tiempo real"""
         id_usuario = request.query_params.get("id_usuario_portal")
         if not id_usuario:
-            return Response(
-                {"error": "id_usuario_portal es requerido"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "id_usuario_portal es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
         def notification_stream():
             """Generador de eventos SSE para notificaciones"""
             # Headers SSE
-            yield "data: {\"type\": \"connected\", \"message\": \"Conectado al stream de notificaciones\"}\n\n"
-            
+            yield 'data: {"type": "connected", "message": "Conectado al stream de notificaciones"}\n\n'
+
             last_check = timezone.now()
-            
+
             while True:
                 try:
                     # Buscar notificaciones nuevas desde la última verificación
                     nuevas_notificaciones = NotificacionesPortal.objects.filter(
-                        id_usuario_portal=id_usuario,
-                        fecha_envio__gt=last_check
-                    ).order_by('-fecha_envio')[:10]
-                    
+                        id_usuario_portal=id_usuario, fecha_envio__gt=last_check
+                    ).order_by("-fecha_envio")[:10]
+
                     if nuevas_notificaciones:
                         notifications_data = []
                         for notif in nuevas_notificaciones:
-                            notifications_data.append({
-                                'id': notif.id_notificacion,
-                                'tipo': notif.tipo,
-                                'titulo': notif.titulo,
-                                'mensaje': notif.mensaje,
-                                'leida': bool(notif.leida),
-                                'fecha_envio': notif.fecha_envio.isoformat(),
-                                'prioridad': getattr(notif, 'prioridad', 'normal')
-                            })
-                        
+                            notifications_data.append(
+                                {
+                                    "id": notif.id_notificacion,
+                                    "tipo": notif.tipo,
+                                    "titulo": notif.titulo,
+                                    "mensaje": notif.mensaje,
+                                    "leida": bool(notif.leida),
+                                    "fecha_envio": notif.fecha_envio.isoformat(),
+                                    "prioridad": getattr(notif, "prioridad", "normal"),
+                                }
+                            )
+
                         event_data = {
-                            'type': 'new_notifications',
-                            'count': len(notifications_data),
-                            'notifications': notifications_data
+                            "type": "new_notifications",
+                            "count": len(notifications_data),
+                            "notifications": notifications_data,
                         }
-                        
+
                         yield f"data: {json.dumps(event_data)}\n\n"
-                    
+
                     # Enviar heartbeat cada 30 segundos
-                    heartbeat_data = {
-                        'type': 'heartbeat',
-                        'timestamp': timezone.now().isoformat()
-                    }
+                    heartbeat_data = {"type": "heartbeat", "timestamp": timezone.now().isoformat()}
                     yield f"data: {json.dumps(heartbeat_data)}\n\n"
-                    
+
                     last_check = timezone.now()
                     time.sleep(10)  # Verificar cada 10 segundos
-                    
+
                 except Exception as e:
-                    error_data = {
-                        'type': 'error',
-                        'message': str(e)
-                    }
+                    error_data = {"type": "error", "message": str(e)}
                     yield f"data: {json.dumps(error_data)}\n\n"
                     break
-        
-        response = StreamingHttpResponse(
-            notification_stream(),
-            content_type='text/event-stream'
-        )
-        response['Cache-Control'] = 'no-cache'
-        response['Connection'] = 'keep-alive'
-        response['Access-Control-Allow-Origin'] = '*'
-        response['Access-Control-Allow-Headers'] = 'Cache-Control'
-        
+
+        response = StreamingHttpResponse(notification_stream(), content_type="text/event-stream")
+        response["Cache-Control"] = "no-cache"
+        response["Connection"] = "keep-alive"
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Headers"] = "Cache-Control"
+
         return response
 
     @action(detail=False, methods=["get"])
@@ -254,74 +241,63 @@ class NotificacionesPortalViewSet(viewsets.ModelViewSet):
         """Endpoint SSE para notificaciones en tiempo real"""
         id_usuario = request.query_params.get("id_usuario_portal")
         if not id_usuario:
-            return Response(
-                {"error": "id_usuario_portal es requerido"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "id_usuario_portal es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
         def notification_stream():
             """Generador de eventos SSE para notificaciones"""
             # Headers SSE
-            yield "data: {\"type\": \"connected\", \"message\": \"Conectado al stream de notificaciones\"}\n\n"
-            
+            yield 'data: {"type": "connected", "message": "Conectado al stream de notificaciones"}\n\n'
+
             last_check = timezone.now()
-            
+
             while True:
                 try:
                     # Buscar notificaciones nuevas desde la última verificación
                     nuevas_notificaciones = NotificacionesPortal.objects.filter(
-                        id_usuario_portal=id_usuario,
-                        fecha_envio__gt=last_check
-                    ).order_by('-fecha_envio')[:10]
-                    
+                        id_usuario_portal=id_usuario, fecha_envio__gt=last_check
+                    ).order_by("-fecha_envio")[:10]
+
                     if nuevas_notificaciones:
                         notifications_data = []
                         for notif in nuevas_notificaciones:
-                            notifications_data.append({
-                                'id': notif.id_notificacion,
-                                'tipo': notif.tipo,
-                                'titulo': notif.titulo,
-                                'mensaje': notif.mensaje,
-                                'leida': bool(notif.leida),
-                                'fecha_envio': notif.fecha_envio.isoformat(),
-                                'prioridad': getattr(notif, 'prioridad', 'normal')
-                            })
-                        
+                            notifications_data.append(
+                                {
+                                    "id": notif.id_notificacion,
+                                    "tipo": notif.tipo,
+                                    "titulo": notif.titulo,
+                                    "mensaje": notif.mensaje,
+                                    "leida": bool(notif.leida),
+                                    "fecha_envio": notif.fecha_envio.isoformat(),
+                                    "prioridad": getattr(notif, "prioridad", "normal"),
+                                }
+                            )
+
                         event_data = {
-                            'type': 'new_notifications',
-                            'count': len(notifications_data),
-                            'notifications': notifications_data
+                            "type": "new_notifications",
+                            "count": len(notifications_data),
+                            "notifications": notifications_data,
                         }
-                        
+
                         yield f"data: {json.dumps(event_data)}\n\n"
-                    
+
                     # Enviar heartbeat cada 30 segundos
-                    heartbeat_data = {
-                        'type': 'heartbeat',
-                        'timestamp': timezone.now().isoformat()
-                    }
+                    heartbeat_data = {"type": "heartbeat", "timestamp": timezone.now().isoformat()}
                     yield f"data: {json.dumps(heartbeat_data)}\n\n"
-                    
+
                     last_check = timezone.now()
                     time.sleep(10)  # Verificar cada 10 segundos
-                    
+
                 except Exception as e:
-                    error_data = {
-                        'type': 'error',
-                        'message': str(e)
-                    }
+                    error_data = {"type": "error", "message": str(e)}
                     yield f"data: {json.dumps(error_data)}\n\n"
                     break
-        
-        response = StreamingHttpResponse(
-            notification_stream(),
-            content_type='text/event-stream'
-        )
-        response['Cache-Control'] = 'no-cache'
-        response['Connection'] = 'keep-alive'
-        response['Access-Control-Allow-Origin'] = '*'
-        response['Access-Control-Allow-Headers'] = 'Cache-Control'
-        
+
+        response = StreamingHttpResponse(notification_stream(), content_type="text/event-stream")
+        response["Cache-Control"] = "no-cache"
+        response["Connection"] = "keep-alive"
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Headers"] = "Cache-Control"
+
         return response
 
 
@@ -332,9 +308,9 @@ class NotificacionesSaldoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NotificacionSaldoSerializer
 
     def get_queryset(self):
-        queryset = NotificacionesSaldo.objects.select_related(
-            "nro_tarjeta", "nro_tarjeta__id_hijo"
-        ).order_by("-fecha_creacion")
+        queryset = NotificacionesSaldo.objects.select_related("nro_tarjeta", "nro_tarjeta__id_hijo").order_by(
+            "-fecha_creacion"
+        )
 
         # Filtros opcionales
         nro_tarjeta = self.request.query_params.get("nro_tarjeta", None)
@@ -411,9 +387,7 @@ class PreferenciasNotificacionViewSet(viewsets.ModelViewSet):
         try:
             id_usuario = request.query_params.get("id_usuario_portal")
             if not id_usuario:
-                return Response(
-                    {"error": "id_usuario_portal es requerido"}, status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({"error": "id_usuario_portal es requerido"}, status=status.HTTP_400_BAD_REQUEST)
 
             preferencias = PreferenciasNotificacion.objects.filter(id_usuario_portal=id_usuario)
             serializer = self.get_serializer(preferencias, many=True)

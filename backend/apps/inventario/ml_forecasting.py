@@ -335,9 +335,7 @@ class StockForecastingService:
                 recomendacion = f"Punto calculado ({punto_reorden}) es menor que mínimo configurado ({stock_minimo_actual}). Usar mínimo configurado."
                 punto_reorden = stock_minimo_actual
             else:
-                recomendacion = (
-                    f"Actualizar stock mínimo de {stock_minimo_actual} a {punto_reorden}"
-                )
+                recomendacion = f"Actualizar stock mínimo de {stock_minimo_actual} a {punto_reorden}"
         except:
             recomendacion = "Configurar como nuevo stock mínimo"
 
@@ -471,20 +469,12 @@ class StockForecastingService:
         if valores:
             promedio_general = np.mean([v for v in valores if v > 0])
 
-            dias_pico = [
-                dia for dia, valor in patron_semanal.items() if valor > promedio_general * 1.2
-            ]
-            dias_valle = [
-                dia
-                for dia, valor in patron_semanal.items()
-                if valor < promedio_general * 0.8 and valor > 0
-            ]
+            dias_pico = [dia for dia, valor in patron_semanal.items() if valor > promedio_general * 1.2]
+            dias_valle = [dia for dia, valor in patron_semanal.items() if valor < promedio_general * 0.8 and valor > 0]
 
             # Determinar si hay estacionalidad significativa
             varianza = np.std(valores)
-            tiene_estacionalidad = (
-                (varianza / promedio_general) > 0.2 if promedio_general > 0 else False
-            )
+            tiene_estacionalidad = (varianza / promedio_general) > 0.2 if promedio_general > 0 else False
         else:  # pragma: no cover
             dias_pico = []
             dias_valle = []
@@ -496,16 +486,12 @@ class StockForecastingService:
             "dias_pico": dias_pico,
             "dias_valle": dias_valle,
             "recomendacion": (
-                "Ajustar pedidos según patrones detectados"
-                if tiene_estacionalidad
-                else "Demanda estable"
+                "Ajustar pedidos según patrones detectados" if tiene_estacionalidad else "Demanda estable"
             ),
         }
 
     @staticmethod
-    def obtener_recomendacion_compra(
-        id_producto: int, stock_actual: Decimal, dias_cobertura_deseada: int = 14
-    ) -> Dict:
+    def obtener_recomendacion_compra(id_producto: int, stock_actual: Decimal, dias_cobertura_deseada: int = 14) -> Dict:
         """
         Recomienda cantidad a comprar basado en predicciones.
 

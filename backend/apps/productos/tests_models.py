@@ -108,25 +108,19 @@ class ListasPreciosModelTest(TestCase):
 
     def test_str_method(self):
         """Test del método __str__"""
-        lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Mayorista", moneda="PYG", estado=True
-        )
+        lista = ListasPrecios.objects.create(nombre_lista="Lista Mayorista", moneda="PYG", estado=True)
 
         self.assertEqual(str(lista), "Lista Mayorista (PYG)")
 
     def test_str_method_con_moneda_usd(self):
         """Test del método __str__ con moneda USD"""
-        lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Internacional", moneda="USD", estado=True
-        )
+        lista = ListasPrecios.objects.create(nombre_lista="Lista Internacional", moneda="USD", estado=True)
 
         self.assertEqual(str(lista), "Lista Internacional (USD)")
 
     def test_fecha_vigencia_opcional(self):
         """Test que fecha_vigencia es opcional"""
-        lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Sin Fecha", moneda="PYG", estado=True
-        )
+        lista = ListasPrecios.objects.create(nombre_lista="Lista Sin Fecha", moneda="PYG", estado=True)
 
         self.assertIsNone(lista.fecha_vigencia)
 
@@ -157,9 +151,7 @@ class PreciosPorListaModelTest(TestCase):
             id_unidad_medida=self.unidad,
         )
 
-        self.lista = ListasPrecios.objects.create(
-            nombre_lista="Lista Minorista", moneda="PYG", estado=True
-        )
+        self.lista = ListasPrecios.objects.create(nombre_lista="Lista Minorista", moneda="PYG", estado=True)
 
     def test_crear_precio_por_lista(self):
         """Test de creación de precio por lista"""
@@ -208,13 +200,17 @@ class ProductosNombrePropertyTest(TestCase):
     def test_nombre_property_alias(self):
         """nombre property devuelve el mismo valor que descripcion."""
         impuesto = Impuestos.objects.create(
-            nombre_impuesto='IVA Nom', porcentaje=10,
-            vigente_desde=timezone.now().date(), estado=True,
+            nombre_impuesto="IVA Nom",
+            porcentaje=10,
+            vigente_desde=timezone.now().date(),
+            estado=True,
         )
-        cat = Categorias.objects.create(nombre='Cat Nom', estado=True)
+        cat = Categorias.objects.create(nombre="Cat Nom", estado=True)
         producto = Productos.objects.create(
-            descripcion='Producto Alias Nombre',
-            stock_minimo=0, estado=True,
-            id_categoria=cat, id_impuesto=impuesto,
+            descripcion="Producto Alias Nombre",
+            stock_minimo=0,
+            estado=True,
+            id_categoria=cat,
+            id_impuesto=impuesto,
         )
-        self.assertEqual(producto.nombre, 'Producto Alias Nombre')
+        self.assertEqual(producto.nombre, "Producto Alias Nombre")

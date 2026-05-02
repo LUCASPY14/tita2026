@@ -13,7 +13,6 @@ from apps.usuarios.models import (
     LegacyCompatMixin,
 )
 
-
 # ──────────────────────────────────────────────────────────────────────────────
 # _resolve_usuario_from_empleado
 # ──────────────────────────────────────────────────────────────────────────────
@@ -113,6 +112,7 @@ class ModelStrMethodsTest(TestCase):
     @pytest.mark.django_db
     def test_roles_str(self):
         from apps.usuarios.models import Roles
+
         rol = Roles.objects.create(nombre_rol="TestRolStr", descripcion="test")
         self.assertIn("Roles", str(rol))
         rol.delete()
@@ -121,6 +121,7 @@ class ModelStrMethodsTest(TestCase):
     def test_empleados_str(self):
         from apps.usuarios.models import Empleados, Roles
         from django.utils import timezone
+
         rol = Roles.objects.create(nombre_rol="TestRolEmpl", descripcion="t")
         emp = Empleados.objects.create(
             nombre="Test",
@@ -136,11 +137,13 @@ class ModelStrMethodsTest(TestCase):
         """Line 255: fecha_cierre property on SesionesActivas"""
         from apps.usuarios.models import SesionesActivas
         from django.utils import timezone
+
         obj = MagicMock(spec=SesionesActivas)
         obj.activa = True
         obj.ultima_actividad = timezone.now()
         # Use the actual property logic
         from apps.usuarios.models import SesionesActivas as SA
+
         # Test the property branches
         sesion = SesionesActivas.__new__(SesionesActivas)
         sesion.activa = True
@@ -154,6 +157,7 @@ class ModelStrMethodsTest(TestCase):
         """Inactive session: fecha_cierre returns ultima_actividad"""
         from apps.usuarios.models import SesionesActivas
         from django.utils import timezone
+
         sesion = SesionesActivas.__new__(SesionesActivas)
         sesion.activa = False
         t = timezone.now()
@@ -165,6 +169,7 @@ class ModelStrMethodsTest(TestCase):
     def test_autenticacion_2fa_fecha_deshabilitado_enabled(self):
         """habilitado=True → fecha_deshabilitado is None"""
         from apps.usuarios.models import Autenticacion2Fa
+
         obj = Autenticacion2Fa.__new__(Autenticacion2Fa)
         obj.habilitado = True
         obj.ultima_verificacion = None
@@ -176,6 +181,7 @@ class ModelStrMethodsTest(TestCase):
         """habilitado=False → fecha_deshabilitado returns ultima_verificacion"""
         from apps.usuarios.models import Autenticacion2Fa
         from django.utils import timezone
+
         obj = Autenticacion2Fa.__new__(Autenticacion2Fa)
         obj.habilitado = False
         t = timezone.now()
@@ -195,6 +201,7 @@ class ResolveClienteFromEmpleadoTest(TestCase):
     def test_none_returns_none(self):
         """Branch 21->22: value is None → returns None immediately."""
         from apps.usuarios.models import _resolve_cliente_from_empleado
+
         result = _resolve_cliente_from_empleado(None)
         self.assertIsNone(result)
 
@@ -202,6 +209,7 @@ class ResolveClienteFromEmpleadoTest(TestCase):
     def test_nonexistent_pk_returns_none(self):
         """Branch 25->26 and 27->28: integer without id_empleado attr, not in DB → None."""
         from apps.usuarios.models import _resolve_cliente_from_empleado
+
         # 99999 is an integer (no id_empleado attr) → enters DB lookup → not found → None
         result = _resolve_cliente_from_empleado(999999)
         self.assertIsNone(result)
@@ -223,9 +231,11 @@ class ResolveClienteFromEmpleadoTest(TestCase):
 
         rol, _ = Roles.objects.get_or_create(nombre_rol="TestIntPkRol", defaults={"descripcion": "t"})
         emp = Empleados.objects.create(
-            nombre="IntPk", apellido="Test",
+            nombre="IntPk",
+            apellido="Test",
             usuario="intpk_branch_test_xyz",
-            fecha_ingreso=timezone.now(), id_rol=rol,
+            fecha_ingreso=timezone.now(),
+            id_rol=rol,
         )
         # Pass the PK (integer) → no id_empleado attr → DB lookup finds emp → 27->30 False arm
         result = _resolve_cliente_from_empleado(emp.pk)
@@ -274,6 +284,7 @@ class EmpleadosManagerGetOrCreateTest(TestCase):
     def test_get_or_create_no_defaults_creates_new(self):
         """When defaults=None (not provided), the False arm of 'if defaults:' is taken."""
         from apps.usuarios.models import Empleados
+
         # This should create a new Empleados without defaults (False arm of if defaults:)
         emp, created = Empleados.objects.get_or_create(usuario="nodefaults_branch_xyz999")
         self.assertTrue(created)
@@ -283,9 +294,9 @@ class EmpleadosManagerGetOrCreateTest(TestCase):
         """When record exists, get_or_create returns (existing, False); True arm never hit."""
         from apps.usuarios.models import Empleados
         from django.utils import timezone
+
         emp_existing = Empleados.objects.create(
-            nombre="Existing", apellido="User", usuario="existing_nodefaults_abc888",
-            fecha_ingreso=timezone.now()
+            nombre="Existing", apellido="User", usuario="existing_nodefaults_abc888", fecha_ingreso=timezone.now()
         )
         emp, created = Empleados.objects.get_or_create(usuario="existing_nodefaults_abc888")
         self.assertFalse(created)

@@ -57,9 +57,7 @@ def generar_alertas_saldo_bajo(self):
 
 
 @shared_task
-def enviar_email_async(
-    email_destinatario: str, nombre_destinatario: str, asunto: str, mensaje: str
-):
+def enviar_email_async(email_destinatario: str, nombre_destinatario: str, asunto: str, mensaje: str):
     """
     Task para enviar email de forma asíncrona.
 
@@ -135,14 +133,10 @@ def limpiar_notificaciones_antiguas(self):
         fecha_limite = timezone.now() - timedelta(days=30)
 
         # Eliminar notificaciones portal leídas antiguas
-        portal_eliminadas = NotificacionesPortal.objects.filter(
-            leida=1, fecha_lectura__lt=fecha_limite
-        ).delete()[0]
+        portal_eliminadas = NotificacionesPortal.objects.filter(leida=1, fecha_lectura__lt=fecha_limite).delete()[0]
 
         # Eliminar notificaciones saldo leídas antiguas
-        saldo_eliminadas = NotificacionesSaldo.objects.filter(
-            leida=1, fecha_lectura__lt=fecha_limite
-        ).delete()[0]
+        saldo_eliminadas = NotificacionesSaldo.objects.filter(leida=1, fecha_lectura__lt=fecha_limite).delete()[0]
 
         total_eliminadas = portal_eliminadas + saldo_eliminadas
 

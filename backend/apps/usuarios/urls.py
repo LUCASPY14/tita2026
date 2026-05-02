@@ -24,12 +24,14 @@ from .views import (
 
 class PublicRolesViewSet(RolesViewSet):
     """Public read-only alias for RolesViewSet (used by /api/usuarios/ routes)."""
+
     permission_classes = [AllowAny]
     pagination_class = None
 
 
 class PublicEmpleadosViewSet(EmpleadosViewSet):
     """Public read-only alias for EmpleadosViewSet (used by /api/usuarios/ routes)."""
+
     permission_classes = [AllowAny]
     pagination_class = None
 

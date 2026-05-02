@@ -60,5 +60,5 @@ class PromocionesAdmin(admin.ModelAdmin):
 
 @admin.register(CondicionVenta)
 class CondicionVentaAdmin(admin.ModelAdmin):
-    list_display = ['id_condicion_venta', 'nombre']
-    search_fields = ['nombre']
+    list_display = ["id_condicion_venta", "nombre"]
+    search_fields = ["nombre"]

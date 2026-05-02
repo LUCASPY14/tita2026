@@ -50,9 +50,9 @@ class PromocionService:
             fecha_hora = timezone.now()
 
         # 1. Filtrar promociones activas y vigentes
-        promociones_query = Promociones.objects.filter(
-            estado=True, fecha_inicio__lte=fecha_hora.date()
-        ).filter(models.Q(fecha_fin__isnull=True) | models.Q(fecha_fin__gte=fecha_hora.date()))
+        promociones_query = Promociones.objects.filter(estado=True, fecha_inicio__lte=fecha_hora.date()).filter(
+            models.Q(fecha_fin__isnull=True) | models.Q(fecha_fin__gte=fecha_hora.date())
+        )
 
         # 2. Si hay código, filtrar por código
         if codigo_promocion:
@@ -122,9 +122,7 @@ class PromocionService:
             return {
                 "monto_descuento": descuento.quantize(Decimal("0.01")),
                 "tipo_descuento": "porcentaje",
-                "productos_afectados": PromocionService._obtener_productos_afectados(
-                    promocion, items
-                ),
+                "productos_afectados": PromocionService._obtener_productos_afectados(promocion, items),
                 "descripcion": f"{promocion.valor_descuento}% de descuento",
             }
 
@@ -143,9 +141,7 @@ class PromocionService:
             return {
                 "monto_descuento": descuento_2x1,
                 "tipo_descuento": "2x1",
-                "productos_afectados": PromocionService._obtener_productos_afectados(
-                    promocion, items
-                ),
+                "productos_afectados": PromocionService._obtener_productos_afectados(promocion, items),
                 "descripcion": "2x1 aplicado",
             }
 
@@ -155,9 +151,7 @@ class PromocionService:
             return {
                 "monto_descuento": descuento_combo,
                 "tipo_descuento": "combo",
-                "productos_afectados": PromocionService._obtener_productos_afectados(
-                    promocion, items
-                ),
+                "productos_afectados": PromocionService._obtener_productos_afectados(promocion, items),
                 "descripcion": "Combo especial",
             }
 
@@ -252,9 +246,7 @@ class PromocionService:
         if promocion.aplica_a == "producto":
             # Verificar si algún producto está en la promoción
             productos_promo = set(
-                ProductosPromocion.objects.filter(id_promocion=promocion).values_list(
-                    "id_producto", flat=True
-                )
+                ProductosPromocion.objects.filter(id_promocion=promocion).values_list("id_producto", flat=True)
             )
 
             productos_venta = set(item["id_producto"] for item in items)
@@ -263,9 +255,7 @@ class PromocionService:
         if promocion.aplica_a == "categoria":
             # Verificar si alguna categoría está en la promoción
             categorias_promo = set(
-                CategoriasPromocion.objects.filter(id_promocion=promocion).values_list(
-                    "id_categoria", flat=True
-                )
+                CategoriasPromocion.objects.filter(id_promocion=promocion).values_list("id_categoria", flat=True)
             )
 
             for item in items:
@@ -288,17 +278,13 @@ class PromocionService:
 
         if promocion.aplica_a == "producto":
             productos_promo = set(
-                ProductosPromocion.objects.filter(id_promocion=promocion).values_list(
-                    "id_producto", flat=True
-                )
+                ProductosPromocion.objects.filter(id_promocion=promocion).values_list("id_producto", flat=True)
             )
             return [item["id_producto"] for item in items if item["id_producto"] in productos_promo]
 
         if promocion.aplica_a == "categoria":
             categorias_promo = set(
-                CategoriasPromocion.objects.filter(id_promocion=promocion).values_list(
-                    "id_categoria", flat=True
-                )
+                CategoriasPromocion.objects.filter(id_promocion=promocion).values_list("id_categoria", flat=True)
             )
 
             afectados = []
@@ -338,9 +324,7 @@ class PromocionService:
 
         # Obtener los productos requeridos en el combo
         productos_combo = set(
-            ProductosPromocion.objects.filter(id_promocion=promocion).values_list(
-                "id_producto", flat=True
-            )
+            ProductosPromocion.objects.filter(id_promocion=promocion).values_list("id_producto", flat=True)
         )
 
         if not productos_combo:
@@ -353,11 +337,7 @@ class PromocionService:
             return Decimal("0.00")
 
         # Calcular cuántos combos completos se pueden armar
-        min_repeticiones = min(
-            int(item["cantidad"])
-            for item in items
-            if item["id_producto"] in productos_combo
-        )
+        min_repeticiones = min(int(item["cantidad"]) for item in items if item["id_producto"] in productos_combo)
 
         return promocion.valor_descuento * min_repeticiones
 
@@ -436,9 +416,7 @@ class DevolucionService:
 
         # 3. Validar estado de venta (debe estar confirmada)
         if venta.estado not in ["Activa"]:
-            raise DRFValidationError(
-                {"error": "Solo se pueden devolver ventas activas", "estado_venta": venta.estado}
-            )
+            raise DRFValidationError({"error": "Solo se pueden devolver ventas activas", "estado_venta": venta.estado})
 
         # 4. Validar productos en la venta original
         detalles_venta = DetallesVenta.objects.filter(id_venta=venta)
@@ -489,10 +467,7 @@ class DevolucionService:
             )
 
         # 5. Generar número de nota de crédito
-        ultimo_nro = (
-            NotasCreditoCliente.objects.aggregate(max_nro=models.Max("nro_nota_credito"))["max_nro"]
-            or 0
-        )
+        ultimo_nro = NotasCreditoCliente.objects.aggregate(max_nro=models.Max("nro_nota_credito"))["max_nro"] or 0
 
         nuevo_nro = ultimo_nro + 1
 
@@ -546,9 +521,7 @@ class DevolucionService:
 
         # 9. Actualizar saldo de la venta (si venta a crédito)
         if venta.tipo_venta == "Crédito":
-            venta.saldo_pendiente = (
-                venta.saldo_pendiente or Decimal("0.00")
-            ) - monto_total_devolucion
+            venta.saldo_pendiente = (venta.saldo_pendiente or Decimal("0.00")) - monto_total_devolucion
 
             if venta.saldo_pendiente <= 0:
                 venta.estado_pago = "Pagada"
@@ -660,8 +633,6 @@ class DevolucionService:
         # Validar plazo
         dias = (timezone.now().date() - venta.fecha.date()).days
         if dias > DevolucionService.DIAS_LIMITE_DEVOLUCION:
-            warnings.append(
-                f"Venta tiene {dias} días (límite: {DevolucionService.DIAS_LIMITE_DEVOLUCION} días)"
-            )
+            warnings.append(f"Venta tiene {dias} días (límite: {DevolucionService.DIAS_LIMITE_DEVOLUCION} días)")
 
         return {"valido": len(errores) == 0, "errores": errores, "warnings": warnings}

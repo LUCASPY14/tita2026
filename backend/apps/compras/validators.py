@@ -40,9 +40,7 @@ def validar_ruc(ruc):
 
     # Validar formato básico (5 a 8 dígitos antes del guión)
     if not re.match(r"^\d{5,8}-\d$", ruc):
-        raise ValidationError(
-            "El RUC debe tener formato XXXXX-Y o XXXXXXXX-Y (ejemplo: 80012345-6)"
-        )
+        raise ValidationError("El RUC debe tener formato XXXXX-Y o XXXXXXXX-Y (ejemplo: 80012345-6)")
 
     # Separar número base y dígito verificador
     partes = ruc.split("-")
@@ -62,9 +60,7 @@ def validar_ruc(ruc):
     digito_calculado = 0 if resto <= 1 else 11 - resto
 
     if digito_calculado != digito_verificador:
-        raise ValidationError(
-            f"El dígito verificador del RUC es incorrecto. Esperado: {digito_calculado}"
-        )
+        raise ValidationError(f"El dígito verificador del RUC es incorrecto. Esperado: {digito_calculado}")
 
 
 def validar_razon_social(razon_social):
@@ -150,9 +146,7 @@ def validar_telefono_proveedor(telefono):
     # Celular: 09XX-XXXXXX o +5959XX-XXXXXX
     # Fijo: 0XX-XXXXXX
     if not re.match(r"^(\+595|0)?[0-9]{6,10}$", telefono_limpio):
-        raise ValidationError(
-            "El teléfono debe tener un formato válido (ej: 0981123456 o 021-123456)"
-        )
+        raise ValidationError("El teléfono debe tener un formato válido (ej: 0981123456 o 021-123456)")
 
 
 def validar_limite_credito_proveedor(limite_credito, compras_pendientes=None):
@@ -213,15 +207,11 @@ def validar_monto_compra(monto):
         raise ValidationError("El monto debe ser un número válido")
 
     if monto_decimal <= 0:
-        raise ValidationError(
-            f"El monto de la compra debe ser positivo. Valor recibido: ₲{monto_decimal:,.0f}"
-        )
+        raise ValidationError(f"El monto de la compra debe ser positivo. Valor recibido: ₲{monto_decimal:,.0f}")
 
     # Límite razonable de 100 millones de guaraníes
     if monto_decimal > Decimal("100000000.00"):
-        raise ValidationError(
-            f"El monto de la compra (₲{monto_decimal:,.0f}) parece excesivamente alto. Verifique."
-        )
+        raise ValidationError(f"El monto de la compra (₲{monto_decimal:,.0f}) parece excesivamente alto. Verifique.")
 
 
 def validar_estado_pago(estado):
@@ -246,9 +236,7 @@ def validar_estado_pago(estado):
     estados_validos = ["Pendiente", "Confirmado", "Pagado", "Parcial", "Cancelado"]
 
     if estado not in estados_validos:
-        raise ValidationError(
-            f"Estado '{estado}' no válido. Debe ser uno de: {', '.join(estados_validos)}"
-        )
+        raise ValidationError(f"Estado '{estado}' no válido. Debe ser uno de: {', '.join(estados_validos)}")
 
 
 def validar_transicion_estado_compra(estado_actual, estado_nuevo):
@@ -314,9 +302,7 @@ def validar_fecha_compra(fecha_compra):
 
     # No puede ser más de 1 día en el futuro
     if fecha_compra > ahora + timedelta(days=1):
-        raise ValidationError(
-            f"La fecha de compra no puede ser futura ({fecha_compra.strftime('%d/%m/%Y')})"
-        )
+        raise ValidationError(f"La fecha de compra no puede ser futura ({fecha_compra.strftime('%d/%m/%Y')})")
 
     # No puede ser más de 1 año atrás
     hace_un_anio = ahora - timedelta(days=365)
@@ -358,9 +344,7 @@ def validar_numero_factura(numero_factura):
         or re.match(formato_simple, numero_factura)
         or len(numero_factura) >= 5
     ):
-        raise ValidationError(
-            "El número de factura debe tener un formato válido (ej: 001-001-0001234)"
-        )
+        raise ValidationError("El número de factura debe tener un formato válido (ej: 001-001-0001234)")
 
 
 def validar_saldo_compra(saldo_pendiente, monto_total):
@@ -387,9 +371,7 @@ def validar_saldo_compra(saldo_pendiente, monto_total):
         raise ValidationError(f"El saldo pendiente no puede ser negativo. Valor: ₲{saldo:,.0f}")
 
     if saldo > total:
-        raise ValidationError(
-            f"El saldo pendiente (₲{saldo:,.0f}) no puede ser mayor al total (₲{total:,.0f})"
-        )
+        raise ValidationError(f"El saldo pendiente (₲{saldo:,.0f}) no puede ser mayor al total (₲{total:,.0f})")
 
 
 # ============================
@@ -420,9 +402,7 @@ def validar_cantidad_compra(cantidad):
 
     # Límite razonable de 100,000 unidades
     if cantidad_decimal > Decimal("100000.000"):
-        raise ValidationError(
-            f"La cantidad ({cantidad_decimal}) parece excesivamente alta. Verifique."
-        )
+        raise ValidationError(f"La cantidad ({cantidad_decimal}) parece excesivamente alta. Verifique.")
 
 
 def validar_costo_unitario(costo_unitario):
@@ -448,9 +428,7 @@ def validar_costo_unitario(costo_unitario):
 
     # Límite razonable de 10 millones de guaraníes
     if costo > Decimal("10000000.00"):
-        raise ValidationError(
-            f"El costo unitario (₲{costo:,.0f}) parece excesivamente alto. Verifique."
-        )
+        raise ValidationError(f"El costo unitario (₲{costo:,.0f}) parece excesivamente alto. Verifique.")
 
 
 def validar_subtotal_coherente(cantidad, costo_unitario, subtotal):
@@ -499,9 +477,7 @@ def validar_producto_duplicado_compra(detalles_compra, id_producto):
     productos_ids = [d.id_producto_id for d in detalles_compra if hasattr(d, "id_producto_id")]
 
     if id_producto in productos_ids:
-        raise ValidationError(
-            f"El producto ID {id_producto} ya está en esta compra. No se permiten duplicados."
-        )
+        raise ValidationError(f"El producto ID {id_producto} ya está en esta compra. No se permiten duplicados.")
 
 
 # ============================
@@ -552,9 +528,7 @@ def validar_aplicacion_pago(monto_aplicado, saldo_compra):
         raise ValidationError(f"El monto a aplicar debe ser positivo. Valor: ₲{aplicado:,.0f}")
 
     if aplicado > saldo:
-        raise ValidationError(
-            f"El monto a aplicar (₲{aplicado:,.0f}) excede el saldo de la compra (₲{saldo:,.0f})"
-        )
+        raise ValidationError(f"El monto a aplicar (₲{aplicado:,.0f}) excede el saldo de la compra (₲{saldo:,.0f})")
 
 
 def validar_suma_aplicaciones(aplicaciones_totales, monto_pago):
@@ -603,14 +577,10 @@ def validar_monto_nota_credito(monto_nc, monto_compra):
         raise ValidationError("Los montos deben ser números válidos")
 
     if nc <= 0:
-        raise ValidationError(
-            f"El monto de la nota de crédito debe ser positivo. Valor: ₲{nc:,.0f}"
-        )
+        raise ValidationError(f"El monto de la nota de crédito debe ser positivo. Valor: ₲{nc:,.0f}")
 
     if nc > compra:
-        raise ValidationError(
-            f"El monto de la NC (₲{nc:,.0f}) no puede exceder el monto de la compra (₲{compra:,.0f})"
-        )
+        raise ValidationError(f"El monto de la NC (₲{nc:,.0f}) no puede exceder el monto de la compra (₲{compra:,.0f})")
 
 
 def validar_motivo_nota_credito(motivo):
@@ -656,9 +626,7 @@ def validar_estado_nota_credito(estado):
     estados_validos = ["Pendiente", "Aplicado", "Rechazado"]
 
     if estado not in estados_validos:
-        raise ValidationError(
-            f"Estado '{estado}' no válido. Debe ser uno de: {', '.join(estados_validos)}"
-        )
+        raise ValidationError(f"Estado '{estado}' no válido. Debe ser uno de: {', '.join(estados_validos)}")
 
 
 # ============================
@@ -688,9 +656,7 @@ def validar_dias_credito(dias_credito):
         raise ValidationError("Los días de crédito no pueden ser negativos")
 
     if dias > 180:
-        raise ValidationError(
-            f"Los días de crédito ({dias}) parecen excesivos (máximo recomendado: 180 días)"
-        )
+        raise ValidationError(f"Los días de crédito ({dias}) parecen excesivos (máximo recomendado: 180 días)")
 
 
 def validar_compra_dentro_limite_credito(monto_compra, saldo_actual, limite_credito):

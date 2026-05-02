@@ -73,12 +73,18 @@ class SerializarModeloTest(TestCase):
 
         mock_instance._meta.fields = [mock_field_relation]
         # getattr returns our falsy mock
-        with patch("builtins.getattr", side_effect=lambda obj, name, default=None: falsy_mock if name == "id_supervisor" else getattr(obj, name, default)):
+        with patch(
+            "builtins.getattr",
+            side_effect=lambda obj, name, default=None: (
+                falsy_mock if name == "id_supervisor" else getattr(obj, name, default)
+            ),
+        ):
             pass  # Can't easily test builtins.getattr without breaking other things
 
         # Alternative: test serializar_modelo via actual model with null FK
         # AuditoriaEmpleados has id_empleado FK (nullable)
         from apps.usuarios.models import AuditoriaEmpleados
+
         auditoria = AuditoriaEmpleados.objects.create(
             fecha_cambio=timezone.now(),
             campo_modificado="test",
@@ -205,9 +211,7 @@ class EmpleadoPostDeleteExceptionTest(TestCase):
             # Should not raise — exception is caught
             empleado.delete()
             # Verify the employee was actually deleted
-            self.assertFalse(
-                Empleados.objects.filter(usuario="del_exc_user").exists()
-            )
+            self.assertFalse(Empleados.objects.filter(usuario="del_exc_user").exists())
 
 
 class RolSignalExceptionTest(TestCase):
@@ -354,9 +358,7 @@ class PerfilSignalTest(TestCase):
         )
         self.assertIsNotNone(perfil.id_perfil)
         # Signal fired and created an AuditoriaOperaciones entry
-        self.assertTrue(
-            AuditoriaOperaciones.objects.filter(operacion="CREAR_PERFIL").exists()
-        )
+        self.assertTrue(AuditoriaOperaciones.objects.filter(operacion="CREAR_PERFIL").exists())
 
     def test_perfil_post_save_updated(self):
         """Updating a PerfilesUsuario triggers perfil_post_save (lines 375-402)."""
@@ -379,9 +381,7 @@ class PerfilSignalTest(TestCase):
         # Update to trigger update path
         perfil.tema = "dark"
         perfil.save()
-        self.assertTrue(
-            AuditoriaOperaciones.objects.filter(operacion="ACTUALIZAR_PERFIL").exists()
-        )
+        self.assertTrue(AuditoriaOperaciones.objects.filter(operacion="ACTUALIZAR_PERFIL").exists())
 
     def test_perfil_post_save_exception(self):
         """When audit fails in perfil_post_save, exception is caught."""
@@ -436,6 +436,5 @@ class EmpleadoUpdateAuditTest(TestCase):
         empleado.save()
         # Verify the audit was recorded
         from apps.usuarios.models import AuditoriaEmpleados
-        self.assertTrue(
-            AuditoriaEmpleados.objects.filter(campo_modificado="nombre").exists()
-        )
+
+        self.assertTrue(AuditoriaEmpleados.objects.filter(campo_modificado="nombre").exists())

@@ -43,6 +43,7 @@ def verificar_vencimientos(self):
         # o directamente en LotesProducto si existe
         try:
             from apps.inventario.models import LotesProducto  # type: ignore
+
             lotes_proximos = LotesProducto.objects.filter(
                 fecha_vencimiento__lte=limite_alerta,
                 fecha_vencimiento__gte=hoy,
@@ -189,19 +190,27 @@ def generar_resumen_diario_stock():
 
     try:
         hoy = timezone.now().date()
-        inicio_dia = timezone.make_aware(
-            timezone.datetime.combine(hoy, timezone.datetime.min.time())
-        )
+        inicio_dia = timezone.make_aware(timezone.datetime.combine(hoy, timezone.datetime.min.time()))
 
-        stocks = StockUnico.objects.select_related("id_producto").filter(
-            id_producto__estado=True
-        )
+        stocks = StockUnico.objects.select_related("id_producto").filter(id_producto__estado=True)
 
-        movimientos_hoy = MovimientosStock.objects.filter(
-            fecha_hora__gte=inicio_dia
-        ).values("id_producto").annotate(
-            total_ingresos=Sum("cantidad", filter=__import__("django.db.models", fromlist=["Q"]).Q(tipo_movimiento__in=["Ingreso", "Compra", "AjustePositivo"])),
-            total_egresos=Sum("cantidad", filter=__import__("django.db.models", fromlist=["Q"]).Q(tipo_movimiento__in=["Egreso", "Venta", "AjusteNegativo"])),
+        movimientos_hoy = (
+            MovimientosStock.objects.filter(fecha_hora__gte=inicio_dia)
+            .values("id_producto")
+            .annotate(
+                total_ingresos=Sum(
+                    "cantidad",
+                    filter=__import__("django.db.models", fromlist=["Q"]).Q(
+                        tipo_movimiento__in=["Ingreso", "Compra", "AjustePositivo"]
+                    ),
+                ),
+                total_egresos=Sum(
+                    "cantidad",
+                    filter=__import__("django.db.models", fromlist=["Q"]).Q(
+                        tipo_movimiento__in=["Egreso", "Venta", "AjusteNegativo"]
+                    ),
+                ),
+            )
         )
         movimientos_dict = {m["id_producto"]: m for m in movimientos_hoy}
 

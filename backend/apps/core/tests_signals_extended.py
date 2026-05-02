@@ -5,6 +5,7 @@ Cubre líneas faltantes:
 66-91 (notificar_saldo_bajo body),
 126-129 (validar_integridad_saldo warning logging)
 """
+
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 from decimal import Decimal
@@ -16,14 +17,12 @@ from apps.core.models import CargasSaldo, Tarjetas, ConsumosTarjeta
 from apps.clientes.models import Clientes, TiposCliente, Hijos
 from apps.productos.models import ListasPrecios
 
-
 # ─── helpers ──────────────────────────────────────────────────────────────────
+
 
 def _make_cliente(suffix=""):
     tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo=f"TipoCS{suffix}")
-    lista, _ = ListasPrecios.objects.get_or_create(
-        nombre_lista=f"ListaCS{suffix}", defaults={"estado": True}
-    )
+    lista, _ = ListasPrecios.objects.get_or_create(nombre_lista=f"ListaCS{suffix}", defaults={"estado": True})
     return Clientes.objects.create(
         nombres=f"ClienteCS{suffix}",
         apellidos="Signals",
@@ -43,8 +42,7 @@ def _make_hijo(cliente, suffix=""):
     )
 
 
-def _make_tarjeta(hijo, suffix="", saldo=Decimal("50000.00"), saldo_alerta=None,
-                  notificar=True, estado="Activa"):
+def _make_tarjeta(hijo, suffix="", saldo=Decimal("50000.00"), saldo_alerta=None, notificar=True, estado="Activa"):
     return Tarjetas.objects.create(
         nro_tarjeta=f"TAR-CS-{suffix}",
         saldo_actual=saldo,
@@ -70,6 +68,7 @@ def _make_consumo(tarjeta, monto=Decimal("1000.00"), saldo_posterior=None):
 # =============================================================================
 # actualizar_saldo_recarga – línea 27
 # =============================================================================
+
 
 class ActualizarSaldoRecargaTest(TestCase):
     """Tests para signal actualizar_saldo_recarga"""
@@ -100,9 +99,7 @@ class ActualizarSaldoRecargaTest(TestCase):
             nro_tarjeta=self.tarjeta,
         )
         # Setear el flag y re-guardar: signal debe retornar sin re-procesar
-        saldo_despues_primer_save = Tarjetas.objects.get(
-            nro_tarjeta=self.tarjeta.nro_tarjeta
-        ).saldo_actual
+        saldo_despues_primer_save = Tarjetas.objects.get(nro_tarjeta=self.tarjeta.nro_tarjeta).saldo_actual
         carga._saldo_actualizado = True
         # Patch ConsumosTarjeta.objects.filter to ensure no duplicate is created
         with patch("apps.core.signals.ConsumosTarjeta.objects.filter") as mock_filter:
@@ -130,6 +127,7 @@ class ActualizarSaldoRecargaTest(TestCase):
 # notificar_saldo_bajo – líneas 66-91
 # =============================================================================
 
+
 class NotificarSaldoBajoTest(TestCase):
     """Tests para signal notificar_saldo_bajo (post_save ConsumosTarjeta)"""
 
@@ -138,10 +136,7 @@ class NotificarSaldoBajoTest(TestCase):
         hijo = _make_hijo(cliente, "nsb")
         # Tarjeta con saldo_alerta=10000 y saldo_actual bajo la alerta
         self.tarjeta = _make_tarjeta(
-            hijo, "nsb",
-            saldo=Decimal("3000.00"),
-            saldo_alerta=Decimal("10000.00"),
-            notificar=True
+            hijo, "nsb", saldo=Decimal("3000.00"), saldo_alerta=Decimal("10000.00"), notificar=True
         )
 
     def test_requiere_notificacion_true_ejecuta_bloque(self):
@@ -155,9 +150,7 @@ class NotificarSaldoBajoTest(TestCase):
         mock_module = MagicMock()
         mock_module.Notificaciones = mock_notif_class
         with patch.dict("sys.modules", {"apps.notificaciones.models": mock_module}):
-            consumo = _make_consumo(
-                self.tarjeta, monto=Decimal("500.00"), saldo_posterior=Decimal("2500.00")
-            )
+            consumo = _make_consumo(self.tarjeta, monto=Decimal("500.00"), saldo_posterior=Decimal("2500.00"))
         # Si llegamos aquí, el signal no falló la transacción
         self.assertIsNotNone(consumo.pk)
 
@@ -166,10 +159,11 @@ class NotificarSaldoBajoTest(TestCase):
         cliente = _make_cliente("nsb2")
         hijo = _make_hijo(cliente, "nsb2")
         tarjeta_sin_notif = _make_tarjeta(
-            hijo, "nsb2",
+            hijo,
+            "nsb2",
             saldo=Decimal("50000.00"),
             saldo_alerta=Decimal("1000.00"),
-            notificar=False  # notificar_saldo_bajo=False → requiere_notificacion=False
+            notificar=False,  # notificar_saldo_bajo=False → requiere_notificacion=False
         )
         consumo = _make_consumo(tarjeta_sin_notif, monto=Decimal("100.00"))
         self.assertIsNotNone(consumo.pk)
@@ -180,10 +174,11 @@ class NotificarSaldoBajoTest(TestCase):
         cliente = _make_cliente("nsb3")
         hijo = _make_hijo(cliente, "nsb3")
         tarjeta_sin_alerta = _make_tarjeta(
-            hijo, "nsb3",
+            hijo,
+            "nsb3",
             saldo=Decimal("50000.00"),
             saldo_alerta=None,  # sta_en_alerta=False → requiere_notificacion=False
-            notificar=True
+            notificar=True,
         )
         consumo = _make_consumo(tarjeta_sin_alerta, monto=Decimal("200.00"))
         # Update → created=False → signal retorna
@@ -213,6 +208,7 @@ class NotificarSaldoBajoTest(TestCase):
 # =============================================================================
 # validar_integridad_saldo – líneas 126-129
 # =============================================================================
+
 
 class ValidarIntegridadSaldoTest(TestCase):
     """Tests para signal validar_integridad_saldo (post_save ConsumosTarjeta)"""
@@ -269,6 +265,7 @@ class ValidarIntegridadSaldoTest(TestCase):
 # validar_tarjeta_unica – líneas 96-108 (pre_save Tarjetas)
 # =============================================================================
 
+
 class ValidarTarjetaUnicaTest(TestCase):
     """Tests para signal validar_tarjeta_unica (pre_save Tarjetas)"""
 
@@ -279,6 +276,7 @@ class ValidarTarjetaUnicaTest(TestCase):
     def test_segunda_tarjeta_mismo_hijo_raise(self):
         """pre_save: Si hijo ya tiene tarjeta → ValidationError."""
         from django.core.exceptions import ValidationError
+
         # Primera tarjeta OK
         _make_tarjeta(self.hijo, "vtu1")
         # Segunda tarjeta para mismo hijo → ValidationError

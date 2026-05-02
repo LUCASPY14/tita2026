@@ -11,6 +11,7 @@ Cubre líneas faltantes:
 575-578 (anio no int),
 779-782 (monto no Decimal)
 """
+
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from decimal import Decimal
@@ -22,10 +23,10 @@ from apps.clientes.validators import (
     validar_limite_credito_cliente,
 )
 
-
 # =============================================================================
 # validar_razon_social - línea 98
 # =============================================================================
+
 
 class ValidarRazonSocialClienteExtendedTest(TestCase):
     def test_caracteres_invalidos_raises(self):
@@ -50,6 +51,7 @@ class ValidarRazonSocialClienteExtendedTest(TestCase):
 # =============================================================================
 # validar_ruc_ci - líneas 132, 135, 138, 145, 148, 153, 158
 # =============================================================================
+
 
 class ValidarRucCiExtendedTest(TestCase):
 
@@ -117,6 +119,7 @@ class ValidarRucCiExtendedTest(TestCase):
 # validar_telefono_cliente - líneas 202, 220
 # =============================================================================
 
+
 class ValidarTelefonoClienteExtendedTest(TestCase):
 
     def test_telefono_con_letras_raises(self):
@@ -148,6 +151,7 @@ class ValidarTelefonoClienteExtendedTest(TestCase):
 # =============================================================================
 # validar_limite_credito_cliente - líneas 244-247
 # =============================================================================
+
 
 class ValidarLimiteCreditoClienteExtendedTest(TestCase):
 
@@ -190,9 +194,11 @@ class ValidarLimiteCreditoClienteExtendedTest(TestCase):
 # líneas 512-515, 539-542, 575-578
 # =============================================================================
 
+
 class ValidarNivelGradoExtendedTest(TestCase):
     def setUp(self):
         from apps.clientes.validators import validar_nivel_grado
+
         self.func = validar_nivel_grado
 
     def test_nivel_string_invalido_raises(self):
@@ -219,6 +225,7 @@ class ValidarNivelGradoExtendedTest(TestCase):
 class ValidarOrdenVisualizacionExtendedTest(TestCase):
     def setUp(self):
         from apps.clientes.validators import validar_orden_visualizacion
+
         self.func = validar_orden_visualizacion
 
     def test_orden_string_invalido_raises(self):
@@ -250,6 +257,7 @@ class ValidarOrdenVisualizacionExtendedTest(TestCase):
 class ValidarAnioEscolarExtendedTest(TestCase):
     def setUp(self):
         from apps.clientes.validators import validar_anio_escolar
+
         self.func = validar_anio_escolar
 
     def test_anio_string_invalido_raises(self):
@@ -277,9 +285,11 @@ class ValidarAnioEscolarExtendedTest(TestCase):
 # validar_monto_autorizacion - líneas 779-782
 # =============================================================================
 
+
 class ValidarMontoAutorizacionExtendedTest(TestCase):
     def setUp(self):
         from apps.clientes.validators import validar_monto_autorizado
+
         self.func = validar_monto_autorizado
 
     def test_monto_string_invalido_raises(self):

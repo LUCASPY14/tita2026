@@ -110,9 +110,7 @@ class ConfiguracionSistemaViewSetTest(APITestCase):
         self.superuser.save()
 
         # Crear usuario normal
-        self.normal_user = Usuarios.objects.create(
-            username="user", email="user@cantina.com", is_active=True
-        )
+        self.normal_user = Usuarios.objects.create(username="user", email="user@cantina.com", is_active=True)
         self.normal_user.set_password("user123")
         self.normal_user.save()
 
@@ -237,9 +235,7 @@ class TestConfiguracionIntegration:
     def test_flujo_completo_configuracion(self):
         """Test: Flujo completo de manejo de configuración"""
         # Crear superusuario
-        admin = Usuarios.objects.create(
-            username="admin", email="admin@test.com", is_superuser=True, is_active=True
-        )
+        admin = Usuarios.objects.create(username="admin", email="admin@test.com", is_superuser=True, is_active=True)
 
         # 1. Crear configuración
         config = ConfiguracionSistema.objects.create(
@@ -272,9 +268,7 @@ class TestConfiguracionIntegration:
 
     def test_agrupar_por_categoria(self):
         """Test: Agrupar configuraciones por categoría"""
-        admin = Usuarios.objects.create(
-            username="admin2", email="admin2@test.com", is_superuser=True, is_active=True
-        )
+        admin = Usuarios.objects.create(username="admin2", email="admin2@test.com", is_superuser=True, is_active=True)
 
         # Crear varias configs en diferentes categorías
         ConfiguracionSistema.objects.create(
@@ -305,9 +299,7 @@ class TestConfiguracionIntegration:
         # Agrupar por categoría
         from django.db.models import Count
 
-        categorias = ConfiguracionSistema.objects.values("categoria").annotate(
-            total=Count("id_config")
-        )
+        categorias = ConfiguracionSistema.objects.values("categoria").annotate(total=Count("id_config"))
 
         assert len(categorias) >= 2
         email_configs = [c for c in categorias if c["categoria"] == "email"]

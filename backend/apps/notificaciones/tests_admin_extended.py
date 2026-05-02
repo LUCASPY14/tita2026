@@ -2,6 +2,7 @@
 Tests for apps/notificaciones/admin.py
 Covers all custom display methods across 15 admin classes.
 """
+
 from unittest.mock import MagicMock, patch
 from django.test import TestCase
 from django.contrib.admin.sites import AdminSite
@@ -55,7 +56,8 @@ def _mock_obj(**kwargs):
 # NotificacionesPortalAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class NotificacionesPortalAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -134,7 +136,8 @@ class NotificacionesPortalAdminTest(TestCase):
 # NotificacionesSaldoAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class NotificacionesSaldoAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -185,7 +188,8 @@ class NotificacionesSaldoAdminTest(TestCase):
 # SolicitudesNotificacionAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class SolicitudesNotificacionAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -228,7 +232,8 @@ class SolicitudesNotificacionAdminTest(TestCase):
 # PreferenciasNotificacionAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class PreferenciasNotificacionAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -263,7 +268,8 @@ class PreferenciasNotificacionAdminTest(TestCase):
 # EmailsEnviadosAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class EmailsEnviadosAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -340,7 +346,8 @@ class EmailsEnviadosAdminTest(TestCase):
 # SmsEnviadosAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class SmsEnviadosAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -414,7 +421,8 @@ class SmsEnviadosAdminTest(TestCase):
 # PlantillasEmailAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class PlantillasEmailAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -453,7 +461,8 @@ class PlantillasEmailAdminTest(TestCase):
 # PlantillasSmsAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class PlantillasSmsAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -495,7 +504,8 @@ class PlantillasSmsAdminTest(TestCase):
 # CampanasComunicacionAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class CampanasComunicacionAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -600,7 +610,8 @@ class CampanasComunicacionAdminTest(TestCase):
 # AlertasAutomaticasAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class AlertasAutomaticasAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -682,7 +693,8 @@ class AlertasAutomaticasAdminTest(TestCase):
 # AlertaDestinatariosAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class AlertaDestinatariosAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -725,7 +737,8 @@ class AlertaDestinatariosAdminTest(TestCase):
 # AlertasSistemaAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class AlertasSistemaAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -813,7 +826,8 @@ class AlertasSistemaAdminTest(TestCase):
 # HistorialAlertasAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class HistorialAlertasAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -836,7 +850,8 @@ class HistorialAlertasAdminTest(TestCase):
 # AnomaliasDetectadasAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class AnomaliasDetectadasAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -926,7 +941,8 @@ class AnomaliasDetectadasAdminTest(TestCase):
 # RestriccionesHorariasAdmin
 # =============================================================================
 
-@patch('apps.notificaciones.admin.format_html', _plain_format_html)
+
+@patch("apps.notificaciones.admin.format_html", _plain_format_html)
 class RestriccionesHorariasAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()

@@ -34,9 +34,7 @@ class StockUnicoAdmin(admin.ModelAdmin):
 
     def cantidad_actual(self, obj):
         if obj.requiere_reposicion:
-            return format_html(
-                '<span style="color: red; font-weight: bold;">{}</span>', obj.cantidad
-            )
+            return format_html('<span style="color: red; font-weight: bold;">{}</span>', obj.cantidad)
         return obj.cantidad
 
     cantidad_actual.short_description = "Stock Actual"
@@ -44,10 +42,12 @@ class StockUnicoAdmin(admin.ModelAdmin):
     def estado_stock(self, obj):
         if obj.requiere_reposicion:
             return format_html(
-                '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>', '⚠️ BAJO'
+                '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
+                "⚠️ BAJO",
             )
         return format_html(
-            '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>', '✓ OK'
+            '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
+            "✓ OK",
         )
 
     estado_stock.short_description = "Estado"
@@ -307,9 +307,7 @@ class LotesProductoAdmin(admin.ModelAdmin):
     def marcar_como_bloqueado(self, request, queryset):
         from django.utils import timezone
 
-        updated = queryset.update(
-            bloqueado=True, motivo_bloqueo="vencido", fecha_bloqueo=timezone.now()
-        )
+        updated = queryset.update(bloqueado=True, motivo_bloqueo="vencido", fecha_bloqueo=timezone.now())
         self.message_user(request, f"{updated} lotes marcados como bloqueados.")
 
     marcar_como_bloqueado.short_description = "Marcar como bloqueados"

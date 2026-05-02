@@ -15,9 +15,7 @@ class Command(BaseCommand):
     help = "Configura límites de transacción iniciales para todos los roles"
 
     def handle(self, *args, **options):
-        self.stdout.write(
-            self.style.SUCCESS("🔧 Configurando límites de transacción iniciales...\n")
-        )
+        self.stdout.write(self.style.SUCCESS("🔧 Configurando límites de transacción iniciales...\n"))
 
         # Obtener roles
         try:
@@ -26,9 +24,7 @@ class Command(BaseCommand):
             rol_cajero = Roles.objects.get(nombre_rol="Cajero")
         except Roles.DoesNotExist as e:
             self.stdout.write(self.style.ERROR(f"❌ Error: No se encontró algún rol."))
-            self.stdout.write(
-                self.style.WARNING(f"   Asegúrate de tener roles: Admin, Gerente, Cajero")
-            )
+            self.stdout.write(self.style.WARNING(f"   Asegúrate de tener roles: Admin, Gerente, Cajero"))
             self.stdout.write(self.style.WARNING(f"   Detalles: {e}"))
             return
 
@@ -210,9 +206,7 @@ class Command(BaseCommand):
             except Exception as e:
                 errores += 1
                 self.stdout.write(
-                    self.style.ERROR(
-                        f"❌ Error: {config['rol'].nombre_rol} - {config['tipo_operacion']}: {e}"
-                    )
+                    self.style.ERROR(f"❌ Error: {config['rol'].nombre_rol} - {config['tipo_operacion']}: {e}")
                 )
 
         self.stdout.write(f"\n📊 Resumen:")

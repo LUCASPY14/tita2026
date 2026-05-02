@@ -43,9 +43,7 @@ class CuentaCorrienteClienteTest(TestCase):
         )
 
         # Rol para empleado
-        self.rol = Roles.objects.create(
-            nombre_rol="Cajero", descripcion="Cajero de ventas", estado=True
-        )
+        self.rol = Roles.objects.create(nombre_rol="Cajero", descripcion="Cajero de ventas", estado=True)
 
         # Empleado cajero
         self.empleado = Empleados.objects.create(
@@ -137,9 +135,7 @@ class CuentaCorrienteClienteTest(TestCase):
         )
 
         # Aplicar pago a venta
-        AplicacionPagosVentas.objects.create(
-            monto_aplicado=Decimal("80000.00"), id_pago_venta=pago, id_venta=venta
-        )
+        AplicacionPagosVentas.objects.create(monto_aplicado=Decimal("80000.00"), id_pago_venta=pago, id_venta=venta)
 
         # Refrescar venta
         venta.refresh_from_db()
@@ -168,9 +164,7 @@ class CuentaCorrienteClienteTest(TestCase):
             id_venta=venta,
         )
 
-        AplicacionPagosVentas.objects.create(
-            monto_aplicado=Decimal("100000.00"), id_pago_venta=pago, id_venta=venta
-        )
+        AplicacionPagosVentas.objects.create(monto_aplicado=Decimal("100000.00"), id_pago_venta=pago, id_venta=venta)
 
         venta.refresh_from_db()
 
@@ -279,9 +273,7 @@ class CuentaCorrienteProveedorTest(TestCase):
         )
 
         # Registrar pago parcial
-        pago = PagosProveedores.objects.create(
-            fecha_creacion=timezone.now(), id_medio_pago=self.medio_pago
-        )
+        pago = PagosProveedores.objects.create(fecha_creacion=timezone.now(), id_medio_pago=self.medio_pago)
 
         AplicacionPagosCompras.objects.create(
             monto_aplicado=Decimal("150000.00"), id_compra=compra, id_pago_proveedor=pago
@@ -320,9 +312,7 @@ class CuentaCorrienteProveedorTest(TestCase):
         )
 
         # Pago de 350,000 distribuido
-        pago = PagosProveedores.objects.create(
-            fecha_creacion=timezone.now(), id_medio_pago=self.medio_pago
-        )
+        pago = PagosProveedores.objects.create(fecha_creacion=timezone.now(), id_medio_pago=self.medio_pago)
 
         AplicacionPagosCompras.objects.create(
             monto_aplicado=Decimal("100000.00"), id_compra=compra1, id_pago_proveedor=pago

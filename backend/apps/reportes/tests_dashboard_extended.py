@@ -31,9 +31,7 @@ class DashboardKpisExceptionTest(TestCase):
 
     def test_calcular_kpis_raises_validation_error_on_exception(self):
         """When an unexpected error occurs, raises ValidationError."""
-        with patch(
-            "apps.reportes.services.dashboard_service.Ventas.objects.filter"
-        ) as mock_filter:
+        with patch("apps.reportes.services.dashboard_service.Ventas.objects.filter") as mock_filter:
             mock_filter.side_effect = Exception("DB connection lost")
             with self.assertRaises(ValidationError) as ctx:
                 DashboardService.calcular_kpis_principales()
@@ -114,8 +112,8 @@ class DashboardVentasTendenciaTest(TestCase):
     def test_tendencia_sin_periodo_anterior(self):
         """When ventas_periodo_anterior == 0, variacion = 0.00 → estable (line 196/201)."""
         result = self._run_ventas_with_mocked_aggregates(
-            actual_value=None,   # → Decimal("0.00")
-            anterior_value=None, # → Decimal("0.00")
+            actual_value=None,  # → Decimal("0.00")
+            anterior_value=None,  # → Decimal("0.00")
         )
         self.assertEqual(result["tendencia"], "estable")
         self.assertIn("ventas_por_dia", result)
@@ -124,9 +122,7 @@ class DashboardVentasTendenciaTest(TestCase):
 
     def test_dashboard_ventas_exception_path(self):
         """Exception path in obtener_dashboard_ventas (lines 233-235)."""
-        with patch(
-            "apps.reportes.services.dashboard_service.Ventas.objects.filter"
-        ) as mock_filter:
+        with patch("apps.reportes.services.dashboard_service.Ventas.objects.filter") as mock_filter:
             mock_filter.side_effect = Exception("query failed")
             with self.assertRaises(ValidationError) as ctx:
                 DashboardService.obtener_dashboard_ventas(dias=7)
@@ -146,9 +142,7 @@ class DashboardRecargasTest(TestCase):
 
     def test_dashboard_recargas_exception_path(self):
         """Exception path in obtener_dashboard_recargas (line 347)."""
-        with patch(
-            "apps.reportes.services.dashboard_service.CargasSaldo.objects.filter"
-        ) as mock_filter:
+        with patch("apps.reportes.services.dashboard_service.CargasSaldo.objects.filter") as mock_filter:
             mock_filter.side_effect = Exception("recargas error")
             with self.assertRaises(ValidationError) as ctx:
                 DashboardService.obtener_dashboard_recargas(dias=7)
@@ -177,12 +171,10 @@ class DashboardFinancieroTest(TestCase):
         simulate that hoy IS fecha_inicio while dias_transcurridos will be 1 (not 0).
 
         Actually dias_transcurridos is always >= 1 when hoy >= fecha_inicio.
-        The else branch (line 376) fires when dias_transcurridos <= 0, which 
+        The else branch (line 376) fires when dias_transcurridos <= 0, which
         can't happen with real dates. We patch the calculation directly.
         """
-        with patch(
-            "apps.reportes.services.dashboard_service.Ventas.objects.filter"
-        ) as mock_filter:
+        with patch("apps.reportes.services.dashboard_service.Ventas.objects.filter") as mock_filter:
             agg_mock = MagicMock()
             agg_mock.aggregate.return_value = {"total": None}
             mock_filter.return_value = agg_mock
@@ -190,9 +182,7 @@ class DashboardFinancieroTest(TestCase):
             # Use a mock date that makes dias_transcurridos = 0
             # by making hoy equal to fecha_inicio - 1 day
             # We achieve this by patching date.today inside the module
-            with patch(
-                "apps.reportes.services.dashboard_service.date"
-            ) as mock_date:
+            with patch("apps.reportes.services.dashboard_service.date") as mock_date:
                 # Set up so hoy = Jan 1 current year
                 fake_today = date(2026, 1, 1)
                 mock_date.today.return_value = fake_today
@@ -209,9 +199,7 @@ class DashboardFinancieroTest(TestCase):
 
     def test_financiero_exception_path(self):
         """Exception path in obtener_dashboard_financiero (line 376 area)."""
-        with patch(
-            "apps.reportes.services.dashboard_service.Ventas.objects.filter"
-        ) as mock_filter:
+        with patch("apps.reportes.services.dashboard_service.Ventas.objects.filter") as mock_filter:
             mock_filter.side_effect = Exception("financiero error")
             with self.assertRaises(ValidationError) as ctx:
                 DashboardService.obtener_dashboard_financiero(mes=3)
@@ -273,6 +261,7 @@ class DashboardGuardarKpiTest(TestCase):
 
         # First create
         from django.utils import timezone as tz
+
         ValoresKpi.objects.create(
             id_kpi=kpi,
             fecha=today,
@@ -306,9 +295,7 @@ class DashboardGuardarKpiTest(TestCase):
             estado=True,
         )
 
-        with patch(
-            "apps.reportes.services.dashboard_service.ValoresKpi.objects.update_or_create"
-        ) as mock_uoc:
+        with patch("apps.reportes.services.dashboard_service.ValoresKpi.objects.update_or_create") as mock_uoc:
             mock_uoc.side_effect = Exception("update_or_create failed")
             with self.assertRaises(ValidationError) as ctx:
                 DashboardService.guardar_valor_kpi(
@@ -326,9 +313,7 @@ class DashboardKpisWithTimezoneTest(TestCase):
     @patch("apps.reportes.services.dashboard_service.CargasSaldo.objects.filter")
     @patch("apps.reportes.services.dashboard_service.Tarjetas.objects.filter")
     @patch("apps.reportes.services.dashboard_service.StockUnico.objects.filter")
-    def test_calcular_kpis_con_use_tz_true(
-        self, mock_stock, mock_tarjetas, mock_recargas, mock_ventas
-    ):
+    def test_calcular_kpis_con_use_tz_true(self, mock_stock, mock_tarjetas, mock_recargas, mock_ventas):
         """
         Test calcular_kpis_principales with USE_TZ=True.
         This covers lines 81-83 where timezone-aware datetimes are created.

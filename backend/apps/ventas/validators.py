@@ -53,14 +53,10 @@ def validar_monto_rango(valor, minimo=None, maximo=None):
     valor_decimal = Decimal(str(valor))
 
     if minimo is not None and valor_decimal < Decimal(str(minimo)):
-        raise ValidationError(
-            f"El monto debe ser al menos {minimo:,.2f}. Valor recibido: {valor_decimal:,.2f}"
-        )
+        raise ValidationError(f"El monto debe ser al menos {minimo:,.2f}. Valor recibido: {valor_decimal:,.2f}")
 
     if maximo is not None and valor_decimal > Decimal(str(maximo)):
-        raise ValidationError(
-            f"El monto no puede exceder {maximo:,.2f}. Valor recibido: {valor_decimal:,.2f}"
-        )
+        raise ValidationError(f"El monto no puede exceder {maximo:,.2f}. Valor recibido: {valor_decimal:,.2f}")
 
 
 def validar_fecha_venta(fecha):
@@ -89,8 +85,7 @@ def validar_fecha_venta(fecha):
     # Permitir hasta 1 hora en el futuro (para ajustes de zona horaria)
     if fecha > ahora + timedelta(hours=1):
         raise ValidationError(
-            f"La fecha de venta no puede ser futura. "
-            f"Fecha recibida: {fecha}, Fecha actual: {ahora}"
+            f"La fecha de venta no puede ser futura. " f"Fecha recibida: {fecha}, Fecha actual: {ahora}"
         )
 
     # No permitir ventas de más de 30 días atrás
@@ -131,16 +126,13 @@ def validar_codigo_promocion(codigo):
 
     # Verificar longitud
     if len(codigo) < 3 or len(codigo) > 20:
-        raise ValidationError(
-            f"El código debe tener entre 3 y 20 caracteres. " f"Longitud actual: {len(codigo)}"
-        )
+        raise ValidationError(f"El código debe tener entre 3 y 20 caracteres. " f"Longitud actual: {len(codigo)}")
 
     # Verificar formato: solo mayúsculas, números y guiones
     patron = r"^[A-Z0-9\-]+$"
     if not re.match(patron, codigo):
         raise ValidationError(
-            f"El código solo puede contener letras mayúsculas, números y guiones. "
-            f"Código recibido: {codigo}"
+            f"El código solo puede contener letras mayúsculas, números y guiones. " f"Código recibido: {codigo}"
         )
 
 
@@ -168,9 +160,7 @@ def validar_porcentaje_descuento(porcentaje):
         raise ValidationError(f"El porcentaje no puede ser negativo. Valor: {porcentaje_decimal}")
 
     if porcentaje_decimal > 100:
-        raise ValidationError(
-            f"El porcentaje no puede ser mayor a 100. Valor: {porcentaje_decimal}"
-        )
+        raise ValidationError(f"El porcentaje no puede ser mayor a 100. Valor: {porcentaje_decimal}")
 
 
 def validar_estado_venta(estado):
@@ -188,9 +178,7 @@ def validar_estado_venta(estado):
     estados_validos = ["Activa", "Cancelada", "Anulada"]
 
     if estado not in estados_validos:
-        raise ValidationError(
-            f"Estado inválido: {estado}. " f'Estados válidos: {", ".join(estados_validos)}'
-        )
+        raise ValidationError(f"Estado inválido: {estado}. " f'Estados válidos: {", ".join(estados_validos)}')
 
 
 def validar_estado_pago(estado):
@@ -208,9 +196,7 @@ def validar_estado_pago(estado):
     estados_validos = ["Pagada", "Pendiente", "Parcial"]
 
     if estado not in estados_validos:
-        raise ValidationError(
-            f"Estado de pago inválido: {estado}. " f'Estados válidos: {", ".join(estados_validos)}'
-        )
+        raise ValidationError(f"Estado de pago inválido: {estado}. " f'Estados válidos: {", ".join(estados_validos)}')
 
 
 def validar_tipo_venta(tipo):
@@ -228,9 +214,7 @@ def validar_tipo_venta(tipo):
     tipos_validos = ["Contado", "Crédito"]
 
     if tipo not in tipos_validos:
-        raise ValidationError(
-            f"Tipo de venta inválido: {tipo}. " f'Tipos válidos: {", ".join(tipos_validos)}'
-        )
+        raise ValidationError(f"Tipo de venta inválido: {tipo}. " f'Tipos válidos: {", ".join(tipos_validos)}')
 
 
 def validar_cantidad_producto(cantidad):
@@ -254,9 +238,7 @@ def validar_cantidad_producto(cantidad):
         raise ValidationError(f"La cantidad debe ser mayor a cero. Valor: {cantidad_decimal}")
 
     if cantidad_decimal > 9999:
-        raise ValidationError(
-            f"La cantidad no puede exceder 9999 unidades. Valor: {cantidad_decimal}"
-        )
+        raise ValidationError(f"La cantidad no puede exceder 9999 unidades. Valor: {cantidad_decimal}")
 
     # Verificar máximo 3 decimales
     # Convertir a string y verificar decimales
@@ -264,10 +246,7 @@ def validar_cantidad_producto(cantidad):
     if "." in cantidad_str:
         decimales = len(cantidad_str.split(".")[1])
         if decimales > 3:
-            raise ValidationError(
-                f"La cantidad no puede tener más de 3 decimales. "
-                f"Decimales actuales: {decimales}"
-            )
+            raise ValidationError(f"La cantidad no puede tener más de 3 decimales. " f"Decimales actuales: {decimales}")
 
 
 def validar_fecha_rango_promocion(fecha_inicio, fecha_fin=None):
@@ -292,24 +271,21 @@ def validar_fecha_rango_promocion(fecha_inicio, fecha_fin=None):
     # Fecha inicio no muy antigua
     if fecha_inicio < hace_30_dias:
         raise ValidationError(
-            f"La fecha de inicio no puede ser más antigua que 30 días. "
-            f"Fecha recibida: {fecha_inicio}"
+            f"La fecha de inicio no puede ser más antigua que 30 días. " f"Fecha recibida: {fecha_inicio}"
         )
 
     if fecha_fin:
         # Fecha fin debe ser posterior a inicio
         if fecha_fin <= fecha_inicio:
             raise ValidationError(
-                f"La fecha de fin debe ser posterior a la fecha de inicio. "
-                f"Inicio: {fecha_inicio}, Fin: {fecha_fin}"
+                f"La fecha de fin debe ser posterior a la fecha de inicio. " f"Inicio: {fecha_inicio}, Fin: {fecha_fin}"
             )
 
         # Rango máximo de 365 días
         dias_diferencia = (fecha_fin - fecha_inicio).days
         if dias_diferencia > 365:
             raise ValidationError(
-                f"El rango de la promoción no puede ser mayor a 365 días. "
-                f"Días actuales: {dias_diferencia}"
+                f"El rango de la promoción no puede ser mayor a 365 días. " f"Días actuales: {dias_diferencia}"
             )
 
 
@@ -420,14 +396,10 @@ def validar_dias_semana(dias):
 
     for dia in dias:
         if not isinstance(dia, int):
-            raise ValidationError(
-                f"Cada día debe ser un número entero. Recibido: {dia} ({type(dia).__name__})"
-            )
+            raise ValidationError(f"Cada día debe ser un número entero. Recibido: {dia} ({type(dia).__name__})")
 
         if dia < 0 or dia > 6:
-            raise ValidationError(
-                f"Los días deben estar entre 0 (Lunes) y 6 (Domingo). " f"Valor inválido: {dia}"
-            )
+            raise ValidationError(f"Los días deben estar entre 0 (Lunes) y 6 (Domingo). " f"Valor inválido: {dia}")
 
 
 def validar_numero_factura(numero):
@@ -451,15 +423,12 @@ def validar_numero_factura(numero):
 
     # Solo números
     if not numero_str.isdigit():
-        raise ValidationError(
-            f"El número de factura solo puede contener dígitos. " f"Valor recibido: {numero_str}"
-        )
+        raise ValidationError(f"El número de factura solo puede contener dígitos. " f"Valor recibido: {numero_str}")
 
     # Máximo 15 dígitos
     if len(numero_str) > 15:
         raise ValidationError(
-            f"El número de factura no puede tener más de 15 dígitos. "
-            f"Longitud actual: {len(numero_str)}"
+            f"El número de factura no puede tener más de 15 dígitos. " f"Longitud actual: {len(numero_str)}"
         )
 
 
@@ -479,6 +448,4 @@ def validar_motivo_credito(motivo, tipo_venta):
             raise ValidationError("Las ventas a crédito requieren un motivo")
 
         if len(motivo) < 10:
-            raise ValidationError(
-                f"El motivo debe tener al menos 10 caracteres. " f"Longitud actual: {len(motivo)}"
-            )
+            raise ValidationError(f"El motivo debe tener al menos 10 caracteres. " f"Longitud actual: {len(motivo)}")

@@ -24,9 +24,7 @@ def validar_nombre_caja(value):
 
     # Caracteres permitidos: letras, números, espacios, guiones
     if not re.match(r"^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-]+$", value):
-        raise ValidationError(
-            "El nombre de la caja solo puede contener letras, números, espacios y guiones."
-        )
+        raise ValidationError("El nombre de la caja solo puede contener letras, números, espacios y guiones.")
 
 
 def validar_ubicacion_caja(value):
@@ -544,9 +542,7 @@ def validar_nro_preimpreso_documento(value):
     # Formato típico: 001-001-0000001
     patron = r"^\d{3}-\d{3}-\d{7}$"
     if not re.match(patron, value):
-        raise ValidationError(
-            "El número preimpreso debe tener el formato XXX-XXX-XXXXXXX (ej: 001-001-0000001)"
-        )
+        raise ValidationError("El número preimpreso debe tener el formato XXX-XXX-XXXXXXX (ej: 001-001-0000001)")
 
 
 def validar_fechas_envio_respuesta_documento(fecha_envio, fecha_respuesta):
@@ -719,9 +715,7 @@ def validar_codigo_punto_expedicion(value):
         raise ValidationError("El código de punto de expedición es requerido.")
 
     if len(value) != 3:
-        raise ValidationError(
-            "El código de punto de expedición debe tener exactamente 3 caracteres."
-        )
+        raise ValidationError("El código de punto de expedición debe tener exactamente 3 caracteres.")
 
     # Debe ser numérico
     if not value.isdigit():
@@ -823,9 +817,7 @@ def validar_telefono_empresa(value):
     # Permitir también formatos locales: (0XXX) XXX-XXX
     patron = r"^(\+595\d{9}|\(\d{3,4}\)\s?\d{3}-\d{3,4}|\d{9,11})$"
     if not re.match(patron, value.replace(" ", "").replace("-", "")):
-        raise ValidationError(
-            "El teléfono debe tener un formato válido (ej: +595981234567 o (021) 123-456)"
-        )
+        raise ValidationError("El teléfono debe tener un formato válido (ej: +595981234567 o (021) 123-456)")
 
 
 def validar_email_empresa(value):

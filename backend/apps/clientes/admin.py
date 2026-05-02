@@ -36,19 +36,16 @@ class HijosAdmin(admin.ModelAdmin):
     list_display = ["id_hijo", "nombre", "apellido", "grado", "estado"]
     list_filter = ["estado", "grado"]
     search_fields = ["nombre", "apellido"]
-    
+
     fieldsets = (
-        ("Información Personal", {
-            "fields": ("nombre", "apellido", "fecha_nacimiento", "grado", "id_cliente_responsable")
-        }),
-        ("Foto de Perfil", {
-            "fields": ("foto_perfil", "fecha_foto")
-        }),
-        ("Estado", {
-            "fields": ("estado",)
-        }),
+        (
+            "Información Personal",
+            {"fields": ("nombre", "apellido", "fecha_nacimiento", "grado", "id_cliente_responsable")},
+        ),
+        ("Foto de Perfil", {"fields": ("foto_perfil", "fecha_foto")}),
+        ("Estado", {"fields": ("estado",)}),
     )
-    
+
     readonly_fields = ["fecha_foto"]
 
 
@@ -103,11 +100,11 @@ class LogsAutorizacionesAdmin(admin.ModelAdmin):
 
 @admin.register(Pais)
 class PaisAdmin(admin.ModelAdmin):
-    list_display = ['id_pais', 'nombre']
-    search_fields = ['nombre']
+    list_display = ["id_pais", "nombre"]
+    search_fields = ["nombre"]
 
 
 @admin.register(Ciudad)
 class CiudadAdmin(admin.ModelAdmin):
-    list_display = ['id_ciudad', 'nombre']
-    search_fields = ['nombre']
+    list_display = ["id_ciudad", "nombre"]
+    search_fields = ["nombre"]

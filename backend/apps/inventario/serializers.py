@@ -4,9 +4,7 @@ from .models import StockUnico, MovimientosStock, AjustesInventario
 
 class StockUnicoSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(source="id_producto.descripcion", read_only=True)
-    producto_categoria = serializers.CharField(
-        source="id_producto.id_categoria.nombre", read_only=True
-    )
+    producto_categoria = serializers.CharField(source="id_producto.id_categoria.nombre", read_only=True)
 
     class Meta:
         model = StockUnico

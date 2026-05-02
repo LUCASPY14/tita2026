@@ -2,6 +2,7 @@
 Tests for apps/reportes/admin.py
 Covers all custom display methods across 7 admin classes.
 """
+
 from unittest.mock import MagicMock, patch
 from django.test import TestCase
 from django.contrib.admin.sites import AdminSite
@@ -39,7 +40,8 @@ def _mock_obj(**kwargs):
 # PlantillasReporteAdmin
 # =============================================================================
 
-@patch('apps.reportes.admin.format_html', _plain_format_html)
+
+@patch("apps.reportes.admin.format_html", _plain_format_html)
 class PlantillasReporteAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -138,7 +140,8 @@ class PlantillasReporteAdminTest(TestCase):
 # DashboardsAdmin
 # =============================================================================
 
-@patch('apps.reportes.admin.format_html', _plain_format_html)
+
+@patch("apps.reportes.admin.format_html", _plain_format_html)
 class DashboardsAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -183,7 +186,8 @@ class DashboardsAdminTest(TestCase):
 # KpiMetricasAdmin
 # =============================================================================
 
-@patch('apps.reportes.admin.format_html', _plain_format_html)
+
+@patch("apps.reportes.admin.format_html", _plain_format_html)
 class KpiMetricasAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -291,7 +295,8 @@ class KpiMetricasAdminTest(TestCase):
 # ValoresKpiAdmin
 # =============================================================================
 
-@patch('apps.reportes.admin.format_html', _plain_format_html)
+
+@patch("apps.reportes.admin.format_html", _plain_format_html)
 class ValoresKpiAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -326,7 +331,8 @@ class ValoresKpiAdminTest(TestCase):
 # PlantillasTareaAdmin
 # =============================================================================
 
-@patch('apps.reportes.admin.format_html', _plain_format_html)
+
+@patch("apps.reportes.admin.format_html", _plain_format_html)
 class PlantillasTareaAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -449,7 +455,8 @@ class PlantillasTareaAdminTest(TestCase):
 # EjecucionesTareaAdmin
 # =============================================================================
 
-@patch('apps.reportes.admin.format_html', _plain_format_html)
+
+@patch("apps.reportes.admin.format_html", _plain_format_html)
 class EjecucionesTareaAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -524,7 +531,8 @@ class EjecucionesTareaAdminTest(TestCase):
 # DestinatariosTareaAdmin
 # =============================================================================
 
-@patch('apps.reportes.admin.format_html', _plain_format_html)
+
+@patch("apps.reportes.admin.format_html", _plain_format_html)
 class DestinatariosTareaAdminTest(TestCase):
     def setUp(self):
         self.site = AdminSite()

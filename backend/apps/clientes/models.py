@@ -10,19 +10,20 @@ from decimal import Decimal
 
 class ClientesManager(models.Manager):
     def create(self, **kwargs):
-        if 'id_lista' not in kwargs and 'id_lista_id' not in kwargs:
+        if "id_lista" not in kwargs and "id_lista_id" not in kwargs:
             from apps.productos.models import ListasPrecios
+
             lista, _ = ListasPrecios.objects.get_or_create(
-                nombre_lista='General',
-                defaults={'estado': True},
+                nombre_lista="General",
+                defaults={"estado": True},
             )
-            kwargs['id_lista'] = lista
-        if 'id_tipo_cliente' not in kwargs and 'id_tipo_cliente_id' not in kwargs:
+            kwargs["id_lista"] = lista
+        if "id_tipo_cliente" not in kwargs and "id_tipo_cliente_id" not in kwargs:
             tipo, _ = TiposCliente.objects.get_or_create(
-                nombre_tipo='Regular',
-                defaults={'estado': True},
+                nombre_tipo="Regular",
+                defaults={"estado": True},
             )
-            kwargs['id_tipo_cliente'] = tipo
+            kwargs["id_tipo_cliente"] = tipo
         return super().create(**kwargs)
 
 
@@ -35,27 +36,25 @@ class Clientes(models.Model):
     id_cliente = models.AutoField(primary_key=True)
     nombres = models.CharField(max_length=100, help_text="Nombres del cliente")
     apellidos = models.CharField(max_length=100, help_text="Apellidos del cliente")
-    razon_social = models.CharField(
-        max_length=255, blank=True, null=True, help_text="Razón social si es empresa"
-    )
+    razon_social = models.CharField(max_length=255, blank=True, null=True, help_text="Razón social si es empresa")
     ruc_ci = models.CharField(unique=True, max_length=20, help_text="RUC o Cédula de Identidad")
     direccion = models.CharField(max_length=255, blank=True, null=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True)
     id_ciudad = models.ForeignKey(
-        "Ciudad", models.SET_NULL, db_column="id_ciudad", blank=True, null=True,
+        "Ciudad",
+        models.SET_NULL,
+        db_column="id_ciudad",
+        blank=True,
+        null=True,
         help_text="Ciudad del catálogo (opcional)",
     )
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.CharField(max_length=254, blank=True, null=True, validators=[EmailValidator()])
-    limite_credito = models.DecimalField(
-        max_digits=12, decimal_places=2, blank=True, null=True, default=0
-    )
+    limite_credito = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, default=0)
     estado = models.BooleanField(default=True, help_text="1=estado, 0=Inactivo")
     fecha_registro = models.DateTimeField(auto_now_add=True)
     id_lista = models.ForeignKey("productos.ListasPrecios", models.DO_NOTHING, db_column="id_lista")
-    id_tipo_cliente = models.ForeignKey(
-        "TiposCliente", models.DO_NOTHING, db_column="id_tipo_cliente"
-    )
+    id_tipo_cliente = models.ForeignKey("TiposCliente", models.DO_NOTHING, db_column="id_tipo_cliente")
 
     objects = ClientesManager()
 
@@ -66,10 +65,10 @@ class Clientes(models.Model):
         verbose_name_plural = "Clientes"
         ordering = ["apellidos", "nombres"]
         indexes = [
-            models.Index(fields=['email'], name='idx_clientes_email'),
-            models.Index(fields=['estado', 'fecha_registro'], name='idx_clientes_estado_fecha'),
-            models.Index(fields=['apellidos', 'nombres'], name='idx_clientes_nombre'),
-            models.Index(fields=['ciudad'], name='idx_clientes_ciudad'),
+            models.Index(fields=["email"], name="idx_clientes_email"),
+            models.Index(fields=["estado", "fecha_registro"], name="idx_clientes_estado_fecha"),
+            models.Index(fields=["apellidos", "nombres"], name="idx_clientes_nombre"),
+            models.Index(fields=["ciudad"], name="idx_clientes_ciudad"),
         ]
 
     def __str__(self):
@@ -147,14 +146,10 @@ class Clientes(models.Model):
         # Total de ventas pendientes
         ventas_pendientes = Ventas.objects.filter(id_cliente=self.id_cliente, saldo_pendiente__gt=0)
 
-        total_debe = ventas_pendientes.aggregate(total=Sum("saldo_pendiente"))["total"] or Decimal(
-            "0.00"
-        )
+        total_debe = ventas_pendientes.aggregate(total=Sum("saldo_pendiente"))["total"] or Decimal("0.00")
 
         # Notas de crédito emitidas sin aplicar
-        notas_credito = NotasCreditoCliente.objects.filter(
-            id_cliente=self.id_cliente, estado="Emitida"
-        )
+        notas_credito = NotasCreditoCliente.objects.filter(id_cliente=self.id_cliente, estado="Emitida")
 
         total_haber = notas_credito.aggregate(total=Sum("monto_total"))["total"] or Decimal("0.00")
 
@@ -213,10 +208,7 @@ class Hijos(models.Model):
     fecha_nacimiento = models.DateField(blank=True, null=True)
     grado = models.CharField(max_length=50, blank=True, null=True)
     foto_perfil = models.ImageField(
-        upload_to='fotos_estudiantes/', 
-        blank=True, 
-        null=True,
-        help_text="Foto de perfil del estudiante"
+        upload_to="fotos_estudiantes/", blank=True, null=True, help_text="Foto de perfil del estudiante"
     )
     fecha_foto = models.DateTimeField(blank=True, null=True)
     estado = models.BooleanField(default=True, help_text="1=estado, 0=Inactivo")
@@ -253,10 +245,7 @@ class Hijos(models.Model):
             return (
                 today.year
                 - self.fecha_nacimiento.year
-                - (
-                    (today.month, today.day)
-                    < (self.fecha_nacimiento.month, self.fecha_nacimiento.day)
-                )
+                - ((today.month, today.day) < (self.fecha_nacimiento.month, self.fecha_nacimiento.day))
             )
         return None
 
@@ -303,9 +292,7 @@ class HistorialGradosHijos(models.Model):
     motivo = models.CharField(max_length=20)
     usuario_registro = models.CharField(max_length=100, blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
-    id_hijo = models.ForeignKey(
-        "Hijos", models.DO_NOTHING, db_column="id_hijo", related_name="historial_grados"
-    )
+    id_hijo = models.ForeignKey("Hijos", models.DO_NOTHING, db_column="id_hijo", related_name="historial_grados")
 
     class Meta:
         managed = True
@@ -328,21 +315,15 @@ class RestriccionesHijos(models.Model):
     """
 
     id_restriccion = models.AutoField(primary_key=True)
-    tipo_restriccion = models.CharField(
-        max_length=100, help_text="Ej: Alergia, Intolerancia, Médica"
-    )
+    tipo_restriccion = models.CharField(max_length=100, help_text="Ej: Alergia, Intolerancia, Médica")
     descripcion = models.TextField(blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
     severidad = models.CharField(max_length=20, help_text="Ej: Baja, Media, Alta, Crítica")
-    requiere_autorizacion = models.BooleanField(
-        default=False, help_text="1 si requiere autorización para excepciones"
-    )
+    requiere_autorizacion = models.BooleanField(default=False, help_text="1 si requiere autorización para excepciones")
     fecha_registro = models.DateTimeField(auto_now_add=True)
     fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
     estado = models.BooleanField(default=True)
-    id_hijo = models.ForeignKey(
-        "Hijos", models.DO_NOTHING, db_column="id_hijo", related_name="restricciones"
-    )
+    id_hijo = models.ForeignKey("Hijos", models.DO_NOTHING, db_column="id_hijo", related_name="restricciones")
 
     class Meta:
         managed = True
@@ -416,9 +397,7 @@ class LogsAutorizaciones(models.Model):
 
     id_log = models.BigAutoField(primary_key=True)
     codigo_barra = models.CharField(max_length=50)
-    tipo_operacion = models.CharField(
-        max_length=20, help_text="Ej: Lectura, Autorización, Validación"
-    )
+    tipo_operacion = models.CharField(max_length=20, help_text="Ej: Lectura, Autorización, Validación")
     id_registro_afectado = models.BigIntegerField(blank=True, null=True)
     descripcion = models.TextField(blank=True, null=True)
     id_usuario = models.IntegerField(blank=True, null=True)

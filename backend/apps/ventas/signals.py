@@ -110,18 +110,20 @@ def emitir_documento_tributario(sender, instance, created, **kwargs):
     from apps.contabilidad.models import Timbrados, DocumentosTributarios, CierresCaja, MovimientosCaja
 
     hoy = date.today()
-    timbrado = Timbrados.objects.filter(
-        estado=True,
-        fecha_inicio__lte=hoy,
-        fecha_fin__gte=hoy,
-    ).order_by("-fecha_inicio").first()
+    timbrado = (
+        Timbrados.objects.filter(
+            estado=True,
+            fecha_inicio__lte=hoy,
+            fecha_fin__gte=hoy,
+        )
+        .order_by("-fecha_inicio")
+        .first()
+    )
 
     if timbrado:
         try:
             with transaction.atomic():
-                usados = DocumentosTributarios.objects.filter(
-                    nro_timbrado=timbrado
-                ).select_for_update().count()
+                usados = DocumentosTributarios.objects.filter(nro_timbrado=timbrado).select_for_update().count()
                 nro = timbrado.nro_inicial + usados
                 if nro <= timbrado.nro_final:
                     DocumentosTributarios.objects.create(
@@ -142,14 +144,16 @@ def emitir_documento_tributario(sender, instance, created, **kwargs):
         # Filtrar por la caja específica que procesó esta venta para evitar
         # asignar el movimiento al turno equivocado cuando hay múltiples cajas abiertas
         if instance.id_caja_id:
-            turno = CierresCaja.objects.filter(
-                estado="abierto",
-                id_caja_id=instance.id_caja_id,
-            ).order_by("-fecha_hora_apertura").first()
+            turno = (
+                CierresCaja.objects.filter(
+                    estado="abierto",
+                    id_caja_id=instance.id_caja_id,
+                )
+                .order_by("-fecha_hora_apertura")
+                .first()
+            )
         else:
-            turno = CierresCaja.objects.filter(
-                estado="abierto"
-            ).order_by("-fecha_hora_apertura").first()
+            turno = CierresCaja.objects.filter(estado="abierto").order_by("-fecha_hora_apertura").first()
         if turno and instance.id_medio_pago_id:
             MovimientosCaja.objects.create(
                 id_cierre=turno,

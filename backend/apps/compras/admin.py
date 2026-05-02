@@ -50,11 +50,11 @@ class ProveedoresAdmin(admin.ModelAdmin):
         if obj.estado:
             return format_html(
                 '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
-                'ACTIVO'
+                "ACTIVO",
             )
         return format_html(
             '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
-            'INACTIVO'
+            "INACTIVO",
         )
 
     estado_badge.short_description = "Estado"
@@ -100,31 +100,31 @@ class ComprasAdmin(admin.ModelAdmin):
         """Muestra número de factura con formato"""
         if obj.nro_factura:
             return format_html("<strong>{}</strong>", obj.nro_factura)
-        return format_html('<em style="color: #999;">{}</em>', 'Sin factura')
+        return format_html('<em style="color: #999;">{}</em>', "Sin factura")
 
     nro_factura_display.short_description = "Nro. Factura"
-    
+
     def tipo_pago_badge(self, obj):
         """Badge para tipo de pago"""
         if obj.tipo_pago == "Contado":
             return format_html(
                 '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
-                'CONTADO'
+                "CONTADO",
             )
         else:
             return format_html(
                 '<span style="background-color: #ffc107; color: black; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
-                'CRÉDITO'
+                "CRÉDITO",
             )
-    
+
     tipo_pago_badge.short_description = "Tipo Pago"
-    
+
     def medio_pago_display(self, obj):
         """Muestra el medio de pago"""
         if obj.id_medio_pago:
             return obj.id_medio_pago.descripcion
-        return format_html('<em style="color: #999;">{}</em>', 'No especificado')
-    
+        return format_html('<em style="color: #999;">{}</em>', "No especificado")
+
     medio_pago_display.short_description = "Medio de Pago"
 
     def proveedor_nombre(self, obj):
@@ -152,7 +152,7 @@ class ComprasAdmin(admin.ModelAdmin):
                 color,
                 saldo_formateado,
             )
-        return format_html('<span style="color: #28a745;">{}</span>', '₲ 0')
+        return format_html('<span style="color: #28a745;">{}</span>', "₲ 0")
 
     saldo_display.short_description = "Saldo Pendiente"
     saldo_display.admin_order_field = "saldo_pendiente"
@@ -265,26 +265,20 @@ class PagosProveedoresAdmin(admin.ModelAdmin):
 
     def medio_pago_nombre(self, obj):
         """Muestra nombre del medio de pago"""
-        return (
-            obj.id_medio_pago.nombre
-            if hasattr(obj.id_medio_pago, "nombre")
-            else str(obj.id_medio_pago)
-        )
+        return obj.id_medio_pago.nombre if hasattr(obj.id_medio_pago, "nombre") else str(obj.id_medio_pago)
 
     medio_pago_nombre.short_description = "Medio de Pago"
 
     def monto_total_aplicado(self, obj):
         """Calcula y muestra el monto total aplicado del pago"""
-        total = AplicacionPagosCompras.objects.filter(id_pago_proveedor=obj).aggregate(
-            total=Sum("monto_aplicado")
-        )["total"] or Decimal("0.00")
+        total = AplicacionPagosCompras.objects.filter(id_pago_proveedor=obj).aggregate(total=Sum("monto_aplicado"))[
+            "total"
+        ] or Decimal("0.00")
 
         if total > 0:
             total_formateado = f"{total:,.2f}"
-            return format_html(
-                '<span style="color: #28a745; font-weight: bold;">₲ {}</span>', total_formateado
-            )
-        return format_html('<em style="color: #999;">{}</em>', '₲ 0.00')
+            return format_html('<span style="color: #28a745; font-weight: bold;">₲ {}</span>', total_formateado)
+        return format_html('<em style="color: #999;">{}</em>', "₲ 0.00")
 
     monto_total_aplicado.short_description = "Monto Aplicado"
 
@@ -357,7 +351,7 @@ class NotasCreditoProveedorAdmin(admin.ModelAdmin):
         """Muestra número de factura con formato"""
         if obj.nro_factura_compra:
             return format_html("<code>{}</code>", obj.nro_factura_compra)
-        return format_html('<em style="color: #999;">{}</em>', 'S/F')
+        return format_html('<em style="color: #999;">{}</em>', "S/F")
 
     nro_factura_display.short_description = "Nro. Factura"
 
@@ -371,9 +365,7 @@ class NotasCreditoProveedorAdmin(admin.ModelAdmin):
     def monto_display(self, obj):
         """Muestra monto total formateado"""
         monto_formateado = f"{obj.monto_total:,.2f}"
-        return format_html(
-            '<span style="color: #dc3545; font-weight: bold;">₲ {}</span>', monto_formateado
-        )
+        return format_html('<span style="color: #dc3545; font-weight: bold;">₲ {}</span>', monto_formateado)
 
     monto_display.short_description = "Monto NC"
     monto_display.admin_order_field = "monto_total"

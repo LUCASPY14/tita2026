@@ -5,6 +5,7 @@ Cubre líneas faltantes:
 118-140 (actualizar_saldos_masivos loop tarjetas),
 168 (limpiar_cache_configuraciones delete)
 """
+
 from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import patch, MagicMock
@@ -16,14 +17,12 @@ from apps.core.models import CargasSaldo, Tarjetas, ConsumosTarjeta
 from apps.clientes.models import Clientes, TiposCliente, Hijos
 from apps.productos.models import ListasPrecios
 
-
 # ─── helpers ──────────────────────────────────────────────────────────────────
+
 
 def _make_cliente(suffix=""):
     tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo=f"TipoCT{suffix}")
-    lista, _ = ListasPrecios.objects.get_or_create(
-        nombre_lista=f"ListaCT{suffix}", defaults={"estado": True}
-    )
+    lista, _ = ListasPrecios.objects.get_or_create(nombre_lista=f"ListaCT{suffix}", defaults={"estado": True})
     return Clientes.objects.create(
         nombres=f"ClienteCT{suffix}",
         apellidos="Tasks",
@@ -58,6 +57,7 @@ def _make_tarjeta(hijo, suffix="", saldo=Decimal("10000.00"), estado="activa"):
 # expirar_recargas_pendientes – líneas 39-46
 # =============================================================================
 
+
 class ExpirarRecargasPendientesTest(TestCase):
     """Tests para la task expirar_recargas_pendientes"""
 
@@ -69,6 +69,7 @@ class ExpirarRecargasPendientesTest(TestCase):
     def test_sin_recargas_pendientes_retorna_cero(self):
         """Sin recargas pendientes expiradas → expiradas=0."""
         from apps.core.tasks import expirar_recargas_pendientes
+
         resultado = expirar_recargas_pendientes.run()
         self.assertTrue(resultado["success"])
         self.assertEqual(resultado["expiradas"], 0)
@@ -87,6 +88,7 @@ class ExpirarRecargasPendientesTest(TestCase):
         CargasSaldo.objects.filter(pk=carga.pk).update(fecha_carga=hace_25h)
 
         from apps.core.tasks import expirar_recargas_pendientes
+
         resultado = expirar_recargas_pendientes.run()
         self.assertTrue(resultado["success"])
         # La task tiene un bug: intenta save(update_fields=["estado", "motivo_rechazo"])
@@ -107,6 +109,7 @@ class ExpirarRecargasPendientesTest(TestCase):
         CargasSaldo.objects.filter(pk=carga.pk).update(fecha_carga=hace_25h)
 
         from apps.core.tasks import expirar_recargas_pendientes
+
         resultado = expirar_recargas_pendientes.run()
         # Loop se ejecutó al menos una vez (líneas 39-46 cubiertas)
         total = resultado["expiradas"] + resultado["errores"]
@@ -115,6 +118,7 @@ class ExpirarRecargasPendientesTest(TestCase):
     def test_retry_en_excepcion(self):
         """Exception outer → self.retry() se llama."""
         from apps.core.tasks import expirar_recargas_pendientes
+
         with patch("apps.core.tasks.CargasSaldo.objects") as mock_qs:
             mock_qs.filter.side_effect = Exception("DB error")
             # self.retry raises Retry exception
@@ -133,6 +137,7 @@ class ExpirarRecargasPendientesTest(TestCase):
         CargasSaldo.objects.filter(pk=carga.pk).update(fecha_carga=hace_25h)
 
         from apps.core.tasks import expirar_recargas_pendientes
+
         with patch.object(CargasSaldo, "save", side_effect=Exception("save error")):
             resultado = expirar_recargas_pendientes.run()
         self.assertGreaterEqual(resultado["errores"], 1)
@@ -141,6 +146,7 @@ class ExpirarRecargasPendientesTest(TestCase):
 # =============================================================================
 # actualizar_saldos_masivos – líneas 118-140
 # =============================================================================
+
 
 class ActualizarSaldosMasivosTest(TestCase):
     """Tests para la task actualizar_saldos_masivos"""
@@ -152,6 +158,7 @@ class ActualizarSaldosMasivosTest(TestCase):
     def test_sin_tarjetas_activas_retorna_cero(self):
         """Sin tarjetas con estado='activa' → tarjetas_procesadas=0."""
         from apps.core.tasks import actualizar_saldos_masivos
+
         resultado = actualizar_saldos_masivos.run()
         self.assertTrue(resultado["success"])
         self.assertEqual(resultado["tarjetas_actualizadas"], 0)
@@ -160,6 +167,7 @@ class ActualizarSaldosMasivosTest(TestCase):
         """Líneas 118-140: Tarjeta activa con saldo correcto → no se actualiza."""
         tarjeta = _make_tarjeta(self.hijo, "asm1", saldo=Decimal("0.00"), estado="activa")
         from apps.core.tasks import actualizar_saldos_masivos
+
         resultado = actualizar_saldos_masivos.run()
         self.assertTrue(resultado["success"])
         self.assertEqual(resultado["tarjetas_actualizadas"], 0)
@@ -177,6 +185,7 @@ class ActualizarSaldosMasivosTest(TestCase):
         )
         # saldo_calculado = -(-8000) = 8000, pero tarjeta.saldo_actual = 5000 → difieren
         from apps.core.tasks import actualizar_saldos_masivos
+
         resultado = actualizar_saldos_masivos.run()
         self.assertTrue(resultado["success"])
         self.assertGreaterEqual(resultado["tarjetas_actualizadas"], 1)
@@ -187,6 +196,7 @@ class ActualizarSaldosMasivosTest(TestCase):
         """Error al procesar tarjeta individual → errores += 1."""
         tarjeta = _make_tarjeta(self.hijo, "asm3", saldo=Decimal("1000.00"), estado="activa")
         from apps.core.tasks import actualizar_saldos_masivos
+
         with patch("apps.core.models.ConsumosTarjeta.objects.filter") as mock_filter:
             mock_filter.return_value.aggregate.side_effect = Exception("DB error")
             resultado = actualizar_saldos_masivos.run()
@@ -195,6 +205,7 @@ class ActualizarSaldosMasivosTest(TestCase):
     def test_excepcion_outer_retorna_error(self):
         """Exception en el bloque outer → retorna success=False."""
         from apps.core.tasks import actualizar_saldos_masivos
+
         with patch("apps.core.tasks.Tarjetas.objects") as mock_qs:
             mock_qs.filter.side_effect = Exception("DB error")
             resultado = actualizar_saldos_masivos.run()
@@ -206,12 +217,14 @@ class ActualizarSaldosMasivosTest(TestCase):
 # limpiar_cache_configuraciones – línea 168
 # =============================================================================
 
+
 class LimpiarCacheConfiguracionesTest(TestCase):
     """Tests para la task limpiar_cache_configuraciones"""
 
     def test_sin_cache_retorna_cero(self):
         """Sin registros de cache → eliminados=0 o error si modelo no existe."""
         from apps.core.tasks import limpiar_cache_configuraciones
+
         resultado = limpiar_cache_configuraciones.run()
         # Si el modelo no existe → success=False con error
         # Si existe pero sin datos → success=True, eliminados=0
@@ -220,6 +233,7 @@ class LimpiarCacheConfiguracionesTest(TestCase):
     def test_elimina_cache_antiguo(self):
         """Línea 168: CacheConfiguracion.objects.filter().delete()[0] eliminados."""
         from apps.core.tasks import limpiar_cache_configuraciones
+
         # Patch dentro de la función (import local)
         with patch("apps.core.models.CacheConfiguracion") as mock_cache:
             mock_cache.objects.filter.return_value.delete.return_value = (5, {})
@@ -229,6 +243,7 @@ class LimpiarCacheConfiguracionesTest(TestCase):
     def test_excepcion_retorna_error(self):
         """Exception en limpiar_cache → retorna success=False."""
         from apps.core.tasks import limpiar_cache_configuraciones
+
         with patch("apps.core.models.CacheConfiguracion") as mock_cache:
             mock_cache.objects.filter.side_effect = Exception("DB error")
             resultado = limpiar_cache_configuraciones.run()
@@ -239,12 +254,14 @@ class LimpiarCacheConfiguracionesTest(TestCase):
 # confirmar_transaccion_bancard – líneas 80-100
 # =============================================================================
 
+
 class ConfirmarTransaccionBancardTest(TestCase):
     """Tests para la task confirmar_transaccion_bancard"""
 
     def test_bancard_success_procesa_webhook(self):
         """Status success → procesar_webhook es llamado."""
         from apps.core.tasks import confirmar_transaccion_bancard
+
         with patch("apps.api_integrations.services.BancardService") as mock_svc_cls:
             mock_svc = MagicMock()
             mock_svc.confirmar_transaccion.return_value = {
@@ -259,6 +276,7 @@ class ConfirmarTransaccionBancardTest(TestCase):
                 pass
             # Just test the logic directly by mocking the import
             import apps.api_integrations.services as svc_module
+
             original = getattr(svc_module, "BancardService", None)
             try:
                 svc_module.BancardService = mock_svc_cls
@@ -272,6 +290,7 @@ class ConfirmarTransaccionBancardTest(TestCase):
         """Status != success → retorna error."""
         from apps.core.tasks import confirmar_transaccion_bancard
         import apps.api_integrations.services as svc_module
+
         mock_svc = MagicMock()
         mock_svc.confirmar_transaccion.return_value = {"status": "error"}
         original = getattr(svc_module, "BancardService", None)
@@ -288,6 +307,7 @@ class ConfirmarTransaccionBancardTest(TestCase):
         """Exception → retorna success=False."""
         from apps.core.tasks import confirmar_transaccion_bancard
         import apps.api_integrations.services as svc_module
+
         original = getattr(svc_module, "BancardService", None)
         try:
             svc_module.BancardService = MagicMock(side_effect=Exception("connection error"))

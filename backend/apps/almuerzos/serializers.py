@@ -33,9 +33,7 @@ class SuscripcionesAlmuerzoSerializer(serializers.ModelSerializer):
     hijo_nombre = serializers.CharField(source="id_hijo.nombre", read_only=True)
     plan_nombre = serializers.CharField(source="id_plan_almuerzo.nombre_plan", read_only=True)
     tipo_plan = serializers.CharField(source="id_plan_almuerzo.tipo_plan", read_only=True)
-    cantidad_almuerzos_mes = serializers.IntegerField(
-        source="id_plan_almuerzo.cantidad_almuerzos_mes", read_only=True
-    )
+    cantidad_almuerzos_mes = serializers.IntegerField(source="id_plan_almuerzo.cantidad_almuerzos_mes", read_only=True)
 
     class Meta:
         model = SuscripcionesAlmuerzo
