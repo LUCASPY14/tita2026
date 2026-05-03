@@ -19,7 +19,7 @@ from apps.compras.models import (
 )
 from apps.contabilidad.models import Impuestos
 from apps.core.models import MediosPago
-from apps.productos.models import Categorias, Productos, UnidadesMedida
+from apps.productos.models import Categorias, Productos
 from apps.usuarios.models import Empleados, Roles
 
 

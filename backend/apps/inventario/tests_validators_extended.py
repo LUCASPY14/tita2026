@@ -14,13 +14,10 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
-import pytest
-
 from apps.inventario.validators import (
     validar_cantidad_ajuste,
     validar_cantidad_lote,
     validar_cantidad_no_negativa,
-    validar_costo_unitario,
     validar_dias_cobertura,
     validar_dias_historico,
     validar_estado_ajuste,

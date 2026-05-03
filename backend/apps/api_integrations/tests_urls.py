@@ -250,7 +250,6 @@ class ApiIntegrationsUrlsIntegrationTest(APITestCase):
         sensitive_patterns = ["password", "secret", "key", "token", "credential"]
 
         # Obtener todas las URLs del módulo
-        from django.conf.urls import include
         from django.urls import URLPattern, URLResolver
 
         def extract_patterns(urlpatterns):
@@ -385,7 +384,7 @@ class ApiIntegrationsUrlsErrorHandlingTest(TestCase):
         for url in case_variants:
             with self.subTest(url=url):
                 try:
-                    response = self.client.get(url)
+                    self.client.get(url)
                     # Debe ser consistente con URL base
                     if base_response and base_response.status_code != 404:
                         # Si la URL base funciona, las variantes pueden o no funcionar

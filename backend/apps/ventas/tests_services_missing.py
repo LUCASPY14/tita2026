@@ -271,7 +271,6 @@ class ObtenerPromocionesAplicablesTest(TestCase):
             prioridad=5,
         )
         # Call without specifying time; if current time < 23:58, promo is excluded
-        import datetime as dt
 
         now = timezone.now()
         if now.hour < 23:

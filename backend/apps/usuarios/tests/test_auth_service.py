@@ -5,7 +5,7 @@ Cobertura completa de funcionalidades de autenticación y seguridad
 
 from datetime import timedelta
 
-from django.test import TestCase, TransactionTestCase
+from django.test import TransactionTestCase
 from django.utils import timezone
 
 from apps.usuarios.models import (

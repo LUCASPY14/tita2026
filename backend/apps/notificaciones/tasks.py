@@ -12,7 +12,6 @@ Se ejecutan vía Celery Beat (programadas) o manual
 
 import logging
 from datetime import timedelta
-from decimal import Decimal
 
 from django.utils import timezone
 

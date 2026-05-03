@@ -3,10 +3,9 @@ Tests para models de reportes
 Cubre modelos de plantillas, dashboards, KPIs, tareas y ejecuciones
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone

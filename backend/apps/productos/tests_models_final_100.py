@@ -6,11 +6,8 @@ Cubre líneas: 17, 19, 53, 136, 148, 283, 319
 from decimal import Decimal
 
 from django.test import TestCase
-from django.utils import timezone
 
-from apps.contabilidad.models import Impuestos
-
-from .models import Categorias, HistoricoPrecios, ListasPrecios, PreciosPorLista, Productos, UnidadesMedida
+from .models import Categorias, HistoricoPrecios, ListasPrecios, PreciosPorLista, Productos
 
 
 class ProductosManagerTest(TestCase):

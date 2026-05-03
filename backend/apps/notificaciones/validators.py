@@ -5,7 +5,7 @@ Incluye validaciones para emails, SMS, plantillas, campañas y alertas
 
 import json
 import re
-from datetime import date, datetime, time
+from datetime import time
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError

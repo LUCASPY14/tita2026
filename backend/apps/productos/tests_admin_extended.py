@@ -2,10 +2,10 @@
 
 from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.admin.sites import AdminSite
-from django.test import RequestFactory, TestCase
+from django.test import TestCase
 
 from apps.productos.admin import (
     CategoriasAdmin,

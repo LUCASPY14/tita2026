@@ -6,7 +6,6 @@ Sprint 2 - Backend Coverage Improvement
 from decimal import Decimal
 
 from django.test import TestCase
-from django.utils import timezone
 
 from apps.productos.models import ListasPrecios
 

@@ -4,7 +4,7 @@ Cubre los helpers _resolve_usuario_from_empleado, _resolve_cliente_from_empleado
 el mixin LegacyCompatMixin, y las ramas en los __str__ referidos por el informe.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from django.test import TestCase
 

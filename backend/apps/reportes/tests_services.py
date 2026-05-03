@@ -4,16 +4,14 @@ Cubre la lógica de negocio para generación de reportes y dashboards
 """
 
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
-from django.db.models import Q
 from django.test import TestCase
 from django.utils import timezone
 
 from apps.core.models import CargasSaldo, ConsumosTarjeta, MediosPago, Tarjetas
-from apps.inventario.models import StockUnico
 from apps.productos.models import Categorias, Productos
 from apps.reportes.services import ReporteService
 from apps.reportes.services.dashboard_service import DashboardService
@@ -112,7 +110,7 @@ class ReporteServiceVentasTest(BaseReportesServiceTest):
     def test_generar_reporte_ventas_basico(self):
         """Debe generar reporte básico de ventas"""
         # Crear datos de prueba
-        ventas = self.crear_ventas_sample(3)
+        self.crear_ventas_sample(3)
 
         fecha_inicio = timezone.now().date() - timedelta(days=10)
         fecha_fin = timezone.now().date()
@@ -166,7 +164,7 @@ class ReporteServiceVentasTest(BaseReportesServiceTest):
         )
 
         # Crear ventas para diferentes empleados
-        ventas_emp1 = self.crear_ventas_sample(2)
+        self.crear_ventas_sample(2)
 
         # Ventas del empleado 2
         Ventas.objects.create(
@@ -191,7 +189,7 @@ class ReporteServiceVentasTest(BaseReportesServiceTest):
     def test_generar_reporte_ventas_top_productos(self):
         """Debe incluir top productos vendidos"""
         # Crear ventas con detalles
-        ventas = self.crear_ventas_sample(5)
+        self.crear_ventas_sample(5)
 
         fecha_inicio = timezone.now().date() - timedelta(days=10)
         fecha_fin = timezone.now().date()
@@ -211,7 +209,7 @@ class ReporteServiceVentasTest(BaseReportesServiceTest):
     def test_generar_reporte_ventas_por_dia(self):
         """Debe agrupar ventas por día"""
         # Crear ventas en diferentes días
-        ventas = self.crear_ventas_sample(7)
+        self.crear_ventas_sample(7)
 
         fecha_inicio = timezone.now().date() - timedelta(days=10)
         fecha_fin = timezone.now().date()
@@ -347,7 +345,7 @@ class ReporteServiceTopProductosTest(BaseReportesServiceTest):
     def test_generar_reporte_top_productos_basico(self):
         """Debe generar reporte de top productos"""
         # Crear ventas con detalles
-        ventas = self.crear_ventas_sample(5)
+        self.crear_ventas_sample(5)
 
         fecha_inicio = timezone.now().date() - timedelta(days=10)
         fecha_fin = timezone.now().date()
@@ -374,7 +372,7 @@ class ReporteServiceTopProductosTest(BaseReportesServiceTest):
     def test_generar_reporte_top_productos_limite(self):
         """Debe respetar límite de productos"""
         # Crear muchas ventas con diferentes productos
-        ventas = self.crear_ventas_sample(10)
+        self.crear_ventas_sample(10)
 
         fecha_inicio = timezone.now().date() - timedelta(days=10)
         fecha_fin = timezone.now().date()
@@ -388,7 +386,7 @@ class ReporteServiceTopProductosTest(BaseReportesServiceTest):
     def test_generar_reporte_top_productos_ordenamiento(self):
         """Debe ordenar productos por cantidad vendida"""
         # Crear ventas específicas para control de ordenamiento
-        ventas = self.crear_ventas_sample(4)
+        self.crear_ventas_sample(4)
 
         fecha_inicio = timezone.now().date() - timedelta(days=10)
         fecha_fin = timezone.now().date()
@@ -458,7 +456,7 @@ class ReporteServiceFinancieroTest(BaseReportesServiceTest):
     def test_generar_reporte_financiero_basico(self):
         """Debe generar reporte financiero básico"""
         # Crear datos para el reporte
-        ventas = self.crear_ventas_sample(3)
+        self.crear_ventas_sample(3)
         recargas, tarjeta = self.crear_recargas_sample(2)
 
         fecha_inicio = timezone.now().date() - timedelta(days=10)
@@ -481,7 +479,7 @@ class ReporteServiceFinancieroTest(BaseReportesServiceTest):
     def test_generar_reporte_financiero_calculos(self):
         """Debe realizar cálculos financieros correctos"""
         # Crear datos controlados
-        ventas = self.crear_ventas_sample(2)
+        self.crear_ventas_sample(2)
 
         fecha_inicio = timezone.now().date() - timedelta(days=10)
         fecha_fin = timezone.now().date()
@@ -496,7 +494,7 @@ class ReporteServiceFinancieroTest(BaseReportesServiceTest):
 
     def test_generar_reporte_financiero_margen_utilidad(self):
         """Debe calcular margen de utilidad correctamente"""
-        ventas = self.crear_ventas_sample(2)
+        self.crear_ventas_sample(2)
 
         fecha_inicio = timezone.now().date() - timedelta(days=10)
         fecha_fin = timezone.now().date()
@@ -517,7 +515,7 @@ class DashboardServiceTest(BaseReportesServiceTest):
 
     def test_calcular_kpis_principales_fecha_actual(self):
         """Debe calcular KPIs para fecha actual"""
-        ventas = self.crear_ventas_sample(3)
+        self.crear_ventas_sample(3)
 
         kpis = DashboardService.calcular_kpis_principales(fecha=None)
 
@@ -538,7 +536,7 @@ class DashboardServiceTest(BaseReportesServiceTest):
 
     def test_obtener_dashboard_ventas_periodo_default(self):
         """Debe obtener dashboard de ventas con período por defecto"""
-        ventas = self.crear_ventas_sample(5)
+        self.crear_ventas_sample(5)
 
         dashboard = DashboardService.obtener_dashboard_ventas(dias=7)
 
@@ -551,7 +549,7 @@ class DashboardServiceTest(BaseReportesServiceTest):
 
     def test_obtener_dashboard_ventas_periodo_personalizado(self):
         """Debe obtener dashboard con período personalizado"""
-        ventas = self.crear_ventas_sample(10)
+        self.crear_ventas_sample(10)
 
         dashboard = DashboardService.obtener_dashboard_ventas(dias=30)
 
@@ -569,7 +567,7 @@ class DashboardServiceTest(BaseReportesServiceTest):
 
     def test_obtener_dashboard_financiero_mes_actual(self):
         """Debe obtener dashboard financiero para mes actual"""
-        ventas = self.crear_ventas_sample(3)
+        self.crear_ventas_sample(3)
 
         dashboard = DashboardService.obtener_dashboard_financiero(mes=None)
 
@@ -597,7 +595,7 @@ class ReportesServicePerformanceTest(BaseReportesServiceTest):
         import time
 
         # Crear muchas ventas
-        ventas = self.crear_ventas_sample(50)
+        self.crear_ventas_sample(50)
 
         fecha_inicio = timezone.now().date() - timedelta(days=30)
         fecha_fin = timezone.now().date()
@@ -641,7 +639,7 @@ class ReportesServicePerformanceTest(BaseReportesServiceTest):
     def test_optimizacion_consultas_agregadas(self):
         """Debe optimizar consultas con agregaciones complejas"""
         # Crear datos diversos
-        ventas = self.crear_ventas_sample(20)
+        self.crear_ventas_sample(20)
         recargas, tarjeta = self.crear_recargas_sample(10)
 
         fecha_inicio = timezone.now().date() - timedelta(days=30)

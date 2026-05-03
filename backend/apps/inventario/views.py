@@ -96,7 +96,7 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
         """
         from decimal import Decimal
 
-        from django.db.models import Avg, Count, Sum
+        from django.db.models import Count, Sum
 
         from apps.inventario.models import DetallesAjuste
         from apps.productos.models import PreciosPorLista, Productos
@@ -320,10 +320,8 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
                 "patrones_temporales": {...}
             }
         """
-        import re
         from datetime import timedelta
 
-        from django.db.models import Count
         from django.utils import timezone
 
         periodo_dias = int(request.query_params.get("periodo_dias", 90))

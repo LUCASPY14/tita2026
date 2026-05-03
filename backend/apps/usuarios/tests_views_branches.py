@@ -4,7 +4,7 @@ Cubre los branches faltantes: _get_client_ip (X-Forwarded-For),
 cambiar_password (empleado no encontrado, admin check, Django User DoesNotExist).
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import RequestFactory, TestCase

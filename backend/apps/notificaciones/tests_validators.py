@@ -5,7 +5,7 @@ Cobertura completa de los 45 valid
 adores
 """
 
-from datetime import date, datetime, time
+from datetime import time
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError

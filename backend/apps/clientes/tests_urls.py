@@ -3,17 +3,13 @@ Tests para URLs de clientes
 Cubre configuración de rutas y patrones URL para el módulo de clientes
 """
 
-from unittest.mock import patch
-
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import NoReverseMatch, resolve, reverse
 
-from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from apps.clientes.models import Clientes, Grados, Hijos, TiposCliente
+from apps.clientes.models import Clientes, TiposCliente
 from apps.clientes.views import ClientesViewSet, HijosViewSet
 
 User = get_user_model()

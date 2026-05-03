@@ -3,7 +3,7 @@ Tests de cobertura de ramas para almuerzos/validators.py.
 Cubre exactamente los branches reportados como faltantes en el informe de cobertura.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError

@@ -3,7 +3,7 @@ Tests para los validadores del módulo Inventario
 Aseguran que todas las reglas de validación funcionan correctamente
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError

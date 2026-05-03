@@ -15,19 +15,15 @@ Fecha: Marzo 2026
 
 import logging
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from django.core.exceptions import ValidationError
-from django.db.models import Avg, Count, F, Q, Sum
-from django.utils import timezone
+from django.db.models import Avg, Count, F, Sum
 from django.utils.timezone import make_aware
 
 from apps.core.models import CargasSaldo, ConsumosTarjeta, Tarjetas
-from apps.inventario.models import MovimientosStock, StockUnico
-from apps.productos.models import Productos
-from apps.reportes.models import PlantillasReporte
 from apps.ventas.models import DetallesVenta, Ventas
 
 logger = logging.getLogger(__name__)

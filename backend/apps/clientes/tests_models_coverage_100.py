@@ -15,8 +15,6 @@ Cobertura de líneas:
 
 from decimal import Decimal
 
-from django.test import TestCase
-
 import pytest
 
 from apps.clientes.models import (

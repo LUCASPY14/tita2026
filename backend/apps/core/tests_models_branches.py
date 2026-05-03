@@ -122,7 +122,6 @@ class TarjetasCleanBranchesTest(TestCase):
 
     def test_clean_with_id_hijo_no_duplicate_passes(self):
         """Branches 158->160 + 164->-154: id_hijo set, no other tarjeta → clean() passes."""
-        from decimal import Decimal
 
         from apps.core.models import Tarjetas
 

@@ -13,8 +13,6 @@ Endpoints disponibles:
 - /api/v1/reportes/dashboard-financiero/
 """
 
-from datetime import date, datetime
-
 from django.utils.dateparse import parse_date
 
 from rest_framework import status, viewsets
@@ -523,7 +521,7 @@ class TareasProgradasViewSet(viewsets.ViewSet):
         Payload: { enabled: bool } o { minute, hour, day_of_week, day_of_month, month_of_year }
         """
         try:
-            from django_celery_beat.models import CrontabSchedule, PeriodicTask
+            from django_celery_beat.models import PeriodicTask
 
             task = PeriodicTask.objects.get(pk=pk)
 

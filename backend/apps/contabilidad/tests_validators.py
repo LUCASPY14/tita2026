@@ -3,7 +3,7 @@ Tests de validadores del módulo de Contabilidad
 Cobertura completa: 62 validadores, ~186 tests
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError

@@ -85,7 +85,7 @@ jobs:
     
     services:
       mssql:
-        image: mcr.microsoft.com/mssql/server:2025-latest
+        image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
           MSSQL_PID: Developer
@@ -93,11 +93,11 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Test_StrongPassw0rd!' -Q 'SELECT 1' -C -No || exit 1"
-          --health-interval=15s
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Test_StrongPassw0rd!' -Q 'SELECT 1' -C || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Test_StrongPassw0rd!' -Q 'SELECT 1' || exit 1"
+          --health-interval=10s
           --health-timeout=10s
-          --health-retries=15
-          --health-start-period=30s
+          --health-retries=12
+          --health-start-period=20s
       
       redis:
         image: redis:7-alpine

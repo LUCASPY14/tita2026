@@ -13,12 +13,10 @@ Modelos soportados:
 - Detección de outliers
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
-from django.core.cache import cache
-from django.db.models import Avg, Count, Q, Sum
 from django.utils import timezone
 
 import numpy as np

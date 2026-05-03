@@ -130,7 +130,6 @@ def alertar_stock_minimo(self):
     """
     from apps.inventario.models import StockUnico
     from apps.notificaciones.models import AlertasSistema
-    from apps.productos.models import Productos
 
     try:
         productos_bajo = 0

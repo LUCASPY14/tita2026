@@ -11,9 +11,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.almuerzos.models import (
-    PlanesAlmuerzo,
     RegistrosConsumoAlmuerzo,
-    SuscripcionesAlmuerzo,
     TiposAlmuerzo,
 )
 from apps.almuerzos.validators import determinar_si_cobra, validar_limite_registros_diarios

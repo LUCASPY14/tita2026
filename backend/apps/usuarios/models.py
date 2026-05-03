@@ -118,8 +118,6 @@ class LegacyCompatQuerySet(models.QuerySet):
 class LegacyCompatManager(models.Manager.from_queryset(LegacyCompatQuerySet)):
     """Manager con compatibilidad para esquema legacy en tests."""
 
-    pass
-
 
 class EmpleadosManager(models.Manager):
     """Manager para Empleados que provee defaults requeridos en tests."""
@@ -573,4 +571,3 @@ class AuditoriaUsuariosWeb(models.Model):
 
 
 # Alias para compatibilidad con tests que importan 'Usuarios'
-from django.contrib.auth.models import User as Usuarios

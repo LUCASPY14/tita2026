@@ -3,10 +3,9 @@ Tests para configuración de la app clientes
 Cubre configuración de Django AppConfig para el módulo de clientes
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from django.apps import apps
-from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 
 from apps.clientes.apps import ClientesConfig

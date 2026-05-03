@@ -4,7 +4,7 @@ Integración con Django REST Framework
 """
 
 from functools import wraps
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from django.db import models, transaction
 

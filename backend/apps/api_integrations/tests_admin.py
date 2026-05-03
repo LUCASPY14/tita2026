@@ -3,9 +3,6 @@ Tests para admin de api_integrations
 Cubre configuración e interfaz administrativa para integraciones API
 """
 
-import json
-
-from django.contrib.admin import ModelAdmin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.test import RequestFactory, TestCase

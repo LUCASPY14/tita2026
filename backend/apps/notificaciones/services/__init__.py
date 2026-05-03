@@ -13,22 +13,19 @@ Fecha: Marzo 2026
 """
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.clientes.models import Clientes, Hijos
 from apps.core.models import Tarjetas
 from apps.notificaciones.models import (
-    EmailsEnviados,
     NotificacionesPortal,
     NotificacionesSaldo,
     PreferenciasNotificacion,
-    SolicitudesNotificacion,
 )
 from apps.usuarios.models import UsuariosPortal
 

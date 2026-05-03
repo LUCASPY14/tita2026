@@ -126,7 +126,7 @@ class IsCajeroOrAdminTest(TestCase):
         self.assertFalse(self.permission.has_permission(request, None))
 
     def test_usuario_con_rol_cajero(self):
-        from unittest.mock import MagicMock, PropertyMock
+        from unittest.mock import MagicMock
 
         request = self.factory.get("/")
         user = MagicMock()

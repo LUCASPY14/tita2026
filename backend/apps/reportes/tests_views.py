@@ -5,10 +5,9 @@ Cubre ViewSets de reportes y dashboards
 
 from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -17,9 +16,6 @@ from rest_framework.test import APIClient, APITestCase
 
 from apps.core.models import CargasSaldo, MediosPago, Tarjetas
 from apps.productos.models import CategoriaProductos, Productos
-from apps.reportes.services import ReporteService
-from apps.reportes.services.dashboard_service import DashboardService
-from apps.reportes.views import ReportesViewSet
 from apps.usuarios.models import Empleados, Roles
 from apps.ventas.models import DetallesVenta, Ventas
 
@@ -541,7 +537,7 @@ class ReportesViewsIntegrationTest(BaseReportesViewsTest):
     def test_flujo_completo_reporte_ventas_con_datos_reales(self):
         """Debe generar reporte de ventas con datos reales"""
         # Crear datos de prueba
-        ventas = self.crear_datos_ventas_sample()
+        self.crear_datos_ventas_sample()
 
         # No usar mock - usar servicio real
         url = reverse("reportes-reporte-ventas")
@@ -576,7 +572,6 @@ class ReportesViewsIntegrationTest(BaseReportesViewsTest):
 
     def test_manejo_concurrencia_reportes(self):
         """Debe manejar múltiples requests concurrentes"""
-        import threading
         from concurrent.futures import ThreadPoolExecutor
 
         def hacer_request_reporte():
@@ -625,7 +620,7 @@ class ReportesViewsIntegrationTest(BaseReportesViewsTest):
 
         for url, params in endpoints_performance:
             start_time = time.time()
-            response = self.client.get(url, params)
+            self.client.get(url, params)
             end_time = time.time()
 
             duration = end_time - start_time

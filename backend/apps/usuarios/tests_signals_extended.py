@@ -258,7 +258,7 @@ class SesionSignalExceptionTest(TestCase):
         # Patch something inside to raise
         from apps.usuarios import signals as signals_module
 
-        original = signals_module.sesion_post_save
+        signals_module.sesion_post_save
 
         def patched_sesion_handler(sender, instance, created, **kwargs):
             try:

@@ -10,7 +10,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.contabilidad.models import Impuestos
-from apps.productos.admin import CategoriasAdmin, ProductosAdmin
+from apps.productos.admin import ProductosAdmin
 from apps.productos.models import Categorias, Productos, UnidadesMedida
 
 

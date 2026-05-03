@@ -2,7 +2,6 @@
 Tests para notificaciones/services/sms_service.py
 """
 
-from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
@@ -157,7 +156,7 @@ class SMSServiceAWSTest(TestCase):
         with patch.object(
             SMSService, "enviar_sms_aws", return_value={"success": True, "message_id": "A", "provider": "aws_sns"}
         ) as mock_aws:
-            result = SMSService.enviar_sms("+595981234567", "Test")
+            SMSService.enviar_sms("+595981234567", "Test")
             mock_aws.assert_called_once()
 
 

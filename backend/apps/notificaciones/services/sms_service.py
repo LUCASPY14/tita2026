@@ -15,8 +15,7 @@ Autor: Cantina Tita Development Team
 """
 
 import logging
-from decimal import Decimal
-from typing import Dict, Optional
+from typing import Dict
 
 from django.conf import settings
 

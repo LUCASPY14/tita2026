@@ -19,9 +19,9 @@ import hashlib
 import hmac
 import io
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from django.conf import settings
 from django.db import transaction
@@ -34,7 +34,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
-from apps.api_integrations.models import CredencialesApi, LogsLlamadasApi, ProveedoresApi
+from apps.api_integrations.models import LogsLlamadasApi, ProveedoresApi
 from apps.cobros.models import AplicacionPagosClientes, PagosClientes
 from apps.ventas.models import Ventas
 
@@ -228,7 +228,7 @@ class SIPAPService:
 
             # 5. Extraer ID de cobro del txn_id
             # Formato: COB-{id_cobro}-{timestamp}
-            id_cobro = int(txn_id.split("-")[1])
+            int(txn_id.split("-")[1])
             id_cliente = metadata.get("id_cliente")
 
             # 6. Verificar si ya fue procesado (idempotencia)

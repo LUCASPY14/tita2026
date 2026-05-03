@@ -11,7 +11,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Max, Sum
+from django.db.models import Sum
 
 from apps.contabilidad.models import DocumentosTributarios, Timbrados
 

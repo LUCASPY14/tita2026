@@ -28,7 +28,7 @@ from apps.productos.models import (
     UnidadesMedida,
 )
 from apps.usuarios.models import Empleados, Roles
-from apps.ventas.models import DetallesVenta, Promociones, PromocionesAplicadas, Ventas
+from apps.ventas.models import Promociones, PromocionesAplicadas, Ventas
 
 
 class VentasViewsExtended2Test(TestCase):

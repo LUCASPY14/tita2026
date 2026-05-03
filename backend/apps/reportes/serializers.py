@@ -3,7 +3,6 @@ Serializers para reportes
 Maneja la serialización y validación de datos de reportes
 """
 
-from datetime import date, datetime
 from decimal import Decimal
 
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -11,7 +10,6 @@ from django.utils import timezone
 
 from rest_framework import serializers
 
-from apps.usuarios.models import Empleados
 from apps.usuarios.serializers import EmpleadosSerializer as EmpleadoBasicoSerializer
 
 from .models import (

@@ -3,7 +3,7 @@ Tests for apps/inventario/admin.py
 Covers all custom display methods across 8 admin classes.
 """
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.admin.sites import AdminSite
 from django.test import TestCase

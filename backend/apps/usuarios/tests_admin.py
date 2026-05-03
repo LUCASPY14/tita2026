@@ -8,7 +8,6 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.usuarios.admin import EmpleadosAdmin, RolesAdmin
 from apps.usuarios.models import Empleados, Roles
 
 

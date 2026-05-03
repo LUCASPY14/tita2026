@@ -3,7 +3,7 @@ Tests para apps.reportes.tasks — calcular_y_guardar_kpis_diarios
 """
 
 from decimal import Decimal
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 

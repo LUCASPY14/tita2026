@@ -3,7 +3,6 @@ Tests de validadores del módulo API Integrations
 Cobertura completa de 48 validadores con casos positivos, negativos y edge cases
 """
 
-import json
 from datetime import datetime, timedelta, timezone
 
 from django.core.exceptions import ValidationError

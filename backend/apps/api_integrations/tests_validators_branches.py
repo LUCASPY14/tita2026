@@ -3,7 +3,7 @@ Tests de ramas faltantes en api_integrations/validators.py
 Cubre branches no alcanzados por los tests principales.
 """
 
-from datetime import date, datetime
+from datetime import date
 
 from django.core.exceptions import ValidationError
 

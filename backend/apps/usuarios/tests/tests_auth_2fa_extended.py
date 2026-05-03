@@ -3,7 +3,7 @@ Extended tests for AuthenticationService and TwoFactorAuthService
 Targeting uncovered lines for coverage improvement.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.test import TransactionTestCase
 from django.utils import timezone
@@ -173,7 +173,6 @@ class CrearEmpleadoTest(BaseAuthTest):
             mock_emp.objects.filter.return_value.exists.return_value = False
             mock_emp.objects.create.side_effect = Exception("Unexpected DB error")
             # We need Roles to work, so import it separately
-            from apps.usuarios.models import Roles as RolesModel
 
             with patch(
                 "apps.usuarios.services.auth_service.AuthenticationService._hash_password", return_value="hashedpw"

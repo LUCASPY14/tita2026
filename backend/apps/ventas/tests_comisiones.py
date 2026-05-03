@@ -8,8 +8,6 @@ from decimal import Decimal
 from django.test import TestCase
 from django.utils import timezone
 
-from rest_framework.test import APITestCase
-
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.contabilidad.models import MovimientosCaja, TarifasComision
 from apps.core.models import MediosPago, Tarjetas

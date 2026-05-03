@@ -10,9 +10,8 @@ from django.utils import timezone
 
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.contabilidad.models import Impuestos
-from apps.core.models import MediosPago, Tarjetas
-from apps.productos.models import Categorias, ListasPrecios, Productos, UnidadesMedida
-from apps.usuarios.models import Empleados, Roles
+from apps.core.models import Tarjetas
+from apps.productos.models import Categorias, ListasPrecios, Productos
 
 from .models import (
     Alergenos,

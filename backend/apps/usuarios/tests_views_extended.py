@@ -12,10 +12,9 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from rest_framework import status
-from rest_framework.test import APIRequestFactory, APITestCase, force_authenticate
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.usuarios.models import AuditoriaOperaciones, Empleados, Roles
-from apps.usuarios.permissions import Permisos
 from apps.usuarios.views import (
     AuditoriaOperacionesViewSet,
     AuthViewSet,
@@ -604,7 +603,7 @@ class RolesViewSetExtendedTest(TestCase):
 
     def test_destroy_con_empleados(self):
         """No debe eliminar el rol si tiene empleados asignados"""
-        emp = make_empleado("emprol", self.rol)
+        make_empleado("emprol", self.rol)
         view = RolesViewSet.as_view({"delete": "destroy"})
         request = self.factory.delete(f"/roles/{self.rol.pk}/")
         force_authenticate(request, user=self.user)

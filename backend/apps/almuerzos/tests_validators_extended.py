@@ -7,10 +7,8 @@ Missing lines targeted: 90-91, 205, 209-210, 281-284, 309, 332, 362-365, 404-405
 915-916, 929, 947, 1039, 1066-1067, 1070, 1080
 """
 
-import json
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase

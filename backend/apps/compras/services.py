@@ -14,7 +14,7 @@ from apps.inventario.models import CostosHistoricos, MovimientosStock, StockUnic
 from apps.productos.models import Productos
 from apps.usuarios.models import Empleados
 
-from .models import Compras, DetallesCompra, Proveedores
+from .models import Compras, DetallesCompra
 
 
 class CompraService:
@@ -320,8 +320,6 @@ class CompraService:
                 - compras_pendientes: Lista de compras con saldo
         """
         from django.db.models import Sum
-
-        from .models import AplicacionPagosCompras
 
         # Total de compras (todas las compras del proveedor)
         compras = Compras.objects.filter(id_proveedor=id_proveedor)

@@ -305,7 +305,6 @@ class ValidarSchemaJSONExtendedTest(TestCase):
     def test_schema_muy_grande(self):
         """Large non-serializable dict raises."""
         # Create a dict with a non-JSON-serializable value (set) to trigger TypeError
-        import unittest
 
         # Instead trigger the "too large" check with a large dict
         big_dict = {str(i): "x" * 100 for i in range(600)}

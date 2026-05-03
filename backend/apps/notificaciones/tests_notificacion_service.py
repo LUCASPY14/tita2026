@@ -3,7 +3,7 @@ Tests para notificaciones/services/__init__.py (NotificacionService)
 """
 
 from decimal import Decimal
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase

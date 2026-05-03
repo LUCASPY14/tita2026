@@ -3,7 +3,7 @@ Management command para inicializar el sistema de usuarios
 Crea permisos, roles y usuario admin inicial
 """
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.usuarios.models import Empleados, Roles

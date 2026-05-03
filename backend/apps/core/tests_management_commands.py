@@ -67,8 +67,6 @@ class SetupLimitesInicialCommandTest(TestCase):
         """When update_or_create raises for a limit, error is counted (lines 210-212, 222)."""
         from unittest.mock import patch
 
-        from apps.core.models import LimitesTransaccion
-
         out = StringIO()
         with patch(
             "apps.core.models.LimitesTransaccion.objects.update_or_create",

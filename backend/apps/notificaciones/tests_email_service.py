@@ -4,9 +4,9 @@ Tests para notificaciones/services/email_service.py
 
 from datetime import datetime
 from decimal import Decimal
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
 from apps.notificaciones.services.email_service import EmailService
 

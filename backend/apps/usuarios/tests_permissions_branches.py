@@ -3,7 +3,7 @@ Tests de ramas faltantes en usuarios/permissions.py
 Cubre branches en PermissionService.obtener_permisos_empleado y clases de permisos.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from django.test import TestCase
 

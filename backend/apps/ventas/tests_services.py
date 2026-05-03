@@ -3,9 +3,9 @@ Tests para ventas/services.py (PromocionService y DevolucionService)
 Cubre métodos privados y ramas no cubiertas
 """
 
-from datetime import date, datetime, time
+from datetime import datetime, time
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 from django.test import TestCase
 from django.utils import timezone

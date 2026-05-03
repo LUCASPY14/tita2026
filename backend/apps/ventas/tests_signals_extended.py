@@ -57,7 +57,7 @@ class ActualizarSaldoVentaSignalTest(TestCase):
             id_pago_venta=self.pago,
             id_venta=self.venta,
         )
-        saldo_antes = self.venta.saldo_pendiente
+        self.venta.saldo_pendiente
         # Refresh - saldo should have changed from the creation
         self.venta.refresh_from_db()
 

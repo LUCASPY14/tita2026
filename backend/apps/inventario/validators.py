@@ -4,7 +4,7 @@ Aseguran integridad de datos en stock, movimientos, ajustes y ML forecasting
 """
 
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
@@ -678,7 +678,7 @@ def validar_umbral_alerta(umbral_cantidad, stock_minimo, stock_maximo):
     """
     try:
         umbral = Decimal(str(umbral_cantidad))
-        minimo = Decimal(str(stock_minimo))
+        Decimal(str(stock_minimo))
         maximo = Decimal(str(stock_maximo))
     except (ValueError, TypeError, InvalidOperation):
         raise ValidationError("Los valores deben ser números válidos")

@@ -10,7 +10,6 @@ from django.utils import timezone
 
 from apps.compras.models import Compras, Proveedores
 from apps.compras.serializers import ComprasSerializer, ProveedoresSerializer
-from apps.usuarios.models import Empleados, Roles
 
 
 class ProveedoresSerializerTest(TestCase):

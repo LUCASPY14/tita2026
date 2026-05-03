@@ -20,7 +20,7 @@ from apps.contabilidad.models import Impuestos
 from apps.inventario.ml_forecasting import StockForecastingService
 from apps.inventario.models import MovimientosStock, StockUnico
 from apps.productos.models import Categorias, ListasPrecios, Productos, UnidadesMedida
-from apps.usuarios.models import Empleados, PerfilesUsuario, Roles
+from apps.usuarios.models import Empleados, Roles
 from apps.ventas.models import DetallesVenta, Ventas
 
 
@@ -524,7 +524,7 @@ class StockForecastingServiceTest(TestCase):
     def test_recomendacion_compra_demanda_cero(self):
         """Lines 542, 581: demanda_diaria=0 paths (dias_cobertura=999, agotamiento=None)."""
         # Create a product with exactly zero demand (movement saved but with qty 0 via mock)
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import patch
 
         # Patch calcular_estadisticas_basicas to return demanda=0 but no error key
         stats_mock = {

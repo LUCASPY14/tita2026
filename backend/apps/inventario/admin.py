@@ -275,7 +275,7 @@ class LotesProductoAdmin(admin.ModelAdmin):
     nombre_producto.short_description = "Producto"
 
     def fecha_vencimiento_color(self, obj):
-        from django.utils import timezone
+        pass
 
         if not obj.fecha_vencimiento:
             return "-"

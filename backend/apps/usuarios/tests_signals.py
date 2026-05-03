@@ -3,9 +3,9 @@ Tests para signals de usuarios
 Cubre hooks, listeners y automatizaciones de eventos de modelo
 """
 
-from unittest.mock import Mock, call, patch
+from unittest.mock import patch
 
-from django.db.models.signals import post_delete, post_save, pre_delete, pre_save
+from django.db.models.signals import post_save, pre_delete, pre_save
 from django.test import TestCase
 from django.utils import timezone
 

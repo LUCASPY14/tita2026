@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 import pytest
 from rest_framework.test import APIRequestFactory
 
-from apps.common.permissions import IsAdminOrReadOnly, IsCajeroOrAdmin, IsClienteOrAdmin, _get_empleado_from_request
+from apps.common.permissions import IsAdminOrReadOnly, IsClienteOrAdmin, _get_empleado_from_request
 from apps.usuarios.models import Empleados, Roles
 
 User = get_user_model()

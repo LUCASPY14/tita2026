@@ -9,7 +9,7 @@ Missing lines (at baseline):
 """
 
 from datetime import date, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase

@@ -9,14 +9,11 @@ from decimal import Decimal
 from django.test import TestCase
 from django.utils import timezone
 
-from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from apps.contabilidad.models import (
-    AuditoriaComisiones,
     Cajas,
     CierresCaja,
-    DatosEmpresa,
     DocumentosTributarios,
     Impuestos,
     MovimientosCaja,

@@ -3,7 +3,7 @@ Tests para core/decorators.py
 Cubre admin_required, api_admin_required, staff_required
 """
 
-from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.test import RequestFactory, TestCase
 

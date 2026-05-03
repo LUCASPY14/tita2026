@@ -4,7 +4,7 @@ Covers the 188 missing lines in inventario/views.py (22.31% coverage)
 """
 
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 from django.test import TestCase
 
@@ -255,7 +255,6 @@ class PuntoReordenTest(TestCase):
 
     def test_punto_reorden_estado_critico(self):
         """stock_actual <= punto_reorden * 0.5 → estado=critico"""
-        from apps.inventario.models import StockUnico
 
         mock_producto = Mock()
         mock_producto.id_producto = 1
@@ -289,7 +288,6 @@ class PuntoReordenTest(TestCase):
 
     def test_punto_reorden_estado_bajo(self):
         """stock_actual <= punto_reorden → estado=bajo"""
-        from apps.inventario.models import StockUnico
 
         mock_producto = Mock()
         mock_producto.id_producto = 1
@@ -322,7 +320,6 @@ class PuntoReordenTest(TestCase):
 
     def test_punto_reorden_estado_saludable(self):
         """stock_actual <= punto_reorden * 1.5 → estado=saludable"""
-        from apps.inventario.models import StockUnico
 
         mock_producto = Mock()
         mock_producto.id_producto = 1
@@ -355,7 +352,6 @@ class PuntoReordenTest(TestCase):
 
     def test_punto_reorden_estado_exceso(self):
         """stock_actual > punto_reorden * 1.5 → estado=exceso"""
-        from apps.inventario.models import StockUnico
 
         mock_producto = Mock()
         mock_producto.id_producto = 1
@@ -388,7 +384,6 @@ class PuntoReordenTest(TestCase):
 
     def test_punto_reorden_con_error_en_resultado(self):
         """When resultado has 'error' key → estado=sin_datos"""
-        from apps.inventario.models import StockUnico
 
         mock_producto = Mock()
         mock_producto.id_producto = 1
@@ -541,7 +536,7 @@ class RecomendacionCompraTest(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_recomendacion_exitosa_con_urgencia_alta(self):
-        from apps.inventario.models import StockUnico
+        pass
 
         mock_producto = Mock()
         mock_producto.id_producto = 1
@@ -615,7 +610,6 @@ class RecomendacionCompraTest(TestCase):
 
     def test_color_urgencia_no_necesaria(self):
         """urgencia 'no_necesaria' maps to green color"""
-        from apps.inventario.models import StockUnico
 
         mock_producto = Mock()
         mock_producto.id_producto = 1
@@ -719,7 +713,6 @@ class AnalisisCompletoTest(TestCase):
 
     def test_analisis_completo_exitoso_con_predicciones(self):
         """Full analysis with predictions list for demanda_total_7dias sum."""
-        from apps.inventario.models import StockUnico
 
         mock_producto = Mock()
         mock_producto.id_producto = 1

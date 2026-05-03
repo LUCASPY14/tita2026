@@ -8,14 +8,14 @@ import hmac
 import json
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from django.conf import settings
 from django.db import transaction
 
 import requests
 
-from apps.api_integrations.models import CredencialesApi, LogsLlamadasApi, ProveedoresApi
+from apps.api_integrations.models import LogsLlamadasApi
 from apps.core.models import CargasSaldo, ConfiguracionSistema
 
 

@@ -14,17 +14,16 @@ Fecha: Marzo 2026
 import logging
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from django.core.exceptions import ValidationError
-from django.db.models import Avg, Count, F, Q, Sum
+from django.db.models import Avg, Count, F, Sum
 from django.utils import timezone
 from django.utils.timezone import get_current_timezone, make_aware
 
-from apps.core.models import CargasSaldo, ConsumosTarjeta, Tarjetas
+from apps.core.models import CargasSaldo, Tarjetas
 from apps.inventario.models import StockUnico
-from apps.productos.models import Productos
-from apps.reportes.models import Dashboards, KpiMetricas, ValoresKpi
+from apps.reportes.models import KpiMetricas, ValoresKpi
 from apps.ventas.models import Ventas
 
 logger = logging.getLogger(__name__)

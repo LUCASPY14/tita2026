@@ -4,7 +4,7 @@ Sprint 2 - Backend Coverage Improvement
 """
 
 from decimal import Decimal
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import Mock
 
 from django.test import RequestFactory, TestCase
 from django.utils import timezone

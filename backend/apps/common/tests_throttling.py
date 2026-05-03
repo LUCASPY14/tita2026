@@ -6,10 +6,7 @@ Verifica los 5 throttles implementados para DRF
 from django.contrib.auth.models import AnonymousUser, User
 from django.test import TestCase
 
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.test import APIRequestFactory, force_authenticate
-from rest_framework.views import APIView
+from rest_framework.test import APIRequestFactory
 
 from apps.common.throttling import (
     AuthRateThrottle,

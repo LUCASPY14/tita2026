@@ -3,7 +3,6 @@ Tests para utilities de la app usuarios
 Cubre permissions, middleware, signals y configuración de apps
 """
 
-import uuid
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import AnonymousUser
@@ -173,7 +172,7 @@ class UsuariosMiddlewareTest(TestCase):
 
     def test_security_headers(self):
         """Debe agregar headers de seguridad"""
-        request = self.factory.get("/")
+        self.factory.get("/")
 
         # Simular middleware que agrega headers de seguridad
         def add_security_headers(response):

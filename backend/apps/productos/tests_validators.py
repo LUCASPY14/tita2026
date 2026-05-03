@@ -4,7 +4,7 @@ Pruebas exhaustivas de todas las validaciones de negocio
 """
 
 import warnings
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -14,8 +14,6 @@ from django.utils import timezone
 from apps.contabilidad.models import Impuestos
 from apps.productos.models import (
     Categorias,
-    ListasPrecios,
-    PreciosPorLista,
     Productos,
     UnidadesMedida,
 )

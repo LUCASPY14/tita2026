@@ -3,9 +3,6 @@ Tests para modelos de api_integrations
 Cubre validaciones, relaciones y funcionalidad de modelos de integraciones API
 """
 
-import json
-from decimal import Decimal
-
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase

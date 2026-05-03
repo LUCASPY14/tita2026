@@ -3,7 +3,6 @@ Signals para el módulo de inventario
 Actualización automática de stock con consistencia ACID y manejo de concurrencia
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 from django.db import transaction
@@ -63,7 +62,7 @@ def actualizar_stock_compra(sender, instance, created, **kwargs):
                 id_producto=producto, defaults={"cantidad": Decimal("0.000")}
             )
 
-            stock_anterior = stock.cantidad
+            stock.cantidad
             stock.cantidad += cantidad
             stock.save()
 
@@ -116,7 +115,6 @@ def validar_stock_venta(sender, instance, **kwargs):
 
     # Por ahora, solo loguear
     # La validación real se hará en el servicio de dominio
-    pass
 
 
 @receiver(post_save, sender=DetallesVenta)
@@ -158,7 +156,7 @@ def descontar_stock_venta(sender, instance, created, **kwargs):
                 )
 
         # Descontar stock
-        stock_anterior = stock.cantidad
+        stock.cantidad
         stock.cantidad -= cantidad
         stock.save()
 

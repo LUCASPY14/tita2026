@@ -18,7 +18,6 @@ from apps.notificaciones.models import (
     AlertasSistema,
     NotificacionesPortal,
     NotificacionesSaldo,
-    PreferenciasNotificacion,
 )
 from apps.usuarios.models import UsuariosPortal
 

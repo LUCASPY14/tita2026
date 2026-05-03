@@ -20,7 +20,6 @@ def generar_cuentas_mensuales():
     Se ejecuta el 1ro de cada mes.
     """
     from apps.almuerzos.models import CuentasAlmuerzoMensual, SuscripcionesAlmuerzo
-    from apps.notificaciones.models import AlertasSistema
 
     hoy = timezone.now().date()
     anio = hoy.year

@@ -65,8 +65,6 @@ class LegacyCompatQuerySet(models.QuerySet):
 class LegacyCompatManager(models.Manager.from_queryset(LegacyCompatQuerySet)):
     """Manager con compatibilidad para esquema legacy en tests."""
 
-    pass
-
 
 class TarjetasManager(models.Manager):
     """Manager que acepta kwargs legacy para crear Tarjetas en tests."""

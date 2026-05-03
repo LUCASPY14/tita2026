@@ -3,7 +3,7 @@ Tests para middleware de usuarios
 Cubre autenticación, autorización y procesamiento de requests
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse

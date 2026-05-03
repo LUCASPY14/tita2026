@@ -3,7 +3,7 @@ Tests para validadores del módulo Almuerzos
 Cobertura completa de 30 validadores con casos positivos, negativos y edge cases
 """
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, time, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError

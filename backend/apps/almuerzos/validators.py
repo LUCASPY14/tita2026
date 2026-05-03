@@ -8,7 +8,6 @@ from datetime import date, datetime, time
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 
 # ==============================================================================
 # VALIDADORES PARA PLANES DE ALMUERZO

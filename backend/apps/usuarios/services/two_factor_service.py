@@ -7,22 +7,20 @@ import base64
 import io
 import json
 import secrets
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from datetime import timedelta
+from typing import Dict, List
 
 from django.db import transaction
 from django.utils import timezone
 
 import pyotp
 import qrcode
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.usuarios.models import (
     AuditoriaOperaciones,
     Autenticacion2Fa,
     Empleados,
     Intentos2Fa,
-    UsuariosPortal,
 )
 
 

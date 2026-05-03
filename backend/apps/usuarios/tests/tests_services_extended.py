@@ -257,8 +257,6 @@ class CrearSesionExceptionTest(BaseSessionTest):
         # Patch the queryset to return None for .first()
         original_filter = SesionesActivas.objects.filter
 
-        call_count = [0]
-
         def fake_filter(*args, **kwargs):
             qs = original_filter(*args, **kwargs)
             if kwargs.get("activa") is True and "order_by" not in str(qs.query):

@@ -4,23 +4,18 @@ Cubre interfaces administrativas y funcionalidad de gestión de reportes
 """
 
 import json
-from datetime import date, timedelta
-from unittest.mock import Mock, patch
 
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
-from django.urls import reverse
 from django.utils import timezone
 
 from apps.reportes.models import (
     Dashboards,
     DestinatariosTarea,
-    EjecucionesTarea,
     KpiMetricas,
     PlantillasReporte,
     PlantillasTarea,
-    ValoresKpi,
 )
 from apps.usuarios.models import Empleados, Roles
 

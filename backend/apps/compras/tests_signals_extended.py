@@ -11,7 +11,7 @@ Cubre líneas faltantes:
 
 from decimal import Decimal
 
-from django.test import TestCase, TransactionTestCase
+from django.test import TransactionTestCase
 from django.utils import timezone
 
 from apps.compras.models import (

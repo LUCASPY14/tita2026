@@ -11,14 +11,13 @@ Cubre líneas faltantes:
 """
 
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from apps.contabilidad.models import Impuestos
-from apps.inventario.models import AjustesInventario, DetallesAjuste, MovimientosStock, StockUnico
+from apps.inventario.models import DetallesAjuste, MovimientosStock, StockUnico
 from apps.inventario.services import AjusteInventarioService, StockService
 from apps.productos.models import Categorias, Productos, UnidadesMedida
 from apps.usuarios.models import Empleados, Roles

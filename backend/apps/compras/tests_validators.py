@@ -3,7 +3,7 @@ Tests para validadores del módulo Compras
 Cobertura completa de 24 validadores
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError

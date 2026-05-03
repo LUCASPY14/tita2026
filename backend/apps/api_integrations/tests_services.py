@@ -7,7 +7,7 @@ import hashlib
 import hmac
 import json
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 from django.conf import settings
 from django.test import TestCase
@@ -15,7 +15,7 @@ from django.utils import timezone
 
 import requests
 
-from apps.api_integrations.models import CredencialesApi, LogsLlamadasApi, ProveedoresApi
+from apps.api_integrations.models import LogsLlamadasApi, ProveedoresApi
 from apps.api_integrations.services.bancard_service import BancardService
 from apps.core.models import CargasSaldo, ConfiguracionSistema
 
@@ -90,7 +90,7 @@ class BancardServiceTest(TestCase):
 
         # Configuración que no existe en BD
         with patch.object(settings, "BANCARD_NONEXISTENT", "fallback_value", create=True):
-            config = service._get_config("BANCARD_NONEXISTENT", "default_value")
+            service._get_config("BANCARD_NONEXISTENT", "default_value")
             # Puede retornar fallback_value o default_value dependiendo de implementación
 
     def test_generar_token_md5(self):

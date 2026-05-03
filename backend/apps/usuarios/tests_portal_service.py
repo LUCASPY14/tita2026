@@ -7,7 +7,7 @@ sin cobertura. Para medir cobertura, usar Python 3.11 o ejecutar en CI/CD.
 """
 
 from datetime import timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 from django.conf import settings
 from django.utils import timezone

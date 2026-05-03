@@ -591,7 +591,6 @@ class VentasViewSet(viewsets.ModelViewSet):
         Descuenta el saldo de la tarjeta y registra el consumo.
         Este método garantiza la integridad transaccional.
         """
-        from django.utils import timezone
 
         from apps.core.models import ConsumosTarjeta
 
@@ -1170,8 +1169,6 @@ class PromocionesViewSet(viewsets.ModelViewSet):
             }
         """
         from django.db.models import Count, Sum
-
-        from apps.ventas.models import PromocionesAplicadas
 
         limite = int(request.query_params.get("limite", 10))
 

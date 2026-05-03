@@ -4,11 +4,9 @@ Incluye: JWT, validación de contraseñas, bloqueo de cuentas, auditoría
 """
 
 import re
-from datetime import datetime, timedelta
-from decimal import Decimal
+from datetime import timedelta
 from typing import Dict, Optional, Tuple
 
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 

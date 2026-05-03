@@ -4,8 +4,6 @@ Incluye: Autenticación, 2FA, Permisos, Sesiones, Recuperación de contraseñas
 """
 
 from django.db.models import Count
-from django.db.models.functions import TruncDate
-from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
@@ -16,16 +14,13 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .authentication import PortalJWTAuthentication, PortalUserProxy
 from .models import (
     AuditoriaOperaciones,
-    BloqueosCuenta,
     Empleados,
     PerfilesUsuario,
     Roles,
-    SesionesActivas,
     UsuariosPortal,
 )
 from .permissions import (
@@ -34,7 +29,6 @@ from .permissions import (
     Permisos,
     PermissionService,
     RolesPermisos,
-    TienePermiso,
 )
 from .serializers import (
     AuditoriaOperacionesSerializer,
@@ -435,7 +429,7 @@ class PasswordRecoveryViewSet(viewsets.ViewSet):
 
         ip_address = self._get_client_ip(request)
 
-        resultado = PasswordRecoveryService.solicitar_recuperacion_empleado(email, ip_address)
+        PasswordRecoveryService.solicitar_recuperacion_empleado(email, ip_address)
 
         # NOTA: En producción, enviar el token por email aquí
         # Para desarrollo, lo retornamos en la respuesta (NO HACER EN PRODUCCIÓN)
@@ -712,7 +706,7 @@ class EmpleadosViewSet(viewsets.ModelViewSet):
         nombre = request.data.get("nombre")
         apellido = request.data.get("apellido")
         usuario = request.data.get("usuario")
-        email = request.data.get("email")
+        request.data.get("email")
         # Accept contrasena_hash as alias for password
         password = request.data.get("password") or request.data.get("contrasena_hash")
         id_rol = request.data.get("id_rol")
@@ -742,15 +736,15 @@ class EmpleadosViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        empleado_actual = request.user
-        ip_address = self._get_client_ip(request)
+        request.user
+        self._get_client_ip(request)
 
         # Use serializer to create directly (bypassing password strength validation for hashed passwords)
         data = dict(request.data)
         data["contrasena_hash"] = password
         serializer = EmpleadosSerializer(data=data)
         if serializer.is_valid():
-            empleado = serializer.save()
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -955,7 +949,7 @@ class PortalAuthViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[IsPortalAuthenticated])
     def dashboard(self, request):
-        from decimal import Decimal
+        pass
 
         from apps.core.models import ConsumosTarjeta, Tarjetas
         from apps.ventas.models import Ventas

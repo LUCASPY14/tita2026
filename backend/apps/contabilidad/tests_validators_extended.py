@@ -1,6 +1,6 @@
 """Extended tests for apps/contabilidad/validators.py - targeting missing branches."""
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -8,22 +8,14 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.contabilidad.validators import (
-    validar_activo_caja,
-    validar_activo_tarifa,
-    validar_activo_timbrado,
     validar_base_imponible,
-    validar_campo_modificado_auditoria,
-    validar_cdc_documento,
     validar_ciudad_empresa,
     validar_codigo_establecimiento,
     validar_codigo_punto_expedicion,
-    validar_consistencia_cierre,
-    validar_descripcion_movimiento,
     validar_descripcion_punto_expedicion,
     validar_diferencia_efectivo,
     validar_direccion_empresa,
     validar_email_empresa,
-    validar_estado_cierre_caja,
     validar_estado_conciliacion,
     validar_fecha_acreditacion_conciliacion,
     validar_fecha_apertura_cierre,
@@ -44,23 +36,16 @@ from apps.contabilidad.validators import (
     validar_monto_movimiento_caja,
     validar_monto_total_documento,
     validar_nombre_caja,
-    validar_nombre_impuesto,
-    validar_nro_preimpreso_documento,
     validar_nro_secuencial_documento,
     validar_nro_timbrado,
     validar_numeros_timbrado,
-    validar_observaciones_conciliacion,
     validar_pais_empresa,
     validar_porcentaje_comision,
     validar_porcentaje_impuesto,
-    validar_razon_social_empresa,
-    validar_ruc_empresa,
     validar_telefono_empresa,
     validar_tipo_documento_timbrado,
     validar_tipo_documento_tributario,
-    validar_tipo_movimiento_caja,
     validar_ubicacion_caja,
-    validar_url_kude_documento,
     validar_valor_anterior_auditoria,
     validar_valor_nuevo_auditoria,
     validar_vigente_desde_impuesto,

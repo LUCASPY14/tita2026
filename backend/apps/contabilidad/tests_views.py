@@ -5,22 +5,17 @@ Cubre ViewSets y vistas de funcionalidad contable
 
 from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import Mock, patch
 
-from django.db import IntegrityError, models
+from django.db import IntegrityError
 from django.db.models import Q
-from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from apps.contabilidad.models import (
-    AuditoriaComisiones,
     Cajas,
     CierresCaja,
-    DatosEmpresa,
     DocumentosTributarios,
     Impuestos,
     MovimientosCaja,
@@ -28,7 +23,6 @@ from apps.contabilidad.models import (
     TarifasComision,
     Timbrados,
 )
-from apps.contabilidad.views import *
 from apps.core.models import MediosPago
 from apps.usuarios.models import Empleados, Roles
 
@@ -471,7 +465,6 @@ class DocumentosTributariosViewSetTest(ContabilidadViewsBaseTest):
 
     def test_documentos_tributarios_filter_by_fecha(self):
         """Debe permitir filtrar documentos por fecha"""
-        from django.db.models import Q
 
         # Crear documentos en diferentes fechas
         fecha_hoy = timezone.now()

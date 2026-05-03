@@ -329,7 +329,6 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
                 status=400,
             )
         hijo = cuenta.id_hijo
-        from apps.contabilidad.serializers import DatosEmpresaSerializer
 
         empresa = self._get_datos_empresa()
         meses_nombre = [
@@ -384,10 +383,6 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
         from django.db.models import Max
 
         from apps.contabilidad.models import DocumentosTributarios, Timbrados
-        from apps.contabilidad.serializers import (
-            DocumentosTributariosSerializer,
-            TimbradoSerializer,
-        )
 
         cuenta = self.get_object()
 

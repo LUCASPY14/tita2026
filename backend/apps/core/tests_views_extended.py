@@ -9,7 +9,7 @@ Cubre las líneas faltantes en core/views.py:
 """
 
 from decimal import Decimal
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase

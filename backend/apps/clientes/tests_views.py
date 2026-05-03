@@ -3,10 +3,9 @@ Tests para views de clientes
 Cubre ViewSets y vistas de funcionalidad para clientes
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 from django.urls import reverse
 

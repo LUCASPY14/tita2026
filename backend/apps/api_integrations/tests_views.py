@@ -3,12 +3,9 @@ Tests para views de api_integrations
 Cubre endpoints de webhooks y funcionalidad de vistas API
 """
 
-import hashlib
-import hmac
 import json
 from unittest.mock import Mock, patch
 
-from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -16,7 +13,6 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.api_integrations.models import CredencialesApi, LogsWebhooks, ProveedoresApi, WebhookEndpoints
-from apps.api_integrations.views import bancard_webhook, webhook_test
 
 
 class BancardWebhookViewTest(APITestCase):

@@ -3,7 +3,6 @@ Tests para notificaciones/tasks.py
 Usa CELERY_TASK_ALWAYS_EAGER para ejecutar tasks en modo síncrono.
 """
 
-from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
@@ -207,6 +206,6 @@ class LimpiarNotificacionesAntiguasExcepcionTest(TestCase):
         from apps.notificaciones.tasks import limpiar_notificaciones_antiguas
 
         # With EAGER_PROPAGATES=False, retry does not reraise
-        resultado = limpiar_notificaciones_antiguas.apply()
+        limpiar_notificaciones_antiguas.apply()
         # Task fails gracefully (retry was scheduled, result may be None or exception)
         # Main goal: the except block (lines 158-160) executes without crashing

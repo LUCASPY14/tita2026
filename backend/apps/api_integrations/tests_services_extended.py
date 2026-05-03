@@ -6,15 +6,10 @@ Missing lines (at baseline 57.78%):
 82-83, 374-455, 468-489, 501-522
 """
 
-import hashlib
-import hmac
-import json
-from datetime import datetime
 from decimal import Decimal
 from unittest.mock import MagicMock, Mock, patch
 
 from django.test import TestCase
-from django.utils import timezone
 
 from apps.api_integrations.services.bancard_service import BancardService
 from apps.core.models import CargasSaldo, ConfiguracionSistema
@@ -353,6 +348,6 @@ class BancardServiceRollbackTransaccionTest(TestCase):
         self.service.rollback_transaccion("REC-999-54321")
 
         call_kwargs = mock_delete.call_args[1]
-        payload = call_kwargs.get("json", mock_delete.call_args[0][1] if len(mock_delete.call_args[0]) > 1 else {})
+        call_kwargs.get("json", mock_delete.call_args[0][1] if len(mock_delete.call_args[0]) > 1 else {})
         # Just verify the call was made with some payload
         self.assertTrue(mock_delete.called)

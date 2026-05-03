@@ -3,8 +3,6 @@ Tests para modelos de la app usuarios
 Cubre validaciones, métodos y comportamientos de Empleados y Roles
 """
 
-from datetime import datetime, timedelta
-
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase

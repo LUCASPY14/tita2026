@@ -6,7 +6,7 @@ Configuración avanzada del panel de administración para gestión de productos,
 from decimal import Decimal
 
 from django.contrib import admin
-from django.db.models import Avg, Count, Sum
+from django.db.models import Avg
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe

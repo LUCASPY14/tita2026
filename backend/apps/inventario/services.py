@@ -4,7 +4,7 @@ Lógica de negocio centralizada y reutilizable
 """
 
 from decimal import Decimal
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -182,7 +182,7 @@ class StockService:
             )
 
         # Descontar stock
-        stock_anterior = stock.cantidad
+        stock.cantidad
         stock.cantidad -= cantidad
         stock.save()
 

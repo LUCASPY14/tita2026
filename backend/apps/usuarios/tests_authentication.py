@@ -2,7 +2,7 @@
 Tests para autenticación de usuarios del portal (clientes)
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import jwt
 import pytest

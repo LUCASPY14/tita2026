@@ -5,7 +5,7 @@ Cubre rutas de código no cubiertas por tests_serializers.py
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock, PropertyMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from django.test import TestCase
 from django.utils import timezone
@@ -14,12 +14,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.reportes.models import (
     Dashboards,
-    DestinatariosTarea,
-    EjecucionesTarea,
-    KpiMetricas,
     PlantillasReporte,
-    PlantillasTarea,
-    ValoresKpi,
 )
 from apps.reportes.serializers import (
     ConfiguracionJSONField,

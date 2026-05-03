@@ -24,7 +24,6 @@ from apps.contabilidad.models import Impuestos
 from apps.inventario.models import (
     AlertasStock,
     AlertasVencimiento,
-    CostosHistoricos,
     LotesProducto,
     MovimientosStock,
     StockUnico,
@@ -591,7 +590,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
 
         from apps.inventario import signals as inv_signals
 
-        gerente = self._make_gerente("loop")
+        self._make_gerente("loop")
         cat2 = _make_categoria("ena2")
         und2 = _make_unidad("ena2")
         imp2 = _make_impuesto("ena2")
@@ -1257,7 +1256,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
         mock_notif_module.EmailsEnviados.objects.create.return_value = MagicMock()
         with patch.dict(sys.modules, {"apps.notificaciones.models": mock_notif_module}):
             # Create Gerente and lote2 inside the patch so any signal chain uses mocked EmailsEnviados
-            gerente = self._make_gerente_env("loop")
+            self._make_gerente_env("loop")
             lote2 = LotesProducto.objects.create(
                 numero_lote="LOTE-ENV-LOOP",
                 fecha_vencimiento=date.today() + timedelta(days=2),

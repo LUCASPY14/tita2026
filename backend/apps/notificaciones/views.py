@@ -4,9 +4,9 @@ Views para app de Notificaciones
 
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.http import StreamingHttpResponse
 from django.utils import timezone
 

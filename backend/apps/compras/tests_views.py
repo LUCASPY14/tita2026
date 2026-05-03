@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from rest_framework.test import APIRequestFactory, force_authenticate
+from rest_framework.test import APIRequestFactory
 
 from apps.compras.models import Compras, Proveedores
 from apps.compras.views import ComprasViewSet, ProveedoresViewSet

@@ -3,9 +3,6 @@ Signals para auditoría automática de cambios en modelos
 Registra automáticamente todas las operaciones CRUD
 """
 
-import json
-
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -440,7 +437,6 @@ def conectar_signals():
     Esta función se llama automáticamente cuando se importa el módulo.
     """
     # Las signals ya están conectadas con @receiver
-    pass
 
 
 # Autoconectar signals al importar

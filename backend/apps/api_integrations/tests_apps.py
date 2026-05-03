@@ -102,7 +102,7 @@ class ApiIntegrationsConfigTest(TestCase):
 
     def test_app_config_migration_modules(self):
         """Debe manejar migrations apropiadamente"""
-        app_config = apps.get_app_config("api_integrations")
+        apps.get_app_config("api_integrations")
 
         # Verificar que migrations están disponibles
         from django.db.migrations.loader import MigrationLoader
@@ -213,7 +213,7 @@ class ApiIntegrationsAppIntegrationTest(TestCase):
 
     def test_app_dependencies_resolution(self):
         """Debe resolver dependencias con otras apps correctamente"""
-        app_config = apps.get_app_config("api_integrations")
+        apps.get_app_config("api_integrations")
 
         # Verificar que puede acceder a modelos de apps relacionadas
         try:
@@ -266,7 +266,6 @@ class ApiIntegrationsAppIntegrationTest(TestCase):
             app_config.ready()
 
             # Verificar que no hay errores relacionados con signals
-            from django.db import models
 
             from apps.api_integrations.models import ProveedoresApi
 
@@ -298,10 +297,7 @@ class ApiIntegrationsAppIntegrationTest(TestCase):
         from apps.api_integrations.models import (
             CredencialesApi,
             EndpointsApi,
-            LogsLlamadasApi,
-            LogsWebhooks,
             ProveedoresApi,
-            WebhookEndpoints,
         )
 
         # Verificar que modelos principales están registrados

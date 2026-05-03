@@ -3,11 +3,10 @@ Servicios de dominio para el módulo de ventas.
 Contiene la lógica de negocio para promociones y devoluciones.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
 from typing import Dict, List, Optional
 
-from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -505,7 +504,7 @@ class DevolucionService:
                 id_producto=producto, defaults={"cantidad": Decimal("0.000")}
             )
 
-            stock_anterior = stock.cantidad
+            stock.cantidad
             stock.cantidad += cantidad  # REINGRESO
             stock.save()
 

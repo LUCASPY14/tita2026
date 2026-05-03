@@ -4,21 +4,18 @@ Cubre routing y configuración de URLs de reportes
 """
 
 from django.http import Http404
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase
 from django.urls import resolve, reverse
 from django.utils import timezone
 
-from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from apps.reportes.models import (
     Dashboards,
-    DestinatariosTarea,
     EjecucionesTarea,
     KpiMetricas,
     PlantillasReporte,
     PlantillasTarea,
-    ValoresKpi,
 )
 from apps.usuarios.models import Empleados, Roles
 

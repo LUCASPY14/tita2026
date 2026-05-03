@@ -3,21 +3,16 @@ Tests comprehensivos para RecargaService
 Cubre los 9 métodos principales con múltiples casos de prueba
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
-from unittest.mock import Mock, patch
 
-from django.core.exceptions import ValidationError
-from django.db import transaction
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.core.models import (
     CargasSaldo,
-    ConfiguracionSistema,
     ConsumosTarjeta,
-    MediosPago,
     Tarjetas,
 )
 from apps.core.services import RecargaService
@@ -284,7 +279,7 @@ class RecargaServiceAcreditarSaldoTest(TransactionTestCase):
     def test_atomicidad_con_error(self):
         """Si hay error, no debe actualizar ningún dato"""
         # Forzar error eliminando la tarjeta
-        tarjeta_id = self.tarjeta.nro_tarjeta
+        self.tarjeta.nro_tarjeta
         self.tarjeta.delete()
 
         # Intentar acreditar (debe fallar)

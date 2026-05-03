@@ -6,9 +6,8 @@ Missing lines targeted: 127, 131-132, 167, 171-172, 206-221, 245, 250-251, 254,
 692-701, 744-752, 778, 783-784, 787, 832, 837-838, 875
 """
 
-from datetime import date
 from decimal import Decimal
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase

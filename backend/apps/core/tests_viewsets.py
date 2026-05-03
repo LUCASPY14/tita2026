@@ -9,9 +9,9 @@ Este módulo contiene tests para:
 Cobertura: 5 custom actions + 15 endpoints CRUD
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase, TransactionTestCase
@@ -22,9 +22,6 @@ from rest_framework.test import APIClient, APIRequestFactory
 from apps.clientes.models import Clientes, Hijos
 from apps.core.models import (
     CargasSaldo,
-    ConfiguracionSistema,
-    ConsumosTarjeta,
-    MediosPago,
     Tarjetas,
 )
 from apps.core.views import CargasSaldoViewSet

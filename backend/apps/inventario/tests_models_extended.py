@@ -199,7 +199,6 @@ class CostosHistoricosTest(InventarioModelsExtTestBase):
 
     def test_str_representation(self):
         """__str__ returns product description, cost and date (line 415)."""
-        from apps.compras.models import Compras, Proveedores
 
         costo = CostosHistoricos.objects.create(
             costo_unitario=Decimal("1500.00"),

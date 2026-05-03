@@ -7,18 +7,14 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
-from django.test import Client, TestCase
-from django.urls import resolve, reverse
+from django.urls import reverse
 from django.utils import timezone
 
-from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from apps.contabilidad.models import (
-    AuditoriaComisiones,
     Cajas,
     CierresCaja,
-    DatosEmpresa,
     DocumentosTributarios,
     Impuestos,
     MovimientosCaja,

@@ -5,7 +5,6 @@ Cantina Tita - Sistema de Gestión
 Tests completos para todos los validadores del módulo de reportes.
 """
 
-import json
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError

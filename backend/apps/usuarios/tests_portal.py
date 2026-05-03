@@ -13,7 +13,6 @@ Cubre:
 """
 
 from datetime import timedelta
-from unittest.mock import patch
 
 from django.conf import settings
 from django.test import TestCase
@@ -199,8 +198,6 @@ class PortalJWTAuthenticationTest(TestCase):
 
     def _make_request(self, token=None):
         from django.test import RequestFactory
-
-        from rest_framework.request import Request
 
         factory = RequestFactory()
         req = factory.get("/")

@@ -192,7 +192,7 @@ class ContabilidadAppsIntegrationTest(TestCase):
         """Debe registrar signals correctamente si los tiene"""
         try:
             # Verificar si hay signals definidos
-            from apps.contabilidad import signals
+            pass
 
             # Si el módulo existe, verificar que no hay errores
             self.assertTrue(True, "Signals module importado correctamente")
@@ -206,7 +206,7 @@ class ContabilidadAppsIntegrationTest(TestCase):
     def test_contabilidad_app_serializers_integration(self):
         """Debe integrar serializers correctamente con DRF"""
         try:
-            from rest_framework import serializers as drf_serializers
+            pass
 
             from apps.contabilidad import serializers
 
@@ -236,8 +236,7 @@ class ContabilidadAppsIntegrationTest(TestCase):
     def test_contabilidad_app_views_integration(self):
         """Debe integrar views correctamente con DRF"""
         try:
-            from rest_framework import views as drf_views
-            from rest_framework import viewsets
+            pass
 
             from apps.contabilidad import views
 
@@ -299,7 +298,7 @@ class ContabilidadAppsIntegrationTest(TestCase):
     def test_contabilidad_app_permissions_integration(self):
         """Debe integrar permisos correctamente si los tiene"""
         try:
-            from rest_framework import permissions as drf_permissions
+            pass
 
             from apps.contabilidad import permissions
 

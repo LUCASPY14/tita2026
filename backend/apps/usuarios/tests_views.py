@@ -10,7 +10,6 @@ from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.usuarios.models import Empleados, Roles
 

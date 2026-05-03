@@ -11,8 +11,6 @@ Cobertura de líneas:
 from datetime import date, datetime, time
 from decimal import Decimal
 
-from django.test import TestCase
-
 import pytest
 
 from apps.almuerzos.models import (
@@ -20,7 +18,6 @@ from apps.almuerzos.models import (
     PlanesAlmuerzo,
     RegistrosConsumoAlmuerzo,
     SuscripcionesAlmuerzo,
-    TiposAlmuerzo,
 )
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios

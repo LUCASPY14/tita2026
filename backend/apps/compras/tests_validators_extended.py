@@ -6,7 +6,7 @@ Missing lines targeted: 59, 98, 174-175, 189, 212-213, 281, 308-311, 361, 378,
 627, 654, 684-685, 715-716
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock
 

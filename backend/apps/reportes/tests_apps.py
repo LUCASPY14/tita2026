@@ -4,24 +4,19 @@ Cubre configuración de la app, signals y configuraciones específicas
 """
 
 import os
-import tempfile
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from django.apps import apps
 from django.conf import settings
-from django.db.models.signals import post_save, pre_delete
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from apps.reportes.apps import ReportesConfig
 from apps.reportes.models import (
     Dashboards,
-    DestinatariosTarea,
-    EjecucionesTarea,
     KpiMetricas,
     PlantillasReporte,
     PlantillasTarea,
-    ValoresKpi,
 )
 from apps.usuarios.models import Empleados, Roles
 
@@ -111,7 +106,6 @@ class ReportesConfigTest(TestCase):
         app_config = apps.get_app_config("reportes")
 
         # Debe usar el módulo de migraciones predeterminado
-        expected_migrations_module = "apps.reportes.migrations"
         # En Django, esto se configura automáticamente a menos que se especifique
 
         # Verificar que el directorio de migraciones existe
@@ -292,7 +286,7 @@ class ReportesAppIntegrationTest(TestCase):
             ]
         ):
             try:
-                from django.template.loader import get_template
+                pass
 
                 # Intentar cargar template si existe
                 # template = get_template('reportes/dashboard.html')
@@ -306,7 +300,7 @@ class ReportesAppIntegrationTest(TestCase):
         app_config = apps.get_app_config("reportes")
 
         # Verificar directorio de static files
-        static_path = os.path.join(app_config.path, "static")
+        os.path.join(app_config.path, "static")
 
         # El directorio puede o no existir dependiendo de la implementación
         # if os.path.exists(static_path):
@@ -317,7 +311,7 @@ class ReportesAppIntegrationTest(TestCase):
         app_config = apps.get_app_config("reportes")
 
         # Verificar directorio de locale
-        locale_path = os.path.join(app_config.path, "locale")
+        os.path.join(app_config.path, "locale")
 
         # En una implementación completa habría archivos de traducción
         # if os.path.exists(locale_path):
@@ -414,7 +408,7 @@ class ReportesAppConfigurationTest(TestCase):
 
         for setting_name in reportes_settings:
             # Verificar que el setting existe o tiene un valor por defecto
-            setting_value = getattr(settings, setting_name, None)
+            getattr(settings, setting_name, None)
             # En implementación real, estos tendrían valores específicos
             # self.assertIsNotNone(setting_value)
 
@@ -478,7 +472,7 @@ class ReportesAppConfigurationTest(TestCase):
         models_to_check = [PlantillasReporte, Dashboards, KpiMetricas, PlantillasTarea]
 
         for model in models_to_check:
-            is_registered = model in admin.site._registry
+            model in admin.site._registry
             # En implementación real, todos deberían estar registrados
             # self.assertTrue(is_registered)
 
@@ -527,7 +521,7 @@ class ReportesAppConfigurationTest(TestCase):
 
         for setting_name in security_settings:
             # Las configuraciones de seguridad pueden estar o no dependiendo del entorno
-            setting_value = getattr(settings, setting_name, None)
+            getattr(settings, setting_name, None)
             # En producción real, estas deberían tener valores apropiados
 
     def test_app_performance_configuration(self):
@@ -559,7 +553,7 @@ class ReportesAppConfigurationTest(TestCase):
         storage_settings = ["MEDIA_URL", "MEDIA_ROOT", "DEFAULT_FILE_STORAGE"]
 
         for setting_name in storage_settings:
-            setting_value = getattr(settings, setting_name, None)
+            getattr(settings, setting_name, None)
             # En implementación real, estos deberían estar configurados
 
     def test_app_email_configuration(self):
@@ -568,7 +562,7 @@ class ReportesAppConfigurationTest(TestCase):
         email_settings = ["EMAIL_HOST", "EMAIL_PORT", "EMAIL_USE_TLS", "DEFAULT_FROM_EMAIL"]
 
         for setting_name in email_settings:
-            setting_value = getattr(settings, setting_name, None)
+            getattr(settings, setting_name, None)
             # La configuración de email puede ser opcional en desarrollo
 
     def test_app_api_configuration(self):
@@ -582,7 +576,7 @@ class ReportesAppConfigurationTest(TestCase):
 
             for config_key in expected_configs:
                 # Pueden estar configuradas en REST_FRAMEWORK
-                config_value = rest_config.get(config_key)
+                rest_config.get(config_key)
                 # En implementación real, verificar valores específicos
 
 

@@ -12,11 +12,10 @@ Configuración en settings.py
 import logging
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import Dict
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, send_mail
-from django.template.loader import render_to_string
 from django.utils import timezone
 
 from apps.notificaciones.models import EmailsEnviados

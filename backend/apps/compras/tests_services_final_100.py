@@ -4,7 +4,7 @@ Cubre líneas: 80-81, 86-87, 196-199, branch 281->288
 """
 
 from decimal import Decimal
-from unittest.mock import PropertyMock, patch
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.utils import timezone

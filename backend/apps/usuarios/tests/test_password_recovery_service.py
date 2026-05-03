@@ -3,7 +3,6 @@ Tests para PasswordRecoveryService
 Cobertura completa de recuperación de contraseñas y verificación de email
 """
 
-import hashlib
 from datetime import timedelta
 
 from django.test import TransactionTestCase

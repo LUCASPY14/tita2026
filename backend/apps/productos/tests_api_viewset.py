@@ -20,7 +20,6 @@ from apps.contabilidad.models import Impuestos
 from apps.productos.models import (
     Categorias,
     ListasPrecios,
-    PreciosPorLista,
     Productos,
     UnidadesMedida,
 )

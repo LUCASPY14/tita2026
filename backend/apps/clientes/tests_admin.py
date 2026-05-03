@@ -9,7 +9,7 @@ from django.contrib import admin
 from django.test import TestCase
 from django.utils import timezone
 
-from apps.clientes.admin import ClientesAdmin, HijosAdmin
+from apps.clientes.admin import ClientesAdmin
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios
 

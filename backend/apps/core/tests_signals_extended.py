@@ -6,7 +6,6 @@ Cubre líneas faltantes:
 126-129 (validar_integridad_saldo warning logging)
 """
 
-from datetime import datetime
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 

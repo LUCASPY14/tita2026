@@ -8,18 +8,13 @@ from decimal import Decimal
 
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
-from django.contrib.messages import get_messages
 from django.db.models import Q
 from django.test import Client, TestCase
-from django.urls import reverse
 from django.utils import timezone
 
-from apps.contabilidad.admin import *
 from apps.contabilidad.models import (
-    AuditoriaComisiones,
     Cajas,
     CierresCaja,
-    DatosEmpresa,
     DocumentosTributarios,
     Impuestos,
     MovimientosCaja,
@@ -118,7 +113,6 @@ class CajasAdminTest(BaseContabilidadAdminTest):
     def test_cajas_admin_readonly_fields(self):
         """Debe tener campos de solo lectura apropiados"""
         # Simular campos readonly para timestamps
-        readonly_fields = ["fecha_creacion", "fecha_modificacion"]
 
         # En este caso, verificamos que los campos de timestamps no sean editables
         # en un entorno real

@@ -217,7 +217,7 @@ class ClientesAdminBackupTest(TestCase):
         with patch.object(admin_instance, "get_search_results") as mock_search:
             mock_search.return_value = (Clientes.objects.all(), False)
 
-            queryset = admin_instance.get_queryset(request)
+            admin_instance.get_queryset(request)
             mock_search.return_value
 
             # Verificar que se puede buscar
@@ -234,7 +234,7 @@ class ClientesAdminBackupTest(TestCase):
     def test_admin_permissions_integration(self):
         """Debe integrar correctamente con sistema de permisos"""
         admin_instance = ClientesAdmin(Clientes, self.site)
-        request = MockRequest(self.admin_user)
+        MockRequest(self.admin_user)
 
         # Verificar permisos básicos
         self.assertTrue(hasattr(admin_instance, "has_view_permission"))
@@ -272,7 +272,7 @@ class ClientesAdminBackupTest(TestCase):
         admin_instance = ClientesAdmin(Clientes, self.site)
 
         # Test que puede generar URL para elementos
-        url = admin_instance.get_absolute_url() if hasattr(admin_instance, "get_absolute_url") else None
+        admin_instance.get_absolute_url() if hasattr(admin_instance, "get_absolute_url") else None
         # Verificar que admin_instance está bien configurado
         self.assertIsNotNone(admin_instance.model)
         self.assertEqual(admin_instance.model, Clientes)

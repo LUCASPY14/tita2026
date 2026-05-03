@@ -3,7 +3,7 @@ Tests para los validadores del módulo Clientes
 Coverage completo de todas las reglas de negocio
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError

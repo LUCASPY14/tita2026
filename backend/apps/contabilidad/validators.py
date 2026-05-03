@@ -652,7 +652,6 @@ def validar_fechas_timbrado(fecha_inicio, fecha_fin):
         raise ValidationError("La fecha de fin debe ser posterior a la fecha de inicio.")
 
     # Validar vigencia razonable (timbrados típicamente 1-2 años)
-    from datetime import timedelta
 
     diferencia_dias = (fecha_fin - fecha_inicio).days
     if diferencia_dias > 730:  # 2 años

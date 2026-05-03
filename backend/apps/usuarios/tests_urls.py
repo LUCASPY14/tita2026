@@ -7,10 +7,8 @@ from django.test import TestCase
 from django.urls import resolve, reverse
 from django.utils import timezone
 
-from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from apps.usuarios import views
 from apps.usuarios.models import Empleados, Roles
 
 

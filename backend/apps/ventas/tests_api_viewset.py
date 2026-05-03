@@ -3,7 +3,7 @@ Tests para VentasViewSet - API REST endpoints
 Objetivo: Aumentar cobertura de views/endpoints de 0% a 40%+
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -14,9 +14,9 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.clientes.models import Clientes, Hijos, TiposCliente
+from apps.clientes.models import Clientes, TiposCliente
 from apps.contabilidad.models import Impuestos
-from apps.core.models import ConsumosTarjeta, MediosPago, Tarjetas
+from apps.core.models import MediosPago
 from apps.inventario.models import StockUnico
 from apps.productos.models import (
     Categorias,
@@ -26,7 +26,7 @@ from apps.productos.models import (
     UnidadesMedida,
 )
 from apps.usuarios.models import Empleados, Roles
-from apps.ventas.models import DetallesVenta, PagosVenta, Ventas
+from apps.ventas.models import Ventas
 
 
 class VentasViewSetAPITest(TestCase):

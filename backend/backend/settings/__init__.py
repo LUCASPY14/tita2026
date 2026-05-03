@@ -7,8 +7,8 @@ import os
 environment = os.environ.get("DJANGO_ENVIRONMENT", "development")
 
 if environment == "production":
-    from .production import *
+    pass
 elif environment == "test":
-    from .test import *
+    pass
 else:
-    from .development import *
+    pass

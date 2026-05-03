@@ -3,14 +3,11 @@ Tests para serializers de reportes
 Cubre validación de datos, serialización y deserialización de reportes
 """
 
-import json
-from datetime import date, datetime, timedelta
-from decimal import Decimal
+from datetime import timedelta
 
 from django.test import TestCase
 from django.utils import timezone
 
-from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from apps.reportes.models import (
@@ -20,7 +17,6 @@ from apps.reportes.models import (
     KpiMetricas,
     PlantillasReporte,
     PlantillasTarea,
-    ValoresKpi,
 )
 from apps.usuarios.models import Empleados, Roles
 
@@ -422,7 +418,6 @@ class KpiMetricasSerializerTest(BaseReportesSerializerTest):
         query_sin_valor = "SELECT COUNT(*) as total FROM ventas"
 
         # Query inválida - múltiples columnas
-        query_multiple = "SELECT SUM(monto) as valor, COUNT(*) as cantidad FROM ventas"
 
         # Crear KPI con query válida
         kpi_valido = KpiMetricas.objects.create(
