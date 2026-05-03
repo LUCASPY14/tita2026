@@ -3,23 +3,24 @@ Servicio de autenticación empresarial para cantina_tita
 Incluye: JWT, validación de contraseñas, bloqueo de cuentas, auditoría
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple
-from decimal import Decimal
-import bcrypt
 import re
+from datetime import datetime, timedelta
+from decimal import Decimal
+from typing import Dict, Optional, Tuple
 
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+
+import bcrypt
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.usuarios.models import (
+    AuditoriaOperaciones,
+    BloqueosCuenta,
     Empleados,
     IntentosLogin,
-    BloqueosCuenta,
     SesionesActivas,
-    AuditoriaOperaciones,
 )
 
 

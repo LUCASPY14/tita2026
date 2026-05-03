@@ -3,29 +3,32 @@ Serializers para reportes
 Maneja la serialización y validación de datos de reportes
 """
 
-from decimal import Decimal
 from datetime import date, datetime
-from rest_framework import serializers
-from django.core.validators import MinValueValidator, MaxValueValidator
+from decimal import Decimal
+
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 
+from rest_framework import serializers
+
+from apps.usuarios.models import Empleados
+from apps.usuarios.serializers import EmpleadosSerializer as EmpleadoBasicoSerializer
+
 from .models import (
-    PlantillasReporte,
     Dashboards,
-    KpiMetricas,
-    ValoresKpi,
-    PlantillasTarea,
-    EjecucionesTarea,
     DestinatariosTarea,
+    EjecucionesTarea,
+    KpiMetricas,
+    PlantillasReporte,
+    PlantillasTarea,
+    ValoresKpi,
 )
 from .validators import (
     validar_configuracion_json,
-    validar_tipo_reporte,
-    validar_frecuencia_ejecucion,
     validar_formato_datos_json,
+    validar_frecuencia_ejecucion,
+    validar_tipo_reporte,
 )
-from apps.usuarios.models import Empleados
-from apps.usuarios.serializers import EmpleadosSerializer as EmpleadoBasicoSerializer
 
 
 class ConfiguracionJSONField(serializers.JSONField):

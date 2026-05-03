@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import StockUnico, MovimientosStock, AjustesInventario
+
+from .models import AjustesInventario, MovimientosStock, StockUnico
 
 
 class StockUnicoSerializer(serializers.ModelSerializer):

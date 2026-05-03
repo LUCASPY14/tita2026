@@ -3,8 +3,8 @@ Tests para notificaciones/services/email_service.py
 """
 
 from datetime import datetime
-from unittest.mock import patch, MagicMock, call
 from decimal import Decimal
+from unittest.mock import MagicMock, call, patch
 
 from django.test import TestCase, override_settings
 

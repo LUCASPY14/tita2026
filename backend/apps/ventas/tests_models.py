@@ -3,28 +3,31 @@ Tests para modelos de la app ventas
 Sprint 2 - Backend Coverage Improvement
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
-from .models import (
-    Ventas,
-    DetallesVenta,
-    PagosVenta,
-    AplicacionPagosVentas,
-    NotasCreditoCliente,
-    DetallesNotaCredito,
-    Promociones,
-    CategoriasPromocion,
-    ProductosPromocion,
-    PromocionesAplicadas,
-    CondicionVenta,
-)
+
 from apps.clientes.models import Clientes, TiposCliente
-from apps.productos.models import ListasPrecios, Productos, Categorias
 from apps.contabilidad.models import Impuestos
-from apps.usuarios.models import Empleados, Roles
 from apps.core.models import MediosPago
 from apps.inventario.models import StockUnico
+from apps.productos.models import Categorias, ListasPrecios, Productos
+from apps.usuarios.models import Empleados, Roles
+
+from .models import (
+    AplicacionPagosVentas,
+    CategoriasPromocion,
+    CondicionVenta,
+    DetallesNotaCredito,
+    DetallesVenta,
+    NotasCreditoCliente,
+    PagosVenta,
+    ProductosPromocion,
+    Promociones,
+    PromocionesAplicadas,
+    Ventas,
+)
 
 
 class VentasModelTest(TestCase):

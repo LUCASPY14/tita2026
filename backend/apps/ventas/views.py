@@ -1,26 +1,29 @@
-﻿from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import ValidationError
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
-from django.db import transaction
-from django.db import models
+﻿from decimal import Decimal
+
+from django.db import models, transaction
 from django.utils import timezone
-from decimal import Decimal
+
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 from apps.common.permissions import CanManageVentas, IsAdminOrReadOnly
-from apps.common.throttling import VentasRateThrottle, BurstRateThrottle
-from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones, CondicionVenta
+from apps.common.throttling import BurstRateThrottle, VentasRateThrottle
+
+from .models import CondicionVenta, DetallesVenta, NotasCreditoCliente, PagosVenta, Promociones, Ventas
 from .serializers import (
-    VentasSerializer,
-    DetallesVentaSerializer,
-    PagosVentaSerializer,
-    NotasCreditoClienteSerializer,
-    PromocionesSerializer,
     CondicionVentaSerializer,
+    DetallesVentaSerializer,
+    NotasCreditoClienteSerializer,
+    PagosVentaSerializer,
+    PromocionesSerializer,
+    VentasSerializer,
 )
-from .services import PromocionService, DevolucionService
+from .services import DevolucionService, PromocionService
 
 
 class VentasViewSet(viewsets.ModelViewSet):
@@ -149,8 +152,9 @@ class VentasViewSet(viewsets.ModelViewSet):
         Raises:
             ValidationError: Si la suma de pagos no coincide con el total de la venta
         """
-        from apps.core.models import MediosPago
         import logging
+
+        from apps.core.models import MediosPago
 
         logger = logging.getLogger(__name__)
 
@@ -204,10 +208,12 @@ class VentasViewSet(viewsets.ModelViewSet):
         - estado_pago: 'Pagada'
         """
         from decimal import Decimal as D
+
+        from django.utils import timezone as tz
+
         from apps.clientes.models import Clientes, Hijos, TiposCliente
         from apps.productos.models import ListasPrecios
         from apps.usuarios.models import Empleados
-        from django.utils import timezone as tz
 
         data = request.data.copy() if hasattr(request.data, "copy") else dict(request.data)
 
@@ -301,8 +307,8 @@ class VentasViewSet(viewsets.ModelViewSet):
         - Separa monto facturado vs recargo POS
         - Valida límite de crédito para ventas a crédito
         """
-        from apps.inventario.services import StockService
         from apps.core.services import AutorizacionService
+        from apps.inventario.services import StockService
 
         venta_data = serializer.validated_data
         id_hijo = venta_data.get("id_hijo")
@@ -585,8 +591,9 @@ class VentasViewSet(viewsets.ModelViewSet):
         Descuenta el saldo de la tarjeta y registra el consumo.
         Este método garantiza la integridad transaccional.
         """
-        from apps.core.models import ConsumosTarjeta
         from django.utils import timezone
+
+        from apps.core.models import ConsumosTarjeta
 
         # Registrar saldo anterior
         saldo_anterior = tarjeta.saldo_actual
@@ -1070,8 +1077,9 @@ class PromocionesViewSet(viewsets.ModelViewSet):
                 ]
             }
         """
+        from django.db.models import Avg, Count, Sum
+
         from apps.ventas.models import PromocionesAplicadas
-        from django.db.models import Sum, Count, Avg
 
         # Parámetros de fecha
         fecha_inicio = request.query_params.get("fecha_inicio")
@@ -1161,8 +1169,9 @@ class PromocionesViewSet(viewsets.ModelViewSet):
                 ]
             }
         """
-        from apps.ventas.models import PromocionesAplicadas
         from django.db.models import Count, Sum
+
+        from apps.ventas.models import PromocionesAplicadas
 
         limite = int(request.query_params.get("limite", 10))
 
@@ -1216,9 +1225,10 @@ class PromocionesViewSet(viewsets.ModelViewSet):
                 ]
             }
         """
-        from apps.ventas.models import PromocionesAplicadas
         from django.db.models import Count, Sum
-        from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
+        from django.db.models.functions import TruncDay, TruncMonth, TruncWeek
+
+        from apps.ventas.models import PromocionesAplicadas
 
         periodo = request.query_params.get("periodo", "mensual")  # mensual, semanal, diario
         fecha_inicio = request.query_params.get("fecha_inicio")

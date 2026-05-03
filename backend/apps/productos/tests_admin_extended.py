@@ -2,18 +2,18 @@
 
 from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 from django.contrib.admin.sites import AdminSite
-from django.test import TestCase, RequestFactory
+from django.test import RequestFactory, TestCase
 
 from apps.productos.admin import (
     CategoriasAdmin,
-    UnidadesMedidaAdmin,
-    ProductosAdmin,
+    HistoricoPreciosAdmin,
     ListasPreciosAdmin,
     PreciosPorListaAdmin,
-    HistoricoPreciosAdmin,
+    ProductosAdmin,
+    UnidadesMedidaAdmin,
 )
 
 # Patch format_html to avoid SafeString/format-spec incompatibility

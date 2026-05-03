@@ -3,23 +3,23 @@ Tests extendidos para apps/ventas/views.py
 Cubre: NotasCreditoClienteViewSet custom actions, PromocionesViewSet custom actions
 """
 
-from unittest.mock import patch, MagicMock
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
-from django.contrib.auth.models import User
-from rest_framework.test import APIRequestFactory
-from rest_framework.test import force_authenticate
+
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
+from rest_framework.test import APIRequestFactory, force_authenticate
 
+from apps.ventas.models import Promociones
 from apps.ventas.views import (
     NotasCreditoClienteViewSet,
     PromocionesViewSet,
 )
-from apps.ventas.models import Promociones
 
 
 def make_user(username="ventastest"):

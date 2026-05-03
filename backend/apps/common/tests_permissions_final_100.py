@@ -3,12 +3,15 @@ Tests finales para alcanzar 100% cobertura en common.permissions
 Cubre líneas específicas: 16-19, 27-28, 51-52, 119, branch 15->23
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
 from django.contrib.auth import get_user_model
+
+import pytest
 from rest_framework.test import APIRequestFactory
-from apps.common.permissions import _get_empleado_from_request, IsAdminOrReadOnly, IsClienteOrAdmin, IsCajeroOrAdmin
-from apps.usuarios.models import Roles, Empleados
+
+from apps.common.permissions import IsAdminOrReadOnly, IsCajeroOrAdmin, IsClienteOrAdmin, _get_empleado_from_request
+from apps.usuarios.models import Empleados, Roles
 
 User = get_user_model()
 

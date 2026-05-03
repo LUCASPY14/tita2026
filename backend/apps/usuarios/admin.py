@@ -1,14 +1,15 @@
-﻿from django.contrib import admin
-from django import forms
+﻿from django import forms
+from django.contrib import admin
 from django.utils import timezone
 from django.utils.formats import sanitize_separators
+
 from .models import (
     Empleados,
-    Roles,
-    PerfilesUsuario,
-    UsuariosPortal,
-    SesionesActivas,
     IntentosLogin,
+    PerfilesUsuario,
+    Roles,
+    SesionesActivas,
+    UsuariosPortal,
 )
 
 

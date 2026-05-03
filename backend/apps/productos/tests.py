@@ -2,17 +2,19 @@
 Tests para el módulo productos
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
+
+from apps.contabilidad.models import Impuestos
 from apps.productos.models import (
-    Productos,
     Categorias,
-    UnidadesMedida,
     ListasPrecios,
     PreciosPorLista,
+    Productos,
+    UnidadesMedida,
 )
-from apps.contabilidad.models import Impuestos
 
 
 class CategoriasTest(TestCase):

@@ -13,23 +13,23 @@ Cubre líneas faltantes:
 """
 
 from datetime import date, timedelta
-from unittest.mock import patch, MagicMock
+from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
-from decimal import Decimal
 
+from apps.compras.models import Compras, DetallesCompra, Proveedores
+from apps.contabilidad.models import Impuestos
 from apps.inventario.models import (
-    StockUnico,
-    MovimientosStock,
     AlertasStock,
+    AlertasVencimiento,
     CostosHistoricos,
     LotesProducto,
-    AlertasVencimiento,
+    MovimientosStock,
+    StockUnico,
 )
-from apps.compras.models import Compras, Proveedores, DetallesCompra
-from apps.productos.models import Productos, Categorias, UnidadesMedida
-from apps.contabilidad.models import Impuestos
+from apps.productos.models import Categorias, Productos, UnidadesMedida
 from apps.usuarios.models import Empleados, Roles
 
 # ─── fixture helpers ────────────────────────────────────────────────────────
@@ -588,6 +588,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
     def test_notification_loop_with_gerente_and_email(self):
         """Lines 286-331: Call signal directly; with Gerente employee the loop body executes."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         gerente = self._make_gerente("loop")
@@ -628,6 +629,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
     def test_notification_loop_with_portal_user(self):
         """Lines 287-302: Employee with perfilesusuario triggers portal notification."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat3 = _make_categoria("ena5")
@@ -685,6 +687,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
     def test_notification_loop_no_email_employee(self):
         """Line 305->284: Employee with no email skips email sending (covers False branch)."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat4 = _make_categoria("ena6")
@@ -737,6 +740,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
     def test_portal_create_exception_covered(self):
         """Lines 300-302: Exception in portal notification create → caught and logged."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat7 = _make_categoria("ena7")
@@ -792,6 +796,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
     def test_celery_exception_covered(self):
         """Lines 327-328: Exception importing Celery tasks → caught silently (pass)."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat8 = _make_categoria("ena8")
@@ -845,6 +850,7 @@ class EnviarNotificacionAlertaTest(TransactionTestCase):
     def test_outer_exception_handler(self):
         """Lines 347-348: Outer Exception handler in enviar_notificacion_alerta."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat9 = _make_categoria("ena9")
@@ -1104,8 +1110,9 @@ class VerificarAlertasVencimientoTest(TestCase):
 
     def test_vencido_signal_direct_not_bloqueado(self):
         """Línea 387 branch covered: dias_restantes<0 + instance.bloqueado=False → update called."""
+        from unittest.mock import MagicMock, patch
+
         from apps.inventario import signals as inv_signals
-        from unittest.mock import patch, MagicMock
 
         mock_instance = MagicMock()
         mock_instance.bloqueado = False
@@ -1236,6 +1243,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
     def test_notification_vencimiento_loop_with_gerente(self):
         """Lines 483-510: Call signal directly with Gerente employee so loop body executes."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat_e2 = _make_categoria("env2")
@@ -1277,6 +1285,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
     def test_vencimiento_loop_with_portal_user(self):
         """Lines 484-496: Employee with perfilesusuario triggers portal notification for vencimiento."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat_ep = _make_categoria("envp")
@@ -1333,6 +1342,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
     def test_vencimiento_loop_no_email(self):
         """Line 499->482: Employee without email skips email sending."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat_ne = _make_categoria("envne")
@@ -1381,6 +1391,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
     def test_vencimiento_email_exception_covered(self):
         """Lines 509-510: Exception during email write → caught and logged."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat_ee = _make_categoria("envee")
@@ -1435,6 +1446,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
     def test_vencimiento_portal_create_exception_covered(self):
         """Lines 495-496: Exception during portal notification create for vencimiento → caught."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat_pce = _make_categoria("vpce")
@@ -1522,6 +1534,7 @@ class EnviarNotificacionVencimientoTest(TestCase):
     def test_vencimiento_exception_handler(self):
         """Lines 523-524: Exception during notification → prints error but doesn't crash."""
         import sys
+
         from apps.inventario import signals as inv_signals
 
         cat_e3 = _make_categoria("env3")

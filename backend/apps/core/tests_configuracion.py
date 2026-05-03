@@ -2,11 +2,12 @@
 Tests para ConfiguracionSistema - ViewSets y Models
 """
 
-import pytest  # type: ignore
 from django.test import TestCase
-from rest_framework import status
-from rest_framework.test import APITestCase, APIClient
 from django.utils import timezone
+
+import pytest  # type: ignore
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
 
 from apps.core.models import ConfiguracionSistema
 from apps.usuarios.models import Usuarios

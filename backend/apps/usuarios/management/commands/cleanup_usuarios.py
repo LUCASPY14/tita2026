@@ -4,7 +4,8 @@ Debe ejecutarse periódicamente vía cron job
 """
 
 from django.core.management.base import BaseCommand
-from apps.usuarios.services import SessionService, PasswordRecoveryService
+
+from apps.usuarios.services import PasswordRecoveryService, SessionService
 
 
 class Command(BaseCommand):
@@ -52,9 +53,11 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.ERROR(f'   ✗ Error: {resultado_sesiones["mensaje"]}'))
             else:
                 # En dry-run, consultar cuántas se limpiarían
-                from apps.usuarios.models import SesionesActivas
-                from django.utils import timezone
                 from datetime import timedelta
+
+                from django.utils import timezone
+
+                from apps.usuarios.models import SesionesActivas
 
                 ahora = timezone.now()
                 expiradas = SesionesActivas.objects.filter(
@@ -95,9 +98,11 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.ERROR(f'   ✗ Error: {resultado_tokens["mensaje"]}'))
             else:
                 # En dry-run, consultar cuántos se eliminarían
-                from apps.usuarios.models import TokensRecuperacion
-                from django.utils import timezone
                 from datetime import timedelta
+
+                from django.utils import timezone
+
+                from apps.usuarios.models import TokensRecuperacion
 
                 ahora = timezone.now()
                 tokens_a_eliminar = TokensRecuperacion.objects.filter(
@@ -114,9 +119,11 @@ class Command(BaseCommand):
         self.stdout.write("3. Limpiando intentos de login antiguos...")
         try:
             if not dry_run:
-                from apps.usuarios.models import IntentosLogin
-                from django.utils import timezone
                 from datetime import timedelta
+
+                from django.utils import timezone
+
+                from apps.usuarios.models import IntentosLogin
 
                 # Eliminar intentos de más de 30 días
                 ahora = timezone.now()
@@ -131,9 +138,11 @@ class Command(BaseCommand):
                 if verbose and cantidad > 0:
                     self.stdout.write(f"     - Criterio: >30 días de antigüedad\n")
             else:
-                from apps.usuarios.models import IntentosLogin
-                from django.utils import timezone
                 from datetime import timedelta
+
+                from django.utils import timezone
+
+                from apps.usuarios.models import IntentosLogin
 
                 ahora = timezone.now()
                 cantidad = IntentosLogin.objects.filter(fecha_intento__lt=ahora - timedelta(days=30)).count()
@@ -148,9 +157,11 @@ class Command(BaseCommand):
         self.stdout.write("4. Limpiando intentos 2FA antiguos...")
         try:
             if not dry_run:
-                from apps.usuarios.models import Intentos2Fa
-                from django.utils import timezone
                 from datetime import timedelta
+
+                from django.utils import timezone
+
+                from apps.usuarios.models import Intentos2Fa
 
                 # Eliminar intentos de más de 30 días
                 ahora = timezone.now()
@@ -165,9 +176,11 @@ class Command(BaseCommand):
                 if verbose and cantidad > 0:
                     self.stdout.write(f"     - Criterio: >30 días de antigüedad\n")
             else:
-                from apps.usuarios.models import Intentos2Fa
-                from django.utils import timezone
                 from datetime import timedelta
+
+                from django.utils import timezone
+
+                from apps.usuarios.models import Intentos2Fa
 
                 ahora = timezone.now()
                 cantidad = Intentos2Fa.objects.filter(fecha_intento__lt=ahora - timedelta(days=30)).count()

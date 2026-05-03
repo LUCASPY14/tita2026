@@ -3,20 +3,21 @@ Extended tests for AuthenticationService and TwoFactorAuthService
 Targeting uncovered lines for coverage improvement.
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from django.test import TransactionTestCase
 from django.utils import timezone
 
-from apps.usuarios.services.auth_service import AuthenticationService
-from apps.usuarios.services.two_factor_service import TwoFactorAuthService
 from apps.usuarios.models import (
-    Empleados,
-    Roles,
-    SesionesActivas,
     AuditoriaOperaciones,
     Autenticacion2Fa,
+    Empleados,
     Intentos2Fa,
+    Roles,
+    SesionesActivas,
 )
+from apps.usuarios.services.auth_service import AuthenticationService
+from apps.usuarios.services.two_factor_service import TwoFactorAuthService
 
 
 class BaseAuthTest(TransactionTestCase):

@@ -3,15 +3,16 @@ Tests para views/viewsets de la app usuarios
 Cubre APIs, permisos, autenticación y endpoints customizados
 """
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from django.contrib.auth.models import User
-from rest_framework.test import APITestCase, APIClient
+
 from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.usuarios.models import Roles, Empleados
+from apps.usuarios.models import Empleados, Roles
 
 
 class RolesViewSetTest(APITestCase):

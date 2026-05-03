@@ -3,49 +3,43 @@ Tests para los validadores del módulo Clientes
 Coverage completo de todas las reglas de negocio
 """
 
-from django.test import TestCase
-from django.core.exceptions import ValidationError
-from decimal import Decimal
 from datetime import date, datetime, timedelta
-from apps.clientes.validators import (
-    # Clientes
-    validar_nombres_cliente,
-    validar_apellidos_cliente,
-    validar_razon_social,
-    validar_ruc_ci,
-    validar_email_cliente,
-    validar_telefono_cliente,
-    validar_limite_credito_cliente,
-    validar_direccion_cliente,
-    # Tipos de Cliente
-    validar_nombre_tipo_cliente,
-    # Hijos
-    validar_nombre_hijo,
-    validar_apellido_hijo,
-    validar_fecha_nacimiento,
-    validar_grado_hijo,
-    validar_foto_perfil,
-    # Grados
-    validar_nombre_grado,
-    validar_nivel_grado,
-    validar_orden_visualizacion,
-    # Historial de Grados
+from decimal import Decimal
+
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+
+from apps.clientes.validators import (  # Clientes; Tipos de Cliente; Hijos; Grados; Historial de Grados; Restricciones; Autorizaciones; Logs
     validar_anio_escolar,
-    validar_motivo_cambio_grado,
+    validar_apellido_hijo,
+    validar_apellidos_cliente,
     validar_cambio_grado,
-    # Restricciones
-    validar_tipo_restriccion,
     validar_descripcion_restriccion,
-    validar_severidad_restriccion,
-    validar_observaciones_restriccion,
-    # Autorizaciones
-    validar_monto_autorizado,
-    validar_saldos_autorizacion,
-    validar_motivo_autorizacion,
-    # Logs
-    validar_tipo_operacion_log,
-    validar_resultado_log,
+    validar_direccion_cliente,
+    validar_email_cliente,
+    validar_fecha_nacimiento,
+    validar_foto_perfil,
+    validar_grado_hijo,
     validar_ip_origen,
+    validar_limite_credito_cliente,
+    validar_monto_autorizado,
+    validar_motivo_autorizacion,
+    validar_motivo_cambio_grado,
+    validar_nivel_grado,
+    validar_nombre_grado,
+    validar_nombre_hijo,
+    validar_nombre_tipo_cliente,
+    validar_nombres_cliente,
+    validar_observaciones_restriccion,
+    validar_orden_visualizacion,
+    validar_razon_social,
+    validar_resultado_log,
+    validar_ruc_ci,
+    validar_saldos_autorizacion,
+    validar_severidad_restriccion,
+    validar_telefono_cliente,
+    validar_tipo_operacion_log,
+    validar_tipo_restriccion,
 )
 
 # ============================================================================

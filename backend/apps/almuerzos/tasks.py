@@ -2,10 +2,12 @@
 Celery tasks para el módulo de Almuerzos
 """
 
-from celery import shared_task
-from django.utils import timezone
-from decimal import Decimal
 import logging
+from decimal import Decimal
+
+from django.utils import timezone
+
+from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,7 @@ def generar_cuentas_mensuales():
     para todos los hijos con suscripción activa que aún no tengan cuenta.
     Se ejecuta el 1ro de cada mes.
     """
-    from apps.almuerzos.models import SuscripcionesAlmuerzo, CuentasAlmuerzoMensual
+    from apps.almuerzos.models import CuentasAlmuerzoMensual, SuscripcionesAlmuerzo
     from apps.notificaciones.models import AlertasSistema
 
     hoy = timezone.now().date()

@@ -3,25 +3,28 @@ Tests para modelos de la app almuerzos
 Sprint 2 - Backend Coverage Improvement
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
+
+from apps.clientes.models import Clientes, Hijos, TiposCliente
+from apps.contabilidad.models import Impuestos
+from apps.core.models import MediosPago, Tarjetas
+from apps.productos.models import Categorias, ListasPrecios, Productos, UnidadesMedida
+from apps.usuarios.models import Empleados, Roles
+
 from .models import (
-    PlanesAlmuerzo,
-    TiposAlmuerzo,
-    SuscripcionesAlmuerzo,
-    RegistrosConsumoAlmuerzo,
+    Alergenos,
     CuentasAlmuerzoMensual,
     PagosAlmuerzoMensual,
     PagosCuentasAlmuerzo,
-    Alergenos,
+    PlanesAlmuerzo,
     ProductosAlergenos,
+    RegistrosConsumoAlmuerzo,
+    SuscripcionesAlmuerzo,
+    TiposAlmuerzo,
 )
-from apps.clientes.models import Clientes, Hijos, TiposCliente
-from apps.productos.models import ListasPrecios, Productos, Categorias, UnidadesMedida
-from apps.core.models import Tarjetas, MediosPago
-from apps.usuarios.models import Empleados, Roles
-from apps.contabilidad.models import Impuestos
 
 
 class PlanesAlmuerzoModelTest(TestCase):

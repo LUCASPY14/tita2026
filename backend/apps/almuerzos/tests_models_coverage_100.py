@@ -8,16 +8,19 @@ Cobertura de líneas:
 - L173, L192, L213: __str__ de CuentasAlmuerzoMensual
 """
 
-import pytest
+from datetime import date, datetime, time
 from decimal import Decimal
-from datetime import date, time, datetime
+
 from django.test import TestCase
+
+import pytest
+
 from apps.almuerzos.models import (
-    PlanesAlmuerzo,
-    TiposAlmuerzo,
-    SuscripcionesAlmuerzo,
-    RegistrosConsumoAlmuerzo,
     CuentasAlmuerzoMensual,
+    PlanesAlmuerzo,
+    RegistrosConsumoAlmuerzo,
+    SuscripcionesAlmuerzo,
+    TiposAlmuerzo,
 )
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios

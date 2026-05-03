@@ -3,20 +3,21 @@ Tests para apps/almuerzos/views.py
 Cubre RegistrosConsumoAlmuerzoViewSet.perform_create() y _agregar_a_cuenta_mensual()
 """
 
-from unittest.mock import MagicMock, patch
-from decimal import Decimal
 from datetime import date, time
+from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 from django.utils import timezone
+
 from rest_framework.exceptions import ValidationError
 
 from apps.almuerzos.models import (
-    PlanesAlmuerzo,
-    TiposAlmuerzo,
-    SuscripcionesAlmuerzo,
-    RegistrosConsumoAlmuerzo,
     Alergenos,
+    PlanesAlmuerzo,
+    RegistrosConsumoAlmuerzo,
+    SuscripcionesAlmuerzo,
+    TiposAlmuerzo,
 )
 from apps.almuerzos.views import RegistrosConsumoAlmuerzoViewSet
 from apps.clientes.models import Clientes, Hijos, TiposCliente

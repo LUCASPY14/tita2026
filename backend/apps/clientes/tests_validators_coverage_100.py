@@ -8,8 +8,10 @@ Cobertura de líneas:
 - L202: Teléfono con caracteres no permitidos
 """
 
-import pytest
 from django.core.exceptions import ValidationError
+
+import pytest
+
 from apps.clientes.validators import validar_ruc_ci, validar_telefono_cliente
 
 

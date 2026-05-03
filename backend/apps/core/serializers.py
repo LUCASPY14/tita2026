@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Tarjetas, CargasSaldo, ConsumosTarjeta, MediosPago, ConfiguracionSistema
+
+from .models import CargasSaldo, ConfiguracionSistema, ConsumosTarjeta, MediosPago, Tarjetas
 
 
 class TarjetasSerializer(serializers.ModelSerializer):

@@ -13,9 +13,9 @@ from decimal import Decimal
 from django.test import TestCase
 from django.utils import timezone
 
+from apps.clientes.models import Clientes, TiposCliente
 from apps.contabilidad.facturacion_service import FacturacionService
 from apps.contabilidad.models import DocumentosTributarios, PuntosExpedicion, Timbrados
-from apps.clientes.models import Clientes, TiposCliente
 from apps.productos.models import ListasPrecios
 from apps.usuarios.models import Empleados, Roles
 from apps.ventas.models import Ventas

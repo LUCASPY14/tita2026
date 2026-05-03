@@ -11,20 +11,21 @@ Autor: Cantina Tita Development Team
 Fecha: Marzo 2026
 """
 
-from decimal import Decimal
-from datetime import datetime, date, timedelta, time
-from django.utils import timezone
-from django.utils.timezone import make_aware, get_current_timezone
-from django.db.models import Sum, Count, Avg, Q, F
-from django.core.exceptions import ValidationError
-from typing import Dict, List, Optional
 import logging
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from typing import Dict, List, Optional
+
+from django.core.exceptions import ValidationError
+from django.db.models import Avg, Count, F, Q, Sum
+from django.utils import timezone
+from django.utils.timezone import get_current_timezone, make_aware
 
 from apps.core.models import CargasSaldo, ConsumosTarjeta, Tarjetas
-from apps.ventas.models import Ventas
-from apps.productos.models import Productos
 from apps.inventario.models import StockUnico
-from apps.reportes.models import KpiMetricas, ValoresKpi, Dashboards
+from apps.productos.models import Productos
+from apps.reportes.models import Dashboards, KpiMetricas, ValoresKpi
+from apps.ventas.models import Ventas
 
 logger = logging.getLogger(__name__)
 

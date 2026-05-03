@@ -14,17 +14,18 @@ Targets:
 - Lines 375-402: perfil_post_save entire body
 """
 
+from unittest.mock import MagicMock, patch
+
 from django.test import TestCase
 from django.utils import timezone
-from unittest.mock import patch, MagicMock
 
 from apps.usuarios.models import (
+    AuditoriaOperaciones,
+    BloqueosCuenta,
     Empleados,
+    PerfilesUsuario,
     Roles,
     SesionesActivas,
-    BloqueosCuenta,
-    PerfilesUsuario,
-    AuditoriaOperaciones,
 )
 from apps.usuarios.signals import serializar_modelo
 

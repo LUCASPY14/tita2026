@@ -1,15 +1,17 @@
-﻿from rest_framework import viewsets, filters
+﻿from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, viewsets
 from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
+
 from apps.common.permissions import IsAdminOrReadOnly
 from apps.common.throttling import BurstRateThrottle, SustainedRateThrottle
-from .models import Productos, Categorias, UnidadesMedida, ListasPrecios, PreciosPorLista
+
+from .models import Categorias, ListasPrecios, PreciosPorLista, Productos, UnidadesMedida
 from .serializers import (
-    ProductosSerializer,
     CategoriasSerializer,
-    UnidadesMedidaSerializer,
     ListasPreciosSerializer,
     PreciosPorListaSerializer,
+    ProductosSerializer,
+    UnidadesMedidaSerializer,
 )
 
 

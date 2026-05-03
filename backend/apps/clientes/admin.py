@@ -3,17 +3,18 @@ Admin configuration for Clientes module - Simple version for testing
 """
 
 from django.contrib import admin
+
 from .models import (
-    Clientes,
-    TiposCliente,
-    Hijos,
-    Grados,
-    HistorialGradosHijos,
-    RestriccionesHijos,
     AutorizacionesSaldoNegativo,
+    Ciudad,
+    Clientes,
+    Grados,
+    Hijos,
+    HistorialGradosHijos,
     LogsAutorizaciones,
     Pais,
-    Ciudad,
+    RestriccionesHijos,
+    TiposCliente,
 )
 
 

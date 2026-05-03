@@ -4,21 +4,23 @@ Cubre PermissionService, clases de permisos DRF y decoradores
 """
 
 from unittest.mock import MagicMock, patch
-from django.test import TestCase, RequestFactory
+
+from django.test import RequestFactory, TestCase
 from django.utils import timezone
+
 from rest_framework.exceptions import PermissionDenied
 
-from apps.usuarios.models import Roles, Empleados
+from apps.usuarios.models import Empleados, Roles
 from apps.usuarios.permissions import (
-    Permisos,
-    RolesPermisos,
-    PermissionService,
-    TienePermiso,
-    TieneAlgunosPermisos,
-    TieneTodosPermisos,
     EsAdministrador,
-    requiere_permiso,
+    Permisos,
+    PermissionService,
+    RolesPermisos,
+    TieneAlgunosPermisos,
+    TienePermiso,
+    TieneTodosPermisos,
     requiere_algunos_permisos,
+    requiere_permiso,
 )
 
 

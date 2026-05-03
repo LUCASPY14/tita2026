@@ -4,13 +4,14 @@ Cubre permissions, middleware, signals y configuración de apps
 """
 
 import uuid
-from django.test import TestCase, RequestFactory
-from django.contrib.auth.models import AnonymousUser
-from django.utils import timezone
 from unittest.mock import Mock, patch
 
-from apps.usuarios.models import Roles, Empleados
+from django.contrib.auth.models import AnonymousUser
+from django.test import RequestFactory, TestCase
+from django.utils import timezone
+
 from apps.usuarios.apps import UsuariosConfig
+from apps.usuarios.models import Empleados, Roles
 
 
 class UsuariosAppsTest(TestCase):

@@ -10,16 +10,17 @@ Cubre líneas faltantes:
 265-301 (obtener_cuenta_corriente_proveedor)
 """
 
-from django.test import TestCase, TransactionTestCase
-from django.core.exceptions import ValidationError
-from django.utils import timezone
 from decimal import Decimal
+
+from django.core.exceptions import ValidationError
+from django.test import TestCase, TransactionTestCase
+from django.utils import timezone
 
 from apps.compras.models import Compras, DetallesCompra, Proveedores
 from apps.compras.services import CompraService
-from apps.productos.models import Productos, UnidadesMedida, Categorias
-from apps.usuarios.models import Empleados, Roles
 from apps.contabilidad.models import Impuestos
+from apps.productos.models import Categorias, Productos, UnidadesMedida
+from apps.usuarios.models import Empleados, Roles
 
 
 def make_base_objects():

@@ -17,20 +17,20 @@ from unittest.mock import MagicMock
 from django.test import TestCase
 from django.utils import timezone
 
-from apps.usuarios.models import Roles, Empleados, SesionesActivas
+from apps.usuarios.models import Empleados, Roles, SesionesActivas
 from apps.usuarios.signals import (
+    audit_log,
     audit_logger,
-    send_notification,
-    update_last_login,
-    hash_password,
-    log_role_change,
-    invalidate_sessions,
     cleanup_user_data,
     create_user_profile,
+    hash_password,
+    invalidate_sessions,
+    log_role_change,
+    send_notification,
     send_welcome_email,
-    audit_log,
     serializar_modelo,
     sesion_post_save,
+    update_last_login,
 )
 
 
@@ -128,6 +128,7 @@ class BloqueoPostSaveObtenerIPExceptionTest(TestCase):
     def test_bloqueo_post_save_370_exit_via_empleado_exception(self):
         """370->exit: when obtener_empleado_actual raises, the except block catches it."""
         from unittest.mock import patch
+
         from apps.usuarios.models import BloqueosCuenta
 
         bloqueo = BloqueosCuenta.objects.create(

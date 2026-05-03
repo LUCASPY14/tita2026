@@ -4,27 +4,29 @@ Views para app de Notificaciones
 
 import json
 import time
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.http import StreamingHttpResponse
-from django.utils import timezone
-from django.db.models import Q, Count
 from datetime import datetime, timedelta
 
+from django.db.models import Count, Q
+from django.http import StreamingHttpResponse
+from django.utils import timezone
+
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 from .models import (
+    AlertasSistema,
     NotificacionesPortal,
     NotificacionesSaldo,
-    AlertasSistema,
-    PreferenciasNotificacion,
     PlantillasEmail,
+    PreferenciasNotificacion,
 )
 from .serializers import (
+    AlertaSistemaSerializer,
     NotificacionPortalSerializer,
     NotificacionSaldoSerializer,
-    AlertaSistemaSerializer,
-    PreferenciasNotificacionSerializer,
     PlantillasEmailSerializer,
+    PreferenciasNotificacionSerializer,
 )
 
 
@@ -58,8 +60,8 @@ class PlantillasEmailViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """Soft-delete."""
-        from rest_framework.response import Response
         from rest_framework import status
+        from rest_framework.response import Response
 
         instance = self.get_object()
         instance.estado = False

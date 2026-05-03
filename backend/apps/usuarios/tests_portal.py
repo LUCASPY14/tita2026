@@ -15,10 +15,11 @@ Cubre:
 from datetime import timedelta
 from unittest.mock import patch
 
-import jwt
 from django.conf import settings
 from django.test import TestCase
 from django.utils import timezone
+
+import jwt
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
@@ -197,8 +198,9 @@ class PortalJWTAuthenticationTest(TestCase):
         self.auth = PortalJWTAuthentication()
 
     def _make_request(self, token=None):
-        from rest_framework.request import Request
         from django.test import RequestFactory
+
+        from rest_framework.request import Request
 
         factory = RequestFactory()
         req = factory.get("/")
@@ -233,8 +235,9 @@ class PortalJWTAuthenticationTest(TestCase):
         self.assertIsNone(result)
 
     def test_lanza_error_token_portal_expirado(self):
-        from rest_framework.exceptions import AuthenticationFailed
         import time as _time
+
+        from rest_framework.exceptions import AuthenticationFailed
 
         # Create an expired portal token directly
         expired_payload = {

@@ -3,21 +3,23 @@ Tests específicos para la lógica de doble registro de almuerzo
 Validación de regla: Máximo 2 registros por día, cobro solo del primero
 """
 
-from django.test import TestCase
-from django.core.exceptions import ValidationError
-from django.utils import timezone
 from datetime import date, time
 from decimal import Decimal
-from apps.almuerzos.validators import validar_limite_registros_diarios, determinar_si_cobra
+
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.utils import timezone
+
 from apps.almuerzos.models import (
-    RegistrosConsumoAlmuerzo,
-    TiposAlmuerzo,
     PlanesAlmuerzo,
+    RegistrosConsumoAlmuerzo,
     SuscripcionesAlmuerzo,
+    TiposAlmuerzo,
 )
-from apps.clientes.models import Hijos, Clientes, TiposCliente
-from apps.productos.models import ListasPrecios
+from apps.almuerzos.validators import determinar_si_cobra, validar_limite_registros_diarios
+from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.core.models import Tarjetas
+from apps.productos.models import ListasPrecios
 
 
 class ValidarLimiteRegistrosDiariosTest(TestCase):

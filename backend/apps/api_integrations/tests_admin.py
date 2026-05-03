@@ -3,29 +3,29 @@ Tests para admin de api_integrations
 Cubre configuración e interfaz administrativa para integraciones API
 """
 
-from django.test import TestCase
-from django.contrib.admin.sites import AdminSite
-from django.contrib.auth.models import User
-from django.test import RequestFactory
-from django.utils import timezone
-from django.contrib.admin import ModelAdmin
 import json
 
-from apps.api_integrations.models import (
-    ProveedoresApi,
-    EndpointsApi,
-    LogsLlamadasApi,
-    CredencialesApi,
-    LogsWebhooks,
-    WebhookEndpoints,
-)
+from django.contrib.admin import ModelAdmin
+from django.contrib.admin.sites import AdminSite
+from django.contrib.auth.models import User
+from django.test import RequestFactory, TestCase
+from django.utils import timezone
+
 from apps.api_integrations.admin import (
-    ProveedoresApiAdmin,
+    CredencialesApiAdmin,
     EndpointsApiAdmin,
     LogsLlamadasApiAdmin,
-    CredencialesApiAdmin,
     LogsWebhooksAdmin,
+    ProveedoresApiAdmin,
     WebhookEndpointsAdmin,
+)
+from apps.api_integrations.models import (
+    CredencialesApi,
+    EndpointsApi,
+    LogsLlamadasApi,
+    LogsWebhooks,
+    ProveedoresApi,
+    WebhookEndpoints,
 )
 from apps.usuarios.models import Empleados, Roles
 

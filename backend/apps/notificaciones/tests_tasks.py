@@ -3,8 +3,8 @@ Tests para notificaciones/tasks.py
 Usa CELERY_TASK_ALWAYS_EAGER para ejecutar tasks en modo síncrono.
 """
 
-from unittest.mock import patch, MagicMock
 from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
 

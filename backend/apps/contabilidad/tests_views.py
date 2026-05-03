@@ -3,32 +3,34 @@ Tests para views de contabilidad
 Cubre ViewSets y vistas de funcionalidad contable
 """
 
+from datetime import date, timedelta
+from decimal import Decimal
+from unittest.mock import Mock, patch
+
+from django.db import IntegrityError, models
+from django.db.models import Q
 from django.test import TestCase
-from rest_framework.test import APITestCase, APIClient
-from rest_framework import status
 from django.urls import reverse
 from django.utils import timezone
-from django.db import models, IntegrityError
-from django.db.models import Q
-from decimal import Decimal
-from datetime import date, timedelta
-from unittest.mock import patch, Mock
+
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
 
 from apps.contabilidad.models import (
+    AuditoriaComisiones,
     Cajas,
     CierresCaja,
-    MovimientosCaja,
-    TarifasComision,
-    AuditoriaComisiones,
-    DocumentosTributarios,
-    Timbrados,
-    PuntosExpedicion,
     DatosEmpresa,
+    DocumentosTributarios,
     Impuestos,
+    MovimientosCaja,
+    PuntosExpedicion,
+    TarifasComision,
+    Timbrados,
 )
-from apps.usuarios.models import Empleados, Roles
-from apps.core.models import MediosPago
 from apps.contabilidad.views import *
+from apps.core.models import MediosPago
+from apps.usuarios.models import Empleados, Roles
 
 
 class ContabilidadViewsBaseTest(APITestCase):
@@ -660,7 +662,7 @@ class ContabilidadViewsIntegrationTest(ContabilidadViewsBaseTest):
 
     def test_reportes_agregados_contables(self):
         """Debe generar reportes agregados correctamente"""
-        from django.db.models import Sum, Count, Avg
+        from django.db.models import Avg, Count, Sum
 
         # Crear datos de prueba para reportes
         cierre = CierresCaja.objects.create(

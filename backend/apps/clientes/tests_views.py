@@ -3,24 +3,25 @@ Tests para views de clientes
 Cubre ViewSets y vistas de funcionalidad para clientes
 """
 
-from django.test import TestCase
-from rest_framework.test import APITestCase, APIClient
-from rest_framework import status
-from django.urls import reverse
-from django.contrib.auth import get_user_model
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters
-from unittest.mock import patch, Mock
-from django.core.exceptions import PermissionDenied
+from unittest.mock import Mock, patch
 
-from apps.clientes.views import ClientesViewSet, HijosViewSet
+from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
+from django.test import TestCase
+from django.urls import reverse
+
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status
+from rest_framework.test import APIClient, APITestCase
+
 from apps.clientes.models import (
     Clientes,
-    TiposCliente,
-    Hijos,
     Grados,
+    Hijos,
+    TiposCliente,
 )
 from apps.clientes.serializers import ClientesSerializer, HijosSerializer
+from apps.clientes.views import ClientesViewSet, HijosViewSet
 from apps.productos.models import ListasPrecios
 
 User = get_user_model()

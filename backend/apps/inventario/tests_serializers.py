@@ -3,18 +3,21 @@ Tests para serializers de la app inventario
 Sprint 2 - Backend Coverage Improvement
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
-from .models import StockUnico, MovimientosStock, AjustesInventario
-from .serializers import (
-    StockUnicoSerializer,
-    MovimientosStockSerializer,
-    AjustesInventarioSerializer,
-)
-from apps.productos.models import Productos, Categorias, UnidadesMedida
-from apps.usuarios.models import Empleados, Roles
+
 from apps.contabilidad.models import Impuestos
+from apps.productos.models import Categorias, Productos, UnidadesMedida
+from apps.usuarios.models import Empleados, Roles
+
+from .models import AjustesInventario, MovimientosStock, StockUnico
+from .serializers import (
+    AjustesInventarioSerializer,
+    MovimientosStockSerializer,
+    StockUnicoSerializer,
+)
 
 
 class StockUnicoSerializerTest(TestCase):

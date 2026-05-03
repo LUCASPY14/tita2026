@@ -2,11 +2,13 @@
 Tareas asíncronas de Celery para la app core
 """
 
-from celery import shared_task
-from django.utils import timezone
-from django.db import transaction
 from datetime import timedelta
 from decimal import Decimal
+
+from django.db import transaction
+from django.utils import timezone
+
+from celery import shared_task
 
 from apps.core.models import CargasSaldo, Tarjetas
 
@@ -117,8 +119,9 @@ def actualizar_saldos_masivos():
             try:
                 with transaction.atomic():
                     # Recalcular saldo desde ConsumosTarjeta
-                    from apps.core.models import ConsumosTarjeta
                     from django.db.models import Sum
+
+                    from apps.core.models import ConsumosTarjeta
 
                     # Suma de consumos (negativos = ingresos, positivos = egresos)
                     suma_consumos = ConsumosTarjeta.objects.filter(nro_tarjeta=tarjeta).aggregate(

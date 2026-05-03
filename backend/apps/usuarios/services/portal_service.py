@@ -7,9 +7,10 @@ Usa PyJWT directamente (no SimpleJWT) para emitir tokens con claim
 
 from datetime import timedelta
 
-import jwt
 from django.conf import settings
 from django.utils import timezone
+
+import jwt
 
 from apps.usuarios.models import UsuariosPortal
 

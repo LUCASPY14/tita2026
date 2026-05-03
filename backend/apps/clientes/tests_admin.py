@@ -3,13 +3,15 @@ Tests complementarios para admin de clientes
 Sprint 2 - Backend Coverage Improvement
 """
 
-from django.test import TestCase
-from django.contrib import admin
-from apps.clientes.models import Clientes, Hijos, TiposCliente
-from apps.clientes.admin import ClientesAdmin, HijosAdmin
-from apps.productos.models import ListasPrecios
-from django.utils import timezone
 from decimal import Decimal
+
+from django.contrib import admin
+from django.test import TestCase
+from django.utils import timezone
+
+from apps.clientes.admin import ClientesAdmin, HijosAdmin
+from apps.clientes.models import Clientes, Hijos, TiposCliente
+from apps.productos.models import ListasPrecios
 
 
 class ClientesAdminTest(TestCase):

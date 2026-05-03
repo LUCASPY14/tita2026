@@ -2,10 +2,13 @@
 Serializers para el módulo de cobros.
 """
 
-from rest_framework import serializers
 from decimal import Decimal
-from .models import PagosClientes, AplicacionPagosClientes
+
+from rest_framework import serializers
+
 from apps.ventas.models import Ventas
+
+from .models import AplicacionPagosClientes, PagosClientes
 
 
 class AplicacionPagoSerializer(serializers.ModelSerializer):

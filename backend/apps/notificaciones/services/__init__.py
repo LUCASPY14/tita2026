@@ -12,23 +12,24 @@ Autor: Cantina Tita Development Team
 Fecha: Marzo 2026
 """
 
-from decimal import Decimal
-from datetime import datetime, date, timedelta
-from django.utils import timezone
-from django.db import transaction
-from django.core.exceptions import ValidationError
-from typing import Dict, List, Optional
 import logging
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+from typing import Dict, List, Optional
 
-from apps.notificaciones.models import (
-    NotificacionesSaldo,
-    NotificacionesPortal,
-    SolicitudesNotificacion,
-    PreferenciasNotificacion,
-    EmailsEnviados,
-)
-from apps.core.models import Tarjetas
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.utils import timezone
+
 from apps.clientes.models import Clientes, Hijos
+from apps.core.models import Tarjetas
+from apps.notificaciones.models import (
+    EmailsEnviados,
+    NotificacionesPortal,
+    NotificacionesSaldo,
+    PreferenciasNotificacion,
+    SolicitudesNotificacion,
+)
 from apps.usuarios.models import UsuariosPortal
 
 logger = logging.getLogger(__name__)

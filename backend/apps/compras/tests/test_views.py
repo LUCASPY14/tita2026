@@ -3,14 +3,16 @@ Tests completos para views de Compras
 Incluye autenticación JWT, validaciones de proveedores y compras
 """
 
-import pytest
 from decimal import Decimal
+
 from django.urls import reverse
 from django.utils import timezone
+
+import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.compras.models import Compras, Proveedores, DetallesCompra
+from apps.compras.models import Compras, DetallesCompra, Proveedores
 
 
 @pytest.fixture

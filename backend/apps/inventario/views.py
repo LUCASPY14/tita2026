@@ -1,20 +1,24 @@
-from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
+from decimal import Decimal
+
 from django.utils import timezone
+
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 from apps.common.permissions import CanManageInventario, IsAdminOrReadOnly
 from apps.common.throttling import BurstRateThrottle, SustainedRateThrottle
-from .models import StockUnico, MovimientosStock, AjustesInventario
-from .serializers import (
-    StockUnicoSerializer,
-    MovimientosStockSerializer,
-    AjustesInventarioSerializer,
-)
+
 from .ml_forecasting import StockForecastingService
-from decimal import Decimal
+from .models import AjustesInventario, MovimientosStock, StockUnico
+from .serializers import (
+    AjustesInventarioSerializer,
+    MovimientosStockSerializer,
+    StockUnicoSerializer,
+)
 
 
 class StockUnicoViewSet(viewsets.ModelViewSet):
@@ -90,10 +94,12 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
                 "tendencia": "aumentando"
             }
         """
-        from django.db.models import Sum, Count, Avg
         from decimal import Decimal
+
+        from django.db.models import Avg, Count, Sum
+
         from apps.inventario.models import DetallesAjuste
-        from apps.productos.models import Productos, PreciosPorLista
+        from apps.productos.models import PreciosPorLista, Productos
 
         mes = request.query_params.get("mes")  # Formato: YYYY-MM
         tipo_merma = request.query_params.get("tipo", "Merma")
@@ -236,11 +242,13 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
                 ]
             }
         """
-        from django.db.models import Sum, Count
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.db.models import Count, Sum
+        from django.utils import timezone
+
         from apps.inventario.models import DetallesAjuste
-        from apps.productos.models import Productos, PreciosPorLista
+        from apps.productos.models import PreciosPorLista, Productos
 
         limite = int(request.query_params.get("limite", 20))
         periodo_dias = int(request.query_params.get("periodo_dias", 90))
@@ -312,10 +320,11 @@ class AjustesInventarioViewSet(viewsets.ModelViewSet):
                 "patrones_temporales": {...}
             }
         """
-        from django.utils import timezone
-        from datetime import timedelta
-        from django.db.models import Count
         import re
+        from datetime import timedelta
+
+        from django.db.models import Count
+        from django.utils import timezone
 
         periodo_dias = int(request.query_params.get("periodo_dias", 90))
         fecha_desde = timezone.now() - timedelta(days=periodo_dias)

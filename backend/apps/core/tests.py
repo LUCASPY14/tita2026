@@ -2,14 +2,15 @@
 Tests para la app core - Reglas de negocio de tarjetas prepago
 """
 
-from django.test import TestCase
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-from decimal import Decimal
 from datetime import datetime, timedelta
+from decimal import Decimal
 
-from apps.core.models import Tarjetas, CargasSaldo, ConsumosTarjeta, MediosPago
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.utils import timezone
+
 from apps.clientes.models import Clientes, Hijos, TiposCliente
+from apps.core.models import CargasSaldo, ConsumosTarjeta, MediosPago, Tarjetas
 from apps.productos.models import ListasPrecios
 
 
@@ -303,7 +304,7 @@ class AutorizacionServiceTest(TestCase):
     def setUp(self):
         """Configurar datos de prueba"""
         # Crear roles
-        from apps.usuarios.models import Roles, Empleados
+        from apps.usuarios.models import Empleados, Roles
 
         self.rol_cajero = Roles.objects.create(nombre_rol="Cajero", descripcion="Cajero de ventas")
 
@@ -407,8 +408,8 @@ class AutorizacionServiceTest(TestCase):
 
     def test_registrar_autorizacion(self):
         """Test: Debe registrar autorización para auditoría"""
-        from apps.core.services import AutorizacionService
         from apps.core.models import RegistroAutorizaciones
+        from apps.core.services import AutorizacionService
 
         registro = AutorizacionService.registrar_autorizacion(
             tipo_operacion="venta",

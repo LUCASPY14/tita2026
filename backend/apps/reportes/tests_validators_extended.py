@@ -12,17 +12,18 @@ Missing lines targeted:
 """
 
 import json
-from django.test import TestCase
+
 from django.core.exceptions import ValidationError
+from django.test import TestCase
 
 from apps.reportes.validators import (
-    validar_parametros_reporte,
     validar_configuracion_dashboard,
+    validar_configuracion_json,
+    validar_formato_datos_json,
+    validar_frecuencia_ejecucion,
+    validar_parametros_reporte,
     validar_parametros_tarea,
     validar_pid_ejecucion,
-    validar_configuracion_json,
-    validar_frecuencia_ejecucion,
-    validar_formato_datos_json,
 )
 
 # =============================================================================

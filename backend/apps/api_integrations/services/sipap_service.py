@@ -14,26 +14,28 @@ Documentación:
 - Estándar EMVCo: https://www.emvco.com/emv-technologies/qrcodes/
 """
 
+import base64
 import hashlib
 import hmac
-import json
-import requests
-import qrcode
 import io
-import base64
+import json
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+
+import qrcode
+import requests
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.backends import default_backend
-from cryptography.exceptions import InvalidSignature
 
-from apps.api_integrations.models import ProveedoresApi, LogsLlamadasApi, CredencialesApi
-from apps.cobros.models import PagosClientes, AplicacionPagosClientes
+from apps.api_integrations.models import CredencialesApi, LogsLlamadasApi, ProveedoresApi
+from apps.cobros.models import AplicacionPagosClientes, PagosClientes
 from apps.ventas.models import Ventas
 
 

@@ -9,14 +9,17 @@ Líneas faltantes:
 
 from decimal import Decimal
 from unittest.mock import Mock, patch
-from django.test import TestCase
+
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.urls import reverse
+
 from rest_framework import status
 from rest_framework.test import APIClient
-from apps.clientes.models import Hijos, Clientes, TiposCliente
+
+from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios
-from apps.usuarios.models import Roles, Empleados
+from apps.usuarios.models import Empleados, Roles
 
 
 class ReporteConsumosHijoValidacionTest(TestCase):

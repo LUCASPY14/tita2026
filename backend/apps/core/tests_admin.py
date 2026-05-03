@@ -10,8 +10,8 @@ from django.test import TestCase
 from apps.core.admin import (
     CacheConfiguracionAdmin,
     CargasSaldoAdmin,
-    ConsumosTarjetaAdmin,
     ConfiguracionSistemaAdmin,
+    ConsumosTarjetaAdmin,
     LimitesTransaccionAdmin,
     MediosPagoAdmin,
     RegistroAutorizacionesAdmin,

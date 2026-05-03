@@ -3,8 +3,9 @@ Tests de ramas faltantes en core/models.py
 Cubre branches en LegacyCompatCoreMixin._rewrite y LegacyCompatQuerySet.
 """
 
-import pytest
 from django.test import TestCase
+
+import pytest
 
 # ──────────────────────────────────────────────────────────────────────────────
 # LegacyCompatCoreMixin._rewrite  (branches 23->24, 24->23, 24->25, 32->33, 35->36)
@@ -110,6 +111,7 @@ class TarjetasCleanBranchesTest(TestCase):
     def test_clean_no_hijo_exits_cleanly(self):
         """Branch 158->-154: id_hijo is None → if block skipped, clean() returns None."""
         from unittest.mock import MagicMock
+
         from apps.core.models import Tarjetas
 
         tarjeta = MagicMock(spec=Tarjetas)
@@ -121,6 +123,7 @@ class TarjetasCleanBranchesTest(TestCase):
     def test_clean_with_id_hijo_no_duplicate_passes(self):
         """Branches 158->160 + 164->-154: id_hijo set, no other tarjeta → clean() passes."""
         from decimal import Decimal
+
         from apps.core.models import Tarjetas
 
         # Create a tarjeta (TarjetasManager auto-creates id_hijo)
@@ -133,8 +136,10 @@ class TarjetasCleanBranchesTest(TestCase):
     def test_clean_with_id_hijo_duplicate_raises(self):
         """Branches 158->160 + 164->165: id_hijo set, duplicate in DB → raises ValidationError."""
         from decimal import Decimal
+
         from django.core.exceptions import ValidationError
         from django.utils import timezone
+
         from apps.core.models import Tarjetas
 
         # Create T1 with auto-created id_hijo
@@ -162,6 +167,7 @@ class CargasSaldoFechaCargaDefaultBranchTest(TestCase):
     def test_create_without_fecha_carga_sets_default(self):
         """Branch 241->242: fecha_carga absent → manager sets tz.now() automatically."""
         from decimal import Decimal
+
         from apps.core.models import CargasSaldo
 
         # CargasSaldo has nro_tarjeta nullable, so FK is not required
@@ -181,9 +187,10 @@ class LimitesTransaccionBranchesTest(TestCase):
 
     def test_requiere_autorizacion_no_limite_returns_not_required(self):
         """Branch 632->634: obtener_limite returns None → returns no-restriction dict."""
+        from decimal import Decimal
+
         from apps.core.models import LimitesTransaccion
         from apps.usuarios.models import Roles
-        from decimal import Decimal
 
         rol, _ = Roles.objects.get_or_create(nombre_rol="TestLimiteRol", defaults={"descripcion": "test"})
         # No LimitesTransaccion for this rol → obtener_limite returns None → 632->634

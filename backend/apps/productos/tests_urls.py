@@ -3,6 +3,7 @@ Tests para URLs de productos
 """
 
 from django.test import SimpleTestCase
+
 from rest_framework.routers import DefaultRouter
 
 
@@ -22,7 +23,7 @@ class ProductosUrlsImportTest(SimpleTestCase):
 
     def test_viewsets_registrados(self):
         from apps.productos import urls as productos_urls
-        from apps.productos.views import ProductosViewSet, CategoriasViewSet
+        from apps.productos.views import CategoriasViewSet, ProductosViewSet
 
         # Verificar que los ViewSets están registrados en el router
         registry_names = [prefix for prefix, _, _ in productos_urls.router.registry]

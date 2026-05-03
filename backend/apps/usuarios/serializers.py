@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Empleados, Roles, PerfilesUsuario, UsuariosPortal, AuditoriaOperaciones
+
+from .models import AuditoriaOperaciones, Empleados, PerfilesUsuario, Roles, UsuariosPortal
 
 
 class RolesSerializer(serializers.ModelSerializer):

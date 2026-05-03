@@ -1,16 +1,16 @@
 ﻿"""Servicio de recuperacion de contrasenas y verificacion de email."""
 
-from datetime import timedelta
-from typing import Dict
 import hashlib
 import secrets
+from datetime import timedelta
+from typing import Dict
 
 from django.db import transaction
 from django.utils import timezone
 
 from apps.usuarios.models import (
-    Empleados,
     AuditoriaOperaciones,
+    Empleados,
     SesionesActivas,
     TokensRecuperacion,
 )

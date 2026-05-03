@@ -3,21 +3,22 @@ Extended tests for PasswordRecoveryService and SessionService
 Targeting uncovered lines for coverage improvement.
 """
 
-from unittest.mock import patch, MagicMock
+from datetime import timedelta
+from unittest.mock import MagicMock, patch
+
 from django.test import TransactionTestCase
 from django.utils import timezone
-from datetime import timedelta
 
-from apps.usuarios.services.password_recovery_service import PasswordRecoveryService
-from apps.usuarios.services.session_service import SessionService
 from apps.usuarios.models import (
     Empleados,
-    Roles,
-    TokensRecuperacion,
-    SesionesActivas,
     PatronesAcceso,
     RenovacionesSesion,
+    Roles,
+    SesionesActivas,
+    TokensRecuperacion,
 )
+from apps.usuarios.services.password_recovery_service import PasswordRecoveryService
+from apps.usuarios.services.session_service import SessionService
 
 
 class BaseUsuariosTest(TransactionTestCase):

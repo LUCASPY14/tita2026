@@ -3,8 +3,9 @@ Modelos de la app core
 Auto-generados desde la base de datos y organizados por funcionalidad
 """
 
-from django.db import models
 from decimal import Decimal
+
+from django.db import models
 
 
 class LegacyCompatCoreMixin:
@@ -88,7 +89,7 @@ class TarjetasManager(models.Manager):
         kwargs.setdefault("limite_credito", Decimal("0.00"))
         # Crear id_hijo por defecto si no se provee
         if "id_hijo" not in kwargs and "id_hijo_id" not in kwargs:
-            from apps.clientes.models import Clientes, TiposCliente, Hijos
+            from apps.clientes.models import Clientes, Hijos, TiposCliente
             from apps.productos.models import ListasPrecios
 
             lista, _ = ListasPrecios.objects.get_or_create(nombre_lista="General")

@@ -6,12 +6,14 @@ Cobertura de líneas:
 - L63-64: Verificación de rol cajero/administrador desde empleado
 """
 
-import pytest
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+
+import pytest
 from rest_framework.test import APIRequestFactory
+
 from apps.common.permissions import IsCajeroOrAdmin
-from apps.usuarios.models import Roles, Empleados
+from apps.usuarios.models import Empleados, Roles
 
 User = get_user_model()
 

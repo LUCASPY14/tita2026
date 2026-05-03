@@ -3,13 +3,16 @@ Tests para TwoFactorAuthService
 Cobertura completa de autenticación de dos factores (2FA/TOTP)
 """
 
+import base64
+from datetime import timedelta
+
 from django.test import TransactionTestCase
 from django.utils import timezone
-from datetime import timedelta
+
 import pyotp
-import base64
+
+from apps.usuarios.models import Autenticacion2Fa, Empleados, Intentos2Fa, Roles
 from apps.usuarios.services.two_factor_service import TwoFactorAuthService
-from apps.usuarios.models import Empleados, Roles, Autenticacion2Fa, Intentos2Fa
 
 
 class TwoFactorAuthServiceTest(TransactionTestCase):

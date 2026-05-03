@@ -3,21 +3,22 @@ Tests para URLs de reportes
 Cubre routing y configuración de URLs de reportes
 """
 
-from django.test import TestCase, SimpleTestCase
-from django.urls import reverse, resolve
 from django.http import Http404
-from rest_framework import status
-from rest_framework.test import APITestCase, APIClient
+from django.test import SimpleTestCase, TestCase
+from django.urls import resolve, reverse
 from django.utils import timezone
 
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
+
 from apps.reportes.models import (
-    PlantillasReporte,
     Dashboards,
-    KpiMetricas,
-    ValoresKpi,
-    PlantillasTarea,
-    EjecucionesTarea,
     DestinatariosTarea,
+    EjecucionesTarea,
+    KpiMetricas,
+    PlantillasReporte,
+    PlantillasTarea,
+    ValoresKpi,
 )
 from apps.usuarios.models import Empleados, Roles
 
@@ -852,7 +853,8 @@ class ReportesUrlsModuleImportTest(SimpleTestCase):
         self.assertIsInstance(reportes_urls.urlpatterns, list)
 
     def test_router_instancia(self):
-        from apps.reportes import urls as reportes_urls
         from rest_framework.routers import DefaultRouter
+
+        from apps.reportes import urls as reportes_urls
 
         self.assertIsInstance(reportes_urls.router, DefaultRouter)

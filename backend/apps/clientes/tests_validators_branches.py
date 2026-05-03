@@ -3,8 +3,9 @@ Tests de ramas faltantes en clientes/validators.py
 Cubre branches no alcanzados por los tests principales.
 """
 
-import pytest
 from django.core.exceptions import ValidationError
+
+import pytest
 
 from apps.clientes.validators import (
     validar_ruc_ci,

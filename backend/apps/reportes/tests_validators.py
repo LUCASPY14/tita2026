@@ -5,55 +5,49 @@ Cantina Tita - Sistema de Gestión
 Tests completos para todos los validadores del módulo de reportes.
 """
 
-from django.test import TestCase
-from django.core.exceptions import ValidationError
-from decimal import Decimal
 import json
+from decimal import Decimal
 
-from .validators import (
-    # Plantillas de Reporte
-    validar_nombre_plantilla_reporte,
-    validar_query_sql,
-    validar_parametros_reporte,
-    validar_tipo_reporte,
-    validar_frecuencia_reporte,
-    # Dashboards
-    validar_nombre_dashboard,
-    validar_configuracion_dashboard,
-    validar_es_publico_dashboard,
-    validar_predeterminado_dashboard,
-    # KPI Métricas
-    validar_nombre_kpi,
-    validar_descripcion_kpi,
-    validar_formula_kpi,
-    validar_unidad_kpi,
-    validar_valor_objetivo_kpi,
-    validar_categoria_kpi,
-    validar_frecuencia_kpi,
-    # Valores KPI
-    validar_valor_kpi,
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+
+from .validators import (  # Plantillas de Reporte; Dashboards; KPI Métricas; Valores KPI; Plantillas de Tarea; Ejecuciones de Tarea; Destinatarios de Tarea
     validar_auto_calc_valores_kpi,
-    # Plantillas de Tarea
-    validar_nombre_plantilla_tarea,
-    validar_descripcion_tarea,
-    validar_tipo_tarea,
+    validar_categoria_kpi,
     validar_comando_tarea,
-    validar_parametros_tarea,
-    validar_frecuencia_tarea,
+    validar_configuracion_dashboard,
     validar_cron_expresion,
-    validar_timeout_tarea,
-    validar_max_reintentos_tarea,
-    validar_notif_exito_tarea,
-    validar_notif_error_tarea,
-    # Ejecuciones de Tarea
+    validar_descripcion_kpi,
+    validar_descripcion_tarea,
     validar_duracion_seg_ejecucion,
+    validar_es_publico_dashboard,
     validar_estado_ejecucion,
-    validar_pid_ejecucion,
-    validar_servidor_ejecucion,
-    # Destinatarios de Tarea
-    validar_notif_inicio_destinatario,
-    validar_notif_fin_destinatario,
+    validar_formula_kpi,
+    validar_frecuencia_kpi,
+    validar_frecuencia_reporte,
+    validar_frecuencia_tarea,
+    validar_max_reintentos_tarea,
+    validar_nombre_dashboard,
+    validar_nombre_kpi,
+    validar_nombre_plantilla_reporte,
+    validar_nombre_plantilla_tarea,
     validar_notif_error_destinatario,
+    validar_notif_error_tarea,
+    validar_notif_exito_tarea,
+    validar_notif_fin_destinatario,
+    validar_notif_inicio_destinatario,
+    validar_parametros_reporte,
+    validar_parametros_tarea,
+    validar_pid_ejecucion,
+    validar_predeterminado_dashboard,
+    validar_query_sql,
+    validar_servidor_ejecucion,
+    validar_timeout_tarea,
+    validar_tipo_reporte,
+    validar_tipo_tarea,
+    validar_unidad_kpi,
+    validar_valor_kpi,
+    validar_valor_objetivo_kpi,
 )
 
 # =============================================================================

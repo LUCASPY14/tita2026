@@ -3,14 +3,15 @@ Serializers para app de Notificaciones
 """
 
 from rest_framework import serializers
+
 from .models import (
+    AlertasSistema,
+    EmailsEnviados,
     NotificacionesPortal,
     NotificacionesSaldo,
-    AlertasSistema,
-    PreferenciasNotificacion,
-    EmailsEnviados,
-    SmsEnviados,
     PlantillasEmail,
+    PreferenciasNotificacion,
+    SmsEnviados,
 )
 
 

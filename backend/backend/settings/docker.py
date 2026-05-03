@@ -3,6 +3,7 @@ Configuración de Django para ejecutar con Docker
 """
 
 import os
+
 from .base import *
 
 # DEBUG desde variable de entorno

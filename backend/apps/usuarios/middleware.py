@@ -4,6 +4,7 @@ Captura empleado actual e IP para uso en signals
 """
 
 from threading import current_thread
+
 from django.utils.deprecation import MiddlewareMixin
 
 

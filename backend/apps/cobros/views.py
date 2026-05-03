@@ -2,19 +2,22 @@
 Views para el módulo de cobros.
 """
 
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from django.db import transaction
 from decimal import Decimal
 
-from .models import PagosClientes, AplicacionPagosClientes
-from .serializers import PagosClientesSerializer, RegistrarPagoSerializer, FacturaPendienteSerializer
+from django.db import transaction
+
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 from apps.clientes.models import Clientes
-from apps.ventas.models import Ventas
 from apps.usuarios.models import Empleados
+from apps.ventas.models import Ventas
+
+from .models import AplicacionPagosClientes, PagosClientes
+from .serializers import FacturaPendienteSerializer, PagosClientesSerializer, RegistrarPagoSerializer
 
 
 class PagosClientesViewSet(viewsets.ModelViewSet):

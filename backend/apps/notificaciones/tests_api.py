@@ -2,23 +2,25 @@
 Tests para ViewSets de notificaciones - API Tests
 """
 
-import pytest  # type: ignore
-from django.urls import reverse
-from django.contrib.auth import get_user_model
-from rest_framework import status
-from rest_framework.test import APITestCase, APIClient
-from django.utils import timezone
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+from django.utils import timezone
+
+import pytest  # type: ignore
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
+
+from apps.clientes.models import Clientes, Hijos, TiposCliente
+from apps.core.models import Tarjetas
 from apps.notificaciones.models import (
+    AlertasSistema,
     NotificacionesPortal,
     NotificacionesSaldo,
-    AlertasSistema,
     PreferenciasNotificacion,
 )
 from apps.usuarios.models import UsuariosPortal
-from apps.clientes.models import Clientes, Hijos, TiposCliente
-from apps.core.models import Tarjetas
 
 User = get_user_model()
 

@@ -4,30 +4,31 @@ Covers all custom display methods across 9 admin classes.
 """
 
 from unittest.mock import MagicMock, patch
-from django.test import TestCase
+
 from django.contrib.admin.sites import AdminSite
+from django.test import TestCase
 
 from apps.almuerzos.admin import (
-    PlanesAlmuerzoAdmin,
-    TiposAlmuerzoAdmin,
-    SuscripcionesAlmuerzoAdmin,
-    RegistrosConsumoAlmuerzoAdmin,
+    AlergenosAdmin,
     CuentasAlmuerzoMensualAdmin,
     PagosAlmuerzoMensualAdmin,
     PagosCuentasAlmuerzoAdmin,
-    AlergenosAdmin,
+    PlanesAlmuerzoAdmin,
     ProductosAlergenosAdmin,
+    RegistrosConsumoAlmuerzoAdmin,
+    SuscripcionesAlmuerzoAdmin,
+    TiposAlmuerzoAdmin,
 )
 from apps.almuerzos.models import (
-    PlanesAlmuerzo,
-    TiposAlmuerzo,
-    SuscripcionesAlmuerzo,
-    RegistrosConsumoAlmuerzo,
+    Alergenos,
     CuentasAlmuerzoMensual,
     PagosAlmuerzoMensual,
     PagosCuentasAlmuerzo,
-    Alergenos,
+    PlanesAlmuerzo,
     ProductosAlergenos,
+    RegistrosConsumoAlmuerzo,
+    SuscripcionesAlmuerzo,
+    TiposAlmuerzo,
 )
 
 _plain_format_html = lambda fmt, *a, **k: fmt.format(*a, **k)

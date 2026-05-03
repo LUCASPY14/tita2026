@@ -3,8 +3,9 @@ Modelos de la app productos
 Gestión de productos, categorías, precios y unidades de medida
 """
 
-from django.db import models
 from decimal import Decimal
+
+from django.db import models
 
 
 class ProductosManager(models.Manager):
@@ -21,8 +22,9 @@ class ProductosManager(models.Manager):
         kwargs.pop("precio_venta", None)
         # Si no se provee id_impuesto, crear/obtener uno por defecto
         if "id_impuesto" not in kwargs and "id_impuesto_id" not in kwargs:
-            from apps.contabilidad.models import Impuestos
             from datetime import date
+
+            from apps.contabilidad.models import Impuestos
 
             impuesto, _ = Impuestos.objects.get_or_create(
                 nombre_impuesto="IVA 0%",

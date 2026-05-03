@@ -3,12 +3,15 @@ Tests para modelos de la app productos
 Sprint 2 - Backend Coverage Improvement
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
-from .models import Productos, Categorias, UnidadesMedida, ListasPrecios, PreciosPorLista
+
 from apps.contabilidad.models import Impuestos
 from apps.inventario.models import StockUnico
+
+from .models import Categorias, ListasPrecios, PreciosPorLista, Productos, UnidadesMedida
 
 
 class ProductosModelTest(TestCase):

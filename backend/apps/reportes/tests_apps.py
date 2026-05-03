@@ -3,24 +3,25 @@ Tests para aplicación de reportes
 Cubre configuración de la app, signals y configuraciones específicas
 """
 
-from django.test import TestCase, override_settings
+import os
+import tempfile
+from unittest.mock import Mock, patch
+
 from django.apps import apps
 from django.conf import settings
-from django.utils import timezone
 from django.db.models.signals import post_save, pre_delete
-from unittest.mock import patch, Mock
-import tempfile
-import os
+from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from apps.reportes.apps import ReportesConfig
 from apps.reportes.models import (
-    PlantillasReporte,
     Dashboards,
-    KpiMetricas,
-    ValoresKpi,
-    PlantillasTarea,
-    EjecucionesTarea,
     DestinatariosTarea,
+    EjecucionesTarea,
+    KpiMetricas,
+    PlantillasReporte,
+    PlantillasTarea,
+    ValoresKpi,
 )
 from apps.usuarios.models import Empleados, Roles
 
@@ -242,8 +243,8 @@ class ReportesAppIntegrationTest(TestCase):
         )
 
         # Verificar que los permisos se crean automáticamente
-        from django.contrib.contenttypes.models import ContentType
         from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
 
         content_type = ContentType.objects.get_for_model(PlantillasReporte)
         expected_permissions = ["add", "change", "delete", "view"]
@@ -263,8 +264,8 @@ class ReportesAppIntegrationTest(TestCase):
         # para reportes como auditoría, rate limiting, etc.
 
         # Simular request con middleware
-        from django.test import RequestFactory
         from django.contrib.auth.models import AnonymousUser
+        from django.test import RequestFactory
 
         factory = RequestFactory()
         request = factory.get("/api/reportes/plantillas/")
@@ -419,7 +420,7 @@ class ReportesAppConfigurationTest(TestCase):
 
     def test_app_url_configuration(self):
         """Debe tener configuración de URLs correcta"""
-        from django.urls import reverse, NoReverseMatch
+        from django.urls import NoReverseMatch, reverse
 
         # URLs principales que deberían estar configuradas
         expected_urls = [
@@ -441,9 +442,9 @@ class ReportesAppConfigurationTest(TestCase):
         """Debe tener serializers correctamente configurados"""
         try:
             from apps.reportes.serializers import (
-                PlantillasReporteSerializer,
                 DashboardsSerializer,
                 KpiMetricasSerializer,
+                PlantillasReporteSerializer,
             )
 
             # Verificar que los serializers existen y son clases
@@ -458,7 +459,7 @@ class ReportesAppConfigurationTest(TestCase):
     def test_app_viewset_configuration(self):
         """Debe tener ViewSets correctamente configurados"""
         try:
-            from apps.reportes.views import PlantillasReporteViewSet, DashboardsViewSet, KpiMetricasViewSet
+            from apps.reportes.views import DashboardsViewSet, KpiMetricasViewSet, PlantillasReporteViewSet
 
             # Verificar que los ViewSets existen
             self.assertTrue(callable(PlantillasReporteViewSet))

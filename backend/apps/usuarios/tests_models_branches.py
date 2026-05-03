@@ -4,13 +4,15 @@ Cubre los helpers _resolve_usuario_from_empleado, _resolve_cliente_from_empleado
 el mixin LegacyCompatMixin, y las ramas en los __str__ referidos por el informe.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
 from django.test import TestCase
 
+import pytest
+
 from apps.usuarios.models import (
-    _resolve_usuario_from_empleado,
     LegacyCompatMixin,
+    _resolve_usuario_from_empleado,
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -119,8 +121,9 @@ class ModelStrMethodsTest(TestCase):
 
     @pytest.mark.django_db
     def test_empleados_str(self):
-        from apps.usuarios.models import Empleados, Roles
         from django.utils import timezone
+
+        from apps.usuarios.models import Empleados, Roles
 
         rol = Roles.objects.create(nombre_rol="TestRolEmpl", descripcion="t")
         emp = Empleados.objects.create(
@@ -135,8 +138,9 @@ class ModelStrMethodsTest(TestCase):
     @pytest.mark.django_db
     def test_sesiones_activas_fecha_cierre_property(self):
         """Line 255: fecha_cierre property on SesionesActivas"""
-        from apps.usuarios.models import SesionesActivas
         from django.utils import timezone
+
+        from apps.usuarios.models import SesionesActivas
 
         obj = MagicMock(spec=SesionesActivas)
         obj.activa = True
@@ -155,8 +159,9 @@ class ModelStrMethodsTest(TestCase):
     @pytest.mark.django_db
     def test_sesiones_activas_fecha_cierre_inactive(self):
         """Inactive session: fecha_cierre returns ultima_actividad"""
-        from apps.usuarios.models import SesionesActivas
         from django.utils import timezone
+
+        from apps.usuarios.models import SesionesActivas
 
         sesion = SesionesActivas.__new__(SesionesActivas)
         sesion.activa = False
@@ -179,8 +184,9 @@ class ModelStrMethodsTest(TestCase):
     @pytest.mark.django_db
     def test_autenticacion_2fa_fecha_deshabilitado_disabled(self):
         """habilitado=False → fecha_deshabilitado returns ultima_verificacion"""
-        from apps.usuarios.models import Autenticacion2Fa
         from django.utils import timezone
+
+        from apps.usuarios.models import Autenticacion2Fa
 
         obj = Autenticacion2Fa.__new__(Autenticacion2Fa)
         obj.habilitado = False
@@ -217,10 +223,11 @@ class ResolveClienteFromEmpleadoTest(TestCase):
     @pytest.mark.django_db
     def test_existing_pk_as_integer_covers_27_30(self):
         """Branch 27->30: integer PK that EXISTS in DB → not None → continues to create cliente."""
-        from apps.usuarios.models import _resolve_cliente_from_empleado, Empleados, Roles
+        from django.utils import timezone
+
         from apps.clientes.models import TiposCliente
         from apps.productos.models import ListasPrecios
-        from django.utils import timezone
+        from apps.usuarios.models import Empleados, Roles, _resolve_cliente_from_empleado
 
         # Pre-create TiposCliente and ListasPrecios
         TiposCliente.objects.get_or_create(nombre_tipo="General_27_30", defaults={"estado": True})
@@ -244,10 +251,11 @@ class ResolveClienteFromEmpleadoTest(TestCase):
     @pytest.mark.django_db
     def test_with_preexisting_tipo_and_lista(self):
         """Branch 39->42 False and 43->51 False: tipo_cliente and lista_precio already exist."""
-        from apps.usuarios.models import _resolve_cliente_from_empleado, Empleados, Roles
+        from django.utils import timezone
+
         from apps.clientes.models import TiposCliente
         from apps.productos.models import ListasPrecios
-        from django.utils import timezone
+        from apps.usuarios.models import Empleados, Roles, _resolve_cliente_from_empleado
 
         # Pre-create TiposCliente and ListasPrecios so False arms are taken
         tipo, _ = TiposCliente.objects.get_or_create(nombre_tipo="General_test", defaults={"estado": True})
@@ -292,8 +300,9 @@ class EmpleadosManagerGetOrCreateTest(TestCase):
 
     def test_get_or_create_no_defaults_finds_existing(self):
         """When record exists, get_or_create returns (existing, False); True arm never hit."""
-        from apps.usuarios.models import Empleados
         from django.utils import timezone
+
+        from apps.usuarios.models import Empleados
 
         emp_existing = Empleados.objects.create(
             nombre="Existing", apellido="User", usuario="existing_nodefaults_abc888", fecha_ingreso=timezone.now()

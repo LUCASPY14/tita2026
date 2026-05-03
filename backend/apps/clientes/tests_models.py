@@ -3,14 +3,17 @@ Tests para modelos de la app clientes
 Sprint 2 - Backend Coverage Improvement
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
-from .models import Clientes, Hijos, TiposCliente, RestriccionesHijos
-from apps.productos.models import ListasPrecios
-from apps.ventas.models import Ventas
-from apps.usuarios.models import Empleados, Roles
+
 from apps.core.models import MediosPago
+from apps.productos.models import ListasPrecios
+from apps.usuarios.models import Empleados, Roles
+from apps.ventas.models import Ventas
+
+from .models import Clientes, Hijos, RestriccionesHijos, TiposCliente
 
 
 class ClientesModelTest(TestCase):

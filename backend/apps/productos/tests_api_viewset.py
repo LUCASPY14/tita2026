@@ -3,25 +3,28 @@ Tests para ProductosViewSet - API REST endpoints
 Objetivo: Aumentar cobertura de productos views
 """
 
+from decimal import Decimal
+
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework.test import APIClient
+
 from rest_framework import status
-from decimal import Decimal
-from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
 
 User = get_user_model()
 
+from django.utils import timezone
+
+from apps.contabilidad.models import Impuestos
 from apps.productos.models import (
-    Productos,
     Categorias,
-    UnidadesMedida,
     ListasPrecios,
     PreciosPorLista,
+    Productos,
+    UnidadesMedida,
 )
 from apps.usuarios.models import Empleados, Roles
-from apps.contabilidad.models import Impuestos
-from django.utils import timezone
 
 
 class ProductosViewSetAPITest(TestCase):

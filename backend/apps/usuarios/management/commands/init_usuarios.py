@@ -4,10 +4,11 @@ Crea permisos, roles y usuario admin inicial
 """
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
+
+from apps.usuarios.models import Empleados, Roles
 from apps.usuarios.permissions import PermissionService
 from apps.usuarios.services import AuthenticationService
-from apps.usuarios.models import Roles, Empleados
-from django.db import transaction
 
 
 class Command(BaseCommand):

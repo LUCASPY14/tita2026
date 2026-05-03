@@ -3,8 +3,9 @@ Modelos para el módulo de cobros y pagos de clientes.
 Gestión de pagos de cuenta corriente y aplicación a facturas pendientes.
 """
 
-from django.db import models
 from decimal import Decimal
+
+from django.db import models
 
 
 class PagosClientes(models.Model):

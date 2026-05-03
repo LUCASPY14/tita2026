@@ -1,12 +1,13 @@
 from rest_framework import serializers
+
 from .models import (
-    PlanesAlmuerzo,
-    TiposAlmuerzo,
-    SuscripcionesAlmuerzo,
-    RegistrosConsumoAlmuerzo,
     Alergenos,
     CuentasAlmuerzoMensual,
+    PlanesAlmuerzo,
     PrecioAlmuerzo,
+    RegistrosConsumoAlmuerzo,
+    SuscripcionesAlmuerzo,
+    TiposAlmuerzo,
 )
 
 

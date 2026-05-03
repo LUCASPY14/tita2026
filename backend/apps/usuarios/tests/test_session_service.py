@@ -3,11 +3,13 @@ Tests para SessionService
 Cobertura completa de gestión de sesiones y detección de patrones
 """
 
+from datetime import timedelta
+
 from django.test import TransactionTestCase
 from django.utils import timezone
-from datetime import timedelta
+
+from apps.usuarios.models import Empleados, PatronesAcceso, Roles, SesionesActivas
 from apps.usuarios.services.session_service import SessionService
-from apps.usuarios.models import Empleados, Roles, SesionesActivas, PatronesAcceso
 
 
 class SessionServiceTest(TransactionTestCase):

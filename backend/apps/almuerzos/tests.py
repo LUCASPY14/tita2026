@@ -2,20 +2,21 @@
 Tests para la app almuerzos - Independencia del módulo de cantina
 """
 
+from datetime import date, datetime
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
-from datetime import datetime, date
 
 from apps.almuerzos.models import (
-    PlanesAlmuerzo,
-    TiposAlmuerzo,
-    SuscripcionesAlmuerzo,
-    RegistrosConsumoAlmuerzo,
     CuentasAlmuerzoMensual,
+    PlanesAlmuerzo,
+    RegistrosConsumoAlmuerzo,
+    SuscripcionesAlmuerzo,
+    TiposAlmuerzo,
 )
-from apps.core.models import Tarjetas, ConsumosTarjeta
 from apps.clientes.models import Clientes, Hijos, TiposCliente
+from apps.core.models import ConsumosTarjeta, Tarjetas
 from apps.productos.models import ListasPrecios
 from apps.usuarios.models import Empleados, Roles
 

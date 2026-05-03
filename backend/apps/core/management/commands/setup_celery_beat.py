@@ -4,9 +4,11 @@ Registra todas las tareas periódicas de Celery Beat en la base de datos.
 Ejecutar una vez tras el deploy o cada vez que se agreguen nuevas tasks.
 """
 
-from django.core.management.base import BaseCommand
-from django_celery_beat.models import CrontabSchedule, PeriodicTask
 import json
+
+from django.core.management.base import BaseCommand
+
+from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
 # Definición centralizada de las tareas periódicas
 # (espeja el beat_schedule de celery_app.py)

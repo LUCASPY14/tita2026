@@ -3,13 +3,15 @@ Servicios de dominio para inventario
 Lógica de negocio centralizada y reutilizable
 """
 
-from django.db import transaction
-from django.core.exceptions import ValidationError
 from decimal import Decimal
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
-from .models import StockUnico, MovimientosStock
+from django.core.exceptions import ValidationError
+from django.db import transaction
+
 from apps.productos.models import Productos
+
+from .models import MovimientosStock, StockUnico
 
 
 class StockService:
@@ -281,9 +283,10 @@ class StockService:
         Returns:
             Lista de productos ordenados por rotación (mayor a menor)
         """
-        from django.utils import timezone
         from datetime import timedelta
-        from django.db.models import Sum, Avg
+
+        from django.db.models import Avg, Sum
+        from django.utils import timezone
 
         fecha_desde = timezone.now() - timedelta(days=dias)
 

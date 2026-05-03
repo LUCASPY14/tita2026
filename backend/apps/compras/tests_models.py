@@ -3,22 +3,24 @@ Tests complementarios para modelos de compras
 Sprint 2 - Backend Coverage Improvement
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
+
 from apps.compras.models import (
+    AplicacionPagosCompras,
     Compras,
     DetallesCompra,
-    Proveedores,
-    PagosProveedores,
-    AplicacionPagosCompras,
-    NotasCreditoProveedor,
     DetallesNotaCreditoProveedor,
+    NotasCreditoProveedor,
+    PagosProveedores,
+    Proveedores,
 )
-from apps.productos.models import Productos, Categorias, UnidadesMedida
 from apps.contabilidad.models import Impuestos
-from apps.usuarios.models import Empleados, Roles
 from apps.core.models import MediosPago
+from apps.productos.models import Categorias, Productos, UnidadesMedida
+from apps.usuarios.models import Empleados, Roles
 
 
 class ProveedoresModelTest(TestCase):

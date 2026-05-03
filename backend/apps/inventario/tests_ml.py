@@ -9,17 +9,19 @@ Prueba:
 - Recomendaciones de compra
 """
 
-from django.test import TestCase
-from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
-from apps.productos.models import Productos, Categorias, UnidadesMedida, ListasPrecios
-from apps.inventario.models import StockUnico, MovimientosStock
-from apps.ventas.models import Ventas, DetallesVenta
+
+from django.test import TestCase
+from django.utils import timezone
+
 from apps.clientes.models import Clientes, TiposCliente
-from apps.usuarios.models import Empleados, PerfilesUsuario, Roles
 from apps.contabilidad.models import Impuestos
 from apps.inventario.ml_forecasting import StockForecastingService
+from apps.inventario.models import MovimientosStock, StockUnico
+from apps.productos.models import Categorias, ListasPrecios, Productos, UnidadesMedida
+from apps.usuarios.models import Empleados, PerfilesUsuario, Roles
+from apps.ventas.models import DetallesVenta, Ventas
 
 
 class StockForecastingServiceTest(TestCase):
@@ -522,7 +524,7 @@ class StockForecastingServiceTest(TestCase):
     def test_recomendacion_compra_demanda_cero(self):
         """Lines 542, 581: demanda_diaria=0 paths (dias_cobertura=999, agotamiento=None)."""
         # Create a product with exactly zero demand (movement saved but with qty 0 via mock)
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import MagicMock, patch
 
         # Patch calcular_estadisticas_basicas to return demanda=0 but no error key
         stats_mock = {

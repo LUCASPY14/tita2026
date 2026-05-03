@@ -1,5 +1,6 @@
 ﻿from django.contrib import admin
-from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones, CondicionVenta
+
+from .models import CondicionVenta, DetallesVenta, NotasCreditoCliente, PagosVenta, Promociones, Ventas
 
 
 @admin.register(Ventas)

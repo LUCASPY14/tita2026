@@ -3,19 +3,21 @@ Tests para serializers de api_integrations
 Cubre serialización y validación de datos de APIs externas
 """
 
+import json
+from decimal import Decimal
+
 from django.test import TestCase
+from django.utils import timezone
+
 from rest_framework import serializers
 from rest_framework.test import APITestCase
-from django.utils import timezone
-from decimal import Decimal
-import json
 
 from apps.api_integrations.models import (
-    ProveedoresApi,
+    CredencialesApi,
     EndpointsApi,
     LogsLlamadasApi,
-    CredencialesApi,
     LogsWebhooks,
+    ProveedoresApi,
     WebhookEndpoints,
 )
 from apps.usuarios.models import Empleados, Roles

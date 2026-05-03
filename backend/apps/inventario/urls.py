@@ -1,4 +1,5 @@
-from django.urls import path, include  # pragma: no cover
+from django.urls import include, path  # pragma: no cover
+
 from rest_framework.routers import DefaultRouter  # pragma: no cover
 
 router = DefaultRouter()  # pragma: no cover

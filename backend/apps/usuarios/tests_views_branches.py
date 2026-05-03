@@ -4,10 +4,12 @@ Cubre los branches faltantes: _get_client_ip (X-Forwarded-For),
 cambiar_password (empleado no encontrado, admin check, Django User DoesNotExist).
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-from django.test import TestCase, RequestFactory
+from unittest.mock import MagicMock, patch
+
 from django.contrib.auth.models import User
+from django.test import RequestFactory, TestCase
+
+import pytest
 
 
 @pytest.mark.django_db
@@ -110,6 +112,7 @@ class CambiarPasswordBranchesTest(TestCase):
 
     def setUp(self):
         from django.utils import timezone
+
         from apps.usuarios.models import Empleados, Roles
 
         self.factory = RequestFactory()
@@ -149,6 +152,7 @@ class CambiarPasswordBranchesTest(TestCase):
 
     def _build_request(self, user, data):
         import json
+
         from django.test import RequestFactory
 
         rf = RequestFactory()
@@ -242,8 +246,9 @@ class EmpleadosCreateSerializerInvalidTest(TestCase):
 
     def test_create_invalid_serializer_returns_400(self):
         """Branch 753->756: valid manual checks but invalid serializer → 400."""
-        from apps.usuarios.views import EmpleadosViewSet
         from rest_framework.test import APIRequestFactory
+
+        from apps.usuarios.views import EmpleadosViewSet
 
         factory = APIRequestFactory()
         data = {
@@ -279,8 +284,9 @@ class PermisosViewSetBranchTest(TestCase):
 
     def test_asignar_a_rol_not_found_returns_404(self):
         """Lines 538-541: Roles.DoesNotExist raises - 404 is returned"""
-        from apps.usuarios.views import PermisosViewSet
         from rest_framework.test import APIRequestFactory
+
+        from apps.usuarios.views import PermisosViewSet
 
         factory = APIRequestFactory()
         request = factory.post("/", {"id_rol": 99999, "codigo_permiso": "ventas.crear"})
@@ -296,9 +302,10 @@ class PermisosViewSetBranchTest(TestCase):
         Branches 537->538 (loop body), 539->540 (new module), 539->541 (existing module).
         Creates permisos from 2 modules so the loop runs and both if arms are hit.
         """
-        from apps.usuarios.views import PermisosViewSet
-        from apps.usuarios.permissions import Permisos
         from rest_framework.test import APIRequestFactory
+
+        from apps.usuarios.permissions import Permisos
+        from apps.usuarios.views import PermisosViewSet
 
         # Create permisos from two modules, with 2 in the same module
         p1, _ = Permisos.objects.get_or_create(

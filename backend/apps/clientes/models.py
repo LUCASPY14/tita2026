@@ -3,9 +3,10 @@ Modelos de la app clientes
 Gestión de clientes, hijos, grados y restricciones
 """
 
-from django.db import models
-from django.core.validators import EmailValidator
 from decimal import Decimal
+
+from django.core.validators import EmailValidator
+from django.db import models
 
 
 class ClientesManager(models.Manager):
@@ -87,8 +88,9 @@ class Clientes(models.Model):
         Returns:
             Decimal: Monto total de ventas pendientes de pago
         """
-        from apps.ventas.models import Ventas
         from django.db.models import Sum
+
+        from apps.ventas.models import Ventas
 
         total = Ventas.objects.filter(id_cliente=self.id_cliente, saldo_pendiente__gt=0).aggregate(
             total=Sum("saldo_pendiente")
@@ -140,8 +142,9 @@ class Clientes(models.Model):
         Returns:
             dict: Resumen de cuenta corriente con saldos y límites
         """
-        from apps.ventas.models import Ventas, NotasCreditoCliente
         from django.db.models import Sum
+
+        from apps.ventas.models import NotasCreditoCliente, Ventas
 
         # Total de ventas pendientes
         ventas_pendientes = Ventas.objects.filter(id_cliente=self.id_cliente, saldo_pendiente__gt=0)

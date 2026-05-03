@@ -3,8 +3,9 @@ Tests de ramas faltantes en compras/validators.py
 Cubre branches no alcanzados por los tests principales.
 """
 
-import pytest
 from django.core.exceptions import ValidationError
+
+import pytest
 
 from apps.compras.validators import validar_numero_factura
 

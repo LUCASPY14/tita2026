@@ -5,11 +5,13 @@ Tareas programadas:
 - calcular_y_guardar_kpis_diarios  →  todos los días 23:45
 """
 
-from celery import shared_task
-from django.utils import timezone
-from django.db import transaction
-from decimal import Decimal
 import logging
+from decimal import Decimal
+
+from django.db import transaction
+from django.utils import timezone
+
+from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
@@ -96,8 +98,9 @@ def calcular_y_guardar_kpis_diarios():
             'kpis_guardados': int
         }
     """
-    from apps.reportes.services.dashboard_service import DashboardService
     from datetime import date as _date
+
+    from apps.reportes.services.dashboard_service import DashboardService
 
     fecha_hoy = _date.today()
     logger.info(f"[KPIs] Calculando KPIs para {fecha_hoy}")

@@ -4,42 +4,43 @@ Covers all custom display methods across 15 admin classes.
 """
 
 from unittest.mock import MagicMock, patch
-from django.test import TestCase
+
 from django.contrib.admin.sites import AdminSite
+from django.test import TestCase
 
 from apps.notificaciones.admin import (
+    AlertaDestinatariosAdmin,
+    AlertasAutomaticasAdmin,
+    AlertasSistemaAdmin,
+    AnomaliasDetectadasAdmin,
+    CampanasComunicacionAdmin,
+    EmailsEnviadosAdmin,
+    HistorialAlertasAdmin,
     NotificacionesPortalAdmin,
     NotificacionesSaldoAdmin,
-    SolicitudesNotificacionAdmin,
-    PreferenciasNotificacionAdmin,
-    EmailsEnviadosAdmin,
-    SmsEnviadosAdmin,
     PlantillasEmailAdmin,
     PlantillasSmsAdmin,
-    CampanasComunicacionAdmin,
-    AlertasAutomaticasAdmin,
-    AlertaDestinatariosAdmin,
-    AlertasSistemaAdmin,
-    HistorialAlertasAdmin,
-    AnomaliasDetectadasAdmin,
+    PreferenciasNotificacionAdmin,
     RestriccionesHorariasAdmin,
+    SmsEnviadosAdmin,
+    SolicitudesNotificacionAdmin,
 )
 from apps.notificaciones.models import (
+    AlertaDestinatarios,
+    AlertasAutomaticas,
+    AlertasSistema,
+    AnomaliasDetectadas,
+    CampanasComunicacion,
+    EmailsEnviados,
+    HistorialAlertas,
     NotificacionesPortal,
     NotificacionesSaldo,
-    SolicitudesNotificacion,
-    PreferenciasNotificacion,
-    EmailsEnviados,
-    SmsEnviados,
     PlantillasEmail,
     PlantillasSms,
-    CampanasComunicacion,
-    AlertasAutomaticas,
-    AlertaDestinatarios,
-    AlertasSistema,
-    HistorialAlertas,
-    AnomaliasDetectadas,
+    PreferenciasNotificacion,
     RestriccionesHorarias,
+    SmsEnviados,
+    SolicitudesNotificacion,
 )
 
 _plain_format_html = lambda fmt, *a, **k: fmt.format(*a, **k)

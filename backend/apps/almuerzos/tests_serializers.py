@@ -3,18 +3,21 @@ Tests para serializers de la app almuerzos
 Sprint 2 - Backend Coverage Improvement
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
-from .models import PlanesAlmuerzo, TiposAlmuerzo, SuscripcionesAlmuerzo, CuentasAlmuerzoMensual
-from .serializers import (
-    PlanesAlmuerzoSerializer,
-    TiposAlmuerzoSerializer,
-    SuscripcionesAlmuerzoSerializer,
-    CuentasAlmuerzoMensualSerializer,
-)
+
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios
+
+from .models import CuentasAlmuerzoMensual, PlanesAlmuerzo, SuscripcionesAlmuerzo, TiposAlmuerzo
+from .serializers import (
+    CuentasAlmuerzoMensualSerializer,
+    PlanesAlmuerzoSerializer,
+    SuscripcionesAlmuerzoSerializer,
+    TiposAlmuerzoSerializer,
+)
 
 
 class PlanesAlmuerzoSerializerTest(TestCase):

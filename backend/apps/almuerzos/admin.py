@@ -1,15 +1,16 @@
 ﻿from django.contrib import admin
 from django.utils.html import format_html
+
 from .models import (
-    PlanesAlmuerzo,
-    TiposAlmuerzo,
-    SuscripcionesAlmuerzo,
-    RegistrosConsumoAlmuerzo,
+    Alergenos,
     CuentasAlmuerzoMensual,
     PagosAlmuerzoMensual,
     PagosCuentasAlmuerzo,
-    Alergenos,
+    PlanesAlmuerzo,
     ProductosAlergenos,
+    RegistrosConsumoAlmuerzo,
+    SuscripcionesAlmuerzo,
+    TiposAlmuerzo,
 )
 
 

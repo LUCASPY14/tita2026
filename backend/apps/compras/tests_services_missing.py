@@ -75,8 +75,9 @@ class ObtenerCuentaCorrienteProveedorTest(TestCase):
     @patch("apps.compras.services.Compras")
     def test_con_compras_pendientes_incluye_dias(self, MockCompras):
         """Lines 290-299: loop body with a compra that has saldo > 0."""
-        from apps.compras.services import CompraService
         from django.utils import timezone
+
+        from apps.compras.services import CompraService
 
         mock_qs = MagicMock()
         MockCompras.objects.filter.return_value = mock_qs

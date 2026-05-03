@@ -3,6 +3,7 @@ Configuración de Celery para el proyecto Cantina Tita
 """
 
 import os
+
 from celery import Celery
 from celery.schedules import crontab
 

@@ -3,15 +3,16 @@ Tests finales para alcanzar 100% cobertura en compras.services
 Cubre líneas: 80-81, 86-87, 196-199, branch 281->288
 """
 
+from decimal import Decimal
+from unittest.mock import PropertyMock, patch
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
-from unittest.mock import patch, PropertyMock
 
 from apps.compras.models import Compras, DetallesCompra, Proveedores
 from apps.compras.services import CompraService
-from apps.productos.models import Productos, Categorias, UnidadesMedida
 from apps.contabilidad.models import Impuestos
+from apps.productos.models import Categorias, Productos, UnidadesMedida
 from apps.usuarios.models import Empleados, Roles
 
 

@@ -3,10 +3,11 @@ Sistema de permisos granulares para cantina_tita
 Integración con Django REST Framework
 """
 
-from typing import List, Optional, Dict
 from functools import wraps
+from typing import Dict, List, Optional
 
 from django.db import models, transaction
+
 from rest_framework import permissions
 from rest_framework.request import Request
 from rest_framework.views import APIView

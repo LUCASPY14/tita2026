@@ -2,24 +2,26 @@
 Tests para la app notificaciones
 """
 
-import pytest  # type: ignore
-from django.test import TestCase
-from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 
+from django.test import TestCase
+from django.utils import timezone
+
+import pytest  # type: ignore
+
+from apps.clientes.models import Clientes, Hijos, TiposCliente
+from apps.core.models import Tarjetas
 from apps.notificaciones.models import (
+    AlertasSistema,
+    EmailsEnviados,
     NotificacionesPortal,
     NotificacionesSaldo,
-    AlertasSistema,
     PreferenciasNotificacion,
-    EmailsEnviados,
     SmsEnviados,
 )
-from apps.clientes.models import Clientes, Hijos, TiposCliente
-from apps.usuarios.models import Empleados, Roles, UsuariosPortal
 from apps.productos.models import ListasPrecios
-from apps.core.models import Tarjetas
+from apps.usuarios.models import Empleados, Roles, UsuariosPortal
 
 
 class NotificacionesPortalTest(TestCase):
@@ -370,24 +372,24 @@ class NotificacionesModelsStrTest(TestCase):
     """Tests for __str__ methods of all Notificaciones models."""
 
     def setUp(self):
+        from apps.clientes.models import Clientes, Hijos, TiposCliente
+        from apps.core.models import Tarjetas
         from apps.notificaciones.models import (
+            AlertaDestinatarios,
+            AlertasAutomaticas,
+            AlertasSistema,
+            AnomaliasDetectadas,
+            CampanasComunicacion,
+            HistorialAlertas,
+            NotificacionesSaldo,
             PlantillasEmail,
             PlantillasSms,
-            CampanasComunicacion,
-            AlertasAutomaticas,
-            AlertaDestinatarios,
-            AlertasSistema,
-            HistorialAlertas,
-            AnomaliasDetectadas,
+            PreferenciasNotificacion,
             RestriccionesHorarias,
             SolicitudesNotificacion,
-            NotificacionesSaldo,
-            PreferenciasNotificacion,
         )
-        from apps.clientes.models import Clientes, TiposCliente, Hijos
-        from apps.usuarios.models import UsuariosPortal, Empleados, Roles
-        from apps.core.models import Tarjetas
         from apps.productos.models import ListasPrecios
+        from apps.usuarios.models import Empleados, Roles, UsuariosPortal
 
         # Minimal setUp for FK models
         self.lista = ListasPrecios.objects.create(nombre_lista="Minorista Str", estado=True)
@@ -571,7 +573,7 @@ class NotificacionesModelsStrTest(TestCase):
         self.assertIn("AlertasAutomaticas", str(n))
 
     def test_alerta_destinatarios_str(self):
-        from apps.notificaciones.models import AlertasAutomaticas, AlertaDestinatarios
+        from apps.notificaciones.models import AlertaDestinatarios, AlertasAutomaticas
 
         alerta = AlertasAutomaticas.objects.create(
             nombre="AlertaD Str",
@@ -636,6 +638,7 @@ class NotificacionesModelsStrTest(TestCase):
 
     def test_restricciones_horarias_str(self):
         from datetime import time
+
         from apps.notificaciones.models import RestriccionesHorarias
 
         n = RestriccionesHorarias.objects.create(

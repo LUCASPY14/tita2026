@@ -3,9 +3,11 @@ Tests de ramas faltantes en usuarios/permissions.py
 Cubre branches en PermissionService.obtener_permisos_empleado y clases de permisos.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
 from django.test import TestCase
+
+import pytest
 
 
 class PermissionServiceBranchesTest(TestCase):
@@ -39,10 +41,11 @@ class TieneAlgunosPermisosHasPermissionBranchTest(TestCase):
     @pytest.mark.django_db
     def test_has_permission_with_permisos_requeridos_checks_permissions(self):
         """Branch 353->356: permisos_requeridos is NOT empty → calls empleado_tiene_algunos."""
-        from apps.usuarios.permissions import TieneAlgunosPermisos
-        from apps.usuarios.models import Empleados, Roles
         from django.contrib.auth.models import User
         from django.utils import timezone
+
+        from apps.usuarios.models import Empleados, Roles
+        from apps.usuarios.permissions import TieneAlgunosPermisos
 
         # Create real user and empleado
         rol, _ = Roles.objects.get_or_create(nombre_rol="TestPermRol", defaults={"descripcion": "t"})
@@ -68,10 +71,11 @@ class TieneAlgunosPermisosHasPermissionBranchTest(TestCase):
     @pytest.mark.django_db
     def test_tiene_todos_permisos_with_permisos_requeridos(self):
         """Branch 379->382: TieneTodosPermisos with non-empty permisos_requeridos."""
-        from apps.usuarios.permissions import TieneTodosPermisos
-        from apps.usuarios.models import Empleados, Roles
         from django.contrib.auth.models import User
         from django.utils import timezone
+
+        from apps.usuarios.models import Empleados, Roles
+        from apps.usuarios.permissions import TieneTodosPermisos
 
         rol, _ = Roles.objects.get_or_create(nombre_rol="TestTodosRol", defaults={"descripcion": "t"})
         user = User.objects.create_user(username="todos_perm_branch_user", password="pass123")

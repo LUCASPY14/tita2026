@@ -3,31 +3,33 @@ Tests para modelos de la app notificaciones
 Cubre el método __str__ de todos los modelos.
 """
 
-from django.test import TestCase
-from django.utils import timezone
 from decimal import Decimal
 
+from django.test import TestCase
+from django.utils import timezone
+
+from apps.clientes.models import Clientes, TiposCliente
+from apps.core.models import Tarjetas
+from apps.productos.models import ListasPrecios
+from apps.usuarios.models import Empleados, Roles, UsuariosPortal
+
 from .models import (
+    AlertaDestinatarios,
+    AlertasAutomaticas,
+    AlertasSistema,
+    AnomaliasDetectadas,
+    CampanasComunicacion,
+    EmailsEnviados,
+    HistorialAlertas,
     NotificacionesPortal,
     NotificacionesSaldo,
-    SolicitudesNotificacion,
-    PreferenciasNotificacion,
-    EmailsEnviados,
-    SmsEnviados,
     PlantillasEmail,
     PlantillasSms,
-    CampanasComunicacion,
-    AlertasAutomaticas,
-    AlertaDestinatarios,
-    AlertasSistema,
-    HistorialAlertas,
-    AnomaliasDetectadas,
+    PreferenciasNotificacion,
     RestriccionesHorarias,
+    SmsEnviados,
+    SolicitudesNotificacion,
 )
-from apps.clientes.models import Clientes, TiposCliente
-from apps.productos.models import ListasPrecios
-from apps.core.models import Tarjetas
-from apps.usuarios.models import Empleados, Roles, UsuariosPortal
 
 
 class NotificacionesModelsBaseTest(TestCase):

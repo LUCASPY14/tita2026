@@ -3,19 +3,19 @@ Servicio de gestion de sesiones empresariales.
 Alineado con modelos actuales de usuarios.
 """
 
+import json
 from datetime import timedelta
 from typing import Dict, List
-import json
 
 from django.db import transaction
 from django.utils import timezone
 
 from apps.usuarios.models import (
-    Empleados,
-    SesionesActivas,
-    RenovacionesSesion,
-    PatronesAcceso,
     AuditoriaOperaciones,
+    Empleados,
+    PatronesAcceso,
+    RenovacionesSesion,
+    SesionesActivas,
 )
 
 

@@ -8,13 +8,13 @@ Cubre líneas faltantes:
 
 from datetime import timedelta
 from decimal import Decimal
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 from django.utils import timezone
 
-from apps.core.models import CargasSaldo, Tarjetas, ConsumosTarjeta
-from apps.clientes.models import Clientes, TiposCliente, Hijos
+from apps.clientes.models import Clientes, Hijos, TiposCliente
+from apps.core.models import CargasSaldo, ConsumosTarjeta, Tarjetas
 from apps.productos.models import ListasPrecios
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
@@ -288,8 +288,8 @@ class ConfirmarTransaccionBancardTest(TestCase):
 
     def test_bancard_no_success_retorna_error(self):
         """Status != success → retorna error."""
-        from apps.core.tasks import confirmar_transaccion_bancard
         import apps.api_integrations.services as svc_module
+        from apps.core.tasks import confirmar_transaccion_bancard
 
         mock_svc = MagicMock()
         mock_svc.confirmar_transaccion.return_value = {"status": "error"}
@@ -305,8 +305,8 @@ class ConfirmarTransaccionBancardTest(TestCase):
 
     def test_excepcion_retorna_error(self):
         """Exception → retorna success=False."""
-        from apps.core.tasks import confirmar_transaccion_bancard
         import apps.api_integrations.services as svc_module
+        from apps.core.tasks import confirmar_transaccion_bancard
 
         original = getattr(svc_module, "BancardService", None)
         try:

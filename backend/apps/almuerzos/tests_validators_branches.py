@@ -3,23 +3,25 @@ Tests de cobertura de ramas para almuerzos/validators.py.
 Cubre exactamente los branches reportados como faltantes en el informe de cobertura.
 """
 
-import pytest
-from decimal import Decimal
 from datetime import date, datetime, timedelta
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 
+import pytest
+
 from apps.almuerzos.validators import (
-    validar_precio_unitario_tipo,
-    validar_motivo_rechazo,
-    validar_coherencia_montos_cuenta,
-    validar_monto_total_cuenta,
-    validar_monto_pagado_cuenta,
-    validar_estado_pago_mensual,
-    validar_referencia_pago,
-    validar_palabras_clave_alergeno,
-    validar_nivel_severidad_alergeno,
     determinar_si_cobra,
+    validar_coherencia_montos_cuenta,
+    validar_estado_pago_mensual,
     validar_limite_registros_diarios,
+    validar_monto_pagado_cuenta,
+    validar_monto_total_cuenta,
+    validar_motivo_rechazo,
+    validar_nivel_severidad_alergeno,
+    validar_palabras_clave_alergeno,
+    validar_precio_unitario_tipo,
+    validar_referencia_pago,
 )
 
 # ──────────────────────────────────────────────────────────────────────────────

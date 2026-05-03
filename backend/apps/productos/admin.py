@@ -3,20 +3,21 @@ Administración del módulo de Productos
 Configuración avanzada del panel de administración para gestión de productos, categorías, precios y unidades
 """
 
-from django.contrib import admin
-from django.utils.html import format_html
-from django.db.models import Count, Sum, Avg
-from django.urls import reverse
-from django.utils.safestring import mark_safe
 from decimal import Decimal
 
+from django.contrib import admin
+from django.db.models import Avg, Count, Sum
+from django.urls import reverse
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
+
 from .models import (
-    Productos,
     Categorias,
-    UnidadesMedida,
+    HistoricoPrecios,
     ListasPrecios,
     PreciosPorLista,
-    HistoricoPrecios,
+    Productos,
+    UnidadesMedida,
 )
 
 # ==================== ADMIN DE CATEGORÍAS ====================

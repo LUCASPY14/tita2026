@@ -3,10 +3,11 @@ Signals para el módulo de ventas
 Automatización de actualización de saldos y aplicación de notas de crédito
 """
 
+from decimal import Decimal
+
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.db import transaction
-from decimal import Decimal
 
 from .models import AplicacionPagosVentas, NotasCreditoCliente, Ventas
 
@@ -106,8 +107,10 @@ def emitir_documento_tributario(sender, instance, created, **kwargs):
         return
 
     from datetime import date
+
     from django.utils import timezone
-    from apps.contabilidad.models import Timbrados, DocumentosTributarios, CierresCaja, MovimientosCaja
+
+    from apps.contabilidad.models import CierresCaja, DocumentosTributarios, MovimientosCaja, Timbrados
 
     hoy = date.today()
     timbrado = (

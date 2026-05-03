@@ -3,31 +3,32 @@ Tests para admin de contabilidad
 Cubre interfaz administrativa y funcionalidades de gestión
 """
 
-from decimal import Decimal
 from datetime import date, timedelta
-from django.test import TestCase, Client
+from decimal import Decimal
+
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
-from django.urls import reverse
-from django.utils import timezone
 from django.contrib.messages import get_messages
 from django.db.models import Q
+from django.test import Client, TestCase
+from django.urls import reverse
+from django.utils import timezone
 
+from apps.contabilidad.admin import *
 from apps.contabilidad.models import (
+    AuditoriaComisiones,
     Cajas,
     CierresCaja,
-    MovimientosCaja,
-    TarifasComision,
-    AuditoriaComisiones,
-    DocumentosTributarios,
-    Timbrados,
-    PuntosExpedicion,
     DatosEmpresa,
+    DocumentosTributarios,
     Impuestos,
+    MovimientosCaja,
+    PuntosExpedicion,
+    TarifasComision,
+    Timbrados,
 )
-from apps.contabilidad.admin import *
-from apps.usuarios.models import Empleados, Roles
 from apps.core.models import MediosPago
+from apps.usuarios.models import Empleados, Roles
 
 
 class BaseContabilidadAdminTest(TestCase):
@@ -798,7 +799,7 @@ class ContabilidadAdminIntegrationTest(BaseContabilidadAdminTest):
             )
 
         # Generar agregaciones
-        from django.db.models import Sum, Count, Avg
+        from django.db.models import Avg, Count, Sum
 
         reportes = MovimientosCaja.objects.aggregate(
             total_ingresos=Sum("monto", filter=Q(tipo_movimiento="ingreso")),

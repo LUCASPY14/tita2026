@@ -3,14 +3,16 @@ Tests simples para la app notificaciones
 Verifican estructura básica sin dependencias complejas de BD
 """
 
-import pytest  # type: ignore
 from django.test import TestCase
+
+import pytest  # type: ignore
+
 from apps.notificaciones.models import (
+    AlertasSistema,
+    EmailsEnviados,
     NotificacionesPortal,
     NotificacionesSaldo,
-    AlertasSistema,
     PreferenciasNotificacion,
-    EmailsEnviados,
     SmsEnviados,
 )
 

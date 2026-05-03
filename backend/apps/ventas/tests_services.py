@@ -3,9 +3,10 @@ Tests para ventas/services.py (PromocionService y DevolucionService)
 Cubre métodos privados y ramas no cubiertas
 """
 
+from datetime import date, datetime, time
 from decimal import Decimal
-from datetime import datetime, time, date
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
 from django.test import TestCase
 from django.utils import timezone
 
@@ -411,8 +412,8 @@ class DevolucionServiceValidarProductosTest(TestCase):
 
     def test_venta_no_existe(self):
         """Venta inexistente → {valido: False, errores: [...]}"""
-        from apps.ventas.services import DevolucionService
         from apps.ventas.models import Ventas
+        from apps.ventas.services import DevolucionService
 
         with patch("apps.ventas.models.Ventas.objects.get", side_effect=Ventas.DoesNotExist()):
             result = DevolucionService.validar_productos_devolucion(999, [{"id_producto": 1, "cantidad": "1"}])
@@ -467,8 +468,9 @@ class DevolucionServiceValidarProductosTest(TestCase):
 
     def test_fuera_de_plazo_genera_warning(self):
         """Venta antigua → warnings pero puede ser válida"""
-        from apps.ventas.services import DevolucionService
         from datetime import timedelta
+
+        from apps.ventas.services import DevolucionService
 
         fecha_antigua = timezone.now() - timedelta(days=10)
         venta_mock = Mock()

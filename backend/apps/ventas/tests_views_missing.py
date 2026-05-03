@@ -12,25 +12,26 @@ Missing lines:
 """
 
 from decimal import Decimal
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.clientes.models import Clientes, TiposCliente, Hijos
-from apps.core.models import MediosPago, Tarjetas
+from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.contabilidad.models import Impuestos
+from apps.core.models import MediosPago, Tarjetas
 from apps.inventario.models import StockUnico
 from apps.productos.models import (
-    ListasPrecios,
-    Productos,
     Categorias,
-    UnidadesMedida,
+    ListasPrecios,
     PreciosPorLista,
+    Productos,
+    UnidadesMedida,
 )
 from apps.usuarios.models import Empleados, Roles
 from apps.ventas.models import Promociones, PromocionesAplicadas, Ventas

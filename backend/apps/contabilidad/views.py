@@ -1,34 +1,37 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django.db import transaction
-from django.utils import timezone
-from django.db.models import Sum
-from .models import (
-    Impuestos,
-    DatosEmpresa,
-    Timbrados,
-    DocumentosTributarios,
-    PuntosExpedicion,
-    Cajas,
-    CierresCaja,
-    MovimientosCaja,
-)
-from .serializers import (
-    ImpuestosSerializer,
-    DatosEmpresaSerializer,
-    TimbradoSerializer,
-    DocumentosTributariosSerializer,
-    PuntosExpedicionSerializer,
-    CajaSerializer,
-    CierresCajaSerializer,
-    MovimientosCajaSerializer,
-    AbrirCajaSerializer,
-    CerrarCajaSerializer,
-)
 from datetime import date
 from decimal import Decimal
+
+from django.db import transaction
+from django.db.models import Sum
+from django.utils import timezone
+
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import (
+    Cajas,
+    CierresCaja,
+    DatosEmpresa,
+    DocumentosTributarios,
+    Impuestos,
+    MovimientosCaja,
+    PuntosExpedicion,
+    Timbrados,
+)
+from .serializers import (
+    AbrirCajaSerializer,
+    CajaSerializer,
+    CerrarCajaSerializer,
+    CierresCajaSerializer,
+    DatosEmpresaSerializer,
+    DocumentosTributariosSerializer,
+    ImpuestosSerializer,
+    MovimientosCajaSerializer,
+    PuntosExpedicionSerializer,
+    TimbradoSerializer,
+)
 
 
 class ImpuestosViewSet(viewsets.ModelViewSet):
@@ -333,8 +336,9 @@ class FacturacionViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["get"], url_path="imprimir")
     def imprimir(self, request, pk=None):
         """Texto 80 columnas para Epson LX-50 (Content-Type: text/plain)."""
-        from .facturacion_service import FacturacionService
         from django.http import HttpResponse
+
+        from .facturacion_service import FacturacionService
 
         try:
             texto = FacturacionService.texto_impresion(int(pk))

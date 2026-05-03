@@ -6,34 +6,34 @@ Missing lines targeted: 127, 131-132, 167, 171-172, 206-221, 245, 250-251, 254,
 692-701, 744-752, 778, 783-784, 787, 832, 837-838, 875
 """
 
-from decimal import Decimal
 from datetime import date
-from unittest.mock import MagicMock, patch, PropertyMock
+from decimal import Decimal
+from unittest.mock import MagicMock, PropertyMock, patch
 
-from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.test import TestCase
 from django.utils import timezone
 
 from apps.productos.validators import (
-    validar_stock_minimo,
-    validar_precio_positivo,
-    validar_cambio_estado_producto,
-    validar_margen_utilidad,
-    validar_nombre_categoria,
-    validar_jerarquia_categoria,
-    validar_categoria_activa_con_productos,
-    validar_nombre_unidad,
     validar_abreviatura_unidad,
-    validar_unidad_activa_con_productos,
-    validar_nombre_lista_precios,
-    validar_fecha_vigencia_lista,
-    validar_lista_activa_con_precios,
-    validar_unicidad_precio_lista,
-    validar_moneda_lista,
-    validar_variacion_precio,
+    validar_cambio_estado_producto,
     validar_cambio_precio_historico,
+    validar_categoria_activa_con_productos,
     validar_fecha_cambio_precio,
+    validar_fecha_vigencia_lista,
+    validar_jerarquia_categoria,
+    validar_lista_activa_con_precios,
+    validar_margen_utilidad,
+    validar_moneda_lista,
+    validar_nombre_categoria,
+    validar_nombre_lista_precios,
+    validar_nombre_unidad,
+    validar_precio_positivo,
     validar_producto_unico,
+    validar_stock_minimo,
+    validar_unicidad_precio_lista,
+    validar_unidad_activa_con_productos,
+    validar_variacion_precio,
 )
 
 

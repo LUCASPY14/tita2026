@@ -6,20 +6,22 @@ debido a incompatibilidad de bcrypt (PyO3). Los tests funcionan correctamente
 sin cobertura. Para medir cobertura, usar Python 3.11 o ejecutar en CI/CD.
 """
 
-import jwt
-import pytest
 from datetime import timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
 from django.conf import settings
 from django.utils import timezone
 
+import jwt
+import pytest
+
+from apps.clientes.models import Clientes
+from apps.usuarios.models import UsuariosPortal
 from apps.usuarios.services.portal_service import (
-    PortalAuthService,
     PORTAL_TOKEN_LIFETIME,
     PORTAL_TOKEN_TYPE,
+    PortalAuthService,
 )
-from apps.usuarios.models import UsuariosPortal
-from apps.clientes.models import Clientes
 
 
 @pytest.fixture

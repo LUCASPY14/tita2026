@@ -3,16 +3,18 @@ Servicios de dominio para compras
 Lógica de negocio centralizada y reutilizable
 """
 
-from django.db import transaction
-from django.core.exceptions import ValidationError
-from django.utils import timezone
 from decimal import Decimal
-from typing import List, Dict
+from typing import Dict, List
+
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.utils import timezone
+
+from apps.inventario.models import CostosHistoricos, MovimientosStock, StockUnico
+from apps.productos.models import Productos
+from apps.usuarios.models import Empleados
 
 from .models import Compras, DetallesCompra, Proveedores
-from apps.productos.models import Productos
-from apps.inventario.models import StockUnico, MovimientosStock, CostosHistoricos
-from apps.usuarios.models import Empleados
 
 
 class CompraService:
@@ -318,6 +320,7 @@ class CompraService:
                 - compras_pendientes: Lista de compras con saldo
         """
         from django.db.models import Sum
+
         from .models import AplicacionPagosCompras
 
         # Total de compras (todas las compras del proveedor)

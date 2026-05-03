@@ -2,14 +2,15 @@
 Tests para autenticación de usuarios del portal (clientes)
 """
 
+from unittest.mock import MagicMock, Mock, patch
+
 import jwt
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 from rest_framework.exceptions import AuthenticationFailed
 
 from apps.usuarios.authentication import (
-    PortalUserProxy,
     PortalJWTAuthentication,
+    PortalUserProxy,
 )
 from apps.usuarios.services.portal_service import PORTAL_TOKEN_TYPE
 

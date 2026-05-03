@@ -2,8 +2,10 @@
 Tests para validador de RUC/CI paraguayo
 """
 
-import pytest
 from django.core.exceptions import ValidationError
+
+import pytest
+
 from apps.common.validators.ruc_validator import validate_ruc
 
 

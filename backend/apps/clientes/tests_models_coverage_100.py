@@ -13,20 +13,23 @@ Cobertura de líneas:
 - L436: Creación de LogsAutorizaciones
 """
 
-import pytest
 from decimal import Decimal
+
 from django.test import TestCase
+
+import pytest
+
 from apps.clientes.models import (
     Clientes,
-    Hijos,
     Grados,
-    TiposCliente,
+    Hijos,
     HistorialGradosHijos,
-    RestriccionesHijos,
     LogsAutorizaciones,
+    RestriccionesHijos,
+    TiposCliente,
 )
-from apps.productos.models import ListasPrecios
 from apps.core.models import TarjetasAutorizacion
+from apps.productos.models import ListasPrecios
 
 
 @pytest.mark.django_db
@@ -66,8 +69,9 @@ class TestClientesPropertiesYMetodos:
         credito_disponible = limite_credito - credito_utilizado
         """
         # Arrange: Crear venta con saldo pendiente para que credito_utilizado se calcule
-        from apps.ventas.models import Ventas
         from datetime import datetime
+
+        from apps.ventas.models import Ventas
 
         Ventas.objects.create(
             id_cliente=cliente_con_credito,
@@ -91,8 +95,9 @@ class TestClientesPropertiesYMetodos:
         Verifica que el cliente con crédito disponible > 0 retorne True
         """
         # Arrange: Crear venta pequeña para tener crédito disponible
-        from apps.ventas.models import Ventas
         from datetime import datetime
+
+        from apps.ventas.models import Ventas
 
         Ventas.objects.create(
             id_cliente=cliente_con_credito,
@@ -115,8 +120,9 @@ class TestClientesPropertiesYMetodos:
         Verifica que cliente sin crédito disponible retorne False
         """
         # Arrange: Cliente con crédito totalmente utilizado
-        from apps.ventas.models import Ventas
         from datetime import datetime
+
+        from apps.ventas.models import Ventas
 
         cliente = Clientes.objects.create(
             nombres="María",

@@ -3,9 +3,11 @@ Tests simplificados para permisos del módulo common
 Tests básicos sin dependencias complejas de modelos
 """
 
-from django.test import TestCase
 from django.contrib.auth.models import User
+from django.test import TestCase
+
 from rest_framework.test import APIRequestFactory
+
 from apps.common.permissions import IsAdminOrReadOnly, ReadOnly
 
 

@@ -3,20 +3,21 @@ Signals para auditoría automática de cambios en modelos
 Registra automáticamente todas las operaciones CRUD
 """
 
-from django.db.models.signals import post_save, post_delete, pre_save
-from django.dispatch import receiver
-from django.utils import timezone
-from django.core.serializers.json import DjangoJSONEncoder
 import json
 
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models.signals import post_delete, post_save, pre_save
+from django.dispatch import receiver
+from django.utils import timezone
+
 from apps.usuarios.models import (
-    Empleados,
     AuditoriaEmpleados,
     AuditoriaOperaciones,
-    Roles,
-    PerfilesUsuario,
-    SesionesActivas,
     BloqueosCuenta,
+    Empleados,
+    PerfilesUsuario,
+    Roles,
+    SesionesActivas,
 )
 
 

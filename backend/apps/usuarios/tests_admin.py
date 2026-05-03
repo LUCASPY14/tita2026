@@ -3,13 +3,13 @@ Tests para configuración de admin de la app usuarios
 Cubre Django Admin interface, filtros, búsquedas y acciones
 """
 
-from django.test import TestCase, Client
 from django.contrib.auth.models import User
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.usuarios.models import Roles, Empleados
-from apps.usuarios.admin import RolesAdmin, EmpleadosAdmin
+from apps.usuarios.admin import EmpleadosAdmin, RolesAdmin
+from apps.usuarios.models import Empleados, Roles
 
 
 class RolesAdminTest(TestCase):

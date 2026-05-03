@@ -3,9 +3,10 @@ Signals para la app core
 Garantiza la integridad transaccional y automatización de procesos
 """
 
+from django.db import transaction
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from django.db import transaction
+
 from .models import CargasSaldo, ConsumosTarjeta, Tarjetas
 
 
@@ -59,8 +60,9 @@ def notificar_saldo_bajo(sender, instance, created, **kwargs):
 
         # Verificar si requiere notificación
         if tarjeta.requiere_notificacion:
-            from apps.notificaciones.models import Notificaciones
             from django.utils import timezone
+
+            from apps.notificaciones.models import Notificaciones
 
             try:
                 # Crear notificación de saldo bajo

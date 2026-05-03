@@ -3,23 +3,23 @@ Tests para módulo de inventario
 Valida reglas de negocio, concurrencia y consistencia ACID
 """
 
-from django.test import TestCase, TransactionTestCase
-from django.utils import timezone
-from django.core.exceptions import ValidationError
+import time
 from decimal import Decimal
 from threading import Thread
-import time
 
-from apps.inventario.models import StockUnico, MovimientosStock, AlertasStock, CostosHistoricos
-from apps.inventario.services import StockService
-from apps.productos.models import Productos, Categorias, UnidadesMedida
-from apps.compras.models import Proveedores, Compras, DetallesCompra
-from apps.ventas.models import Ventas, DetallesVenta
-from apps.core.models import MediosPago
-from apps.contabilidad.models import Impuestos
-from apps.usuarios.models import Empleados, Roles
+from django.core.exceptions import ValidationError
+from django.test import TestCase, TransactionTestCase
+from django.utils import timezone
+
 from apps.clientes.models import Clientes, TiposCliente
-from apps.productos.models import ListasPrecios
+from apps.compras.models import Compras, DetallesCompra, Proveedores
+from apps.contabilidad.models import Impuestos
+from apps.core.models import MediosPago
+from apps.inventario.models import AlertasStock, CostosHistoricos, MovimientosStock, StockUnico
+from apps.inventario.services import StockService
+from apps.productos.models import Categorias, ListasPrecios, Productos, UnidadesMedida
+from apps.usuarios.models import Empleados, Roles
+from apps.ventas.models import DetallesVenta, Ventas
 
 
 class StockUnicoTest(TestCase):

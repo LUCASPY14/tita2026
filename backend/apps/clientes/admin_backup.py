@@ -4,12 +4,12 @@ Re-exports admin classes from admin.py for backwards compatibility.
 """
 
 from apps.clientes.admin import (  # noqa: F401
-    ClientesAdmin,
-    TiposClienteAdmin,
-    HijosAdmin,
-    GradosAdmin,
-    HistorialGradosHijosAdmin,
-    RestriccionesHijosAdmin,
     AutorizacionesSaldoNegativoAdmin,
+    ClientesAdmin,
+    GradosAdmin,
+    HijosAdmin,
+    HistorialGradosHijosAdmin,
     LogsAutorizacionesAdmin,
+    RestriccionesHijosAdmin,
+    TiposClienteAdmin,
 )

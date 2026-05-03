@@ -3,8 +3,9 @@ Tests para validadores del módulo common
 Verifica validación de RUC/CI para Paraguay
 """
 
-from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.test import TestCase
+
 from apps.common.validators.ruc_validator import validate_ruc
 
 

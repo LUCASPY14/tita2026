@@ -15,48 +15,40 @@ Este módulo contiene tests para todos los validadores de:
 Total: ~108 tests
 """
 
-from django.test import TestCase
-from django.core.exceptions import ValidationError
-from decimal import Decimal
 from datetime import date, timedelta
+from decimal import Decimal
 
-from apps.core.validators import (
-    # Tarjetas
-    validar_numero_tarjeta,
-    validar_saldo_tarjeta,
-    validar_estado_tarjeta,
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+
+from apps.core.validators import (  # Tarjetas; Tarjetas Autorización; Cargas Saldo; Consumos Tarjeta; Transacciones Online; Medios Pago; Configuración Sistema; Límites Transacción; Registro Autorizaciones
+    validar_autorizadores_diferentes,
+    validar_clave_configuracion,
+    validar_codigo_barra_autorizacion,
     validar_codigo_barras_tarjeta,
+    validar_descripcion_medio_pago,
+    validar_estado_carga,
+    validar_estado_tarjeta,
+    validar_fecha_vencimiento_autorizacion,
     validar_fecha_vencimiento_tarjeta,
     validar_limite_credito,
-    validar_saldo_alerta,
-    # Tarjetas Autorización
-    validar_codigo_barra_autorizacion,
-    validar_tipo_autorizacion,
-    validar_fecha_vencimiento_autorizacion,
-    # Cargas Saldo
-    validar_monto_carga,
-    validar_estado_carga,
-    validar_referencia_pago,
-    # Consumos Tarjeta
-    validar_monto_consumo,
-    validar_saldos_coherentes,
-    # Transacciones Online
-    validar_monto_transaccion,
     validar_metodo_pago_online,
-    # Medios Pago
-    validar_descripcion_medio_pago,
-    # Configuración Sistema
-    validar_clave_configuracion,
+    validar_monto_carga,
+    validar_monto_consumo,
+    validar_monto_limite,
+    validar_monto_transaccion,
+    validar_motivo_autorizacion,
+    validar_numero_tarjeta,
+    validar_referencia_pago,
+    validar_saldo_alerta,
+    validar_saldo_tarjeta,
+    validar_saldos_coherentes,
+    validar_tipo_autorizacion,
     validar_tipo_configuracion,
+    validar_tipo_operacion_limite,
+    validar_unicidad_rol_operacion,
     validar_valor_configuracion,
     validar_valores_permitidos,
-    # Límites Transacción
-    validar_tipo_operacion_limite,
-    validar_monto_limite,
-    validar_unicidad_rol_operacion,
-    # Registro Autorizaciones
-    validar_motivo_autorizacion,
-    validar_autorizadores_diferentes,
 )
 
 # =============================================================================
@@ -931,9 +923,10 @@ class ValidadoresUnicidadRolOperacionTestCase(TestCase):
 
     def setUp(self):
         """Configurar datos de prueba"""
-        from apps.usuarios.models import Roles
-        from apps.core.models import LimitesTransaccion
         from datetime import datetime
+
+        from apps.core.models import LimitesTransaccion
+        from apps.usuarios.models import Roles
 
         # Crear rol de prueba
         self.rol = Roles.objects.create(
@@ -1009,8 +1002,9 @@ class ValidadoresAutorizadoresDiferentesTestCase(TestCase):
 
     def setUp(self):
         """Configurar empleados de prueba"""
-        from apps.usuarios.models import Empleados
         from datetime import date
+
+        from apps.usuarios.models import Empleados
 
         self.empleado1 = Empleados.objects.create(
             nombre="Juan", apellido="Pérez", email="juan@example.com", fecha_ingreso=date.today()

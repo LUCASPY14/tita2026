@@ -7,8 +7,9 @@ Covers:
 """
 
 from io import StringIO
-from django.test import TestCase
+
 from django.core.management import call_command
+from django.test import TestCase
 
 from apps.usuarios.models import Roles
 
@@ -65,6 +66,7 @@ class SetupLimitesInicialCommandTest(TestCase):
     def test_command_handles_limit_creation_error(self):
         """When update_or_create raises for a limit, error is counted (lines 210-212, 222)."""
         from unittest.mock import patch
+
         from apps.core.models import LimitesTransaccion
 
         out = StringIO()
@@ -155,6 +157,7 @@ class MonitorDatabaseCommandImportTest(TestCase):
     def test_command_class_is_base_command_subclass(self):
         """Command re-exported from monitoring is a valid Django management command."""
         from django.core.management.base import BaseCommand
+
         from apps.core.management.commands.monitor_database import Command
 
         self.assertTrue(issubclass(Command, BaseCommand))

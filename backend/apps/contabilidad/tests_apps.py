@@ -3,9 +3,9 @@ Tests para apps de contabilidad
 Cubre configuración de aplicación Django y integración
 """
 
-from django.test import TestCase
 from django.apps import apps
 from django.conf import settings
+from django.test import TestCase
 
 from apps.contabilidad.apps import ContabilidadConfig
 
@@ -144,6 +144,7 @@ class ContabilidadAppsIntegrationTest(TestCase):
         """Debe integrarse correctamente con Django admin"""
         try:
             from django.contrib import admin
+
             from apps.contabilidad import models
 
             # Verificar que los modelos principales están registrados en admin
@@ -205,8 +206,9 @@ class ContabilidadAppsIntegrationTest(TestCase):
     def test_contabilidad_app_serializers_integration(self):
         """Debe integrar serializers correctamente con DRF"""
         try:
-            from apps.contabilidad import serializers
             from rest_framework import serializers as drf_serializers
+
+            from apps.contabilidad import serializers
 
             # Verificar que el módulo de serializers existe
             self.assertIsNotNone(serializers)
@@ -234,8 +236,10 @@ class ContabilidadAppsIntegrationTest(TestCase):
     def test_contabilidad_app_views_integration(self):
         """Debe integrar views correctamente con DRF"""
         try:
+            from rest_framework import views as drf_views
+            from rest_framework import viewsets
+
             from apps.contabilidad import views
-            from rest_framework import viewsets, views as drf_views
 
             # Verificar que el módulo de views existe
             self.assertIsNotNone(views)
@@ -269,8 +273,9 @@ class ContabilidadAppsIntegrationTest(TestCase):
     def test_contabilidad_app_urls_integration(self):
         """Debe integrar URLs correctamente"""
         try:
-            from apps.contabilidad import urls
             from django.urls import URLPattern, URLResolver
+
+            from apps.contabilidad import urls
 
             # Verificar que el módulo de URLs existe
             self.assertIsNotNone(urls)
@@ -294,8 +299,9 @@ class ContabilidadAppsIntegrationTest(TestCase):
     def test_contabilidad_app_permissions_integration(self):
         """Debe integrar permisos correctamente si los tiene"""
         try:
-            from apps.contabilidad import permissions
             from rest_framework import permissions as drf_permissions
+
+            from apps.contabilidad import permissions
 
             # Verificar que el módulo existe
             self.assertIsNotNone(permissions)
@@ -344,15 +350,15 @@ class ContabilidadAppsMetaTest(TestCase):
         """Debe declarar dependencias correctamente"""
         try:
             # Verificar importaciones principales
-            from apps.contabilidad import models, apps
+            from apps.contabilidad import apps, models
 
             # No deberían fallar las importaciones básicas
             self.assertIsNotNone(models)
             self.assertIsNotNone(apps)
 
             # Verificar dependencias de Django
-            from django.db import models as django_models
             from django.apps import AppConfig
+            from django.db import models as django_models
 
             self.assertIsNotNone(django_models)
             self.assertIsNotNone(AppConfig)
@@ -363,6 +369,7 @@ class ContabilidadAppsMetaTest(TestCase):
     def test_contabilidad_app_structure(self):
         """Debe tener estructura de archivos correcta"""
         import os
+
         import apps.contabilidad
 
         app_path = os.path.dirname(apps.contabilidad.__file__)

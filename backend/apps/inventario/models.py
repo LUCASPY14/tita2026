@@ -3,10 +3,11 @@ Modelos de la app inventario
 Gestión de stock, movimientos y costos con consistencia ACID
 """
 
-from django.db import models
-from django.core.validators import MinValueValidator
-from django.core.exceptions import ValidationError
 from decimal import Decimal
+
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from django.db import models
 
 
 class StockUnico(models.Model):
@@ -50,7 +51,7 @@ class StockUnico(models.Model):
         Returns:
             Decimal: Costo promedio o 0 si no hay compras
         """
-        from django.db.models import Sum, F
+        from django.db.models import F, Sum
 
         costos = CostosHistoricos.objects.filter(id_producto=self.id_producto).aggregate(
             total_monto=Sum(F("costo_unitario") * F("cantidad_comprada")),
@@ -84,9 +85,10 @@ class StockUnico(models.Model):
         Returns:
             int: Días estimados o None si no hay ventas
         """
-        from django.utils import timezone
         from datetime import timedelta
+
         from django.db.models import Sum
+        from django.utils import timezone
 
         # Ventas de últimos 30 días
         hace_30_dias = timezone.now() - timedelta(days=30)

@@ -1,21 +1,22 @@
 ﻿from django.contrib import admin
 from django.utils.html import format_html
+
 from .models import (
+    AlertaDestinatarios,
+    AlertasAutomaticas,
+    AlertasSistema,
+    AnomaliasDetectadas,
+    CampanasComunicacion,
+    EmailsEnviados,
+    HistorialAlertas,
     NotificacionesPortal,
     NotificacionesSaldo,
-    SolicitudesNotificacion,
-    PreferenciasNotificacion,
-    EmailsEnviados,
-    SmsEnviados,
     PlantillasEmail,
     PlantillasSms,
-    CampanasComunicacion,
-    AlertasAutomaticas,
-    AlertaDestinatarios,
-    AlertasSistema,
-    HistorialAlertas,
-    AnomaliasDetectadas,
+    PreferenciasNotificacion,
     RestriccionesHorarias,
+    SmsEnviados,
+    SolicitudesNotificacion,
 )
 
 # =============================================================================

@@ -6,10 +6,11 @@ Este módulo contiene validadores para todos los modelos del sistema de reportes
 incluyendo plantillas de reportes, dashboards, KPIs, tareas programadas y sus ejecuciones.
 """
 
-from django.core.exceptions import ValidationError
-from decimal import Decimal
-import re
 import json
+import re
+from decimal import Decimal
+
+from django.core.exceptions import ValidationError
 
 # =============================================================================
 # VALIDADORES - PLANTILLAS DE REPORTE

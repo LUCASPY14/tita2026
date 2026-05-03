@@ -5,13 +5,14 @@ Cubre validación, serialización y deserialización de datos
 
 from django.test import TestCase
 from django.utils import timezone
+
 from rest_framework.exceptions import ValidationError
 
-from apps.usuarios.models import Roles, Empleados, AuditoriaOperaciones
+from apps.usuarios.models import AuditoriaOperaciones, Empleados, Roles
 from apps.usuarios.serializers import (
-    RolesSerializer,
-    EmpleadosSerializer,
     AuditoriaOperacionesSerializer,
+    EmpleadosSerializer,
+    RolesSerializer,
 )
 
 

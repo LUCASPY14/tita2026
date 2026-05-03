@@ -3,7 +3,8 @@ Tests para apps.reportes.tasks — calcular_y_guardar_kpis_diarios
 """
 
 from decimal import Decimal
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
+
 from django.test import TestCase
 
 
@@ -52,7 +53,7 @@ class CalcularKpisDiariosTest(TestCase):
     @patch("apps.reportes.models.KpiMetricas")
     def test_get_or_create_kpi_metricas_crea_definiciones(self, mock_kpi_class):
         """_get_or_create_kpi_metricas llama get_or_create por cada definición."""
-        from apps.reportes.tasks import _get_or_create_kpi_metricas, KPI_DEFINITIONS
+        from apps.reportes.tasks import KPI_DEFINITIONS, _get_or_create_kpi_metricas
 
         mock_kpi = MagicMock()
         mock_kpi.id_kpi = 99

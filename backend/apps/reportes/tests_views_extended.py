@@ -35,19 +35,21 @@ Missing lines targeted:
 - 429: EjecucionesTareaViewSet.logs
 """
 
-from django.utils import timezone
-from rest_framework.test import APITestCase
-from rest_framework import status
-from django.contrib.auth.models import User
-from django.urls import reverse
 from unittest.mock import patch
 
+from django.contrib.auth.models import User
+from django.urls import reverse
+from django.utils import timezone
+
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from apps.reportes.models import (
-    PlantillasReporte,
     Dashboards,
-    KpiMetricas,
-    PlantillasTarea,
     EjecucionesTarea,
+    KpiMetricas,
+    PlantillasReporte,
+    PlantillasTarea,
 )
 
 
@@ -480,7 +482,7 @@ class DashboardsActionsTest(BaseReportesExtTest):
 
     def setUp(self):
         super().setUp()
-        from apps.usuarios.models import Roles, Empleados
+        from apps.usuarios.models import Empleados, Roles
 
         rol, _ = Roles.objects.get_or_create(nombre_rol="TestDashboardRol")
         empleado, _ = Empleados.objects.get_or_create(

@@ -3,25 +3,26 @@ Servicio de autenticación de dos factores (2FA) con TOTP
 Implementa Google Authenticator compatible
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Optional
-import pyotp
-import qrcode
-import io
 import base64
-import secrets
+import io
 import json
+import secrets
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
 
 from django.db import transaction
 from django.utils import timezone
+
+import pyotp
+import qrcode
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.usuarios.models import (
-    Empleados,
-    UsuariosPortal,
-    Autenticacion2Fa,
-    Intentos2Fa,
     AuditoriaOperaciones,
+    Autenticacion2Fa,
+    Empleados,
+    Intentos2Fa,
+    UsuariosPortal,
 )
 
 

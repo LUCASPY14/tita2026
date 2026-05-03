@@ -4,7 +4,7 @@ Targeting missing lines: 75, 78, 117-142, 218-220, 251-278, 330
 """
 
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
 

@@ -3,8 +3,8 @@ Tests para apps.py de api_integrations
 Cubre configuración de aplicación Django y funcionalidad de apps
 """
 
-from django.test import TestCase
 from django.apps import apps
+from django.test import TestCase
 from django.test.utils import override_settings
 
 from apps.api_integrations.apps import ApiIntegrationsConfig
@@ -267,6 +267,7 @@ class ApiIntegrationsAppIntegrationTest(TestCase):
 
             # Verificar que no hay errores relacionados con signals
             from django.db import models
+
             from apps.api_integrations.models import ProveedoresApi
 
             # Crear instancia de prueba para verificar signals
@@ -293,12 +294,13 @@ class ApiIntegrationsAppIntegrationTest(TestCase):
     def test_app_admin_integration(self):
         """Debe integrar con Django admin correctamente"""
         from django.contrib import admin
+
         from apps.api_integrations.models import (
-            ProveedoresApi,
+            CredencialesApi,
             EndpointsApi,
             LogsLlamadasApi,
-            CredencialesApi,
             LogsWebhooks,
+            ProveedoresApi,
             WebhookEndpoints,
         )
 
@@ -342,8 +344,8 @@ class ApiIntegrationsAppIntegrationTest(TestCase):
     def test_app_middleware_compatibility(self):
         """Debe ser compatible con middleware del proyecto"""
         # Verificar que la app funciona con middleware común
-        from django.test import RequestFactory
         from django.contrib.auth.models import AnonymousUser
+        from django.test import RequestFactory
 
         factory = RequestFactory()
         request = factory.get("/")

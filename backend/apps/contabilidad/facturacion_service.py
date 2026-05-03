@@ -89,8 +89,8 @@ class FacturacionService:
         Ventas incluidas: genera_factura_legal=True, pagadas, sin documento.
         Almuerzos incluidos: con monto_pagado > 0, sin documento.
         """
-        from apps.ventas.models import Ventas
         from apps.almuerzos.models import CuentasAlmuerzoMensual
+        from apps.ventas.models import Ventas
 
         ventas_qs = (
             Ventas.objects.filter(
@@ -174,9 +174,9 @@ class FacturacionService:
         Raises:
             ValueError: nro fuera de rango, ya utilizado, sin timbrado
         """
-        from apps.ventas.models import Ventas
         from apps.almuerzos.models import CuentasAlmuerzoMensual
         from apps.clientes.models import Clientes
+        from apps.ventas.models import Ventas
 
         hoy = datetime.now().date()
 
@@ -250,8 +250,8 @@ class FacturacionService:
         Anula un documento: desvincula ventas y almuerzos para que vuelvan a la cola.
         El registro del documento queda con tipo_documento='Factura-Anulada'.
         """
-        from apps.ventas.models import Ventas
         from apps.almuerzos.models import CuentasAlmuerzoMensual
+        from apps.ventas.models import Ventas
 
         with transaction.atomic():
             doc = DocumentosTributarios.objects.select_for_update().get(pk=id_documento)
@@ -268,9 +268,9 @@ class FacturacionService:
         Genera texto de 80 columnas para la Epson LX-50 (texto plano, sin ESC/P especial).
         Devuelve string listo para enviar como text/plain.
         """
-        from apps.ventas.models import Ventas
         from apps.almuerzos.models import CuentasAlmuerzoMensual
         from apps.contabilidad.models import DatosEmpresa
+        from apps.ventas.models import Ventas
 
         doc = DocumentosTributarios.objects.select_related("nro_timbrado__id_punto", "id_cliente").get(pk=id_documento)
         timbrado = doc.nro_timbrado

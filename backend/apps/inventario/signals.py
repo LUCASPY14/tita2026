@@ -3,23 +3,25 @@ Signals para el módulo de inventario
 Actualización automática de stock con consistencia ACID y manejo de concurrencia
 """
 
+from datetime import timedelta
+from decimal import Decimal
+
+from django.db import transaction
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from django.db import transaction
 from django.utils import timezone
-from decimal import Decimal
-from datetime import timedelta
+
+from apps.compras.models import Compras, DetallesCompra
+from apps.ventas.models import DetallesVenta, Ventas
 
 from .models import (
-    StockUnico,
-    MovimientosStock,
     AlertasStock,
+    AlertasVencimiento,
     CostosHistoricos,
     LotesProducto,
-    AlertasVencimiento,
+    MovimientosStock,
+    StockUnico,
 )
-from apps.compras.models import DetallesCompra, Compras
-from apps.ventas.models import DetallesVenta, Ventas
 
 
 @receiver(post_save, sender=Compras)
@@ -244,7 +246,7 @@ def enviar_notificacion_alerta(sender, instance, created, **kwargs):
         return
 
     try:
-        from apps.notificaciones.models import NotificacionesPortal, EmailsEnviados
+        from apps.notificaciones.models import EmailsEnviados, NotificacionesPortal
         from apps.usuarios.models import Empleados, Roles
 
         # Determinar prioridad y mensaje según tipo
@@ -425,7 +427,7 @@ def enviar_notificacion_vencimiento(sender, instance, created, **kwargs):
         return
 
     try:
-        from apps.notificaciones.models import NotificacionesPortal, EmailsEnviados
+        from apps.notificaciones.models import EmailsEnviados, NotificacionesPortal
         from apps.usuarios.models import Empleados, Roles
 
         # Determinar urgencia según tipo de alerta

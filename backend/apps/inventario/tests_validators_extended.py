@@ -10,10 +10,11 @@ Missing lines (at baseline 84.62%):
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-import pytest
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
+
+import pytest
 
 from apps.inventario.validators import (
     validar_cantidad_ajuste,

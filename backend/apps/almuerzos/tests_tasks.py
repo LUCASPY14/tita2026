@@ -5,7 +5,8 @@ Nota: las tareas usan imports lazy (dentro del body de la función),
 por lo que el patch target es el módulo fuente, no apps.almuerzos.tasks.
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from django.test import TestCase
 
 
@@ -85,8 +86,9 @@ class AlertarCuentasVencidasTest(TestCase):
     @patch("apps.almuerzos.models.CuentasAlmuerzoMensual")
     def test_crea_alertas_para_cuentas_pendientes_de_meses_anteriores(self, mock_cuentas, mock_alertas):
         """Crea AlertasSistema para cada cuenta vencida sin alerta previa."""
-        from apps.almuerzos.tasks import alertar_cuentas_vencidas
         from decimal import Decimal
+
+        from apps.almuerzos.tasks import alertar_cuentas_vencidas
 
         cuenta = MagicMock()
         cuenta.pk = 10

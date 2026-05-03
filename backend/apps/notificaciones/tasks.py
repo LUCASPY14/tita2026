@@ -10,11 +10,13 @@ Este módulo contiene tasks asíncronas para:
 Se ejecutan vía Celery Beat (programadas) o manual
 """
 
-from celery import shared_task
-from decimal import Decimal
-from datetime import timedelta
-from django.utils import timezone
 import logging
+from datetime import timedelta
+from decimal import Decimal
+
+from django.utils import timezone
+
+from celery import shared_task
 
 from apps.notificaciones.services import NotificacionService
 from apps.notificaciones.services.email_service import EmailService

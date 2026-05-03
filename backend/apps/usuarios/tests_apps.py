@@ -3,8 +3,8 @@ Tests para configuración de aplicación usuarios
 Cubre UsuariosConfig y setup de la app Django
 """
 
-from django.test import TestCase
 from django.apps import apps
+from django.test import TestCase
 
 from apps.usuarios.apps import UsuariosConfig
 

@@ -4,23 +4,24 @@ Covers all custom display methods across 6 admin classes.
 """
 
 from unittest.mock import MagicMock, patch
-from django.test import TestCase
+
 from django.contrib.admin.sites import AdminSite
+from django.test import TestCase
 
 from apps.api_integrations.admin import (
-    ProveedoresApiAdmin,
+    CredencialesApiAdmin,
     EndpointsApiAdmin,
     LogsLlamadasApiAdmin,
-    CredencialesApiAdmin,
     LogsWebhooksAdmin,
+    ProveedoresApiAdmin,
     WebhookEndpointsAdmin,
 )
 from apps.api_integrations.models import (
-    ProveedoresApi,
+    CredencialesApi,
     EndpointsApi,
     LogsLlamadasApi,
-    CredencialesApi,
     LogsWebhooks,
+    ProveedoresApi,
     WebhookEndpoints,
 )
 

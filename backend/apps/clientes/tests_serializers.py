@@ -3,12 +3,15 @@ Tests para serializers de la app clientes
 Sprint 2 - Backend Coverage Improvement
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
+
+from apps.productos.models import ListasPrecios
+
 from .models import Clientes, Hijos, TiposCliente
 from .serializers import ClientesSerializer, HijosSerializer
-from apps.productos.models import ListasPrecios
 
 
 class ClientesSerializerTest(TestCase):

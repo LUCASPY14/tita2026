@@ -7,14 +7,14 @@ Cubre líneas faltantes:
 """
 
 from datetime import datetime
-from unittest.mock import patch, MagicMock
 from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 from django.utils import timezone
 
-from apps.core.models import CargasSaldo, Tarjetas, ConsumosTarjeta
-from apps.clientes.models import Clientes, TiposCliente, Hijos
+from apps.clientes.models import Clientes, Hijos, TiposCliente
+from apps.core.models import CargasSaldo, ConsumosTarjeta, Tarjetas
 from apps.productos.models import ListasPrecios
 
 # ─── helpers ──────────────────────────────────────────────────────────────────

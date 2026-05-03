@@ -1,13 +1,14 @@
 ﻿from django.contrib import admin
 from django.utils.html import format_html
+
 from .models import (
-    PlantillasReporte,
     Dashboards,
-    KpiMetricas,
-    ValoresKpi,
-    PlantillasTarea,
-    EjecucionesTarea,
     DestinatariosTarea,
+    EjecucionesTarea,
+    KpiMetricas,
+    PlantillasReporte,
+    PlantillasTarea,
+    ValoresKpi,
 )
 
 # =============================================================================

@@ -2,12 +2,12 @@
 Tests para notificaciones/services/__init__.py (NotificacionService)
 """
 
-from unittest.mock import patch, MagicMock, PropertyMock
 from decimal import Decimal
+from unittest.mock import MagicMock, PropertyMock, patch
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
-from django.core.exceptions import ValidationError
 
 
 class NotificacionServiceImportTest(TestCase):
@@ -53,8 +53,8 @@ class NotificacionServiceSaldoBajoTest(TestCase):
     @patch("apps.notificaciones.services.NotificacionesSaldo.objects.create")
     @patch("apps.core.models.Tarjetas.objects.select_related")
     def test_tarjeta_no_existe(self, mock_select, mock_create):
-        from apps.notificaciones.services import NotificacionService
         from apps.core.models import Tarjetas
+        from apps.notificaciones.services import NotificacionService
 
         mock_chain = MagicMock()
         mock_chain.get.side_effect = Tarjetas.DoesNotExist()
@@ -126,8 +126,8 @@ class NotificacionServiceRecargaTest(TestCase):
 
     @patch("apps.core.models.CargasSaldo.objects.select_related")
     def test_recarga_no_existe(self, mock_select):
-        from apps.notificaciones.services import NotificacionService
         from apps.core.models import CargasSaldo
+        from apps.notificaciones.services import NotificacionService
 
         mock_chain = MagicMock()
         mock_chain.get.side_effect = CargasSaldo.DoesNotExist()
@@ -175,8 +175,8 @@ class NotificacionServiceConsumoTest(TestCase):
 
     @patch("apps.core.models.ConsumosTarjeta.objects.select_related")
     def test_consumo_no_existe(self, mock_select):
-        from apps.notificaciones.services import NotificacionService
         from apps.core.models import ConsumosTarjeta
+        from apps.notificaciones.services import NotificacionService
 
         mock_chain = MagicMock()
         mock_chain.get.side_effect = ConsumosTarjeta.DoesNotExist()
@@ -368,8 +368,9 @@ class NotificacionServiceConsumoExitosoTest(TestCase):
     @patch("apps.notificaciones.services.UsuariosPortal.objects.get")
     @patch("apps.core.models.ConsumosTarjeta.objects.select_related")
     def test_consumo_exitoso_con_usuario_portal(self, mock_select, mock_usuario_get, mock_portal_create):
-        from apps.notificaciones.services import NotificacionService
         import django.utils.timezone as tz_module
+
+        from apps.notificaciones.services import NotificacionService
 
         hijo_mock = MagicMock()
         hijo_mock.nombre = "Carlos"
@@ -403,9 +404,10 @@ class NotificacionServiceConsumoExitosoTest(TestCase):
     @patch("apps.notificaciones.services.UsuariosPortal.objects.get")
     @patch("apps.core.models.ConsumosTarjeta.objects.select_related")
     def test_consumo_sin_usuario_portal(self, mock_select, mock_usuario_get):
+        import django.utils.timezone as tz_module
+
         from apps.notificaciones.services import NotificacionService
         from apps.usuarios.models import UsuariosPortal
-        import django.utils.timezone as tz_module
 
         hijo_mock = MagicMock()
         hijo_mock.nombre = "Carlos"
@@ -580,8 +582,8 @@ class NotificacionServiceMarcarLeidaTest(TestCase):
 
     @patch("apps.notificaciones.services.NotificacionesPortal.objects.get")
     def test_marcar_portal_no_existe_raises(self, mock_get):
-        from apps.notificaciones.services import NotificacionService
         from apps.notificaciones.models import NotificacionesPortal
+        from apps.notificaciones.services import NotificacionService
 
         mock_get.side_effect = NotificacionesPortal.DoesNotExist()
 
@@ -590,8 +592,8 @@ class NotificacionServiceMarcarLeidaTest(TestCase):
 
     @patch("apps.notificaciones.services.NotificacionesSaldo.objects.get")
     def test_marcar_saldo_no_existe_raises(self, mock_get):
-        from apps.notificaciones.services import NotificacionService
         from apps.notificaciones.models import NotificacionesSaldo
+        from apps.notificaciones.services import NotificacionService
 
         mock_get.side_effect = NotificacionesSaldo.DoesNotExist()
 
@@ -691,8 +693,9 @@ class NotificacionServiceRecargaSinIdEncontradoTest(TestCase):
     @patch("apps.core.models.CargasSaldo.objects.select_related")
     def test_sin_id_portal_pero_encontrado_en_db(self, mock_select, mock_usuario_get, mock_portal_create):
         """Line 234: id_usuario_portal not provided, but UsuariosPortal.get succeeds."""
-        from apps.notificaciones.services import NotificacionService
         import django.utils.timezone as tz_module
+
+        from apps.notificaciones.services import NotificacionService
 
         hijo_mock = MagicMock()
         hijo_mock.nombre = "Ana"
@@ -737,8 +740,9 @@ class NotificacionServiceConsumoPortalEncontradoTest(TestCase):
     @patch("apps.core.models.ConsumosTarjeta.objects.select_related")
     def test_sin_id_portal_pero_encontrado_en_db(self, mock_select, mock_usuario_get, mock_portal_create):
         """Line 314: id_usuario_portal not provided, but UsuariosPortal.get succeeds."""
-        from apps.notificaciones.services import NotificacionService
         import django.utils.timezone as tz_module
+
+        from apps.notificaciones.services import NotificacionService
 
         hijo_mock = MagicMock()
         hijo_mock.nombre = "Carlos"
@@ -775,8 +779,9 @@ class NotificacionServiceConsumoPortalEncontradoTest(TestCase):
     @patch("apps.core.models.ConsumosTarjeta.objects.select_related")
     def test_consumo_excepcion_inesperada_raises(self, mock_select, mock_usuario_get, mock_portal_create):
         """Lines 338-340: outer except Exception in enviar_notificacion_consumo."""
-        from apps.notificaciones.services import NotificacionService
         import django.utils.timezone as tz_module
+
+        from apps.notificaciones.services import NotificacionService
 
         hijo_mock = MagicMock()
         hijo_mock.nombre = "Carlos"

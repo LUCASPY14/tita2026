@@ -1,30 +1,33 @@
-﻿from rest_framework import viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
+﻿from datetime import date, datetime
+from decimal import Decimal
+
 from django.db import transaction
 from django.db.models import F, Q
-from datetime import datetime, date
-from decimal import Decimal
+
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.response import Response
+
 from .models import (
-    PlanesAlmuerzo,
-    TiposAlmuerzo,
-    SuscripcionesAlmuerzo,
-    RegistrosConsumoAlmuerzo,
     Alergenos,
     CuentasAlmuerzoMensual,
+    PlanesAlmuerzo,
     PrecioAlmuerzo,
+    RegistrosConsumoAlmuerzo,
+    SuscripcionesAlmuerzo,
+    TiposAlmuerzo,
 )
 from .serializers import (
-    PlanesAlmuerzoSerializer,
-    TiposAlmuerzoSerializer,
-    SuscripcionesAlmuerzoSerializer,
-    RegistrosConsumoAlmuerzoSerializer,
     AlergenosSerializer,
     CuentasAlmuerzoMensualSerializer,
+    PlanesAlmuerzoSerializer,
     PrecioAlmuerzoSerializer,
+    RegistrosConsumoAlmuerzoSerializer,
+    SuscripcionesAlmuerzoSerializer,
+    TiposAlmuerzoSerializer,
 )
 
 
@@ -378,12 +381,13 @@ class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
         - Crea un DocumentosTributarios con tipo 'Factura'.
         - Actualiza la cuenta con id_documento + nro_comprobante.
         """
-        from apps.contabilidad.models import Timbrados, DocumentosTributarios
+        from django.db.models import Max
+
+        from apps.contabilidad.models import DocumentosTributarios, Timbrados
         from apps.contabilidad.serializers import (
             DocumentosTributariosSerializer,
             TimbradoSerializer,
         )
-        from django.db.models import Max
 
         cuenta = self.get_object()
 

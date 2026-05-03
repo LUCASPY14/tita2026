@@ -11,9 +11,10 @@ Covers missing lines:
 """
 
 from datetime import date
-from unittest.mock import patch, MagicMock
-from django.test import TestCase
+from unittest.mock import MagicMock, patch
+
 from django.core.exceptions import ValidationError
+from django.test import TestCase
 
 from apps.reportes.services import ReporteService
 

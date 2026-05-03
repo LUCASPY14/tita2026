@@ -4,20 +4,21 @@ Cubre la lógica de negocio para generación de reportes y dashboards
 """
 
 import time
-from decimal import Decimal
 from datetime import date, datetime, timedelta
+from decimal import Decimal
+from unittest.mock import Mock, patch
+
+from django.db.models import Q
 from django.test import TestCase
 from django.utils import timezone
-from django.db.models import Q
-from unittest.mock import patch, Mock
 
+from apps.core.models import CargasSaldo, ConsumosTarjeta, MediosPago, Tarjetas
+from apps.inventario.models import StockUnico
+from apps.productos.models import Categorias, Productos
 from apps.reportes.services import ReporteService
 from apps.reportes.services.dashboard_service import DashboardService
 from apps.usuarios.models import Empleados, Roles
-from apps.ventas.models import Ventas, DetallesVenta
-from apps.productos.models import Productos, Categorias
-from apps.core.models import CargasSaldo, Tarjetas, MediosPago, ConsumosTarjeta
-from apps.inventario.models import StockUnico
+from apps.ventas.models import DetallesVenta, Ventas
 
 
 class BaseReportesServiceTest(TestCase):

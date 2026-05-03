@@ -14,12 +14,13 @@ Configuración en settings.py:
 Autor: Cantina Tita Development Team
 """
 
+import logging
 from decimal import Decimal
 from typing import Dict, Optional
-import logging
-import requests
 
 from django.conf import settings
+
+import requests
 
 logger = logging.getLogger(__name__)
 

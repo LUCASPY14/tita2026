@@ -3,9 +3,10 @@ Servicios de autorizaciÃ³n y control de lÃ­mites
 LÃ³gica centralizada para verificar autorizaciones de operaciones
 """
 
-from django.core.exceptions import ValidationError
 from decimal import Decimal
 from typing import Dict
+
+from django.core.exceptions import ValidationError
 
 from .models import LimitesTransaccion, RegistroAutorizaciones
 
@@ -278,6 +279,7 @@ class RecargaService:
         Formato: REF-YYYYMMDD-NNNNN
         """
         from django.utils import timezone
+
         from apps.core.models import CargasSaldo
 
         now = timezone.now()
@@ -314,8 +316,9 @@ class RecargaService:
         Returns:
             True si ya existe (duplicado), False si es nuevo
         """
-        from apps.core.models import CargasSaldo
         from django.db.models import Q
+
+        from apps.core.models import CargasSaldo
 
         filtro = Q()
 
@@ -342,8 +345,9 @@ class RecargaService:
             dict con resultado de la operaciÃ³n
         """
         from django.db import transaction
-        from apps.core.models import Tarjetas, ConsumosTarjeta
         from django.utils import timezone
+
+        from apps.core.models import ConsumosTarjeta, Tarjetas
 
         with transaction.atomic():
             # Obtener tarjeta con lock
@@ -385,9 +389,10 @@ class RecargaService:
         Returns:
             dict con informaciÃ³n de la factura generada
         """
-        from apps.ventas.models import Ventas, DetallesVenta
-        from apps.productos.models import Productos
         from django.utils import timezone
+
+        from apps.productos.models import Productos
+        from apps.ventas.models import DetallesVenta, Ventas
 
         # Buscar o crear producto "Recarga de Saldo"
         producto_recarga, created = Productos.objects.get_or_create(
@@ -460,11 +465,12 @@ class RecargaService:
         Returns:
             dict con resultado completo
         """
-        from apps.core.models import CargasSaldo, Tarjetas
-        from apps.clientes.models import Hijos
-        from apps.usuarios.models import Empleados
-        from django.utils import timezone
         from django.db import transaction
+        from django.utils import timezone
+
+        from apps.clientes.models import Hijos
+        from apps.core.models import CargasSaldo, Tarjetas
+        from apps.usuarios.models import Empleados
 
         # Calcular montos
         montos = cls.calcular_montos(monto, metodo_pago)
@@ -521,9 +527,10 @@ class RecargaService:
         Returns:
             dict con cÃ³digo de referencia y datos bancarios
         """
-        from apps.core.models import CargasSaldo, Tarjetas
-        from apps.clientes.models import Hijos
         from django.utils import timezone
+
+        from apps.clientes.models import Hijos
+        from apps.core.models import CargasSaldo, Tarjetas
 
         # Generar cÃ³digo Ãºnico
         codigo_ref = cls.generar_codigo_referencia()
@@ -589,11 +596,12 @@ class RecargaService:
         Returns:
             dict con resultado de validaciÃ³n
         """
-        from apps.core.models import CargasSaldo, Tarjetas
-        from apps.clientes.models import Hijos
-        from apps.usuarios.models import Empleados
-        from django.utils import timezone
         from django.db import transaction
+        from django.utils import timezone
+
+        from apps.clientes.models import Hijos
+        from apps.core.models import CargasSaldo, Tarjetas
+        from apps.usuarios.models import Empleados
 
         # Validar idempotencia
         if cls.validar_idempotencia(numero_comprobante=numero_comprobante):
@@ -694,10 +702,11 @@ class RecargaService:
         Returns:
             dict con resultado
         """
+        from django.db import transaction
+        from django.utils import timezone
+
         from apps.core.models import CargasSaldo
         from apps.usuarios.models import Empleados
-        from django.utils import timezone
-        from django.db import transaction
 
         supervisor = Empleados.objects.get(id_empleado=supervisor_id)
 

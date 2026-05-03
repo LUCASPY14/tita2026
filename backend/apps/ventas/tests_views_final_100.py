@@ -14,21 +14,23 @@ Target missing lines:
 """
 
 from decimal import Decimal
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient
-from rest_framework.exceptions import ValidationError
 
-from apps.clientes.models import Clientes, TiposCliente, Hijos
-from apps.core.models import MediosPago, Tarjetas
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
+from rest_framework.test import APIClient
+
+from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.contabilidad.models import Impuestos
+from apps.core.models import MediosPago, Tarjetas
 from apps.inventario.models import StockUnico
-from apps.productos.models import Productos, Categorias, UnidadesMedida, PreciosPorLista, ListasPrecios
+from apps.productos.models import Categorias, ListasPrecios, PreciosPorLista, Productos, UnidadesMedida
 from apps.usuarios.models import Empleados, Roles
-from apps.ventas.models import Ventas, DetallesVenta, PagosVenta
+from apps.ventas.models import DetallesVenta, PagosVenta, Ventas
 from apps.ventas.views import VentasViewSet
 
 

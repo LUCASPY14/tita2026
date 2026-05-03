@@ -10,16 +10,17 @@ Cubre líneas faltantes:
 356-372 (AjusteInventarioService.crear_ajuste)
 """
 
-from django.test import TestCase, TransactionTestCase
-from django.core.exceptions import ValidationError
-from django.utils import timezone
 from decimal import Decimal
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from apps.inventario.models import StockUnico, MovimientosStock, AjustesInventario, DetallesAjuste
-from apps.inventario.services import StockService, AjusteInventarioService
-from apps.productos.models import Productos, Categorias, UnidadesMedida
+from django.core.exceptions import ValidationError
+from django.test import TestCase, TransactionTestCase
+from django.utils import timezone
+
 from apps.contabilidad.models import Impuestos
+from apps.inventario.models import AjustesInventario, DetallesAjuste, MovimientosStock, StockUnico
+from apps.inventario.services import AjusteInventarioService, StockService
+from apps.productos.models import Categorias, Productos, UnidadesMedida
 from apps.usuarios.models import Empleados, Roles
 
 

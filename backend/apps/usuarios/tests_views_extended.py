@@ -5,25 +5,26 @@ Cubre: AuthViewSet, TwoFactorViewSet, SesionesViewSet, PasswordRecoveryViewSet,
        AuditoriaOperacionesViewSet custom actions
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.utils import timezone
-from django.contrib.auth.models import User
-from rest_framework.test import APITestCase, APIRequestFactory
-from rest_framework.test import force_authenticate
-from rest_framework import status
 
-from apps.usuarios.models import Roles, Empleados, AuditoriaOperaciones
+from rest_framework import status
+from rest_framework.test import APIRequestFactory, APITestCase, force_authenticate
+
+from apps.usuarios.models import AuditoriaOperaciones, Empleados, Roles
 from apps.usuarios.permissions import Permisos
 from apps.usuarios.views import (
+    AuditoriaOperacionesViewSet,
     AuthViewSet,
-    TwoFactorViewSet,
-    SesionesViewSet,
+    EmpleadosViewSet,
     PasswordRecoveryViewSet,
     PermisosViewSet,
     RolesViewSet,
-    EmpleadosViewSet,
-    AuditoriaOperacionesViewSet,
+    SesionesViewSet,
+    TwoFactorViewSet,
 )
 
 

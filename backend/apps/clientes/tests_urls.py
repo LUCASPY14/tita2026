@@ -3,16 +3,18 @@ Tests para URLs de clientes
 Cubre configuración de rutas y patrones URL para el módulo de clientes
 """
 
-from django.test import TestCase
-from django.urls import reverse, resolve, NoReverseMatch
-from django.conf import settings
-from rest_framework.test import APITestCase, APIClient
-from rest_framework import status
 from unittest.mock import patch
 
-from apps.clientes.views import ClientesViewSet, HijosViewSet
-from apps.clientes.models import Clientes, TiposCliente, Hijos, Grados
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import NoReverseMatch, resolve, reverse
+
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
+
+from apps.clientes.models import Clientes, Grados, Hijos, TiposCliente
+from apps.clientes.views import ClientesViewSet, HijosViewSet
 
 User = get_user_model()
 
@@ -418,8 +420,9 @@ class ClientesUrlsModuleImportTest(TestCase):
         self.assertIsInstance(clientes_urls.urlpatterns, list)
 
     def test_router_registrado(self):
-        from apps.clientes import urls as clientes_urls
         from rest_framework.routers import DefaultRouter
+
+        from apps.clientes import urls as clientes_urls
 
         self.assertIsInstance(clientes_urls.router, DefaultRouter)
 

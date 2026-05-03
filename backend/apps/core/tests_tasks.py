@@ -4,8 +4,8 @@ Covers all 4 Celery tasks (73 stmts, 0% coverage in baseline)
 Uses CELERY_TASK_ALWAYS_EAGER for synchronous execution.
 """
 
-from unittest.mock import patch, Mock, MagicMock
 from decimal import Decimal
+from unittest.mock import MagicMock, Mock, patch
 
 from django.test import TestCase, override_settings
 

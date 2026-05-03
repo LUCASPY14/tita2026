@@ -3,23 +3,24 @@ Tests para admin de reportes
 Cubre interfaces administrativas y funcionalidad de gestión de reportes
 """
 
-from django.test import TestCase, Client
+import json
+from datetime import date, timedelta
+from unittest.mock import Mock, patch
+
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
-from datetime import date, timedelta
-from unittest.mock import patch, Mock
-import json
 
 from apps.reportes.models import (
-    PlantillasReporte,
     Dashboards,
-    KpiMetricas,
-    ValoresKpi,
-    PlantillasTarea,
-    EjecucionesTarea,
     DestinatariosTarea,
+    EjecucionesTarea,
+    KpiMetricas,
+    PlantillasReporte,
+    PlantillasTarea,
+    ValoresKpi,
 )
 from apps.usuarios.models import Empleados, Roles
 

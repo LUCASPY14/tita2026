@@ -12,16 +12,19 @@ Cobertura de líneas:
 - L601: Branch de primer registro del día
 """
 
-import pytest
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
-from apps.almuerzos.validators import (
-    validar_precio_unitario_tipo,
-    validar_limite_registros_diarios,
-    determinar_si_cobra,
-)
+
+import pytest
+
 from apps.almuerzos.models import RegistrosConsumoAlmuerzo
+from apps.almuerzos.validators import (
+    determinar_si_cobra,
+    validar_limite_registros_diarios,
+    validar_precio_unitario_tipo,
+)
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios
 

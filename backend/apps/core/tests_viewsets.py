@@ -9,23 +9,25 @@ Este módulo contiene tests para:
 Cobertura: 5 custom actions + 15 endpoints CRUD
 """
 
-from django.test import TestCase, TransactionTestCase
-from rest_framework.test import APIClient, APIRequestFactory
-from rest_framework import status
-from decimal import Decimal
-from unittest.mock import patch, MagicMock
 from datetime import date, datetime, timedelta
+from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
+from django.test import TestCase, TransactionTestCase
+
+from rest_framework import status
+from rest_framework.test import APIClient, APIRequestFactory
+
+from apps.clientes.models import Clientes, Hijos
 from apps.core.models import (
-    Tarjetas,
     CargasSaldo,
+    ConfiguracionSistema,
     ConsumosTarjeta,
     MediosPago,
-    ConfiguracionSistema,
+    Tarjetas,
 )
 from apps.core.views import CargasSaldoViewSet
-from apps.clientes.models import Hijos, Clientes
 from apps.usuarios.models import Empleados
 
 # =============================================================================
@@ -38,8 +40,8 @@ class RecargaCajaActionTest(TransactionTestCase):
 
     def setUp(self):
         """Setup común para todos los tests"""
-        from apps.productos.models import ListasPrecios
         from apps.clientes.models import TiposCliente
+        from apps.productos.models import ListasPrecios
         from apps.usuarios.models import Roles
 
         self.client = APIClient()
@@ -186,8 +188,8 @@ class GenerarReferenciaTransferenciaActionTest(TestCase):
 
     def setUp(self):
         """Setup común"""
-        from apps.productos.models import ListasPrecios
         from apps.clientes.models import TiposCliente
+        from apps.productos.models import ListasPrecios
 
         self.client = APIClient()
 
@@ -281,8 +283,8 @@ class ValidarTransferenciaActionTest(TransactionTestCase):
 
     def setUp(self):
         """Setup común"""
-        from apps.productos.models import ListasPrecios
         from apps.clientes.models import TiposCliente
+        from apps.productos.models import ListasPrecios
 
         self.client = APIClient()
 
@@ -479,8 +481,8 @@ class AprobarSupervisorActionTest(TransactionTestCase):
 
     def setUp(self):
         """Setup común"""
-        from apps.productos.models import ListasPrecios
         from apps.clientes.models import TiposCliente
+        from apps.productos.models import ListasPrecios
 
         self.client = APIClient()
 
@@ -604,8 +606,8 @@ class IniciarRecargaBancardActionTest(TestCase):
 
     def setUp(self):
         """Setup común"""
-        from apps.productos.models import ListasPrecios
         from apps.clientes.models import TiposCliente
+        from apps.productos.models import ListasPrecios
 
         self.client = APIClient()
 

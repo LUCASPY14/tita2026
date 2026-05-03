@@ -13,13 +13,15 @@ Modelos soportados:
 - Detección de outliers
 """
 
-import numpy as np
-from decimal import Decimal
-from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
-from django.utils import timezone
-from django.db.models import Sum, Avg, Count, Q
+from decimal import Decimal
+from typing import Dict, List, Optional, Tuple
+
 from django.core.cache import cache
+from django.db.models import Avg, Count, Q, Sum
+from django.utils import timezone
+
+import numpy as np
 
 
 class StockForecastingService:

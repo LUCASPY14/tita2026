@@ -1,14 +1,15 @@
 from django.contrib import admin
 from django.utils.html import format_html
+
 from .models import (
-    StockUnico,
-    MovimientosStock,
     AjustesInventario,
-    DetallesAjuste,
-    CostosHistoricos,
     AlertasStock,
-    LotesProducto,
     AlertasVencimiento,
+    CostosHistoricos,
+    DetallesAjuste,
+    LotesProducto,
+    MovimientosStock,
+    StockUnico,
 )
 
 

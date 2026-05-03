@@ -4,26 +4,27 @@ Covers all custom display methods across 7 admin classes.
 """
 
 from unittest.mock import MagicMock, patch
-from django.test import TestCase
+
 from django.contrib.admin.sites import AdminSite
+from django.test import TestCase
 
 from apps.reportes.admin import (
-    PlantillasReporteAdmin,
     DashboardsAdmin,
-    KpiMetricasAdmin,
-    ValoresKpiAdmin,
-    PlantillasTareaAdmin,
-    EjecucionesTareaAdmin,
     DestinatariosTareaAdmin,
+    EjecucionesTareaAdmin,
+    KpiMetricasAdmin,
+    PlantillasReporteAdmin,
+    PlantillasTareaAdmin,
+    ValoresKpiAdmin,
 )
 from apps.reportes.models import (
-    PlantillasReporte,
     Dashboards,
-    KpiMetricas,
-    ValoresKpi,
-    PlantillasTarea,
-    EjecucionesTarea,
     DestinatariosTarea,
+    EjecucionesTarea,
+    KpiMetricas,
+    PlantillasReporte,
+    PlantillasTarea,
+    ValoresKpi,
 )
 
 _plain_format_html = lambda fmt, *a, **k: fmt.format(*a, **k)

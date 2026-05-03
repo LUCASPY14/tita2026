@@ -3,35 +3,37 @@ Tests extendidos para serializers de reportes
 Cubre rutas de código no cubiertas por tests_serializers.py
 """
 
-from decimal import Decimal
 from datetime import date, datetime, timedelta
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
+from decimal import Decimal
+from unittest.mock import MagicMock, Mock, PropertyMock, patch
+
 from django.test import TestCase
 from django.utils import timezone
+
 from rest_framework.exceptions import ValidationError
 
+from apps.reportes.models import (
+    Dashboards,
+    DestinatariosTarea,
+    EjecucionesTarea,
+    KpiMetricas,
+    PlantillasReporte,
+    PlantillasTarea,
+    ValoresKpi,
+)
 from apps.reportes.serializers import (
     ConfiguracionJSONField,
-    PlantillasReporteSerializer,
-    PlantillasReporteListSerializer,
-    DashboardsSerializer,
-    KpiMetricasSerializer,
-    ValoresKpiSerializer,
-    PlantillasTareaSerializer,
-    EjecucionesTareaSerializer,
-    DestinatariosTareaSerializer,
-    ReporteVentasRequestSerializer,
-    ReporteFinancieroRequestSerializer,
     DashboardRequestSerializer,
-)
-from apps.reportes.models import (
-    PlantillasReporte,
-    Dashboards,
-    KpiMetricas,
-    ValoresKpi,
-    PlantillasTarea,
-    EjecucionesTarea,
-    DestinatariosTarea,
+    DashboardsSerializer,
+    DestinatariosTareaSerializer,
+    EjecucionesTareaSerializer,
+    KpiMetricasSerializer,
+    PlantillasReporteListSerializer,
+    PlantillasReporteSerializer,
+    PlantillasTareaSerializer,
+    ReporteFinancieroRequestSerializer,
+    ReporteVentasRequestSerializer,
+    ValoresKpiSerializer,
 )
 from apps.usuarios.models import Empleados, Roles
 

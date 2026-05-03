@@ -13,20 +13,22 @@ Endpoints disponibles:
 - /api/v1/reportes/dashboard-financiero/
 """
 
-from rest_framework import viewsets, status
+from datetime import date, datetime
+
+from django.utils.dateparse import parse_date
+
+from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from datetime import date, datetime
-from django.utils.dateparse import parse_date
 
-from .models import PlantillasReporte, Dashboards, KpiMetricas, PlantillasTarea, EjecucionesTarea
+from .models import Dashboards, EjecucionesTarea, KpiMetricas, PlantillasReporte, PlantillasTarea
 from .serializers import (
-    PlantillasReporteSerializer,
     DashboardsSerializer,
-    KpiMetricasSerializer,
-    PlantillasTareaSerializer,
     EjecucionesTareaSerializer,
+    KpiMetricasSerializer,
+    PlantillasReporteSerializer,
+    PlantillasTareaSerializer,
 )
 from .services import ReporteService
 from .services.dashboard_service import DashboardService
@@ -521,7 +523,7 @@ class TareasProgradasViewSet(viewsets.ViewSet):
         Payload: { enabled: bool } o { minute, hour, day_of_week, day_of_month, month_of_year }
         """
         try:
-            from django_celery_beat.models import PeriodicTask, CrontabSchedule
+            from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
             task = PeriodicTask.objects.get(pk=pk)
 

@@ -3,11 +3,14 @@ Tests finales para alcanzar 100% cobertura en productos.models
 Cubre líneas: 17, 19, 53, 136, 148, 283, 319
 """
 
-from django.test import TestCase
 from decimal import Decimal
+
+from django.test import TestCase
 from django.utils import timezone
-from .models import Productos, Categorias, PreciosPorLista, HistoricoPrecios, ListasPrecios, UnidadesMedida
+
 from apps.contabilidad.models import Impuestos
+
+from .models import Categorias, HistoricoPrecios, ListasPrecios, PreciosPorLista, Productos, UnidadesMedida
 
 
 class ProductosManagerTest(TestCase):

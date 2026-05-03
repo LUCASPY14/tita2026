@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import PagosClientes, AplicacionPagosClientes
+
+from .models import AplicacionPagosClientes, PagosClientes
 
 
 @admin.register(PagosClientes)

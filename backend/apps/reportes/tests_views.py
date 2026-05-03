@@ -3,23 +3,25 @@ Tests para views de reportes
 Cubre ViewSets de reportes y dashboards
 """
 
-from decimal import Decimal
 from datetime import date, timedelta
+from decimal import Decimal
+from unittest.mock import Mock, patch
+
+from django.contrib.auth.models import User
 from django.test import TestCase
-from rest_framework.test import APITestCase, APIClient
-from rest_framework import status
 from django.urls import reverse
 from django.utils import timezone
-from django.contrib.auth.models import User
-from unittest.mock import patch, Mock
 
-from apps.reportes.views import ReportesViewSet
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
+
+from apps.core.models import CargasSaldo, MediosPago, Tarjetas
+from apps.productos.models import CategoriaProductos, Productos
 from apps.reportes.services import ReporteService
 from apps.reportes.services.dashboard_service import DashboardService
+from apps.reportes.views import ReportesViewSet
 from apps.usuarios.models import Empleados, Roles
-from apps.ventas.models import Ventas, DetallesVenta
-from apps.productos.models import Productos, CategoriaProductos
-from apps.core.models import CargasSaldo, Tarjetas, MediosPago
+from apps.ventas.models import DetallesVenta, Ventas
 
 
 class BaseReportesViewsTest(APITestCase):
@@ -574,8 +576,8 @@ class ReportesViewsIntegrationTest(BaseReportesViewsTest):
 
     def test_manejo_concurrencia_reportes(self):
         """Debe manejar múltiples requests concurrentes"""
-        from concurrent.futures import ThreadPoolExecutor
         import threading
+        from concurrent.futures import ThreadPoolExecutor
 
         def hacer_request_reporte():
             client = APIClient()

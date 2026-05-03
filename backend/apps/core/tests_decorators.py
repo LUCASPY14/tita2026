@@ -3,10 +3,9 @@ Tests para core/decorators.py
 Cubre admin_required, api_admin_required, staff_required
 """
 
-from django.test import TestCase, RequestFactory
-from django.contrib.auth.models import User
-from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth.models import AnonymousUser, User
 from django.http import JsonResponse
+from django.test import RequestFactory, TestCase
 
 
 class AdminRequiredDecoratorTest(TestCase):
@@ -81,16 +80,17 @@ class ApiAdminRequiredDecoratorTest(TestCase):
 
     def _wrap_for_drf(self, request):
         """Convierte el request de Django a un request compatible con DRF mock."""
-        from rest_framework.request import Request
         from rest_framework.parsers import JSONParser
+        from rest_framework.request import Request
 
         drf_request = Request(request, parsers=[JSONParser()])
         return drf_request
 
     def test_bloquea_usuario_sin_autenticar(self):
         """api_admin_required debe bloquear requests sin autenticar"""
-        from apps.core.decorators import api_admin_required
         from django.contrib.auth.models import AnonymousUser
+
+        from apps.core.decorators import api_admin_required
 
         @api_admin_required
         def api_view(request):
@@ -120,8 +120,9 @@ class ApiAdminRequiredDecoratorTest(TestCase):
 
     def test_permite_admin(self):
         """api_admin_required debe permitir usuarios con is_staff"""
-        from apps.core.decorators import api_admin_required
         from rest_framework.response import Response
+
+        from apps.core.decorators import api_admin_required
 
         @api_admin_required
         def api_view(request):

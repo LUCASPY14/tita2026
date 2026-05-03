@@ -3,12 +3,15 @@ Tests para modelos de la app core
 Sprint 2 - Backend Coverage Improvement
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
-from .models import Tarjetas, CargasSaldo
+
 from apps.clientes.models import Clientes, Hijos, TiposCliente
 from apps.productos.models import ListasPrecios
+
+from .models import CargasSaldo, Tarjetas
 
 
 class TarjetasModelTest(TestCase):

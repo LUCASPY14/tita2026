@@ -4,9 +4,11 @@ Cubre branches en ProductosManager._prepare_kwargs, precio_venta property,
 CategoriasManager, HistoricoPrecios.variacion_porcentual, y get_or_create.
 """
 
-import pytest
 from decimal import Decimal
+
 from django.test import TestCase
+
+import pytest
 
 
 @pytest.mark.django_db
@@ -39,8 +41,9 @@ class ProductosManagerBranchesTest(TestCase):
 
     def test_precio_venta_property_with_precio(self):
         """Branch 129->130: precio_venta True arm — producto HAS a precio → returns it."""
-        from apps.productos.models import Productos, PreciosPorLista, ListasPrecios
         from django.utils import timezone as tz
+
+        from apps.productos.models import ListasPrecios, PreciosPorLista, Productos
 
         p = Productos.objects.create(
             descripcion="Test_PrecioVenta_Branch",

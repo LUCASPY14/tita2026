@@ -3,17 +3,18 @@ Tests para Serializers de Ventas
 Objetivo: Aumentar cobertura de serializers de 0% a 40%+
 """
 
-from django.test import TestCase
-from django.utils import timezone
 from decimal import Decimal
 
-from apps.ventas.models import Ventas, DetallesVenta
-from apps.ventas.serializers import VentasSerializer, DetallesVentaSerializer
-from apps.core.models import MediosPago
+from django.test import TestCase
+from django.utils import timezone
+
 from apps.clientes.models import Clientes, TiposCliente
-from apps.productos.models import ListasPrecios, Productos, Categorias, UnidadesMedida
-from apps.usuarios.models import Empleados, Roles
 from apps.contabilidad.models import Impuestos
+from apps.core.models import MediosPago
+from apps.productos.models import Categorias, ListasPrecios, Productos, UnidadesMedida
+from apps.usuarios.models import Empleados, Roles
+from apps.ventas.models import DetallesVenta, Ventas
+from apps.ventas.serializers import DetallesVentaSerializer, VentasSerializer
 
 
 class VentasSerializerTest(TestCase):
@@ -248,7 +249,7 @@ class VentasSerializerGetNroDocumentoTest(TestCase):
 
     def test_get_nro_documento_tributario_con_documento(self):
         """Test: Obtener nro_secuencial cuando existe documento tributario"""
-        from apps.contabilidad.models import DocumentosTributarios, Timbrados, PuntosExpedicion
+        from apps.contabilidad.models import DocumentosTributarios, PuntosExpedicion, Timbrados
 
         # Crear venta
         venta = Ventas.objects.create(

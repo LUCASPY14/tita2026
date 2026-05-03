@@ -3,21 +3,23 @@ Tests para Cuenta Corriente de Clientes y Proveedores
 Valida reglas de negocio de crédito, pagos y notas de crédito
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
+
 from apps.clientes.models import Clientes, TiposCliente
-from apps.ventas.models import Ventas, AplicacionPagosVentas, PagosVenta, NotasCreditoCliente
 from apps.compras.models import (
-    Proveedores,
-    Compras,
     AplicacionPagosCompras,
-    PagosProveedores,
+    Compras,
     NotasCreditoProveedor,
+    PagosProveedores,
+    Proveedores,
 )
 from apps.core.models import MediosPago
-from apps.usuarios.models import Empleados, Roles
 from apps.productos.models import ListasPrecios
+from apps.usuarios.models import Empleados, Roles
+from apps.ventas.models import AplicacionPagosVentas, NotasCreditoCliente, PagosVenta, Ventas
 
 
 class CuentaCorrienteClienteTest(TestCase):

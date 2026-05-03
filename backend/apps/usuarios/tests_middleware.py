@@ -3,13 +3,14 @@ Tests para middleware de usuarios
 Cubre autenticación, autorización y procesamiento de requests
 """
 
-from django.test import TestCase, RequestFactory
-from django.http import HttpResponse
-from django.contrib.auth.models import AnonymousUser
-from django.utils import timezone
 from unittest.mock import Mock, patch
 
-from apps.usuarios.models import Roles, Empleados
+from django.contrib.auth.models import AnonymousUser
+from django.http import HttpResponse
+from django.test import RequestFactory, TestCase
+from django.utils import timezone
+
+from apps.usuarios.models import Empleados, Roles
 
 
 class UsuariosMiddlewareTest(TestCase):

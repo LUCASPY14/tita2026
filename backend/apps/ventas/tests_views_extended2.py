@@ -4,31 +4,31 @@ Targeting uncovered lines: 90, 199-208, 244-256, 279-285, 289-290,
 294-337, 341-411, 424, 438, 455-466, 501-504, 860-865, 930
 """
 
-from unittest.mock import patch, MagicMock
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
-from django.test import TestCase
-from django.utils import timezone
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
-from rest_framework import status
+from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from apps.ventas.models import Ventas, DetallesVenta, Promociones, PromocionesAplicadas
-from apps.core.models import Tarjetas, MediosPago
-from apps.contabilidad.models import TarifasComision
+from rest_framework import status
+from rest_framework.test import APIClient
+
 from apps.clientes.models import Clientes, Hijos, TiposCliente
+from apps.contabilidad.models import Impuestos, TarifasComision
+from apps.core.models import MediosPago, Tarjetas
+from apps.inventario.models import StockUnico
 from apps.productos.models import (
-    ListasPrecios,
-    Productos,
     Categorias,
-    UnidadesMedida,
+    ListasPrecios,
     PreciosPorLista,
+    Productos,
+    UnidadesMedida,
 )
 from apps.usuarios.models import Empleados, Roles
-from apps.contabilidad.models import Impuestos
-from apps.inventario.models import StockUnico
+from apps.ventas.models import DetallesVenta, Promociones, PromocionesAplicadas, Ventas
 
 
 class VentasViewsExtended2Test(TestCase):

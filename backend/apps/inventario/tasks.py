@@ -8,9 +8,11 @@ Incluye:
 """
 
 import logging
-from celery import shared_task
-from django.utils import timezone
 from datetime import timedelta
+
+from django.utils import timezone
+
+from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
@@ -127,8 +129,8 @@ def alertar_stock_minimo(self):
         dict: {productos_bajo_stock, alertas_creadas, errores}
     """
     from apps.inventario.models import StockUnico
-    from apps.productos.models import Productos
     from apps.notificaciones.models import AlertasSistema
+    from apps.productos.models import Productos
 
     try:
         productos_bajo = 0
@@ -185,8 +187,9 @@ def generar_resumen_diario_stock():
     Returns:
         dict: {productos_procesados, timestamp}
     """
-    from apps.inventario.models import StockUnico, MovimientosStock
     from django.db.models import Sum
+
+    from apps.inventario.models import MovimientosStock, StockUnico
 
     try:
         hoy = timezone.now().date()

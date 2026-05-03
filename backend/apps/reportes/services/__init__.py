@@ -13,21 +13,22 @@ Autor: Cantina Tita Development Team
 Fecha: Marzo 2026
 """
 
-from decimal import Decimal
-from datetime import datetime, date, timedelta
-from django.utils import timezone
-from django.db.models import Sum, Count, Avg, Q, F
-from django.core.exceptions import ValidationError
-from typing import Dict, List, Optional
 import logging
 import re
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+from typing import Dict, List, Optional
+
+from django.core.exceptions import ValidationError
+from django.db.models import Avg, Count, F, Q, Sum
+from django.utils import timezone
+from django.utils.timezone import make_aware
 
 from apps.core.models import CargasSaldo, ConsumosTarjeta, Tarjetas
-from apps.ventas.models import Ventas, DetallesVenta
+from apps.inventario.models import MovimientosStock, StockUnico
 from apps.productos.models import Productos
-from apps.inventario.models import StockUnico, MovimientosStock
 from apps.reportes.models import PlantillasReporte
-from django.utils.timezone import make_aware
+from apps.ventas.models import DetallesVenta, Ventas
 
 logger = logging.getLogger(__name__)
 

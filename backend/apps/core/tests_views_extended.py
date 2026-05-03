@@ -8,13 +8,15 @@ Cubre las líneas faltantes en core/views.py:
 487-489 (valores_permitidos), 507-508 (resetear_default exception)
 """
 
-from django.test import TestCase
-from rest_framework.test import APIClient
-from rest_framework import status
-from unittest.mock import patch, MagicMock, PropertyMock
 from decimal import Decimal
+from unittest.mock import MagicMock, PropertyMock, patch
 
 from django.contrib.auth.models import User
+from django.test import TestCase
+
+from rest_framework import status
+from rest_framework.test import APIClient
+
 from apps.core.models import ConfiguracionSistema
 from apps.core.views import ConfiguracionSistemaViewSet
 
@@ -27,9 +29,9 @@ class IniciarRecargaBancardEdgeCasesTest(TestCase):
     """Cubre casos de borde en iniciar_recarga_bancard"""
 
     def setUp(self):
-        from apps.productos.models import ListasPrecios
-        from apps.clientes.models import TiposCliente, Clientes, Hijos
+        from apps.clientes.models import Clientes, Hijos, TiposCliente
         from apps.core.models import Tarjetas
+        from apps.productos.models import ListasPrecios
 
         self.client = APIClient()
         self.auth_user = User.objects.create_user(username="bancard_ext_user", password="testpass123")

@@ -3,22 +3,23 @@ URLs para el módulo de usuarios
 Incluye autenticación, 2FA, sesiones, permisos y CRUD
 """
 
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django.urls import include, path
+
 from rest_framework.permissions import AllowAny
+from rest_framework.routers import DefaultRouter
 
 from .views import (
-    AuthViewSet,
-    TwoFactorViewSet,
-    SesionesViewSet,
-    PasswordRecoveryViewSet,
-    PermisosViewSet,
-    RolesViewSet,
-    EmpleadosViewSet,
-    PerfilesUsuarioViewSet,
-    UsuariosPortalViewSet,
-    PortalAuthViewSet,
     AuditoriaOperacionesViewSet,
+    AuthViewSet,
+    EmpleadosViewSet,
+    PasswordRecoveryViewSet,
+    PerfilesUsuarioViewSet,
+    PermisosViewSet,
+    PortalAuthViewSet,
+    RolesViewSet,
+    SesionesViewSet,
+    TwoFactorViewSet,
+    UsuariosPortalViewSet,
 )
 
 

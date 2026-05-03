@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Ventas, DetallesVenta, PagosVenta, NotasCreditoCliente, Promociones, CondicionVenta
+
+from .models import CondicionVenta, DetallesVenta, NotasCreditoCliente, PagosVenta, Promociones, Ventas
 
 
 class DetallesVentaSerializer(serializers.ModelSerializer):

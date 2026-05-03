@@ -3,18 +3,20 @@ Tests para AuthenticationService
 Cobertura completa de funcionalidades de autenticación y seguridad
 """
 
+from datetime import timedelta
+
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
-from datetime import timedelta
-from apps.usuarios.services.auth_service import AuthenticationService
+
 from apps.usuarios.models import (
+    AuditoriaOperaciones,
+    BloqueosCuenta,
     Empleados,
+    IntentosLogin,
     Roles,
     SesionesActivas,
-    BloqueosCuenta,
-    AuditoriaOperaciones,
-    IntentosLogin,
 )
+from apps.usuarios.services.auth_service import AuthenticationService
 
 
 class AuthenticationServiceTest(TransactionTestCase):

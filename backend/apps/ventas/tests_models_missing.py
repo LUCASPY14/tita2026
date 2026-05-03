@@ -46,8 +46,7 @@ def _make_base_fixtures():
     from apps.clientes.models import Clientes, TiposCliente
     from apps.contabilidad.models import Impuestos
     from apps.core.models import MediosPago
-    from apps.productos.models import Categorias, Productos, UnidadesMedida
-    from apps.productos.models import ListasPrecios
+    from apps.productos.models import Categorias, ListasPrecios, Productos, UnidadesMedida
     from apps.usuarios.models import Empleados, Roles
 
     lista, _ = ListasPrecios.objects.get_or_create(

@@ -3,9 +3,11 @@ Tests de ramas faltantes en core/signals.py
 Cubre branches: 39->-12 (consumo_existe True) and 100->-94 (created=False).
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
 from django.test import TestCase
+
+import pytest
 
 
 class ActualizarSaldoRecargaBranchTest(TestCase):
@@ -15,8 +17,8 @@ class ActualizarSaldoRecargaBranchTest(TestCase):
 
     def test_consumo_existe_true_skips_update(self):
         """Branch 39->-12: consumo already exists → if not consumo: False → exit."""
+        from apps.core.models import CargasSaldo, ConsumosTarjeta, Tarjetas
         from apps.core.signals import actualizar_saldo_recarga
-        from apps.core.models import CargasSaldo, Tarjetas, ConsumosTarjeta
 
         # Create a mock instance with estado='confirmado' and no _saldo_actualizado
         mock_carga = MagicMock(spec=CargasSaldo)
@@ -51,8 +53,8 @@ class NotificarSaldoBajoBranchTest(TestCase):
 
     def test_created_false_exits_immediately(self):
         """Branch 100->-94: created=False → if created: False → function exits cleanly."""
-        from apps.core.signals import notificar_saldo_bajo
         from apps.core.models import ConsumosTarjeta
+        from apps.core.signals import notificar_saldo_bajo
 
         mock_consumo = MagicMock()
         # Call with created=False → takes the False arm → exits without checking tarjeta
@@ -72,8 +74,8 @@ class ValidarTarjetaUnicaSinHijoBranchTest(TestCase):
 
     def test_no_id_hijo_exits_without_query(self):
         """Branch in validar_tarjeta_unica: id_hijo=None → if block skipped → exits."""
-        from apps.core.signals import validar_tarjeta_unica
         from apps.core.models import Tarjetas
+        from apps.core.signals import validar_tarjeta_unica
 
         mock_tarjeta = MagicMock()
         mock_tarjeta.id_hijo = None

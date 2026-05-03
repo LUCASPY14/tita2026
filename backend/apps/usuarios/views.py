@@ -3,51 +3,52 @@ Views para gestión completa de usuarios con seguridad empresarial
 Incluye: Autenticación, 2FA, Permisos, Sesiones, Recuperación de contraseñas
 """
 
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
-from django.utils import timezone
 from django.db.models import Count
 from django.db.models.functions import TruncDate
-from django_ratelimit.decorators import ratelimit
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
+from django_filters.rest_framework import DjangoFilterBackend
+from django_ratelimit.decorators import ratelimit
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from .authentication import PortalJWTAuthentication, PortalUserProxy
 from .models import (
-    Empleados,
-    Roles,
-    PerfilesUsuario,
-    UsuariosPortal,
-    SesionesActivas,
-    BloqueosCuenta,
     AuditoriaOperaciones,
-)
-from .serializers import (
-    EmpleadosSerializer,
-    RolesSerializer,
-    PerfilesUsuarioSerializer,
-    UsuariosPortalSerializer,
-    AuditoriaOperacionesSerializer,
-)
-from .services import (
-    AuthenticationService,
-    TwoFactorAuthService,
-    SessionService,
-    PasswordRecoveryService,
+    BloqueosCuenta,
+    Empleados,
+    PerfilesUsuario,
+    Roles,
+    SesionesActivas,
+    UsuariosPortal,
 )
 from .permissions import (
-    PermissionService,
-    TienePermiso,
     EsAdministrador,
     IsPortalAuthenticated,
     Permisos,
+    PermissionService,
     RolesPermisos,
+    TienePermiso,
 )
-from .authentication import PortalJWTAuthentication, PortalUserProxy
+from .serializers import (
+    AuditoriaOperacionesSerializer,
+    EmpleadosSerializer,
+    PerfilesUsuarioSerializer,
+    RolesSerializer,
+    UsuariosPortalSerializer,
+)
+from .services import (
+    AuthenticationService,
+    PasswordRecoveryService,
+    SessionService,
+    TwoFactorAuthService,
+)
 from .services.portal_service import PortalAuthService
 
 # ==================== AUTENTICACIÓN ====================
@@ -954,9 +955,10 @@ class PortalAuthViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[IsPortalAuthenticated])
     def dashboard(self, request):
-        from apps.core.models import Tarjetas, ConsumosTarjeta
-        from apps.ventas.models import Ventas
         from decimal import Decimal
+
+        from apps.core.models import ConsumosTarjeta, Tarjetas
+        from apps.ventas.models import Ventas
 
         proxy: PortalUserProxy = request.user
         cliente = proxy.portal_user.id_cliente
@@ -1161,8 +1163,8 @@ class AuditoriaOperacionesViewSet(viewsets.ReadOnlyModelViewSet):
         Retorna timeline de operaciones agrupadas por día.
         Útil para gráficos de actividad en el tiempo.
         """
-        from django.db.models.functions import TruncDate
         from django.db.models import Count
+        from django.db.models.functions import TruncDate
 
         queryset = self.get_queryset()
 

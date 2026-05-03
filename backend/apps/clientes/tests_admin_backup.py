@@ -3,32 +3,32 @@ Tests para admin_backup de clientes
 Cubre configuración de Django Admin para el módulo de clientes
 """
 
-from django.test import TestCase
+from unittest.mock import Mock, patch
+
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory
-from unittest.mock import Mock, patch
+from django.test import RequestFactory, TestCase
 
 from apps.clientes.admin_backup import (
-    ClientesAdmin,
-    TiposClienteAdmin,
-    HijosAdmin,
-    GradosAdmin,
-    HistorialGradosHijosAdmin,
-    RestriccionesHijosAdmin,
     AutorizacionesSaldoNegativoAdmin,
+    ClientesAdmin,
+    GradosAdmin,
+    HijosAdmin,
+    HistorialGradosHijosAdmin,
     LogsAutorizacionesAdmin,
+    RestriccionesHijosAdmin,
+    TiposClienteAdmin,
 )
 from apps.clientes.models import (
-    Clientes,
-    TiposCliente,
-    Hijos,
-    Grados,
-    HistorialGradosHijos,
-    RestriccionesHijos,
     AutorizacionesSaldoNegativo,
+    Clientes,
+    Grados,
+    Hijos,
+    HistorialGradosHijos,
     LogsAutorizaciones,
+    RestriccionesHijos,
+    TiposCliente,
 )
 
 User = get_user_model()

@@ -3,9 +3,11 @@ Tests para serializers de compras
 Sprint 2 - Backend Coverage Improvement
 """
 
+from decimal import Decimal
+
 from django.test import TestCase
 from django.utils import timezone
-from decimal import Decimal
+
 from apps.compras.models import Compras, Proveedores
 from apps.compras.serializers import ComprasSerializer, ProveedoresSerializer
 from apps.usuarios.models import Empleados, Roles

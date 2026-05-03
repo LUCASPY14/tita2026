@@ -14,16 +14,17 @@ Targets:
 - Lines 430-453: guardar_valor_kpi success path
 """
 
-from decimal import Decimal
 from datetime import date, timedelta
-from unittest.mock import patch, MagicMock, PropertyMock
-from django.test import TestCase
-from django.core.exceptions import ValidationError
+from decimal import Decimal
+from unittest.mock import MagicMock, PropertyMock, patch
 
-from apps.reportes.services.dashboard_service import DashboardService
-from apps.reportes.models import KpiMetricas, ValoresKpi
-from apps.ventas.models import Ventas
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+
 from apps.core.models import CargasSaldo
+from apps.reportes.models import KpiMetricas, ValoresKpi
+from apps.reportes.services.dashboard_service import DashboardService
+from apps.ventas.models import Ventas
 
 
 class DashboardKpisExceptionTest(TestCase):

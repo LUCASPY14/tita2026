@@ -3,24 +3,25 @@ Tests para Serializers de Productos
 Objetivo: Aumentar cobertura de serializers
 """
 
-from django.test import TestCase
-from django.utils import timezone
 from decimal import Decimal
 from unittest.mock import patch
 
+from django.test import TestCase
+from django.utils import timezone
+
+from apps.contabilidad.models import Impuestos
 from apps.productos.models import (
-    Productos,
     Categorias,
-    UnidadesMedida,
     ListasPrecios,
     PreciosPorLista,
+    Productos,
+    UnidadesMedida,
 )
 from apps.productos.serializers import (
-    ProductosSerializer,
     CategoriasSerializer,
     PreciosPorListaSerializer,
+    ProductosSerializer,
 )
-from apps.contabilidad.models import Impuestos
 
 
 class ProductosSerializerTest(TestCase):

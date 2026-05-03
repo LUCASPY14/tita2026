@@ -2,23 +2,24 @@
 Tests para la app inventario - Stock,  Lotes, Vencimientos, Alertas
 """
 
-from django.test import TestCase, TransactionTestCase
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-from decimal import Decimal
 from datetime import datetime, timedelta
+from decimal import Decimal
 
+from django.core.exceptions import ValidationError
+from django.test import TestCase, TransactionTestCase
+from django.utils import timezone
+
+from apps.contabilidad.models import Impuestos
 from apps.inventario.models import (
-    StockUnico,
-    MovimientosStock,
     AlertasStock,
-    LotesProducto,
     AlertasVencimiento,
+    LotesProducto,
+    MovimientosStock,
+    StockUnico,
 )
 from apps.inventario.services import StockService
-from apps.productos.models import Productos, UnidadesMedida, Categorias
+from apps.productos.models import Categorias, Productos, UnidadesMedida
 from apps.usuarios.models import Empleados, Roles
-from apps.contabilidad.models import Impuestos
 
 
 class StockServiceTest(TransactionTestCase):

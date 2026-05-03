@@ -6,12 +6,15 @@ Cobertura de líneas:
 - L112: Variable nro_tarjeta en perform_create de RegistrosConsumoAlmuerzoViewSet
 """
 
-import pytest
-from decimal import Decimal
 from datetime import date, time
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient, APIRequestFactory
+
+import pytest
 from rest_framework import status
+from rest_framework.test import APIClient, APIRequestFactory
+
 from apps.almuerzos.models import RegistrosConsumoAlmuerzo
 from apps.almuerzos.views import RegistrosConsumoAlmuerzoViewSet
 from apps.clientes.models import Clientes, Hijos, TiposCliente
@@ -111,6 +114,7 @@ class TestRegistrosConsumoAlmuerzoViewSetPerformCreate:
         llega a perform_create y la lógica de negocio se ejecuta correctamente.
         """
         from rest_framework.exceptions import ValidationError as DRFValidationError
+
         from apps.almuerzos.serializers import RegistrosConsumoAlmuerzoSerializer
 
         view = RegistrosConsumoAlmuerzoViewSet()

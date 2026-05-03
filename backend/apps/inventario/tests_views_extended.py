@@ -4,8 +4,10 @@ Covers the 188 missing lines in inventario/views.py (22.31% coverage)
 """
 
 from decimal import Decimal
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
 from django.test import TestCase
+
 from rest_framework.test import APIRequestFactory
 
 from apps.inventario.views import AjustesInventarioViewSet
@@ -770,8 +772,8 @@ class AnalisisCompletoTest(TestCase):
 
 
 def _make_producto_for_views(suffix="vw"):
-    from apps.productos.models import Categorias, UnidadesMedida, Productos
     from apps.contabilidad.models import Impuestos
+    from apps.productos.models import Categorias, Productos, UnidadesMedida
 
     impuesto, _ = Impuestos.objects.get_or_create(
         nombre_impuesto=f"IVA views {suffix}",
@@ -843,7 +845,9 @@ class ReporteMermasMensualConDatosTest(TestCase):
     def test_tendencia_aumentando(self):
         """Line 192-193: total_ajustes > ajustes_mes_anterior → 'aumentando'."""
         import datetime
+
         from django.utils import timezone
+
         from apps.inventario.models import AjustesInventario
 
         now = timezone.now()
@@ -868,7 +872,9 @@ class ReporteMermasMensualConDatosTest(TestCase):
     def test_tendencia_disminuyendo(self):
         """Line 194-195: total_ajustes < ajustes_mes_anterior → 'disminuyendo'."""
         import datetime
+
         from django.utils import timezone
+
         from apps.inventario.models import AjustesInventario
 
         now = timezone.now()
@@ -892,7 +898,9 @@ class ReporteMermasMensualConDatosTest(TestCase):
     def test_tendencia_estable(self):
         """Line 196-197: total_ajustes == ajustes_mes_anterior → 'estable'."""
         import datetime
+
         from django.utils import timezone
+
         from apps.inventario.models import AjustesInventario
 
         now = timezone.now()

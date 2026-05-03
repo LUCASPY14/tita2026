@@ -4,10 +4,10 @@ Targeting missing lines: 66, 111-125, 201-221, 302-305, 614, 653-678
 """
 
 from decimal import Decimal
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.test import TestCase
 from django.utils import timezone
 
 
@@ -42,8 +42,8 @@ class AutorizacionServiceDobleAutorizacionTest(TestCase):
     """Cover lines 111-125: doble autorizacion logic."""
 
     def setUp(self):
-        from apps.usuarios.models import Roles, Empleados
         from apps.core.models import LimitesTransaccion
+        from apps.usuarios.models import Empleados, Roles
 
         self.rol_cajero = Roles.objects.create(nombre_rol="Cajero", descripcion="Cajero")
         self.rol_gerente = Roles.objects.create(nombre_rol="Gerente", descripcion="Gerente")
@@ -152,8 +152,8 @@ class AutorizacionServiceHistorialTest(TestCase):
     """Cover lines 201-221: obtener_historial_autorizaciones with filters."""
 
     def setUp(self):
-        from apps.usuarios.models import Roles, Empleados
         from apps.core.models import RegistroAutorizaciones
+        from apps.usuarios.models import Empleados, Roles
 
         self.rol = Roles.objects.create(nombre_rol="Admin_ext", descripcion="Admin")
         self.empleado = Empleados.objects.create(
@@ -210,8 +210,9 @@ class AutorizacionServiceHistorialTest(TestCase):
 
     def test_historial_filtrado_por_fechas(self):
         """Filter by fecha_desde and fecha_hasta."""
-        from apps.core.services import AutorizacionService
         from datetime import timedelta
+
+        from apps.core.services import AutorizacionService
 
         ahora = timezone.now()
         result = AutorizacionService.obtener_historial_autorizaciones(
@@ -249,9 +250,9 @@ class RecargaServiceValidarTransferenciaExtendedTest(TestCase):
     """Cover line 614 (monto alto with codigo), lines 653-678 (manual flow)."""
 
     def setUp(self):
-        from apps.usuarios.models import Roles, Empleados
         from apps.clientes.models import Clientes, Hijos
         from apps.core.models import Tarjetas
+        from apps.usuarios.models import Empleados, Roles
 
         self.rol = Roles.objects.create(nombre_rol="Cajero_ext", descripcion="Cajero")
         self.empleado = Empleados.objects.create(
@@ -325,8 +326,8 @@ class RecargaServiceValidarTransferenciaExtendedTest(TestCase):
     @patch("apps.core.services.RecargaService.validar_idempotencia", return_value=False)
     def test_codigo_referencia_monto_alto_requiere_aprobacion(self, mock_idem):
         """Line 614: transferencia with codigo and monto above threshold."""
-        from apps.core.services import RecargaService
         from apps.core.models import CargasSaldo
+        from apps.core.services import RecargaService
 
         # Create a pending recarga
         recarga = CargasSaldo.objects.create(

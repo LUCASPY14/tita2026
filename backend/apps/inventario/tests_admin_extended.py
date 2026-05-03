@@ -3,29 +3,30 @@ Tests for apps/inventario/admin.py
 Covers all custom display methods across 8 admin classes.
 """
 
-from unittest.mock import MagicMock, patch, call
-from django.test import TestCase
+from unittest.mock import MagicMock, call, patch
+
 from django.contrib.admin.sites import AdminSite
+from django.test import TestCase
 
 from apps.inventario.admin import (
-    StockUnicoAdmin,
-    MovimientosStockAdmin,
     AjustesInventarioAdmin,
-    DetallesAjusteAdmin,
-    CostosHistoricosAdmin,
     AlertasStockAdmin,
-    LotesProductoAdmin,
     AlertasVencimientoAdmin,
+    CostosHistoricosAdmin,
+    DetallesAjusteAdmin,
+    LotesProductoAdmin,
+    MovimientosStockAdmin,
+    StockUnicoAdmin,
 )
 from apps.inventario.models import (
-    StockUnico,
-    MovimientosStock,
     AjustesInventario,
-    DetallesAjuste,
-    CostosHistoricos,
     AlertasStock,
-    LotesProducto,
     AlertasVencimiento,
+    CostosHistoricos,
+    DetallesAjuste,
+    LotesProducto,
+    MovimientosStock,
+    StockUnico,
 )
 
 _plain_format_html = lambda fmt, *a, **k: fmt.format(*a, **k)

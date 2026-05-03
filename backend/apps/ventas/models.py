@@ -3,8 +3,9 @@ Modelos de la app ventas
 Gestión de ventas, pagos, notas de crédito y promociones
 """
 
-from django.db import models
 from decimal import Decimal
+
+from django.db import models
 
 
 class VentasManager(models.Manager):
@@ -44,8 +45,9 @@ class VentasManager(models.Manager):
             kwargs["id_cliente"] = cliente
         # Proveer id_empleado_cajero por defecto
         if "id_empleado_cajero" not in kwargs and "id_empleado_cajero_id" not in kwargs:
-            from apps.usuarios.models import Empleados
             from django.utils import timezone as tz
+
+            from apps.usuarios.models import Empleados
 
             empleado, _ = Empleados.objects.get_or_create(
                 email="cajero@sistema.com",

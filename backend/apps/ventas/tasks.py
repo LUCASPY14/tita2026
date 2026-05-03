@@ -7,10 +7,12 @@ Incluye:
 """
 
 import logging
-from celery import shared_task
-from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
+
+from django.utils import timezone
+
+from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +33,9 @@ def generar_resumen_diario_ventas():
     Returns:
         dict: Resumen con métricas del día
     """
-    from django.db.models import Sum, Count, Avg
-    from apps.ventas.models import Ventas, DetallesVenta
+    from django.db.models import Avg, Count, Sum
+
+    from apps.ventas.models import DetallesVenta, Ventas
 
     try:
         hoy = timezone.now().date()
@@ -91,8 +94,9 @@ def cerrar_cajas_automatico():
 
     Se ejecuta cada hora.
     """
-    from apps.contabilidad.models import CierresCaja
     from django.db.models import Sum
+
+    from apps.contabilidad.models import CierresCaja
 
     try:
         limite = timezone.now() - timedelta(hours=24)

@@ -3,13 +3,15 @@ Servicios de dominio para el módulo de ventas.
 Contiene la lógica de negocio para promociones y devoluciones.
 """
 
-from django.db import transaction, models
-from django.utils import timezone
-from django.core.exceptions import ValidationError
-from rest_framework.exceptions import ValidationError as DRFValidationError
-from decimal import Decimal
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from decimal import Decimal
+from typing import Dict, List, Optional
+
+from django.core.exceptions import ValidationError
+from django.db import models, transaction
+from django.utils import timezone
+
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 
 class PromocionService:
@@ -237,8 +239,8 @@ class PromocionService:
     @staticmethod
     def _validar_alcance(promocion, items: List[Dict]) -> bool:
         """Valida si los productos cumplen el alcance de la promoción"""
-        from apps.ventas.models import ProductosPromocion, CategoriasPromocion
         from apps.productos.models import Productos
+        from apps.ventas.models import CategoriasPromocion, ProductosPromocion
 
         if promocion.aplica_a == "total":
             return True  # Aplica a cualquier compra
@@ -270,8 +272,8 @@ class PromocionService:
     @staticmethod
     def _obtener_productos_afectados(promocion, items: List[Dict]) -> List[int]:
         """Retorna IDs de productos afectados por la promoción"""
-        from apps.ventas.models import ProductosPromocion, CategoriasPromocion
         from apps.productos.models import Productos
+        from apps.ventas.models import CategoriasPromocion, ProductosPromocion
 
         if promocion.aplica_a == "total":
             return [item["id_producto"] for item in items]
@@ -387,14 +389,14 @@ class DevolucionService:
         Raises:
             ValidationError: Si la venta no existe o productos inválidos
         """
+        from apps.inventario.models import MovimientosStock, StockUnico
+        from apps.productos.models import Productos
         from apps.ventas.models import (
-            Ventas,
+            DetallesNotaCredito,
             DetallesVenta,
             NotasCreditoCliente,
-            DetallesNotaCredito,
+            Ventas,
         )
-        from apps.inventario.models import StockUnico, MovimientosStock
-        from apps.productos.models import Productos
 
         # 1. Validar venta existe
         try:
@@ -550,8 +552,8 @@ class DevolucionService:
         Returns:
             {'exito': bool, 'mensaje': str}
         """
-        from apps.ventas.models import NotasCreditoCliente, DetallesNotaCredito
-        from apps.inventario.models import StockUnico, MovimientosStock
+        from apps.inventario.models import MovimientosStock, StockUnico
+        from apps.ventas.models import DetallesNotaCredito, NotasCreditoCliente
 
         try:
             nota = NotasCreditoCliente.objects.select_for_update().get(id_nota=id_nota)
@@ -603,7 +605,7 @@ class DevolucionService:
                 'warnings': List[str]
             }
         """
-        from apps.ventas.models import Ventas, DetallesVenta
+        from apps.ventas.models import DetallesVenta, Ventas
 
         errores = []
         warnings = []

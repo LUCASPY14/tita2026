@@ -3,14 +3,15 @@ Tests de ramas faltantes en ventas/validators.py
 Cubre branches no alcanzados por los tests principales.
 """
 
-import pytest
 from django.core.exceptions import ValidationError
+
+import pytest
 
 from apps.ventas.validators import (
     validar_codigo_promocion,
     validar_credito_disponible,
-    validar_saldo_tarjeta,
     validar_dias_semana,
+    validar_saldo_tarjeta,
 )
 
 
