@@ -72,6 +72,7 @@ jobs:
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -92,10 +93,11 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Test_StrongPassw0rd!' -Q 'SELECT 1' -C || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Test_StrongPassw0rd!' -Q 'SELECT 1' -C -No || exit 1"
+          --health-interval=15s
+          --health-timeout=10s
+          --health-retries=15
+          --health-start-period=30s
       
       redis:
         image: redis:7-alpine
@@ -214,7 +216,7 @@ jobs:
       - name: Check import sorting (isort)
         run: |
           cd backend
-          isort --check-only apps/ backend/ || (echo "❌ Run: isort apps/ backend/" && exit 1)
+          isort --check-only --settings-path . apps/ backend/ || (echo "❌ Run: isort --settings-path . apps/ backend/" && exit 1)
       
       - name: Lint with Flake8
         run: |
@@ -267,7 +269,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend
-          npm ci
+          npm install --prefer-offline
       
       - name: Run tests with coverage
         run: |
@@ -308,7 +310,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend
-          npm ci
+          npm install --prefer-offline
       
       - name: Type check (TypeScript)
         run: |
@@ -346,7 +348,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd mobile
-          npm ci
+          npm install --prefer-offline
       
       - name: Run tests
         run: |
@@ -429,7 +431,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend
-          npm ci
+          npm install --prefer-offline
       
       - name: Build production bundle
         env:
@@ -488,7 +490,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend
-          npm ci
+          npm install --prefer-offline
       
       - name: Download frontend build
         uses: actions/download-artifact@v4
