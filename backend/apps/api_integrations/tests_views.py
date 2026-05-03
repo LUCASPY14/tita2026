@@ -52,7 +52,7 @@ class BancardWebhookViewTest(APITestCase):
             id_proveedor=self.proveedor,
         )
 
-        self.webhook_url = "/api/v1/webhooks/bancard/"
+        self.webhook_url = reverse("bancard_webhook")
 
         # Datos de webhook válidos
         self.valid_operation = {
@@ -305,7 +305,7 @@ class WebhookTestViewTest(APITestCase):
         """Debe retornar estructura de respuesta correcta"""
         response = self.client.get(self.test_url)
 
-        required_fields = ["status", "message", "método", "path"]
+        required_fields = ["status", "message", "método", "paths"]
         for field in required_fields:
             with self.subTest(field=field):
                 self.assertIn(field, response.data)
@@ -416,7 +416,7 @@ class WebhookViewsIntegrationTest(APITestCase):
 
         # Enviar webhook
         response = self.client.post(
-            "/api/v1/webhooks/bancard/",
+            reverse("bancard_webhook"),
             data=json.dumps(webhook_data),
             content_type="application/json",
             HTTP_USER_AGENT="IntegrationTest/1.0",
@@ -459,7 +459,7 @@ class WebhookViewsIntegrationTest(APITestCase):
         for scenario in error_scenarios:
             with self.subTest(scenario=scenario["expected_error"]):
                 response = self.client.post(
-                    "/api/v1/webhooks/bancard/", data=scenario["data"], content_type="application/json"
+                    reverse("bancard_webhook"), data=scenario["data"], content_type="application/json"
                 )
 
                 self.assertEqual(response.status_code, scenario["expected_status"])
@@ -479,7 +479,7 @@ class WebhookViewsIntegrationTest(APITestCase):
 
         # Enviar webhook (va a fallar pero debería crear log)
         self.client.post(
-            "/api/v1/webhooks/bancard/",
+            reverse("bancard_webhook"),
             data=json.dumps(webhook_data),
             content_type="application/json",
             HTTP_USER_AGENT="LogTest/1.0",
@@ -514,7 +514,7 @@ class WebhookViewsIntegrationTest(APITestCase):
             webhook_data["shop_process_id"] = f"REC-PERF-{i}"
 
             response = self.client.post(
-                "/api/v1/webhooks/bancard/", data=json.dumps(webhook_data), content_type="application/json"
+                reverse("bancard_webhook"), data=json.dumps(webhook_data), content_type="application/json"
             )
 
             if response.status_code == status.HTTP_200_OK:

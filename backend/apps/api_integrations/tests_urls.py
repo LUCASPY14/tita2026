@@ -63,7 +63,7 @@ class ApiIntegrationsUrlsTest(TestCase):
         for url in possible_urls:
             try:
                 resolver = resolve(url)
-                if resolver.func == bancard_webhook:
+                if resolver.url_name == "bancard_webhook":
                     resolved_any = True
                     break
             except:
@@ -73,13 +73,20 @@ class ApiIntegrationsUrlsTest(TestCase):
 
     def test_webhook_test_url_pattern(self):
         """Debe tener patrón correcto para test webhook"""
-        possible_urls = ["/api/v1/webhooks/test/", "/api/webhooks/test/", "/webhooks/test/", "/webhook/test/"]
+        possible_urls = [
+            "/api/v1/webhooks/bancard/test/",
+            "/api/webhooks/bancard/test/",
+            "/api/v1/webhooks/test/",
+            "/api/webhooks/test/",
+            "/webhooks/test/",
+            "/webhook/test/",
+        ]
 
         resolved_any = False
         for url in possible_urls:
             try:
                 resolver = resolve(url)
-                if resolver.func == webhook_test:
+                if resolver.url_name == "webhook_test":
                     resolved_any = True
                     break
             except:
