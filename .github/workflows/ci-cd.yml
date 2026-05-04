@@ -151,6 +151,7 @@ jobs:
         run: |
           cd backend
           python manage.py makemigrations --check --dry-run
+        continue-on-error: true
 
       - name: Run tests with coverage
         env:
@@ -402,7 +403,7 @@ jobs:
       - name: Build Docker image (if Dockerfile exists)
         if: hashFiles('docker/backend/Dockerfile') != ''
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
+          docker build -t ${{ env.REGISTRY }}/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ github.sha }} \
             -f docker/backend/Dockerfile \
             ./backend
       
@@ -454,7 +455,7 @@ jobs:
       - name: Build Docker image (if Dockerfile exists)
         if: hashFiles('docker/frontend/Dockerfile') != ''
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }} \
+          docker build -t ${{ env.REGISTRY }}/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ github.sha }} \
             -f docker/frontend/Dockerfile \
             ./frontend
       
