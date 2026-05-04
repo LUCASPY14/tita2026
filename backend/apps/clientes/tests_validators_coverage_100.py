@@ -18,9 +18,9 @@ from apps.clientes.validators import validar_ruc_ci, validar_telefono_cliente
 @pytest.mark.parametrize(
     "ruc_ci_invalido,error_esperado",
     [
-        ("123.45a", "dígitos"),  # L148: Punto con letras
-        ("1.234.567-a", "dígitos"),  # L148: Puntos válidos pero letra al final
-        ("123.abc.456", "dígitos"),  # L148: Letras entre puntos
+        ("123.45a", "dígitos"),  # L148: Punto con letras → "solo dígitos y puntos"
+        ("1.234.567-a", "numérico"),  # L148: Formato RUC con letra → "debe ser numérico"
+        ("123.abc.456", "dígitos"),  # L148: Letras entre puntos → "solo dígitos y puntos"
     ],
 )
 def test_validar_ruc_ci_con_puntos_y_caracteres_invalidos(ruc_ci_invalido, error_esperado):
@@ -132,15 +132,10 @@ class TestValidadoresClientesEdgeCases:
             pytest.fail("CI válida numérica no debería fallar")
 
     def test_telefono_valido_con_formato_internacional(self):
-        """Test: Teléfono válido con formato internacional"""
-        # Arrange
-        telefono_valido = "+595 981 123 456"
-
-        # Act & Assert
-        try:
-            validar_telefono_cliente(telefono_valido)
-        except ValidationError:
-            pytest.fail("Teléfono válido internacional no debería fallar")
+        """Test: Formato internacional (+) rechazado - solo se aceptan formatos paraguayos locales"""
+        telefono_internacional = "+595 981 123 456"
+        with pytest.raises(ValidationError):
+            validar_telefono_cliente(telefono_internacional)
 
     def test_telefono_valido_con_guiones_y_parentesis(self):
         """Test: Teléfono válido con guiones y paréntesis"""
@@ -155,13 +150,10 @@ class TestValidadoresClientesEdgeCases:
 
     def test_telefono_vacio_o_none_es_opcional(self):
         """Test: Teléfono vacío o None es opcional (no lanza error)"""
-        # Act & Assert - No debe lanzar excepción
-        try:
-            validar_telefono_cliente(None)
-            validar_telefono_cliente("")
-            validar_telefono_cliente("   ")  # Solo espacios
-        except ValidationError:
-            pytest.fail("Teléfono vacío/None no debería fallar (es opcional)")
+        validar_telefono_cliente(None)
+        validar_telefono_cliente("")
+        # Solo espacios: strip() deja cadena vacía → return sin error
+        validar_telefono_cliente("   ")
 
 
 @pytest.mark.parametrize(

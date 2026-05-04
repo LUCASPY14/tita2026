@@ -462,7 +462,7 @@ class MediosPagoAdminTest(TestCase):
     def test_estado_badge_activo(self):
         obj = _mock_obj(estado=True)
         result = str(self.admin.estado_badge(obj))
-        self.assertIn("estado", result)
+        self.assertIn("ACTIVO", result)
 
     def test_estado_badge_inactivo(self):
         obj = _mock_obj(estado=False)
@@ -627,7 +627,7 @@ class CacheConfiguracionAdminTest(TestCase):
     def test_activo_badge_activo(self):
         obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
-        self.assertIn("estado", result)
+        self.assertIn("ACTIVO", result)
 
     def test_activo_badge_inactivo(self):
         obj = _mock_obj(estado=False)
@@ -685,7 +685,7 @@ class LimitesTransaccionAdminTest(TestCase):
     def test_activo_badge_true(self):
         obj = _mock_obj(estado=True)
         result = str(self.admin.activo_badge(obj))
-        self.assertIn("estado", result)
+        self.assertIn("ACTIVO", result)
 
     def test_activo_badge_false(self):
         obj = _mock_obj(estado=False)
@@ -757,3 +757,4 @@ class RegistroAutorizacionesAdminTest(TestCase):
         obj = _mock_obj(fecha_autorizacion=datetime.datetime(2024, 4, 8, 16, 45))
         result = self.admin.fecha_autorizacion_display(obj)
         self.assertIn("08/04/2024", result)
+

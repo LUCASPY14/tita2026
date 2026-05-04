@@ -193,6 +193,9 @@ def validar_telefono_cliente(telefono):
 
     telefono = telefono.strip()
 
+    if not telefono:
+        return  # Solo espacios → opcional
+
     if len(telefono) < 7 or len(telefono) > 20:
         raise ValidationError("El teléfono debe tener entre 7 y 20 caracteres")
 

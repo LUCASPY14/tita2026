@@ -1,12 +1,22 @@
-"""
+﻿"""
 ====================================
 Database Management Command - Cantina Tita
 Django management command for database monitoring and optimization
 ====================================
 """
 
-import os
-import sys
+from django.core.management.base import BaseCommand
+from django.db import connection
 
-# Add the parent directory to the path so we can import from monitoring
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+class Command(BaseCommand):
+    help = "Monitor database health and performance"
+
+    def handle(self, *args, **options):
+        """Check database connectivity and basic health metrics."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+            self.stdout.write(self.style.SUCCESS("Database connection: OK"))
+        except Exception as e:
+            self.stderr.write(self.style.ERROR(f"Database error: {e}"))

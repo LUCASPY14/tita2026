@@ -214,16 +214,18 @@ def validar_fecha_movimiento_caja(value):
     if not isinstance(value, (datetime, date)):
         raise ValidationError("La fecha de movimiento debe ser un datetime válido.")
 
-    # Convertir a datetime si es date
+    # Convertir a datetime si es date, normalizar a naive para comparación
     if isinstance(value, date) and not isinstance(value, datetime):
-        # Convertir a datetime y hacerlo timezone-aware
         value_dt = datetime.combine(value, datetime.min.time())
-        value_dt = timezone.make_aware(value_dt)
+    elif isinstance(value, datetime):
+        value_dt = timezone.make_naive(value) if not timezone.is_naive(value) else value
     else:
         value_dt = value
 
     # No puede ser más de 1 hora en el futuro (tolerancia por diferencias de servidor)
     ahora = timezone.now()
+    if not timezone.is_naive(ahora):
+        ahora = timezone.make_naive(ahora)
     if value_dt > ahora + timedelta(hours=1):
         raise ValidationError("La fecha de movimiento no puede ser futura.")
 

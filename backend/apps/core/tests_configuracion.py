@@ -2,6 +2,7 @@
 Tests para ConfiguracionSistema - ViewSets y Models
 """
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 import pytest  # type: ignore
@@ -9,7 +10,8 @@ from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from apps.core.models import ConfiguracionSistema
-from apps.usuarios.models import Usuarios
+
+Usuarios = get_user_model()
 
 
 class ConfiguracionSistemaModelTest(TestCase):

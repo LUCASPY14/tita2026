@@ -133,7 +133,7 @@ const TarjetaScanInput: React.FC<TarjetaScanInputProps> = ({
   };
 
   const getInputClasses = () => {
-    let baseClasses = "w-full pl-10 pr-10 py-3 text-lg border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200";
+    const baseClasses = "w-full pl-10 pr-10 py-3 text-lg border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200";
     
     if (disabled) {
       return `${baseClasses} bg-gray-100 text-gray-500 cursor-not-allowed`;

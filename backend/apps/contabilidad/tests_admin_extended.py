@@ -69,7 +69,7 @@ class CajasAdminTest(TestCase):
         result = self.admin.activo_badge(obj)
         self.assertIn("green", result)
         self.assertIn("Activa", result)
-        self.assertIn("✓", result)
+        self.assertIn("\u2713", result)
 
     def test_activo_badge_inactive(self):
         """Lines 42-45: estado=False returns red badge."""
@@ -77,7 +77,7 @@ class CajasAdminTest(TestCase):
         result = self.admin.activo_badge(obj)
         self.assertIn("red", result)
         self.assertIn("Inactiva", result)
-        self.assertIn("✗", result)
+        self.assertIn("\u2717", result)
 
 
 # =============================================================================
@@ -247,7 +247,7 @@ class MovimientosCajaAdminTest(TestCase):
         """Lines 187-189: monto_comision == 0 returns '₲0'."""
         obj = _mock_obj(monto_comision=Decimal("0"))
         result = self.admin.monto_comision_display(obj)
-        self.assertEqual(result, "₲0")
+        self.assertEqual(result, "\u20b20")
 
 
 # =============================================================================
@@ -452,25 +452,25 @@ class DocumentosTributariosAdminTest(TestCase):
         self.assertIn("Pendiente", result)
 
     def test_estado_sifen_badge_aprobado(self):
-        """Lines 405-421: estado_sifen='Aprobado' returns green badge with ✓."""
+        """estado_sifen='Aprobado' returns green badge with ✓."""
         obj = _mock_obj(estado_sifen="Aprobado")
         result = self.admin.estado_sifen_badge(obj)
         self.assertIn("green", result)
-        self.assertIn("✓", result)
+        self.assertIn("\u2713", result)
 
     def test_estado_sifen_badge_rechazado(self):
         """estado_sifen='Rechazado' returns red badge with ✗."""
         obj = _mock_obj(estado_sifen="Rechazado")
         result = self.admin.estado_sifen_badge(obj)
         self.assertIn("red", result)
-        self.assertIn("✗", result)
+        self.assertIn("\u2717", result)
 
     def test_estado_sifen_badge_pendiente(self):
         """estado_sifen='Pendiente' returns orange badge with ⏳."""
         obj = _mock_obj(estado_sifen="Pendiente")
         result = self.admin.estado_sifen_badge(obj)
         self.assertIn("orange", result)
-        self.assertIn("⏳", result)
+        self.assertIn("\u23f3", result)
 
     def test_estado_sifen_badge_unknown(self):
         """Unknown estado_sifen returns gray badge with ?."""
@@ -510,7 +510,7 @@ class TimbradosAdminTest(TestCase):
         obj = _mock_obj(estado=True)
         result = self.admin.activo_badge(obj)
         self.assertIn("green", result)
-        self.assertIn("estado", result)
+        self.assertIn("Activo", result)
 
     def test_activo_badge_inactive(self):
         """Lines 497-499: estado=False returns red badge."""
@@ -548,7 +548,7 @@ class PuntosExpedicionAdminTest(TestCase):
         obj = _mock_obj(estado=True)
         result = self.admin.activo_badge(obj)
         self.assertIn("green", result)
-        self.assertIn("estado", result)
+        self.assertIn("Activo", result)
 
     def test_activo_badge_inactive(self):
         """Lines 548-550: estado=False returns red badge."""
@@ -610,10 +610,11 @@ class ImpuestosAdminTest(TestCase):
         obj = _mock_obj(estado=True)
         result = self.admin.activo_badge(obj)
         self.assertIn("green", result)
-        self.assertIn("estado", result)
+        self.assertIn("Activo", result)
 
     def test_activo_badge_inactive(self):
         """Lines 623-625: estado=False returns red badge."""
         obj = _mock_obj(estado=False)
         result = self.admin.activo_badge(obj)
         self.assertIn("red", result)
+
