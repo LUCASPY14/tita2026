@@ -37,7 +37,7 @@ on:
         default: true
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: '3.12'
   NODE_VERSION: '20'
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ${{ github.repository }}
@@ -226,11 +226,7 @@ jobs:
       - name: Lint with Flake8
         run: |
           cd backend
-          flake8 apps/ backend/ \
-            --max-line-length=120 \
-            --extend-ignore=E203,E266,E501,W503 \
-            --exclude=migrations,__pycache__,node_modules,.venv \
-            --statistics
+          flake8 apps/ backend/ --statistics
       
       - name: Security scan (Bandit)
         run: |
