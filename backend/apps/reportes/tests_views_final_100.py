@@ -7,13 +7,13 @@ Líneas faltantes:
 - 524-545: TareasProgramadasViewSet.partial_update
 """
 
-import pytest
 from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
