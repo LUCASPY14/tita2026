@@ -757,4 +757,3 @@ class RegistroAutorizacionesAdminTest(TestCase):
         obj = _mock_obj(fecha_autorizacion=datetime.datetime(2024, 4, 8, 16, 45))
         result = self.admin.fecha_autorizacion_display(obj)
         self.assertIn("08/04/2024", result)
-

@@ -27,6 +27,7 @@ module.exports = {
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-empty-function': 'warn',
     '@typescript-eslint/no-inferrable-types': 'warn',
+    '@typescript-eslint/no-explicit-any': 'off',
   },
   settings: {
     react: {

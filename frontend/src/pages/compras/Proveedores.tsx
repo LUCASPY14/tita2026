@@ -256,6 +256,7 @@ const CuentaCorrienteModal: React.FC<CuentaCorrienteModalProps> = ({ proveedor, 
 
   useEffect(() => {
     cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proveedor.id_proveedor]);
 
   const cargar = async () => {

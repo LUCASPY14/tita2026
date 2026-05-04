@@ -122,6 +122,10 @@ jobs:
       
       - name: Install ODBC driver for SQL Server
         run: |
+          # Remove any conflicting Microsoft repo entries (Ubuntu 24.04 runners may have them pre-installed)
+          sudo rm -f /etc/apt/sources.list.d/mssql-release.list
+          sudo rm -f /usr/share/keyrings/microsoft-prod.gpg
+          # Add Microsoft repo with a single consistent key
           curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft.gpg
           echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/$(lsb_release -rs)/prod $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/mssql-release.list
           sudo apt-get update

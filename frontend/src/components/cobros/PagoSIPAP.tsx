@@ -92,6 +92,7 @@ const PagoSIPAP: React.FC<PagoSIPAPProps> = ({
       setEstado('error');
       onError?.(mensaje);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idCliente, monto, descripcion, onError]);
 
   /**

@@ -617,4 +617,3 @@ class ImpuestosAdminTest(TestCase):
         obj = _mock_obj(estado=False)
         result = self.admin.activo_badge(obj)
         self.assertIn("red", result)
-
