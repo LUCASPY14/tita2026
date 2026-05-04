@@ -40,7 +40,7 @@ env:
   PYTHON_VERSION: '3.12'
   NODE_VERSION: '20'
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ${{ github.repository }}
+  IMAGE_PREFIX: lucaspy14/tita2026
 
 # Cancel in-progress runs for the same workflow
 concurrency:
@@ -403,7 +403,7 @@ jobs:
       - name: Build Docker image (if Dockerfile exists)
         if: hashFiles('docker/backend/Dockerfile') != ''
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ github.sha }} \
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
             -f docker/backend/Dockerfile \
             ./backend
       
@@ -455,7 +455,7 @@ jobs:
       - name: Build Docker image (if Dockerfile exists)
         if: hashFiles('docker/frontend/Dockerfile') != ''
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ github.sha }} \
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }} \
             -f docker/frontend/Dockerfile \
             ./frontend
       
