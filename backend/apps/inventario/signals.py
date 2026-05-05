@@ -95,6 +95,18 @@ def actualizar_stock_compra(sender, instance, created, **kwargs):
             _resolver_alertas_stock(producto, stock.cantidad)
 
 
+@receiver(post_save, sender=DetallesVenta)
+def verificar_alerta_tras_venta(sender, instance, created, **kwargs):
+    """Solo verifica alertas de stock bajo; el descuento lo hace StockService en la vista."""
+    if not created:
+        return
+    try:
+        stock = StockUnico.objects.get(id_producto=instance.id_producto)
+        _generar_alerta_stock_bajo(instance.id_producto, stock.cantidad)
+    except StockUnico.DoesNotExist:
+        pass
+
+
 @receiver(pre_save, sender=Ventas)
 def validar_stock_venta(sender, instance, **kwargs):
     """
@@ -116,64 +128,6 @@ def validar_stock_venta(sender, instance, **kwargs):
     # Por ahora, solo loguear
     # La validación real se hará en el servicio de dominio
 
-
-@receiver(post_save, sender=DetallesVenta)
-def descontar_stock_venta(sender, instance, created, **kwargs):
-    """
-    Descuenta stock cuando se confirma una venta.
-
-    CRITICAL: Usa select_for_update() para evitar overselling
-
-    Flujo:
-    1. Bloquea StockUnico con select_for_update()
-    2. Verifica stock disponible
-    3. Descuenta cantidad
-    4. Crea MovimientosStock
-    5. Verifica si debe generar alerta
-    """
-    if not created:
-        return
-
-    with transaction.atomic():
-        producto = instance.id_producto
-        cantidad = instance.cantidad
-        venta = instance.id_venta
-
-        # BLOQUEO PESIMISTA: Espera si otro proceso está modificando
-        try:
-            stock = StockUnico.objects.select_for_update().get(id_producto=producto)
-        except StockUnico.DoesNotExist:
-            # Crear stock si no existe (caso edge)
-            stock = StockUnico.objects.create(id_producto=producto, cantidad=Decimal("0.000"))
-
-        # Validar stock disponible
-        if not producto.permite_stock_negativo:
-            if stock.cantidad < cantidad:
-                # Esto no debería pasar si la validación previa funcionó
-                raise ValueError(
-                    f"Stock insuficiente para {producto.descripcion}. "
-                    f"Disponible: {stock.cantidad}, Solicitado: {cantidad}"
-                )
-
-        # Descontar stock
-        stock.cantidad
-        stock.cantidad -= cantidad
-        stock.save()
-
-        # Registrar movimiento
-        MovimientosStock.objects.create(
-            tipo_movimiento="Egreso",
-            motivo="venta",
-            cantidad=cantidad,
-            stock_resultante=stock.cantidad,
-            observaciones=f"Venta #{venta.id_venta}",
-            id_venta=venta,
-            id_empleado_autoriza=venta.id_empleado_cajero,
-            id_producto=producto,
-        )
-
-        # Verificar si debe generar alerta de stock bajo
-        _generar_alerta_stock_bajo(producto, stock.cantidad)
 
 
 def _generar_alerta_stock_bajo(producto, stock_actual):

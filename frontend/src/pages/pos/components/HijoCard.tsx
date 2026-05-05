@@ -40,7 +40,7 @@ const HijoCard: React.FC<HijoCardProps> = ({
 
   const getSaldoIcon = () => {
     if (saldo.alertaBajo) return <AlertTriangle className="h-4 w-4" />;
-    return <span className="text-xs font-bold leading-none">Gs.</span>;
+    return null;
   };
 
   return (
