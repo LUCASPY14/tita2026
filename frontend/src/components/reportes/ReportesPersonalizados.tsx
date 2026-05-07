@@ -14,7 +14,7 @@ import { FileText, Download, Calendar, Search, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { Card, Button, Input } from '../common';
-import reportesService from '../../services/reportes.service';
+import reportesService, { exportarReportePDF, exportarReporteExcel, descargarArchivo } from '../../services/reportes.service';
 import type {
   ReporteVentas,
   ReporteFinanciero
@@ -25,6 +25,11 @@ type TipoReporte = 'ventas' | 'recargas' | 'top-productos' | 'consumos-tarjeta' 
 export default function ReportesPersonalizados() {
   const [tipoReporte, setTipoReporte] = useState<TipoReporte>('ventas');
   const [cargando, setCargando] = useState(false);
+  const [exportandoPDF, setExportandoPDF] = useState(false);
+  const [exportandoExcel, setExportandoExcel] = useState(false);
+
+  const TIPOS_EXPORTABLES = ['ventas', 'recargas'] as const;
+  const puedeExportarServidor = (TIPOS_EXPORTABLES as readonly string[]).includes(tipoReporte);
   
   // Filtros generales
   const [fechaInicio, setFechaInicio] = useState(
@@ -89,6 +94,30 @@ export default function ReportesPersonalizados() {
   };
 
   const puedeExportar = (tipoReporte === 'ventas' && !!reporteVentas) || (tipoReporte === 'financiero' && !!reporteFinanciero);
+
+  const handleExportarPDF = async () => {
+    setExportandoPDF(true);
+    try {
+      const blob = await exportarReportePDF(tipoReporte, { fecha_inicio: fechaInicio, fecha_fin: fechaFin });
+      descargarArchivo(blob, `reporte-${tipoReporte}-${fechaInicio}-${fechaFin}.pdf`);
+    } catch {
+      toast.error('Error al generar el PDF');
+    } finally {
+      setExportandoPDF(false);
+    }
+  };
+
+  const handleExportarExcel = async () => {
+    setExportandoExcel(true);
+    try {
+      const blob = await exportarReporteExcel(tipoReporte, { fecha_inicio: fechaInicio, fecha_fin: fechaFin });
+      descargarArchivo(blob, `reporte-${tipoReporte}-${fechaInicio}-${fechaFin}.xlsx`);
+    } catch {
+      toast.error('Error al generar el Excel');
+    } finally {
+      setExportandoExcel(false);
+    }
+  };
 
   const generarReporte = async () => {
     setCargando(true);
@@ -323,6 +352,28 @@ export default function ReportesPersonalizados() {
               <Download size={16} />
               Exportar CSV
             </Button>
+          )}
+          {puedeExportarServidor && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleExportarPDF}
+                disabled={exportandoPDF}
+                className="flex items-center gap-2"
+              >
+                <FileText size={16} />
+                {exportandoPDF ? 'Generando...' : 'Exportar PDF'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleExportarExcel}
+                disabled={exportandoExcel}
+                className="flex items-center gap-2"
+              >
+                <Download size={16} />
+                {exportandoExcel ? 'Generando...' : 'Exportar Excel'}
+              </Button>
+            </>
           )}
         </div>
       </Card>

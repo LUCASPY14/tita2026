@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Filter, RefreshCw, Eye, Calendar, TrendingUp,
-  ChevronLeft, ChevronRight, DollarSign, ShoppingBag, Banknote, FileText,
+  ChevronLeft, ChevronRight, DollarSign, ShoppingBag, Banknote, FileText, XCircle,
 } from 'lucide-react';
 import { Input, Button, Spinner, Badge, EmptyState } from '../../../components/common';
 import { posService } from '../../../services/pos.service';
+import { ventasService } from '../../../services/ventas.service';
 import type { Venta, MedioPago } from '../../../types';
 
 const ESTADOS_PAGO = ['Pendiente', 'Parcial', 'Pagado'] as const;
@@ -37,6 +38,9 @@ const HistorialVentas: React.FC = () => {
   const [bancoEmisor, setBancoEmisor] = useState('');
   const [procesandoPago, setProcesandoPago] = useState(false);
   const [errorPago, setErrorPago] = useState('');
+
+  // Estado para cancelar venta
+  const [cancelandoId, setCancelandoId] = useState<number | null>(null);
 
   // Estado para emitir factura individual
   const [ventaFacturar, setVentaFacturar] = useState<Venta | null>(null);
@@ -180,6 +184,23 @@ const HistorialVentas: React.FC = () => {
       setErrorPago(String(msg));
     } finally {
       setProcesandoPago(false);
+    }
+  };
+
+  const handleCancelarVenta = async (venta: Venta) => {
+    const confirmado = window.confirm(
+      `¿Cancelar la venta ${venta.nro_factura_venta ? `#${venta.nro_factura_venta}` : `ID ${venta.id_venta}`}?\nEsta acción no se puede deshacer.`
+    );
+    if (!confirmado) return;
+    setCancelandoId(venta.id_venta);
+    try {
+      await ventasService.cancel(venta.id_venta);
+      cargarVentas(paginaActual);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Error al cancelar la venta.';
+      alert(String(msg));
+    } finally {
+      setCancelandoId(null);
     }
   };
 
@@ -452,6 +473,19 @@ const HistorialVentas: React.FC = () => {
                           title="Registrar pago"
                         >
                           <Banknote className="h-4 w-4" />
+                        </button>
+                      )}
+                      {venta.estado === 'Activa' && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelarVenta(venta)}
+                          disabled={cancelandoId === venta.id_venta}
+                          className="rounded-lg p-1.5 text-gray-400 hover:bg-red-100 hover:text-red-600 disabled:opacity-40 transition-colors"
+                          title="Cancelar venta"
+                        >
+                          {cancelandoId === venta.id_venta
+                            ? <Spinner size="sm" />
+                            : <XCircle className="h-4 w-4" />}
                         </button>
                       )}
                     </div>

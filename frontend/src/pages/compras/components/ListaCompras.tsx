@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingCart, Edit, Eye, Trash2, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { Search, ShoppingCart, Edit, Eye, Trash2, CheckCircle, Clock, DollarSign, Package, AlertCircle } from 'lucide-react';
 import { comprasService } from '../../../services/compras.service';
 import { Compra, Proveedor } from '../../../types';
 import { Card, Spinner, EmptyState, Skeleton } from '../../../components/common';
 import toast from 'react-hot-toast';
+
+interface EstadisticasCompras {
+  total_compras: number;
+  compras_pendientes: number;
+  monto_total: number;
+  saldo_pendiente: number;
+}
 
 interface ListaComprasProps {
   onEditar: (compra: Compra) => void;
@@ -19,9 +26,11 @@ const ListaCompras: React.FC<ListaComprasProps> = ({ onEditar, onVerDetalle }) =
   const [filtroProveedor, setFiltroProveedor] = useState<number | undefined>();
   const [paginaActual, setPaginaActual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
+  const [estadisticas, setEstadisticas] = useState<EstadisticasCompras | null>(null);
 
   useEffect(() => {
     cargarProveedores();
+    comprasService.getEstadisticasCompras().then(setEstadisticas).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -126,8 +135,45 @@ const ListaCompras: React.FC<ListaComprasProps> = ({ onEditar, onVerDetalle }) =
     );
   }
 
+  const formatearMonedaStr = (valor: number) =>
+    new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', minimumFractionDigits: 0 }).format(valor);
+
   return (
     <div className="space-y-6">
+      {/* Cards de estadísticas */}
+      {estadisticas && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex items-center gap-3">
+            <Package className="h-7 w-7 text-amber-500 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-500">Total compras</p>
+              <p className="text-xl font-bold text-gray-800">{estadisticas.total_compras}</p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex items-center gap-3">
+            <AlertCircle className="h-7 w-7 text-yellow-500 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-500">Pendientes</p>
+              <p className="text-xl font-bold text-yellow-700">{estadisticas.compras_pendientes}</p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex items-center gap-3">
+            <DollarSign className="h-7 w-7 text-green-500 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-500">Monto total</p>
+              <p className="text-lg font-bold text-green-700">{formatearMonedaStr(estadisticas.monto_total)}</p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex items-center gap-3">
+            <Clock className="h-7 w-7 text-red-400 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-500">Saldo pendiente</p>
+              <p className="text-lg font-bold text-red-600">{formatearMonedaStr(estadisticas.saldo_pendiente)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filtros */}
       <Card>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">

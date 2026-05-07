@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Edit, Eye, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import { Search, Edit, Eye, ToggleLeft, ToggleRight, Trash2, Users, UserCheck, UserX, CreditCard } from 'lucide-react';
 import { Input, Button, Badge, ConfirmDialog, Skeleton, EmptyState } from '../../../components/common';
 import { clientesService } from '../../../services/clientes.service';
 import type { Cliente } from '../../../types';
 import { useDebounce } from '../../../hooks/useDebounce';
 import toast from 'react-hot-toast';
+
+interface EstadisticasClientes {
+  total: number;
+  activos: number;
+  inactivos: number;
+  con_credito: number;
+  sin_credito: number;
+}
 
 interface ListaClientesProps {
   onEditar: (cliente: Cliente) => void;
@@ -19,8 +27,13 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
   const [paginaActual, setPaginaActual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [clienteAEliminar, setClienteAEliminar] = useState<Cliente | null>(null);
+  const [estadisticas, setEstadisticas] = useState<EstadisticasClientes | null>(null);
 
   const busquedaDebounced = useDebounce(busqueda);
+
+  useEffect(() => {
+    clientesService.getEstadisticas().then(setEstadisticas).catch(() => {});
+  }, []);
 
   useEffect(() => {
     cargarClientes();
@@ -87,6 +100,40 @@ const ListaClientes: React.FC<ListaClientesProps> = ({ onEditar, onVerDetalle })
 
   return (
     <div className="space-y-4">
+      {/* Cards de estadísticas */}
+      {estadisticas && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex items-center gap-3">
+            <Users className="h-7 w-7 text-amber-500 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-xl font-bold text-gray-800">{estadisticas.total}</p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex items-center gap-3">
+            <UserCheck className="h-7 w-7 text-green-500 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-500">Activos</p>
+              <p className="text-xl font-bold text-green-700">{estadisticas.activos}</p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex items-center gap-3">
+            <CreditCard className="h-7 w-7 text-blue-500 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-500">Con crédito</p>
+              <p className="text-xl font-bold text-blue-700">{estadisticas.con_credito}</p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex items-center gap-3">
+            <UserX className="h-7 w-7 text-gray-400 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-500">Inactivos</p>
+              <p className="text-xl font-bold text-gray-600">{estadisticas.inactivos}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filtros */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <div className="md:col-span-2">
