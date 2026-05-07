@@ -570,4 +570,44 @@ class AuditoriaUsuariosWeb(models.Model):
         db_table = "auditoria_usuarios_web"
 
 
+class Permisos(models.Model):
+    id = models.AutoField(primary_key=True)
+    codigo_permiso = models.CharField(max_length=100, unique=True)
+    nombre = models.CharField(max_length=100)
+    modulo = models.CharField(max_length=50)
+    descripcion = models.TextField(blank=True, null=True)
+    estado = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.codigo_permiso} - {self.nombre}"
+
+    class Meta:
+        managed = True
+        db_table = "permisos"
+        verbose_name = "Permiso"
+        verbose_name_plural = "Permisos"
+        ordering = ["modulo", "codigo_permiso"]
+
+
+class RolesPermisos(models.Model):
+    id = models.AutoField(primary_key=True)
+    id_rol = models.ForeignKey(Roles, on_delete=models.CASCADE, db_column="id_rol")
+    id_permiso = models.ForeignKey(Permisos, on_delete=models.CASCADE, db_column="id_permiso")
+    fecha_asignacion = models.DateTimeField(auto_now_add=True)
+    asignado_por = models.ForeignKey(
+        "Empleados", on_delete=models.SET_NULL, null=True, blank=True, db_column="asignado_por"
+    )
+
+    def __str__(self):
+        return f"{self.id_rol.nombre_rol} - {self.id_permiso.codigo_permiso}"
+
+    class Meta:
+        managed = True
+        db_table = "roles_permisos"
+        verbose_name = "Rol-Permiso"
+        verbose_name_plural = "Roles-Permisos"
+        unique_together = [["id_rol", "id_permiso"]]
+
+
 # Alias para compatibilidad con tests que importan 'Usuarios'

@@ -12,57 +12,7 @@ from rest_framework import permissions
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
-from apps.usuarios.models import Empleados, Roles
-
-# ==================== MODELO DE PERMISOS ====================
-
-
-class Permisos(models.Model):
-    """
-    Tabla de permisos disponibles en el sistema.
-    """
-
-    id = models.AutoField(primary_key=True)
-    codigo_permiso = models.CharField(
-        max_length=100, unique=True, help_text="Código único del permiso (ej: 'ventas.crear')"
-    )
-    nombre = models.CharField(max_length=100, help_text="Nombre descriptivo del permiso")
-    modulo = models.CharField(max_length=50, help_text="Módulo al que pertenece (ventas, inventario, usuarios, etc)")
-    descripcion = models.TextField(blank=True, null=True)
-    estado = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "permisos"
-        verbose_name = "Permiso"
-        verbose_name_plural = "Permisos"
-        ordering = ["modulo", "codigo_permiso"]
-
-    def __str__(self):
-        return f"{self.codigo_permiso} - {self.nombre}"
-
-
-class RolesPermisos(models.Model):
-    """
-    Relación muchos a muchos entre roles y permisos.
-    """
-
-    id = models.AutoField(primary_key=True)
-    id_rol = models.ForeignKey(Roles, on_delete=models.CASCADE, db_column="id_rol")
-    id_permiso = models.ForeignKey(Permisos, on_delete=models.CASCADE, db_column="id_permiso")
-    fecha_asignacion = models.DateTimeField(auto_now_add=True)
-    asignado_por = models.ForeignKey(
-        Empleados, on_delete=models.SET_NULL, null=True, blank=True, db_column="asignado_por"
-    )
-
-    class Meta:
-        db_table = "roles_permisos"
-        verbose_name = "Rol-Permiso"
-        verbose_name_plural = "Roles-Permisos"
-        unique_together = [["id_rol", "id_permiso"]]
-
-    def __str__(self):
-        return f"{self.id_rol.nombre_rol} - {self.id_permiso.codigo_permiso}"
+from apps.usuarios.models import Empleados, Permisos, Roles, RolesPermisos
 
 
 # ==================== SERVICIO DE PERMISOS ====================
