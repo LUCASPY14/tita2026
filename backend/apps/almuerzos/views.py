@@ -9,7 +9,10 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from apps.common.permissions import IsCajeroOrAdmin, IsAdminOrReadOnly
 
 from .models import (
     Alergenos,
@@ -49,6 +52,7 @@ def get_precio_almuerzo_activo(fecha=None):
 class PlanesAlmuerzoViewSet(viewsets.ModelViewSet):
     queryset = PlanesAlmuerzo.objects.all()
     serializer_class = PlanesAlmuerzoSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["estado", "tipo_plan"]
     search_fields = ["nombre_plan"]
@@ -63,6 +67,7 @@ class PrecioAlmuerzoViewSet(viewsets.ModelViewSet):
 
     queryset = PrecioAlmuerzo.objects.all()
     serializer_class = PrecioAlmuerzoSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["activo"]
     ordering = ["-fecha_inicio_vigencia"]
@@ -80,6 +85,7 @@ class PrecioAlmuerzoViewSet(viewsets.ModelViewSet):
 class TiposAlmuerzoViewSet(viewsets.ModelViewSet):
     queryset = TiposAlmuerzo.objects.all()
     serializer_class = TiposAlmuerzoSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["estado"]
     search_fields = ["nombre"]
@@ -88,6 +94,7 @@ class TiposAlmuerzoViewSet(viewsets.ModelViewSet):
 class SuscripcionesAlmuerzoViewSet(viewsets.ModelViewSet):
     queryset = SuscripcionesAlmuerzo.objects.all()
     serializer_class = SuscripcionesAlmuerzoSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["estado", "id_hijo", "id_plan_almuerzo"]
     ordering = ["-fecha_inicio"]
@@ -111,6 +118,7 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 
     queryset = RegistrosConsumoAlmuerzo.objects.select_related("id_hijo", "nro_tarjeta").all()
     serializer_class = RegistrosConsumoAlmuerzoSerializer
+    permission_classes = [IsAuthenticated, IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["estado", "id_hijo", "fecha_consumo", "ya_cobrado"]
     search_fields = ["id_hijo__nombre", "id_hijo__apellido", "nro_tarjeta__nro_tarjeta"]
@@ -274,6 +282,7 @@ class RegistrosConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 class AlergenosViewSet(viewsets.ModelViewSet):
     queryset = Alergenos.objects.all()
     serializer_class = AlergenosSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["estado", "nivel_severidad"]
     search_fields = ["nombre"]
@@ -282,6 +291,7 @@ class AlergenosViewSet(viewsets.ModelViewSet):
 class CuentasAlmuerzoMensualViewSet(viewsets.ModelViewSet):
     queryset = CuentasAlmuerzoMensual.objects.select_related("id_hijo").all()
     serializer_class = CuentasAlmuerzoMensualSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["id_hijo", "anio", "mes", "estado"]
     ordering_fields = ["anio", "mes", "monto_total"]

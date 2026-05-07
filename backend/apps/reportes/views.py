@@ -17,8 +17,11 @@ from django.utils.dateparse import parse_date
 
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+
+from apps.common.permissions import IsAdminOrReadOnly
 
 from .models import Dashboards, EjecucionesTarea, KpiMetricas, PlantillasReporte, PlantillasTarea
 from .serializers import (
@@ -39,8 +42,10 @@ class ReportesViewSet(viewsets.ViewSet):
     Proporciona endpoints para:
     - Reportes de ventas, recargas, productos, consumos, financiero
     - Dashboards y KPIs en tiempo real
-    - Exportación de reportes (futuro)
+    - Exportación de reportes (PDF, Excel)
     """
+
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=["get"], url_path="ventas")
     def reporte_ventas(self, request):
@@ -370,6 +375,166 @@ class ReportesViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=["get"], url_path="exportar-pdf")
+    def exportar_pdf(self, request):
+        """
+        Genera y descarga un reporte en PDF.
+
+        GET /api/v1/reportes/exportar-pdf/?tipo=ventas&fecha_inicio=YYYY-MM-DD&fecha_fin=YYYY-MM-DD
+        """
+        import io
+
+        from django.http import HttpResponse
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
+
+        tipo = request.query_params.get("tipo", "ventas")
+        fecha_inicio_str = request.query_params.get("fecha_inicio")
+        fecha_fin_str = request.query_params.get("fecha_fin")
+
+        if not fecha_inicio_str or not fecha_fin_str:
+            return Response(
+                {"error": "Parámetros fecha_inicio y fecha_fin son requeridos"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        fecha_inicio = parse_date(fecha_inicio_str)
+        fecha_fin = parse_date(fecha_fin_str)
+
+        if not fecha_inicio or not fecha_fin:
+            return Response(
+                {"error": "Formato de fecha inválido. Use YYYY-MM-DD"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        TIPOS_SOPORTADOS = ("ventas", "recargas")
+        if tipo not in TIPOS_SOPORTADOS:
+            return Response(
+                {"error": f"Tipo no soportado. Use: {', '.join(TIPOS_SOPORTADOS)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            if tipo == "ventas":
+                datos = ReporteService.generar_reporte_ventas(fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
+            else:
+                datos = ReporteService.generar_reporte_recargas(fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
+
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=letter)
+            styles = getSampleStyleSheet()
+            elements = [
+                Paragraph(f"Reporte de {tipo.capitalize()}", styles["Title"]),
+                Paragraph(f"Período: {fecha_inicio} al {fecha_fin}", styles["Normal"]),
+            ]
+
+            resumen = datos.get("resumen", {})
+            if resumen:
+                table_data = [["Concepto", "Valor"]]
+                for key, value in resumen.items():
+                    table_data.append([key.replace("_", " ").capitalize(), str(value)])
+                tabla = Table(table_data, colWidths=[250, 200])
+                tabla.setStyle(
+                    TableStyle(
+                        [
+                            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                            ("FONTSIZE", (0, 0), (-1, -1), 10),
+                            ("PADDING", (0, 0), (-1, -1), 6),
+                        ]
+                    )
+                )
+                elements.append(tabla)
+
+            doc.build(elements)
+            buffer.seek(0)
+
+            response = HttpResponse(buffer, content_type="application/pdf")
+            response["Content-Disposition"] = (
+                f'attachment; filename="reporte_{tipo}_{fecha_inicio}_{fecha_fin}.pdf"'
+            )
+            return response
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["get"], url_path="exportar-excel")
+    def exportar_excel(self, request):
+        """
+        Genera y descarga un reporte en Excel.
+
+        GET /api/v1/reportes/exportar-excel/?tipo=ventas&fecha_inicio=YYYY-MM-DD&fecha_fin=YYYY-MM-DD
+        """
+        import io
+
+        import openpyxl
+        from django.http import HttpResponse
+
+        tipo = request.query_params.get("tipo", "ventas")
+        fecha_inicio_str = request.query_params.get("fecha_inicio")
+        fecha_fin_str = request.query_params.get("fecha_fin")
+
+        if not fecha_inicio_str or not fecha_fin_str:
+            return Response(
+                {"error": "Parámetros fecha_inicio y fecha_fin son requeridos"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        fecha_inicio = parse_date(fecha_inicio_str)
+        fecha_fin = parse_date(fecha_fin_str)
+
+        if not fecha_inicio or not fecha_fin:
+            return Response(
+                {"error": "Formato de fecha inválido. Use YYYY-MM-DD"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        TIPOS_SOPORTADOS = ("ventas", "recargas")
+        if tipo not in TIPOS_SOPORTADOS:
+            return Response(
+                {"error": f"Tipo no soportado. Use: {', '.join(TIPOS_SOPORTADOS)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            if tipo == "ventas":
+                datos = ReporteService.generar_reporte_ventas(fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
+            else:
+                datos = ReporteService.generar_reporte_recargas(fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
+
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = tipo.capitalize()
+
+            ws.append([f"Reporte de {tipo.capitalize()}"])
+            ws.append([f"Período: {fecha_inicio} al {fecha_fin}"])
+            ws.append([])
+
+            resumen = datos.get("resumen", {})
+            if resumen:
+                ws.append(["Concepto", "Valor"])
+                for key, value in resumen.items():
+                    ws.append([key.replace("_", " ").capitalize(), str(value)])
+
+            buffer = io.BytesIO()
+            wb.save(buffer)
+            buffer.seek(0)
+
+            response = HttpResponse(
+                buffer,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+            response["Content-Disposition"] = (
+                f'attachment; filename="reporte_{tipo}_{fecha_inicio}_{fecha_fin}.xlsx"'
+            )
+            return response
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CRUD ViewSets for reportes models
@@ -379,6 +544,7 @@ class ReportesViewSet(viewsets.ViewSet):
 class PlantillasReporteViewSet(ModelViewSet):
     queryset = PlantillasReporte.objects.all()
     serializer_class = PlantillasReporteSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     @action(detail=True, methods=["post"], url_path="ejecutar", url_name="ejecutar")
     def ejecutar(self, request, pk=None):
@@ -396,6 +562,7 @@ class PlantillasReporteViewSet(ModelViewSet):
 class DashboardsViewSet(ModelViewSet):
     queryset = Dashboards.objects.all().order_by("id_dashboard")
     serializer_class = DashboardsSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     @action(detail=True, methods=["get", "post"], url_path="exportar", url_name="exportar")
     def exportar(self, request, pk=None):
@@ -414,6 +581,7 @@ class DashboardsViewSet(ModelViewSet):
 class KpiMetricasViewSet(ModelViewSet):
     queryset = KpiMetricas.objects.all()
     serializer_class = KpiMetricasSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     @action(detail=True, methods=["post"], url_path="calcular", url_name="calcular")
     def calcular(self, request, pk=None):
@@ -431,6 +599,7 @@ class KpiMetricasViewSet(ModelViewSet):
 class PlantillasTareaViewSet(ModelViewSet):
     queryset = PlantillasTarea.objects.all()
     serializer_class = PlantillasTareaSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     @action(detail=True, methods=["post"], url_path="ejecutar", url_name="ejecutar")
     def ejecutar(self, request, pk=None):
@@ -448,6 +617,7 @@ class PlantillasTareaViewSet(ModelViewSet):
 class EjecucionesTareaViewSet(ModelViewSet):
     queryset = EjecucionesTarea.objects.all()
     serializer_class = EjecucionesTareaSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     @action(detail=True, methods=["post"], url_path="cancelar", url_name="cancelar")
     def cancelar(self, request, pk=None):

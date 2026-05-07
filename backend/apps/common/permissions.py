@@ -168,6 +168,29 @@ class CanManageInventario(permissions.BasePermission):
         return False
 
 
+class CanManageCompras(permissions.BasePermission):
+    """
+    Permite lecturas a cualquier empleado autenticado.
+    Escritura restringida a administradores, gerentes y encargados de compras.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        if request.user.is_staff:
+            return True
+
+        empleado = _get_empleado_from_request(request)
+        if empleado is not None:
+            roles_permitidos = ["administrador", "admin", "gerente", "encargado compras", "encargado_compras"]
+            return empleado.id_rol.nombre_rol.lower() in roles_permitidos
+        return False
+
+
 class ReadOnly(permissions.BasePermission):
     """
     Permiso de solo lectura para todos los usuarios autenticados

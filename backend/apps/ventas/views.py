@@ -708,6 +708,39 @@ class VentasViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @action(detail=True, methods=["post"], url_path="cancelar")
+    def cancelar(self, request, pk=None):
+        """
+        Cancela una venta activa.
+
+        POST /api/v1/ventas/{id}/cancelar/
+        """
+        venta = self.get_object()
+
+        if venta.estado == "Cancelada":
+            return Response(
+                {"error": "La venta ya está cancelada."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if venta.estado == "Anulada":
+            return Response(
+                {"error": "No se puede cancelar una venta anulada."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            venta.estado = "Cancelada"
+            venta.save(update_fields=["estado"])
+
+        serializer = self.get_serializer(venta)
+        return Response(
+            {
+                "mensaje": f"Venta #{venta.id_venta} cancelada exitosamente.",
+                "venta": serializer.data,
+            }
+        )
+
     @action(detail=False, methods=["get"], url_path="sin_facturar")
     def sin_facturar(self, request):
         """

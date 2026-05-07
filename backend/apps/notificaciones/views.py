@@ -12,7 +12,10 @@ from django.utils import timezone
 
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from apps.common.permissions import IsAdminOrReadOnly
 
 from .models import (
     AlertasSistema,
@@ -35,6 +38,7 @@ class PlantillasEmailViewSet(viewsets.ModelViewSet):
 
     queryset = PlantillasEmail.objects.all().order_by("categoria", "nombre")
     serializer_class = PlantillasEmailSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
 
     def get_queryset(self):
@@ -74,6 +78,7 @@ class NotificacionesPortalViewSet(viewsets.ModelViewSet):
 
     queryset = NotificacionesPortal.objects.all()
     serializer_class = NotificacionPortalSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = NotificacionesPortal.objects.all().order_by("-fecha_envio")
@@ -308,6 +313,7 @@ class NotificacionesSaldoViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = NotificacionesSaldo.objects.all()
     serializer_class = NotificacionSaldoSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = NotificacionesSaldo.objects.select_related("nro_tarjeta", "nro_tarjeta__id_hijo").order_by(
@@ -332,6 +338,7 @@ class AlertasSistemaViewSet(viewsets.ModelViewSet):
 
     queryset = AlertasSistema.objects.all()
     serializer_class = AlertaSistemaSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = AlertasSistema.objects.all().order_by("-fecha_creacion")
@@ -382,6 +389,7 @@ class PreferenciasNotificacionViewSet(viewsets.ModelViewSet):
 
     queryset = PreferenciasNotificacion.objects.all()
     serializer_class = PreferenciasNotificacionSerializer
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=["get"])
     def obtener_preferencias(self, request):

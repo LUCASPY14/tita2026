@@ -3,7 +3,10 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from apps.common.permissions import CanManageCompras, IsAdminOrReadOnly
 
 from .models import Compras, DetallesCompra, NotasCreditoProveedor, PagosProveedores, Proveedores
 from .serializers import (
@@ -25,6 +28,7 @@ class ProveedoresViewSet(viewsets.ModelViewSet):
 
     queryset = Proveedores.objects.all()
     serializer_class = ProveedoresSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["estado", "ciudad"]
     search_fields = ["razon_social", "ruc", "email"]
@@ -70,6 +74,7 @@ class ComprasViewSet(viewsets.ModelViewSet):
 
     queryset = Compras.objects.all()
     serializer_class = ComprasSerializer
+    permission_classes = [IsAuthenticated, CanManageCompras]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["estado_pago", "id_proveedor"]
     search_fields = ["nro_factura", "id_proveedor__razon_social"]
@@ -212,10 +217,36 @@ class ComprasViewSet(viewsets.ModelViewSet):
 
         return Response({"totales": totales, "warnings": validacion["warnings"]})
 
+    @action(detail=False, methods=["get"])
+    def estadisticas(self, request):
+        """
+        Resumen estadístico de compras.
+
+        GET /api/v1/compras/estadisticas/
+        """
+        from django.db.models import Sum
+
+        total_compras = Compras.objects.count()
+        compras_pendientes = Compras.objects.filter(estado_pago="Pendiente").count()
+        monto_total = Compras.objects.aggregate(total=Sum("monto_total"))["total"] or 0
+        saldo_pendiente = (
+            Compras.objects.filter(estado_pago="Pendiente").aggregate(total=Sum("saldo_pendiente"))["total"] or 0
+        )
+
+        return Response(
+            {
+                "total_compras": total_compras,
+                "compras_pendientes": compras_pendientes,
+                "monto_total": str(monto_total),
+                "saldo_pendiente": str(saldo_pendiente),
+            }
+        )
+
 
 class DetallesCompraViewSet(viewsets.ModelViewSet):
     queryset = DetallesCompra.objects.all().order_by("pk")
     serializer_class = DetallesCompraSerializer
+    permission_classes = [IsAuthenticated, CanManageCompras]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["id_compra", "id_producto"]
 
@@ -223,6 +254,7 @@ class DetallesCompraViewSet(viewsets.ModelViewSet):
 class PagosProveedoresViewSet(viewsets.ModelViewSet):
     queryset = PagosProveedores.objects.all()
     serializer_class = PagosProveedoresSerializer
+    permission_classes = [IsAuthenticated, CanManageCompras]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["id_medio_pago"]
     ordering = ["-fecha_creacion"]
@@ -231,6 +263,7 @@ class PagosProveedoresViewSet(viewsets.ModelViewSet):
 class NotasCreditoProveedorViewSet(viewsets.ModelViewSet):
     queryset = NotasCreditoProveedor.objects.all()
     serializer_class = NotasCreditoProveedorSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["estado", "id_proveedor"]
     ordering = ["-fecha"]

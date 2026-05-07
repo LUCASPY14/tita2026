@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.clientes.models import RestriccionesHijos
+from apps.common.permissions import IsCajeroOrAdmin, IsAdminOrReadOnly
 
 from .models import CargasSaldo, ConfiguracionSistema, ConsumosTarjeta, MediosPago, Tarjetas
 from .serializers import (
@@ -26,6 +27,7 @@ from .services import RecargaService
 class TarjetasViewSet(viewsets.ModelViewSet):
     queryset = Tarjetas.objects.all()
     serializer_class = TarjetasSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["estado", "id_hijo"]
     search_fields = ["nro_tarjeta", "codigo_barras"]
@@ -98,6 +100,7 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
 
     queryset = CargasSaldo.objects.all()
     serializer_class = CargasSaldoSerializer
+    permission_classes = [IsAuthenticated, IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["estado", "nro_tarjeta", "id_cliente_origen"]
     search_fields = ["referencia", "pay_request_id", "tx_id", "custom_identifier"]
@@ -389,6 +392,7 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
 class ConsumosTarjetaViewSet(viewsets.ModelViewSet):
     queryset = ConsumosTarjeta.objects.all()
     serializer_class = ConsumosTarjetaSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["nro_tarjeta"]
     ordering_fields = ["fecha_consumo"]
@@ -398,6 +402,7 @@ class ConsumosTarjetaViewSet(viewsets.ModelViewSet):
 class MediosPagoViewSet(viewsets.ModelViewSet):
     queryset = MediosPago.objects.all()
     serializer_class = MediosPagoSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["estado"]
     search_fields = ["descripcion"]

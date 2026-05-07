@@ -56,6 +56,33 @@ class ClientesViewSet(viewsets.ModelViewSet):
         }
         return Response(cuenta)
 
+    @action(detail=False, methods=["get"])
+    def estadisticas(self, request):
+        """
+        Resumen estadístico de clientes.
+
+        GET /api/v1/clientes/estadisticas/
+        """
+        from django.db.models import Q
+
+        total = Clientes.objects.count()
+        activos = Clientes.objects.filter(estado=True).count()
+        inactivos = Clientes.objects.filter(estado=False).count()
+        con_credito = Clientes.objects.filter(estado=True, limite_credito__gt=0).count()
+        sin_credito = Clientes.objects.filter(
+            Q(estado=True) & (Q(limite_credito=0) | Q(limite_credito__isnull=True))
+        ).count()
+
+        return Response(
+            {
+                "total": total,
+                "activos": activos,
+                "inactivos": inactivos,
+                "con_credito": con_credito,
+                "sin_credito": sin_credito,
+            }
+        )
+
 
 class TiposClienteViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet de solo lectura para tipos de cliente."""
