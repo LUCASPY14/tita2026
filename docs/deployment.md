@@ -1,331 +1,314 @@
-# Deployment Guide
+# 🚀 Guía de Deployment - Cantina Tita
 
-## Despliegue en Producción
+## 📋 Pre-requisitos
 
-### Requisitos Previos
-
-- Servidor Linux (Ubuntu 20.04+)
-- Python 3.11+
+- Python 3.14+
 - Node.js 18+
 - SQL Server 2025
-- Nginx
-- Domain name (opcional)
+- Redis 6+ (para Celery)
 
-### 1. Preparar el Servidor
+---
 
+## ⚙️ Configuración Inicial
+
+### 1. Clonar Repositorio
 ```bash
-# Actualizar sistema
-sudo apt update && sudo apt upgrade -y
-
-# Instalar dependencias
-sudo apt install -y python3-pip python3-venv nginx git curl gnupg2 unixodbc-dev
-curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
-sudo apt update
-sudo ACCEPT_EULA=Y apt install -y msodbcsql18 mssql-tools18
-
-# Instalar Node.js
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
+git clone https://github.com/tu-usuario/cantina-tita.git
+cd cantina-tita
 ```
 
-### 2. Configurar SQL Server
+### 2. Backend Setup
 
+#### Crear entorno virtual
 ```bash
-# Crear base de datos titadb
-/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'secure_password_here' -Q "IF DB_ID('titadb') IS NULL CREATE DATABASE [titadb]" -C
+cd backend
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
 ```
 
-### 3. Clonar y Configurar Backend
-
+#### Instalar dependencias
 ```bash
-# Clonar repositorio
-cd /var/www
-sudo git clone <repository_url> cantina_tita
-cd cantina_tita/backend
-
-# Crear entorno virtual
-python3 -m venv venv
-source venv/bin/activate
-
-# Instalar dependencias
 pip install -r requirements.txt
-pip install gunicorn
-
-# Configurar variables de entorno
-sudo nano .env
 ```
 
-Agregar en `.env`:
+#### Configurar variables de entorno
+```bash
+cp .env.example .env
+# Editar .env con tus configuraciones
 ```
-DEBUG=False
-SECRET_KEY=generate_a_secure_secret_key_here
+
+**Variables importantes:**
+```env
+DJANGO_ENVIRONMENT=production
+DJANGO_SECRET_KEY=<genera-una-clave-segura-aqui>
 DB_ENGINE=mssql
 DB_NAME=titadb
 DB_USER=sa
-DB_PASSWORD=secure_password_here
+DB_PASSWORD=<password-seguro>
 DB_HOST=localhost
 DB_PORT=1433
-ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
-CORS_ALLOWED_ORIGINS=https://yourdomain.com
+ALLOWED_HOSTS=tudominio.com,www.tudominio.com
 ```
 
+#### Ejecutar migraciones
 ```bash
-# Ejecutar migraciones
 python manage.py migrate
+```
 
-# Crear superusuario
+#### Crear superusuario
+```bash
 python manage.py createsuperuser
+```
 
-# Recolectar archivos estáticos
+#### Recolectar archivos estáticos
+```bash
 python manage.py collectstatic --no-input
 ```
 
-### 4. Configurar Gunicorn
+---
+
+### 3. Frontend Setup
 
 ```bash
-# Crear archivo de servicio
-sudo nano /etc/systemd/system/gunicorn.service
-```
-
-Contenido:
-```ini
-[Unit]
-Description=gunicorn daemon for cantina_tita
-After=network.target
-
-[Service]
-User=www-data
-Group=www-data
-WorkingDirectory=/var/www/cantina_tita/backend
-Environment="PATH=/var/www/cantina_tita/backend/venv/bin"
-ExecStart=/var/www/cantina_tita/backend/venv/bin/gunicorn \
-          --workers 3 \
-          --bind unix:/var/www/cantina_tita/backend/gunicorn.sock \
-          backend.wsgi:application
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-# Iniciar y habilitar servicio
-sudo systemctl start gunicorn
-sudo systemctl enable gunicorn
-```
-
-### 5. Configurar Frontend
-
-```bash
-cd /var/www/cantina_tita/frontend
-
-# Instalar dependencias
+cd ../frontend
 npm install
-
-# Configurar variables de entorno
-nano .env.production
 ```
 
-Contenido de `.env.production`:
-```
-VITE_API_URL=https://yourdomain.com/api/v1
-VITE_APP_NAME=Cantina Tita
-```
-
+#### Configurar API endpoint
 ```bash
-# Build para producción
+# Crear .env.production
+echo "REACT_APP_API_URL=https://api.tudominio.com" > .env.production
+```
+
+#### Build de producción
+```bash
 npm run build
 ```
 
-### 6. Configurar Nginx
+---
 
+## 🧪 Ejecutar Tests
+
+### Backend
 ```bash
-sudo nano /etc/nginx/sites-available/cantina_tita
-```
-
-Contenido:
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com www.yourdomain.com;
-
-    # Frontend
-    location / {
-        root /var/www/cantina_tita/frontend/dist;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Backend API
-    location /api/ {
-        include proxy_params;
-        proxy_pass http://unix:/var/www/cantina_tita/backend/gunicorn.sock;
-    }
-
-    # Django Admin
-    location /admin/ {
-        include proxy_params;
-        proxy_pass http://unix:/var/www/cantina_tita/backend/gunicorn.sock;
-    }
-
-    # Static files
-    location /static/ {
-        alias /var/www/cantina_tita/backend/static/;
-    }
-
-    # Media files
-    location /media/ {
-        alias /var/www/cantina_tita/backend/media/;
-    }
-
-    # Seguridad
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-
-    client_max_body_size 10M;
-}
-```
-
-```bash
-# Habilitar sitio
-sudo ln -s /etc/nginx/sites-available/cantina_tita /etc/nginx/sites-enabled/
-
-# Verificar configuración
-sudo nginx -t
-
-# Reiniciar Nginx
-sudo systemctl restart nginx
-```
-
-### 7. Configurar SSL (Opcional pero Recomendado)
-
-```bash
-# Instalar Certbot
-sudo apt install certbot python3-certbot-nginx
-
-# Obtener certificado
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
-
-# Verificar renovación automática
-sudo certbot renew --dry-run
-```
-
-## Despliegue con Docker
-
-### Usando Docker Compose
-
-```bash
-# Clonar repositorio
-git clone <repository_url> cantina_tita
-cd cantina_tita
-
-# Configurar variables de entorno
-cp .env.example .env
-nano .env
-
-# Iniciar servicios
-docker-compose -f docker/docker-compose.yml up -d
-
-# Ejecutar migraciones
-docker-compose exec backend python manage.py migrate
-
-# Crear superusuario
-docker-compose exec backend python manage.py createsuperuser
-
-# Ver logs
-docker-compose logs -f
-```
-
-## Mantenimiento
-
-### Actualizar Aplicación
-
-```bash
-cd /var/www/cantina_tita
-
-# Backend
-git pull origin main
 cd backend
-source venv/bin/activate
+pytest tests/integration/ -v
+```
+
+**Resultado esperado:** 17/17 tests passing ✅
+
+### Frontend
+```bash
+cd frontend
+npm test -- --watchAll=false
+```
+
+**Resultado esperado:** 620-670 tests passing (92-100%) ⚠️
+
+---
+
+## 🐳 Deployment con Docker
+
+### Desarrollo
+```bash
+cd docker
+docker-compose up -d
+```
+
+### Producción
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+**Servicios incluidos:**
+- Backend (Django + Gunicorn)
+- Frontend (Nginx sirviendo build)
+- SQL Server Database
+- Redis (Celery broker)
+
+---
+
+## 🔒 Seguridad Pre-Deploy
+
+### Checklist Crítico
+- [ ] `DEBUG = False` en producción
+- [ ] `SECRET_KEY` única y segura
+- [ ] `ALLOWED_HOSTS` configurado correctamente
+- [ ] HTTPS habilitado
+- [ ] CORS configurado restrictivamente
+- [ ] Base de datos con usuario no-root
+- [ ] Backups automáticos configurados
+- [ ] Logs monitoreados (Sentry/similar)
+
+### Generar SECRET_KEY segura
+```python
+from django.core.management.utils import get_random_secret_key
+print(get_random_secret_key())
+```
+
+---
+
+## 📊 Monitoreo y Logs
+
+### Ver logs en Docker
+```bash
+docker-compose logs -f backend
+docker-compose logs -f frontend
+```
+
+### Logs de Django
+```bash
+tail -f backend/logs/django.log
+```
+
+### Logs de Nginx
+```bash
+tail -f frontend/logs/nginx/access.log
+tail -f frontend/logs/nginx/error.log
+```
+
+---
+
+## 🔄 Tareas Periódicas (Celery)
+
+### Iniciar workers
+```bash
+cd backend
+celery -A backend worker -l info
+```
+
+### Iniciar scheduler (Celery Beat)
+```bash
+celery -A backend beat -l info
+```
+
+### Monitorear tareas
+```bash
+celery -A backend events
+```
+
+---
+
+## 📈 Performance Tuning
+
+### Backend (Gunicorn)
+```bash
+# Recomendado: (2 x CPU cores) + 1
+gunicorn backend.wsgi:application \
+  --bind 0.0.0.0:8000 \
+  --workers 5 \
+  --timeout 120
+```
+
+### Database (SQL Server)
+```sql
+-- Query Store (recomendado para análisis de rendimiento)
+ALTER DATABASE [titadb] SET QUERY_STORE = ON;
+```
+
+### Frontend (Nginx)
+```nginx
+# Habilitar compresión gzip
+gzip on;
+gzip_types text/css application/javascript application/json;
+gzip_min_length 1000;
+```
+
+---
+
+## 🆘 Troubleshooting
+
+### Error: "Can't connect to SQL Server"
+```bash
+# Verificar que SQL Server esté corriendo
+systemctl status mssql-server
+
+# Verificar credenciales
+/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '<tu-password>' -Q "SELECT 1" -C
+```
+
+### Error: "SECRET_KEY is insecure"
+```bash
+# Generar nueva clave
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+
+# Actualizar en .env
+DJANGO_SECRET_KEY=nueva-clave-generada
+```
+
+### Frontend no conecta con Backend
+```bash
+# Verificar CORS en backend/settings
+CORS_ALLOWED_ORIGINS = ['https://tudominio.com']
+
+# Verificar API URL en frontend
+echo $REACT_APP_API_URL
+```
+
+---
+
+## 📚 Recursos Adicionales
+
+- **Documentación Backend:** [backend/README.md](backend/README.md)
+- **Reporte de Tests:** [backend/tests/README.md](backend/tests/README.md)
+- **Reporte de Validación:** [VALIDATION_REPORT.md](VALIDATION_REPORT.md)
+- **API Documentation:** `http://localhost:8000/swagger/` (desarrollo)
+
+---
+
+## 🎯 Métricas de Producción
+
+### Backend
+- Response time: < 200ms promedio
+- Uptime: 99.9%
+- Error rate: < 0.1%
+
+### Frontend
+- Bundle size: < 500KB (gzip)
+- Time to Interactive: < 3s
+- Lighthouse score: > 90
+
+---
+
+## 🔄 Actualización de Producción
+
+### Proceso Zero-Downtime
+
+1. **Pull latest code:**
+```bash
+git pull origin main
+```
+
+2. **Update backend:**
+```bash
+cd backend
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py collectstatic --no-input
 sudo systemctl restart gunicorn
+```
 
-# Frontend
-cd ../frontend
+3. **Update frontend:**
+```bash
+cd frontend
 npm install
 npm run build
+sudo systemctl restart nginx
 ```
 
-### Backup Automático
-
-Agregar a crontab:
+4. **Verificar:**
 ```bash
-# Editar crontab
-crontab -e
-
-# Backup diario a las 2 AM
-0 2 * * * /var/www/cantina_tita/backend/venv/bin/python /var/www/cantina_tita/backend/scripts/backup_db.py
+curl -I https://tudominio.com  # Debe retornar 200
 ```
 
-### Monitoreo de Logs
+---
 
-```bash
-# Logs de Gunicorn
-sudo journalctl -u gunicorn -f
+## 📞 Soporte
 
-# Logs de Nginx
-sudo tail -f /var/log/nginx/access.log
-sudo tail -f /var/log/nginx/error.log
-```
+**Equipo de Desarrollo:** dev@cantinatita.com  
+**Issues:** GitHub Issues  
+**Documentación:** Wiki del proyecto
 
-## Troubleshooting
+---
 
-### Error 502 Bad Gateway
-```bash
-# Verificar Gunicorn
-sudo systemctl status gunicorn
-sudo systemctl restart gunicorn
-
-# Verificar socket
-ls -la /var/www/cantina_tita/backend/gunicorn.sock
-```
-
-### Error de permisos
-```bash
-sudo chown -R www-data:www-data /var/www/cantina_tita
-sudo chmod -R 755 /var/www/cantina_tita
-```
-
-### Base de datos no responde
-```bash
-sudo systemctl status mssql-server
-sudo systemctl restart mssql-server
-```
-
-## Seguridad Adicional
-
-### Firewall (UFW)
-
-```bash
-sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'
-sudo ufw enable
-```
-
-### Fail2Ban
-
-```bash
-sudo apt install fail2ban
-sudo systemctl enable fail2ban
-sudo systemctl start fail2ban
-```
-
-### Actualizaciones de Seguridad
-
-```bash
-# Configurar actualizaciones automáticas
-sudo apt install unattended-upgrades
-sudo dpkg-reconfigure --priority=low unattended-upgrades
-```
+**Última actualización:** 5 de Marzo, 2026
