@@ -777,6 +777,22 @@ class VentasViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(qs, many=True)
         return Response({"count": qs.count(), "results": serializer.data})
 
+    def destroy(self, request, *args, **kwargs):
+        """Elimina una venta. Restringido a administradores y gerentes."""
+        from apps.common.permissions import _get_empleado_from_request
+
+        if not request.user.is_staff:
+            empleado = _get_empleado_from_request(request)
+            if empleado is None:
+                return Response({"error": "No autorizado."}, status=status.HTTP_403_FORBIDDEN)
+            roles_admin = ["administrador", "admin", "gerente"]
+            if empleado.id_rol.nombre_rol.lower() not in roles_admin:
+                return Response(
+                    {"error": "Solo administradores y gerentes pueden eliminar ventas."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        return super().destroy(request, *args, **kwargs)
+
     def _descontar_stock_venta(self, venta, detalles):
         """
         Descuenta stock usando StockService (centralizado y ACID).

@@ -66,7 +66,7 @@ class TestIsCajeroOrAdminPermission:
             apellido="Cajero",
             usuario="pcajero",
             contrasena_hash="hash123",
-            fecha_ingreso=datetime.now(timezone.utc),
+            fecha_ingreso=datetime.now(),
             id_rol=rol_cajero,
             estado=True,
         )
@@ -81,7 +81,7 @@ class TestIsCajeroOrAdminPermission:
             apellido="Admin",
             usuario="aadmin",
             contrasena_hash="hash456",
-            fecha_ingreso=datetime.now(timezone.utc),
+            fecha_ingreso=datetime.now(),
             id_rol=rol_administrador,
             estado=True,
         )
@@ -96,7 +96,7 @@ class TestIsCajeroOrAdminPermission:
             apellido="Vendedor",
             usuario="lvendedor",
             contrasena_hash="hash789",
-            fecha_ingreso=datetime.now(timezone.utc),
+            fecha_ingreso=datetime.now(),
             id_rol=rol_vendedor,
             estado=True,
         )

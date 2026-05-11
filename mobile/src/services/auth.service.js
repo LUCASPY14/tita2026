@@ -21,7 +21,7 @@ export async function logout() {
         `${BASE_URL}/auth/logout/`,
         {},
         { headers: { Authorization: `Token ${token}` } }
-      );
+      ).catch(() => {});
     }
   } finally {
     await clearToken();

@@ -55,7 +55,7 @@ from apps.reportes.models import (
 
 class BaseReportesExtTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="reports_ext", password="testpass")
+        self.user = User.objects.create_user(username="reports_ext", password="testpass", is_staff=True)
         self.client.force_authenticate(user=self.user)
 
 

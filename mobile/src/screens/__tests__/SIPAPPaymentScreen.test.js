@@ -98,7 +98,7 @@ describe('SIPAPPaymentScreen', () => {
     );
   });
 
-  it.skip('should call generarQRCargaSaldo when pressing generate with valid monto', async () => {
+  it('should call generarQRCargaSaldo when pressing generate with valid monto', async () => {
     const mockQRData = {
       qr_data: {
         txn_id: 'TXN123',
@@ -126,7 +126,7 @@ describe('SIPAPPaymentScreen', () => {
     });
   });
 
-  it.skip('should handle QR generation error', async () => {
+  it('should handle QR generation error', async () => {
     sipapService.generarQRCargaSaldo.mockRejectedValue(
       new Error('Error al generar QR')
     );

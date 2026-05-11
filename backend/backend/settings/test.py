@@ -12,18 +12,24 @@ USE_TZ = False
 TIME_ZONE = "UTC"
 
 # Base de datos SQL Server para tests
+_db_user = os.environ.get("DB_USER", "")
+_db_extra = "TrustServerCertificate=yes;MARS_Connection=yes"
+if not _db_user:
+    # Sin usuario → Windows Authentication (instancia local)
+    _db_extra += ";Trusted_Connection=yes"
+
 DATABASES = {
     "default": {
         "ENGINE": "mssql",
         "NAME": os.environ.get("DB_NAME", "titadb"),
-        "HOST": os.environ.get("DB_HOST", "np:localhost"),
-        "PORT": os.environ.get("DB_PORT", "1433"),
-        "USER": os.environ.get("DB_USER", ""),
+        "HOST": os.environ.get("DB_HOST", "."),
+        "PORT": os.environ.get("DB_PORT", ""),
+        "USER": _db_user,
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
         "ATOMIC_REQUESTS": False,
         "OPTIONS": {
             "driver": "ODBC Driver 18 for SQL Server",
-            "extra_params": "TrustServerCertificate=yes;MARS_Connection=yes",
+            "extra_params": _db_extra,
         },
         "TEST": {
             "NAME": os.environ.get("DB_TEST_NAME", "test_titadb"),

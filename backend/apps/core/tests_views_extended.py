@@ -34,7 +34,7 @@ class IniciarRecargaBancardEdgeCasesTest(TestCase):
         from apps.productos.models import ListasPrecios
 
         self.client = APIClient()
-        self.auth_user = User.objects.create_user(username="bancard_ext_user", password="testpass123")
+        self.auth_user = User.objects.create_user(username="bancard_ext_user", password="testpass123", is_staff=True)
         self.client.force_authenticate(user=self.auth_user)
 
         self.tipo_cliente = TiposCliente.objects.create(nombre_tipo="Standard Bancard", estado=True)

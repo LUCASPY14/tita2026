@@ -3,9 +3,11 @@ Tests para módulo de inventario
 Valida reglas de negocio, concurrencia y consistencia ACID
 """
 
+import unittest
 from decimal import Decimal
 from threading import Thread
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
@@ -307,6 +309,10 @@ class ConcurrenciaStockTest(TransactionTestCase):
             id_rol=self.rol,
         )
 
+    @unittest.skipIf(
+        settings.DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3",
+        "SQLite no soporta transacciones concurrentes entre hilos",
+    )
     def test_concurrencia_reserva_stock(self):
         """
         Simular 5 cajeros intentando vender el último producto simultáneamente.

@@ -708,11 +708,14 @@ class RecargaService:
         from apps.core.models import CargasSaldo
         from apps.usuarios.models import Empleados
 
-        supervisor = Empleados.objects.get(id_empleado=supervisor_id)
+        supervisor = Empleados.objects.select_related("id_rol").get(id_empleado=supervisor_id)
 
-        # Verificar permisos de supervisor (TODO: integrar con sistema de roles)
-        # if not supervisor.es_supervisor:
-        #     raise ValidationError('El empleado no tiene permisos de supervisor')
+        roles_permitidos = ["supervisor", "administrador", "admin", "gerente"]
+        if supervisor.id_rol.nombre_rol.lower() not in roles_permitidos:
+            raise ValidationError(
+                f"El empleado '{supervisor.nombre}' no tiene permisos para aprobar recargas. "
+                f"Se requiere rol de supervisor, administrador o gerente."
+            )
 
         with transaction.atomic():
             recarga = CargasSaldo.objects.select_for_update().get(

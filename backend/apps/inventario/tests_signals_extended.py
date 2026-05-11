@@ -304,30 +304,34 @@ class ActualizarStockCompraSignalTest(TransactionTestCase):
                     self.assertEqual(mock_create.call_count, count_first)
 
 
-# ─── descontar_stock_venta ─────────────────────────────────────────────────
+# ─── verificar_alerta_tras_venta ───────────────────────────────────────────
 
 
-class DescontarStockVentaSignalTest(TransactionTestCase):
-    """Tests para signal descontar_stock_venta (post_save DetallesVenta)"""
+class VerificarAlertaTrasVentaSignalTest(TransactionTestCase):
+    """Tests para signal verificar_alerta_tras_venta (post_save DetallesVenta).
+
+    Este signal NO descuenta stock — solo verifica alertas de stock bajo.
+    El descuento de stock lo realiza StockService en la vista.
+    """
 
     def setUp(self):
-        rol = _make_rol("dsv")
-        self.empleado = _make_empleado(rol, "dsv")
-        cat = _make_categoria("dsv")
-        und = _make_unidad("dsv")
-        imp = _make_impuesto("dsv")
-        self.producto = _make_producto(cat, und, imp, "dsv")
+        rol = _make_rol("vatv")
+        self.empleado = _make_empleado(rol, "vatv")
+        cat = _make_categoria("vatv")
+        und = _make_unidad("vatv")
+        imp = _make_impuesto("vatv")
+        # stock_minimo=5 por defecto
+        self.producto = _make_producto(cat, und, imp, "vatv", stock_minimo=Decimal("5.000"))
 
-        # Crear cliente y venta para DetallesVenta
         from apps.clientes.models import Clientes, TiposCliente
         from apps.productos.models import ListasPrecios
 
         tipo_cliente, _ = TiposCliente.objects.get_or_create(nombre_tipo="Normal")
-        lista, _ = ListasPrecios.objects.get_or_create(nombre_lista="Lista General DSV", defaults={"estado": True})
+        lista, _ = ListasPrecios.objects.get_or_create(nombre_lista="Lista General VATV", defaults={"estado": True})
         self.cliente = Clientes.objects.create(
             nombres="Cliente",
-            apellidos="SignalVtaTest",
-            ruc_ci="9900999-D",
+            apellidos="AlertaVtaTest",
+            ruc_ci="9900999-V",
             estado=True,
             id_lista=lista,
             id_tipo_cliente=tipo_cliente,
@@ -343,91 +347,78 @@ class DescontarStockVentaSignalTest(TransactionTestCase):
             id_empleado_cajero=self.empleado,
         )
 
-    def test_sin_stock_crea_stock_cero(self):
-        """Línea 135: Sin StockUnico existente → crea stock con 0 y lo descuenta."""
-        from apps.ventas.models import DetallesVenta
-
-        # No existe StockUnico para el producto → signal crea uno
-        # permite_stock_negativo=False + no hay stock → genera ValueError
-        with self.assertRaises(Exception):
-            DetallesVenta.objects.create(
-                id_venta=self.venta,
-                id_producto=self.producto,
-                cantidad=Decimal("5.000"),
-                precio_unitario=Decimal("1000.00"),
-            )
-
-    def test_stock_insuficiente_raises_valueerror(self):
-        """Línea 153: Stock insuficiente para producto sin permite_stock_negativo → ValueError."""
-        from apps.ventas.models import DetallesVenta
-
-        # Crear stock insuficiente
-        StockUnico.objects.create(
-            id_producto=self.producto,
-            cantidad=Decimal("2.000"),
-        )
-        with self.assertRaises((ValueError, Exception)):
-            DetallesVenta.objects.create(
-                id_venta=self.venta,
-                id_producto=self.producto,
-                cantidad=Decimal("5.000"),
-                precio_unitario=Decimal("1000.00"),
-            )
-
-    def test_stock_suficiente_descuenta(self):
-        """Descuenta stock correctamente cuando hay suficiente."""
-        cat = _make_categoria("dsv2")
-        und = _make_unidad("dsv2")
-        imp = _make_impuesto("dsv2")
-        producto2 = _make_producto(cat, und, imp, "dsv2", permite_negativo=True)
-        StockUnico.objects.create(
-            id_producto=producto2,
-            cantidad=Decimal("10.000"),
-        )
-        from apps.ventas.models import DetallesVenta
-
-        DetallesVenta.objects.create(
-            id_venta=self.venta,
-            id_producto=producto2,
-            cantidad=Decimal("3.000"),
-            precio_unitario=Decimal("1000.00"),
-        )
-        stock = StockUnico.objects.get(id_producto=producto2)
-        self.assertEqual(stock.cantidad, Decimal("7.000"))
-        self.assertEqual(MovimientosStock.objects.filter(id_producto=producto2, motivo="venta").count(), 1)
-
-    def test_suficiente_no_negativo_branch_151_to_159(self):
-        """Lines 151->159: permite_stock_negativo=False + stock sufficient → no ValueError."""
-        cat = _make_categoria("dsv3")
-        und = _make_unidad("dsv3")
-        imp = _make_impuesto("dsv3")
-        # producto with permite_stock_negativo=False (default)
-        producto3 = _make_producto(cat, und, imp, "dsv3", permite_negativo=False)
-        StockUnico.objects.create(
-            id_producto=producto3,
-            cantidad=Decimal("20.000"),
-        )
-        from apps.ventas.models import DetallesVenta
-
-        # Stock=20 >= cantidad=5 → no ValueError, goes through 151->159 branch
-        DetallesVenta.objects.create(
-            id_venta=self.venta,
-            id_producto=producto3,
-            cantidad=Decimal("5.000"),
-            precio_unitario=Decimal("1000.00"),
-        )
-        stock = StockUnico.objects.get(id_producto=producto3)
-        self.assertEqual(stock.cantidad, Decimal("15.000"))
-
-    def test_descontar_update_no_created(self):
-        """Line 135: Signal returns early when created=False (update, not insert)."""
+    def test_update_retorna_temprano(self):
+        """Signal retorna sin crear alertas cuando created=False (actualización, no inserción)."""
         from apps.inventario import signals as inv_signals
 
         mock_instance = MagicMock()
-        initial_count = MovimientosStock.objects.count()
-        inv_signals.descontar_stock_venta(sender=None, instance=mock_instance, created=False)
-        # No new stock movements created
-        self.assertEqual(MovimientosStock.objects.count(), initial_count)
+        initial_count = AlertasStock.objects.count()
+        inv_signals.verificar_alerta_tras_venta(sender=None, instance=mock_instance, created=False)
+        self.assertEqual(AlertasStock.objects.count(), initial_count)
+
+    def test_stock_no_existe_no_falla(self):
+        """Cuando StockUnico no existe, signal pasa silenciosamente sin error ni alerta."""
+        from apps.inventario import signals as inv_signals
+
+        mock_instance = MagicMock()
+        mock_instance.id_producto = self.producto
+        initial_count = AlertasStock.objects.count()
+        # No hay StockUnico → DoesNotExist capturado internamente
+        inv_signals.verificar_alerta_tras_venta(sender=None, instance=mock_instance, created=True)
+        self.assertEqual(AlertasStock.objects.count(), initial_count)
+
+    def test_alerta_generada_cuando_stock_bajo(self):
+        """Crea alerta de stock cuando el stock actual está por debajo del mínimo."""
+        # stock=3, minimo=5 → stock_minimo alert
+        StockUnico.objects.create(id_producto=self.producto, cantidad=Decimal("3.000"))
+
+        from apps.ventas.models import DetallesVenta
+
+        DetallesVenta.objects.create(
+            id_venta=self.venta,
+            id_producto=self.producto,
+            cantidad=Decimal("1.000"),
+            precio_unitario=Decimal("1000.00"),
+        )
+        self.assertEqual(AlertasStock.objects.filter(id_producto=self.producto, activa=True).count(), 1)
+
+    def test_sin_alerta_cuando_stock_suficiente(self):
+        """No genera alerta cuando el stock está por encima del mínimo."""
+        # stock=50, minimo=5 → sin alerta
+        StockUnico.objects.create(id_producto=self.producto, cantidad=Decimal("50.000"))
+
+        from apps.ventas.models import DetallesVenta
+
+        DetallesVenta.objects.create(
+            id_venta=self.venta,
+            id_producto=self.producto,
+            cantidad=Decimal("1.000"),
+            precio_unitario=Decimal("1000.00"),
+        )
+        self.assertEqual(AlertasStock.objects.filter(id_producto=self.producto, activa=True).count(), 0)
+
+    def test_alerta_no_duplicada(self):
+        """No crea alerta duplicada cuando ya existe una alerta activa para el producto."""
+        StockUnico.objects.create(id_producto=self.producto, cantidad=Decimal("3.000"))
+        AlertasStock.objects.create(
+            tipo_alerta="stock_minimo",
+            stock_actual=Decimal("3.000"),
+            stock_minimo=Decimal("5.000"),
+            id_producto=self.producto,
+            activa=True,
+            notificacion_enviada=False,
+        )
+
+        from apps.ventas.models import DetallesVenta
+
+        DetallesVenta.objects.create(
+            id_venta=self.venta,
+            id_producto=self.producto,
+            cantidad=Decimal("1.000"),
+            precio_unitario=Decimal("1000.00"),
+        )
+        # Sigue siendo 1, no se crea duplicado
+        self.assertEqual(AlertasStock.objects.filter(id_producto=self.producto, activa=True).count(), 1)
 
 
 # ─── _generar_alerta_stock_bajo ───────────────────────────────────────────────

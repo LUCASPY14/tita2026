@@ -133,7 +133,7 @@ class TestIsAdminOrReadOnlyWithEmpleado:
             apellido="Gerente",
             usuario="cgerente",
             contrasena_hash="hash123",
-            fecha_ingreso=datetime.now(timezone.utc),
+            fecha_ingreso=datetime.now(),
             id_rol=rol_gerente,
             estado=True,
         )
@@ -185,7 +185,7 @@ class TestIsClienteOrAdminWithEmpleado:
             apellido="Vendedora",
             usuario="mvendedora",
             contrasena_hash="hash456",
-            fecha_ingreso=datetime.now(timezone.utc),
+            fecha_ingreso=datetime.now(),
             id_rol=rol_vendedor,
             estado=True,
         )

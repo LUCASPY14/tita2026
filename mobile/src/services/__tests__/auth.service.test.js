@@ -64,7 +64,7 @@ describe('Auth Service', () => {
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('cantina_user');
     });
 
-    it.skip('should clear tokens even if API call fails', async () => {
+    it('should clear tokens even if API call fails', async () => {
       SecureStore.getItemAsync.mockResolvedValue('test-token');
       axios.post.mockRejectedValue(new Error());
 

@@ -126,6 +126,9 @@ class CargasSaldoViewSet(viewsets.ModelViewSet):
             metodo_pago = request.data.get("metodo_pago", "efectivo")
             referencia = request.data.get("referencia")
 
+            if monto <= Decimal("0"):
+                return Response({"error": "El monto debe ser mayor a 0."}, status=status.HTTP_400_BAD_REQUEST)
+
             # Obtener empleado del request (asumiendo autenticación)
             # empleado_id = request.user.empleado.id_empleado
             # Por ahora, usamos un valor de prueba
