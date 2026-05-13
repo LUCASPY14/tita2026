@@ -17,16 +17,16 @@ class Command(BaseCommand):
     help = "Configura límites de transacción iniciales para todos los roles"
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS("🔧 Configurando límites de transacción iniciales...\n"))
+        self.stdout.write(self.style.SUCCESS("Configurando limites de transaccion iniciales...\n"))
 
         # Obtener roles
         try:
-            rol_admin = Roles.objects.get(nombre_rol="Admin")
+            rol_admin = Roles.objects.get(nombre_rol="Administrador")
             rol_gerente = Roles.objects.get(nombre_rol="Gerente")
             rol_cajero = Roles.objects.get(nombre_rol="Cajero")
         except Roles.DoesNotExist as e:
-            self.stdout.write(self.style.ERROR(f"❌ Error: No se encontró algún rol."))
-            self.stdout.write(self.style.WARNING(f"   Asegúrate de tener roles: Admin, Gerente, Cajero"))
+            self.stdout.write(self.style.ERROR(f"ERROR: No se encontro algun rol."))
+            self.stdout.write(self.style.WARNING(f"   Asegurate de tener roles: Administrador, Gerente, Cajero"))
             self.stdout.write(self.style.WARNING(f"   Detalles: {e}"))
             return
 
@@ -196,25 +196,25 @@ class Command(BaseCommand):
                     creados += 1
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f"✅ Creado: {config['rol'].nombre_rol} - {config['tipo_operacion']} = Gs. {config['monto']:,.0f}"
+                            f"OK Creado: {config['rol'].nombre_rol} - {config['tipo_operacion']} = Gs. {config['monto']:,.0f}"
                         )
                     )
                 else:
                     actualizados += 1
                     self.stdout.write(
-                        f"🔄 Actualizado: {config['rol'].nombre_rol} - {config['tipo_operacion']} = Gs. {config['monto']:,.0f}"
+                        f"~~ Actualizado: {config['rol'].nombre_rol} - {config['tipo_operacion']} = Gs. {config['monto']:,.0f}"
                     )
 
             except Exception as e:
                 errores += 1
                 self.stdout.write(
-                    self.style.ERROR(f"❌ Error: {config['rol'].nombre_rol} - {config['tipo_operacion']}: {e}")
+                    self.style.ERROR(f"ERROR Error: {config['rol'].nombre_rol} - {config['tipo_operacion']}: {e}")
                 )
 
-        self.stdout.write(f"\n📊 Resumen:")
-        self.stdout.write(self.style.SUCCESS(f"   ✅ Creados: {creados}"))
-        self.stdout.write(f"   🔄 Actualizados: {actualizados}")
+        self.stdout.write(f"\n== Resumen:")
+        self.stdout.write(self.style.SUCCESS(f"   OK Creados: {creados}"))
+        self.stdout.write(f"   ~~ Actualizados: {actualizados}")
         if errores > 0:
-            self.stdout.write(self.style.ERROR(f"   ❌ Errores: {errores}"))
+            self.stdout.write(self.style.ERROR(f"   ERROR Errores: {errores}"))
 
-        self.stdout.write(self.style.SUCCESS("\n✨ Configuración inicial completada!\n"))
+        self.stdout.write(self.style.SUCCESS("\n** Configuración inicial completada!\n"))

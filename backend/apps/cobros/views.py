@@ -252,9 +252,33 @@ class PagosClientesViewSet(viewsets.ModelViewSet):
                 descripcion = f"Pago de {cantidad_facturas} facturas"
 
         # Crear registro temporal de cobro (lo completaremos con el webhook)
+        from apps.core.models import MediosPago
+        from apps.usuarios.models import Empleados
+
+        medio_qr, _ = MediosPago.objects.get_or_create(
+            descripcion="QR (SIPAP)",
+            defaults={"genera_comision": False, "requiere_validacion": True, "estado": True},
+        )
+
+        # Cajero: si hay empleado asociado al request lo usamos; si no, usamos sistema
+        try:
+            cajero = Empleados.objects.get(email=request.user.email)
+        except Empleados.DoesNotExist:
+            cajero, _ = Empleados.objects.get_or_create(
+                usuario="sistema_qr",
+                defaults={
+                    "nombre": "Sistema",
+                    "apellido": "QR",
+                    "contrasena_hash": "",
+                    "email": "sistema_qr@cantinatita.com",
+                },
+            )
+
         pago_pendiente = PagosClientes.objects.create(
             id_cliente=cliente,
             monto_total=monto,
+            id_medio_pago=medio_qr,
+            id_empleado_cajero=cajero,
             estado="Pendiente",
             observaciones=f"QR SIPAP generado - {descripcion}",
         )

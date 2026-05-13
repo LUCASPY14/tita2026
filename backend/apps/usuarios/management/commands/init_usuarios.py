@@ -37,11 +37,11 @@ class Command(BaseCommand):
         resultado = PermissionService.inicializar_permisos()
 
         if resultado["permisos_creados"] > 0:
-            self.stdout.write(self.style.SUCCESS(f'   ✓ {resultado["permisos_creados"]} permisos creados'))
+            self.stdout.write(self.style.SUCCESS(f'   OK {resultado["permisos_creados"]} permisos creados'))
         if resultado["permisos_existentes"] > 0:
-            self.stdout.write(self.style.WARNING(f'   ⚠ {resultado["permisos_existentes"]} permisos ya existían'))
+            self.stdout.write(self.style.WARNING(f'   -- {resultado["permisos_existentes"]} permisos ya existian'))
 
-        self.stdout.write(self.style.SUCCESS(f'   ✓ Total de permisos en el sistema: {resultado["total"]}\n'))
+        self.stdout.write(self.style.SUCCESS(f'   OK Total de permisos en el sistema: {resultado["total"]}\n'))
 
         # 2. Crear roles base
         self.stdout.write("2. Creando roles base...")
@@ -118,7 +118,7 @@ class Command(BaseCommand):
             )
 
             if created:
-                self.stdout.write(self.style.SUCCESS(f'   ✓ Rol creado: {rol_data["nombre_rol"]}'))
+                self.stdout.write(self.style.SUCCESS(f'   OK Rol creado: {rol_data["nombre_rol"]}'))
 
                 # Asignar permisos al rol
                 for permiso_codigo in rol_data["permisos"]:
@@ -126,7 +126,7 @@ class Command(BaseCommand):
 
                 self.stdout.write(f'     - {len(rol_data["permisos"])} permisos asignados')
             else:
-                self.stdout.write(self.style.WARNING(f'   ⚠ Rol ya existía: {rol_data["nombre_rol"]}'))
+                self.stdout.write(self.style.WARNING(f'   -- Rol ya existia: {rol_data["nombre_rol"]}'))
 
         self.stdout.write("")
 
@@ -136,7 +136,7 @@ class Command(BaseCommand):
 
             # Verificar si ya existe
             if Empleados.objects.filter(usuario="admin").exists():
-                self.stdout.write(self.style.WARNING("   ⚠ Usuario admin ya existe\n"))
+                self.stdout.write(self.style.WARNING("   -- Usuario admin ya existe\n"))
             else:
                 rol_admin = Roles.objects.get(nombre_rol="Administrador")
 
@@ -146,18 +146,18 @@ class Command(BaseCommand):
                     usuario="admin",
                     email="admin@cantinatita.com",
                     password=options["admin_password"],
-                    id_rol=rol_admin.id_rol,  # Usar id_rol en lugar de id
+                    id_rol=rol_admin.id_rol,
                     creado_por=None,
                     ip_address="127.0.0.1",
                 )
 
                 if resultado["success"]:
-                    self.stdout.write(self.style.SUCCESS("   ✓ Usuario admin creado exitosamente"))
+                    self.stdout.write(self.style.SUCCESS("   OK Usuario admin creado exitosamente"))
                     self.stdout.write(f"     - Usuario: admin")
                     self.stdout.write(f'     - Password: {options["admin_password"]}')
                     self.stdout.write(f"     - Email: admin@cantinatita.com\n")
                 else:  # pragma: no cover
-                    self.stdout.write(self.style.ERROR(f'   ✗ Error al crear admin: {resultado["mensaje"]}\n'))
+                    self.stdout.write(self.style.ERROR(f'   ERROR al crear admin: {resultado["mensaje"]}\n'))
 
         # 4. Resumen
         self.stdout.write(self.style.MIGRATE_HEADING("=== Resumen de Inicialización ===\n"))
@@ -170,7 +170,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Roles creados: {total_roles}")
         self.stdout.write(f"Empleados activos: {total_empleados}")
 
-        self.stdout.write(self.style.SUCCESS("\n✅ Inicialización completada exitosamente\n"))
+        self.stdout.write(self.style.SUCCESS("\n[OK] Inicializacion completada exitosamente\n"))
 
         # 5. Instrucciones
         self.stdout.write(self.style.MIGRATE_HEADING("=== Próximos Pasos ===\n"))
