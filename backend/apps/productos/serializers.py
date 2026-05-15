@@ -1,86 +1,79 @@
+"""
+Serializers para la app productos
+"""
+
 from rest_framework import serializers
 
-from .models import Categorias, ListasPrecios, PreciosPorLista, Productos, UnidadesMedida
+from .models import (
+    Categoria,
+    Producto,
+    UnidadMedida,
+    ListaPrecio,
+    PrecioPorLista,
+    HistoricoPrecio,
+    Impuesto,
+    ProductoImpuesto,
+)
 
 
-# Create your serializers here.
-class CategoriasSerializer(serializers.ModelSerializer):
+class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Categorias
+        model = Categoria
         fields = "__all__"
 
 
-class UnidadesMedidaSerializer(serializers.ModelSerializer):
+class ProductoSerializer(serializers.ModelSerializer):
+    categoria_nombre = serializers.CharField(source="categoria.nombre", read_only=True)
+    precio_actual = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+
     class Meta:
-        model = UnidadesMedida
+        model = Producto
         fields = "__all__"
 
 
-class ListasPreciosSerializer(serializers.ModelSerializer):
+class UnidadMedidaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ListasPrecios
+        model = UnidadMedida
         fields = "__all__"
 
 
-class PreciosPorListaSerializer(serializers.ModelSerializer):
+class ListaPrecioSerializer(serializers.ModelSerializer):
     class Meta:
-        model = PreciosPorLista
+        model = ListaPrecio
         fields = "__all__"
 
 
-class ProductosSerializer(serializers.ModelSerializer):
-    stock_actual = serializers.SerializerMethodField()
-    requiere_reposicion = serializers.SerializerMethodField()
-    precio = serializers.SerializerMethodField()
-    categoria_nombre = serializers.SerializerMethodField()
-    impuesto_nombre = serializers.SerializerMethodField()
-    id_impuesto = serializers.PrimaryKeyRelatedField(
-        queryset=__import__("apps.contabilidad.models", fromlist=["Impuestos"]).Impuestos.objects.all(),
-        required=False,
-    )
+class PrecioPorListaSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
+    lista_nombre = serializers.CharField(source="lista.nombre", read_only=True)
 
     class Meta:
-        model = Productos
+        model = PrecioPorLista
+        fields = "__all__"
+        read_only_fields = ["fecha_vigencia"]
+
+
+class HistoricoPrecioSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
+    variacion_porcentual = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+
+    class Meta:
+        model = HistoricoPrecio
+        fields = "__all__"
+        read_only_fields = ["fecha_cambio"]
+
+
+class ImpuestoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Impuesto
         fields = "__all__"
 
-    def create(self, validated_data):
-        if "id_impuesto" not in validated_data:
-            from apps.contabilidad.models import Impuestos
 
-            impuesto, _ = Impuestos.objects.get_or_create(
-                nombre_impuesto="IVA 10%",
-                defaults={"porcentaje": 10, "estado": True},
-            )
-            validated_data["id_impuesto"] = impuesto
-        return super().create(validated_data)
+class ProductoImpuestoSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
+    impuesto_nombre = serializers.CharField(source="impuesto.nombre", read_only=True)
 
-    def get_stock_actual(self, obj):
-        try:
-            return float(obj.stock.cantidad)
-        except Exception:
-            return None
-
-    def get_requiere_reposicion(self, obj):
-        try:
-            return obj.stock.cantidad <= obj.stock_minimo
-        except Exception:
-            return False
-
-    def get_categoria_nombre(self, obj):
-        try:
-            return obj.id_categoria.nombre if obj.id_categoria else None
-        except Exception:
-            return None
-
-    def get_impuesto_nombre(self, obj):
-        try:
-            return obj.id_impuesto.nombre_impuesto if obj.id_impuesto else None
-        except Exception:
-            return None
-
-    def get_precio(self, obj):
-        try:
-            precio = obj.precios.order_by("id_precio").first()
-            return float(precio.precio_unitario) if precio else None
-        except Exception:
-            return None
+    class Meta:
+        model = ProductoImpuesto
+        fields = "__all__"
+        read_only_fields = ["fecha_asignacion"]

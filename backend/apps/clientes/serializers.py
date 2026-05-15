@@ -1,54 +1,88 @@
+"""
+Serializers para la app clientes
+"""
+
 from rest_framework import serializers
 
-from .models import Ciudad, Clientes, Grados, Hijos, Pais, RestriccionesHijos, TiposCliente
+from .models import (
+    Cliente,
+    CuentaCorrienteCliente,
+    TipoCliente,
+    Hijo,
+    Grado,
+    HistorialGrado,
+    RestriccionHijo,
+    AutorizacionSaldoNegativo,
+    Pais,
+    Ciudad,
+)
 
 
-# Create your serializers here.
-class TiposClienteSerializer(serializers.ModelSerializer):
+class ClienteSerializer(serializers.ModelSerializer):
+    saldo_cuenta_corriente = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+    tipo_cliente_nombre = serializers.CharField(source="tipo_cliente.nombre", read_only=True)
+
     class Meta:
-        model = TiposCliente
+        model = Cliente
+        fields = "__all__"
+        read_only_fields = ["fecha_registro"]
+
+
+class CuentaCorrienteClienteSerializer(serializers.ModelSerializer):
+    cliente_nombre = serializers.CharField(source="cliente.nombre_completo", read_only=True)
+
+    class Meta:
+        model = CuentaCorrienteCliente
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion", "saldo_anterior", "saldo_resultante"]
+
+
+class TipoClienteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoCliente
         fields = "__all__"
 
 
-class GradosSerializer(serializers.ModelSerializer):
+class HijoSerializer(serializers.ModelSerializer):
+    cliente_nombre = serializers.CharField(source="cliente_responsable.nombre_completo", read_only=True)
+
     class Meta:
-        model = Grados
+        model = Hijo
         fields = "__all__"
 
 
-class ClientesSerializer(serializers.ModelSerializer):
-    id_lista = serializers.PrimaryKeyRelatedField(
-        queryset=__import__("apps.productos.models", fromlist=["ListasPrecios"]).ListasPrecios.objects.all(),
-        required=False,
-    )
+class GradoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Grado
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
+
+
+class HistorialGradoSerializer(serializers.ModelSerializer):
+    hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
 
     class Meta:
-        model = Clientes
+        model = HistorialGrado
         fields = "__all__"
-
-    def create(self, validated_data):
-        if "id_lista" not in validated_data:
-            from apps.productos.models import ListasPrecios
-
-            lista, _ = ListasPrecios.objects.get_or_create(
-                nombre_lista="General",
-                defaults={"estado": True, "moneda": "PYG"},
-            )
-            validated_data["id_lista"] = lista
-        return super().create(validated_data)
+        read_only_fields = ["fecha_cambio"]
 
 
-class HijosSerializer(serializers.ModelSerializer):
+class RestriccionHijoSerializer(serializers.ModelSerializer):
+    hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
+
     class Meta:
-        model = Hijos
+        model = RestriccionHijo
         fields = "__all__"
+        read_only_fields = ["fecha_registro", "fecha_actualizacion"]
 
 
-class RestriccionesHijosSerializer(serializers.ModelSerializer):
+class AutorizacionSaldoNegativoSerializer(serializers.ModelSerializer):
+    cliente_nombre = serializers.CharField(source="cliente.nombre_completo", read_only=True)
+
     class Meta:
-        model = RestriccionesHijos
+        model = AutorizacionSaldoNegativo
         fields = "__all__"
-        read_only_fields = ["fecha_registro", "fecha_ultima_actualizacion"]
+        read_only_fields = ["fecha_autorizacion", "saldo_anterior", "saldo_resultante"]
 
 
 class PaisSerializer(serializers.ModelSerializer):

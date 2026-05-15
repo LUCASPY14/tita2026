@@ -1,453 +1,462 @@
-﻿from decimal import Decimal
+﻿"""
+Admin para la app compras
+Gestión de proveedores, compras, pagos y cuentas corrientes
+"""
 
 from django.contrib import admin
-from django.db.models import Sum
+from django.db import models
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
+from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import (
-    AplicacionPagosCompras,
-    Compras,
-    DetallesCompra,
-    DetallesNotaCreditoProveedor,
-    NotasCreditoProveedor,
-    PagosProveedores,
-    Proveedores,
+    Proveedor,
+    CuentaCorrienteProveedor,
+    Compra,
+    DetalleCompra,
+    PagoProveedor,
+    AplicacionPagoCompra,
+    NotaCreditoProveedor,
+    DetalleNotaCreditoProveedor,
 )
 
 
-@admin.register(Proveedores)
-class ProveedoresAdmin(admin.ModelAdmin):
+# ==============================================================================
+# DETALLE DE COMPRA (INLINE)
+# ==============================================================================
+
+class DetalleCompraInline(admin.TabularInline):
+    model = DetalleCompra
+    extra = 0
+    fields = ["producto", "cantidad", "costo_unitario", "subtotal", "monto_iva"]
+    readonly_fields = ["subtotal", "monto_iva"]
+    autocomplete_fields = ["producto"]
+
+    def has_add_permission(self, request, obj=None):
+        """No permite agregar detalles si la compra está pagada."""
+        if obj and obj.estado_pago == "PAGADO":
+            return False
+        return super().has_add_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        """No permite modificar detalles si la compra está pagada."""
+        if obj and obj.estado_pago == "PAGADO":
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        """No permite eliminar detalles si la compra está pagada."""
+        if obj and obj.estado_pago == "PAGADO":
+            return False
+        return super().has_delete_permission(request, obj)
+
+
+# ==============================================================================
+# PROVEEDOR
+# ==============================================================================
+
+@admin.register(Proveedor)
+class ProveedorAdmin(admin.ModelAdmin):
     list_display = [
-        "id_proveedor",
+        "ruc",
         "razon_social",
-        "ruc_display",
         "telefono",
         "email",
-        "ciudad",
-        "estado_badge",
-        "fecha_registro",
-    ]
-    list_filter = ["estado", "ciudad", "fecha_registro"]
-    search_fields = ["razon_social", "ruc", "email", "telefono"]
-    ordering = ["razon_social"]
-    date_hierarchy = "fecha_registro"
-    list_per_page = 25
-
-    fieldsets = (
-        ("Información Básica", {"fields": ("razon_social", "ruc", "estado")}),
-        ("Datos de Contacto", {"fields": ("telefono", "email", "direccion", "ciudad")}),
-        ("Auditoría", {"fields": ("fecha_registro",), "classes": ("collapse",)}),
-    )
-
-    readonly_fields = ["fecha_registro"]
-
-    def ruc_display(self, obj):
-        """Muestra RUC con formato"""
-        return format_html("<code>{}</code>", obj.ruc)
-
-    ruc_display.short_description = "RUC"
-
-    def estado_badge(self, obj):
-        """Badge coloreado para estado estado/inactivo"""
-        if obj.estado:
-            return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
-                "ACTIVO",
-            )
-        return format_html(
-            '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
-            "INACTIVO",
-        )
-
-    estado_badge.short_description = "Estado"
-
-
-@admin.register(Compras)
-class ComprasAdmin(admin.ModelAdmin):
-    list_display = [
-        "id_compra",
-        "nro_factura_display",
-        "proveedor_nombre",
-        "fecha",
-        "tipo_pago_badge",
-        "medio_pago_display",
-        "monto_display",
         "saldo_display",
-        "estado_badge",
+        "activo",
     ]
-    list_filter = ["estado_pago", "tipo_pago", "id_medio_pago", "fecha", "id_proveedor"]
-    search_fields = ["nro_factura", "id_proveedor__razon_social", "observaciones"]
-    ordering = ["-fecha", "-id_compra"]
-    date_hierarchy = "fecha"
-    list_per_page = 20
+    list_filter = ["activo"]
+    search_fields = ["ruc", "razon_social", "email"]
+    readonly_fields = ["fecha_registro"]
+    ordering = ["razon_social"]
 
-    fieldsets = (
-        (
-            "Información de Compra",
-            {"fields": ("id_proveedor", "nro_factura", "fecha", "id_documento")},
-        ),
-        (
-            "Forma de Pago",
-            {"fields": ("tipo_pago", "id_medio_pago", "estado_pago")},
-        ),
-        ("Montos", {"fields": ("monto_total", "saldo_pendiente")}),
-        ("Observaciones", {"fields": ("observaciones",), "classes": ("collapse",)}),
-    )
-
-    readonly_fields = []
-
-    actions = ["marcar_como_pagado", "generar_orden_pago"]
-
-    def nro_factura_display(self, obj):
-        """Muestra número de factura con formato"""
-        if obj.nro_factura:
-            return format_html("<strong>{}</strong>", obj.nro_factura)
-        return format_html('<em style="color: #999;">{}</em>', "Sin factura")
-
-    nro_factura_display.short_description = "Nro. Factura"
-
-    def tipo_pago_badge(self, obj):
-        """Badge para tipo de pago"""
-        if obj.tipo_pago == "Contado":
-            return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
-                "CONTADO",
+    def get_queryset(self, request):
+        """Anota saldo de cuenta corriente para evitar N+1 queries."""
+        cero = Value(0, output_field=models.DecimalField())
+        return super().get_queryset(request).annotate(
+            _saldo_cc=Coalesce(
+                Sum("movimientos_cuenta__monto", filter=models.Q(movimientos_cuenta__tipo="DEBITO")),
+                cero,
+            ) - Coalesce(
+                Sum("movimientos_cuenta__monto", filter=~models.Q(movimientos_cuenta__tipo="DEBITO")),
+                cero,
             )
-        else:
-            return format_html(
-                '<span style="background-color: #ffc107; color: black; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
-                "CRÉDITO",
-            )
-
-    tipo_pago_badge.short_description = "Tipo Pago"
-
-    def medio_pago_display(self, obj):
-        """Muestra el medio de pago"""
-        if obj.id_medio_pago:
-            return obj.id_medio_pago.descripcion
-        return format_html('<em style="color: #999;">{}</em>', "No especificado")
-
-    medio_pago_display.short_description = "Medio de Pago"
-
-    def proveedor_nombre(self, obj):
-        """Muestra nombre del proveedor"""
-        return obj.id_proveedor.razon_social
-
-    proveedor_nombre.short_description = "Proveedor"
-    proveedor_nombre.admin_order_field = "id_proveedor__razon_social"
-
-    def monto_display(self, obj):
-        """Muestra monto total formateado"""
-        monto_formateado = f"{obj.monto_total:,.0f}"
-        return format_html("₲ {}", monto_formateado)
-
-    monto_display.short_description = "Monto Total"
-    monto_display.admin_order_field = "monto_total"
+        )
 
     def saldo_display(self, obj):
-        """Muestra saldo pendiente formateado"""
-        if obj.saldo_pendiente and obj.saldo_pendiente > 0:
-            color = "#dc3545" if obj.saldo_pendiente == obj.monto_total else "#fd7e14"
-            saldo_formateado = f"{obj.saldo_pendiente:,.0f}"
-            return format_html(
-                '<span style="color: {}; font-weight: bold;">₲ {}</span>',
-                color,
-                saldo_formateado,
-            )
-        return format_html('<span style="color: #28a745;">{}</span>', "₲ 0")
+        saldo = getattr(obj, "_saldo_cc", 0) or 0
+        color = "#dc3545" if saldo > 0 else "#28a745"
+        return format_html('<strong style="color:{};">₲{:,}</strong>', color, saldo)
+    saldo_display.short_description = "Saldo Cta. Cte."
 
-    saldo_display.short_description = "Saldo Pendiente"
-    saldo_display.admin_order_field = "saldo_pendiente"
 
-    def estado_badge(self, obj):
-        """Badge coloreado según estado de pago"""
-        colores = {
-            "Pendiente": ("#ffc107", "#000"),
-            "Confirmado": ("#17a2b8", "#fff"),
-            "Parcial": ("#fd7e14", "#fff"),
-            "Pagado": ("#28a745", "#fff"),
-            "Cancelado": ("#6c757d", "#fff"),
+# ==============================================================================
+# CUENTA CORRIENTE PROVEEDOR
+# ==============================================================================
+
+@admin.register(CuentaCorrienteProveedor)
+class CuentaCorrienteProveedorAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "proveedor_link",
+        "fecha",
+        "tipo_badge",
+        "monto_display",
+        "saldo_resultante_display",
+        "descripcion",
+    ]
+    list_filter = ["tipo", "fecha"]
+    search_fields = ["proveedor__razon_social", "proveedor__ruc", "descripcion"]
+    readonly_fields = ["fecha_creacion", "saldo_anterior", "saldo_resultante"]
+    list_select_related = ["proveedor"]
+    date_hierarchy = "fecha"
+    ordering = ["-fecha", "-id"]
+
+    def get_readonly_fields(self, request, obj=None):
+        """Movimiento de cuenta corriente inmutable una vez creado."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
+    def proveedor_link(self, obj):
+        url = reverse("admin:compras_proveedor_change", args=[obj.proveedor.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.proveedor.razon_social)
+    proveedor_link.short_description = "Proveedor"
+
+    def tipo_badge(self, obj):
+        colors = {
+            "DEBITO": "#dc3545",
+            "CREDITO": "#28a745",
+            "NOTA_CREDITO": "#0d6efd",
+            "AJUSTE": "#ffc107",
         }
-        bg_color, text_color = colores.get(obj.estado_pago, ("#6c757d", "#fff"))
+        color = colors.get(obj.tipo, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: {}; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
-            bg_color,
-            text_color,
-            obj.estado_pago.upper(),
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_tipo_display(),
         )
-
-    estado_badge.short_description = "Estado"
-
-    def marcar_como_pagado(self, request, queryset):
-        """Acción para marcar compras como pagadas"""
-        updated = queryset.filter(estado_pago__in=["Confirmado", "Parcial"]).update(
-            estado_pago="Pagado", saldo_pendiente=0
-        )
-        self.message_user(request, f"{updated} compra(s) marcada(s) como pagada(s)")
-
-    marcar_como_pagado.short_description = "Marcar como Pagado"
-
-    def generar_orden_pago(self, request, queryset):
-        """Acción para generar orden de pago (placeholder)"""
-        count = queryset.filter(saldo_pendiente__gt=0).count()
-        self.message_user(request, f"Generada orden de pago para {count} compra(s)")
-
-    generar_orden_pago.short_description = "Generar Orden de Pago"
-
-
-@admin.register(DetallesCompra)
-class DetallesCompraAdmin(admin.ModelAdmin):
-    list_display = [
-        "id_detalle",
-        "compra_info",
-        "producto_descripcion",
-        "cantidad",
-        "costo_display",
-        "subtotal_display",
-        "iva_display",
-    ]
-    list_filter = ["id_compra__fecha", "id_compra__id_proveedor"]
-    search_fields = ["id_producto__descripcion", "id_compra__nro_factura"]
-    ordering = ["-id_compra__fecha", "id_detalle"]
-    list_per_page = 30
-
-    def compra_info(self, obj):
-        """Muestra información de la compra"""
-        return format_html("Compra #{} - {}", obj.id_compra_id, obj.id_compra.nro_factura or "S/F")
-
-    compra_info.short_description = "Compra"
-    compra_info.admin_order_field = "id_compra"
-
-    def producto_descripcion(self, obj):
-        """Muestra descripción del producto"""
-        return obj.id_producto.descripcion
-
-    producto_descripcion.short_description = "Producto"
-    producto_descripcion.admin_order_field = "id_producto__descripcion"
-
-    def costo_display(self, obj):
-        """Muestra costo unitario formateado"""
-        costo_formateado = f"{obj.costo_unitario:,.2f}"
-        return format_html("₲ {}", costo_formateado)
-
-    costo_display.short_description = "Costo Unit."
-    costo_display.admin_order_field = "costo_unitario"
-
-    def subtotal_display(self, obj):
-        """Muestra subtotal formateado"""
-        subtotal_formateado = f"{obj.subtotal:,.2f}"
-        return format_html("<strong>₲ {}</strong>", subtotal_formateado)
-
-    subtotal_display.short_description = "Subtotal"
-    subtotal_display.admin_order_field = "subtotal"
-
-    def iva_display(self, obj):
-        """Muestra IVA formateado"""
-        if obj.monto_iva:
-            iva_formateado = f"{obj.monto_iva:,.2f}"
-            return format_html("₲ {}", iva_formateado)
-        return "-"
-
-    iva_display.short_description = "IVA"
-
-
-@admin.register(PagosProveedores)
-class PagosProveedoresAdmin(admin.ModelAdmin):
-    list_display = [
-        "id_pago_proveedor",
-        "medio_pago_nombre",
-        "fecha_creacion",
-        "monto_total_aplicado",
-    ]
-    list_filter = ["fecha_creacion", "id_medio_pago"]
-    search_fields = ["id_medio_pago__nombre"]
-    ordering = ["-fecha_creacion"]
-    date_hierarchy = "fecha_creacion"
-    list_per_page = 25
-
-    def medio_pago_nombre(self, obj):
-        """Muestra nombre del medio de pago"""
-        return obj.id_medio_pago.nombre if hasattr(obj.id_medio_pago, "nombre") else str(obj.id_medio_pago)
-
-    medio_pago_nombre.short_description = "Medio de Pago"
-
-    def monto_total_aplicado(self, obj):
-        """Calcula y muestra el monto total aplicado del pago"""
-        total = AplicacionPagosCompras.objects.filter(id_pago_proveedor=obj).aggregate(total=Sum("monto_aplicado"))[
-            "total"
-        ] or Decimal("0.00")
-
-        if total > 0:
-            total_formateado = f"{total:,.2f}"
-            return format_html('<span style="color: #28a745; font-weight: bold;">₲ {}</span>', total_formateado)
-        return format_html('<em style="color: #999;">{}</em>', "₲ 0.00")
-
-    monto_total_aplicado.short_description = "Monto Aplicado"
-
-
-@admin.register(AplicacionPagosCompras)
-class AplicacionPagosComprasAdmin(admin.ModelAdmin):
-    list_display = ["id_aplicacion", "pago_info", "compra_info", "monto_display"]
-    list_filter = ["id_pago_proveedor__fecha_creacion", "id_compra__id_proveedor"]
-    search_fields = ["id_compra__nro_factura", "id_pago_proveedor__id_pago_proveedor"]
-    ordering = ["-id_pago_proveedor__fecha_creacion"]
-    list_per_page = 30
-
-    def pago_info(self, obj):
-        """Muestra información del pago"""
-        return format_html(
-            "Pago #{} - {}",
-            obj.id_pago_proveedor_id,
-            obj.id_pago_proveedor.fecha_creacion.strftime("%d/%m/%Y"),
-        )
-
-    pago_info.short_description = "Pago"
-
-    def compra_info(self, obj):
-        """Muestra información de la compra"""
-        return format_html("Compra #{} - {}", obj.id_compra_id, obj.id_compra.nro_factura or "S/F")
-
-    compra_info.short_description = "Compra"
+    tipo_badge.short_description = "Tipo"
 
     def monto_display(self, obj):
-        """Muestra monto aplicado formateado"""
-        monto_formateado = f"{obj.monto_aplicado:,.2f}"
-        return format_html('<strong style="color: #28a745;">₲ {}</strong>', monto_formateado)
+        return f"₲{obj.monto:,.0f}"
+    monto_display.short_description = "Monto"
 
-    monto_display.short_description = "Monto Aplicado"
-    monto_display.admin_order_field = "monto_aplicado"
+    def saldo_resultante_display(self, obj):
+        color = "#dc3545" if obj.saldo_resultante > 0 else "#28a745"
+        return format_html('<strong style="color:{};">₲{:,}</strong>', color, obj.saldo_resultante)
+    saldo_resultante_display.short_description = "Saldo Resultante"
 
 
-@admin.register(NotasCreditoProveedor)
-class NotasCreditoProveedorAdmin(admin.ModelAdmin):
+# ==============================================================================
+# COMPRA
+# ==============================================================================
+
+@admin.register(Compra)
+class CompraAdmin(admin.ModelAdmin):
     list_display = [
-        "id_nota_proveedor",
-        "nro_factura_display",
-        "proveedor_nombre",
+        "id",
         "fecha",
-        "monto_display",
-        "estado_badge",
-        "fecha_creacion",
+        "proveedor_link",
+        "tipo_pago_badge",
+        "monto_total_display",
+        "saldo_pendiente_display",
+        "estado_pago_badge",
     ]
-    list_filter = ["estado", "fecha", "id_proveedor"]
-    search_fields = ["nro_factura_compra", "id_proveedor__razon_social", "observacion"]
-    ordering = ["-fecha", "-id_nota_proveedor"]
+    list_filter = ["estado_pago", "tipo_pago", "fecha"]
+    search_fields = ["proveedor__razon_social", "nro_factura_proveedor"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["proveedor"]
     date_hierarchy = "fecha"
-    list_per_page = 20
-
+    ordering = ["-fecha"]
+    inlines = [DetalleCompraInline]
     fieldsets = (
-        (
-            "Información de NC",
-            {"fields": ("id_proveedor", "id_compra_original", "nro_factura_compra", "fecha")},
-        ),
-        ("Montos y Estado", {"fields": ("monto_total", "estado")}),
-        ("Observaciones", {"fields": ("observacion",), "classes": ("collapse",)}),
-        ("Auditoría", {"fields": ("fecha_creacion",), "classes": ("collapse",)}),
+        ("Datos de la Compra", {
+            "fields": ("proveedor", "tipo_pago", "fecha")
+        }),
+        ("Montos", {
+            "fields": ("monto_total",)
+        }),
+        ("Factura del Proveedor", {
+            "fields": ("nro_factura_proveedor",)
+        }),
+        ("Estado", {
+            "fields": ("estado_pago", "observaciones")
+        }),
+        ("Medio de Pago", {
+            "fields": ("medio_pago",)
+        }),
+        ("Auditoría", {
+            "fields": ("creado_por", "fecha_creacion"),
+            "classes": ("collapse",),
+        }),
     )
 
+    def get_queryset(self, request):
+        """Anota total pagado para evitar N+1 queries."""
+        cero = Value(0, output_field=models.DecimalField())
+        return super().get_queryset(request).annotate(
+            _total_pagado=Coalesce(
+                Sum("aplicaciones_pago__monto_aplicado"),
+                cero,
+            )
+        )
+
+    def get_readonly_fields(self, request, obj=None):
+        """Compras pagadas inmutables."""
+        if obj and obj.estado_pago == "PAGADO":
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
+    def proveedor_link(self, obj):
+        url = reverse("admin:compras_proveedor_change", args=[obj.proveedor.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.proveedor.razon_social)
+    proveedor_link.short_description = "Proveedor"
+
+    def tipo_pago_badge(self, obj):
+        colors = {"CONTADO": "#28a745", "CREDITO": "#fd7e14"}
+        color = colors.get(obj.tipo_pago, "#6c757d")
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_tipo_pago_display(),
+        )
+    tipo_pago_badge.short_description = "Tipo"
+
+    def monto_total_display(self, obj):
+        return f"₲{obj.monto_total:,.0f}"
+    monto_total_display.short_description = "Total"
+
+    def saldo_pendiente_display(self, obj):
+        total_pagado = getattr(obj, "_total_pagado", 0) or 0
+        saldo = obj.monto_total - total_pagado
+        if saldo <= 0:
+            return format_html('<span style="color:#28a745;">₲0</span>')
+        return format_html('<span style="color:#dc3545;">₲{:,}</span>', saldo)
+    saldo_pendiente_display.short_description = "Saldo Pend."
+
+    def estado_pago_badge(self, obj):
+        colors = {"PAGADO": "#28a745", "PARCIAL": "#ffc107", "PENDIENTE": "#dc3545"}
+        color = colors.get(obj.estado_pago, "#6c757d")
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_estado_pago_display(),
+        )
+    estado_pago_badge.short_description = "Estado Pago"
+
+
+# ==============================================================================
+# PAGO A PROVEEDOR
+# ==============================================================================
+
+@admin.register(PagoProveedor)
+class PagoProveedorAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "proveedor_link",
+        "monto_total_display",
+        "medio_pago_link",
+        "estado_badge",
+        "fecha",
+    ]
+    list_filter = ["estado", "medio_pago", "fecha"]
+    search_fields = ["proveedor__razon_social", "referencia"]
     readonly_fields = ["fecha_creacion"]
+    list_select_related = ["proveedor", "medio_pago"]
+    date_hierarchy = "fecha"
+    ordering = ["-fecha"]
+    fieldsets = (
+        ("Datos del Pago", {
+            "fields": ("proveedor", "monto_total", "medio_pago")
+        }),
+        ("Referencia", {
+            "fields": ("referencia",)
+        }),
+        ("Estado", {
+            "fields": ("estado", "observaciones")
+        }),
+        ("Auditoría", {
+            "fields": ("creado_por", "fecha_creacion"),
+            "classes": ("collapse",),
+        }),
+    )
 
-    actions = ["marcar_como_aplicado", "rechazar_nota"]
+    def get_readonly_fields(self, request, obj=None):
+        """Pagos conciliados/rechazados inmutables."""
+        if obj and obj.estado in ("CONCILIADO", "RECHAZADO"):
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
 
-    def nro_factura_display(self, obj):
-        """Muestra número de factura con formato"""
-        if obj.nro_factura_compra:
-            return format_html("<code>{}</code>", obj.nro_factura_compra)
-        return format_html('<em style="color: #999;">{}</em>', "S/F")
+    def has_delete_permission(self, request, obj=None):
+        """No permite eliminar pagos conciliados o rechazados."""
+        if obj and obj.estado in ("CONCILIADO", "RECHAZADO"):
+            return False
+        return super().has_delete_permission(request, obj)
 
-    nro_factura_display.short_description = "Nro. Factura"
+    def proveedor_link(self, obj):
+        url = reverse("admin:compras_proveedor_change", args=[obj.proveedor.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.proveedor.razon_social)
+    proveedor_link.short_description = "Proveedor"
 
-    def proveedor_nombre(self, obj):
-        """Muestra nombre del proveedor"""
-        return obj.id_proveedor.razon_social
+    def monto_total_display(self, obj):
+        return f"₲{obj.monto_total:,.0f}"
+    monto_total_display.short_description = "Monto"
 
-    proveedor_nombre.short_description = "Proveedor"
-    proveedor_nombre.admin_order_field = "id_proveedor__razon_social"
-
-    def monto_display(self, obj):
-        """Muestra monto total formateado"""
-        monto_formateado = f"{obj.monto_total:,.2f}"
-        return format_html('<span style="color: #dc3545; font-weight: bold;">₲ {}</span>', monto_formateado)
-
-    monto_display.short_description = "Monto NC"
-    monto_display.admin_order_field = "monto_total"
+    def medio_pago_link(self, obj):
+        url = reverse("admin:core_mediopago_change", args=[obj.medio_pago.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.medio_pago.descripcion)
+    medio_pago_link.short_description = "Medio de Pago"
 
     def estado_badge(self, obj):
-        """Badge coloreado según estado"""
-        colores = {
-            "Pendiente": ("#ffc107", "#000"),
-            "Aplicado": ("#28a745", "#fff"),
-            "Rechazado": ("#dc3545", "#fff"),
-        }
-        bg_color, text_color = colores.get(obj.estado, ("#6c757d", "#fff"))
+        colors = {"PENDIENTE": "#ffc107", "CONCILIADO": "#28a745", "RECHAZADO": "#dc3545"}
+        color = colors.get(obj.estado, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: {}; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
-            bg_color,
-            text_color,
-            obj.estado.upper(),
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_estado_display(),
         )
-
     estado_badge.short_description = "Estado"
 
-    def marcar_como_aplicado(self, request, queryset):
-        """Acción para marcar NCs como aplicadas"""
-        updated = queryset.filter(estado="Pendiente").update(estado="Aplicado")
-        self.message_user(request, f"{updated} nota(s) de crédito marcada(s) como aplicada(s)")
 
-    marcar_como_aplicado.short_description = "Marcar como Aplicado"
+# ==============================================================================
+# APLICACIÓN DE PAGO A COMPRA
+# ==============================================================================
 
-    def rechazar_nota(self, request, queryset):
-        """Acción para rechazar NCs"""
-        updated = queryset.filter(estado="Pendiente").update(estado="Rechazado")
-        self.message_user(request, f"{updated} nota(s) de crédito rechazada(s)")
+@admin.register(AplicacionPagoCompra)
+class AplicacionPagoCompraAdmin(admin.ModelAdmin):
+    list_display = ["id", "pago_link", "compra_link", "monto_aplicado_display"]
+    search_fields = ["pago__proveedor__razon_social", "pago__referencia"]
+    list_select_related = ["pago", "compra"]
 
-    rechazar_nota.short_description = "Rechazar NC"
+    def get_readonly_fields(self, request, obj=None):
+        """Aplicación de pago inmutable una vez creada."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return []
+
+    def has_delete_permission(self, request, obj=None):
+        """No permite eliminar aplicaciones de pago."""
+        return False
+
+    def pago_link(self, obj):
+        url = reverse("admin:compras_pagoproveedor_change", args=[obj.pago.pk])
+        return format_html('<a href="{}">Pago #{}</a>', url, obj.pago.pk)
+    pago_link.short_description = "Pago"
+
+    def compra_link(self, obj):
+        url = reverse("admin:compras_compra_change", args=[obj.compra.pk])
+        return format_html('<a href="{}">Compra #{}</a>', url, obj.compra.pk)
+    compra_link.short_description = "Compra"
+
+    def monto_aplicado_display(self, obj):
+        return f"₲{obj.monto_aplicado:,.0f}"
+    monto_aplicado_display.short_description = "Monto Aplicado"
 
 
-@admin.register(DetallesNotaCreditoProveedor)
-class DetallesNotaCreditoProveedorAdmin(admin.ModelAdmin):
+# ==============================================================================
+# NOTA DE CRÉDITO PROVEEDOR
+# ==============================================================================
+
+@admin.register(NotaCreditoProveedor)
+class NotaCreditoProveedorAdmin(admin.ModelAdmin):
     list_display = [
-        "id_detalle_nc_proveedor",
-        "nota_info",
-        "producto_descripcion",
-        "cantidad",
-        "precio_display",
-        "subtotal_display",
+        "id",
+        "proveedor_link",
+        "compra_original_link",
+        "monto_total_display",
+        "estado_badge",
+        "fecha",
     ]
-    list_filter = ["id_nota_proveedor__fecha", "id_nota_proveedor__id_proveedor"]
-    search_fields = ["id_producto__descripcion", "id_nota_proveedor__nro_factura_compra"]
-    ordering = ["-id_nota_proveedor__fecha", "id_detalle_nc_proveedor"]
-    list_per_page = 30
+    list_filter = ["estado", "fecha"]
+    search_fields = ["proveedor__razon_social", "nro_factura_compra"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["proveedor", "compra_original"]
+    date_hierarchy = "fecha"
+    ordering = ["-fecha"]
+    fieldsets = (
+        ("Datos de la Nota", {
+            "fields": ("proveedor", "compra_original", "monto_total", "nro_factura_compra")
+        }),
+        ("Estado", {
+            "fields": ("estado", "observacion")
+        }),
+        ("Auditoría", {
+            "fields": ("creado_por", "fecha_creacion"),
+            "classes": ("collapse",),
+        }),
+    )
 
-    def nota_info(self, obj):
-        """Muestra información de la NC"""
+    def get_readonly_fields(self, request, obj=None):
+        """Nota de crédito inmutable una vez aplicada o anulada."""
+        if obj and obj.estado in ("APLICADA", "ANULADA"):
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
+    def has_delete_permission(self, request, obj=None):
+        """No permite eliminar notas aplicadas o anuladas."""
+        if obj and obj.estado in ("APLICADA", "ANULADA"):
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def proveedor_link(self, obj):
+        url = reverse("admin:compras_proveedor_change", args=[obj.proveedor.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.proveedor.razon_social)
+    proveedor_link.short_description = "Proveedor"
+
+    def compra_original_link(self, obj):
+        if obj.compra_original:
+            url = reverse("admin:compras_compra_change", args=[obj.compra_original.pk])
+            return format_html('<a href="{}">Compra #{}</a>', url, obj.compra_original.pk)
+        return "-"
+    compra_original_link.short_description = "Compra Original"
+
+    def monto_total_display(self, obj):
+        return f"₲{obj.monto_total:,.0f}"
+    monto_total_display.short_description = "Monto"
+
+    def estado_badge(self, obj):
+        colors = {"EMITIDA": "#ffc107", "APLICADA": "#28a745", "ANULADA": "#6c757d"}
+        color = colors.get(obj.estado, "#6c757d")
         return format_html(
-            "NC #{} - Fact. {}",
-            obj.id_nota_proveedor_id,
-            obj.id_nota_proveedor.nro_factura_compra or "S/F",
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_estado_display(),
         )
+    estado_badge.short_description = "Estado"
 
-    nota_info.short_description = "Nota de Crédito"
 
-    def producto_descripcion(self, obj):
-        """Muestra descripción del producto"""
-        return obj.id_producto.descripcion
+# ==============================================================================
+# DETALLE DE NOTA DE CRÉDITO PROVEEDOR
+# ==============================================================================
 
-    producto_descripcion.short_description = "Producto"
-    producto_descripcion.admin_order_field = "id_producto__descripcion"
+@admin.register(DetalleNotaCreditoProveedor)
+class DetalleNotaCreditoProveedorAdmin(admin.ModelAdmin):
+    list_display = ["id", "nota_credito_link", "producto_link", "cantidad", "subtotal_display"]
+    search_fields = ["nota_credito__proveedor__razon_social", "producto__descripcion"]
+    list_select_related = ["nota_credito", "producto"]
 
-    def precio_display(self, obj):
-        """Muestra precio unitario formateado"""
-        precio_formateado = f"{obj.precio_unitario:,.2f}"
-        return format_html("₲ {}", precio_formateado)
+    def get_readonly_fields(self, request, obj=None):
+        """Detalle inmutable una vez creado."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return []
 
-    precio_display.short_description = "Precio Unit."
-    precio_display.admin_order_field = "precio_unitario"
+    def has_delete_permission(self, request, obj=None):
+        """No permite eliminar detalles de notas de crédito."""
+        return False
+
+    def nota_credito_link(self, obj):
+        url = reverse("admin:compras_notacreditoproveedor_change", args=[obj.nota_credito.pk])
+        return format_html('<a href="{}">NC #{}</a>', url, obj.nota_credito.pk)
+    nota_credito_link.short_description = "Nota de Crédito"
+
+    def producto_link(self, obj):
+        url = reverse("admin:productos_producto_change", args=[obj.producto.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.producto.descripcion)
+    producto_link.short_description = "Producto"
 
     def subtotal_display(self, obj):
-        """Muestra subtotal formateado"""
-        subtotal_formateado = f"{obj.subtotal:,.2f}"
-        return format_html('<strong style="color: #dc3545;">₲ {}</strong>', subtotal_formateado)
-
+        return f"₲{obj.subtotal:,.0f}"
     subtotal_display.short_description = "Subtotal"
-    subtotal_display.admin_order_field = "subtotal"

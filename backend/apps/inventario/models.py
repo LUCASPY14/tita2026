@@ -1,623 +1,513 @@
 """
 Modelos de la app inventario
-Gestión de stock, movimientos y costos con consistencia ACID
+Gestión de stock, movimientos, lotes, ajustes y costos
 """
 
+from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 
-class StockUnico(models.Model):
+# ==============================================================================
+# STOCK (INVENTARIO ACTUAL)
+# ==============================================================================
+
+class Stock(models.Model):
     """
     Inventario actual de cada producto.
-
-    Reglas de negocio:
-    - Un solo registro por producto (OneToOne)
-    - Stock nunca puede ser negativo (excepto si producto permite_stock_negativo)
-    - Toda actualización debe estar respaldada por MovimientosStock
-    - Se usa select_for_update() para evitar condiciones de carrera
+    Un solo registro por producto (OneToOne).
     """
 
-    id_stock = models.AutoField(primary_key=True)
-    cantidad = models.DecimalField(max_digits=10, decimal_places=3, help_text="Stock actual disponible")
-    fecha_ultima_actualizacion = models.DateTimeField(auto_now=True, help_text="Última modificación del stock")
-    id_producto = models.OneToOneField(
-        "productos.Productos", models.DO_NOTHING, db_column="id_producto", related_name="stock"
+    producto = models.OneToOneField(
+        "productos.Producto",
+        models.PROTECT,
+        related_name="stock",
+        help_text="Producto asociado",
     )
+    cantidad = models.DecimalField(
+        max_digits=10, decimal_places=3, default=0,
+        help_text="Stock actual disponible",
+    )
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = True
-        db_table = "stock_unico"
         verbose_name = "Stock"
         verbose_name_plural = "Stocks"
         indexes = [
-            models.Index(fields=["id_producto"]),
-            models.Index(fields=["-fecha_ultima_actualizacion"]),
+            models.Index(fields=["producto"]),
+            models.Index(fields=["-fecha_actualizacion"]),
         ]
 
     def __str__(self):
-        return f"{self.id_producto.descripcion}: {self.cantidad} unidades"
+        return f"{self.producto}: {self.cantidad}"
 
     @property
-    def costo_promedio_ponderado(self):
-        """
-        Calcula el costo promedio ponderado basado en las últimas compras.
-
-        Fórmula: Σ(costo_unitario × cantidad) / Σ(cantidad)
-
-        Returns:
-            Decimal: Costo promedio o 0 si no hay compras
-        """
-        from django.db.models import F, Sum
-
-        costos = CostosHistoricos.objects.filter(id_producto=self.id_producto).aggregate(
-            total_monto=Sum(F("costo_unitario") * F("cantidad_comprada")),
-            total_cantidad=Sum("cantidad_comprada"),
+    def costo_promedio(self):
+        """Costo promedio ponderado basado en compras históricas."""
+        costos = self.producto.costos_historicos.aggregate(
+            total_monto=models.Sum(
+                models.F("costo_unitario") * models.F("cantidad_comprada")
+            ),
+            total_cantidad=models.Sum("cantidad_comprada"),
         )
-
         if costos["total_cantidad"] and costos["total_cantidad"] > 0:
-            return (costos["total_monto"] / costos["total_cantidad"]).quantize(Decimal("0.01"))
-        return Decimal("0.00")
+            return (costos["total_monto"] / costos["total_cantidad"]).quantize(Decimal("1"))
+        return Decimal("0")
 
     @property
     def valor_inventario(self):
-        """
-        Calcula el valor total del inventario de este producto.
-
-        Returns:
-            Decimal: cantidad × costo_promedio_ponderado
-        """
-        return (self.cantidad * self.costo_promedio_ponderado).quantize(Decimal("0.01"))
+        return (self.cantidad * self.costo_promedio).quantize(Decimal("1"))
 
     @property
     def requiere_reposicion(self):
-        """Verifica si el stock está por debajo del mínimo"""
-        return self.cantidad <= self.id_producto.stock_minimo
+        return self.cantidad <= self.producto.stock_minimo
 
     @property
     def dias_stock_disponible(self):
-        """
-        Calcula cuántos días durará el stock actual según venta promedio.
-
-        Returns:
-            int: Días estimados o None si no hay ventas
-        """
-        from datetime import timedelta
-
-        from django.db.models import Sum
-        from django.utils import timezone
-
-        # Ventas de últimos 30 días
+        """Días estimados de stock según venta promedio de 30 días."""
         hace_30_dias = timezone.now() - timedelta(days=30)
-
-        ventas_mes = MovimientosStock.objects.filter(
-            id_producto=self.id_producto, tipo_movimiento="Egreso", fecha_hora__gte=hace_30_dias
-        ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
+        ventas_mes = MovimientoStock.objects.filter(
+            producto=self.producto,
+            tipo=MovimientoStock.Tipo.EGRESO,
+            fecha__gte=hace_30_dias,
+        ).aggregate(total=models.Sum("cantidad"))["total"] or Decimal("0")
 
         if ventas_mes > 0:
-            venta_promedio_diaria = ventas_mes / 30
-            return int(self.cantidad / venta_promedio_diaria)
-
+            venta_diaria = ventas_mes / 30
+            if venta_diaria > 0:
+                return int(self.cantidad / venta_diaria)
         return None
 
     def clean(self):
-        """
-        Validaciones del modelo.
-
-        Regla de oro: No permitir stock negativo excepto si producto lo permite
-        """
-        if self.cantidad < 0 and not self.id_producto.permite_stock_negativo:
-            raise ValidationError(
-                {
-                    "cantidad": f"El producto {self.id_producto.descripcion} no permite stock negativo. Stock actual: {self.cantidad}"
-                }
-            )
+        if self.cantidad < 0 and not self.producto.permite_stock_negativo:
+            raise ValidationError({
+                "cantidad": f"{self.producto} no permite stock negativo."
+            })
 
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
 
 
-class MovimientosStock(models.Model):
-    """
-    Historial de todos los movimientos de inventario.
+# ==============================================================================
+# MOVIMIENTO DE STOCK
+# ==============================================================================
 
-    Reglas críticas:
-    - NUNCA eliminar movimientos (auditoría)
-    - Cada movimiento debe tener un motivo específico
-    - stock_resultante debe coincidir con StockUnico.cantidad
-    - Se registra quién autorizó cada movimiento
+class MovimientoStock(models.Model):
+    """Historial de todos los movimientos de inventario."""
 
-    Tipos de movimiento:
-    - Ingreso: Aumenta stock (compras, devoluciones cliente, ajustes positivos)
-    - Egreso: Disminuye stock (ventas, devoluciones proveedor, mermas)
-    """
+    class Tipo(models.TextChoices):
+        INGRESO = "INGRESO", "Ingreso"
+        EGRESO = "EGRESO", "Egreso"
 
-    TIPO_MOVIMIENTO_CHOICES = [
-        ("Ingreso", "Ingreso"),
-        ("Egreso", "Egreso"),
-    ]
+    class Motivo(models.TextChoices):
+        COMPRA = "COMPRA", "Compra a proveedor"
+        VENTA = "VENTA", "Venta a cliente"
+        AJUSTE_AUMENTO = "AJUSTE_AUMENTO", "Ajuste de inventario (aumento)"
+        AJUSTE_MERMA = "AJUSTE_MERMA", "Ajuste de inventario (merma)"
+        DEVOLUCION_CLIENTE = "DEVOLUCION_CLIENTE", "Devolución de cliente"
+        DEVOLUCION_PROVEEDOR = "DEVOLUCION_PROVEEDOR", "Devolución a proveedor"
+        CORRECCION = "CORRECCION", "Corrección manual"
+        TRANSFERENCIA = "TRANSFERENCIA", "Transferencia"
+        VENCIDO = "VENCIDO", "Baja por vencimiento"
+        DANADO = "DANADO", "Baja por daño"
+        INVENTARIO_INICIAL = "INVENTARIO_INICIAL", "Inventario inicial"
 
-    MOTIVO_CHOICES = [
-        ("compra", "Compra a proveedor"),
-        ("venta", "Venta a cliente"),
-        ("ajuste_aumento", "Ajuste de inventario (aumento)"),
-        ("ajuste_merma", "Ajuste de inventario (merma)"),
-        ("devolucion_cliente", "Devolución de cliente"),
-        ("devolucion_proveedor", "Devolución a proveedor"),
-        ("correccion_manual", "Corrección manual"),
-        ("transferencia", "Transferencia entre sucursales"),
-        ("producto_vencido", "Baja por vencimiento"),
-        ("producto_danado", "Baja por daño físico"),
-        ("inventario_inicial", "Inventario inicial"),
-    ]
-
-    id_movimiento_stock = models.BigAutoField(primary_key=True)
-    fecha_hora = models.DateTimeField(auto_now_add=True, help_text="Fecha y hora del movimiento")
-    tipo_movimiento = models.CharField(max_length=7, choices=TIPO_MOVIMIENTO_CHOICES, help_text="Ingreso o Egreso")
-    motivo = models.CharField(
-        max_length=50,
-        choices=MOTIVO_CHOICES,
-        default="correccion_manual",
-        help_text="Razón específica del movimiento",
+    producto = models.ForeignKey(
+        "productos.Producto",
+        models.PROTECT,
+        related_name="movimientos_stock",
     )
+    fecha = models.DateTimeField(default=timezone.now)
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    motivo = models.CharField(max_length=25, choices=Motivo.choices)
     cantidad = models.DecimalField(
-        max_digits=10,
-        decimal_places=3,
+        max_digits=10, decimal_places=3,
         validators=[MinValueValidator(Decimal("0.001"))],
-        help_text="Cantidad del movimiento (siempre positiva)",
+        help_text="Cantidad (siempre positiva)",
     )
-    stock_resultante = models.DecimalField(max_digits=10, decimal_places=3, help_text="Stock después del movimiento")
-    observaciones = models.TextField(blank=True, null=True, help_text="Notas adicionales sobre el movimiento")
-    id_compra = models.ForeignKey(
-        "compras.Compras",
-        models.DO_NOTHING,
-        db_column="id_compra",
-        blank=True,
+    stock_resultante = models.DecimalField(
+        max_digits=10, decimal_places=3,
+        help_text="Stock después del movimiento",
+    )
+    observaciones = models.TextField(blank=True, null=True)
+
+    # Referencias a documentos origen
+    compra = models.ForeignKey(
+        "compras.Compra",
+        models.SET_NULL,
         null=True,
-        related_name="movimientos_stock",
-    )
-    id_venta = models.ForeignKey(
-        "ventas.Ventas",
-        models.DO_NOTHING,
-        db_column="id_venta",
         blank=True,
+        related_name="movimientos_stock",
+    )
+    venta = models.ForeignKey(
+        "ventas.Venta",
+        models.SET_NULL,
         null=True,
+        blank=True,
         related_name="movimientos_stock",
     )
-    id_ajuste = models.BigIntegerField(blank=True, null=True, help_text="ID del ajuste de inventario asociado")
-    id_empleado_autoriza = models.ForeignKey(
-        "usuarios.Empleados",
-        models.DO_NOTHING,
-        db_column="id_empleado_autoriza",
-        related_name="movimientos_autorizados",
+    ajuste = models.ForeignKey(
+        "AjusteInventario",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos",
     )
-    id_producto = models.ForeignKey(
-        "productos.Productos",
-        models.DO_NOTHING,
-        db_column="id_producto",
-        related_name="movimientos_stock",
+
+    # Auditoría
+    autorizado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.PROTECT,
+        related_name="movimientos_stock_autorizados",
     )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "movimientos_stock"
         verbose_name = "Movimiento de Stock"
         verbose_name_plural = "Movimientos de Stock"
-        ordering = ["-fecha_hora"]
+        ordering = ["-fecha"]
         indexes = [
-            models.Index(fields=["id_producto", "-fecha_hora"]),
-            models.Index(fields=["tipo_movimiento", "motivo"]),
-            models.Index(fields=["-fecha_hora"]),
+            models.Index(fields=["producto", "-fecha"]),
+            models.Index(fields=["tipo", "motivo"]),
+            models.Index(fields=["-fecha"]),
         ]
 
     def __str__(self):
-        signo = "+" if self.tipo_movimiento == "Ingreso" else "-"
-        return f"{self.id_producto.descripcion}: {signo}{self.cantidad} ({self.get_motivo_display()})"
+        signo = "+" if self.tipo == self.Tipo.INGRESO else "-"
+        return f"{self.producto}: {signo}{self.cantidad} ({self.get_motivo_display()})"
 
     def clean(self):
-        """Validaciones de consistencia"""
-        # La cantidad siempre debe ser positiva
         if self.cantidad <= 0:
-            raise ValidationError({"cantidad": "La cantidad debe ser mayor a cero"})
+            raise ValidationError({"cantidad": "La cantidad debe ser mayor a cero."})
 
-        # Validar coherencia tipo_movimiento y motivo
         motivos_ingreso = [
-            "compra",
-            "ajuste_aumento",
-            "devolucion_cliente",
-            "inventario_inicial",
-            "transferencia",
+            self.Motivo.COMPRA,
+            self.Motivo.AJUSTE_AUMENTO,
+            self.Motivo.DEVOLUCION_CLIENTE,
+            self.Motivo.INVENTARIO_INICIAL,
+            self.Motivo.TRANSFERENCIA,
         ]
         motivos_egreso = [
-            "venta",
-            "ajuste_merma",
-            "devolucion_proveedor",
-            "producto_vencido",
-            "producto_danado",
+            self.Motivo.VENTA,
+            self.Motivo.AJUSTE_MERMA,
+            self.Motivo.DEVOLUCION_PROVEEDOR,
+            self.Motivo.VENCIDO,
+            self.Motivo.DANADO,
         ]
 
-        if self.tipo_movimiento == "Ingreso" and self.motivo in motivos_egreso:
-            raise ValidationError({"motivo": f'El motivo "{self.get_motivo_display()}" no es válido para un Ingreso'})
-
-        if self.tipo_movimiento == "Egreso" and self.motivo in motivos_ingreso:
-            raise ValidationError({"motivo": f'El motivo "{self.get_motivo_display()}" no es válido para un Egreso'})
+        if self.tipo == self.Tipo.INGRESO and self.motivo in motivos_egreso:
+            raise ValidationError({
+                "motivo": f"Motivo '{self.get_motivo_display()}' no válido para Ingreso."
+            })
+        if self.tipo == self.Tipo.EGRESO and self.motivo in motivos_ingreso:
+            raise ValidationError({
+                "motivo": f"Motivo '{self.get_motivo_display()}' no válido para Egreso."
+            })
 
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
 
 
-class AjustesInventario(models.Model):
-    """
-    Ajustes manuales de inventario (aumentos o mermas).
+# ==============================================================================
+# AJUSTE DE INVENTARIO
+# ==============================================================================
 
-    Flujo:
-    1. Se crea con estado='Pendiente'
-    2. Supervisor revisa y cambia a 'Aprobado' o 'Rechazado'
-    3. Si se aprueba, signal crea MovimientosStock y actualiza StockUnico
-    """
+class AjusteInventario(models.Model):
+    """Ajuste manual de inventario (aumento o merma)."""
 
-    TIPO_AJUSTE_CHOICES = [
-        ("Aumento", "Aumento de stock"),
-        ("Merma", "Disminución de stock"),
-    ]
+    class TipoAjuste(models.TextChoices):
+        AUMENTO = "AUMENTO", "Aumento de stock"
+        MERMA = "MERMA", "Disminución de stock"
 
-    ESTADO_CHOICES = [
-        ("Pendiente", "Pendiente de aprobación"),
-        ("Aprobado", "Aprobado y aplicado"),
-        ("Rechazado", "Rechazado"),
-    ]
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        APROBADO = "APROBADO", "Aprobado"
+        RECHAZADO = "RECHAZADO", "Rechazado"
 
-    id_ajuste = models.BigAutoField(primary_key=True)
-    fecha_hora = models.DateTimeField(auto_now_add=True, help_text="Fecha de creación del ajuste")
-    tipo_ajuste = models.CharField(max_length=8, choices=TIPO_AJUSTE_CHOICES, help_text="Aumento o Merma")
+    fecha = models.DateTimeField(default=timezone.now)
+    tipo = models.CharField(max_length=10, choices=TipoAjuste.choices)
     motivo = models.CharField(max_length=255, help_text="Razón del ajuste")
-    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default="Pendiente", help_text="Estado del ajuste")
-    fecha_aprobacion = models.DateTimeField(blank=True, null=True, help_text="Cuándo fue aprobado/rechazado")
-    id_empleado_solicita = models.ForeignKey(
-        "usuarios.Empleados",
-        models.DO_NOTHING,
-        db_column="id_empleado_solicita",
-        blank=True,
+    estado = models.CharField(
+        max_length=10, choices=Estado.choices, default=Estado.PENDIENTE
+    )
+    fecha_aprobacion = models.DateTimeField(null=True, blank=True)
+    solicitado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.PROTECT,
         null=True,
+        blank=True,
         related_name="ajustes_solicitados",
-        help_text="Empleado que solicita el ajuste",
     )
-    id_empleado_aprueba = models.ForeignKey(
-        "usuarios.Empleados",
-        models.DO_NOTHING,
-        db_column="id_empleado_aprueba",
-        blank=True,
+    aprobado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.SET_NULL,
         null=True,
+        blank=True,
         related_name="ajustes_aprobados",
-        help_text="Supervisor que aprueba/rechaza",
     )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "ajustes_inventario"
         verbose_name = "Ajuste de Inventario"
         verbose_name_plural = "Ajustes de Inventario"
-        ordering = ["-fecha_hora"]
+        ordering = ["-fecha"]
 
     def __str__(self):
-        return f"Ajuste #{self.id_ajuste} - {self.tipo_ajuste} ({self.estado})"
+        return f"Ajuste #{self.pk} - {self.get_tipo_display()} ({self.get_estado_display()})"
 
 
-class DetallesAjuste(models.Model):
-    """
-    Detalles de cada producto en un ajuste de inventario.
-    """
+class DetalleAjuste(models.Model):
+    """Producto incluido en un ajuste de inventario."""
 
-    id_detalle = models.BigAutoField(primary_key=True)
-    cantidad_ajustada = models.DecimalField(
-        max_digits=8,
-        decimal_places=3,
+    ajuste = models.ForeignKey(
+        AjusteInventario, models.CASCADE, related_name="detalles"
+    )
+    producto = models.ForeignKey(
+        "productos.Producto", models.PROTECT, related_name="detalles_ajuste"
+    )
+    cantidad = models.DecimalField(
+        max_digits=10, decimal_places=3,
         validators=[MinValueValidator(Decimal("0.001"))],
         help_text="Cantidad a ajustar (siempre positiva)",
     )
-    id_ajuste = models.ForeignKey(
-        "AjustesInventario", models.DO_NOTHING, db_column="id_ajuste", related_name="detalles"
-    )
-    id_movimiento_stock = models.OneToOneField(
-        "MovimientosStock",
-        models.DO_NOTHING,
-        db_column="id_movimiento_stock",
-        blank=True,
+    movimiento_stock = models.OneToOneField(
+        MovimientoStock,
+        models.SET_NULL,
         null=True,
-        help_text="Movimiento creado al aprobar",
+        blank=True,
+        help_text="Movimiento generado al aprobar",
     )
-    id_producto = models.ForeignKey("productos.Productos", models.DO_NOTHING, db_column="id_producto")
 
     class Meta:
-        managed = True
-        db_table = "detalles_ajuste"
-        unique_together = (("id_ajuste", "id_producto"),)
         verbose_name = "Detalle de Ajuste"
         verbose_name_plural = "Detalles de Ajustes"
+        unique_together = [("ajuste", "producto")]
 
     def __str__(self):
-        return f"{self.id_producto.descripcion}: {self.cantidad_ajustada}"
+        return f"{self.producto}: {self.cantidad}"
 
 
-class CostosHistoricos(models.Model):
-    """
-    Historial de costos de compra para calcular costo promedio ponderado.
+# ==============================================================================
+# COSTO HISTÓRICO
+# ==============================================================================
 
-    Se registra cada vez que se recibe una compra.
-    """
+class CostoHistorico(models.Model):
+    """Historial de costos de compra para cálculo de costo promedio."""
 
-    id_costo_historico = models.BigAutoField(primary_key=True)
-    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, help_text="Costo de compra por unidad")
-    cantidad_comprada = models.DecimalField(
-        max_digits=10,
-        decimal_places=3,
-        default=Decimal("1.000"),
-        help_text="Cantidad comprada a este costo",
-    )
-    fecha_compra = models.DateTimeField(help_text="Fecha de la compra")
-    id_compra = models.ForeignKey(
-        "compras.Compras",
-        models.DO_NOTHING,
-        db_column="id_compra",
-        blank=True,
-        null=True,
-        related_name="costos_productos",
-    )
-    id_producto = models.ForeignKey(
-        "productos.Productos",
-        models.DO_NOTHING,
-        db_column="id_producto",
+    producto = models.ForeignKey(
+        "productos.Producto",
+        models.PROTECT,
         related_name="costos_historicos",
     )
+    compra = models.ForeignKey(
+        "compras.Compra",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="costos_productos",
+    )
+    costo_unitario = models.DecimalField(
+        max_digits=12, decimal_places=0,
+        help_text="Costo por unidad en Guaraníes",
+    )
+    cantidad_comprada = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal("1.000"),
+    )
+    fecha_compra = models.DateTimeField()
 
     class Meta:
-        managed = True
-        db_table = "costos_historicos"
         verbose_name = "Costo Histórico"
         verbose_name_plural = "Costos Históricos"
         ordering = ["-fecha_compra"]
         indexes = [
-            models.Index(fields=["id_producto", "-fecha_compra"]),
+            models.Index(fields=["producto", "-fecha_compra"]),
         ]
 
     def __str__(self):
-        return f"{self.id_producto.descripcion}: Gs. {self.costo_unitario:,.0f} ({self.fecha_compra.date()})"
+        return f"{self.producto}: ₲{self.costo_unitario:,.0f} ({self.fecha_compra.date()})"
 
     @property
     def costo_total(self):
-        """Costo total de esta compra"""
-        return (self.costo_unitario * self.cantidad_comprada).quantize(Decimal("0.01"))
+        return (self.costo_unitario * self.cantidad_comprada).quantize(Decimal("1"))
 
 
-class AlertasStock(models.Model):
-    """
-    Alertas de stock mínimo para evitar disparar notificaciones duplicadas.
+# ==============================================================================
+# ALERTA DE STOCK
+# ==============================================================================
 
-    Reglas:
-    - Se crea cuando stock pasa por debajo del mínimo
-    - Se marca como resuelta cuando stock vuelve arriba del mínimo
-    - No se crean alertas duplicadas mientras esté activa
-    """
+class AlertaStock(models.Model):
+    """Alerta cuando el stock está por debajo del mínimo."""
 
-    TIPO_ALERTA_CHOICES = [
-        ("stock_minimo", "Stock por debajo del mínimo"),
-        ("stock_cero", "Stock agotado"),
-        ("stock_critico", "Stock crítico (50% del mínimo)"),
-    ]
+    class TipoAlerta(models.TextChoices):
+        STOCK_MINIMO = "STOCK_MINIMO", "Stock bajo el mínimo"
+        STOCK_CERO = "STOCK_CERO", "Stock agotado"
+        STOCK_CRITICO = "STOCK_CRITICO", "Stock crítico (50% del mínimo)"
 
-    id_alerta = models.BigAutoField(primary_key=True)
-    tipo_alerta = models.CharField(max_length=20, choices=TIPO_ALERTA_CHOICES, default="stock_minimo")
-    stock_actual = models.DecimalField(max_digits=10, decimal_places=3, help_text="Stock cuando se generó la alerta")
-    stock_minimo = models.DecimalField(max_digits=10, decimal_places=3, help_text="Stock mínimo configurado")
-    fecha_generada = models.DateTimeField(auto_now_add=True)
-    fecha_resuelta = models.DateTimeField(
-        blank=True, null=True, help_text="Cuándo se resolvió (stock volvió arriba del mínimo)"
-    )
-    activa = models.BooleanField(default=True, help_text="False cuando se resuelve")
-    notificacion_enviada = models.BooleanField(default=False, help_text="Si ya se envió notificación")
-    id_producto = models.ForeignKey(
-        "productos.Productos",
-        models.DO_NOTHING,
-        db_column="id_producto",
+    producto = models.ForeignKey(
+        "productos.Producto",
+        models.PROTECT,
         related_name="alertas_stock",
     )
+    tipo = models.CharField(max_length=15, choices=TipoAlerta.choices)
+    stock_actual = models.DecimalField(max_digits=10, decimal_places=3)
+    stock_minimo = models.DecimalField(max_digits=10, decimal_places=3)
+    activa = models.BooleanField(default=True)
+    notificacion_enviada = models.BooleanField(default=False)
+    fecha_generada = models.DateTimeField(auto_now_add=True)
+    fecha_resuelta = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        managed = True
-        db_table = "alertas_stock"
         verbose_name = "Alerta de Stock"
         verbose_name_plural = "Alertas de Stock"
         ordering = ["-fecha_generada"]
         indexes = [
-            models.Index(fields=["id_producto", "activa"]),
+            models.Index(fields=["producto", "activa"]),
             models.Index(fields=["-fecha_generada"]),
         ]
 
     def __str__(self):
         estado = "Activa" if self.activa else "Resuelta"
-        return f"{self.id_producto.descripcion}: {self.get_tipo_alerta_display()} - {estado}"
+        return f"{self.producto}: {self.get_tipo_display()} - {estado}"
 
 
-class LotesProducto(models.Model):
-    """
-    Gestión de lotes de productos con fecha de vencimiento.
+# ==============================================================================
+# LOTE DE PRODUCTO
+# ==============================================================================
 
-    Permite:
-    - Control FIFO (First In, First Out) automático
-    - Trazabilidad producto → compra → lote
-    - Alertas de vencimiento próximo
-    - Bloqueo de productos vencidos
+class LoteProducto(models.Model):
+    """Lote de producto con fecha de vencimiento (FIFO)."""
 
-    Casos de uso:
-    - Productos perecederos (lácteos, embutidos, etc.)
-    - Control de calidad
-    - Cumplimiento normativas sanitarias
-    """
+    class MotivoBloqueo(models.TextChoices):
+        VENCIDO = "VENCIDO", "Producto vencido"
+        DEFECTUOSO = "DEFECTUOSO", "Lote defectuoso"
+        RETIRADO = "RETIRADO", "Retiro preventivo"
+        OTRO = "OTRO", "Otro motivo"
 
-    id_lote = models.AutoField(primary_key=True)
-    numero_lote = models.CharField(max_length=100, help_text="Número de lote del proveedor")
-    fecha_fabricacion = models.DateField(blank=True, null=True, help_text="Fecha de fabricación (opcional)")
-    fecha_vencimiento = models.DateField(help_text="Fecha de vencimiento del producto")
-    cantidad_inicial = models.DecimalField(max_digits=10, decimal_places=3, help_text="Cantidad original comprada")
-    cantidad_disponible = models.DecimalField(
-        max_digits=10, decimal_places=3, help_text="Cantidad actual disponible en el lote"
+    producto = models.ForeignKey(
+        "productos.Producto", models.PROTECT, related_name="lotes"
     )
-    bloqueado = models.BooleanField(default=False, help_text="True si está vencido o retirado del inventario")
+    compra = models.ForeignKey(
+        "compras.Compra",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Compra origen del lote",
+    )
+    numero_lote = models.CharField(max_length=100)
+    fecha_fabricacion = models.DateField(blank=True, null=True)
+    fecha_vencimiento = models.DateField()
+    cantidad_inicial = models.DecimalField(max_digits=10, decimal_places=3)
+    cantidad_disponible = models.DecimalField(max_digits=10, decimal_places=3)
+    bloqueado = models.BooleanField(default=False)
     motivo_bloqueo = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        choices=[
-            ("vencido", "Producto vencido"),
-            ("defectuoso", "Lote defectuoso"),
-            ("retirado", "Retiro preventivo"),
-            ("otro", "Otro motivo"),
-        ],
+        max_length=15, choices=MotivoBloqueo.choices, blank=True, null=True
     )
-    fecha_bloqueo = models.DateTimeField(blank=True, null=True, help_text="Cuándo se bloqueó el lote")
+    fecha_bloqueo = models.DateTimeField(null=True, blank=True)
     observaciones = models.TextField(blank=True, null=True)
-    id_producto = models.ForeignKey(
-        "productos.Productos", models.DO_NOTHING, db_column="id_producto", related_name="lotes"
-    )
-    id_compra = models.ForeignKey(
-        "compras.Compras",
-        models.DO_NOTHING,
-        db_column="id_compra",
-        blank=True,
-        null=True,
-        help_text="Compra origen del lote (trazabilidad)",
-    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "lotes_producto"
         verbose_name = "Lote de Producto"
         verbose_name_plural = "Lotes de Productos"
-        ordering = ["fecha_vencimiento", "-id_lote"]  # FIFO: primero los que vencen antes
+        ordering = ["fecha_vencimiento"]  # FIFO
         indexes = [
-            models.Index(fields=["id_producto", "fecha_vencimiento"]),
+            models.Index(fields=["producto", "fecha_vencimiento"]),
             models.Index(fields=["fecha_vencimiento", "bloqueado"]),
             models.Index(fields=["numero_lote"]),
         ]
 
     def __str__(self):
         estado = "Bloqueado" if self.bloqueado else "Disponible"
-        return f"Lote {self.numero_lote} - {self.id_producto.descripcion} ({estado})"
+        return f"Lote {self.numero_lote} - {self.producto} ({estado})"
 
     @property
     def dias_hasta_vencimiento(self):
-        """Calcula días restantes hasta vencimiento"""
-        from django.utils import timezone
-
         if not self.fecha_vencimiento:
             return None
-        delta = self.fecha_vencimiento - timezone.now().date()
-        return delta.days
+        return (self.fecha_vencimiento - timezone.now().date()).days
 
     @property
     def esta_vencido(self):
-        """True si ya pasó la fecha de vencimiento"""
         return self.dias_hasta_vencimiento is not None and self.dias_hasta_vencimiento < 0
 
     @property
     def proximo_a_vencer(self):
-        """True si vence en menos de 30 días"""
-        return self.dias_hasta_vencimiento is not None and 0 <= self.dias_hasta_vencimiento <= 30
+        dias = self.dias_hasta_vencimiento
+        return dias is not None and 0 <= dias <= 30
 
     def clean(self):
-        """Validaciones de modelo"""
-        super().clean()
-
-        # Validar fecha de vencimiento > fecha de fabricación
         if self.fecha_fabricacion and self.fecha_vencimiento:
             if self.fecha_vencimiento <= self.fecha_fabricacion:
-                raise ValidationError(
-                    {"fecha_vencimiento": "La fecha de vencimiento debe ser posterior a la fecha de fabricación"}
-                )
-
-        # Validar cantidad disponible <= cantidad inicial
+                raise ValidationError({
+                    "fecha_vencimiento": "Debe ser posterior a la fecha de fabricación."
+                })
         if self.cantidad_disponible > self.cantidad_inicial:
-            raise ValidationError(
-                {"cantidad_disponible": "La cantidad disponible no puede ser mayor a la cantidad inicial"}
-            )
-
-        # Si está bloqueado, debe tener motivo
+            raise ValidationError({
+                "cantidad_disponible": "No puede ser mayor a la cantidad inicial."
+            })
         if self.bloqueado and not self.motivo_bloqueo:
-            raise ValidationError({"motivo_bloqueo": "Debe especificar el motivo del bloqueo"})
+            raise ValidationError({"motivo_bloqueo": "Debe especificar el motivo."})
 
 
-class AlertasVencimiento(models.Model):
-    """
-    Alertas automáticas de productos próximos a vencer.
+# ==============================================================================
+# ALERTA DE VENCIMIENTO
+# ==============================================================================
 
-    Se generan automáticamente cuando:
-    - Faltan 30 días para vencimiento
-    - Faltan 15 días
-    - Faltan 7 días
-    - Faltan 3 días
-    - Producto vencido
-    """
+class AlertaVencimiento(models.Model):
+    """Alerta de productos próximos a vencer."""
 
-    id_alerta = models.AutoField(primary_key=True)
-    tipo_alerta = models.CharField(
-        max_length=20,
-        choices=[
-            ("30_dias", "30 días para vencer"),
-            ("15_dias", "15 días para vencer"),
-            ("7_dias", "7 días para vencer"),
-            ("3_dias", "3 días para vencer"),
-            ("vencido", "Producto vencido"),
-        ],
+    class TipoAlerta(models.TextChoices):
+        DIAS_30 = "30_DIAS", "30 días para vencer"
+        DIAS_15 = "15_DIAS", "15 días para vencer"
+        DIAS_7 = "7_DIAS", "7 días para vencer"
+        DIAS_3 = "3_DIAS", "3 días para vencer"
+        VENCIDO = "VENCIDO", "Producto vencido"
+
+    class Accion(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        DESCUENTO = "DESCUENTO", "Descuento aplicado"
+        DEVUELTO = "DEVUELTO", "Devuelto a proveedor"
+        DONADO = "DONADO", "Donado"
+        DESCARTADO = "DESCARTADO", "Descartado"
+        VENDIDO = "VENDIDO", "Vendido a tiempo"
+
+    lote = models.ForeignKey(
+        LoteProducto, models.CASCADE, related_name="alertas"
     )
-    dias_restantes = models.IntegerField(help_text="Días hasta vencimiento (negativo si ya venció)")
-    fecha_generada = models.DateTimeField(auto_now_add=True)
-    fecha_vencimiento = models.DateField(help_text="Fecha de vencimiento del lote")
-    cantidad_lote = models.DecimalField(
-        max_digits=10, decimal_places=3, help_text="Cantidad en el lote cuando se generó la alerta"
-    )
+    tipo = models.CharField(max_length=10, choices=TipoAlerta.choices)
+    dias_restantes = models.IntegerField()
+    fecha_vencimiento = models.DateField()
+    cantidad_lote = models.DecimalField(max_digits=10, decimal_places=3)
     accion_tomada = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        choices=[
-            ("pendiente", "Pendiente"),
-            ("descuento_aplicado", "Descuento aplicado"),
-            ("devuelto", "Devuelto a proveedor"),
-            ("donado", "Donado"),
-            ("descartado", "Descartado"),
-            ("vendido", "Vendido a tiempo"),
-        ],
-        default="pendiente",
+        max_length=15, choices=Accion.choices, default=Accion.PENDIENTE,
+        null=True, blank=True,
     )
-    fecha_accion = models.DateTimeField(blank=True, null=True)
-    id_lote = models.ForeignKey(LotesProducto, models.CASCADE, db_column="id_lote", related_name="alertas")
-    id_empleado_responsable = models.ForeignKey(
-        "usuarios.Empleados",
-        models.DO_NOTHING,
-        db_column="id_empleado_responsable",
-        blank=True,
+    fecha_accion = models.DateTimeField(null=True, blank=True)
+    responsable = models.ForeignKey(
+        "usuarios.Usuario",
+        models.SET_NULL,
         null=True,
-        help_text="Empleado que tomó acción sobre la alerta",
+        blank=True,
+        related_name="alertas_vencimiento",
     )
     notificacion_enviada = models.BooleanField(default=False)
+    fecha_generada = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "alertas_vencimiento"
         verbose_name = "Alerta de Vencimiento"
         verbose_name_plural = "Alertas de Vencimiento"
         ordering = ["fecha_vencimiento", "-fecha_generada"]
         indexes = [
-            models.Index(fields=["id_lote", "tipo_alerta"]),
+            models.Index(fields=["lote", "tipo"]),
             models.Index(fields=["fecha_vencimiento"]),
             models.Index(fields=["accion_tomada"]),
         ]
 
     def __str__(self):
-        return f"{self.id_lote} - {self.get_tipo_alerta_display()}"
+        return f"{self.lote} - {self.get_tipo_display()}"

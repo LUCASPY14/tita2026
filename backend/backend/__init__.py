@@ -1,8 +1,1 @@
-"""
-Backend de Cantina Tita
-"""
-
-# Importar Celery para que Django lo cargue al iniciar
-from .celery_app import app as celery_app
-
-__all__ = ("celery_app",)
+# Celery removido en v1

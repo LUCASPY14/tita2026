@@ -1,47 +1,87 @@
+"""
+Serializers para la app compras
+"""
+
 from rest_framework import serializers
 
-from .models import Compras, DetallesCompra, NotasCreditoProveedor, PagosProveedores, Proveedores
+from .models import (
+    Proveedor,
+    CuentaCorrienteProveedor,
+    Compra,
+    DetalleCompra,
+    PagoProveedor,
+    AplicacionPagoCompra,
+    NotaCreditoProveedor,
+    DetalleNotaCreditoProveedor,
+)
 
 
-class ProveedoresSerializer(serializers.ModelSerializer):
+class ProveedorSerializer(serializers.ModelSerializer):
+    saldo_cuenta_corriente = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+
     class Meta:
-        model = Proveedores
+        model = Proveedor
+        fields = "__all__"
+        read_only_fields = ["fecha_registro"]
+
+
+class CuentaCorrienteProveedorSerializer(serializers.ModelSerializer):
+    proveedor_nombre = serializers.CharField(source="proveedor.razon_social", read_only=True)
+
+    class Meta:
+        model = CuentaCorrienteProveedor
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion", "saldo_anterior", "saldo_resultante"]
+
+
+class DetalleCompraSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
+
+    class Meta:
+        model = DetalleCompra
         fields = "__all__"
 
 
-class DetallesCompraSerializer(serializers.ModelSerializer):
-    producto_nombre = serializers.CharField(source="id_producto.nombre", read_only=True)
+class CompraSerializer(serializers.ModelSerializer):
+    proveedor_nombre = serializers.CharField(source="proveedor.razon_social", read_only=True)
+    detalles = DetalleCompraSerializer(many=True, read_only=True)
+    saldo_pendiente = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
 
     class Meta:
-        model = DetallesCompra
+        model = Compra
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
+
+
+class PagoProveedorSerializer(serializers.ModelSerializer):
+    proveedor_nombre = serializers.CharField(source="proveedor.razon_social", read_only=True)
+    medio_pago_nombre = serializers.CharField(source="medio_pago.descripcion", read_only=True)
+
+    class Meta:
+        model = PagoProveedor
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
+
+
+class AplicacionPagoCompraSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AplicacionPagoCompra
         fields = "__all__"
 
 
-class ComprasSerializer(serializers.ModelSerializer):
-    detalles = DetallesCompraSerializer(many=True, read_only=True, source="detallescompra_set")
-    proveedor_nombre = serializers.CharField(source="id_proveedor.razon_social", read_only=True)
-    medio_pago_descripcion = serializers.CharField(source="id_medio_pago.descripcion", read_only=True, allow_null=True)
-    # Hacer estos campos opcionales para creación (se calculan en perform_create)
-    monto_total = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=0)
-    estado_pago = serializers.CharField(max_length=10, required=False, default="Pendiente")
-    saldo_pendiente = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+class DetalleNotaCreditoProveedorSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
 
     class Meta:
-        model = Compras
+        model = DetalleNotaCreditoProveedor
         fields = "__all__"
 
 
-class PagosProveedoresSerializer(serializers.ModelSerializer):
-    medio_pago_descripcion = serializers.CharField(source="id_medio_pago.descripcion", read_only=True)
+class NotaCreditoProveedorSerializer(serializers.ModelSerializer):
+    proveedor_nombre = serializers.CharField(source="proveedor.razon_social", read_only=True)
+    detalles = DetalleNotaCreditoProveedorSerializer(many=True, read_only=True)
 
     class Meta:
-        model = PagosProveedores
+        model = NotaCreditoProveedor
         fields = "__all__"
-
-
-class NotasCreditoProveedorSerializer(serializers.ModelSerializer):
-    proveedor_nombre = serializers.CharField(source="id_proveedor.razon_social", read_only=True)
-
-    class Meta:
-        model = NotasCreditoProveedor
-        fields = "__all__"
+        read_only_fields = ["fecha_creacion"]

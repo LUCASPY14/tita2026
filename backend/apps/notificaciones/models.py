@@ -1,328 +1,214 @@
-﻿"""
+"""
 Modelos de la app notificaciones
-Auto-generados desde la base de datos y organizados por funcionalidad
+Notificaciones a clientes, plantillas y preferencias
 """
 
 from django.db import models
+from django.utils import timezone
 
 
-class NotificacionesPortal(models.Model):
-    id_notificacion = models.AutoField(primary_key=True)
-    tipo = models.CharField(max_length=50)
+# ==============================================================================
+# NOTIFICACIÓN (UNIFICADA)
+# ==============================================================================
+
+class Notificacion(models.Model):
+    """Notificación enviada a un usuario del sistema."""
+
+    class Tipo(models.TextChoices):
+        SALDO_BAJO = "SALDO_BAJO", "Saldo bajo"
+        RECARGA = "RECARGA", "Recarga exitosa"
+        CONSUMO = "CONSUMO", "Consumo registrado"
+        VENCIMIENTO = "VENCIMIENTO", "Vencimiento de tarjeta"
+        ALMUERZO = "ALMUERZO", "Cuenta de almuerzo"
+        SISTEMA = "SISTEMA", "Alerta del sistema"
+
+    class Destino(models.TextChoices):
+        EMAIL = "EMAIL", "Email"
+        SISTEMA = "SISTEMA", "En sistema"
+
+    usuario = models.ForeignKey(
+        "usuarios.Usuario",
+        models.CASCADE,
+        related_name="notificaciones",
+        help_text="Usuario destinatario",
+    )
+    tipo = models.CharField(max_length=15, choices=Tipo.choices)
     titulo = models.CharField(max_length=255)
     mensaje = models.TextField()
-    leida = models.IntegerField()
-    fecha_envio = models.DateTimeField()
+    destino = models.CharField(
+        max_length=10, choices=Destino.choices, default=Destino.SISTEMA
+    )
+    leida = models.BooleanField(default=False)
+    fecha_envio = models.DateTimeField(default=timezone.now)
     fecha_lectura = models.DateTimeField(blank=True, null=True)
-    creado_en = models.DateTimeField()
-    id_usuario_portal = models.ForeignKey("usuarios.UsuariosPortal", models.DO_NOTHING, db_column="id_usuario_portal")
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "notificaciones_portal"
+        verbose_name = "Notificación"
+        verbose_name_plural = "Notificaciones"
+        ordering = ["-fecha_envio"]
+        indexes = [
+            models.Index(fields=["usuario", "leida"]),
+            models.Index(fields=["tipo"]),
+            models.Index(fields=["-fecha_envio"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.get_tipo_display()}] {self.titulo} - {self.usuario}"
 
 
-class NotificacionesSaldo(models.Model):
-    id_notificacion = models.BigAutoField(primary_key=True)
+# ==============================================================================
+# PREFERENCIA DE NOTIFICACIÓN
+# ==============================================================================
+
+class PreferenciaNotificacion(models.Model):
+    """Preferencias de notificación por usuario y tipo."""
+
+    usuario = models.ForeignKey(
+        "usuarios.Usuario",
+        models.CASCADE,
+        related_name="preferencias_notificacion",
+    )
     tipo_notificacion = models.CharField(max_length=50)
-    saldo_actual = models.DecimalField(max_digits=12, decimal_places=2)
-    mensaje = models.TextField()
-    enviada_email = models.IntegerField()
-    enviada_sms = models.IntegerField()
-    leida = models.IntegerField()
-    email_destinatario = models.CharField(max_length=254, blank=True, null=True)
-    fecha_creacion = models.DateTimeField()
-    fecha_envio = models.DateTimeField(blank=True, null=True)
-    nro_tarjeta = models.ForeignKey("core.Tarjetas", models.DO_NOTHING, db_column="nro_tarjeta")
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    email_activo = models.BooleanField(default=True)
+    sistema_activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = True
-        db_table = "notificaciones_saldo"
-
-
-class SolicitudesNotificacion(models.Model):
-    id_solicitud = models.BigAutoField(primary_key=True)
-    saldo_alerta = models.DecimalField(max_digits=10, decimal_places=2)
-    mensaje = models.CharField(max_length=255)
-    destino = models.CharField(max_length=8)
-    estado = models.CharField(max_length=9, blank=True, null=True)
-    fecha_solicitud = models.DateTimeField()
-    fecha_envio = models.DateTimeField(blank=True, null=True)
-    id_cliente = models.ForeignKey("clientes.Clientes", models.DO_NOTHING, db_column="id_cliente")
-    nro_tarjeta = models.ForeignKey("core.Tarjetas", models.DO_NOTHING, db_column="nro_tarjeta")
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "solicitudes_notificacion"
-
-
-class PreferenciasNotificacion(models.Model):
-    id_preferencia = models.AutoField(primary_key=True)
-    tipo_notificacion = models.CharField(max_length=50)
-    email_activo = models.IntegerField()
-    push_activo = models.IntegerField()
-    creado_en = models.DateTimeField()
-    actualizado_en = models.DateTimeField()
-    id_usuario_portal = models.ForeignKey("usuarios.UsuariosPortal", models.DO_NOTHING, db_column="id_usuario_portal")
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "preferencias_notificacion"
         verbose_name = "Preferencia de Notificación"
         verbose_name_plural = "Preferencias de Notificaciones"
-        unique_together = (("id_usuario_portal", "tipo_notificacion"),)
-
-
-class EmailsEnviados(models.Model):
-    id_email = models.AutoField(primary_key=True)
-    email_destinatario = models.CharField(max_length=254)
-    nombre_destinatario = models.CharField(max_length=100)
-    asunto = models.CharField(max_length=200)
-    cuerpo = models.TextField()
-    estado = models.CharField(max_length=20)
-    fecha_envio = models.DateTimeField()
-    fecha_entrega = models.DateTimeField(blank=True, null=True)
-    fecha_apertura = models.DateTimeField(blank=True, null=True)
-    mensaje_error = models.TextField(blank=True, null=True)
-    intentos = models.IntegerField()
-    id_cliente = models.ForeignKey(
-        "clientes.Clientes", models.DO_NOTHING, db_column="id_cliente", blank=True, null=True
-    )
-    enviado_por = models.ForeignKey(
-        "usuarios.Empleados", models.DO_NOTHING, db_column="enviado_por", blank=True, null=True
-    )
-    id_template = models.ForeignKey(
-        "PlantillasEmail", models.DO_NOTHING, db_column="id_template", blank=True, null=True
-    )
+        unique_together = [("usuario", "tipo_notificacion")]
 
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "emails_enviados"
-        verbose_name = "Email Enviado"
-        verbose_name_plural = "Emails Enviados"
+        return f"{self.usuario} - {self.tipo_notificacion}"
 
 
-class SmsEnviados(models.Model):
-    id_sms = models.AutoField(primary_key=True)
-    telefono = models.CharField(max_length=20)
-    mensaje = models.CharField(max_length=160)
-    estado = models.CharField(max_length=20)
-    fecha_envio = models.DateTimeField()
-    fecha_entrega = models.DateTimeField(blank=True, null=True)
-    costo = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    id_cliente = models.ForeignKey(
-        "clientes.Clientes", models.DO_NOTHING, db_column="id_cliente", blank=True, null=True
-    )
-    enviado_por = models.ForeignKey(
-        "usuarios.Empleados", models.DO_NOTHING, db_column="enviado_por", blank=True, null=True
-    )
-    id_template = models.ForeignKey("PlantillasSms", models.DO_NOTHING, db_column="id_template", blank=True, null=True)
+# ==============================================================================
+# PLANTILLA DE EMAIL
+# ==============================================================================
 
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+class PlantillaEmail(models.Model):
+    """Plantilla reutilizable para envío de emails."""
 
-    class Meta:
-        managed = True
-        db_table = "sms_enviados"
-
-
-class PlantillasEmail(models.Model):
-    id_template = models.AutoField(primary_key=True)
-    codigo = models.CharField(unique=True, max_length=50)
+    codigo = models.CharField(max_length=50, unique=True)
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True, null=True)
     asunto = models.CharField(max_length=200)
     cuerpo_html = models.TextField()
     cuerpo_texto = models.TextField(blank=True, null=True)
-    variables = models.JSONField()
+    variables = models.JSONField(
+        default=list, help_text="Variables disponibles en la plantilla"
+    )
     categoria = models.CharField(max_length=30)
-    estado = models.BooleanField(default=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
-    created_by = models.ForeignKey(
-        "usuarios.Empleados", models.DO_NOTHING, db_column="created_by", blank=True, null=True
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="plantillas_email",
     )
 
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
     class Meta:
-        managed = True
-        db_table = "plantillas_email"
         verbose_name = "Plantilla de Email"
         verbose_name_plural = "Plantillas de Emails"
-
-
-class PlantillasSms(models.Model):
-    id_template = models.AutoField(primary_key=True)
-    codigo = models.CharField(unique=True, max_length=50)
-    nombre = models.CharField(max_length=100)
-    mensaje = models.CharField(max_length=160)
-    variables = models.JSONField()
-    categoria = models.CharField(max_length=30)
-    estado = models.BooleanField(default=True)
-    created_at = models.DateTimeField()
+        ordering = ["categoria", "nombre"]
 
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "plantillas_sms"
+        return f"{self.codigo} - {self.nombre}"
 
 
-class CampanasComunicacion(models.Model):
-    id_campana = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-    descripcion = models.TextField()
-    tipo = models.CharField(max_length=20)
-    segmentacion = models.TextField()
-    fecha_programada = models.DateTimeField(blank=True, null=True)
-    fecha_enviada = models.DateTimeField(blank=True, null=True)
-    estado = models.CharField(max_length=20)
-    total_destinatarios = models.IntegerField()
-    total_enviados = models.IntegerField()
-    total_entregados = models.IntegerField()
-    created_at = models.DateTimeField()
-    created_by = models.ForeignKey(
-        "usuarios.Empleados", models.DO_NOTHING, db_column="created_by", blank=True, null=True
+# ==============================================================================
+# EMAIL ENVIADO
+# ==============================================================================
+
+class EmailEnviado(models.Model):
+    """Registro de email enviado (auditoría)."""
+
+    class Estado(models.TextChoices):
+        ENVIADO = "ENVIADO", "Enviado"
+        ENTREGADO = "ENTREGADO", "Entregado"
+        ABIERTO = "ABIERTO", "Abierto"
+        REBOTADO = "REBOTADO", "Rebotado"
+        ERROR = "ERROR", "Error"
+
+    destinatario_email = models.EmailField(max_length=254)
+    destinatario_nombre = models.CharField(max_length=100)
+    asunto = models.CharField(max_length=200)
+    cuerpo = models.TextField()
+    estado = models.CharField(
+        max_length=15, choices=Estado.choices, default=Estado.ENVIADO
     )
-    id_email_template = models.ForeignKey(
-        "PlantillasEmail", models.DO_NOTHING, db_column="id_email_template", blank=True, null=True
+    fecha_envio = models.DateTimeField(default=timezone.now)
+    fecha_entrega = models.DateTimeField(blank=True, null=True)
+    fecha_apertura = models.DateTimeField(blank=True, null=True)
+    mensaje_error = models.TextField(blank=True, null=True)
+    intentos = models.IntegerField(default=1)
+    plantilla = models.ForeignKey(
+        PlantillaEmail,
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="envios",
     )
-    id_sms_template = models.ForeignKey(
-        "PlantillasSms", models.DO_NOTHING, db_column="id_sms_template", blank=True, null=True
+    cliente = models.ForeignKey(
+        "clientes.Cliente",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="emails_recibidos",
     )
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "campanas_comunicacion"
-
-
-class AlertasAutomaticas(models.Model):
-    id_alerta = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-    descripcion = models.TextField()
-    condicion = models.TextField()
-    tipo_alerta = models.CharField(max_length=20)
-    criticidad = models.CharField(max_length=10)
-    frecuencia_min = models.IntegerField()
-    estado = models.BooleanField(default=True)
-    ultima_verificacion = models.DateTimeField(blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "alertas_automaticas"
-
-
-class AlertaDestinatarios(models.Model):
-    id_destinatario = models.AutoField(primary_key=True)
-    via_email = models.IntegerField()
-    via_sistema = models.IntegerField()
-    estado = models.BooleanField(default=True)
-    id_alerta = models.ForeignKey("AlertasAutomaticas", models.DO_NOTHING, db_column="id_alerta")
-    id_empleado = models.ForeignKey("usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado")
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "alerta_destinatarios"
-        unique_together = (("id_alerta", "id_empleado"),)
-
-
-class AlertasSistema(models.Model):
-    id_alerta = models.BigAutoField(primary_key=True)
-    tipo = models.CharField(max_length=30)
-    mensaje = models.CharField(max_length=500)
-    fecha_creacion = models.DateTimeField()
-    fecha_leida = models.DateTimeField(blank=True, null=True)
-    estado = models.CharField(max_length=9, blank=True, null=True)
-    id_empleado_resuelve = models.IntegerField(blank=True, null=True)
-    fecha_resolucion = models.DateTimeField(blank=True, null=True)
-    observaciones = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "alertas_sistema"
-
-
-class HistorialAlertas(models.Model):
-    id_historial = models.AutoField(primary_key=True)
-    fecha_disparada = models.DateTimeField()
-    mensaje = models.TextField()
-    datos_contexto = models.JSONField()
-    resuelto = models.IntegerField()
-    fecha_resolucion = models.DateTimeField(blank=True, null=True)
-    id_alerta = models.ForeignKey("AlertasAutomaticas", models.DO_NOTHING, db_column="id_alerta")
-    resuelto_por = models.ForeignKey(
-        "usuarios.Empleados", models.DO_NOTHING, db_column="resuelto_por", blank=True, null=True
+    enviado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="emails_enviados",
     )
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "historial_alertas"
-
-
-class AnomaliasDetectadas(models.Model):
-    id_anomalia = models.AutoField(primary_key=True)
-    usuario = models.CharField(max_length=100)
-    tipo_anomalia = models.CharField(max_length=30)
-    ip_address = models.CharField(max_length=45, blank=True, null=True)
-    fecha_deteccion = models.DateTimeField()
-    descripcion = models.TextField(blank=True, null=True)
-    nivel_riesgo = models.CharField(max_length=10)
-    notificado = models.IntegerField()
+        verbose_name = "Email Enviado"
+        verbose_name_plural = "Emails Enviados"
+        ordering = ["-fecha_envio"]
 
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+        return f"Email: {self.asunto} - {self.destinatario_email} ({self.get_estado_display()})"
+
+
+# ==============================================================================
+# SOLICITUD DE NOTIFICACIÓN
+# ==============================================================================
+
+class SolicitudNotificacion(models.Model):
+    """Solicitud de envío de notificación (procesada por Celery o servicio)."""
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        ENVIADA = "ENVIADA", "Enviada"
+        FALLIDA = "FALLIDA", "Fallida"
+
+    cliente = models.ForeignKey(
+        "clientes.Cliente", models.CASCADE, related_name="solicitudes_notificacion"
+    )
+    tipo = models.CharField(max_length=50)
+    mensaje = models.CharField(max_length=255)
+    destino = models.CharField(
+        max_length=10, choices=Notificacion.Destino.choices
+    )
+    estado = models.CharField(
+        max_length=10, choices=Estado.choices, default=Estado.PENDIENTE
+    )
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_envio = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = True
-        db_table = "anomalias_detectadas"
-
-
-class RestriccionesHorarias(models.Model):
-    id_restriccion = models.AutoField(primary_key=True)
-    usuario = models.CharField(max_length=100, blank=True, null=True)
-    tipo_usuario = models.CharField(max_length=20)
-    dia_semana = models.CharField(max_length=20)
-    hora_inicio = models.TimeField()
-    hora_fin = models.TimeField()
-    estado = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField()
+        verbose_name = "Solicitud de Notificación"
+        verbose_name_plural = "Solicitudes de Notificaciones"
+        ordering = ["-fecha_solicitud"]
 
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "restricciones_horarias"
+        return f"Solicitud {self.tipo} - {self.cliente} ({self.get_estado_display()})"

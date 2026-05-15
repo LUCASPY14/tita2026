@@ -1,160 +1,107 @@
-﻿from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, viewsets
-from rest_framework.decorators import action
+﻿"""
+Views para la app clientes
+"""
+
+from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
-from apps.common.permissions import IsAdminOrReadOnly, IsClienteOrAdmin
-from apps.common.throttling import BurstRateThrottle, SustainedRateThrottle
+from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Ciudad, Clientes, Grados, Hijos, Pais, RestriccionesHijos, TiposCliente
+from .models import (
+    Cliente,
+    CuentaCorrienteCliente,
+    TipoCliente,
+    Hijo,
+    Grado,
+    HistorialGrado,
+    RestriccionHijo,
+    AutorizacionSaldoNegativo,
+    Pais,
+    Ciudad,
+)
 from .serializers import (
-    CiudadSerializer,
-    ClientesSerializer,
-    GradosSerializer,
-    HijosSerializer,
+    ClienteSerializer,
+    CuentaCorrienteClienteSerializer,
+    TipoClienteSerializer,
+    HijoSerializer,
+    GradoSerializer,
+    HistorialGradoSerializer,
+    RestriccionHijoSerializer,
+    AutorizacionSaldoNegativoSerializer,
     PaisSerializer,
-    RestriccionesHijosSerializer,
-    TiposClienteSerializer,
+    CiudadSerializer,
 )
 
 
-# Create your views here.
-class ClientesViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para gestionar clientes.
-    Permite listar, crear, editar y eliminar clientes.
-
-    Permisos:
-    - Admin: Acceso total
-    - Clientes autenticados: Solo lectura de sus propios datos
-    """
-
-    queryset = Clientes.objects.all()
-    serializer_class = ClientesSerializer
-    permission_classes = [IsAuthenticated, IsClienteOrAdmin]
-    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["estado", "id_tipo_cliente"]
-    search_fields = ["nombres", "apellidos", "ruc_ci", "email"]
-    ordering_fields = ["nombres", "apellidos", "fecha_registro"]
-    ordering = ["apellidos", "nombres"]
-
-    @action(detail=True, methods=["get"])
-    def cuenta_corriente(self, request, pk=None):
-        """
-        Obtiene el estado de cuenta corriente del cliente.
-
-        GET /api/v1/clientes/{id}/cuenta_corriente/
-        """
-        cliente = self.get_object()
-        cuenta = cliente.cuenta_corriente
-        cuenta["cliente"] = {
-            "id": cliente.id_cliente,
-            "nombre": f"{cliente.nombres} {cliente.apellidos}",
-            "ruc_ci": cliente.ruc_ci,
-        }
-        return Response(cuenta)
-
-    @action(detail=False, methods=["get"])
-    def estadisticas(self, request):
-        """
-        Resumen estadístico de clientes.
-
-        GET /api/v1/clientes/estadisticas/
-        """
-        from django.db.models import Q
-
-        total = Clientes.objects.count()
-        activos = Clientes.objects.filter(estado=True).count()
-        inactivos = Clientes.objects.filter(estado=False).count()
-        con_credito = Clientes.objects.filter(estado=True, limite_credito__gt=0).count()
-        sin_credito = Clientes.objects.filter(
-            Q(estado=True) & (Q(limite_credito=0) | Q(limite_credito__isnull=True))
-        ).count()
-
-        return Response(
-            {
-                "total": total,
-                "activos": activos,
-                "inactivos": inactivos,
-                "con_credito": con_credito,
-                "sin_credito": sin_credito,
-            }
-        )
+class ClienteViewSet(viewsets.ModelViewSet):
+    queryset = Cliente.objects.select_related("tipo_cliente", "lista_precio").all()
+    serializer_class = ClienteSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["activo", "tipo_cliente"]
+    search_fields = ["ruc_ci", "nombres", "apellidos"]
 
 
-class TiposClienteViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet de solo lectura para tipos de cliente."""
+class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
+    queryset = CuentaCorrienteCliente.objects.select_related("cliente").all()
+    serializer_class = CuentaCorrienteClienteSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["cliente", "tipo"]
 
-    queryset = TiposCliente.objects.filter(estado=True)
-    serializer_class = TiposClienteSerializer
+
+class TipoClienteViewSet(viewsets.ModelViewSet):
+    queryset = TipoCliente.objects.all()
+    serializer_class = TipoClienteSerializer
     permission_classes = [IsAuthenticated]
 
 
-class GradosViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet de solo lectura para grados escolares."""
-
-    queryset = Grados.objects.filter(estado=True).order_by("orden_visualizacion")
-    serializer_class = GradosSerializer
+class HijoViewSet(viewsets.ModelViewSet):
+    queryset = Hijo.objects.select_related("cliente_responsable").all()
+    serializer_class = HijoSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = None
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["activo", "cliente_responsable"]
+    search_fields = ["nombre", "apellido"]
 
 
-class HijosViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para gestionar hijos/estudiantes.
-
-    Permisos:
-    - Admin: Acceso total
-    - Clientes: Solo sus propios hijos
-    """
-
-    queryset = Hijos.objects.all()
-    serializer_class = HijosSerializer
-    permission_classes = [IsAuthenticated, IsClienteOrAdmin]
-    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["estado", "grado", "id_cliente_responsable"]
-    search_fields = ["nombre", "apellido", "tarjetas__nro_tarjeta", "tarjetas__codigo_barras"]
-    ordering = ["apellido", "nombre"]
+class GradoViewSet(viewsets.ModelViewSet):
+    queryset = Grado.objects.all()
+    serializer_class = GradoSerializer
+    permission_classes = [IsAuthenticated]
 
 
-class RestriccionesHijosViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para gestionar restricciones de compra de los hijos.
-    Accesible por administradores y por el cliente (padre) responsable del hijo.
-    """
+class HistorialGradoViewSet(viewsets.ModelViewSet):
+    queryset = HistorialGrado.objects.select_related("hijo").all()
+    serializer_class = HistorialGradoSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["hijo", "anio_escolar"]
 
-    queryset = RestriccionesHijos.objects.all()
-    serializer_class = RestriccionesHijosSerializer
-    permission_classes = [IsAuthenticated, IsClienteOrAdmin]
-    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["id_hijo", "estado", "severidad"]
-    search_fields = ["tipo_restriccion", "descripcion"]
-    ordering = ["-severidad", "tipo_restriccion"]
+
+class RestriccionHijoViewSet(viewsets.ModelViewSet):
+    queryset = RestriccionHijo.objects.select_related("hijo").all()
+    serializer_class = RestriccionHijoSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["hijo", "severidad", "activo"]
+
+
+class AutorizacionSaldoNegativoViewSet(viewsets.ModelViewSet):
+    queryset = AutorizacionSaldoNegativo.objects.select_related("cliente", "venta").all()
+    serializer_class = AutorizacionSaldoNegativoSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["cliente", "estado"]
 
 
 class PaisViewSet(viewsets.ModelViewSet):
-    """ViewSet para gestionar el catálogo de países."""
-
-    queryset = Pais.objects.all().order_by("nombre")
+    queryset = Pais.objects.all()
     serializer_class = PaisSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["nombre"]
-    ordering_fields = ["nombre"]
-    ordering = ["nombre"]
+    permission_classes = [IsAuthenticated]
 
 
 class CiudadViewSet(viewsets.ModelViewSet):
-    """ViewSet para gestionar el catálogo de ciudades."""
-
-    queryset = Ciudad.objects.all().order_by("nombre")
+    queryset = Ciudad.objects.all()
     serializer_class = CiudadSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["nombre"]
-    ordering_fields = ["nombre"]
-    ordering = ["nombre"]
+    permission_classes = [IsAuthenticated]

@@ -1,499 +1,315 @@
 ﻿"""
-Configuración del panel de administración para api_integrations
-Gestión de proveedores API, endpoints, webhooks, credenciales y logs
+Admin para la app api_integrations
+Gestión de proveedores API, endpoints, credenciales, webhooks y logs
 """
 
 from django.contrib import admin
+from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import (
-    CredencialesApi,
-    EndpointsApi,
-    LogsLlamadasApi,
-    LogsWebhooks,
-    ProveedoresApi,
-    WebhookEndpoints,
+    ProveedorApi,
+    EndpointApi,
+    CredencialApi,
+    WebhookEndpoint,
+    LogLlamadaApi,
+    LogWebhook,
 )
 
 
-# ============================================================================
-# PROVEEDORES API
-# ============================================================================
-@admin.register(ProveedoresApi)
-class ProveedoresApiAdmin(admin.ModelAdmin):
-    """Panel de administración para Proveedores API"""
+# ==============================================================================
+# PROVEEDOR DE API
+# ==============================================================================
 
-    list_display = (
-        "id_proveedor",
+@admin.register(ProveedorApi)
+class ProveedorApiAdmin(admin.ModelAdmin):
+    list_display = [
         "nombre",
-        "tipo_servicio",
+        "tipo_servicio_badge",
         "url_base",
-        "version",
-        "estado",
-        "created_at",
-    )
-
-    list_filter = ("estado", "tipo_servicio", "tipo_auth", "created_at")
-
-    search_fields = ("nombre", "descripcion", "url_base", "version", "tipo_servicio")
-
-    readonly_fields = ("id_proveedor", "created_at")
-
-    ordering = ["nombre"]
-
+        "tipo_auth_badge",
+        "activo",
+    ]
+    list_filter = ["activo", "tipo_servicio", "tipo_auth"]
+    search_fields = ["nombre", "url_base"]
+    readonly_fields = ["fecha_creacion"]
     fieldsets = (
-        (
-            "Información Básica",
-            {"fields": ("id_proveedor", "nombre", "descripcion", "tipo_servicio")},
-        ),
-        (
-            "Configuración de API",
-            {"fields": ("url_base", "version", "documentacion", "timeout", "max_reintentos")},
-        ),
-        ("Autenticación", {"fields": ("tipo_auth", "config_auth")}),
-        ("Estado", {"fields": ("estado", "created_at")}),
+        ("Datos del Proveedor", {
+            "fields": ("nombre", "descripcion", "tipo_servicio", "activo")
+        }),
+        ("Conexión", {
+            "fields": ("url_base", "version", "documentacion")
+        }),
+        ("Autenticación", {
+            "fields": ("tipo_auth", "config_auth")
+        }),
+        ("Configuración", {
+            "fields": ("timeout", "max_reintentos")
+        }),
+        ("Auditoría", {
+            "fields": ("fecha_creacion",),
+            "classes": ("collapse",),
+        }),
     )
 
     def tipo_servicio_badge(self, obj):
-        colores = {
-            "REST": "#28a745",  # Verde
-            "SOAP": "#007bff",  # Azul
-            "GraphQL": "#e83e8c",  # Rosa
-            "WebSocket": "#fd7e14",  # Naranja
-            "gRPC": "#6f42c1",  # Púrpura
-            "XML-RPC": "#20c997",  # Teal
-            "OData": "#6610f2",  # Índigo
+        colors = {
+            "PAGOS_QR": "#28a745",
+            "BANCO": "#0d6efd",
+            "NOTIFICACIONES": "#ffc107",
+            "OTRO": "#6c757d",
         }
-        color = colores.get(obj.tipo_servicio, "#6c757d")
+        color = colors.get(obj.tipo_servicio, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; '
-            'border-radius: 3px; font-weight: bold; font-size: 11px;">{}</span>',
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
             color,
-            obj.tipo_servicio,
+            obj.get_tipo_servicio_display(),
         )
-
     tipo_servicio_badge.short_description = "Tipo Servicio"
 
     def tipo_auth_badge(self, obj):
-        colores = {
-            "API_KEY": "#007bff",
-            "OAuth2": "#28a745",
-            "Bearer": "#17a2b8",
-            "Basic": "#ffc107",
-            "JWT": "#e83e8c",
-            "None": "#6c757d",
-            "HMAC": "#6f42c1",
-            "Custom": "#fd7e14",
-        }
-        color = colores.get(obj.tipo_auth, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; '
-            'border-radius: 3px; font-weight: bold; font-size: 11px;">🔐 {}</span>',
-            color,
-            obj.tipo_auth,
+            '<code style="background:#e9ecef;padding:2px 6px;border-radius:3px;">{}</code>',
+            obj.get_tipo_auth_display(),
         )
-
-    tipo_auth_badge.short_description = "Autenticación"
-
-    def activo_badge(self, obj):
-        if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">{}</span>', "✓ estado")
-        return format_html('<span style="color: red; font-weight: bold;">{}</span>', "✗ Inactivo")
-
-    activo_badge.short_description = "Estado"
+    tipo_auth_badge.short_description = "Auth"
 
 
-# ============================================================================
-# ENDPOINTS API
-# ============================================================================
-@admin.register(EndpointsApi)
-class EndpointsApiAdmin(admin.ModelAdmin):
-    """Panel de administración para Endpoints API"""
+# ==============================================================================
+# ENDPOINT DE API
+# ==============================================================================
 
-    list_display = (
-        "id_endpoint",
+@admin.register(EndpointApi)
+class EndpointApiAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "proveedor_link",
         "nombre",
-        "proveedor_nombre",
-        "metodo",
+        "metodo_badge",
         "path",
-        "requiere_auth",
-        "estado",
-    )
+        "activo",
+    ]
+    list_filter = ["activo", "proveedor", "metodo"]
+    search_fields = ["nombre", "path", "proveedor__nombre"]
+    list_select_related = ["proveedor"]
 
-    list_filter = ("metodo", "requiere_auth", "estado", "id_proveedor")
-
-    search_fields = ("nombre", "descripcion", "path")
-
-    readonly_fields = ("id_endpoint",)
-
-    raw_id_fields = ("id_proveedor",)
-
-    fieldsets = (
-        (
-            "🔌 Información del Endpoint",
-            {"fields": ("id_endpoint", "nombre", "descripcion", "id_proveedor")},
-        ),
-        ("🌐 Configuración HTTP", {"fields": ("path", "metodo", "headers", "parametros")}),
-        ("📋 Esquemas", {"fields": ("schema_request", "schema_response")}),
-        ("⚙️ Opciones", {"fields": ("requiere_auth", "cache_segundos", "estado")}),
-    )
+    def proveedor_link(self, obj):
+        url = reverse("admin:api_integrations_proveedorapi_change", args=[obj.proveedor.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.proveedor.nombre)
+    proveedor_link.short_description = "Proveedor"
 
     def metodo_badge(self, obj):
-        colores = {
+        colors = {
             "GET": "#28a745",
-            "POST": "#007bff",
+            "POST": "#0d6efd",
             "PUT": "#ffc107",
+            "PATCH": "#fd7e14",
             "DELETE": "#dc3545",
-            "PATCH": "#17a2b8",
-            "HEAD": "#6c757d",
-            "OPTIONS": "#6f42c1",
         }
-        color = colores.get(obj.metodo, "#6c757d")
+        color = colors.get(obj.metodo, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; '
-            'border-radius: 3px; font-weight: bold; font-size: 11px;">{}</span>',
+            '<span style="background:{};color:white;padding:2px 6px;border-radius:3px;font-size:11px;">{}</span>',
             color,
-            obj.metodo,
+            obj.get_metodo_display(),
         )
-
     metodo_badge.short_description = "Método"
 
-    def requiere_auth_badge(self, obj):
-        if obj.requiere_auth:
-            return format_html('<span style="color: #dc3545; font-weight: bold;">{}</span>', "🔒 Requiere Auth")
-        return format_html('<span style="color: #6c757d;">{}</span>', "🔓 Público")
 
-    requiere_auth_badge.short_description = "Autenticación"
+# ==============================================================================
+# CREDENCIAL DE API
+# ==============================================================================
 
-    def activo_badge(self, obj):
-        if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">{}</span>', "✓ estado")
-        return format_html('<span style="color: red; font-weight: bold;">{}</span>', "✗ Inactivo")
+@admin.register(CredencialApi)
+class CredencialApiAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "proveedor_link",
+        "ambiente_badge",
+        "activo",
+        "fecha_actualizacion",
+    ]
+    list_filter = ["activo", "ambiente", "proveedor"]
+    search_fields = ["proveedor__nombre"]
+    readonly_fields = ["fecha_actualizacion"]
+    list_select_related = ["proveedor"]
+    fieldsets = (
+        ("Datos de la Credencial", {
+            "fields": ("proveedor", "ambiente", "activo")
+        }),
+        ("Claves (ocultas en lista)", {
+            "fields": ("api_key", "secret", "token"),
+        }),
+        ("Configuración", {
+            "fields": ("configuracion", "fecha_expiracion")
+        }),
+        ("Auditoría", {
+            "fields": ("fecha_actualizacion",),
+            "classes": ("collapse",),
+        }),
+    )
 
-    activo_badge.short_description = "Estado"
+    def proveedor_link(self, obj):
+        url = reverse("admin:api_integrations_proveedorapi_change", args=[obj.proveedor.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.proveedor.nombre)
+    proveedor_link.short_description = "Proveedor"
 
-    def proveedor_nombre(self, obj):
-        return obj.id_proveedor.nombre if obj.id_proveedor else "-"
+    def ambiente_badge(self, obj):
+        colors = {"SANDBOX": "#ffc107", "PRODUCCION": "#28a745"}
+        color = colors.get(obj.ambiente, "#6c757d")
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_ambiente_display(),
+        )
+    ambiente_badge.short_description = "Ambiente"
 
-    proveedor_nombre.short_description = "Proveedor"
+
+# ==============================================================================
+# WEBHOOK ENDPOINT
+# ==============================================================================
+
+@admin.register(WebhookEndpoint)
+class WebhookEndpointAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "proveedor_link",
+        "nombre",
+        "path",
+        "requiere_verificacion_badge",
+        "activo",
+    ]
+    list_filter = ["activo", "requiere_verificacion", "proveedor"]
+    search_fields = ["nombre", "path", "proveedor__nombre"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["proveedor"]
+    fieldsets = (
+        ("Datos del Webhook", {
+            "fields": ("proveedor", "nombre", "descripcion", "path", "activo")
+        }),
+        ("Verificación", {
+            "fields": ("requiere_verificacion", "secret_key", "header_verificacion")
+        }),
+        ("Eventos", {
+            "fields": ("eventos", "handler")
+        }),
+        ("Auditoría", {
+            "fields": ("fecha_creacion",),
+            "classes": ("collapse",),
+        }),
+    )
+
+    def proveedor_link(self, obj):
+        url = reverse("admin:api_integrations_proveedorapi_change", args=[obj.proveedor.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.proveedor.nombre)
+    proveedor_link.short_description = "Proveedor"
+
+    def requiere_verificacion_badge(self, obj):
+        if obj.requiere_verificacion:
+            return format_html('<span style="color:#0d6efd;">✓</span>')
+        return "-"
+    requiere_verificacion_badge.short_description = "Verificación"
 
 
-# ============================================================================
-# LOGS LLAMADAS API
-# ============================================================================
-@admin.register(LogsLlamadasApi)
-class LogsLlamadasApiAdmin(admin.ModelAdmin):
-    """Panel de administración para Logs de Llamadas API"""
+# ==============================================================================
+# LOG DE LLAMADA API
+# ==============================================================================
 
-    list_display = (
-        "id_log",
-        "timestamp",
-        "metodo",
+@admin.register(LogLlamadaApi)
+class LogLlamadaApiAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "metodo_badge",
         "url",
-        "status_code",
+        "status_code_badge",
         "tiempo_ms",
         "exitoso",
-        "intento",
-        "ip_origen",
-    )
-
-    list_filter = ("exitoso", "metodo", "timestamp", "status_code", "id_endpoint")
-
-    search_fields = ("url", "error_msg", "ip_origen")
-
-    readonly_fields = ("id_log", "timestamp")
-
+        "timestamp",
+    ]
+    list_filter = ["metodo", "exitoso", "timestamp"]
+    search_fields = ["url", "endpoint__nombre"]
+    readonly_fields = ["timestamp"]
     date_hierarchy = "timestamp"
-
     ordering = ["-timestamp"]
 
-    fieldsets = (
-        (
-            "📊 Información del Log",
-            {"fields": ("id_log", "timestamp", "id_endpoint", "id_empleado")},
-        ),
-        ("📤 Request", {"fields": ("metodo", "url", "headers_req", "payload_req", "bytes_sent")}),
-        (
-            "📥 Response",
-            {"fields": ("status_code", "headers_res", "payload_res", "bytes_received")},
-        ),
-        ("⏱️ Rendimiento", {"fields": ("tiempo_ms", "exitoso", "intento")}),
-        ("🔍 Detalles", {"fields": ("error_msg", "ip_origen", "contexto")}),
-    )
+    def get_readonly_fields(self, request, obj=None):
+        """Log inmutable."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
 
     def metodo_badge(self, obj):
-        colores = {
+        colors = {
             "GET": "#28a745",
-            "POST": "#007bff",
+            "POST": "#0d6efd",
             "PUT": "#ffc107",
+            "PATCH": "#fd7e14",
             "DELETE": "#dc3545",
-            "PATCH": "#17a2b8",
         }
-        color = colores.get(obj.metodo, "#6c757d")
+        color = colors.get(obj.metodo, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 2px 6px; '
-            'border-radius: 3px; font-size: 10px;">{}</span>',
+            '<span style="background:{};color:white;padding:2px 6px;border-radius:3px;font-size:11px;">{}</span>',
             color,
             obj.metodo,
         )
-
     metodo_badge.short_description = "Método"
 
-    def url_corta(self, obj):
-        if len(obj.url) > 50:
-            return obj.url[:47] + "..."
-        return obj.url
-
-    url_corta.short_description = "URL"
-
-    def status_badge(self, obj):
+    def status_code_badge(self, obj):
         if 200 <= obj.status_code < 300:
-            color = "#28a745"  # Verde
-        elif 300 <= obj.status_code < 400:
-            color = "#17a2b8"  # Azul claro
+            color = "#28a745"
         elif 400 <= obj.status_code < 500:
-            color = "#ffc107"  # Amarillo
+            color = "#ffc107"
         else:
-            color = "#dc3545"  # Rojo
-
+            color = "#dc3545"
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 2px 6px; '
-            'border-radius: 3px; font-weight: bold; font-size: 10px;">{}</span>',
+            '<span style="background:{};color:white;padding:2px 6px;border-radius:3px;font-size:11px;">{}</span>',
             color,
             obj.status_code,
         )
-
-    status_badge.short_description = "Status"
-
-    def exitoso_badge(self, obj):
-        if obj.exitoso:
-            return format_html('<span style="color: green; font-weight: bold;">{}</span>', "✓ OK")
-        return format_html('<span style="color: red; font-weight: bold;">{}</span>', "✗ Error")
-
-    exitoso_badge.short_description = "Resultado"
-
-    def has_add_permission(self, request):
-        """No permitir agregar logs manualmente"""
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        """No permitir editar logs existentes"""
-        return False
+    status_code_badge.short_description = "Status"
 
 
-# ============================================================================
-# CREDENCIALES API
-# ============================================================================
-@admin.register(CredencialesApi)
-class CredencialesApiAdmin(admin.ModelAdmin):
-    """Panel de administración para Credenciales API"""
+# ==============================================================================
+# LOG DE WEBHOOK
+# ==============================================================================
 
-    list_display = (
-        "id_credencial",
-        "proveedor_nombre",
-        "ambiente",
-        "tiene_api_key",
-        "tiene_secret",
-        "tiene_token",
-        "fecha_expiracion",
-        "estado",
-        "updated_at",
-    )
-
-    list_filter = ("estado", "ambiente", "id_proveedor", "fecha_expiracion", "updated_at")
-
-    search_fields = ("id_proveedor__nombre",)
-
-    readonly_fields = ("id_credencial", "updated_at")
-
-    fieldsets = (
-        ("🔑 Información de Credencial", {"fields": ("id_credencial", "id_proveedor", "ambiente")}),
-        (
-            "🔐 Credenciales (Sensible)",
-            {"fields": ("api_key", "secret", "token"), "classes": ("collapse",)},
-        ),
-        ("⚙️ Configuración", {"fields": ("configuracion", "fecha_expiracion")}),
-        ("📅 Estado", {"fields": ("estado", "updated_at")}),
-    )
-
-    def ambiente_badge(self, obj):
-        colores = {
-            "development": "#6c757d",
-            "staging": "#ffc107",
-            "production": "#dc3545",
-            "testing": "#17a2b8",
-        }
-        color = colores.get(obj.ambiente, "#6c757d")
-        iconos = {"development": "🛠️", "staging": "🚧", "production": "🔴", "testing": "🧪"}
-        icono = iconos.get(obj.ambiente, "📌")
-        return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; '
-            'border-radius: 3px; font-weight: bold; font-size: 11px;">{} {}</span>',
-            color,
-            icono,
-            obj.ambiente.upper(),
-        )
-
-    ambiente_badge.short_description = "Ambiente"
-
-    def tiene_api_key(self, obj):
-        if obj.api_key:
-            return format_html('<span style="color: green;">{}</span>', "✓")
-        return format_html('<span style="color: #ccc;">{}</span>', "—")
-
-    tiene_api_key.short_description = "API Key"
-
-    def tiene_secret(self, obj):
-        if obj.secret:
-            return format_html('<span style="color: green;">{}</span>', "✓")
-        return format_html('<span style="color: #ccc;">{}</span>', "—")
-
-    tiene_secret.short_description = "Secret"
-
-    def tiene_token(self, obj):
-        if obj.token:
-            return format_html('<span style="color: green;">{}</span>', "✓")
-        return format_html('<span style="color: #ccc;">{}</span>', "—")
-
-    tiene_token.short_description = "Token"
-
-    def activo_badge(self, obj):
-        if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">{}</span>', "✓ estado")
-        return format_html('<span style="color: red; font-weight: bold;">{}</span>', "✗ Inactivo")
-
-    activo_badge.short_description = "Estado"
-
-    def proveedor_nombre(self, obj):
-        return obj.id_proveedor.nombre if obj.id_proveedor else "-"
-
-    proveedor_nombre.short_description = "Proveedor"
-
-
-# ============================================================================
-# LOGS WEBHOOKS
-# ============================================================================
-@admin.register(LogsWebhooks)
-class LogsWebhooksAdmin(admin.ModelAdmin):
-    """Panel de administración para Logs de Webhooks"""
-
-    list_display = (
-        "id_log",
-        "timestamp",
+@admin.register(LogWebhook)
+class LogWebhookAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "webhook_link",
         "evento_tipo",
-        "ip_origen",
-        "verificacion_ok",
-        "procesado_ok",
-        "tiempo_proc_ms",
-        "id_webhook",
-    )
-
-    list_filter = ("verificacion_ok", "procesado_ok", "timestamp", "evento_tipo", "id_webhook")
-
-    search_fields = ("evento_tipo", "ip_origen", "error_msg", "user_agent")
-
-    readonly_fields = ("id_log", "timestamp", "payload", "headers")
-
+        "verificacion_badge",
+        "procesado_badge",
+        "timestamp",
+    ]
+    list_filter = ["verificacion_ok", "procesado_ok", "evento_tipo", "timestamp"]
+    search_fields = ["webhook__nombre", "evento_tipo", "ip_origen"]
+    readonly_fields = ["timestamp"]
+    list_select_related = ["webhook"]
     date_hierarchy = "timestamp"
+    ordering = ["-timestamp"]
 
-    fieldsets = (
-        (
-            "📨 Información del Webhook",
-            {"fields": ("id_log", "timestamp", "id_webhook", "evento_tipo")},
-        ),
-        ("📬 Datos Recibidos", {"fields": ("headers", "payload", "ip_origen", "user_agent")}),
-        (
-            "✅ Procesamiento",
-            {"fields": ("verificacion_ok", "procesado_ok", "tiempo_proc_ms", "error_msg")},
-        ),
-    )
+    def get_readonly_fields(self, request, obj=None):
+        """Log inmutable."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
+    def webhook_link(self, obj):
+        if obj.webhook:
+            url = reverse("admin:api_integrations_webhookendpoint_change", args=[obj.webhook.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.webhook.nombre)
+        return "-"
+    webhook_link.short_description = "Webhook"
 
     def verificacion_badge(self, obj):
         if obj.verificacion_ok:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Verificado</span>')
-        return format_html('<span style="color: red; font-weight: bold;">✗ No Verificado</span>')
-
+            return format_html('<span style="color:#28a745;">✓</span>')
+        return format_html('<span style="color:#dc3545;">✗</span>')
     verificacion_badge.short_description = "Verificación"
 
     def procesado_badge(self, obj):
         if obj.procesado_ok:
-            return format_html('<span style="color: green; font-weight: bold;">✓ Procesado</span>')
-        return format_html('<span style="color: red; font-weight: bold;">✗ Error</span>')
-
-    procesado_badge.short_description = "Procesamiento"
-
-    def has_add_permission(self, request):
-        """No permitir agregar logs manualmente"""
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        """No permitir editar logs existentes"""
-        return False
-
-
-# ============================================================================
-# WEBHOOK ENDPOINTS
-# ============================================================================
-@admin.register(WebhookEndpoints)
-class WebhookEndpointsAdmin(admin.ModelAdmin):
-    """Panel de administración para Webhook Endpoints"""
-
-    list_display = (
-        "id_webhook",
-        "nombre",
-        "proveedor_nombre",
-        "path",
-        "requiere_verificacion",
-        "estado",
-        "created_at",
-    )
-
-    list_filter = ("estado", "requiere_verificacion", "id_proveedor", "created_at")
-
-    search_fields = ("nombre", "descripcion", "path", "handler_func")
-
-    readonly_fields = ("id_webhook", "created_at")
-
-    fieldsets = (
-        (
-            "🔗 Información del Webhook",
-            {"fields": ("id_webhook", "nombre", "descripcion", "id_proveedor")},
-        ),
-        ("🌐 Configuración", {"fields": ("path", "eventos", "handler_func")}),
-        (
-            "🔒 Seguridad",
-            {"fields": ("requiere_verificacion", "secret_key", "header_verificacion")},
-        ),
-        ("⚙️ Estado", {"fields": ("estado", "created_at")}),
-    )
-
-    def requiere_verificacion_badge(self, obj):
-        if obj.requiere_verificacion:
-            return format_html('<span style="color: #dc3545; font-weight: bold;">🔒 Verificación Req.</span>')
-        return format_html('<span style="color: #6c757d;">🔓 Sin Verificación</span>')
-
-    requiere_verificacion_badge.short_description = "Verificación"
-
-    def eventos_count(self, obj):
-        if isinstance(obj.eventos, list):
-            count = len(obj.eventos)
-            return format_html(
-                '<span style="background-color: #17a2b8; color: white; padding: 2px 6px; '
-                'border-radius: 3px; font-size: 10px;">{} eventos</span>',
-                count,
-            )
-        return "—"
-
-    eventos_count.short_description = "Eventos"
-
-    def activo_badge(self, obj):
-        if obj.estado:
-            return format_html('<span style="color: green; font-weight: bold;">✓ estado</span>')
-        return format_html('<span style="color: red; font-weight: bold;">✗ Inactivo</span>')
-
-    activo_badge.short_description = "Estado"
-
-    def proveedor_nombre(self, obj):
-        return obj.id_proveedor.nombre if obj.id_proveedor else "-"
-
-    proveedor_nombre.short_description = "Proveedor"
+            return format_html('<span style="color:#28a745;">✓</span>')
+        return format_html('<span style="color:#dc3545;">✗</span>')
+    procesado_badge.short_description = "Procesado"

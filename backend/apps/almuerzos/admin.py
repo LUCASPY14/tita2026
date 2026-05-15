@@ -1,476 +1,463 @@
-﻿from django.contrib import admin
+﻿"""
+Admin para la app almuerzos
+Gestión de precios, planes, suscripciones, consumo y alérgenos
+"""
+
+from django.contrib import admin
+from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import (
-    Alergenos,
-    CuentasAlmuerzoMensual,
-    PagosAlmuerzoMensual,
-    PagosCuentasAlmuerzo,
-    PlanesAlmuerzo,
-    ProductosAlergenos,
-    RegistrosConsumoAlmuerzo,
-    SuscripcionesAlmuerzo,
-    TiposAlmuerzo,
+    PrecioAlmuerzo,
+    TipoAlmuerzo,
+    PlanAlmuerzo,
+    SuscripcionAlmuerzo,
+    RegistroConsumoAlmuerzo,
+    CuentaAlmuerzoMensual,
+    PagoCuentaAlmuerzo,
+    PagoAlmuerzoMensual,
+    Alergeno,
+    ProductoAlergeno,
 )
 
 
-@admin.register(PlanesAlmuerzo)
-class PlanesAlmuerzoAdmin(admin.ModelAdmin):
+# ==============================================================================
+# PRECIO DE ALMUERZO
+# ==============================================================================
+
+@admin.register(PrecioAlmuerzo)
+class PrecioAlmuerzoAdmin(admin.ModelAdmin):
+    list_display = ["precio_unitario_display", "fecha_inicio_vigencia", "fecha_fin_vigencia", "descripcion", "activo"]
+    list_filter = ["activo"]
+    search_fields = ["descripcion"]
+    ordering = ["-fecha_inicio_vigencia"]
+
+    def precio_unitario_display(self, obj):
+        return f"₲{obj.precio_unitario:,.0f}"
+    precio_unitario_display.short_description = "Precio"
+
+
+# ==============================================================================
+# TIPO DE ALMUERZO
+# ==============================================================================
+
+@admin.register(TipoAlmuerzo)
+class TipoAlmuerzoAdmin(admin.ModelAdmin):
     list_display = [
-        "id_plan_almuerzo",
-        "nombre_plan",
-        "precio_mensual_badge",
-        "dias_semana_incluidos",
-        "estado_badge",
-        "fecha_creacion",
-    ]
-    list_filter = ["estado", "fecha_creacion"]
-    search_fields = ["nombre_plan", "descripcion"]
-    readonly_fields = ["id_plan_almuerzo", "fecha_creacion"]
-    ordering = ["nombre_plan"]
-
-    fieldsets = (
-        ("Información del Plan", {"fields": ("id_plan_almuerzo", "nombre_plan", "descripcion")}),
-        ("Precios y Días", {"fields": ("precio_mensual", "dias_semana_incluidos")}),
-        ("Estado", {"fields": ("estado", "fecha_creacion")}),
-    )
-
-    def precio_mensual_badge(self, obj):
-        color = "#4CAF50" if obj.precio_mensual < 500000 else "#FF9800"
-        precio_formateado = f"{obj.precio_mensual:,.0f}"
-        return format_html('<strong style="color: {};">₲{}</strong>', color, precio_formateado)
-
-    precio_mensual_badge.short_description = "Precio Mensual"
-
-    def estado_badge(self, obj):
-        if obj.estado:
-            return format_html(
-                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-                "ACTIVO",
-            )
-        return format_html(
-            '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-            "INACTIVO",
-        )
-
-    estado_badge.short_description = "Estado"
-
-
-@admin.register(TiposAlmuerzo)
-class TiposAlmuerzoAdmin(admin.ModelAdmin):
-    list_display = [
-        "id_tipo_almuerzo",
         "nombre",
-        "precio_unitario_badge",
+        "precio_unitario_display",
         "incluye_plato_principal",
         "incluye_postre",
         "incluye_bebida",
-        "estado_badge",
+        "activo",
     ]
-    list_filter = ["estado", "incluye_plato_principal", "incluye_postre", "incluye_bebida"]
-    search_fields = ["nombre", "descripcion"]
-    readonly_fields = ["id_tipo_almuerzo", "fecha_creacion"]
-    ordering = ["nombre"]
+    list_filter = ["activo", "incluye_plato_principal", "incluye_postre", "incluye_bebida"]
+    search_fields = ["nombre"]
 
-    fieldsets = (
-        (
-            "Información del Tipo",
-            {"fields": ("id_tipo_almuerzo", "nombre", "descripcion", "precio_unitario")},
-        ),
-        (
-            "Componentes Incluidos",
-            {"fields": ("incluye_plato_principal", "incluye_postre", "incluye_bebida")},
-        ),
-        ("Estado", {"fields": ("estado", "fecha_creacion")}),
-    )
-
-    def precio_unitario_badge(self, obj):
-        color = "#2196F3" if obj.precio_unitario < 50000 else "#FF9800"
-        precio_formateado = f"{obj.precio_unitario:,.0f}"
-        return format_html('<strong style="color: {};">₲{}</strong>', color, precio_formateado)
-
-    precio_unitario_badge.short_description = "Precio"
-
-    def estado_badge(self, obj):
-        if obj.estado:
-            return format_html(
-                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-                "ACTIVO",
-            )
-        return format_html(
-            '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-            "INACTIVO",
-        )
-
-    estado_badge.short_description = "Estado"
+    def precio_unitario_display(self, obj):
+        return f"₲{obj.precio_unitario:,.0f}"
+    precio_unitario_display.short_description = "Precio"
 
 
-@admin.register(SuscripcionesAlmuerzo)
-class SuscripcionesAlmuerzoAdmin(admin.ModelAdmin):
+# ==============================================================================
+# PLAN DE ALMUERZO
+# ==============================================================================
+
+@admin.register(PlanAlmuerzo)
+class PlanAlmuerzoAdmin(admin.ModelAdmin):
     list_display = [
-        "id_suscripcion",
-        "id_hijo",
-        "id_plan_almuerzo",
+        "nombre",
+        "tipo_badge",
+        "precio_mensual_display",
+        "cantidad_almuerzos_mes",
+        "dias_semana_incluidos",
+        "activo",
+    ]
+    list_filter = ["activo", "tipo"]
+    search_fields = ["nombre"]
+
+    def tipo_badge(self, obj):
+        colors = {"CANTIDAD": "#0d6efd", "SIN_LIMITE": "#28a745"}
+        color = colors.get(obj.tipo, "#6c757d")
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_tipo_display(),
+        )
+    tipo_badge.short_description = "Tipo"
+
+    def precio_mensual_display(self, obj):
+        return f"₲{obj.precio_mensual:,.0f}"
+    precio_mensual_display.short_description = "Precio Mensual"
+
+
+# ==============================================================================
+# SUSCRIPCIÓN DE ALMUERZO
+# ==============================================================================
+
+@admin.register(SuscripcionAlmuerzo)
+class SuscripcionAlmuerzoAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "hijo_link",
+        "plan_link",
         "fecha_inicio",
         "fecha_fin",
         "estado_badge",
     ]
-    list_filter = ["estado", "fecha_inicio"]
-    search_fields = ["id_hijo__nombre", "id_hijo__apellido", "id_plan_almuerzo__nombre_plan"]
-    readonly_fields = ["id_suscripcion"]
+    list_filter = ["estado", "plan"]
+    search_fields = ["hijo__nombre", "hijo__apellido"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["hijo", "plan"]
     ordering = ["-fecha_inicio"]
-
     fieldsets = (
-        (
-            "Información de la Suscripción",
-            {"fields": ("id_suscripcion", "id_hijo", "id_plan_almuerzo")},
-        ),
-        ("Periodo", {"fields": ("fecha_inicio", "fecha_fin", "estado")}),
+        ("Datos de la Suscripción", {
+            "fields": ("hijo", "plan", "estado")
+        }),
+        ("Vigencia", {
+            "fields": ("fecha_inicio", "fecha_fin")
+        }),
     )
 
-    def estado_badge(self, obj):
-        colores = {
-            "Activa": "#4CAF50",
-            "Pausada": "#FF9800",
-            "Cancelada": "#F44336",
-            "Finalizada": "#9E9E9E",
-        }
-        color = colores.get(obj.estado, "#607D8B")
-        return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
-            obj.estado or "N/A",
-        )
+    def hijo_link(self, obj):
+        url = reverse("admin:clientes_hijo_change", args=[obj.hijo.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.hijo.nombre_completo)
+    hijo_link.short_description = "Estudiante"
 
+    def plan_link(self, obj):
+        url = reverse("admin:almuerzos_planalmuerzo_change", args=[obj.plan.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.plan.nombre)
+    plan_link.short_description = "Plan"
+
+    def estado_badge(self, obj):
+        colors = {"ACTIVA": "#28a745", "SUSPENDIDA": "#ffc107", "CANCELADA": "#6c757d"}
+        color = colors.get(obj.estado, "#6c757d")
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_estado_display(),
+        )
     estado_badge.short_description = "Estado"
 
 
-@admin.register(RegistrosConsumoAlmuerzo)
-class RegistrosConsumoAlmuerzoAdmin(admin.ModelAdmin):
+# ==============================================================================
+# REGISTRO DE CONSUMO DE ALMUERZO
+# ==============================================================================
+
+@admin.register(RegistroConsumoAlmuerzo)
+class RegistroConsumoAlmuerzoAdmin(admin.ModelAdmin):
     list_display = [
-        "id_registro_consumo",
+        "id",
+        "hijo_link",
         "fecha_consumo",
-        "hora_registro",
-        "id_hijo",
-        "costo_badge",
+        "tipo_almuerzo_link",
+        "costo_display",
         "estado_badge",
-        "marcado_en_cuenta",
     ]
-    list_filter = ["estado", "fecha_consumo", "marcado_en_cuenta"]
-    search_fields = ["id_hijo__nombre", "id_hijo__apellido"]
-    readonly_fields = ["id_registro_consumo"]
+    list_filter = ["estado", "fecha_consumo", "tipo_almuerzo"]
+    search_fields = ["hijo__nombre", "hijo__apellido"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["hijo", "tipo_almuerzo"]
+    date_hierarchy = "fecha_consumo"
     ordering = ["-fecha_consumo", "-hora_registro"]
-
     fieldsets = (
-        (
-            "Información del Registro",
-            {"fields": ("id_registro_consumo", "id_hijo", "id_suscripcion", "id_tipo_almuerzo")},
-        ),
-        ("Fecha y Hora", {"fields": ("fecha_consumo", "hora_registro")}),
-        (
-            "Costo y Estado",
-            {"fields": ("costo_almuerzo", "estado", "motivo_rechazo", "marcado_en_cuenta")},
-        ),
-        (
-            "Empleado y Tarjeta",
-            {"fields": ("id_empleado_registro", "nro_tarjeta"), "classes": ("collapse",)},
-        ),
+        ("Datos del Consumo", {
+            "fields": ("hijo", "suscripcion", "tipo_almuerzo", "fecha_consumo", "hora_registro")
+        }),
+        ("Costo y Cobro", {
+            "fields": ("costo_almuerzo", "ya_cobrado", "marcado_en_cuenta")
+        }),
+        ("Estado", {
+            "fields": ("estado", "motivo_rechazo")
+        }),
+        ("Registro", {
+            "fields": ("nro_tarjeta", "registrado_por", "fecha_creacion"),
+            "classes": ("collapse",),
+        }),
     )
 
-    def costo_badge(self, obj):
-        if not obj.costo_almuerzo:
-            return format_html('<span style="color: #999;">{}</span>', "N/A")
-        costo_formateado = f"{obj.costo_almuerzo:,.0f}"
-        return format_html("<strong>₲{}</strong>", costo_formateado)
+    def get_readonly_fields(self, request, obj=None):
+        """Consumo inmutable una vez creado."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
 
-    costo_badge.short_description = "Costo"
+    def hijo_link(self, obj):
+        url = reverse("admin:clientes_hijo_change", args=[obj.hijo.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.hijo.nombre_completo)
+    hijo_link.short_description = "Estudiante"
+
+    def tipo_almuerzo_link(self, obj):
+        if obj.tipo_almuerzo:
+            url = reverse("admin:almuerzos_tipoalmuerzo_change", args=[obj.tipo_almuerzo.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.tipo_almuerzo.nombre)
+        return "-"
+    tipo_almuerzo_link.short_description = "Tipo"
+
+    def costo_display(self, obj):
+        if obj.costo_almuerzo:
+            return f"₲{obj.costo_almuerzo:,.0f}"
+        return "-"
+    costo_display.short_description = "Costo"
 
     def estado_badge(self, obj):
-        colores = {
-            "Registrado": "#2196F3",
-            "Confirmado": "#4CAF50",
-            "Rechazado": "#F44336",
-            "Cancelado": "#FF9800",
-        }
-        color = colores.get(obj.estado, "#607D8B")
+        colors = {"REGISTRADO": "#28a745", "RECHAZADO": "#dc3545", "ANULADO": "#6c757d"}
+        color = colors.get(obj.estado, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
             color,
-            obj.estado,
+            obj.get_estado_display(),
         )
-
     estado_badge.short_description = "Estado"
 
 
-@admin.register(CuentasAlmuerzoMensual)
-class CuentasAlmuerzoMensualAdmin(admin.ModelAdmin):
+# ==============================================================================
+# CUENTA MENSUAL DE ALMUERZO
+# ==============================================================================
+
+@admin.register(CuentaAlmuerzoMensual)
+class CuentaAlmuerzoMensualAdmin(admin.ModelAdmin):
     list_display = [
-        "id_cuenta",
-        "id_hijo",
-        "periodo_display",
+        "id",
+        "hijo_link",
+        "periodo",
         "cantidad_almuerzos",
-        "monto_total_badge",
-        "monto_pagado_badge",
-        "saldo_badge",
+        "monto_total_display",
+        "monto_pagado_display",
+        "saldo_pendiente_display",
         "estado_badge",
     ]
-    list_filter = ["estado", "anio", "mes", "forma_cobro"]
-    search_fields = ["id_hijo__nombre", "id_hijo__apellido"]
-    readonly_fields = [
-        "id_cuenta",
-        "fecha_generacion",
-        "fecha_actualizacion",
-        "saldo_pendiente_display",
-    ]
+    list_filter = ["estado", "anio", "mes"]
+    search_fields = ["hijo__nombre", "hijo__apellido"]
+    readonly_fields = ["fecha_generacion", "fecha_actualizacion", "fecha_creacion"]
+    list_select_related = ["hijo"]
     ordering = ["-anio", "-mes"]
-
     fieldsets = (
-        ("Información de la Cuenta", {"fields": ("id_cuenta", "id_hijo")}),
-        ("Periodo", {"fields": ("anio", "mes", "fecha_generacion")}),
-        (
-            "Montos",
-            {
-                "fields": (
-                    "cantidad_almuerzos",
-                    "monto_total",
-                    "forma_cobro",
-                    "monto_pagado",
-                    "saldo_pendiente_display",
-                )
-            },
-        ),
-        ("Estado", {"fields": ("estado", "fecha_actualizacion", "observaciones")}),
+        ("Datos de la Cuenta", {
+            "fields": ("hijo", "anio", "mes", "cantidad_almuerzos", "monto_total")
+        }),
+        ("Pago", {
+            "fields": ("forma_cobro", "monto_pagado", "estado")
+        }),
+        ("Facturación", {
+            "fields": ("factura", "nro_comprobante", "comprobante_pago", "fecha_pago")
+        }),
+        ("Auditoría", {
+            "fields": ("fecha_generacion", "fecha_actualizacion", "observaciones"),
+            "classes": ("collapse",),
+        }),
     )
 
-    def periodo_display(self, obj):
-        meses = [
-            "",
-            "Enero",
-            "Febrero",
-            "Marzo",
-            "Abril",
-            "Mayo",
-            "Junio",
-            "Julio",
-            "Agosto",
-            "Septiembre",
-            "Octubre",
-            "Noviembre",
-            "Diciembre",
-        ]
-        return format_html("<strong>{} {}</strong>", meses[obj.mes] if obj.mes <= 12 else obj.mes, obj.anio)
+    def get_readonly_fields(self, request, obj=None):
+        """Cuenta inmutable cuando está pagada o anulada."""
+        if obj and obj.estado in ("PAGADO", "ANULADO"):
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
 
-    periodo_display.short_description = "Periodo"
+    def hijo_link(self, obj):
+        url = reverse("admin:clientes_hijo_change", args=[obj.hijo.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.hijo.nombre_completo)
+    hijo_link.short_description = "Estudiante"
 
-    def monto_total_badge(self, obj):
-        if obj.monto_total is None:
-            return format_html('<span style="color: #999;">{}</span>', "N/A")
-        monto_formateado = f"{obj.monto_total:,.0f}"
-        return format_html("<strong>₲{}</strong>", monto_formateado)
+    def periodo(self, obj):
+        return f"{obj.mes:02d}/{obj.anio}"
+    periodo.short_description = "Período"
 
-    monto_total_badge.short_description = "Total"
+    def monto_total_display(self, obj):
+        return f"₲{obj.monto_total:,.0f}"
+    monto_total_display.short_description = "Total"
 
-    def monto_pagado_badge(self, obj):
-        if obj.monto_pagado is None or obj.monto_total is None:
-            return format_html('<span style="color: #999;">{}</span>', "N/A")
-        color = "#4CAF50" if obj.monto_pagado >= obj.monto_total else "#FF9800"
-        monto_formateado = f"{obj.monto_pagado:,.0f}"
-        return format_html('<strong style="color: {};">₲{}</strong>', color, monto_formateado)
-
-    monto_pagado_badge.short_description = "Pagado"
-
-    def saldo_badge(self, obj):
-        if obj.monto_total is None or obj.monto_pagado is None:
-            return format_html('<span style="color: #999;">{}</span>', "N/A")
-        saldo = obj.monto_total - obj.monto_pagado
-        color = "#4CAF50" if saldo <= 0 else "#F44336"
-        saldo_formateado = f"{saldo:,.0f}"
-        return format_html('<strong style="color: {};">₲{}</strong>', color, saldo_formateado)
-
-    saldo_badge.short_description = "Saldo"
+    def monto_pagado_display(self, obj):
+        return f"₲{obj.monto_pagado:,.0f}"
+    monto_pagado_display.short_description = "Pagado"
 
     def saldo_pendiente_display(self, obj):
-        if obj.monto_total is None or obj.monto_pagado is None:
-            return format_html('<span style="color: #999;">{}</span>', "N/A")
-        saldo = obj.monto_total - obj.monto_pagado
-        saldo_formateado = f"{saldo:,.2f}"
-        return format_html("<strong>₲{}</strong>", saldo_formateado)
-
-    saldo_pendiente_display.short_description = "Saldo Pendiente"
+        saldo = obj.saldo_pendiente
+        if saldo <= 0:
+            return format_html('<span style="color:#28a745;">₲0</span>')
+        return format_html('<span style="color:#dc3545;">₲{:,}</span>', saldo)
+    saldo_pendiente_display.short_description = "Saldo Pend."
 
     def estado_badge(self, obj):
-        colores = {
-            "Pendiente": "#FF9800",
-            "Pagada": "#4CAF50",
-            "Vencida": "#F44336",
-            "Cancelada": "#9E9E9E",
+        colors = {
+            "PENDIENTE": "#dc3545",
+            "VALIDACION": "#ffc107",
+            "PAGADO": "#28a745",
+            "PARCIAL": "#fd7e14",
+            "ANULADO": "#6c757d",
         }
-        color = colores.get(obj.estado, "#607D8B")
+        color = colors.get(obj.estado, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
             color,
-            obj.estado,
+            obj.get_estado_display(),
         )
-
     estado_badge.short_description = "Estado"
 
 
-@admin.register(PagosAlmuerzoMensual)
-class PagosAlmuerzoMensualAdmin(admin.ModelAdmin):
+# ==============================================================================
+# PAGO DE CUENTA DE ALMUERZO
+# ==============================================================================
+
+@admin.register(PagoCuentaAlmuerzo)
+class PagoCuentaAlmuerzoAdmin(admin.ModelAdmin):
     list_display = [
-        "id_pago_almuerzo",
-        "id_suscripcion",
-        "mes_pagado",
-        "monto_pagado_badge",
+        "id",
+        "cuenta_link",
+        "monto_display",
+        "medio_pago",
         "fecha_pago",
+    ]
+    list_filter = ["fecha_pago"]
+    search_fields = ["cuenta__hijo__nombre", "cuenta__hijo__apellido", "referencia"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["cuenta", "cuenta__hijo"]
+    date_hierarchy = "fecha_pago"
+    ordering = ["-fecha_pago"]
+
+    def get_readonly_fields(self, request, obj=None):
+        """Pago inmutable una vez creado."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
+    def has_delete_permission(self, request, obj=None):
+        """No permite eliminar pagos."""
+        return False
+
+    def cuenta_link(self, obj):
+        url = reverse("admin:almuerzos_cuentaalmuerzomensual_change", args=[obj.cuenta.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.cuenta)
+    cuenta_link.short_description = "Cuenta"
+
+    def monto_display(self, obj):
+        return f"₲{obj.monto:,.0f}"
+    monto_display.short_description = "Monto"
+
+
+# ==============================================================================
+# PAGO MENSUAL DE SUSCRIPCIÓN
+# ==============================================================================
+
+@admin.register(PagoAlmuerzoMensual)
+class PagoAlmuerzoMensualAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "suscripcion_link",
+        "monto_pagado_display",
+        "mes_pagado",
         "estado_badge",
+        "fecha_pago",
     ]
     list_filter = ["estado", "fecha_pago"]
-    search_fields = ["id_suscripcion__id_hijo__nombre", "id_suscripcion__id_hijo__apellido"]
-    readonly_fields = ["id_pago_almuerzo", "fecha_pago"]
+    search_fields = ["suscripcion__hijo__nombre", "suscripcion__hijo__apellido"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["suscripcion", "suscripcion__hijo", "suscripcion__plan"]
+    date_hierarchy = "fecha_pago"
     ordering = ["-fecha_pago"]
-
     fieldsets = (
-        ("Información del Pago", {"fields": ("id_pago_almuerzo", "id_suscripcion", "id_venta")}),
-        ("Detalles del Pago", {"fields": ("monto_pagado", "mes_pagado", "fecha_pago", "estado")}),
+        ("Datos del Pago", {
+            "fields": ("suscripcion", "monto_pagado", "mes_pagado", "estado")
+        }),
+        ("Venta", {
+            "fields": ("venta",)
+        }),
+        ("Auditoría", {
+            "fields": ("fecha_creacion",),
+            "classes": ("collapse",),
+        }),
     )
 
-    def monto_pagado_badge(self, obj):
-        monto_formateado = f"{obj.monto_pagado:,.0f}"
-        return format_html('<strong style="color: #4CAF50;">₲{}</strong>', monto_formateado)
+    def get_readonly_fields(self, request, obj=None):
+        """Pago inmutable una vez confirmado o rechazado."""
+        if obj and obj.estado in ("CONFIRMADO", "RECHAZADO"):
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
 
-    monto_pagado_badge.short_description = "Monto"
+    def has_delete_permission(self, request, obj=None):
+        """No permite eliminar pagos confirmados o rechazados."""
+        if obj and obj.estado in ("CONFIRMADO", "RECHAZADO"):
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def suscripcion_link(self, obj):
+        url = reverse("admin:almuerzos_suscripcionalmuerzo_change", args=[obj.suscripcion.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.suscripcion)
+    suscripcion_link.short_description = "Suscripción"
+
+    def monto_pagado_display(self, obj):
+        return f"₲{obj.monto_pagado:,.0f}"
+    monto_pagado_display.short_description = "Monto"
 
     def estado_badge(self, obj):
-        if not obj.estado:
-            return format_html('<span style="color: #999;">{}</span>', "N/A")
-        colores = {"Pendiente": "#FF9800", "Confirmado": "#4CAF50", "Rechazado": "#F44336"}
-        color = colores.get(obj.estado, "#607D8B")
+        colors = {"PENDIENTE": "#ffc107", "CONFIRMADO": "#28a745", "RECHAZADO": "#dc3545"}
+        color = colors.get(obj.estado, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
             color,
-            obj.estado,
+            obj.get_estado_display(),
         )
-
     estado_badge.short_description = "Estado"
 
 
-@admin.register(PagosCuentasAlmuerzo)
-class PagosCuentasAlmuerzoAdmin(admin.ModelAdmin):
-    list_display = [
-        "id_pago",
-        "id_cuenta",
-        "fecha_pago",
-        "medio_pago",
-        "monto_badge",
-        "referencia",
-        "id_empleado_registro",
-    ]
-    list_filter = ["medio_pago", "fecha_pago"]
-    search_fields = ["referencia", "id_cuenta__id_hijo__nombre"]
-    readonly_fields = ["id_pago", "fecha_pago"]
-    ordering = ["-fecha_pago"]
+# ==============================================================================
+# ALÉRGENO
+# ==============================================================================
 
+@admin.register(Alergeno)
+class AlergenoAdmin(admin.ModelAdmin):
+    list_display = ["nombre", "severidad_badge", "activo"]
+    list_filter = ["activo", "severidad"]
+    search_fields = ["nombre"]
+    readonly_fields = ["fecha_creacion"]
     fieldsets = (
-        ("Información del Pago", {"fields": ("id_pago", "id_cuenta", "fecha_pago")}),
-        ("Detalles del Pago", {"fields": ("monto", "medio_pago", "referencia")}),
-        (
-            "Empleado y Observaciones",
-            {"fields": ("id_empleado_registro", "observaciones"), "classes": ("collapse",)},
-        ),
+        ("Datos del Alérgeno", {
+            "fields": ("nombre", "descripcion", "severidad", "icono")
+        }),
+        ("Palabras Clave", {
+            "fields": ("palabras_clave",),
+            "classes": ("collapse",),
+        }),
+        ("Auditoría", {
+            "fields": ("creado_por", "fecha_creacion"),
+            "classes": ("collapse",),
+        }),
     )
 
-    def monto_badge(self, obj):
-        monto_formateado = f"{obj.monto:,.0f}"
-        return format_html('<strong style="color: #4CAF50;">₲{}</strong>', monto_formateado)
-
-    monto_badge.short_description = "Monto"
-
-
-@admin.register(Alergenos)
-class AlergenosAdmin(admin.ModelAdmin):
-    list_display = [
-        "id_alergeno",
-        "nombre",
-        "icono",
-        "nivel_severidad_badge",
-        "estado_badge",
-        "fecha_creacion",
-    ]
-    list_filter = ["nivel_severidad", "estado", "fecha_creacion"]
-    search_fields = ["nombre", "descripcion"]
-    readonly_fields = ["id_alergeno", "fecha_creacion"]
-    ordering = ["nombre"]
-
-    fieldsets = (
-        ("Información del Alérgeno", {"fields": ("id_alergeno", "nombre", "descripcion", "icono")}),
-        ("Clasificación", {"fields": ("nivel_severidad", "palabras_clave")}),
-        (
-            "Registro",
-            {"fields": ("estado", "fecha_creacion", "usuario_creacion"), "classes": ("collapse",)},
-        ),
-    )
-
-    def nivel_severidad_badge(self, obj):
-        colores = {"Critica": "#F44336", "Alta": "#FF9800", "Media": "#FFC107", "Baja": "#4CAF50"}
-        color = colores.get(obj.nivel_severidad, "#607D8B")
-        icono = (
-            "🔴" if obj.nivel_severidad == "Critica" else ("🟡" if obj.nivel_severidad in ["Alta", "Media"] else "🟢")
-        )
+    def severidad_badge(self, obj):
+        colors = {"BAJA": "#28a745", "MEDIA": "#ffc107", "ALTA": "#fd7e14", "CRITICA": "#dc3545"}
+        color = colors.get(obj.severidad, "#6c757d")
         return format_html(
-            '{} <span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-            icono,
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;">{}</span>',
             color,
-            obj.nivel_severidad,
+            obj.get_severidad_display(),
         )
-
-    nivel_severidad_badge.short_description = "Severidad"
-
-    def estado_badge(self, obj):
-        if obj.estado:
-            return format_html(
-                '<span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-                "ACTIVO",
-            )
-        return format_html(
-            '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-            "INACTIVO",
-        )
-
-    estado_badge.short_description = "Estado"
+    severidad_badge.short_description = "Severidad"
 
 
-@admin.register(ProductosAlergenos)
-class ProductosAlergenosAdmin(admin.ModelAdmin):
-    list_display = [
-        "id_producto_alergeno",
-        "id_producto",
-        "id_alergeno",
-        "contiene_badge",
-        "fecha_registro",
-        "usuario_registro",
-    ]
-    list_filter = ["contiene", "fecha_registro"]
-    search_fields = ["id_producto__nombre", "id_alergeno__nombre", "observaciones"]
-    readonly_fields = ["id_producto_alergeno", "fecha_registro"]
-    ordering = ["-fecha_registro"]
+# ==============================================================================
+# PRODUCTO - ALÉRGENO
+# ==============================================================================
 
-    fieldsets = (
-        (
-            "Relación Producto-Alérgeno",
-            {"fields": ("id_producto_alergeno", "id_producto", "id_alergeno")},
-        ),
-        ("Detalles", {"fields": ("contiene", "observaciones")}),
-        ("Registro", {"fields": ("fecha_registro", "usuario_registro"), "classes": ("collapse",)}),
-    )
+@admin.register(ProductoAlergeno)
+class ProductoAlergenoAdmin(admin.ModelAdmin):
+    list_display = ["producto_link", "alergeno_link", "contiene_badge"]
+    list_filter = ["alergeno", "contiene"]
+    search_fields = ["producto__descripcion", "alergeno__nombre"]
+    list_select_related = ["producto", "alergeno"]
+
+    def producto_link(self, obj):
+        url = reverse("admin:productos_producto_change", args=[obj.producto.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.producto.descripcion)
+    producto_link.short_description = "Producto"
+
+    def alergeno_link(self, obj):
+        url = reverse("admin:almuerzos_alergeno_change", args=[obj.alergeno.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.alergeno.nombre)
+    alergeno_link.short_description = "Alérgeno"
 
     def contiene_badge(self, obj):
         if obj.contiene:
-            return format_html(
-                '<span style="background-color: #F44336; color: white; padding: 3px 8px; border-radius: 3px;">⚠️ CONTIENE</span>'
-            )
-        return format_html(
-            '<span style="background-color: #FF9800; color: white; padding: 3px 8px; border-radius: 3px;">PUEDE CONTENER TRAZAS</span>'
-        )
-
-    contiene_badge.short_description = "Estado"
+            return format_html('<span style="color:#dc3545;">⚠ Contiene</span>')
+        return format_html('<span style="color:#6c757d;">Trazas</span>')
+    contiene_badge.short_description = "Contiene"

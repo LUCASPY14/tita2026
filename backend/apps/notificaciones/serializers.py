@@ -1,161 +1,52 @@
 """
-Serializers para app de Notificaciones
+Serializers para la app notificaciones
 """
 
 from rest_framework import serializers
 
 from .models import (
-    AlertasSistema,
-    EmailsEnviados,
-    NotificacionesPortal,
-    NotificacionesSaldo,
-    PlantillasEmail,
-    PreferenciasNotificacion,
-    SmsEnviados,
+    Notificacion,
+    PreferenciaNotificacion,
+    PlantillaEmail,
+    EmailEnviado,
+    SolicitudNotificacion,
 )
 
 
-class PlantillasEmailSerializer(serializers.ModelSerializer):
-    """Serializer para plantillas de email transaccional."""
+class NotificacionSerializer(serializers.ModelSerializer):
+    usuario_nombre = serializers.CharField(source="usuario.nombre_completo", read_only=True)
 
     class Meta:
-        model = PlantillasEmail
-        fields = [
-            "id_template",
-            "codigo",
-            "nombre",
-            "descripcion",
-            "asunto",
-            "cuerpo_html",
-            "cuerpo_texto",
-            "variables",
-            "categoria",
-            "estado",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = ["id_template", "created_at", "updated_at"]
+        model = Notificacion
+        fields = "__all__"
+        read_only_fields = ["fecha_envio", "fecha_lectura", "fecha_creacion"]
 
 
-class NotificacionPortalSerializer(serializers.ModelSerializer):
-    """Serializer para notificaciones del portal"""
-
+class PreferenciaNotificacionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = NotificacionesPortal
-        fields = [
-            "id_notificacion",
-            "tipo",
-            "titulo",
-            "mensaje",
-            "leida",
-            "fecha_envio",
-            "fecha_lectura",
-            "creado_en",
-            "id_usuario_portal",
-        ]
+        model = PreferenciaNotificacion
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion", "fecha_actualizacion"]
 
 
-class NotificacionSaldoSerializer(serializers.ModelSerializer):
-    """Serializer para notificaciones de saldo"""
-
-    hijo_nombre = serializers.SerializerMethodField()
-
+class PlantillaEmailSerializer(serializers.ModelSerializer):
     class Meta:
-        model = NotificacionesSaldo
-        fields = [
-            "id_notificacion",
-            "tipo_notificacion",
-            "saldo_actual",
-            "mensaje",
-            "enviada_email",
-            "enviada_sms",
-            "leida",
-            "email_destinatario",
-            "fecha_creacion",
-            "fecha_envio",
-            "nro_tarjeta",
-            "hijo_nombre",
-        ]
-
-    def get_hijo_nombre(self, obj):
-        try:
-            hijo = obj.nro_tarjeta.id_hijo
-            return f"{hijo.nombre} {hijo.apellido}"
-        except:  # pragma: no cover
-            return None
-
-
-class AlertaSistemaSerializer(serializers.ModelSerializer):
-    """Serializer para alertas del sistema"""
-
-    empleado_nombre = serializers.SerializerMethodField()
-
-    class Meta:
-        model = AlertasSistema
-        fields = [
-            "id_alerta",
-            "tipo",
-            "mensaje",
-            "fecha_creacion",
-            "fecha_leida",
-            "estado",
-            "id_empleado_resuelve",
-            "fecha_resolucion",
-            "observaciones",
-            "empleado_nombre",
-        ]
-
-    def get_empleado_nombre(self, obj):
-        # Por ahora retorna None, se puede implementar después
-        return None
-
-
-class PreferenciasNotificacionSerializer(serializers.ModelSerializer):
-    """Serializer para preferencias de notificación"""
-
-    class Meta:
-        model = PreferenciasNotificacion
-        fields = [
-            "id_preferencia",
-            "tipo_notificacion",
-            "email_activo",
-            "push_activo",
-            "creado_en",
-            "actualizado_en",
-            "id_usuario_portal",
-        ]
+        model = PlantillaEmail
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion", "fecha_actualizacion"]
 
 
 class EmailEnviadoSerializer(serializers.ModelSerializer):
-    """Serializer para emails enviados"""
+    class Meta:
+        model = EmailEnviado
+        fields = "__all__"
+        read_only_fields = ["fecha_envio", "fecha_entrega", "fecha_apertura", "fecha_creacion"]
+
+
+class SolicitudNotificacionSerializer(serializers.ModelSerializer):
+    cliente_nombre = serializers.CharField(source="cliente.nombre_completo", read_only=True)
 
     class Meta:
-        model = EmailsEnviados
-        fields = [
-            "id_email",
-            "email_destinatario",
-            "nombre_destinatario",
-            "asunto",
-            "estado",
-            "fecha_envio",
-            "fecha_entrega",
-            "fecha_apertura",
-            "mensaje_error",
-            "intentos",
-        ]
-
-
-class SMSEnviadoSerializer(serializers.ModelSerializer):
-    """Serializer para SMS enviados"""
-
-    class Meta:
-        model = SmsEnviados
-        fields = [
-            "id_sms",
-            "telefono",
-            "mensaje",
-            "estado",
-            "fecha_envio",
-            "fecha_entrega",
-            "costo",
-        ]
+        model = SolicitudNotificacion
+        fields = "__all__"
+        read_only_fields = ["fecha_solicitud", "fecha_envio"]

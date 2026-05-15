@@ -1,271 +1,241 @@
-﻿"""
+"""
 Modelos de la app contabilidad
-Auto-generados desde la base de datos y organizados por funcionalidad
+Gestión de cajas, cierres, movimientos, facturación y comisiones
 """
 
+from decimal import Decimal
+
 from django.db import models
+from django.utils import timezone
 
 
-class Cajas(models.Model):
-    id_caja = models.AutoField(primary_key=True)
-    nombre_caja = models.CharField(max_length=50)
+# ==============================================================================
+# CAJA
+# ==============================================================================
+
+class Caja(models.Model):
+    """Caja registradora o punto de venta físico."""
+
+    nombre = models.CharField(max_length=50)
     ubicacion = models.CharField(max_length=100, blank=True, null=True)
-    estado = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    activo = models.BooleanField(default=True)
 
     class Meta:
-        managed = True
-        db_table = "cajas"
-
-
-class CierresCaja(models.Model):
-    id_cierre = models.BigAutoField(primary_key=True)
-    fecha_hora_apertura = models.DateTimeField()
-    fecha_hora_cierre = models.DateTimeField(blank=True, null=True)
-    monto_inicial = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    monto_contado_fisico = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    diferencia_efectivo = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    estado = models.CharField(max_length=7, blank=True, null=True)
-    id_caja = models.ForeignKey("Cajas", models.DO_NOTHING, db_column="id_caja")
-    id_empleado = models.ForeignKey("usuarios.Empleados", models.DO_NOTHING, db_column="id_empleado")
+        verbose_name = "Caja"
+        verbose_name_plural = "Cajas"
 
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+        return self.nombre
+
+
+# ==============================================================================
+# CIERRE DE CAJA
+# ==============================================================================
+
+class CierreCaja(models.Model):
+    """Cierre diario de caja con arqueo."""
+
+    class Estado(models.TextChoices):
+        ABIERTO = "ABIERTO", "Abierto"
+        CERRADO = "CERRADO", "Cerrado"
+        CONCILIADO = "CONCILIADO", "Conciliado"
+
+    caja = models.ForeignKey(
+        Caja, models.PROTECT, related_name="cierres"
+    )
+    empleado = models.ForeignKey(
+        "usuarios.Usuario", models.PROTECT, related_name="cierres_caja"
+    )
+    fecha_apertura = models.DateTimeField(default=timezone.now)
+    fecha_cierre = models.DateTimeField(blank=True, null=True)
+    monto_inicial = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0,
+        help_text="Monto en Guaraníes al abrir la caja",
+    )
+    monto_contado_fisico = models.DecimalField(
+        max_digits=12, decimal_places=0, blank=True, null=True,
+        help_text="Monto contado al cerrar",
+    )
+    diferencia_efectivo = models.DecimalField(
+        max_digits=12, decimal_places=0, blank=True, null=True,
+        help_text="Diferencia entre lo esperado y lo contado",
+    )
+    estado = models.CharField(
+        max_length=15, choices=Estado.choices, default=Estado.ABIERTO
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "cierres_caja"
-        ordering = ["-fecha_hora_apertura"]
+        verbose_name = "Cierre de Caja"
+        verbose_name_plural = "Cierres de Caja"
+        ordering = ["-fecha_apertura"]
         indexes = [
-            models.Index(fields=["id_caja", "fecha_hora_apertura"], name="idx_cierres_caja_fecha"),
-            models.Index(fields=["id_empleado", "fecha_hora_apertura"], name="idx_cierres_emp_fecha"),
-            models.Index(fields=["estado", "fecha_hora_cierre"], name="idx_cierres_estado"),
-            models.Index(fields=["fecha_hora_apertura"], name="idx_cierres_apertura"),
+            models.Index(fields=["caja", "fecha_apertura"]),
+            models.Index(fields=["empleado", "fecha_apertura"]),
+            models.Index(fields=["estado"]),
         ]
 
+    def __str__(self):
+        return f"Cierre #{self.pk} - {self.caja} ({self.get_estado_display()})"
 
-class MovimientosCaja(models.Model):
-    id_movimiento = models.BigAutoField(primary_key=True)
-    tipo_movimiento = models.CharField(max_length=20)
-    monto = models.DecimalField(max_digits=12, decimal_places=2)
-    monto_comision = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    fecha_movimiento = models.DateTimeField()
+
+# ==============================================================================
+# MOVIMIENTO DE CAJA
+# ==============================================================================
+
+class MovimientoCaja(models.Model):
+    """Movimiento de dinero dentro de un cierre de caja."""
+
+    class Tipo(models.TextChoices):
+        INGRESO = "INGRESO", "Ingreso"
+        EGRESO = "EGRESO", "Egreso"
+
+    cierre = models.ForeignKey(
+        CierreCaja, models.PROTECT,
+        null=True, blank=True,
+        related_name="movimientos",
+    )
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    monto = models.DecimalField(max_digits=12, decimal_places=0)
+    monto_comision = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0,
+        help_text="Comisión del medio de pago",
+    )
+    fecha = models.DateTimeField(default=timezone.now)
     descripcion = models.CharField(max_length=200, blank=True, null=True)
-    id_cierre = models.ForeignKey("CierresCaja", models.DO_NOTHING, db_column="id_cierre", blank=True, null=True)
-    id_medio_pago = models.ForeignKey("core.MediosPago", models.DO_NOTHING, db_column="id_medio_pago")
-    id_venta = models.ForeignKey("ventas.Ventas", models.DO_NOTHING, db_column="id_venta", blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    medio_pago = models.ForeignKey(
+        "core.MedioPago", models.PROTECT, related_name="movimientos_caja"
+    )
+    venta = models.ForeignKey(
+        "ventas.Venta",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos_caja",
+    )
 
     class Meta:
-        managed = True
-        db_table = "movimientos_caja"
-        ordering = ["-fecha_movimiento"]
+        verbose_name = "Movimiento de Caja"
+        verbose_name_plural = "Movimientos de Caja"
+        ordering = ["-fecha"]
         indexes = [
-            models.Index(fields=["id_cierre", "fecha_movimiento"], name="idx_mov_caja_cierre"),
-            models.Index(fields=["id_venta"], name="idx_mov_caja_venta"),
-            models.Index(fields=["fecha_movimiento", "tipo_movimiento"], name="idx_mov_caja_fecha_tipo"),
-            models.Index(fields=["id_medio_pago", "fecha_movimiento"], name="idx_mov_caja_medio"),
+            models.Index(fields=["cierre", "fecha"]),
+            models.Index(fields=["venta"]),
+            models.Index(fields=["fecha", "tipo"]),
         ]
 
-
-class TarifasComision(models.Model):
-    id_tarifa = models.AutoField(primary_key=True)
-    fecha_inicio_vigencia = models.DateTimeField()
-    fecha_fin_vigencia = models.DateTimeField(blank=True, null=True)
-    porcentaje_comision = models.DecimalField(max_digits=5, decimal_places=4)
-    monto_fijo_comision = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    estado = models.BooleanField(default=True)
-    id_medio_pago = models.ForeignKey("core.MediosPago", models.DO_NOTHING, db_column="id_medio_pago")
-
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "tarifas_comision"
+        signo = "+" if self.tipo == self.Tipo.INGRESO else "-"
+        return f"{signo}₲{self.monto:,.0f} - {self.descripcion or self.get_tipo_display()}"
 
 
-class AuditoriaComisiones(models.Model):
-    id_auditoria = models.BigAutoField(primary_key=True)
-    fecha_cambio = models.DateTimeField()
-    campo_modificado = models.CharField(max_length=50)
-    valor_anterior = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True)
-    valor_nuevo = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True)
-    id_empleado_modifico = models.ForeignKey(
-        "usuarios.Empleados",
-        models.DO_NOTHING,
-        db_column="id_empleado_modifico",
-        blank=True,
-        null=True,
+# ==============================================================================
+# CONCILIACIÓN DE PAGOS
+# ==============================================================================
+
+class ConciliacionPago(models.Model):
+    """Conciliación entre un pago registrado y el extracto bancario."""
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        CONCILIADO = "CONCILIADO", "Conciliado"
+        DISCREPANCIA = "DISCREPANCIA", "Discrepancia"
+
+    pago_venta = models.OneToOneField(
+        "ventas.PagoVenta",
+        models.PROTECT,
+        related_name="conciliacion",
     )
-    id_tarifa = models.ForeignKey("TarifasComision", models.DO_NOTHING, db_column="id_tarifa", blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "auditoria_comisiones"
-
-
-class ConciliacionPagos(models.Model):
-    id_conciliacion = models.BigAutoField(primary_key=True)
     fecha_acreditacion = models.DateTimeField(blank=True, null=True)
-    fecha_conciliacion = models.DateTimeField()
-    estado = models.CharField(max_length=20)
-    monto_acreditado = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    fecha_conciliacion = models.DateTimeField(default=timezone.now)
+    monto_acreditado = models.DecimalField(
+        max_digits=12, decimal_places=0, blank=True, null=True,
+        help_text="Monto en extracto bancario",
+    )
+    estado = models.CharField(
+        max_length=15, choices=Estado.choices, default=Estado.PENDIENTE
+    )
     observaciones = models.TextField(blank=True, null=True)
-    fecha_creacion = models.DateTimeField()
-    fecha_actualizacion = models.DateTimeField()
-    id_pago_venta = models.OneToOneField("ventas.PagosVenta", models.DO_NOTHING, db_column="id_pago_venta")
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = True
-        db_table = "conciliacion_pagos"
+        verbose_name = "Conciliación de Pago"
+        verbose_name_plural = "Conciliaciones de Pagos"
+        ordering = ["-fecha_conciliacion"]
+
+    def __str__(self):
+        return f"Conciliación #{self.pk} - Pago #{self.pago_venta_id}"
 
 
-class DocumentosTributarios(models.Model):
-    CONDICION_CHOICES = [
-        ("CONTADO", "Contado"),
-        ("CREDITO", "Crédito"),
-    ]
 
-    id_documento = models.BigAutoField(primary_key=True)
-    nro_secuencial = models.IntegerField(help_text="Número secuencial fiscal dentro del rango del timbrado")
-    fecha_emision = models.DateTimeField()
-    monto_total = models.DecimalField(max_digits=12, decimal_places=2)
-    nro_timbrado = models.ForeignKey("Timbrados", models.DO_NOTHING, db_column="nro_timbrado")
-    tipo_documento = models.CharField(max_length=20, default="Factura")
-    nro_preimpreso_interno = models.CharField(
-        max_length=20,
-        blank=True,
+# ==============================================================================
+# FACTURA (PAPEL PREIMPRESO)
+# ==============================================================================
+
+class Factura(models.Model):
+    """Factura en papel preimpreso con numeración controlada."""
+
+    class Estado(models.TextChoices):
+        EMITIDA = "EMITIDA", "Emitida"
+        ANULADA = "ANULADA", "Anulada"
+
+    nro_factura = models.CharField(
+        max_length=20, unique=True,
+        help_text="Número preimpreso (ej: 001-001-0001234)",
+    )
+    fecha_emision = models.DateTimeField(default=timezone.now)
+    monto_total = models.DecimalField(max_digits=12, decimal_places=0)
+    iva_10 = models.DecimalField(max_digits=12, decimal_places=0, default=0)
+    iva_5 = models.DecimalField(max_digits=12, decimal_places=0, default=0)
+    monto_exenta = models.DecimalField(max_digits=12, decimal_places=0, default=0)
+    estado = models.CharField(
+        max_length=10, choices=Estado.choices, default=Estado.EMITIDA
+    )
+    venta = models.OneToOneField(
+        "ventas.Venta",
+        models.PROTECT,
         null=True,
-        help_text="Número de formulario preimpreso (ej: 001-001-0000123)",
-    )
-    id_cliente = models.ForeignKey(
-        "clientes.Clientes",
-        models.SET_NULL,
-        db_column="id_cliente",
         blank=True,
-        null=True,
-        related_name="documentos",
-        help_text="Cliente al que se emite la factura",
+        related_name="factura_venta",
+        help_text="Venta asociada a esta factura",
     )
-    condicion_venta = models.CharField(
-        max_length=7,
-        choices=CONDICION_CHOICES,
-        default="CONTADO",
-        help_text="Condición de venta exigida por la SET",
+    cliente = models.ForeignKey(
+        "clientes.Cliente",
+        models.PROTECT,
+        related_name="facturas",
     )
-    plazo_dias = models.PositiveSmallIntegerField(
-        blank=True,
-        null=True,
-        help_text="Plazo en días para condición Crédito (obligatorio si CREDITO)",
-    )
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    observaciones = models.TextField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "documentos_tributarios"
-        verbose_name = "Documento Tributario"
-        verbose_name_plural = "Documentos Tributarios"
-        unique_together = (("nro_timbrado", "nro_secuencial"),)
-
-
-class DocumentoImpuestos(models.Model):
-    id_documento = models.OneToOneField(
-        "DocumentosTributarios", models.DO_NOTHING, db_column="id_documento", primary_key=True
-    )
-    id_impuesto = models.ForeignKey("Impuestos", models.DO_NOTHING, db_column="id_impuesto")
-    base_imponible = models.DecimalField(max_digits=12, decimal_places=2)
-    monto_impuesto = models.DecimalField(max_digits=10, decimal_places=2)
+        verbose_name = "Factura"
+        verbose_name_plural = "Facturas"
+        ordering = ["-fecha_emision"]
 
     def __str__(self):
-        return f"{self.__class__.__name__} - Doc:{self.id_documento_id} Imp:{self.id_impuesto_id}"
-
-    class Meta:
-        managed = False
-        db_table = "documento_impuestos"
-        unique_together = [["id_documento", "id_impuesto"]]
+        return f"Factura {self.nro_factura} - ₲{self.monto_total:,.0f}"
 
 
-class Timbrados(models.Model):
-    nro_timbrado = models.IntegerField(primary_key=True)
-    tipo_documento = models.CharField(max_length=12)
-    fecha_inicio = models.DateField()
-    fecha_fin = models.DateField()
-    nro_inicial = models.IntegerField()
-    nro_final = models.IntegerField()
-    estado = models.BooleanField(default=True)
-    id_punto = models.ForeignKey("PuntosExpedicion", models.DO_NOTHING, db_column="id_punto")
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "timbrados"
-        verbose_name = "Timbrado"
-        verbose_name_plural = "Timbrados"
-
-
-class PuntosExpedicion(models.Model):
-    id_punto = models.AutoField(primary_key=True)
-    codigo_establecimiento = models.CharField(max_length=3)
-    codigo_punto_expedicion = models.CharField(max_length=3)
-    descripcion_ubicacion = models.CharField(max_length=100, blank=True, null=True)
-    estado = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "puntos_expedicion"
-        unique_together = (("codigo_establecimiento", "codigo_punto_expedicion"),)
-
+# ==============================================================================
+# DATOS DE LA EMPRESA
+# ==============================================================================
 
 class DatosEmpresa(models.Model):
-    id_empresa = models.AutoField(primary_key=True)
+    """Datos fiscales de la cantina para emisión de documentos."""
+
     ruc = models.CharField(max_length=20)
     razon_social = models.CharField(max_length=255)
     direccion = models.CharField(max_length=255, blank=True, null=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True)
-    pais = models.CharField(max_length=100, blank=True, null=True)
+    pais = models.CharField(max_length=100, blank=True, null=True, default="Paraguay")
     telefono = models.CharField(max_length=20, blank=True, null=True)
-    email = models.CharField(max_length=100, blank=True, null=True)
-    estado = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    email = models.EmailField(max_length=100, blank=True, null=True)
+    activo = models.BooleanField(default=True)
 
     class Meta:
-        managed = True
-        db_table = "datos_empresa"
-
-
-class Impuestos(models.Model):
-    id_impuesto = models.AutoField(primary_key=True)
-    nombre_impuesto = models.CharField(unique=True, max_length=50)
-    porcentaje = models.DecimalField(max_digits=4, decimal_places=2)
-    vigente_desde = models.DateField()
-    vigente_hasta = models.DateField(blank=True, null=True)
-    estado = models.BooleanField(default=True)
+        verbose_name = "Datos de Empresa"
+        verbose_name_plural = "Datos de Empresa"
 
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "impuestos"
-        verbose_name = "Impuesto"
-        verbose_name_plural = "Impuestos"
+        return f"{self.razon_social} - RUC {self.ruc}"

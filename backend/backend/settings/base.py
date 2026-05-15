@@ -1,49 +1,64 @@
 """
 Configuración base de Django para el proyecto Cantina Tita
+Optimizado para desarrollo local (SQLite) y producción (PostgreSQL en HP Mini)
 """
 
 import os
+import warnings
+from datetime import timedelta
 from pathlib import Path
 
+# Carga variables de entorno desde archivo .env (solo desarrollo)
 try:
     from dotenv import load_dotenv
-
-    # Carga variables de entorno desde backend/.env (solo en desarrollo local)
     load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 except ImportError:
-    pass  # En Docker no se necesita dotenv, las vars vienen del docker-compose
+    pass
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-# Must be set via SECRET_KEY environment variable; insecure fallback only for local dev.
-_SECRET_KEY_DEFAULT = "django-insecure-cantina-tita-dev-only-do-not-use-in-production"
-SECRET_KEY = os.environ.get("SECRET_KEY", _SECRET_KEY_DEFAULT)
+# ==============================================================================
+# SEGURIDAD
+# ==============================================================================
 
-# SECURITY WARNING: don't run with debug turned on in production!
-# Set DEBUG=True in env only for local development.
+SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
+
+# En producción, exigir SECRET_KEY explícita
+if not DEBUG and not SECRET_KEY:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("SECRET_KEY es obligatoria cuando DEBUG=False")
+
+# Fallback SOLO para desarrollo local
+if DEBUG and not SECRET_KEY:
+    SECRET_KEY = "django-insecure-dev-only-cantina-tita-2024"
+    warnings.warn(
+        "Usando SECRET_KEY insegura para desarrollo. Configurala en .env",
+        RuntimeWarning,
+    )
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
-# Application definition
+# ==============================================================================
+# APLICACIONES
+# ==============================================================================
+
 INSTALLED_APPS = [
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Third party apps
+    # Third party
     "rest_framework",
     "rest_framework_simplejwt",
-    "drf_yasg",
+    "rest_framework_simplejwt.token_blacklist",  # Para invalidar refresh tokens
     "corsheaders",
     "django_filters",
-    "django_celery_beat",  # Celery Beat para tareas programadas
     # Local apps
-    "apps.common",
     "apps.core",
     "apps.usuarios",
     "apps.clientes",
@@ -57,7 +72,14 @@ INSTALLED_APPS = [
     "apps.notificaciones",
     "apps.api_integrations",
     "apps.reportes",
+
 ]
+
+AUTH_USER_MODEL = "usuarios.Usuario"
+
+# ==============================================================================
+# MIDDLEWARE
+# ==============================================================================
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -68,10 +90,14 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "apps.usuarios.middleware.AuditContextMiddleware",  # Middleware de auditoría
 ]
 
+# ==============================================================================
+# URLS Y WSGI
+# ==============================================================================
+
 ROOT_URLCONF = "backend.urls"
+WSGI_APPLICATION = "backend.wsgi.application"
 
 TEMPLATES = [
     {
@@ -89,68 +115,95 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "backend.wsgi.application"
+# ==============================================================================
+# BASE DE DATOS
+# ==============================================================================
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-DATABASES = {
-    "default": {
-        "ENGINE": "mssql",
-        "NAME": os.environ.get("DB_NAME", "titadb"),
-        "HOST": os.environ.get("DB_HOST", "np:localhost"),
-        "ATOMIC_REQUESTS": False,
-        "OPTIONS": {
-            "driver": "ODBC Driver 18 for SQL Server",
-            "trusted_connection": "yes",
-            "extra_params": "TrustServerCertificate=yes;MARS_Connection=yes",
-        },
+# Desarrollo: SQLite (sin dependencias externas)
+# Producción: PostgreSQL (configurado por variables de entorno)
+
+if os.environ.get("DB_ENGINE") == "postgresql":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DB_NAME", "cantina_tita"),
+            "USER": os.environ.get("DB_USER", "cantina_user"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+            "HOST": os.environ.get("DB_HOST", "localhost"),
+            "PORT": os.environ.get("DB_PORT", "5432"),
+            "ATOMIC_REQUESTS": True,
+            "CONN_MAX_AGE": 60,
+            "OPTIONS": {
+                "connect_timeout": 10,
+                "options": (
+                    "-c statement_timeout=15000ms "
+                    "-c lock_timeout=10000ms "
+                    "-c idle_in_transaction_session_timeout=10000ms"
+                ),
+            },
+        }
     }
-}
+else:
+    # SQLite para desarrollo local
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+            "ATOMIC_REQUESTS": True,
+            "OPTIONS": {
+                "timeout": 20,
+                "transaction_mode": "IMMEDIATE",
+            },
+        }
+    }
 
-# Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+# ==============================================================================
+# VALIDACIÓN DE CONTRASEÑAS
+# ==============================================================================
+
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
+# ==============================================================================
+# INTERNACIONALIZACIÓN
+# ==============================================================================
+
 LANGUAGE_CODE = "es-py"
-
 TIME_ZONE = "America/Asuncion"
-
 USE_I18N = True
-
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
+# ==============================================================================
+# ARCHIVOS ESTÁTICOS Y MEDIA
+# ==============================================================================
+
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
+# Buscar estáticos en apps instaladas (jazzmin, admin, rest_framework)
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 ]
+STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 
-# Media files
+# Media files (fotos de perfil de hijos, etc.)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
+# Seguridad para archivos media (fotos de menores de edad)
+MEDIA_UPLOAD_MAX_SIZE = 5 * 1024 * 1024  # 5 MB máximo por archivo
+MEDIA_ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"]
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# REST Framework
+# ==============================================================================
+# REST FRAMEWORK
+# ==============================================================================
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -160,42 +213,40 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "MAX_PAGE_SIZE": 100,
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "100/day",
-        "user": "1000/day",
-        "burst": "60/min",
-        "sustained": "1000/hour",
-        "ventas": "200/hour",
+        "user": "500/hour",
         "auth": "5/min",
-        "reportes": "10/hour",
     },
-    "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",
-    "DATE_FORMAT": "%Y-%m-%d",
+    "DATETIME_FORMAT": "%d/%m/%Y %H:%M",
+    "DATE_FORMAT": "%d/%m/%Y",
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
     ],
 }
 
-# CORS Settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# ==============================================================================
+# CORS
+# ==============================================================================
+
+CORS_ALLOWED_ORIGINS = os.environ.get(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173",
+).split(",")
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Simple JWT Settings
-from datetime import timedelta
+# ==============================================================================
+# SIMPLE JWT
+# ==============================================================================
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
@@ -205,46 +256,16 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": True,
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
-    "VERIFYING_KEY": None,
-    "AUDIENCE": None,
     "ISSUER": "cantina-tita",
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-    "TOKEN_TYPE_CLAIM": "token_type",
-    "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
-    "SLIDING_TOKEN_LIFETIME": timedelta(hours=1),
-    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=7),
-}
-
-# Swagger Settings
-SWAGGER_SETTINGS = {
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header",
-            "description": 'JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"',
-        }
-    },
-    "USE_SESSION_AUTH": False,
-    "JSON_EDITOR": True,
-    "SUPPORTED_SUBMIT_METHODS": ["get", "post", "put", "delete", "patch"],
-    "OPERATIONS_SORTER": "alpha",
-    "TAGS_SORTER": "alpha",
-    "DOC_EXPANSION": "list",
-    "DEEP_LINKING": True,
-    "SHOW_EXTENSIONS": True,
-    "DEFAULT_MODEL_RENDERING": "example",
 }
 
 # ==============================================================================
-# LOGGING CONFIGURATION
+# LOGGING SIMPLIFICADO
 # ==============================================================================
 
-# Crear directorio de logs si no existe
 LOGS_DIR = BASE_DIR / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
 
@@ -252,267 +273,140 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "verbose": {
-            "format": "[{levelname}] {asctime} | {name} | {module}:{funcName}:{lineno} | {message}",
-            "style": "{",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
         "simple": {
             "format": "[{levelname}] {asctime} | {message}",
             "style": "{",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
-        "json": {
-            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-            "format": "%(asctime)s %(name)s %(levelname)s %(message)s",
-        },
-    },
-    "filters": {
-        "require_debug_false": {
-            "()": "django.utils.log.RequireDebugFalse",
-        },
-        "require_debug_true": {
-            "()": "django.utils.log.RequireDebugTrue",
+        "verbose": {
+            "format": "[{levelname}] {asctime} | {name} | {module}:{lineno} | {message}",
+            "style": "{",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
     },
     "handlers": {
         "console": {
-            "level": "DEBUG",
+            "level": "DEBUG" if DEBUG else "INFO",
             "class": "logging.StreamHandler",
             "formatter": "simple",
-            "filters": ["require_debug_true"],
         },
-        "file_general": {
+        "file": {
             "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": LOGS_DIR / "cantina.log",
-            "maxBytes": 1024 * 1024 * 15,  # 15 MB
-            "backupCount": 10,
+            "maxBytes": 1024 * 1024 * 10,  # 10 MB
+            "backupCount": 5,
             "formatter": "verbose",
         },
         "file_errors": {
             "level": "ERROR",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": LOGS_DIR / "errors.log",
-            "maxBytes": 1024 * 1024 * 10,  # 10 MB
-            "backupCount": 10,
-            "formatter": "verbose",
-        },
-        "file_security": {
-            "level": "WARNING",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": LOGS_DIR / "security.log",
             "maxBytes": 1024 * 1024 * 5,  # 5 MB
-            "backupCount": 20,
-            "formatter": "verbose",
-        },
-        "file_performance": {
-            "level": "DEBUG",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": LOGS_DIR / "performance.log",
-            "maxBytes": 1024 * 1024 * 10,  # 10 MB
-            "backupCount": 5,
-            "formatter": "verbose",
-        },
-        "mail_admins": {
-            "level": "ERROR",
-            "class": "django.utils.log.AdminEmailHandler",
-            "filters": ["require_debug_false"],
+            "backupCount": 3,
             "formatter": "verbose",
         },
     },
     "root": {
-        "handlers": ["console", "file_general"],
+        "handlers": ["console", "file"],
         "level": "INFO",
     },
     "loggers": {
-        # Django core
         "django": {
-            "handlers": ["console", "file_general"],
+            "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": False,
         },
         "django.request": {
-            "handlers": ["file_errors", "mail_admins"],
+            "handlers": ["console", "file_errors"],
             "level": "ERROR",
             "propagate": False,
         },
-        "django.security": {
-            "handlers": ["file_security", "mail_admins"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-        "django.db.backends": {
-            "handlers": ["file_performance"],
-            "level": "WARNING",  # Cambiar a DEBUG para ver queries SQL
-            "propagate": False,
-        },
-        # Aplicaciones del proyecto
         "apps": {
-            "handlers": ["console", "file_general", "file_errors"],
-            "level": "DEBUG",
-            "propagate": False,
-        },
-        "apps.ventas": {
-            "handlers": ["console", "file_general"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "apps.compras": {
-            "handlers": ["console", "file_general"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "apps.inventario": {
-            "handlers": ["console", "file_general"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "apps.notificaciones": {
-            "handlers": ["console", "file_general"],
-            "level": "INFO",
+            "handlers": ["console", "file"],
+            "level": "DEBUG" if DEBUG else "INFO",
             "propagate": False,
         },
     },
 }
 
 # ==============================================================================
-# CELERY CONFIGURATION
+# SIPAP — Pagos QR Paraguay (solo cuando se configure)
 # ==============================================================================
 
-# Broker: Redis (cambiar en producción)
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
-
-# Configuración general
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = "America/Asuncion"  # Paraguay
-CELERY_ENABLE_UTC = True
-
-# Configuración de Beat (tareas programadas)
-CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
-
-# Configuración de tareas
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutos
-CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutos
-
-# Configuración de workers
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
-
-# ==============================================================================
-# BANCARD CONFIGURATION (REMOVIDO - Usando SIPAP QR)
-# ==============================================================================
-# BANCARD_AMBIENTE = os.environ.get('BANCARD_AMBIENTE', 'staging')
-# BANCARD_PUBLIC_KEY = os.environ.get('BANCARD_PUBLIC_KEY', '')
-# BANCARD_PRIVATE_KEY = os.environ.get('BANCARD_PRIVATE_KEY', '')
-# BANCARD_IP_WHITELIST = ['190.105.242.0/24', '127.0.0.1']
-
-# ==============================================================================
-# SIPAP CONFIGURATION (Sistema de Pagos QR Nativo de Paraguay - BCP)
-# ==============================================================================
-
-SIPAP_AMBIENTE = os.environ.get("SIPAP_AMBIENTE", "sandbox")  # 'sandbox' o 'produccion'
+SIPAP_AMBIENTE = os.environ.get("SIPAP_AMBIENTE", "sandbox")
 SIPAP_MERCHANT_ID = os.environ.get("SIPAP_MERCHANT_ID", "")
 SIPAP_API_KEY = os.environ.get("SIPAP_API_KEY", "")
 SIPAP_API_SECRET = os.environ.get("SIPAP_API_SECRET", "")
-SIPAP_BANCO_AGREGADOR = os.environ.get("SIPAP_BANCO_AGREGADOR", "continental")  # continental, atlas, itau, etc.
-
-# Clave pública RSA del banco para validar webhooks (PEM format)
-SIPAP_BANCO_PUBLIC_KEY = os.environ.get("SIPAP_BANCO_PUBLIC_KEY", "")
-
-# IPs permitidas para webhooks (actualizar con IPs reales del banco)
-SIPAP_IP_WHITELIST = ["127.0.0.1", "::1"]  # Actualizar en producción
-
-# URLs de API según ambiente
-SIPAP_API_URLS = {
-    "sandbox": {
-        "continental": "https://sandbox-api.bancontinental.com.py/sipap/v1",
-        "atlas": "https://sandbox-api.atlaspy.com/sipap/v1",
-        "itau": "https://sandbox-api.itau.com.py/sipap/v1",
-    },
-    "produccion": {
-        "continental": "https://api.bancontinental.com.py/sipap/v1",
-        "atlas": "https://api.atlaspy.com/sipap/v1",
-        "itau": "https://api.itau.com.py/sipap/v1",
-    },
-}
-
-# Configuración de QR
-SIPAP_QR_EXPIRACION_MINUTOS = 15  # QR expira en 15 minutos
-SIPAP_QR_SIZE = 300  # Tamaño del QR en píxeles
+SIPAP_BANCO_AGREGADOR = os.environ.get("SIPAP_BANCO_AGREGADOR", "")
+SIPAP_QR_EXPIRACION_MINUTOS = int(os.environ.get("SIPAP_QR_EXPIRACION_MINUTOS", "15"))
 
 # ==============================================================================
-# EMAIL CONFIGURATION
+# EMAIL (solo cuando se configure SMTP)
 # ==============================================================================
 
-# Backend de email (puedes cambiar a SendGrid, AWS SES, etc.)
-EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+if DEBUG:
+    EMAIL_BACKEND = os.environ.get(
+        "EMAIL_BACKEND",
+        "django.core.mail.backends.console.EmailBackend",
+    )
+else:
+    EMAIL_BACKEND = os.environ.get(
+        "EMAIL_BACKEND",
+        "django.core.mail.backends.smtp.EmailBackend",
+    )
 
-# Configuración SMTP (Gmail, Outlook, etc.)
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False") == "True"
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-
-# Email remitente por defecto
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Cantina Tita <noreply@cantinatita.com>")
-SERVER_EMAIL = DEFAULT_FROM_EMAIL
-
-# SendGrid (opcional - si usas SendGrid en vez de SMTP)
-SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
-
-# Configuración de notificaciones por email
-EMAIL_QUEUE_CELERY = True  # Usar Celery para envío asíncrono
-EMAIL_TIMEOUT = 10  # Timeout en segundos
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    "Cantina Tita <noreply@cantinatita.com>",
+)
 
 # ==============================================================================
-# SMS CONFIGURATION
+# NOTIFICACIONES
 # ==============================================================================
 
-# Activar/desactivar SMS
-SMS_ENABLED = os.environ.get("SMS_ENABLED", "True") == "True"
-SMS_SOLO_PRODUCCION = os.environ.get("SMS_SOLO_PRODUCCION", "True") == "True"
-
-# Provider SMS: 'twilio', 'infobip', 'aws_sns'
-SMS_PROVIDER = os.environ.get("SMS_PROVIDER", "twilio")
-
-# Twilio Configuration
-TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
-TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
-TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")  # +595981234567
-
-# Infobip Configuration (provider popular en Paraguay)
-INFOBIP_API_KEY = os.environ.get("INFOBIP_API_KEY", "")
-INFOBIP_BASE_URL = os.environ.get("INFOBIP_BASE_URL", "https://api.infobip.com")
-INFOBIP_SENDER = os.environ.get("INFOBIP_SENDER", "Cantina Tita")
-
-# AWS SNS Configuration
-AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
-AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
-AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
-
+NOTIFICACIONES_ACTIVAS = os.environ.get("NOTIFICACIONES_ACTIVAS", "True") == "True"
+NOTIFICACION_SALDO_BAJO_DEFAULT = int(
+    os.environ.get("NOTIFICACION_SALDO_BAJO", "10000")  # ₲10,000
+)
+NOTIFICACION_INTERVALO_MINIMO = int(
+    os.environ.get("NOTIFICACION_INTERVALO", "24")  # horas
+)
 # ==============================================================================
-# NOTIFICACIONES CONFIGURATION
+# JAZZMIN SETTINGS
 # ==============================================================================
 
-# Activar sistema de notificaciones
-NOTIFICACIONES_ACTIVAS = True
-
-# Tipos de notificaciones habilitadas
-NOTIFICACIONES_TIPOS = {
-    "saldo_bajo": True,
-    "recarga": True,
-    "consumo": True,
-    "vencimiento_tarjeta": True,
-    "alerta_sistema": True,
+JAZZMIN_SETTINGS = {
+    "site_title": "Cantina Tita",
+    "site_header": "La Cantina de Tita",
+    "site_brand": "🍽️ Cantina Tita",
+    "welcome_sign": "Bienvenido a La Cantina de Tita",
+    "copyright": "Cantina Tita S.A.",
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "icons": {
+        "ventas": "fas fa-cash-register",
+        "compras": "fas fa-truck",
+        "clientes": "fas fa-users",
+        "core": "fas fa-credit-card",
+        "productos": "fas fa-box",
+        "inventario": "fas fa-warehouse",
+        "almuerzos": "fas fa-utensils",
+        "contabilidad": "fas fa-calculator",
+        "usuarios": "fas fa-user-shield",
+        "notificaciones": "fas fa-bell",
+        "reportes": "fas fa-chart-bar",
+    },
 }
 
-# Umbrales de notificación
-NOTIFICACION_SALDO_BAJO_DEFAULT = 10000  # ₲10,000
-NOTIFICACION_INTERVALO_MINIMO = 24  # Horas entre notificaciones del mismo tipo
+JAZZMIN_UI_TWEAKS = {
+    "navbar_fixed": True,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-success",
+    "theme": "default",
+}

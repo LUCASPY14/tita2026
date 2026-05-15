@@ -1,98 +1,88 @@
-﻿from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, viewsets
+﻿"""
+Views para la app productos
+"""
+
+from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from apps.common.permissions import IsAdminOrReadOnly
-from apps.common.throttling import BurstRateThrottle, SustainedRateThrottle
+from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Categorias, ListasPrecios, PreciosPorLista, Productos, UnidadesMedida
+from .models import (
+    Categoria,
+    Producto,
+    UnidadMedida,
+    ListaPrecio,
+    PrecioPorLista,
+    HistoricoPrecio,
+    Impuesto,
+    ProductoImpuesto,
+)
 from .serializers import (
-    CategoriasSerializer,
-    ListasPreciosSerializer,
-    PreciosPorListaSerializer,
-    ProductosSerializer,
-    UnidadesMedidaSerializer,
+    CategoriaSerializer,
+    ProductoSerializer,
+    UnidadMedidaSerializer,
+    ListaPrecioSerializer,
+    PrecioPorListaSerializer,
+    HistoricoPrecioSerializer,
+    ImpuestoSerializer,
+    ProductoImpuestoSerializer,
 )
 
 
-# Create your views here.
-class ProductosViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para gestionar productos.
-    Permite listar, crear, editar y eliminar productos.
-
-    Permisos:
-    - Admin: CRUD completo
-    - Usuarios autenticados: Solo lectura
-    """
-
-    queryset = Productos.objects.all()
-    serializer_class = ProductosSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["estado", "id_categoria", "es_servicio"]
-    search_fields = ["codigo_barra", "descripcion"]
-    ordering_fields = ["descripcion", "stock_minimo"]
-    ordering = ["descripcion"]
-
-
-class CategoriasViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para gestionar categorías de productos.
-
-    Permisos:
-    - Admin: CRUD completo
-    - Usuarios autenticados: Solo lectura
-    """
-
-    queryset = Categorias.objects.all()
-    serializer_class = CategoriasSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    throttle_classes = [BurstRateThrottle]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["estado"]
-    search_fields = ["nombre"]
-    ordering = ["nombre"]
-
-
-class UnidadesMedidaViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para gestionar unidades de medida.
-    """
-
-    queryset = UnidadesMedida.objects.filter(estado=True)
-    serializer_class = UnidadesMedidaSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    pagination_class = None
+class CategoriaViewSet(viewsets.ModelViewSet):
+    queryset = Categoria.objects.select_related("categoria_padre").all()
+    serializer_class = CategoriaSerializer
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["estado"]
-    ordering = ["nombre"]
+    filterset_fields = ["activo"]
 
 
-class ListasPreciosViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para gestionar listas de precios.
-    """
-
-    queryset = ListasPrecios.objects.filter(estado=True)
-    serializer_class = ListasPreciosSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    pagination_class = None
+class ProductoViewSet(viewsets.ModelViewSet):
+    queryset = Producto.objects.select_related("categoria", "unidad_medida").all()
+    serializer_class = ProductoSerializer
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["estado"]
-    ordering = ["nombre_lista"]
+    filterset_fields = ["activo", "categoria", "es_servicio"]
+    search_fields = ["descripcion", "codigo_barra", "codigo"]
 
 
-class PreciosPorListaViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para gestionar precios por lista de productos.
-    """
+class UnidadMedidaViewSet(viewsets.ModelViewSet):
+    queryset = UnidadMedida.objects.all()
+    serializer_class = UnidadMedidaSerializer
+    permission_classes = [IsAuthenticated]
 
-    queryset = PreciosPorLista.objects.select_related("id_producto", "id_lista").all()
-    serializer_class = PreciosPorListaSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    pagination_class = None
+
+class ListaPrecioViewSet(viewsets.ModelViewSet):
+    queryset = ListaPrecio.objects.all()
+    serializer_class = ListaPrecioSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class PrecioPorListaViewSet(viewsets.ModelViewSet):
+    queryset = PrecioPorLista.objects.select_related("producto", "lista").all()
+    serializer_class = PrecioPorListaSerializer
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["id_producto", "id_lista"]
-    ordering = ["id_lista", "id_producto"]
+    filterset_fields = ["producto", "lista"]
+
+
+class HistoricoPrecioViewSet(viewsets.ModelViewSet):
+    queryset = HistoricoPrecio.objects.select_related("producto").all()
+    serializer_class = HistoricoPrecioSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["producto"]
+
+
+class ImpuestoViewSet(viewsets.ModelViewSet):
+    queryset = Impuesto.objects.all()
+    serializer_class = ImpuestoSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class ProductoImpuestoViewSet(viewsets.ModelViewSet):
+    queryset = ProductoImpuesto.objects.select_related("producto", "impuesto").all()
+    serializer_class = ProductoImpuestoSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["producto", "impuesto"]

@@ -1,373 +1,438 @@
+﻿"""
+Admin para la app inventario
+Gestión de stock, movimientos, ajustes, lotes, costos y alertas
+"""
+
 from django.contrib import admin
+from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import (
-    AjustesInventario,
-    AlertasStock,
-    AlertasVencimiento,
-    CostosHistoricos,
-    DetallesAjuste,
-    LotesProducto,
-    MovimientosStock,
-    StockUnico,
+    Stock,
+    MovimientoStock,
+    AjusteInventario,
+    DetalleAjuste,
+    CostoHistorico,
+    AlertaStock,
+    LoteProducto,
+    AlertaVencimiento,
 )
 
 
-@admin.register(StockUnico)
-class StockUnicoAdmin(admin.ModelAdmin):
+# ==============================================================================
+# STOCK
+# ==============================================================================
+
+@admin.register(Stock)
+class StockAdmin(admin.ModelAdmin):
     list_display = [
-        "id_stock",
-        "nombre_producto",
-        "cantidad_actual",
+        "producto_link",
+        "cantidad_display",
+        "requiere_reposicion_badge",
+        "fecha_actualizacion",
+    ]
+    list_filter = ["fecha_actualizacion"]
+    search_fields = ["producto__descripcion", "producto__codigo_barra"]
+    readonly_fields = [
+        "fecha_actualizacion",
+        "costo_promedio",
         "valor_inventario",
-        "estado_stock",
-        "fecha_ultima_actualizacion",
+        "dias_stock_disponible",
     ]
-    list_filter = ["fecha_ultima_actualizacion"]
-    search_fields = ["id_producto__descripcion", "id_producto__codigo_barras"]
-    ordering = ["id_producto"]
-    readonly_fields = ["fecha_ultima_actualizacion"]
+    list_select_related = ["producto"]
+    ordering = ["producto__descripcion"]
+    fieldsets = (
+        ("Datos del Stock", {
+            "fields": ("producto", "cantidad")
+        }),
+        ("Valores Calculados", {
+            "fields": ("costo_promedio", "valor_inventario", "dias_stock_disponible"),
+            "classes": ("collapse",),
+        }),
+        ("Auditoría", {
+            "fields": ("fecha_actualizacion",),
+        }),
+    )
 
-    def nombre_producto(self, obj):
-        return obj.id_producto.descripcion
+    def producto_link(self, obj):
+        url = reverse("admin:productos_producto_change", args=[obj.producto.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.producto.descripcion)
+    producto_link.short_description = "Producto"
 
-    nombre_producto.short_description = "Producto"
+    def cantidad_display(self, obj):
+        color = "#dc3545" if obj.cantidad < obj.producto.stock_minimo else "#28a745"
+        return format_html('<strong style="color:{};">{}</strong>', color, obj.cantidad)
+    cantidad_display.short_description = "Cantidad"
 
-    def cantidad_actual(self, obj):
+    def requiere_reposicion_badge(self, obj):
         if obj.requiere_reposicion:
-            return format_html('<span style="color: red; font-weight: bold;">{}</span>', obj.cantidad)
-        return obj.cantidad
-
-    cantidad_actual.short_description = "Stock Actual"
-
-    def estado_stock(self, obj):
-        if obj.requiere_reposicion:
-            return format_html(
-                '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
-                "⚠️ BAJO",
-            )
-        return format_html(
-            '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
-            "✓ OK",
-        )
-
-    estado_stock.short_description = "Estado"
-
-    def valor_inventario(self, obj):
-        return f"₲ {obj.valor_inventario:,.0f}"
-
-    valor_inventario.short_description = "Valor Total"
+            return format_html('<span style="color:#dc3545;">⚠ Reponer</span>')
+        return format_html('<span style="color:#28a745;">✓ OK</span>')
+    requiere_reposicion_badge.short_description = "Reposición"
 
 
-@admin.register(MovimientosStock)
-class MovimientosStockAdmin(admin.ModelAdmin):
+# ==============================================================================
+# MOVIMIENTO DE STOCK
+# ==============================================================================
+
+@admin.register(MovimientoStock)
+class MovimientoStockAdmin(admin.ModelAdmin):
     list_display = [
-        "id_movimiento_stock",
-        "nombre_producto",
-        "tipo_movimiento_color",
-        "cantidad",
-        "stock_resultante",
-        "motivo_breve",
-        "fecha_hora",
+        "id",
+        "producto_link",
+        "tipo_badge",
+        "motivo_badge",
+        "cantidad_display",
+        "stock_resultante_display",
+        "fecha",
     ]
-    list_filter = ["tipo_movimiento", "fecha_hora"]
-    search_fields = ["id_producto__descripcion", "motivo"]
-    ordering = ["-fecha_hora"]
-    readonly_fields = ["fecha_hora"]
-    date_hierarchy = "fecha_hora"
+    list_filter = ["tipo", "motivo", "fecha"]
+    search_fields = ["producto__descripcion", "producto__codigo_barra", "observaciones"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["producto"]
+    date_hierarchy = "fecha"
+    ordering = ["-fecha"]
 
-    def nombre_producto(self, obj):
-        return obj.id_producto.descripcion
+    def get_readonly_fields(self, request, obj=None):
+        """Movimiento inmutable una vez creado."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
 
-    nombre_producto.short_description = "Producto"
+    def producto_link(self, obj):
+        url = reverse("admin:productos_producto_change", args=[obj.producto.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.producto.descripcion)
+    producto_link.short_description = "Producto"
 
-    def tipo_movimiento_color(self, obj):
-        if obj.tipo_movimiento == "Ingreso":
-            return format_html(
-                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px;">↑ {}</span>',
-                obj.tipo_movimiento,
-            )
-        else:
-            return format_html(
-                '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px;">↓ {}</span>',
-                obj.tipo_movimiento,
-            )
+    def tipo_badge(self, obj):
+        colors = {"INGRESO": "#28a745", "EGRESO": "#dc3545"}
+        color = colors.get(obj.tipo, "#6c757d")
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_tipo_display(),
+        )
+    tipo_badge.short_description = "Tipo"
 
-    tipo_movimiento_color.short_description = "Tipo"
+    def motivo_badge(self, obj):
+        return format_html(
+            '<span style="background:#17a2b8;color:white;padding:2px 6px;border-radius:3px;font-size:10px;">{}</span>',
+            obj.get_motivo_display(),
+        )
+    motivo_badge.short_description = "Motivo"
 
-    def motivo_breve(self, obj):
-        return obj.motivo[:50] + "..." if len(obj.motivo) > 50 else obj.motivo
+    def cantidad_display(self, obj):
+        signo = "+" if obj.tipo == "INGRESO" else "-"
+        return f"{signo}{obj.cantidad}"
+    cantidad_display.short_description = "Cantidad"
 
-    motivo_breve.short_description = "Motivo"
+    def stock_resultante_display(self, obj):
+        color = "#dc3545" if obj.stock_resultante < 0 else "#28a745"
+        return format_html('<strong style="color:{};">{}</strong>', color, obj.stock_resultante)
+    stock_resultante_display.short_description = "Stock Resultante"
 
 
-@admin.register(AjustesInventario)
-class AjustesInventarioAdmin(admin.ModelAdmin):
+# ==============================================================================
+# AJUSTE DE INVENTARIO
+# ==============================================================================
+
+@admin.register(AjusteInventario)
+class AjusteInventarioAdmin(admin.ModelAdmin):
     list_display = [
-        "id_ajuste",
-        "tipo_ajuste_color",
-        "estado_ajuste_color",
-        "motivo_breve",
-        "fecha_hora",
-        "autorizado_por",
+        "id",
+        "tipo_badge",
+        "estado_badge",
+        "motivo",
+        "solicitado_por_link",
+        "fecha",
     ]
-    list_filter = ["tipo_ajuste", "estado", "fecha_hora"]
-    search_fields = ["motivo", "id_empleado__nombre"]
-    ordering = ["-fecha_hora"]
-    readonly_fields = ["fecha_hora"]
-    date_hierarchy = "fecha_hora"
-    actions = ["aprobar_ajustes", "rechazar_ajustes"]
+    list_filter = ["tipo", "estado", "fecha"]
+    search_fields = ["motivo", "solicitado_por__nombre", "solicitado_por__apellido"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["solicitado_por"]
+    date_hierarchy = "fecha"
+    ordering = ["-fecha"]
+    fieldsets = (
+        ("Datos del Ajuste", {
+            "fields": ("tipo", "estado", "motivo")
+        }),
+        ("Aprobación", {
+            "fields": ("solicitado_por", "aprobado_por", "fecha_aprobacion")
+        }),
+        ("Auditoría", {
+            "fields": ("fecha_creacion",),
+            "classes": ("collapse",),
+        }),
+    )
 
-    def tipo_ajuste_color(self, obj):
-        colores = {
-            "Merma": "#dc3545",
-            "Sobrante": "#28a745",
-            "Correccion": "#ffc107",
-            "Vencimiento": "#6c757d",
-            "Deterioro": "#fd7e14",
-        }
+    def get_readonly_fields(self, request, obj=None):
+        """Ajuste inmutable cuando está aprobado o rechazado."""
+        if obj and obj.estado in ("APROBADO", "RECHAZADO"):
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
+    def tipo_badge(self, obj):
+        colors = {"AUMENTO": "#28a745", "MERMA": "#dc3545"}
+        color = colors.get(obj.tipo, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
-            colores.get(obj.tipo_ajuste, "#6c757d"),
-            obj.tipo_ajuste,
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_tipo_display(),
         )
+    tipo_badge.short_description = "Tipo"
 
-    tipo_ajuste_color.short_description = "Tipo"
-
-    def estado_ajuste_color(self, obj):
-        colores = {
-            "Pendiente": "#ffc107",
-            "Aprobado": "#28a745",
-            "Rechazado": "#dc3545",
-            "Aplicado": "#007bff",
-        }
+    def estado_badge(self, obj):
+        colors = {"PENDIENTE": "#ffc107", "APROBADO": "#28a745", "RECHAZADO": "#dc3545"}
+        color = colors.get(obj.estado, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
-            colores.get(obj.estado, "#6c757d"),
-            obj.estado,
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_estado_display(),
         )
+    estado_badge.short_description = "Estado"
 
-    estado_ajuste_color.short_description = "Estado"
-
-    def motivo_breve(self, obj):
-        return obj.motivo[:40] + "..." if len(obj.motivo) > 40 else obj.motivo
-
-    motivo_breve.short_description = "Motivo"
-
-    def autorizado_por(self, obj):
-        return obj.id_empleado.nombre if obj.id_empleado else "-"
-
-    autorizado_por.short_description = "Autorizado Por"
-
-    def aprobar_ajustes(self, request, queryset):
-        updated = queryset.update(estado="Aprobado")
-        self.message_user(request, f"{updated} ajustes aprobados exitosamente.")
-
-    aprobar_ajustes.short_description = "✓ Aprobar ajustes seleccionados"
-
-    def rechazar_ajustes(self, request, queryset):
-        updated = queryset.update(estado="Rechazado")
-        self.message_user(request, f"{updated} ajustes rechazados.")
-
-    rechazar_ajustes.short_description = "✗ Rechazar ajustes seleccionados"
+    def solicitado_por_link(self, obj):
+        if obj.solicitado_por:
+            url = reverse("admin:usuarios_usuario_change", args=[obj.solicitado_por.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.solicitado_por.nombre_completo)
+        return "-"
+    solicitado_por_link.short_description = "Solicitado por"
 
 
-@admin.register(DetallesAjuste)
-class DetallesAjusteAdmin(admin.ModelAdmin):
-    list_display = ["id_detalle", "id_ajuste", "nombre_producto", "cantidad_ajustada"]
-    list_filter = ["id_ajuste__tipo_ajuste", "id_ajuste__fecha_hora"]
-    search_fields = ["id_producto__descripcion"]
-    ordering = ["-id_ajuste"]
+# ==============================================================================
+# DETALLE DE AJUSTE
+# ==============================================================================
 
-    def nombre_producto(self, obj):
-        return obj.id_producto.descripcion
+@admin.register(DetalleAjuste)
+class DetalleAjusteAdmin(admin.ModelAdmin):
+    list_display = ["id", "ajuste_link", "producto_link", "cantidad"]
+    search_fields = ["ajuste__motivo", "producto__descripcion"]
+    list_select_related = ["ajuste", "producto"]
 
-    nombre_producto.short_description = "Producto"
+    def get_readonly_fields(self, request, obj=None):
+        """Detalle inmutable una vez creado."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return []
+
+    def has_delete_permission(self, request, obj=None):
+        """No permite eliminar detalles de ajuste."""
+        return False
+
+    def ajuste_link(self, obj):
+        url = reverse("admin:inventario_ajusteinventario_change", args=[obj.ajuste.pk])
+        return format_html('<a href="{}">Ajuste #{}</a>', url, obj.ajuste.pk)
+    ajuste_link.short_description = "Ajuste"
+
+    def producto_link(self, obj):
+        url = reverse("admin:productos_producto_change", args=[obj.producto.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.producto.descripcion)
+    producto_link.short_description = "Producto"
 
 
-@admin.register(CostosHistoricos)
-class CostosHistoricosAdmin(admin.ModelAdmin):
+# ==============================================================================
+# COSTO HISTÓRICO
+# ==============================================================================
+
+@admin.register(CostoHistorico)
+class CostoHistoricoAdmin(admin.ModelAdmin):
     list_display = [
-        "id_costo_historico",
-        "nombre_producto",
-        "costo_unitario_format",
+        "id",
+        "producto_link",
+        "costo_unitario_display",
         "cantidad_comprada",
+        "costo_total_display",
         "fecha_compra",
     ]
     list_filter = ["fecha_compra"]
-    search_fields = ["id_producto__descripcion"]
-    ordering = ["-fecha_compra"]
+    search_fields = ["producto__descripcion"]
+    list_select_related = ["producto"]
     date_hierarchy = "fecha_compra"
+    ordering = ["-fecha_compra"]
 
-    def nombre_producto(self, obj):
-        return obj.id_producto.descripcion
+    def get_readonly_fields(self, request, obj=None):
+        """Costo histórico inmutable una vez creado."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return []
 
-    nombre_producto.short_description = "Producto"
+    def producto_link(self, obj):
+        url = reverse("admin:productos_producto_change", args=[obj.producto.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.producto.descripcion)
+    producto_link.short_description = "Producto"
 
-    def costo_unitario_format(self, obj):
-        return f"₲ {obj.costo_unitario:,.0f}"
+    def costo_unitario_display(self, obj):
+        return f"₲{obj.costo_unitario:,.0f}"
+    costo_unitario_display.short_description = "Costo Unitario"
 
-    costo_unitario_format.short_description = "Costo Unitario"
+    def costo_total_display(self, obj):
+        return f"₲{obj.costo_total:,.0f}"
+    costo_total_display.short_description = "Costo Total"
 
 
-@admin.register(AlertasStock)
-class AlertasStockAdmin(admin.ModelAdmin):
+# ==============================================================================
+# ALERTA DE STOCK
+# ==============================================================================
+
+@admin.register(AlertaStock)
+class AlertaStockAdmin(admin.ModelAdmin):
     list_display = [
-        "id_alerta",
-        "nombre_producto",
-        "stock_actual",
-        "stock_minimo",
-        "tipo_alerta_color",
+        "id",
+        "producto_link",
+        "tipo_badge",
+        "stock_actual_display",
+        "stock_minimo_display",
         "activa",
         "fecha_generada",
     ]
-    list_filter = ["tipo_alerta", "activa", "fecha_generada"]
-    search_fields = ["id_producto__descripcion"]
+    list_filter = ["tipo", "activa", "fecha_generada"]
+    search_fields = ["producto__descripcion"]
+    readonly_fields = ["fecha_generada"]
+    list_select_related = ["producto"]
     ordering = ["-fecha_generada"]
-    readonly_fields = ["fecha_generada", "fecha_resuelta"]
-    actions = ["marcar_como_resuelta"]
 
-    def nombre_producto(self, obj):
-        return obj.id_producto.descripcion
+    def producto_link(self, obj):
+        url = reverse("admin:productos_producto_change", args=[obj.producto.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.producto.descripcion)
+    producto_link.short_description = "Producto"
 
-    nombre_producto.short_description = "Producto"
-
-    def tipo_alerta_color(self, obj):
-        colores = {"stock_critico": "#dc3545", "stock_cero": "#fd7e14", "stock_minimo": "#ffc107"}
+    def tipo_badge(self, obj):
+        colors = {
+            "STOCK_MINIMO": "#ffc107",
+            "STOCK_CERO": "#dc3545",
+            "STOCK_CRITICO": "#dc3545",
+        }
+        color = colors.get(obj.tipo, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
-            colores.get(obj.tipo_alerta, "#6c757d"),
-            obj.get_tipo_alerta_display(),
-        )
-
-    tipo_alerta_color.short_description = "Tipo"
-
-    def marcar_como_resuelta(self, request, queryset):
-        from django.utils import timezone
-
-        updated = queryset.update(activa=False, fecha_resuelta=timezone.now())
-        self.message_user(request, f"{updated} alertas marcadas como resueltas.")
-
-    marcar_como_resuelta.short_description = "✓ Marcar como resueltas"
-
-
-@admin.register(LotesProducto)
-class LotesProductoAdmin(admin.ModelAdmin):
-    list_display = [
-        "id_lote",
-        "numero_lote",
-        "nombre_producto",
-        "cantidad_disponible",
-        "fecha_vencimiento_color",
-        "bloqueado",
-        "fecha_creacion",
-    ]
-    list_filter = ["bloqueado", "fecha_vencimiento", "fecha_creacion"]
-    search_fields = ["numero_lote", "id_producto__descripcion"]
-    ordering = ["fecha_vencimiento", "-fecha_creacion"]
-    readonly_fields = ["fecha_creacion"]
-    date_hierarchy = "fecha_vencimiento"
-    actions = ["marcar_como_bloqueado"]
-
-    def nombre_producto(self, obj):
-        return obj.id_producto.descripcion
-
-    nombre_producto.short_description = "Producto"
-
-    def fecha_vencimiento_color(self, obj):
-        pass
-
-        if not obj.fecha_vencimiento:
-            return "-"
-
-        dias_restantes = obj.dias_hasta_vencimiento
-
-        if dias_restantes < 0:
-            color = "#dc3545"  # Rojo - vencido
-            icono = "✗"
-        elif dias_restantes <= 7:
-            color = "#fd7e14"  # Naranja - vence pronto
-            icono = "⚠️"
-        elif dias_restantes <= 30:
-            color = "#ffc107"  # Amarillo - atención
-            icono = "⏰"
-        else:
-            color = "#28a745"  # Verde - OK
-            icono = "✓"
-
-        return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{} {} ({} días)</span>',
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
             color,
-            icono,
-            obj.fecha_vencimiento.strftime("%d/%m/%Y"),
-            dias_restantes,
+            obj.get_tipo_display(),
         )
+    tipo_badge.short_description = "Tipo"
 
-    fecha_vencimiento_color.short_description = "Vencimiento"
+    def stock_actual_display(self, obj):
+        return str(obj.stock_actual)
+    stock_actual_display.short_description = "Stock Actual"
 
-    def marcar_como_bloqueado(self, request, queryset):
-        from django.utils import timezone
-
-        updated = queryset.update(bloqueado=True, motivo_bloqueo="vencido", fecha_bloqueo=timezone.now())
-        self.message_user(request, f"{updated} lotes marcados como bloqueados.")
-
-    marcar_como_bloqueado.short_description = "Marcar como bloqueados"
+    def stock_minimo_display(self, obj):
+        return str(obj.stock_minimo)
+    stock_minimo_display.short_description = "Stock Mínimo"
 
 
-@admin.register(AlertasVencimiento)
-class AlertasVencimientoAdmin(admin.ModelAdmin):
+# ==============================================================================
+# LOTE DE PRODUCTO
+# ==============================================================================
+
+@admin.register(LoteProducto)
+class LoteProductoAdmin(admin.ModelAdmin):
     list_display = [
-        "id_alerta",
-        "nombre_lote",
+        "id",
+        "producto_link",
+        "numero_lote",
+        "cantidad_disponible",
         "fecha_vencimiento",
-        "dias_restantes_color",
-        "cantidad_lote",
-        "accion_tomada",
+        "dias_vencimiento_badge",
+        "bloqueado",
+    ]
+    list_filter = ["bloqueado", "fecha_vencimiento"]
+    search_fields = ["producto__descripcion", "numero_lote"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["producto"]
+    ordering = ["fecha_vencimiento"]
+    fieldsets = (
+        ("Datos del Lote", {
+            "fields": ("producto", "compra", "numero_lote")
+        }),
+        ("Cantidades", {
+            "fields": ("cantidad_inicial", "cantidad_disponible")
+        }),
+        ("Vencimiento", {
+            "fields": ("fecha_fabricacion", "fecha_vencimiento")
+        }),
+        ("Bloqueo", {
+            "fields": ("bloqueado", "motivo_bloqueo", "fecha_bloqueo")
+        }),
+        ("Auditoría", {
+            "fields": ("observaciones", "fecha_creacion"),
+            "classes": ("collapse",),
+        }),
+    )
+
+    def producto_link(self, obj):
+        url = reverse("admin:productos_producto_change", args=[obj.producto.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.producto.descripcion)
+    producto_link.short_description = "Producto"
+
+    def dias_vencimiento_badge(self, obj):
+        dias = obj.dias_hasta_vencimiento
+        if dias is None:
+            return "-"
+        if dias < 0:
+            return format_html('<span style="color:#dc3545;">VENCIDO ({} días)</span>', abs(dias))
+        if dias <= 7:
+            color = "#dc3545"
+        elif dias <= 30:
+            color = "#ffc107"
+        else:
+            color = "#28a745"
+        return format_html('<strong style="color:{};">{} días</strong>', color, dias)
+    dias_vencimiento_badge.short_description = "Vencimiento"
+
+
+# ==============================================================================
+# ALERTA DE VENCIMIENTO
+# ==============================================================================
+
+@admin.register(AlertaVencimiento)
+class AlertaVencimientoAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "lote_link",
+        "tipo_badge",
+        "dias_restantes",
+        "accion_tomada_badge",
         "fecha_generada",
     ]
-    list_filter = ["tipo_alerta", "accion_tomada", "fecha_generada"]
-    search_fields = ["id_lote__numero_lote"]
-    ordering = ["fecha_vencimiento", "-fecha_generada"]
-    readonly_fields = ["fecha_generada", "fecha_accion"]
-    date_hierarchy = "fecha_vencimiento"
-    actions = ["marcar_como_descartado"]
+    list_filter = ["tipo", "accion_tomada", "fecha_generada"]
+    search_fields = ["lote__producto__descripcion", "lote__numero_lote"]
+    readonly_fields = ["fecha_generada"]
+    list_select_related = ["lote"]
+    ordering = ["-fecha_generada"]
 
-    def nombre_lote(self, obj):
-        return obj.id_lote.numero_lote
+    def lote_link(self, obj):
+        url = reverse("admin:inventario_loteproducto_change", args=[obj.lote.pk])
+        return format_html('<a href="{}">Lote {}</a>', url, obj.lote.numero_lote)
+    lote_link.short_description = "Lote"
 
-    nombre_lote.short_description = "Lote"
-
-    def dias_restantes_color(self, obj):
-        dias = obj.dias_restantes
-
-        if dias < 0:
-            color = "#dc3545"
-            texto = f"VENCIDO hace {abs(dias)} días"
-        elif dias <= 3:
-            color = "#dc3545"
-            texto = f"{dias} días ⚠️ CRÍTICO"
-        elif dias <= 7:
-            color = "#fd7e14"
-            texto = f"{dias} días ⚠️"
-        elif dias <= 15:
-            color = "#ffc107"
-            texto = f"{dias} días"
-        else:
-            color = "#17a2b8"
-            texto = f"{dias} días"
-
+    def tipo_badge(self, obj):
+        colors = {
+            "30_DIAS": "#ffc107",
+            "15_DIAS": "#fd7e14",
+            "7_DIAS": "#dc3545",
+            "3_DIAS": "#dc3545",
+            "VENCIDO": "#dc3545",
+        }
+        color = colors.get(obj.tipo, "#6c757d")
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
             color,
-            texto,
+            obj.get_tipo_display(),
         )
+    tipo_badge.short_description = "Tipo"
 
-    dias_restantes_color.short_description = "Días Restantes"
-
-    def marcar_como_descartado(self, request, queryset):
-        from django.utils import timezone
-
-        updated = queryset.update(accion_tomada="descartado", fecha_accion=timezone.now())
-        self.message_user(request, f"{updated} alertas marcadas como descartadas.")
-
-    marcar_como_descartado.short_description = "Marcar como descartados"
+    def accion_tomada_badge(self, obj):
+        colors = {
+            "PENDIENTE": "#ffc107",
+            "DESCUENTO": "#0d6efd",
+            "DEVUELTO": "#17a2b8",
+            "DONADO": "#28a745",
+            "DESCARTADO": "#6c757d",
+            "VENDIDO": "#28a745",
+        }
+        color = colors.get(obj.accion_tomada, "#6c757d")
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color,
+            obj.get_accion_tomada_display() if obj.accion_tomada else "-",
+        )
+    accion_tomada_badge.short_description = "Acción"

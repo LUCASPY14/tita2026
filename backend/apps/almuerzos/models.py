@@ -1,290 +1,442 @@
-﻿"""
+"""
 Modelos de la app almuerzos
-Auto-generados desde la base de datos y organizados por funcionalidad
+Gestión de almuerzos escolares: precios, planes, suscripciones y consumo
 """
 
-from django.db import models
+from decimal import Decimal
 
+from django.db import models
+from django.utils import timezone
+
+
+def hora_actual():
+    """Retorna la hora actual para usar como default en TimeField."""
+    return timezone.localtime().time()
+
+
+# ==============================================================================
+# PRECIO DE ALMUERZO (HISTÓRICO)
+# ==============================================================================
 
 class PrecioAlmuerzo(models.Model):
     """Historial de precios unitarios del almuerzo con vigencia."""
 
-    TIPO_CHOICES = [
-        ("precio_unitario", "Precio Unitario"),
-    ]
-
-    id_precio = models.AutoField(primary_key=True)
-    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, help_text="Precio por almuerzo en guaraníes")
-    fecha_inicio_vigencia = models.DateField(help_text="Fecha desde la cual aplica este precio")
-    fecha_fin_vigencia = models.DateField(
-        blank=True, null=True, help_text="Fecha hasta la cual aplica (vacío = sin vencimiento)"
+    precio_unitario = models.DecimalField(
+        max_digits=12, decimal_places=0,
+        help_text="Precio por almuerzo en Guaraníes",
     )
-    descripcion = models.CharField(max_length=200, blank=True, help_text="Ej: Ajuste por inflación 2026")
+    fecha_inicio_vigencia = models.DateField()
+    fecha_fin_vigencia = models.DateField(
+        blank=True, null=True,
+        help_text="Vacío = sin vencimiento",
+    )
+    descripcion = models.CharField(
+        max_length=200, blank=True,
+        help_text="Ej: Ajuste por inflación 2026",
+    )
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"Precio almuerzo: Gs {self.precio_unitario} ({self.fecha_inicio_vigencia})"
-
     class Meta:
-        managed = True
-        db_table = "precios_almuerzo"
+        verbose_name = "Precio de Almuerzo"
+        verbose_name_plural = "Precios de Almuerzo"
         ordering = ["-fecha_inicio_vigencia"]
 
+    def __str__(self):
+        return f"₲{self.precio_unitario:,.0f} (desde {self.fecha_inicio_vigencia})"
 
-class PlanesAlmuerzo(models.Model):
-    TIPO_PLAN_CHOICES = [
-        ("cantidad", "Mensual con cantidad de almuerzos"),
-        ("sin_limite", "Mensual sin límite (cuenta corriente)"),
-    ]
 
-    id_plan_almuerzo = models.AutoField(primary_key=True)
-    nombre_plan = models.CharField(unique=True, max_length=100)
+# ==============================================================================
+# TIPO DE ALMUERZO
+# ==============================================================================
+
+class TipoAlmuerzo(models.Model):
+    """Tipo de almuerzo (plato principal, postre, bebida, etc.)."""
+
+    nombre = models.CharField(max_length=100, unique=True)
     descripcion = models.TextField(blank=True, null=True)
-    precio_mensual = models.DecimalField(
-        max_digits=10, decimal_places=2, help_text="Precio mensual fijo (solo referencia para facturación global)"
+    precio_unitario = models.DecimalField(
+        max_digits=12, decimal_places=0,
+        help_text="Precio en Guaraníes",
     )
-    tipo_plan = models.CharField(
-        max_length=20,
-        choices=TIPO_PLAN_CHOICES,
-        default="sin_limite",
-        help_text="sin_limite: se registra consumo y se cobra al final del mes. cantidad: tiene cuota mensual de almuerzos.",
+    incluye_plato_principal = models.BooleanField(default=True)
+    incluye_postre = models.BooleanField(default=False)
+    incluye_bebida = models.BooleanField(default=False)
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Tipo de Almuerzo"
+        verbose_name_plural = "Tipos de Almuerzo"
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return f"{self.nombre} - ₲{self.precio_unitario:,.0f}"
+
+
+# ==============================================================================
+# PLAN DE ALMUERZO
+# ==============================================================================
+
+class PlanAlmuerzo(models.Model):
+    """Plan de almuerzo mensual o por cantidad."""
+
+    class TipoPlan(models.TextChoices):
+        CANTIDAD = "CANTIDAD", "Mensual con cantidad fija"
+        SIN_LIMITE = "SIN_LIMITE", "Mensual sin límite (cuenta corriente)"
+
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
+    tipo = models.CharField(
+        max_length=15, choices=TipoPlan.choices, default=TipoPlan.SIN_LIMITE,
+    )
+    precio_mensual = models.DecimalField(
+        max_digits=12, decimal_places=0,
+        help_text="Precio mensual fijo de referencia en Guaraníes",
     )
     cantidad_almuerzos_mes = models.IntegerField(
-        blank=True,
-        null=True,
-        help_text="Solo para tipo=cantidad: máximo de almuerzos incluidos por mes",
+        blank=True, null=True,
+        help_text="Solo para tipo=CANTIDAD: máximo de almuerzos por mes",
     )
     limite_credito_mensual = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        blank=True,
-        null=True,
-        help_text="Monto máximo acumulable en la cuenta corriente por mes. Null = sin límite.",
+        max_digits=12, decimal_places=0,
+        blank=True, null=True,
+        help_text="Monto máximo acumulable por mes. Vacío = sin límite",
     )
-    dias_semana_incluidos = models.CharField(max_length=60)
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    estado = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "planes_almuerzo"
-
-
-class TiposAlmuerzo(models.Model):
-    id_tipo_almuerzo = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-    descripcion = models.TextField(blank=True, null=True)
-    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    incluye_plato_principal = models.BooleanField(default=True, help_text="Incluye plato principal")
-    incluye_postre = models.BooleanField(default=False, help_text="Incluye postre")
-    incluye_bebida = models.BooleanField(default=False, help_text="Incluye bebida")
-    fecha_creacion = models.DateTimeField()
-    estado = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    dias_semana_incluidos = models.CharField(
+        max_length=60,
+        help_text="Días de la semana incluidos (ej: LUN,MAR,MIE,JUE,VIE)",
+    )
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "tipos_almuerzo"
+        verbose_name = "Plan de Almuerzo"
+        verbose_name_plural = "Planes de Almuerzo"
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return self.nombre
 
 
-class SuscripcionesAlmuerzo(models.Model):
-    id_suscripcion = models.BigAutoField(primary_key=True)
+# ==============================================================================
+# SUSCRIPCIÓN DE ALMUERZO
+# ==============================================================================
+
+class SuscripcionAlmuerzo(models.Model):
+    """Suscripción de un hijo a un plan de almuerzo."""
+
+    class Estado(models.TextChoices):
+        ACTIVA = "ACTIVA", "Activa"
+        SUSPENDIDA = "SUSPENDIDA", "Suspendida"
+        CANCELADA = "CANCELADA", "Cancelada"
+
+    hijo = models.ForeignKey(
+        "clientes.Hijo", models.PROTECT, related_name="suscripciones_almuerzo"
+    )
+    plan = models.ForeignKey(
+        PlanAlmuerzo, models.PROTECT, related_name="suscripciones"
+    )
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField(blank=True, null=True)
-    estado = models.CharField(max_length=10, blank=True, null=True)
-    id_hijo = models.ForeignKey("clientes.Hijos", models.DO_NOTHING, db_column="id_hijo")
-    id_plan_almuerzo = models.ForeignKey("PlanesAlmuerzo", models.DO_NOTHING, db_column="id_plan_almuerzo")
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    estado = models.CharField(
+        max_length=15, choices=Estado.choices, default=Estado.ACTIVA
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "suscripciones_almuerzo"
-        unique_together = (("id_hijo", "id_plan_almuerzo", "estado"),)
+        verbose_name = "Suscripción de Almuerzo"
+        verbose_name_plural = "Suscripciones de Almuerzo"
+        unique_together = [("hijo", "plan", "estado")]
+
+    def __str__(self):
+        return f"{self.hijo} - {self.plan} ({self.get_estado_display()})"
 
 
-class RegistrosConsumoAlmuerzo(models.Model):
-    id_registro_consumo = models.BigAutoField(primary_key=True)
+# ==============================================================================
+# REGISTRO DE CONSUMO DE ALMUERZO
+# ==============================================================================
+
+class RegistroConsumoAlmuerzo(models.Model):
+    """Consumo diario de almuerzo por un estudiante."""
+
+    class Estado(models.TextChoices):
+        REGISTRADO = "REGISTRADO", "Registrado"
+        RECHAZADO = "RECHAZADO", "Rechazado"
+        ANULADO = "ANULADO", "Anulado"
+
+    hijo = models.ForeignKey(
+        "clientes.Hijo", models.PROTECT, related_name="consumos_almuerzo"
+    )
+    suscripcion = models.ForeignKey(
+        SuscripcionAlmuerzo,
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="consumos",
+    )
+    tipo_almuerzo = models.ForeignKey(
+        TipoAlmuerzo,
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="consumos",
+    )
     fecha_consumo = models.DateField()
-    hora_registro = models.TimeField()
-    costo_almuerzo = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    hora_registro = models.TimeField(default=hora_actual)
+    costo_almuerzo = models.DecimalField(
+        max_digits=12, decimal_places=0,
+        blank=True, null=True,
+        help_text="Costo en Guaraníes al momento del consumo",
+    )
     ya_cobrado = models.BooleanField(
         default=True,
-        help_text="Indica si este registro generó cobro de saldo. El primer registro del día cobra (True), el segundo no cobra (False)",
+        help_text="El primer registro del día cobra (True), siguientes no (False)",
     )
     marcado_en_cuenta = models.BooleanField(
         default=False,
-        help_text="Indica si el consumo se agregó a la cuenta mensual de almuerzo (NO relacionado con saldo de cantina)",
+        help_text="Si se agregó a la cuenta mensual de almuerzo",
     )
-    estado = models.CharField(max_length=20)
+    estado = models.CharField(
+        max_length=15, choices=Estado.choices, default=Estado.REGISTRADO
+    )
     motivo_rechazo = models.CharField(max_length=255, blank=True, null=True)
-    id_hijo = models.ForeignKey("clientes.Hijos", models.DO_NOTHING, db_column="id_hijo")
-    id_suscripcion = models.ForeignKey(
-        "SuscripcionesAlmuerzo",
-        models.DO_NOTHING,
-        db_column="id_suscripcion",
-        blank=True,
+    nro_tarjeta = models.ForeignKey(
+        "core.Tarjeta",
+        models.SET_NULL,
         null=True,
-    )
-    id_tipo_almuerzo = models.ForeignKey(
-        "TiposAlmuerzo", models.DO_NOTHING, db_column="id_tipo_almuerzo", blank=True, null=True
-    )
-    nro_tarjeta = models.ForeignKey("core.Tarjetas", models.DO_NOTHING, db_column="nro_tarjeta", blank=True, null=True)
-    id_empleado_registro = models.ForeignKey(
-        "usuarios.Empleados",
-        models.DO_NOTHING,
-        db_column="id_empleado_registro",
         blank=True,
-        null=True,
+        related_name="consumos_almuerzo",
+        help_text="Tarjeta usada al momento del consumo",
     )
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    registrado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.PROTECT,
+        related_name="consumos_almuerzo_registrados",
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "registros_consumo_almuerzo"
+        verbose_name = "Registro de Consumo"
+        verbose_name_plural = "Registros de Consumo"
+        ordering = ["-fecha_consumo", "-hora_registro"]
+        indexes = [
+            models.Index(fields=["hijo", "fecha_consumo"]),
+            models.Index(fields=["fecha_consumo"]),
+            models.Index(fields=["estado"]),
+        ]
+
+    def __str__(self):
+        return f"{self.hijo} - {self.fecha_consumo} ({self.get_estado_display()})"
 
 
-class CuentasAlmuerzoMensual(models.Model):
-    ESTADO_CHOICES = [
-        ("pendiente", "Pendiente"),
-        ("validacion_pendiente", "Validación Pendiente"),
-        ("pagado", "Pagado"),
-        ("parcial", "Parcial"),
-        ("anulado", "Anulado"),
-    ]
+# ==============================================================================
+# CUENTA MENSUAL DE ALMUERZO
+# ==============================================================================
 
-    FORMA_PAGO_CHOICES = [
-        ("efectivo", "Efectivo"),
-        ("transferencia", "Transferencia bancaria"),
-        ("online", "Pago online"),
-        ("debito_automatico", "Débito automático"),
-    ]
+class CuentaAlmuerzoMensual(models.Model):
+    """Cuenta mensual que agrupa los consumos de almuerzo de un hijo."""
 
-    id_cuenta = models.BigAutoField(primary_key=True)
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        VALIDACION = "VALIDACION", "Validación Pendiente"
+        PAGADO = "PAGADO", "Pagado"
+        PARCIAL = "PARCIAL", "Parcial"
+        ANULADO = "ANULADO", "Anulado"
+
+    class FormaCobro(models.TextChoices):
+        EFECTIVO = "EFECTIVO", "Efectivo"
+        TRANSFERENCIA = "TRANSFERENCIA", "Transferencia bancaria"
+        ONLINE = "ONLINE", "Pago online"
+        DEBITO_AUTOMATICO = "DEBITO_AUTOMATICO", "Débito automático"
+
+    hijo = models.ForeignKey(
+        "clientes.Hijo", models.PROTECT, related_name="cuentas_almuerzo"
+    )
     anio = models.IntegerField()
     mes = models.SmallIntegerField()
     cantidad_almuerzos = models.IntegerField()
-    monto_total = models.DecimalField(max_digits=10, decimal_places=2)
-    forma_cobro = models.CharField(max_length=20)
-    monto_pagado = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=25, default="pendiente")
-    fecha_generacion = models.DateField()
-    fecha_actualizacion = models.DateTimeField()
-    observaciones = models.TextField(blank=True, null=True)
-    # Campos de pago
-    forma_pago = models.CharField(
-        max_length=25, blank=True, choices=FORMA_PAGO_CHOICES, help_text="Método de pago utilizado"
+    monto_total = models.DecimalField(max_digits=12, decimal_places=0)
+    forma_cobro = models.CharField(max_length=20, choices=FormaCobro.choices)
+    monto_pagado = models.DecimalField(max_digits=12, decimal_places=0, default=0)
+    estado = models.CharField(
+        max_length=15, choices=Estado.choices, default=Estado.PENDIENTE
     )
-    comprobante_pago = models.TextField(blank=True, help_text="Referencia, URL o descripción del comprobante de pago")
-    fecha_pago = models.DateField(blank=True, null=True, help_text="Fecha efectiva del pago")
-    id_hijo = models.ForeignKey("clientes.Hijos", models.DO_NOTHING, db_column="id_hijo")
-    # Documento tributario generado (factura física o electrónica)
-    id_documento = models.ForeignKey(
-        "contabilidad.DocumentosTributarios",
-        models.SET_NULL,
-        db_column="id_documento",
-        blank=True,
-        null=True,
-        help_text="Factura/comprobante tributario emitido para esta cuenta",
+    fecha_generacion = models.DateField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    fecha_pago = models.DateField(blank=True, null=True)
+    observaciones = models.TextField(blank=True, null=True)
+    comprobante_pago = models.TextField(
+        blank=True, help_text="Referencia o URL del comprobante"
     )
     nro_comprobante = models.CharField(
-        max_length=30,
-        blank=True,
-        help_text="Número de comprobante formateado (ej: 001-001-0000001)",
+        max_length=30, blank=True,
+        help_text="Número de comprobante (ej: 001-001-0000001)",
     )
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "cuentas_almuerzo_mensual"
-        unique_together = (("id_hijo", "anio", "mes"),)
-
-
-class PagosAlmuerzoMensual(models.Model):
-    id_pago_almuerzo = models.BigAutoField(primary_key=True)
-    fecha_pago = models.DateTimeField()
-    monto_pagado = models.DecimalField(max_digits=10, decimal_places=2)
-    mes_pagado = models.DateField()
-    estado = models.CharField(max_length=9, blank=True, null=True)
-    id_suscripcion = models.ForeignKey("SuscripcionesAlmuerzo", models.DO_NOTHING, db_column="id_suscripcion")
-    id_venta = models.OneToOneField("ventas.Ventas", models.DO_NOTHING, db_column="id_venta", blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    factura = models.ForeignKey(
+        "contabilidad.Factura",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cuentas_almuerzo",
+        help_text="Factura preimpresa asociada",
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
-        db_table = "pagos_almuerzo_mensual"
-        unique_together = (("id_suscripcion", "mes_pagado"),)
+        verbose_name = "Cuenta Mensual de Almuerzo"
+        verbose_name_plural = "Cuentas Mensuales de Almuerzo"
+        unique_together = [("hijo", "anio", "mes")]
+        ordering = ["-anio", "-mes"]
+
+    def __str__(self):
+        return f"{self.hijo} - {self.mes:02d}/{self.anio} - ₲{self.monto_total:,.0f}"
+
+    @property
+    def saldo_pendiente(self):
+        return self.monto_total - self.monto_pagado
 
 
-class PagosCuentasAlmuerzo(models.Model):
-    id_pago = models.BigAutoField(primary_key=True)
-    fecha_pago = models.DateTimeField()
+# ==============================================================================
+# PAGO DE CUENTA DE ALMUERZO
+# ==============================================================================
+
+class PagoCuentaAlmuerzo(models.Model):
+    """Pago realizado a una cuenta mensual de almuerzo."""
+
+    cuenta = models.ForeignKey(
+        CuentaAlmuerzoMensual, models.PROTECT, related_name="pagos"
+    )
+    monto = models.DecimalField(max_digits=12, decimal_places=0)
+    fecha_pago = models.DateTimeField(default=timezone.now)
     medio_pago = models.CharField(max_length=15)
-    monto = models.DecimalField(max_digits=10, decimal_places=2)
     referencia = models.CharField(max_length=50, blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
-    id_cuenta = models.ForeignKey("CuentasAlmuerzoMensual", models.DO_NOTHING, db_column="id_cuenta")
-    id_empleado_registro = models.ForeignKey(
-        "usuarios.Empleados",
-        models.DO_NOTHING,
-        db_column="id_empleado_registro",
-        blank=True,
+    registrado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.PROTECT,
+        related_name="pagos_almuerzo_registrados",
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Pago de Cuenta de Almuerzo"
+        verbose_name_plural = "Pagos de Cuentas de Almuerzo"
+        ordering = ["-fecha_pago"]
+
+    def __str__(self):
+        return f"Pago #{self.pk} - {self.cuenta} - ₲{self.monto:,.0f}"
+
+
+# ==============================================================================
+# PAGO MENSUAL DE SUSCRIPCIÓN
+# ==============================================================================
+
+class PagoAlmuerzoMensual(models.Model):
+    """Pago mensual de una suscripción de almuerzo."""
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        CONFIRMADO = "CONFIRMADO", "Confirmado"
+        RECHAZADO = "RECHAZADO", "Rechazado"
+
+    suscripcion = models.ForeignKey(
+        SuscripcionAlmuerzo, models.PROTECT, related_name="pagos_mensuales"
+    )
+    venta = models.OneToOneField(
+        "ventas.Venta",
+        models.SET_NULL,
         null=True,
+        blank=True,
+        related_name="pago_almuerzo",
+    )
+    monto_pagado = models.DecimalField(max_digits=12, decimal_places=0)
+    mes_pagado = models.DateField(help_text="Mes al que corresponde el pago")
+    fecha_pago = models.DateTimeField(default=timezone.now)
+    estado = models.CharField(
+        max_length=15, choices=Estado.choices, default=Estado.PENDIENTE
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Pago Mensual de Almuerzo"
+        verbose_name_plural = "Pagos Mensuales de Almuerzo"
+        unique_together = [("suscripcion", "mes_pagado")]
+        ordering = ["-fecha_pago"]
+
+    def __str__(self):
+        return f"Pago {self.suscripcion} - {self.mes_pagado}"
+
+
+# ==============================================================================
+# ALÉRGENOS
+# ==============================================================================
+
+class Alergeno(models.Model):
+    """Alérgeno que puede estar presente en productos."""
+
+    class Severidad(models.TextChoices):
+        BAJA = "BAJA", "Baja"
+        MEDIA = "MEDIA", "Media"
+        ALTA = "ALTA", "Alta"
+        CRITICA = "CRITICA", "Crítica"
+
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
+    palabras_clave = models.JSONField(
+        help_text="Palabras clave para detectar el alérgeno en descripciones"
+    )
+    severidad = models.CharField(
+        max_length=10, choices=Severidad.choices, default=Severidad.MEDIA
+    )
+    icono = models.CharField(max_length=10, blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    creado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="alergenos_creados",
     )
 
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
     class Meta:
-        managed = True
-        db_table = "pagos_cuentas_almuerzo"
-
-
-class Alergenos(models.Model):
-    id_alergeno = models.AutoField(primary_key=True)
-    nombre = models.CharField(unique=True, max_length=100)
-    descripcion = models.TextField(blank=True, null=True)
-    palabras_clave = models.JSONField()
-    nivel_severidad = models.CharField(max_length=10)
-    icono = models.CharField(max_length=10, blank=True, null=True)
-    estado = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField()
-    usuario_creacion = models.CharField(max_length=100, blank=True, null=True)
+        verbose_name = "Alérgeno"
+        verbose_name_plural = "Alérgenos"
+        ordering = ["nombre"]
 
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
-
-    class Meta:
-        managed = True
-        db_table = "alergenos"
+        return self.nombre
 
 
-class ProductosAlergenos(models.Model):
-    id_producto_alergeno = models.AutoField(primary_key=True)
-    contiene = models.BooleanField(default=True, help_text="True=Contiene el alérgeno, False=Puede contener trazas")
+class ProductoAlergeno(models.Model):
+    """Relación producto-alérgeno."""
+
+    producto = models.ForeignKey(
+        "productos.Producto", models.CASCADE, related_name="alergenos"
+    )
+    alergeno = models.ForeignKey(
+        Alergeno, models.CASCADE, related_name="productos"
+    )
+    contiene = models.BooleanField(
+        default=True,
+        help_text="True=Contiene el alérgeno, False=Puede contener trazas",
+    )
     observaciones = models.TextField(blank=True, null=True)
-    fecha_registro = models.DateTimeField()
-    usuario_registro = models.CharField(max_length=100, blank=True, null=True)
-    id_alergeno = models.ForeignKey("Alergenos", models.DO_NOTHING, db_column="id_alergeno")
-    id_producto = models.ForeignKey("productos.Productos", models.DO_NOTHING, db_column="id_producto")
-
-    def __str__(self):
-        return f"{self.__class__.__name__} #{self.pk}"
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    registrado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="alergenos_productos_registrados",
+    )
 
     class Meta:
-        managed = True
-        db_table = "productos_alergenos"
-        unique_together = (("id_producto", "id_alergeno"),)
+        verbose_name = "Producto-Alérgeno"
+        verbose_name_plural = "Productos-Alérgenos"
+        unique_together = [("producto", "alergeno")]
+
+    def __str__(self):
+        verbo = "Contiene" if self.contiene else "Trazas de"
+        return f"{self.producto} {verbo} {self.alergeno}"

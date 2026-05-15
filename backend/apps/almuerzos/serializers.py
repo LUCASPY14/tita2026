@@ -1,15 +1,26 @@
+"""
+Serializers para la app almuerzos
+"""
+
 from rest_framework import serializers
 
 from .models import (
-    Alergenos,
-    CuentasAlmuerzoMensual,
-    PlanesAlmuerzo,
     PrecioAlmuerzo,
-    RegistrosConsumoAlmuerzo,
-    SuscripcionesAlmuerzo,
-    TiposAlmuerzo,
+    TipoAlmuerzo,
+    PlanAlmuerzo,
+    SuscripcionAlmuerzo,
+    RegistroConsumoAlmuerzo,
+    CuentaAlmuerzoMensual,
+    PagoCuentaAlmuerzo,
+    PagoAlmuerzoMensual,
+    Alergeno,
+    ProductoAlergeno,
 )
 
+
+# ==============================================================================
+# PRECIO ALMUERZO
+# ==============================================================================
 
 class PrecioAlmuerzoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,65 +29,123 @@ class PrecioAlmuerzoSerializer(serializers.ModelSerializer):
         read_only_fields = ["fecha_creacion"]
 
 
-class PlanesAlmuerzoSerializer(serializers.ModelSerializer):
+# ==============================================================================
+# TIPO ALMUERZO
+# ==============================================================================
+
+class TipoAlmuerzoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = PlanesAlmuerzo
+        model = TipoAlmuerzo
         fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
 
 
-class TiposAlmuerzoSerializer(serializers.ModelSerializer):
+# ==============================================================================
+# PLAN ALMUERZO
+# ==============================================================================
+
+class PlanAlmuerzoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TiposAlmuerzo
+        model = PlanAlmuerzo
         fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
 
 
-class SuscripcionesAlmuerzoSerializer(serializers.ModelSerializer):
-    hijo_nombre = serializers.CharField(source="id_hijo.nombre", read_only=True)
-    plan_nombre = serializers.CharField(source="id_plan_almuerzo.nombre_plan", read_only=True)
-    tipo_plan = serializers.CharField(source="id_plan_almuerzo.tipo_plan", read_only=True)
-    cantidad_almuerzos_mes = serializers.IntegerField(source="id_plan_almuerzo.cantidad_almuerzos_mes", read_only=True)
+# ==============================================================================
+# SUSCRIPCION ALMUERZO
+# ==============================================================================
 
-    class Meta:
-        model = SuscripcionesAlmuerzo
-        fields = "__all__"
-
-
-class RegistrosConsumoAlmuerzoSerializer(serializers.ModelSerializer):
-    hijo_nombre = serializers.CharField(source="id_hijo.nombre", read_only=True)
-    tipo_almuerzo_nombre = serializers.CharField(source="id_tipo_almuerzo.nombre", read_only=True)
-    nro_registro_hoy = serializers.SerializerMethodField()
-
-    class Meta:
-        model = RegistrosConsumoAlmuerzo
-        fields = "__all__"
-        read_only_fields = ["hora_registro", "costo_almuerzo", "ya_cobrado", "estado", "marcado_en_cuenta"]
-
-    def get_nro_registro_hoy(self, obj):
-        """Retorna el número ordinal de registro del alumno en el día (1 o 2)."""
-        count = RegistrosConsumoAlmuerzo.objects.filter(
-            id_hijo=obj.id_hijo,
-            fecha_consumo=obj.fecha_consumo,
-            estado__in=["Registrado", "Confirmado"],
-            id_registro_consumo__lte=obj.id_registro_consumo,
-        ).count()
-        return count
-
-
-class AlergenosSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Alergenos
-        fields = "__all__"
-
-
-class CuentasAlmuerzoMensualSerializer(serializers.ModelSerializer):
-    hijo_nombre = serializers.SerializerMethodField()
+class SuscripcionAlmuerzoSerializer(serializers.ModelSerializer):
+    hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
+    plan_nombre = serializers.CharField(source="plan.nombre", read_only=True)
 
     class Meta:
-        model = CuentasAlmuerzoMensual
+        model = SuscripcionAlmuerzo
         fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
 
-    def get_hijo_nombre(self, obj):
-        try:
-            return f"{obj.id_hijo.nombre} {obj.id_hijo.apellido}"
-        except Exception:
-            return None
+
+# ==============================================================================
+# REGISTRO CONSUMO ALMUERZO
+# ==============================================================================
+
+class RegistroConsumoAlmuerzoSerializer(serializers.ModelSerializer):
+    hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
+    tipo_almuerzo_nombre = serializers.CharField(source="tipo_almuerzo.nombre", read_only=True)
+
+    class Meta:
+        model = RegistroConsumoAlmuerzo
+        fields = "__all__"
+        read_only_fields = [
+            "hora_registro",
+            "costo_almuerzo",
+            "ya_cobrado",
+            "estado",
+            "marcado_en_cuenta",
+            "fecha_creacion",
+        ]
+
+
+# ==============================================================================
+# CUENTA ALMUERZO MENSUAL
+# ==============================================================================
+
+class CuentaAlmuerzoMensualSerializer(serializers.ModelSerializer):
+    hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
+    saldo_pendiente = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+
+    class Meta:
+        model = CuentaAlmuerzoMensual
+        fields = "__all__"
+        read_only_fields = [
+            "fecha_generacion",
+            "fecha_actualizacion",
+            "fecha_creacion",
+        ]
+
+
+# ==============================================================================
+# PAGO CUENTA ALMUERZO
+# ==============================================================================
+
+class PagoCuentaAlmuerzoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PagoCuentaAlmuerzo
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
+
+
+# ==============================================================================
+# PAGO ALMUERZO MENSUAL
+# ==============================================================================
+
+class PagoAlmuerzoMensualSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PagoAlmuerzoMensual
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
+
+
+# ==============================================================================
+# ALERGENO
+# ==============================================================================
+
+class AlergenoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Alergeno
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
+
+
+# ==============================================================================
+# PRODUCTO ALERGENO
+# ==============================================================================
+
+class ProductoAlergenoSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
+    alergeno_nombre = serializers.CharField(source="alergeno.nombre", read_only=True)
+
+    class Meta:
+        model = ProductoAlergeno
+        fields = "__all__"
+        read_only_fields = ["fecha_registro"]

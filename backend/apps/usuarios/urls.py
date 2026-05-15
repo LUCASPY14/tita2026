@@ -1,60 +1,22 @@
-"""
-URLs para el módulo de usuarios
-Incluye autenticación, 2FA, sesiones, permisos y CRUD
-"""
-
 from django.urls import include, path
-
-from rest_framework.permissions import AllowAny
 from rest_framework.routers import DefaultRouter
 
 from .views import (
-    AuditoriaOperacionesViewSet,
-    AuthViewSet,
-    EmpleadosViewSet,
-    PasswordRecoveryViewSet,
-    PerfilesUsuarioViewSet,
-    PermisosViewSet,
-    PortalAuthViewSet,
-    RolesViewSet,
-    SesionesViewSet,
-    TwoFactorViewSet,
-    UsuariosPortalViewSet,
+    UsuarioViewSet,
+    EmpleadoViewSet,
+    RolViewSet,
+    PermisoViewSet,
+    RolPermisoViewSet,
+    PerfilUsuarioViewSet,
 )
 
-
-class PublicRolesViewSet(RolesViewSet):
-    """Public read-only alias for RolesViewSet (used by /api/usuarios/ routes)."""
-
-    permission_classes = [AllowAny]
-    pagination_class = None
-
-
-class PublicEmpleadosViewSet(EmpleadosViewSet):
-    """Public read-only alias for EmpleadosViewSet (used by /api/usuarios/ routes)."""
-
-    permission_classes = [AllowAny]
-    pagination_class = None
-
-
-# Router principal
 router = DefaultRouter()
-
-# Registrar ViewSets CRUD (public versions for /api/usuarios/ path)
-router.register(r"roles", PublicRolesViewSet, basename="usuarios-roles")
-router.register(r"empleados", PublicEmpleadosViewSet, basename="usuarios-empleados")
-router.register(r"perfiles", PerfilesUsuarioViewSet, basename="perfiles")
-router.register(r"portal", UsuariosPortalViewSet, basename="portal")
-router.register(r"portal-auth", PortalAuthViewSet, basename="portal-auth")
-
-# Registrar ViewSets de funcionalidad
-router.register(r"auth", AuthViewSet, basename="auth")
-router.register(r"2fa", TwoFactorViewSet, basename="2fa")
-router.register(r"sesiones", SesionesViewSet, basename="sesiones")
-router.register(r"password", PasswordRecoveryViewSet, basename="password")
-router.register(r"permisos", PermisosViewSet, basename="permisos")
-router.register(r"auditoria", AuditoriaOperacionesViewSet, basename="auditoria")
-
+router.register(r"usuarios", UsuarioViewSet, basename="usuarios")
+router.register(r"empleados", EmpleadoViewSet, basename="empleados")
+router.register(r"roles", RolViewSet, basename="roles")
+router.register(r"permisos", PermisoViewSet, basename="permisos")
+router.register(r"roles-permisos", RolPermisoViewSet, basename="roles-permisos")
+router.register(r"perfiles", PerfilUsuarioViewSet, basename="perfiles")
 
 urlpatterns = [
     path("", include(router.urls)),

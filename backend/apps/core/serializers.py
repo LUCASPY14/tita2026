@@ -1,93 +1,83 @@
+"""
+Serializers para la app core
+"""
+
 from rest_framework import serializers
 
-from .models import CargasSaldo, ConfiguracionSistema, ConsumosTarjeta, MediosPago, Tarjetas
+from .models import (
+    Tarjeta,
+    MovimientoTarjeta,
+    TarjetaAutorizacion,
+    CargaSaldo,
+    ConsumoTarjeta,
+    MedioPago,
+    LimiteTransaccion,
+    RegistroAutorizacion,
+)
 
 
-class TarjetasSerializer(serializers.ModelSerializer):
-    hijo_nombre = serializers.CharField(source="id_hijo.nombre", read_only=True)
-    hijo_apellido = serializers.CharField(source="id_hijo.apellido", read_only=True)
-    hijo_foto = serializers.SerializerMethodField()
-    hijo_fecha_foto = serializers.CharField(source="id_hijo.fecha_foto", read_only=True)
-
-    def get_hijo_foto(self, obj):
-        """Retorna la URL completa de la foto del hijo."""
-        if obj.id_hijo and obj.id_hijo.foto_perfil:
-            request = self.context.get("request")
-            if request:
-                return request.build_absolute_uri(obj.id_hijo.foto_perfil.url)
-            return obj.id_hijo.foto_perfil.url
-        return None
-
-    saldo_disponible = serializers.SerializerMethodField()
+class TarjetaSerializer(serializers.ModelSerializer):
+    hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
+    saldo_disponible = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
 
     class Meta:
-        model = Tarjetas
+        model = Tarjeta
         fields = "__all__"
-
-    def get_saldo_disponible(self, obj):
-        """Calcula el saldo disponible considerando límite de crédito"""
-        if obj.permite_saldo_negativo:
-            return obj.saldo_actual + obj.limite_credito
-        return obj.saldo_actual
+        read_only_fields = ["fecha_creacion", "ultima_notificacion_saldo"]
 
 
-class CargasSaldoSerializer(serializers.ModelSerializer):
-    tarjeta_numero = serializers.CharField(source="nro_tarjeta.nro_tarjeta", read_only=True)
-    hijo_nombre = serializers.SerializerMethodField(read_only=True)
-    cliente_nombre = serializers.CharField(source="id_cliente_origen.nombres", read_only=True)
-    cajero_nombre = serializers.SerializerMethodField(read_only=True)
-    supervisor_nombre = serializers.SerializerMethodField(read_only=True)
+class MovimientoTarjetaSerializer(serializers.ModelSerializer):
+    tarjeta_nro = serializers.CharField(source="tarjeta.nro_tarjeta", read_only=True)
 
     class Meta:
-        model = CargasSaldo
+        model = MovimientoTarjeta
         fields = "__all__"
-        read_only_fields = [
-            "id_carga",
-            "fecha_carga",
-            "fecha_confirmacion",
-            "fecha_aprobacion",
-            "id_factura",
-        ]
-
-    def get_hijo_nombre(self, obj):
-        """Retorna nombre completo del hijo"""
-        try:
-            return f"{obj.nro_tarjeta.id_hijo.nombre} {obj.nro_tarjeta.id_hijo.apellido}"
-        except:
-            return None
-
-    def get_cajero_nombre(self, obj):
-        """Retorna nombre del cajero responsable"""
-        try:
-            return obj.usuario_responsable.nombre
-        except AttributeError:
-            return None
-
-    def get_supervisor_nombre(self, obj):
-        """Retorna nombre del supervisor aprobador"""
-        try:
-            return obj.supervisor_aprobador.nombre
-        except AttributeError:
-            return None
+        read_only_fields = ["fecha_creacion", "saldo_anterior", "saldo_resultante"]
 
 
-class ConsumosTarjetaSerializer(serializers.ModelSerializer):
-    tarjeta_numero = serializers.CharField(source="nro_tarjeta.nro_tarjeta", read_only=True)
+class TarjetaAutorizacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TarjetaAutorizacion
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
+
+
+class CargaSaldoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CargaSaldo
+        fields = "__all__"
+        read_only_fields = ["fecha_carga", "fecha_confirmacion", "fecha_aprobacion", "fecha_creacion"]
+
+
+class ConsumoTarjetaSerializer(serializers.ModelSerializer):
+    tarjeta_nro = serializers.CharField(source="tarjeta.nro_tarjeta", read_only=True)
 
     class Meta:
-        model = ConsumosTarjeta
+        model = ConsumoTarjeta
+        fields = "__all__"
+        read_only_fields = ["fecha_consumo", "saldo_anterior", "saldo_posterior", "fecha_creacion"]
+
+
+class MedioPagoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MedioPago
         fields = "__all__"
 
 
-class MediosPagoSerializer(serializers.ModelSerializer):
-    nombre = serializers.CharField(source="descripcion", read_only=True)
+class LimiteTransaccionSerializer(serializers.ModelSerializer):
+    rol_nombre = serializers.CharField(source="rol.nombre_rol", read_only=True)
 
     class Meta:
-        model = MediosPago
-        fields = ["id_medio_pago", "descripcion", "nombre", "genera_comision", "requiere_validacion", "estado"]
-
-
-class ConfiguracionSistemaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ConfiguracionSistema
+        model = LimiteTransaccion
         fields = "__all__"
+        read_only_fields = ["fecha_creacion", "fecha_modificacion"]
+
+
+class RegistroAutorizacionSerializer(serializers.ModelSerializer):
+    solicitante_nombre = serializers.CharField(source="solicitante.nombre_completo", read_only=True)
+    autorizador_nombre = serializers.CharField(source="autorizador.nombre_completo", read_only=True)
+
+    class Meta:
+        model = RegistroAutorizacion
+        fields = "__all__"
+        read_only_fields = ["fecha_autorizacion"]

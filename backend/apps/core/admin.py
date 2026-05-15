@@ -1,965 +1,499 @@
-﻿from datetime import timedelta
+﻿"""
+Admin para la app core
+Gestión de tarjetas, movimientos, medios de pago, límites de transacción y autorizaciones
+"""
+
+from turtle import color
 
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import (
-    CacheConfiguracion,
-    CargasSaldo,
-    ConfiguracionSistema,
-    ConsumosTarjeta,
-    LimitesTransaccion,
-    MediosPago,
-    RegistroAutorizaciones,
-    Tarjetas,
-    TarjetasAutorizacion,
-    TransaccionesOnline,
+    Tarjeta,
+    MovimientoTarjeta,
+    TarjetaAutorizacion,
+    CargaSaldo,
+    ConsumoTarjeta,
+    MedioPago,
+    LimiteTransaccion,
+    RegistroAutorizacion,
 )
 
 
-@admin.register(Tarjetas)
-class TarjetasAdmin(admin.ModelAdmin):
-    """Admin avanzado para Tarjetas de estudiantes"""
+# ==============================================================================
+# TARJETA
+# ==============================================================================
 
+@admin.register(Tarjeta)
+class TarjetaAdmin(admin.ModelAdmin):
     list_display = [
-        "nro_tarjeta_badge",
-        "hijo_info",
+        "nro_tarjeta",
+        "codigo_barras",
+        "hijo_link",
         "saldo_display",
-        "saldo_disponible_display",
+        "limite_credito_display",
         "estado_badge",
-        "alerta_saldo",
-        "fecha_vencimiento_display",
+        "fecha_vencimiento",
     ]
-
-    list_filter = ["estado", "permite_saldo_negativo", "fecha_creacion"]
-    search_fields = ["nro_tarjeta", "codigo_barras", "id_hijo__nombre", "id_hijo__apellido"]
+    list_filter = ["estado", "permite_saldo_negativo"]
+    search_fields = ["nro_tarjeta", "codigo_barras", "hijo__nombre", "hijo__apellido"]
     readonly_fields = ["fecha_creacion", "ultima_notificacion_saldo"]
-    ordering = ["-fecha_creacion"]
-
+    list_select_related = ["hijo"]
     fieldsets = (
-        (
-            "Información de la Tarjeta",
-            {"fields": ("nro_tarjeta", "codigo_barras", "id_hijo", "estado")},
-        ),
-        (
-            "Saldo y Crédito",
-            {
-                "fields": (
-                    "saldo_actual",
-                    "saldo_alerta",
-                    "permite_saldo_negativo",
-                    "limite_credito",
-                )
-            },
-        ),
-        (
-            "Notificaciones",
-            {
-                "fields": ("notificar_saldo_bajo", "ultima_notificacion_saldo"),
-                "classes": ("collapse",),
-            },
-        ),
-        ("Fechas", {"fields": ("fecha_vencimiento", "fecha_creacion"), "classes": ("collapse",)}),
+        ("Datos de la Tarjeta", {
+            "fields": ("nro_tarjeta", "codigo_barras", "hijo", "estado")
+        }),
+        ("Saldo y Crédito", {
+            "fields": ("saldo_actual", "saldo_alerta", "limite_credito", "permite_saldo_negativo")
+        }),
+        ("Notificaciones", {
+            "fields": ("notificar_saldo_bajo", "ultima_notificacion_saldo"),
+            "classes": ("collapse",),
+        }),
+        ("Vigencia", {
+            "fields": ("fecha_vencimiento", "fecha_creacion"),
+        }),
     )
 
-    def nro_tarjeta_badge(self, obj):
-        """Número de tarjeta en badge"""
-        return format_html(
-            '<code style="background:#e9ecef;padding:2px 6px;border-radius:3px;">{}</code>',
-            obj.nro_tarjeta,
-        )
-
-    nro_tarjeta_badge.short_description = "Nº Tarjeta"
-
-    def hijo_info(self, obj):
-        """Información del hijo asociado"""
-        if obj.id_hijo:
-            return format_html(
-                '{} {} <small style="color:#6c757d;">(ID: {})</small>',
-                obj.id_hijo.nombre,
-                obj.id_hijo.apellido,
-                obj.id_hijo.id_hijo,
-            )
-        return "-"
-
-    hijo_info.short_description = "Estudiante"
+    def hijo_link(self, obj):
+        url = reverse("admin:clientes_hijo_change", args=[obj.hijo.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.hijo.nombre_completo)
+    hijo_link.short_description = "Estudiante"
 
     def saldo_display(self, obj):
-        """Saldo actual formateado"""
-        color = "#28a745" if obj.saldo_actual >= 0 else "#dc3545"
-        saldo_formateado = f"{obj.saldo_actual:,.2f}"
-        return format_html('<strong style="color:{};">₲{}</strong>', color, saldo_formateado)
+        color = "#dc3545" if obj.saldo_actual < 0 else "#28a745"
+        monto_formateado = "₲{:,.0f}".format(obj.saldo_actual)
+        return format_html('<strong style="color:{};">{}</strong>', color, monto_formateado)
+    saldo_display.short_description = "Saldo"
 
-    saldo_display.short_description = "Saldo Actual"
-
-    def saldo_disponible_display(self, obj):
-        """Saldo disponible considerando límite de crédito"""
-        saldo_disp = obj.saldo_disponible
-        saldo_formateado = f"{saldo_disp:,.2f}"
-        return format_html("₲{}", saldo_formateado)
-
-    saldo_disponible_display.short_description = "Saldo Disponible"
+    def limite_credito_display(self, obj):
+        return f"₲{obj.limite_credito:,.0f}"
+    limite_credito_display.short_description = "Límite Crédito"
 
     def estado_badge(self, obj):
-        """Estado con color"""
         colors = {
-            "Activa": "#28a745",
-            "Bloqueada": "#ffc107",
-            "Vencida": "#6c757d",
-            "Cancelada": "#dc3545",
-            "Suspendida": "#fd7e14",
+            "ACTIVA": "#28a745",
+            "BLOQUEADA": "#ffc107",
+            "VENCIDA": "#6c757d",
+            "CANCELADA": "#dc3545",
         }
         color = colors.get(obj.estado, "#6c757d")
         return format_html(
             '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
             color,
-            obj.estado.upper(),
+            obj.get_estado_display(),
         )
-
     estado_badge.short_description = "Estado"
 
-    def alerta_saldo(self, obj):
-        """Indicador de alerta de saldo"""
-        if obj.esta_en_alerta:
-            return format_html('<span style="color:#dc3545;">{}</span>', "⚠️ Saldo bajo")
-        return format_html('<span style="color:#28a745;">{}</span>', "✓ OK")
 
-    alerta_saldo.short_description = "Alerta"
+# ==============================================================================
+# MOVIMIENTO DE TARJETA
+# ==============================================================================
 
-    def fecha_vencimiento_display(self, obj):
-        """Fecha de vencimiento formateada"""
-        if obj.fecha_vencimiento:
-            from datetime import date
-
-            hoy = date.today()
-            if obj.fecha_vencimiento < hoy:
-                color = "#dc3545"
-                estado = "(VENCIDA)"
-            elif obj.fecha_vencimiento <= hoy + timedelta(days=30):
-                color = "#ffc107"
-                estado = "(Próxima)"
-            else:
-                color = "#28a745"
-                estado = ""
-
-            return format_html(
-                '<span style="color:{};">{} {}</span>',
-                color,
-                obj.fecha_vencimiento.strftime("%d/%m/%Y"),
-                estado,
-            )
-        return "-"
-
-    fecha_vencimiento_display.short_description = "Vencimiento"
-
-
-@admin.register(TarjetasAutorizacion)
-class TarjetasAutorizacionAdmin(admin.ModelAdmin):
-    """Admin para Tarjetas de Autorización de empleados"""
-
+@admin.register(MovimientoTarjeta)
+class MovimientoTarjetaAdmin(admin.ModelAdmin):
     list_display = [
-        "codigo_barra_badge",
+        "id",
+        "tarjeta_link",
         "tipo_badge",
-        "empleado_info",
-        "permisos_badge",
-        "estado_badge",
-        "fecha_vencimiento_display",
+        "monto_display",
+        "saldo_resultante_display",
+        "fecha",
     ]
+    list_filter = ["tipo", "fecha"]
+    search_fields = ["tarjeta__nro_tarjeta", "descripcion"]
+    readonly_fields = ["fecha_creacion", "saldo_anterior", "saldo_resultante"]
+    list_select_related = ["tarjeta"]
+    date_hierarchy = "fecha"
+    ordering = ["-fecha", "-id"]
 
-    list_filter = ["tipo_autorizacion", "estado", "fecha_creacion"]
-    search_fields = ["codigo_barra", "id_empleado__nombre", "id_empleado__apellido"]
-    readonly_fields = ["fecha_creacion"]
-    date_hierarchy = "fecha_creacion"
+    def get_readonly_fields(self, request, obj=None):
+        """Movimiento inmutable una vez creado."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
 
-    fieldsets = (
-        (
-            "Información de la Tarjeta",
-            {"fields": ("codigo_barra", "tipo_autorizacion", "id_empleado", "estado")},
-        ),
-        (
-            "Permisos",
-            {
-                "fields": (
-                    "puede_anular_almuerzos",
-                    "puede_anular_ventas",
-                    "puede_anular_recargas",
-                    "puede_modificar_precios",
-                )
-            },
-        ),
-        (
-            "Vigencia",
-            {
-                "fields": ("fecha_vencimiento", "fecha_creacion"),
-            },
-        ),
-        ("Observaciones", {"fields": ("observaciones",), "classes": ("collapse",)}),
-    )
-
-    def codigo_barra_badge(self, obj):
-        """Código de barras en badge"""
-        return format_html(
-            '<code style="background:#e9ecef;padding:2px 6px;border-radius:3px;">{}</code>',
-            obj.codigo_barra,
-        )
-
-    codigo_barra_badge.short_description = "Código de Barras"
+    def tarjeta_link(self, obj):
+        url = reverse("admin:core_tarjeta_change", args=[obj.tarjeta.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.tarjeta.nro_tarjeta)
+    tarjeta_link.short_description = "Tarjeta"
 
     def tipo_badge(self, obj):
-        """Tipo de autorización con color"""
         colors = {
-            "Supervisor": "#17a2b8",
-            "Gerente": "#6610f2",
-            "Director": "#e83e8c",
-            "Temporal": "#ffc107",
+            "RECARGA": "#28a745",
+            "CONSUMO": "#dc3545",
+            "AJUSTE": "#ffc107",
+            "REVERSO": "#0d6efd",
         }
-        color = colors.get(obj.tipo_autorizacion, "#6c757d")
+        color = colors.get(obj.tipo, "#6c757d")
         return format_html(
             '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
             color,
-            obj.tipo_autorizacion.upper(),
+            obj.get_tipo_display(),
         )
-
     tipo_badge.short_description = "Tipo"
 
-    def empleado_info(self, obj):
-        """Información del empleado"""
-        if obj.id_empleado:
-            return format_html("{} {}", obj.id_empleado.nombre, obj.id_empleado.apellido)
+    def monto_display(self, obj):
+        signo = "+" if obj.tipo in ("RECARGA", "REVERSO") else "-"
+        return f"{signo}₲{obj.monto:,.0f}"
+    monto_display.short_description = "Monto"
+
+    def saldo_resultante_display(self, obj):
+        color = "#dc3545" if obj.saldo_resultante < 0 else "#28a745"
+        return format_html('<strong style="color:{};">₲{:,}</strong>', color, obj.saldo_resultante)
+    saldo_resultante_display.short_description = "Saldo Resultante"
+
+
+# ==============================================================================
+# TARJETA DE AUTORIZACIÓN
+# ==============================================================================
+
+@admin.register(TarjetaAutorizacion)
+class TarjetaAutorizacionAdmin(admin.ModelAdmin):
+    list_display = [
+        "codigo_barra",
+        "tipo_autorizacion",
+        "empleado_link",
+        "permisos_display",
+        "activo",
+        "fecha_vencimiento",
+    ]
+    list_filter = ["tipo_autorizacion", "activo"]
+    search_fields = ["codigo_barra", "empleado__nombre", "empleado__apellido"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["empleado"]
+    fieldsets = (
+        ("Datos de la Tarjeta", {
+            "fields": ("codigo_barra", "tipo_autorizacion", "empleado", "activo")
+        }),
+        ("Permisos", {
+            "fields": (
+                "puede_anular_almuerzos",
+                "puede_anular_ventas",
+                "puede_anular_recargas",
+                "puede_modificar_precios",
+            )
+        }),
+        ("Vigencia", {
+            "fields": ("fecha_vencimiento", "fecha_creacion"),
+        }),
+        ("Observaciones", {
+            "fields": ("observaciones",),
+            "classes": ("collapse",),
+        }),
+    )
+
+    def empleado_link(self, obj):
+        if obj.empleado:
+            url = reverse("admin:usuarios_usuario_change", args=[obj.empleado.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.empleado.nombre_completo)
         return "-"
+    empleado_link.short_description = "Empleado"
 
-    empleado_info.short_description = "Empleado"
-
-    def permisos_badge(self, obj):
-        """Permisos activos"""
+    def permisos_display(self, obj):
         permisos = []
         if obj.puede_anular_almuerzos:
             permisos.append("Almuerzos")
         if obj.puede_anular_ventas:
             permisos.append("Ventas")
-        if obj.puede_anular_recargas:  # pragma: no cover
+        if obj.puede_anular_recargas:
             permisos.append("Recargas")
         if obj.puede_modificar_precios:
             permisos.append("Precios")
-
-        if permisos:
-            return format_html("<small>{}</small>", ", ".join(permisos))
-        return format_html('<small style="color:#6c757d;">{}</small>', "Sin permisos")
-
-    permisos_badge.short_description = "Permisos"
-
-    def estado_badge(self, obj):
-        """Estado estado/inactivo"""
-        if obj.estado:
-            return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-                "ACTIVA",
-            )
-        return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            "INACTIVA",
-        )
-
-    estado_badge.short_description = "Estado"
-
-    def fecha_vencimiento_display(self, obj):
-        """Fecha de vencimiento formateada"""
-        if obj.fecha_vencimiento:
-            from datetime import date
-
-            hoy = date.today()
-            if obj.fecha_vencimiento < hoy:
-                color = "#dc3545"
-                estado = "(VENCIDA)"
-            else:
-                color = "#28a745"
-                estado = ""
-
-            return format_html(
-                '<span style="color:{};">{} {}</span>',
-                color,
-                obj.fecha_vencimiento.strftime("%d/%m/%Y"),
-                estado,
-            )
-        return format_html('<small style="color:#6c757d;">{}</small>', "Sin vencimiento")
-
-    fecha_vencimiento_display.short_description = "Vencimiento"
+        return ", ".join(permisos) if permisos else "-"
+    permisos_display.short_description = "Permisos"
 
 
-@admin.register(CargasSaldo)
-class CargasSaldoAdmin(admin.ModelAdmin):
-    """Admin para Cargas de Saldo"""
+# ==============================================================================
+# CARGA DE SALDO
+# ==============================================================================
 
+@admin.register(CargaSaldo)
+class CargaSaldoAdmin(admin.ModelAdmin):
     list_display = [
-        "id_carga",
-        "nro_tarjeta_link",
-        "monto_display",
+        "id",
+        "tarjeta_link",
+        "cliente_origen_link",
+        "monto_cargado_display",
         "estado_badge",
-        "fecha_carga_display",
-        "referencia_badge",
-        "cliente_info",
+        "fecha_carga",
     ]
-
     list_filter = ["estado", "fecha_carga"]
-    search_fields = ["id_carga", "referencia", "tx_id", "nro_tarjeta__nro_tarjeta"]
-    readonly_fields = ["fecha_carga", "fecha_confirmacion"]
+    search_fields = ["tarjeta__nro_tarjeta", "referencia"]
+    readonly_fields = [
+        "fecha_carga",
+        "fecha_confirmacion",
+        "fecha_aprobacion",
+        "pay_request_id",
+        "tx_id",
+        "custom_identifier",
+        "numero_comprobante_externo",
+        "referencia_externa",
+        "fecha_creacion",
+    ]
+    list_select_related = ["tarjeta", "cliente_origen"]
     date_hierarchy = "fecha_carga"
     ordering = ["-fecha_carga"]
+    fieldsets = (
+        ("Datos de la Recarga", {
+            "fields": ("tarjeta", "cliente_origen", "monto_cargado", "comision", "total_cobrado")
+        }),
+        ("Estado", {
+            "fields": ("estado", "fecha_carga", "fecha_confirmacion", "fecha_aprobacion")
+        }),
+        ("Referencias", {
+            "fields": ("referencia", "metodo_pago")
+        }),
+        ("Responsables", {
+            "fields": ("responsable", "supervisor_aprobador")
+        }),
+        ("Pasarela de Pago (solo lectura)", {
+            "fields": (
+                "pay_request_id", "tx_id", "custom_identifier",
+                "numero_comprobante_externo", "referencia_externa",
+            ),
+            "classes": ("collapse",),
+        }),
+        ("Auditoría", {
+            "fields": ("fecha_creacion",),
+            "classes": ("collapse",),
+        }),
+    )
 
-    def nro_tarjeta_link(self, obj):
-        """Link a la tarjeta"""
-        if obj.nro_tarjeta:
-            url = reverse("admin:core_tarjetas_change", args=[obj.nro_tarjeta.nro_tarjeta])
-            return format_html('<a href="{}">{}</a>', url, obj.nro_tarjeta.nro_tarjeta)
+    def get_readonly_fields(self, request, obj=None):
+        """Campos de pasarela siempre readonly. Monto/tarjeta bloqueados en estados finales."""
+        readonly = list(self.readonly_fields)
+        if obj and obj.estado in ("CONFIRMADA", "RECHAZADA"):
+            readonly.extend(["monto_cargado", "tarjeta", "cliente_origen"])
+        return readonly
+
+    def tarjeta_link(self, obj):
+        if obj.tarjeta:
+            url = reverse("admin:core_tarjeta_change", args=[obj.tarjeta.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.tarjeta.nro_tarjeta)
         return "-"
+    tarjeta_link.short_description = "Tarjeta"
 
-    nro_tarjeta_link.short_description = "Tarjeta"
+    def cliente_origen_link(self, obj):
+        if obj.cliente_origen:
+            url = reverse("admin:clientes_cliente_change", args=[obj.cliente_origen.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.cliente_origen.nombre_completo)
+        return "-"
+    cliente_origen_link.short_description = "Cliente Origen"
 
-    def monto_display(self, obj):
-        """Monto formateado"""
-        monto_formateado = f"{obj.monto_cargado:,.2f}"
-        return format_html('<strong style="color:#28a745;">₲{}</strong>', monto_formateado)
-
-    monto_display.short_description = "Monto"
+    def monto_cargado_display(self, obj):
+        return f"₲{obj.monto_cargado:,.0f}"
+    monto_cargado_display.short_description = "Monto"
 
     def estado_badge(self, obj):
-        """Estado con color"""
         colors = {
-            "Pendiente": "#ffc107",
-            "Confirmado": "#28a745",
-            "Rechazado": "#dc3545",
-            "Cancelado": "#6c757d",
-            "Reembolsado": "#fd7e14",
+            "PENDIENTE": "#ffc107",
+            "CONFIRMADA": "#28a745",
+            "RECHAZADA": "#dc3545",
         }
         color = colors.get(obj.estado, "#6c757d")
         return format_html(
             '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
             color,
-            obj.estado.upper(),
+            obj.get_estado_display(),
         )
-
     estado_badge.short_description = "Estado"
 
-    def fecha_carga_display(self, obj):
-        """Fecha de carga formateada"""
-        return obj.fecha_carga.strftime("%d/%m/%Y %H:%M")
 
-    fecha_carga_display.short_description = "Fecha Carga"
+# ==============================================================================
+# CONSUMO DE TARJETA
+# ==============================================================================
 
-    def referencia_badge(self, obj):
-        """Referencia en badge"""
-        if obj.referencia:
-            return format_html(
-                '<code style="background:#e9ecef;padding:2px 6px;border-radius:3px;">{}</code>',
-                obj.referencia[:20] + "..." if len(obj.referencia) > 20 else obj.referencia,
-            )
-        return "-"
-
-    referencia_badge.short_description = "Referencia"
-
-    def cliente_info(self, obj):
-        """Información del cliente origen"""
-        if obj.id_cliente_origen:
-            return format_html("{} {}", obj.id_cliente_origen.nombre, obj.id_cliente_origen.apellido)
-        return format_html('<small style="color:#6c757d;">{}</small>', "-")
-
-    cliente_info.short_description = "Cliente"
-
-
-@admin.register(ConsumosTarjeta)
-class ConsumosTarjetaAdmin(admin.ModelAdmin):
-    """Admin para Consumos de Tarjeta"""
-
+@admin.register(ConsumoTarjeta)
+class ConsumoTarjetaAdmin(admin.ModelAdmin):
     list_display = [
-        "id_consumo",
-        "nro_tarjeta_link",
-        "monto_display",
-        "detalle_corto",
-        "saldos_display",
-        "fecha_consumo_display",
-        "empleado_registro",
+        "id",
+        "tarjeta_link",
+        "monto_consumido_display",
+        "saldo_anterior_display",
+        "saldo_posterior_display",
+        "registrado_por_link",
+        "detalle",
+        "fecha_consumo",
     ]
-
     list_filter = ["fecha_consumo"]
-    search_fields = ["id_consumo", "nro_tarjeta__nro_tarjeta", "detalle"]
-    readonly_fields = ["fecha_consumo", "saldo_anterior", "saldo_posterior"]
+    search_fields = ["tarjeta__nro_tarjeta", "detalle"]
+    readonly_fields = ["fecha_consumo", "saldo_anterior", "saldo_posterior", "fecha_creacion"]
+    list_select_related = ["tarjeta", "registrado_por"]
     date_hierarchy = "fecha_consumo"
     ordering = ["-fecha_consumo"]
 
-    def nro_tarjeta_link(self, obj):
-        """Link a la tarjeta"""
-        if obj.nro_tarjeta:
-            url = reverse("admin:core_tarjetas_change", args=[obj.nro_tarjeta.nro_tarjeta])
-            return format_html('<a href="{}">{}</a>', url, obj.nro_tarjeta.nro_tarjeta)
+    def get_readonly_fields(self, request, obj=None):
+        """Registro inmutable una vez creado."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
+    def tarjeta_link(self, obj):
+        url = reverse("admin:core_tarjeta_change", args=[obj.tarjeta.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.tarjeta.nro_tarjeta)
+    tarjeta_link.short_description = "Tarjeta"
+
+    def monto_consumido_display(self, obj):
+        return f"-₲{obj.monto_consumido:,.0f}"
+    monto_consumido_display.short_description = "Monto"
+
+    def saldo_anterior_display(self, obj):
+        return f"₲{obj.saldo_anterior:,.0f}"
+    saldo_anterior_display.short_description = "Saldo Anterior"
+
+    def saldo_posterior_display(self, obj):
+        color = "#dc3545" if obj.saldo_posterior < 0 else "#28a745"
+        return format_html('<strong style="color:{};">₲{:,}</strong>', color, obj.saldo_posterior)
+    saldo_posterior_display.short_description = "Saldo Posterior"
+
+    def registrado_por_link(self, obj):
+        if obj.registrado_por:
+            url = reverse("admin:usuarios_usuario_change", args=[obj.registrado_por.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.registrado_por.nombre_completo)
         return "-"
-
-    nro_tarjeta_link.short_description = "Tarjeta"
-
-    def monto_display(self, obj):
-        """Monto consumido formateado"""
-        monto_formateado = f"{obj.monto_consumido:,.2f}"
-        return format_html('<strong style="color:#dc3545;">-₲{}</strong>', monto_formateado)
-
-    monto_display.short_description = "Monto"
-
-    def detalle_corto(self, obj):
-        """Detalle truncado"""
-        if obj.detalle:
-            if len(obj.detalle) > 40:
-                return obj.detalle[:40] + "..."
-            return obj.detalle
-        return "-"
-
-    detalle_corto.short_description = "Detalle"
-
-    def saldos_display(self, obj):
-        """Saldos anterior y posterior"""
-        saldo_ant_formateado = f"{obj.saldo_anterior:,.2f}"
-        saldo_post_formateado = f"{obj.saldo_posterior:,.2f}"
-        return format_html("<small>₲{} → ₲{}</small>", saldo_ant_formateado, saldo_post_formateado)
-
-    saldos_display.short_description = "Saldos"
-
-    def fecha_consumo_display(self, obj):
-        """Fecha de consumo formateada"""
-        return obj.fecha_consumo.strftime("%d/%m/%Y %H:%M")
-
-    fecha_consumo_display.short_description = "Fecha"
-
-    def empleado_registro(self, obj):
-        """Empleado que registró"""
-        if obj.id_empleado_registro:
-            return format_html(
-                "<small>{} {}</small>",
-                obj.id_empleado_registro.nombre,
-                obj.id_empleado_registro.apellido,
-            )
-        return format_html('<small style="color:#6c757d;">{}</small>', "Sistema")
-
-    empleado_registro.short_description = "Registrado por"
+    registrado_por_link.short_description = "Registrado por"
 
 
-@admin.register(TransaccionesOnline)
-class TransaccionesOnlineAdmin(admin.ModelAdmin):
-    """Admin para Transacciones Online"""
+# ==============================================================================
+# MEDIO DE PAGO
+# ==============================================================================
 
-    list_display = [
-        "id_transaccion",
-        "monto_display",
-        "metodo_pago_badge",
-        "estado_badge",
-        "fecha_transaccion_display",
-        "referencia_badge",
-    ]
-
-    list_filter = ["metodo_pago", "estado", "fecha_transaccion"]
-    search_fields = ["id_transaccion", "referencia_pago", "id_transaccion_externa"]
-    readonly_fields = ["creado_en", "actualizado_en"]
-    date_hierarchy = "fecha_transaccion"
-    ordering = ["-fecha_transaccion"]
-
-    def monto_display(self, obj):
-        """Monto formateado"""
-        monto_formateado = f"{obj.monto:,.2f}"
-        return format_html('<strong style="color:#0d6efd;">₲{}</strong>', monto_formateado)
-
-    monto_display.short_description = "Monto"
-
-    def metodo_pago_badge(self, obj):
-        """Método de pago con color"""
-        colors = {
-            "tarjeta_credito": "#6610f2",
-            "tarjeta_debito": "#0d6efd",
-            "transferencia": "#17a2b8",
-            "qr": "#28a745",
-            "billetera": "#fd7e14",
-        }
-        nombres = {
-            "tarjeta_credito": "T. Crédito",
-            "tarjeta_debito": "T. Débito",
-            "transferencia": "Transferencia",
-            "qr": "QR",
-            "billetera": "Billetera",
-        }
-        color = colors.get(obj.metodo_pago, "#6c757d")
-        nombre = nombres.get(obj.metodo_pago, obj.metodo_pago)
-        return format_html(
-            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            color,
-            nombre.upper(),
-        )
-
-    metodo_pago_badge.short_description = "Método"
-
-    def estado_badge(self, obj):
-        """Estado con color"""
-        colors = {
-            "Pendiente": "#ffc107",
-            "Confirmado": "#28a745",
-            "Rechazado": "#dc3545",
-            "Cancelado": "#6c757d",
-        }
-        color = colors.get(obj.estado, "#6c757d")
-        return format_html(
-            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            color,
-            obj.estado.upper(),
-        )
-
-    estado_badge.short_description = "Estado"
-
-    def fecha_transaccion_display(self, obj):
-        """Fecha de transacción formateada"""
-        return obj.fecha_transaccion.strftime("%d/%m/%Y %H:%M")
-
-    fecha_transaccion_display.short_description = "Fecha"
-
-    def referencia_badge(self, obj):
-        """Referencia en badge"""
-        if obj.referencia_pago:
-            return format_html(
-                '<code style="background:#e9ecef;padding:2px 6px;border-radius:3px;">{}</code>',
-                (obj.referencia_pago[:20] + "..." if len(obj.referencia_pago) > 20 else obj.referencia_pago),
-            )
-        return "-"
-
-    referencia_badge.short_description = "Referencia"
-
-
-@admin.register(MediosPago)
-class MediosPagoAdmin(admin.ModelAdmin):
-    """Admin para Medios de Pago"""
-
-    list_display = [
-        "id_medio_pago",
-        "descripcion_badge",
-        "genera_comision_badge",
-        "requiere_validacion_badge",
-        "estado_badge",
-    ]
-
-    list_filter = ["genera_comision", "requiere_validacion", "estado"]
+@admin.register(MedioPago)
+class MedioPagoAdmin(admin.ModelAdmin):
+    list_display = ["descripcion", "requiere_validacion_badge", "activo"]
+    list_filter = ["activo", "requiere_validacion"]
     search_fields = ["descripcion"]
-    ordering = ["descripcion"]
-
-    def descripcion_badge(self, obj):
-        """Descripción en badge"""
-        return format_html("<strong>{}</strong>", obj.descripcion)
-
-    descripcion_badge.short_description = "Descripción"
-
-    def genera_comision_badge(self, obj):
-        """Indicador de comisión"""
-        if obj.genera_comision:
-            return format_html('<span style="color:#fd7e14;">{}</span>', "✓ Cobra comisión")
-        return format_html('<span style="color:#6c757d;">{}</span>', "-")
-
-    genera_comision_badge.short_description = "Comisión"
 
     def requiere_validacion_badge(self, obj):
-        """Indicador de validación"""
         if obj.requiere_validacion:
-            return format_html('<span style="color:#0d6efd;">{}</span>', "✓ Requiere validación")
-        return format_html('<span style="color:#6c757d;">{}</span>', "-")
-
+            return format_html('<span style="color:#0d6efd;">✓</span>')
+        return "-"
     requiere_validacion_badge.short_description = "Validación"
 
-    def estado_badge(self, obj):
-        """Estado estado/inactivo"""
-        if obj.estado:
-            return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-                "ACTIVO",
-            )
-        return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            "INACTIVO",
-        )
 
-    estado_badge.short_description = "Estado"
+# ==============================================================================
+# LÍMITE DE TRANSACCIÓN
+# ==============================================================================
 
-
-@admin.register(ConfiguracionSistema)
-class ConfiguracionSistemaAdmin(admin.ModelAdmin):
-    """Admin para Configuración del Sistema"""
-
+@admin.register(LimiteTransaccion)
+class LimiteTransaccionAdmin(admin.ModelAdmin):
     list_display = [
-        "clave_badge",
-        "valor_display",
-        "tipo_badge",
-        "categoria_badge",
-        "requerido_badge",
-        "updated_info",
-    ]
-
-    list_filter = ["tipo", "categoria", "requerido", "estado"]
-    search_fields = ["clave", "descripcion"]
-    readonly_fields = ["updated_at"]
-    ordering = ["categoria", "clave"]
-
-    fieldsets = (
-        ("Identificación", {"fields": ("clave", "descripcion", "categoria")}),
-        ("Valor", {"fields": ("valor", "valor_defecto", "tipo")}),
-        (
-            "Validación",
-            {
-                "fields": ("validacion", "valores_permitidos", "valor_min", "valor_max"),
-                "classes": ("collapse",),
-            },
-        ),
-        (
-            "Configuración",
-            {"fields": ("requerido", "requiere_reinicio", "solo_superuser", "estado")},
-        ),
-        ("Auditoría", {"fields": ("updated_at", "updated_by"), "classes": ("collapse",)}),
-    )
-
-    def clave_badge(self, obj):
-        """Clave en badge"""
-        return format_html(
-            '<code style="background:#e9ecef;padding:2px 6px;border-radius:3px;font-family:monospace;">{}</code>',
-            obj.clave,
-        )
-
-    clave_badge.short_description = "Clave"
-
-    def valor_display(self, obj):
-        """Valor truncado"""
-        if len(obj.valor) > 50:
-            return format_html('<span title="{}">{}</span>', obj.valor, obj.valor[:47] + "...")
-        return obj.valor
-
-    valor_display.short_description = "Valor"
-
-    def tipo_badge(self, obj):
-        """Tipo de configuración con color"""
-        colors = {
-            "string": "#6c757d",
-            "int": "#0d6efd",
-            "decimal": "#17a2b8",
-            "bool": "#28a745",
-            "json": "#6610f2",
-            "email": "#e83e8c",
-            "url": "#fd7e14",
-            "date": "#ffc107",
-        }
-        color = colors.get(obj.tipo, "#6c757d")
-        return format_html(
-            '<span style="background:{};color:white;padding:2px 6px;border-radius:3px;font-size:10px;">{}</span>',
-            color,
-            obj.tipo.upper(),
-        )
-
-    tipo_badge.short_description = "Tipo"
-
-    def categoria_badge(self, obj):
-        """Categoría en badge"""
-        return format_html(
-            '<span style="background:#e9ecef;padding:2px 6px;border-radius:3px;font-size:10px;">{}</span>',
-            obj.categoria,
-        )
-
-    categoria_badge.short_description = "Categoría"
-
-    def requerido_badge(self, obj):
-        """Indicador de requerido"""
-        if obj.requerido:
-            return format_html('<span style="color:#dc3545;">{}</span>', "✓ Obligatorio")
-        return format_html('<span style="color:#6c757d;">{}</span>', "Opcional")
-
-    requerido_badge.short_description = "Requerido"
-
-    def updated_info(self, obj):
-        """Información de actualización"""
-        if obj.updated_by:
-            return format_html(
-                "<small>{}<br/>{}</small>",
-                obj.updated_at.strftime("%d/%m/%Y %H:%M"),
-                f"{obj.updated_by.nombre} {obj.updated_by.apellido}",
-            )
-        return obj.updated_at.strftime("%d/%m/%Y %H:%M")
-
-    updated_info.short_description = "Última actualización"
-
-
-@admin.register(CacheConfiguracion)
-class CacheConfiguracionAdmin(admin.ModelAdmin):
-    """Admin para Configuración de Caché"""
-
-    list_display = [
-        "clave_badge",
-        "tipo_cache_badge",
-        "ttl_display",
-        "size_display",
-        "performance_display",
-        "activo_badge",
-    ]
-
-    list_filter = ["tipo_cache", "auto_invalidate", "estado"]
-    search_fields = ["clave", "descripcion"]
-    readonly_fields = ["hits", "misses", "ultima_limpieza"]
-    ordering = ["clave"]
-
-    def clave_badge(self, obj):
-        """Clave en badge"""
-        return format_html(
-            '<code style="background:#e9ecef;padding:2px 6px;border-radius:3px;">{}</code>',
-            obj.clave,
-        )
-
-    clave_badge.short_description = "Clave"
-
-    def tipo_cache_badge(self, obj):
-        """Tipo de caché"""
-        colors = {
-            "memory": "#28a745",
-            "redis": "#dc3545",
-            "database": "#0d6efd",
-        }
-        color = colors.get(obj.tipo_cache, "#6c757d")
-        return format_html(
-            '<span style="background:{};color:white;padding:2px 6px;border-radius:3px;font-size:10px;">{}</span>',
-            color,
-            obj.tipo_cache.upper(),
-        )
-
-    tipo_cache_badge.short_description = "Tipo"
-
-    def ttl_display(self, obj):
-        """TTL formateado"""
-        if obj.ttl_segundos < 60:
-            return format_html("{} seg", obj.ttl_segundos)
-        elif obj.ttl_segundos < 3600:
-            return format_html("{} min", obj.ttl_segundos // 60)
-        else:
-            return format_html("{} hrs", obj.ttl_segundos // 3600)
-
-    ttl_display.short_description = "TTL"
-
-    def size_display(self, obj):
-        """Tamaño máximo formateado"""
-        return format_html("{} MB", obj.max_size_mb)
-
-    size_display.short_description = "Tamaño"
-
-    def performance_display(self, obj):
-        """Ratio de hits vs misses"""
-        total = obj.hits + obj.misses
-        if total > 0:
-            hit_rate = (obj.hits / total) * 100
-            color = "#28a745" if hit_rate >= 80 else "#ffc107" if hit_rate >= 60 else "#dc3545"
-            hit_rate_formateado = f"{hit_rate:.1f}"
-            return format_html(
-                '<span style="color:{};">{}% ({}/{})</span>', color, hit_rate_formateado, obj.hits, total
-            )
-        return "-"
-
-    performance_display.short_description = "Performance (Hits/Total)"
-
-    def activo_badge(self, obj):
-        """Estado estado"""
-        if obj.estado:
-            return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-                "ACTIVO",
-            )
-        return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            "INACTIVO",
-        )
-
-    activo_badge.short_description = "Estado"
-
-
-@admin.register(LimitesTransaccion)
-class LimitesTransaccionAdmin(admin.ModelAdmin):
-    """Admin para Límites de Transacción"""
-
-    list_display = [
-        "rol_badge",
-        "operacion_badge",
-        "monto_limite_display",
+        "rol_link",
+        "tipo_operacion_badge",
+        "monto_maximo_display",
         "doble_autorizacion_badge",
-        "activo_badge",
+        "activo",
     ]
-
-    list_filter = ["id_rol", "tipo_operacion", "requiere_autorizacion_doble", "estado"]
-    search_fields = ["id_rol__nombre_rol", "observaciones"]
+    list_filter = ["rol", "tipo_operacion", "requiere_autorizacion_doble", "activo"]
+    search_fields = ["rol__nombre_rol"]
     readonly_fields = ["fecha_creacion", "fecha_modificacion"]
-    ordering = ["id_rol", "tipo_operacion"]
-
+    list_select_related = ["rol"]
+    filter_horizontal = ["roles_autorizadores"]
     fieldsets = (
-        (
-            "Configuración",
-            {"fields": ("id_rol", "tipo_operacion", "monto_maximo_sin_autorizacion")},
-        ),
-        ("Autorización", {"fields": ("requiere_autorizacion_doble", "roles_autorizadores")}),
-        ("Estado", {"fields": ("estado", "observaciones")}),
-        (
-            "Auditoría",
-            {
-                "fields": ("id_empleado_configurador", "fecha_creacion", "fecha_modificacion"),
-                "classes": ("collapse",),
-            },
-        ),
+        ("Configuración", {
+            "fields": ("rol", "tipo_operacion", "monto_maximo")
+        }),
+        ("Autorización", {
+            "fields": ("requiere_autorizacion_doble", "roles_autorizadores")
+        }),
+        ("Estado", {
+            "fields": ("activo", "observaciones")
+        }),
+        ("Auditoría", {
+            "fields": ("configurado_por", "fecha_creacion", "fecha_modificacion"),
+            "classes": ("collapse",),
+        }),
     )
 
-    filter_horizontal = ["roles_autorizadores"]
+    def rol_link(self, obj):
+        url = reverse("admin:usuarios_rol_change", args=[obj.rol.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.rol.nombre_rol)
+    rol_link.short_description = "Rol"
 
-    def rol_badge(self, obj):
-        """Rol en badge"""
-        return format_html("<strong>{}</strong>", obj.id_rol.nombre_rol)
-
-    rol_badge.short_description = "Rol"
-
-    def operacion_badge(self, obj):
-        """Tipo de operación con color"""
-        colors = {
-            "venta": "#28a745",
-            "descuento": "#ffc107",
-            "nota_credito_cliente": "#0d6efd",
-            "nota_credito_proveedor": "#17a2b8",
-            "ajuste_inventario": "#6610f2",
-            "exceder_credito": "#dc3545",
-            "anular_venta": "#fd7e14",
-            "retiro_caja": "#e83e8c",
-            "devolucion": "#6c757d",
-        }
-        color = colors.get(obj.tipo_operacion, "#6c757d")
+    def tipo_operacion_badge(self, obj):
         return format_html(
-            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:10px;">{}</span>',
-            color,
-            obj.get_tipo_operacion_display().upper(),
+            '<span style="background:#17a2b8;color:white;padding:2px 8px;border-radius:3px;font-size:10px;">{}</span>',
+            obj.get_tipo_operacion_display(),
         )
+    tipo_operacion_badge.short_description = "Operación"
 
-    operacion_badge.short_description = "Operación"
-
-    def monto_limite_display(self, obj):
-        """Monto límite formateado"""
-        monto_formateado = f"{obj.monto_maximo_sin_autorizacion:,.2f}"
-        return format_html('<strong style="color:#0d6efd;">₲{}</strong>', monto_formateado)
-
-    monto_limite_display.short_description = "Monto Límite"
+    def monto_maximo_display(self, obj):
+        return f"₲{obj.monto_maximo:,.0f}"
+    monto_maximo_display.short_description = "Monto Máximo"
 
     def doble_autorizacion_badge(self, obj):
-        """Indicador de doble autorización"""
         if obj.requiere_autorizacion_doble:
-            return format_html('<span style="color:#dc3545;">{}</span>', "⚠️ Requiere doble autorización")
-        return format_html('<span style="color:#6c757d;">{}</span>', "Autorización simple")
-
+            return format_html('<span style="color:#dc3545;">⚠️ Doble</span>')
+        return "Simple"
     doble_autorizacion_badge.short_description = "Autorización"
 
-    def activo_badge(self, obj):
-        """Estado estado"""
-        if obj.estado:
-            return format_html(
-                '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-                "ACTIVO",
-            )
-        return format_html(
-            '<span style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            "INACTIVO",
-        )
 
-    activo_badge.short_description = "Estado"
+# ==============================================================================
+# REGISTRO DE AUTORIZACIÓN
+# ==============================================================================
 
-
-@admin.register(RegistroAutorizaciones)
-class RegistroAutorizacionesAdmin(admin.ModelAdmin):
-    """Admin para Registro de Autorizaciones"""
-
+@admin.register(RegistroAutorizacion)
+class RegistroAutorizacionAdmin(admin.ModelAdmin):
     list_display = [
-        "id_autorizacion",
-        "operacion_badge",
+        "id",
+        "tipo_operacion_badge",
         "monto_display",
-        "solicitante_info",
-        "autorizador_info",
-        "autorizador2_info",
-        "fecha_autorizacion_display",
+        "solicitante_link",
+        "autorizador_link",
+        "fecha_autorizacion",
     ]
-
     list_filter = ["tipo_operacion", "fecha_autorizacion"]
     search_fields = [
-        "id_empleado_solicitante__nombre",
-        "id_empleado_solicitante__apellido",
-        "id_empleado_autorizador__nombre",
-        "id_empleado_autorizador__apellido",
+        "solicitante__nombre", "solicitante__apellido",
+        "autorizador__nombre", "autorizador__apellido",
         "motivo",
     ]
     readonly_fields = ["fecha_autorizacion", "ip_address"]
+    list_select_related = ["solicitante", "autorizador"]
     date_hierarchy = "fecha_autorizacion"
     ordering = ["-fecha_autorizacion"]
-
     fieldsets = (
-        ("Operación", {"fields": ("tipo_operacion", "monto", "motivo")}),
-        (
-            "Participantes",
-            {
-                "fields": (
-                    "id_empleado_solicitante",
-                    "id_empleado_autorizador",
-                    "id_empleado_autorizador_2",
-                )
-            },
-        ),
-        (
-            "Referencias",
-            {"fields": ("id_venta", "id_compra", "id_ajuste"), "classes": ("collapse",)},
-        ),
-        ("Auditoría", {"fields": ("fecha_autorizacion", "ip_address"), "classes": ("collapse",)}),
+        ("Operación", {
+            "fields": ("tipo_operacion", "monto", "motivo")
+        }),
+        ("Participantes", {
+            "fields": ("solicitante", "autorizador", "autorizador_2")
+        }),
+        ("Referencias", {
+            "fields": ("venta", "compra", "ajuste"),
+            "classes": ("collapse",),
+        }),
+        ("Auditoría", {
+            "fields": ("fecha_autorizacion", "ip_address"),
+            "classes": ("collapse",),
+        }),
     )
 
-    def operacion_badge(self, obj):
-        """Tipo de operación"""
+    def get_readonly_fields(self, request, obj=None):
+        """Registro de autorización inmutable una vez creado."""
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
+    def tipo_operacion_badge(self, obj):
         return format_html(
             '<span style="background:#17a2b8;color:white;padding:2px 8px;border-radius:3px;font-size:10px;">{}</span>',
-            obj.tipo_operacion.upper().replace("_", " "),
+            obj.tipo_operacion,
         )
-
-    operacion_badge.short_description = "Operación"
+    tipo_operacion_badge.short_description = "Operación"
 
     def monto_display(self, obj):
-        """Monto formateado"""
-        monto_formateado = f"{obj.monto:,.2f}"
-        return format_html('<strong style="color:#dc3545;">₲{}</strong>', monto_formateado)
-
+        return f"₲{obj.monto:,.0f}"
     monto_display.short_description = "Monto"
 
-    def solicitante_info(self, obj):
-        """Empleado solicitante"""
-        if obj.id_empleado_solicitante:
-            return format_html("{} {}", obj.id_empleado_solicitante.nombre, obj.id_empleado_solicitante.apellido)
-        return "-"
+    def solicitante_link(self, obj):
+        url = reverse("admin:usuarios_usuario_change", args=[obj.solicitante.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.solicitante.nombre_completo)
+    solicitante_link.short_description = "Solicitante"
 
-    solicitante_info.short_description = "Solicitante"
-
-    def autorizador_info(self, obj):
-        """Primer autorizador"""
-        if obj.id_empleado_autorizador:
-            return format_html(
-                '<span style="color:#28a745;">{} {}</span>',
-                obj.id_empleado_autorizador.nombre,
-                obj.id_empleado_autorizador.apellido,
-            )
-        return "-"
-
-    autorizador_info.short_description = "Autorizador 1"
-
-    def autorizador2_info(self, obj):
-        """Segundo autorizador"""
-        if obj.id_empleado_autorizador_2:
-            return format_html(
-                '<span style="color:#28a745;">{} {}</span>',
-                obj.id_empleado_autorizador_2.nombre,
-                obj.id_empleado_autorizador_2.apellido,
-            )
-        return format_html('<small style="color:#6c757d;">{}</small>', "-")
-
-    autorizador2_info.short_description = "Autorizador 2"
-
-    def fecha_autorizacion_display(self, obj):
-        """Fecha de autorización formateada"""
-        return obj.fecha_autorizacion.strftime("%d/%m/%Y %H:%M")
-
-    fecha_autorizacion_display.short_description = "Fecha"
+    def autorizador_link(self, obj):
+        url = reverse("admin:usuarios_usuario_change", args=[obj.autorizador.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.autorizador.nombre_completo)
+    autorizador_link.short_description = "Autorizador"
