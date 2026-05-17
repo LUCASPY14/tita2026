@@ -89,26 +89,28 @@ CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
 CORS_ALLOW_CREDENTIALS = True
 
 # ==========================================
-# DATABASE PRODUCTION CONFIG (SQL SERVER)
+# DATABASE PRODUCTION CONFIG (PostgreSQL)
 # ==========================================
 
 DATABASES = {
     "default": {
-        "ENGINE": "mssql",
-        "NAME": os.environ.get("DB_NAME", "titadb"),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "1433"),
-        "USER": os.environ.get("DB_USER", ""),
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("DB_NAME", "cantina_tita"),
+        "USER": os.environ.get("DB_USER", "cantina_user"),
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
+        "ATOMIC_REQUESTS": True,
+        "CONN_MAX_AGE": 600,
+        "CONN_HEALTH_CHECKS": True,
         "OPTIONS": {
-            "driver": "ODBC Driver 18 for SQL Server",
-            "extra_params": (
-                "TrustServerCertificate=yes;" "MARS_Connection=yes;" "Encrypt=yes;" "Connection Timeout=30;"
+            "connect_timeout": 10,
+            "options": (
+                "-c statement_timeout=15000ms "
+                "-c lock_timeout=10000ms "
+                "-c idle_in_transaction_session_timeout=10000ms"
             ),
         },
-        "ATOMIC_REQUESTS": True,
-        "CONN_MAX_AGE": 600,  # 10 min
-        "CONN_HEALTH_CHECKS": True,
     }
 }
 

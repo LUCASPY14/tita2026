@@ -6,34 +6,27 @@ from .base import *
 
 DEBUG = True
 
-# Database para desarrollo
 DATABASES = {
     "default": {
-        "ENGINE": "mssql",
-        "NAME": os.environ.get("DB_NAME", "titadb"),
-        "HOST": os.environ.get("DB_HOST", "np:localhost"),
-        "ATOMIC_REQUESTS": False,
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("DB_NAME", "cantina_tita_dev"),
+        "USER": os.environ.get("DB_USER", "postgres"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
+        "ATOMIC_REQUESTS": True,
         "OPTIONS": {
-            "driver": "ODBC Driver 18 for SQL Server",
-            "trusted_connection": "yes",
-            "extra_params": "TrustServerCertificate=yes;MARS_Connection=yes",
+            "connect_timeout": 10,
         },
     }
 }
 
-# CORS más permisivo en desarrollo
 CORS_ALLOW_ALL_ORIGINS = True
 
-# CSRF - Deshabilitar para API (usamos JWT)
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
 ]
 
-# Email backend para desarrollo (consola)
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
-# Mostrar toolbar de debug (opcional, requiere django-debug-toolbar)
-# INSTALLED_APPS += ['debug_toolbar']
-# MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
-# INTERNAL_IPS = ['127.0.0.1']

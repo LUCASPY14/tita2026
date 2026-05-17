@@ -8,6 +8,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
 from django_filters.rest_framework import DjangoFilterBackend
+from .services import VentaService
 
 from .models import (
     Venta,
@@ -35,7 +36,18 @@ class VentaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["estado", "estado_pago", "tipo", "cliente", "fecha"]
-
+    def perform_create(self, serializer):
+        data = serializer.validated_data
+        items = self.request.data.get('items', [])
+        
+        VentaService.registrar_venta(
+            cliente=data.get('cliente'),
+            cajero=self.request.user,
+            tipo=data.get('tipo', 'CONTADO'),
+            medio_pago=data.get('medio_pago'),
+            tarjeta=data.get('tarjeta'),
+            items=items,
+        )
 
 class DetalleVentaViewSet(viewsets.ModelViewSet):
     queryset = DetalleVenta.objects.select_related("venta", "producto").all()

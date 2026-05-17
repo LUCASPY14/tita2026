@@ -65,7 +65,6 @@ INSTALLED_APPS = [
     "apps.productos",
     "apps.ventas",
     "apps.compras",
-    "apps.cobros",
     "apps.inventario",
     "apps.almuerzos",
     "apps.contabilidad",
@@ -119,43 +118,21 @@ TEMPLATES = [
 # BASE DE DATOS
 # ==============================================================================
 
-# Desarrollo: SQLite (sin dependencias externas)
-# Producción: PostgreSQL (configurado por variables de entorno)
-
-if os.environ.get("DB_ENGINE") == "postgresql":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ.get("DB_NAME", "cantina_tita"),
-            "USER": os.environ.get("DB_USER", "cantina_user"),
-            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-            "HOST": os.environ.get("DB_HOST", "localhost"),
-            "PORT": os.environ.get("DB_PORT", "5432"),
-            "ATOMIC_REQUESTS": True,
-            "CONN_MAX_AGE": 60,
-            "OPTIONS": {
-                "connect_timeout": 10,
-                "options": (
-                    "-c statement_timeout=15000ms "
-                    "-c lock_timeout=10000ms "
-                    "-c idle_in_transaction_session_timeout=10000ms"
-                ),
-            },
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("DB_NAME", "cantina_tita"),
+        "USER": os.environ.get("DB_USER", "postgres"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
+        "ATOMIC_REQUESTS": True,
+        "CONN_MAX_AGE": 60,
+        "OPTIONS": {
+            "connect_timeout": 10,
+        },
     }
-else:
-    # SQLite para desarrollo local
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-            "ATOMIC_REQUESTS": True,
-            "OPTIONS": {
-                "timeout": 20,
-                "transaction_mode": "IMMEDIATE",
-            },
-        }
-    }
+}
 
 # ==============================================================================
 # VALIDACIÓN DE CONTRASEÑAS

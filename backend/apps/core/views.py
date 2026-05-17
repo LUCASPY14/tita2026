@@ -3,6 +3,7 @@ Views para la app core
 """
 
 from rest_framework import viewsets
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAuthenticated
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -27,15 +28,17 @@ from .serializers import (
     LimiteTransaccionSerializer,
     RegistroAutorizacionSerializer,
 )
+from .services import TarjetaService
 
 
 class TarjetaViewSet(viewsets.ModelViewSet):
     queryset = Tarjeta.objects.select_related("hijo").all()
     serializer_class = TarjetaSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["estado"]
     search_fields = ["nro_tarjeta", "hijo__nombre", "hijo__apellido"]
+    ordering = ["nro_tarjeta"]
 
 
 class MovimientoTarjetaViewSet(viewsets.ModelViewSet):
@@ -58,6 +61,21 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["tarjeta", "estado"]
+
+    def perform_create(self, serializer):
+        """Si es carga en caja (EFECTIVO/POS), confirmar automaticamente."""
+        carga = serializer.save()
+        
+        # Si es pago en caja, confirmar inmediatamente
+        if carga.metodo_pago in ("EFECTIVO", "POS DEBITO", "POS CREDITO"):
+            TarjetaService.cargar_saldo(
+                tarjeta=carga.tarjeta,
+                monto=carga.monto_cargado,
+                cliente_origen=carga.cliente_origen,
+                responsable=carga.responsable or self.request.user,
+                metodo_pago=carga.metodo_pago,
+                referencia=carga.referencia or "",
+            )
 
 
 class ConsumoTarjetaViewSet(viewsets.ModelViewSet):

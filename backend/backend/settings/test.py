@@ -5,51 +5,35 @@ Configuración para tests
 from .base import *
 
 DEBUG = True
-
-# Deshabilitar soporte de zona horaria en tests para simplificar la ejecución
-# y evitar dependencias de configuración del motor SQL.
 USE_TZ = False
 TIME_ZONE = "UTC"
 
-# Base de datos SQL Server para tests
-_db_user = os.environ.get("DB_USER", "")
-_db_extra = "TrustServerCertificate=yes;MARS_Connection=yes"
-if not _db_user:
-    # Sin usuario → Windows Authentication (instancia local)
-    _db_extra += ";Trusted_Connection=yes"
-
 DATABASES = {
     "default": {
-        "ENGINE": "mssql",
-        "NAME": os.environ.get("DB_NAME", "titadb"),
-        "HOST": os.environ.get("DB_HOST", "."),
-        "PORT": os.environ.get("DB_PORT", ""),
-        "USER": _db_user,
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("DB_TEST_NAME", "cantina_tita_test"),
+        "USER": os.environ.get("DB_USER", "postgres"),
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
         "ATOMIC_REQUESTS": False,
         "OPTIONS": {
-            "driver": "ODBC Driver 18 for SQL Server",
-            "extra_params": _db_extra,
+            "connect_timeout": 10,
         },
         "TEST": {
-            "NAME": os.environ.get("DB_TEST_NAME", "test_titadb"),
+            "NAME": os.environ.get("DB_TEST_NAME", "cantina_tita_test"),
         },
     }
 }
 
-
-# Passwords más simples para tests
 AUTH_PASSWORD_VALIDATORS = []
 
-# Hasher rápido para tests (evita bcrypt lento y tests de rendimiento flaky)
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
-# Email backend para tests
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
-# Logging mínimo en tests
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": True,
