@@ -7,6 +7,7 @@ interface User {
   nombre: string
   apellido: string
   rol: string
+  cliente_id?: number
 }
 
 interface AuthState {

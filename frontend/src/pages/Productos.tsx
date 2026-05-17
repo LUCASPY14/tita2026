@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Table, Input, Tag, message } from 'antd'
-import { SearchOutlined } from '@ant-design/icons'
+import toast from 'react-hot-toast'
 import api from '../services/api'
+import Input from '../components/ui/Input'
+import Badge from '../components/ui/Badge'
+import Table, { type Column } from '../components/ui/Table'
 
 interface Producto {
   id: number
@@ -10,88 +12,49 @@ interface Producto {
   categoria_nombre: string
   precio_actual: string
   activo: boolean
-  stock_minimo: number
 }
+
+const columns: Column<Producto>[] = [
+  { title: 'Codigo', dataIndex: 'codigo_barra', key: 'codigo_barra' },
+  { title: 'Descripcion', dataIndex: 'descripcion', key: 'descripcion' },
+  { title: 'Categoria', dataIndex: 'categoria_nombre', key: 'categoria' },
+  {
+    title: 'Precio',
+    dataIndex: 'precio_actual',
+    key: 'precio',
+    render: (v) => <span className="font-bold text-green-700">Gs. {parseInt(v as string).toLocaleString('es-PY')}</span>,
+  },
+  {
+    title: 'Estado',
+    dataIndex: 'activo',
+    key: 'activo',
+    render: (v) => <Badge color={v ? 'green' : 'red'}>{v ? 'Activo' : 'Inactivo'}</Badge>,
+  },
+]
 
 export default function Productos() {
   const [productos, setProductos] = useState<Producto[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
 
-  const cargarProductos = async () => {
-    setLoading(true)
-    try {
-      const { data } = await api.get('/productos/productos/', {
-        params: { search }
-      })
-      setProductos(data.results || [])
-    } catch {
-      message.error('Error al cargar productos')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    cargarProductos()
+    setLoading(true)
+    api.get('/productos/productos/', { params: search ? { search } : {} })
+      .then(({ data }) => setProductos(data.results || []))
+      .catch(() => toast.error('Error al cargar productos'))
+      .finally(() => setLoading(false))
   }, [search])
-
-  const columns = [
-    {
-      title: 'Codigo',
-      dataIndex: 'codigo_barra',
-      key: 'codigo_barra',
-    },
-    {
-      title: 'Descripcion',
-      dataIndex: 'descripcion',
-      key: 'descripcion',
-    },
-    {
-      title: 'Categoria',
-      dataIndex: 'categoria_nombre',
-      key: 'categoria',
-    },
-    {
-      title: 'Precio',
-      dataIndex: 'precio_actual',
-      key: 'precio',
-      render: (p: string) => (
-        <span className="font-bold text-green-700">
-          Gs. {parseInt(p).toLocaleString('es-PY')}
-        </span>
-      ),
-    },
-    {
-      title: 'Estado',
-      dataIndex: 'activo',
-      key: 'activo',
-      render: (activo: boolean) => (
-        <Tag color={activo ? 'green' : 'red'}>
-          {activo ? 'Activo' : 'Inactivo'}
-        </Tag>
-      ),
-    },
-  ]
 
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Productos</h2>
       <Input
-        prefix={<SearchOutlined />}
-        placeholder="Buscar productos..."
+        placeholder="🔍 Buscar productos..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="mb-4 max-w-md"
-        size="large"
+        className="mb-4 max-w-sm"
       />
-      <Table
-        dataSource={productos}
-        columns={columns}
-        loading={loading}
-        rowKey="id"
-        pagination={{ pageSize: 10 }}
-      />
+      <Table columns={columns} dataSource={productos} rowKey="id" loading={loading} pageSize={10} />
     </div>
   )
 }

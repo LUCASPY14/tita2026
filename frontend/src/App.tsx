@@ -1,63 +1,61 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ConfigProvider, App } from 'antd'
-import esES from 'antd/locale/es_ES'
+import { Toaster } from 'react-hot-toast'
 import Login from './pages/Login'
 import AppLayout from './components/Layout'
+import PortalLayout from './components/PortalLayout'
 import Productos from './pages/Productos'
 import Clientes from './pages/Clientes'
 import Tarjetas from './pages/Tarjetas'
 import Ventas from './pages/Ventas'
 import Caja from './pages/Cajas'
 import Compras from './pages/Compras'
+import Dashboard from './pages/Dashboard'
+import Almuerzos from './pages/Almuerzos'
+import PortalDashboard from './pages/portal/Dashboard'
+import PortalLogin from './pages/portal/Login'
 import { useAuthStore } from './store/authStore'
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />
+function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
+  const { isAuthenticated, user } = useAuthStore()
+  if (!isAuthenticated) return <Navigate to="/login" />
+  if (roles && user && !roles.includes(user.rol)) return <Navigate to="/login" />
+  return <>{children}</>
 }
 
-function Dashboard() {
+export default function App() {
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Panel de Control</h2>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h3 className="text-lg font-bold text-blue-800">Ventas Hoy</h3>
-          <p className="text-3xl font-bold">Gs. 0</p>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <h3 className="text-lg font-bold text-green-800">Clientes</h3>
-          <p className="text-3xl font-bold">10</p>
-        </div>
-        <div className="bg-orange-50 p-4 rounded-lg">
-          <h3 className="text-lg font-bold text-orange-800">Productos</h3>
-          <p className="text-3xl font-bold">12</p>
-        </div>
-      </div>
-    </div>
-  )
-}
+    <BrowserRouter>
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <Routes>
+        {/* Portal padres (separado) */}
+        <Route path="/portal/login" element={<PortalLogin />} />
+        <Route path="/portal" element={
+          <PrivateRoute roles={['CLIENTE_WEB']}>
+            <PortalLayout />
+          </PrivateRoute>
+        }>
+          <Route index element={<PortalDashboard />} />
+        </Route>
 
-export default function AppWrapper() {
-  return (
-    <ConfigProvider locale={esES} theme={{ token: { colorPrimary: '#16a34a' } }}>
-      <App>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route element={<PrivateRoute><AppLayout /></PrivateRoute>}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/ventas" element={<Ventas />} />
-              <Route path="/compras" element={<Compras />} />
-              <Route path="/clientes" element={<Clientes />} />
-              <Route path="/productos" element={<Productos />} />
-              <Route path="/tarjetas" element={<Tarjetas />} />
-              <Route path="/caja" element={<Caja />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/dashboard" />} />
-          </Routes>
-        </BrowserRouter>
-      </App>
-    </ConfigProvider>
+        {/* Sistema de gestión */}
+        <Route path="/login" element={<Login />} />
+        <Route element={
+          <PrivateRoute roles={['ADMIN', 'CAJERO', 'COCINA']}>
+            <AppLayout />
+          </PrivateRoute>
+        }>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/ventas" element={<Ventas />} />
+          <Route path="/compras" element={<Compras />} />
+          <Route path="/clientes" element={<Clientes />} />
+          <Route path="/productos" element={<Productos />} />
+          <Route path="/tarjetas" element={<Tarjetas />} />
+          <Route path="/caja" element={<Caja />} />
+          <Route path="/almuerzos" element={<Almuerzos />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/login" />} />
+      </Routes>
+    </BrowserRouter>
   )
 }

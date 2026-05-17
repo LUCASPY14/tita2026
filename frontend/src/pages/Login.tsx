@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, Input, message } from 'antd'
+import toast from 'react-hot-toast'
 import { useAuthStore } from '../store/authStore'
+import Input from '../components/ui/Input'
+import Button from '../components/ui/Button'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -12,16 +14,16 @@ export default function Login() {
 
   const handleSubmit = async () => {
     if (!email || !password) {
-      message.warning('Ingrese email y contraseña')
+      toast.error('Ingrese email y contrasena')
       return
     }
     setLoading(true)
     try {
       await login(email, password)
-      message.success('Bienvenido a La Cantina de Tita')
+      toast.success('Bienvenido a La Cantina de Tita')
       navigate('/dashboard')
     } catch {
-      message.error('Email o contraseña incorrectos')
+      toast.error('Email o contrasena incorrectos')
     } finally {
       setLoading(false)
     }
@@ -29,35 +31,39 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-green-50">
-      <Card className="w-96 shadow-lg" title={
-        <div className="text-center text-xl">La Cantina de Tita</div>
-      }>
-        <Input
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mb-3"
-          size="large"
-          onPressEnter={handleSubmit}
-        />
-        <Input.Password
-          placeholder="Contrasena"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mb-4"
-          size="large"
-          onPressEnter={handleSubmit}
-        />
-        <Button
-          type="primary"
-          block
-          size="large"
-          loading={loading}
-          onClick={handleSubmit}
-        >
-          Iniciar Sesion
-        </Button>
-      </Card>
+      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">🍽</div>
+          <h1 className="text-2xl font-bold text-gray-900">La Cantina de Tita</h1>
+          <p className="text-sm text-gray-500 mt-1">Sistema de Gestión</p>
+        </div>
+        <div className="space-y-4">
+          <Input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            autoFocus
+          />
+          <Input
+            type="password"
+            placeholder="Contrasena"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+          />
+          <Button
+            variant="primary"
+            block
+            size="lg"
+            loading={loading}
+            onClick={handleSubmit}
+          >
+            Iniciar Sesion
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
