@@ -53,6 +53,7 @@ def _generate_backup_codes(n=8):
     return [secrets.token_hex(3).upper() for _ in range(n)]
 
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters as drf_filters
 
 from .models import (
     Usuario,
@@ -97,9 +98,11 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
     filterset_fields = ["rol", "is_active"]
     search_fields = ["email", "nombre", "apellido"]
+    ordering_fields = ["email", "nombre", "date_joined"]
+    ordering = ["-date_joined"]
 
     def get_permissions(self):
         if self.action == "me":

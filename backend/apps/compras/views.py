@@ -2,9 +2,10 @@
 Views para la app compras
 """
 
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 
 from common.permissions import IsCajeroOrAdmin
+from common.mixins import ExportCSVMixin
 from .filters import CompraFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -31,13 +32,23 @@ from .serializers import (
 )
 
 
-class ProveedorViewSet(viewsets.ModelViewSet):
+class ProveedorViewSet(ExportCSVMixin, viewsets.ModelViewSet):
     queryset = Proveedor.objects.all()
     serializer_class = ProveedorSerializer
     permission_classes = [IsCajeroOrAdmin]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["activo"]
     search_fields = ["ruc", "razon_social"]
+    ordering_fields = ["razon_social", "ruc"]
+    ordering = ["razon_social"]
+    export_filename = "proveedores"
+    export_fields = [
+        ("RUC", "ruc"),
+        ("Razón Social", "razon_social"),
+        ("Teléfono", "telefono"),
+        ("Email", "email"),
+        ("Activo", "activo"),
+    ]
 
 
 class CuentaCorrienteProveedorViewSet(viewsets.ModelViewSet):
@@ -48,12 +59,23 @@ class CuentaCorrienteProveedorViewSet(viewsets.ModelViewSet):
     filterset_fields = ["proveedor", "tipo"]
 
 
-class CompraViewSet(viewsets.ModelViewSet):
+class CompraViewSet(ExportCSVMixin, viewsets.ModelViewSet):
     queryset = Compra.objects.select_related("proveedor").prefetch_related("detalles").all()
     serializer_class = CompraSerializer
     permission_classes = [IsCajeroOrAdmin]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = CompraFilter
+    search_fields = ["proveedor__razon_social", "nro_factura"]
+    ordering_fields = ["fecha", "monto_total"]
+    ordering = ["-fecha"]
+    export_filename = "compras"
+    export_fields = [
+        ("Fecha", lambda o: str(o.fecha)[:10]),
+        ("Proveedor", "proveedor__razon_social"),
+        ("Nro. Factura", "nro_factura"),
+        ("Monto Total", "monto_total"),
+        ("Estado", "estado"),
+    ]
 
 
 class DetalleCompraViewSet(viewsets.ModelViewSet):

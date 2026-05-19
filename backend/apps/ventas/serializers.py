@@ -2,6 +2,7 @@
 Serializers para la app ventas
 """
 
+from decimal import Decimal
 from rest_framework import serializers
 
 from .models import (
@@ -32,6 +33,23 @@ class VentaSerializer(serializers.ModelSerializer):
         model = Venta
         fields = "__all__"
         read_only_fields = ["fecha_creacion"]
+
+    def validate(self, attrs):
+        # monto_total debe ser positivo
+        monto_total = attrs.get("monto_total")
+        if monto_total is not None and monto_total <= Decimal("0"):
+            raise serializers.ValidationError({"monto_total": "El monto total debe ser mayor a cero."})
+
+        # No se puede crear una venta anulada directamente
+        if attrs.get("estado") == "ANULADA" and self.instance is None:
+            raise serializers.ValidationError({"estado": "No se puede crear una venta en estado ANULADA."})
+
+        # El cliente debe estar activo
+        cliente = attrs.get("cliente")
+        if cliente and not getattr(cliente, "activo", True):
+            raise serializers.ValidationError({"cliente": "El cliente está inactivo y no puede realizar compras."})
+
+        return attrs
 
 
 class PagoVentaSerializer(serializers.ModelSerializer):

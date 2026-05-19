@@ -213,6 +213,7 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
 }
 
 # ==============================================================================
@@ -226,6 +227,35 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
 }
+
+# ==============================================================================
+# CACHÉ (Redis cuando esté disponible, memoria local en desarrollo)
+# ==============================================================================
+
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/1")
+
+if os.environ.get("USE_REDIS_CACHE", "False") == "True":
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "SOCKET_CONNECT_TIMEOUT": 5,
+                "SOCKET_TIMEOUT": 5,
+                "IGNORE_EXCEPTIONS": True,
+            },
+            "KEY_PREFIX": "cantina",
+            "TIMEOUT": 300,  # 5 minutos
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "cantina-tita",
+        }
+    }
 
 # ==============================================================================
 # CORS

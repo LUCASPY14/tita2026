@@ -2,10 +2,13 @@
 Configuración de Celery para el proyecto Cantina Tita
 """
 
+import logging
 import os
 
 from celery import Celery
 from celery.schedules import crontab
+
+logger = logging.getLogger(__name__)
 
 # Establecer módulo de settings de Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings.base")
@@ -72,6 +75,46 @@ app.conf.beat_schedule = {
 }
 
 app.conf.timezone = "America/Asuncion"  # Paraguay timezone
+
+# Tareas críticas que disparan alerta cuando fallan
+_CRITICAL_TASKS = {
+    "apps.almuerzos.tasks.generar_cuentas_mensuales",
+    "apps.ventas.tasks.generar_resumen_diario_ventas",
+    "apps.inventario.tasks.generar_resumen_diario_stock",
+}
+
+
+@app.on_after_finalize.connect
+def setup_task_failure_handler(sender, **kwargs):
+    """Registra el signal task_failure para alertar cuando fallen tareas críticas."""
+    from celery.signals import task_failure
+
+    @task_failure.connect
+    def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, einfo=None, **kw):
+        task_name = getattr(sender, "name", "") or ""
+        if task_name not in _CRITICAL_TASKS:
+            return
+        logger.error(
+            "TAREA CRÍTICA FALLÓ | task=%s | id=%s | error=%s",
+            task_name, task_id, exception,
+        )
+        try:
+            import django
+            from django.conf import settings as django_settings
+            for _, admin_email in getattr(django_settings, "ADMINS", []):
+                from apps.notificaciones.services import EmailService
+                EmailService.enviar_simple(
+                    destinatario_email=admin_email,
+                    destinatario_nombre="Admin",
+                    asunto=f"[Cantina Tita] Tarea crítica falló: {task_name}",
+                    cuerpo=(
+                        f"La tarea {task_name} (id={task_id}) falló.\n\n"
+                        f"Error: {exception}\n\n"
+                        f"Traceback:\n{einfo}"
+                    ),
+                )
+        except Exception as e:
+            logger.exception("No se pudo enviar alerta de fallo: %s", e)
 
 
 @app.task(bind=True, ignore_result=True)

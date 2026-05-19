@@ -7,15 +7,17 @@ from decimal import Decimal
 from django.db import models, transaction
 from django.utils import timezone
 
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import IsAdmin, IsStaffUser
+from common.mixins import ExportCSVMixin
 
 from django_filters.rest_framework import DjangoFilterBackend
+from .filters import MovimientoStockFilter, AlertaStockFilter, LoteProductoFilter, AlertaVencimientoFilter
 
 from .models import (
     Stock,
@@ -42,16 +44,30 @@ from .serializers import (
 class StockViewSet(viewsets.ModelViewSet):
     queryset = Stock.objects.select_related("producto").all()
     serializer_class = StockSerializer
-
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["producto__descripcion", "producto__codigo_barra"]
+    ordering_fields = ["cantidad", "fecha_actualizacion"]
+    ordering = ["-fecha_actualizacion"]
 
 
-class MovimientoStockViewSet(viewsets.ModelViewSet):
+class MovimientoStockViewSet(ExportCSVMixin, viewsets.ModelViewSet):
     queryset = MovimientoStock.objects.select_related("producto").all()
     serializer_class = MovimientoStockSerializer
-
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["producto", "tipo", "motivo"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = MovimientoStockFilter
+    search_fields = ["producto__descripcion", "observaciones"]
+    ordering_fields = ["fecha", "cantidad"]
+    ordering = ["-fecha"]
+    export_filename = "movimientos_stock"
+    export_fields = [
+        ("Fecha", lambda o: str(o.fecha)[:19]),
+        ("Producto", "producto__descripcion"),
+        ("Tipo", "tipo"),
+        ("Motivo", "motivo"),
+        ("Cantidad", "cantidad"),
+        ("Stock Resultante", "stock_resultante"),
+        ("Observaciones", "observaciones"),
+    ]
 
 
 class AjusteInventarioViewSet(viewsets.ModelViewSet):
@@ -144,25 +160,31 @@ class CostoHistoricoViewSet(viewsets.ModelViewSet):
 class AlertaStockViewSet(viewsets.ModelViewSet):
     queryset = AlertaStock.objects.select_related("producto").all()
     serializer_class = AlertaStockSerializer
-
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["producto", "tipo", "activa"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = AlertaStockFilter
+    search_fields = ["producto__descripcion"]
+    ordering_fields = ["id"]
+    ordering = ["-id"]
 
 
 class LoteProductoViewSet(viewsets.ModelViewSet):
     queryset = LoteProducto.objects.select_related("producto").all()
     serializer_class = LoteProductoSerializer
-
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["producto", "bloqueado"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = LoteProductoFilter
+    search_fields = ["produto__descripcion", "nro_lote"]
+    ordering_fields = ["fecha_vencimiento", "fecha_ingreso"]
+    ordering = ["fecha_vencimiento"]
 
 
 class AlertaVencimientoViewSet(viewsets.ModelViewSet):
     queryset = AlertaVencimiento.objects.select_related("lote").all()
     serializer_class = AlertaVencimientoSerializer
-
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["lote", "tipo"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = AlertaVencimientoFilter
+    search_fields = ["lote__nro_lote", "lote__produto__descripcion"]
+    ordering_fields = ["id"]
+    ordering = ["-id"]
 
 
 class StockCriticoView(APIView):

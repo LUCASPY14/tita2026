@@ -11,6 +11,7 @@ import Modal from '../components/ui/Modal'
 import {
   Search, ShoppingCart, CreditCard, X, Plus, Minus, User,
   Wallet, Banknote, Tag, AlertTriangle, CheckCircle, History,
+  Eye, XCircle, Download,
 } from 'lucide-react'
 
 // ─── Historial interfaces ─────────────────────────────────────────────────────
@@ -22,6 +23,18 @@ interface VentaHistorial {
   tipo: string
   monto_total: string
   estado: string
+}
+
+interface DetalleVenta {
+  id: number
+  producto_nombre: string
+  cantidad: number
+  precio_unitario: string
+  subtotal: string
+}
+
+interface VentaDetalle extends VentaHistorial {
+  detalles: DetalleVenta[]
 }
 
 type PageTab = 'pos' | 'historial'
@@ -154,6 +167,14 @@ export default function Ventas() {
   const [histPage, setHistPage] = useState(1)
   const [histTotal, setHistTotal] = useState(0)
   const histTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  // ── Venta detail modal ─────────────────────────────────────────────
+  const [ventaDetalle, setVentaDetalle] = useState<VentaDetalle | null>(null)
+  const [loadingDetalle, setLoadingDetalle] = useState(false)
+
+  // ── Anular venta ───────────────────────────────────────────────────
+  const [ventaAnular, setVentaAnular] = useState<VentaHistorial | null>(null)
+  const [anulando, setAnulando] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -324,6 +345,63 @@ export default function Ventas() {
     }
   }, [])
 
+  const loadVentaDetalle = useCallback(async (id: number) => {
+    setLoadingDetalle(true)
+    try {
+      const { data } = await api.get(`/ventas/ventas/${id}/`)
+      setVentaDetalle(data)
+    } catch {
+      toast.error('Error al cargar detalles de la venta')
+    } finally {
+      setLoadingDetalle(false)
+    }
+  }, [])
+
+  const anularVenta = async () => {
+    if (!ventaAnular) return
+    setAnulando(true)
+    try {
+      await api.post(`/ventas/ventas/${ventaAnular.id}/anular/`)
+      toast.success('Venta anulada correctamente')
+      setVentaAnular(null)
+      loadHistorial(histSearch, histDesde, histHasta, histTipo, histPage)
+    } catch (e: unknown) {
+      toast.error(extractErrorMessage(e))
+    } finally {
+      setAnulando(false)
+    }
+  }
+
+  const exportCSV = useCallback(() => {
+    if (historial.length === 0) { toast.error('No hay datos para exportar'); return }
+    const headers = ['ID', 'Fecha', 'Cliente', 'Tipo', 'Monto', 'Estado']
+    const rows = historial.map(v => [
+      v.id,
+      v.fecha,
+      v.cliente_nombre || '',
+      v.tipo,
+      Number(v.monto_total) || 0,
+      v.estado,
+    ])
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'ventas.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }, [historial])
+
+  // Ctrl+Enter to trigger cobrar confirmation from POS
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'Enter' && pageTab === 'pos' && carrito.length > 0 && !showConfirm) {
+        setShowConfirm(true)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [pageTab, carrito.length, showConfirm])
+
   useEffect(() => {
     if (pageTab !== 'historial') return
     clearTimeout(histTimer.current)
@@ -364,6 +442,29 @@ export default function Ventas() {
     {
       title: 'Estado', key: 'estado', width: 100,
       render: (_, r) => <Badge color={r.estado === 'ACTIVA' ? 'green' : 'default'}>{r.estado}</Badge>,
+    },
+    {
+      title: '', key: 'acciones', width: 90,
+      render: (_, r) => (
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => loadVentaDetalle(r.id)}
+            title="Ver detalle"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition-colors cursor-pointer"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          {r.estado !== 'ANULADA' && (
+            <button
+              onClick={() => setVentaAnular(r)}
+              title="Anular venta"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+            >
+              <XCircle className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      ),
     },
   ]
 
@@ -447,6 +548,14 @@ export default function Ventas() {
                 <option value="CREDITO">Crédito</option>
               </select>
             </div>
+            <button
+              onClick={exportCSV}
+              title="Exportar CSV"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:text-green-700 hover:border-green-300 transition-colors cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              CSV
+            </button>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -744,6 +853,97 @@ export default function Ventas() {
         </div>
       </div>
       }
+
+      {/* ── Modal detalle de venta ────────────────────────────────── */}
+      <Modal
+        open={ventaDetalle !== null}
+        title={`Venta #${ventaDetalle?.id ?? ''}`}
+        onOk={() => setVentaDetalle(null)}
+        onCancel={() => setVentaDetalle(null)}
+        okText="Cerrar"
+        width={520}
+      >
+        {loadingDetalle ? (
+          <div className="py-8 text-center text-slate-400 text-sm">Cargando...</div>
+        ) : ventaDetalle ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1.5">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Cliente</p>
+                <p className="font-medium text-slate-800">{ventaDetalle.cliente_nombre || '—'}</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1.5">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Fecha</p>
+                <p className="font-medium text-slate-800 tabular-nums">{formatFecha(ventaDetalle.fecha)}</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1.5">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Tipo</p>
+                <Badge color={TIPO_COLOR[ventaDetalle.tipo] ?? 'default'}>{ventaDetalle.tipo}</Badge>
+              </div>
+              <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1.5">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Estado</p>
+                <Badge color={ventaDetalle.estado === 'ACTIVA' ? 'green' : 'default'}>{ventaDetalle.estado}</Badge>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Productos</p>
+              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 overflow-hidden">
+                {(ventaDetalle.detalles ?? []).map((d) => (
+                  <div key={d.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-slate-800 truncate">{d.producto_nombre}</p>
+                      <p className="text-xs text-slate-500 tabular-nums">
+                        {d.cantidad} × Gs. {(Number(d.precio_unitario) || 0).toLocaleString('es-PY')}
+                      </p>
+                    </div>
+                    <span className="font-semibold text-emerald-700 tabular-nums ml-4">
+                      Gs. {(Number(d.subtotal) || 0).toLocaleString('es-PY')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-between items-center px-4 py-3 bg-green-50 rounded-xl border border-green-100">
+              <span className="text-base font-bold text-slate-700">TOTAL</span>
+              <span className="text-xl font-extrabold text-emerald-700 tabular-nums">
+                Gs. {(Number(ventaDetalle.monto_total) || 0).toLocaleString('es-PY')}
+              </span>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* ── Modal anular venta ────────────────────────────────────── */}
+      <Modal
+        open={ventaAnular !== null}
+        title="Anular venta"
+        onOk={anularVenta}
+        onCancel={() => setVentaAnular(null)}
+        confirmLoading={anulando}
+        okText="Anular"
+        width={400}
+      >
+        <div className="space-y-3 text-sm">
+          <p className="text-slate-600">
+            ¿Confirma la anulación de la venta <span className="font-semibold">#{ventaAnular?.id}</span>?
+          </p>
+          {ventaAnular && (
+            <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Cliente</span>
+                <span className="font-medium text-slate-800">{ventaAnular.cliente_nombre || '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Monto</span>
+                <span className="font-semibold text-emerald-700 tabular-nums">
+                  Gs. {(Number(ventaAnular.monto_total) || 0).toLocaleString('es-PY')}
+                </span>
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-slate-400">Esta acción no se puede deshacer.</p>
+        </div>
+      </Modal>
 
       <Modal
         open={showConfirm}

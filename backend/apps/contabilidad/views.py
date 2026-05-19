@@ -9,7 +9,7 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -45,6 +45,10 @@ class CajaViewSet(viewsets.ModelViewSet):
     queryset = Caja.objects.all()
     serializer_class = CajaSerializer
     permission_classes = [IsCajeroOrAdmin]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["nombre", "descripcion"]
+    ordering_fields = ["nombre", "id"]
+    ordering = ["nombre"]
 
 
 class CierreCajaViewSet(viewsets.ModelViewSet):

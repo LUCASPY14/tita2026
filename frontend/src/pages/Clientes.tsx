@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import {
   Plus, Search, Users, Edit2, AlertTriangle,
@@ -127,12 +128,15 @@ interface ClienteModalProps {
 }
 
 function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onSaved }: ClienteModalProps) {
-  const [form, setForm] = useState<ClienteForm>(BLANK_CLIENTE)
   const [saving, setSaving] = useState(false)
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<ClienteForm>({
+    defaultValues: BLANK_CLIENTE,
+  })
+  const activo = watch('activo')
 
   useEffect(() => {
     if (!open) return
-    setForm(cliente
+    reset(cliente
       ? {
           nombres: cliente.nombres,
           apellidos: cliente.apellidos,
@@ -149,18 +153,9 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
         }
       : BLANK_CLIENTE
     )
-  }, [open, cliente])
+  }, [open, cliente, reset])
 
-  function setText(field: keyof ClienteForm) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setForm(prev => ({ ...prev, [field]: e.target.value }))
-  }
-
-  async function handleSave() {
-    if (!form.nombres || !form.apellidos || !form.ruc_ci || !form.tipo_cliente || !form.lista_precio) {
-      toast.error('Completá los campos obligatorios')
-      return
-    }
+  const onSubmit = handleSubmit(async (form) => {
     setSaving(true)
     const payload = {
       ...form,
@@ -183,9 +178,15 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
     } finally {
       setSaving(false)
     }
-  }
+  })
 
-  const selectClass = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
+  const selectClass = (hasError?: boolean) => [
+    'w-full border rounded-xl px-3 py-2 text-sm text-slate-900 bg-white',
+    'focus:outline-none focus:ring-2 transition-colors duration-150',
+    hasError
+      ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500'
+      : 'border-slate-200 focus:ring-green-500/30 focus:border-green-500',
+  ].join(' ')
   const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   return (
@@ -193,7 +194,7 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
       open={open}
       title={cliente ? `Editar — ${cliente.apellidos}, ${cliente.nombres}` : 'Nuevo Cliente'}
       onCancel={onClose}
-      onOk={handleSave}
+      onOk={onSubmit}
       okText={cliente ? 'Guardar Cambios' : 'Crear Cliente'}
       confirmLoading={saving}
       width={680}
@@ -203,52 +204,50 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Nombres *"
-            value={form.nombres}
-            onChange={setText('nombres')}
             placeholder="Ej: Juan Carlos"
+            error={errors.nombres?.message}
+            {...register('nombres', { required: 'El nombre es obligatorio' })}
           />
           <Input
             label="Apellidos *"
-            value={form.apellidos}
-            onChange={setText('apellidos')}
             placeholder="Ej: González Pérez"
+            error={errors.apellidos?.message}
+            {...register('apellidos', { required: 'Los apellidos son obligatorios' })}
           />
           <Input
             label="RUC / CI *"
-            value={form.ruc_ci}
-            onChange={setText('ruc_ci')}
             placeholder="Ej: 1234567-8"
+            error={errors.ruc_ci?.message}
+            {...register('ruc_ci', { required: 'El RUC/CI es obligatorio' })}
           />
           <Input
             label="Razón Social"
-            value={form.razon_social}
-            onChange={setText('razon_social')}
             placeholder="Solo si es empresa"
+            {...register('razon_social')}
           />
           <Input
             label="Teléfono"
-            value={form.telefono}
-            onChange={setText('telefono')}
             placeholder="+595 981 000 000"
+            {...register('telefono')}
           />
           <Input
             label="Email"
             type="email"
-            value={form.email}
-            onChange={setText('email')}
             placeholder="cliente@email.com"
+            error={errors.email?.message}
+            {...register('email', {
+              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Email inválido' },
+            })}
           />
           <Input
             label="Dirección"
-            value={form.direccion}
-            onChange={setText('direccion')}
             placeholder="Calle y número"
+            {...register('direccion')}
           />
           <Input
             label="Ciudad"
-            value={form.ciudad}
-            onChange={setText('ciudad')}
             placeholder="Asunción"
+            {...register('ciudad')}
           />
         </div>
 
@@ -256,30 +255,37 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
         <div className="border-t border-slate-100 pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={labelClass}>Tipo de Cliente *</label>
-            <select required value={form.tipo_cliente} onChange={setText('tipo_cliente')} className={selectClass}>
+            <select
+              className={selectClass(!!errors.tipo_cliente)}
+              {...register('tipo_cliente', { required: 'Seleccioná un tipo' })}
+            >
               <option value="">Seleccionar...</option>
               {tiposCliente.map(t => (
                 <option key={t.id} value={t.id}>{t.nombre}</option>
               ))}
             </select>
+            {errors.tipo_cliente && <p className="text-xs text-red-500 mt-0.5">{errors.tipo_cliente.message}</p>}
           </div>
           <div>
             <label className={labelClass}>Lista de Precio *</label>
-            <select required value={form.lista_precio} onChange={setText('lista_precio')} className={selectClass}>
+            <select
+              className={selectClass(!!errors.lista_precio)}
+              {...register('lista_precio', { required: 'Seleccioná una lista' })}
+            >
               <option value="">Seleccionar...</option>
               {listasPrecios.map(l => (
                 <option key={l.id} value={l.id}>{l.nombre}</option>
               ))}
             </select>
+            {errors.lista_precio && <p className="text-xs text-red-500 mt-0.5">{errors.lista_precio.message}</p>}
           </div>
           <Input
             label="Límite de Crédito (Gs.)"
             type="number"
             min="0"
             step="1000"
-            value={form.limite_credito}
-            onChange={setText('limite_credito')}
             placeholder="0"
+            {...register('limite_credito', { min: { value: 0, message: 'Debe ser ≥ 0' } })}
           />
         </div>
 
@@ -288,22 +294,22 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
           <button
             type="button"
             role="switch"
-            aria-checked={form.activo}
-            onClick={() => setForm(prev => ({ ...prev, activo: !prev.activo }))}
+            aria-checked={activo}
+            onClick={() => setValue('activo', !activo)}
             className={[
               'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30',
-              form.activo ? 'bg-green-500' : 'bg-slate-200',
+              activo ? 'bg-green-500' : 'bg-slate-200',
             ].join(' ')}
           >
             <span
               className={[
                 'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200',
-                form.activo ? 'translate-x-5' : 'translate-x-0',
+                activo ? 'translate-x-5' : 'translate-x-0',
               ].join(' ')}
             />
           </button>
           <span className="text-sm text-slate-700 font-medium">
-            Cliente {form.activo ? 'activo' : 'inactivo'}
+            Cliente {activo ? 'activo' : 'inactivo'}
           </span>
         </div>
       </div>
