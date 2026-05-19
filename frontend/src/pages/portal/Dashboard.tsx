@@ -1,231 +1,466 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+import {
+  CreditCard, AlertTriangle, UtensilsCrossed, History,
+  CalendarCheck, CheckCircle2, Clock, AlertCircle,
+} from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 import Spinner from '../../components/ui/Spinner'
-import Button from '../../components/ui/Button'
+import Badge, { type BadgeColor } from '../../components/ui/Badge'
 
-interface Hijo {
-  id: number
-  nombre_completo: string
-  grado: string
-}
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
-interface TarjetaInfo {
+interface Tarjeta {
   nro_tarjeta: string
-  saldo_actual: string
+  saldo_actual: number
+  estado: string
+  en_alerta: boolean
 }
 
-interface CuentaAlmuerzo {
-  id: number
-  mes: number
-  anio: number
+interface Restriccion {
+  tipo: string
+  severidad: string
+  descripcion: string
+  requiere_autorizacion: boolean
+}
+
+interface ConsumoReciente {
+  fecha_consumo: string
+  costo_almuerzo: string
+  ya_cobrado: boolean
+}
+
+interface CuentaMensual {
   cantidad_almuerzos: number
-  monto_total: string
-  monto_pagado: string
+  monto_total: number
+  monto_pagado: number
+  monto_pendiente: number
   estado: string
 }
 
-export default function PortalDashboard() {
-  const { user, logout } = useAuthStore()
-  const [hijos, setHijos] = useState<Hijo[]>([])
-  const [tarjetas, setTarjetas] = useState<Record<number, TarjetaInfo>>({})
-  const [cuentas, setCuentas] = useState<Record<number, CuentaAlmuerzo[]>>({})
-  const [loading, setLoading] = useState(true)
-  const [hijoExpandido, setHijoExpandido] = useState<number | null>(null)
-  const [montoRecarga, setMontoRecarga] = useState<Record<number, number>>({})
-  const [recargando, setRecargando] = useState(false)
+interface HijoData {
+  id: number
+  nombre: string
+  grado: string | null
+  tarjeta: Tarjeta | null
+  restricciones: Restriccion[]
+  consumos_mes: { total: number; cobrados: number; ultimos: ConsumoReciente[] }
+  cuenta_mensual: CuentaMensual | null
+}
 
-  const meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+interface PortalData {
+  cliente: { id: number; nombre: string; email: string }
+  mes: { anio: number; mes: number }
+  hijos: HijoData[]
+}
 
-  const cargarDatos = async () => {
-    if (!user?.cliente_id) return
-    setLoading(true)
-    try {
-      const { data } = await api.get('/clientes/hijos/', {
-        params: { cliente_responsable: user.cliente_id }
-      })
-      const lista: Hijo[] = data.results || []
-      setHijos(lista)
+interface Suscripcion {
+  id: number
+  plan: number
+  plan_nombre: string
+  estado: string
+  fecha_inicio: string
+  fecha_fin: string | null
+  observaciones: string
+}
 
-      const tData: Record<number, TarjetaInfo> = {}
-      const cData: Record<number, CuentaAlmuerzo[]> = {}
-      
-      for (const h of lista) {
-        try {
-          const { data: tResp } = await api.get('/core/tarjetas/', {
-            params: { search: h.nombre_completo }
-          })
-          const encontrada = (tResp.results || []).find(
-            (t: { hijo_nombre: string }) => t.hijo_nombre === h.nombre_completo
-          )
-          if (encontrada) tData[h.id] = encontrada
-        } catch {}
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-        try {
-          const { data: cResp } = await api.get('/almuerzos/cuentas-mensuales/', {
-            params: { hijo: h.id, ordering: '-anio,-mes' }
-          })
-          cData[h.id] = cResp.results || []
-        } catch {}
-      }
-      setTarjetas(tData)
-      setCuentas(cData)
-    } catch {} finally {
-      setLoading(false)
-    }
+type HijoTab = 'resumen' | 'historial' | 'plan'
+
+const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+const SEVERIDAD_COLOR: Record<string, BadgeColor> = {
+  CRITICA: 'red', ALTA: 'orange', MEDIA: 'yellow', BAJA: 'default',
+}
+
+const CUENTA_COLOR: Record<string, BadgeColor> = {
+  PAGADO: 'green', PARCIAL: 'blue', PENDIENTE: 'orange',
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatGs(n: number) {
+  return 'Gs. ' + (Number(n) || 0).toLocaleString('es-PY')
+}
+
+function formatFecha(iso: string) {
+  return new Date(iso).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap',
+        active ? 'border-green-500 text-green-700' : 'border-transparent text-slate-500 hover:text-slate-700',
+      ].join(' ')}
+    >
+      {children}
+    </button>
+  )
+}
+
+function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: number } }) {
+  return (
+    <div className="space-y-4">
+      {/* Tarjeta saldo */}
+      {hijo.tarjeta ? (
+        <div className={[
+          'rounded-2xl border p-4',
+          hijo.tarjeta.en_alerta
+            ? 'bg-red-50 border-red-200'
+            : hijo.tarjeta.estado === 'BLOQUEADA'
+              ? 'bg-slate-100 border-slate-300'
+              : 'bg-green-50 border-green-200',
+        ].join(' ')}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <CreditCard className={`w-4 h-4 ${hijo.tarjeta.en_alerta ? 'text-red-500' : 'text-green-600'}`} />
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Tarjeta escolar</p>
+              </div>
+              <p className={`text-3xl font-bold tabular-nums ${hijo.tarjeta.en_alerta ? 'text-red-700' : 'text-emerald-700'}`}>
+                {formatGs(hijo.tarjeta.saldo_actual)}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">{hijo.tarjeta.nro_tarjeta}</p>
+            </div>
+            <div className="text-right space-y-1.5">
+              <Badge color={hijo.tarjeta.estado === 'ACTIVA' ? 'green' : 'default'}>
+                {hijo.tarjeta.estado}
+              </Badge>
+              {hijo.tarjeta.en_alerta && (
+                <div className="flex items-center gap-1 justify-end">
+                  <AlertTriangle className="w-3 h-3 text-red-500" />
+                  <span className="text-xs text-red-600 font-medium">Saldo bajo</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 flex items-center gap-3 text-slate-400">
+          <CreditCard className="w-5 h-5" />
+          <p className="text-sm">Sin tarjeta asignada</p>
+        </div>
+      )}
+
+      {/* Restricciones */}
+      {hijo.restricciones.length > 0 && (
+        <div className="space-y-2">
+          {hijo.restricciones.map((r, i) => (
+            <div
+              key={i}
+              className={[
+                'rounded-xl border px-4 py-3 flex items-start gap-3',
+                r.severidad === 'CRITICA' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200',
+              ].join(' ')}
+            >
+              <AlertCircle className={`w-4 h-4 mt-0.5 shrink-0 ${r.severidad === 'CRITICA' ? 'text-red-500' : 'text-amber-500'}`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800">{r.tipo}</p>
+                {r.descripcion && <p className="text-xs text-slate-500 mt-0.5">{r.descripcion}</p>}
+              </div>
+              <Badge color={SEVERIDAD_COLOR[r.severidad] ?? 'default'}>{r.severidad}</Badge>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Cuenta mensual */}
+      {hijo.cuenta_mensual ? (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <UtensilsCrossed className="w-4 h-4 text-slate-500" />
+              <p className="text-sm font-semibold text-slate-700">
+                Almuerzo — {MESES[mes.mes]} {mes.anio}
+              </p>
+            </div>
+            <Badge color={CUENTA_COLOR[hijo.cuenta_mensual.estado] ?? 'default'}>
+              {hijo.cuenta_mensual.estado}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 divide-x divide-slate-100">
+            <div className="p-4 text-center">
+              <p className="text-xs text-slate-500 mb-1">Almuerzos tomados</p>
+              <p className="text-2xl font-bold text-slate-800 tabular-nums">{hijo.cuenta_mensual.cantidad_almuerzos}</p>
+            </div>
+            <div className="p-4 text-center">
+              <p className="text-xs text-slate-500 mb-1">Total del mes</p>
+              <p className="text-lg font-bold text-emerald-700 tabular-nums">{formatGs(hijo.cuenta_mensual.monto_total)}</p>
+            </div>
+          </div>
+          {hijo.cuenta_mensual.monto_pendiente > 0 && (
+            <div className="px-4 py-3 bg-red-50 border-t border-red-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-red-500" />
+                <p className="text-sm font-medium text-red-700">Pendiente de pago</p>
+              </div>
+              <p className="text-sm font-bold text-red-700 tabular-nums">
+                {formatGs(hijo.cuenta_mensual.monto_pendiente)}
+              </p>
+            </div>
+          )}
+          {hijo.cuenta_mensual.monto_pendiente === 0 && (
+            <div className="px-4 py-3 bg-green-50 border-t border-green-100 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
+              <p className="text-sm font-medium text-green-700">Cuenta al día</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-slate-100 bg-white px-4 py-6 text-center text-slate-400 text-sm">
+          Sin cuenta de almuerzo en {MESES[mes.mes]}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function HistorialTab({ hijo }: { hijo: HijoData }) {
+  if (hijo.consumos_mes.total === 0) {
+    return (
+      <div className="py-12 text-center text-slate-400">
+        <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 opacity-30" />
+        <p className="text-sm">Sin consumos registrados este mes</p>
+      </div>
+    )
   }
-
-  useEffect(() => { cargarDatos() }, [user])
-
-  const handleRecarga = async (hijoId: number, nroTarjeta: string) => {
-    const monto = montoRecarga[hijoId]
-    if (!monto || monto < 1000) {
-      toast.error('Ingrese un monto válido (mínimo Gs. 1.000)')
-      return
-    }
-    setRecargando(true)
-    try {
-      await api.post('/core/cargas-saldo/', {
-        tarjeta: nroTarjeta,
-        monto_cargado: monto,
-        metodo_pago: 'EFECTIVO',
-      })
-      toast.success('Recarga exitosa')
-      setMontoRecarga((prev) => ({ ...prev, [hijoId]: 0 }))
-      cargarDatos()
-    } catch {
-      toast.error('Error al recargar')
-    } finally {
-      setRecargando(false)
-    }
-  }
-
-  if (loading) return <Spinner />
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Bienvenido, {user?.nombre}</h2>
-          <p className="text-gray-500">Portal de Padres</p>
+    <div className="space-y-3">
+      <div className="flex gap-3">
+        <div className="flex-1 bg-white rounded-xl border border-slate-100 px-4 py-3 text-center">
+          <p className="text-xs text-slate-500">Total almuerzos</p>
+          <p className="text-xl font-bold text-slate-800 tabular-nums">{hijo.consumos_mes.total}</p>
         </div>
-        <button onClick={logout} className="text-sm text-red-500 hover:underline">
-          Cerrar sesión
-        </button>
+        <div className="flex-1 bg-white rounded-xl border border-slate-100 px-4 py-3 text-center">
+          <p className="text-xs text-slate-500">Cobrados</p>
+          <p className="text-xl font-bold text-emerald-700 tabular-nums">{hijo.consumos_mes.cobrados}</p>
+        </div>
       </div>
 
-      <div className="grid gap-6">
-        {hijos.map((hijo) => (
-          <div key={hijo.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            {/* Cabecera */}
-            <div className="p-6">
-              <div className="flex justify-between items-start">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Últimos consumos</p>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {hijo.consumos_mes.ultimos.length === 0 && (
+            <p className="px-4 py-4 text-sm text-slate-400 text-center">Sin registros disponibles</p>
+          )}
+          {hijo.consumos_mes.ultimos.map((c, i) => (
+            <div key={i} className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                  <UtensilsCrossed className="w-4 h-4 text-slate-500" />
+                </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800">{hijo.nombre_completo}</h3>
-                  <p className="text-sm text-gray-500">{hijo.grado || 'Sin grado'}</p>
+                  <p className="text-sm font-medium text-slate-800">Almuerzo</p>
+                  <p className="text-xs text-slate-400">{formatFecha(c.fecha_consumo)}</p>
                 </div>
-                {tarjetas[hijo.id] && (
-                  <div className="text-right">
-                    <p className="text-xs text-gray-400">Saldo tarjeta</p>
-                    <p className="text-2xl font-bold text-green-700">
-                      Gs. {parseInt(tarjetas[hijo.id].saldo_actual).toLocaleString('es-PY')}
-                    </p>
-                    <p className="text-xs text-gray-400">{tarjetas[hijo.id].nro_tarjeta}</p>
-                  </div>
-                )}
               </div>
-
-              {/* Cuenta almuerzo */}
-              {cuentas[hijo.id]?.length > 0 && (
-                <div className="mt-4 bg-orange-50 rounded-lg p-3">
-                  <p className="text-sm font-bold text-orange-800">
-                    🍽️ Cuenta Almuerzo - {meses[cuentas[hijo.id][0].mes]} {cuentas[hijo.id][0].anio}
-                  </p>
-                  <div className="flex justify-between mt-1 text-sm">
-                    <span>Total: Gs. {parseInt(cuentas[hijo.id][0].monto_total).toLocaleString('es-PY')}</span>
-                    <span>Pagado: Gs. {parseInt(cuentas[hijo.id][0].monto_pagado).toLocaleString('es-PY')}</span>
-                    <span className="font-bold text-red-600">
-                      Pendiente: Gs. {(parseInt(cuentas[hijo.id][0].monto_total) - parseInt(cuentas[hijo.id][0].monto_pagado)).toLocaleString('es-PY')}
-                    </span>
-                  </div>
-                </div>
-              )}
+              <div className="text-right">
+                <p className="text-sm font-semibold text-slate-800 tabular-nums">
+                  {c.ya_cobrado ? formatGs(Number(c.costo_almuerzo)) : '—'}
+                </p>
+                <Badge color={c.ya_cobrado ? 'orange' : 'green'}>
+                  {c.ya_cobrado ? 'Cobrado' : 'Sin cargo'}
+                </Badge>
+              </div>
             </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
-            {/* Acciones */}
-            <div className="bg-gray-50 px-6 py-3 flex gap-2 border-t">
-              {tarjetas[hijo.id] && (
-                <div className="flex gap-1 flex-1">
-                  <input
-                    type="number"
-                    placeholder="Monto Gs."
-                    className="border rounded px-2 py-1 w-28 text-sm"
-                    value={montoRecarga[hijo.id] || ''}
-                    onChange={(e) => setMontoRecarga((prev) => ({ ...prev, [hijo.id]: parseInt(e.target.value) || 0 }))}
-                  />
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    loading={recargando}
-                    onClick={() => handleRecarga(hijo.id, tarjetas[hijo.id].nro_tarjeta)}
-                  >
-                    Recargar
-                  </Button>
-                </div>
-              )}
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setHijoExpandido(hijoExpandido === hijo.id ? null : hijo.id)}
-              >
-                {hijoExpandido === hijo.id ? 'Ocultar' : 'Ver consumos'}
-              </Button>
+function PlanTab({ suscripciones, loading }: { suscripciones: Suscripcion[] | undefined; loading: boolean }) {
+  if (loading) return <Spinner className="mt-8" />
+
+  if (!suscripciones || suscripciones.length === 0) {
+    return (
+      <div className="py-12 text-center text-slate-400">
+        <CalendarCheck className="w-10 h-10 mx-auto mb-3 opacity-30" />
+        <p className="text-sm">Sin plan de almuerzo activo</p>
+        <p className="text-xs mt-1">Consultá con la cantina para suscribirte</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {suscripciones.map(s => (
+        <div key={s.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-green-50 border-b border-green-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CalendarCheck className="w-4 h-4 text-green-600" />
+              <p className="text-sm font-semibold text-green-800">{s.plan_nombre}</p>
             </div>
-
-            {/* Consumos expandidos */}
-            {hijoExpandido === hijo.id && cuentas[hijo.id] && (
-              <div className="px-6 pb-4">
-                <table className="w-full text-sm mt-2">
-                  <thead>
-                    <tr className="text-left text-gray-500 border-b">
-                      <th className="py-2">Mes</th>
-                      <th className="py-2">Almuerzos</th>
-                      <th className="py-2">Total</th>
-                      <th className="py-2">Pagado</th>
-                      <th className="py-2">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cuentas[hijo.id].map((c) => (
-                      <tr key={c.id} className="border-b border-gray-100">
-                        <td className="py-2">{meses[c.mes]} {c.anio}</td>
-                        <td className="py-2">{c.cantidad_almuerzos}</td>
-                        <td className="py-2">Gs. {parseInt(c.monto_total).toLocaleString('es-PY')}</td>
-                        <td className="py-2">Gs. {parseInt(c.monto_pagado).toLocaleString('es-PY')}</td>
-                        <td className="py-2">
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            c.estado === 'PAGADO' ? 'bg-green-100 text-green-800' :
-                            c.estado === 'PARCIAL' ? 'bg-blue-100 text-blue-800' :
-                            'bg-orange-100 text-orange-800'
-                          }`}>
-                            {c.estado}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <Badge color={s.estado === 'ACTIVA' ? 'green' : 'default'}>{s.estado}</Badge>
+          </div>
+          <div className="px-4 py-3 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Inicio</span>
+              <span className="font-medium text-slate-800">{formatFecha(s.fecha_inicio)}</span>
+            </div>
+            {s.fecha_fin && (
+              <div className="flex justify-between">
+                <span className="text-slate-500">Vencimiento</span>
+                <span className="font-medium text-slate-800">{formatFecha(s.fecha_fin)}</span>
               </div>
             )}
+            {s.observaciones && (
+              <p className="text-xs text-slate-400 pt-1 border-t border-slate-100">{s.observaciones}</p>
+            )}
           </div>
-        ))}
-        {hijos.length === 0 && (
-          <p className="text-center text-gray-400 py-8">
-            No se encontraron hijos asociados a tu cuenta.
-          </p>
-        )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+export default function PortalDashboard() {
+  const { user } = useAuthStore()
+  const [data, setData] = useState<PortalData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedHijoId, setSelectedHijoId] = useState<number | null>(null)
+  const [tabs, setTabs] = useState<Record<number, HijoTab>>({})
+  const [suscripciones, setSuscripciones] = useState<Record<number, Suscripcion[]>>({})
+  const [loadingPlan, setLoadingPlan] = useState<Record<number, boolean>>({})
+
+  useEffect(() => {
+    const cargar = async () => {
+      setLoading(true)
+      try {
+        const { data: res } = await api.get('/usuarios/portal/mi-hijo/')
+        setData(res)
+        if (res.hijos.length > 0) {
+          setSelectedHijoId(res.hijos[0].id)
+          const init: Record<number, HijoTab> = {}
+          res.hijos.forEach((h: HijoData) => { init[h.id] = 'resumen' })
+          setTabs(init)
+        }
+      } catch {
+        toast.error('Error al cargar los datos')
+      } finally {
+        setLoading(false)
+      }
+    }
+    cargar()
+  }, [user])
+
+  const loadPlan = useCallback(async (hijoId: number) => {
+    if (suscripciones[hijoId] !== undefined) return
+    setLoadingPlan(prev => ({ ...prev, [hijoId]: true }))
+    try {
+      const { data: res } = await api.get('/almuerzos/suscripciones/', {
+        params: { hijo: hijoId, estado: 'ACTIVA', page_size: 10 },
+      })
+      setSuscripciones(prev => ({ ...prev, [hijoId]: res.results ?? [] }))
+    } catch {
+      setSuscripciones(prev => ({ ...prev, [hijoId]: [] }))
+    } finally {
+      setLoadingPlan(prev => ({ ...prev, [hijoId]: false }))
+    }
+  }, [suscripciones])
+
+  const setTab = useCallback((hijoId: number, tab: HijoTab) => {
+    setTabs(prev => ({ ...prev, [hijoId]: tab }))
+    if (tab === 'plan') loadPlan(hijoId)
+  }, [loadPlan])
+
+  if (loading) return <Spinner className="mt-12" />
+
+  if (!data || data.hijos.length === 0) {
+    return (
+      <div className="py-16 text-center text-slate-400">
+        <UtensilsCrossed className="w-12 h-12 mx-auto mb-4 opacity-20" />
+        <p className="text-base font-medium text-slate-600">Sin hijos asociados</p>
+        <p className="text-sm mt-1">Contactá con la administración de la cantina.</p>
+      </div>
+    )
+  }
+
+  const hijo = data.hijos.find(h => h.id === selectedHijoId) ?? data.hijos[0]
+  const tab = tabs[hijo.id] ?? 'resumen'
+
+  return (
+    <div className="space-y-5">
+      {/* Welcome */}
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">Hola, {user?.nombre}</h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          {MESES[data.mes.mes]} {data.mes.anio}
+        </p>
+      </div>
+
+      {/* Hijo selector */}
+      {data.hijos.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {data.hijos.map(h => (
+            <button
+              key={h.id}
+              onClick={() => setSelectedHijoId(h.id)}
+              className={[
+                'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors cursor-pointer shrink-0',
+                h.id === selectedHijoId
+                  ? 'bg-green-500 text-white'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:border-green-300',
+              ].join(' ')}
+            >
+              {h.nombre}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Hijo card */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        {/* Hijo header */}
+        <div className="px-5 py-4 border-b border-slate-100">
+          <p className="text-base font-bold text-slate-800">{hijo.nombre}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{hijo.grado || 'Sin grado'}</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-slate-100 px-5 flex gap-1 overflow-x-auto">
+          <TabBtn active={tab === 'resumen'} onClick={() => setTab(hijo.id, 'resumen')}>
+            Resumen
+          </TabBtn>
+          <TabBtn active={tab === 'historial'} onClick={() => setTab(hijo.id, 'historial')}>
+            <span className="flex items-center gap-1.5">
+              <History className="w-3.5 h-3.5" />
+              Historial
+            </span>
+          </TabBtn>
+          <TabBtn active={tab === 'plan'} onClick={() => setTab(hijo.id, 'plan')}>
+            <span className="flex items-center gap-1.5">
+              <CalendarCheck className="w-3.5 h-3.5" />
+              Plan
+            </span>
+          </TabBtn>
+        </div>
+
+        {/* Tab content */}
+        <div className="p-5">
+          {tab === 'resumen' && <ResumenTab hijo={hijo} mes={data.mes} />}
+          {tab === 'historial' && <HistorialTab hijo={hijo} />}
+          {tab === 'plan' && (
+            <PlanTab
+              suscripciones={suscripciones[hijo.id]}
+              loading={loadingPlan[hijo.id] ?? false}
+            />
+          )}
+        </div>
       </div>
     </div>
   )
