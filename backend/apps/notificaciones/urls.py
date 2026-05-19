@@ -7,6 +7,7 @@ from .views import (
     PlantillaEmailViewSet,
     EmailEnviadoViewSet,
     SolicitudNotificacionViewSet,
+    EnviarNotificacionView,
 )
 
 router = DefaultRouter()
@@ -18,4 +19,5 @@ router.register(r"solicitudes", SolicitudNotificacionViewSet, basename="solicitu
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("enviar/", EnviarNotificacionView.as_view(), name="notificaciones-enviar"),
 ]

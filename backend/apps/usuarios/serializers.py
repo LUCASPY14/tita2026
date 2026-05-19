@@ -45,6 +45,27 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
         return user
 
 
+class CambiarPasswordSerializer(serializers.Serializer):
+    password_actual = serializers.CharField(write_only=True)
+    password_nuevo = serializers.CharField(write_only=True, min_length=6)
+
+    def validate_password_actual(self, value):
+        user = self.context["request"].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("La contraseña actual es incorrecta.")
+        return value
+
+
+class RecuperarPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ConfirmarPasswordSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    password_nuevo = serializers.CharField(write_only=True, min_length=6)
+
+
 class EmpleadoSerializer(serializers.ModelSerializer):
     rol_nombre = serializers.CharField(source="id_rol.nombre_rol", read_only=True)
 

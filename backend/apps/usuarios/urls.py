@@ -8,6 +8,14 @@ from .views import (
     PermisoViewSet,
     RolPermisoViewSet,
     PerfilUsuarioViewSet,
+    PortalMiHijoView,
+    RecuperarPasswordView,
+    ConfirmarPasswordView,
+    TwoFAEstadoView,
+    TwoFAConfigurarView,
+    TwoFAActivarView,
+    TwoFAVerificarView,
+    TwoFADesactivarView,
 )
 
 router = DefaultRouter()
@@ -20,4 +28,12 @@ router.register(r"perfiles", PerfilUsuarioViewSet, basename="perfiles")
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("recuperar-password/", RecuperarPasswordView.as_view(), name="recuperar-password"),
+    path("recuperar-password/confirmar/", ConfirmarPasswordView.as_view(), name="confirmar-password"),
+    path("portal/mi-hijo/", PortalMiHijoView.as_view(), name="portal-mi-hijo"),
+    path("2fa/estado/", TwoFAEstadoView.as_view(), name="2fa-estado"),
+    path("2fa/configurar/", TwoFAConfigurarView.as_view(), name="2fa-configurar"),
+    path("2fa/activar/", TwoFAActivarView.as_view(), name="2fa-activar"),
+    path("2fa/verificar/", TwoFAVerificarView.as_view(), name="2fa-verificar"),
+    path("2fa/desactivar/", TwoFADesactivarView.as_view(), name="2fa-desactivar"),
 ]

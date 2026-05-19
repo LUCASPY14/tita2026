@@ -3,7 +3,8 @@ Views para la app api_integrations
 """
 
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+
+from common.permissions import IsAdmin
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -28,7 +29,7 @@ from .serializers import (
 class ProveedorApiViewSet(viewsets.ModelViewSet):
     queryset = ProveedorApi.objects.all()
     serializer_class = ProveedorApiSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["activo", "tipo_servicio"]
 
@@ -36,7 +37,7 @@ class ProveedorApiViewSet(viewsets.ModelViewSet):
 class EndpointApiViewSet(viewsets.ModelViewSet):
     queryset = EndpointApi.objects.select_related("proveedor").all()
     serializer_class = EndpointApiSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["proveedor", "activo"]
 
@@ -44,7 +45,7 @@ class EndpointApiViewSet(viewsets.ModelViewSet):
 class CredencialApiViewSet(viewsets.ModelViewSet):
     queryset = CredencialApi.objects.select_related("proveedor").all()
     serializer_class = CredencialApiSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["proveedor", "ambiente", "activo"]
 
@@ -52,7 +53,7 @@ class CredencialApiViewSet(viewsets.ModelViewSet):
 class WebhookEndpointViewSet(viewsets.ModelViewSet):
     queryset = WebhookEndpoint.objects.select_related("proveedor").all()
     serializer_class = WebhookEndpointSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["proveedor", "activo"]
 
@@ -60,7 +61,7 @@ class WebhookEndpointViewSet(viewsets.ModelViewSet):
 class LogLlamadaApiViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = LogLlamadaApi.objects.select_related("endpoint").all()
     serializer_class = LogLlamadaApiSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["endpoint", "exitoso", "metodo"]
 
@@ -68,6 +69,6 @@ class LogLlamadaApiViewSet(viewsets.ReadOnlyModelViewSet):
 class LogWebhookViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = LogWebhook.objects.select_related("webhook").all()
     serializer_class = LogWebhookSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["webhook", "procesado_ok", "evento_tipo"]

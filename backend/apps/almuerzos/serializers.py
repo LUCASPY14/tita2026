@@ -15,6 +15,7 @@ from .models import (
     PagoAlmuerzoMensual,
     Alergeno,
     ProductoAlergeno,
+    MenuDiario,
 )
 
 
@@ -149,3 +150,14 @@ class ProductoAlergenoSerializer(serializers.ModelSerializer):
         model = ProductoAlergeno
         fields = "__all__"
         read_only_fields = ["fecha_registro"]
+
+
+# ==============================================================================
+# MENÚ DIARIO
+# ==============================================================================
+
+class MenuDiarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MenuDiario
+        fields = "__all__"
+        read_only_fields = ["creado_por", "fecha_creacion", "fecha_actualizacion"]

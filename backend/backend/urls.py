@@ -3,8 +3,9 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
+from apps.usuarios.views import CustomTokenObtainPairView
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
+
     TokenRefreshView,
     TokenVerifyView,
 )
@@ -23,10 +24,9 @@ urlpatterns = [
     path('api/health/', health_check, name='health-check'),
 
     # JWT Auth
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-
+    path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     # Apps API
     path('api/almuerzos/', include('apps.almuerzos.urls')),
     path('api/ventas/', include('apps.ventas.urls')),
@@ -39,7 +39,6 @@ urlpatterns = [
     path('api/usuarios/', include('apps.usuarios.urls')),
     path('api/notificaciones/', include('apps.notificaciones.urls')),
     path('api/integrations/', include('apps.api_integrations.urls')),
-    path('api/reportes/', include('apps.reportes.urls')),
 ]
 
 if settings.DEBUG:

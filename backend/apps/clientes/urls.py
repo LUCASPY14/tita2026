@@ -12,6 +12,7 @@ from .views import (
     AutorizacionSaldoNegativoViewSet,
     PaisViewSet,
     CiudadViewSet,
+    ReporteCuentaCorrienteView,
 )
 
 router = DefaultRouter()
@@ -28,4 +29,5 @@ router.register(r"ciudades", CiudadViewSet, basename="ciudades")
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("reporte-cuenta-corriente/", ReporteCuentaCorrienteView.as_view(), name="reporte-cc"),
 ]

@@ -34,6 +34,10 @@ app.conf.beat_schedule = {
         "task": "apps.notificaciones.tasks.limpiar_notificaciones_antiguas",
         "schedule": crontab(hour=3, minute=0, day_of_week=0),  # Domingos 03:00
     },
+    "enviar-emails-pendientes": {
+        "task": "apps.notificaciones.tasks.enviar_emails_pendientes",
+        "schedule": crontab(minute="*/15"),  # Cada 15 minutos
+    },
     # ── Inventario ────────────────────────────────────────────────────
     "alertar-stock-minimo": {
         "task": "apps.inventario.tasks.alertar_stock_minimo",
@@ -64,11 +68,7 @@ app.conf.beat_schedule = {
         "task": "apps.almuerzos.tasks.alertar_cuentas_vencidas",
         "schedule": crontab(hour=8, minute=0, day_of_month=10),  # Día 10 de cada mes 08:00
     },
-    # ── Reportes / KPIs ───────────────────────────────────────────────────────
-    "calcular-kpis-diarios": {
-        "task": "apps.reportes.tasks.calcular_y_guardar_kpis_diarios",
-        "schedule": crontab(hour=23, minute=45),  # Todos los días 23:45
-    },
+
 }
 
 app.conf.timezone = "America/Asuncion"  # Paraguay timezone

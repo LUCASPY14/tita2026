@@ -6,6 +6,7 @@ Tarjetas, movimientos de tarjeta, medios de pago, límites de transacción y aut
 from decimal import Decimal
 from django.db import models
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 
 # ==============================================================================
@@ -51,6 +52,7 @@ class Tarjeta(models.Model):
     notificar_saldo_bajo = models.BooleanField(default=True)
     ultima_notificacion_saldo = models.DateTimeField(blank=True, null=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    history = HistoricalRecords()
 
     class Meta:
         verbose_name = "Tarjeta"
@@ -280,7 +282,15 @@ class CargaSaldo(models.Model):
     referencia_externa = models.CharField(
         max_length=200, blank=True, null=True
     )
+    factura = models.OneToOneField(
+        "contabilidad.Factura",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="carga_saldo",
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    history = HistoricalRecords()
 
     class Meta:
         verbose_name = "Carga de Saldo"

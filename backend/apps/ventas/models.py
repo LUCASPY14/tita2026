@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 
 # ==============================================================================
@@ -76,6 +77,14 @@ class Venta(models.Model):
         blank=True,
         related_name="ventas_factura",
     )
+    tarjeta = models.ForeignKey(
+        "core.Tarjeta",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ventas",
+        help_text="Tarjeta usada en el pago (permite reverso al anular)",
+    )
     factura = models.ForeignKey(
         "contabilidad.Factura",
         models.SET_NULL,
@@ -109,6 +118,7 @@ class Venta(models.Model):
         related_name="ventas_autorizadas",
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    history = HistoricalRecords()
 
     class Meta:
         verbose_name = "Venta"

@@ -8,6 +8,8 @@ from .views import (
     ConciliacionPagoViewSet,
     FacturaViewSet,
     DatosEmpresaViewSet,
+    DashboardResumenView,
+    ReportePeriodoView,
 )
 
 router = DefaultRouter()
@@ -20,4 +22,6 @@ router.register(r"datos-empresa", DatosEmpresaViewSet, basename="datos-empresa")
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("dashboard/", DashboardResumenView.as_view(), name="dashboard-resumen"),
+    path("reportes/", ReportePeriodoView.as_view(), name="reportes-periodo"),
 ]

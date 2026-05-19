@@ -8,12 +8,18 @@ from decimal import Decimal
 from django.db import models, transaction
 from django.db.models import F
 
-from rest_framework import viewsets
+import csv
+
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from rest_framework import serializers as drf_serializers
+
+from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -28,6 +34,7 @@ from .models import (
     PagoAlmuerzoMensual,
     Alergeno,
     ProductoAlergeno,
+    MenuDiario,
 )
 from .serializers import (
     PrecioAlmuerzoSerializer,
@@ -40,8 +47,10 @@ from .serializers import (
     PagoAlmuerzoMensualSerializer,
     AlergenoSerializer,
     ProductoAlergenoSerializer,
+    MenuDiarioSerializer,
 )
-from .validators import validar_limite_registros_diarios
+from .filters import RegistroConsumoFilter
+from .validators import validar_limite_registros_diarios, validar_restricciones_alergenicas
 
 
 # ==============================================================================
@@ -73,7 +82,7 @@ def get_precio_almuerzo_activo(fecha=None):
 class PrecioAlmuerzoViewSet(viewsets.ModelViewSet):
     queryset = PrecioAlmuerzo.objects.all()
     serializer_class = PrecioAlmuerzoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["activo"]
     ordering = ["-fecha_inicio_vigencia"]
@@ -96,7 +105,7 @@ class PrecioAlmuerzoViewSet(viewsets.ModelViewSet):
 class TipoAlmuerzoViewSet(viewsets.ModelViewSet):
     queryset = TipoAlmuerzo.objects.all()
     serializer_class = TipoAlmuerzoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["activo"]
     search_fields = ["nombre"]
@@ -109,7 +118,7 @@ class TipoAlmuerzoViewSet(viewsets.ModelViewSet):
 class PlanAlmuerzoViewSet(viewsets.ModelViewSet):
     queryset = PlanAlmuerzo.objects.all()
     serializer_class = PlanAlmuerzoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["activo", "tipo"]
     search_fields = ["nombre"]
@@ -122,7 +131,6 @@ class PlanAlmuerzoViewSet(viewsets.ModelViewSet):
 class SuscripcionAlmuerzoViewSet(viewsets.ModelViewSet):
     queryset = SuscripcionAlmuerzo.objects.select_related("hijo", "plan").all()
     serializer_class = SuscripcionAlmuerzoSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["estado", "hijo", "plan"]
     ordering = ["-fecha_inicio"]
@@ -150,11 +158,21 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         "hijo", "suscripcion", "tipo_almuerzo", "nro_tarjeta"
     ).all()
     serializer_class = RegistroConsumoAlmuerzoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["estado", "hijo", "fecha_consumo", "ya_cobrado"]
+    filterset_class = RegistroConsumoFilter
     search_fields = ["hijo__nombre", "hijo__apellido"]
     ordering = ["-fecha_consumo", "-hora_registro"]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        advertencias = self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        data = dict(serializer.data)
+        if advertencias:
+            data["advertencias"] = advertencias
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         registro_data = serializer.validated_data
@@ -167,6 +185,10 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         # Tarjeta requerida como identificacion
         if not nro_tarjeta:
             raise ValidationError({"error": "Debe especificar la tarjeta para registrar el ingreso al almuerzo"})
+
+        # Validar restricciones alérgénicas del hijo
+        forzar = self.request.data.get("forzar_restriccion", False)
+        advertencias = validar_restricciones_alergenicas(hijo, forzar=bool(forzar))
 
         # Validar limite de 2 registros por dia
         es_primer_registro = validar_limite_registros_diarios(hijo, fecha_consumo)
@@ -219,6 +241,8 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             if es_primer_registro:
                 self._agregar_a_cuenta_mensual(registro)
 
+        return advertencias
+
     def _agregar_a_cuenta_mensual(self, registro):
         """Agrega el consumo a la cuenta mensual de almuerzo del hijo."""
         fecha = registro.fecha_consumo
@@ -250,10 +274,53 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 class CuentaAlmuerzoMensualViewSet(viewsets.ModelViewSet):
     queryset = CuentaAlmuerzoMensual.objects.select_related("hijo").all()
     serializer_class = CuentaAlmuerzoMensualSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["hijo", "anio", "mes", "estado"]
     ordering = ["-anio", "-mes"]
+
+    @action(detail=False, methods=["post"], url_path="generar", permission_classes=[IsAdmin])
+    def generar(self, request):
+        """
+        POST /api/almuerzos/cuentas-mensuales/generar/
+        Body: {anio: 2026, mes: 5}
+        Genera cuentas para todas las suscripciones activas del mes indicado.
+        """
+        class _Serializer(drf_serializers.Serializer):
+            anio = drf_serializers.IntegerField(min_value=2020, max_value=2099)
+            mes = drf_serializers.IntegerField(min_value=1, max_value=12)
+
+        serializer = _Serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        anio = serializer.validated_data["anio"]
+        mes = serializer.validated_data["mes"]
+
+        suscripciones = SuscripcionAlmuerzo.objects.filter(
+            estado=SuscripcionAlmuerzo.Estado.ACTIVA
+        ).select_related("hijo")
+
+        creadas = 0
+        for suscripcion in suscripciones:
+            _, fue_creada = CuentaAlmuerzoMensual.objects.get_or_create(
+                hijo=suscripcion.hijo,
+                anio=anio,
+                mes=mes,
+                defaults={
+                    "cantidad_almuerzos": 0,
+                    "monto_total": 0,
+                    "monto_pagado": 0,
+                    "forma_cobro": CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+                    "estado": CuentaAlmuerzoMensual.Estado.PENDIENTE,
+                },
+            )
+            if fue_creada:
+                creadas += 1
+
+        return Response({
+            "cuentas_creadas": creadas,
+            "mes": mes,
+            "anio": anio,
+        })
 
 
 # ==============================================================================
@@ -263,7 +330,7 @@ class CuentaAlmuerzoMensualViewSet(viewsets.ModelViewSet):
 class PagoCuentaAlmuerzoViewSet(viewsets.ModelViewSet):
     queryset = PagoCuentaAlmuerzo.objects.select_related("cuenta").all()
     serializer_class = PagoCuentaAlmuerzoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["cuenta"]
     ordering = ["-fecha_pago"]
@@ -287,7 +354,7 @@ class PagoCuentaAlmuerzoViewSet(viewsets.ModelViewSet):
 class PagoAlmuerzoMensualViewSet(viewsets.ModelViewSet):
     queryset = PagoAlmuerzoMensual.objects.select_related("suscripcion").all()
     serializer_class = PagoAlmuerzoMensualSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["suscripcion", "estado"]
     ordering = ["-fecha_pago"]
@@ -300,7 +367,7 @@ class PagoAlmuerzoMensualViewSet(viewsets.ModelViewSet):
 class AlergenoViewSet(viewsets.ModelViewSet):
     queryset = Alergeno.objects.all()
     serializer_class = AlergenoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["activo", "severidad"]
     search_fields = ["nombre"]
@@ -313,6 +380,117 @@ class AlergenoViewSet(viewsets.ModelViewSet):
 class ProductoAlergenoViewSet(viewsets.ModelViewSet):
     queryset = ProductoAlergeno.objects.select_related("producto", "alergeno").all()
     serializer_class = ProductoAlergenoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["producto", "alergeno", "contiene"]
+
+
+# ==============================================================================
+# MENÚ DIARIO
+# ==============================================================================
+
+class MenuDiarioViewSet(viewsets.ModelViewSet):
+    """
+    CRUD de menú del día. Staff puede crear/editar; CLIENTE_WEB puede leer.
+    GET /api/almuerzos/menu/?fecha=YYYY-MM-DD
+    GET /api/almuerzos/menu/hoy/  → menú del día actual
+    """
+    queryset = MenuDiario.objects.filter(activo=True)
+    serializer_class = MenuDiarioSerializer
+    permission_classes = [IsStaffOrClienteWeb]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ["fecha", "activo"]
+    ordering = ["-fecha"]
+
+    def perform_create(self, serializer):
+        serializer.save(creado_por=self.request.user)
+
+    @action(detail=False, methods=["get"], url_path="hoy")
+    def hoy(self, request):
+        """Retorna el menú del día actual (fecha de hoy)."""
+        menu = MenuDiario.objects.filter(fecha=date.today(), activo=True).first()
+        if menu is None:
+            return Response({"detail": "No hay menú publicado para hoy."}, status=404)
+        return Response(MenuDiarioSerializer(menu).data)
+
+
+# ==============================================================================
+# REPORTE DE ALMUERZOS
+# ==============================================================================
+
+class ReporteAlmuerzosView(APIView):
+    """
+    GET /api/almuerzos/reportes/?anio=2026&mes=5
+    Parámetros opcionales: hijo=<id>, grado=<str>, formato=csv
+    Retorna resumen por hijo: cantidad de almuerzos, monto total, pendiente.
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        from django.db.models import Count, Sum, Q
+        from django.http import HttpResponse
+
+        anio = request.query_params.get("anio")
+        mes = request.query_params.get("mes")
+        hijo_id = request.query_params.get("hijo")
+        grado = request.query_params.get("grado")
+
+        if not anio or not mes:
+            return Response(
+                {"error": "Se requieren los parámetros anio y mes."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        qs = CuentaAlmuerzoMensual.objects.filter(
+            anio=anio, mes=mes
+        ).select_related("hijo")
+
+        if hijo_id:
+            qs = qs.filter(hijo_id=hijo_id)
+        if grado:
+            qs = qs.filter(hijo__grado__icontains=grado)
+
+        filas = []
+        for c in qs.order_by("hijo__apellido", "hijo__nombre"):
+            filas.append({
+                "hijo_id": c.hijo_id,
+                "hijo": c.hijo.nombre_completo,
+                "grado": c.hijo.grado or "",
+                "cantidad_almuerzos": c.cantidad_almuerzos,
+                "monto_total": int(c.monto_total),
+                "monto_pagado": int(c.monto_pagado),
+                "monto_pendiente": int(c.monto_total - c.monto_pagado),
+                "estado": c.estado,
+            })
+
+        totales = {
+            "cantidad_almuerzos": sum(f["cantidad_almuerzos"] for f in filas),
+            "monto_total": sum(f["monto_total"] for f in filas),
+            "monto_pagado": sum(f["monto_pagado"] for f in filas),
+            "monto_pendiente": sum(f["monto_pendiente"] for f in filas),
+            "alumnos": len(filas),
+            "con_deuda": sum(1 for f in filas if f["monto_pendiente"] > 0),
+        }
+
+        if request.query_params.get("formato") == "csv":
+            resp = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+            resp["Content-Disposition"] = (
+                f'attachment; filename="almuerzos_{anio}_{mes}.csv"'
+            )
+            writer = csv.writer(resp)
+            writer.writerow(["REPORTE DE ALMUERZOS", f"{mes}/{anio}"])
+            writer.writerow([])
+            writer.writerow(["Alumno", "Grado", "Almuerzos", "Total (Gs)", "Pagado (Gs)", "Pendiente (Gs)", "Estado"])
+            for f in filas:
+                writer.writerow([f["hijo"], f["grado"], f["cantidad_almuerzos"],
+                                  f["monto_total"], f["monto_pagado"], f["monto_pendiente"], f["estado"]])
+            writer.writerow([])
+            writer.writerow(["TOTALES", "", totales["cantidad_almuerzos"],
+                              totales["monto_total"], totales["monto_pagado"], totales["monto_pendiente"], ""])
+            return resp
+
+        return Response({
+            "periodo": {"anio": int(anio), "mes": int(mes)},
+            "totales": totales,
+            "detalle": filas,
+        })

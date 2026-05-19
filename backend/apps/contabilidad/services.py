@@ -3,7 +3,7 @@ Servicios de negocio para contabilidad
 Caja y facturacion
 """
 
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import models, transaction, IntegrityError
 from django.utils import timezone
@@ -11,6 +11,9 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from .models import Caja, CierreCaja, MovimientoCaja, Factura
+
+TIPO_CARGA_SALDO = "CARGA_SALDO"
+TIPO_PAGO_ALMUERZO = "PAGO_ALMUERZO"
 
 
 class CajaService:
@@ -153,3 +156,78 @@ class FacturacionService:
             factura.estado = Factura.Estado.ANULADA
             factura.save()
             return factura
+
+    @staticmethod
+    def _calcular_iva_10(monto: Decimal) -> dict:
+        """Precio incluye IVA 10%: iva = monto * 10/110."""
+        iva = (monto * Decimal("10") / Decimal("110")).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        return {"iva_10": iva, "iva_5": Decimal(0), "monto_exenta": Decimal(0)}
+
+    @classmethod
+    def emitir_para_origen(cls, *, tipo: str, origen_id: int, nro_factura: str) -> Factura:
+        """
+        Emite una factura para una CargaSaldo o PagoCuentaAlmuerzo.
+        tipo: CARGA_SALDO | PAGO_ALMUERZO
+        """
+        from apps.core.models import CargaSaldo
+        from apps.almuerzos.models import PagoCuentaAlmuerzo
+
+        with transaction.atomic():
+            if tipo == TIPO_CARGA_SALDO:
+                origen = CargaSaldo.objects.select_for_update().get(pk=origen_id)
+
+                if origen.estado != CargaSaldo.Estado.CONFIRMADA:
+                    raise ValidationError({"error": "Solo se pueden facturar cargas confirmadas."})
+                if origen.factura_id:
+                    raise ValidationError({"error": "Esta carga de saldo ya tiene factura emitida."})
+
+                cliente = origen.cliente_origen
+                if not cliente:
+                    raise ValidationError({"error": "La carga no tiene cliente asociado."})
+
+                monto = origen.monto_cargado
+                iva = cls._calcular_iva_10(monto)
+
+            elif tipo == TIPO_PAGO_ALMUERZO:
+                origen = PagoCuentaAlmuerzo.objects.select_related(
+                    "cuenta__hijo__cliente_responsable"
+                ).select_for_update().get(pk=origen_id)
+
+                if origen.factura_id:
+                    raise ValidationError({"error": "Este pago ya tiene factura emitida."})
+
+                cliente = origen.cuenta.hijo.cliente_responsable
+                monto = origen.monto
+                iva = cls._calcular_iva_10(monto)
+
+            else:
+                raise ValidationError({"error": f"Tipo desconocido: {tipo}."})
+
+            factura = FacturacionService.emitir_factura(
+                cliente=cliente,
+                nro_factura=nro_factura,
+                monto_total=monto,
+                **iva,
+            )
+
+            origen.factura = factura
+            origen.save(update_fields=["factura"])
+
+            return factura
+
+    @staticmethod
+    def get_pendientes() -> dict:
+        """Retorna cargas de saldo y pagos de almuerzo sin factura."""
+        from apps.core.models import CargaSaldo
+        from apps.almuerzos.models import PagoCuentaAlmuerzo
+
+        cargas = CargaSaldo.objects.filter(
+            estado=CargaSaldo.Estado.CONFIRMADA,
+            factura__isnull=True,
+        ).select_related("cliente_origen", "tarjeta__hijo").order_by("-fecha_carga")
+
+        pagos = PagoCuentaAlmuerzo.objects.filter(
+            factura__isnull=True,
+        ).select_related("cuenta__hijo__cliente_responsable").order_by("-fecha_pago")
+
+        return {"cargas": cargas, "pagos": pagos}

@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",  # Para invalidar refresh tokens
     "corsheaders",
     "django_filters",
+    "simple_history",
     # Local apps
     "apps.core",
     "apps.usuarios",
@@ -70,7 +71,6 @@ INSTALLED_APPS = [
     "apps.contabilidad",
     "apps.notificaciones",
     "apps.api_integrations",
-    "apps.reportes",
 
 ]
 
@@ -89,6 +89,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
 # ==============================================================================
@@ -186,7 +187,7 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
+        "common.permissions.IsStaffUser",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
@@ -342,6 +343,7 @@ DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL",
     "Cantina Tita <noreply@cantinatita.com>",
 )
+PORTAL_FRONTEND_URL = os.environ.get("PORTAL_FRONTEND_URL", "http://localhost:5173")
 
 # ==============================================================================
 # NOTIFICACIONES
@@ -377,7 +379,6 @@ JAZZMIN_SETTINGS = {
         "contabilidad": "fas fa-calculator",
         "usuarios": "fas fa-user-shield",
         "notificaciones": "fas fa-bell",
-        "reportes": "fas fa-chart-bar",
     },
 }
 

@@ -4,7 +4,8 @@ Views para la app core
 
 from rest_framework import viewsets
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.permissions import IsAuthenticated
+
+from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -34,7 +35,7 @@ from .services import TarjetaService
 class TarjetaViewSet(viewsets.ModelViewSet):
     queryset = Tarjeta.objects.select_related("hijo").all()
     serializer_class = TarjetaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["estado"]
     search_fields = ["nro_tarjeta", "hijo__nombre", "hijo__apellido"]
@@ -44,7 +45,7 @@ class TarjetaViewSet(viewsets.ModelViewSet):
 class MovimientoTarjetaViewSet(viewsets.ModelViewSet):
     queryset = MovimientoTarjeta.objects.select_related("tarjeta").all()
     serializer_class = MovimientoTarjetaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["tarjeta", "tipo"]
 
@@ -52,13 +53,13 @@ class MovimientoTarjetaViewSet(viewsets.ModelViewSet):
 class TarjetaAutorizacionViewSet(viewsets.ModelViewSet):
     queryset = TarjetaAutorizacion.objects.select_related("empleado").all()
     serializer_class = TarjetaAutorizacionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCajeroOrAdmin]
 
 
 class CargaSaldoViewSet(viewsets.ModelViewSet):
     queryset = CargaSaldo.objects.select_related("tarjeta", "cliente_origen").all()
     serializer_class = CargaSaldoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["tarjeta", "estado"]
 
@@ -81,7 +82,6 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
 class ConsumoTarjetaViewSet(viewsets.ModelViewSet):
     queryset = ConsumoTarjeta.objects.select_related("tarjeta").all()
     serializer_class = ConsumoTarjetaSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["tarjeta"]
 
@@ -89,13 +89,13 @@ class ConsumoTarjetaViewSet(viewsets.ModelViewSet):
 class MedioPagoViewSet(viewsets.ModelViewSet):
     queryset = MedioPago.objects.all()
     serializer_class = MedioPagoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
 
 
 class LimiteTransaccionViewSet(viewsets.ModelViewSet):
     queryset = LimiteTransaccion.objects.select_related("rol").all()
     serializer_class = LimiteTransaccionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["rol", "tipo_operacion", "activo"]
 
@@ -103,6 +103,6 @@ class LimiteTransaccionViewSet(viewsets.ModelViewSet):
 class RegistroAutorizacionViewSet(viewsets.ModelViewSet):
     queryset = RegistroAutorizacion.objects.select_related("solicitante", "autorizador").all()
     serializer_class = RegistroAutorizacionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["tipo_operacion"]

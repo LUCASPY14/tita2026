@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Factura {{ factura.nro_factura }}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; padding: 20px; }
+  .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+  .header h1 { font-size: 20px; font-weight: bold; }
+  .header h2 { font-size: 14px; }
+  .header p { font-size: 11px; color: #444; }
+  .factura-nro { text-align: right; font-size: 14px; font-weight: bold; margin-bottom: 15px; }
+  .section { margin-bottom: 12px; }
+  .section label { font-weight: bold; display: inline-block; width: 130px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+  th { background: #f0f0f0; border: 1px solid #999; padding: 6px 8px; text-align: left; }
+  td { border: 1px solid #ccc; padding: 5px 8px; }
+  .totals { width: 50%; margin-left: auto; }
+  .totals td { font-size: 12px; }
+  .totals tr.total-row td { font-weight: bold; font-size: 13px; border-top: 2px solid #000; }
+  .footer { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px; font-size: 10px; color: #666; text-align: center; }
+  .firma { display: flex; justify-content: space-between; margin-top: 50px; }
+  .firma div { text-align: center; width: 40%; border-top: 1px solid #000; padding-top: 5px; }
+  @media print {
+    body { padding: 0; }
+    button { display: none; }
+    @page { margin: 15mm; }
+  }
+</style>
+</head>
+<body>
+
+<button onclick="window.print()" style="float:right;padding:6px 16px;margin-bottom:10px;cursor:pointer;">
+  🖨️ Imprimir
+</button>
+
+<div class="header">
+  {% if empresa %}
+    <h1>{{ empresa.razon_social }}</h1>
+    <h2>{{ empresa.nombre_fantasia|default:'' }}</h2>
+    <p>RUC: {{ empresa.ruc }} | {{ empresa.direccion|default:'' }}</p>
+    <p>Tel: {{ empresa.telefono|default:'-' }} | {{ empresa.email|default:'' }}</p>
+  {% else %}
+    <h1>Cantina Tita</h1>
+    <p>Sistema de Gestión Escolar</p>
+  {% endif %}
+</div>
+
+<div class="factura-nro">
+  FACTURA N° {{ factura.nro_factura }}
+</div>
+
+<div class="section">
+  <p><label>Fecha:</label> {{ factura.fecha_emision|date:"d/m/Y H:i" }}</p>
+  <p><label>Cliente:</label> {{ factura.cliente.nombre_completo|default:'-' }}</p>
+  {% if factura.cliente.ruc_ci %}
+  <p><label>RUC/CI:</label> {{ factura.cliente.ruc_ci }}</p>
+  {% endif %}
+  <p><label>Condición:</label> CONTADO</p>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Descripción</th>
+      <th style="width:80px;text-align:right">Monto</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{ concepto }}</td>
+      <td style="text-align:right">Gs. {{ factura.monto_total|floatformat:0 }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="totals">
+  <tr>
+    <td>Exenta:</td>
+    <td style="text-align:right">Gs. {{ factura.monto_exenta|floatformat:0 }}</td>
+  </tr>
+  <tr>
+    <td>IVA 5%:</td>
+    <td style="text-align:right">Gs. {{ factura.iva_5|floatformat:0 }}</td>
+  </tr>
+  <tr>
+    <td>IVA 10%:</td>
+    <td style="text-align:right">Gs. {{ factura.iva_10|floatformat:0 }}</td>
+  </tr>
+  <tr class="total-row">
+    <td>TOTAL:</td>
+    <td style="text-align:right">Gs. {{ factura.monto_total|floatformat:0 }}</td>
+  </tr>
+</table>
+
+<div class="firma">
+  <div>Vendedor</div>
+  <div>Cliente / Aclaración</div>
+</div>
+
+<div class="footer">
+  <p>Documento válido como comprobante de pago — {{ factura.nro_factura }}</p>
+  {% if factura.estado == 'ANULADA' %}
+  <p style="color:red;font-weight:bold;font-size:14px;">⚠ FACTURA ANULADA</p>
+  {% endif %}
+</div>
+
+</body>
+</html>

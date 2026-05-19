@@ -317,6 +317,13 @@ class PagoCuentaAlmuerzo(models.Model):
         models.PROTECT,
         related_name="pagos_almuerzo_registrados",
     )
+    factura = models.OneToOneField(
+        "contabilidad.Factura",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pago_cuenta_almuerzo",
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -440,3 +447,36 @@ class ProductoAlergeno(models.Model):
     def __str__(self):
         verbo = "Contiene" if self.contiene else "Trazas de"
         return f"{self.producto} {verbo} {self.alergeno}"
+
+
+# ==============================================================================
+# MENÚ DIARIO
+# ==============================================================================
+
+class MenuDiario(models.Model):
+    """Menú del día visible para padres en el portal."""
+
+    fecha = models.DateField(unique=True)
+    plato_principal = models.CharField(max_length=255)
+    guarnicion = models.CharField(max_length=255, blank=True)
+    postre = models.CharField(max_length=255, blank=True)
+    bebida = models.CharField(max_length=100, blank=True)
+    descripcion = models.TextField(blank=True, help_text="Descripción adicional o notas")
+    activo = models.BooleanField(default=True)
+    creado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="menus_creados",
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Menú Diario"
+        verbose_name_plural = "Menús Diarios"
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return f"Menú {self.fecha} — {self.plato_principal}"

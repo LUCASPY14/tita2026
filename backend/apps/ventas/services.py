@@ -12,7 +12,7 @@ from rest_framework.exceptions import ValidationError
 from apps.clientes.models import CuentaCorrienteCliente
 from apps.inventario.models import Stock, MovimientoStock
 from apps.core.models import Tarjeta, MovimientoTarjeta
-from .models import Venta, DetalleVenta, PagoVenta, AplicacionPago
+from .models import Venta, DetalleVenta, PagoVenta, AplicacionPago, NotaCredito
 
 
 class VentaService:
@@ -147,6 +147,7 @@ class VentaService:
                 tipo=tipo,
                 medio_pago=medio_pago,
                 hijo=hijo,
+                tarjeta=tarjeta_bloqueada,
                 monto_total=monto_total,
                 monto_gravada_10=monto_gravada_10,
                 monto_gravada_5=monto_gravada_5,
@@ -168,9 +169,8 @@ class VentaService:
                             producto=producto,
                             defaults={"cantidad": Decimal("0")},
                         )
-                    stock.cantidad = models.F("cantidad") - det["cantidad"]
+                    stock.cantidad -= det["cantidad"]
                     stock.save()
-                    stock.refresh_from_db()
 
                     MovimientoStock.objects.create(
                         producto=producto,
@@ -214,9 +214,8 @@ class VentaService:
             # 6. Si es contado con tarjeta, descontar saldo
             if tipo == "CONTADO" and tarjeta_bloqueada:
                 saldo_anterior_tarjeta = tarjeta_bloqueada.saldo_actual
-                tarjeta_bloqueada.saldo_actual = models.F("saldo_actual") - monto_total
+                tarjeta_bloqueada.saldo_actual -= monto_total
                 tarjeta_bloqueada.save()
-                tarjeta_bloqueada.refresh_from_db()
 
                 MovimientoTarjeta.objects.create(
                     tarjeta=tarjeta_bloqueada,
@@ -229,6 +228,92 @@ class VentaService:
                 )
 
             return venta
+
+    @staticmethod
+    def anular_venta(venta: "Venta", anulado_por) -> "Venta":
+        """
+        Anula una venta ACTIVA revirtiendo:
+        - Stock (DEVOLUCION_CLIENTE por cada detalle)
+        - Saldo de tarjeta (REVERSO si se pagó con tarjeta)
+        - Cuenta corriente (entrada CREDITO si era CREDITO)
+
+        Raises ValidationError si la venta ya está anulada o tiene factura EMITIDA.
+        """
+        if venta.estado == Venta.Estado.ANULADA:
+            raise ValidationError({"error": "La venta ya está anulada."})
+
+        # Bloquear si tiene factura emitida asociada
+        factura = getattr(venta, "factura_venta", None)
+        if factura and factura.estado == "EMITIDA":
+            raise ValidationError({
+                "error": "La venta tiene una factura EMITIDA. Anulá primero la factura."
+            })
+
+        with transaction.atomic():
+            venta = Venta.objects.select_for_update().get(pk=venta.pk)
+            if venta.estado == Venta.Estado.ANULADA:
+                raise ValidationError({"error": "La venta ya está anulada."})
+
+            # 1. Revertir stock
+            for detalle in venta.detalles.select_related("producto").all():
+                if detalle.producto.requiere_stock:
+                    stock, _ = Stock.objects.get_or_create(
+                        producto=detalle.producto,
+                        defaults={"cantidad": Decimal("0")},
+                    )
+                    stock = Stock.objects.select_for_update().get(pk=stock.pk)
+                    stock.cantidad += detalle.cantidad
+                    stock.save()
+                    MovimientoStock.objects.create(
+                        producto=detalle.producto,
+                        tipo=MovimientoStock.Tipo.INGRESO,
+                        motivo=MovimientoStock.Motivo.DEVOLUCION_CLIENTE,
+                        cantidad=detalle.cantidad,
+                        stock_resultante=stock.cantidad,
+                        venta=venta,
+                        autorizado_por=anulado_por,
+                    )
+
+            # 2. Revertir saldo de tarjeta (si aplica)
+            if venta.tarjeta_id:
+                tarjeta = Tarjeta.objects.select_for_update().get(pk=venta.tarjeta_id)
+                saldo_anterior = tarjeta.saldo_actual
+                tarjeta.saldo_actual += venta.monto_total
+                tarjeta.save()
+                MovimientoTarjeta.objects.create(
+                    tarjeta=tarjeta,
+                    tipo=MovimientoTarjeta.Tipo.REVERSO,
+                    monto=venta.monto_total,
+                    saldo_anterior=saldo_anterior,
+                    descripcion=f"Anulación Venta #{venta.pk}",
+                    creado_por=anulado_por,
+                )
+
+            # 3. Revertir cuenta corriente (si era CREDITO)
+            if venta.tipo == Venta.Tipo.CREDITO:
+                ultimo_cc = (
+                    CuentaCorrienteCliente.objects
+                    .filter(cliente=venta.cliente)
+                    .select_for_update()
+                    .order_by("-id")
+                    .first()
+                )
+                saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
+                CuentaCorrienteCliente.objects.create(
+                    cliente=venta.cliente,
+                    tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+                    monto=venta.monto_total,
+                    saldo_anterior=saldo_anterior_cc,
+                    saldo_resultante=saldo_anterior_cc - venta.monto_total,
+                    venta=venta,
+                    descripcion=f"Anulación Venta #{venta.pk}",
+                    creado_por=anulado_por,
+                )
+
+            venta.estado = Venta.Estado.ANULADA
+            venta.save(update_fields=["estado"])
+
+        return venta
 
 
 class PagoService:

@@ -58,3 +58,22 @@ class DatosEmpresaSerializer(serializers.ModelSerializer):
     class Meta:
         model = DatosEmpresa
         fields = "__all__"
+
+
+class CerrarCajaSerializer(serializers.Serializer):
+    monto_contado_fisico = serializers.IntegerField(min_value=0)
+
+
+class EmitirFacturaSerializer(serializers.Serializer):
+    tipo = serializers.ChoiceField(choices=["CARGA_SALDO", "PAGO_ALMUERZO"])
+    origen_id = serializers.IntegerField(min_value=1)
+    nro_factura = serializers.CharField(max_length=20)
+
+
+class PendienteItemSerializer(serializers.Serializer):
+    tipo = serializers.CharField()
+    id = serializers.IntegerField()
+    cliente_nombre = serializers.CharField()
+    descripcion = serializers.CharField()
+    monto = serializers.IntegerField()
+    fecha = serializers.DateTimeField()

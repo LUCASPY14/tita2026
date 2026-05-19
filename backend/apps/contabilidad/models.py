@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 
 # ==============================================================================
@@ -63,7 +64,12 @@ class CierreCaja(models.Model):
     estado = models.CharField(
         max_length=15, choices=Estado.choices, default=Estado.ABIERTO
     )
+    observaciones_conciliacion = models.TextField(
+        blank=True, null=True,
+        help_text="Nota del contador al conciliar el cierre",
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    history = HistoricalRecords()
 
     class Meta:
         verbose_name = "Cierre de Caja"
@@ -207,6 +213,7 @@ class Factura(models.Model):
     )
     observaciones = models.TextField(blank=True, null=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    history = HistoricalRecords()
 
     class Meta:
         verbose_name = "Factura"

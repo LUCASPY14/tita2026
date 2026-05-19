@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.core.validators import EmailValidator
 from django.db import models
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 
 # ==============================================================================
@@ -58,6 +59,7 @@ class Cliente(models.Model):
         models.PROTECT,
         related_name="clientes",
     )
+    history = HistoricalRecords()
 
     class Meta:
         verbose_name = "Cliente"

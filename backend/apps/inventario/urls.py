@@ -10,6 +10,7 @@ from .views import (
     AlertaStockViewSet,
     LoteProductoViewSet,
     AlertaVencimientoViewSet,
+    StockCriticoView,
 )
 
 router = DefaultRouter()
@@ -24,4 +25,5 @@ router.register(r"alertas-vencimiento", AlertaVencimientoViewSet, basename="aler
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("stock-critico/", StockCriticoView.as_view(), name="stock-critico"),
 ]
