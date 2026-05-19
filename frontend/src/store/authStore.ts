@@ -15,6 +15,7 @@ interface AuthState {
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  loadUser: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -25,12 +26,23 @@ export const useAuthStore = create<AuthState>((set) => ({
     const { data } = await api.post('/token/', { email, password })
     localStorage.setItem('access_token', data.access)
     localStorage.setItem('refresh_token', data.refresh)
-    set({ isAuthenticated: true })
-  },
+    set({ isAuthenticated: true, user: data.user || null })
+},
 
   logout: () => {
     localStorage.clear()
     set({ user: null, isAuthenticated: false })
     window.location.href = '/login'
+  },
+
+  loadUser: async () => {
+    if (!localStorage.getItem('access_token')) return
+    try {
+      const { data } = await api.get('/usuarios/usuarios/me/')
+      set({ user: data, isAuthenticated: true })
+    } catch {
+      localStorage.clear()
+      set({ user: null, isAuthenticated: false })
+    }
   },
 }))
