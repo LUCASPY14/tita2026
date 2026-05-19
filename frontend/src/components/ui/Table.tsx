@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react'
 
 export interface Column<T> {
   title: string
@@ -14,6 +15,12 @@ interface TableProps<T> {
   rowKey: keyof T | ((record: T) => string | number)
   loading?: boolean
   pageSize?: number
+  /** Server-side pagination: controlled page number (1-based) */
+  page?: number
+  /** Server-side pagination: callback when page changes */
+  onPageChange?: (page: number) => void
+  /** Server-side pagination: total record count */
+  total?: number
 }
 
 function getKey<T>(record: T, rowKey: keyof T | ((r: T) => string | number)): string | number {
@@ -26,23 +33,30 @@ export default function Table<T extends object>({
   rowKey,
   loading = false,
   pageSize = 10,
+  page: controlledPage,
+  onPageChange,
+  total: controlledTotal,
 }: TableProps<T>) {
-  const [page, setPage] = useState(1)
-  const total = dataSource.length
+  const [internalPage, setInternalPage] = useState(1)
+
+  const isServerSide = controlledPage !== undefined && onPageChange !== undefined
+  const page = isServerSide ? controlledPage : internalPage
+  const setPage = isServerSide ? onPageChange : setInternalPage
+  const total = isServerSide ? (controlledTotal ?? dataSource.length) : dataSource.length
+
   const totalPages = Math.ceil(total / pageSize)
-  const start = (page - 1) * pageSize
-  const rows = dataSource.slice(start, start + pageSize)
+  const rows = isServerSide ? dataSource : dataSource.slice((page - 1) * pageSize, page * pageSize)
 
   return (
-    <div>
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
+    <div className="flex flex-col gap-3">
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
         <table className="w-full text-sm text-left">
-          <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
-            <tr>
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-3 font-medium whitespace-nowrap"
+                  className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap"
                   style={col.width ? { width: col.width } : undefined}
                 >
                   {col.title}
@@ -50,28 +64,34 @@ export default function Table<T extends object>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-slate-100">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
                   {columns.map((col) => (
                     <td key={col.key} className="px-4 py-3">
-                      <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-4 bg-slate-100 rounded-lg animate-pulse" />
                     </td>
                   ))}
                 </tr>
               ))
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-400">
-                  Sin datos
+                <td colSpan={columns.length} className="px-4 py-14 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <Inbox className="w-8 h-8 text-slate-300" />
+                    <span className="text-sm text-slate-400">Sin datos</span>
+                  </div>
                 </td>
               </tr>
             ) : (
               rows.map((record) => (
-                <tr key={getKey(record, rowKey)} className="hover:bg-gray-50">
+                <tr
+                  key={getKey(record, rowKey)}
+                  className="hover:bg-slate-50/80 transition-colors duration-100"
+                >
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 whitespace-nowrap">
+                    <td key={col.key} className="px-4 py-3 whitespace-nowrap text-slate-700">
                       {col.render
                         ? col.render(col.dataIndex ? record[col.dataIndex] : undefined, record)
                         : col.dataIndex
@@ -87,31 +107,41 @@ export default function Table<T extends object>({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-3 text-sm text-gray-600">
+        <div className="flex items-center justify-between text-xs text-slate-500 px-1">
           <span>{total} registros</span>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <button
-              className="px-3 py-1 border rounded disabled:opacity-40"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
             >
-              &lt;
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+              const p = totalPages <= 7 ? i + 1
+                : page <= 4 ? i + 1
+                : page >= totalPages - 3 ? totalPages - 6 + i
+                : page - 3 + i
+              return p
+            }).map((p) => (
               <button
                 key={p}
-                className={`px-3 py-1 border rounded ${p === page ? 'bg-green-600 text-white border-green-600' : 'hover:bg-gray-50'}`}
+                className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  p === page
+                    ? 'bg-green-600 text-white shadow-sm shadow-green-600/25'
+                    : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
                 onClick={() => setPage(p)}
               >
                 {p}
               </button>
             ))}
             <button
-              className="px-3 py-1 border rounded disabled:opacity-40"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
               disabled={page === totalPages}
             >
-              &gt;
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
