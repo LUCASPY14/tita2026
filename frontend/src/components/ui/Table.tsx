@@ -67,10 +67,13 @@ export default function Table<T extends object>({
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3">
-                      <div className="h-4 bg-slate-100 rounded-lg animate-pulse" />
+                <tr key={i} className="border-b border-slate-100 last:border-0">
+                  {columns.map((col, j) => (
+                    <td key={col.key} className="px-4 py-3.5">
+                      <div
+                        className="h-3.5 bg-slate-100 rounded-full animate-pulse"
+                        style={{ width: `${55 + ((i * 4 + j * 9) % 40)}%` }}
+                      />
                     </td>
                   ))}
                 </tr>

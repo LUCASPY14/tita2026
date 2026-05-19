@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   CreditCard, AlertTriangle, UtensilsCrossed, History,
-  CalendarCheck, CheckCircle2, Clock, AlertCircle,
+  CalendarCheck, CheckCircle2, Clock, AlertCircle, RefreshCw,
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
@@ -337,26 +337,25 @@ export default function PortalDashboard() {
   const [suscripciones, setSuscripciones] = useState<Record<number, Suscripcion[]>>({})
   const [loadingPlan, setLoadingPlan] = useState<Record<number, boolean>>({})
 
-  useEffect(() => {
-    const cargar = async () => {
-      setLoading(true)
-      try {
-        const { data: res } = await api.get('/usuarios/portal/mi-hijo/')
-        setData(res)
-        if (res.hijos.length > 0) {
-          setSelectedHijoId(res.hijos[0].id)
-          const init: Record<number, HijoTab> = {}
-          res.hijos.forEach((h: HijoData) => { init[h.id] = 'resumen' })
-          setTabs(init)
-        }
-      } catch {
-        toast.error('Error al cargar los datos')
-      } finally {
-        setLoading(false)
+  const cargar = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { data: res } = await api.get('/usuarios/portal/mi-hijo/')
+      setData(res)
+      if (res.hijos.length > 0) {
+        setSelectedHijoId(res.hijos[0].id)
+        const init: Record<number, HijoTab> = {}
+        res.hijos.forEach((h: HijoData) => { init[h.id] = 'resumen' })
+        setTabs(init)
       }
+    } catch {
+      toast.error('Error al cargar los datos')
+    } finally {
+      setLoading(false)
     }
-    cargar()
-  }, [user])
+  }, [])
+
+  useEffect(() => { cargar() }, [user, cargar])
 
   const loadPlan = useCallback(async (hijoId: number) => {
     if (suscripciones[hijoId] !== undefined) return
@@ -396,11 +395,21 @@ export default function PortalDashboard() {
   return (
     <div className="space-y-5">
       {/* Welcome */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Hola, {user?.nombre}</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          {MESES[data.mes.mes]} {data.mes.anio}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Hola, {user?.nombre}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {MESES[data.mes.mes]} {data.mes.anio}
+          </p>
+        </div>
+        <button
+          onClick={cargar}
+          disabled={loading}
+          className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-40 cursor-pointer shrink-0"
+          title="Actualizar datos"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {/* Hijo selector */}

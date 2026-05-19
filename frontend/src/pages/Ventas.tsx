@@ -7,6 +7,7 @@ import Select from '../components/ui/Select'
 import Combobox from '../components/ui/Combobox'
 import Table, { type Column } from '../components/ui/Table'
 import Badge from '../components/ui/Badge'
+import Modal from '../components/ui/Modal'
 import {
   Search, ShoppingCart, CreditCard, X, Plus, Minus, User,
   Wallet, Banknote, Tag, AlertTriangle, CheckCircle, History,
@@ -129,6 +130,7 @@ export default function Ventas() {
   const [categoria, setCategoria] = useState('')
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
   const [cobrando, setCobrando] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [clienteId, setClienteId] = useState<number | undefined>()
@@ -295,6 +297,7 @@ export default function Ventas() {
       setCarrito([])
       setTarjeta(null)
       setTarjetaSearch('')
+      setShowConfirm(false)
     } catch (e: unknown) {
       toast.error(extractErrorMessage(e))
     } finally {
@@ -731,7 +734,7 @@ export default function Ventas() {
                       Gs. {total.toLocaleString('es-PY')}
                     </span>
                   </div>
-                  <Button variant="primary" block size="lg" loading={cobrando} onClick={cobrar}>
+                  <Button variant="primary" block size="lg" loading={cobrando} onClick={() => setShowConfirm(true)}>
                     Cobrar Gs. {total.toLocaleString('es-PY')}
                   </Button>
                 </>
@@ -741,6 +744,49 @@ export default function Ventas() {
         </div>
       </div>
       }
+
+      <Modal
+        open={showConfirm}
+        title="Confirmar cobro"
+        onOk={cobrar}
+        onCancel={() => setShowConfirm(false)}
+        confirmLoading={cobrando}
+        okText="Cobrar"
+        width={440}
+      >
+        <div className="space-y-3">
+          <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Cliente</span>
+              <span className="font-semibold text-slate-800">
+                {clientes.find(c => c.id === clienteId)
+                  ? `${clientes.find(c => c.id === clienteId)!.nombres} ${clientes.find(c => c.id === clienteId)!.apellidos}`.trim()
+                  : tarjeta?.cliente_nombre || '—'}
+              </span>
+            </div>
+            {tarjeta && (
+              <div className="flex justify-between">
+                <span className="text-slate-500">Alumno</span>
+                <span className="font-medium text-slate-700">{tarjeta.hijo_nombre}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-slate-500">Tipo</span>
+              <span className="font-medium text-slate-700">{tipoVenta}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Productos</span>
+              <span className="font-medium text-slate-700">{carrito.length} ítem{carrito.length !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          <div className="flex justify-between items-center px-4 py-3 bg-green-50 rounded-xl border border-green-100">
+            <span className="text-base font-bold text-slate-700">TOTAL</span>
+            <span className="text-xl font-extrabold text-emerald-700 tabular-nums">
+              Gs. {total.toLocaleString('es-PY')}
+            </span>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

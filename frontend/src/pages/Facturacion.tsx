@@ -268,7 +268,20 @@ export default function Facturacion() {
       width: 130,
       render: (_, r) => (
         <div className="flex gap-1.5">
-          <Button size="sm" variant="secondary" onClick={() => window.open(`/api/contabilidad/facturas/${r.id}/pdf/`, '_blank')}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={async () => {
+              try {
+                const res = await api.get(`/contabilidad/facturas/${r.id}/pdf/`, { responseType: 'blob' })
+                const url = URL.createObjectURL(new Blob([res.data], { type: 'text/html' }))
+                const w = window.open(url, '_blank')
+                if (w) w.onload = () => URL.revokeObjectURL(url)
+              } catch {
+                toast.error('Error al abrir el PDF')
+              }
+            }}
+          >
             <Printer className="w-3.5 h-3.5" />
             PDF
           </Button>

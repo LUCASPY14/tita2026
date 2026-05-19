@@ -7,6 +7,7 @@ import {
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area,
 } from 'recharts'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
@@ -36,6 +37,12 @@ interface ChartData {
   cantidad_total: number
 }
 
+interface TendenciaPoint {
+  fecha: string
+  cantidad: number
+  monto: number
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getWeekRange() {
@@ -60,6 +67,7 @@ const PIE_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6']
 export default function Dashboard() {
   const [resumen, setResumen] = useState<Resumen | null>(null)
   const [chart, setChart] = useState<ChartData | null>(null)
+  const [tendencia, setTendencia] = useState<TendenciaPoint[]>([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const { user } = useAuthStore()
@@ -69,8 +77,9 @@ export default function Dashboard() {
     Promise.all([
       api.get('/contabilidad/dashboard/'),
       api.get('/contabilidad/reportes/', { params: { fecha_desde: desde, fecha_hasta: hasta } }),
+      api.get('/contabilidad/dashboard/tendencia/', { params: { dias: 14 } }),
     ])
-      .then(([dashRes, repRes]) => {
+      .then(([dashRes, repRes, tendRes]) => {
         setResumen(dashRes.data)
         const v = repRes.data?.ventas
         setChart({
@@ -78,6 +87,7 @@ export default function Dashboard() {
           monto_total: v?.monto_total ?? 0,
           cantidad_total: v?.cantidad ?? 0,
         })
+        setTendencia(tendRes.data?.data ?? [])
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -132,6 +142,12 @@ export default function Dashboard() {
     tipo: TIPO_LABEL[t.tipo] ?? t.tipo,
     Ventas: t.cantidad,
     'Monto (k)': Math.round((Number(t.monto) || 0) / 1000),
+  }))
+
+  const tendenciaData = tendencia.map(d => ({
+    dia: new Date(d.fecha + 'T00:00:00').toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' }),
+    Ventas: d.cantidad,
+    'Monto (k)': Math.round(d.monto / 1000),
   }))
 
   return (
@@ -224,6 +240,36 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* ── Tendencia de ventas ───────────────────────────────────────────────── */}
+      {tendenciaData.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-800">Tendencia de ventas — últimos 14 días</h2>
+            <span className="text-xs text-slate-400 tabular-nums">
+              {tendencia.reduce((s, d) => s + d.cantidad, 0)} ventas
+            </span>
+          </div>
+          <div className="p-4 h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={tendenciaData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="dia" tick={{ fontSize: 11, fill: '#94a3b8' }} interval={1} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                <Tooltip
+                  contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                  formatter={(v, name) =>
+                    name === 'Monto (k)' ? [`${formatGs((Number(v) || 0) * 1000)} Gs.`, 'Monto'] : [Number(v), String(name)]
+                  }
+                />
+                <Legend formatter={(v) => <span className="text-xs text-slate-600">{v}</span>} />
+                <Area type="monotone" dataKey="Ventas" stroke="#22c55e" fill="#22c55e20" strokeWidth={2} dot={false} />
+                <Area type="monotone" dataKey="Monto (k)" stroke="#3b82f6" fill="#3b82f620" strokeWidth={2} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       {/* ── Gráficos de la semana ─────────────────────────────────────────────── */}
       {chart && chart.por_tipo.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -246,7 +292,7 @@ export default function Dashboard() {
                     outerRadius={90}
                     paddingAngle={3}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
                     {pieData.map((_, i) => (
@@ -254,7 +300,7 @@ export default function Dashboard() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(v: number) => [`Gs. ${v.toLocaleString('es-PY')}`, 'Monto']}
+                    formatter={(v) => [`Gs. ${(Number(v) || 0).toLocaleString('es-PY')}`, 'Monto']}
                   />
                   <Legend
                     formatter={(value) => <span className="text-xs text-slate-600">{value}</span>}
@@ -277,8 +323,8 @@ export default function Dashboard() {
                   <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
                   <Tooltip
                     contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
-                    formatter={(v: number, name: string) =>
-                      name === 'Monto (k)' ? [`${formatGs(v * 1000)} Gs.`, 'Monto'] : [v, name]
+                    formatter={(v, name) =>
+                      name === 'Monto (k)' ? [`${formatGs((Number(v) || 0) * 1000)} Gs.`, 'Monto'] : [Number(v), String(name)]
                     }
                   />
                   <Legend formatter={(v) => <span className="text-xs text-slate-600">{v}</span>} />

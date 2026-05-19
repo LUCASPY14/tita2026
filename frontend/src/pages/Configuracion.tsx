@@ -5,6 +5,7 @@ import {
   GraduationCap, Building2, History, Shield, Eye, EyeOff,
   CheckCircle2, XCircle, Copy,
 } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import api from '../services/api'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -749,11 +750,11 @@ export default function Configuracion() {
                   1. Escaneá este código con tu app de autenticación, o copiá el secret manualmente.
                 </p>
                 <div className="bg-slate-50 rounded-xl p-4 flex flex-col items-center gap-3">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(otpUri)}`}
-                    alt="QR 2FA"
-                    className="rounded-lg border border-slate-200"
-                    width={180} height={180}
+                  <QRCodeSVG
+                    value={otpUri}
+                    size={180}
+                    level="H"
+                    className="rounded-lg border border-slate-200 p-2 bg-white"
                   />
                   <div className="flex items-center gap-2 text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 w-full">
                     <code className="flex-1 break-all text-slate-700 select-all">

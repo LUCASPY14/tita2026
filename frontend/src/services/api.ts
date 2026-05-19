@@ -1,4 +1,5 @@
 import axios from 'axios'
+import toast from 'react-hot-toast'
 
 const api = axios.create({
   baseURL: '/api',
@@ -33,6 +34,9 @@ api.interceptors.response.use(
           window.location.href = '/login'
         }
       }
+    }
+    if (!error.response) {
+      toast.error('Sin conexión con el servidor', { id: 'network-error' })
     }
     return Promise.reject(error)
   }
