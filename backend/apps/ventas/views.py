@@ -16,6 +16,7 @@ from common.permissions import IsCajeroOrAdmin, IsAdmin, IsStaffUser
 from .filters import VentaFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 from .services import VentaService
 
 from .models import (
@@ -42,8 +43,11 @@ class VentaViewSet(viewsets.ModelViewSet):
     queryset = Venta.objects.select_related("cliente", "cajero").prefetch_related("detalles").all()
     serializer_class = VentaSerializer
     permission_classes = [IsCajeroOrAdmin]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = VentaFilter
+    search_fields = ["cliente__nombres", "cliente__apellidos", "cliente__ruc_ci"]
+    ordering_fields = ["fecha", "monto_total"]
+    ordering = ["-fecha"]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

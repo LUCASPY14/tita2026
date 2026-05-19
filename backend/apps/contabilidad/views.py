@@ -3,6 +3,7 @@ Views para la app contabilidad
 """
 
 import csv
+from datetime import timedelta
 
 from django.http import HttpResponse
 from django.template.loader import render_to_string
@@ -395,4 +396,49 @@ class DashboardResumenView(APIView):
             "productos": productos_total,
             "stockBajo": stock_bajo,
             "cajasAbiertas": cajas_abiertas,
+        })
+
+
+class DashboardTendenciaView(APIView):
+    """
+    GET /api/contabilidad/dashboard/tendencia/?dias=7
+    Ventas diarias de los últimos N días (máx 90) para el gráfico de tendencia.
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        from django.db.models import Count, Sum
+        from django.db.models.functions import TruncDate
+        from apps.ventas.models import Venta
+
+        dias = min(max(int(request.query_params.get("dias", 7)), 1), 90)
+        hasta = timezone.now().date()
+        desde = hasta - timedelta(days=dias - 1)
+
+        ventas_qs = (
+            Venta.objects
+            .filter(fecha__date__gte=desde, fecha__date__lte=hasta, estado=Venta.Estado.ACTIVA)
+            .annotate(dia=TruncDate("fecha"))
+            .values("dia")
+            .annotate(cantidad=Count("id"), monto=Sum("monto_total"))
+            .order_by("dia")
+        )
+
+        dias_map = {v["dia"]: v for v in ventas_qs}
+        resultado = []
+        current = desde
+        while current <= hasta:
+            v = dias_map.get(current)
+            resultado.append({
+                "fecha": current.isoformat(),
+                "cantidad": v["cantidad"] if v else 0,
+                "monto": int(v["monto"] or 0) if v else 0,
+            })
+            current += timedelta(days=1)
+
+        return Response({
+            "dias": dias,
+            "desde": desde.isoformat(),
+            "hasta": hasta.isoformat(),
+            "data": resultado,
         })

@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     "simple_history",
+    "drf_spectacular",
     # Local apps
     "apps.core",
     "apps.usuarios",
@@ -198,10 +199,12 @@ REST_FRAMEWORK = {
         "rest_framework.filters.OrderingFilter",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "user": "500/hour",
+        "anon": "200/hour",
+        "user": "1000/hour",
         "auth": "5/min",
     },
     "DATETIME_FORMAT": "%d/%m/%Y %H:%M",
@@ -209,6 +212,19 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# ==============================================================================
+# DRF SPECTACULAR (OpenAPI / Swagger)
+# ==============================================================================
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Cantina Tita API",
+    "DESCRIPTION": "API REST para el sistema de gestión de Cantina Tita",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 # ==============================================================================

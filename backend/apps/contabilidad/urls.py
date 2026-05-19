@@ -9,6 +9,7 @@ from .views import (
     FacturaViewSet,
     DatosEmpresaViewSet,
     DashboardResumenView,
+    DashboardTendenciaView,
     ReportePeriodoView,
 )
 
@@ -23,5 +24,6 @@ router.register(r"datos-empresa", DatosEmpresaViewSet, basename="datos-empresa")
 urlpatterns = [
     path("", include(router.urls)),
     path("dashboard/", DashboardResumenView.as_view(), name="dashboard-resumen"),
+    path("dashboard/tendencia/", DashboardTendenciaView.as_view(), name="dashboard-tendencia"),
     path("reportes/", ReportePeriodoView.as_view(), name="reportes-periodo"),
 ]
