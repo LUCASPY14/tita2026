@@ -33,9 +33,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-green-50">
       <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="text-4xl mb-2">🍽</div>
-          <h1 className="text-2xl font-bold text-gray-900">La Cantina de Tita</h1>
-          <p className="text-sm text-gray-500 mt-1">Sistema de Gestión</p>
+          <img src="/logo_tita.png" alt="La Cantina de Tita" className="h-28 w-auto mx-auto mb-3" />
+          <p className="text-sm text-slate-500">Sistema de Gestión</p>
         </div>
         <div className="space-y-4">
           <Input

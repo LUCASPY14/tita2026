@@ -68,15 +68,19 @@ export default function AppLayout() {
         <div
           className={[
             'flex items-center h-14 border-b border-white/5 shrink-0',
-            collapsed ? 'justify-center px-3' : 'px-5 gap-2.5',
+            collapsed ? 'justify-center px-3' : 'px-4 gap-2.5',
           ].join(' ')}
         >
-          <div className="w-7 h-7 bg-green-500 rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-white font-black text-xs leading-none">CT</span>
+          <div className="bg-white rounded-lg p-0.5 shrink-0">
+            <img
+              src="/logo_tita.png"
+              alt="Cantina Tita"
+              className={collapsed ? 'h-7 w-auto' : 'h-8 w-auto'}
+            />
           </div>
           {!collapsed && (
-            <span className="text-white/90 font-semibold text-sm tracking-tight truncate">
-              Cantina Tita
+            <span className="text-white/70 font-medium text-xs tracking-tight truncate">
+              Sistema de Gestión
             </span>
           )}
         </div>

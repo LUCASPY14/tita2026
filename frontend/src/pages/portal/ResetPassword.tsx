@@ -83,7 +83,7 @@ export default function PortalResetPassword() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-4">🔑</div>
+          <img src="/logo_tita.png" alt="Cantina Tita" className="h-16 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-green-800">Nueva contraseña</h1>
           <p className="text-gray-500 mt-2 text-sm">Ingresá tu nueva contraseña</p>
         </div>

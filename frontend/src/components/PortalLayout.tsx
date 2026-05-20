@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { UtensilsCrossed, Home, Bell, LogOut } from 'lucide-react'
+import { Home, Bell, LogOut } from 'lucide-react'
 
 const navItems = [
   { path: '/portal', label: 'Inicio', icon: Home, exact: true },
@@ -18,13 +18,8 @@ export default function PortalLayout() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-green-500 rounded-lg flex items-center justify-center shrink-0">
-              <UtensilsCrossed className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-slate-800 leading-none">Cantina Tita</p>
-              <p className="text-xs text-slate-400 leading-none mt-0.5 hidden sm:block">Portal de Padres</p>
-            </div>
+            <img src="/logo_tita.png" alt="Cantina Tita" className="h-8 w-auto" />
+            <p className="text-xs text-slate-400 hidden sm:block">Portal de Padres</p>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-600 hidden sm:block">{user?.nombre}</span>
