@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { create } from 'zustand'
 import api from '../services/api'
 
@@ -35,7 +36,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: !!localStorage.getItem('access_token'),
 
   login: async (email: string, password: string) => {
-    const { data } = await api.post('/token/', { email, password })
+    const { data } = await axios.post('/api/token/', { email, password })
     localStorage.setItem('access_token', data.access)
     localStorage.setItem('refresh_token', data.refresh)
     set({ isAuthenticated: true, user: data.user || null })

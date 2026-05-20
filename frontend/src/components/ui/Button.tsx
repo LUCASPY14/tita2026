@@ -64,11 +64,14 @@ export default function Button({
         className,
       ].join(' ')}
     >
-      {loading ? (
-        <Loader2 className="animate-spin h-4 w-4 shrink-0" />
-      ) : icon ? (
-        <span className="shrink-0">{icon}</span>
-      ) : null}
+      <Loader2
+        aria-hidden="true"
+        className={[
+          'h-4 w-4 shrink-0 transition-all duration-150',
+          loading ? 'animate-spin' : 'w-0 opacity-0 overflow-hidden',
+        ].join(' ')}
+      />
+      {!loading && icon && <span className="shrink-0">{icon}</span>}
       {children}
     </button>
   )
