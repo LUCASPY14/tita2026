@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from celery import shared_task
 from django.utils import timezone
 from datetime import timedelta
@@ -28,7 +29,7 @@ def alertar_stock_minimo():
         # Determinar tipo de alerta
         if stock.cantidad <= 0:
             tipo = AlertaStock.TipoAlerta.STOCK_CERO
-        elif stock.cantidad <= stock.producto.stock_minimo * 0.5:
+        elif stock.cantidad <= stock.producto.stock_minimo * Decimal("0.5"):
             tipo = AlertaStock.TipoAlerta.STOCK_CRITICO
         else:
             tipo = AlertaStock.TipoAlerta.STOCK_MINIMO

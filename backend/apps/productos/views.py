@@ -2,6 +2,8 @@
 Views para la app productos
 """
 
+from django.core.cache import cache
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
@@ -34,12 +36,36 @@ from .serializers import (
 )
 
 
+_CACHE_TTL = 300  # 5 minutos
+
+
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.select_related("categoria_padre").all()
     serializer_class = CategoriaSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["activo"]
+
+    def list(self, request, *args, **kwargs):
+        cache_key = f"categorias_list_{request.query_params.urlencode()}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        response = super().list(request, *args, **kwargs)
+        cache.set(cache_key, response.data, _CACHE_TTL)
+        return response
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        cache.clear()
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        cache.clear()
+
+    def perform_destroy(self, instance):
+        super().perform_destroy(instance)
+        cache.clear()
 
 
 class ProductoViewSet(viewsets.ModelViewSet):
@@ -49,6 +75,27 @@ class ProductoViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["activo", "categoria", "es_servicio"]
     search_fields = ["descripcion", "codigo_barra", "codigo"]
+
+    def list(self, request, *args, **kwargs):
+        cache_key = f"productos_list_{request.query_params.urlencode()}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        response = super().list(request, *args, **kwargs)
+        cache.set(cache_key, response.data, _CACHE_TTL)
+        return response
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        cache.clear()
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        cache.clear()
+
+    def perform_destroy(self, instance):
+        super().perform_destroy(instance)
+        cache.clear()
 
 
 class UnidadMedidaViewSet(viewsets.ModelViewSet):

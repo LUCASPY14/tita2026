@@ -141,6 +141,8 @@ export default function Inventario() {
   const [filterTipoMov, setFilterTipoMov] = useState('')
   const [pageMov, setPageMov] = useState(1)
   const [totalMov, setTotalMov] = useState(0)
+  const [sortMovKey, setSortMovKey] = useState('fecha')
+  const [sortMovDir, setSortMovDir] = useState<'asc' | 'desc'>('desc')
   const searchTimerMov = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // ── Lotes ─────────────────────────────────────────────────────────
@@ -150,6 +152,8 @@ export default function Inventario() {
   const [filterProductoLote, setFilterProductoLote] = useState('')
   const [pageLotes, setPageLotes] = useState(1)
   const [totalLotes, setTotalLotes] = useState(0)
+  const [sortLotesKey, setSortLotesKey] = useState('fecha_vencimiento')
+  const [sortLotesDir, setSortLotesDir] = useState<'asc' | 'desc'>('asc')
 
   // ── Load catalogs ─────────────────────────────────────────────────
   useEffect(() => {
@@ -191,7 +195,8 @@ export default function Inventario() {
   const loadMovimientos = useCallback(async (prod: string, tipo: string, p: number) => {
     setLoadingMov(true)
     try {
-      const params: Record<string, unknown> = { page: p, page_size: 15, ordering: '-fecha' }
+      const ordering = sortMovDir === 'asc' ? sortMovKey : `-${sortMovKey}`
+      const params: Record<string, unknown> = { page: p, page_size: 15, ordering }
       if (prod) params.producto = prod
       if (tipo) params.tipo = tipo
       const { data } = await api.get('/inventario/movimientos/', { params })
@@ -202,7 +207,7 @@ export default function Inventario() {
     } finally {
       setLoadingMov(false)
     }
-  }, [])
+  }, [sortMovKey, sortMovDir])
 
   useEffect(() => {
     if (tab !== 'movimientos') return
@@ -223,7 +228,8 @@ export default function Inventario() {
   const loadLotes = useCallback(async (prod: string, vencido: string, p: number) => {
     setLoadingLotes(true)
     try {
-      const params: Record<string, unknown> = { page: p, page_size: 15 }
+      const ordering = sortLotesDir === 'asc' ? sortLotesKey : `-${sortLotesKey}`
+      const params: Record<string, unknown> = { page: p, page_size: 15, ordering }
       if (prod) params.producto = prod
       if (vencido !== '') params.bloqueado = vencido
       const { data } = await api.get('/inventario/lotes/', { params })
@@ -234,7 +240,7 @@ export default function Inventario() {
     } finally {
       setLoadingLotes(false)
     }
-  }, [])
+  }, [sortLotesKey, sortLotesDir])
 
   useEffect(() => {
     if (tab === 'lotes') {
@@ -365,6 +371,7 @@ export default function Inventario() {
     {
       title: 'Fecha',
       key: 'fecha',
+      sortable: true,
       render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha)}</span>,
     },
     {
@@ -379,7 +386,8 @@ export default function Inventario() {
     },
     {
       title: 'Cantidad',
-      key: 'cant',
+      key: 'cantidad',
+      sortable: true,
       render: (_, r) => {
         const isEntry = r.tipo === 'ENTRADA'
         return (
@@ -410,7 +418,8 @@ export default function Inventario() {
     },
     {
       title: 'Vencimiento',
-      key: 'vto',
+      key: 'fecha_vencimiento',
+      sortable: true,
       render: (_, r) => (
         <span className={`text-sm font-medium ${r.esta_vencido ? 'text-red-600' : r.dias_hasta_vencimiento <= 30 ? 'text-orange-600' : 'text-slate-700'}`}>
           {formatFecha(r.fecha_vencimiento)}
@@ -428,7 +437,8 @@ export default function Inventario() {
     },
     {
       title: 'Cantidad',
-      key: 'cant',
+      key: 'cantidad',
+      sortable: true,
       render: (_, r) => <span className="tabular-nums text-sm text-slate-700">{r.cantidad}</span>,
     },
     {
@@ -559,8 +569,12 @@ export default function Inventario() {
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-1">
-              <Table columns={colsMov} dataSource={movimientos} rowKey="id" loading={loadingMov}
-                pageSize={15} page={pageMov} onPageChange={setPageMov} total={totalMov} />
+              <Table
+                columns={colsMov} dataSource={movimientos} rowKey="id" loading={loadingMov}
+                pageSize={15} page={pageMov} onPageChange={setPageMov} total={totalMov}
+                sortKey={sortMovKey} sortDir={sortMovDir}
+                onSort={(key, dir) => { setSortMovKey(key); setSortMovDir(dir) }}
+              />
             </div>
           </div>
         </>
@@ -598,8 +612,12 @@ export default function Inventario() {
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-1">
-              <Table columns={colsLotes} dataSource={lotes} rowKey="id" loading={loadingLotes}
-                pageSize={15} page={pageLotes} onPageChange={setPageLotes} total={totalLotes} />
+              <Table
+                columns={colsLotes} dataSource={lotes} rowKey="id" loading={loadingLotes}
+                pageSize={15} page={pageLotes} onPageChange={setPageLotes} total={totalLotes}
+                sortKey={sortLotesKey} sortDir={sortLotesDir}
+                onSort={(key, dir) => { setSortLotesKey(key); setSortLotesDir(dir) }}
+              />
             </div>
           </div>
         </>

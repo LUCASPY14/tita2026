@@ -136,6 +136,11 @@ export default function Reportes() {
     }
   }
 
+  // ── Sort state ───────────────────────────────────────────────────
+  const [sortTipo, setSortTipo] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null)
+  const [sortCierres, setSortCierres] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null)
+  const [sortDetalle, setSortDetalle] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null)
+
   // ── Cuenta corriente tab ─────────────────────────────────────────
   const [ccData, setCcData] = useState<CuentaCorrienteData | null>(null)
   const [loadingCc, setLoadingCc] = useState(false)
@@ -153,6 +158,21 @@ export default function Reportes() {
     }
   }
 
+  // ── Client-side sort helper ──────────────────────────────────────
+  function clientSort<T>(arr: T[], key: string, dir: 'asc' | 'desc'): T[] {
+    return [...arr].sort((a, b) => {
+      const av = (a as Record<string, unknown>)[key]
+      const bv = (b as Record<string, unknown>)[key]
+      if (av == null) return 1
+      if (bv == null) return -1
+      if (typeof av === 'number' && typeof bv === 'number')
+        return dir === 'asc' ? av - bv : bv - av
+      return dir === 'asc'
+        ? String(av).localeCompare(String(bv))
+        : String(bv).localeCompare(String(av))
+    })
+  }
+
   // ── Columns ──────────────────────────────────────────────────────
 
   const columnsTipo: Column<VentaTipo>[] = [
@@ -167,11 +187,13 @@ export default function Reportes() {
       title: 'Cantidad',
       key: 'cantidad',
       dataIndex: 'cantidad',
+      sortable: true,
       render: v => <span className="tabular-nums font-semibold text-slate-800">{v as number}</span>,
     },
     {
       title: 'Monto',
       key: 'monto',
+      sortable: true,
       render: (_, r) => (
         <span className="tabular-nums font-semibold text-emerald-700">{formatGs(r.monto)}</span>
       ),
@@ -182,17 +204,18 @@ export default function Reportes() {
     { title: 'Caja', key: 'caja', dataIndex: 'caja' },
     {
       title: 'Apertura',
-      key: 'apertura',
+      key: 'fecha_apertura',
+      sortable: true,
       render: (_, r) => <span className="text-sm text-slate-600">{formatFecha(r.fecha_apertura)}</span>,
     },
     {
       title: 'Cierre',
-      key: 'cierre',
+      key: 'fecha_cierre',
       render: (_, r) => <span className="text-sm text-slate-600">{formatFecha(r.fecha_cierre)}</span>,
     },
     {
       title: 'Inicial',
-      key: 'inicial',
+      key: 'monto_inicial',
       render: (_, r) => <span className="tabular-nums text-sm text-slate-700">{formatGs(r.monto_inicial)}</span>,
     },
     {
@@ -202,7 +225,8 @@ export default function Reportes() {
     },
     {
       title: 'Diferencia',
-      key: 'dif',
+      key: 'diferencia',
+      sortable: true,
       render: (_, r) => {
         const n = r.diferencia
         return (
@@ -237,14 +261,16 @@ export default function Reportes() {
     },
     {
       title: 'Saldo Deuda',
-      key: 'saldo',
+      key: 'saldo_deuda',
+      sortable: true,
       render: (_, r) => (
         <span className="tabular-nums font-bold text-red-600">{formatGs(r.saldo_deuda)}</span>
       ),
     },
     {
       title: 'Días Atraso',
-      key: 'dias',
+      key: 'dias_atraso',
+      sortable: true,
       render: (_, r) => (
         <span className={`tabular-nums font-semibold text-sm ${r.dias_atraso > 60 ? 'text-red-600' : r.dias_atraso > 30 ? 'text-orange-600' : 'text-slate-700'}`}>
           {r.dias_atraso}d
@@ -261,9 +287,18 @@ export default function Reportes() {
   const inputDateClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
   const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
+  const tipoSorted = sortTipo && data
+    ? clientSort(data.ventas.por_tipo, sortTipo.key, sortTipo.dir)
+    : (data?.ventas.por_tipo ?? [])
+  const cierresSorted = sortCierres && data
+    ? clientSort(data.cierres_caja, sortCierres.key, sortCierres.dir)
+    : (data?.cierres_caja ?? [])
   const ccDetalleFiltrado = (ccData?.detalle ?? []).filter(d =>
     !searchCc || d.cliente.toLowerCase().includes(searchCc.toLowerCase()) || d.ruc_ci.includes(searchCc)
   )
+  const ccDetalleSorted = sortDetalle
+    ? clientSort(ccDetalleFiltrado, sortDetalle.key, sortDetalle.dir)
+    : ccDetalleFiltrado
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -385,7 +420,11 @@ export default function Reportes() {
                     <h2 className="text-sm font-semibold text-slate-800">Ventas por Tipo</h2>
                   </div>
                   <div className="p-1">
-                    <Table columns={columnsTipo} dataSource={data.ventas.por_tipo} rowKey="tipo" pageSize={10} />
+                    <Table
+                      columns={columnsTipo} dataSource={tipoSorted} rowKey="tipo" pageSize={10}
+                      sortKey={sortTipo?.key} sortDir={sortTipo?.dir}
+                      onSort={(key, dir) => setSortTipo({ key, dir })}
+                    />
                   </div>
                 </div>
               )}
@@ -403,7 +442,11 @@ export default function Reportes() {
                       No hay cierres de caja en este período.
                     </p>
                   ) : (
-                    <Table columns={columnsCierres} dataSource={data.cierres_caja} rowKey="id" pageSize={10} />
+                    <Table
+                      columns={columnsCierres} dataSource={cierresSorted} rowKey="id" pageSize={10}
+                      sortKey={sortCierres?.key} sortDir={sortCierres?.dir}
+                      onSort={(key, dir) => setSortCierres({ key, dir })}
+                    />
                   )}
                 </div>
               </div>
@@ -498,7 +541,11 @@ export default function Reportes() {
                   </div>
                 </div>
                 <div className="p-1">
-                  <Table columns={colsDetalle} dataSource={ccDetalleFiltrado} rowKey="cliente_id" pageSize={15} />
+                  <Table
+                    columns={colsDetalle} dataSource={ccDetalleSorted} rowKey="cliente_id" pageSize={15}
+                    sortKey={sortDetalle?.key} sortDir={sortDetalle?.dir}
+                    onSort={(key, dir) => setSortDetalle({ key, dir })}
+                  />
                 </div>
               </div>
             </div>

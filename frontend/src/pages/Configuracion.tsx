@@ -156,6 +156,7 @@ export default function Configuracion() {
   const [loadingEmp, setLoadingEmp] = useState(false)
   const [empForm, setEmpForm] = useState({ ruc: '', razon_social: '', direccion: '', ciudad: '', pais: 'Paraguay', telefono: '', email: '', activo: true })
   const [savingEmp, setSavingEmp] = useState(false)
+  const savedEmpRef = useRef<typeof empForm | null>(null)
 
   // ── Historial Precios ─────────────────────────────────────────────
   const [historico, setHistorico] = useState<HistoricoPrecioItem[]>([])
@@ -243,12 +244,28 @@ export default function Configuracion() {
       const { data } = await api.get('/contabilidad/datos-empresa/', { params: { page_size: 1 } })
       const emp = (data.results ?? data ?? [])[0] ?? null
       setEmpresa(emp)
-      if (emp) setEmpForm({ ruc: emp.ruc, razon_social: emp.razon_social, direccion: emp.direccion ?? '', ciudad: emp.ciudad ?? '', pais: emp.pais ?? 'Paraguay', telefono: emp.telefono ?? '', email: emp.email ?? '', activo: emp.activo })
+      if (emp) {
+        const f = { ruc: emp.ruc, razon_social: emp.razon_social, direccion: emp.direccion ?? '', ciudad: emp.ciudad ?? '', pais: emp.pais ?? 'Paraguay', telefono: emp.telefono ?? '', email: emp.email ?? '', activo: emp.activo }
+        setEmpForm(f)
+        savedEmpRef.current = f
+      }
     } catch { toast.error('Error al cargar datos de empresa') }
     finally { setLoadingEmp(false) }
   }, [])
 
   useEffect(() => { if (tab === 'datos_empresa') loadEmpresa() }, [tab, loadEmpresa])
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!savedEmpRef.current) return
+      if (JSON.stringify(empForm) !== JSON.stringify(savedEmpRef.current)) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [empForm])
 
   // ── Load historial precios ────────────────────────────────────────
   const loadHistorico = useCallback(async (productoId: number | undefined, p: number) => {
@@ -402,6 +419,7 @@ export default function Configuracion() {
         await api.post('/contabilidad/datos-empresa/', empForm)
       }
       toast.success('Datos guardados')
+      savedEmpRef.current = { ...empForm }
       loadEmpresa()
     } catch (err) { toast.error(extractErrorMessage(err)) }
     finally { setSavingEmp(false) }

@@ -83,6 +83,7 @@ class VentaService:
 
             # 1. Calcular totales y validar
             monto_total = Decimal("0")
+            limite_credito = getattr(cliente, "limite_credito", None)
             monto_gravada_10 = Decimal("0")
             monto_gravada_5 = Decimal("0")
             monto_exenta = Decimal("0")
@@ -130,6 +131,16 @@ class VentaService:
                     "iva_10": item_iva_10,
                     "iva_5": item_iva_5,
                 })
+
+            # Validar límite de crédito
+            if tipo == "CREDITO" and limite_credito is not None and Decimal(str(limite_credito)) > Decimal("0"):
+                if saldo_anterior_cc + monto_total > Decimal(str(limite_credito)):
+                    raise ValidationError({
+                        "error": "La venta excede el límite de crédito autorizado del cliente.",
+                        "limite_credito": str(limite_credito),
+                        "saldo_deudor": str(saldo_anterior_cc),
+                        "monto_venta": str(monto_total),
+                    })
 
             # Validar saldo de tarjeta con objeto bloqueado
             if tipo == "CONTADO" and tarjeta_bloqueada:
@@ -289,7 +300,12 @@ class VentaService:
                     creado_por=anulado_por,
                 )
 
-            # 3. Revertir cuenta corriente (si era CREDITO)
+            # 3. Anular PagoVenta asociados
+            PagoVenta.objects.filter(venta=venta).exclude(
+                estado=PagoVenta.Estado.ANULADO
+            ).update(estado=PagoVenta.Estado.ANULADO)
+
+            # 4. Revertir cuenta corriente (si era CREDITO)
             if venta.tipo == Venta.Tipo.CREDITO:
                 ultimo_cc = (
                     CuentaCorrienteCliente.objects

@@ -8,10 +8,23 @@ import {
 import api from '../services/api'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
+import Combobox from '../components/ui/Combobox'
 import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
 import Spinner from '../components/ui/Spinner'
 import Table, { type Column } from '../components/ui/Table'
+
+const CIUDADES_PY = [
+  'Asunción', 'San Lorenzo', 'Luque', 'Capiatá', 'Lambaré',
+  'Fernando de la Mora', 'Limpio', 'Ñemby', 'Mariano Roque Alonso',
+  'Encarnación', 'Ciudad del Este', 'Pedro Juan Caballero',
+  'Concepción', 'Coronel Oviedo', 'Caaguazú', 'Villarrica',
+  'Pilar', 'Caazapá', 'San Juan Bautista', 'Villa Hayes',
+  'Pozo Colorado', 'Fuerte Olimpo', 'Filadelfia', 'Loma Plata',
+  'Minga Guazú', 'Hernandarias', 'Presidente Franco',
+]
+
+const RUC_CI_REGEX = /^(\d{6,8}(-\d{1,2})?|\d{1,8}-\d{1}|\d{6,8})$/
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -133,6 +146,7 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
     defaultValues: BLANK_CLIENTE,
   })
   const activo = watch('activo')
+  const ciudadVal = watch('ciudad')
 
   useEffect(() => {
     if (!open) return
@@ -216,9 +230,12 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
           />
           <Input
             label="RUC / CI *"
-            placeholder="Ej: 1234567-8"
+            placeholder="Ej: 1234567 o 80123456-5"
             error={errors.ruc_ci?.message}
-            {...register('ruc_ci', { required: 'El RUC/CI es obligatorio' })}
+            {...register('ruc_ci', {
+              required: 'El RUC/CI es obligatorio',
+              pattern: { value: RUC_CI_REGEX, message: 'Formato inválido. Ej: 1234567 o 80123456-5' },
+            })}
           />
           <Input
             label="Razón Social"
@@ -244,11 +261,16 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
             placeholder="Calle y número"
             {...register('direccion')}
           />
-          <Input
-            label="Ciudad"
-            placeholder="Asunción"
-            {...register('ciudad')}
-          />
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Ciudad</label>
+            <Combobox
+              options={CIUDADES_PY.map(c => ({ value: c, label: c }))}
+              value={ciudadVal || undefined}
+              onChange={(v) => setValue('ciudad', String(v))}
+              filterLocal
+              placeholder="Buscar ciudad..."
+            />
+          </div>
         </div>
 
         {/* Comercial */}

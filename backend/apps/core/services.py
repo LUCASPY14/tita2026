@@ -5,7 +5,7 @@ Tarjetas, recargas y consumos
 
 from decimal import Decimal
 
-from django.db import models, transaction
+from django.db import transaction
 from django.utils import timezone
 
 from rest_framework.exceptions import ValidationError
@@ -64,9 +64,8 @@ class TarjetaService:
             )
 
             saldo_anterior = tarjeta.saldo_actual
-            tarjeta.saldo_actual = models.F("saldo_actual") + monto
+            tarjeta.saldo_actual += monto
             tarjeta.save()
-            tarjeta.refresh_from_db()
 
             MovimientoTarjeta.objects.create(
                 tarjeta=tarjeta,
@@ -114,9 +113,8 @@ class TarjetaService:
                 })
 
             saldo_anterior = tarjeta.saldo_actual
-            tarjeta.saldo_actual = models.F("saldo_actual") - monto
+            tarjeta.saldo_actual -= monto
             tarjeta.save()
-            tarjeta.refresh_from_db()
 
             consumo = ConsumoTarjeta.objects.create(
                 tarjeta=tarjeta,

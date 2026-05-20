@@ -208,6 +208,7 @@ class PagoVenta(models.Model):
         PENDIENTE = "PENDIENTE", "Pendiente"
         CONCILIADO = "CONCILIADO", "Conciliado"
         RECHAZADO = "RECHAZADO", "Rechazado"
+        ANULADO = "ANULADO", "Anulado"
 
     cliente = models.ForeignKey(
         "clientes.Cliente",

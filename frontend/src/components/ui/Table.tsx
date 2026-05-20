@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronsUpDown, Inbox } from 'lucide-react'
 
 export interface Column<T> {
   title: string
   dataIndex?: keyof T
   key: string
   width?: number
+  sortable?: boolean
   render?: (value: unknown, record: T) => ReactNode
 }
 
@@ -21,6 +22,12 @@ interface TableProps<T> {
   onPageChange?: (page: number) => void
   /** Server-side pagination: total record count */
   total?: number
+  /** Controlled sort column key */
+  sortKey?: string
+  /** Controlled sort direction */
+  sortDir?: 'asc' | 'desc'
+  /** Callback when a sortable header is clicked */
+  onSort?: (key: string, dir: 'asc' | 'desc') => void
 }
 
 function getKey<T>(record: T, rowKey: keyof T | ((r: T) => string | number)): string | number {
@@ -36,6 +43,9 @@ export default function Table<T extends object>({
   page: controlledPage,
   onPageChange,
   total: controlledTotal,
+  sortKey,
+  sortDir,
+  onSort,
 }: TableProps<T>) {
   const [internalPage, setInternalPage] = useState(1)
 
@@ -59,7 +69,21 @@ export default function Table<T extends object>({
                   className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap"
                   style={col.width ? { width: col.width } : undefined}
                 >
-                  {col.title}
+                  {col.sortable ? (
+                    <button
+                      onClick={() => onSort?.(col.key, sortKey === col.key && sortDir === 'asc' ? 'desc' : 'asc')}
+                      className="flex items-center gap-1 hover:text-slate-800 transition-colors cursor-pointer"
+                    >
+                      {col.title}
+                      {sortKey === col.key ? (
+                        sortDir === 'asc'
+                          ? <ChevronUp className="w-3 h-3" />
+                          : <ChevronDown className="w-3 h-3" />
+                      ) : (
+                        <ChevronsUpDown className="w-3 h-3 opacity-40" />
+                      )}
+                    </button>
+                  ) : col.title}
                 </th>
               ))}
             </tr>

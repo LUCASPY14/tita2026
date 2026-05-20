@@ -357,6 +357,63 @@ export default function Ventas() {
     }
   }, [])
 
+  const exportarPDF = useCallback((venta: VentaDetalle) => {
+    const win = window.open('', '_blank', 'width=600,height=800')
+    if (!win) { toast.error('Bloqueá el bloqueo de ventanas emergentes'); return }
+    const rows = (venta.detalles ?? []).map(d => `
+      <tr>
+        <td>${d.producto_nombre}</td>
+        <td style="text-align:center">${d.cantidad}</td>
+        <td style="text-align:right">Gs. ${(Number(d.precio_unitario) || 0).toLocaleString('es-PY')}</td>
+        <td style="text-align:right">Gs. ${(Number(d.subtotal) || 0).toLocaleString('es-PY')}</td>
+      </tr>`).join('')
+    win.document.write(`<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"/>
+<title>Venta #${venta.id} — Cantina Tita</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;padding:32px;max-width:520px;margin:0 auto}
+h1{font-size:22px;font-weight:800;margin-bottom:2px}
+.sub{font-size:12px;color:#64748b;margin-bottom:24px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.card{background:#f8fafc;border-radius:8px;padding:12px}
+.card .lbl{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.card .val{font-size:13px;font-weight:600;color:#1e293b}
+.sec{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;color:#64748b;padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:left}
+th:nth-child(2){text-align:center}th:nth-child(3),th:nth-child(4){text-align:right}
+td{padding:9px 10px;font-size:12px;color:#334155;border-bottom:1px solid #f1f5f9}
+.total{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#f0fdf4;border-radius:8px;margin-top:16px}
+.tl{font-size:15px;font-weight:700}
+.tv{font-size:22px;font-weight:800;color:#059669}
+.footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:28px;padding-top:14px;border-top:1px dashed #e2e8f0}
+@media print{body{padding:16px}}
+</style></head>
+<body>
+<h1>Cantina Tita</h1>
+<p class="sub">Comprobante de Venta #${venta.id}</p>
+<div class="grid">
+  <div class="card"><div class="lbl">Cliente</div><div class="val">${venta.cliente_nombre || '—'}</div></div>
+  <div class="card"><div class="lbl">Fecha</div><div class="val">${formatFecha(venta.fecha)}</div></div>
+  <div class="card"><div class="lbl">Tipo</div><div class="val">${venta.tipo}</div></div>
+  <div class="card"><div class="lbl">Estado</div><div class="val">${venta.estado}</div></div>
+</div>
+<p class="sec">Productos</p>
+<table>
+  <thead><tr><th>Producto</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="total">
+  <span class="tl">TOTAL</span>
+  <span class="tv">Gs. ${(Number(venta.monto_total) || 0).toLocaleString('es-PY')}</span>
+</div>
+<div class="footer">Cantina Tita · ${new Date().toLocaleDateString('es-PY')}</div>
+<script>window.onload=function(){window.print()}<\/script>
+</body></html>`)
+    win.document.close()
+  }, [])
+
   const anularVenta = async () => {
     if (!ventaAnular) return
     setAnulando(true)
@@ -908,6 +965,15 @@ export default function Ventas() {
               <span className="text-xl font-extrabold text-emerald-700 tabular-nums">
                 Gs. {(Number(ventaDetalle.monto_total) || 0).toLocaleString('es-PY')}
               </span>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => exportarPDF(ventaDetalle)}
+                className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-green-700 transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                Descargar PDF
+              </button>
             </div>
           </div>
         ) : null}

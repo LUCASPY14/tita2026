@@ -52,9 +52,8 @@ class VentaViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        venta = self._registrar(serializer)
-        headers = self.get_success_headers(serializer.data)
 
+        # Pre-save: verificar alérgenos antes de crear la venta
         advertencias = []
         hijo = serializer.validated_data.get("hijo")
         if hijo:
@@ -64,6 +63,9 @@ class VentaViewSet(viewsets.ModelViewSet):
             ids = [i.get("producto") for i in items if i.get("producto")]
             productos = list(Producto.objects.filter(pk__in=ids))
             advertencias = verificar_alergenos_venta(hijo, productos)
+
+        venta = self._registrar(serializer)
+        headers = self.get_success_headers(serializer.data)
 
         resp_data = VentaSerializer(venta).data
         if advertencias:

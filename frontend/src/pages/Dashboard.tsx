@@ -7,7 +7,7 @@ import {
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  AreaChart, Area,
+  AreaChart, Area, type LegendProps,
 } from 'recharts'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [chart, setChart] = useState<ChartData | null>(null)
   const [tendencia, setTendencia] = useState<TendenciaPoint[]>([])
   const [loading, setLoading] = useState(true)
+  const [hiddenPie, setHiddenPie] = useState<Set<string>>(new Set())
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
@@ -132,11 +133,47 @@ export default function Dashboard() {
     { path: '/compras', label: 'Nueva Compra', icon: Truck, color: 'bg-orange-600', desc: 'Registrar ingreso de stock' },
   ]
 
+  const togglePieSeries = (name: string) => {
+    setHiddenPie(prev => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
+  }
+
   const pieData = (chart?.por_tipo ?? []).map(t => ({
     name: TIPO_LABEL[t.tipo] ?? t.tipo,
     value: Number(t.monto) || 0,
     cantidad: t.cantidad,
   }))
+  const pieDataFiltered = pieData.filter(d => !hiddenPie.has(d.name))
+
+  const renderPieLegend = ({ payload = [] }: LegendProps) => (
+    <div className="flex flex-wrap justify-center gap-1.5 mt-2 px-2">
+      {payload.map((entry, i) => {
+        const name = String(entry.value)
+        const hidden = hiddenPie.has(name)
+        return (
+          <button
+            key={i}
+            onClick={() => togglePieSeries(name)}
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-all cursor-pointer select-none ${
+              hidden
+                ? 'border-slate-200 text-slate-400 bg-slate-50 line-through'
+                : 'border-slate-200 text-slate-600 bg-white hover:bg-slate-50'
+            }`}
+          >
+            <span
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ backgroundColor: hidden ? '#cbd5e1' : (entry.color ?? PIE_COLORS[i % PIE_COLORS.length]) }}
+            />
+            {name}
+          </button>
+        )
+      })}
+    </div>
+  )
 
   const barData = (chart?.por_tipo ?? []).map(t => ({
     tipo: TIPO_LABEL[t.tipo] ?? t.tipo,
@@ -285,7 +322,7 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={pieData}
+                    data={pieDataFiltered}
                     cx="50%"
                     cy="50%"
                     innerRadius={55}
@@ -295,16 +332,17 @@ export default function Dashboard() {
                     label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                    ))}
+                    {pieDataFiltered.map((entry, i) => {
+                      const origIdx = pieData.findIndex(d => d.name === entry.name)
+                      return (
+                        <Cell key={i} fill={PIE_COLORS[(origIdx >= 0 ? origIdx : i) % PIE_COLORS.length]} />
+                      )
+                    })}
                   </Pie>
                   <Tooltip
                     formatter={(v) => [`Gs. ${(Number(v) || 0).toLocaleString('es-PY')}`, 'Monto']}
                   />
-                  <Legend
-                    formatter={(value) => <span className="text-xs text-slate-600">{value}</span>}
-                  />
+                  <Legend content={renderPieLegend} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import {
   Truck, Search, Plus, Eye, CreditCard,
@@ -129,6 +130,12 @@ const MEDIO_PAGO_COLOR: Record<string, BadgeColor> = {
 
 type TabKey = 'compras' | 'proveedores' | 'pagos'
 
+interface CompraFormFields {
+  proveedor_id: number | ''
+  tipo_pago: string
+  nro_factura: string
+}
+
 const ITEM_EMPTY: ItemForm = { producto: null, cantidad: 1, costo_unitario: 0, subtotal: 0 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -170,11 +177,20 @@ export default function Compras() {
   // ── Create/Edit compra modal ────────────────────────────────────
   const [compraModalOpen, setCompraModalOpen] = useState(false)
   const [editingCompra, setEditingCompra] = useState<Compra | null>(null)
-  const [proveedorId, setProveedorId] = useState<number | ''>('')
-  const [tipoPago, setTipoPago] = useState('CONTADO')
-  const [nroFactura, setNroFactura] = useState('')
   const [items, setItems] = useState<ItemForm[]>([{ ...ITEM_EMPTY }])
   const [savingCompra, setSavingCompra] = useState(false)
+
+  const {
+    register: registerCompra,
+    handleSubmit: handleSubmitCompra,
+    reset: resetCompra,
+    watch: watchCompra,
+    setValue: setValueCompra,
+    formState: { errors: compraErrors },
+  } = useForm<CompraFormFields>({
+    defaultValues: { proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' },
+  })
+  const proveedorId = watchCompra('proveedor_id')
 
   // ── Pago modal ──────────────────────────────────────────────────
   const [pagoModalOpen, setPagoModalOpen] = useState(false)
@@ -287,19 +303,15 @@ export default function Compras() {
   // ── Open create modal ────────────────────────────────────────────
   const openCreate = useCallback(() => {
     setEditingCompra(null)
-    setProveedorId('')
-    setTipoPago('CONTADO')
-    setNroFactura('')
+    resetCompra({ proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' })
     setItems([{ ...ITEM_EMPTY }])
     setCompraModalOpen(true)
-  }, [])
+  }, [resetCompra])
 
   // ── Open edit modal ──────────────────────────────────────────────
   const openEdit = useCallback((c: Compra) => {
     setEditingCompra(c)
-    setProveedorId(c.proveedor)
-    setTipoPago(c.tipo_pago)
-    setNroFactura(c.nro_factura_proveedor || '')
+    resetCompra({ proveedor_id: c.proveedor, tipo_pago: c.tipo_pago, nro_factura: c.nro_factura_proveedor || '' })
     setItems(
       c.detalles?.length
         ? c.detalles.map(d => ({
@@ -311,7 +323,7 @@ export default function Compras() {
         : [{ ...ITEM_EMPTY }]
     )
     setCompraModalOpen(true)
-  }, [])
+  }, [resetCompra])
 
   // ── Items management ─────────────────────────────────────────────
   const actualizarItem = useCallback((index: number, field: keyof ItemForm, value: unknown) => {
@@ -329,17 +341,17 @@ export default function Compras() {
   const total = useMemo(() => items.reduce((s, i) => s + i.subtotal, 0), [items])
 
   // ── Save compra ──────────────────────────────────────────────────
-  const handleSaveCompra = useCallback(async () => {
-    if (!proveedorId || items.some(i => !i.producto)) {
-      toast.error('Seleccioná proveedor y todos los productos')
+  const handleSaveCompra = handleSubmitCompra(async (fields) => {
+    if (items.some(i => !i.producto)) {
+      toast.error('Completá todos los productos de la lista')
       return
     }
     setSavingCompra(true)
     try {
       const payload = {
-        proveedor: proveedorId,
-        tipo_pago: tipoPago,
-        nro_factura_proveedor: nroFactura,
+        proveedor: fields.proveedor_id,
+        tipo_pago: fields.tipo_pago,
+        nro_factura_proveedor: fields.nro_factura,
         items: items.map(i => ({
           producto: i.producto!.id,
           cantidad: i.cantidad,
@@ -361,7 +373,7 @@ export default function Compras() {
     } finally {
       setSavingCompra(false)
     }
-  }, [proveedorId, items, tipoPago, nroFactura, editingCompra, total, searchCompras, filterEstado, filterTipo, filterProveedor, loadCompras])
+  })
 
   // ── Open pago modal ──────────────────────────────────────────────
   const openPago = useCallback((c: Compra) => {
@@ -845,14 +857,17 @@ export default function Compras() {
               <Combobox
                 options={proveedores.map(p => ({ value: p.id, label: p.razon_social }))}
                 value={proveedorId || undefined}
-                onChange={v => setProveedorId(v as number)}
+                onChange={v => setValueCompra('proveedor_id', v as number)}
                 filterLocal
                 placeholder="Buscar proveedor..."
               />
+              {compraErrors.proveedor_id && (
+                <p className="text-xs text-red-500 mt-0.5">{compraErrors.proveedor_id.message}</p>
+              )}
             </div>
             <div>
               <label className={labelClass}>Tipo de Pago</label>
-              <select value={tipoPago} onChange={e => setTipoPago(e.target.value)} className={inputClass}>
+              <select className={inputClass} {...registerCompra('tipo_pago')}>
                 <option value="CONTADO">Contado</option>
                 <option value="CREDITO">Crédito</option>
               </select>
@@ -862,10 +877,9 @@ export default function Compras() {
           <div>
             <label className={labelClass}>Nro. Factura Proveedor</label>
             <input
-              value={nroFactura}
-              onChange={e => setNroFactura(e.target.value)}
               placeholder="001-001-0001234"
               className={inputClass}
+              {...registerCompra('nro_factura')}
             />
           </div>
 
