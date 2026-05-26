@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   CreditCard, Search, Plus, Lock, Unlock, History,
-  RefreshCw, ArrowUp, ArrowDown,
+  ArrowUp, ArrowDown,
 } from 'lucide-react'
 import api from '../services/api'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
@@ -89,6 +89,7 @@ interface CargaSaldo {
   metodo_pago: string
   estado: string
   fecha: string
+  fecha_carga: string
   usuario_nombre?: string
 }
 
@@ -126,16 +127,16 @@ const TIPO_MOV_COLOR: Record<string, BadgeColor> = {
 }
 
 const ESTADO_CARGA_COLOR: Record<string, BadgeColor> = {
-  APROBADA: 'green',
+  CONFIRMADA: 'green',
   PENDIENTE: 'yellow',
   RECHAZADA: 'red',
-  ANULADA: 'default',
 }
 
 const METODO_PAGO_LABEL: Record<string, string> = {
   EFECTIVO: 'Efectivo',
+  'POS DEBITO': 'POS Débito',
+  'POS CREDITO': 'POS Crédito',
   TRANSFERENCIA: 'Transferencia',
-  TARJETA: 'Tarjeta',
 }
 
 const FORM_INITIAL: TarjetaForm = {
@@ -166,12 +167,6 @@ export default function Tarjetas() {
   const [hijos, setHijos] = useState<Hijo[]>([])
   const [form, setForm] = useState<TarjetaForm>(FORM_INITIAL)
   const [saving, setSaving] = useState(false)
-
-  const [recargaOpen, setRecargaOpen] = useState(false)
-  const [recargaTarjeta, setRecargaTarjeta] = useState<Tarjeta | null>(null)
-  const [montoRecarga, setMontoRecarga] = useState('')
-  const [metodoPago, setMetodoPago] = useState('EFECTIVO')
-  const [recargando, setRecargando] = useState(false)
 
   const [toggling, setToggling] = useState<string | null>(null)
 
@@ -271,35 +266,6 @@ export default function Tarjetas() {
     }
   }, [form, search, estadoFilter, loadTarjetas])
 
-  const openRecarga = useCallback((t: Tarjeta) => {
-    setRecargaTarjeta(t)
-    setMontoRecarga('')
-    setMetodoPago('EFECTIVO')
-    setRecargaOpen(true)
-  }, [])
-
-  const handleRecarga = useCallback(async () => {
-    const montoNum = Number(montoRecarga) || 0
-    if (montoNum <= 0) { toast.error('Ingresá un monto válido'); return }
-    setRecargando(true)
-    try {
-      await api.post('/core/cargas-saldo/', {
-        tarjeta: recargaTarjeta?.nro_tarjeta,
-        monto_cargado: montoNum,
-        metodo_pago: metodoPago,
-      })
-      toast.success('Recarga realizada')
-      setRecargaOpen(false)
-      loadTarjetas(search, estadoFilter, page)
-      if (detailTarjeta && recargaTarjeta && detailTarjeta.nro_tarjeta === recargaTarjeta.nro_tarjeta) {
-        openDetail(detailTarjeta)
-      }
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setRecargando(false)
-    }
-  }, [montoRecarga, metodoPago, recargaTarjeta, search, estadoFilter, page, loadTarjetas, detailTarjeta, openDetail])
 
   // ── Derived ─────────────────────────────────────────────────────
 
@@ -375,16 +341,12 @@ export default function Tarjetas() {
     {
       title: '',
       key: 'acciones',
-      width: 210,
+      width: 130,
       render: (_, r) => (
         <div className="flex items-center gap-1.5">
           <Button size="sm" variant="secondary" onClick={() => openDetail(r)}>
             <History className="w-3.5 h-3.5" />
             Ver
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => openRecarga(r)} disabled={r.estado !== 'ACTIVA'}>
-            <RefreshCw className="w-3.5 h-3.5" />
-            Recargar
           </Button>
           <Button
             size="sm"
@@ -453,7 +415,7 @@ export default function Tarjetas() {
     {
       title: 'Fecha',
       key: 'fecha',
-      render: (_, r) => <span className="text-xs text-slate-500">{formatFecha(r.fecha)}</span>,
+      render: (_, r) => <span className="text-xs text-slate-500">{formatFecha(r.fecha_carga ?? r.fecha)}</span>,
     },
     {
       title: 'Monto',
@@ -587,10 +549,6 @@ export default function Tarjetas() {
               <span className="text-xs text-slate-400">Cliente: {detailTarjeta.cliente_nombre}</span>
             </div>
             <div className="flex gap-2">
-              <Button size="sm" variant="secondary" onClick={() => openRecarga(detailTarjeta)} disabled={detailTarjeta.estado !== 'ACTIVA'}>
-                <RefreshCw className="w-3.5 h-3.5" />
-                Recargar
-              </Button>
               <Button
                 size="sm"
                 variant={detailTarjeta.estado === 'ACTIVA' ? 'danger' : 'primary'}
@@ -750,58 +708,6 @@ export default function Tarjetas() {
         </div>
       </Modal>
 
-      {/* ── Recarga Modal ─────────────────────────────────────────── */}
-      <Modal
-        open={recargaOpen}
-        title={`Recargar — ${recargaTarjeta?.hijo_nombre ?? ''}`}
-        onOk={handleRecarga}
-        onCancel={() => setRecargaOpen(false)}
-        okText="Recargar"
-        confirmLoading={recargando}
-        width={400}
-      >
-        <div className="space-y-4">
-          <div className="bg-slate-50 rounded-xl px-4 py-3 flex justify-between items-center">
-            <div>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Saldo actual</p>
-              <p className="text-xl font-bold tabular-nums text-slate-800">
-                {formatGs(recargaTarjeta?.saldo_actual)}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Nro. tarjeta</p>
-              <p className="text-sm font-mono font-semibold text-slate-700">{recargaTarjeta?.nro_tarjeta}</p>
-            </div>
-          </div>
-
-          <div>
-            <label className={labelClass}>Monto a recargar *</label>
-            <input
-              type="number"
-              value={montoRecarga}
-              onChange={e => setMontoRecarga(e.target.value)}
-              placeholder="Guaraníes"
-              min={1000}
-              step={1000}
-              className={inputClass}
-              autoFocus
-            />
-          </div>
-
-          <div>
-            <label className={labelClass}>Método de pago</label>
-            <select
-              value={metodoPago}
-              onChange={e => setMetodoPago(e.target.value)}
-              className={inputClass}
-            >
-              <option value="EFECTIVO">Efectivo</option>
-              <option value="TRANSFERENCIA">Transferencia</option>
-              <option value="TARJETA">Tarjeta</option>
-            </select>
-          </div>
-        </div>
-      </Modal>
     </div>
   )
 }

@@ -1,0 +1,958 @@
+erDiagram
+
+%% ══ USUARIOS ══════════════════════════════════════════════════════
+    usuarios {
+        int id PK
+        string email UK
+        string nombre
+        string apellido
+        string rol
+        int cliente_id FK
+        int empleado_legacy_id FK
+        bool is_active
+        datetime fecha_creacion
+    }
+    empleados {
+        int id_empleado PK
+        string nombre
+        string apellido
+        int id_rol FK
+        bool estado
+        datetime fecha_ingreso
+    }
+    roles {
+        int id_rol PK
+        string nombre_rol UK
+        bool estado
+    }
+    permisos {
+        int id PK
+        string codigo_permiso UK
+        string nombre
+        string modulo
+        bool estado
+    }
+    roles_permisos {
+        int id PK
+        int id_rol FK
+        int id_permiso FK
+        int asignado_por FK
+    }
+    perfiles_usuario {
+        int id_perfil PK
+        int usuario FK
+        string tema
+        string idioma
+        bool notif_email
+    }
+    autenticacion_2fa {
+        int id_2fa PK
+        int usuario FK
+        bool habilitado
+        datetime fecha_activacion
+    }
+    intentos_2fa {
+        int id_intento PK
+        int usuario FK
+        bool exitoso
+        datetime fecha_intento
+    }
+    intentos_login {
+        int id_intento PK
+        string email
+        string ip_address
+        bool exitoso
+        datetime fecha_intento
+    }
+    sesiones_activas {
+        int id_sesion PK
+        int usuario FK
+        string session_key UK
+        bool activa
+        datetime ultima_actividad
+    }
+    renovaciones_sesion {
+        int id_renovacion PK
+        int usuario FK
+        datetime fecha_renovacion
+    }
+    patrones_acceso {
+        int id_patron PK
+        int usuario FK
+        string ip_address
+        bool es_habitual
+    }
+    bloqueos_cuenta {
+        int id_bloqueo PK
+        int usuario FK
+        int bloqueado_por FK
+        string motivo
+        bool estado
+    }
+    tokens_recuperacion {
+        int id_token PK
+        int usuario FK
+        string token UK
+        bool usado
+        datetime fecha_expiracion
+    }
+    tokens_verificacion {
+        int id_token PK
+        int usuario FK
+        string token UK
+        string tipo
+        bool usado
+    }
+    auditoria_empleados {
+        int id_auditoria PK
+        int empleado FK
+        int modificado_por FK
+        string campo_modificado
+        datetime fecha_cambio
+    }
+    auditoria_operaciones {
+        int id_auditoria PK
+        int usuario FK
+        string operacion
+        string tabla_afectada
+        string resultado
+    }
+    auditoria_usuarios_web {
+        int id_auditoria PK
+        int cliente FK
+        string campo_modificado
+        datetime fecha_cambio
+    }
+
+%% ══ CLIENTES ══════════════════════════════════════════════════════
+    clientes {
+        int id PK
+        string ruc_ci UK
+        string nombres
+        string apellidos
+        int lista_precio FK
+        int tipo_cliente FK
+        int ciudad_catalogo FK
+        bool activo
+    }
+    cuentas_corriente_cliente {
+        int id PK
+        int cliente FK
+        string tipo
+        decimal monto
+        decimal saldo_resultante
+        int venta FK
+        int pago FK
+        int nota_credito FK
+        int creado_por FK
+    }
+    tipos_cliente {
+        int id PK
+        string nombre UK
+        bool activo
+    }
+    hijos {
+        int id PK
+        string nombre
+        string apellido
+        string grado
+        int cliente_responsable FK
+        bool activo
+    }
+    grados {
+        int id PK
+        string nombre UK
+        int nivel
+        int orden
+        bool es_ultimo
+    }
+    historial_grados {
+        int id PK
+        int hijo FK
+        string grado_nuevo
+        int anio_escolar
+        string motivo
+    }
+    restricciones_hijo {
+        int id PK
+        int hijo FK
+        string tipo
+        string severidad
+        bool activo
+    }
+    autorizaciones_saldo_negativo {
+        int id PK
+        int cliente FK
+        int venta FK
+        int empleado_autoriza FK
+        decimal monto_autorizado
+        string estado
+    }
+    paises {
+        int id PK
+        string nombre UK
+    }
+    ciudades {
+        int id PK
+        string nombre
+    }
+
+%% ══ PRODUCTOS ══════════════════════════════════════════════════════
+    categorias {
+        int id PK
+        string nombre
+        int categoria_padre FK
+        bool activo
+    }
+    unidades_medida {
+        int id PK
+        string nombre
+        string abreviatura
+        bool activo
+    }
+    productos {
+        int id PK
+        string codigo UK
+        string codigo_barra UK
+        string descripcion
+        int categoria FK
+        int unidad_medida FK
+        decimal stock_minimo
+        bool activo
+    }
+    listas_precios {
+        int id PK
+        string nombre UK
+        string moneda
+        bool activo
+    }
+    precios_por_lista {
+        int id PK
+        int producto FK
+        int lista FK
+        decimal precio_unitario
+    }
+    historico_precios {
+        int id PK
+        int producto FK
+        decimal precio_anterior
+        decimal precio_nuevo
+        int modificado_por FK
+        datetime fecha_cambio
+    }
+    impuestos {
+        int id PK
+        string nombre UK
+        decimal porcentaje
+        bool activo
+    }
+    productos_impuestos {
+        int id PK
+        int producto FK
+        int impuesto FK
+    }
+
+%% ══ CORE (Tarjetas y Saldo) ════════════════════════════════════════
+    tarjetas {
+        string nro_tarjeta PK
+        string codigo_barras UK
+        int hijo FK
+        decimal saldo_actual
+        decimal saldo_alerta
+        string estado
+        date fecha_vencimiento
+    }
+    movimientos_tarjeta {
+        int id PK
+        string tarjeta FK
+        string tipo
+        decimal monto
+        decimal saldo_resultante
+        int carga FK
+        int consumo FK
+        int creado_por FK
+        datetime fecha
+    }
+    tarjetas_autorizacion {
+        int id PK
+        string codigo_barra UK
+        string tipo_autorizacion
+        int empleado FK
+        bool activo
+    }
+    cargas_saldo {
+        int id PK
+        string tarjeta FK
+        int cliente_origen FK
+        decimal monto_cargado
+        string estado
+        int venta FK
+        int responsable FK
+        int factura FK
+        datetime fecha_carga
+    }
+    consumos_tarjeta {
+        int id PK
+        string tarjeta FK
+        decimal monto_consumido
+        decimal saldo_anterior
+        decimal saldo_posterior
+        int registrado_por FK
+        datetime fecha_consumo
+    }
+    medios_pago {
+        int id PK
+        string descripcion UK
+        bool requiere_validacion
+        bool activo
+    }
+    limites_transaccion {
+        int id PK
+        int rol FK
+        string tipo_operacion
+        decimal monto_maximo
+        bool requiere_autorizacion_doble
+        int configurado_por FK
+    }
+    registros_autorizacion {
+        int id PK
+        int solicitante FK
+        int autorizador FK
+        string tipo_operacion
+        decimal monto
+        int venta FK
+        int compra FK
+        int ajuste FK
+        datetime fecha_autorizacion
+    }
+
+%% ══ VENTAS ════════════════════════════════════════════════════════
+    ventas {
+        int id PK
+        int cliente FK
+        int hijo FK
+        string tipo
+        string estado
+        string estado_pago
+        decimal monto_total
+        decimal iva_10
+        decimal iva_5
+        int medio_pago FK
+        string tarjeta FK
+        int factura FK
+        int caja FK
+        int cajero FK
+        int autorizado_por FK
+        datetime fecha
+    }
+    detalles_venta {
+        int id PK
+        int venta FK
+        int producto FK
+        decimal cantidad
+        decimal precio_unitario
+        decimal subtotal
+    }
+    pagos_venta {
+        int id PK
+        int cliente FK
+        int venta FK
+        decimal monto
+        int medio_pago FK
+        int cierre_caja FK
+        int cajero FK
+        string estado
+        datetime fecha
+    }
+    aplicaciones_pago {
+        int id PK
+        int pago FK
+        int venta FK
+        decimal monto_aplicado
+    }
+    notas_credito {
+        int id PK
+        string nro_nota_credito UK
+        int cliente FK
+        int venta_origen FK
+        decimal monto_total
+        string estado
+        int empleado_autoriza FK
+        datetime fecha_emision
+    }
+    detalles_notas_credito {
+        int id PK
+        int nota_credito FK
+        int producto FK
+        decimal cantidad
+        decimal subtotal
+    }
+    condiciones_venta {
+        int id PK
+        string nombre UK
+        int plazo_dias
+    }
+
+%% ══ ALMUERZOS ══════════════════════════════════════════════════════
+    precios_almuerzo {
+        int id PK
+        decimal precio_unitario
+        date fecha_inicio_vigencia
+        bool activo
+    }
+    tipos_almuerzo {
+        int id PK
+        string nombre UK
+        decimal precio_unitario
+        bool activo
+    }
+    planes_almuerzo {
+        int id PK
+        string nombre UK
+        string tipo
+        decimal precio_mensual
+        bool activo
+    }
+    suscripciones_almuerzo {
+        int id PK
+        int hijo FK
+        int plan FK
+        date fecha_inicio
+        string estado
+    }
+    registros_consumo_almuerzo {
+        int id PK
+        int hijo FK
+        int suscripcion FK
+        int tipo_almuerzo FK
+        string nro_tarjeta FK
+        date fecha_consumo
+        decimal costo_almuerzo
+        string estado
+        int registrado_por FK
+    }
+    cuentas_almuerzo_mensual {
+        int id PK
+        int hijo FK
+        int anio
+        int mes
+        decimal monto_total
+        decimal monto_pagado
+        string estado
+        int factura FK
+    }
+    pagos_cuenta_almuerzo {
+        int id PK
+        int cuenta FK
+        decimal monto
+        string medio_pago
+        int registrado_por FK
+        int factura FK
+        datetime fecha_pago
+    }
+    pagos_almuerzo_mensual {
+        int id PK
+        int suscripcion FK
+        int venta FK
+        decimal monto_pagado
+        date mes_pagado
+        string estado
+    }
+    alergenos {
+        int id PK
+        string nombre UK
+        string severidad
+        int creado_por FK
+        bool activo
+    }
+    productos_alergenos {
+        int id PK
+        int producto FK
+        int alergeno FK
+        bool contiene
+        int registrado_por FK
+    }
+    menus_diarios {
+        int id PK
+        date fecha UK
+        string plato_principal
+        string guarnicion
+        int creado_por FK
+    }
+
+%% ══ INVENTARIO ══════════════════════════════════════════════════════
+    stocks {
+        int id PK
+        int producto FK
+        decimal cantidad
+        datetime fecha_actualizacion
+    }
+    movimientos_stock {
+        int id PK
+        int producto FK
+        string tipo
+        string motivo
+        decimal cantidad
+        decimal stock_resultante
+        int compra FK
+        int venta FK
+        int ajuste FK
+        int autorizado_por FK
+        datetime fecha
+    }
+    ajustes_inventario {
+        int id PK
+        string tipo
+        string motivo
+        string estado
+        int solicitado_por FK
+        int aprobado_por FK
+        datetime fecha
+    }
+    detalles_ajuste {
+        int id PK
+        int ajuste FK
+        int producto FK
+        decimal cantidad
+        int movimiento_stock FK
+    }
+    costos_historicos {
+        int id PK
+        int producto FK
+        int compra FK
+        decimal costo_unitario
+        decimal cantidad_comprada
+        datetime fecha_compra
+    }
+    alertas_stock {
+        int id PK
+        int producto FK
+        string tipo
+        decimal stock_actual
+        decimal stock_minimo
+        bool activa
+        datetime fecha_generada
+    }
+    lotes_productos {
+        int id PK
+        int producto FK
+        int compra FK
+        string numero_lote
+        date fecha_vencimiento
+        decimal cantidad_disponible
+        bool bloqueado
+    }
+    alertas_vencimiento {
+        int id PK
+        int lote FK
+        string tipo
+        int dias_restantes
+        string accion_tomada
+        int responsable FK
+        datetime fecha_generada
+    }
+
+%% ══ COMPRAS ════════════════════════════════════════════════════════
+    proveedores {
+        int id PK
+        string ruc UK
+        string razon_social
+        bool activo
+    }
+    cuentas_corriente_proveedores {
+        int id PK
+        int proveedor FK
+        string tipo
+        decimal monto
+        decimal saldo_resultante
+        int compra FK
+        int pago FK
+        int nota_credito_prov FK
+        int creado_por FK
+    }
+    compras {
+        int id PK
+        int proveedor FK
+        decimal monto_total
+        string tipo_pago
+        string estado_pago
+        string estado_entrega
+        int medio_pago FK
+        int creado_por FK
+        datetime fecha
+    }
+    detalles_compra {
+        int id PK
+        int compra FK
+        int producto FK
+        decimal cantidad
+        decimal costo_unitario
+        decimal subtotal
+    }
+    pagos_proveedor {
+        int id PK
+        int proveedor FK
+        decimal monto_total
+        string estado
+        int medio_pago FK
+        int creado_por FK
+        datetime fecha
+    }
+    aplicaciones_pago_compra {
+        int id PK
+        int pago FK
+        int compra FK
+        decimal monto_aplicado
+    }
+    notas_credito_proveedor {
+        int id PK
+        int proveedor FK
+        int compra_original FK
+        decimal monto_total
+        string estado
+        int creado_por FK
+        datetime fecha
+    }
+    detalles_nc_proveedor {
+        int id PK
+        int nota_credito FK
+        int producto FK
+        decimal cantidad
+        decimal subtotal
+    }
+
+%% ══ CONTABILIDAD ══════════════════════════════════════════════════
+    cajas {
+        int id PK
+        string nombre
+        string ubicacion
+        bool activo
+    }
+    cierres_caja {
+        int id PK
+        int caja FK
+        int empleado FK
+        decimal monto_inicial
+        decimal monto_contado_fisico
+        decimal diferencia_efectivo
+        string estado
+        datetime fecha_apertura
+        datetime fecha_cierre
+    }
+    movimientos_caja {
+        int id PK
+        int cierre FK
+        string tipo
+        decimal monto
+        int medio_pago FK
+        int venta FK
+        datetime fecha
+    }
+    conciliaciones_pago {
+        int id PK
+        int pago_venta FK
+        string estado
+        decimal monto_acreditado
+        datetime fecha_conciliacion
+    }
+    facturas {
+        int id PK
+        string nro_factura UK
+        decimal monto_total
+        decimal iva_10
+        decimal iva_5
+        decimal monto_exenta
+        string estado
+        int venta FK
+        int cliente FK
+        datetime fecha_emision
+    }
+    datos_empresa {
+        int id PK
+        string ruc
+        string razon_social
+        string nombre_fantasia
+        string direccion
+        bool activo
+    }
+
+%% ══ NOTIFICACIONES ════════════════════════════════════════════════
+    notificaciones {
+        int id PK
+        int usuario FK
+        string tipo
+        string titulo
+        string destino
+        bool leida
+        datetime fecha_envio
+    }
+    preferencias_notificacion {
+        int id PK
+        int usuario FK
+        string tipo_notificacion
+        bool email_activo
+        bool sistema_activo
+    }
+    plantillas_email {
+        int id PK
+        string codigo UK
+        string nombre
+        string categoria
+        int creado_por FK
+        bool activo
+    }
+    emails_enviados {
+        int id PK
+        string destinatario_email
+        string asunto
+        string estado
+        int plantilla FK
+        int cliente FK
+        int enviado_por FK
+        datetime fecha_envio
+    }
+    solicitudes_notificacion {
+        int id PK
+        int cliente FK
+        string tipo
+        string destino
+        string estado
+    }
+
+%% ══ API INTEGRATIONS ══════════════════════════════════════════════
+    proveedores_api {
+        int id PK
+        string nombre
+        string tipo_servicio
+        string tipo_auth
+        string url_base
+        bool activo
+    }
+    endpoints_api {
+        int id PK
+        int proveedor FK
+        string nombre
+        string path
+        string metodo
+        bool activo
+    }
+    credenciales_api {
+        int id PK
+        int proveedor FK
+        string ambiente
+        datetime fecha_expiracion
+        bool activo
+    }
+    webhook_endpoints {
+        int id PK
+        int proveedor FK
+        string nombre
+        string path
+        bool activo
+    }
+    logs_llamada_api {
+        int id PK
+        int endpoint FK
+        int usuario FK
+        int status_code
+        int tiempo_ms
+        bool exitoso
+        datetime timestamp
+    }
+    logs_webhook {
+        int id PK
+        int webhook FK
+        string evento_tipo
+        bool verificacion_ok
+        bool procesado_ok
+        datetime timestamp
+    }
+
+%% ══════════════════════════════════════════════════════════════════
+%% RELACIONES
+%% ══════════════════════════════════════════════════════════════════
+
+%% ── Usuarios ──────────────────────────────────────────────────────
+    usuarios }o--o| clientes : "cliente"
+    usuarios }o--o| empleados : "empleado_legacy"
+    empleados }|--|| roles : "id_rol"
+    roles_permisos }|--|| roles : "id_rol"
+    roles_permisos }|--|| permisos : "id_permiso"
+    roles_permisos }o--o| usuarios : "asignado_por"
+    perfiles_usuario ||--|| usuarios : "usuario"
+    autenticacion_2fa ||--|| usuarios : "usuario"
+    intentos_2fa }|--|| usuarios : "usuario"
+    sesiones_activas }|--|| usuarios : "usuario"
+    renovaciones_sesion }|--|| usuarios : "usuario"
+    patrones_acceso }|--|| usuarios : "usuario"
+    bloqueos_cuenta }|--|| usuarios : "usuario"
+    bloqueos_cuenta }|--o| usuarios : "bloqueado_por"
+    tokens_recuperacion }|--|| usuarios : "usuario"
+    tokens_verificacion }|--|| usuarios : "usuario"
+    auditoria_empleados }|--o| empleados : "empleado"
+    auditoria_empleados }|--o| usuarios : "modificado_por"
+    auditoria_operaciones }|--o| usuarios : "usuario"
+    auditoria_usuarios_web }|--o| clientes : "cliente"
+
+%% ── Clientes ──────────────────────────────────────────────────────
+    clientes }|--|| listas_precios : "lista_precio"
+    clientes }|--|| tipos_cliente : "tipo_cliente"
+    clientes }|--o| ciudades : "ciudad_catalogo"
+    hijos }|--|| clientes : "cliente_responsable"
+    historial_grados }|--|| hijos : "hijo"
+    restricciones_hijo }|--|| hijos : "hijo"
+    autorizaciones_saldo_negativo }|--|| clientes : "cliente"
+    autorizaciones_saldo_negativo }|--|| ventas : "venta"
+    autorizaciones_saldo_negativo }|--|| empleados : "empleado_autoriza"
+    cuentas_corriente_cliente }|--|| clientes : "cliente"
+    cuentas_corriente_cliente }|--o| ventas : "venta"
+    cuentas_corriente_cliente }|--o| pagos_venta : "pago"
+    cuentas_corriente_cliente }|--o| notas_credito : "nota_credito"
+    cuentas_corriente_cliente }|--|| usuarios : "creado_por"
+
+%% ── Productos ──────────────────────────────────────────────────────
+    categorias }|--o| categorias : "categoria_padre"
+    productos }|--|| categorias : "categoria"
+    productos }|--o| unidades_medida : "unidad_medida"
+    precios_por_lista }|--|| productos : "producto"
+    precios_por_lista }|--|| listas_precios : "lista"
+    historico_precios }|--|| productos : "producto"
+    historico_precios }|--o| usuarios : "modificado_por"
+    productos_impuestos }|--|| productos : "producto"
+    productos_impuestos }|--|| impuestos : "impuesto"
+
+%% ── Core (Tarjetas) ────────────────────────────────────────────────
+    tarjetas ||--|| hijos : "hijo"
+    movimientos_tarjeta }|--|| tarjetas : "tarjeta"
+    movimientos_tarjeta }|--o| cargas_saldo : "carga"
+    movimientos_tarjeta }|--o| consumos_tarjeta : "consumo"
+    movimientos_tarjeta }|--|| usuarios : "creado_por"
+    tarjetas_autorizacion }|--o| usuarios : "empleado"
+    cargas_saldo }|--o| tarjetas : "tarjeta"
+    cargas_saldo }|--o| clientes : "cliente_origen"
+    cargas_saldo }|--o| ventas : "venta"
+    cargas_saldo }|--o| usuarios : "responsable"
+    cargas_saldo }|--o| facturas : "factura"
+    consumos_tarjeta }|--|| tarjetas : "tarjeta"
+    consumos_tarjeta }|--o| usuarios : "registrado_por"
+    limites_transaccion }|--|| roles : "rol"
+    limites_transaccion }|--o| usuarios : "configurado_por"
+    registros_autorizacion }|--|| usuarios : "solicitante"
+    registros_autorizacion }|--|| usuarios : "autorizador"
+    registros_autorizacion }|--o| ventas : "venta"
+    registros_autorizacion }|--o| compras : "compra"
+    registros_autorizacion }|--o| ajustes_inventario : "ajuste"
+
+%% ── Ventas ──────────────────────────────────────────────────────────
+    ventas }|--|| clientes : "cliente"
+    ventas }|--o| hijos : "hijo"
+    ventas }|--o| medios_pago : "medio_pago"
+    ventas }|--o| tarjetas : "tarjeta"
+    ventas }|--o| facturas : "factura"
+    ventas }|--o| cajas : "caja"
+    ventas }|--|| usuarios : "cajero"
+    ventas }|--o| usuarios : "autorizado_por"
+    detalles_venta }|--|| ventas : "venta"
+    detalles_venta }|--|| productos : "producto"
+    pagos_venta }|--|| clientes : "cliente"
+    pagos_venta }|--o| ventas : "venta"
+    pagos_venta }|--|| medios_pago : "medio_pago"
+    pagos_venta }|--o| cierres_caja : "cierre_caja"
+    pagos_venta }|--|| usuarios : "cajero"
+    aplicaciones_pago }|--|| pagos_venta : "pago"
+    aplicaciones_pago }|--|| ventas : "venta"
+    notas_credito }|--|| clientes : "cliente"
+    notas_credito }|--o| ventas : "venta_origen"
+    notas_credito }|--|| usuarios : "empleado_autoriza"
+    detalles_notas_credito }|--|| notas_credito : "nota_credito"
+    detalles_notas_credito }|--|| productos : "producto"
+
+%% ── Almuerzos ────────────────────────────────────────────────────────
+    suscripciones_almuerzo }|--|| hijos : "hijo"
+    suscripciones_almuerzo }|--|| planes_almuerzo : "plan"
+    registros_consumo_almuerzo }|--|| hijos : "hijo"
+    registros_consumo_almuerzo }|--o| suscripciones_almuerzo : "suscripcion"
+    registros_consumo_almuerzo }|--o| tipos_almuerzo : "tipo_almuerzo"
+    registros_consumo_almuerzo }|--o| tarjetas : "nro_tarjeta"
+    registros_consumo_almuerzo }|--|| usuarios : "registrado_por"
+    cuentas_almuerzo_mensual }|--|| hijos : "hijo"
+    cuentas_almuerzo_mensual }|--o| facturas : "factura"
+    pagos_cuenta_almuerzo }|--|| cuentas_almuerzo_mensual : "cuenta"
+    pagos_cuenta_almuerzo }|--|| usuarios : "registrado_por"
+    pagos_cuenta_almuerzo }|--o| facturas : "factura"
+    pagos_almuerzo_mensual }|--|| suscripciones_almuerzo : "suscripcion"
+    pagos_almuerzo_mensual }|--o| ventas : "venta"
+    alergenos }|--o| usuarios : "creado_por"
+    productos_alergenos }|--|| productos : "producto"
+    productos_alergenos }|--|| alergenos : "alergeno"
+    productos_alergenos }|--o| usuarios : "registrado_por"
+    menus_diarios }|--o| usuarios : "creado_por"
+
+%% ── Inventario ────────────────────────────────────────────────────────
+    stocks ||--|| productos : "producto"
+    movimientos_stock }|--|| productos : "producto"
+    movimientos_stock }|--o| compras : "compra"
+    movimientos_stock }|--o| ventas : "venta"
+    movimientos_stock }|--o| ajustes_inventario : "ajuste"
+    movimientos_stock }|--|| usuarios : "autorizado_por"
+    ajustes_inventario }|--o| usuarios : "solicitado_por"
+    ajustes_inventario }|--o| usuarios : "aprobado_por"
+    detalles_ajuste }|--|| ajustes_inventario : "ajuste"
+    detalles_ajuste }|--|| productos : "producto"
+    detalles_ajuste }|--o| movimientos_stock : "movimiento_stock"
+    costos_historicos }|--|| productos : "producto"
+    costos_historicos }|--o| compras : "compra"
+    alertas_stock }|--|| productos : "producto"
+    lotes_productos }|--|| productos : "producto"
+    lotes_productos }|--o| compras : "compra"
+    alertas_vencimiento }|--|| lotes_productos : "lote"
+    alertas_vencimiento }|--o| usuarios : "responsable"
+
+%% ── Compras ───────────────────────────────────────────────────────────
+    compras }|--|| proveedores : "proveedor"
+    compras }|--o| medios_pago : "medio_pago"
+    compras }|--|| usuarios : "creado_por"
+    cuentas_corriente_proveedores }|--|| proveedores : "proveedor"
+    cuentas_corriente_proveedores }|--o| compras : "compra"
+    cuentas_corriente_proveedores }|--o| pagos_proveedor : "pago"
+    cuentas_corriente_proveedores }|--o| notas_credito_proveedor : "nota_credito_prov"
+    cuentas_corriente_proveedores }|--|| usuarios : "creado_por"
+    detalles_compra }|--|| compras : "compra"
+    detalles_compra }|--|| productos : "producto"
+    pagos_proveedor }|--|| proveedores : "proveedor"
+    pagos_proveedor }|--|| medios_pago : "medio_pago"
+    pagos_proveedor }|--|| usuarios : "creado_por"
+    aplicaciones_pago_compra }|--|| pagos_proveedor : "pago"
+    aplicaciones_pago_compra }|--|| compras : "compra"
+    notas_credito_proveedor }|--|| proveedores : "proveedor"
+    notas_credito_proveedor }|--o| compras : "compra_original"
+    notas_credito_proveedor }|--|| usuarios : "creado_por"
+    detalles_nc_proveedor }|--|| notas_credito_proveedor : "nota_credito"
+    detalles_nc_proveedor }|--|| productos : "producto"
+
+%% ── Contabilidad ──────────────────────────────────────────────────────
+    cierres_caja }|--|| cajas : "caja"
+    cierres_caja }|--|| usuarios : "empleado"
+    movimientos_caja }|--o| cierres_caja : "cierre"
+    movimientos_caja }|--|| medios_pago : "medio_pago"
+    movimientos_caja }|--o| ventas : "venta"
+    conciliaciones_pago ||--|| pagos_venta : "pago_venta"
+    facturas }|--o| ventas : "venta"
+    facturas }|--|| clientes : "cliente"
+
+%% ── Notificaciones ────────────────────────────────────────────────────
+    notificaciones }|--|| usuarios : "usuario"
+    preferencias_notificacion }|--|| usuarios : "usuario"
+    plantillas_email }|--o| usuarios : "creado_por"
+    emails_enviados }|--o| plantillas_email : "plantilla"
+    emails_enviados }|--o| clientes : "cliente"
+    emails_enviados }|--o| usuarios : "enviado_por"
+    solicitudes_notificacion }|--|| clientes : "cliente"
+
+%% ── API Integrations ──────────────────────────────────────────────────
+    endpoints_api }|--|| proveedores_api : "proveedor"
+    credenciales_api }|--|| proveedores_api : "proveedor"
+    webhook_endpoints }|--|| proveedores_api : "proveedor"
+    logs_llamada_api }|--o| endpoints_api : "endpoint"
+    logs_llamada_api }|--o| usuarios : "usuario"
+    logs_webhook }|--o| webhook_endpoints : "webhook"

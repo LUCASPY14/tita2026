@@ -4,6 +4,7 @@ import {
   Settings, Plus, Edit2, Tag, ListOrdered, CreditCard, Users,
   GraduationCap, Building2, History, Shield, Eye, EyeOff,
   CheckCircle2, XCircle, Copy,
+  UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent,
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import api from '../services/api'
@@ -54,8 +55,8 @@ interface ListaPrecio {
 
 interface MedioPago {
   id: number
-  nombre: string
-  tipo: string
+  descripcion: string
+  requiere_validacion: boolean
   activo: boolean
 }
 
@@ -72,6 +73,7 @@ interface DatosEmpresa {
   id: number
   ruc: string
   razon_social: string
+  nombre_fantasia: string
   direccion: string
   ciudad: string
   pais: string
@@ -101,10 +103,58 @@ interface Estado2FA {
   tiene_backup_codes: boolean
 }
 
+interface TipoAlmuerzo {
+  id: number
+  nombre: string
+  descripcion: string
+  precio_unitario: string | number
+  incluye_plato_principal: boolean
+  incluye_postre: boolean
+  incluye_bebida: boolean
+  activo: boolean
+}
+
+interface PlanAlmuerzo {
+  id: number
+  nombre: string
+  tipo: 'CANTIDAD' | 'SIN_LIMITE'
+  precio_mensual: string | number
+  cantidad_almuerzos_mes: number | null
+  dias_semana_incluidos: number[]
+  activo: boolean
+}
+
+interface UnidadMedida {
+  id: number
+  nombre: string
+  abreviatura: string
+  activo: boolean
+}
+
+interface Alergeno {
+  id: number
+  nombre: string
+  descripcion: string
+  palabras_clave: string[]
+  severidad: 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA'
+  icono: string
+  activo: boolean
+}
+
+interface Impuesto {
+  id: number
+  nombre: string
+  porcentaje: string | number
+  vigente_desde: string | null
+  vigente_hasta: string | null
+  activo: boolean
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type TabKey = 'categorias' | 'tipos_cliente' | 'listas_precio' | 'medios_pago'
             | 'grados' | 'datos_empresa' | 'historial_precios' | 'seguridad'
+            | 'tipos_almuerzo' | 'planes_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -140,7 +190,7 @@ export default function Configuracion() {
   const [loadingMp, setLoadingMp] = useState(false)
   const [mpModal, setMpModal] = useState(false)
   const [editingMp, setEditingMp] = useState<MedioPago | null>(null)
-  const [mpForm, setMpForm] = useState({ nombre: '', tipo: 'EFECTIVO', activo: true })
+  const [mpForm, setMpForm] = useState({ descripcion: '', requiere_validacion: false, activo: true })
   const [savingMp, setSavingMp] = useState(false)
 
   // ── Grados ────────────────────────────────────────────────────────
@@ -154,7 +204,7 @@ export default function Configuracion() {
   // ── Datos Empresa ─────────────────────────────────────────────────
   const [empresa, setEmpresa] = useState<DatosEmpresa | null>(null)
   const [loadingEmp, setLoadingEmp] = useState(false)
-  const [empForm, setEmpForm] = useState({ ruc: '', razon_social: '', direccion: '', ciudad: '', pais: 'Paraguay', telefono: '', email: '', activo: true })
+  const [empForm, setEmpForm] = useState({ ruc: '', razon_social: '', nombre_fantasia: '', direccion: '', ciudad: '', pais: 'Paraguay', telefono: '', email: '', activo: true })
   const [savingEmp, setSavingEmp] = useState(false)
   const savedEmpRef = useRef<typeof empForm | null>(null)
 
@@ -176,6 +226,46 @@ export default function Configuracion() {
   const [backupCodes, setBackupCodes] = useState<string[]>([])
   const [otpCode, setOtpCode] = useState('')
   const [showSecret, setShowSecret] = useState(false)
+
+  // ── Tipos Almuerzo ────────────────────────────────────────────────
+  const [tiposAlmuerzo, setTiposAlmuerzo] = useState<TipoAlmuerzo[]>([])
+  const [loadingTa, setLoadingTa] = useState(false)
+  const [taModal, setTaModal] = useState(false)
+  const [editingTa, setEditingTa] = useState<TipoAlmuerzo | null>(null)
+  const [taForm, setTaForm] = useState({ nombre: '', descripcion: '', precio_unitario: '', incluye_plato_principal: true, incluye_postre: false, incluye_bebida: false, activo: true })
+  const [savingTa, setSavingTa] = useState(false)
+
+  // ── Planes Almuerzo ───────────────────────────────────────────────
+  const [planesAlmuerzo, setPlanesAlmuerzo] = useState<PlanAlmuerzo[]>([])
+  const [loadingPa, setLoadingPa] = useState(false)
+  const [paModal, setPaModal] = useState(false)
+  const [editingPa, setEditingPa] = useState<PlanAlmuerzo | null>(null)
+  const [paForm, setPaForm] = useState({ nombre: '', tipo: 'CANTIDAD' as 'CANTIDAD' | 'SIN_LIMITE', precio_mensual: '', cantidad_almuerzos_mes: '', dias_semana_incluidos: [] as number[], activo: true })
+  const [savingPa, setSavingPa] = useState(false)
+
+  // ── Unidades de Medida ────────────────────────────────────────────
+  const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedida[]>([])
+  const [loadingUm, setLoadingUm] = useState(false)
+  const [umModal, setUmModal] = useState(false)
+  const [editingUm, setEditingUm] = useState<UnidadMedida | null>(null)
+  const [umForm, setUmForm] = useState({ nombre: '', abreviatura: '', activo: true })
+  const [savingUm, setSavingUm] = useState(false)
+
+  // ── Alérgenos ─────────────────────────────────────────────────────
+  const [alergenos, setAlergenos] = useState<Alergeno[]>([])
+  const [loadingAl, setLoadingAl] = useState(false)
+  const [alModal, setAlModal] = useState(false)
+  const [editingAl, setEditingAl] = useState<Alergeno | null>(null)
+  const [alForm, setAlForm] = useState({ nombre: '', descripcion: '', palabras_clave: '', severidad: 'MEDIA' as 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA', icono: '', activo: true })
+  const [savingAl, setSavingAl] = useState(false)
+
+  // ── Impuestos ─────────────────────────────────────────────────────
+  const [impuestos, setImpuestos] = useState<Impuesto[]>([])
+  const [loadingImp, setLoadingImp] = useState(false)
+  const [impModal, setImpModal] = useState(false)
+  const [editingImp, setEditingImp] = useState<Impuesto | null>(null)
+  const [impForm, setImpForm] = useState({ nombre: '', porcentaje: '', vigente_desde: '', vigente_hasta: '', activo: true })
+  const [savingImp, setSavingImp] = useState(false)
 
   // ── Load categorías ───────────────────────────────────────────────
   const loadCategorias = useCallback(async () => {
@@ -217,7 +307,7 @@ export default function Configuracion() {
   const loadMediosPago = useCallback(async () => {
     setLoadingMp(true)
     try {
-      const { data } = await api.get('/ventas/medios-pago/', { params: { page_size: 100 } })
+      const { data } = await api.get('/core/medios-pago/', { params: { page_size: 100 } })
       setMediosPago(data.results ?? data ?? [])
     } catch { toast.error('Error al cargar medios de pago') }
     finally { setLoadingMp(false) }
@@ -245,7 +335,7 @@ export default function Configuracion() {
       const emp = (data.results ?? data ?? [])[0] ?? null
       setEmpresa(emp)
       if (emp) {
-        const f = { ruc: emp.ruc, razon_social: emp.razon_social, direccion: emp.direccion ?? '', ciudad: emp.ciudad ?? '', pais: emp.pais ?? 'Paraguay', telefono: emp.telefono ?? '', email: emp.email ?? '', activo: emp.activo }
+        const f = { ruc: emp.ruc, razon_social: emp.razon_social, nombre_fantasia: emp.nombre_fantasia ?? '', direccion: emp.direccion ?? '', ciudad: emp.ciudad ?? '', pais: emp.pais ?? 'Paraguay', telefono: emp.telefono ?? '', email: emp.email ?? '', activo: emp.activo }
         setEmpForm(f)
         savedEmpRef.current = f
       }
@@ -311,6 +401,66 @@ export default function Configuracion() {
   }, [])
 
   useEffect(() => { if (tab === 'seguridad') { load2FA(); setTwoFAStep('idle') } }, [tab, load2FA])
+
+  // ── Load tipos almuerzo ───────────────────────────────────────────
+  const loadTiposAlmuerzo = useCallback(async () => {
+    setLoadingTa(true)
+    try {
+      const { data } = await api.get('/almuerzos/tipos-almuerzo/', { params: { page_size: 100 } })
+      setTiposAlmuerzo(data.results ?? data ?? [])
+    } catch { toast.error('Error al cargar tipos de almuerzo') }
+    finally { setLoadingTa(false) }
+  }, [])
+
+  useEffect(() => { if (tab === 'tipos_almuerzo') loadTiposAlmuerzo() }, [tab, loadTiposAlmuerzo])
+
+  // ── Load planes almuerzo ──────────────────────────────────────────
+  const loadPlanesAlmuerzo = useCallback(async () => {
+    setLoadingPa(true)
+    try {
+      const { data } = await api.get('/almuerzos/planes-almuerzo/', { params: { page_size: 100 } })
+      setPlanesAlmuerzo(data.results ?? data ?? [])
+    } catch { toast.error('Error al cargar planes de almuerzo') }
+    finally { setLoadingPa(false) }
+  }, [])
+
+  useEffect(() => { if (tab === 'planes_almuerzo') loadPlanesAlmuerzo() }, [tab, loadPlanesAlmuerzo])
+
+  // ── Load unidades medida ──────────────────────────────────────────
+  const loadUnidadesMedida = useCallback(async () => {
+    setLoadingUm(true)
+    try {
+      const { data } = await api.get('/productos/unidades-medida/', { params: { page_size: 100 } })
+      setUnidadesMedida(data.results ?? data ?? [])
+    } catch { toast.error('Error al cargar unidades de medida') }
+    finally { setLoadingUm(false) }
+  }, [])
+
+  useEffect(() => { if (tab === 'unidades_medida') loadUnidadesMedida() }, [tab, loadUnidadesMedida])
+
+  // ── Load alérgenos ────────────────────────────────────────────────
+  const loadAlergenos = useCallback(async () => {
+    setLoadingAl(true)
+    try {
+      const { data } = await api.get('/almuerzos/alergenos/', { params: { page_size: 100 } })
+      setAlergenos(data.results ?? data ?? [])
+    } catch { toast.error('Error al cargar alérgenos') }
+    finally { setLoadingAl(false) }
+  }, [])
+
+  useEffect(() => { if (tab === 'alergenos') loadAlergenos() }, [tab, loadAlergenos])
+
+  // ── Load impuestos ────────────────────────────────────────────────
+  const loadImpuestos = useCallback(async () => {
+    setLoadingImp(true)
+    try {
+      const { data } = await api.get('/productos/impuestos/', { params: { page_size: 100 } })
+      setImpuestos(data.results ?? data ?? [])
+    } catch { toast.error('Error al cargar impuestos') }
+    finally { setLoadingImp(false) }
+  }, [])
+
+  useEffect(() => { if (tab === 'impuestos') loadImpuestos() }, [tab, loadImpuestos])
 
   // ── Categorías CRUD ───────────────────────────────────────────────
   const openCat = useCallback((c?: Categoria) => {
@@ -455,22 +605,160 @@ export default function Configuracion() {
     } catch (err) { toast.error(extractErrorMessage(err)) }
   }
 
+  // ── Tipos Almuerzo CRUD ───────────────────────────────────────────
+  const openTa = useCallback((t?: TipoAlmuerzo) => {
+    setEditingTa(t ?? null)
+    setTaForm(t
+      ? { nombre: t.nombre, descripcion: t.descripcion, precio_unitario: String(t.precio_unitario), incluye_plato_principal: t.incluye_plato_principal, incluye_postre: t.incluye_postre, incluye_bebida: t.incluye_bebida, activo: t.activo }
+      : { nombre: '', descripcion: '', precio_unitario: '', incluye_plato_principal: true, incluye_postre: false, incluye_bebida: false, activo: true })
+    setTaModal(true)
+  }, [])
+
+  const saveTa = useCallback(async () => {
+    if (!taForm.nombre) { toast.error('Ingresá el nombre'); return }
+    setSavingTa(true)
+    try {
+      const payload = { ...taForm, precio_unitario: Number(taForm.precio_unitario) || 0 }
+      if (editingTa) {
+        await api.put(`/almuerzos/tipos-almuerzo/${editingTa.id}/`, payload)
+        toast.success('Tipo de almuerzo actualizado')
+      } else {
+        await api.post('/almuerzos/tipos-almuerzo/', payload)
+        toast.success('Tipo de almuerzo creado')
+      }
+      setTaModal(false); loadTiposAlmuerzo()
+    } catch (err) { toast.error(extractErrorMessage(err)) }
+    finally { setSavingTa(false) }
+  }, [taForm, editingTa, loadTiposAlmuerzo])
+
+  // ── Planes Almuerzo CRUD ──────────────────────────────────────────
+  const openPa = useCallback((p?: PlanAlmuerzo) => {
+    setEditingPa(p ?? null)
+    setPaForm(p
+      ? { nombre: p.nombre, tipo: p.tipo, precio_mensual: String(p.precio_mensual), cantidad_almuerzos_mes: p.cantidad_almuerzos_mes != null ? String(p.cantidad_almuerzos_mes) : '', dias_semana_incluidos: p.dias_semana_incluidos ?? [], activo: p.activo }
+      : { nombre: '', tipo: 'CANTIDAD', precio_mensual: '', cantidad_almuerzos_mes: '', dias_semana_incluidos: [], activo: true })
+    setPaModal(true)
+  }, [])
+
+  const savePa = useCallback(async () => {
+    if (!paForm.nombre) { toast.error('Ingresá el nombre'); return }
+    setSavingPa(true)
+    try {
+      const payload = {
+        ...paForm,
+        precio_mensual: Number(paForm.precio_mensual) || 0,
+        cantidad_almuerzos_mes: paForm.tipo === 'CANTIDAD' && paForm.cantidad_almuerzos_mes ? Number(paForm.cantidad_almuerzos_mes) : null,
+      }
+      if (editingPa) {
+        await api.put(`/almuerzos/planes-almuerzo/${editingPa.id}/`, payload)
+        toast.success('Plan actualizado')
+      } else {
+        await api.post('/almuerzos/planes-almuerzo/', payload)
+        toast.success('Plan creado')
+      }
+      setPaModal(false); loadPlanesAlmuerzo()
+    } catch (err) { toast.error(extractErrorMessage(err)) }
+    finally { setSavingPa(false) }
+  }, [paForm, editingPa, loadPlanesAlmuerzo])
+
+  // ── Unidades Medida CRUD ──────────────────────────────────────────
+  const openUm = useCallback((u?: UnidadMedida) => {
+    setEditingUm(u ?? null)
+    setUmForm(u ? { nombre: u.nombre, abreviatura: u.abreviatura, activo: u.activo } : { nombre: '', abreviatura: '', activo: true })
+    setUmModal(true)
+  }, [])
+
+  const saveUm = useCallback(async () => {
+    if (!umForm.nombre) { toast.error('Ingresá el nombre'); return }
+    setSavingUm(true)
+    try {
+      if (editingUm) {
+        await api.put(`/productos/unidades-medida/${editingUm.id}/`, umForm)
+        toast.success('Unidad actualizada')
+      } else {
+        await api.post('/productos/unidades-medida/', umForm)
+        toast.success('Unidad creada')
+      }
+      setUmModal(false); loadUnidadesMedida()
+    } catch (err) { toast.error(extractErrorMessage(err)) }
+    finally { setSavingUm(false) }
+  }, [umForm, editingUm, loadUnidadesMedida])
+
+  // ── Alérgenos CRUD ────────────────────────────────────────────────
+  const openAl = useCallback((a?: Alergeno) => {
+    setEditingAl(a ?? null)
+    setAlForm(a
+      ? { nombre: a.nombre, descripcion: a.descripcion, palabras_clave: (a.palabras_clave ?? []).join(', '), severidad: a.severidad, icono: a.icono ?? '', activo: a.activo }
+      : { nombre: '', descripcion: '', palabras_clave: '', severidad: 'MEDIA', icono: '', activo: true })
+    setAlModal(true)
+  }, [])
+
+  const saveAl = useCallback(async () => {
+    if (!alForm.nombre) { toast.error('Ingresá el nombre'); return }
+    setSavingAl(true)
+    try {
+      const palabras = alForm.palabras_clave ? alForm.palabras_clave.split(',').map(s => s.trim()).filter(Boolean) : []
+      const payload = { ...alForm, palabras_clave: palabras }
+      if (editingAl) {
+        await api.put(`/almuerzos/alergenos/${editingAl.id}/`, payload)
+        toast.success('Alérgeno actualizado')
+      } else {
+        await api.post('/almuerzos/alergenos/', payload)
+        toast.success('Alérgeno creado')
+      }
+      setAlModal(false); loadAlergenos()
+    } catch (err) { toast.error(extractErrorMessage(err)) }
+    finally { setSavingAl(false) }
+  }, [alForm, editingAl, loadAlergenos])
+
+  // ── Impuestos CRUD ────────────────────────────────────────────────
+  const openImp = useCallback((i?: Impuesto) => {
+    setEditingImp(i ?? null)
+    setImpForm(i
+      ? { nombre: i.nombre, porcentaje: String(i.porcentaje), vigente_desde: i.vigente_desde ?? '', vigente_hasta: i.vigente_hasta ?? '', activo: i.activo }
+      : { nombre: '', porcentaje: '', vigente_desde: '', vigente_hasta: '', activo: true })
+    setImpModal(true)
+  }, [])
+
+  const saveImp = useCallback(async () => {
+    if (!impForm.nombre) { toast.error('Ingresá el nombre'); return }
+    setSavingImp(true)
+    try {
+      const payload = {
+        nombre: impForm.nombre,
+        porcentaje: Number(impForm.porcentaje) || 0,
+        vigente_desde: impForm.vigente_desde || null,
+        vigente_hasta: impForm.vigente_hasta || null,
+        activo: impForm.activo,
+      }
+      if (editingImp) {
+        await api.put(`/productos/impuestos/${editingImp.id}/`, payload)
+        toast.success('Impuesto actualizado')
+      } else {
+        await api.post('/productos/impuestos/', payload)
+        toast.success('Impuesto creado')
+      }
+      setImpModal(false); loadImpuestos()
+    } catch (err) { toast.error(extractErrorMessage(err)) }
+    finally { setSavingImp(false) }
+  }, [impForm, editingImp, loadImpuestos])
+
   // ── Medios pago CRUD ──────────────────────────────────────────────
   const openMp = useCallback((m?: MedioPago) => {
     setEditingMp(m ?? null)
-    setMpForm(m ? { nombre: m.nombre, tipo: m.tipo, activo: m.activo } : { nombre: '', tipo: 'EFECTIVO', activo: true })
+    setMpForm(m ? { descripcion: m.descripcion, requiere_validacion: m.requiere_validacion, activo: m.activo } : { descripcion: '', requiere_validacion: false, activo: true })
     setMpModal(true)
   }, [])
 
   const saveMp = useCallback(async () => {
-    if (!mpForm.nombre) { toast.error('Ingresá el nombre'); return }
+    if (!mpForm.descripcion) { toast.error('Ingresá la descripción'); return }
     setSavingMp(true)
     try {
       if (editingMp) {
-        await api.put(`/ventas/medios-pago/${editingMp.id}/`, mpForm)
+        await api.put(`/core/medios-pago/${editingMp.id}/`, mpForm)
         toast.success('Medio de pago actualizado')
       } else {
-        await api.post('/ventas/medios-pago/', mpForm)
+        await api.post('/core/medios-pago/', mpForm)
         toast.success('Medio de pago creado')
       }
       setMpModal(false)
@@ -519,8 +807,11 @@ export default function Configuracion() {
   ]
 
   const colsMp: Column<MedioPago>[] = [
-    { title: 'Nombre', key: 'nombre', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span> },
-    { title: 'Tipo', key: 'tipo', render: (_, r) => <Badge color="blue">{r.tipo}</Badge> },
+    { title: 'Descripción', key: 'descripcion', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.descripcion}</span> },
+    {
+      title: 'Requiere validación', key: 'req_val', width: 160,
+      render: (_, r) => <Badge color={r.requiere_validacion ? 'blue' : 'default'}>{r.requiere_validacion ? 'Sí' : 'No'}</Badge>,
+    },
     {
       title: 'Estado',
       key: 'activo',
@@ -579,6 +870,52 @@ export default function Configuracion() {
     },
   ]
 
+  const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+  const SEVERIDAD_COLOR: Record<string, 'blue' | 'orange' | 'red' | 'purple'> = { BAJA: 'blue', MEDIA: 'orange', ALTA: 'red', CRITICA: 'purple' }
+
+  const colsTa: Column<TipoAlmuerzo>[] = [
+    { title: 'Nombre', key: 'nombre', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span> },
+    { title: 'Precio unit.', key: 'precio', width: 130, render: (_, r) => <span className="tabular-nums text-sm text-slate-700">Gs. {(Number(r.precio_unitario) || 0).toLocaleString('es-PY')}</span> },
+    { title: 'Plato Ppal', key: 'pp', width: 100, render: (_, r) => <Badge color={r.incluye_plato_principal ? 'green' : 'default'}>{r.incluye_plato_principal ? 'Sí' : 'No'}</Badge> },
+    { title: 'Postre', key: 'pos', width: 80, render: (_, r) => <Badge color={r.incluye_postre ? 'green' : 'default'}>{r.incluye_postre ? 'Sí' : 'No'}</Badge> },
+    { title: 'Bebida', key: 'beb', width: 80, render: (_, r) => <Badge color={r.incluye_bebida ? 'green' : 'default'}>{r.incluye_bebida ? 'Sí' : 'No'}</Badge> },
+    { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
+    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openTa(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+  ]
+
+  const colsPa: Column<PlanAlmuerzo>[] = [
+    { title: 'Nombre', key: 'nombre', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span> },
+    { title: 'Tipo', key: 'tipo', width: 120, render: (_, r) => <Badge color={r.tipo === 'SIN_LIMITE' ? 'blue' : 'orange'}>{r.tipo === 'SIN_LIMITE' ? 'Sin límite' : 'Por cantidad'}</Badge> },
+    { title: 'Precio mensual', key: 'precio', width: 150, render: (_, r) => <span className="tabular-nums text-sm text-slate-700">Gs. {(Number(r.precio_mensual) || 0).toLocaleString('es-PY')}</span> },
+    { title: 'Cant./mes', key: 'cant', width: 100, render: (_, r) => <span className="tabular-nums text-sm text-slate-500">{r.cantidad_almuerzos_mes ?? '—'}</span> },
+    { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
+    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openPa(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+  ]
+
+  const colsUm: Column<UnidadMedida>[] = [
+    { title: 'Nombre', key: 'nombre', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span> },
+    { title: 'Abreviatura', key: 'abrev', width: 130, render: (_, r) => <code className="text-sm text-slate-600 bg-slate-100 rounded px-2 py-0.5">{r.abreviatura}</code> },
+    { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
+    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openUm(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+  ]
+
+  const colsAl: Column<Alergeno>[] = [
+    { title: 'Nombre', key: 'nombre', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span> },
+    { title: 'Severidad', key: 'sev', width: 110, render: (_, r) => <Badge color={SEVERIDAD_COLOR[r.severidad] ?? 'default'}>{r.severidad}</Badge> },
+    { title: 'Icono', key: 'icono', width: 70, render: (_, r) => <span className="text-lg">{r.icono || '—'}</span> },
+    { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
+    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openAl(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+  ]
+
+  const colsImp: Column<Impuesto>[] = [
+    { title: 'Nombre', key: 'nombre', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span> },
+    { title: 'Porcentaje', key: 'pct', width: 110, render: (_, r) => <span className="tabular-nums text-sm font-semibold text-slate-700">{Number(r.porcentaje) || 0}%</span> },
+    { title: 'Desde', key: 'desde', width: 120, render: (_, r) => <span className="text-xs text-slate-500">{r.vigente_desde ? new Date(r.vigente_desde).toLocaleDateString('es-PY') : '—'}</span> },
+    { title: 'Hasta', key: 'hasta', width: 120, render: (_, r) => <span className="text-xs text-slate-500">{r.vigente_hasta ? new Date(r.vigente_hasta).toLocaleDateString('es-PY') : '—'}</span> },
+    { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
+    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openImp(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+  ]
+
   const TABS: { key: TabKey; label: string; icon: typeof Settings }[] = [
     { key: 'categorias',       label: 'Categorías',       icon: Tag },
     { key: 'tipos_cliente',    label: 'Tipos de Cliente', icon: Users },
@@ -588,6 +925,11 @@ export default function Configuracion() {
     { key: 'datos_empresa',    label: 'Empresa',          icon: Building2 },
     { key: 'historial_precios',label: 'Hist. Precios',    icon: History },
     { key: 'seguridad',        label: 'Seguridad',        icon: Shield },
+    { key: 'tipos_almuerzo',   label: 'Tipos Almuerzo',   icon: UtensilsCrossed },
+    { key: 'planes_almuerzo',  label: 'Planes Almuerzo',  icon: Calendar },
+    { key: 'unidades_medida',  label: 'Unidades Medida',  icon: Ruler },
+    { key: 'alergenos',        label: 'Alérgenos',        icon: AlertTriangle },
+    { key: 'impuestos',        label: 'Impuestos',        icon: Percent },
   ]
 
   // ── Render ────────────────────────────────────────────────────────
@@ -599,12 +941,17 @@ export default function Configuracion() {
           <h1 className="text-2xl font-bold text-slate-900">Configuración</h1>
           <p className="text-sm text-slate-500 mt-0.5">Administración de catálogos del sistema</p>
         </div>
-        {['categorias','tipos_cliente','listas_precio','medios_pago','grados'].includes(tab) && (
+        {['categorias','tipos_cliente','listas_precio','medios_pago','grados','tipos_almuerzo','planes_almuerzo','unidades_medida','alergenos','impuestos'].includes(tab) && (
           <Button variant="primary" onClick={() => {
             if (tab === 'categorias') openCat()
             else if (tab === 'tipos_cliente') openTc()
             else if (tab === 'listas_precio') openLp()
             else if (tab === 'grados') openGr()
+            else if (tab === 'tipos_almuerzo') openTa()
+            else if (tab === 'planes_almuerzo') openPa()
+            else if (tab === 'unidades_medida') openUm()
+            else if (tab === 'alergenos') openAl()
+            else if (tab === 'impuestos') openImp()
             else openMp()
           }}>
             <Plus className="w-4 h-4" />
@@ -632,14 +979,19 @@ export default function Configuracion() {
       </div>
 
       {/* Tables — catálogos simples */}
-      {['categorias','tipos_cliente','listas_precio','medios_pago','grados'].includes(tab) && (
+      {['categorias','tipos_cliente','listas_precio','medios_pago','grados','tipos_almuerzo','planes_almuerzo','unidades_medida','alergenos','impuestos'].includes(tab) && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-1">
-            {tab === 'categorias'    && <Table columns={colsCat} dataSource={categorias}    rowKey="id" loading={loadingCat} pageSize={20} />}
-            {tab === 'tipos_cliente' && <Table columns={colsTc}  dataSource={tiposCliente}  rowKey="id" loading={loadingTc}  pageSize={20} />}
-            {tab === 'listas_precio' && <Table columns={colsLp}  dataSource={listasPrecio}  rowKey="id" loading={loadingLp}  pageSize={20} />}
-            {tab === 'medios_pago'   && <Table columns={colsMp}  dataSource={mediosPago}    rowKey="id" loading={loadingMp}  pageSize={20} />}
-            {tab === 'grados'        && <Table columns={colsGr}  dataSource={grados}        rowKey="id" loading={loadingGr}  pageSize={20} />}
+            {tab === 'categorias'     && <Table columns={colsCat} dataSource={categorias}    rowKey="id" loading={loadingCat} pageSize={20} />}
+            {tab === 'tipos_cliente'  && <Table columns={colsTc}  dataSource={tiposCliente}  rowKey="id" loading={loadingTc}  pageSize={20} />}
+            {tab === 'listas_precio'  && <Table columns={colsLp}  dataSource={listasPrecio}  rowKey="id" loading={loadingLp}  pageSize={20} />}
+            {tab === 'medios_pago'    && <Table columns={colsMp}  dataSource={mediosPago}    rowKey="id" loading={loadingMp}  pageSize={20} />}
+            {tab === 'grados'         && <Table columns={colsGr}  dataSource={grados}        rowKey="id" loading={loadingGr}  pageSize={20} />}
+            {tab === 'tipos_almuerzo' && <Table columns={colsTa}  dataSource={tiposAlmuerzo} rowKey="id" loading={loadingTa}  pageSize={20} />}
+            {tab === 'planes_almuerzo'&& <Table columns={colsPa}  dataSource={planesAlmuerzo}rowKey="id" loading={loadingPa}  pageSize={20} />}
+            {tab === 'unidades_medida'&& <Table columns={colsUm}  dataSource={unidadesMedida}rowKey="id" loading={loadingUm}  pageSize={20} />}
+            {tab === 'alergenos'      && <Table columns={colsAl}  dataSource={alergenos}     rowKey="id" loading={loadingAl}  pageSize={20} />}
+            {tab === 'impuestos'      && <Table columns={colsImp} dataSource={impuestos}     rowKey="id" loading={loadingImp} pageSize={20} />}
           </div>
         </div>
       )}
@@ -658,6 +1010,10 @@ export default function Configuracion() {
                   <label className={labelClass}>Razón Social *</label>
                   <input value={empForm.razon_social} onChange={e => setEmpForm(f => ({ ...f, razon_social: e.target.value }))} className={inputClass} />
                 </div>
+              </div>
+              <div>
+                <label className={labelClass}>Nombre de Fantasía</label>
+                <input value={empForm.nombre_fantasia} onChange={e => setEmpForm(f => ({ ...f, nombre_fantasia: e.target.value }))} className={inputClass} placeholder="Nombre comercial (opcional)" />
               </div>
               <div>
                 <label className={labelClass}>Dirección</label>
@@ -923,20 +1279,13 @@ export default function Configuracion() {
       >
         <div className="space-y-4">
           <div>
-            <label className={labelClass}>Nombre *</label>
-            <input value={mpForm.nombre} onChange={e => setMpForm(f => ({ ...f, nombre: e.target.value }))} className={inputClass} />
+            <label className={labelClass}>Descripción *</label>
+            <input value={mpForm.descripcion} onChange={e => setMpForm(f => ({ ...f, descripcion: e.target.value }))} className={inputClass} />
           </div>
-          <div>
-            <label className={labelClass}>Tipo</label>
-            <select value={mpForm.tipo} onChange={e => setMpForm(f => ({ ...f, tipo: e.target.value }))} className={inputClass}>
-              <option value="EFECTIVO">Efectivo</option>
-              <option value="TARJETA">Tarjeta</option>
-              <option value="TRANSFERENCIA">Transferencia</option>
-              <option value="CHEQUE">Cheque</option>
-              <option value="OTRO">Otro</option>
-            </select>
+          <div className="flex flex-col gap-3">
+            {toggleSwitch(mpForm.requiere_validacion, v => setMpForm(f => ({ ...f, requiere_validacion: v })), 'Requiere validación')}
+            {toggleSwitch(mpForm.activo, v => setMpForm(f => ({ ...f, activo: v })), 'Activo')}
           </div>
-          {toggleSwitch(mpForm.activo, v => setMpForm(f => ({ ...f, activo: v })), 'Activo')}
         </div>
       </Modal>
 
@@ -971,6 +1320,201 @@ export default function Configuracion() {
             {toggleSwitch(grForm.es_ultimo, v => setGrForm(f => ({ ...f, es_ultimo: v })), 'Es el último grado')}
             {toggleSwitch(grForm.activo, v => setGrForm(f => ({ ...f, activo: v })), 'Activo')}
           </div>
+        </div>
+      </Modal>
+
+      {/* ── Tipo Almuerzo modal ─────────────────────────────────────── */}
+      <Modal
+        open={taModal}
+        title={editingTa ? 'Editar Tipo de Almuerzo' : 'Nuevo Tipo de Almuerzo'}
+        onOk={saveTa}
+        onCancel={() => setTaModal(false)}
+        okText={editingTa ? 'Guardar' : 'Crear'}
+        confirmLoading={savingTa}
+        width={440}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className={labelClass}>Nombre *</label>
+            <input value={taForm.nombre} onChange={e => setTaForm(f => ({ ...f, nombre: e.target.value }))} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Descripción</label>
+            <textarea value={taForm.descripcion} onChange={e => setTaForm(f => ({ ...f, descripcion: e.target.value }))} rows={2} className={`${inputClass} resize-none`} />
+          </div>
+          <div>
+            <label className={labelClass}>Precio unitario (Gs.)</label>
+            <input type="number" min={0} step={1000} value={taForm.precio_unitario} onChange={e => setTaForm(f => ({ ...f, precio_unitario: e.target.value }))} className={inputClass} />
+          </div>
+          <div className="flex flex-col gap-3">
+            {toggleSwitch(taForm.incluye_plato_principal, v => setTaForm(f => ({ ...f, incluye_plato_principal: v })), 'Incluye plato principal')}
+            {toggleSwitch(taForm.incluye_postre, v => setTaForm(f => ({ ...f, incluye_postre: v })), 'Incluye postre')}
+            {toggleSwitch(taForm.incluye_bebida, v => setTaForm(f => ({ ...f, incluye_bebida: v })), 'Incluye bebida')}
+            {toggleSwitch(taForm.activo, v => setTaForm(f => ({ ...f, activo: v })), 'Activo')}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Plan Almuerzo modal ─────────────────────────────────────── */}
+      <Modal
+        open={paModal}
+        title={editingPa ? 'Editar Plan de Almuerzo' : 'Nuevo Plan de Almuerzo'}
+        onOk={savePa}
+        onCancel={() => setPaModal(false)}
+        okText={editingPa ? 'Guardar' : 'Crear'}
+        confirmLoading={savingPa}
+        width={480}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className={labelClass}>Nombre *</label>
+            <input value={paForm.nombre} onChange={e => setPaForm(f => ({ ...f, nombre: e.target.value }))} className={inputClass} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Tipo</label>
+              <select value={paForm.tipo} onChange={e => setPaForm(f => ({ ...f, tipo: e.target.value as 'CANTIDAD' | 'SIN_LIMITE' }))} className={inputClass}>
+                <option value="CANTIDAD">Por cantidad</option>
+                <option value="SIN_LIMITE">Sin límite</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Precio mensual (Gs.)</label>
+              <input type="number" min={0} step={1000} value={paForm.precio_mensual} onChange={e => setPaForm(f => ({ ...f, precio_mensual: e.target.value }))} className={inputClass} />
+            </div>
+          </div>
+          {paForm.tipo === 'CANTIDAD' && (
+            <div>
+              <label className={labelClass}>Cantidad almuerzos/mes</label>
+              <input type="number" min={1} value={paForm.cantidad_almuerzos_mes} onChange={e => setPaForm(f => ({ ...f, cantidad_almuerzos_mes: e.target.value }))} className={inputClass} />
+            </div>
+          )}
+          <div>
+            <label className={labelClass}>Días de semana incluidos</label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {DIAS_SEMANA.map((dia, i) => {
+                const checked = paForm.dias_semana_incluidos.includes(i)
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setPaForm(f => ({
+                      ...f,
+                      dias_semana_incluidos: checked
+                        ? f.dias_semana_incluidos.filter(d => d !== i)
+                        : [...f.dias_semana_incluidos, i],
+                    }))}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                      checked ? 'bg-green-500 text-white border-green-500' : 'bg-white text-slate-600 border-slate-200 hover:border-green-400'
+                    }`}
+                  >
+                    {dia}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          {toggleSwitch(paForm.activo, v => setPaForm(f => ({ ...f, activo: v })), 'Activo')}
+        </div>
+      </Modal>
+
+      {/* ── Unidad Medida modal ─────────────────────────────────────── */}
+      <Modal
+        open={umModal}
+        title={editingUm ? 'Editar Unidad de Medida' : 'Nueva Unidad de Medida'}
+        onOk={saveUm}
+        onCancel={() => setUmModal(false)}
+        okText={editingUm ? 'Guardar' : 'Crear'}
+        confirmLoading={savingUm}
+        width={400}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className={labelClass}>Nombre *</label>
+            <input value={umForm.nombre} onChange={e => setUmForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Kilogramo" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Abreviatura *</label>
+            <input value={umForm.abreviatura} onChange={e => setUmForm(f => ({ ...f, abreviatura: e.target.value }))} placeholder="kg" className={inputClass} />
+          </div>
+          {toggleSwitch(umForm.activo, v => setUmForm(f => ({ ...f, activo: v })), 'Activo')}
+        </div>
+      </Modal>
+
+      {/* ── Alérgeno modal ──────────────────────────────────────────── */}
+      <Modal
+        open={alModal}
+        title={editingAl ? 'Editar Alérgeno' : 'Nuevo Alérgeno'}
+        onOk={saveAl}
+        onCancel={() => setAlModal(false)}
+        okText={editingAl ? 'Guardar' : 'Crear'}
+        confirmLoading={savingAl}
+        width={460}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Nombre *</label>
+              <input value={alForm.nombre} onChange={e => setAlForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Gluten" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Icono (emoji)</label>
+              <input value={alForm.icono} onChange={e => setAlForm(f => ({ ...f, icono: e.target.value }))} placeholder="🌾" className={inputClass} />
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>Descripción</label>
+            <textarea value={alForm.descripcion} onChange={e => setAlForm(f => ({ ...f, descripcion: e.target.value }))} rows={2} className={`${inputClass} resize-none`} />
+          </div>
+          <div>
+            <label className={labelClass}>Severidad</label>
+            <select value={alForm.severidad} onChange={e => setAlForm(f => ({ ...f, severidad: e.target.value as 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA' }))} className={inputClass}>
+              <option value="BAJA">Baja</option>
+              <option value="MEDIA">Media</option>
+              <option value="ALTA">Alta</option>
+              <option value="CRITICA">Crítica</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Palabras clave (separadas por coma)</label>
+            <input value={alForm.palabras_clave} onChange={e => setAlForm(f => ({ ...f, palabras_clave: e.target.value }))} placeholder="trigo, harina, cebada" className={inputClass} />
+          </div>
+          {toggleSwitch(alForm.activo, v => setAlForm(f => ({ ...f, activo: v })), 'Activo')}
+        </div>
+      </Modal>
+
+      {/* ── Impuesto modal ──────────────────────────────────────────── */}
+      <Modal
+        open={impModal}
+        title={editingImp ? 'Editar Impuesto' : 'Nuevo Impuesto'}
+        onOk={saveImp}
+        onCancel={() => setImpModal(false)}
+        okText={editingImp ? 'Guardar' : 'Crear'}
+        confirmLoading={savingImp}
+        width={440}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Nombre *</label>
+              <input value={impForm.nombre} onChange={e => setImpForm(f => ({ ...f, nombre: e.target.value }))} placeholder="IVA 10%" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Porcentaje (%)</label>
+              <input type="number" min={0} max={100} step={0.5} value={impForm.porcentaje} onChange={e => setImpForm(f => ({ ...f, porcentaje: e.target.value }))} className={inputClass} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Vigente desde</label>
+              <input type="date" value={impForm.vigente_desde} onChange={e => setImpForm(f => ({ ...f, vigente_desde: e.target.value }))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Vigente hasta</label>
+              <input type="date" value={impForm.vigente_hasta} onChange={e => setImpForm(f => ({ ...f, vigente_hasta: e.target.value }))} className={inputClass} />
+            </div>
+          </div>
+          {toggleSwitch(impForm.activo, v => setImpForm(f => ({ ...f, activo: v })), 'Activo')}
         </div>
       </Modal>
     </div>

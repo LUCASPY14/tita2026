@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentación UML — Sistema Cantina Tita v1.0</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+/* ── Reset ─────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:10pt;color:#1a1a2e;background:#e9ecef}
+
+/* ── Page size: Letter portrait ─────────── */
+@page{size:letter portrait;margin:14mm 16mm}
+.page{
+  width:216mm;min-height:276mm;padding:14mm 16mm;
+  margin:0 auto 18px;background:#fff;
+  box-shadow:0 3px 12px rgba(0,0,0,.18);
+  page-break-after:always;display:flex;flex-direction:column;
+  position:relative;
+}
+@media print{
+  body{background:#fff}
+  .page{box-shadow:none;margin:0;width:100%}
+  .no-print{display:none!important}
+}
+
+/* ── Typography ─────────────────────────── */
+h1{font-size:22pt;font-weight:800;color:#1e3a5f;text-align:center}
+h2{font-size:13pt;font-weight:700;color:#1e3a5f;border-bottom:2pt solid #27ae60;padding-bottom:4px;margin-bottom:10px}
+h3{font-size:10pt;font-weight:700;color:#2c3e50;margin:8px 0 5px}
+p{line-height:1.55;margin-bottom:5px;font-size:9.5pt}
+ul,ol{padding-left:18px;font-size:9.5pt;line-height:1.6}
+
+/* ── Cover ──────────────────────────────── */
+.cover{justify-content:center;align-items:center;text-align:center}
+.cover-icon{font-size:72pt;margin-bottom:12px;line-height:1}
+.cover-title{font-size:30pt;font-weight:900;color:#1e3a5f;line-height:1.1}
+.cover-sub{font-size:14pt;color:#27ae60;font-weight:700;margin:6px 0 30px}
+.cover-line{width:120px;height:3pt;background:linear-gradient(90deg,#1e3a5f,#27ae60);margin:0 auto 30px;border-radius:2px}
+.cover-meta{background:#f0f7f4;border:1.5pt solid #c8e6c9;border-radius:10px;padding:18px 30px;display:inline-block;text-align:left}
+.cover-meta table{border-collapse:collapse}
+.cover-meta td{padding:4px 14px;font-size:9.5pt}
+.cover-meta td:first-child{font-weight:700;color:#1e3a5f;text-align:right;border-right:1.5pt solid #c8e6c9}
+.cover-meta td:last-child{color:#2c3e50}
+.cover-badge{display:inline-block;background:#27ae60;color:#fff;padding:5px 20px;border-radius:20px;font-size:9pt;font-weight:700;margin-top:22px;letter-spacing:.5px}
+.cover-footer{position:absolute;bottom:20px;width:calc(100% - 32mm);text-align:center;font-size:8pt;color:#aaa}
+
+/* ── Section divider ────────────────────── */
+.sec-div{page-break-before:always;justify-content:center;align-items:center;text-align:center;background:linear-gradient(160deg,#1e3a5f 60%,#27ae60)}
+.sec-div .snum{font-size:90pt;font-weight:900;color:rgba(255,255,255,.08);line-height:1;position:absolute}
+.sec-div .stitle{font-size:26pt;font-weight:800;color:#fff;position:relative}
+.sec-div .sdesc{font-size:11pt;color:rgba(255,255,255,.75);max-width:380px;margin-top:10px;position:relative}
+.sec-div .stag{display:inline-block;background:rgba(255,255,255,.15);border:1.5pt solid rgba(255,255,255,.3);color:#fff;padding:4px 18px;border-radius:20px;font-size:9pt;margin-top:18px;position:relative}
+
+/* ── TOC ────────────────────────────────── */
+.toc-section{font-weight:700;color:#1e3a5f;font-size:10.5pt;margin:10px 0 4px;padding:4px 8px;background:#e8f5e9;border-left:3pt solid #27ae60;border-radius:0 4px 4px 0}
+.toc-item{display:flex;justify-content:space-between;align-items:center;padding:3px 8px 3px 20px;border-bottom:.5pt dotted #ddd;font-size:9pt}
+.toc-item:hover{background:#f8fffe}
+.toc-pg{font-weight:600;color:#27ae60;min-width:28px;text-align:right}
+
+/* ── Diagram box ────────────────────────── */
+.diag-page{page-break-before:always}
+.diag-header{background:linear-gradient(135deg,#1e3a5f 0%,#27ae60 100%);color:#fff;padding:8px 14px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center}
+.diag-header h2{color:#fff;border:none;padding:0;margin:0;font-size:11.5pt}
+.diag-header .dtag{background:rgba(255,255,255,.18);padding:2px 10px;border-radius:12px;font-size:8pt;font-weight:600}
+.diag-body{border:1.5pt solid #c8e6c9;border-top:none;border-radius:0 0 6px 6px;padding:10px;flex:1}
+.diag-desc{font-size:8.5pt;color:#555;margin-bottom:8px;padding:5px 8px;background:#f9fafb;border-left:2.5pt solid #27ae60;border-radius:0 4px 4px 0;line-height:1.5}
+
+/* ── Mermaid ────────────────────────────── */
+.mermaid{text-align:center;overflow:hidden}
+pre.mermaid{margin:0}
+
+/* ── Tables ─────────────────────────────── */
+.spec-table{width:100%;border-collapse:collapse;font-size:8.5pt;margin:6px 0}
+.spec-table th{background:#1e3a5f;color:#fff;padding:5px 7px;text-align:left;font-size:8pt}
+.spec-table td{padding:4px 7px;border-bottom:.5pt solid #e0e0e0;vertical-align:top}
+.spec-table tr:nth-child(even) td{background:#f8f9fa}
+.spec-table .hl{font-weight:700;color:#1e3a5f}
+.spec-table .code{font-family:monospace;font-size:8pt;color:#c0392b}
+.spec-table .actor{color:#27ae60;font-weight:700}
+.spec-table .tag{display:inline-block;padding:1px 6px;border-radius:8px;font-size:7.5pt;font-weight:600}
+.tag-alto{background:#fde;color:#c0392b}
+.tag-med{background:#fef3cd;color:#856404}
+.tag-bajo{background:#d1ecf1;color:#0c5460}
+
+/* ── Footer line ────────────────────────── */
+.footer{margin-top:auto;padding-top:8px;border-top:.5pt solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;font-size:7.5pt;color:#aaa}
+.footer .logo-sm{font-weight:800;color:#1e3a5f;font-size:8pt}
+
+/* ── Print btn ──────────────────────────── */
+.print-bar{position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#1e3a5f,#27ae60);padding:8px 20px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.print-bar h3{color:#fff;font-size:11pt;flex:1}
+.print-bar button{background:#fff;color:#1e3a5f;border:none;padding:6px 20px;border-radius:20px;font-weight:700;cursor:pointer;font-size:9pt}
+.print-bar button:hover{background:#e8f5e9}
+body:has(.print-bar){padding-top:48px}
+@media print{.print-bar{display:none}}
+</style>
+</head>
+<body>
+<script>
+mermaid.initialize({
+  startOnLoad:true,theme:'base',
+  themeVariables:{
+    primaryColor:'#e8f5e9',primaryBorderColor:'#27ae60',
+    primaryTextColor:'#1a1a2e',secondaryColor:'#e3f2fd',
+    tertiaryColor:'#fff8e1',noteBkgColor:'#fffde7',
+    fontFamily:'Segoe UI,Arial,sans-serif',fontSize:'11px',
+    actorBkg:'#e8f5e9',actorBorder:'#27ae60',
+    sequenceNumberColor:'#1e3a5f'
+  },
+  er:{diagramPadding:20,layoutDirection:'TB',minEntityWidth:80},
+  flowchart:{curve:'basis',padding:20},
+  sequence:{diagramMarginX:15,diagramMarginY:10,actorMargin:40,width:140,height:60}
+});
+</script>
+
+<!-- Print bar -->
+<div class="print-bar no-print">
+  <h3>📄 Documentación UML — Sistema Cantina Tita v1.0</h3>
+  <button onclick="window.print()">🖨 Imprimir / Exportar PDF</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PÁGINA 1 — PORTADA
+════════════════════════════════════════════════════════════ -->
+<div class="page cover">
+  <div class="cover-icon">🍽</div>
+  <div class="cover-title">Sistema de Gestión</div>
+  <div class="cover-sub">Cantina Tita</div>
+  <div class="cover-line"></div>
+  <div style="font-size:16pt;font-weight:700;color:#1e3a5f;margin-bottom:6px">Documentación UML Completa</div>
+  <div style="font-size:10pt;color:#666;margin-bottom:24px">Casos de Uso · Entidad-Relación · Secuencia · Requerimientos · Despliegue</div>
+  <div class="cover-meta">
+    <table>
+      <tr><td>Proyecto</td><td>Sistema de Gestión Cantina Tita</td></tr>
+      <tr><td>Versión</td><td>1.0.0</td></tr>
+      <tr><td>Fecha</td><td>Mayo 2026</td></tr>
+      <tr><td>Stack</td><td>Django 4.2 · React 19 · PostgreSQL · Docker</td></tr>
+      <tr><td>Módulos</td><td>11 aplicaciones Django</td></tr>
+      <tr><td>Autor</td><td>Cantina Tita Development Team</td></tr>
+    </table>
+  </div>
+  <div class="cover-badge">CONFIDENCIAL — USO INTERNO</div>
+  <div class="cover-footer">Sistema Cantina Tita v1.0 · Documentación UML · Tamaño carta, orientación vertical</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PÁGINA 2 — TABLA DE CONTENIDOS
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h1 style="text-align:left;font-size:18pt;margin-bottom:14px">Tabla de Contenidos</h1>
+  <div class="toc-section">I. Arquitectura del Sistema</div>
+  <div class="toc-item"><span>Diagrama de Despliegue</span><span class="toc-pg">3</span></div>
+  <div class="toc-section">II. Diagrama de Requerimientos</div>
+  <div class="toc-item"><span>Requerimientos Funcionales del Sistema</span><span class="toc-pg">4</span></div>
+  <div class="toc-section">III. Diagramas de Casos de Uso por Módulo</div>
+  <div class="toc-item"><span>Módulo: Usuarios y Autenticación</span><span class="toc-pg">5</span></div>
+  <div class="toc-item"><span>Módulo: Clientes e Hijos</span><span class="toc-pg">6</span></div>
+  <div class="toc-item"><span>Módulo: Productos y Precios</span><span class="toc-pg">7</span></div>
+  <div class="toc-item"><span>Módulo: Tarjetas y Saldo (Core)</span><span class="toc-pg">8</span></div>
+  <div class="toc-item"><span>Módulo: Ventas</span><span class="toc-pg">9</span></div>
+  <div class="toc-item"><span>Módulo: Almuerzos</span><span class="toc-pg">10</span></div>
+  <div class="toc-item"><span>Módulo: Inventario</span><span class="toc-pg">11</span></div>
+  <div class="toc-item"><span>Módulo: Compras</span><span class="toc-pg">12</span></div>
+  <div class="toc-item"><span>Módulo: Contabilidad y Caja</span><span class="toc-pg">13</span></div>
+  <div class="toc-item"><span>Módulo: Notificaciones</span><span class="toc-pg">14</span></div>
+  <div class="toc-item"><span>Módulo: Integraciones API</span><span class="toc-pg">15</span></div>
+  <div class="toc-section">IV. Especificaciones Detalladas de Casos de Uso</div>
+  <div class="toc-item"><span>Tabla de especificaciones — Todos los módulos</span><span class="toc-pg">16</span></div>
+  <div class="toc-section">V. Diagramas Entidad-Relación por Módulo</div>
+  <div class="toc-item"><span>ER: Usuarios · Clientes · Productos</span><span class="toc-pg">18–20</span></div>
+  <div class="toc-item"><span>ER: Core (Tarjetas) · Ventas · Almuerzos</span><span class="toc-pg">21–23</span></div>
+  <div class="toc-item"><span>ER: Inventario · Compras · Contabilidad</span><span class="toc-pg">24–26</span></div>
+  <div class="toc-item"><span>ER: Notificaciones · Integraciones API</span><span class="toc-pg">27–28</span></div>
+  <div class="toc-section">VI. Diagramas de Secuencia — Flujos Clave</div>
+  <div class="toc-item"><span>Login y autenticación 2FA</span><span class="toc-pg">29</span></div>
+  <div class="toc-item"><span>Carga de saldo en tarjeta</span><span class="toc-pg">30</span></div>
+  <div class="toc-item"><span>Registro de venta con tarjeta</span><span class="toc-pg">31</span></div>
+  <div class="toc-item"><span>Registro de consumo de almuerzo</span><span class="toc-pg">32</span></div>
+  <div class="toc-item"><span>Registro de compra y actualización de stock</span><span class="toc-pg">33</span></div>
+  <div class="toc-item"><span>Ajuste de inventario (solicitar y aprobar)</span><span class="toc-pg">34</span></div>
+  <div class="toc-item"><span>Emisión y anulación de factura</span><span class="toc-pg">35</span></div>
+  <div class="toc-item"><span>Cierre de caja</span><span class="toc-pg">36</span></div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>Tabla de Contenidos</span><span>Pág. 2</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECCIÓN I — DIAGRAMA DE DESPLIEGUE
+════════════════════════════════════════════════════════════ -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>I. Diagrama de Despliegue — Sistema Cantina Tita</h2><span class="dtag">Arquitectura</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Infraestructura de producción: contenedores Docker sobre servidor Linux. El frontend (Nginx + React) recibe peticiones del navegador, el backend Django corre con Gunicorn, y los workers Celery procesan tareas asíncronas. Redis actúa como broker y caché. PostgreSQL es la base de datos central.</div>
+    <pre class="mermaid">
+graph TB
+  subgraph Internet["🌐 Internet"]
+    BR["🖥️ Navegador\nChrome / Firefox"]
+    APP["📱 App Móvil\nPortal Padres"]
+  end
+  subgraph Servidor["🖥️ Servidor de Producción (Linux + Docker)"]
+    subgraph FE["📦 Contenedor: Frontend"]
+      NG["Nginx 1.25\nServidor web + proxy"]
+      RA["React 19 / Vite\nbuild estático"]
+    end
+    subgraph BE["📦 Contenedor: Backend"]
+      GU["Gunicorn\nWSGI server"]
+      DJ["Django 4.2\nREST Framework"]
+    end
+    subgraph WK["📦 Contenedor: Workers"]
+      CE["Celery Worker\nTareas asíncronas"]
+      CB["Celery Beat\nScheduler"]
+    end
+    subgraph DB["📦 Contenedor: Base de datos"]
+      PG["PostgreSQL 15\ncantina_tita_db"]
+    end
+    subgraph CA["📦 Contenedor: Caché / Broker"]
+      RD["Redis 7\nCache + Broker"]
+    end
+  end
+  subgraph Ext["☁️ Servicios Externos"]
+    SM["SMTP Server\nEmail"]
+    QR["API QR / SIPAP\nPago electrónico"]
+  end
+
+  BR -->|HTTPS 443| NG
+  APP -->|HTTPS 443| NG
+  NG -->|/api proxy| GU
+  GU --> DJ
+  DJ <-->|ORM queries| PG
+  DJ <-->|cache/session| RD
+  CE <-->|tasks| RD
+  CE <-->|ORM| PG
+  CB --> CE
+  DJ -->|email tasks| CE
+  CE -->|SMTP| SM
+  DJ -->|HTTP REST| QR
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>Diagrama de Despliegue</span><span>Pág. 3</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECCIÓN II — DIAGRAMA DE REQUERIMIENTOS
+════════════════════════════════════════════════════════════ -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>II. Diagrama de Requerimientos — Sistema Cantina Tita</h2><span class="dtag">Requerimientos</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Árbol de requerimientos funcionales agrupados por dominio. Cada módulo cubre un conjunto de necesidades del negocio. Los requerimientos no funcionales (seguridad, performance, usabilidad) son transversales.</div>
+    <pre class="mermaid">
+mindmap
+  root((Sistema\nCantina Tita))
+    Gestión de Usuarios
+      Autenticación JWT
+      Roles y Permisos RBAC
+      2FA Opcional
+      Auditoría de accesos
+    Gestión de Clientes
+      Registro de clientes
+      Gestión de hijos
+      Cuenta corriente
+      Historial de grados
+    Catálogo
+      Productos y categorías
+      Precios por lista
+      Impuestos
+      Unidades de medida
+    Tarjetas y Saldo
+      Activación de tarjeta
+      Carga de saldo
+      Control de consumos
+      Alertas de saldo bajo
+    Ventas
+      Punto de venta
+      Pagos múltiples
+      Notas de crédito
+      Reportes de venta
+    Almuerzos
+      Planes y suscripciones
+      Registro de consumo
+      Cuentas mensuales
+      Alérgenos y menú
+    Inventario
+      Control de stock
+      Ajustes con aprobación
+      Lotes y vencimientos
+      Alertas de stock mínimo
+    Compras
+      Órdenes de compra
+      Pago a proveedores
+      Notas de crédito
+      Cuenta corriente proveedor
+    Contabilidad
+      Gestión de caja
+      Facturación legal
+      Dashboard financiero
+      Conciliación de pagos
+    Notificaciones
+      Sistema interno
+      Email con plantillas
+      Preferencias por usuario
+    Integraciones
+      APIs externas
+      Webhooks
+      Logs de auditoría
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>Diagrama de Requerimientos</span><span>Pág. 4</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECCIÓN III — CASOS DE USO
+════════════════════════════════════════════════════════════ -->
+
+<!-- CU-01: USUARIOS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-01 · Casos de Uso — Módulo Usuarios y Autenticación</h2><span class="dtag">usuarios</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Gestiona el ciclo de vida de los usuarios del sistema: autenticación, roles, permisos, sesiones y seguridad 2FA. Actores: Administrador (gestión), Usuario (operaciones propias), Sistema (procesos automatizados).</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+  USR["👤 Usuario"]
+  SIS["⚙️ Sistema"]
+
+  subgraph SYS["Sistema — Módulo Usuarios"]
+    direction TB
+    UC1(["🔐 Autenticar\n(login JWT)"])
+    UC2(["🔑 Recuperar\ncontraseña"])
+    UC3(["📱 Configurar 2FA"])
+    UC4(["👁 Ver perfil\npropio"])
+    UC5(["👥 Crear / editar\nusuario"])
+    UC6(["🎭 Asignar rol\na usuario"])
+    UC7(["🛡 Gestionar\npermisos por rol"])
+    UC8(["🔒 Bloquear /\ndesbloquear cuenta"])
+    UC9(["📋 Ver auditoría\nde accesos"])
+    UC10(["⏱ Gestionar\nsesión activa"])
+  end
+
+  USR --> UC1
+  USR --> UC2
+  USR --> UC3
+  USR --> UC4
+  USR --> UC10
+  ADM --> UC5
+  ADM --> UC6
+  ADM --> UC7
+  ADM --> UC8
+  ADM --> UC9
+  SIS --> UC3
+  SIS -.->|"«include»"| UC1
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-01 Usuarios</span><span>Pág. 5</span></div>
+</div>
+
+<!-- CU-02: CLIENTES -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-02 · Casos de Uso — Módulo Clientes e Hijos</h2><span class="dtag">clientes</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Gestión de clientes (padres/responsables) e hijos (alumnos). Incluye cuenta corriente, tipos de cliente, grados escolares y restricciones. Actores: Administrador, Cajero, Cliente Web (portal).</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+  CAJ["🧑‍💼 Cajero"]
+  CLI["👨‍👩‍👧 Cliente Web\n(Portal)"]
+
+  subgraph SYS["Sistema — Módulo Clientes"]
+    direction TB
+    UC1(["➕ Registrar\ncliente"])
+    UC2(["✏️ Actualizar\ndatos cliente"])
+    UC3(["👶 Gestionar\nhijos"])
+    UC4(["🏫 Asignar / cambiar\ngrado escolar"])
+    UC5(["📊 Ver cuenta\ncorriente"])
+    UC6(["💳 Asignar lista\nde precios"])
+    UC7(["⚠️ Gestionar\nrestricciones hijo"])
+    UC8(["🔍 Buscar\ncliente"])
+    UC9(["📋 Reporte cuenta\ncorriente"])
+    UC10(["🏷 Gestionar tipos\nde cliente"])
+  end
+
+  ADM --> UC1
+  ADM --> UC2
+  ADM --> UC3
+  ADM --> UC4
+  ADM --> UC6
+  ADM --> UC7
+  ADM --> UC10
+  CAJ --> UC2
+  CAJ --> UC3
+  CAJ --> UC5
+  CAJ --> UC8
+  CAJ --> UC9
+  CLI --> UC5
+  CLI --> UC8
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-02 Clientes</span><span>Pág. 6</span></div>
+</div>
+
+<!-- CU-03: PRODUCTOS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-03 · Casos de Uso — Módulo Productos y Precios</h2><span class="dtag">productos</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Catálogo de productos con precios diferenciados por lista de precio. Incluye categorías jerárquicas, unidades de medida, impuestos y trazabilidad histórica de cambios de precio.</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+  CAJ["🧑‍💼 Cajero\n(solo lectura)"]
+
+  subgraph SYS["Sistema — Módulo Productos"]
+    direction TB
+    UC1(["📦 Crear / editar\nproducto"])
+    UC2(["🗂 Gestionar\ncategorías"])
+    UC3(["📏 Gestionar unidades\nde medida"])
+    UC4(["💲 Definir listas\nde precios"])
+    UC5(["🏷 Asignar precio\npor lista"])
+    UC6(["🧾 Asignar\nimpuestos"])
+    UC7(["📈 Ver histórico\nde precios"])
+    UC8(["🔍 Buscar\nproducto"])
+    UC9(["✅ Activar /\ndesactivar producto"])
+  end
+
+  ADM --> UC1
+  ADM --> UC2
+  ADM --> UC3
+  ADM --> UC4
+  ADM --> UC5
+  ADM --> UC6
+  ADM --> UC7
+  ADM --> UC9
+  CAJ --> UC8
+  CAJ --> UC7
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-03 Productos</span><span>Pág. 7</span></div>
+</div>
+
+<!-- CU-04: CORE/TARJETAS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-04 · Casos de Uso — Módulo Tarjetas y Saldo (Core)</h2><span class="dtag">core</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Sistema de tarjetas monedero vinculadas a hijos/alumnos. Cargas de saldo, consumos, límites de transacción y notificaciones de saldo bajo. Actores: Administrador, Cajero, Sistema (alertas automáticas).</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+  CAJ["🧑‍💼 Cajero"]
+  SIS["⚙️ Sistema"]
+
+  subgraph SYS["Sistema — Módulo Core / Tarjetas"]
+    direction TB
+    UC1(["💳 Activar / crear\ntarjeta"])
+    UC2(["💰 Cargar\nsaldo"])
+    UC3(["🛒 Registrar\nconsumo"])
+    UC4(["📋 Ver movimientos\ntarjeta"])
+    UC5(["🔔 Alerta saldo\nbajo"])
+    UC6(["🔒 Gestionar límites\nde transacción"])
+    UC7(["💳 Gestionar medios\nde pago"])
+    UC8(["🔑 Tarjeta de\nautorización"])
+    UC9(["📊 Ver estado\ntarjeta"])
+  end
+
+  CAJ --> UC1
+  CAJ --> UC2
+  CAJ --> UC3
+  CAJ --> UC4
+  CAJ --> UC9
+  ADM --> UC1
+  ADM --> UC6
+  ADM --> UC7
+  ADM --> UC8
+  SIS --> UC5
+  SIS -.->|"«include»"| UC2
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-04 Core/Tarjetas</span><span>Pág. 8</span></div>
+</div>
+
+<!-- CU-05: VENTAS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-05 · Casos de Uso — Módulo Ventas</h2><span class="dtag">ventas</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Punto de venta de la cantina. Ventas por efectivo, tarjeta monedero o cuenta corriente. Anulaciones, notas de crédito y reportes de ventas por producto.</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+  CAJ["🧑‍💼 Cajero"]
+
+  subgraph SYS["Sistema — Módulo Ventas"]
+    direction TB
+    UC1(["🛒 Registrar\nventa"])
+    UC2(["💵 Aplicar\npago"])
+    UC3(["❌ Anular\nventa"])
+    UC4(["📄 Emitir nota\nde crédito"])
+    UC5(["👀 Consultar\nventa"])
+    UC6(["📊 Reporte ventas\npor producto"])
+    UC7(["🏷 Gestionar\ncondiciones de venta"])
+    UC8(["🔍 Filtrar ventas\npor período / estado"])
+  end
+
+  CAJ --> UC1
+  CAJ --> UC2
+  CAJ --> UC5
+  CAJ --> UC8
+  ADM --> UC1
+  ADM --> UC3
+  ADM --> UC4
+  ADM --> UC6
+  ADM --> UC7
+  ADM --> UC8
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-05 Ventas</span><span>Pág. 9</span></div>
+</div>
+
+<!-- CU-06: ALMUERZOS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-06 · Casos de Uso — Módulo Almuerzos</h2><span class="dtag">almuerzos</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Gestión del servicio de almuerzo escolar: suscripciones por plan, registro de consumo diario, generación de cuentas mensuales y cobro. Incluye menú diario y control de alérgenos.</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+  CAJ["🧑‍💼 Cajero"]
+  COC["👨‍🍳 Cocina"]
+
+  subgraph SYS["Sistema — Módulo Almuerzos"]
+    direction TB
+    UC1(["🍽 Registrar consumo\nde almuerzo"])
+    UC2(["📋 Generar cuenta\nmensual"])
+    UC3(["💰 Registrar pago\nde cuenta"])
+    UC4(["📅 Ver / publicar\nmenú diario"])
+    UC5(["📑 Gestionar planes\nde almuerzo"])
+    UC6(["🔔 Suscribir hijo\na plan"])
+    UC7(["⚠️ Gestionar\nalérgenos"])
+    UC8(["📊 Reporte\nalmuerzos"])
+    UC9(["💲 Gestionar precios\nde almuerzo"])
+  end
+
+  COC --> UC1
+  COC --> UC4
+  CAJ --> UC1
+  CAJ --> UC3
+  ADM --> UC2
+  ADM --> UC4
+  ADM --> UC5
+  ADM --> UC6
+  ADM --> UC7
+  ADM --> UC8
+  ADM --> UC9
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-06 Almuerzos</span><span>Pág. 10</span></div>
+</div>
+
+<!-- CU-07: INVENTARIO -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-07 · Casos de Uso — Módulo Inventario</h2><span class="dtag">inventario</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Control de existencias de productos: stock en tiempo real, ajustes con flujo de aprobación, gestión de lotes con control de vencimientos y alertas automáticas de stock crítico.</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+  SIS["⚙️ Sistema"]
+
+  subgraph SYS["Sistema — Módulo Inventario"]
+    direction TB
+    UC1(["📦 Ver stock\nactual"])
+    UC2(["✏️ Solicitar ajuste\nde inventario"])
+    UC3(["✅ Aprobar / rechazar\najuste"])
+    UC4(["📦 Registrar\nlote de producto"])
+    UC5(["⚠️ Ver alertas\nde stock mínimo"])
+    UC6(["🗓 Ver alertas\nde vencimiento"])
+    UC7(["💰 Ver costos\nhistóricos"])
+    UC8(["📊 Ver movimientos\nde stock"])
+    UC9(["🚨 Stock crítico\n(vista rápida)"])
+  end
+
+  ADM --> UC1
+  ADM --> UC2
+  ADM --> UC3
+  ADM --> UC4
+  ADM --> UC5
+  ADM --> UC6
+  ADM --> UC7
+  ADM --> UC8
+  ADM --> UC9
+  SIS --> UC5
+  SIS --> UC6
+  SIS -.->|"«include»"| UC3
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-07 Inventario</span><span>Pág. 11</span></div>
+</div>
+
+<!-- CU-08: COMPRAS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-08 · Casos de Uso — Módulo Compras</h2><span class="dtag">compras</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Gestión de adquisiciones: registro de compras a proveedores, seguimiento de entregas, pagos y notas de crédito de proveedor. Mantiene cuenta corriente por proveedor.</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+
+  subgraph SYS["Sistema — Módulo Compras"]
+    direction TB
+    UC1(["🏭 Gestionar\nproveedor"])
+    UC2(["🛒 Registrar\ncompra"])
+    UC3(["📦 Registrar\nentrega"])
+    UC4(["💵 Registrar pago\na proveedor"])
+    UC5(["🔗 Aplicar pago\na compra"])
+    UC6(["📄 Emitir nota\nde crédito proveedor"])
+    UC7(["📊 Ver cuenta\ncorriente proveedor"])
+    UC8(["📋 Ver detalle\nde compra"])
+    UC9(["📤 Exportar\ncompras CSV"])
+  end
+
+  ADM --> UC1
+  ADM --> UC2
+  ADM --> UC3
+  ADM --> UC4
+  ADM --> UC5
+  ADM --> UC6
+  ADM --> UC7
+  ADM --> UC8
+  ADM --> UC9
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-08 Compras</span><span>Pág. 12</span></div>
+</div>
+
+<!-- CU-09: CONTABILIDAD -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-09 · Casos de Uso — Módulo Contabilidad y Caja</h2><span class="dtag">contabilidad</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Gestión de caja diaria, facturación legal preimpresa, conciliación de pagos y dashboard financiero. La caja agrupa todos los movimientos del día.</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+  CAJ["🧑‍💼 Cajero"]
+
+  subgraph SYS["Sistema — Módulo Contabilidad"]
+    direction TB
+    UC1(["🏦 Abrir\ncaja"])
+    UC2(["💼 Cerrar\ncaja"])
+    UC3(["➕ Registrar movimiento\n(ingreso/egreso)"])
+    UC4(["🧾 Emitir\nfactura legal"])
+    UC5(["❌ Anular\nfactura"])
+    UC6(["📑 Ver facturas\npendientes"])
+    UC7(["🔄 Conciliar\npagosPOS"])
+    UC8(["📊 Dashboard\nfinanciero"])
+    UC9(["🏢 Gestionar datos\nde la empresa"])
+    UC10(["🖨 Imprimir\ncierre de caja"])
+  end
+
+  CAJ --> UC1
+  CAJ --> UC2
+  CAJ --> UC3
+  CAJ --> UC4
+  CAJ --> UC6
+  CAJ --> UC10
+  ADM --> UC1
+  ADM --> UC2
+  ADM --> UC4
+  ADM --> UC5
+  ADM --> UC7
+  ADM --> UC8
+  ADM --> UC9
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-09 Contabilidad</span><span>Pág. 13</span></div>
+</div>
+
+<!-- CU-10: NOTIFICACIONES -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-10 · Casos de Uso — Módulo Notificaciones</h2><span class="dtag">notificaciones</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Sistema de notificaciones internas y por email hacia clientes y usuarios. Gestión de plantillas de email con variables dinámicas y registro de todos los envíos.</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+  USR["👤 Usuario\n(cualquier rol)"]
+  SIS["⚙️ Sistema"]
+  CLI["👨‍👩‍👧 Cliente\n(portal)"]
+
+  subgraph SYS["Sistema — Módulo Notificaciones"]
+    direction TB
+    UC1(["🔔 Ver notificaciones\npropias"])
+    UC2(["✅ Marcar como\nleída"])
+    UC3(["📧 Enviar notificación\nmanual"])
+    UC4(["📝 Gestionar plantillas\nde email"])
+    UC5(["📤 Ver historial\nde emails enviados"])
+    UC6(["⚙️ Configurar preferencias\nde notificación"])
+    UC7(["🤖 Notificación\nautomática"])
+  end
+
+  USR --> UC1
+  USR --> UC2
+  USR --> UC6
+  CLI --> UC1
+  CLI --> UC2
+  ADM --> UC3
+  ADM --> UC4
+  ADM --> UC5
+  SIS --> UC7
+  UC7 -.->|"«include»"| UC3
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-10 Notificaciones</span><span>Pág. 14</span></div>
+</div>
+
+<!-- CU-11: API INTEGRATIONS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>CU-11 · Casos de Uso — Módulo Integraciones API</h2><span class="dtag">api_integrations</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Administración de proveedores de API externos (pagos, QR, servicios), credenciales, webhooks entrantes y registro completo de todas las llamadas realizadas.</div>
+    <pre class="mermaid">
+flowchart LR
+  ADM["👤 Administrador"]
+  SIS["⚙️ Sistema"]
+  EXT["🌐 API Externa"]
+
+  subgraph SYS["Sistema — Módulo Integraciones"]
+    direction TB
+    UC1(["🔌 Registrar\nproveedor API"])
+    UC2(["🔐 Gestionar\ncredenciales"])
+    UC3(["📡 Gestionar\nwebhooks"])
+    UC4(["📋 Ver logs de\nllamadas API"])
+    UC5(["📋 Ver logs de\nwebhooks"])
+    UC6(["✅ Activar /\ndesactivar proveedor"])
+    UC7(["📞 Llamada a\nAPI externa"])
+    UC8(["📥 Recibir\nwebhook"])
+  end
+
+  ADM --> UC1
+  ADM --> UC2
+  ADM --> UC3
+  ADM --> UC4
+  ADM --> UC5
+  ADM --> UC6
+  SIS --> UC7
+  EXT --> UC8
+  UC7 -.->|"«include»"| UC2
+  UC8 -.->|"«include»"| UC5
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>CU-11 Integraciones</span><span>Pág. 15</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECCIÓN IV — ESPECIFICACIONES DETALLADAS
+════════════════════════════════════════════════════════════ -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>IV. Especificaciones Detalladas — Casos de Uso Principales</h2><span class="dtag">Specs</span></div>
+  <div class="diag-body" style="overflow:auto">
+    <table class="spec-table">
+      <tr><th>ID</th><th>Caso de Uso</th><th>Actores</th><th>Precondición</th><th>Flujo Principal</th><th>Postcondición</th><th>Prioridad</th></tr>
+      <tr>
+        <td class="code">CU-01-1</td><td class="hl">Autenticar Usuario</td>
+        <td class="actor">Usuario</td>
+        <td>Usuario registrado y activo</td>
+        <td>1. Ingresa email+contraseña<br>2. Sistema valida credenciales<br>3. Si 2FA: pide código TOTP<br>4. Genera tokens JWT (access + refresh)<br>5. Redirige al dashboard</td>
+        <td>Sesión iniciada, token en localStorage</td>
+        <td><span class="tag tag-alto">ALTO</span></td>
+      </tr>
+      <tr>
+        <td class="code">CU-04-2</td><td class="hl">Cargar Saldo Tarjeta</td>
+        <td class="actor">Cajero / Admin</td>
+        <td>Tarjeta activa, caja abierta</td>
+        <td>1. Selecciona tarjeta del hijo<br>2. Ingresa monto y medio de pago<br>3. Valida límite de transacción<br>4. Crea CargaSaldo en estado CONFIRMADA<br>5. Actualiza saldo de tarjeta<br>6. Registra MovimientoTarjeta</td>
+        <td>Saldo actualizado, movimiento registrado</td>
+        <td><span class="tag tag-alto">ALTO</span></td>
+      </tr>
+      <tr>
+        <td class="code">CU-05-1</td><td class="hl">Registrar Venta</td>
+        <td class="actor">Cajero / Admin</td>
+        <td>Caja abierta, productos con stock</td>
+        <td>1. Selecciona cliente/hijo<br>2. Agrega productos al carrito<br>3. Calcula impuestos (IVA 10/5/exenta)<br>4. Selecciona medio de pago<br>5. Descuenta stock por producto<br>6. Actualiza cuenta corriente cliente<br>7. Registra movimiento en caja</td>
+        <td>Venta COBRADA, stock descontado</td>
+        <td><span class="tag tag-alto">ALTO</span></td>
+      </tr>
+      <tr>
+        <td class="code">CU-06-1</td><td class="hl">Registrar Consumo Almuerzo</td>
+        <td class="actor">Cajero / Cocina</td>
+        <td>Hijo con suscripción vigente o saldo</td>
+        <td>1. Escanea tarjeta o selecciona hijo<br>2. Sistema verifica suscripción o saldo<br>3. Registra RegistroConsumoAlmuerzo<br>4. Agrega a cuenta mensual del hijo<br>5. Descuenta saldo si corresponde</td>
+        <td>Consumo registrado, cuenta actualizada</td>
+        <td><span class="tag tag-alto">ALTO</span></td>
+      </tr>
+      <tr>
+        <td class="code">CU-09-4</td><td class="hl">Emitir Factura Legal</td>
+        <td class="actor">Cajero / Admin</td>
+        <td>Carga confirmada o pago almuerzo sin factura</td>
+        <td>1. Ve lista de pendientes de facturar<br>2. Selecciona item a facturar<br>3. Ingresa Nro. de factura preimpresa<br>4. Sistema crea Factura con IVA calculado<br>5. Vincula factura al origen<br>6. Genera PDF para impresión</td>
+        <td>Factura emitida, origen vinculado</td>
+        <td><span class="tag tag-alto">ALTO</span></td>
+      </tr>
+      <tr>
+        <td class="code">CU-07-3</td><td class="hl">Aprobar Ajuste Inventario</td>
+        <td class="actor">Admin</td>
+        <td>Ajuste en estado PENDIENTE</td>
+        <td>1. Admin revisa solicitud de ajuste<br>2. Valida motivo y cantidades<br>3. Aprueba o rechaza con observación<br>4. Si aprueba: actualiza Stock por producto<br>5. Crea MovimientoStock con tipo AJUSTE<br>6. Notifica al solicitante</td>
+        <td>Stock actualizado, ajuste APROBADO</td>
+        <td><span class="tag tag-med">MEDIO</span></td>
+      </tr>
+      <tr>
+        <td class="code">CU-08-2</td><td class="hl">Registrar Compra</td>
+        <td class="actor">Admin</td>
+        <td>Proveedor activo, productos existentes</td>
+        <td>1. Selecciona proveedor<br>2. Agrega ítems con cantidad y costo<br>3. Sistema valida totales e IVA<br>4. Registra Compra + DetalleCompra<br>5. Actualiza stock y CostoHistórico<br>6. Actualiza cuenta corriente proveedor</td>
+        <td>Compra registrada, stock actualizado</td>
+        <td><span class="tag tag-alto">ALTO</span></td>
+      </tr>
+      <tr>
+        <td class="code">CU-09-2</td><td class="hl">Cerrar Caja</td>
+        <td class="actor">Cajero / Admin</td>
+        <td>Caja en estado ABIERTO</td>
+        <td>1. Cajero cuenta efectivo físico<br>2. Ingresa monto contado<br>3. Sistema calcula diferencia vs. esperado<br>4. Actualiza CierreCaja a estado CERRADO<br>5. Genera reporte PDF de cierre<br>6. Registra diferencia en observaciones</td>
+        <td>Caja cerrada, diferencia registrada</td>
+        <td><span class="tag tag-alto">ALTO</span></td>
+      </tr>
+    </table>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>Especificaciones Detalladas</span><span>Pág. 16–17</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECCIÓN V — DIAGRAMAS ENTIDAD-RELACIÓN
+════════════════════════════════════════════════════════════ -->
+
+<!-- ER-01: USUARIOS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>ER-01 · Entidad-Relación — Módulo Usuarios</h2><span class="dtag">usuarios</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Modela usuarios del sistema con autenticación, roles, permisos RBAC, sesiones activas, intentos de login, recuperación de contraseña y auditoría completa.</div>
+    <pre class="mermaid">
+erDiagram
+  USUARIO {
+    int id PK
+    string email UK
+    string nombre
+    string apellido
+    string rol
+    bool is_active
+    bool email_verificado
+    datetime fecha_creacion
+    datetime ultimo_acceso
+  }
+  ROL {
+    int id_rol PK
+    string nombre_rol UK
+    string descripcion
+    bool estado
+  }
+  PERMISO {
+    int id PK
+    string codigo_permiso UK
+    string nombre
+    string modulo
+  }
+  ROL_PERMISO {
+    int id PK
+    datetime fecha_asignacion
+  }
+  PERFIL_USUARIO {
+    int id PK
+    string tema
+    string idioma
+    bool notif_email
+    json dashboard_config
+  }
+  AUTENTICACION_2FA {
+    int id PK
+    string secret_key
+    bool habilitado
+    datetime fecha_activacion
+  }
+  SESION_ACTIVA {
+    int id PK
+    string session_key UK
+    string ip_address
+    datetime ultima_actividad
+    bool activa
+  }
+  EMPLEADO {
+    int id PK
+    string nombre
+    string apellido
+    string email
+    bool estado
+  }
+  TOKEN_RECUPERACION {
+    int id PK
+    string token UK
+    datetime fecha_expiracion
+    bool usado
+  }
+  BLOQUEO_CUENTA {
+    int id PK
+    string motivo
+    datetime fecha_bloqueo
+    bool estado
+  }
+
+  USUARIO ||--|| PERFIL_USUARIO : "tiene"
+  USUARIO ||--o| AUTENTICACION_2FA : "configura"
+  USUARIO ||--o{ SESION_ACTIVA : "mantiene"
+  USUARIO ||--o{ TOKEN_RECUPERACION : "solicita"
+  USUARIO ||--o{ BLOQUEO_CUENTA : "sufre"
+  USUARIO }o--|| ROL : "tiene rol"
+  EMPLEADO }o--|| ROL : "asignado a"
+  ROL ||--o{ ROL_PERMISO : "contiene"
+  PERMISO ||--o{ ROL_PERMISO : "asignado en"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>ER-01 Usuarios</span><span>Pág. 18</span></div>
+</div>
+
+<!-- ER-02: CLIENTES -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>ER-02 · Entidad-Relación — Módulo Clientes</h2><span class="dtag">clientes</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Clientes (padres/responsables) con sus hijos/alumnos, cuenta corriente, historial de grados escolares y restricciones alimenticias u otras.</div>
+    <pre class="mermaid">
+erDiagram
+  CLIENTE {
+    int id PK
+    string nombres
+    string apellidos
+    string ruc_ci UK
+    string email
+    string telefono
+    decimal limite_credito
+    bool activo
+    datetime fecha_registro
+  }
+  HIJO {
+    int id PK
+    string nombre
+    string apellido
+    date fecha_nacimiento
+    string grado
+    bool activo
+  }
+  TIPO_CLIENTE {
+    int id PK
+    string nombre UK
+    bool activo
+  }
+  GRADO {
+    int id PK
+    string nombre UK
+    int nivel
+    int orden
+    bool es_ultimo
+  }
+  HISTORIAL_GRADO {
+    int id PK
+    string grado_anterior
+    string grado_nuevo
+    int anio_escolar
+    datetime fecha_cambio
+  }
+  CUENTA_CORRIENTE {
+    int id PK
+    datetime fecha
+    string tipo
+    decimal monto
+    decimal saldo_anterior
+    decimal saldo_resultante
+    string descripcion
+  }
+  RESTRICCION_HIJO {
+    int id PK
+    string tipo
+    string descripcion
+    string severidad
+    bool activo
+  }
+
+  CLIENTE ||--o{ HIJO : "tiene"
+  CLIENTE }o--|| TIPO_CLIENTE : "clasificado como"
+  HIJO ||--o{ HISTORIAL_GRADO : "registra"
+  HIJO ||--o{ RESTRICCION_HIJO : "tiene"
+  CLIENTE ||--o{ CUENTA_CORRIENTE : "posee"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>ER-02 Clientes</span><span>Pág. 19</span></div>
+</div>
+
+<!-- ER-03: PRODUCTOS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>ER-03 · Entidad-Relación — Módulo Productos</h2><span class="dtag">productos</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Catálogo de productos con categorías jerárquicas, múltiples listas de precios y asignación de impuestos por producto. Historial de cambios de precio.</div>
+    <pre class="mermaid">
+erDiagram
+  PRODUCTO {
+    int id PK
+    string codigo_barra UK
+    string codigo UK
+    string descripcion
+    decimal stock_minimo
+    bool permite_stock_negativo
+    bool es_servicio
+    bool activo
+  }
+  CATEGORIA {
+    int id PK
+    string nombre
+    string descripcion
+    bool activo
+  }
+  UNIDAD_MEDIDA {
+    int id PK
+    string nombre
+    string abreviatura
+    bool activo
+  }
+  LISTA_PRECIO {
+    int id PK
+    string nombre UK
+    date fecha_vigencia
+    string moneda
+    bool activo
+  }
+  PRECIO_POR_LISTA {
+    int id PK
+    decimal precio_unitario
+    datetime fecha_vigencia
+  }
+  HISTORICO_PRECIO {
+    int id PK
+    decimal precio_anterior
+    decimal precio_nuevo
+    datetime fecha_cambio
+  }
+  IMPUESTO {
+    int id PK
+    string nombre UK
+    decimal porcentaje
+    date vigente_desde
+    date vigente_hasta
+    bool activo
+  }
+  PRODUCTO_IMPUESTO {
+    int id PK
+    datetime fecha_asignacion
+  }
+
+  PRODUCTO }o--|| CATEGORIA : "pertenece a"
+  CATEGORIA ||--o{ CATEGORIA : "sub-categoría de"
+  PRODUCTO }o--o| UNIDAD_MEDIDA : "medido en"
+  PRODUCTO ||--o{ PRECIO_POR_LISTA : "tiene precio en"
+  LISTA_PRECIO ||--o{ PRECIO_POR_LISTA : "contiene"
+  PRODUCTO ||--o{ HISTORICO_PRECIO : "registra cambios"
+  PRODUCTO ||--o{ PRODUCTO_IMPUESTO : "grava con"
+  IMPUESTO ||--o{ PRODUCTO_IMPUESTO : "aplica a"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>ER-03 Productos</span><span>Pág. 20</span></div>
+</div>
+
+<!-- ER-04: CORE/TARJETAS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>ER-04 · Entidad-Relación — Módulo Core / Tarjetas</h2><span class="dtag">core</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Tarjetas monedero vinculadas a hijos, cargas de saldo, consumos, medios de pago, límites de transacción por rol y registro de autorizaciones dobles.</div>
+    <pre class="mermaid">
+erDiagram
+  TARJETA {
+    string nro_tarjeta PK
+    string codigo_barras UK
+    decimal saldo_actual
+    decimal limite_credito
+    bool permite_saldo_negativo
+    string estado
+    date fecha_vencimiento
+  }
+  CARGA_SALDO {
+    int id PK
+    decimal monto_cargado
+    datetime fecha_carga
+    string estado
+    string metodo_pago
+    decimal comision
+    string referencia
+  }
+  CONSUMO_TARJETA {
+    int id PK
+    datetime fecha_consumo
+    decimal monto_consumido
+    decimal saldo_anterior
+    decimal saldo_posterior
+    string detalle
+  }
+  MOVIMIENTO_TARJETA {
+    int id PK
+    datetime fecha
+    string tipo
+    decimal monto
+    decimal saldo_anterior
+    decimal saldo_resultante
+  }
+  MEDIO_PAGO {
+    int id PK
+    string descripcion UK
+    bool requiere_validacion
+    bool activo
+  }
+  LIMITE_TRANSACCION {
+    int id PK
+    string tipo_operacion
+    decimal monto_maximo
+    bool requiere_autorizacion_doble
+    bool activo
+  }
+  REGISTRO_AUTORIZACION {
+    int id PK
+    string tipo_operacion
+    decimal monto
+    datetime fecha_autorizacion
+  }
+
+  TARJETA ||--o{ CARGA_SALDO : "recibe"
+  TARJETA ||--o{ CONSUMO_TARJETA : "genera"
+  TARJETA ||--o{ MOVIMIENTO_TARJETA : "registra"
+  CARGA_SALDO ||--o| MOVIMIENTO_TARJETA : "origina"
+  CONSUMO_TARJETA ||--o| MOVIMIENTO_TARJETA : "origina"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>ER-04 Core/Tarjetas</span><span>Pág. 21</span></div>
+</div>
+
+<!-- ER-05: VENTAS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>ER-05 · Entidad-Relación — Módulo Ventas</h2><span class="dtag">ventas</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Ventas con desglose de IVA, pagos múltiples por venta, notas de crédito y aplicación de pagos a múltiples ventas. Vinculadas a caja, tarjeta y cliente.</div>
+    <pre class="mermaid">
+erDiagram
+  VENTA {
+    int id PK
+    datetime fecha
+    string tipo
+    string estado
+    string estado_pago
+    decimal monto_total
+    decimal iva_10
+    decimal iva_5
+    decimal monto_exenta
+  }
+  DETALLE_VENTA {
+    int id PK
+    decimal cantidad
+    decimal precio_unitario
+    decimal subtotal
+    decimal iva_10
+    decimal iva_5
+  }
+  PAGO_VENTA {
+    int id PK
+    decimal monto
+    decimal monto_comision
+    datetime fecha
+    string referencia
+    string estado
+  }
+  APLICACION_PAGO {
+    int id PK
+    decimal monto_aplicado
+  }
+  NOTA_CREDITO {
+    int id PK
+    string nro_nota_credito UK
+    datetime fecha_emision
+    decimal monto_total
+    string motivo
+    string estado
+  }
+  DETALLE_NOTA_CREDITO {
+    int id PK
+    decimal cantidad
+    decimal precio_unitario
+    decimal subtotal
+  }
+
+  VENTA ||--o{ DETALLE_VENTA : "tiene"
+  VENTA ||--o{ APLICACION_PAGO : "recibe"
+  PAGO_VENTA ||--o{ APLICACION_PAGO : "aplicado en"
+  VENTA ||--o| NOTA_CREDITO : "genera"
+  NOTA_CREDITO ||--o{ DETALLE_NOTA_CREDITO : "detalla"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>ER-05 Ventas</span><span>Pág. 22</span></div>
+</div>
+
+<!-- ER-06: ALMUERZOS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>ER-06 · Entidad-Relación — Módulo Almuerzos</h2><span class="dtag">almuerzos</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Planes de almuerzo, suscripciones de hijos, registro de consumo diario y cuentas mensuales. Incluye menú diario, tipos de almuerzo y control de alérgenos por producto.</div>
+    <pre class="mermaid">
+erDiagram
+  PLAN_ALMUERZO {
+    int id PK
+    string nombre
+    string tipo
+    decimal precio_mensual
+    int cantidad_almuerzos_mes
+    bool activo
+  }
+  SUSCRIPCION_ALMUERZO {
+    int id PK
+    date fecha_inicio
+    date fecha_fin
+    string estado
+  }
+  REGISTRO_CONSUMO {
+    int id PK
+    date fecha_consumo
+    decimal costo_almuerzo
+    bool ya_cobrado
+    string estado
+  }
+  CUENTA_MENSUAL {
+    int id PK
+    int anio
+    int mes
+    int cantidad_almuerzos
+    decimal monto_total
+    decimal monto_pagado
+    string estado
+  }
+  PAGO_CUENTA_ALMUERZO {
+    int id PK
+    decimal monto
+    datetime fecha_pago
+    string medio_pago
+  }
+  MENU_DIARIO {
+    int id PK
+    date fecha
+    string plato_principal
+    string guarnicion
+    string postre
+    bool activo
+  }
+  ALERGENO {
+    int id PK
+    string nombre
+    string severidad
+    bool activo
+  }
+  TIPO_ALMUERZO {
+    int id PK
+    string nombre
+    decimal precio_unitario
+    bool activo
+  }
+
+  PLAN_ALMUERZO ||--o{ SUSCRIPCION_ALMUERZO : "suscribe"
+  SUSCRIPCION_ALMUERZO ||--o{ REGISTRO_CONSUMO : "genera"
+  REGISTRO_CONSUMO ||--o{ CUENTA_MENSUAL : "acumula en"
+  CUENTA_MENSUAL ||--o{ PAGO_CUENTA_ALMUERZO : "paga con"
+  TIPO_ALMUERZO ||--o{ REGISTRO_CONSUMO : "clasifica"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>ER-06 Almuerzos</span><span>Pág. 23</span></div>
+</div>
+
+<!-- ER-07: INVENTARIO -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>ER-07 · Entidad-Relación — Módulo Inventario</h2><span class="dtag">inventario</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Stock por producto, ajustes con aprobación, lotes con fecha de vencimiento, costos históricos y alertas automáticas de stock mínimo y vencimiento próximo.</div>
+    <pre class="mermaid">
+erDiagram
+  STOCK {
+    int id PK
+    decimal cantidad
+    datetime fecha_actualizacion
+  }
+  MOVIMIENTO_STOCK {
+    int id PK
+    datetime fecha
+    string tipo
+    string motivo
+    decimal cantidad
+    decimal stock_resultante
+    string observaciones
+  }
+  AJUSTE_INVENTARIO {
+    int id PK
+    datetime fecha
+    string tipo
+    string motivo
+    string estado
+    datetime fecha_aprobacion
+  }
+  DETALLE_AJUSTE {
+    int id PK
+    decimal cantidad
+  }
+  COSTO_HISTORICO {
+    int id PK
+    decimal costo_unitario
+    decimal cantidad_comprada
+    datetime fecha_compra
+  }
+  LOTE_PRODUCTO {
+    int id PK
+    string numero_lote
+    date fecha_vencimiento
+    decimal cantidad_inicial
+    decimal cantidad_disponible
+    bool bloqueado
+  }
+  ALERTA_STOCK {
+    int id PK
+    string tipo
+    decimal stock_actual
+    decimal stock_minimo
+    bool activa
+    bool notificacion_enviada
+  }
+  ALERTA_VENCIMIENTO {
+    int id PK
+    string tipo
+    int dias_restantes
+    date fecha_vencimiento
+    string accion_tomada
+  }
+
+  STOCK ||--o{ MOVIMIENTO_STOCK : "origina"
+  AJUSTE_INVENTARIO ||--o{ DETALLE_AJUSTE : "compuesto por"
+  DETALLE_AJUSTE ||--o| MOVIMIENTO_STOCK : "genera"
+  LOTE_PRODUCTO ||--o{ ALERTA_VENCIMIENTO : "genera"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>ER-07 Inventario</span><span>Pág. 24</span></div>
+</div>
+
+<!-- ER-08: COMPRAS -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>ER-08 · Entidad-Relación — Módulo Compras</h2><span class="dtag">compras</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Compras a proveedores con detalle por producto, pagos con aplicación a múltiples compras, notas de crédito y cuenta corriente por proveedor.</div>
+    <pre class="mermaid">
+erDiagram
+  PROVEEDOR {
+    int id PK
+    string ruc UK
+    string razon_social
+    string telefono
+    string email
+    bool activo
+  }
+  COMPRA {
+    int id PK
+    datetime fecha
+    decimal monto_total
+    string tipo_pago
+    string estado_pago
+    string estado_entrega
+    string nro_factura_proveedor
+  }
+  DETALLE_COMPRA {
+    int id PK
+    decimal cantidad
+    decimal costo_unitario
+    decimal subtotal
+    decimal monto_iva
+  }
+  PAGO_PROVEEDOR {
+    int id PK
+    decimal monto_total
+    datetime fecha
+    string referencia
+    string estado
+  }
+  APLICACION_PAGO_COMPRA {
+    int id PK
+    decimal monto_aplicado
+  }
+  NOTA_CREDITO_PROVEEDOR {
+    int id PK
+    datetime fecha
+    decimal monto_total
+    string nro_factura_compra
+    string estado
+  }
+  CUENTA_CORRIENTE_PROVEEDOR {
+    int id PK
+    datetime fecha
+    string tipo
+    decimal monto
+    decimal saldo_resultante
+  }
+
+  PROVEEDOR ||--o{ COMPRA : "suministra"
+  COMPRA ||--o{ DETALLE_COMPRA : "contiene"
+  PROVEEDOR ||--o{ PAGO_PROVEEDOR : "recibe"
+  PAGO_PROVEEDOR ||--o{ APLICACION_PAGO_COMPRA : "aplicado a"
+  COMPRA ||--o{ APLICACION_PAGO_COMPRA : "pagada con"
+  PROVEEDOR ||--o{ NOTA_CREDITO_PROVEEDOR : "emite"
+  PROVEEDOR ||--o{ CUENTA_CORRIENTE_PROVEEDOR : "mantiene"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>ER-08 Compras</span><span>Pág. 25</span></div>
+</div>
+
+<!-- ER-09: CONTABILIDAD -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>ER-09 · Entidad-Relación — Módulo Contabilidad</h2><span class="dtag">contabilidad</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Gestión de cajas físicas, cierres de caja diarios con movimientos, facturas preimpresas legales y datos de la empresa emisora.</div>
+    <pre class="mermaid">
+erDiagram
+  CAJA {
+    int id PK
+    string nombre
+    string ubicacion
+    bool activo
+  }
+  CIERRE_CAJA {
+    int id PK
+    datetime fecha_apertura
+    datetime fecha_cierre
+    decimal monto_inicial
+    decimal monto_contado_fisico
+    decimal diferencia_efectivo
+    string estado
+  }
+  MOVIMIENTO_CAJA {
+    int id PK
+    string tipo
+    decimal monto
+    decimal monto_comision
+    datetime fecha
+    string descripcion
+  }
+  CONCILIACION_PAGO {
+    int id PK
+    datetime fecha_acreditacion
+    decimal monto_acreditado
+    string estado
+  }
+  FACTURA {
+    int id PK
+    string nro_factura UK
+    datetime fecha_emision
+    decimal monto_total
+    decimal iva_10
+    decimal iva_5
+    decimal monto_exenta
+    string estado
+  }
+  DATOS_EMPRESA {
+    int id PK
+    string ruc
+    string razon_social
+    string nombre_fantasia
+    string direccion
+    string email
+    bool activo
+  }
+
+  CAJA ||--o{ CIERRE_CAJA : "tiene"
+  CIERRE_CAJA ||--o{ MOVIMIENTO_CAJA : "registra"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>ER-09 Contabilidad</span><span>Pág. 26</span></div>
+</div>
+
+<!-- ER-10 + ER-11: NOTIFICACIONES + INTEGRACIONES -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>ER-10/11 · Notificaciones e Integraciones API</h2><span class="dtag">notificaciones · api_integrations</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Notificaciones (sistema e email con plantillas) y gestión de proveedores de API externos con credenciales, webhooks y logs de auditoría.</div>
+    <pre class="mermaid">
+erDiagram
+  NOTIFICACION {
+    int id PK
+    string tipo
+    string titulo
+    string mensaje
+    string destino
+    bool leida
+    datetime fecha_envio
+  }
+  PREFERENCIA_NOTIFICACION {
+    int id PK
+    string tipo_notificacion
+    bool email_activo
+    bool sistema_activo
+  }
+  PLANTILLA_EMAIL {
+    int id PK
+    string codigo UK
+    string nombre
+    string asunto
+    string cuerpo_html
+    json variables
+    bool activo
+  }
+  EMAIL_ENVIADO {
+    int id PK
+    string destinatario_email
+    string asunto
+    string estado
+    datetime fecha_envio
+    int intentos
+  }
+  PROVEEDOR_API {
+    int id PK
+    string nombre
+    string tipo_servicio
+    string url_base
+    string tipo_auth
+    bool activo
+  }
+  ENDPOINT_API {
+    int id PK
+    string nombre
+    string path
+    string metodo
+    bool activo
+  }
+  CREDENCIAL_API {
+    int id PK
+    string ambiente
+    datetime fecha_expiracion
+    bool activo
+  }
+  LOG_LLAMADA_API {
+    int id PK
+    datetime timestamp
+    string metodo
+    string url
+    int status_code
+    int tiempo_ms
+    bool exitoso
+  }
+  WEBHOOK_ENDPOINT {
+    int id PK
+    string nombre
+    string path
+    bool activo
+  }
+
+  PLANTILLA_EMAIL ||--o{ EMAIL_ENVIADO : "usada en"
+  PROVEEDOR_API ||--o{ ENDPOINT_API : "expone"
+  PROVEEDOR_API ||--o{ CREDENCIAL_API : "tiene"
+  PROVEEDOR_API ||--o{ WEBHOOK_ENDPOINT : "recibe"
+  ENDPOINT_API ||--o{ LOG_LLAMADA_API : "genera"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>ER-10/11 Notificaciones e Integraciones</span><span>Pág. 27</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECCIÓN VI — DIAGRAMAS DE SECUENCIA
+════════════════════════════════════════════════════════════ -->
+
+<!-- SEQ-01: LOGIN + 2FA -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>SEQ-01 · Secuencia — Login y Autenticación 2FA</h2><span class="dtag">usuarios</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Flujo de autenticación con JWT Simple JWT. Si el usuario tiene 2FA habilitado, debe ingresar el código TOTP antes de recibir los tokens de acceso.</div>
+    <pre class="mermaid">
+sequenceDiagram
+  actor U as 👤 Usuario
+  participant F as Frontend React
+  participant API as Django API
+  participant DB as PostgreSQL
+
+  U->>F: Ingresa email + contraseña
+  F->>API: POST /api/token/
+  API->>DB: Verifica credenciales
+  DB-->>API: Usuario válido
+  alt 2FA habilitado
+    API-->>F: {require_2fa: true, user_id}
+    F-->>U: Muestra campo código TOTP
+    U->>F: Ingresa código TOTP
+    F->>API: POST /api/token/2fa/verificar/
+    API->>DB: Valida código TOTP
+    DB-->>API: Código válido
+  end
+  API-->>F: {access, refresh, user:{...}}
+  F->>F: Guarda tokens en localStorage
+  F-->>U: Redirige al Dashboard
+  Note over F,API: Token access expira en 60min
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>SEQ-01 Login + 2FA</span><span>Pág. 29</span></div>
+</div>
+
+<!-- SEQ-02: CARGA DE SALDO -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>SEQ-02 · Secuencia — Carga de Saldo en Tarjeta</h2><span class="dtag">core</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Flujo completo de carga de saldo. El cajero selecciona tarjeta y monto, el backend valida límites, crea la carga y actualiza saldo de la tarjeta en una transacción atómica.</div>
+    <pre class="mermaid">
+sequenceDiagram
+  actor C as 🧑‍💼 Cajero
+  participant F as Frontend
+  participant API as Django API
+  participant SVC as TarjetaService
+  participant DB as PostgreSQL
+
+  C->>F: Selecciona tarjeta y monto
+  C->>F: Elige medio de pago
+  F->>API: POST /api/v1/core/cargas-saldo/
+  API->>SVC: cargar_saldo(tarjeta, monto, medio)
+  SVC->>DB: BEGIN TRANSACTION
+  SVC->>DB: SELECT tarjeta FOR UPDATE
+  DB-->>SVC: Tarjeta activa, saldo actual
+  SVC->>DB: Valida LimiteTransaccion por rol
+  SVC->>DB: INSERT CargaSaldo (estado=CONFIRMADA)
+  SVC->>DB: UPDATE Tarjeta.saldo_actual += monto
+  SVC->>DB: INSERT MovimientoTarjeta (CARGA)
+  DB-->>SVC: Commit OK
+  SVC-->>API: CargaSaldo creada
+  API-->>F: 201 {carga_id, saldo_nuevo}
+  F-->>C: ✅ "Saldo cargado correctamente"
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>SEQ-02 Carga de Saldo</span><span>Pág. 30</span></div>
+</div>
+
+<!-- SEQ-03: REGISTRAR VENTA -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>SEQ-03 · Secuencia — Registro de Venta con Tarjeta</h2><span class="dtag">ventas</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Registro de una venta pagada con tarjeta monedero. Incluye validación de stock, cálculo de IVA, descuento de saldo en tarjeta y actualización de la cuenta corriente del cliente.</div>
+    <pre class="mermaid">
+sequenceDiagram
+  actor C as 🧑‍💼 Cajero
+  participant F as Frontend
+  participant API as Django API
+  participant SVC as VentaService
+  participant INV as StockService
+  participant DB as PostgreSQL
+
+  C->>F: Agrega productos al carrito
+  C->>F: Selecciona cliente + tarjeta
+  F->>API: POST /api/v1/ventas/ventas/
+  API->>SVC: registrar_venta(items, cliente, tarjeta)
+  SVC->>DB: BEGIN TRANSACTION
+  SVC->>INV: validar_disponibilidad_multiple(items)
+  INV->>DB: Verifica stock por producto
+  DB-->>INV: Stock disponible ✓
+  SVC->>DB: INSERT Venta + DetalleVenta[]
+  SVC->>DB: Descuenta Stock por producto
+  SVC->>DB: INSERT MovimientoStock(VENTA)
+  alt Pago con tarjeta
+    SVC->>DB: SELECT Tarjeta FOR UPDATE
+    SVC->>DB: UPDATE Tarjeta.saldo -= monto_total
+    SVC->>DB: INSERT ConsumoTarjeta
+    SVC->>DB: INSERT MovimientoTarjeta(CONSUMO)
+  end
+  SVC->>DB: INSERT CuentaCorriente(cliente)
+  SVC->>DB: INSERT MovimientoCaja(INGRESO)
+  DB-->>SVC: Commit OK
+  API-->>F: 201 {venta_id, ...}
+  F-->>C: ✅ Venta registrada
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>SEQ-03 Registro de Venta</span><span>Pág. 31</span></div>
+</div>
+
+<!-- SEQ-04: CONSUMO ALMUERZO -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>SEQ-04 · Secuencia — Registro de Consumo de Almuerzo</h2><span class="dtag">almuerzos</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">El cajero o cocina registra el consumo de almuerzo de un alumno. El sistema verifica suscripción vigente, registra el consumo y actualiza la cuenta mensual.</div>
+    <pre class="mermaid">
+sequenceDiagram
+  actor C as 👨‍🍳 Cajero/Cocina
+  participant F as Frontend
+  participant API as Django API
+  participant SVC as AlmuerzoService
+  participant DB as PostgreSQL
+
+  C->>F: Escanea tarjeta o busca hijo
+  F->>API: POST /api/v1/almuerzos/registros-consumo/
+  API->>SVC: registrar_consumo(hijo, tipo_almuerzo)
+  SVC->>DB: BEGIN TRANSACTION
+  SVC->>DB: Busca SuscripcionAlmuerzo vigente
+  alt Tiene suscripción activa
+    DB-->>SVC: Suscripción encontrada
+    SVC->>DB: INSERT RegistroConsumoAlmuerzo
+    SVC->>SVC: _agregar_a_cuenta_mensual(hijo)
+    SVC->>DB: SELECT CuentaMensual (mes actual)
+    alt No existe cuenta del mes
+      SVC->>DB: INSERT CuentaMensual(nuevo)
+    end
+    SVC->>DB: UPDATE CuentaMensual.cantidad++
+    SVC->>DB: UPDATE CuentaMensual.monto_total += costo
+  else Sin suscripción
+    SVC->>DB: INSERT RegistroConsumoAlmuerzo(pendiente cobro)
+  end
+  DB-->>SVC: Commit OK
+  API-->>F: 201 {consumo_id}
+  F-->>C: ✅ Consumo registrado
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>SEQ-04 Consumo Almuerzo</span><span>Pág. 32</span></div>
+</div>
+
+<!-- SEQ-05: REGISTRAR COMPRA -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>SEQ-05 · Secuencia — Registro de Compra y Actualización de Stock</h2><span class="dtag">compras · inventario</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">El administrador registra una compra a proveedor. El backend actualiza automáticamente el stock de cada producto y registra el costo histórico, actualizando también la cuenta corriente del proveedor.</div>
+    <pre class="mermaid">
+sequenceDiagram
+  actor A as 👤 Administrador
+  participant F as Frontend
+  participant API as Django API
+  participant SVC as CompraService
+  participant DB as PostgreSQL
+
+  A->>F: Selecciona proveedor + ítems
+  F->>API: POST /api/v1/compras/compras/
+  API->>SVC: crear_compra(proveedor, items[])
+  SVC->>DB: BEGIN TRANSACTION
+  SVC->>SVC: validar_items(items)
+  SVC->>DB: INSERT Compra + DetalleCompra[]
+  loop Por cada producto
+    SVC->>SVC: _actualizar_stock_y_costos(prod, cant, costo)
+    SVC->>DB: UPDATE Stock.cantidad += cantidad
+    SVC->>DB: INSERT MovimientoStock(COMPRA, INGRESO)
+    SVC->>DB: INSERT CostoHistorico(costo_unit)
+    SVC->>DB: UPDATE AlertaStock (si resuelve)
+  end
+  SVC->>DB: INSERT CuentaCorrienteProveedor(COMPRA)
+  DB-->>SVC: Commit OK
+  API-->>F: 201 {compra_id, monto_total}
+  F-->>A: ✅ Compra registrada, stock actualizado
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>SEQ-05 Compra + Stock</span><span>Pág. 33</span></div>
+</div>
+
+<!-- SEQ-06: AJUSTE INVENTARIO -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>SEQ-06 · Secuencia — Ajuste de Inventario (Solicitar y Aprobar)</h2><span class="dtag">inventario</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Flujo de doble paso: el usuario solicita un ajuste de inventario y el administrador lo aprueba o rechaza. Solo al aprobarse se modifica el stock real del sistema.</div>
+    <pre class="mermaid">
+sequenceDiagram
+  actor U as 👤 Usuario
+  actor A as 👤 Admin
+  participant F as Frontend
+  participant API as Django API
+  participant DB as PostgreSQL
+
+  U->>F: Crea solicitud de ajuste
+  F->>API: POST /api/v1/inventario/ajustes/
+  API->>DB: INSERT AjusteInventario (PENDIENTE)
+  API->>DB: INSERT DetalleAjuste[]
+  DB-->>API: Ajuste creado
+  API-->>F: 201 {ajuste_id, estado:PENDIENTE}
+  F-->>U: ✅ Solicitud enviada para aprobación
+
+  Note over A,DB: El Admin revisa la solicitud
+  A->>F: Aprueba ajuste
+  F->>API: POST /api/v1/inventario/ajustes/{id}/aprobar/
+  API->>DB: BEGIN TRANSACTION
+  API->>DB: UPDATE AjusteInventario.estado = APROBADO
+  loop Por cada DetalleAjuste
+    API->>DB: UPDATE Stock.cantidad (±cantidad)
+    API->>DB: INSERT MovimientoStock(AJUSTE)
+    API->>DB: UPDATE DetalleAjuste.movimiento_stock
+  end
+  API->>DB: Commit OK
+  API-->>F: 200 {ajuste_id, estado:APROBADO}
+  F-->>A: ✅ Ajuste aplicado al stock
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>SEQ-06 Ajuste Inventario</span><span>Pág. 34</span></div>
+</div>
+
+<!-- SEQ-07: EMITIR FACTURA -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>SEQ-07 · Secuencia — Emisión de Factura Legal</h2><span class="dtag">contabilidad</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Flujo de emisión de factura preimpresa para una carga de saldo o pago de almuerzo. El sistema calcula IVA automáticamente y vincula la factura al origen para evitar duplicados.</div>
+    <pre class="mermaid">
+sequenceDiagram
+  actor C as 🧑‍💼 Cajero
+  participant F as Frontend
+  participant API as Django API
+  participant SVC as FacturacionService
+  participant DB as PostgreSQL
+
+  C->>F: Ver lista de pendientes de facturar
+  F->>API: GET /api/v1/contabilidad/facturas/pendiente-facturar/
+  API->>DB: Cargas confirmadas sin factura
+  DB-->>API: Lista de pendientes
+  API-->>F: [{tipo, id, cliente, monto...}]
+  F-->>C: Muestra pendientes
+
+  C->>F: Selecciona ítem, ingresa Nro. Factura
+  F->>API: POST /api/v1/contabilidad/facturas/emitir/
+  API->>SVC: emitir_para_origen(tipo,id,nro_factura)
+  SVC->>DB: BEGIN TRANSACTION
+  SVC->>DB: SELECT origen FOR UPDATE (of self)
+  SVC->>DB: Verifica origen sin factura previa
+  SVC->>DB: Resuelve cliente (cliente_origen o tarjeta→hijo→cliente)
+  SVC->>DB: Calcula IVA (monto*10/110)
+  SVC->>DB: INSERT Factura(nro, monto, iva_10)
+  SVC->>DB: UPDATE origen.factura = factura
+  DB-->>SVC: Commit OK
+  API-->>F: 201 {factura_id, nro_factura}
+  F-->>C: ✅ Factura emitida correctamente
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>SEQ-07 Emisión de Factura</span><span>Pág. 35</span></div>
+</div>
+
+<!-- SEQ-08: CIERRE DE CAJA -->
+<div class="page diag-page">
+  <div class="diag-header"><h2>SEQ-08 · Secuencia — Cierre de Caja</h2><span class="dtag">contabilidad</span></div>
+  <div class="diag-body">
+    <div class="diag-desc">Al final del día, el cajero cuenta el efectivo físico y cierra la caja. El sistema calcula la diferencia entre el monto esperado (sumatoria de movimientos) y el contado, y genera el PDF de cierre.</div>
+    <pre class="mermaid">
+sequenceDiagram
+  actor C as 🧑‍💼 Cajero
+  participant F as Frontend
+  participant API as Django API
+  participant SVC as CajaService
+  participant DB as PostgreSQL
+
+  C->>F: Ingresa monto contado físico
+  F->>API: POST /api/v1/contabilidad/cierres-caja/{id}/cerrar/
+  API->>SVC: cerrar_caja(cierre, monto_contado)
+  SVC->>DB: BEGIN TRANSACTION
+  SVC->>DB: SELECT CierreCaja FOR UPDATE
+  SVC->>DB: Verifica estado = ABIERTO
+  SVC->>DB: SUM(MovimientoCaja.monto) por tipo
+  SVC->>DB: Calcula diferencia efectivo
+  SVC->>DB: UPDATE CierreCaja(estado=CERRADO, diferencia, fecha_cierre)
+  DB-->>SVC: Commit OK
+  SVC-->>API: CierreCaja actualizado
+  API-->>F: 200 {cierre_id, diferencia, totales_por_medio}
+  F-->>C: ✅ Caja cerrada
+
+  C->>F: Solicita imprimir PDF
+  F->>API: GET /api/v1/contabilidad/cierres-caja/{id}/pdf/
+  API->>DB: Carga cierre + movimientos
+  API-->>F: HTML con datos del cierre
+  F->>F: window.print()
+  F-->>C: 🖨 PDF del cierre generado
+    </pre>
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>SEQ-08 Cierre de Caja</span><span>Pág. 36</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PÁGINA FINAL — RESUMEN
+════════════════════════════════════════════════════════════ -->
+<div class="page diag-page" style="justify-content:center;align-items:center;text-align:center">
+  <div style="font-size:48pt;margin-bottom:12px">📐</div>
+  <h1 style="font-size:20pt;margin-bottom:8px">Resumen de Documentación UML</h1>
+  <div style="font-size:10pt;color:#27ae60;font-weight:700;margin-bottom:24px">Sistema de Gestión — Cantina Tita v1.0</div>
+  <table class="spec-table" style="max-width:480px;margin:0 auto 20px">
+    <tr><th>Tipo de Diagrama</th><th>Cantidad</th><th>Módulos / Flujos</th></tr>
+    <tr><td>Diagrama de Despliegue</td><td>1</td><td>Arquitectura completa</td></tr>
+    <tr><td>Diagrama de Requerimientos</td><td>1</td><td>11 dominios funcionales</td></tr>
+    <tr><td>Casos de Uso</td><td>11</td><td>Un diagrama por módulo</td></tr>
+    <tr><td>Especificaciones Detalladas</td><td>8</td><td>Casos críticos del negocio</td></tr>
+    <tr><td>Entidad-Relación (ER)</td><td>11</td><td>Un diagrama por módulo</td></tr>
+    <tr><td>Diagramas de Secuencia</td><td>8</td><td>Flujos de negocio clave</td></tr>
+    <tr><td><strong>TOTAL</strong></td><td><strong>40</strong></td><td><strong>37 páginas de documentación</strong></td></tr>
+  </table>
+  <div style="background:#e8f5e9;border:1.5pt solid #c8e6c9;border-radius:10px;padding:14px 24px;display:inline-block;text-align:left;font-size:9pt">
+    <strong style="color:#1e3a5f">Stack Tecnológico:</strong> Django 4.2 · DRF · React 19 · TypeScript · Tailwind CSS 4 · PostgreSQL 15 · Redis 7 · Celery · Docker · Nginx · Gunicorn
+  </div>
+  <div style="margin-top:20px;font-size:8pt;color:#aaa">
+    Generado: Mayo 2026 · Formato: Carta (216 × 279 mm) · Orientación: Vertical
+  </div>
+  <div class="footer"><span class="logo-sm">🍽 Cantina Tita</span><span>Fin de la documentación</span><span>Pág. 37</span></div>
+</div>
+
+</body>
+</html>

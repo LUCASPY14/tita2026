@@ -2,6 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { BarChart2, Search, TrendingUp, ShoppingCart, FileText, Download, Users, AlertTriangle } from 'lucide-react'
 import api from '../services/api'
+import { exportarReporteVentasPDF, exportarCuentaCorrientePDF } from '../utils/pdf'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -360,10 +361,16 @@ export default function Reportes() {
               Generar Reporte
             </Button>
             {data && (
-              <Button variant="secondary" onClick={exportarCSV}>
-                <Download className="w-4 h-4" />
-                Exportar CSV
-              </Button>
+              <>
+                <Button variant="secondary" onClick={exportarCSV}>
+                  <Download className="w-4 h-4" />
+                  CSV
+                </Button>
+                <Button variant="secondary" onClick={() => exportarReporteVentasPDF(data, desde, hasta)}>
+                  <FileText className="w-4 h-4" />
+                  PDF
+                </Button>
+              </>
             )}
           </div>
 
@@ -466,14 +473,22 @@ export default function Reportes() {
       {/* ── Cuenta corriente tab ──────────────────────────────────── */}
       {tab === 'cuenta_corriente' && (
         <>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <Button variant="secondary" loading={loadingCc} onClick={cargarCuentaCorriente}>
               <Search className="w-4 h-4" />
               Actualizar
             </Button>
-            {ccData && (
-              <p className="text-xs text-slate-400">Generado: {new Date(ccData.fecha).toLocaleString('es-PY')}</p>
-            )}
+            <div className="flex items-center gap-3">
+              {ccData && (
+                <p className="text-xs text-slate-400">Generado: {new Date(ccData.fecha).toLocaleString('es-PY')}</p>
+              )}
+              {ccData && ccDetalleSorted.length > 0 && (
+                <Button variant="secondary" onClick={() => exportarCuentaCorrientePDF(ccDetalleSorted, ccData.resumen.total_deuda, ccData.fecha)}>
+                  <FileText className="w-4 h-4" />
+                  PDF
+                </Button>
+              )}
+            </div>
           </div>
 
           {loadingCc && !ccData && (

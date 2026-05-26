@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ShoppingCart,
   UtensilsCrossed,
+  Utensils,
   CreditCard,
   Users,
   Package,
@@ -15,10 +16,12 @@ import {
   Warehouse,
   UserCog,
   Settings,
+  Zap,
   PanelLeftClose,
   PanelLeftOpen,
   ChevronDown,
   LogOut,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -32,7 +35,9 @@ const navItems: NavItem[] = [
   { path: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
   { path: '/ventas',      label: 'Ventas',       icon: ShoppingCart },
   { path: '/almuerzos',   label: 'Almuerzos',    icon: UtensilsCrossed },
+  { path: '/comedor',     label: 'Comedor',       icon: Utensils },
   { path: '/tarjetas',    label: 'Tarjetas',     icon: CreditCard },
+  { path: '/carga-saldo', label: 'Carga Saldo',  icon: Wallet },
   { path: '/clientes',    label: 'Clientes',     icon: Users },
   { path: '/productos',   label: 'Productos',    icon: Package },
   { path: '/compras',     label: 'Compras',      icon: Truck },
@@ -42,6 +47,7 @@ const navItems: NavItem[] = [
   { path: '/inventario',   label: 'Inventario',   icon: Warehouse },
   { path: '/usuarios',     label: 'Usuarios',     icon: UserCog },
   { path: '/configuracion',label: 'Configuración',icon: Settings },
+  { path: '/modo-recreo',  label: 'Modo Recreo',  icon: Zap },
 ]
 
 export default function AppLayout() {

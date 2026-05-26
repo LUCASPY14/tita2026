@@ -17,6 +17,9 @@ import Reportes from './pages/Reportes'
 import Inventario from './pages/Inventario'
 import Usuarios from './pages/Usuarios'
 import Configuracion from './pages/Configuracion'
+import CargaSaldo from './pages/CargaSaldo'
+import Comedor from './pages/Comedor'
+import ModoRecreo from './pages/ModoRecreo'
 import PortalDashboard from './pages/portal/Dashboard'
 import PortalLogin from './pages/portal/Login'
 import PortalNotificaciones from './pages/portal/Notificaciones'
@@ -96,14 +99,23 @@ export default function App() {
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/productos" element={<Productos />} />
           <Route path="/tarjetas" element={<Tarjetas />} />
+          <Route path="/carga-saldo" element={<CargaSaldo />} />
           <Route path="/caja" element={<Caja />} />
           <Route path="/almuerzos" element={<Almuerzos />} />
+          <Route path="/comedor" element={<Comedor />} />
           <Route path="/facturacion" element={<Facturacion />} />
           <Route path="/reportes" element={<Reportes />} />
           <Route path="/inventario" element={<Inventario />} />
           <Route path="/usuarios" element={<Usuarios />} />
           <Route path="/configuracion" element={<Configuracion />} />
         </Route>
+
+        {/* Modo Recreo — overlay full-screen, fuera del AppLayout */}
+        <Route path="/modo-recreo" element={
+          <PrivateRoute roles={['ADMIN', 'CAJERO']}>
+            <ModoRecreo />
+          </PrivateRoute>
+        } />
 
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

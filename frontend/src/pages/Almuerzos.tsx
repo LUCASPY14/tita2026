@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   UtensilsCrossed, Plus, Search, Edit2, X,
-  CheckCircle, Calendar, BookOpen, Users, BarChart2,
+  CheckCircle, Calendar, Users, BarChart2,
+  PauseCircle, Banknote, RefreshCw, EyeOff, Eye, FileText,
 } from 'lucide-react'
 import api from '../services/api'
+import { exportarCuentasMensualesPDF } from '../utils/pdf'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -44,7 +46,6 @@ function formatFecha(iso: string | null | undefined): string {
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -98,8 +99,10 @@ interface Suscripcion {
 interface MenuDiario {
   id: number
   fecha: string
-  tipo_almuerzo: number
-  tipo_almuerzo_nombre: string
+  plato_principal: string
+  guarnicion: string
+  postre: string
+  bebida: string
   descripcion: string
   activo: boolean
 }
@@ -148,7 +151,7 @@ const ESTADO_SUSCRIPCION_COLOR: Record<string, BadgeColor> = {
   SUSPENDIDA: 'orange',
 }
 
-type TabKey = 'consumos' | 'cuentas' | 'tipos' | 'planes' | 'suscripciones' | 'menu'
+type TabKey = 'consumos' | 'cuentas' | 'suscripciones' | 'menu'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -182,26 +185,6 @@ export default function Almuerzos() {
   const [cuentas, setCuentas] = useState<CuentaMensual[]>([])
   const [loadingCuentas, setLoadingCuentas] = useState(false)
 
-  // ── Tipos de almuerzo ─────────────────────────────────────────────
-  const [loadingTipos, setLoadingTipos] = useState(false)
-  const [tipoModalOpen, setTipoModalOpen] = useState(false)
-  const [editingTipo, setEditingTipo] = useState<TipoAlmuerzo | null>(null)
-  const [tipoForm, setTipoForm] = useState({
-    nombre: '', descripcion: '', precio_unitario: '',
-    incluye_plato_principal: true, incluye_postre: false, incluye_bebida: false, activo: true,
-  })
-  const [savingTipo, setSavingTipo] = useState(false)
-
-  // ── Planes ────────────────────────────────────────────────────────
-  const [loadingPlanes, setLoadingPlanes] = useState(false)
-  const [planModalOpen, setPlanModalOpen] = useState(false)
-  const [editingPlan, setEditingPlan] = useState<PlanAlmuerzo | null>(null)
-  const [planForm, setPlanForm] = useState({
-    nombre: '', tipo: 'CANTIDAD', precio_mensual: '',
-    cantidad_almuerzos_mes: '', dias_semana_incluidos: [] as number[], activo: true,
-  })
-  const [savingPlan, setSavingPlan] = useState(false)
-
   // ── Suscripciones ─────────────────────────────────────────────────
   const [suscripciones, setSuscripciones] = useState<Suscripcion[]>([])
   const [loadingSusc, setLoadingSusc] = useState(false)
@@ -213,8 +196,29 @@ export default function Almuerzos() {
   const [menu, setMenu] = useState<MenuDiario[]>([])
   const [loadingMenu, setLoadingMenu] = useState(false)
   const [menuModalOpen, setMenuModalOpen] = useState(false)
-  const [menuForm, setMenuForm] = useState({ fecha: todayISO(), tipo_almuerzo: '', descripcion: '' })
+  const [menuForm, setMenuForm] = useState({ fecha: todayISO(), plato_principal: '', guarnicion: '', postre: '', bebida: '', descripcion: '' })
   const [savingMenu, setSavingMenu] = useState(false)
+  const [editingMenu, setEditingMenu] = useState<MenuDiario | null>(null)
+  const [editMenuOpen, setEditMenuOpen] = useState(false)
+  const [editMenuForm, setEditMenuForm] = useState({ fecha: '', plato_principal: '', guarnicion: '', postre: '', bebida: '', descripcion: '', activo: true })
+  const [savingEditMenu, setSavingEditMenu] = useState(false)
+
+  // ── Pago cuenta ───────────────────────────────────────────────────
+  const [pagoOpen, setPagoOpen] = useState(false)
+  const [pagoCuenta, setPagoCuenta] = useState<CuentaMensual | null>(null)
+  const [pagoForm, setPagoForm] = useState({ monto: '', medio_pago: 'EFECTIVO', referencia: '' })
+  const [savingPago, setSavingPago] = useState(false)
+
+  // ── Filtros y generación de cuentas ──────────────────────────────
+  const [filtroCuentaMes, setFiltroCuentaMes] = useState<number | ''>('')
+  const [filtroCuentaAnio, setFiltroCuentaAnio] = useState<number | ''>(new Date().getFullYear())
+  const [generando, setGenerando] = useState(false)
+
+  // ── Edit suscripcion ──────────────────────────────────────────────
+  const [editingSusc, setEditingSusc] = useState<Suscripcion | null>(null)
+  const [editSuscOpen, setEditSuscOpen] = useState(false)
+  const [editSuscForm, setEditSuscForm] = useState({ plan: '', fecha_fin: '' })
+  const [savingEditSusc, setSavingEditSusc] = useState(false)
 
   // ── Load catalogs ─────────────────────────────────────────────────
   useEffect(() => {
@@ -263,52 +267,21 @@ export default function Almuerzos() {
   const loadCuentas = useCallback(async () => {
     setLoadingCuentas(true)
     try {
-      const { data } = await api.get('/almuerzos/cuentas-mensuales/', { params: { ordering: '-anio,-mes', page_size: 200 } })
+      const params: Record<string, unknown> = { ordering: '-anio,-mes', page_size: 200 }
+      if (filtroCuentaMes) params.mes = filtroCuentaMes
+      if (filtroCuentaAnio) params.anio = filtroCuentaAnio
+      const { data } = await api.get('/almuerzos/cuentas-mensuales/', { params })
       setCuentas(data.results ?? [])
     } catch {
       toast.error('Error al cargar cuentas')
     } finally {
       setLoadingCuentas(false)
     }
-  }, [])
+  }, [filtroCuentaMes, filtroCuentaAnio])
 
   useEffect(() => {
     if (tab === 'cuentas') loadCuentas()
   }, [tab, loadCuentas])
-
-  // ── Load tipos ────────────────────────────────────────────────────
-  const loadTipos = useCallback(async () => {
-    setLoadingTipos(true)
-    try {
-      const { data } = await api.get('/almuerzos/tipos-almuerzo/', { params: { page_size: 100 } })
-      setTiposAlmuerzo(data.results ?? [])
-    } catch {
-      toast.error('Error al cargar tipos')
-    } finally {
-      setLoadingTipos(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (tab === 'tipos') loadTipos()
-  }, [tab, loadTipos])
-
-  // ── Load planes ───────────────────────────────────────────────────
-  const loadPlanes = useCallback(async () => {
-    setLoadingPlanes(true)
-    try {
-      const { data } = await api.get('/almuerzos/planes-almuerzo/', { params: { page_size: 100 } })
-      setPlanes(data.results ?? [])
-    } catch {
-      toast.error('Error al cargar planes')
-    } finally {
-      setLoadingPlanes(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (tab === 'planes') loadPlanes()
-  }, [tab, loadPlanes])
 
   // ── Load suscripciones ────────────────────────────────────────────
   const loadSuscripciones = useCallback(async () => {
@@ -392,89 +365,6 @@ export default function Almuerzos() {
     }
   }, [hijoId, tarjeta, fechaConsumo, tipoAlmuerzoId, loadRegistros])
 
-  // ── Tipos CRUD ────────────────────────────────────────────────────
-  const openTipoModal = useCallback((t?: TipoAlmuerzo) => {
-    if (t) {
-      setEditingTipo(t)
-      setTipoForm({
-        nombre: t.nombre, descripcion: t.descripcion,
-        precio_unitario: String(Number(t.precio_unitario) || ''),
-        incluye_plato_principal: t.incluye_plato_principal,
-        incluye_postre: t.incluye_postre,
-        incluye_bebida: t.incluye_bebida,
-        activo: t.activo,
-      })
-    } else {
-      setEditingTipo(null)
-      setTipoForm({ nombre: '', descripcion: '', precio_unitario: '', incluye_plato_principal: true, incluye_postre: false, incluye_bebida: false, activo: true })
-    }
-    setTipoModalOpen(true)
-  }, [])
-
-  const handleSaveTipo = useCallback(async () => {
-    if (!tipoForm.nombre) { toast.error('Ingresá el nombre'); return }
-    setSavingTipo(true)
-    try {
-      const payload = { ...tipoForm, precio_unitario: Number(tipoForm.precio_unitario) || 0 }
-      if (editingTipo) {
-        await api.put(`/almuerzos/tipos-almuerzo/${editingTipo.id}/`, payload)
-        toast.success('Tipo actualizado')
-      } else {
-        await api.post('/almuerzos/tipos-almuerzo/', payload)
-        toast.success('Tipo creado')
-      }
-      setTipoModalOpen(false)
-      loadTipos()
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setSavingTipo(false)
-    }
-  }, [tipoForm, editingTipo, loadTipos])
-
-  // ── Planes CRUD ───────────────────────────────────────────────────
-  const openPlanModal = useCallback((p?: PlanAlmuerzo) => {
-    if (p) {
-      setEditingPlan(p)
-      setPlanForm({
-        nombre: p.nombre, tipo: p.tipo,
-        precio_mensual: String(Number(p.precio_mensual) || ''),
-        cantidad_almuerzos_mes: String(p.cantidad_almuerzos_mes ?? ''),
-        dias_semana_incluidos: p.dias_semana_incluidos ?? [],
-        activo: p.activo,
-      })
-    } else {
-      setEditingPlan(null)
-      setPlanForm({ nombre: '', tipo: 'CANTIDAD', precio_mensual: '', cantidad_almuerzos_mes: '', dias_semana_incluidos: [], activo: true })
-    }
-    setPlanModalOpen(true)
-  }, [])
-
-  const handleSavePlan = useCallback(async () => {
-    if (!planForm.nombre) { toast.error('Ingresá el nombre'); return }
-    setSavingPlan(true)
-    try {
-      const payload = {
-        ...planForm,
-        precio_mensual: Number(planForm.precio_mensual) || 0,
-        cantidad_almuerzos_mes: planForm.tipo === 'CANTIDAD' ? (Number(planForm.cantidad_almuerzos_mes) || null) : null,
-      }
-      if (editingPlan) {
-        await api.put(`/almuerzos/planes-almuerzo/${editingPlan.id}/`, payload)
-        toast.success('Plan actualizado')
-      } else {
-        await api.post('/almuerzos/planes-almuerzo/', payload)
-        toast.success('Plan creado')
-      }
-      setPlanModalOpen(false)
-      loadPlanes()
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setSavingPlan(false)
-    }
-  }, [planForm, editingPlan, loadPlanes])
-
   // ── Suscripciones ──────────────────────────────────────────────────
   const handleSaveSusc = useCallback(async () => {
     if (!suscForm.hijo || !suscForm.plan) { toast.error('Completá todos los campos'); return }
@@ -498,7 +388,7 @@ export default function Almuerzos() {
 
   const cancelarSusc = useCallback(async (id: number) => {
     try {
-      await api.patch(`/almuerzos/suscripciones/${id}/`, { estado: 'INACTIVA' })
+      await api.patch(`/almuerzos/suscripciones/${id}/`, { estado: 'CANCELADA' })
       toast.success('Suscripción cancelada')
       loadSuscripciones()
     } catch (err) {
@@ -508,17 +398,20 @@ export default function Almuerzos() {
 
   // ── Menú ───────────────────────────────────────────────────────────
   const handleSaveMenu = useCallback(async () => {
-    if (!menuForm.fecha || !menuForm.tipo_almuerzo) { toast.error('Completá los campos'); return }
+    if (!menuForm.fecha || !menuForm.plato_principal) { toast.error('Ingresá la fecha y el plato principal'); return }
     setSavingMenu(true)
     try {
       await api.post('/almuerzos/menu/', {
         fecha: menuForm.fecha,
-        tipo_almuerzo: Number(menuForm.tipo_almuerzo),
+        plato_principal: menuForm.plato_principal,
+        guarnicion: menuForm.guarnicion,
+        postre: menuForm.postre,
+        bebida: menuForm.bebida,
         descripcion: menuForm.descripcion,
       })
       toast.success('Menú registrado')
       setMenuModalOpen(false)
-      setMenuForm({ fecha: todayISO(), tipo_almuerzo: '', descripcion: '' })
+      setMenuForm({ fecha: todayISO(), plato_principal: '', guarnicion: '', postre: '', bebida: '', descripcion: '' })
       loadMenu()
     } catch (err) {
       toast.error(extractErrorMessage(err))
@@ -526,6 +419,139 @@ export default function Almuerzos() {
       setSavingMenu(false)
     }
   }, [menuForm, loadMenu])
+
+  // ── Edit menú ─────────────────────────────────────────────────────
+  const openEditMenu = useCallback((m: MenuDiario) => {
+    setEditingMenu(m)
+    setEditMenuForm({
+      fecha: m.fecha,
+      plato_principal: m.plato_principal,
+      guarnicion: m.guarnicion,
+      postre: m.postre,
+      bebida: m.bebida,
+      descripcion: m.descripcion,
+      activo: m.activo,
+    })
+    setEditMenuOpen(true)
+  }, [])
+
+  const handleSaveEditMenu = useCallback(async () => {
+    if (!editingMenu || !editMenuForm.plato_principal) { toast.error('Ingresá el plato principal'); return }
+    setSavingEditMenu(true)
+    try {
+      await api.put(`/almuerzos/menu/${editingMenu.id}/`, editMenuForm)
+      toast.success('Menú actualizado')
+      setEditMenuOpen(false)
+      loadMenu()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSavingEditMenu(false)
+    }
+  }, [editingMenu, editMenuForm, loadMenu])
+
+  const toggleMenuActivo = useCallback(async (m: MenuDiario) => {
+    try {
+      await api.patch(`/almuerzos/menu/${m.id}/`, { activo: !m.activo })
+      toast.success(m.activo ? 'Menú desactivado' : 'Menú activado')
+      loadMenu()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    }
+  }, [loadMenu])
+
+  // ── Pago cuenta ───────────────────────────────────────────────────
+  const openPagoCuenta = useCallback((c: CuentaMensual) => {
+    setPagoCuenta(c)
+    const pendiente = Number(c.saldo_pendiente) || (Number(c.monto_total) - Number(c.monto_pagado))
+    setPagoForm({ monto: String(pendiente > 0 ? pendiente : ''), medio_pago: 'EFECTIVO', referencia: '' })
+    setPagoOpen(true)
+  }, [])
+
+  const handlePagar = useCallback(async () => {
+    if (!pagoCuenta) return
+    if (!pagoForm.monto || Number(pagoForm.monto) <= 0) { toast.error('Ingresá el monto'); return }
+    setSavingPago(true)
+    try {
+      await api.post('/almuerzos/pagos-cuenta/', {
+        cuenta: pagoCuenta.id,
+        monto: Number(pagoForm.monto),
+        medio_pago: pagoForm.medio_pago,
+        referencia: pagoForm.referencia || undefined,
+      })
+      toast.success('Pago registrado')
+      setPagoOpen(false)
+      loadCuentas()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSavingPago(false)
+    }
+  }, [pagoCuenta, pagoForm, loadCuentas])
+
+  // ── Generar cuentas del mes ───────────────────────────────────────
+  const handleGenerarCuentas = useCallback(async () => {
+    setGenerando(true)
+    try {
+      const body: Record<string, unknown> = {}
+      if (filtroCuentaAnio) body.anio = filtroCuentaAnio
+      if (filtroCuentaMes) body.mes = filtroCuentaMes
+      await api.post('/almuerzos/cuentas-mensuales/generar/', body)
+      toast.success('Cuentas generadas')
+      loadCuentas()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setGenerando(false)
+    }
+  }, [filtroCuentaAnio, filtroCuentaMes, loadCuentas])
+
+  // ── Suspender suscripcion ─────────────────────────────────────────
+  const suspenderSusc = useCallback(async (id: number) => {
+    try {
+      await api.patch(`/almuerzos/suscripciones/${id}/`, { estado: 'SUSPENDIDA' })
+      toast.success('Suscripción suspendida')
+      loadSuscripciones()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    }
+  }, [loadSuscripciones])
+
+  // ── Edit suscripcion ──────────────────────────────────────────────
+  const openEditSusc = useCallback((s: Suscripcion) => {
+    setEditingSusc(s)
+    setEditSuscForm({ plan: String(s.plan), fecha_fin: s.fecha_fin ?? '' })
+    setEditSuscOpen(true)
+  }, [])
+
+  const handleSaveEditSusc = useCallback(async () => {
+    if (!editingSusc || !editSuscForm.plan) { toast.error('Seleccioná un plan'); return }
+    setSavingEditSusc(true)
+    try {
+      await api.patch(`/almuerzos/suscripciones/${editingSusc.id}/`, {
+        plan: Number(editSuscForm.plan),
+        fecha_fin: editSuscForm.fecha_fin || null,
+      })
+      toast.success('Suscripción actualizada')
+      setEditSuscOpen(false)
+      loadSuscripciones()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSavingEditSusc(false)
+    }
+  }, [editingSusc, editSuscForm, loadSuscripciones])
+
+  // ── Anular consumo ────────────────────────────────────────────────
+  const anularConsumo = useCallback(async (id: number) => {
+    try {
+      await api.patch(`/almuerzos/registros-consumo/${id}/`, { estado: 'ANULADO' })
+      toast.success('Consumo anulado')
+      loadRegistros(searchRegistros, pageRegistros)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    }
+  }, [loadRegistros, searchRegistros, pageRegistros])
 
   // ── Summary stats ──────────────────────────────────────────────────
   const mesActual = new Date().getMonth() + 1
@@ -573,6 +599,17 @@ export default function Almuerzos() {
       key: 'estado',
       render: (_, r) => <Badge color={ESTADO_REGISTRO_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
     },
+    {
+      title: '',
+      key: 'acc',
+      width: 90,
+      render: (_, r) => r.estado === 'REGISTRADO' ? (
+        <Button size="sm" variant="danger" onClick={() => anularConsumo(r.id)}>
+          <X className="w-3.5 h-3.5" />
+          Anular
+        </Button>
+      ) : null,
+    },
   ]
 
   const colsCuentas: Column<CuentaMensual>[] = [
@@ -614,95 +651,16 @@ export default function Almuerzos() {
       key: 'estado',
       render: (_, r) => <Badge color={ESTADO_CUENTA_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
     },
-  ]
-
-  const colsTipos: Column<TipoAlmuerzo>[] = [
-    {
-      title: 'Nombre',
-      key: 'nombre',
-      render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span>,
-    },
-    {
-      title: 'Precio',
-      key: 'precio',
-      render: (_, r) => <span className="tabular-nums font-semibold text-emerald-700">{formatGs(r.precio_unitario)}</span>,
-    },
-    {
-      title: 'Incluye',
-      key: 'incluye',
-      render: (_, r) => (
-        <div className="flex gap-1 flex-wrap">
-          {r.incluye_plato_principal && <Badge color="blue">Plato</Badge>}
-          {r.incluye_postre && <Badge color="purple">Postre</Badge>}
-          {r.incluye_bebida && <Badge color="green">Bebida</Badge>}
-        </div>
-      ),
-    },
-    {
-      title: 'Estado',
-      key: 'activo',
-      render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge>,
-    },
     {
       title: '',
-      key: 'acciones',
+      key: 'acc',
       width: 80,
-      render: (_, r) => (
-        <Button size="sm" variant="secondary" onClick={() => openTipoModal(r)}>
-          <Edit2 className="w-3.5 h-3.5" />
+      render: (_, r) => (r.estado !== 'PAGADO' && r.estado !== 'ANULADO') ? (
+        <Button size="sm" variant="primary" onClick={() => openPagoCuenta(r)}>
+          <Banknote className="w-3.5 h-3.5" />
+          Pagar
         </Button>
-      ),
-    },
-  ]
-
-  const colsPlanes: Column<PlanAlmuerzo>[] = [
-    {
-      title: 'Nombre',
-      key: 'nombre',
-      render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span>,
-    },
-    {
-      title: 'Tipo',
-      key: 'tipo',
-      render: (_, r) => <Badge color={r.tipo === 'SIN_LIMITE' ? 'green' : 'blue'}>{r.tipo}</Badge>,
-    },
-    {
-      title: 'Precio Mensual',
-      key: 'precio',
-      render: (_, r) => <span className="tabular-nums font-semibold text-emerald-700">{formatGs(r.precio_mensual)}</span>,
-    },
-    {
-      title: 'Almuerzos/mes',
-      key: 'cant',
-      render: (_, r) => (
-        <span className="text-sm text-slate-600">{r.cantidad_almuerzos_mes ?? 'Sin límite'}</span>
-      ),
-    },
-    {
-      title: 'Días',
-      key: 'dias',
-      render: (_, r) => (
-        <div className="flex gap-1 flex-wrap">
-          {(r.dias_semana_incluidos ?? []).map(d => (
-            <span key={d} className="text-xs bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">{DIAS[d - 1] ?? d}</span>
-          ))}
-        </div>
-      ),
-    },
-    {
-      title: 'Estado',
-      key: 'activo',
-      render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge>,
-    },
-    {
-      title: '',
-      key: 'acciones',
-      width: 80,
-      render: (_, r) => (
-        <Button size="sm" variant="secondary" onClick={() => openPlanModal(r)}>
-          <Edit2 className="w-3.5 h-3.5" />
-        </Button>
-      ),
+      ) : null,
     },
   ]
 
@@ -735,12 +693,19 @@ export default function Almuerzos() {
     {
       title: '',
       key: 'acc',
-      width: 100,
+      width: 160,
       render: (_, r) => r.estado === 'ACTIVA' ? (
-        <Button size="sm" variant="danger" onClick={() => cancelarSusc(r.id)}>
-          <X className="w-3.5 h-3.5" />
-          Cancelar
-        </Button>
+        <div className="flex gap-1.5">
+          <Button size="sm" variant="secondary" onClick={() => openEditSusc(r)}>
+            <Edit2 className="w-3.5 h-3.5" />
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => suspenderSusc(r.id)}>
+            <PauseCircle className="w-3.5 h-3.5" />
+          </Button>
+          <Button size="sm" variant="danger" onClick={() => cancelarSusc(r.id)}>
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
       ) : null,
     },
   ]
@@ -752,19 +717,43 @@ export default function Almuerzos() {
       render: (_, r) => <span className="text-sm font-medium text-slate-800">{formatFecha(r.fecha)}</span>,
     },
     {
-      title: 'Tipo',
-      key: 'tipo',
-      render: (_, r) => <span className="text-sm text-slate-700">{r.tipo_almuerzo_nombre}</span>,
+      title: 'Plato principal',
+      key: 'plato',
+      render: (_, r) => <span className="text-sm text-slate-700">{r.plato_principal}</span>,
     },
     {
-      title: 'Descripción',
+      title: 'Guarnición / Postre / Bebida',
+      key: 'extras',
+      render: (_, r) => (
+        <span className="text-sm text-slate-500">
+          {[r.guarnicion, r.postre, r.bebida].filter(Boolean).join(' · ') || '—'}
+        </span>
+      ),
+    },
+    {
+      title: 'Notas',
       key: 'desc',
-      render: (_, r) => <span className="text-sm text-slate-500">{r.descripcion || '—'}</span>,
+      render: (_, r) => <span className="text-sm text-slate-400">{r.descripcion || '—'}</span>,
     },
     {
       title: 'Estado',
       key: 'activo',
       render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge>,
+    },
+    {
+      title: '',
+      key: 'acc',
+      width: 100,
+      render: (_, r) => (
+        <div className="flex gap-1.5">
+          <Button size="sm" variant="secondary" onClick={() => openEditMenu(r)}>
+            <Edit2 className="w-3.5 h-3.5" />
+          </Button>
+          <Button size="sm" variant={r.activo ? 'danger' : 'secondary'} onClick={() => toggleMenuActivo(r)}>
+            {r.activo ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+          </Button>
+        </div>
+      ),
     },
   ]
 
@@ -784,12 +773,10 @@ export default function Almuerzos() {
   )
 
   const TABS: { key: TabKey; label: string; icon: typeof UtensilsCrossed }[] = [
-    { key: 'consumos', label: 'Consumos', icon: UtensilsCrossed },
-    { key: 'cuentas', label: 'Cuentas Mensuales', icon: BarChart2 },
-    { key: 'tipos', label: 'Tipos', icon: BookOpen },
-    { key: 'planes', label: 'Planes', icon: CheckCircle },
-    { key: 'suscripciones', label: 'Suscripciones', icon: Users },
-    { key: 'menu', label: 'Menú', icon: Calendar },
+    { key: 'consumos',      label: 'Consumos',          icon: UtensilsCrossed },
+    { key: 'cuentas',       label: 'Cuentas Mensuales', icon: BarChart2 },
+    { key: 'suscripciones', label: 'Suscripciones',     icon: Users },
+    { key: 'menu',          label: 'Menú',              icon: Calendar },
   ]
 
   // ── Render ────────────────────────────────────────────────────────
@@ -805,18 +792,6 @@ export default function Almuerzos() {
           <Button variant="primary" onClick={() => setConsumoOpen(true)}>
             <Plus className="w-4 h-4" />
             Registrar Consumo
-          </Button>
-        )}
-        {tab === 'tipos' && (
-          <Button variant="primary" onClick={() => openTipoModal()}>
-            <Plus className="w-4 h-4" />
-            Nuevo Tipo
-          </Button>
-        )}
-        {tab === 'planes' && (
-          <Button variant="primary" onClick={() => openPlanModal()}>
-            <Plus className="w-4 h-4" />
-            Nuevo Plan
           </Button>
         )}
         {tab === 'suscripciones' && (
@@ -900,35 +875,38 @@ export default function Almuerzos() {
       {/* ── Cuentas tab ──────────────────────────────────────────── */}
       {tab === 'cuentas' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
+          <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-slate-800">Cuentas Mensuales de Almuerzos</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={filtroCuentaMes}
+                onChange={e => setFiltroCuentaMes(Number(e.target.value) || '')}
+                className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30"
+              >
+                <option value="">Todos los meses</option>
+                {MESES.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+              </select>
+              <input
+                type="number"
+                placeholder="Año"
+                value={filtroCuentaAnio}
+                onChange={e => setFiltroCuentaAnio(Number(e.target.value) || '')}
+                className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 w-24"
+              />
+              <Button variant="secondary" size="sm" loading={generando} onClick={handleGenerarCuentas}>
+                <RefreshCw className="w-3.5 h-3.5" />
+                Generar
+              </Button>
+              {cuentas.length > 0 && (
+                <Button variant="secondary" size="sm" onClick={() => exportarCuentasMensualesPDF(cuentas, filtroCuentaMes, filtroCuentaAnio)}>
+                  <FileText className="w-3.5 h-3.5" />
+                  PDF
+                </Button>
+              )}
+            </div>
           </div>
           <div className="p-1">
             <Table columns={colsCuentas} dataSource={cuentas} rowKey="id" loading={loadingCuentas} pageSize={15} />
-          </div>
-        </div>
-      )}
-
-      {/* ── Tipos tab ─────────────────────────────────────────────── */}
-      {tab === 'tipos' && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-800">Tipos de Almuerzo</h2>
-          </div>
-          <div className="p-1">
-            <Table columns={colsTipos} dataSource={tiposAlmuerzo} rowKey="id" loading={loadingTipos} pageSize={20} />
-          </div>
-        </div>
-      )}
-
-      {/* ── Planes tab ────────────────────────────────────────────── */}
-      {tab === 'planes' && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-800">Planes de Almuerzo</h2>
-          </div>
-          <div className="p-1">
-            <Table columns={colsPlanes} dataSource={planes} rowKey="id" loading={loadingPlanes} pageSize={20} />
           </div>
         </div>
       )}
@@ -1037,121 +1015,6 @@ export default function Almuerzos() {
         </div>
       </Modal>
 
-      {/* ── Tipo almuerzo modal ───────────────────────────────────── */}
-      <Modal
-        open={tipoModalOpen}
-        title={editingTipo ? 'Editar Tipo de Almuerzo' : 'Nuevo Tipo de Almuerzo'}
-        onOk={handleSaveTipo}
-        onCancel={() => setTipoModalOpen(false)}
-        okText={editingTipo ? 'Guardar' : 'Crear'}
-        confirmLoading={savingTipo}
-        width={480}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>Nombre *</label>
-            <input value={tipoForm.nombre} onChange={e => setTipoForm(f => ({ ...f, nombre: e.target.value }))} className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Descripción</label>
-            <textarea
-              value={tipoForm.descripcion}
-              onChange={e => setTipoForm(f => ({ ...f, descripcion: e.target.value }))}
-              rows={2}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Precio Unitario (Gs.)</label>
-            <input type="number" min={0} step={500}
-              value={tipoForm.precio_unitario}
-              onChange={e => setTipoForm(f => ({ ...f, precio_unitario: e.target.value }))}
-              className={inputClass}
-            />
-          </div>
-          <div className="space-y-2">
-            {toggleSwitch(tipoForm.incluye_plato_principal, v => setTipoForm(f => ({ ...f, incluye_plato_principal: v })), 'Incluye plato principal')}
-            {toggleSwitch(tipoForm.incluye_postre, v => setTipoForm(f => ({ ...f, incluye_postre: v })), 'Incluye postre')}
-            {toggleSwitch(tipoForm.incluye_bebida, v => setTipoForm(f => ({ ...f, incluye_bebida: v })), 'Incluye bebida')}
-            {toggleSwitch(tipoForm.activo, v => setTipoForm(f => ({ ...f, activo: v })), 'Activo')}
-          </div>
-        </div>
-      </Modal>
-
-      {/* ── Plan almuerzo modal ───────────────────────────────────── */}
-      <Modal
-        open={planModalOpen}
-        title={editingPlan ? 'Editar Plan de Almuerzo' : 'Nuevo Plan de Almuerzo'}
-        onOk={handleSavePlan}
-        onCancel={() => setPlanModalOpen(false)}
-        okText={editingPlan ? 'Guardar' : 'Crear'}
-        confirmLoading={savingPlan}
-        width={520}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>Nombre *</label>
-            <input value={planForm.nombre} onChange={e => setPlanForm(f => ({ ...f, nombre: e.target.value }))} className={inputClass} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Tipo</label>
-              <select value={planForm.tipo} onChange={e => setPlanForm(f => ({ ...f, tipo: e.target.value }))} className={inputClass}>
-                <option value="CANTIDAD">Por Cantidad</option>
-                <option value="SIN_LIMITE">Sin Límite</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>Precio Mensual (Gs.)</label>
-              <input type="number" min={0} step={1000}
-                value={planForm.precio_mensual}
-                onChange={e => setPlanForm(f => ({ ...f, precio_mensual: e.target.value }))}
-                className={inputClass}
-              />
-            </div>
-          </div>
-          {planForm.tipo === 'CANTIDAD' && (
-            <div>
-              <label className={labelClass}>Almuerzos por Mes</label>
-              <input type="number" min={1}
-                value={planForm.cantidad_almuerzos_mes}
-                onChange={e => setPlanForm(f => ({ ...f, cantidad_almuerzos_mes: e.target.value }))}
-                className={inputClass}
-              />
-            </div>
-          )}
-          <div>
-            <label className={labelClass}>Días de la semana incluidos</label>
-            <div className="flex flex-wrap gap-2">
-              {DIAS.map((dia, idx) => {
-                const num = idx + 1
-                const checked = planForm.dias_semana_incluidos.includes(num)
-                return (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => setPlanForm(f => ({
-                      ...f,
-                      dias_semana_incluidos: checked
-                        ? f.dias_semana_incluidos.filter(d => d !== num)
-                        : [...f.dias_semana_incluidos, num],
-                    }))}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      checked
-                        ? 'bg-green-600 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {dia}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          {toggleSwitch(planForm.activo, v => setPlanForm(f => ({ ...f, activo: v })), 'Activo')}
-        </div>
-      </Modal>
-
       {/* ── Suscripción modal ─────────────────────────────────────── */}
       <Modal
         open={suscModalOpen}
@@ -1190,6 +1053,143 @@ export default function Almuerzos() {
         </div>
       </Modal>
 
+      {/* ── Pago cuenta modal ─────────────────────────────────────── */}
+      <Modal
+        open={pagoOpen}
+        title="Registrar Pago de Cuenta"
+        onOk={handlePagar}
+        onCancel={() => setPagoOpen(false)}
+        okText="Registrar Pago"
+        confirmLoading={savingPago}
+        width={440}
+      >
+        {pagoCuenta && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 rounded-xl p-4">
+              <p className="text-sm font-semibold text-slate-800">{pagoCuenta.hijo_nombre}</p>
+              <p className="text-xs text-slate-500 mt-1">{MESES[pagoCuenta.mes]} {pagoCuenta.anio} — {pagoCuenta.cantidad_almuerzos} almuerzos</p>
+              <div className="flex gap-6 mt-3">
+                <div>
+                  <p className="text-xs text-slate-400">Total</p>
+                  <p className="text-sm font-bold text-slate-800">{formatGs(pagoCuenta.monto_total)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Pagado</p>
+                  <p className="text-sm font-bold text-emerald-700">{formatGs(pagoCuenta.monto_pagado)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Saldo</p>
+                  <p className="text-sm font-bold text-red-600">{formatGs(pagoCuenta.saldo_pendiente)}</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Monto (Gs.) *</label>
+              <input
+                type="number"
+                min={1}
+                step={1000}
+                value={pagoForm.monto}
+                onChange={e => setPagoForm(f => ({ ...f, monto: e.target.value }))}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Medio de Pago</label>
+              <select
+                value={pagoForm.medio_pago}
+                onChange={e => setPagoForm(f => ({ ...f, medio_pago: e.target.value }))}
+                className={inputClass}
+              >
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="TARJETA">Tarjeta</option>
+                <option value="CHEQUE">Cheque</option>
+              </select>
+            </div>
+            {pagoForm.medio_pago !== 'EFECTIVO' && (
+              <div>
+                <label className={labelClass}>Referencia</label>
+                <input
+                  value={pagoForm.referencia}
+                  onChange={e => setPagoForm(f => ({ ...f, referencia: e.target.value }))}
+                  placeholder="Nro. de transferencia, cheque, etc."
+                  className={inputClass}
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Edit suscripción modal ────────────────────────────────── */}
+      <Modal
+        open={editSuscOpen}
+        title="Editar Suscripción"
+        onOk={handleSaveEditSusc}
+        onCancel={() => setEditSuscOpen(false)}
+        okText="Guardar"
+        confirmLoading={savingEditSusc}
+        width={440}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className={labelClass}>Plan *</label>
+            <select value={editSuscForm.plan} onChange={e => setEditSuscForm(f => ({ ...f, plan: e.target.value }))} className={inputClass}>
+              <option value="">Seleccionar...</option>
+              {planes.filter(p => p.activo).map(p => (
+                <option key={p.id} value={p.id}>{p.nombre} — {formatGs(p.precio_mensual)}/mes</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Fecha de Fin (opcional)</label>
+            <input type="date" value={editSuscForm.fecha_fin} onChange={e => setEditSuscForm(f => ({ ...f, fecha_fin: e.target.value }))} className={inputClass} />
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Edit menú modal ───────────────────────────────────────── */}
+      <Modal
+        open={editMenuOpen}
+        title="Editar Menú"
+        onOk={handleSaveEditMenu}
+        onCancel={() => setEditMenuOpen(false)}
+        okText="Guardar"
+        confirmLoading={savingEditMenu}
+        width={560}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className={labelClass}>Fecha *</label>
+            <input type="date" value={editMenuForm.fecha} onChange={e => setEditMenuForm(f => ({ ...f, fecha: e.target.value }))} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Plato principal *</label>
+            <input value={editMenuForm.plato_principal} onChange={e => setEditMenuForm(f => ({ ...f, plato_principal: e.target.value }))} className={inputClass} />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className={labelClass}>Guarnición</label>
+              <input value={editMenuForm.guarnicion} onChange={e => setEditMenuForm(f => ({ ...f, guarnicion: e.target.value }))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Postre</label>
+              <input value={editMenuForm.postre} onChange={e => setEditMenuForm(f => ({ ...f, postre: e.target.value }))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Bebida</label>
+              <input value={editMenuForm.bebida} onChange={e => setEditMenuForm(f => ({ ...f, bebida: e.target.value }))} className={inputClass} />
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>Notas</label>
+            <textarea value={editMenuForm.descripcion} onChange={e => setEditMenuForm(f => ({ ...f, descripcion: e.target.value }))} rows={2} className={`${inputClass} resize-none`} />
+          </div>
+          {toggleSwitch(editMenuForm.activo, v => setEditMenuForm(f => ({ ...f, activo: v })), 'Activo')}
+        </div>
+      </Modal>
+
       {/* ── Menú modal ────────────────────────────────────────────── */}
       <Modal
         open={menuModalOpen}
@@ -1198,7 +1198,7 @@ export default function Almuerzos() {
         onCancel={() => setMenuModalOpen(false)}
         okText="Guardar"
         confirmLoading={savingMenu}
-        width={440}
+        width={560}
       >
         <div className="space-y-4">
           <div>
@@ -1206,21 +1206,50 @@ export default function Almuerzos() {
             <input type="date" value={menuForm.fecha} onChange={e => setMenuForm(f => ({ ...f, fecha: e.target.value }))} className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>Tipo de Almuerzo *</label>
-            <select value={menuForm.tipo_almuerzo} onChange={e => setMenuForm(f => ({ ...f, tipo_almuerzo: e.target.value }))} className={inputClass}>
-              <option value="">Seleccionar...</option>
-              {tiposAlmuerzo.filter(t => t.activo).map(t => (
-                <option key={t.id} value={t.id}>{t.nombre}</option>
-              ))}
-            </select>
+            <label className={labelClass}>Plato principal *</label>
+            <input
+              value={menuForm.plato_principal}
+              onChange={e => setMenuForm(f => ({ ...f, plato_principal: e.target.value }))}
+              placeholder="Ej: Milanesa con papas"
+              className={inputClass}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className={labelClass}>Guarnición</label>
+              <input
+                value={menuForm.guarnicion}
+                onChange={e => setMenuForm(f => ({ ...f, guarnicion: e.target.value }))}
+                placeholder="Ej: Ensalada"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Postre</label>
+              <input
+                value={menuForm.postre}
+                onChange={e => setMenuForm(f => ({ ...f, postre: e.target.value }))}
+                placeholder="Ej: Fruta"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Bebida</label>
+              <input
+                value={menuForm.bebida}
+                onChange={e => setMenuForm(f => ({ ...f, bebida: e.target.value }))}
+                placeholder="Ej: Jugo"
+                className={inputClass}
+              />
+            </div>
           </div>
           <div>
-            <label className={labelClass}>Descripción</label>
+            <label className={labelClass}>Notas</label>
             <textarea
               value={menuForm.descripcion}
               onChange={e => setMenuForm(f => ({ ...f, descripcion: e.target.value }))}
               rows={2}
-              placeholder="Descripción del menú del día..."
+              placeholder="Información adicional..."
               className={`${inputClass} resize-none`}
             />
           </div>
