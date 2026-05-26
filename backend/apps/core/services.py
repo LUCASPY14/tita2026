@@ -81,6 +81,43 @@ class TarjetaService:
             return carga
 
     @staticmethod
+    def confirmar_carga(*, carga, responsable) -> "CargaSaldo":
+        """
+        Confirma una CargaSaldo PENDIENTE: actualiza el saldo de la tarjeta
+        y genera el MovimientoTarjeta correspondiente.
+        """
+        from django.utils import timezone
+
+        if carga.estado != CargaSaldo.Estado.PENDIENTE:
+            raise ValidationError({"error": "La carga no está en estado PENDIENTE."})
+
+        with transaction.atomic():
+            tarjeta = Tarjeta.objects.select_for_update().get(pk=carga.tarjeta_id)
+            TarjetaService._validar_activa(tarjeta)
+
+            saldo_anterior = tarjeta.saldo_actual
+            tarjeta.saldo_actual += carga.monto_cargado
+            tarjeta.save()
+
+            carga.estado = CargaSaldo.Estado.CONFIRMADA
+            carga.responsable = responsable
+            carga.fecha_confirmacion = timezone.now()
+            carga.save()
+
+            MovimientoTarjeta.objects.create(
+                tarjeta=tarjeta,
+                tipo=MovimientoTarjeta.Tipo.RECARGA,
+                monto=carga.monto_cargado,
+                saldo_anterior=saldo_anterior,
+                saldo_resultante=tarjeta.saldo_actual,
+                carga=carga,
+                descripcion=f"Recarga confirmada #{carga.pk}",
+                creado_por=responsable,
+            )
+
+            return carga
+
+    @staticmethod
     def consumir_saldo(
         *,
         tarjeta,

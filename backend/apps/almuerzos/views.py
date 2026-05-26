@@ -237,6 +237,7 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 costo_almuerzo=costo_calculado,
                 ya_cobrado=es_primer_registro,
                 estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+                registrado_por=self.request.user,
             )
             if es_primer_registro:
                 self._agregar_a_cuenta_mensual(registro)
@@ -339,12 +340,14 @@ class PagoCuentaAlmuerzoViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             pago = serializer.save()
             cuenta = pago.cuenta
+            nuevo_pagado = cuenta.monto_pagado + pago.monto
             cuenta.monto_pagado = F("monto_pagado") + pago.monto
-            if cuenta.monto_pagado + pago.monto >= cuenta.monto_total:
+            if nuevo_pagado >= cuenta.monto_total:
                 cuenta.estado = CuentaAlmuerzoMensual.Estado.PAGADO
-            elif cuenta.monto_pagado + pago.monto > 0:
+            elif nuevo_pagado > 0:
                 cuenta.estado = CuentaAlmuerzoMensual.Estado.PARCIAL
             cuenta.save()
+            cuenta.refresh_from_db()
 
 
 # ==============================================================================

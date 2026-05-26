@@ -2,8 +2,10 @@
 Views para la app core
 """
 
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.response import Response
 
 from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb
 
@@ -56,6 +58,9 @@ class TarjetaAutorizacionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsCajeroOrAdmin]
 
 
+METODOS_CONFIRMACION_INMEDIATA = ("EFECTIVO", "POS DEBITO", "POS CREDITO")
+
+
 class CargaSaldoViewSet(viewsets.ModelViewSet):
     queryset = CargaSaldo.objects.select_related("tarjeta", "cliente_origen").all()
     serializer_class = CargaSaldoSerializer
@@ -63,20 +68,44 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["tarjeta", "estado"]
 
-    def perform_create(self, serializer):
-        """Si es carga en caja (EFECTIVO/POS), confirmar automaticamente."""
-        carga = serializer.save()
-        
-        # Si es pago en caja, confirmar inmediatamente
-        if carga.metodo_pago in ("EFECTIVO", "POS DEBITO", "POS CREDITO"):
-            TarjetaService.cargar_saldo(
-                tarjeta=carga.tarjeta,
-                monto=carga.monto_cargado,
-                cliente_origen=carga.cliente_origen,
-                responsable=carga.responsable or self.request.user,
-                metodo_pago=carga.metodo_pago,
-                referencia=carga.referencia or "",
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        metodo = data.get("metodo_pago", "")
+
+        if metodo in METODOS_CONFIRMACION_INMEDIATA:
+            # El servicio crea la CargaSaldo + actualiza saldo + crea MovimientoTarjeta atomicamente
+            carga = TarjetaService.cargar_saldo(
+                tarjeta=data["tarjeta"],
+                monto=data["monto_cargado"],
+                cliente_origen=data.get("cliente_origen"),
+                responsable=self.request.user,
+                metodo_pago=metodo,
+                referencia=data.get("referencia") or "",
             )
+            out = self.get_serializer(carga)
+            return Response(out.data, status=status.HTTP_201_CREATED)
+
+        # Pagos por transferencia u otros: quedan PENDIENTE para confirmacion manual
+        carga = serializer.save(responsable=self.request.user)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    @action(detail=True, methods=["post"], url_path="confirmar")
+    def confirmar(self, request, pk=None):
+        """POST /api/core/cargas-saldo/<id>/confirmar/ — confirma una carga PENDIENTE."""
+        carga = self.get_object()
+        if carga.estado != CargaSaldo.Estado.PENDIENTE:
+            return Response(
+                {"error": f"Solo se pueden confirmar cargas PENDIENTE. Estado actual: {carga.estado}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        carga_confirmada = TarjetaService.confirmar_carga(
+            carga=carga,
+            responsable=request.user,
+        )
+        return Response(self.get_serializer(carga_confirmada).data)
 
 
 class ConsumoTarjetaViewSet(viewsets.ModelViewSet):

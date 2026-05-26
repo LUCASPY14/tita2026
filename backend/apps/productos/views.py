@@ -117,6 +117,18 @@ class PrecioPorListaViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["producto", "lista"]
 
+    def perform_update(self, serializer):
+        old_price = serializer.instance.precio_unitario
+        instance = serializer.save()
+        if instance.precio_unitario != old_price:
+            HistoricoPrecio.objects.create(
+                producto=instance.producto,
+                precio_anterior=old_price,
+                precio_nuevo=instance.precio_unitario,
+                modificado_por=self.request.user if self.request.user.is_authenticated else None,
+            )
+        cache.clear()
+
 
 class HistoricoPrecioViewSet(viewsets.ModelViewSet):
     queryset = HistoricoPrecio.objects.select_related("producto", "modificado_por").all()

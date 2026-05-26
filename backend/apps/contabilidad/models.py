@@ -233,6 +233,7 @@ class DatosEmpresa(models.Model):
 
     ruc = models.CharField(max_length=20)
     razon_social = models.CharField(max_length=255)
+    nombre_fantasia = models.CharField(max_length=255, blank=True, null=True)
     direccion = models.CharField(max_length=255, blank=True, null=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True)
     pais = models.CharField(max_length=100, blank=True, null=True, default="Paraguay")

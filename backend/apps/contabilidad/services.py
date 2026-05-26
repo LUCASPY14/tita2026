@@ -174,7 +174,11 @@ class FacturacionService:
 
         with transaction.atomic():
             if tipo == TIPO_CARGA_SALDO:
-                origen = CargaSaldo.objects.select_for_update().get(pk=origen_id)
+                origen = CargaSaldo.objects.select_for_update(of=("self",)).get(pk=origen_id)
+                # Load related objects separately to avoid FOR UPDATE on nullable outer joins
+                origen = CargaSaldo.objects.select_related(
+                    "tarjeta__hijo__cliente_responsable", "cliente_origen"
+                ).get(pk=origen_id)
 
                 if origen.estado != CargaSaldo.Estado.CONFIRMADA:
                     raise ValidationError({"error": "Solo se pueden facturar cargas confirmadas."})
@@ -182,6 +186,8 @@ class FacturacionService:
                     raise ValidationError({"error": "Esta carga de saldo ya tiene factura emitida."})
 
                 cliente = origen.cliente_origen
+                if not cliente and origen.tarjeta and origen.tarjeta.hijo:
+                    cliente = origen.tarjeta.hijo.cliente_responsable
                 if not cliente:
                     raise ValidationError({"error": "La carga no tiene cliente asociado."})
 

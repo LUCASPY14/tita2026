@@ -27,12 +27,17 @@ def custom_exception_handler(exc, context):
     if isinstance(exc, ValidationError):
         field_errors = {}
         non_field = []
-        for key, value in data.items():
-            messages = [str(v) for v in (value if isinstance(value, list) else [value])]
-            if key == "non_field_errors":
-                non_field.extend(messages)
-            else:
-                field_errors[key] = messages
+        if isinstance(data, (str, list)):
+            # ValidationError raised with a plain string or list
+            msgs = data if isinstance(data, list) else [data]
+            non_field.extend(str(m) for m in msgs)
+        else:
+            for key, value in data.items():
+                messages = [str(v) for v in (value if isinstance(value, list) else [value])]
+                if key in ("non_field_errors", "error", "detail"):
+                    non_field.extend(messages)
+                else:
+                    field_errors[key] = messages
         normalized["detail"] = "; ".join(non_field) if non_field else "Error de validación."
         normalized["code"] = "validation_error"
         normalized["field_errors"] = field_errors

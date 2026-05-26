@@ -101,8 +101,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
     filterset_fields = ["rol", "is_active"]
     search_fields = ["email", "nombre", "apellido"]
-    ordering_fields = ["email", "nombre", "date_joined"]
-    ordering = ["-date_joined"]
+    ordering_fields = ["email", "nombre", "fecha_creacion"]
+    ordering = ["-fecha_creacion"]
 
     def get_permissions(self):
         if self.action == "me":

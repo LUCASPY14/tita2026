@@ -83,6 +83,7 @@ class RegistroConsumoAlmuerzoSerializer(serializers.ModelSerializer):
             "ya_cobrado",
             "estado",
             "marcado_en_cuenta",
+            "registrado_por",
             "fecha_creacion",
         ]
 
