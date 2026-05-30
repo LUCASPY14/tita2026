@@ -291,6 +291,81 @@ class PortalMiHijoView(APIView):
         })
 
 
+class PortalHistorialConsumos(APIView):
+    """
+    GET /api/v1/usuarios/portal/historial-consumos/?hijo_id=X&anio=2026&mes=5
+    Historial de consumos de almuerzos de un hijo del padre autenticado.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from datetime import date
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+
+        user = request.user
+        if not user.cliente:
+            return Response({"detail": "Sin cliente vinculado."}, status=400)
+
+        hijo_id = request.query_params.get("hijo_id")
+        anio = int(request.query_params.get("anio", date.today().year))
+        mes = int(request.query_params.get("mes", date.today().month))
+
+        hijo = user.cliente.hijos.filter(id=hijo_id, activo=True).first()
+        if not hijo:
+            return Response({"detail": "Hijo no encontrado."}, status=404)
+
+        consumos_qs = (
+            RegistroConsumoAlmuerzo.objects
+            .filter(
+                hijo=hijo,
+                fecha_consumo__year=anio,
+                fecha_consumo__month=mes,
+                estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            )
+            .order_by("-fecha_consumo")
+        )
+
+        consumos = list(
+            consumos_qs.values(
+                "id", "fecha_consumo", "costo_almuerzo", "ya_cobrado",
+            )
+        )
+
+        return Response({
+            "anio": anio,
+            "mes": mes,
+            "hijo": {"id": hijo.id, "nombre": hijo.nombre_completo},
+            "consumos": consumos,
+            "total": len(consumos),
+            "monto_total": sum(int(c["costo_almuerzo"]) for c in consumos),
+            "cobrados": sum(1 for c in consumos if c["ya_cobrado"]),
+        })
+
+
+class PortalMisFacturas(APIView):
+    """
+    GET /api/v1/usuarios/portal/mis-facturas/
+    Facturas emitidas para el cliente del padre autenticado.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.contabilidad.models import Factura
+
+        user = request.user
+        if not user.cliente:
+            return Response({"detail": "Sin cliente vinculado."}, status=400)
+
+        facturas = (
+            Factura.objects
+            .filter(cliente=user.cliente, estado=Factura.Estado.EMITIDA)
+            .order_by("-fecha_emision")
+            .values("id", "nro_factura", "fecha_emision", "monto_total", "iva_10", "estado")
+        )
+
+        return Response(list(facturas))
+
+
 class RecuperarPasswordView(APIView):
     """
     POST /api/usuarios/recuperar-password/

@@ -21,6 +21,7 @@ import {
   ChevronDown,
   LogOut,
   Wallet,
+  ChefHat,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { path: '/modo-recreo',  label: 'Modo Recreo',  icon: Zap },
   { path: '/almuerzos',    label: 'Almuerzos',    icon: UtensilsCrossed },
   { path: '/comedor',      label: 'Comedor',      icon: Utensils },
+  { path: '/menu-diario',  label: 'Menú Diario',  icon: ChefHat },
   { path: '/tarjetas',     label: 'Tarjetas',     icon: CreditCard },
   { path: '/carga-saldo',  label: 'Carga Saldo',  icon: Wallet },
   { path: '/clientes',     label: 'Clientes',     icon: Users },

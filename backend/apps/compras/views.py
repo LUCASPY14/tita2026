@@ -4,7 +4,10 @@ Views para la app compras
 
 from django.db.models import DecimalField, Sum, Value
 from django.db.models.functions import Coalesce
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, status
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
 from common.permissions import IsCajeroOrAdmin
 from common.mixins import ExportCSVMixin
@@ -22,6 +25,7 @@ from .models import (
     NotaCreditoProveedor,
     DetalleNotaCreditoProveedor,
 )
+from .services import CompraService
 from .serializers import (
     ProveedorSerializer,
     CuentaCorrienteProveedorSerializer,
@@ -90,6 +94,21 @@ class CompraViewSet(ExportCSVMixin, viewsets.ModelViewSet):
                 )
             )
         )
+
+    @action(detail=True, methods=["post"], url_path="confirmar-entrega")
+    def confirmar_entrega(self, request, pk=None):
+        """Confirma la recepción de mercadería de una compra a crédito pendiente."""
+        compra = self.get_object()
+        if compra.tipo_pago != Compra.TipoPago.CREDITO:
+            return Response(
+                {"error": "Solo se pueden confirmar entregas de compras a crédito."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            compra = CompraService.confirmar_compra(compra=compra, autorizado_por=request.user)
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        return Response(CompraSerializer(compra).data)
 
 
 class DetalleCompraViewSet(viewsets.ModelViewSet):

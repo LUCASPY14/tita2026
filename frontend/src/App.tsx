@@ -26,6 +26,9 @@ import PortalDashboard from './pages/portal/Dashboard'
 import PortalLogin from './pages/portal/Login'
 import PortalNotificaciones from './pages/portal/Notificaciones'
 import PortalResetPassword from './pages/portal/ResetPassword'
+import PortalHistorial from './pages/portal/Historial'
+import PortalFacturas from './pages/portal/Facturas'
+import MenuDiario from './pages/MenuDiario'
 import { useAuthStore } from './store/authStore'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; message: string }> {
@@ -104,6 +107,8 @@ export default function App() {
         }>
           <Route index element={<PortalDashboard />} />
           <Route path="notificaciones" element={<PortalNotificaciones />} />
+          <Route path="historial" element={<PortalHistorial />} />
+          <Route path="facturas" element={<PortalFacturas />} />
         </Route>
 
         {/* Sistema de gestión */}
@@ -130,6 +135,7 @@ export default function App() {
           <Route path="/inventario" element={<Inventario />} />
           <Route path="/usuarios" element={<Usuarios />} />
           <Route path="/configuracion" element={<Configuracion />} />
+          <Route path="/menu-diario" element={<MenuDiario />} />
         </Route>
 
         {/* Modo Recreo — overlay full-screen, fuera del AppLayout */}

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import {
   Truck, Search, Plus, Eye, CreditCard,
-  Building2, DollarSign, X,
+  Building2, DollarSign, X, PackageCheck,
 } from 'lucide-react'
 import api from '../services/api'
 import { useCatalogoStore } from '../store/catalogoStore'
@@ -211,6 +211,7 @@ export default function Compras() {
   const [medioPago, setMedioPago] = useState('EFECTIVO')
   const [obsPago, setObsPago] = useState('')
   const [savingPago, setSavingPago] = useState(false)
+  const [confirmandoEntrega, setConfirmandoEntrega] = useState<number | null>(null)
 
   // ── Cuenta corriente modal ──────────────────────────────────────
   const [ccProveedor, setCcProveedor] = useState<Proveedor | null>(null)
@@ -414,6 +415,20 @@ export default function Compras() {
     }
   }, [montoPago, pagoCompra, medioPago, obsPago, searchCompras, filterEstado, filterTipo, filterProveedor, pageCompras, loadCompras])
 
+  // ── Confirmar entrega ─────────────────────────────────────────────
+  const handleConfirmarEntrega = useCallback(async (compra: Compra) => {
+    setConfirmandoEntrega(compra.id)
+    try {
+      await api.post(`/compras/compras/${compra.id}/confirmar-entrega/`)
+      toast.success('Entrega confirmada — stock actualizado')
+      loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, pageCompras)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setConfirmandoEntrega(null)
+    }
+  }, [searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, pageCompras, loadCompras])
+
   // ── Cuenta corriente ─────────────────────────────────────────────
   const openCuentaCorriente = useCallback(async (p: Proveedor) => {
     setCcProveedor(p)
@@ -495,6 +510,17 @@ export default function Compras() {
             <Button size="sm" variant="primary" onClick={() => openPago(r)}>
               <DollarSign className="w-3.5 h-3.5" />
               Pagar
+            </Button>
+          )}
+          {r.tipo_pago === 'CREDITO' && r.estado_entrega === 'PENDIENTE' && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => handleConfirmarEntrega(r)}
+              disabled={confirmandoEntrega === r.id}
+            >
+              <PackageCheck className="w-3.5 h-3.5" />
+              {confirmandoEntrega === r.id ? '...' : 'Recibir'}
             </Button>
           )}
         </div>
@@ -862,12 +888,20 @@ export default function Compras() {
 
           <div className="flex items-center justify-between">
             <Button variant="secondary" onClick={() => setDetailCompra(null)}>Cerrar</Button>
-            {(detailCompra.estado_pago === 'PENDIENTE' || detailCompra.estado_pago === 'PARCIAL') && (
-              <Button variant="primary" onClick={() => { setDetailCompra(null); openPago(detailCompra) }}>
-                <DollarSign className="w-4 h-4" />
-                Registrar Pago
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {detailCompra.tipo_pago === 'CREDITO' && detailCompra.estado_entrega === 'PENDIENTE' && (
+                <Button variant="secondary" onClick={() => { setDetailCompra(null); handleConfirmarEntrega(detailCompra) }}>
+                  <PackageCheck className="w-4 h-4" />
+                  Confirmar Entrega
+                </Button>
+              )}
+              {(detailCompra.estado_pago === 'PENDIENTE' || detailCompra.estado_pago === 'PARCIAL') && (
+                <Button variant="primary" onClick={() => { setDetailCompra(null); openPago(detailCompra) }}>
+                  <DollarSign className="w-4 h-4" />
+                  Registrar Pago
+                </Button>
+              )}
+            </div>
           </div>
         </Modal>
       )}
