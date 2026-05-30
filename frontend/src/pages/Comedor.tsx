@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   CheckCircle, XCircle, UtensilsCrossed, Clock,
-  Download, Maximize2, Minimize2,
+  Download, Maximize2, Minimize2, List, RefreshCw,
 } from 'lucide-react'
 import api from '../services/api'
 import { exportarIngresosComedorPDF } from '../utils/pdf'
@@ -97,6 +97,10 @@ export default function Comedor() {
   const [hijosLoading, setHijosLoading] = useState(true)
   const [clock, setClock] = useState(nowDisplay())
   const [fullscreen, setFullscreen] = useState(false)
+  const [panelMode, setPanelMode] = useState<'recientes' | 'lista'>('recientes')
+  const [suscriptosHoy, setSuscriptosHoy] = useState<{ hijoId: number; nombre: string; grado: string }[]>([])
+  const [consumidosHoy, setConsumidosHoy] = useState<Set<number>>(new Set())
+  const [loadingLista, setLoadingLista] = useState(false)
 
   // reloj
   useEffect(() => {
@@ -119,6 +123,44 @@ export default function Comedor() {
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
+
+  // cargar lista de alumnos suscritos + quiénes ya comieron hoy
+  const cargarListaHoy = useCallback(async () => {
+    setLoadingLista(true)
+    try {
+      const [suscRes, consumRes] = await Promise.all([
+        api.get('/almuerzos/suscripciones/', { params: { estado: 'ACTIVA', page_size: 500 } }),
+        api.get('/almuerzos/registros-consumo/', { params: { fecha_consumo: todayISO(), page_size: 500 } }),
+      ])
+      const hijosSusc: { hijoId: number; nombre: string; grado: string }[] = (suscRes.data.results ?? []).map(
+        (s: { hijo: number; hijo_nombre?: string; hijo_grado?: string }) => ({
+          hijoId: s.hijo,
+          nombre: s.hijo_nombre ?? String(s.hijo),
+          grado: s.hijo_grado ?? '',
+        })
+      )
+      const consumidos = new Set<number>(
+        (consumRes.data.results ?? []).map((r: { hijo: number }) => r.hijo)
+      )
+      setSuscriptosHoy(hijosSusc)
+      setConsumidosHoy(consumidos)
+    } catch {
+      // silencioso
+    } finally {
+      setLoadingLista(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (panelMode === 'lista') cargarListaHoy()
+  }, [panelMode, cargarListaHoy])
+
+  // actualizar lista cada vez que se registra un consumo
+  useEffect(() => {
+    const handler = () => { if (panelMode === 'lista') cargarListaHoy() }
+    window.addEventListener('comedor:registro', handler)
+    return () => window.removeEventListener('comedor:registro', handler)
+  }, [panelMode, cargarListaHoy])
 
   // fullscreen API
   const toggleFullscreen = useCallback(() => {
@@ -367,38 +409,115 @@ export default function Comedor() {
           </div>
         </div>
 
-        {/* ── Panel derecho: recientes ──────────────────────────── */}
+        {/* ── Panel derecho ────────────────────────────────────── */}
         <div className="w-72 bg-slate-950 border-l border-white/5 flex flex-col shrink-0">
-          <div className="px-4 py-3 border-b border-white/5">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Ingresos de hoy — {recientes.length}
-            </p>
+          {/* Toggle header */}
+          <div className="px-3 py-2 border-b border-white/5 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPanelMode('recientes')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                panelMode === 'recientes' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              Recientes ({recientes.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPanelMode('lista')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                panelMode === 'lista' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              Lista de hoy
+            </button>
           </div>
-          <div className="flex-1 overflow-y-auto">
-            {recientes.length === 0 ? (
-              <div className="flex items-center justify-center h-32">
-                <p className="text-slate-600 text-sm">Sin ingresos aún</p>
+
+          {/* Panel: recientes */}
+          {panelMode === 'recientes' && (
+            <div className="flex-1 overflow-y-auto">
+              {recientes.length === 0 ? (
+                <div className="flex items-center justify-center h-32">
+                  <p className="text-slate-600 text-sm">Sin ingresos aún</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-white/5">
+                  {recientes.map((r, i) => (
+                    <li key={r.id} className={`px-4 py-3 flex items-center gap-3 ${i === 0 ? 'bg-green-500/5' : ''}`}>
+                      <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                        <CheckCircle className={`w-4 h-4 ${i === 0 ? 'text-green-400' : 'text-slate-500'}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`text-sm font-medium truncate ${i === 0 ? 'text-white' : 'text-slate-300'}`}>{r.nombre}</p>
+                        {r.grado && <p className="text-xs text-slate-500 truncate">{r.grado}</p>}
+                      </div>
+                      <span className="text-xs text-slate-500 tabular-nums shrink-0 ml-auto">{r.hora}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {/* Panel: lista de hoy */}
+          {panelMode === 'lista' && (
+            <>
+              <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between">
+                <p className="text-xs text-slate-500">
+                  <span className="text-green-400 font-semibold">{consumidosHoy.size}</span>
+                  {' / '}
+                  <span className="text-slate-400 font-semibold">{suscriptosHoy.length}</span>
+                  {' almorzaron'}
+                </p>
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); cargarListaHoy() }}
+                  className="p-1 text-slate-500 hover:text-slate-300 cursor-pointer"
+                  disabled={loadingLista}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingLista ? 'animate-spin' : ''}`} />
+                </button>
               </div>
-            ) : (
-              <ul className="divide-y divide-white/5">
-                {recientes.map((r, i) => (
-                  <li
-                    key={r.id}
-                    className={`px-4 py-3 flex items-center gap-3 ${i === 0 ? 'bg-green-500/5' : ''}`}
-                  >
-                    <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                      <CheckCircle className={`w-4 h-4 ${i === 0 ? 'text-green-400' : 'text-slate-500'}`} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className={`text-sm font-medium truncate ${i === 0 ? 'text-white' : 'text-slate-300'}`}>{r.nombre}</p>
-                      {r.grado && <p className="text-xs text-slate-500 truncate">{r.grado}</p>}
-                    </div>
-                    <span className="text-xs text-slate-500 tabular-nums shrink-0 ml-auto">{r.hora}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+              <div className="flex-1 overflow-y-auto">
+                {loadingLista ? (
+                  <div className="flex items-center justify-center h-20">
+                    <p className="text-slate-600 text-xs">Cargando...</p>
+                  </div>
+                ) : suscriptosHoy.length === 0 ? (
+                  <div className="flex items-center justify-center h-20">
+                    <p className="text-slate-600 text-xs">Sin suscripciones activas hoy</p>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-white/5">
+                    {[...suscriptosHoy].sort((a, b) => {
+                      const aOk = consumidosHoy.has(a.hijoId)
+                      const bOk = consumidosHoy.has(b.hijoId)
+                      if (aOk !== bOk) return aOk ? 1 : -1
+                      return a.nombre.localeCompare(b.nombre)
+                    }).map(s => {
+                      const comio = consumidosHoy.has(s.hijoId)
+                      return (
+                        <li key={s.hijoId} className="px-3 py-2.5 flex items-center gap-2.5">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${comio ? 'bg-green-500/20' : 'bg-slate-800'}`}>
+                            {comio
+                              ? <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                              : <XCircle className="w-3.5 h-3.5 text-slate-600" />
+                            }
+                          </div>
+                          <div className="min-w-0">
+                            <p className={`text-xs font-medium truncate ${comio ? 'text-slate-400' : 'text-slate-200'}`}>{s.nombre}</p>
+                            {s.grado && <p className="text-xs text-slate-600 truncate">{s.grado}</p>}
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

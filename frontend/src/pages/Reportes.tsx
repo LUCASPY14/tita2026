@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { BarChart2, Search, TrendingUp, ShoppingCart, FileText, Download, Users, AlertTriangle } from 'lucide-react'
+import { BarChart2, Search, TrendingUp, ShoppingCart, FileText, Download, Users, AlertTriangle, UtensilsCrossed } from 'lucide-react'
 import api from '../services/api'
 import { exportarReporteVentasPDF, exportarCuentaCorrientePDF } from '../utils/pdf'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
@@ -88,7 +88,30 @@ const AGING_COLOR: Record<string, BadgeColor> = {
   '90+': 'red',
 }
 
-type TabKey = 'ventas' | 'cuenta_corriente'
+interface AlmuerzoFila {
+  hijo_id: number
+  hijo: string
+  grado: string
+  cantidad_almuerzos: number
+  monto_total: number
+  monto_pagado: number
+  monto_pendiente: number
+  estado: string
+}
+
+interface AlmuerzosData {
+  filas: AlmuerzoFila[]
+  totales: {
+    alumnos: number
+    cantidad_almuerzos: number
+    monto_total: number
+    monto_pagado: number
+    monto_pendiente: number
+    con_deuda: number
+  }
+}
+
+type TabKey = 'ventas' | 'cuenta_corriente' | 'almuerzos'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -157,6 +180,46 @@ export default function Reportes() {
       toast.error('Error al cargar cuenta corriente')
     } finally {
       setLoadingCc(false)
+    }
+  }
+
+  // ── Almuerzos tab ───────────────────────────────────────────────
+  const hoy = new Date()
+  const [anioAlm, setAnioAlm] = useState(hoy.getFullYear())
+  const [mesAlm, setMesAlm] = useState(hoy.getMonth() + 1)
+  const [gradoAlm, setGradoAlm] = useState('')
+  const [almuerzosData, setAlmuerzosData] = useState<AlmuerzosData | null>(null)
+  const [loadingAlm, setLoadingAlm] = useState(false)
+
+  async function cargarAlmuerzos() {
+    setLoadingAlm(true)
+    try {
+      const { data: res } = await api.get('/almuerzos/reportes/', {
+        params: { anio: anioAlm, mes: mesAlm, ...(gradoAlm ? { grado: gradoAlm } : {}) },
+      })
+      setAlmuerzosData(res)
+    } catch {
+      toast.error('Error al cargar reporte de almuerzos')
+    } finally {
+      setLoadingAlm(false)
+    }
+  }
+
+  async function exportarAlmuerzosCSV() {
+    try {
+      const response = await api.get('/almuerzos/reportes/', {
+        params: { anio: anioAlm, mes: mesAlm, ...(gradoAlm ? { grado: gradoAlm } : {}), formato: 'csv' },
+        responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `almuerzos_${anioAlm}_${String(mesAlm).padStart(2, '0')}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('CSV descargado')
+    } catch {
+      toast.error('Error al exportar')
     }
   }
 
@@ -286,6 +349,52 @@ export default function Reportes() {
     },
   ]
 
+  const ESTADO_ALM_COLOR: Record<string, BadgeColor> = {
+    PAGADO: 'green', PARCIAL: 'blue', PENDIENTE: 'orange',
+  }
+
+  const colsAlmuerzos: Column<AlmuerzoFila>[] = [
+    {
+      title: 'Alumno',
+      key: 'hijo',
+      render: (_, r) => (
+        <div>
+          <p className="text-sm font-medium text-slate-800">{r.hijo}</p>
+          <p className="text-xs text-slate-400">{r.grado || '—'}</p>
+        </div>
+      ),
+    },
+    {
+      title: 'Almuerzos',
+      key: 'cantidad_almuerzos',
+      render: (_, r) => <span className="tabular-nums font-semibold text-slate-800">{r.cantidad_almuerzos}</span>,
+    },
+    {
+      title: 'Total',
+      key: 'monto_total',
+      render: (_, r) => <span className="tabular-nums text-sm text-slate-700">{formatGs(r.monto_total)}</span>,
+    },
+    {
+      title: 'Pagado',
+      key: 'monto_pagado',
+      render: (_, r) => <span className="tabular-nums text-sm text-emerald-700 font-semibold">{formatGs(r.monto_pagado)}</span>,
+    },
+    {
+      title: 'Pendiente',
+      key: 'monto_pendiente',
+      render: (_, r) => (
+        <span className={`tabular-nums text-sm font-bold ${r.monto_pendiente > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+          {formatGs(r.monto_pendiente)}
+        </span>
+      ),
+    },
+    {
+      title: 'Estado',
+      key: 'estado',
+      render: (_, r) => <Badge color={ESTADO_ALM_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
+    },
+  ]
+
   const inputDateClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
   const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
@@ -330,6 +439,15 @@ export default function Reportes() {
           >
             <Users className="w-4 h-4" />
             Cuenta Corriente Clientes
+          </button>
+          <button
+            onClick={() => setTab('almuerzos')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+              tab === 'almuerzos' ? 'border-green-600 text-green-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <UtensilsCrossed className="w-4 h-4" />
+            Almuerzos
           </button>
         </div>
       </div>
@@ -571,6 +689,99 @@ export default function Reportes() {
             <div className="text-center py-20 text-slate-400">
               <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="text-sm font-medium">Hacé clic en "Actualizar" para cargar el reporte</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Almuerzos tab ────────────────────────────────────────── */}
+      {tab === 'almuerzos' && (
+        <>
+          {/* Filters */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-wrap items-end gap-4">
+            <div>
+              <label className={labelClass}>Año</label>
+              <input
+                type="number"
+                min={2020}
+                max={2099}
+                value={anioAlm}
+                onChange={e => setAnioAlm(Number(e.target.value))}
+                className={`${inputDateClass} w-24`}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Mes</label>
+              <select
+                value={mesAlm}
+                onChange={e => setMesAlm(Number(e.target.value))}
+                className={`${inputDateClass} w-auto`}
+              >
+                {['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].map((m, i) => (
+                  <option key={i + 1} value={i + 1}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Grado</label>
+              <input
+                placeholder="Filtrar por grado..."
+                value={gradoAlm}
+                onChange={e => setGradoAlm(e.target.value)}
+                className={`${inputDateClass} w-40`}
+              />
+            </div>
+            <Button variant="primary" onClick={cargarAlmuerzos} disabled={loadingAlm}>
+              <TrendingUp className="w-4 h-4" />
+              {loadingAlm ? 'Cargando...' : 'Buscar'}
+            </Button>
+            {almuerzosData && (
+              <Button variant="secondary" onClick={exportarAlmuerzosCSV}>
+                <Download className="w-4 h-4" />
+                CSV
+              </Button>
+            )}
+          </div>
+
+          {/* KPI summary */}
+          {almuerzosData && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                { label: 'Alumnos', value: almuerzosData.totales.alumnos },
+                { label: 'Almuerzos', value: almuerzosData.totales.cantidad_almuerzos },
+                { label: 'Total', value: formatGs(almuerzosData.totales.monto_total) },
+                { label: 'Pagado', value: formatGs(almuerzosData.totales.monto_pagado) },
+                { label: 'Pendiente', value: formatGs(almuerzosData.totales.monto_pendiente) },
+                { label: 'Con deuda', value: almuerzosData.totales.con_deuda },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-3 py-3 text-center">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{label}</p>
+                  <p className="text-sm font-bold text-slate-800 mt-0.5 tabular-nums">{value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Table */}
+          {almuerzosData && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-1">
+                <Table
+                  columns={colsAlmuerzos}
+                  dataSource={almuerzosData.filas}
+                  rowKey="hijo_id"
+                  loading={loadingAlm}
+                  pageSize={almuerzosData.filas.length}
+                />
+              </div>
+            </div>
+          )}
+
+          {!almuerzosData && !loadingAlm && (
+            <div className="text-center py-20 text-slate-400">
+              <UtensilsCrossed className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm font-medium">Seleccioná año y mes, luego hacé clic en "Buscar"</p>
             </div>
           )}
         </>

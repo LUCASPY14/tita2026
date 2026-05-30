@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   Package, Plus, Search, CheckCircle, XCircle, Clock,
-  TrendingUp, TrendingDown, AlertTriangle, X,
+  TrendingUp, TrendingDown, AlertTriangle, X, Bell,
 } from 'lucide-react'
 import api from '../services/api'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
@@ -86,6 +86,17 @@ interface Lote {
   bloqueado: boolean
 }
 
+interface AlertaStock {
+  id: number
+  producto: number
+  producto_nombre: string
+  tipo: string
+  stock_actual: string | number
+  stock_minimo: string | number
+  activa: boolean
+  fecha_generada: string
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ESTADO_COLOR: Record<string, BadgeColor> = {
@@ -106,7 +117,7 @@ const TIPO_MOV_COLOR: Record<string, BadgeColor> = {
   TRANSFERENCIA: 'blue',
 }
 
-type TabKey = 'ajustes' | 'movimientos' | 'lotes'
+type TabKey = 'ajustes' | 'movimientos' | 'lotes' | 'alertas'
 
 const DETALLE_EMPTY: DetalleAjuste = { producto: null, cantidad: 1, motivo_detalle: '' }
 
@@ -250,6 +261,34 @@ export default function Inventario() {
       loadLotes(filterProductoLote, filterVencido, 1)
     }
   }, [tab, filterProductoLote, filterVencido, loadLotes])
+
+  // ── Alertas de stock ──────────────────────────────────────────────
+  const [alertas, setAlertas] = useState<AlertaStock[]>([])
+  const [loadingAlertas, setLoadingAlertas] = useState(false)
+  const [totalAlertas, setTotalAlertas] = useState(0)
+  const [pageAlertas, setPageAlertas] = useState(1)
+
+  const loadAlertas = useCallback(async (p: number) => {
+    setLoadingAlertas(true)
+    try {
+      const { data } = await api.get('/inventario/alertas/', {
+        params: { activa: true, page: p, page_size: 15 },
+      })
+      setAlertas(data.results ?? [])
+      setTotalAlertas(data.count ?? 0)
+    } catch {
+      toast.error('Error al cargar alertas de stock')
+    } finally {
+      setLoadingAlertas(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'alertas') {
+      setPageAlertas(1)
+      loadAlertas(1)
+    }
+  }, [tab, loadAlertas])
 
   // ── Ajuste actions ────────────────────────────────────────────────
   const handleSaveAjuste = useCallback(async () => {
@@ -460,10 +499,53 @@ export default function Inventario() {
   const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
   const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
+  const ALERTA_COLOR: Record<string, BadgeColor> = {
+    STOCK_CERO: 'red',
+    STOCK_CRITICO: 'orange',
+    STOCK_MINIMO: 'yellow',
+  }
+
+  const colsAlertas: Column<AlertaStock>[] = [
+    {
+      title: 'Producto',
+      key: 'producto',
+      render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.producto_nombre}</span>,
+    },
+    {
+      title: 'Tipo',
+      key: 'tipo',
+      render: (_, r) => (
+        <Badge color={ALERTA_COLOR[r.tipo] ?? 'default'}>
+          {r.tipo.replace(/_/g, ' ')}
+        </Badge>
+      ),
+    },
+    {
+      title: 'Stock Actual',
+      key: 'stock_actual',
+      render: (_, r) => (
+        <span className="tabular-nums text-sm font-bold text-red-600">{Number(r.stock_actual)}</span>
+      ),
+    },
+    {
+      title: 'Stock Mínimo',
+      key: 'stock_minimo',
+      render: (_, r) => (
+        <span className="tabular-nums text-sm text-slate-500">{Number(r.stock_minimo)}</span>
+      ),
+    },
+    {
+      title: 'Generada',
+      key: 'fecha_generada',
+      render: (_, r) => <span className="text-xs text-slate-400">{formatFecha(r.fecha_generada)}</span>,
+    },
+  ]
+
   const TABS: { key: TabKey; label: string; icon: typeof Package }[] = [
     { key: 'ajustes', label: 'Ajustes', icon: Package },
     { key: 'movimientos', label: 'Movimientos', icon: TrendingUp },
     { key: 'lotes', label: 'Lotes y Vencimientos', icon: AlertTriangle },
+    { key: 'alertas', label: 'Alertas de Stock', icon: Bell },
   ]
 
   // ── Render ────────────────────────────────────────────────────────
@@ -502,6 +584,11 @@ export default function Inventario() {
               {key === 'lotes' && lotesConAlerta > 0 && (
                 <span className="bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">
                   {lotesConAlerta}
+                </span>
+              )}
+              {key === 'alertas' && totalAlertas > 0 && (
+                <span className="bg-red-100 text-red-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">
+                  {totalAlertas}
                 </span>
               )}
             </button>
@@ -614,6 +701,34 @@ export default function Inventario() {
                 pageSize={15} page={pageLotes} onPageChange={p => { setPageLotes(p); loadLotes(filterProductoLote, filterVencido, p) }} total={totalLotes}
                 sortKey={sortLotesKey} sortDir={sortLotesDir}
                 onSort={(key, dir) => { setSortLotesKey(key); setSortLotesDir(dir) }}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Alertas tab ──────────────────────────────────────────── */}
+      {tab === 'alertas' && (
+        <>
+          {totalAlertas > 0 && (
+            <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-3">
+              <Bell className="w-4 h-4 text-red-500 shrink-0" />
+              <p className="text-sm text-red-700 font-medium">
+                {totalAlertas} producto(s) con stock bajo el mínimo configurado.
+              </p>
+            </div>
+          )}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-1">
+              <Table
+                columns={colsAlertas}
+                dataSource={alertas}
+                rowKey="id"
+                loading={loadingAlertas}
+                pageSize={15}
+                page={pageAlertas}
+                total={totalAlertas}
+                onPageChange={p => { setPageAlertas(p); loadAlertas(p) }}
               />
             </div>
           </div>
