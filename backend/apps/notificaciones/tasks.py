@@ -88,15 +88,23 @@ def enviar_emails_pendientes():
     enviados = 0
     errores = 0
     for notif in pendientes:
-        ok = EmailService.enviar_notificacion(notif)
+        try:
+            if not notif.usuario.email:
+                raise ValueError("El usuario no tiene email registrado.")
+            EmailService.enviar_simple(
+                destinatario_email=notif.usuario.email,
+                destinatario_nombre=notif.usuario.nombre_completo,
+                asunto=notif.titulo,
+                cuerpo=notif.mensaje,
+            )
+            enviados += 1
+        except Exception as exc:
+            logger.error("Error enviando email notif #%d: %s", notif.pk, exc)
+            errores += 1
         # Marcar leída independientemente del resultado para no reintentar indefinidamente
         notif.leida = True
         notif.fecha_lectura = timezone.now()
         notif.save(update_fields=["leida", "fecha_lectura"])
-        if ok:
-            enviados += 1
-        else:
-            errores += 1
 
     logger.info(
         "enviar_emails_pendientes: %d enviados, %d errores",

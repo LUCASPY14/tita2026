@@ -27,19 +27,29 @@ from .serializers import (
 
 
 class NotificacionViewSet(viewsets.ModelViewSet):
-    queryset = Notificacion.objects.select_related("usuario").all()
     serializer_class = NotificacionSerializer
     permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["usuario", "tipo", "destino", "leida"]
+    filterset_fields = ["tipo", "destino", "leida"]
+
+    def get_queryset(self):
+        qs = Notificacion.objects.select_related("usuario")
+        if self.request.user.is_staff:
+            return qs.all()
+        return qs.filter(usuario=self.request.user)
 
 
 class PreferenciaNotificacionViewSet(viewsets.ModelViewSet):
-    queryset = PreferenciaNotificacion.objects.select_related("usuario").all()
     serializer_class = PreferenciaNotificacionSerializer
     permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["usuario", "tipo_notificacion"]
+    filterset_fields = ["tipo_notificacion"]
+
+    def get_queryset(self):
+        qs = PreferenciaNotificacion.objects.select_related("usuario")
+        if self.request.user.is_staff:
+            return qs.all()
+        return qs.filter(usuario=self.request.user)
 
 
 class PlantillaEmailViewSet(viewsets.ModelViewSet):

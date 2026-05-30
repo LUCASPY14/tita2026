@@ -4,6 +4,7 @@ Servicio para procesar y enviar notificaciones.
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db import transaction
 from django.utils import timezone
 
 from .models import EmailEnviado, Notificacion, SolicitudNotificacion
@@ -19,30 +20,31 @@ class NotificacionService:
         """
         qs = SolicitudNotificacion.objects.filter(
             estado=SolicitudNotificacion.Estado.PENDIENTE
-        ).select_related("cliente")
+        ).select_related("cliente").select_for_update(skip_locked=True)
 
         if solicitud_ids:
             qs = qs.filter(pk__in=solicitud_ids)
 
         resultados = {"enviadas": 0, "fallidas": 0, "ids_enviadas": [], "ids_fallidas": []}
 
-        for solicitud in qs:
-            try:
-                if solicitud.destino == Notificacion.Destino.SISTEMA:
-                    NotificacionService._enviar_sistema(solicitud)
-                elif solicitud.destino == Notificacion.Destino.EMAIL:
-                    NotificacionService._enviar_email(solicitud)
+        with transaction.atomic():
+            for solicitud in qs:
+                try:
+                    if solicitud.destino == Notificacion.Destino.SISTEMA:
+                        NotificacionService._enviar_sistema(solicitud)
+                    elif solicitud.destino == Notificacion.Destino.EMAIL:
+                        NotificacionService._enviar_email(solicitud)
 
-                solicitud.estado = SolicitudNotificacion.Estado.ENVIADA
-                solicitud.fecha_envio = timezone.now()
-                solicitud.save(update_fields=["estado", "fecha_envio"])
-                resultados["enviadas"] += 1
-                resultados["ids_enviadas"].append(solicitud.pk)
-            except Exception as exc:
-                solicitud.estado = SolicitudNotificacion.Estado.FALLIDA
-                solicitud.save(update_fields=["estado"])
-                resultados["fallidas"] += 1
-                resultados["ids_fallidas"].append({"id": solicitud.pk, "error": str(exc)})
+                    solicitud.estado = SolicitudNotificacion.Estado.ENVIADA
+                    solicitud.fecha_envio = timezone.now()
+                    solicitud.save(update_fields=["estado", "fecha_envio"])
+                    resultados["enviadas"] += 1
+                    resultados["ids_enviadas"].append(solicitud.pk)
+                except Exception as exc:
+                    solicitud.estado = SolicitudNotificacion.Estado.FALLIDA
+                    solicitud.save(update_fields=["estado"])
+                    resultados["fallidas"] += 1
+                    resultados["ids_fallidas"].append({"id": solicitud.pk, "error": str(exc)})
 
         return resultados
 
