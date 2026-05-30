@@ -207,6 +207,8 @@ export default function Configuracion() {
   const [empForm, setEmpForm] = useState({ ruc: '', razon_social: '', nombre_fantasia: '', direccion: '', ciudad: '', pais: 'Paraguay', telefono: '', email: '', activo: true })
   const [savingEmp, setSavingEmp] = useState(false)
   const savedEmpRef = useRef<typeof empForm | null>(null)
+  const empFormRef = useRef(empForm)
+  empFormRef.current = empForm
 
   // ── Historial Precios ─────────────────────────────────────────────
   const [historico, setHistorico] = useState<HistoricoPrecioItem[]>([])
@@ -216,6 +218,7 @@ export default function Configuracion() {
   const [productosLookup, setProductosLookup] = useState<Producto[]>([])
   const [histProductoId, setHistProductoId] = useState<number | undefined>()
   const histTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const requestIdHistRef = useRef(0)
 
   // ── Seguridad / 2FA ───────────────────────────────────────────────
   const [estado2fa, setEstado2fa] = useState<Estado2FA | null>(null)
@@ -348,26 +351,33 @@ export default function Configuracion() {
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (!savedEmpRef.current) return
-      if (JSON.stringify(empForm) !== JSON.stringify(savedEmpRef.current)) {
+      if (JSON.stringify(empFormRef.current) !== JSON.stringify(savedEmpRef.current)) {
         e.preventDefault()
         e.returnValue = ''
       }
     }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [empForm])
+  }, [])
 
   // ── Load historial precios ────────────────────────────────────────
   const loadHistorico = useCallback(async (productoId: number | undefined, p: number) => {
+    const requestId = ++requestIdHistRef.current
     setLoadingHist(true)
     try {
       const params: Record<string, unknown> = { page: p, page_size: 15, ordering: '-fecha_cambio' }
       if (productoId) params.producto = productoId
       const { data } = await api.get('/productos/historico-precios/', { params })
+      if (requestId !== requestIdHistRef.current) return
       setHistorico(data.results ?? [])
       setHistTotal(data.count ?? 0)
-    } catch { toast.error('Error al cargar historial') }
-    finally { setLoadingHist(false) }
+    } catch {
+      if (requestId !== requestIdHistRef.current) return
+      toast.error('Error al cargar historial')
+    }
+    finally {
+      if (requestId === requestIdHistRef.current) setLoadingHist(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -376,12 +386,6 @@ export default function Configuracion() {
     histTimer.current = setTimeout(() => { setHistPage(1); loadHistorico(histProductoId, 1) }, 300)
     return () => clearTimeout(histTimer.current)
   }, [tab, histProductoId, loadHistorico])
-
-  useEffect(() => {
-    if (tab !== 'historial_precios') return
-    loadHistorico(histProductoId, histPage)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [histPage])
 
   useEffect(() => {
     if (tab !== 'historial_precios') return
@@ -1070,7 +1074,7 @@ export default function Configuracion() {
                 loading={loadingHist}
                 pageSize={15}
                 page={histPage}
-                onPageChange={setHistPage}
+                onPageChange={p => { setHistPage(p); loadHistorico(histProductoId, p) }}
                 total={histTotal}
               />
             </div>

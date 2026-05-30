@@ -90,21 +90,27 @@ export default function CajaPage() {
   const [obsConc, setObsConc] = useState('')
   const [conciliando, setConciliando] = useState(false)
 
-  const filterTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const abriendoRef = useRef(false)
+  const cerrandoRef = useRef(false)
+  const conciliandoRef = useRef(false)
+  const requestIdRef = useRef(0)
 
   const loadCierres = useCallback(async () => {
+    const requestId = ++requestIdRef.current
     setLoading(true)
     try {
       const params: Record<string, string | number> = { page, page_size: 15 }
       if (filterEstado) params.estado = filterEstado
       if (filterCaja) params.caja = filterCaja
-      const { data } = await api.get('/contabilidad/cierres-caja/', { params })
+      const { data } = await api.get('/contabilidad/cierres-caja/', { params, timeout: 8000 })
+      if (requestId !== requestIdRef.current) return
       setCierres(data.results ?? [])
       setTotal(data.count ?? 0)
     } catch {
+      if (requestId !== requestIdRef.current) return
       toast.error('Error al cargar cierres')
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) setLoading(false)
     }
   }, [page, filterEstado, filterCaja])
 
@@ -117,7 +123,8 @@ export default function CajaPage() {
       .then(({ data }) => {
         const lista: Caja[] = data.results ?? data
         setCajas(lista)
-        if (lista.length > 0) setCajaSeleccionada(String(lista[0].id))
+        const primeraActiva = lista.find(c => c.activo)
+        setCajaSeleccionada(primeraActiva ? String(primeraActiva.id) : '')
       })
       .catch(() => {})
   }, [])
@@ -125,13 +132,15 @@ export default function CajaPage() {
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   async function abrirCaja() {
+    if (abriendoRef.current) return
     if (!cajaSeleccionada) { toast.error('Seleccioná una caja'); return }
+    abriendoRef.current = true
     setAbriendo(true)
     try {
       await api.post('/contabilidad/cierres-caja/', {
         caja: Number(cajaSeleccionada),
         monto_inicial: Number(montoInicial) || 0,
-      })
+      }, { timeout: 10000 })
       toast.success('Caja abierta')
       setAbrirModal(false)
       setMontoInicial('')
@@ -139,51 +148,46 @@ export default function CajaPage() {
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {
+      abriendoRef.current = false
       setAbriendo(false)
     }
   }
 
   async function confirmarCierre() {
-    if (!cerrarModal) return
+    if (cerrandoRef.current || !cerrarModal) return
+    cerrandoRef.current = true
     setCerrando(true)
     try {
       await api.post(`/contabilidad/cierres-caja/${cerrarModal.id}/cerrar/`, {
         monto_contado_fisico: Number(montoContado) || 0,
-      })
+      }, { timeout: 10000 })
       toast.success('Caja cerrada')
       setCerrarModal(null)
       loadCierres()
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {
+      cerrandoRef.current = false
       setCerrando(false)
     }
   }
 
   async function confirmarConciliar() {
-    if (!conciliarModal) return
+    if (conciliandoRef.current || !conciliarModal) return
+    conciliandoRef.current = true
     setConciliando(true)
     try {
       await api.post(`/contabilidad/cierres-caja/${conciliarModal.id}/conciliar/`, {
         observaciones: obsConc,
-      })
+      }, { timeout: 10000 })
       toast.success('Cierre conciliado')
       setConciliarModal(null)
       loadCierres()
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {
+      conciliandoRef.current = false
       setConciliando(false)
-    }
-  }
-
-  function handleFilterChange(setter: (v: string) => void) {
-    return (e: React.ChangeEvent<HTMLSelectElement>) => {
-      clearTimeout(filterTimerRef.current)
-      filterTimerRef.current = setTimeout(() => {
-        setter(e.target.value)
-        setPage(1)
-      }, 0)
     }
   }
 
@@ -284,7 +288,7 @@ export default function CajaPage() {
   }), [cierres])
 
   const selectClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
-  const cajaActiva = cajas.find(c => String(c.id) === cajaSeleccionada)
+  const cajaActiva = cajas.find(c => String(c.id) === cajaSeleccionada && c.activo)
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -294,7 +298,7 @@ export default function CajaPage() {
           <h1 className="text-2xl font-bold text-slate-900">Caja</h1>
           <p className="text-sm text-slate-500 mt-0.5">Apertura y cierre de cajas registradoras</p>
         </div>
-        <Button variant="primary" onClick={() => setAbrirModal(true)}>
+        <Button variant="primary" onClick={() => { setAbrirModal(true); setMontoInicial('') }}>
           <Plus className="w-4 h-4" />
           Abrir Caja
         </Button>
@@ -320,13 +324,13 @@ export default function CajaPage() {
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex flex-wrap gap-3 items-center">
         <LayoutGrid className="w-4 h-4 text-slate-400" />
-        <select value={filterEstado} onChange={handleFilterChange(setFilterEstado)} className={selectClass}>
+        <select value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1) }} className={selectClass}>
           <option value="">Todos los estados</option>
           <option value="ABIERTO">Abiertas</option>
           <option value="CERRADO">Cerradas</option>
           <option value="CONCILIADO">Conciliadas</option>
         </select>
-        <select value={filterCaja} onChange={handleFilterChange(setFilterCaja)} className={selectClass}>
+        <select value={filterCaja} onChange={e => { setFilterCaja(e.target.value); setPage(1) }} className={selectClass}>
           <option value="">Todas las cajas</option>
           {cajas.map(c => (
             <option key={c.id} value={c.id}>{c.nombre}</option>
@@ -352,7 +356,7 @@ export default function CajaPage() {
       <Modal
         open={abrirModal}
         title="Abrir Caja"
-        onCancel={() => setAbrirModal(false)}
+        onCancel={() => { setAbrirModal(false); setMontoInicial('') }}
         onOk={abrirCaja}
         okText="Abrir Caja"
         confirmLoading={abriendo}

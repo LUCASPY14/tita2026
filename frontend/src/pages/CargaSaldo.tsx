@@ -97,6 +97,7 @@ export default function CargaSaldo() {
   const [tarjeta, setTarjeta] = useState<Tarjeta | null>(null)
   const [buscando, setBuscando] = useState(false)
   const inputBusquedaRef = useRef<HTMLInputElement>(null)
+  const limpiarTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // ── Formulario de carga ──────────────────────────────────────────
   const [monto, setMonto] = useState('')
@@ -116,6 +117,7 @@ export default function CargaSaldo() {
   // ── Auto-focus al inicio ──────────────────────────────────────────
   useEffect(() => {
     inputBusquedaRef.current?.focus()
+    return () => clearTimeout(limpiarTimerRef.current)
   }, [])
 
   // ── Buscar tarjeta ────────────────────────────────────────────────
@@ -228,7 +230,7 @@ export default function CargaSaldo() {
     setMovimientos([])
     setCargas([])
     setUltimaCarga(null)
-    setTimeout(() => inputBusquedaRef.current?.focus(), 50)
+    limpiarTimerRef.current = setTimeout(() => inputBusquedaRef.current?.focus(), 50)
   }, [])
 
   const metodoSeleccionado = METODOS.find(m => m.value === metodo)

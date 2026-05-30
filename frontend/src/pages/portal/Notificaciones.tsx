@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   Bell, AlertTriangle, CreditCard, UtensilsCrossed,
@@ -52,11 +52,15 @@ export default function PortalNotificaciones() {
   const [notifs, setNotifs] = useState<Notificacion[]>([])
   const [loading, setLoading] = useState(true)
   const [marcando, setMarcando] = useState<number | null>(null)
+  const [marcandoTodas, setMarcandoTodas] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const isFetchingRef = useRef(false)
 
   const cargar = useCallback(async (silent = false) => {
     if (!user) return
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
     if (!silent) setLoading(true)
     else setRefreshing(true)
     try {
@@ -76,6 +80,7 @@ export default function PortalNotificaciones() {
     } catch {
       if (!silent) toast.error('Error al cargar notificaciones')
     } finally {
+      isFetchingRef.current = false
       if (!silent) setLoading(false)
       else setRefreshing(false)
     }
@@ -101,11 +106,20 @@ export default function PortalNotificaciones() {
   }
 
   const marcarTodas = async () => {
-    for (const n of notifs.filter(n => !n.leida)) {
-      await api.patch(`/notificaciones/notificaciones/${n.id}/`, { leida: true }).catch(() => {})
+    const pendientes = notifs.filter(n => !n.leida)
+    if (pendientes.length === 0) return
+    setMarcandoTodas(true)
+    try {
+      await Promise.all(
+        pendientes.map(n => api.patch(`/notificaciones/notificaciones/${n.id}/`, { leida: true }))
+      )
+      setNotifs(prev => prev.map(n => ({ ...n, leida: true })))
+      toast.success('Todas marcadas como leídas')
+    } catch {
+      toast.error('Error al marcar algunas notificaciones')
+    } finally {
+      setMarcandoTodas(false)
     }
-    setNotifs(prev => prev.map(n => ({ ...n, leida: true })))
-    toast.success('Todas marcadas como leídas')
   }
 
   if (loading) return <Spinner className="mt-12" />
@@ -130,15 +144,16 @@ export default function PortalNotificaciones() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => cargar(true)}
             disabled={refreshing}
+            aria-label="Actualizar notificaciones"
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-40"
-            title="Actualizar"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
           {noLeidas > 0 && (
-            <Button size="sm" variant="secondary" onClick={marcarTodas}>
+            <Button size="sm" variant="secondary" onClick={marcarTodas} loading={marcandoTodas} disabled={marcandoTodas}>
               <CheckCheck className="w-3.5 h-3.5" />
               Marcar todas
             </Button>

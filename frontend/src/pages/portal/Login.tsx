@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../../store/authStore'
 import api from '../../services/api'
@@ -25,8 +25,13 @@ export default function PortalLogin() {
       await login(email, password)
       toast.success('Bienvenido al portal')
       navigate('/portal')
-    } catch {
-      toast.error('Credenciales incorrectas')
+    } catch (err) {
+      const e = err as { response?: { status?: number } }
+      if (e?.response?.status === 401) {
+        toast.error('Credenciales incorrectas')
+      } else {
+        toast.error('Error de conexión. Intentalo de nuevo.')
+      }
     } finally {
       setLoading(false)
     }
@@ -38,11 +43,11 @@ export default function PortalLogin() {
     setEnviando(true)
     try {
       await api.post('/usuarios/recuperar-password/', { email: emailRecuperar.trim() })
-      setEnviado(true)
     } catch {
-      toast.error('No se encontró una cuenta con ese email')
+      // Never reveal whether the email exists in the system
     } finally {
       setEnviando(false)
+      setEnviado(true)
     }
   }
 
@@ -51,7 +56,7 @@ export default function PortalLogin() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
           <div className="text-center mb-8">
-            <img src="/logo_tita.png" alt="Cantina Tita" className="h-16 w-auto mx-auto mb-4" />
+            <img src="/logo_tita.png" alt="Cantina Tita" className="h-24 w-auto mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-green-800">Recuperar contraseña</h1>
             <p className="text-gray-500 mt-2 text-sm">Te enviaremos un enlace a tu email</p>
           </div>
@@ -64,6 +69,7 @@ export default function PortalLogin() {
                 Si existe una cuenta con ese email, recibirás un enlace para restablecer tu contraseña.
               </p>
               <button
+                type="button"
                 onClick={() => { setOlvideModo(false); setEnviado(false); setEmailRecuperar('') }}
                 className="text-sm text-green-600 hover:underline cursor-pointer"
               >
@@ -103,7 +109,7 @@ export default function PortalLogin() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <img src="/logo_tita.png" alt="La Cantina de Tita" className="h-32 w-auto mx-auto mb-3" />
+          <img src="/logo_tita.png" alt="La Cantina de Tita" className="h-24 w-auto mx-auto mb-3" />
           <p className="text-gray-500">Portal de Padres</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -113,6 +119,7 @@ export default function PortalLogin() {
             placeholder="tucorreo@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
             required
           />
           <Input
@@ -121,6 +128,7 @@ export default function PortalLogin() {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
             required
           />
           <Button variant="primary" block size="lg" loading={loading} type="submit">
@@ -129,6 +137,7 @@ export default function PortalLogin() {
         </form>
         <div className="mt-4 text-center space-y-2">
           <button
+            type="button"
             onClick={() => setOlvideModo(true)}
             className="text-sm text-green-600 hover:underline cursor-pointer"
           >
@@ -136,7 +145,7 @@ export default function PortalLogin() {
           </button>
           <p className="text-sm text-gray-400">
             ¿Trabajás en la cantina?{' '}
-            <a href="/login" className="text-green-600 hover:underline">Acceso empleados</a>
+            <Link to="/login" className="text-green-600 hover:underline">Acceso empleados</Link>
           </p>
         </div>
       </div>

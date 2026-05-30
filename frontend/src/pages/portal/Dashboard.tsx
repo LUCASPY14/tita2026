@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   CreditCard, AlertTriangle, UtensilsCrossed, History,
@@ -95,6 +95,9 @@ function formatFecha(iso: string) {
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
+      type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
       className={[
         'px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap',
@@ -332,13 +335,17 @@ export default function PortalDashboard() {
   const { user } = useAuthStore()
   const [data, setData] = useState<PortalData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [selectedHijoId, setSelectedHijoId] = useState<number | null>(null)
   const [tabs, setTabs] = useState<Record<number, HijoTab>>({})
   const [suscripciones, setSuscripciones] = useState<Record<number, Suscripcion[]>>({})
   const [loadingPlan, setLoadingPlan] = useState<Record<number, boolean>>({})
+  // Tracks which hijo plan requests have been initiated (prevents duplicate fetches)
+  const planRequestedRef = useRef<Set<number>>(new Set())
 
   const cargar = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const { data: res } = await api.get('/usuarios/portal/mi-hijo/')
       setData(res)
@@ -350,6 +357,7 @@ export default function PortalDashboard() {
       }
     } catch {
       toast.error('Error al cargar los datos')
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -358,7 +366,8 @@ export default function PortalDashboard() {
   useEffect(() => { cargar() }, [user, cargar])
 
   const loadPlan = useCallback(async (hijoId: number) => {
-    if (suscripciones[hijoId] !== undefined) return
+    if (planRequestedRef.current.has(hijoId)) return
+    planRequestedRef.current.add(hijoId)
     setLoadingPlan(prev => ({ ...prev, [hijoId]: true }))
     try {
       const { data: res } = await api.get('/almuerzos/suscripciones/', {
@@ -367,10 +376,11 @@ export default function PortalDashboard() {
       setSuscripciones(prev => ({ ...prev, [hijoId]: res.results ?? [] }))
     } catch {
       setSuscripciones(prev => ({ ...prev, [hijoId]: [] }))
+      planRequestedRef.current.delete(hijoId)
     } finally {
       setLoadingPlan(prev => ({ ...prev, [hijoId]: false }))
     }
-  }, [suscripciones])
+  }, [])
 
   const setTab = useCallback((hijoId: number, tab: HijoTab) => {
     setTabs(prev => ({ ...prev, [hijoId]: tab }))
@@ -378,6 +388,22 @@ export default function PortalDashboard() {
   }, [loadPlan])
 
   if (loading) return <Spinner className="mt-12" />
+
+  if (error) {
+    return (
+      <div className="py-16 text-center text-slate-400">
+        <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-40" />
+        <p className="text-base font-medium text-slate-600">No se pudieron cargar los datos</p>
+        <button
+          type="button"
+          onClick={cargar}
+          className="mt-4 px-4 py-2 text-sm font-medium text-green-700 border border-green-200 rounded-xl hover:bg-green-50 transition-colors cursor-pointer"
+        >
+          Reintentar
+        </button>
+      </div>
+    )
+  }
 
   if (!data || data.hijos.length === 0) {
     return (
@@ -403,9 +429,11 @@ export default function PortalDashboard() {
           </p>
         </div>
         <button
+          type="button"
           onClick={cargar}
           disabled={loading}
           className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-40 cursor-pointer shrink-0"
+          aria-label="Actualizar datos"
           title="Actualizar datos"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -417,8 +445,10 @@ export default function PortalDashboard() {
         <div className="flex gap-2 overflow-x-auto pb-1">
           {data.hijos.map(h => (
             <button
+              type="button"
               key={h.id}
               onClick={() => setSelectedHijoId(h.id)}
+              aria-pressed={h.id === selectedHijoId}
               className={[
                 'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors cursor-pointer shrink-0',
                 h.id === selectedHijoId
@@ -441,7 +471,7 @@ export default function PortalDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-slate-100 px-5 flex gap-1 overflow-x-auto">
+        <div role="tablist" className="border-b border-slate-100 px-5 flex gap-1 overflow-x-auto">
           <TabBtn active={tab === 'resumen'} onClick={() => setTab(hijo.id, 'resumen')}>
             Resumen
           </TabBtn>

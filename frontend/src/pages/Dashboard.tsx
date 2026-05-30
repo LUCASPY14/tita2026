@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ShoppingCart, Users, Package, AlertTriangle, Banknote,
@@ -7,7 +7,7 @@ import {
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  AreaChart, Area, type LegendProps,
+  AreaChart, Area,
 } from 'recharts'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
@@ -97,11 +97,12 @@ export default function Dashboard() {
   const hora = new Date().getHours()
   const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
 
-  if (loading) return <Spinner className="mt-24" />
+  const r = useMemo(
+    () => resumen ?? { ventasHoy: 0, montoHoy: 0, clientes: 0, productos: 0, stockBajo: 0, cajasAbiertas: 0 },
+    [resumen]
+  )
 
-  const r = resumen ?? { ventasHoy: 0, montoHoy: 0, clientes: 0, productos: 0, stockBajo: 0, cajasAbiertas: 0 }
-
-  const stats = [
+  const stats = useMemo(() => [
     {
       label: 'Ventas Hoy', value: r.ventasHoy, sub: `${r.montoHoy.toLocaleString('es-PY')} Gs.`,
       icon: ShoppingCart, color: 'text-blue-600', bg: 'bg-blue-50',
@@ -124,32 +125,50 @@ export default function Dashboard() {
       label: 'Cajas Abiertas', value: r.cajasAbiertas, sub: 'en operación',
       icon: Banknote, color: 'text-purple-600', bg: 'bg-purple-50',
     },
-  ]
+  ], [r])
 
-  const accesos = [
-    { path: '/ventas', label: 'Nueva Venta', icon: ShoppingCart, color: 'bg-blue-600', desc: 'Registrar venta en POS' },
-    { path: '/tarjetas', label: 'Recargar Tarjeta', icon: CreditCard, color: 'bg-emerald-600', desc: 'Carga de saldo' },
-    { path: '/caja', label: 'Gestionar Caja', icon: Banknote, color: 'bg-purple-600', desc: 'Abrir / cerrar caja' },
-    { path: '/compras', label: 'Nueva Compra', icon: Truck, color: 'bg-orange-600', desc: 'Registrar ingreso de stock' },
-  ]
+  const pieData = useMemo(
+    () => (chart?.por_tipo ?? []).map(t => ({
+      name: TIPO_LABEL[t.tipo] ?? t.tipo,
+      value: Number(t.monto) || 0,
+      cantidad: t.cantidad,
+    })),
+    [chart]
+  )
 
-  const togglePieSeries = (name: string) => {
+  const pieDataFiltered = useMemo(
+    () => pieData.filter(d => !hiddenPie.has(d.name)),
+    [pieData, hiddenPie]
+  )
+
+  const barData = useMemo(
+    () => (chart?.por_tipo ?? []).map(t => ({
+      tipo: TIPO_LABEL[t.tipo] ?? t.tipo,
+      Ventas: t.cantidad,
+      'Monto (k)': Math.round((Number(t.monto) || 0) / 1000),
+    })),
+    [chart]
+  )
+
+  const tendenciaData = useMemo(
+    () => tendencia.map(d => ({
+      dia: new Date(d.fecha + 'T00:00:00').toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' }),
+      Ventas: d.cantidad,
+      'Monto (k)': Math.round(d.monto / 1000),
+    })),
+    [tendencia]
+  )
+
+  const togglePieSeries = useCallback((name: string) => {
     setHiddenPie(prev => {
       const next = new Set(prev)
       if (next.has(name)) next.delete(name)
       else next.add(name)
       return next
     })
-  }
+  }, [])
 
-  const pieData = (chart?.por_tipo ?? []).map(t => ({
-    name: TIPO_LABEL[t.tipo] ?? t.tipo,
-    value: Number(t.monto) || 0,
-    cantidad: t.cantidad,
-  }))
-  const pieDataFiltered = pieData.filter(d => !hiddenPie.has(d.name))
-
-  const renderPieLegend = ({ payload = [] }: LegendProps) => (
+  const renderPieLegend = ({ payload = [] }: { payload?: ReadonlyArray<{ value: unknown; color?: string }> }) => (
     <div className="flex flex-wrap justify-center gap-1.5 mt-2 px-2">
       {payload.map((entry, i) => {
         const name = String(entry.value)
@@ -175,17 +194,14 @@ export default function Dashboard() {
     </div>
   )
 
-  const barData = (chart?.por_tipo ?? []).map(t => ({
-    tipo: TIPO_LABEL[t.tipo] ?? t.tipo,
-    Ventas: t.cantidad,
-    'Monto (k)': Math.round((Number(t.monto) || 0) / 1000),
-  }))
+  if (loading) return <Spinner className="mt-24" />
 
-  const tendenciaData = tendencia.map(d => ({
-    dia: new Date(d.fecha + 'T00:00:00').toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' }),
-    Ventas: d.cantidad,
-    'Monto (k)': Math.round(d.monto / 1000),
-  }))
+  const accesos = [
+    { path: '/ventas', label: 'Nueva Venta', icon: ShoppingCart, color: 'bg-blue-600', desc: 'Registrar venta en POS' },
+    { path: '/tarjetas', label: 'Recargar Tarjeta', icon: CreditCard, color: 'bg-emerald-600', desc: 'Carga de saldo' },
+    { path: '/caja', label: 'Gestionar Caja', icon: Banknote, color: 'bg-purple-600', desc: 'Abrir / cerrar caja' },
+    { path: '/compras', label: 'Nueva Compra', icon: Truck, color: 'bg-orange-600', desc: 'Registrar ingreso de stock' },
+  ]
 
   return (
     <div className="p-4 md:p-6 space-y-6">

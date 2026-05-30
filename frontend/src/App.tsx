@@ -1,13 +1,15 @@
 import { Component, useEffect, type ReactNode } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Login from './pages/Login'
+import RecuperarPassword from './pages/RecuperarPassword'
+import RestablecerPassword from './pages/RestablecerPassword'
 import AppLayout from './components/Layout'
 import PortalLayout from './components/PortalLayout'
 import Productos from './pages/Productos'
 import Clientes from './pages/Clientes'
 import Tarjetas from './pages/Tarjetas'
-import Ventas from './pages/Ventas'
+// Ventas eliminado — se usa ModoRecreo como POS principal
 import Caja from './pages/Cajas'
 import Compras from './pages/Compras'
 import Dashboard from './pages/Dashboard'
@@ -62,6 +64,23 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
   return <>{children}</>
 }
 
+function AuthMonitor() {
+  const navigate = useNavigate()
+  const { logout, user } = useAuthStore()
+
+  useEffect(() => {
+    const handle = () => {
+      const isPortal = user?.rol === 'CLIENTE_WEB'
+      logout()
+      navigate(isPortal ? '/portal/login' : '/login', { replace: true })
+    }
+    window.addEventListener('auth:logout', handle)
+    return () => window.removeEventListener('auth:logout', handle)
+  }, [logout, navigate, user])
+
+  return null
+}
+
 export default function App() {
   const { loadUser } = useAuthStore()
 
@@ -72,6 +91,7 @@ export default function App() {
   return (
     <ErrorBoundary>
     <BrowserRouter>
+      <AuthMonitor />
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <Routes>
         {/* Portal padres (separado) */}
@@ -88,13 +108,15 @@ export default function App() {
 
         {/* Sistema de gestión */}
         <Route path="/login" element={<Login />} />
+        <Route path="/recuperar-password" element={<RecuperarPassword />} />
+        <Route path="/reset-password" element={<RestablecerPassword />} />
         <Route element={
           <PrivateRoute roles={['ADMIN', 'CAJERO', 'COCINA']}>
             <AppLayout />
           </PrivateRoute>
         }>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/ventas" element={<Ventas />} />
+          <Route path="/ventas" element={<Navigate to="/modo-recreo" />} />
           <Route path="/compras" element={<Compras />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/productos" element={<Productos />} />

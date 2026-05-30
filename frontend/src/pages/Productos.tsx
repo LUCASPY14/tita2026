@@ -4,6 +4,7 @@ import {
   Plus, Search, Package, Edit2, AlertTriangle, Tag, TrendingDown,
 } from 'lucide-react'
 import api from '../services/api'
+import { useCatalogoStore } from '../store/catalogoStore'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -121,6 +122,12 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
     )
   }, [open, producto])
 
+  useEffect(() => {
+    if (form.es_servicio) {
+      setForm(prev => ({ ...prev, requiere_stock: false, stock_minimo: '0' }))
+    }
+  }, [form.es_servicio])
+
   function setText(field: keyof ProductoForm) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(prev => ({ ...prev, [field]: e.target.value }))
@@ -173,6 +180,7 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
           type="button"
           role="switch"
           aria-checked={checked}
+          aria-label={label}
           onClick={() => toggleBool(field)}
           className={[
             'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30 shrink-0',
@@ -251,7 +259,7 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
             min="0"
             step="1"
             value={form.stock_minimo}
-            onChange={setText('stock_minimo')}
+            onChange={e => setForm(prev => ({ ...prev, stock_minimo: String(Math.max(0, Number(e.target.value) || 0)) }))}
             placeholder="0"
           />
         </div>
@@ -274,6 +282,7 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
 const PAGE_SIZE = 25
 
 export default function Productos() {
+  const invalidateCatalogo = useCatalogoStore(state => state.invalidate)
   const [productos, setProductos] = useState<Producto[]>([])
   const [stockMap, setStockMap] = useState<Record<number, StockRecord>>({})
   const [categorias, setCategorias] = useState<Categoria[]>([])
@@ -369,6 +378,7 @@ export default function Productos() {
   function handleSaved() {
     loadProductos()
     loadStock()
+    invalidateCatalogo()
   }
 
   const columns = useMemo<Column<Producto>[]>(() => [
@@ -476,8 +486,9 @@ export default function Productos() {
   const stats = useMemo(() => ({
     activos: productos.filter(p => p.activo).length,
     sinStock: productos.filter(p => {
-      const s = stockMap[p.id]
-      return p.requiere_stock && !p.es_servicio && s && Number(s.cantidad) <= 0
+      if (!p.requiere_stock || p.es_servicio) return false
+      const cantidad = stockMap[p.id] ? Number(stockMap[p.id].cantidad) : 0
+      return cantidad <= 0
     }).length,
   }), [productos, stockMap])
 

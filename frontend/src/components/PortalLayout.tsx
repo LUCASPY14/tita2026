@@ -12,6 +12,11 @@ export default function PortalLayout() {
   const location = useLocation()
   const { user, logout } = useAuthStore()
 
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
@@ -24,7 +29,8 @@ export default function PortalLayout() {
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-600 hidden sm:block">{user?.nombre}</span>
             <button
-              onClick={logout}
+              type="button"
+              onClick={handleLogout}
               className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -48,8 +54,10 @@ export default function PortalLayout() {
               : location.pathname.startsWith(path)
             return (
               <button
+                type="button"
                 key={path}
                 onClick={() => navigate(path)}
+                aria-current={active ? 'page' : undefined}
                 className={[
                   'flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium',
                   'transition-colors cursor-pointer relative',

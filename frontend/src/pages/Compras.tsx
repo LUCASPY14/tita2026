@@ -6,6 +6,7 @@ import {
   Building2, DollarSign, X,
 } from 'lucide-react'
 import api from '../services/api'
+import { useCatalogoStore } from '../store/catalogoStore'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -74,6 +75,7 @@ interface Compra {
   fecha: string
   monto_total: string | number
   estado_pago: string
+  estado_entrega: string
   tipo_pago: string
   nro_factura_proveedor: string
   saldo_pendiente: string | number
@@ -122,6 +124,11 @@ const TIPO_PAGO_COLOR: Record<string, BadgeColor> = {
   CREDITO: 'orange',
 }
 
+const ESTADO_ENTREGA_COLOR: Record<string, BadgeColor> = {
+  PENDIENTE: 'orange',
+  RECIBIDA: 'green',
+}
+
 const MEDIO_PAGO_COLOR: Record<string, BadgeColor> = {
   EFECTIVO: 'green',
   TRANSFERENCIA: 'blue',
@@ -142,6 +149,7 @@ const ITEM_EMPTY: ItemForm = { producto: null, cantidad: 1, costo_unitario: 0, s
 
 export default function Compras() {
   const [tab, setTab] = useState<TabKey>('compras')
+  const getProductos = useCatalogoStore(state => state.getProductos)
 
   // ── Catalogs ────────────────────────────────────────────────────
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
@@ -154,9 +162,11 @@ export default function Compras() {
   const [filterEstado, setFilterEstado] = useState('')
   const [filterTipo, setFilterTipo] = useState('')
   const [filterProveedor, setFilterProveedor] = useState('')
+  const [filterEntrega, setFilterEntrega] = useState('')
   const [pageCompras, setPageCompras] = useState(1)
   const [totalCompras, setTotalCompras] = useState(0)
   const searchTimerCompras = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const requestIdComprasRef = useRef(0)
 
   // ── Proveedores list ────────────────────────────────────────────
   const [pageProveedores, setPageProveedores] = useState(1)
@@ -164,12 +174,14 @@ export default function Compras() {
   const [loadingProv, setLoadingProv] = useState(false)
   const [searchProv, setSearchProv] = useState('')
   const searchTimerProv = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const requestIdProvRef = useRef(0)
 
   // ── Pagos list ──────────────────────────────────────────────────
   const [pagos, setPagos] = useState<PagoProveedor[]>([])
   const [loadingPagos, setLoadingPagos] = useState(false)
   const [pagePagos, setPagePagos] = useState(1)
   const [totalPagos, setTotalPagos] = useState(0)
+  const requestIdPagosRef = useRef(0)
 
   // ── Compra detail modal ─────────────────────────────────────────
   const [detailCompra, setDetailCompra] = useState<Compra | null>(null)
@@ -207,17 +219,15 @@ export default function Compras() {
 
   // ── Load catalogs ────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([
-      api.get('/compras/proveedores/', { params: { activo: true, page_size: 500 } }),
-      api.get('/productos/productos/', { params: { page_size: 500 } }),
-    ]).then(([pRes, prodRes]) => {
-      setProveedores(pRes.data.results ?? [])
-      setProductos(prodRes.data.results ?? [])
-    }).catch(() => {})
-  }, [])
+    api.get('/compras/proveedores/', { params: { activo: true, page_size: 500 } })
+      .then(res => setProveedores(res.data.results ?? []))
+      .catch(() => {})
+    getProductos().then(prods => setProductos(prods as Producto[])).catch(() => {})
+  }, [getProductos])
 
   // ── Load compras ─────────────────────────────────────────────────
-  const loadCompras = useCallback(async (search: string, estado: string, tipo: string, prov: string, p: number) => {
+  const loadCompras = useCallback(async (search: string, estado: string, tipo: string, prov: string, entrega: string, p: number) => {
+    const requestId = ++requestIdComprasRef.current
     setLoadingCompras(true)
     try {
       const params: Record<string, unknown> = { page: p, page_size: 15 }
@@ -225,13 +235,16 @@ export default function Compras() {
       if (estado) params.estado_pago = estado
       if (tipo) params.tipo_pago = tipo
       if (prov) params.proveedor = prov
+      if (entrega) params.estado_entrega = entrega
       const { data } = await api.get('/compras/compras/', { params })
+      if (requestId !== requestIdComprasRef.current) return
       setCompras(data.results ?? [])
       setTotalCompras(data.count ?? 0)
     } catch {
+      if (requestId !== requestIdComprasRef.current) return
       toast.error('Error al cargar compras')
     } finally {
-      setLoadingCompras(false)
+      if (requestId === requestIdComprasRef.current) setLoadingCompras(false)
     }
   }, [])
 
@@ -239,30 +252,27 @@ export default function Compras() {
     clearTimeout(searchTimerCompras.current)
     searchTimerCompras.current = setTimeout(() => {
       setPageCompras(1)
-      loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, 1)
+      loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, 1)
     }, 350)
     return () => clearTimeout(searchTimerCompras.current)
-  }, [searchCompras, filterEstado, filterTipo, filterProveedor, loadCompras])
-
-  useEffect(() => {
-    loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, pageCompras)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageCompras])
+  }, [searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, loadCompras])
 
   // ── Load proveedores with pagination ─────────────────────────────
   const loadProveedores = useCallback(async (search: string, p: number) => {
+    const requestId = ++requestIdProvRef.current
     setLoadingProv(true)
     try {
       const params: Record<string, unknown> = { page: p, page_size: 15 }
       if (search) params.search = search
       const { data } = await api.get('/compras/proveedores/', { params })
-      setProveedores(prev => p === 1 ? (data.results ?? []) : prev)
+      if (requestId !== requestIdProvRef.current) return
+      setProveedores(data.results ?? [])
       setTotalProveedores(data.count ?? 0)
-      if (p === 1) setProveedores(data.results ?? [])
     } catch {
+      if (requestId !== requestIdProvRef.current) return
       toast.error('Error al cargar proveedores')
     } finally {
-      setLoadingProv(false)
+      if (requestId === requestIdProvRef.current) setLoadingProv(false)
     }
   }, [])
 
@@ -277,22 +287,20 @@ export default function Compras() {
     }
   }, [searchProv, tab, loadProveedores])
 
-  useEffect(() => {
-    if (tab === 'proveedores') loadProveedores(searchProv, pageProveedores)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageProveedores])
-
   // ── Load pagos ───────────────────────────────────────────────────
   const loadPagos = useCallback(async (p: number) => {
+    const requestId = ++requestIdPagosRef.current
     setLoadingPagos(true)
     try {
       const { data } = await api.get('/compras/pagos/', { params: { page: p, page_size: 15 } })
+      if (requestId !== requestIdPagosRef.current) return
       setPagos(data.results ?? [])
       setTotalPagos(data.count ?? 0)
     } catch {
+      if (requestId !== requestIdPagosRef.current) return
       toast.error('Error al cargar pagos')
     } finally {
-      setLoadingPagos(false)
+      if (requestId === requestIdPagosRef.current) setLoadingPagos(false)
     }
   }, [])
 
@@ -367,7 +375,7 @@ export default function Compras() {
       }
       setCompraModalOpen(false)
       setPageCompras(1)
-      loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, 1)
+      loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, 1)
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {
@@ -398,7 +406,7 @@ export default function Compras() {
       })
       toast.success('Pago registrado')
       setPagoModalOpen(false)
-      loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, pageCompras)
+      loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, pageCompras)
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {
@@ -461,7 +469,14 @@ export default function Compras() {
     {
       title: 'Estado',
       key: 'estado',
-      render: (_, r) => <Badge color={ESTADO_PAGO_COLOR[r.estado_pago] ?? 'default'}>{r.estado_pago}</Badge>,
+      render: (_, r) => (
+        <div className="flex flex-col gap-1">
+          <Badge color={ESTADO_PAGO_COLOR[r.estado_pago] ?? 'default'}>{r.estado_pago}</Badge>
+          {r.tipo_pago === 'CREDITO' && (
+            <Badge color={ESTADO_ENTREGA_COLOR[r.estado_entrega] ?? 'default'}>{r.estado_entrega}</Badge>
+          )}
+        </div>
+      ),
     },
     {
       title: '',
@@ -705,6 +720,18 @@ export default function Compras() {
                 <option value="CREDITO">Crédito</option>
               </select>
             </div>
+            <div>
+              <label className={labelClass}>Entrega</label>
+              <select
+                value={filterEntrega}
+                onChange={e => { setFilterEntrega(e.target.value); setPageCompras(1) }}
+                className={`${inputClass} w-auto`}
+              >
+                <option value="">Todas</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="RECIBIDA">Recibida</option>
+              </select>
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -716,7 +743,7 @@ export default function Compras() {
                 loading={loadingCompras}
                 pageSize={15}
                 page={pageCompras}
-                onPageChange={setPageCompras}
+                onPageChange={p => { setPageCompras(p); loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, p) }}
                 total={totalCompras}
               />
             </div>
@@ -748,7 +775,7 @@ export default function Compras() {
                 loading={loadingProv}
                 pageSize={15}
                 page={pageProveedores}
-                onPageChange={setPageProveedores}
+                onPageChange={p => { setPageProveedores(p); loadProveedores(searchProv, p) }}
                 total={totalProveedores}
               />
             </div>
@@ -802,6 +829,11 @@ export default function Compras() {
           <div className="flex items-center gap-2 mb-4">
             <Badge color={TIPO_PAGO_COLOR[detailCompra.tipo_pago] ?? 'default'}>{detailCompra.tipo_pago}</Badge>
             <Badge color={ESTADO_PAGO_COLOR[detailCompra.estado_pago] ?? 'default'}>{detailCompra.estado_pago}</Badge>
+            {detailCompra.tipo_pago === 'CREDITO' && (
+              <Badge color={ESTADO_ENTREGA_COLOR[detailCompra.estado_entrega] ?? 'default'}>
+                Entrega: {detailCompra.estado_entrega}
+              </Badge>
+            )}
           </div>
 
           <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Detalle de productos</h3>

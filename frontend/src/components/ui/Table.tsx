@@ -73,6 +73,7 @@ export default function Table<T extends object>({
                     <button
                       onClick={() => onSort?.(col.key, sortKey === col.key && sortDir === 'asc' ? 'desc' : 'asc')}
                       className="flex items-center gap-1 hover:text-slate-800 transition-colors cursor-pointer"
+                      aria-label={`Ordenar por ${col.title}`}
                     >
                       {col.title}
                       {sortKey === col.key ? (
@@ -140,7 +141,8 @@ export default function Table<T extends object>({
             <button
               className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page === 1}
+              disabled={loading || page === 1}
+              aria-label="Página anterior"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
@@ -153,12 +155,15 @@ export default function Table<T extends object>({
             }).map((p) => (
               <button
                 key={p}
-                className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   p === page
                     ? 'bg-green-600 text-white shadow-sm shadow-green-600/25'
                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
                 onClick={() => setPage(p)}
+                disabled={loading}
+                aria-label={`Ir a página ${p}`}
+                aria-current={p === page ? 'page' : undefined}
               >
                 {p}
               </button>
@@ -166,7 +171,8 @@ export default function Table<T extends object>({
             <button
               className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page === totalPages}
+              disabled={loading || page === totalPages}
+              aria-label="Página siguiente"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>

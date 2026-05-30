@@ -695,6 +695,7 @@ export default function Clientes() {
   })
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const requestIdRef = useRef(0)
 
   useEffect(() => {
     api.get('/clientes/tipos-cliente/').then(({ data }) => setTiposCliente(data.results ?? data)).catch(() => {})
@@ -702,6 +703,7 @@ export default function Clientes() {
   }, [])
 
   const loadClientes = useCallback(async () => {
+    const requestId = ++requestIdRef.current
     setLoading(true)
     try {
       const params: Record<string, string | number> = { page, page_size: PAGE_SIZE }
@@ -709,12 +711,14 @@ export default function Clientes() {
       if (filterActivo) params.activo = filterActivo
       if (filterTipo) params.tipo_cliente = filterTipo
       const { data } = await api.get('/clientes/clientes/', { params })
+      if (requestId !== requestIdRef.current) return
       setClientes(data.results ?? [])
       setTotal(data.count ?? 0)
     } catch {
+      if (requestId !== requestIdRef.current) return
       toast.error('Error al cargar clientes')
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) setLoading(false)
     }
   }, [page, search, filterActivo, filterTipo])
 

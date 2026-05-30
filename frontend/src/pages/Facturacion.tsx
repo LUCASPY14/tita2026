@@ -92,6 +92,7 @@ export default function Facturacion() {
   const [pageFact, setPageFact] = useState(1)
   const [totalFact, setTotalFact] = useState(0)
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const requestIdRef = useRef(0)
 
   const [emitirModal, setEmitirModal] = useState<PendienteItem | null>(null)
   const [nroFactura, setNroFactura] = useState('')
@@ -115,18 +116,21 @@ export default function Facturacion() {
 
   // ── Load facturas ────────────────────────────────────────────────
   const loadFacturas = useCallback(async (search: string, estado: string, p: number) => {
+    const requestId = ++requestIdRef.current
     setLoadingFact(true)
     try {
       const params: Record<string, unknown> = { page: p, page_size: 15, ordering: '-fecha_emision' }
       if (search) params.search = search
       if (estado) params.estado = estado
       const { data } = await api.get('/contabilidad/facturas/', { params })
+      if (requestId !== requestIdRef.current) return
       setFacturas(data.results ?? [])
       setTotalFact(data.count ?? 0)
     } catch {
+      if (requestId !== requestIdRef.current) return
       toast.error('Error al cargar facturas')
     } finally {
-      setLoadingFact(false)
+      if (requestId === requestIdRef.current) setLoadingFact(false)
     }
   }, [])
 
@@ -136,7 +140,7 @@ export default function Facturacion() {
       setPageFact(1)
       loadFacturas(searchFact, filterEstado, 1)
     }
-  }, [tab])
+  }, [tab, loadPendientes, loadFacturas, searchFact, filterEstado])
 
   useEffect(() => {
     if (tab !== 'emitidas') return
@@ -147,11 +151,6 @@ export default function Facturacion() {
     }, 350)
     return () => clearTimeout(searchTimer.current)
   }, [searchFact, filterEstado])
-
-  useEffect(() => {
-    if (tab === 'emitidas') loadFacturas(searchFact, filterEstado, pageFact)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageFact])
 
   // ── Emitir ───────────────────────────────────────────────────────
   const emitirFactura = useCallback(async () => {
@@ -388,7 +387,7 @@ export default function Facturacion() {
                 loading={loadingFact}
                 pageSize={15}
                 page={pageFact}
-                onPageChange={setPageFact}
+                onPageChange={p => { setPageFact(p); loadFacturas(searchFact, filterEstado, p) }}
                 total={totalFact}
               />
             </div>

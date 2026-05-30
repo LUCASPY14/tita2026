@@ -50,6 +50,7 @@ export default function Button({
 }: ButtonProps) {
   return (
     <button
+      type="button"
       {...props}
       disabled={disabled || loading}
       className={[
@@ -64,13 +65,7 @@ export default function Button({
         className,
       ].join(' ')}
     >
-      <Loader2
-        aria-hidden="true"
-        className={[
-          'h-4 w-4 shrink-0 transition-all duration-150',
-          loading ? 'animate-spin' : 'w-0 opacity-0 overflow-hidden',
-        ].join(' ')}
-      />
+      {loading && <Loader2 aria-hidden="true" className="h-4 w-4 shrink-0 animate-spin" />}
       {!loading && icon && <span className="shrink-0">{icon}</span>}
       {children}
     </button>

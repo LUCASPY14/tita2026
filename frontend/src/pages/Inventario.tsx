@@ -144,6 +144,9 @@ export default function Inventario() {
   const [sortMovKey, setSortMovKey] = useState('fecha')
   const [sortMovDir, setSortMovDir] = useState<'asc' | 'desc'>('desc')
   const searchTimerMov = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const requestIdAjustesRef = useRef(0)
+  const requestIdMovRef = useRef(0)
+  const requestIdLotesRef = useRef(0)
 
   // ── Lotes ─────────────────────────────────────────────────────────
   const [lotes, setLotes] = useState<Lote[]>([])
@@ -164,18 +167,21 @@ export default function Inventario() {
 
   // ── Load ajustes ──────────────────────────────────────────────────
   const loadAjustes = useCallback(async (estado: string, tipo: string, p: number) => {
+    const requestId = ++requestIdAjustesRef.current
     setLoadingAjustes(true)
     try {
       const params: Record<string, unknown> = { page: p, page_size: 15, ordering: '-fecha' }
       if (estado) params.estado = estado
       if (tipo) params.tipo = tipo
       const { data } = await api.get('/inventario/ajustes/', { params })
+      if (requestId !== requestIdAjustesRef.current) return
       setAjustes(data.results ?? [])
       setTotalAjustes(data.count ?? 0)
     } catch {
+      if (requestId !== requestIdAjustesRef.current) return
       toast.error('Error al cargar ajustes')
     } finally {
-      setLoadingAjustes(false)
+      if (requestId === requestIdAjustesRef.current) setLoadingAjustes(false)
     }
   }, [])
 
@@ -186,13 +192,9 @@ export default function Inventario() {
     }
   }, [tab, filterEstado, filterTipoAjuste, loadAjustes])
 
-  useEffect(() => {
-    if (tab === 'ajustes') loadAjustes(filterEstado, filterTipoAjuste, pageAjustes)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageAjustes])
-
   // ── Load movimientos ──────────────────────────────────────────────
   const loadMovimientos = useCallback(async (prod: string, tipo: string, p: number) => {
+    const requestId = ++requestIdMovRef.current
     setLoadingMov(true)
     try {
       const ordering = sortMovDir === 'asc' ? sortMovKey : `-${sortMovKey}`
@@ -200,12 +202,14 @@ export default function Inventario() {
       if (prod) params.producto = prod
       if (tipo) params.tipo = tipo
       const { data } = await api.get('/inventario/movimientos/', { params })
+      if (requestId !== requestIdMovRef.current) return
       setMovimientos(data.results ?? [])
       setTotalMov(data.count ?? 0)
     } catch {
+      if (requestId !== requestIdMovRef.current) return
       toast.error('Error al cargar movimientos')
     } finally {
-      setLoadingMov(false)
+      if (requestId === requestIdMovRef.current) setLoadingMov(false)
     }
   }, [sortMovKey, sortMovDir])
 
@@ -219,13 +223,9 @@ export default function Inventario() {
     return () => clearTimeout(searchTimerMov.current)
   }, [tab, filterProductoMov, filterTipoMov, loadMovimientos])
 
-  useEffect(() => {
-    if (tab === 'movimientos') loadMovimientos(filterProductoMov, filterTipoMov, pageMov)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageMov])
-
   // ── Load lotes ────────────────────────────────────────────────────
   const loadLotes = useCallback(async (prod: string, vencido: string, p: number) => {
+    const requestId = ++requestIdLotesRef.current
     setLoadingLotes(true)
     try {
       const ordering = sortLotesDir === 'asc' ? sortLotesKey : `-${sortLotesKey}`
@@ -233,12 +233,14 @@ export default function Inventario() {
       if (prod) params.producto = prod
       if (vencido !== '') params.bloqueado = vencido
       const { data } = await api.get('/inventario/lotes/', { params })
+      if (requestId !== requestIdLotesRef.current) return
       setLotes(data.results ?? [])
       setTotalLotes(data.count ?? 0)
     } catch {
+      if (requestId !== requestIdLotesRef.current) return
       toast.error('Error al cargar lotes')
     } finally {
-      setLoadingLotes(false)
+      if (requestId === requestIdLotesRef.current) setLoadingLotes(false)
     }
   }, [sortLotesKey, sortLotesDir])
 
@@ -248,11 +250,6 @@ export default function Inventario() {
       loadLotes(filterProductoLote, filterVencido, 1)
     }
   }, [tab, filterProductoLote, filterVencido, loadLotes])
-
-  useEffect(() => {
-    if (tab === 'lotes') loadLotes(filterProductoLote, filterVencido, pageLotes)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageLotes])
 
   // ── Ajuste actions ────────────────────────────────────────────────
   const handleSaveAjuste = useCallback(async () => {
@@ -538,7 +535,7 @@ export default function Inventario() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-1">
               <Table columns={colsAjustes} dataSource={ajustes} rowKey="id" loading={loadingAjustes}
-                pageSize={15} page={pageAjustes} onPageChange={setPageAjustes} total={totalAjustes} />
+                pageSize={15} page={pageAjustes} onPageChange={p => { setPageAjustes(p); loadAjustes(filterEstado, filterTipoAjuste, p) }} total={totalAjustes} />
             </div>
           </div>
         </>
@@ -571,7 +568,7 @@ export default function Inventario() {
             <div className="p-1">
               <Table
                 columns={colsMov} dataSource={movimientos} rowKey="id" loading={loadingMov}
-                pageSize={15} page={pageMov} onPageChange={setPageMov} total={totalMov}
+                pageSize={15} page={pageMov} onPageChange={p => { setPageMov(p); loadMovimientos(filterProductoMov, filterTipoMov, p) }} total={totalMov}
                 sortKey={sortMovKey} sortDir={sortMovDir}
                 onSort={(key, dir) => { setSortMovKey(key); setSortMovDir(dir) }}
               />
@@ -614,7 +611,7 @@ export default function Inventario() {
             <div className="p-1">
               <Table
                 columns={colsLotes} dataSource={lotes} rowKey="id" loading={loadingLotes}
-                pageSize={15} page={pageLotes} onPageChange={setPageLotes} total={totalLotes}
+                pageSize={15} page={pageLotes} onPageChange={p => { setPageLotes(p); loadLotes(filterProductoLote, filterVencido, p) }} total={totalLotes}
                 sortKey={sortLotesKey} sortDir={sortLotesDir}
                 onSort={(key, dir) => { setSortLotesKey(key); setSortLotesDir(dir) }}
               />

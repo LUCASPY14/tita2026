@@ -9,24 +9,27 @@ export default function PortalResetPassword() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const uid = searchParams.get('uid') || ''
-  const token = searchParams.get('token') || ''
+  const uid = searchParams.get('uid') ?? ''
+  const token = searchParams.get('token') ?? ''
 
   const [password, setPassword] = useState('')
   const [confirmar, setConfirmar] = useState('')
+  const [errors, setErrors] = useState<{ password?: string; confirmar?: string }>({})
   const [loading, setLoading] = useState(false)
   const [exito, setExito] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const validate = (): boolean => {
+    const e: { password?: string; confirmar?: string } = {}
+    if (password.length < 6) e.password = 'Debe tener al menos 6 caracteres'
+    if (!confirmar) e.confirmar = 'Confirmá tu contraseña'
+    else if (password !== confirmar) e.confirmar = 'Las contraseñas no coinciden'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const handleSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
-    if (password.length < 6) {
-      toast.error('La contraseña debe tener al menos 6 caracteres')
-      return
-    }
-    if (password !== confirmar) {
-      toast.error('Las contraseñas no coinciden')
-      return
-    }
+    if (!validate()) return
     setLoading(true)
     try {
       await api.post('/usuarios/recuperar-password/confirmar/', {
@@ -36,9 +39,9 @@ export default function PortalResetPassword() {
       })
       setExito(true)
       toast.success('Contraseña restablecida correctamente')
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: string } } }
-      toast.error(err?.response?.data?.error || 'Enlace inválido o expirado')
+    } catch {
+      toast.error('El enlace es inválido o ya fue usado')
+      navigate('/portal/login', { replace: true })
     } finally {
       setLoading(false)
     }
@@ -48,14 +51,15 @@ export default function PortalResetPassword() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center">
-          <p className="text-4xl mb-4">⚠</p>
+          <p className="text-4xl mb-4">⚠️</p>
           <p className="text-gray-700 font-semibold">Enlace inválido</p>
           <p className="text-gray-500 text-sm mt-2">
             El enlace de recuperación no es válido. Solicitá uno nuevo desde el login.
           </p>
           <button
-            onClick={() => navigate('/portal/login')}
-            className="mt-4 text-sm text-green-600 hover:underline"
+            type="button"
+            onClick={() => navigate('/portal/login', { replace: true })}
+            className="mt-4 text-sm text-green-600 hover:underline cursor-pointer"
           >
             Volver al login
           </button>
@@ -71,7 +75,7 @@ export default function PortalResetPassword() {
           <p className="text-5xl mb-4">✅</p>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Contraseña restablecida</h2>
           <p className="text-gray-500 text-sm mb-6">Ya podés iniciar sesión con tu nueva contraseña.</p>
-          <Button variant="primary" block onClick={() => navigate('/portal/login')}>
+          <Button variant="primary" block onClick={() => navigate('/portal/login', { replace: true })}>
             Ir al login
           </Button>
         </div>
@@ -83,7 +87,7 @@ export default function PortalResetPassword() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <img src="/logo_tita.png" alt="Cantina Tita" className="h-16 w-auto mx-auto mb-4" />
+          <img src="/logo_tita.png" alt="Cantina Tita" className="h-24 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-green-800">Nueva contraseña</h1>
           <p className="text-gray-500 mt-2 text-sm">Ingresá tu nueva contraseña</p>
         </div>
@@ -93,7 +97,12 @@ export default function PortalResetPassword() {
             type="password"
             placeholder="Mínimo 6 caracteres"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              if (errors.password) setErrors(prev => ({ ...prev, password: undefined }))
+            }}
+            error={errors.password}
+            autoComplete="new-password"
             required
           />
           <Input
@@ -101,7 +110,12 @@ export default function PortalResetPassword() {
             type="password"
             placeholder="Repetí la contraseña"
             value={confirmar}
-            onChange={(e) => setConfirmar(e.target.value)}
+            onChange={(e) => {
+              setConfirmar(e.target.value)
+              if (errors.confirmar) setErrors(prev => ({ ...prev, confirmar: undefined }))
+            }}
+            error={errors.confirmar}
+            autoComplete="new-password"
             required
           />
           <Button variant="primary" block size="lg" loading={loading} type="submit">
@@ -110,8 +124,9 @@ export default function PortalResetPassword() {
         </form>
         <p className="text-center text-sm text-gray-400 mt-6">
           <button
-            onClick={() => navigate('/portal/login')}
-            className="text-green-600 hover:underline"
+            type="button"
+            onClick={() => navigate('/portal/login', { replace: true })}
+            className="text-green-600 hover:underline cursor-pointer"
           >
             Volver al login
           </button>

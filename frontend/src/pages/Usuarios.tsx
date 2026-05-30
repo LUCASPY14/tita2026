@@ -103,6 +103,7 @@ export default function Usuarios() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const requestIdRef = useRef(0)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<Usuario | null>(null)
@@ -120,18 +121,21 @@ export default function Usuarios() {
 
   // ── Load usuarios ─────────────────────────────────────────────────
   const loadUsuarios = useCallback(async (q: string, rol: string, p: number) => {
+    const requestId = ++requestIdRef.current
     setLoading(true)
     try {
       const params: Record<string, unknown> = { page: p, page_size: 15 }
       if (q) params.search = q
       if (rol) params.rol = rol
       const { data } = await api.get('/usuarios/usuarios/', { params })
+      if (requestId !== requestIdRef.current) return
       setUsuarios(data.results ?? [])
       setTotal(data.count ?? 0)
     } catch {
+      if (requestId !== requestIdRef.current) return
       toast.error('Error al cargar usuarios')
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) setLoading(false)
     }
   }, [])
 
@@ -143,11 +147,6 @@ export default function Usuarios() {
     }, 350)
     return () => clearTimeout(searchTimer.current)
   }, [search, filterRol, loadUsuarios])
-
-  useEffect(() => {
-    loadUsuarios(search, filterRol, page)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page])
 
   // ── Load roles / permisos ─────────────────────────────────────────
   const loadRoles = useCallback(async () => {
@@ -233,6 +232,7 @@ export default function Usuarios() {
   const handleSave = useCallback(async () => {
     if (!form.email || !form.nombre) { toast.error('Completá email y nombre'); return }
     if (!editingUser && form.password.length < 6) { toast.error('La contraseña debe tener mínimo 6 caracteres'); return }
+    if (editingUser && form.password && form.password.length < 6) { toast.error('La nueva contraseña debe tener mínimo 6 caracteres'); return }
     setSaving(true)
     try {
       const payload: Record<string, unknown> = {
@@ -412,7 +412,7 @@ export default function Usuarios() {
                 loading={loading}
                 pageSize={15}
                 page={page}
-                onPageChange={setPage}
+                onPageChange={p => { setPage(p); loadUsuarios(search, filterRol, p) }}
                 total={total}
               />
             </div>

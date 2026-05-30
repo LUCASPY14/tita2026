@@ -112,6 +112,7 @@ export default function Reportes() {
       })
       setData(res)
     } catch {
+      setData(null)
       toast.error('Error al cargar el reporte')
     } finally {
       setLoading(false)
@@ -221,7 +222,7 @@ export default function Reportes() {
     },
     {
       title: 'Contado',
-      key: 'contado',
+      key: 'monto_contado_fisico',
       render: (_, r) => <span className="tabular-nums text-sm text-slate-700">{formatGs(r.monto_contado_fisico)}</span>,
     },
     {
@@ -362,11 +363,11 @@ export default function Reportes() {
             </Button>
             {data && (
               <>
-                <Button variant="secondary" onClick={exportarCSV}>
+                <Button variant="secondary" onClick={exportarCSV} disabled={loading}>
                   <Download className="w-4 h-4" />
                   CSV
                 </Button>
-                <Button variant="secondary" onClick={() => exportarReporteVentasPDF(data, desde, hasta)}>
+                <Button variant="secondary" onClick={() => exportarReporteVentasPDF(data, desde, hasta)} disabled={loading}>
                   <FileText className="w-4 h-4" />
                   PDF
                 </Button>

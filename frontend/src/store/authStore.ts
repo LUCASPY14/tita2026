@@ -31,6 +31,11 @@ function clearInactivityTimer() {
   }
 }
 
+function clearTokens() {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: !!localStorage.getItem('access_token'),
@@ -45,9 +50,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: () => {
     clearInactivityTimer()
-    localStorage.clear()
+    clearTokens()
     set({ user: null, isAuthenticated: false })
-    window.location.href = '/login'
+    window.dispatchEvent(new Event('auth:logout'))
   },
 
   loadUser: async () => {
@@ -58,7 +63,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       get().resetInactivityTimer()
     } catch {
       clearInactivityTimer()
-      localStorage.clear()
+      clearTokens()
       set({ user: null, isAuthenticated: false })
     }
   },
@@ -82,4 +87,9 @@ if (typeof window !== 'undefined') {
   ACTIVITY_EVENTS.forEach((event) =>
     window.addEventListener(event, handleActivity, { passive: true })
   )
+
+  // Start inactivity timer immediately on page reload if already authenticated
+  if (useAuthStore.getState().isAuthenticated) {
+    useAuthStore.getState().resetInactivityTimer()
+  }
 }

@@ -10,8 +10,6 @@ export const BADGE_COLORS: Record<BadgeColor, string> = {
   default: 'bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-500/20',
 }
 
-const colors = BADGE_COLORS
-
 interface BadgeProps {
   color?: BadgeColor
   children: React.ReactNode
@@ -21,7 +19,7 @@ interface BadgeProps {
 export default function Badge({ color = 'default', children, className = '' }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colors[color]} ${className}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${BADGE_COLORS[color]} ${className}`}
     >
       {children}
     </span>

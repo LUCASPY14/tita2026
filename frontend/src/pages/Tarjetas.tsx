@@ -155,6 +155,7 @@ export default function Tarjetas() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const requestIdRef = useRef(0)
 
   const [detailTarjeta, setDetailTarjeta] = useState<Tarjeta | null>(null)
   const [detailTab, setDetailTab] = useState<'movimientos' | 'cargas'>('movimientos')
@@ -173,18 +174,21 @@ export default function Tarjetas() {
   // ── Data loading ────────────────────────────────────────────────
 
   const loadTarjetas = useCallback(async (q: string, estado: string, p: number) => {
+    const requestId = ++requestIdRef.current
     setLoading(true)
     try {
       const params: Record<string, unknown> = { page: p, page_size: 15 }
       if (q) params.search = q
       if (estado) params.estado = estado
       const { data } = await api.get('/core/tarjetas/', { params })
+      if (requestId !== requestIdRef.current) return
       setTarjetas(data.results ?? [])
       setTotal(data.count ?? 0)
     } catch {
+      if (requestId !== requestIdRef.current) return
       toast.error('Error al cargar tarjetas')
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) setLoading(false)
     }
   }, [])
 
@@ -196,11 +200,6 @@ export default function Tarjetas() {
     }, 350)
     return () => clearTimeout(searchTimer.current)
   }, [search, estadoFilter, loadTarjetas])
-
-  useEffect(() => {
-    loadTarjetas(search, estadoFilter, page)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page])
 
   const openDetail = useCallback(async (t: Tarjeta) => {
     setDetailTarjeta(t)
@@ -511,7 +510,7 @@ export default function Tarjetas() {
             loading={loading}
             pageSize={15}
             page={page}
-            onPageChange={setPage}
+            onPageChange={p => { setPage(p); loadTarjetas(search, estadoFilter, p) }}
             total={total}
           />
         </div>
@@ -554,7 +553,7 @@ export default function Tarjetas() {
                 variant={detailTarjeta.estado === 'ACTIVA' ? 'danger' : 'primary'}
                 onClick={() => toggleEstado(detailTarjeta)}
                 loading={toggling === detailTarjeta.nro_tarjeta}
-                disabled={detailTarjeta.estado === 'VENCIDA' || detailTarjeta.estado === 'CANCELADA'}
+                disabled={!!toggling || detailTarjeta.estado === 'VENCIDA' || detailTarjeta.estado === 'CANCELADA'}
               >
                 {detailTarjeta.estado === 'ACTIVA' ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                 {detailTarjeta.estado === 'ACTIVA' ? 'Bloquear' : 'Activar'}

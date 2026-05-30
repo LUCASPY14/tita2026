@@ -258,10 +258,10 @@ export default function Almuerzos() {
     return () => clearTimeout(searchTimerReg.current)
   }, [searchRegistros, loadRegistros])
 
-  useEffect(() => {
-    loadRegistros(searchRegistros, pageRegistros)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageRegistros])
+  const handlePageChange = useCallback((page: number) => {
+    setPageRegistros(page)
+    loadRegistros(searchRegistros, page)
+  }, [loadRegistros, searchRegistros])
 
   // ── Load cuentas ──────────────────────────────────────────────────
   const loadCuentas = useCallback(async () => {
@@ -317,13 +317,24 @@ export default function Almuerzos() {
     if (tab === 'menu') loadMenu()
   }, [tab, loadMenu])
 
+  // Escuchar registros del Comedor para refrescar en tiempo real
+  useEffect(() => {
+    const handler = () => {
+      if (tab === 'consumos') loadRegistros(searchRegistros, pageRegistros)
+      if (tab === 'cuentas') loadCuentas()
+    }
+    window.addEventListener('comedor:registro', handler)
+    return () => window.removeEventListener('comedor:registro', handler)
+  }, [tab, searchRegistros, pageRegistros, loadRegistros, loadCuentas])
+
   // ── Tarjeta search ────────────────────────────────────────────────
-  const buscarTarjeta = useCallback(async () => {
-    if (!tarjetaSearch.trim()) { toast.error('Ingresá un número de tarjeta'); return }
+  const buscarTarjeta = useCallback(async (nro?: string) => {
+    const searchValue = nro ?? tarjetaSearch.trim()
+    if (!searchValue) { toast.error('Ingresá un número de tarjeta'); return }
     setTarjetaBuscando(true)
     try {
-      const { data } = await api.get('/core/tarjetas/', { params: { search: tarjetaSearch } })
-      const found = (data.results ?? []).find((t: TarjetaBusqueda) => t.nro_tarjeta === tarjetaSearch)
+      const { data } = await api.get('/core/tarjetas/', { params: { search: searchValue }, timeout: 6000 })
+      const found = (data.results ?? []).find((t: TarjetaBusqueda) => t.nro_tarjeta === searchValue)
       if (!found) { toast.error('Tarjeta no encontrada'); return }
       if (found.estado !== 'ACTIVA') { toast.error(`Tarjeta ${found.estado}`); return }
       setTarjeta(found)
@@ -334,12 +345,18 @@ export default function Almuerzos() {
       toast.error('Error al buscar tarjeta')
     } finally {
       setTarjetaBuscando(false)
+      setTarjetaSearch('')
     }
   }, [tarjetaSearch, hijos])
 
   const handleRegistrarConsumo = useCallback(async () => {
     if (!hijoId) { toast.error('Seleccioná un estudiante'); return }
     if (!tarjeta) { toast.error('Buscá la tarjeta del estudiante'); return }
+    const h = hijos.find(x => x.id === Number(hijoId))
+    if (h) {
+      const coincide = tarjeta.hijo_nombre === `${h.nombre} ${h.apellido}` || tarjeta.hijo_nombre === h.nombre_completo
+      if (!coincide) { toast.error('La tarjeta no pertenece al estudiante seleccionado'); return }
+    }
     setRegistrando(true)
     try {
       const payload: Record<string, unknown> = {
@@ -363,7 +380,7 @@ export default function Almuerzos() {
     } finally {
       setRegistrando(false)
     }
-  }, [hijoId, tarjeta, fechaConsumo, tipoAlmuerzoId, loadRegistros])
+  }, [hijoId, tarjeta, hijos, fechaConsumo, tipoAlmuerzoId, loadRegistros])
 
   // ── Suscripciones ──────────────────────────────────────────────────
   const handleSaveSusc = useCallback(async () => {
@@ -866,7 +883,7 @@ export default function Almuerzos() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-1">
               <Table columns={colsRegistros} dataSource={registros} rowKey="id" loading={loadingRegistros}
-                pageSize={15} page={pageRegistros} onPageChange={setPageRegistros} total={totalRegistros} />
+                pageSize={15} page={pageRegistros} onPageChange={handlePageChange} total={totalRegistros} />
             </div>
           </div>
         </>
@@ -953,10 +970,10 @@ export default function Almuerzos() {
                 placeholder="Nro. tarjeta"
                 value={tarjetaSearch}
                 onChange={e => setTarjetaSearch(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && buscarTarjeta()}
+                onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) buscarTarjeta(v) } }}
                 className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
               />
-              <Button size="sm" variant="secondary" loading={tarjetaBuscando} onClick={buscarTarjeta}>
+              <Button size="sm" variant="secondary" loading={tarjetaBuscando} onClick={() => buscarTarjeta()}>
                 <Search className="w-3.5 h-3.5" />
                 Buscar
               </Button>
@@ -979,6 +996,7 @@ export default function Almuerzos() {
               value={hijoId}
               onChange={e => setHijoId(Number(e.target.value) || '')}
               className={inputClass}
+              disabled={!!tarjeta}
             >
               <option value="">Seleccionar...</option>
               {hijos.map(h => (

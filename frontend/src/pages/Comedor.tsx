@@ -72,6 +72,7 @@ type ResultState = {
 }
 
 interface RegistroReciente {
+  id: string
   nombre: string
   grado: string
   hora: string
@@ -84,6 +85,8 @@ interface RegistroReciente {
 export default function Comedor() {
   const inputRef = useRef<HTMLInputElement>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval>>(undefined)
+  const focusTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const scanningRef = useRef(false)
 
   const [inputVal, setInputVal] = useState('')
   const [scanning, setScanning] = useState(false)
@@ -91,6 +94,7 @@ export default function Comedor() {
   const [countdown, setCountdown] = useState<number | null>(null)
   const [recientes, setRecientes] = useState<RegistroReciente[]>([])
   const [hijos, setHijos] = useState<Hijo[]>([])
+  const [hijosLoading, setHijosLoading] = useState(true)
   const [clock, setClock] = useState(nowDisplay())
   const [fullscreen, setFullscreen] = useState(false)
 
@@ -100,11 +104,15 @@ export default function Comedor() {
     return () => clearInterval(t)
   }, [])
 
+  // limpiar intervalo al desmontar
+  useEffect(() => { return () => clearInterval(countdownRef.current) }, [])
+
   // cargar hijos al montar
   useEffect(() => {
     api.get('/clientes/hijos/', { params: { page_size: 500 } })
       .then(r => setHijos(r.data.results ?? []))
-      .catch(() => {})
+      .catch(() => toast.error('Error al cargar estudiantes'))
+      .finally(() => setHijosLoading(false))
   }, [])
 
   // foco automático
@@ -131,10 +139,11 @@ export default function Comedor() {
 
   const clearResult = useCallback(() => {
     clearInterval(countdownRef.current)
+    clearTimeout(focusTimeoutRef.current)
     setResult(null)
     setCountdown(null)
     setInputVal('')
-    setTimeout(() => inputRef.current?.focus(), 50)
+    focusTimeoutRef.current = setTimeout(() => inputRef.current?.focus(), 50)
   }, [])
 
   const startCountdown = useCallback((segundos = 4) => {
@@ -154,13 +163,19 @@ export default function Comedor() {
     }, 1000)
   }, [])
 
-  const handleScan = useCallback(async () => {
-    const nro = inputVal.trim()
-    if (!nro || scanning) return
+  const handleScan = useCallback(async (nro: string) => {
+    if (scanningRef.current || !nro) return
+    if (hijosLoading) {
+      setResult({ tipo: 'error', message: 'Cargando datos del sistema…' })
+      startCountdown(2)
+      return
+    }
+    scanningRef.current = true
+    setScanning(true)
+    setInputVal('')
     clearInterval(countdownRef.current)
     setResult(null)
     setCountdown(null)
-    setScanning(true)
     try {
       const { data: res } = await api.get('/core/tarjetas/', { params: { search: nro } })
       const tarjeta: TarjetaResult | undefined = (res.results ?? []).find(
@@ -202,6 +217,7 @@ export default function Comedor() {
       })
       const hora = nowTime()
       const entry: RegistroReciente = {
+        id: `${nro}-${Date.now()}`,
         nombre: tarjeta.hijo_nombre,
         grado: hijoGrado,
         hora,
@@ -211,15 +227,16 @@ export default function Comedor() {
       setResult({ tipo: 'ok', nombre: tarjeta.hijo_nombre, grado: hijoGrado, tarjeta: nro, saldo: tarjeta.saldo_actual })
       setRecientes(prev => [entry, ...prev].slice(0, 30))
       startCountdown(4)
+      window.dispatchEvent(new CustomEvent('comedor:registro'))
     } catch (err) {
       const msg = extractErrorMessage(err)
       setResult({ tipo: 'error', message: msg })
       startCountdown(3)
     } finally {
+      scanningRef.current = false
       setScanning(false)
-      setInputVal('')
     }
-  }, [inputVal, scanning, hijos, startCountdown])
+  }, [hijos, hijosLoading, startCountdown])
 
   // refoco al hacer click en cualquier parte
   const handlePageClick = useCallback(() => {
@@ -330,7 +347,7 @@ export default function Comedor() {
               ref={inputRef}
               value={inputVal}
               onChange={e => setInputVal(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleScan() }}
+              onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) handleScan(v) } }}
               placeholder="Nro. de tarjeta..."
               disabled={scanning}
               autoComplete="off"
@@ -366,7 +383,7 @@ export default function Comedor() {
               <ul className="divide-y divide-white/5">
                 {recientes.map((r, i) => (
                   <li
-                    key={i}
+                    key={r.id}
                     className={`px-4 py-3 flex items-center gap-3 ${i === 0 ? 'bg-green-500/5' : ''}`}
                   >
                     <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">

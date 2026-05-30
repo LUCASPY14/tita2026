@@ -1,9 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import {
   LayoutDashboard,
-  ShoppingCart,
   UtensilsCrossed,
   Utensils,
   CreditCard,
@@ -32,32 +31,55 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { path: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
-  { path: '/ventas',      label: 'Ventas',       icon: ShoppingCart },
-  { path: '/almuerzos',   label: 'Almuerzos',    icon: UtensilsCrossed },
-  { path: '/comedor',     label: 'Comedor',       icon: Utensils },
-  { path: '/tarjetas',    label: 'Tarjetas',     icon: CreditCard },
-  { path: '/carga-saldo', label: 'Carga Saldo',  icon: Wallet },
-  { path: '/clientes',    label: 'Clientes',     icon: Users },
-  { path: '/productos',   label: 'Productos',    icon: Package },
-  { path: '/compras',     label: 'Compras',      icon: Truck },
-  { path: '/caja',        label: 'Caja',         icon: Banknote },
+  { path: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+  { path: '/modo-recreo',  label: 'Modo Recreo',  icon: Zap },
+  { path: '/almuerzos',    label: 'Almuerzos',    icon: UtensilsCrossed },
+  { path: '/comedor',      label: 'Comedor',      icon: Utensils },
+  { path: '/tarjetas',     label: 'Tarjetas',     icon: CreditCard },
+  { path: '/carga-saldo',  label: 'Carga Saldo',  icon: Wallet },
+  { path: '/clientes',     label: 'Clientes',     icon: Users },
+  { path: '/productos',    label: 'Productos',    icon: Package },
+  { path: '/compras',      label: 'Compras',      icon: Truck },
+  { path: '/caja',         label: 'Caja',         icon: Banknote },
   { path: '/facturacion',  label: 'Facturación',  icon: FileText },
   { path: '/reportes',     label: 'Reportes',     icon: BarChart2 },
   { path: '/inventario',   label: 'Inventario',   icon: Warehouse },
   { path: '/usuarios',     label: 'Usuarios',     icon: UserCog },
   { path: '/configuracion',label: 'Configuración',icon: Settings },
-  { path: '/modo-recreo',  label: 'Modo Recreo',  icon: Zap },
 ]
+
+const ROL_LABEL: Record<string, string> = {
+  ADMIN:       'Administrador',
+  CAJERO:      'Cajero',
+  COCINA:      'Cocina',
+  CLIENTE_WEB: 'Portal Padres',
+}
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuthStore()
 
   const initials = (user?.nombre?.[0] ?? 'U').toUpperCase()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  useEffect(() => {
+    if (!userMenuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [userMenuOpen])
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -92,14 +114,17 @@ export default function AppLayout() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+        <nav role="navigation" aria-label="Menú principal" className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
           {navItems.map(({ path, label, icon: Icon }) => {
-            const active = location.pathname === path
+            const active = location.pathname === path || location.pathname.startsWith(path + '/')
             return (
               <button
+                type="button"
                 key={path}
                 onClick={() => navigate(path)}
                 title={collapsed ? label : undefined}
+                aria-label={collapsed ? label : undefined}
+                aria-current={active ? 'page' : undefined}
                 className={[
                   'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium',
                   'transition-all duration-150 cursor-pointer group',
@@ -133,6 +158,7 @@ export default function AppLayout() {
         {/* Collapse toggle */}
         <div className="p-2 border-t border-white/5 shrink-0">
           <button
+            type="button"
             onClick={() => setCollapsed(!collapsed)}
             className={[
               'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm',
@@ -141,6 +167,7 @@ export default function AppLayout() {
               collapsed ? 'justify-center' : '',
             ].join(' ')}
             title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+            aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
           >
             {collapsed ? (
               <PanelLeftOpen className="w-[18px] h-[18px]" />
@@ -159,9 +186,13 @@ export default function AppLayout() {
 
         {/* Header */}
         <header className="h-14 bg-white border-b border-slate-200/80 px-4 flex items-center justify-end shrink-0">
-          <div className="relative">
+          <div ref={userMenuRef} className="relative">
             <button
+              type="button"
               onClick={() => setUserMenuOpen(!userMenuOpen)}
+              aria-expanded={userMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Menú de usuario"
               className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
             >
               <span className="w-7 h-7 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
@@ -172,7 +203,7 @@ export default function AppLayout() {
                   {user?.nombre || 'Usuario'}
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5 leading-none">
-                  {user?.rol || ''}
+                  {ROL_LABEL[user?.rol ?? ''] || user?.rol || ''}
                 </p>
               </div>
               <ChevronDown
@@ -184,7 +215,7 @@ export default function AppLayout() {
             </button>
 
             {userMenuOpen && (
-              <div className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/60 z-50 overflow-hidden">
+              <div role="menu" className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/60 z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-100">
                   <p className="text-sm font-semibold text-slate-800 truncate">
                     {user?.nombre} {user?.apellido}
@@ -192,7 +223,9 @@ export default function AppLayout() {
                   <p className="text-xs text-slate-400 mt-0.5 truncate">{user?.email}</p>
                 </div>
                 <button
-                  onClick={() => { setUserMenuOpen(false); logout() }}
+                  type="button"
+                  role="menuitem"
+                  onClick={handleLogout}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
