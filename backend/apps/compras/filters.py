@@ -8,4 +8,4 @@ class CompraFilter(django_filters.FilterSet):
 
     class Meta:
         model = Compra
-        fields = ["proveedor", "estado_pago", "tipo_pago", "fecha_desde", "fecha_hasta"]
+        fields = ["proveedor", "estado_pago", "estado_entrega", "tipo_pago", "fecha_desde", "fecha_hasta"]

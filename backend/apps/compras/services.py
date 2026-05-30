@@ -170,6 +170,9 @@ class CompraService:
 
             # Compras CREDITO: registrar en cuenta corriente
             if tipo_pago == "CREDITO":
+                # Bloquear fila del proveedor para serializar el acceso a su CC,
+                # incluso cuando no existen movimientos previos (ultimo_cc sería None).
+                Proveedor.objects.select_for_update().get(pk=proveedor.pk)
                 ultimo_cc = (
                     CuentaCorrienteProveedor.objects
                     .filter(proveedor=proveedor)

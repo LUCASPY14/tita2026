@@ -2,6 +2,8 @@
 Views para la app compras
 """
 
+from django.db.models import DecimalField, Sum, Value
+from django.db.models.functions import Coalesce
 from rest_framework import viewsets, filters
 
 from common.permissions import IsCajeroOrAdmin
@@ -60,22 +62,34 @@ class CuentaCorrienteProveedorViewSet(viewsets.ModelViewSet):
 
 
 class CompraViewSet(ExportCSVMixin, viewsets.ModelViewSet):
-    queryset = Compra.objects.select_related("proveedor").prefetch_related("detalles").all()
     serializer_class = CompraSerializer
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = CompraFilter
-    search_fields = ["proveedor__razon_social", "nro_factura"]
+    search_fields = ["proveedor__razon_social", "nro_factura_proveedor"]
     ordering_fields = ["fecha", "monto_total"]
     ordering = ["-fecha"]
     export_filename = "compras"
     export_fields = [
         ("Fecha", lambda o: str(o.fecha)[:10]),
         ("Proveedor", "proveedor__razon_social"),
-        ("Nro. Factura", "nro_factura"),
+        ("Nro. Factura", "nro_factura_proveedor"),
         ("Monto Total", "monto_total"),
-        ("Estado", "estado"),
+        ("Estado Pago", "estado_pago"),
     ]
+
+    def get_queryset(self):
+        return (
+            Compra.objects
+            .select_related("proveedor")
+            .prefetch_related("detalles")
+            .annotate(
+                _total_pagado=Coalesce(
+                    Sum("aplicaciones_pago__monto_aplicado"),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=0)),
+                )
+            )
+        )
 
 
 class DetalleCompraViewSet(viewsets.ModelViewSet):

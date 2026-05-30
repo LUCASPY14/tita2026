@@ -5,7 +5,7 @@ Gestión de proveedores, compras y cuentas corrientes de proveedores
 
 from decimal import Decimal
 
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 
@@ -129,22 +129,23 @@ class CuentaCorrienteProveedor(models.Model):
         return f"{self.get_tipo_display()} - {self.proveedor} - ₲{self.monto:,.0f}"
 
     def save(self, *args, **kwargs):
-        """Calcula automáticamente el saldo resultante."""
-        if self.saldo_anterior is None:
+        """Calcula automáticamente el saldo resultante con bloqueo pesimista."""
+        with transaction.atomic():
             ultimo = (
                 CuentaCorrienteProveedor.objects
+                .select_for_update()
                 .filter(proveedor=self.proveedor)
                 .order_by("-id")
                 .first()
             )
             self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
 
-        if self.tipo == self.Tipo.DEBITO:
-            self.saldo_resultante = self.saldo_anterior + self.monto
-        elif self.tipo in (self.Tipo.CREDITO, self.Tipo.NOTA_CREDITO, self.Tipo.AJUSTE):
-            self.saldo_resultante = self.saldo_anterior - self.monto
+            if self.tipo == self.Tipo.DEBITO:
+                self.saldo_resultante = self.saldo_anterior + self.monto
+            elif self.tipo in (self.Tipo.CREDITO, self.Tipo.NOTA_CREDITO, self.Tipo.AJUSTE):
+                self.saldo_resultante = self.saldo_anterior - self.monto
 
-        super().save(*args, **kwargs)
+            super().save(*args, **kwargs)
 
 
 # ==============================================================================
@@ -221,6 +222,8 @@ class Compra(models.Model):
     @property
     def total_pagado(self):
         """Suma de pagos aplicados a esta compra."""
+        if hasattr(self, "_total_pagado"):
+            return self._total_pagado
         total = self.aplicaciones_pago.aggregate(
             total=models.Sum("monto_aplicado")
         )["total"]
