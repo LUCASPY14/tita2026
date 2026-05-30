@@ -38,7 +38,7 @@ from .serializers import (
     EmitirFacturaSerializer,
     PendienteItemSerializer,
 )
-from .services import FacturacionService
+from .services import CajaService, FacturacionService
 
 
 class CajaViewSet(viewsets.ModelViewSet):
@@ -46,7 +46,7 @@ class CajaViewSet(viewsets.ModelViewSet):
     serializer_class = CajaSerializer
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["nombre", "descripcion"]
+    search_fields = ["nombre", "ubicacion"]
     ordering_fields = ["nombre", "id"]
     ordering = ["nombre"]
 
@@ -84,25 +84,10 @@ class CierreCajaViewSet(viewsets.ModelViewSet):
 
         serializer = CerrarCajaSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        monto_contado = serializer.validated_data["monto_contado_fisico"]
+        from decimal import Decimal
+        monto_contado = Decimal(serializer.validated_data["monto_contado_fisico"])
 
-        from django.db.models import Sum as DSum
-        ingresos = (
-            MovimientoCaja.objects.filter(cierre=cierre, tipo=MovimientoCaja.Tipo.INGRESO)
-            .aggregate(total=DSum("monto"))["total"] or 0
-        )
-        egresos = (
-            MovimientoCaja.objects.filter(cierre=cierre, tipo=MovimientoCaja.Tipo.EGRESO)
-            .aggregate(total=DSum("monto"))["total"] or 0
-        )
-        monto_esperado = cierre.monto_inicial + ingresos - egresos
-
-        cierre.monto_contado_fisico = monto_contado
-        cierre.diferencia_efectivo = monto_contado - monto_esperado
-        cierre.fecha_cierre = timezone.now()
-        cierre.estado = CierreCaja.Estado.CERRADO
-        cierre.save()
-
+        cierre = CajaService.cerrar_caja(cierre=cierre, monto_contado=monto_contado)
         return Response(CierreCajaSerializer(cierre).data)
 
     @action(detail=True, methods=["get"], url_path="pdf")

@@ -174,11 +174,12 @@ class FacturacionService:
 
         with transaction.atomic():
             if tipo == TIPO_CARGA_SALDO:
-                origen = CargaSaldo.objects.select_for_update(of=("self",)).get(pk=origen_id)
-                # Load related objects separately to avoid FOR UPDATE on nullable outer joins
-                origen = CargaSaldo.objects.select_related(
-                    "tarjeta__hijo__cliente_responsable", "cliente_origen"
-                ).get(pk=origen_id)
+                origen = (
+                    CargaSaldo.objects
+                    .select_related("tarjeta__hijo__cliente_responsable", "cliente_origen")
+                    .select_for_update(of=("self",))
+                    .get(pk=origen_id)
+                )
 
                 if origen.estado != CargaSaldo.Estado.CONFIRMADA:
                     raise ValidationError({"error": "Solo se pueden facturar cargas confirmadas."})

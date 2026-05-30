@@ -27,7 +27,13 @@ class CierreCajaSerializer(serializers.ModelSerializer):
     class Meta:
         model = CierreCaja
         fields = "__all__"
-        read_only_fields = ["fecha_creacion"]
+        read_only_fields = [
+            "fecha_creacion",
+            "diferencia_efectivo",
+            "monto_contado_fisico",
+            "fecha_cierre",
+            "estado",
+        ]
 
 
 class MovimientoCajaSerializer(serializers.ModelSerializer):
@@ -51,7 +57,13 @@ class FacturaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Factura
         fields = "__all__"
-        read_only_fields = ["fecha_creacion"]
+        read_only_fields = [
+            "fecha_creacion",
+            "iva_10",
+            "iva_5",
+            "monto_exenta",
+            "monto_total",
+        ]
 
 
 class DatosEmpresaSerializer(serializers.ModelSerializer):
