@@ -10,6 +10,7 @@ import struct
 import time
 
 from django.contrib.auth.tokens import default_token_generator
+from django.core import signing
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -19,6 +20,9 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from common.permissions import IsAdmin
@@ -77,23 +81,48 @@ from .serializers import (
 )
 
 
-class CustomTokenObtainPairView(TokenObtainPairView):
-    """Login que devuelve tokens + datos del usuario."""
+def _user_data(user):
+    return {
+        "id": user.id,
+        "email": user.email,
+        "nombre": user.nombre,
+        "apellido": user.apellido,
+        "rol": user.rol,
+        "cliente_id": user.cliente_id if user.cliente else None,
+    }
 
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        if response.status_code == 200:
-            user = request.user
-            if user and user.is_authenticated:
-                response.data['user'] = {
-                    'id': user.id,
-                    'email': user.email,
-                    'nombre': user.nombre,
-                    'apellido': user.apellido,
-                    'rol': user.rol,
-                    'cliente_id': user.cliente_id if user.cliente else None,
-                }
-        return response
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """Expone self.user después de validate() para que el view lo consuma."""
+    pass
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    Login con soporte de 2FA.
+    - Sin 2FA: devuelve access + refresh + datos del usuario.
+    - Con 2FA: devuelve requires_2fa=True + pre_auth_token (válido 5 min).
+      El cliente debe completar el login en POST /api/usuarios/2fa/login/.
+    """
+    serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *_args, **_kwargs):
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0])
+
+        user = serializer.user
+
+        try:
+            if user.auth_2fa.habilitado:
+                pre_auth = signing.dumps({"user_id": user.id}, salt="2fa-pre-auth")
+                return Response({"requires_2fa": True, "pre_auth_token": pre_auth})
+        except Exception:
+            pass
+
+        return Response({**serializer.validated_data, "user": _user_data(user)})
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -240,7 +269,7 @@ class PortalMiHijoView(APIView):
             hijos_data.append({
                 "id": hijo.id,
                 "nombre": hijo.nombre_completo,
-                "grado": hijo.grado,
+                "grado": hijo.grado_nombre,
                 "tarjeta": tarjeta_data,
                 "restricciones": restricciones,
                 "consumos_mes": {
@@ -288,7 +317,10 @@ class RecuperarPasswordView(APIView):
         from django.conf import settings as django_settings
 
         portal_url = getattr(django_settings, "PORTAL_FRONTEND_URL", "http://localhost:5173")
-        link = f"{portal_url}/portal/reset-password?uid={uid}&token={token}"
+        if user.rol == Usuario.Rol.CLIENTE_WEB:
+            link = f"{portal_url}/portal/reset-password?uid={uid}&token={token}"
+        else:
+            link = f"{portal_url}/reset-password?uid={uid}&token={token}"
 
         EmailService.enviar_simple(
             destinatario_email=email,
@@ -509,3 +541,65 @@ class TwoFADesactivarView(APIView):
         auth.backup_codes = []
         auth.save(update_fields=["habilitado", "fecha_activacion", "secret_key", "backup_codes"])
         return Response({"detail": f"2FA desactivado para {target.email}."})
+
+
+class TwoFALoginVerificarView(APIView):
+    """
+    POST /api/usuarios/2fa/login/
+    Segundo paso del login cuando el usuario tiene 2FA habilitado.
+    Body: {"pre_auth_token": "...", "codigo": "123456"}
+    Emite el JWT real si el código TOTP (o backup code) es válido.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from .models import Autenticacion2FA, Intento2FA
+
+        pre_auth = request.data.get("pre_auth_token", "")
+        codigo = (request.data.get("codigo") or "").strip()
+        ip = request.META.get("REMOTE_ADDR")
+
+        if not pre_auth or not codigo:
+            return Response(
+                {"error": "Se requieren pre_auth_token y codigo."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            data = signing.loads(pre_auth, salt="2fa-pre-auth", max_age=300)
+            user = Usuario.objects.get(pk=data["user_id"], is_active=True)
+        except (signing.BadSignature, Usuario.DoesNotExist):
+            return Response(
+                {"error": "Token inválido o expirado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            auth = user.auth_2fa
+        except Exception:
+            return Response({"error": "2FA no configurado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        codigo_upper = codigo.upper()
+        valido = _verify_totp(auth.secret_key, codigo.lower())
+
+        if not valido and codigo_upper in auth.backup_codes:
+            valido = True
+            auth.backup_codes = [c for c in auth.backup_codes if c != codigo_upper]
+            auth.save(update_fields=["backup_codes"])
+
+        Intento2FA.objects.create(
+            usuario=user, ip_address=ip, codigo_ingresado=codigo, exitoso=valido,
+        )
+
+        if not valido:
+            return Response({"error": "Código inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        auth.ultima_verificacion = timezone.now()
+        auth.save(update_fields=["ultima_verificacion"])
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "user": _user_data(user),
+        })

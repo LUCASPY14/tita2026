@@ -5,7 +5,7 @@ Gestión de productos, categorías, listas de precios y unidades de medida
 
 from decimal import Decimal
 
-from django.db import models
+from django.db import models, transaction
 
 
 # ==============================================================================
@@ -127,8 +127,12 @@ class Producto(models.Model):
 
     @property
     def precio_actual(self):
-        """Precio de la primera lista disponible o 0."""
-        precio = self.precios.select_related("lista").order_by("id").first()
+        lista_defecto = ListaPrecio.objects.filter(activo=True, es_por_defecto=True).first()
+        if lista_defecto:
+            precio = self.precios.filter(lista=lista_defecto).first()
+            if precio:
+                return precio.precio_unitario
+        precio = self.precios.select_related("lista").order_by("lista__nombre").first()
         return precio.precio_unitario if precio else Decimal("0")
 
     @property
@@ -156,6 +160,10 @@ class ListaPrecio(models.Model):
     fecha_vigencia = models.DateField(blank=True, null=True)
     moneda = models.CharField(max_length=3, default="PYG")
     activo = models.BooleanField(default=True)
+    es_por_defecto = models.BooleanField(
+        default=False,
+        help_text="Lista usada como referencia cuando no se especifica ninguna (solo una puede ser por defecto)",
+    )
 
     class Meta:
         verbose_name = "Lista de Precios"
@@ -164,6 +172,17 @@ class ListaPrecio(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.moneda})"
+
+    def save(self, *args, **kwargs):
+        if self.es_por_defecto:
+            with transaction.atomic():
+                # Desactiva la lista por defecto anterior antes de guardar la nueva.
+                ListaPrecio.objects.filter(es_por_defecto=True).exclude(pk=self.pk).update(
+                    es_por_defecto=False
+                )
+                super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
 
 
 # ==============================================================================

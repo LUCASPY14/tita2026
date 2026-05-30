@@ -106,6 +106,12 @@ class CuentaCorrienteClienteAdmin(admin.ModelAdmin):
     ordering = ["-fecha", "-id"]
     list_select_related = ["cliente"]
 
+    def has_add_permission(self, _request):
+        return False
+
+    def has_delete_permission(self, _request, _obj=None):
+        return False
+
     def cliente_link(self, obj):
         url = reverse("admin:clientes_cliente_change", args=[obj.cliente.pk])
         return format_html('<a href="{}">{}</a>', url, obj.cliente.nombre_completo)
@@ -141,9 +147,9 @@ class TipoClienteAdmin(admin.ModelAdmin):
 @admin.register(Hijo)
 class HijoAdmin(admin.ModelAdmin):
     list_display = ["nombre_completo", "grado", "cliente_responsable_link", "activo"]
-    list_filter = ["activo"]
+    list_filter = ["activo", "grado"]
     search_fields = ["nombre", "apellido", "cliente_responsable__ruc_ci"]
-    list_select_related = ["cliente_responsable"]
+    list_select_related = ["cliente_responsable", "grado"]
     fieldsets = (
         ("Datos del Estudiante", {
             "fields": ("nombre", "apellido", "fecha_nacimiento", "grado")
@@ -274,5 +280,6 @@ class PaisAdmin(admin.ModelAdmin):
 
 @admin.register(Ciudad)
 class CiudadAdmin(admin.ModelAdmin):
-    list_display = ["nombre"]
+    list_display = ["nombre", "pais"]
+    list_filter = ["pais"]
     search_fields = ["nombre"]

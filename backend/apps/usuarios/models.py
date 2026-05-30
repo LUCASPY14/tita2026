@@ -122,6 +122,14 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     def es_empleado(self):
         return self.rol in [self.Rol.ADMIN, self.Rol.CAJERO, self.Rol.COCINA]
 
+    def save(self, *args, **kwargs):
+        # is_superuser solo tiene sentido para ADMIN; evita escalada de privilegios en el admin Django.
+        if self.is_superuser and self.rol != self.Rol.ADMIN:
+            raise ValueError(
+                f"is_superuser=True solo está permitido para rol ADMIN (rol actual: {self.rol})."
+            )
+        super().save(*args, **kwargs)
+
 
 # ==============================================================================
 # EMPLEADO — Datos de personal (ya no para autenticación)
@@ -190,10 +198,6 @@ class Rol(models.Model):
     def __str__(self):
         return self.nombre_rol
 
-    def delete(self, *args, **kwargs):
-        if self.empleados.exists():
-            raise Exception("No se puede eliminar el rol porque tiene empleados asignados.")
-        return super().delete(*args, **kwargs)
 
 
 class Permiso(models.Model):
@@ -466,8 +470,6 @@ class TokenRecuperacion(models.Model):
 
     @property
     def es_valido(self):
-        """Verifica si el token aún es válido."""
-        from django.utils import timezone
         return not self.usado and self.fecha_expiracion > timezone.now()
 
 
@@ -493,8 +495,6 @@ class TokenVerificacion(models.Model):
 
     @property
     def es_valido(self):
-        """Verifica si el token aún es válido."""
-        from django.utils import timezone
         return not self.usado and self.expira_en > timezone.now()
 
 

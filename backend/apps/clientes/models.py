@@ -6,7 +6,7 @@ Gestión de clientes, hijos, cuentas corrientes y restricciones
 from decimal import Decimal
 
 from django.core.validators import EmailValidator
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
@@ -169,22 +169,24 @@ class CuentaCorrienteCliente(models.Model):
         return f"{self.get_tipo_display()} - {self.cliente} - ₲{self.monto:,.0f}"
 
     def save(self, *args, **kwargs):
-        """Calcula automáticamente el saldo resultante."""
-        if self.saldo_anterior is None:
-            ultimo = (
-                CuentaCorrienteCliente.objects
-                .filter(cliente=self.cliente)
-                .order_by("-id")
-                .first()
-            )
-            self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
+        with transaction.atomic():
+            if self.saldo_anterior is None:
+                # Lock the client row so concurrent movements can't read the same saldo_anterior.
+                Cliente.objects.select_for_update().get(pk=self.cliente_id)
+                ultimo = (
+                    CuentaCorrienteCliente.objects
+                    .filter(cliente_id=self.cliente_id)
+                    .order_by("-id")
+                    .first()
+                )
+                self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
 
-        if self.tipo == self.Tipo.DEBITO:
-            self.saldo_resultante = self.saldo_anterior + self.monto
-        elif self.tipo in (self.Tipo.CREDITO, self.Tipo.AJUSTE):
-            self.saldo_resultante = self.saldo_anterior - self.monto
+            if self.tipo == self.Tipo.DEBITO:
+                self.saldo_resultante = self.saldo_anterior + self.monto
+            elif self.tipo in (self.Tipo.CREDITO, self.Tipo.AJUSTE):
+                self.saldo_resultante = self.saldo_anterior - self.monto
 
-        super().save(*args, **kwargs)
+            super().save(*args, **kwargs)
 
 
 # ==============================================================================
@@ -216,7 +218,13 @@ class Hijo(models.Model):
     nombre = models.CharField(max_length=100, help_text="Nombre del estudiante")
     apellido = models.CharField(max_length=100, help_text="Apellido del estudiante")
     fecha_nacimiento = models.DateField(blank=True, null=True)
-    grado = models.CharField(max_length=50, blank=True, null=True)
+    grado = models.ForeignKey(
+        "Grado",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="hijos",
+    )
     foto_perfil = models.ImageField(
         upload_to="hijos/fotos/%Y/%m/",
         blank=True,
@@ -235,13 +243,23 @@ class Hijo(models.Model):
         verbose_name = "Hijo/Estudiante"
         verbose_name_plural = "Hijos/Estudiantes"
         ordering = ["apellido", "nombre"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cliente_responsable", "nombre", "apellido"],
+                name="uq_hijo_cliente_nombre_apellido",
+            )
+        ]
 
     def __str__(self):
-        return f"{self.apellido}, {self.nombre} ({self.grado or 'Sin grado'})"
+        return f"{self.apellido}, {self.nombre} ({self.grado.nombre if self.grado else 'Sin grado'})"
 
     @property
     def nombre_completo(self):
         return f"{self.nombre} {self.apellido}"
+
+    @property
+    def grado_nombre(self):
+        return self.grado.nombre if self.grado else None
 
     @property
     def edad(self):
@@ -404,6 +422,13 @@ class Pais(models.Model):
 
 class Ciudad(models.Model):
     nombre = models.CharField(max_length=100)
+    pais = models.ForeignKey(
+        Pais,
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ciudades",
+    )
 
     class Meta:
         verbose_name = "Ciudad"

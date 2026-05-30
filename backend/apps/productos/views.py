@@ -3,6 +3,9 @@ Views para la app productos
 """
 
 from django.core.cache import cache
+from django.db import transaction
+from django.db.models import DecimalField, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -39,6 +42,16 @@ from .serializers import (
 _CACHE_TTL = 300  # 5 minutos
 
 
+def _invalidar_cache(*prefixes):
+    """Borra claves de caché por prefijo (Redis) o todo el caché (LocMem)."""
+    for prefix in prefixes:
+        try:
+            cache.delete_pattern(f"{prefix}*")
+        except (AttributeError, NotImplementedError):
+            cache.clear()
+            return
+
+
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.select_related("categoria_padre").all()
     serializer_class = CategoriaSerializer
@@ -57,24 +70,56 @@ class CategoriaViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         super().perform_create(serializer)
-        cache.clear()
+        _invalidar_cache("categorias_list_")
 
     def perform_update(self, serializer):
         super().perform_update(serializer)
-        cache.clear()
+        _invalidar_cache("categorias_list_")
 
     def perform_destroy(self, instance):
         super().perform_destroy(instance)
-        cache.clear()
+        _invalidar_cache("categorias_list_")
 
 
 class ProductoViewSet(viewsets.ModelViewSet):
-    queryset = Producto.objects.select_related("categoria", "unidad_medida").all()
     serializer_class = ProductoSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["activo", "categoria", "es_servicio"]
     search_fields = ["descripcion", "codigo_barra", "codigo"]
+
+    def get_queryset(self):
+        from apps.inventario.models import Stock
+
+        precio_default_sq = PrecioPorLista.objects.filter(
+            producto=OuterRef("pk"),
+            lista__es_por_defecto=True,
+            lista__activo=True,
+        ).values("precio_unitario")[:1]
+
+        precio_fallback_sq = PrecioPorLista.objects.filter(
+            producto=OuterRef("pk"),
+        ).order_by("lista__nombre").values("precio_unitario")[:1]
+
+        stock_sq = Stock.objects.filter(
+            producto=OuterRef("pk")
+        ).values("cantidad")[:1]
+
+        return (
+            Producto.objects
+            .select_related("categoria", "unidad_medida")
+            .annotate(
+                _precio_actual=Coalesce(
+                    Subquery(precio_default_sq),
+                    Subquery(precio_fallback_sq),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=0)),
+                ),
+                _stock_actual=Coalesce(
+                    Subquery(stock_sq),
+                    Value(0, output_field=DecimalField(max_digits=10, decimal_places=3)),
+                ),
+            )
+        )
 
     def list(self, request, *args, **kwargs):
         cache_key = f"productos_list_{request.query_params.urlencode()}"
@@ -87,15 +132,15 @@ class ProductoViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         super().perform_create(serializer)
-        cache.clear()
+        _invalidar_cache("productos_list_")
 
     def perform_update(self, serializer):
         super().perform_update(serializer)
-        cache.clear()
+        _invalidar_cache("productos_list_")
 
     def perform_destroy(self, instance):
         super().perform_destroy(instance)
-        cache.clear()
+        _invalidar_cache("productos_list_")
 
 
 class UnidadMedidaViewSet(viewsets.ModelViewSet):
@@ -118,16 +163,17 @@ class PrecioPorListaViewSet(viewsets.ModelViewSet):
     filterset_fields = ["producto", "lista"]
 
     def perform_update(self, serializer):
-        old_price = serializer.instance.precio_unitario
-        instance = serializer.save()
-        if instance.precio_unitario != old_price:
-            HistoricoPrecio.objects.create(
-                producto=instance.producto,
-                precio_anterior=old_price,
-                precio_nuevo=instance.precio_unitario,
-                modificado_por=self.request.user if self.request.user.is_authenticated else None,
-            )
-        cache.clear()
+        with transaction.atomic():
+            old_price = serializer.instance.precio_unitario
+            instance = serializer.save()
+            if instance.precio_unitario != old_price:
+                HistoricoPrecio.objects.create(
+                    producto=instance.producto,
+                    precio_anterior=old_price,
+                    precio_nuevo=instance.precio_unitario,
+                    modificado_por=self.request.user if self.request.user.is_authenticated else None,
+                )
+        _invalidar_cache("productos_list_")
 
 
 class HistoricoPrecioViewSet(viewsets.ModelViewSet):
@@ -161,6 +207,8 @@ class HistoricoPrecioViewSet(viewsets.ModelViewSet):
             qs = qs.filter(fecha_cambio__date__gte=desde)
         if hasta:
             qs = qs.filter(fecha_cambio__date__lte=hasta)
+
+        qs = qs[:500]
 
         historial = [
             {

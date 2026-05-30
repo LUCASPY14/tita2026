@@ -3,9 +3,12 @@ Modelos de la app almuerzos
 Gestión de almuerzos escolares: precios, planes, suscripciones y consumo
 """
 
+from datetime import date
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 
 
@@ -41,6 +44,25 @@ class PrecioAlmuerzo(models.Model):
         verbose_name = "Precio de Almuerzo"
         verbose_name_plural = "Precios de Almuerzo"
         ordering = ["-fecha_inicio_vigencia"]
+
+    def clean(self):
+        qs = PrecioAlmuerzo.objects.exclude(pk=self.pk or 0)
+        # Solo un precio puede tener fecha_fin_vigencia NULL (el vigente actual)
+        if self.fecha_fin_vigencia is None:
+            if qs.filter(fecha_fin_vigencia__isnull=True).exists():
+                raise ValidationError(
+                    "Ya existe un precio sin fecha de fin. Cerrá el precio anterior antes de crear uno nuevo."
+                )
+        # Verificar solapamiento de rangos con el resto
+        if self.fecha_inicio_vigencia:
+            fin_self = self.fecha_fin_vigencia or date.max
+            for p in qs:
+                fin_p = p.fecha_fin_vigencia or date.max
+                if max(self.fecha_inicio_vigencia, p.fecha_inicio_vigencia) <= min(fin_self, fin_p):
+                    raise ValidationError(
+                        f"El período se solapa con '₲{p.precio_unitario:,.0f}' "
+                        f"({p.fecha_inicio_vigencia} – {p.fecha_fin_vigencia or 'indefinido'})."
+                    )
 
     def __str__(self):
         return f"₲{self.precio_unitario:,.0f} (desde {self.fecha_inicio_vigencia})"
@@ -147,7 +169,13 @@ class SuscripcionAlmuerzo(models.Model):
     class Meta:
         verbose_name = "Suscripción de Almuerzo"
         verbose_name_plural = "Suscripciones de Almuerzo"
-        unique_together = [("hijo", "plan", "estado")]
+        constraints = [
+            UniqueConstraint(
+                fields=["hijo", "plan"],
+                condition=Q(estado="ACTIVA"),
+                name="unique_suscripcion_activa_por_hijo_plan",
+            )
+        ]
 
     def __str__(self):
         return f"{self.hijo} - {self.plan} ({self.get_estado_display()})"
@@ -191,10 +219,12 @@ class RegistroConsumoAlmuerzo(models.Model):
     )
     ya_cobrado = models.BooleanField(
         default=True,
+        db_index=True,
         help_text="El primer registro del día cobra (True), siguientes no (False)",
     )
     marcado_en_cuenta = models.BooleanField(
         default=False,
+        db_index=True,
         help_text="Si se agregó a la cuenta mensual de almuerzo",
     )
     estado = models.CharField(
@@ -225,6 +255,20 @@ class RegistroConsumoAlmuerzo(models.Model):
             models.Index(fields=["fecha_consumo"]),
             models.Index(fields=["estado"]),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.costo_almuerzo:
+            if self.tipo_almuerzo_id and self.tipo_almuerzo and self.tipo_almuerzo.precio_unitario:
+                self.costo_almuerzo = self.tipo_almuerzo.precio_unitario
+            elif self.fecha_consumo:
+                precio = PrecioAlmuerzo.objects.filter(
+                    fecha_inicio_vigencia__lte=self.fecha_consumo
+                ).filter(
+                    Q(fecha_fin_vigencia__gte=self.fecha_consumo) | Q(fecha_fin_vigencia__isnull=True)
+                ).order_by("-fecha_inicio_vigencia").first()
+                if precio:
+                    self.costo_almuerzo = precio.precio_unitario
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.hijo} - {self.fecha_consumo} ({self.get_estado_display()})"
@@ -286,7 +330,9 @@ class CuentaAlmuerzoMensual(models.Model):
     class Meta:
         verbose_name = "Cuenta Mensual de Almuerzo"
         verbose_name_plural = "Cuentas Mensuales de Almuerzo"
-        unique_together = [("hijo", "anio", "mes")]
+        constraints = [
+            UniqueConstraint(fields=["hijo", "anio", "mes"], name="unique_cuenta_almuerzo_mensual")
+        ]
         ordering = ["-anio", "-mes"]
 
     def __str__(self):
@@ -295,6 +341,28 @@ class CuentaAlmuerzoMensual(models.Model):
     @property
     def saldo_pendiente(self):
         return self.monto_total - self.monto_pagado
+
+    def _calcular_estado(self):
+        """Actualiza estado y fecha_pago en la instancia sin guardar."""
+        if self.monto_pagado >= self.monto_total:
+            self.estado = self.Estado.PAGADO
+            if not self.fecha_pago:
+                self.fecha_pago = timezone.now().date()
+        elif self.monto_pagado > 0:
+            self.estado = self.Estado.PARCIAL
+        else:
+            self.estado = self.Estado.PENDIENTE
+
+    def actualizar_estado(self):
+        """Recalcula el estado según los montos actuales y persiste."""
+        self._calcular_estado()
+        self.save(update_fields=["estado", "fecha_pago"])
+
+    def registrar_pago(self, monto):
+        """Incrementa monto_pagado, recalcula estado y persiste todo en un solo save."""
+        self.monto_pagado += monto
+        self._calcular_estado()
+        self.save(update_fields=["monto_pagado", "estado", "fecha_pago"])
 
 
 # ==============================================================================
@@ -334,6 +402,16 @@ class PagoCuentaAlmuerzo(models.Model):
     def __str__(self):
         return f"Pago #{self.pk} - {self.cuenta} - ₲{self.monto:,.0f}"
 
+    def clean(self):
+        if self.cuenta_id and self.monto is not None:
+            if self.monto <= 0:
+                raise ValidationError({"monto": "El monto debe ser mayor a cero."})
+            saldo = self.cuenta.saldo_pendiente
+            if self.monto > saldo:
+                raise ValidationError(
+                    {"monto": f"El monto (₲{self.monto:,.0f}) supera el saldo pendiente (₲{saldo:,.0f})."}
+                )
+
 
 # ==============================================================================
 # PAGO MENSUAL DE SUSCRIPCIÓN
@@ -368,8 +446,17 @@ class PagoAlmuerzoMensual(models.Model):
     class Meta:
         verbose_name = "Pago Mensual de Almuerzo"
         verbose_name_plural = "Pagos Mensuales de Almuerzo"
-        unique_together = [("suscripcion", "mes_pagado")]
+        constraints = [
+            UniqueConstraint(fields=["suscripcion", "mes_pagado"], name="unique_pago_mensual_suscripcion")
+        ]
         ordering = ["-fecha_pago"]
+
+    def clean(self):
+        if self.mes_pagado:
+            if self.mes_pagado.day != 1:
+                raise ValidationError({"mes_pagado": "Debe ser el primer día del mes (ej: 2026-05-01)."})
+            if self.mes_pagado > date.today().replace(day=1):
+                raise ValidationError({"mes_pagado": "No se puede registrar un pago de un mes futuro."})
 
     def __str__(self):
         return f"Pago {self.suscripcion} - {self.mes_pagado}"
@@ -391,7 +478,8 @@ class Alergeno(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
     descripcion = models.TextField(blank=True, null=True)
     palabras_clave = models.JSONField(
-        help_text="Palabras clave para detectar el alérgeno en descripciones"
+        default=list,
+        help_text="Lista de palabras clave para detectar el alérgeno en descripciones",
     )
     severidad = models.CharField(
         max_length=10, choices=Severidad.choices, default=Severidad.MEDIA
@@ -442,7 +530,9 @@ class ProductoAlergeno(models.Model):
     class Meta:
         verbose_name = "Producto-Alérgeno"
         verbose_name_plural = "Productos-Alérgenos"
-        unique_together = [("producto", "alergeno")]
+        constraints = [
+            UniqueConstraint(fields=["producto", "alergeno"], name="unique_producto_alergeno")
+        ]
 
     def __str__(self):
         verbo = "Contiene" if self.contiene else "Trazas de"

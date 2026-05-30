@@ -51,6 +51,10 @@ class VentaService:
         if tipo == "CONTADO" and medio_pago is None:
             raise ValidationError({"error": "Las ventas al contado requieren un medio de pago."})
 
+        # Validar que el hijo pertenezca al cliente
+        if hijo and hijo.cliente_responsable_id != cliente.pk:
+            raise ValidationError({"error": "El hijo indicado no pertenece al cliente."})
+
         with transaction.atomic():
             # 0. Bloquear stocks y tarjeta para evitar race conditions
             productos_con_stock = [item["producto"] for item in items if item["producto"].requiere_stock]
@@ -133,11 +137,13 @@ class VentaService:
                 })
 
             # Validar límite de crédito
-            if tipo == "CREDITO" and limite_credito is not None and Decimal(str(limite_credito)) > Decimal("0"):
-                if saldo_anterior_cc + monto_total > Decimal(str(limite_credito)):
+            # limite_credito=0 → sin crédito permitido; None → sin límite; >0 → límite máximo.
+            if tipo == "CREDITO" and limite_credito is not None:
+                limite_decimal = Decimal(str(limite_credito))
+                if saldo_anterior_cc + monto_total > limite_decimal:
                     raise ValidationError({
                         "error": "La venta excede el límite de crédito autorizado del cliente.",
-                        "limite_credito": str(limite_credito),
+                        "limite_credito": str(limite_decimal),
                         "saldo_deudor": str(saldo_anterior_cc),
                         "monto_venta": str(monto_total),
                     })
@@ -253,9 +259,8 @@ class VentaService:
         if venta.estado == Venta.Estado.ANULADA:
             raise ValidationError({"error": "La venta ya está anulada."})
 
-        # Bloquear si tiene factura emitida asociada
-        factura = getattr(venta, "factura_venta", None)
-        if factura and factura.estado == "EMITIDA":
+        # Bloquear si tiene factura emitida asociada (campo FK directo en Venta)
+        if venta.factura and venta.factura.estado == "EMITIDA":
             raise ValidationError({
                 "error": "La venta tiene una factura EMITIDA. Anulá primero la factura."
             })
@@ -351,6 +356,17 @@ class PagoService:
         if venta and venta.tipo != "CREDITO":
             raise ValidationError({"error": "Solo se pueden registrar pagos para ventas a credito."})
 
+        # Rechazar pagos que excedan el saldo pendiente de la venta.
+        # Para pagar más, usar venta=None (pago a cuenta corriente) y aplicar manualmente.
+        if venta:
+            saldo = venta.saldo_pendiente
+            if monto > saldo:
+                raise ValidationError({
+                    "error": "El monto del pago supera el saldo pendiente de la venta.",
+                    "saldo_pendiente": str(saldo),
+                    "monto_pago": str(monto),
+                })
+
         with transaction.atomic():
             # Bloquear cuenta corriente
             ultimo_cc = (
@@ -373,21 +389,18 @@ class PagoService:
                 estado=PagoVenta.Estado.PENDIENTE,
             )
 
-            # Aplicar a la venta
+            # Aplicar a la venta (monto == saldo_pendiente garantizado por la validación previa)
             if venta:
-                monto_aplicar = min(monto, venta.saldo_pendiente)
                 AplicacionPago.objects.create(
                     pago=pago,
                     venta=venta,
-                    monto_aplicado=monto_aplicar,
+                    monto_aplicado=monto,
                 )
-
-                # Actualizar estado de pago
-                if venta.saldo_pendiente <= 0:
-                    venta.estado_pago = Venta.EstadoPago.PAGADO
-                elif venta.total_pagado > 0:
-                    venta.estado_pago = Venta.EstadoPago.PARCIAL
-                venta.save()
+                venta.estado_pago = (
+                    Venta.EstadoPago.PAGADO if venta.saldo_pendiente <= 0
+                    else Venta.EstadoPago.PARCIAL
+                )
+                venta.save(update_fields=["estado_pago"])
 
             # Registrar en cuenta corriente (CREDITO)
             CuentaCorrienteCliente.objects.create(

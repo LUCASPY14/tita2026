@@ -81,7 +81,7 @@ class ProductoAdmin(admin.ModelAdmin):
 
         precio_subquery = PrecioPorLista.objects.filter(
             producto=OuterRef("pk")
-        ).order_by("id").values("precio_unitario")[:1]
+        ).order_by("-fecha_vigencia").values("precio_unitario")[:1]
 
         stock_subquery = Stock.objects.filter(
             producto=OuterRef("pk")

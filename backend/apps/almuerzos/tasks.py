@@ -12,13 +12,21 @@ def generar_cuentas_mensuales():
     con suscripción activa que no tenga cuenta aún.
     Se ejecuta el día 1 de cada mes a las 06:00.
     """
+    import calendar
+    from datetime import date
+    from django.db import models as db_models
     from apps.almuerzos.models import SuscripcionAlmuerzo, CuentaAlmuerzoMensual
 
     hoy = timezone.now().date()
     anio, mes = hoy.year, hoy.month
+    primer_dia = date(anio, mes, 1)
+    ultimo_dia = date(anio, mes, calendar.monthrange(anio, mes)[1])
 
     suscripciones = SuscripcionAlmuerzo.objects.filter(
         estado=SuscripcionAlmuerzo.Estado.ACTIVA,
+        fecha_inicio__lte=ultimo_dia,
+    ).filter(
+        db_models.Q(fecha_fin__isnull=True) | db_models.Q(fecha_fin__gte=primer_dia)
     ).select_related("hijo")
 
     creadas = 0
@@ -78,15 +86,15 @@ def alertar_cuentas_vencidas():
         if not usuario:
             continue
 
-        saldo_pendiente = int(cuenta.monto_total - cuenta.monto_pagado)
+        saldo_pendiente = cuenta.monto_total - cuenta.monto_pagado
         Notificacion.objects.create(
             usuario=usuario,
             tipo=Notificacion.Tipo.ALMUERZO,
             titulo="Cuenta de almuerzo pendiente de pago",
             mensaje=(
                 f"La cuenta de almuerzo de {cuenta.hijo.nombre_completo} "
-                f"correspondiente a {cuenta.mes}/{cuenta.anio} "
-                f"tiene un saldo pendiente de Gs. {saldo_pendiente:,}."
+                f"correspondiente a {cuenta.mes:02d}/{cuenta.anio} "
+                f"tiene un saldo pendiente de Gs. {saldo_pendiente:,.0f}."
             ),
             destino=Notificacion.Destino.SISTEMA,
         )

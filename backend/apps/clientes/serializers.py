@@ -45,6 +45,7 @@ class TipoClienteSerializer(serializers.ModelSerializer):
 
 class HijoSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.CharField(source="cliente_responsable.nombre_completo", read_only=True)
+    grado_nombre = serializers.CharField(source="grado.nombre", read_only=True, allow_null=True)
 
     class Meta:
         model = Hijo
@@ -92,6 +93,8 @@ class PaisSerializer(serializers.ModelSerializer):
 
 
 class CiudadSerializer(serializers.ModelSerializer):
+    pais_nombre = serializers.CharField(source="pais.nombre", read_only=True, allow_null=True)
+
     class Meta:
         model = Ciudad
         fields = "__all__"

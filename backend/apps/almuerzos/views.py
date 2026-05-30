@@ -92,10 +92,10 @@ class PrecioAlmuerzoViewSet(viewsets.ModelViewSet):
         precio = get_precio_almuerzo_activo()
         if precio:
             return Response(PrecioAlmuerzoSerializer(precio).data)
-        return Response({
-            "precio_unitario": 25000,
-            "mensaje": "Sin precio configurado - usando valor predeterminado"
-        })
+        return Response(
+            {"error": "No hay un precio de almuerzo vigente configurado. Configure uno en el admin."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
 
 # ==============================================================================
@@ -160,6 +160,17 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
     serializer_class = RegistroConsumoAlmuerzoSerializer
     permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [IsCajeroOrAdmin()]
+        return [IsStaffOrClienteWeb()]
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {"error": "Los registros de consumo no pueden eliminarse. Use el estado ANULADO."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
     filterset_class = RegistroConsumoFilter
     search_fields = ["hijo__nombre", "hijo__apellido"]
     ordering = ["-fecha_consumo", "-hora_registro"]
@@ -185,6 +196,14 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         # Tarjeta requerida como identificacion
         if not nro_tarjeta:
             raise ValidationError({"error": "Debe especificar la tarjeta para registrar el ingreso al almuerzo"})
+
+        # Validar que la tarjeta pertenece al hijo y está activa
+        if nro_tarjeta.hijo_id != hijo.pk:
+            raise ValidationError({"error": "La tarjeta no pertenece al estudiante indicado."})
+        if nro_tarjeta.estado != "ACTIVA":
+            raise ValidationError({
+                "error": f"La tarjeta está {nro_tarjeta.get_estado_display().lower()} y no puede usarse para ingresar."
+            })
 
         # Validar restricciones alérgénicas del hijo
         forzar = self.request.data.get("forzar_restriccion", False)
@@ -262,10 +281,11 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             },
         )
 
+        # Lock para evitar race conditions en actualizaciones concurrentes
+        cuenta = CuentaAlmuerzoMensual.objects.select_for_update().get(pk=cuenta.pk)
         cuenta.cantidad_almuerzos = F("cantidad_almuerzos") + 1
         cuenta.monto_total = F("monto_total") + registro.costo_almuerzo
-        cuenta.save()
-        cuenta.refresh_from_db()
+        cuenta.save(update_fields=["cantidad_almuerzos", "monto_total"])
 
 
 # ==============================================================================
@@ -279,6 +299,13 @@ class CuentaAlmuerzoMensualViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["hijo", "anio", "mes", "estado"]
     ordering = ["-anio", "-mes"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if hasattr(user, "rol") and user.rol == "CLIENTE_WEB":
+            qs = qs.filter(hijo__cliente_responsable=user.cliente)
+        return qs
 
     @action(detail=False, methods=["post"], url_path="generar", permission_classes=[IsAdmin])
     def generar(self, request):
@@ -339,15 +366,12 @@ class PagoCuentaAlmuerzoViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         with transaction.atomic():
             pago = serializer.save()
-            cuenta = pago.cuenta
-            nuevo_pagado = cuenta.monto_pagado + pago.monto
-            cuenta.monto_pagado = F("monto_pagado") + pago.monto
-            if nuevo_pagado >= cuenta.monto_total:
-                cuenta.estado = CuentaAlmuerzoMensual.Estado.PAGADO
-            elif nuevo_pagado > 0:
-                cuenta.estado = CuentaAlmuerzoMensual.Estado.PARCIAL
-            cuenta.save()
-            cuenta.refresh_from_db()
+            cuenta = (
+                CuentaAlmuerzoMensual.objects
+                .select_for_update()
+                .get(pk=pago.cuenta_id)
+            )
+            cuenta.registrar_pago(pago.monto)
 
 
 # ==============================================================================
@@ -446,19 +470,19 @@ class ReporteAlmuerzosView(APIView):
 
         qs = CuentaAlmuerzoMensual.objects.filter(
             anio=anio, mes=mes
-        ).select_related("hijo")
+        ).select_related("hijo__grado")
 
         if hijo_id:
             qs = qs.filter(hijo_id=hijo_id)
         if grado:
-            qs = qs.filter(hijo__grado__icontains=grado)
+            qs = qs.filter(hijo__grado__nombre__icontains=grado)
 
         filas = []
         for c in qs.order_by("hijo__apellido", "hijo__nombre"):
             filas.append({
                 "hijo_id": c.hijo_id,
                 "hijo": c.hijo.nombre_completo,
-                "grado": c.hijo.grado or "",
+                "grado": c.hijo.grado.nombre if c.hijo.grado else "",
                 "cantidad_almuerzos": c.cantidad_almuerzos,
                 "monto_total": int(c.monto_total),
                 "monto_pagado": int(c.monto_pagado),

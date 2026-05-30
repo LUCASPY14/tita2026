@@ -5,7 +5,8 @@ Gestión de ventas, detalles, pagos y notas de crédito
 
 from decimal import Decimal
 
-from django.db import models
+from django.core.exceptions import ValidationError
+from django.db import models, transaction
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
@@ -290,6 +291,34 @@ class PagoVenta(models.Model):
         """Total cobrado al cliente (monto + comisión)."""
         return self.monto + self.monto_comision
 
+    def anular(self):
+        """
+        Anula el pago y revierte sus aplicaciones.
+        Recalcula el estado_pago de cada venta afectada.
+        """
+        if self.estado == self.Estado.ANULADO:
+            raise ValidationError("El pago ya está anulado.")
+        if self.estado == self.Estado.CONCILIADO:
+            raise ValidationError("No se puede anular un pago conciliado.")
+
+        with transaction.atomic():
+            ventas_afectadas = list(
+                self.aplicaciones.select_related("venta").values_list("venta_id", flat=True)
+            )
+            self.aplicaciones.all().delete()
+            self.estado = self.Estado.ANULADO
+            self.save(update_fields=["estado"])
+
+            for venta in Venta.objects.filter(pk__in=ventas_afectadas):
+                total = venta.total_pagado
+                if total <= 0:
+                    venta.estado_pago = Venta.EstadoPago.PENDIENTE
+                elif total >= venta.monto_total:
+                    venta.estado_pago = Venta.EstadoPago.PAGADO
+                else:
+                    venta.estado_pago = Venta.EstadoPago.PARCIAL
+                venta.save(update_fields=["estado_pago"])
+
 
 # ==============================================================================
 # APLICACIÓN DE PAGOS
@@ -314,6 +343,29 @@ class AplicacionPago(models.Model):
 
     def __str__(self):
         return f"₲{self.monto_aplicado:,.0f} → Venta #{self.venta_id}"
+
+    def clean(self):
+        if self.monto_aplicado is None or self.monto_aplicado <= 0:
+            raise ValidationError({"monto_aplicado": "El monto aplicado debe ser mayor a cero."})
+
+        if self.venta_id:
+            saldo = self.venta.saldo_pendiente
+            if self.monto_aplicado > saldo:
+                raise ValidationError(
+                    {"monto_aplicado": f"El monto (₲{self.monto_aplicado:,.0f}) supera el saldo pendiente de la venta (₲{saldo:,.0f})."}
+                )
+
+        if self.pago_id:
+            ya_aplicado = (
+                self.pago.aplicaciones
+                .exclude(pk=self.pk)
+                .aggregate(total=models.Sum("monto_aplicado"))["total"]
+            ) or Decimal("0")
+            disponible = self.pago.monto - ya_aplicado
+            if self.monto_aplicado > disponible:
+                raise ValidationError(
+                    {"monto_aplicado": f"El monto (₲{self.monto_aplicado:,.0f}) supera el saldo disponible del pago (₲{disponible:,.0f})."}
+                )
 
 
 # ==============================================================================

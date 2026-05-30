@@ -41,18 +41,20 @@ from .serializers import (
 )
 
 
-class StockViewSet(viewsets.ModelViewSet):
+class StockViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Stock.objects.select_related("producto").all()
     serializer_class = StockSerializer
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["producto__descripcion", "producto__codigo_barra"]
     ordering_fields = ["cantidad", "fecha_actualizacion"]
     ordering = ["-fecha_actualizacion"]
 
 
-class MovimientoStockViewSet(ExportCSVMixin, viewsets.ModelViewSet):
+class MovimientoStockViewSet(ExportCSVMixin, viewsets.ReadOnlyModelViewSet):
     queryset = MovimientoStock.objects.select_related("producto").all()
     serializer_class = MovimientoStockSerializer
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = MovimientoStockFilter
     search_fields = ["producto__descripcion", "observaciones"]
@@ -73,6 +75,7 @@ class MovimientoStockViewSet(ExportCSVMixin, viewsets.ModelViewSet):
 class AjusteInventarioViewSet(viewsets.ModelViewSet):
     queryset = AjusteInventario.objects.select_related("solicitado_por").prefetch_related("detalles").all()
     serializer_class = AjusteInventarioSerializer
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["tipo", "estado"]
 
@@ -95,12 +98,31 @@ class AjusteInventarioViewSet(viewsets.ModelViewSet):
             tipo_mov = MovimientoStock.Tipo.INGRESO if es_ingreso else MovimientoStock.Tipo.EGRESO
             motivo_mov = MovimientoStock.Motivo.AJUSTE_AUMENTO if es_ingreso else MovimientoStock.Motivo.AJUSTE_MERMA
 
+            # Paso 1: bloquear todos los stocks y validar disponibilidad para MERMA.
+            # Se hace antes de modificar cualquier fila para un rechazo limpio.
+            detalles_con_stock = []
             for detalle in ajuste.detalles.select_related("producto").all():
                 stock, _ = Stock.objects.get_or_create(
                     producto=detalle.producto,
                     defaults={"cantidad": Decimal("0")},
                 )
                 stock = Stock.objects.select_for_update().get(pk=stock.pk)
+
+                if not es_ingreso and not detalle.producto.permite_stock_negativo:
+                    if stock.cantidad < detalle.cantidad:
+                        return Response(
+                            {
+                                "error": f"Stock insuficiente para {detalle.producto.descripcion}.",
+                                "disponible": str(stock.cantidad),
+                                "requerido": str(detalle.cantidad),
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
+                detalles_con_stock.append((detalle, stock))
+
+            # Paso 2: aplicar todos los cambios (validaciones ya superadas).
+            for detalle, stock in detalles_con_stock:
                 if es_ingreso:
                     stock.cantidad += detalle.cantidad
                 else:
@@ -146,20 +168,21 @@ class AjusteInventarioViewSet(viewsets.ModelViewSet):
 class DetalleAjusteViewSet(viewsets.ModelViewSet):
     queryset = DetalleAjuste.objects.select_related("ajuste", "producto").all()
     serializer_class = DetalleAjusteSerializer
-
+    permission_classes = [IsStaffUser]
 
 
 class CostoHistoricoViewSet(viewsets.ModelViewSet):
     queryset = CostoHistorico.objects.select_related("producto").all()
     serializer_class = CostoHistoricoSerializer
-
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["producto"]
 
 
-class AlertaStockViewSet(viewsets.ModelViewSet):
+class AlertaStockViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AlertaStock.objects.select_related("producto").all()
     serializer_class = AlertaStockSerializer
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = AlertaStockFilter
     search_fields = ["producto__descripcion"]
@@ -170,19 +193,21 @@ class AlertaStockViewSet(viewsets.ModelViewSet):
 class LoteProductoViewSet(viewsets.ModelViewSet):
     queryset = LoteProducto.objects.select_related("producto").all()
     serializer_class = LoteProductoSerializer
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = LoteProductoFilter
-    search_fields = ["produto__descripcion", "nro_lote"]
-    ordering_fields = ["fecha_vencimiento", "fecha_ingreso"]
+    search_fields = ["producto__descripcion", "numero_lote"]
+    ordering_fields = ["fecha_vencimiento", "fecha_creacion"]
     ordering = ["fecha_vencimiento"]
 
 
-class AlertaVencimientoViewSet(viewsets.ModelViewSet):
+class AlertaVencimientoViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AlertaVencimiento.objects.select_related("lote").all()
     serializer_class = AlertaVencimientoSerializer
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = AlertaVencimientoFilter
-    search_fields = ["lote__nro_lote", "lote__produto__descripcion"]
+    search_fields = ["lote__numero_lote", "lote__producto__descripcion"]
     ordering_fields = ["id"]
     ordering = ["-id"]
 
@@ -218,9 +243,9 @@ class StockCriticoView(APIView):
                 "producto_id": s.producto_id,
                 "descripcion": s.producto.descripcion,
                 "categoria": s.producto.categoria.nombre if s.producto.categoria else None,
-                "stock_actual": float(s.cantidad),
-                "stock_minimo": float(s.producto.stock_minimo),
-                "diferencia": float(s.cantidad - s.producto.stock_minimo),
+                "stock_actual": s.cantidad,
+                "stock_minimo": s.producto.stock_minimo,
+                "diferencia": s.cantidad - s.producto.stock_minimo,
                 "dias_stock": s.dias_stock_disponible,
             })
 

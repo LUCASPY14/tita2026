@@ -40,7 +40,6 @@ from .serializers import (
 
 
 class VentaViewSet(viewsets.ModelViewSet):
-    queryset = Venta.objects.select_related("cliente", "cajero").prefetch_related("detalles").all()
     serializer_class = VentaSerializer
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -48,6 +47,21 @@ class VentaViewSet(viewsets.ModelViewSet):
     search_fields = ["cliente__nombres", "cliente__apellidos", "cliente__ruc_ci"]
     ordering_fields = ["fecha", "monto_total"]
     ordering = ["-fecha"]
+
+    def get_queryset(self):
+        from django.db.models import DecimalField, Sum, Value
+        from django.db.models.functions import Coalesce
+        return (
+            Venta.objects
+            .select_related("cliente", "cajero")
+            .prefetch_related("detalles")
+            .annotate(
+                _total_pagado=Coalesce(
+                    Sum("aplicaciones_pago__monto_aplicado"),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=0)),
+                )
+            )
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -112,11 +126,31 @@ class PagoVentaViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["estado", "medio_pago", "cliente", "venta"]
 
+    _ESTADOS_FINALES = (PagoVenta.Estado.CONCILIADO, PagoVenta.Estado.ANULADO)
 
-class AplicacionPagoViewSet(viewsets.ModelViewSet):
+    def perform_update(self, serializer):
+        if serializer.instance.estado in self._ESTADOS_FINALES:
+            from rest_framework.exceptions import ValidationError as DRFValidationError
+            raise DRFValidationError(
+                f"No se puede modificar un pago en estado {serializer.instance.estado}."
+            )
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.estado in self._ESTADOS_FINALES:
+            from rest_framework.exceptions import ValidationError as DRFValidationError
+            raise DRFValidationError(
+                f"No se puede eliminar un pago en estado {instance.estado}."
+            )
+        super().perform_destroy(instance)
+
+
+class AplicacionPagoViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AplicacionPago.objects.select_related("pago", "venta").all()
     serializer_class = AplicacionPagoSerializer
-    permission_classes = [IsCajeroOrAdmin]
+    permission_classes = [IsStaffUser]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["pago", "venta"]
 
 
 class NotaCreditoViewSet(viewsets.ModelViewSet):
@@ -179,7 +213,7 @@ class ReporteVentasProductoView(APIView):
                 "producto_id": r["producto__id"],
                 "descripcion": r["producto__descripcion"],
                 "categoria": r["producto__categoria__nombre"] or "",
-                "total_cantidad": float(r["total_cantidad"] or 0),
+                "total_cantidad": r["total_cantidad"] or 0,
                 "total_monto": int(r["total_monto"] or 0),
                 "num_ventas": r["num_ventas"],
             }

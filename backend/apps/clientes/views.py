@@ -46,14 +46,16 @@ from .serializers import (
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.select_related("tipo_cliente", "lista_precio").all()
     serializer_class = ClienteSerializer
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["activo", "tipo_cliente"]
     search_fields = ["ruc_ci", "nombres", "apellidos"]
 
 
-class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
+class CuentaCorrienteClienteViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = CuentaCorrienteCliente.objects.select_related("cliente").all()
     serializer_class = CuentaCorrienteClienteSerializer
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["cliente", "tipo"]
 
@@ -65,12 +67,20 @@ class TipoClienteViewSet(viewsets.ModelViewSet):
 
 
 class HijoViewSet(viewsets.ModelViewSet):
-    queryset = Hijo.objects.select_related("cliente_responsable").all()
     serializer_class = HijoSerializer
     permission_classes = [IsStaffOrClienteWeb]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["activo", "cliente_responsable"]
     search_fields = ["nombre", "apellido"]
+
+    def get_queryset(self):
+        qs = Hijo.objects.select_related("cliente_responsable", "grado")
+        if self.request.user.es_cliente_web:
+            cliente = getattr(self.request.user, "cliente", None)
+            if cliente is None:
+                return qs.none()
+            qs = qs.filter(cliente_responsable=cliente)
+        return qs
 
 
 class GradoViewSet(viewsets.ModelViewSet):
@@ -82,16 +92,25 @@ class GradoViewSet(viewsets.ModelViewSet):
 class HistorialGradoViewSet(viewsets.ModelViewSet):
     queryset = HistorialGrado.objects.select_related("hijo").all()
     serializer_class = HistorialGradoSerializer
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["hijo", "anio_escolar"]
 
 
 class RestriccionHijoViewSet(viewsets.ModelViewSet):
-    queryset = RestriccionHijo.objects.select_related("hijo").all()
     serializer_class = RestriccionHijoSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["hijo", "severidad", "activo"]
+
+    def get_queryset(self):
+        qs = RestriccionHijo.objects.select_related("hijo__cliente_responsable")
+        if self.request.user.es_cliente_web:
+            cliente = getattr(self.request.user, "cliente", None)
+            if cliente is None:
+                return qs.none()
+            qs = qs.filter(hijo__cliente_responsable=cliente)
+        return qs
 
 
 class AutorizacionSaldoNegativoViewSet(viewsets.ModelViewSet):
@@ -109,7 +128,7 @@ class PaisViewSet(viewsets.ModelViewSet):
 
 
 class CiudadViewSet(viewsets.ModelViewSet):
-    queryset = Ciudad.objects.all()
+    queryset = Ciudad.objects.select_related("pais").all()
     serializer_class = CiudadSerializer
     permission_classes = [IsAdminOrReadOnly]
 

@@ -19,7 +19,7 @@ from .models import (
 class TarjetaSerializer(serializers.ModelSerializer):
     hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
     hijo_foto = serializers.SerializerMethodField()
-    hijo_grado = serializers.CharField(source="hijo.grado", read_only=True)
+    hijo_grado = serializers.CharField(source="hijo.grado_nombre", read_only=True, allow_null=True)
     hijo_restricciones = serializers.SerializerMethodField()
     saldo_disponible = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
     

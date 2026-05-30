@@ -87,6 +87,28 @@ class RegistroConsumoAlmuerzoSerializer(serializers.ModelSerializer):
             "fecha_creacion",
         ]
 
+    def validate(self, data):
+        hijo = data.get("hijo")
+        suscripcion = data.get("suscripcion")
+        fecha_consumo = data.get("fecha_consumo")
+
+        if suscripcion and hijo and suscripcion.hijo_id != hijo.pk:
+            raise serializers.ValidationError(
+                {"suscripcion": "La suscripción no pertenece al estudiante indicado."}
+            )
+
+        if suscripcion and fecha_consumo:
+            if suscripcion.fecha_inicio > fecha_consumo:
+                raise serializers.ValidationError(
+                    {"suscripcion": "La suscripción no estaba vigente en la fecha de consumo."}
+                )
+            if suscripcion.fecha_fin and suscripcion.fecha_fin < fecha_consumo:
+                raise serializers.ValidationError(
+                    {"suscripcion": "La suscripción ya había vencido en la fecha de consumo."}
+                )
+
+        return data
+
 
 # ==============================================================================
 # CUENTA ALMUERZO MENSUAL
@@ -116,6 +138,20 @@ class PagoCuentaAlmuerzoSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["fecha_creacion"]
 
+    def validate(self, data):
+        cuenta = data.get("cuenta")
+        monto = data.get("monto")
+
+        if cuenta and monto is not None:
+            if monto <= 0:
+                raise serializers.ValidationError({"monto": "El monto debe ser mayor a cero."})
+            saldo = cuenta.saldo_pendiente
+            if monto > saldo:
+                raise serializers.ValidationError(
+                    {"monto": f"El monto (₲{monto:,.0f}) supera el saldo pendiente (₲{saldo:,.0f})."}
+                )
+        return data
+
 
 # ==============================================================================
 # PAGO ALMUERZO MENSUAL
@@ -126,6 +162,21 @@ class PagoAlmuerzoMensualSerializer(serializers.ModelSerializer):
         model = PagoAlmuerzoMensual
         fields = "__all__"
         read_only_fields = ["fecha_creacion"]
+
+    def validate(self, data):
+        suscripcion = data.get("suscripcion")
+        mes_pagado = data.get("mes_pagado")
+
+        if suscripcion and mes_pagado:
+            if mes_pagado < suscripcion.fecha_inicio.replace(day=1):
+                raise serializers.ValidationError(
+                    {"mes_pagado": "El mes pagado es anterior al inicio de la suscripción."}
+                )
+            if suscripcion.fecha_fin and mes_pagado > suscripcion.fecha_fin.replace(day=1):
+                raise serializers.ValidationError(
+                    {"mes_pagado": "El mes pagado es posterior al vencimiento de la suscripción."}
+                )
+        return data
 
 
 # ==============================================================================

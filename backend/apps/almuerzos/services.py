@@ -12,7 +12,6 @@ from rest_framework.exceptions import ValidationError
 
 from .models import (
     PrecioAlmuerzo,
-    PlanAlmuerzo,
     SuscripcionAlmuerzo,
     RegistroConsumoAlmuerzo,
     CuentaAlmuerzoMensual,
@@ -61,6 +60,18 @@ class AlmuerzoService:
         """
         if not nro_tarjeta:
             raise ValidationError({"error": "Debe especificar la tarjeta."})
+
+        # Validar que la tarjeta pertenece al hijo y está activa
+        if nro_tarjeta.hijo_id != hijo.pk:
+            raise ValidationError({"error": "La tarjeta no pertenece al estudiante indicado."})
+        if nro_tarjeta.estado != "ACTIVA":
+            raise ValidationError({
+                "error": f"La tarjeta está {nro_tarjeta.get_estado_display().lower()} y no puede usarse."
+            })
+
+        # No permitir consumos en fecha futura
+        if fecha_consumo > date.today():
+            raise ValidationError({"error": "No se puede registrar un consumo en fecha futura."})
 
         # Validar suscripcion activa
         if suscripcion and suscripcion.estado != SuscripcionAlmuerzo.Estado.ACTIVA:
@@ -130,12 +141,6 @@ class AlmuerzoService:
         fecha = registro.fecha_consumo
         hijo = registro.hijo
 
-        forma_cobro = (
-            registro.suscripcion.plan.tipo
-            if registro.suscripcion
-            else PlanAlmuerzo.TipoPlan.SIN_LIMITE
-        )
-
         cuenta, _ = CuentaAlmuerzoMensual.objects.get_or_create(
             hijo=hijo,
             anio=fecha.year,
@@ -144,11 +149,13 @@ class AlmuerzoService:
                 "cantidad_almuerzos": 0,
                 "monto_total": 0,
                 "monto_pagado": 0,
-                "forma_cobro": forma_cobro,
+                "forma_cobro": CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
                 "estado": CuentaAlmuerzoMensual.Estado.PENDIENTE,
             },
         )
 
-        cuenta.cantidad_almuerzos = models.F("cantidad_almuerzos") + 1
-        cuenta.monto_total = models.F("monto_total") + registro.costo_almuerzo
-        cuenta.save()
+        # Lock pesimista para evitar race conditions en consumos simultáneos
+        cuenta = CuentaAlmuerzoMensual.objects.select_for_update().get(pk=cuenta.pk)
+        cuenta.cantidad_almuerzos += 1
+        cuenta.monto_total += registro.costo_almuerzo
+        cuenta.save(update_fields=["cantidad_almuerzos", "monto_total"])

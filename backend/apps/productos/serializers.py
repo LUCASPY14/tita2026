@@ -24,7 +24,12 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 class ProductoSerializer(serializers.ModelSerializer):
     categoria_nombre = serializers.CharField(source="categoria.nombre", read_only=True)
-    precio_actual = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+    precio_actual = serializers.SerializerMethodField()
+
+    def get_precio_actual(self, obj):
+        # Usa la anotación _precio_actual del queryset cuando está disponible (evita N+1).
+        annotated = getattr(obj, "_precio_actual", None)
+        return annotated if annotated is not None else obj.precio_actual
 
     class Meta:
         model = Producto
@@ -55,7 +60,7 @@ class PrecioPorListaSerializer(serializers.ModelSerializer):
 
 class HistoricoPrecioSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
-    variacion_porcentual = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+    variacion_porcentual = serializers.DecimalField(max_digits=7, decimal_places=2, read_only=True)
 
     class Meta:
         model = HistoricoPrecio

@@ -1,7 +1,7 @@
 import logging
 from celery import shared_task
+from django.db import models as db_models, transaction
 from django.utils import timezone
-from django.db import models as db_models
 from datetime import timedelta
 
 logger = logging.getLogger(__name__)
@@ -37,35 +37,47 @@ def cerrar_cajas_automatico():
 
     hoy = timezone.now().date()
 
-    cierres_abiertos = CierreCaja.objects.filter(
-        estado=CierreCaja.Estado.ABIERTO,
-        fecha_apertura__date__lt=hoy,
-    ).select_for_update()
+    # Obtener IDs sin bloqueo — el lock se adquiere por fila dentro de cada transacción.
+    pks_abiertos = list(
+        CierreCaja.objects.filter(
+            estado=CierreCaja.Estado.ABIERTO,
+            fecha_apertura__date__lt=hoy,
+        ).values_list("pk", flat=True)
+    )
 
     cerradas = 0
-    for cierre in cierres_abiertos:
-        ingresos = (
-            MovimientoCaja.objects.filter(
-                cierre=cierre, tipo=MovimientoCaja.Tipo.INGRESO
-            ).aggregate(total=m.Sum("monto"))["total"] or 0
-        )
-        egresos = (
-            MovimientoCaja.objects.filter(
-                cierre=cierre, tipo=MovimientoCaja.Tipo.EGRESO
-            ).aggregate(total=m.Sum("monto"))["total"] or 0
-        )
-        monto_esperado = cierre.monto_inicial + ingresos - egresos
+    for pk in pks_abiertos:
+        with transaction.atomic():
+            # Re-fetch con lock dentro de la transacción para evitar doble cierre.
+            try:
+                cierre = CierreCaja.objects.select_for_update().get(
+                    pk=pk, estado=CierreCaja.Estado.ABIERTO
+                )
+            except CierreCaja.DoesNotExist:
+                continue  # Otro worker ya lo cerró
 
-        cierre.monto_contado_fisico = monto_esperado
-        cierre.diferencia_efectivo = 0
-        cierre.fecha_cierre = timezone.now()
-        cierre.estado = CierreCaja.Estado.CERRADO
-        cierre.save()
-        cerradas += 1
-        logger.warning(
-            "Cierre automático caja #%d — Monto esperado: Gs. %s",
-            cierre.pk, monto_esperado,
-        )
+            ingresos = (
+                MovimientoCaja.objects.filter(
+                    cierre=cierre, tipo=MovimientoCaja.Tipo.INGRESO
+                ).aggregate(total=m.Sum("monto"))["total"] or 0
+            )
+            egresos = (
+                MovimientoCaja.objects.filter(
+                    cierre=cierre, tipo=MovimientoCaja.Tipo.EGRESO
+                ).aggregate(total=m.Sum("monto"))["total"] or 0
+            )
+            monto_esperado = cierre.monto_inicial + ingresos - egresos
+
+            cierre.monto_contado_fisico = monto_esperado
+            cierre.diferencia_efectivo = 0
+            cierre.fecha_cierre = timezone.now()
+            cierre.estado = CierreCaja.Estado.CERRADO
+            cierre.save()
+            cerradas += 1
+            logger.warning(
+                "Cierre automático caja #%d — Monto esperado: Gs. %s",
+                cierre.pk, monto_esperado,
+            )
 
     logger.info("cerrar_cajas_automatico: %d cajas cerradas", cerradas)
     return {"cajas_cerradas": cerradas}

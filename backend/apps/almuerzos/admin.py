@@ -171,14 +171,20 @@ class RegistroConsumoAlmuerzoAdmin(admin.ModelAdmin):
             "fields": ("estado", "motivo_rechazo")
         }),
         ("Registro", {
-            "fields": ("nro_tarjeta", "registrado_por", "fecha_creacion"),
+            "fields": ("nro_tarjeta", "registrado_por_display", "fecha_creacion"),
             "classes": ("collapse",),
         }),
     )
 
+    def registrado_por_display(self, obj):
+        if not obj.registrado_por:
+            return "-"
+        return obj.registrado_por.get_full_name() or obj.registrado_por.username
+    registrado_por_display.short_description = "Registrado por"
+
     def get_readonly_fields(self, request, obj=None):
-        """Consumo inmutable una vez creado."""
-        if obj:
+        """Permite editar mientras el consumo está REGISTRADO y no cobrado; bloquea en otros casos."""
+        if obj and (obj.estado != "REGISTRADO" or obj.ya_cobrado):
             return [f.name for f in self.model._meta.fields]
         return self.readonly_fields
 
@@ -273,9 +279,11 @@ class CuentaAlmuerzoMensualAdmin(admin.ModelAdmin):
 
     def saldo_pendiente_display(self, obj):
         saldo = obj.saldo_pendiente
-        if saldo <= 0:
+        if saldo < 0:
+            return format_html('<span style="color:#fd7e14;">-₲{:,}</span>', abs(int(saldo)))
+        if saldo == 0:
             return format_html('<span style="color:#28a745;">₲0</span>')
-        return format_html('<span style="color:#dc3545;">₲{:,}</span>', saldo)
+        return format_html('<span style="color:#dc3545;">₲{:,}</span>', int(saldo))
     saldo_pendiente_display.short_description = "Saldo Pend."
 
     def estado_badge(self, obj):
@@ -320,6 +328,10 @@ class PagoCuentaAlmuerzoAdmin(admin.ModelAdmin):
         if obj:
             return [f.name for f in self.model._meta.fields]
         return self.readonly_fields
+
+    def has_change_permission(self, request, obj=None):
+        """Los pagos solo se ven; no se modifican."""
+        return False
 
     def has_delete_permission(self, request, obj=None):
         """No permite eliminar pagos."""
@@ -369,10 +381,13 @@ class PagoAlmuerzoMensualAdmin(admin.ModelAdmin):
     )
 
     def get_readonly_fields(self, request, obj=None):
-        """Pago inmutable una vez confirmado o rechazado."""
-        if obj and obj.estado in ("CONFIRMADO", "RECHAZADO"):
-            return [f.name for f in self.model._meta.fields]
-        return self.readonly_fields
+        """La suscripción no puede cambiar una vez creado el pago; todo es readonly si está confirmado/rechazado."""
+        readonly = list(self.readonly_fields)
+        if obj:
+            readonly.append("suscripcion")
+            if obj.estado in ("CONFIRMADO", "RECHAZADO"):
+                return [f.name for f in self.model._meta.fields]
+        return readonly
 
     def has_delete_permission(self, request, obj=None):
         """No permite eliminar pagos confirmados o rechazados."""

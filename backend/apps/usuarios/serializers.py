@@ -4,6 +4,8 @@ Serializers para la app usuarios
 
 from rest_framework import serializers
 
+from apps.clientes.models import Cliente
+
 from .models import (
     Usuario,
     Empleado,
@@ -24,6 +26,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "apellido",
             "rol",
             "nombre_completo",
+            "cliente_id",
             "is_active",
             "ultimo_acceso",
         ]
@@ -32,10 +35,28 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
 class UsuarioCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
+    cliente = serializers.PrimaryKeyRelatedField(
+        queryset=Cliente.objects.all(),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = Usuario
-        fields = ["email", "nombre", "apellido", "rol", "password", "is_active"]
+        fields = ["email", "nombre", "apellido", "rol", "password", "cliente", "is_active"]
+
+    def validate(self, data):
+        rol = data.get("rol")
+        cliente = data.get("cliente")
+        if rol == Usuario.Rol.CLIENTE_WEB and not cliente:
+            raise serializers.ValidationError(
+                {"cliente": "Se requiere un cliente para usuarios con rol CLIENTE_WEB."}
+            )
+        if rol != Usuario.Rol.CLIENTE_WEB and cliente:
+            raise serializers.ValidationError(
+                {"cliente": "Solo usuarios CLIENTE_WEB pueden tener un cliente asociado."}
+            )
+        return data
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -54,6 +75,13 @@ class CambiarPasswordSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("La contraseña actual es incorrecta.")
         return value
+
+    def validate(self, data):
+        if data.get("password_nuevo") == data.get("password_actual"):
+            raise serializers.ValidationError(
+                {"password_nuevo": "La nueva contraseña debe ser diferente a la actual."}
+            )
+        return data
 
 
 class RecuperarPasswordSerializer(serializers.Serializer):

@@ -27,7 +27,13 @@ class DetalleVentaSerializer(serializers.ModelSerializer):
 class VentaSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.CharField(source="cliente.nombre_completo", read_only=True)
     detalles = DetalleVentaSerializer(many=True, read_only=True)
-    saldo_pendiente = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+    saldo_pendiente = serializers.SerializerMethodField()
+
+    def get_saldo_pendiente(self, obj):
+        total_pagado = getattr(obj, "_total_pagado", None)
+        if total_pagado is None:
+            total_pagado = obj.total_pagado
+        return obj.monto_total - total_pagado
 
     class Meta:
         model = Venta
