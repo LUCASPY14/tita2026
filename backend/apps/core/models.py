@@ -296,6 +296,13 @@ class CargaSaldo(models.Model):
         verbose_name = "Carga de Saldo"
         verbose_name_plural = "Cargas de Saldo"
         ordering = ["-fecha_carga"]
+        indexes = [
+            models.Index(
+                fields=["tarjeta", "fecha_carga"],
+                name="idx_cargasaldo_pendientes",
+                condition=models.Q(estado="PENDIENTE"),
+            ),
+        ]
 
     def __str__(self):
         return f"Carga #{self.pk} - {self.tarjeta} - ₲{self.monto_cargado:,.0f}"

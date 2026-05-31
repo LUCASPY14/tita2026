@@ -100,6 +100,9 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
         "HOST": os.environ.get("DB_HOST", "localhost"),
         "PORT": os.environ.get("DB_PORT", "5432"),
+        # ATOMIC_REQUESTS + CONN_MAX_AGE=600 hacen innecesario PgBouncer a esta escala
+        # (~8-12 conexiones reales). Si se superan 40-50 conexiones sostenidas, hay que
+        # desactivar ambas ANTES de habilitar PgBouncer en modo transaction.
         "ATOMIC_REQUESTS": True,
         "CONN_MAX_AGE": 600,
         "CONN_HEALTH_CHECKS": True,
