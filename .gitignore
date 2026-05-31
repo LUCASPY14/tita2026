@@ -69,10 +69,12 @@ mobile/.expo-shared/
 .DS_Store
 Thumbs.db
 
-# Backups
+# Backups y dumps de base de datos
 *.bak
 *.backup
 *.sql
+# Excepción: scripts de operación en scripts/ sí deben versionarse
+!scripts/**
 
 # Temporary files
 *.tmp

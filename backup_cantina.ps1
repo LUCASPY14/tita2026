@@ -5,28 +5,39 @@
 # Para registrar la tarea:
 #   schtasks /Create /TN "Backup Cantina" /TR "powershell -File C:\backups\backup_cantina.ps1" /SC DAILY /ST 02:00 /RU SYSTEM
 
-$DB       = "cantina_tita_dev"
-$USER     = "postgres"
-$HOST     = "localhost"
-$PORT     = "5432"
-$DIR      = "C:\backups\cantina"
-$KEEP     = 30            # días a conservar
-$FECHA    = Get-Date -Format "yyyyMMdd_HHmm"
-$ARCHIVO  = "$DIR\cantina_$FECHA.sql.gz"
-$LOG      = "$DIR\backup_$FECHA.log"
+param(
+    [string]$DbName = "cantina_tita",
+    [string]$PgUser = "postgres",
+    [string]$PgHost = "localhost",
+    [string]$PgPort = "5432",
+    [string]$PgBin  = "C:\Program Files\PostgreSQL\16\bin"
+)
+
+$DIR     = "C:\backups\cantina"
+$KEEP    = 30            # días a conservar
+$FECHA   = Get-Date -Format "yyyyMMdd_HHmm"
+$ARCHIVO = "$DIR\cantina_$FECHA.dump"
+$LOG     = "$DIR\backup_$FECHA.log"
 
 # Crear directorio si no existe
 if (-not (Test-Path $DIR)) { New-Item -ItemType Directory -Path $DIR | Out-Null }
 
-$env:PGPASSWORD = "TU_PASSWORD_AQUI"   # <-- reemplazar o usar .pgpass
+# Credenciales: configurar con scripts\setup_pgpass.ps1 antes del primer uso.
+# El archivo pgpass.conf en %APPDATA%\postgresql\ permite autenticación sin contraseña en texto plano.
+if ($env:PGPASSWORD) {
+    Write-Host "Usando PGPASSWORD desde variable de entorno."
+} elseif (-not (Test-Path (Join-Path $env:APPDATA "postgresql\pgpass.conf"))) {
+    Write-Error "No hay credenciales configuradas. Ejecutar: scripts\setup_pgpass.ps1 -Password <password>"
+    exit 1
+}
 
 try {
-    # pg_dump + compresión
-    & "C:\Program Files\PostgreSQL\16\bin\pg_dump.exe" `
-        -h $HOST -p $PORT -U $USER `
+    # pg_dump formato custom (compatible con pg_restore y restore_cantina.ps1)
+    & (Join-Path $PgBin "pg_dump.exe") `
+        -h $PgHost -p $PgPort -U $PgUser `
         --format=custom --compress=9 `
         --file=$ARCHIVO `
-        $DB
+        $DbName
 
     if ($LASTEXITCODE -ne 0) {
         throw "pg_dump falló con código $LASTEXITCODE"
@@ -36,7 +47,7 @@ try {
     "$(Get-Date) | OK | $ARCHIVO | $size MB" | Out-File $LOG
 
     # Rotación: eliminar backups con más de $KEEP días
-    Get-ChildItem "$DIR\cantina_*.sql.gz" |
+    Get-ChildItem "$DIR\cantina_*.dump" |
         Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$KEEP) } |
         Remove-Item -Force
 

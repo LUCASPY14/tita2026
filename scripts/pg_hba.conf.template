@@ -1,0 +1,40 @@
+# pg_hba.conf — plantilla para cantina_tita producción
+# Ubicación en Windows: C:\Program Files\PostgreSQL\16\data\pg_hba.conf
+# Aplicar cambios: en psql ejecutar SELECT pg_reload_conf();
+#
+# PREREQUISITO — restringir listen_addresses en postgresql.conf:
+#   listen_addresses = 'localhost,<IP_LAN_DEL_SERVIDOR>'
+#   (el valor por defecto '*' expone el puerto 5432 en todas las interfaces)
+#   Requiere reinicio de PostgreSQL para aplicarse.
+#
+# INSTRUCCIONES:
+#   1. Reemplazar las IPs de las 7 PCs cajeras y la PC admin con las reales de la LAN.
+#   2. Copiar este archivo sobre el pg_hba.conf existente.
+#   3. Ejecutar: SELECT pg_reload_conf();
+#   4. Verificar desde un cajero: psql -h <IP_SERVIDOR> -U cantina_user -d cantina_tita
+
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# Conexión local (el servidor mismo — para scripts de backup/restore y mantenimiento)
+local   all             postgres                                trust
+host    all             postgres        127.0.0.1/32            scram-sha-256
+host    all             postgres        ::1/128                 scram-sha-256
+
+# Usuario de la aplicación Django — solo desde el servidor (Gunicorn corre aquí)
+host    cantina_tita    cantina_user    127.0.0.1/32            scram-sha-256
+
+# Usuario de reportes (read-only) — solo desde la PC de administración
+# REEMPLAZAR con la IP real de la PC admin:
+host    cantina_tita    reporting       192.168.1.XXX/32        scram-sha-256
+
+# PCs cajeras (ModoRecreo) — acceden vía API a Gunicorn, no directamente a PG
+# Si en el futuro algún cajero necesita acceso directo a PG, agregar aquí:
+# host  cantina_tita    reporting       192.168.1.YYY/32        scram-sha-256
+# host  cantina_tita    reporting       192.168.1.ZZZ/32        scram-sha-256
+
+# PC comedor
+# host  cantina_tita    reporting       192.168.1.WWW/32        scram-sha-256
+
+# BLOQUEAR todo lo demás explícitamente
+host    all             all             0.0.0.0/0               reject
+host    all             all             ::/0                    reject
