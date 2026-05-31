@@ -22,6 +22,8 @@ import {
   LogOut,
   Wallet,
   ChefHat,
+  Leaf,
+  Plug,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -46,7 +48,9 @@ const navItems: NavItem[] = [
   { path: '/facturacion',  label: 'Facturación',  icon: FileText },
   { path: '/reportes',     label: 'Reportes',     icon: BarChart2 },
   { path: '/inventario',   label: 'Inventario',   icon: Warehouse },
+  { path: '/alergenos',    label: 'Alérgenos',    icon: Leaf },
   { path: '/usuarios',     label: 'Usuarios',     icon: UserCog },
+  { path: '/integraciones',label: 'Integraciones',icon: Plug },
   { path: '/configuracion',label: 'Configuración',icon: Settings },
 ]
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { UserPlus, Search, Edit2, Eye, EyeOff, Shield, Users } from 'lucide-react'
+import { UserPlus, Search, Edit2, Eye, EyeOff, Shield, Users, HardHat, Plus } from 'lucide-react'
 import api from '../services/api'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -68,6 +68,27 @@ interface RolPermiso {
   permiso_codigo: string
 }
 
+interface Empleado {
+  id_empleado: number
+  nombre: string
+  apellido: string
+  email: string | null
+  telefono: string | null
+  fecha_ingreso: string
+  estado: boolean
+  id_rol: number
+  rol_nombre: string
+}
+
+interface EmpleadoForm {
+  nombre: string
+  apellido: string
+  email: string
+  telefono: string
+  id_rol: number | ''
+  estado: boolean
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ROL_COLOR: Record<string, BadgeColor> = {
@@ -88,7 +109,7 @@ const FORM_INITIAL: UsuarioForm = {
   email: '', nombre: '', apellido: '', rol: 'CAJERO', password: '', is_active: true,
 }
 
-type TabKey = 'usuarios' | 'permisos'
+type TabKey = 'usuarios' | 'permisos' | 'empleados'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -181,6 +202,76 @@ export default function Usuarios() {
       loadPermisosAll()
     }
   }, [tab, loadRoles, loadPermisosAll])
+
+  // ── Empleados ──────────────────────────────────────────────────────
+  const [empleados, setEmpleados] = useState<Empleado[]>([])
+  const [loadingEmp, setLoadingEmp] = useState(false)
+  const [totalEmp, setTotalEmp] = useState(0)
+  const [pageEmp, setPageEmp] = useState(1)
+  const [empModalOpen, setEmpModalOpen] = useState(false)
+  const [editingEmp, setEditingEmp] = useState<Empleado | null>(null)
+  const [savingEmp, setSavingEmp] = useState(false)
+  const [empForm, setEmpForm] = useState<EmpleadoForm>({
+    nombre: '', apellido: '', email: '', telefono: '', id_rol: '', estado: true,
+  })
+
+  const loadEmpleados = useCallback(async (p: number) => {
+    setLoadingEmp(true)
+    try {
+      const { data } = await api.get('/usuarios/empleados/', {
+        params: { page: p, page_size: 15 },
+      })
+      setEmpleados(data.results ?? [])
+      setTotalEmp(data.count ?? 0)
+    } catch {
+      toast.error('Error al cargar empleados')
+    } finally {
+      setLoadingEmp(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'empleados') {
+      loadEmpleados(1)
+      loadRoles()
+    }
+  }, [tab, loadEmpleados, loadRoles])
+
+  const openCreateEmp = () => {
+    setEditingEmp(null)
+    setEmpForm({ nombre: '', apellido: '', email: '', telefono: '', id_rol: roles[0]?.id_rol ?? '', estado: true })
+    setEmpModalOpen(true)
+  }
+
+  const openEditEmp = (emp: Empleado) => {
+    setEditingEmp(emp)
+    setEmpForm({ nombre: emp.nombre, apellido: emp.apellido, email: emp.email ?? '', telefono: emp.telefono ?? '', id_rol: emp.id_rol, estado: emp.estado })
+    setEmpModalOpen(true)
+  }
+
+  const handleSaveEmp = async () => {
+    if (!empForm.nombre || !empForm.apellido || !empForm.id_rol) {
+      toast.error('Nombre, apellido y rol son obligatorios')
+      return
+    }
+    setSavingEmp(true)
+    try {
+      const payload = { ...empForm, id_rol: Number(empForm.id_rol) }
+      if (editingEmp) {
+        await api.put(`/usuarios/empleados/${editingEmp.id_empleado}/`, payload)
+        toast.success('Empleado actualizado')
+      } else {
+        await api.post('/usuarios/empleados/', payload)
+        toast.success('Empleado creado')
+      }
+      setEmpModalOpen(false)
+      loadEmpleados(pageEmp)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSavingEmp(false)
+    }
+  }
 
   useEffect(() => {
     if (selectedRolId) loadRolPermisos(selectedRolId)
@@ -334,8 +425,40 @@ export default function Usuarios() {
     return acc
   }, {})
 
+  const colsEmpleados: Column<Empleado>[] = [
+    {
+      title: 'Empleado',
+      key: 'nombre',
+      render: (_, r) => (
+        <div>
+          <p className="text-sm font-medium text-slate-800">{r.nombre} {r.apellido}</p>
+          <p className="text-xs text-slate-400">{r.email || '—'}</p>
+        </div>
+      ),
+    },
+    { title: 'Teléfono', key: 'telefono', render: (_, r) => <span className="text-sm text-slate-600">{r.telefono || '—'}</span> },
+    { title: 'Rol', key: 'rol', render: (_, r) => <Badge color="blue">{r.rol_nombre}</Badge> },
+    {
+      title: 'Estado',
+      key: 'estado',
+      render: (_, r) => <Badge color={r.estado ? 'green' : 'default'}>{r.estado ? 'Activo' : 'Inactivo'}</Badge>,
+    },
+    {
+      title: '',
+      key: 'acciones',
+      width: 80,
+      render: (_, r) => (
+        <Button size="sm" variant="secondary" onClick={() => openEditEmp(r)}>
+          <Edit2 className="w-3.5 h-3.5" />
+          Editar
+        </Button>
+      ),
+    },
+  ]
+
   const TABS = [
     { key: 'usuarios' as TabKey, label: 'Usuarios', icon: Users },
+    { key: 'empleados' as TabKey, label: 'Empleados', icon: HardHat },
     { key: 'permisos' as TabKey, label: 'Roles y Permisos', icon: Shield },
   ]
 
@@ -352,6 +475,12 @@ export default function Usuarios() {
           <Button variant="primary" onClick={openCreate}>
             <UserPlus className="w-4 h-4" />
             Nuevo Usuario
+          </Button>
+        )}
+        {tab === 'empleados' && (
+          <Button variant="primary" onClick={openCreateEmp}>
+            <Plus className="w-4 h-4" />
+            Nuevo Empleado
           </Button>
         )}
       </div>
@@ -491,6 +620,71 @@ export default function Usuarios() {
           )}
         </div>
       )}
+
+      {/* ── Empleados tab ────────────────────────────────────────── */}
+      {tab === 'empleados' && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-1">
+            <Table
+              columns={colsEmpleados}
+              dataSource={empleados}
+              rowKey="id_empleado"
+              loading={loadingEmp}
+              pageSize={15}
+              page={pageEmp}
+              total={totalEmp}
+              onPageChange={p => { setPageEmp(p); loadEmpleados(p) }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Empleado modal ────────────────────────────────────────── */}
+      <Modal
+        open={empModalOpen}
+        title={editingEmp ? `Editar — ${editingEmp.nombre} ${editingEmp.apellido}` : 'Nuevo Empleado'}
+        onOk={handleSaveEmp}
+        onCancel={() => setEmpModalOpen(false)}
+        okText={editingEmp ? 'Guardar' : 'Crear'}
+        confirmLoading={savingEmp}
+        width={480}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Nombre *</label>
+              <input value={empForm.nombre} onChange={e => setEmpForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Nombre" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Apellido *</label>
+              <input value={empForm.apellido} onChange={e => setEmpForm(f => ({ ...f, apellido: e.target.value }))} placeholder="Apellido" className={inputClass} />
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>Email</label>
+            <input type="email" value={empForm.email} onChange={e => setEmpForm(f => ({ ...f, email: e.target.value }))} placeholder="correo@ejemplo.com" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Teléfono</label>
+            <input value={empForm.telefono} onChange={e => setEmpForm(f => ({ ...f, telefono: e.target.value }))} placeholder="0981 xxxxxx" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Rol *</label>
+            <select value={empForm.id_rol} onChange={e => setEmpForm(f => ({ ...f, id_rol: Number(e.target.value) }))} className={inputClass}>
+              <option value="">— Elegí un rol —</option>
+              {roles.map(r => <option key={r.id_rol} value={r.id_rol}>{r.nombre_rol}</option>)}
+            </select>
+          </div>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div className="relative shrink-0">
+              <input type="checkbox" className="sr-only peer" checked={empForm.estado} onChange={e => setEmpForm(f => ({ ...f, estado: e.target.checked }))} />
+              <div className="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-green-500 transition-colors" />
+              <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
+            </div>
+            <span className="text-sm text-slate-700">Empleado activo</span>
+          </label>
+        </div>
+      </Modal>
 
       {/* ── Create/Edit modal ──────────────────────────────────────── */}
       <Modal

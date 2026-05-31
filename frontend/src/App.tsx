@@ -29,6 +29,8 @@ import PortalResetPassword from './pages/portal/ResetPassword'
 import PortalHistorial from './pages/portal/Historial'
 import PortalFacturas from './pages/portal/Facturas'
 import MenuDiario from './pages/MenuDiario'
+import Alergenos from './pages/Alergenos'
+import Integraciones from './pages/Integraciones'
 import { useAuthStore } from './store/authStore'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; message: string }> {
@@ -136,6 +138,8 @@ export default function App() {
           <Route path="/usuarios" element={<Usuarios />} />
           <Route path="/configuracion" element={<Configuracion />} />
           <Route path="/menu-diario" element={<MenuDiario />} />
+          <Route path="/alergenos" element={<Alergenos />} />
+          <Route path="/integraciones" element={<Integraciones />} />
         </Route>
 
         {/* Modo Recreo — overlay full-screen, fuera del AppLayout */}
