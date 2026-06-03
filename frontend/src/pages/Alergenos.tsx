@@ -134,7 +134,7 @@ export default function Alergenos() {
   const loadAsignaciones = useCallback(async (p: number) => {
     setLoadingAsig(true)
     try {
-      const { data } = await api.get('/almuerzos/producto-alergenos/', { params: { page: p, page_size: 15 } })
+      const { data } = await api.get('/almuerzos/productos-alergenos/', { params: { page: p, page_size: 15 } })
       setAsignaciones(data.results ?? [])
       setTotalAsig(data.count ?? 0)
     } catch { toast.error('Error al cargar asignaciones') }
@@ -147,7 +147,7 @@ export default function Alergenos() {
     if (!asigForm.producto || !asigForm.alergeno) { toast.error('Seleccioná producto y alérgeno'); return }
     setSavingAsig(true)
     try {
-      await api.post('/almuerzos/producto-alergenos/', asigForm)
+      await api.post('/almuerzos/productos-alergenos/', asigForm)
       toast.success('Asignación creada')
       setAsigModalOpen(false)
       loadAsignaciones(pageAsig)
@@ -157,7 +157,7 @@ export default function Alergenos() {
 
   const handleDeleteAsig = async (id: number) => {
     try {
-      await api.delete(`/almuerzos/producto-alergenos/${id}/`)
+      await api.delete(`/almuerzos/productos-alergenos/${id}/`)
       toast.success('Asignación eliminada')
       loadAsignaciones(pageAsig)
     } catch { toast.error('Error al eliminar') }
