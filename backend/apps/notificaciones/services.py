@@ -10,6 +10,56 @@ from django.utils import timezone
 from .models import EmailEnviado, Notificacion, SolicitudNotificacion
 
 
+def crear_solicitudes_cobro(hijos_con_deuda, mensaje_template=None):
+    """
+    Crea SolicitudNotificacion para todos los responsables que reciben notificaciones
+    de cobro de los alumnos indicados, en orden de prioridad (orden_cobro).
+
+    Args:
+        hijos_con_deuda: QuerySet o lista de Hijo con deuda.
+        mensaje_template: Callable(hijo, responsable) -> str, o None para usar el
+                          mensaje por defecto.
+
+    Returns:
+        int: cantidad de solicitudes creadas.
+    """
+    from apps.clientes.models import AlumnoResponsable
+
+    solicitudes = []
+    for hijo in hijos_con_deuda:
+        responsables = (
+            AlumnoResponsable.objects
+            .filter(hijo=hijo, activo=True, recibe_notificaciones=True)
+            .select_related("cliente")
+            .order_by("orden_cobro")
+        )
+        for resp in responsables:
+            if not resp.cliente.email and not resp.cliente.activo:
+                continue
+            if mensaje_template:
+                mensaje = mensaje_template(hijo, resp)
+            else:
+                mensaje = (
+                    f"Estimado/a {resp.cliente.nombre_completo}, "
+                    f"le informamos que el alumno/a {hijo.nombre_completo} "
+                    f"tiene saldo pendiente en la cantina. "
+                    f"Por favor regularice su situación. Gracias."
+                )
+            solicitudes.append(
+                SolicitudNotificacion(
+                    cliente=resp.cliente,
+                    tipo="COBRO_PENDIENTE",
+                    destino=Notificacion.Destino.EMAIL,
+                    mensaje=mensaje,
+                )
+            )
+
+    if solicitudes:
+        SolicitudNotificacion.objects.bulk_create(solicitudes)
+
+    return len(solicitudes)
+
+
 class NotificacionService:
 
     @staticmethod

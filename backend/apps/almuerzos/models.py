@@ -570,3 +570,72 @@ class MenuDiario(models.Model):
 
     def __str__(self):
         return f"Menú {self.fecha} — {self.plato_principal}"
+
+    @property
+    def tiene_alergenos(self):
+        """True si algún producto del menú tiene alérgenos registrados."""
+        return self.detalles.filter(
+            producto__productoalergeno__isnull=False
+        ).exists()
+
+
+class DetalleMenuDiario(models.Model):
+    """
+    Relaciona un menú del día con los productos del catálogo que lo componen.
+    Permite calcular costo, alérgenos y descontar stock automáticamente.
+    """
+
+    class Curso(models.TextChoices):
+        ENTRADA       = "ENTRADA",       "Entrada"
+        PLATO_PRINCIPAL = "PLATO_PRINCIPAL", "Plato principal"
+        GUARNICION    = "GUARNICION",    "Guarnición"
+        POSTRE        = "POSTRE",        "Postre"
+        BEBIDA        = "BEBIDA",        "Bebida"
+        EXTRA         = "EXTRA",         "Extra"
+
+    menu = models.ForeignKey(
+        MenuDiario,
+        models.CASCADE,
+        related_name="detalles",
+    )
+    producto = models.ForeignKey(
+        "productos.Producto",
+        models.PROTECT,
+        related_name="apariciones_menu",
+        help_text="Producto del catálogo que compone este plato",
+    )
+    curso = models.CharField(
+        max_length=20,
+        choices=Curso.choices,
+        default=Curso.PLATO_PRINCIPAL,
+        help_text="Parte del menú a la que pertenece este ítem",
+    )
+    cantidad = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        default=1,
+        help_text="Cantidad de producto por porción (en la unidad de medida del producto)",
+    )
+    es_opcional = models.BooleanField(
+        default=False,
+        help_text="El alumno puede elegir si lo consume o no",
+    )
+    observaciones = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = "Detalle de Menú Diario"
+        verbose_name_plural = "Detalles de Menú Diario"
+        ordering = ["menu", "curso"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["menu", "producto", "curso"],
+                name="uq_menu_producto_curso",
+            ),
+            models.CheckConstraint(
+                check=models.Q(cantidad__gt=0),
+                name="chk_detalle_menu_cantidad_positiva",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.menu.fecha} | {self.get_curso_display()} | {self.producto}"
