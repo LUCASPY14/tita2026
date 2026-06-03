@@ -5,17 +5,80 @@ Serializers para la app clientes
 from rest_framework import serializers
 
 from .models import (
+    AlumnoResponsable,
+    AutorizacionSaldoNegativo,
+    Ciudad,
     Cliente,
     CuentaCorrienteCliente,
-    TipoCliente,
-    Hijo,
     Grado,
     HistorialGrado,
-    RestriccionHijo,
-    AutorizacionSaldoNegativo,
+    Hijo,
     Pais,
-    Ciudad,
+    RestriccionHijo,
+    TipoCliente,
 )
+
+
+class AlumnoResponsableSerializer(serializers.ModelSerializer):
+    """Responsable de un alumno — lectura y escritura."""
+
+    cliente_nombre = serializers.CharField(source="cliente.nombre_completo", read_only=True)
+    cliente_ruc_ci = serializers.CharField(source="cliente.ruc_ci", read_only=True)
+    cliente_telefono = serializers.CharField(source="cliente.telefono", read_only=True, allow_null=True)
+    cliente_email = serializers.EmailField(source="cliente.email", read_only=True, allow_null=True)
+    parentesco_display = serializers.CharField(source="get_parentesco_display", read_only=True)
+
+    class Meta:
+        model = AlumnoResponsable
+        fields = [
+            "id",
+            "hijo",
+            "cliente",
+            "cliente_nombre",
+            "cliente_ruc_ci",
+            "cliente_telefono",
+            "cliente_email",
+            "parentesco",
+            "parentesco_display",
+            "es_titular",
+            "orden_cobro",
+            "recibe_notificaciones",
+            "puede_ver_saldo",
+            "activo",
+            "fecha_creacion",
+            "agregado_por",
+        ]
+        read_only_fields = ["fecha_creacion", "es_titular"]
+
+    def validate(self, attrs):
+        # No permitir orden_cobro=0; mínimo 1
+        if attrs.get("orden_cobro", 1) < 1:
+            raise serializers.ValidationError({"orden_cobro": "Debe ser mayor o igual a 1."})
+        return attrs
+
+
+class AlumnoResponsableResumenSerializer(serializers.ModelSerializer):
+    """Versión compacta para incluir en HijoSerializer."""
+
+    cliente_nombre = serializers.CharField(source="cliente.nombre_completo", read_only=True)
+    cliente_telefono = serializers.CharField(source="cliente.telefono", read_only=True, allow_null=True)
+    parentesco_display = serializers.CharField(source="get_parentesco_display", read_only=True)
+
+    class Meta:
+        model = AlumnoResponsable
+        fields = [
+            "id",
+            "cliente",
+            "cliente_nombre",
+            "cliente_telefono",
+            "parentesco",
+            "parentesco_display",
+            "es_titular",
+            "orden_cobro",
+            "recibe_notificaciones",
+            "puede_ver_saldo",
+            "activo",
+        ]
 
 
 class ClienteSerializer(serializers.ModelSerializer):
@@ -46,10 +109,15 @@ class TipoClienteSerializer(serializers.ModelSerializer):
 class HijoSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.CharField(source="cliente_responsable.nombre_completo", read_only=True)
     grado_nombre = serializers.CharField(source="grado.nombre", read_only=True, allow_null=True)
+    responsables = serializers.SerializerMethodField()
 
     class Meta:
         model = Hijo
         fields = "__all__"
+
+    def get_responsables(self, obj):
+        qs = obj.responsables.filter(activo=True).select_related("cliente").order_by("orden_cobro")
+        return AlumnoResponsableResumenSerializer(qs, many=True).data
 
 
 class GradoSerializer(serializers.ModelSerializer):

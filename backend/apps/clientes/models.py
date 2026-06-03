@@ -437,3 +437,100 @@ class Ciudad(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+# ==============================================================================
+# ALUMNO ↔ RESPONSABLE (N:M)
+# ==============================================================================
+
+class AlumnoResponsable(models.Model):
+    """
+    Relación entre un alumno y sus responsables financieros (padre, madre, tutor, etc.).
+    Permite múltiples contactos de cobro con orden de escalamiento.
+
+    Reglas de negocio:
+    - Cada alumno debe tener exactamente un titular activo (es_titular=True, activo=True).
+    - El titular es quien figura en ventas, facturas y recargas (sincronizado con
+      Hijo.cliente_responsable para no romper el modelo financiero existente).
+    - orden_cobro define el orden de contacto ante deudas (1 = primero).
+    """
+
+    class Parentesco(models.TextChoices):
+        PADRE  = "PADRE",  "Padre"
+        MADRE  = "MADRE",  "Madre"
+        ABUELO = "ABUELO", "Abuelo"
+        ABUELA = "ABUELA", "Abuela"
+        TIO    = "TIO",    "Tío"
+        TIA    = "TIA",    "Tía"
+        TUTOR  = "TUTOR",  "Tutor/a Legal"
+        OTRO   = "OTRO",   "Otro"
+
+    hijo = models.ForeignKey(
+        Hijo,
+        models.CASCADE,
+        related_name="responsables",
+    )
+    cliente = models.ForeignKey(
+        Cliente,
+        models.RESTRICT,
+        related_name="hijos_asignados",
+        help_text="Responsable financiero",
+    )
+    parentesco = models.CharField(max_length=20, choices=Parentesco.choices)
+    es_titular = models.BooleanField(
+        default=False,
+        help_text="Responsable financiero principal. Sincronizado con Hijo.cliente_responsable.",
+    )
+    orden_cobro = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Orden de contacto para escalamiento de cobro (1 = primero).",
+    )
+    recibe_notificaciones = models.BooleanField(
+        default=False,
+        help_text="Recibe alertas de deuda y saldo bajo.",
+    )
+    puede_ver_saldo = models.BooleanField(
+        default=False,
+        help_text="Puede consultar el saldo y consumos del alumno en el portal.",
+    )
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    agregado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="responsables_registrados",
+    )
+
+    class Meta:
+        verbose_name = "Responsable de Alumno"
+        verbose_name_plural = "Responsables de Alumnos"
+        ordering = ["hijo", "orden_cobro"]
+        constraints = [
+            # Un cliente no puede ser responsable del mismo alumno dos veces
+            models.UniqueConstraint(
+                fields=["hijo", "cliente"],
+                name="uq_alumno_responsable",
+            ),
+            # Cada alumno tiene a lo sumo un titular activo — garantizado por la BD
+            models.UniqueConstraint(
+                fields=["hijo"],
+                condition=models.Q(es_titular=True, activo=True),
+                name="uq_alumno_titular_activo",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["hijo", "activo", "orden_cobro"],
+                name="idx_ar_hijo_cobro",
+            ),
+            models.Index(
+                fields=["cliente", "activo"],
+                name="idx_ar_cliente_activo",
+            ),
+        ]
+
+    def __str__(self):
+        titular = " [TITULAR]" if self.es_titular else ""
+        return f"{self.hijo} ← {self.cliente} ({self.get_parentesco_display()}){titular}"

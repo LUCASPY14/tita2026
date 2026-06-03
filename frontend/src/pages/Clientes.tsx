@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import {
   Plus, Search, Users, Edit2, AlertTriangle,
   GraduationCap, Phone, Mail, ShieldAlert, Baby,
+  UserPlus, Crown, Bell, Eye, Trash2, ChevronDown,
 } from 'lucide-react'
 import api from '../services/api'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
@@ -93,6 +94,36 @@ interface RestriccionHijo {
   severidad: 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA'
   activo: boolean
   hijo_nombre: string
+}
+
+interface AlumnoResponsable {
+  id: number
+  hijo: number
+  cliente: number
+  cliente_nombre: string
+  cliente_ruc_ci: string
+  cliente_telefono: string | null
+  cliente_email: string | null
+  parentesco: string
+  parentesco_display: string
+  es_titular: boolean
+  orden_cobro: number
+  recibe_notificaciones: boolean
+  puede_ver_saldo: boolean
+  activo: boolean
+}
+
+interface AgregarResponsableForm {
+  cliente: string
+  parentesco: string
+  orden_cobro: string
+  recibe_notificaciones: boolean
+  puede_ver_saldo: boolean
+}
+
+const PARENTESCO_LABELS: Record<string, string> = {
+  PADRE: 'Padre', MADRE: 'Madre', ABUELO: 'Abuelo', ABUELA: 'Abuela',
+  TIO: 'Tío', TIA: 'Tía', TUTOR: 'Tutor/a Legal', OTRO: 'Otro',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -449,6 +480,364 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
   )
 }
 
+// ─── AgregarResponsableModal ──────────────────────────────────────────────────
+
+const BLANK_RESP: AgregarResponsableForm = {
+  cliente: '', parentesco: 'OTRO', orden_cobro: '1',
+  recibe_notificaciones: true, puede_ver_saldo: false,
+}
+
+interface AgregarResponsableModalProps {
+  open: boolean
+  hijoId: number
+  onClose: () => void
+  onSaved: () => void
+}
+
+function AgregarResponsableModal({ open, hijoId, onClose, onSaved }: AgregarResponsableModalProps) {
+  const [form, setForm] = useState<AgregarResponsableForm>(BLANK_RESP)
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setForm(BLANK_RESP)
+    api.get('/clientes/clientes/', { params: { activo: 'true', page_size: 200 } })
+      .then(({ data }) => setClientes(data.results ?? data))
+      .catch(() => toast.error('Error al cargar clientes'))
+  }, [open])
+
+  const selectClass = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors'
+  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+
+  async function handleSave() {
+    if (!form.cliente) { toast.error('Seleccioná un cliente'); return }
+    if (!form.parentesco) { toast.error('Seleccioná el parentesco'); return }
+    setSaving(true)
+    try {
+      await api.post('/clientes/responsables/', {
+        hijo: hijoId,
+        cliente: Number(form.cliente),
+        parentesco: form.parentesco,
+        orden_cobro: Number(form.orden_cobro) || 1,
+        recibe_notificaciones: form.recibe_notificaciones,
+        puede_ver_saldo: form.puede_ver_saldo,
+      })
+      toast.success('Responsable agregado')
+      onSaved()
+      onClose()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      title="Agregar Responsable"
+      onCancel={onClose}
+      onOk={handleSave}
+      okText="Agregar"
+      confirmLoading={saving}
+      width={460}
+    >
+      <div className="space-y-4">
+        <div>
+          <label className={labelClass}>Cliente (responsable) *</label>
+          <select
+            className={selectClass}
+            value={form.cliente}
+            onChange={e => setForm(p => ({ ...p, cliente: e.target.value }))}
+          >
+            <option value="">Seleccionar cliente...</option>
+            {clientes.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.apellidos}, {c.nombres} — {c.ruc_ci}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Parentesco *</label>
+            <select
+              className={selectClass}
+              value={form.parentesco}
+              onChange={e => setForm(p => ({ ...p, parentesco: e.target.value }))}
+            >
+              {Object.entries(PARENTESCO_LABELS).map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Orden de cobro</label>
+            <input
+              type="number"
+              min={1}
+              className={selectClass}
+              value={form.orden_cobro}
+              onChange={e => setForm(p => ({ ...p, orden_cobro: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-slate-100 pt-3 space-y-2.5">
+          {([
+            ['recibe_notificaciones', 'Recibe notificaciones de cobro'] as const,
+            ['puede_ver_saldo', 'Puede consultar saldo en el portal'] as const,
+          ]).map(([field, label]) => (
+            <div key={field} className="flex items-center gap-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form[field]}
+                onClick={() => setForm(p => ({ ...p, [field]: !p[field] }))}
+                className={[
+                  'relative w-10 h-5 rounded-full transition-colors shrink-0',
+                  form[field] ? 'bg-green-500' : 'bg-slate-200',
+                ].join(' ')}
+              >
+                <span className={[
+                  'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform',
+                  form[field] ? 'translate-x-5' : 'translate-x-0',
+                ].join(' ')} />
+              </button>
+              <span className="text-sm text-slate-700">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+// ─── ResponsablesModal ────────────────────────────────────────────────────────
+
+interface ResponsablesModalProps {
+  open: boolean
+  hijo: Hijo | null
+  onClose: () => void
+}
+
+function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
+  const [responsables, setResponsables] = useState<AlumnoResponsable[]>([])
+  const [loading, setLoading] = useState(false)
+  const [agregarOpen, setAgregarOpen] = useState(false)
+
+  const loadResponsables = useCallback(async () => {
+    if (!hijo) return
+    setLoading(true)
+    try {
+      const { data } = await api.get('/clientes/responsables/', {
+        params: { hijo: hijo.id, page_size: 50 },
+      })
+      setResponsables((data.results ?? data).sort(
+        (a: AlumnoResponsable, b: AlumnoResponsable) => a.orden_cobro - b.orden_cobro
+      ))
+    } catch {
+      toast.error('Error al cargar responsables')
+    } finally {
+      setLoading(false)
+    }
+  }, [hijo])
+
+  useEffect(() => {
+    if (open) loadResponsables()
+  }, [open, loadResponsables])
+
+  async function handleSetTitular(r: AlumnoResponsable) {
+    try {
+      await api.post(`/clientes/responsables/${r.id}/set_titular/`)
+      toast.success(`${r.cliente_nombre} ahora es el titular`)
+      loadResponsables()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    }
+  }
+
+  async function handleToggle(r: AlumnoResponsable, field: 'recibe_notificaciones' | 'puede_ver_saldo' | 'activo') {
+    try {
+      await api.patch(`/clientes/responsables/${r.id}/`, { [field]: !r[field] })
+      loadResponsables()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    }
+  }
+
+  async function handleDelete(r: AlumnoResponsable) {
+    if (!window.confirm(`¿Eliminar a ${r.cliente_nombre} como responsable?`)) return
+    try {
+      await api.delete(`/clientes/responsables/${r.id}/`)
+      toast.success('Responsable eliminado')
+      loadResponsables()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    }
+  }
+
+  return (
+    <>
+      <Modal
+        open={open}
+        title={`Responsables — ${hijo?.apellido ?? ''}, ${hijo?.nombre ?? ''}`}
+        onCancel={onClose}
+        footer={null}
+        width={600}
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-500">
+              Los responsables son contactados en orden de cobro cuando hay deuda pendiente.
+            </p>
+            <Button variant="primary" size="sm" onClick={() => setAgregarOpen(true)}>
+              <UserPlus className="w-3.5 h-3.5" />
+              Agregar
+            </Button>
+          </div>
+
+          {loading ? (
+            <Spinner className="py-8" />
+          ) : responsables.length === 0 ? (
+            <div className="text-center py-10 text-slate-400">
+              <Users className="w-9 h-9 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Sin responsables registrados</p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {responsables.map((r) => (
+                <li
+                  key={r.id}
+                  className={[
+                    'rounded-xl border px-4 py-3',
+                    r.es_titular
+                      ? 'border-amber-200 bg-amber-50/60'
+                      : 'border-slate-100 bg-white',
+                    !r.activo ? 'opacity-50' : '',
+                  ].join(' ')}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Orden + avatar */}
+                    <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-xs font-bold text-slate-500">
+                      {r.orden_cobro}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-slate-800">{r.cliente_nombre}</span>
+                        {r.es_titular && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                            <Crown className="w-3 h-3" />
+                            Titular
+                          </span>
+                        )}
+                        <Badge color="default">{r.parentesco_display}</Badge>
+                        {!r.activo && <Badge color="red">Inactivo</Badge>}
+                      </div>
+                      <div className="mt-1 flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+                        <span className="font-mono">{r.cliente_ruc_ci}</span>
+                        {r.cliente_telefono && (
+                          <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{r.cliente_telefono}</span>
+                        )}
+                        {r.cliente_email && (
+                          <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{r.cliente_email}</span>
+                        )}
+                      </div>
+                      {/* Preferencias inline */}
+                      <div className="mt-2 flex items-center gap-3">
+                        <button
+                          onClick={() => handleToggle(r, 'recibe_notificaciones')}
+                          title="Recibe notificaciones de cobro"
+                          className={[
+                            'flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors',
+                            r.recibe_notificaciones
+                              ? 'border-blue-200 bg-blue-50 text-blue-700'
+                              : 'border-slate-200 bg-slate-50 text-slate-400 line-through',
+                          ].join(' ')}
+                        >
+                          <Bell className="w-3 h-3" />
+                          Notificaciones
+                        </button>
+                        <button
+                          onClick={() => handleToggle(r, 'puede_ver_saldo')}
+                          title="Puede ver saldo en el portal"
+                          className={[
+                            'flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors',
+                            r.puede_ver_saldo
+                              ? 'border-green-200 bg-green-50 text-green-700'
+                              : 'border-slate-200 bg-slate-50 text-slate-400 line-through',
+                          ].join(' ')}
+                        >
+                          <Eye className="w-3 h-3" />
+                          Ver saldo
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!r.es_titular && r.activo && (
+                        <button
+                          onClick={() => handleSetTitular(r)}
+                          title="Designar como titular"
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        >
+                          <Crown className="w-3 h-3" />
+                          Titular
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleToggle(r, 'activo')}
+                        className={[
+                          'px-2 py-1 text-xs font-medium rounded-lg transition-colors',
+                          r.activo
+                            ? 'text-slate-400 hover:text-orange-600 hover:bg-orange-50'
+                            : 'text-slate-400 hover:text-green-600 hover:bg-green-50',
+                        ].join(' ')}
+                        title={r.activo ? 'Desactivar' : 'Reactivar'}
+                      >
+                        {r.activo ? 'Desactivar' : 'Reactivar'}
+                      </button>
+                      {!r.es_titular && (
+                        <button
+                          onClick={() => handleDelete(r)}
+                          className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+            <p className="text-xs text-slate-400">
+              <ChevronDown className="w-3 h-3 inline mr-1" />
+              El titular se sincroniza con el responsable financiero principal del alumno.
+            </p>
+            <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <AgregarResponsableModal
+        open={agregarOpen}
+        hijoId={hijo?.id ?? 0}
+        onClose={() => setAgregarOpen(false)}
+        onSaved={loadResponsables}
+      />
+    </>
+  )
+}
+
 // ─── HijosModal ───────────────────────────────────────────────────────────────
 
 interface HijosModalProps {
@@ -462,6 +851,7 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
   const [restricciones, setRestricciones] = useState<Record<number, RestriccionHijo[]>>({})
   const [loading, setLoading] = useState(false)
   const [hijoModal, setHijoModal] = useState<{ open: boolean; hijo: Hijo | null }>({ open: false, hijo: null })
+  const [responsablesModal, setResponsablesModal] = useState<{ open: boolean; hijo: Hijo | null }>({ open: false, hijo: null })
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   const loadHijos = useCallback(async () => {
@@ -604,6 +994,14 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
                           </button>
                         )}
                         <button
+                          onClick={() => setResponsablesModal({ open: true, hijo })}
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          title="Gestionar responsables"
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                          Resp.
+                        </button>
+                        <button
                           onClick={() => setHijoModal({ open: true, hijo })}
                           className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                           title="Editar"
@@ -665,6 +1063,11 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
         clienteId={cliente?.id ?? 0}
         onClose={() => setHijoModal({ open: false, hijo: null })}
         onSaved={loadHijos}
+      />
+      <ResponsablesModal
+        open={responsablesModal.open}
+        hijo={responsablesModal.hijo}
+        onClose={() => setResponsablesModal({ open: false, hijo: null })}
       />
     </>
   )
