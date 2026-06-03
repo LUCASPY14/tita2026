@@ -5,17 +5,18 @@ Serializers para la app almuerzos
 from rest_framework import serializers
 
 from .models import (
-    PrecioAlmuerzo,
-    TipoAlmuerzo,
-    PlanAlmuerzo,
-    SuscripcionAlmuerzo,
-    RegistroConsumoAlmuerzo,
+    Alergeno,
     CuentaAlmuerzoMensual,
+    DetalleMenuDiario,
+    MenuDiario,
     PagoCuentaAlmuerzo,
     PagoAlmuerzoMensual,
-    Alergeno,
+    PlanAlmuerzo,
+    PrecioAlmuerzo,
     ProductoAlergeno,
-    MenuDiario,
+    RegistroConsumoAlmuerzo,
+    SuscripcionAlmuerzo,
+    TipoAlmuerzo,
 )
 
 
@@ -205,10 +206,35 @@ class ProductoAlergenoSerializer(serializers.ModelSerializer):
 
 
 # ==============================================================================
-# MENÚ DIARIO
+# MENÚ DIARIO + DETALLE
 # ==============================================================================
 
+class DetalleMenuDiarioSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
+    producto_codigo = serializers.CharField(source="producto.codigo", read_only=True)
+    unidad_medida = serializers.CharField(
+        source="producto.unidad_medida.abreviatura", read_only=True, allow_null=True
+    )
+    curso_display = serializers.CharField(source="get_curso_display", read_only=True)
+
+    class Meta:
+        model = DetalleMenuDiario
+        fields = [
+            "id", "menu", "producto", "producto_nombre", "producto_codigo",
+            "unidad_medida", "curso", "curso_display",
+            "cantidad", "es_opcional", "observaciones",
+        ]
+
+    def validate_cantidad(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("La cantidad debe ser mayor que cero.")
+        return value
+
+
 class MenuDiarioSerializer(serializers.ModelSerializer):
+    detalles = DetalleMenuDiarioSerializer(many=True, read_only=True)
+    tiene_alergenos = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = MenuDiario
         fields = "__all__"

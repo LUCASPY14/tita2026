@@ -80,3 +80,23 @@ FROM pg_stat_statements
 WHERE mean_exec_time > 500
 ORDER BY mean_exec_time DESC
 LIMIT 10;
+
+\echo ''
+\echo '=== 7. Integridad: alumnos sin titular activo en AlumnoResponsable ==='
+SELECT
+    h.id          AS hijo_id,
+    h.apellido || ', ' || h.nombre AS alumno,
+    g.nombre      AS grado,
+    c.apellidos || ', ' || c.nombres AS responsable_legacy
+FROM clientes_hijo h
+LEFT JOIN clientes_grado g ON g.id = h.grado_id
+LEFT JOIN clientes_cliente c ON c.id = h.cliente_responsable_id
+WHERE NOT EXISTS (
+    SELECT 1 FROM clientes_alumnoresponsable ar
+    WHERE ar.hijo_id = h.id
+      AND ar.es_titular = true
+      AND ar.activo = true
+)
+AND h.activo = true
+ORDER BY h.apellido, h.nombre;
+-- Resultado esperado: 0 filas (cada alumno activo debe tener un titular)

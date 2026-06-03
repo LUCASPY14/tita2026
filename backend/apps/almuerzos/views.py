@@ -24,30 +24,32 @@ from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsSt
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import (
-    PrecioAlmuerzo,
-    TipoAlmuerzo,
-    PlanAlmuerzo,
-    SuscripcionAlmuerzo,
-    RegistroConsumoAlmuerzo,
+    Alergeno,
     CuentaAlmuerzoMensual,
+    DetalleMenuDiario,
+    MenuDiario,
     PagoCuentaAlmuerzo,
     PagoAlmuerzoMensual,
-    Alergeno,
+    PlanAlmuerzo,
+    PrecioAlmuerzo,
     ProductoAlergeno,
-    MenuDiario,
+    RegistroConsumoAlmuerzo,
+    SuscripcionAlmuerzo,
+    TipoAlmuerzo,
 )
 from .serializers import (
-    PrecioAlmuerzoSerializer,
-    TipoAlmuerzoSerializer,
-    PlanAlmuerzoSerializer,
-    SuscripcionAlmuerzoSerializer,
-    RegistroConsumoAlmuerzoSerializer,
+    AlergenoSerializer,
     CuentaAlmuerzoMensualSerializer,
+    DetalleMenuDiarioSerializer,
+    MenuDiarioSerializer,
     PagoCuentaAlmuerzoSerializer,
     PagoAlmuerzoMensualSerializer,
-    AlergenoSerializer,
+    PlanAlmuerzoSerializer,
+    PrecioAlmuerzoSerializer,
     ProductoAlergenoSerializer,
-    MenuDiarioSerializer,
+    RegistroConsumoAlmuerzoSerializer,
+    SuscripcionAlmuerzoSerializer,
+    TipoAlmuerzoSerializer,
 )
 from .filters import RegistroConsumoFilter
 from .validators import validar_limite_registros_diarios, validar_restricciones_alergenicas
@@ -439,6 +441,36 @@ class MenuDiarioViewSet(viewsets.ModelViewSet):
         if menu is None:
             return Response({"detail": "No hay menú publicado para hoy."}, status=404)
         return Response(MenuDiarioSerializer(menu).data)
+
+
+# ==============================================================================
+# DETALLE MENÚ DIARIO
+# ==============================================================================
+
+class DetalleMenuDiarioViewSet(viewsets.ModelViewSet):
+    """
+    CRUD de ítems de un menú diario.
+    GET  /api/almuerzos/detalle-menu/?menu={id}   → ítems del menú
+    GET  /api/almuerzos/detalle-menu/?menu={id}&curso=PLATO_PRINCIPAL
+    POST /api/almuerzos/detalle-menu/             → agregar ítem (staff)
+    PATCH/DELETE /api/almuerzos/detalle-menu/{id}/
+    """
+    serializer_class = DetalleMenuDiarioSerializer
+    permission_classes = [IsStaffOrClienteWeb]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["menu", "curso", "es_opcional"]
+
+    def get_queryset(self):
+        return (
+            DetalleMenuDiario.objects
+            .select_related("producto", "producto__unidad_medida")
+            .order_by("curso", "producto__descripcion")
+        )
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsStaffOrClienteWeb()]
+        return [IsAdminOrReadOnly()]
 
 
 # ==============================================================================

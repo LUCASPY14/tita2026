@@ -80,6 +80,17 @@ ALTER TABLE contabilidad_historicalfactura SET (
     autovacuum_analyze_scale_factor = 0.02
 );
 
+-- Tablas nuevas de negocio (alta tasa de escritura esperada en producción)
+ALTER TABLE clientes_alumnoresponsable SET (
+    autovacuum_vacuum_scale_factor  = 0.05,
+    autovacuum_analyze_scale_factor = 0.02
+);
+
+ALTER TABLE almuerzos_detallemenudiario SET (
+    autovacuum_vacuum_scale_factor  = 0.05,
+    autovacuum_analyze_scale_factor = 0.02
+);
+
 COMMIT;
 
 -- Forzar un analyze inmediato para que el planificador tenga estadísticas frescas
@@ -94,3 +105,5 @@ ANALYZE ventas_historicalventa;
 ANALYZE clientes_historicalcliente;
 ANALYZE contabilidad_historicalcierrecaja;
 ANALYZE contabilidad_historicalfactura;
+ANALYZE clientes_alumnoresponsable;
+ANALYZE almuerzos_detallemenudiario;
