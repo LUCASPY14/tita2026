@@ -51,6 +51,7 @@ export default function Button({
   return (
     <button
       type="button"
+      translate="no"
       {...props}
       disabled={disabled || loading}
       className={[
@@ -67,7 +68,7 @@ export default function Button({
     >
       {loading && <Loader2 aria-hidden="true" className="h-4 w-4 shrink-0 animate-spin" />}
       {!loading && icon && <span className="shrink-0">{icon}</span>}
-      {children}
+      {children != null && <span>{children}</span>}
     </button>
   )
 }

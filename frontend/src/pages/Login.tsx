@@ -32,13 +32,18 @@ export default function Login() {
     setLoading(true)
     try {
       await login(email, password)
-      toast.success('¡Bienvenido a La Cantina de Tita!')
       navigate('/dashboard')
+      // Defer toast to a separate React batch: calling toast.success() in the same
+      // synchronous frame as navigate() causes React 19 to batch both the Toaster
+      // update and the route change together, resulting in an insertBefore DOM error
+      // when it tries to insert the toast node while simultaneously unmounting Login.
+      queueMicrotask(() => toast.success('¡Bienvenido a La Cantina de Tita!'))
     } catch {
       setErrors({ password: 'Email o contraseña incorrectos' })
-    } finally {
       setLoading(false)
     }
+    // No finally: on success the component unmounts immediately after navigate(),
+    // so setLoading(false) would be a state update on an unmounting component.
   }
 
   return (
