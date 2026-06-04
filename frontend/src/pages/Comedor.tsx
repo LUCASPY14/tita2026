@@ -162,6 +162,23 @@ export default function Comedor() {
     return () => window.removeEventListener('comedor:registro', handler)
   }, [panelMode, cargarListaHoy])
 
+  // Auto-refresh cada 60s cuando el panel derecho está en "lista"
+  useEffect(() => {
+    if (panelMode !== 'lista') return
+    const t = setInterval(() => cargarListaHoy(), 60_000)
+    return () => clearInterval(t)
+  }, [panelMode, cargarListaHoy])
+
+  // Carga inicial del set consumidosHoy para el anti-doble-scan (siempre, no solo con panel lista)
+  useEffect(() => {
+    api.get('/almuerzos/registros-consumo/', { params: { fecha_consumo: todayISO(), page_size: 500 } })
+      .then(r => {
+        const ids = new Set<number>((r.data.results ?? []).map((x: { hijo: number }) => x.hijo))
+        setConsumidosHoy(ids)
+      })
+      .catch(() => {})
+  }, [])
+
   // fullscreen API
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -252,11 +269,23 @@ export default function Comedor() {
         startCountdown(3)
         return
       }
+
+      // ── Anti-doble-scan: verificar si ya almorzó hoy ──────────────────────
+      if (consumidosHoy.has(hijoId)) {
+        setResult({ tipo: 'error', message: `${tarjeta.hijo_nombre} ya registró almuerzo hoy` })
+        startCountdown(4)
+        return
+      }
+
       await api.post('/almuerzos/registros-consumo/', {
         hijo: hijoId,
         fecha_consumo: todayISO(),
         nro_tarjeta: tarjeta.nro_tarjeta,
       })
+
+      // Actualizar set local inmediatamente sin esperar refresh de API
+      setConsumidosHoy(prev => new Set([...prev, hijoId as number]))
+
       const hora = nowTime()
       const entry: RegistroReciente = {
         id: `${nro}-${Date.now()}`,
@@ -278,7 +307,7 @@ export default function Comedor() {
       scanningRef.current = false
       setScanning(false)
     }
-  }, [hijos, hijosLoading, startCountdown])
+  }, [hijos, hijosLoading, startCountdown, consumidosHoy])
 
   // refoco al hacer click en cualquier parte
   const handlePageClick = useCallback(() => {
@@ -346,6 +375,28 @@ export default function Comedor() {
 
         {/* ── Panel izquierdo: scan ─────────────────────────────── */}
         <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8">
+
+          {/* Contador de progreso */}
+          {suscriptosHoy.length > 0 && (
+            <div className="w-full max-w-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">Almuerzos hoy</span>
+                <span className="text-white text-sm font-bold tabular-nums">
+                  {consumidosHoy.size}
+                  <span className="text-slate-500 font-normal"> / {suscriptosHoy.length}</span>
+                </span>
+              </div>
+              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-2 bg-green-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.round((consumidosHoy.size / suscriptosHoy.length) * 100)}%` }}
+                />
+              </div>
+              <p className="text-slate-600 text-xs mt-1 text-right">
+                {Math.round((consumidosHoy.size / suscriptosHoy.length) * 100)}% completado
+              </p>
+            </div>
+          )}
 
           {/* Área de resultado */}
           {result ? (

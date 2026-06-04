@@ -224,6 +224,95 @@ export function exportarCuentasMensualesPDF(cuentas: CuentaMensual[], mes?: numb
   }
 }
 
+// ─── Reporte de Almuerzos por Período ────────────────────────────────────────
+
+const MESES_ALM = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+const ESTADO_COLOR_ALM: Record<string, [number, number, number]> = {
+  PAGADO: [22, 163, 74], PENDIENTE: [234, 88, 12], PARCIAL: [37, 99, 235],
+}
+
+interface AlmuerzoFila {
+  hijo: string; grado: string
+  cantidad_almuerzos: number
+  monto_total: number; monto_pagado: number; monto_pendiente: number
+  estado: string
+}
+
+interface AlmuerzoTotales {
+  alumnos: number; cantidad_almuerzos: number
+  monto_total: number; monto_pagado: number; monto_pendiente: number; con_deuda: number
+}
+
+export function exportarAlmuerzosPDF(
+  filas: AlmuerzoFila[],
+  totales: AlmuerzoTotales,
+  anio: number,
+  mes?: number,
+  grado?: string,
+) {
+  try {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+    const periodo = mes ? `${MESES_ALM[mes]} ${anio}` : String(anio)
+    const subtituloExtra = grado ? ` — Grado: ${grado}` : ''
+    let y = header(doc, 'Reporte de Almuerzos', `Período: ${periodo}${subtituloExtra}`)
+
+    // KPI summary row
+    doc.setFontSize(8.5)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(0, 0, 0)
+    doc.text(
+      `Alumnos: ${totales.alumnos}   |   Almuerzos: ${totales.cantidad_almuerzos}   |   ` +
+      `Total: ${gs(totales.monto_total)}   |   Pagado: ${gs(totales.monto_pagado)}   |   ` +
+      `Pendiente: ${gs(totales.monto_pendiente)}   |   Con deuda: ${totales.con_deuda}`,
+      14, y
+    )
+    y += 9
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Estudiante', 'Grado', 'Almuerzos', 'Total', 'Pagado', 'Pendiente', 'Estado']],
+      body: filas.map(f => [
+        f.hijo,
+        f.grado || '—',
+        f.cantidad_almuerzos,
+        gs(f.monto_total),
+        gs(f.monto_pagado),
+        gs(f.monto_pendiente),
+        f.estado,
+      ]),
+      styles: { fontSize: 8, cellPadding: 2.5 },
+      headStyles: { fillColor: BRAND_COLOR, textColor: [255, 255, 255], fontStyle: 'bold' },
+      columnStyles: {
+        2: { halign: 'center' },
+        3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' },
+        6: { halign: 'center' },
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      didParseCell: (data) => {
+        if (data.column.index === 6 && data.section === 'body') {
+          const estado = filas[data.row.index]?.estado
+          data.cell.styles.textColor = ESTADO_COLOR_ALM[estado] ?? GRAY
+          data.cell.styles.fontStyle = 'bold'
+        }
+        // Pendiente en rojo si > 0
+        if (data.column.index === 5 && data.section === 'body') {
+          const pendiente = filas[data.row.index]?.monto_pendiente ?? 0
+          if (Number(pendiente) > 0) data.cell.styles.textColor = [220, 38, 38]
+        }
+      },
+    })
+
+    footer(doc)
+    const suffix = mes ? `${anio}_${String(mes).padStart(2, '0')}` : anio
+    doc.save(`almuerzos_${suffix}.pdf`)
+  } catch (err) {
+    console.error('Error generando PDF de almuerzos:', err)
+    throw new Error('No se pudo generar el PDF')
+  }
+}
+
 // ─── Registro de Ingresos al Comedor ─────────────────────────────────────────
 
 interface IngresoComedor {

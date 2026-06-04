@@ -2,7 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { BarChart2, Search, TrendingUp, ShoppingCart, FileText, Download, Users, AlertTriangle, UtensilsCrossed } from 'lucide-react'
 import api from '../services/api'
-import { exportarReporteVentasPDF, exportarCuentaCorrientePDF } from '../utils/pdf'
+import { exportarReporteVentasPDF, exportarCuentaCorrientePDF, exportarAlmuerzosPDF } from '../utils/pdf'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -220,6 +220,22 @@ export default function Reportes() {
       toast.success('CSV descargado')
     } catch {
       toast.error('Error al exportar')
+    }
+  }
+
+  function handleAlmuerzosPDF() {
+    if (!almuerzosData) return
+    try {
+      exportarAlmuerzosPDF(
+        almuerzosData.filas,
+        almuerzosData.totales,
+        anioAlm,
+        mesAlm || undefined,
+        gradoAlm || undefined,
+      )
+      toast.success('PDF descargado')
+    } catch {
+      toast.error('Error al generar PDF')
     }
   }
 
@@ -737,10 +753,16 @@ export default function Reportes() {
               {loadingAlm ? 'Cargando...' : 'Buscar'}
             </Button>
             {almuerzosData && (
-              <Button variant="secondary" onClick={exportarAlmuerzosCSV}>
-                <Download className="w-4 h-4" />
-                CSV
-              </Button>
+              <>
+                <Button variant="secondary" onClick={exportarAlmuerzosCSV}>
+                  <Download className="w-4 h-4" />
+                  CSV
+                </Button>
+                <Button variant="secondary" onClick={handleAlmuerzosPDF}>
+                  <FileText className="w-4 h-4" />
+                  PDF
+                </Button>
+              </>
             )}
           </div>
 
