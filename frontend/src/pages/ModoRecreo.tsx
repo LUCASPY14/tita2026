@@ -541,7 +541,7 @@ export default function ModoRecreo() {
           <div className="flex items-center gap-3 ml-4 text-[11px] text-slate-400">
             <span className="flex items-center gap-1"><ClockIcon size={14} weight="fill" />{clock}</span>
             <span>Ventas hoy: <strong className="text-white">{dailyStats.count}</strong></span>
-            <span>Tiempo medio: <strong className="text-white">{avgTime}s</strong></span>
+            <span>Tiempo medio: <strong className="text-white">{dailyStats.count > 0 ? `${avgTime}s` : '—'}</strong></span>
           </div>
         </div>
         <div className="flex items-center gap-4 text-[11px]">
@@ -589,31 +589,62 @@ export default function ModoRecreo() {
                 <div className="text-center">
                   {tarjeta.hijo_foto ? (
                     <img src={tarjeta.hijo_foto} alt={tarjeta.hijo_nombre}
-                      className="w-28 h-28 rounded-full object-cover border-4 border-green-500 mx-auto mb-3 shadow-md" />
+                      className="w-36 h-36 rounded-full object-cover border-4 border-green-500 mx-auto mb-3 shadow-md" />
                   ) : (
-                    <div className="w-28 h-28 rounded-full bg-slate-100 border-4 border-green-300 flex items-center justify-center mx-auto mb-3">
-                      <UserIcon size={56} weight="fill" className="text-slate-400" />
+                    <div className="w-36 h-36 rounded-full bg-slate-100 border-4 border-green-300 flex items-center justify-center mx-auto mb-3">
+                      <UserIcon size={72} weight="fill" className="text-slate-400" />
                     </div>
                   )}
                   <p className="text-2xl font-black text-slate-900 leading-tight">{tarjeta.hijo_nombre}</p>
                   {tarjeta.hijo_grado && <p className="text-slate-500 text-base mt-0.5">{tarjeta.hijo_grado}</p>}
+                  <p className="text-slate-300 text-xs mt-1 font-mono tracking-wider">
+                    {tarjeta.nro_tarjeta}
+                  </p>
                 </div>
 
-                <div className={`rounded-2xl p-4 text-center border-2 ${
+                {/* Restricciones — siempre visibles, antes del saldo */}
+                {tarjeta.hijo_restricciones?.length > 0 && (
+                  <div className="bg-red-50 border-2 border-red-400 rounded-xl p-2.5 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <WarningIcon size={14} weight="fill" className="text-red-500 shrink-0" />
+                      <span className="text-red-600 text-xs font-black uppercase tracking-wider">
+                        {tarjeta.hijo_restricciones.length} Restricción{tarjeta.hijo_restricciones.length > 1 ? 'es' : ''}
+                      </span>
+                    </div>
+                    {tarjeta.hijo_restricciones.map(r => (
+                      <div key={r.id} className="flex items-center gap-1.5">
+                        <span className="text-xs">🚫</span>
+                        <span className="text-red-700 text-xs font-semibold leading-tight flex-1">{r.descripcion || r.tipo}</span>
+                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${
+                          r.severidad === 'CRITICA' ? 'bg-red-600 text-white' :
+                          r.severidad === 'ALTA' ? 'bg-orange-500 text-white' : 'bg-slate-300 text-slate-700'
+                        }`}>{r.severidad}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Saldo con labels explícitos */}
+                <div className={`rounded-2xl p-4 border-2 ${
                   (saldoDisponible ?? 0) < 5000 ? 'bg-red-50 border-red-400' :
                   (saldoDisponible ?? 0) < 15000 ? 'bg-yellow-50 border-yellow-400' : 'bg-green-50 border-green-400'
                 }`}>
-                  <p className="text-slate-500 text-xs uppercase tracking-widest font-bold mb-1">Saldo</p>
-                  <p className={`text-4xl font-black tabular-nums leading-none ${
-                    (saldoDisponible ?? 0) < 5000 ? 'text-red-600' :
-                    (saldoDisponible ?? 0) < 15000 ? 'text-yellow-600' : 'text-green-600'
-                  }`}>
-                    {gs(tarjeta.saldo_disponible || tarjeta.saldo_actual)}
-                  </p>
-                  {saldoTrasCompra !== null && carrito.length > 0 && (
-                    <p className={`text-sm font-semibold mt-2 tabular-nums ${saldoTrasCompra < 0 ? 'text-red-600' : 'text-slate-600'}`}>
-                      → {gs(saldoTrasCompra)}
+                  <div className="flex items-baseline justify-between mb-1">
+                    <p className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Saldo actual</p>
+                    <p className={`text-3xl font-black tabular-nums leading-none ${
+                      (saldoDisponible ?? 0) < 5000 ? 'text-red-600' :
+                      (saldoDisponible ?? 0) < 15000 ? 'text-yellow-600' : 'text-green-600'
+                    }`}>
+                      {gs(tarjeta.saldo_disponible || tarjeta.saldo_actual)}
                     </p>
+                  </div>
+                  {carrito.length > 0 && saldoTrasCompra !== null && (
+                    <div className="flex items-baseline justify-between border-t border-current/20 pt-1.5 mt-1.5">
+                      <p className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Después de compra</p>
+                      <p className={`text-xl font-black tabular-nums ${saldoTrasCompra < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                        {gs(saldoTrasCompra)}
+                      </p>
+                    </div>
                   )}
                 </div>
 
@@ -621,27 +652,6 @@ export default function ModoRecreo() {
                   <div className="w-3 h-3 rounded-full bg-green-500 shrink-0" />
                   <span className="text-green-700 text-sm font-bold">ACTIVA</span>
                 </div>
-
-                {tarjeta.hijo_restricciones?.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <WarningIcon size={16} weight="fill" className="text-red-500 shrink-0" />
-                      <span className="text-red-600 text-sm font-black uppercase tracking-wider">Restricciones</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {tarjeta.hijo_restricciones.map(r => (
-                        <div key={r.id} className="bg-red-50 border border-red-300 rounded-lg px-3 py-1.5 flex items-center gap-2">
-                          <span className="text-sm">🚫</span>
-                          <span className="text-red-600 text-sm leading-tight">{r.descripcion || r.tipo}</span>
-                          <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                            r.severidad === 'CRITICA' ? 'bg-red-600 text-white' :
-                            r.severidad === 'ALTA' ? 'bg-orange-500 text-white' : 'bg-slate-300 text-slate-700'
-                          }`}>{r.severidad}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </>
             ) : (
               <div className="flex flex-col items-center justify-center h-48 text-center">
@@ -700,10 +710,10 @@ export default function ModoRecreo() {
             {favoritos.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendUpIcon size={16} weight="fill" className="text-orange-500" />
-                  <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Más vendidos</span>
+                  <span className="text-base">🔥</span>
+                  <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Top más vendidos</span>
                 </div>
-                <div className="flex gap-3 overflow-x-auto">
+                <div className="flex gap-3 overflow-x-auto pb-1">
                   {favoritos.map(p => {
                     const meta = catMeta(p.categoria_nombre)
                     const restr = isRestricto(p)
@@ -714,15 +724,20 @@ export default function ModoRecreo() {
                         onClick={() => handleAgregar(p)}
                         disabled={bloqueado}
                         className={[
-                          'flex flex-col items-center justify-center shrink-0 w-36 h-28 rounded-2xl border-2 p-2 transition-all duration-100',
+                          'relative flex flex-col items-center justify-center shrink-0 w-32 h-24 rounded-2xl border-2 p-2 transition-all duration-100',
                           bloqueado
                             ? 'bg-red-50 border-red-300 opacity-60 cursor-not-allowed'
                             : `bg-white ${meta.border} cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95`,
                         ].join(' ')}
                       >
-                        <span className="text-4xl mb-1">{meta.emoji}</span>
-                        <span className="text-xs text-slate-700 font-semibold leading-tight line-clamp-1">{p.descripcion}</span>
-                        <span className={`text-base font-black tabular-nums mt-0.5 ${meta.accent}`}>{gs(p.precio_actual)}</span>
+                        {p.stock_actual != null && p.stock_actual <= 3 && (
+                          <span className="absolute top-1 right-1 text-[9px] font-bold text-red-600 bg-red-100 rounded px-1">
+                            {p.stock_actual === 0 ? 'AGOTADO' : `${p.stock_actual}u`}
+                          </span>
+                        )}
+                        <span className="text-3xl mb-0.5">{meta.emoji}</span>
+                        <span className="text-[11px] text-slate-700 font-semibold leading-tight line-clamp-1">{p.descripcion}</span>
+                        <span className={`text-sm font-black tabular-nums mt-0.5 ${meta.accent}`}>{gs(p.precio_actual)}</span>
                       </button>
                     )
                   })}
@@ -758,10 +773,15 @@ export default function ModoRecreo() {
                       {idx < 9 && (
                         <span className="absolute top-1.5 left-2 text-xs font-bold text-slate-400/60">{idx + 1}</span>
                       )}
-                      {bloqueado && <span className="absolute top-1.5 right-2 text-base">🚫</span>}
-                      {p.stock_actual != null && (
-                        <span className="absolute bottom-1.5 right-2 text-[10px] text-slate-400 font-medium tabular-nums">
-                          {p.stock_actual}u
+                      {bloqueado && <span className="absolute top-1.5 right-2 text-sm">🚫</span>}
+                      {p.stock_actual != null && !bloqueado && (
+                        <span className={`absolute bottom-1 right-1.5 text-[9px] font-bold px-1 py-0.5 rounded tabular-nums ${
+                          p.stock_actual === 0     ? 'bg-red-600 text-white' :
+                          p.stock_actual <= 3      ? 'bg-red-100 text-red-700' :
+                          p.stock_actual <= 10     ? 'bg-orange-100 text-orange-700' :
+                          'text-slate-300'
+                        }`}>
+                          {p.stock_actual === 0 ? 'AGOTADO' : `${p.stock_actual}u`}
                         </span>
                       )}
                       <span className="text-3xl mb-1">{meta.emoji}</span>
