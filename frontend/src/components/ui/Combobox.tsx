@@ -70,7 +70,7 @@ export default function Combobox({
         aria-autocomplete="list"
         autoComplete="off"
         className={[
-          'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white',
+          'w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-base text-slate-900 bg-white',
           'placeholder:text-slate-400',
           'focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500',
           'transition-colors duration-150',
@@ -97,7 +97,7 @@ export default function Combobox({
                 key={opt.value}
                 role="option"
                 aria-selected={opt.value === value}
-                className="px-3 py-2.5 text-sm text-slate-700 hover:bg-green-50 hover:text-green-700 cursor-pointer transition-colors first:rounded-t-xl last:rounded-b-xl"
+                className="px-3.5 py-3 text-base text-slate-700 hover:bg-green-50 hover:text-green-700 cursor-pointer transition-colors first:rounded-t-xl last:rounded-b-xl"
                 onMouseDown={() => {
                   onChange(opt.value, opt)
                   setQuery(opt.label)
@@ -108,7 +108,7 @@ export default function Combobox({
               </li>
             ))
           ) : (
-            <li className="px-3 py-2.5 text-sm text-slate-400 text-center">Sin resultados</li>
+            <li className="px-3.5 py-3 text-base text-slate-400 text-center">Sin resultados</li>
           )}
         </ul>
       )}

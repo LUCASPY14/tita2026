@@ -60,13 +60,13 @@ export default function Table<T extends object>({
   return (
     <div className="flex flex-col gap-3">
       <div className="overflow-x-auto rounded-xl border border-slate-200">
-        <table className="w-full text-sm text-left">
+        <table className="w-full text-base text-left">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap"
+                  className="px-4 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap"
                   style={col.width ? { width: col.width } : undefined}
                 >
                   {col.sortable ? (
@@ -94,7 +94,7 @@ export default function Table<T extends object>({
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-slate-100 last:border-0">
                   {columns.map((col, j) => (
-                    <td key={col.key} className="px-4 py-3.5">
+                    <td key={col.key} className="px-4 py-4">
                       <div
                         className="h-3.5 bg-slate-100 rounded-full animate-pulse"
                         style={{ width: `${55 + ((i * 4 + j * 9) % 40)}%` }}
@@ -119,7 +119,7 @@ export default function Table<T extends object>({
                   className="hover:bg-slate-50/80 transition-colors duration-100"
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 whitespace-nowrap text-slate-700">
+                    <td key={col.key} className="px-4 py-3.5 whitespace-nowrap text-slate-700">
                       {col.render
                         ? col.render(col.dataIndex ? record[col.dataIndex] : undefined, record)
                         : col.dataIndex
@@ -135,7 +135,7 @@ export default function Table<T extends object>({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+        <div className="flex items-center justify-between text-sm text-slate-500 px-1">
           <span>{total} registros</span>
           <div className="flex items-center gap-1">
             <button
@@ -155,7 +155,7 @@ export default function Table<T extends object>({
             }).map((p) => (
               <button
                 key={p}
-                className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   p === page
                     ? 'bg-green-600 text-white shadow-sm shadow-green-600/25'
                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'

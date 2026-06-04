@@ -95,7 +95,7 @@ export default function AppLayout() {
         className={[
           'bg-slate-950 text-white flex flex-col shrink-0',
           'transition-all duration-200 ease-in-out',
-          collapsed ? 'w-16' : 'w-60',
+          collapsed ? 'w-16' : 'w-64',
         ].join(' ')}
       >
         {/* Logo */}
@@ -109,11 +109,11 @@ export default function AppLayout() {
             <img
               src="/logo_tita.png"
               alt="Cantina Tita"
-              className={collapsed ? 'h-7 w-auto' : 'h-8 w-auto'}
+              className={collapsed ? 'h-7 w-auto' : 'h-9 w-auto'}
             />
           </div>
           {!collapsed && (
-            <span className="text-white/70 font-medium text-xs tracking-tight truncate">
+            <span className="text-white/70 font-medium text-sm tracking-tight truncate">
               Sistema de Gestión
             </span>
           )}
@@ -132,7 +132,7 @@ export default function AppLayout() {
                 aria-label={collapsed ? label : undefined}
                 aria-current={active ? 'page' : undefined}
                 className={[
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium',
+                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-medium',
                   'transition-all duration-150 cursor-pointer group',
                   collapsed ? 'justify-center' : '',
                   active
@@ -167,7 +167,7 @@ export default function AppLayout() {
             type="button"
             onClick={() => setCollapsed(!collapsed)}
             className={[
-              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm',
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-base',
               'text-slate-500 hover:bg-white/5 hover:text-slate-300',
               'transition-colors duration-150 cursor-pointer',
               collapsed ? 'justify-center' : '',
@@ -180,7 +180,7 @@ export default function AppLayout() {
             ) : (
               <>
                 <PanelLeftClose className="w-[18px] h-[18px]" />
-                <span className="text-xs">Colapsar</span>
+                <span className="text-sm">Colapsar</span>
               </>
             )}
           </button>
@@ -191,7 +191,7 @@ export default function AppLayout() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* Header */}
-        <header className="h-14 bg-white border-b border-slate-200/80 px-4 flex items-center justify-end shrink-0">
+        <header className="h-16 bg-white border-b border-slate-200/80 px-4 flex items-center justify-end shrink-0">
           <div ref={userMenuRef} className="relative">
             <button
               type="button"
@@ -201,14 +201,14 @@ export default function AppLayout() {
               aria-label="Menú de usuario"
               className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
             >
-              <span className="w-7 h-7 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+              <span className="w-8 h-8 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-sm font-bold shrink-0">
                 {initials}
               </span>
               <div className="hidden sm:block text-left">
                 <p className="text-sm font-medium text-slate-700 leading-none">
                   {user?.nombre || 'Usuario'}
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5 leading-none">
+                <p className="text-sm text-slate-400 mt-0.5 leading-none">
                   {ROL_LABEL[user?.rol ?? ''] || user?.rol || ''}
                 </p>
               </div>
@@ -226,13 +226,13 @@ export default function AppLayout() {
                   <p className="text-sm font-semibold text-slate-800 truncate">
                     {user?.nombre} {user?.apellido}
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5 truncate">{user?.email}</p>
+                  <p className="text-sm text-slate-400 mt-0.5 truncate">{user?.email}</p>
                 </div>
                 <button
                   type="button"
                   role="menuitem"
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-base text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Cerrar sesión
