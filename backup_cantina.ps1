@@ -53,6 +53,19 @@ try {
 
     Write-Host "Backup OK: $ARCHIVO ($size MB)"
 
+    # ── Backup a la nube (opcional) ──────────────────────────────────────────
+    # Se activa automáticamente si existe scripts\backup_nube.ps1 y rclone está
+    # disponible. Configura rclone con: rclone config → remote "gdrive"
+    $scriptNube = Join-Path (Split-Path $MyInvocation.MyCommand.Path) "scripts\backup_nube.ps1"
+    if (Test-Path $scriptNube) {
+        $rcloneOk = $null
+        try { $rcloneOk = Get-Command rclone -ErrorAction Stop } catch {}
+        if ($rcloneOk) {
+            Write-Host "Iniciando backup a la nube..."
+            & powershell -File $scriptNube -SoloUltimo
+        }
+    }
+
 } catch {
     "$(Get-Date) | ERROR | $_" | Out-File $LOG
     Write-Error "Backup FALLIDO: $_"

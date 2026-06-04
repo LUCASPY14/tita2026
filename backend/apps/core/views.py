@@ -2,6 +2,8 @@
 Views para la app core
 """
 
+from django.core.cache import cache
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -10,6 +12,18 @@ from rest_framework.response import Response
 from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb
 
 from django_filters.rest_framework import DjangoFilterBackend
+
+# Los medios de pago y límites cambian rarísimo → TTL de 1 hora
+_CACHE_TTL_LONG = 3600
+
+
+def _invalidar_cache_core(*prefixes):
+    for prefix in prefixes:
+        try:
+            cache.delete_pattern(f"{prefix}*")
+        except (AttributeError, NotImplementedError):
+            cache.clear()
+            return
 
 from .models import (
     Tarjeta,
@@ -119,6 +133,27 @@ class MedioPagoViewSet(viewsets.ModelViewSet):
     queryset = MedioPago.objects.all()
     serializer_class = MedioPagoSerializer
     permission_classes = [IsAdminOrReadOnly]
+
+    def list(self, request, *args, **kwargs):
+        cache_key = f"medios_pago_list_{request.query_params.urlencode()}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        response = super().list(request, *args, **kwargs)
+        cache.set(cache_key, response.data, _CACHE_TTL_LONG)
+        return response
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        _invalidar_cache_core("medios_pago_list_")
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        _invalidar_cache_core("medios_pago_list_")
+
+    def perform_destroy(self, instance):
+        super().perform_destroy(instance)
+        _invalidar_cache_core("medios_pago_list_")
 
 
 class LimiteTransaccionViewSet(viewsets.ModelViewSet):

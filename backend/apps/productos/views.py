@@ -39,7 +39,8 @@ from .serializers import (
 )
 
 
-_CACHE_TTL = 300  # 5 minutos
+_CACHE_TTL = 600        # 10 minutos — productos (cambian con stock/precios)
+_CACHE_TTL_CATS = 3600  # 1 hora — categorías (cambian raramente)
 
 
 def _invalidar_cache(*prefixes):
@@ -65,7 +66,7 @@ class CategoriaViewSet(viewsets.ModelViewSet):
         if cached is not None:
             return Response(cached)
         response = super().list(request, *args, **kwargs)
-        cache.set(cache_key, response.data, _CACHE_TTL)
+        cache.set(cache_key, response.data, _CACHE_TTL_CATS)
         return response
 
     def perform_create(self, serializer):
