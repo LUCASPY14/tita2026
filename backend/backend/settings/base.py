@@ -366,6 +366,26 @@ SIPAP_BANCO_AGREGADOR = os.environ.get("SIPAP_BANCO_AGREGADOR", "")
 SIPAP_QR_EXPIRACION_MINUTOS = int(os.environ.get("SIPAP_QR_EXPIRACION_MINUTOS", "15"))
 
 # ==============================================================================
+# BANCARD — Pagos con tarjeta de débito/crédito (Visa/Mastercard)
+# Sandbox: https://vpos.infonet.com.py:8888
+# Producción: https://vpos.infonet.com.py
+# Obtener credenciales en: https://comercios.bancard.com.py
+# ==============================================================================
+
+BANCARD_SANDBOX = os.environ.get("BANCARD_SANDBOX", "True") == "True"
+BANCARD_PUBLIC_KEY = os.environ.get("BANCARD_PUBLIC_KEY", "")
+BANCARD_PRIVATE_KEY = os.environ.get("BANCARD_PRIVATE_KEY", "")
+# URL base del frontend (para redirecciones post-pago)
+BANCARD_RETURN_URL = os.environ.get(
+    "BANCARD_RETURN_URL",
+    "http://localhost:8000/api/v1/bancard/retorno/",
+)
+BANCARD_CANCEL_URL = os.environ.get(
+    "BANCARD_CANCEL_URL",
+    "http://localhost:5173/portal/carga-saldo?estado=cancelado",
+)
+
+# ==============================================================================
 # EMAIL (solo cuando se configure SMTP)
 # ==============================================================================
 

@@ -1,20 +1,26 @@
-﻿asgiref==3.11.1
-Django==4.2
-django-cors-headers==4.9.0
-django-filter==25.1
-djangorestframework==3.17.1
-djangorestframework_simplejwt==5.5.1
-pillow==12.2.0
-psycopg2-binary==2.9.12
-PyJWT==2.12.1
-python-dotenv==1.2.2
-sqlparse==0.5.5
-tzdata==2026.2
+﻿# ── Core ──────────────────────────────────────────────────────────────────────
+# Django 5.2 LTS — soportado hasta abril 2028 (upgrade desde 4.2 LTS)
+# Requisitos: Python 3.10+, PostgreSQL 14+
+# Ver notas de migración: https://docs.djangoproject.com/en/5.2/releases/5.0/
+asgiref==3.11.1
+Django>=5.2,<6.0
+django-cors-headers>=4.9.0
+django-filter>=25.1
+djangorestframework>=3.17.1
+djangorestframework_simplejwt>=5.5.1
+pillow>=12.2.0
+psycopg2-binary>=2.9.12
+PyJWT>=2.12.1
+python-dotenv>=1.2.2
+sqlparse>=0.5.5
+tzdata>=2026.2
 
-django-simple-history==3.7.0
+# ── Extensiones ───────────────────────────────────────────────────────────────
+django-simple-history>=3.7.0
 celery[redis]>=5.3.0
 redis>=5.0.0
 django-jazzmin>=2.6.0
 drf-spectacular>=0.27.0
 django-redis>=5.4.0
 flower>=2.0.0
+requests>=2.31.0

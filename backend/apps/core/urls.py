@@ -11,6 +11,7 @@ from .views import (
     LimiteTransaccionViewSet,
     RegistroAutorizacionViewSet,
 )
+from .bancard_views import bancard_iniciar, bancard_retorno, bancard_estado
 
 router = DefaultRouter()
 router.register(r"tarjetas", TarjetaViewSet, basename="tarjetas")
@@ -24,4 +25,8 @@ router.register(r"registros-autorizacion", RegistroAutorizacionViewSet, basename
 
 urlpatterns = [
     path("", include(router.urls)),
+    # Bancard vPOS
+    path("bancard/iniciar/",              bancard_iniciar,              name="bancard-iniciar"),
+    path("bancard/retorno/",              bancard_retorno,              name="bancard-retorno"),
+    path("bancard/estado/<str:shop_process_id>/", bancard_estado,       name="bancard-estado"),
 ]

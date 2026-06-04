@@ -472,3 +472,81 @@ class RegistroAutorizacion(models.Model):
 
     def __str__(self):
         return f"{self.tipo_operacion} - ₲{self.monto:,.0f} - {self.fecha_autorizacion:%d/%m/%Y %H:%M}"
+
+
+# ==============================================================================
+# PAGO BANCARD
+# ==============================================================================
+
+class PagoBancard(models.Model):
+    """
+    Transacción de pago con tarjeta de débito/crédito a través de Bancard vPOS.
+    El flujo es: iniciar → redirigir a Bancard → confirmar → acreditar saldo.
+    """
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        APROBADO  = "APROBADO",  "Aprobado"
+        RECHAZADO = "RECHAZADO", "Rechazado"
+        CANCELADO = "CANCELADO", "Cancelado"
+        ERROR     = "ERROR",     "Error"
+
+    tarjeta = models.ForeignKey(
+        Tarjeta,
+        models.PROTECT,
+        related_name="pagos_bancard",
+        help_text="Tarjeta prepago que se recargará",
+    )
+    cliente = models.ForeignKey(
+        "clientes.Cliente",
+        models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="pagos_bancard",
+    )
+    # Identificadores
+    shop_process_id = models.CharField(
+        max_length=100, unique=True,
+        help_text="ID único generado por nosotros (UUID)",
+    )
+    process_id = models.CharField(
+        max_length=200, null=True, blank=True,
+        help_text="process_id devuelto por Bancard",
+    )
+    # Montos
+    monto = models.DecimalField(
+        max_digits=12, decimal_places=0,
+        help_text="Monto en Guaraníes a cargar en la tarjeta",
+    )
+    descripcion = models.CharField(max_length=255, default="Recarga de saldo — Cantina Tita")
+    # Estado
+    estado = models.CharField(
+        max_length=15, choices=Estado.choices, default=Estado.PENDIENTE
+    )
+    # Respuesta completa de Bancard (para auditoría)
+    bancard_response = models.JSONField(default=dict)
+    # Carga de saldo creada cuando el pago es aprobado
+    carga_saldo = models.OneToOneField(
+        CargaSaldo,
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pago_bancard",
+    )
+    # Auditoría
+    ip_origen = models.GenericIPAddressField(null=True, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_confirmacion = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Pago Bancard"
+        verbose_name_plural = "Pagos Bancard"
+        ordering = ["-fecha_creacion"]
+        indexes = [
+            models.Index(fields=["shop_process_id"]),
+            models.Index(fields=["tarjeta", "-fecha_creacion"]),
+            models.Index(fields=["estado", "-fecha_creacion"]),
+        ]
+
+    def __str__(self):
+        return f"Bancard #{self.shop_process_id} - {self.tarjeta} - ₲{self.monto:,.0f} [{self.estado}]"

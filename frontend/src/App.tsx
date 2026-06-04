@@ -28,6 +28,7 @@ import PortalNotificaciones from './pages/portal/Notificaciones'
 import PortalResetPassword from './pages/portal/ResetPassword'
 import PortalHistorial from './pages/portal/Historial'
 import PortalFacturas from './pages/portal/Facturas'
+import PortalCargaSaldo from './pages/portal/CargaSaldo'
 import MenuDiario from './pages/MenuDiario'
 import Alergenos from './pages/Alergenos'
 import Integraciones from './pages/Integraciones'
@@ -108,6 +109,7 @@ export default function App() {
           </PrivateRoute>
         }>
           <Route index element={<PortalDashboard />} />
+          <Route path="carga-saldo" element={<PortalCargaSaldo />} />
           <Route path="notificaciones" element={<PortalNotificaciones />} />
           <Route path="historial" element={<PortalHistorial />} />
           <Route path="facturas" element={<PortalFacturas />} />

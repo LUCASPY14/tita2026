@@ -1,12 +1,13 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { Home, Bell, LogOut, History, FileText } from 'lucide-react'
+import { Home, Bell, LogOut, History, FileText, Wallet } from 'lucide-react'
 
 const navItems = [
-  { path: '/portal', label: 'Inicio', icon: Home, exact: true },
-  { path: '/portal/historial', label: 'Historial', icon: History, exact: false },
-  { path: '/portal/facturas', label: 'Facturas', icon: FileText, exact: false },
-  { path: '/portal/notificaciones', label: 'Notificaciones', icon: Bell, exact: false },
+  { path: '/portal',              label: 'Inicio',     icon: Home,    exact: true  },
+  { path: '/portal/carga-saldo', label: 'Recargar',   icon: Wallet,  exact: false },
+  { path: '/portal/historial',   label: 'Historial',  icon: History, exact: false },
+  { path: '/portal/facturas',    label: 'Facturas',   icon: FileText,exact: false },
+  { path: '/portal/notificaciones', label: 'Alertas', icon: Bell,    exact: false },
 ]
 
 export default function PortalLayout() {
