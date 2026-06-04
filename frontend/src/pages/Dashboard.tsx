@@ -177,7 +177,7 @@ export default function Dashboard() {
           <button
             key={i}
             onClick={() => togglePieSeries(name)}
-            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-all cursor-pointer select-none ${
+            className={`flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full border transition-all cursor-pointer select-none ${
               hidden
                 ? 'border-slate-200 text-slate-400 bg-slate-50 line-through'
                 : 'border-slate-200 text-slate-600 bg-white hover:bg-slate-50'
@@ -207,10 +207,10 @@ export default function Dashboard() {
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-3xl font-bold text-slate-900">
           {saludo}, {user?.nombre ?? 'Usuario'}
         </h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <p className="text-base text-slate-500 mt-0.5">
           Resumen del día — {new Date().toLocaleDateString('es-PY', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
           })}
@@ -223,12 +223,12 @@ export default function Dashboard() {
           <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-4">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide truncate">{label}</p>
-                <p className={`text-3xl font-bold mt-1 tabular-nums ${color}`}>{value}</p>
-                <p className="text-xs text-slate-400 mt-0.5 truncate">{sub}</p>
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide truncate">{label}</p>
+                <p className={`text-4xl font-bold mt-1 tabular-nums ${color}`}>{value}</p>
+                <p className="text-sm text-slate-400 mt-0.5 truncate">{sub}</p>
               </div>
-              <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
-                <Icon className={`w-4.5 h-4.5 ${color}`} />
+              <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
+                <Icon className={`w-5 h-5 ${color}`} />
               </div>
             </div>
           </div>
@@ -240,7 +240,7 @@ export default function Dashboard() {
         {/* Accesos rápidos */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-800">Accesos Rápidos</h2>
+            <h2 className="text-base font-semibold text-slate-800">Accesos Rápidos</h2>
           </div>
           <div className="p-5 grid grid-cols-2 gap-3">
             {accesos.map(({ path, label, icon: Icon, color, desc }) => (
@@ -249,12 +249,12 @@ export default function Dashboard() {
                 onClick={() => navigate(path)}
                 className="flex items-center gap-3 p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/80 transition-all group text-left"
               >
-                <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center shrink-0`}>
-                  <Icon className="w-5 h-5 text-white" />
+                <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center shrink-0`}>
+                  <Icon className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 group-hover:text-slate-900">{label}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+                  <p className="text-base font-semibold text-slate-800 group-hover:text-slate-900">{label}</p>
+                  <p className="text-sm text-slate-400 mt-0.5">{desc}</p>
                 </div>
                 <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
               </button>
@@ -265,7 +265,7 @@ export default function Dashboard() {
         {/* Estado del sistema */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-800">Estado del Sistema</h2>
+            <h2 className="text-base font-semibold text-slate-800">Estado del Sistema</h2>
           </div>
           <div className="px-6 py-4 space-y-3">
             {[
@@ -275,7 +275,7 @@ export default function Dashboard() {
               { label: 'Entorno', badge: 'Producción', color: 'purple' as const },
             ].map(({ label, badge, color }) => (
               <div key={label} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
-                <span className="text-sm text-slate-600">{label}</span>
+                <span className="text-base text-slate-600">{label}</span>
                 <Badge color={color}>{badge}</Badge>
               </div>
             ))}
@@ -283,7 +283,7 @@ export default function Dashboard() {
           <div className="px-6 pb-5">
             <div className="flex items-center gap-2 mt-2 p-3 bg-green-50 rounded-xl">
               <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
-              <p className="text-xs text-green-700 font-medium">
+              <p className="text-sm text-green-700 font-medium">
                 {r.cajasAbiertas > 0
                   ? `${r.cajasAbiertas} caja${r.cajasAbiertas !== 1 ? 's' : ''} en operación`
                   : 'Sin cajas abiertas hoy'}
@@ -297,7 +297,7 @@ export default function Dashboard() {
       {tendenciaData.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-800">Tendencia de ventas — últimos 14 días</h2>
+            <h2 className="text-base font-semibold text-slate-800">Tendencia de ventas — últimos 14 días</h2>
             <span className="text-xs text-slate-400 tabular-nums">
               {tendencia.reduce((s, d) => s + d.cantidad, 0)} ventas
             </span>
@@ -329,8 +329,8 @@ export default function Dashboard() {
           {/* Distribución por tipo */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-800">Ventas por tipo — últimos 7 días</h2>
-              <span className="text-xs text-slate-400 tabular-nums">
+              <h2 className="text-base font-semibold text-slate-800">Ventas por tipo — últimos 7 días</h2>
+              <span className="text-sm text-slate-400 tabular-nums">
                 {chart.cantidad_total} ventas · Gs. {chart.monto_total.toLocaleString('es-PY')}
               </span>
             </div>
@@ -367,7 +367,7 @@ export default function Dashboard() {
           {/* Comparativa por tipo */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
             <div className="px-6 py-4 border-b border-slate-100">
-              <h2 className="text-sm font-semibold text-slate-800">Comparativa de ventas</h2>
+              <h2 className="text-base font-semibold text-slate-800">Comparativa de ventas</h2>
             </div>
             <div className="p-4 h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -381,7 +381,7 @@ export default function Dashboard() {
                       name === 'Monto (k)' ? [`${formatGs((Number(v) || 0) * 1000)} Gs.`, 'Monto'] : [Number(v), String(name)]
                     }
                   />
-                  <Legend formatter={(v) => <span className="text-xs text-slate-600">{v}</span>} />
+                  <Legend formatter={(v) => <span className="text-sm text-slate-600">{v}</span>} />
                   <Bar dataKey="Ventas" fill="#22c55e" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="Monto (k)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -398,7 +398,7 @@ export default function Dashboard() {
           onClick={() => navigate('/productos')}
         >
           <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-          <p className="text-sm text-red-800 flex-1">
+          <p className="text-base text-red-800 flex-1">
             <span className="font-semibold">{r.stockBajo} alerta{r.stockBajo !== 1 ? 's' : ''} de stock</span>
             {' '}activa{r.stockBajo !== 1 ? 's' : ''}. Revisá el módulo de Productos.
           </p>
