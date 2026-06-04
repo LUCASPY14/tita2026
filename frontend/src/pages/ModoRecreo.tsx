@@ -1,21 +1,39 @@
 /**
- * Modo Recreo — POS ultra-rápido para recreo escolar.
- * Objetivo: 3-5 segundos por alumno.
- * Flujo: escanear tarjeta → agregar productos → F9 para cobrar → reset automático.
+ * Modo Recreo v3 — POS ultra-rápido para recreo escolar.
+ * Mejoras aplicadas:
+ * - Escaneo inteligente (detecta automáticamente tarjeta/producto)
+ * - Fila de favoritos (top 5 más vendidos)
+ * - Feedback visual al agregar producto (parpadeo verde)
+ * - Panel alumno dominante (foto, nombre, saldo gigantes)
+ * - Total y botón COBRAR de gran tamaño
+ * - Atajos visibles en header, Ctrl+Backspace, +/- numérico
+ * - Colores de alto contraste, mejor aprovechamiento del espacio
+ * - Íconos Phosphor (estilo fill) para mayor peso visual
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
-  Zap, X, Plus, Minus, CheckCircle, XCircle,
-  User, CreditCard, ShoppingCart, AlertTriangle,
-  Banknote, RefreshCw, Clock, Search,
-} from 'lucide-react'
+  LightningIcon,
+  XIcon,
+  PlusIcon,
+  MinusIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  UserIcon,
+  CreditCardIcon,
+  ShoppingCartIcon,
+  WarningIcon,
+  SpinnerIcon,
+  ClockIcon,
+  MagnifyingGlassIcon,
+  TrendUpIcon,
+  MoneyIcon,
+} from '@phosphor-icons/react'
 import api from '../services/api'
 import { useCatalogoStore } from '../store/catalogoStore'
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
-
 function tone(freq: number, ms: number, type: OscillatorType = 'sine', vol = 0.22) {
   try {
     const ctx = new AudioContext()
@@ -39,7 +57,6 @@ const sfx = {
 }
 
 // ─── Frecuencia de ventas (localStorage) ─────────────────────────────────────
-
 const SALES_KEY = 'recreo_sales_v2'
 const getSalesMap = (): Record<number, number> => {
   try { return JSON.parse(localStorage.getItem(SALES_KEY) || '{}') }
@@ -51,37 +68,50 @@ const addSales = (ids: number[]) => {
   localStorage.setItem(SALES_KEY, JSON.stringify(m))
 }
 
-// ─── Metadata de categorías ───────────────────────────────────────────────────
-
-const CAT: Record<string, { emoji: string; bg: string; border: string; accent: string }> = {
-  bebidas:   { emoji: '🥤', bg: 'bg-blue-50',    border: 'border-blue-200',    accent: 'text-blue-700' },
-  snacks:    { emoji: '🍟', bg: 'bg-orange-50',  border: 'border-orange-200',  accent: 'text-orange-700' },
-  lácteos:   { emoji: '🥛', bg: 'bg-sky-50',     border: 'border-sky-200',     accent: 'text-sky-700' },
-  panaderia: { emoji: '🍞', bg: 'bg-amber-50',   border: 'border-amber-200',   accent: 'text-amber-700' },
-  panadería: { emoji: '🍞', bg: 'bg-amber-50',   border: 'border-amber-200',   accent: 'text-amber-700' },
-  frutas:    { emoji: '🍎', bg: 'bg-green-50',   border: 'border-green-200',   accent: 'text-green-700' },
-  postres:   { emoji: '🍰', bg: 'bg-pink-50',    border: 'border-pink-200',    accent: 'text-pink-700' },
-  golosinas: { emoji: '🍬', bg: 'bg-purple-50',  border: 'border-purple-200',  accent: 'text-purple-700' },
-  alimentos: { emoji: '🍽️', bg: 'bg-emerald-50', border: 'border-emerald-200', accent: 'text-emerald-700' },
+// ─── Contadores diarios ──────────────────────────────────────────────────────
+const DAILY_KEY = 'recreo_daily_stats'
+interface DailyStats { date: string; count: number; totalTime: number }
+const getDailyStats = (): DailyStats => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(DAILY_KEY) || '{}')
+    const today = new Date().toISOString().slice(0, 10)
+    if (stored.date !== today) return { date: today, count: 0, totalTime: 0 }
+    return stored
+  } catch { return { date: new Date().toISOString().slice(0, 10), count: 0, totalTime: 0 } }
+}
+const updateDailyStats = (timeMs: number) => {
+  const stats = getDailyStats()
+  stats.count += 1
+  stats.totalTime += timeMs
+  localStorage.setItem(DAILY_KEY, JSON.stringify(stats))
 }
 
+// ─── Metadata de categorías (ajustada para alto contraste) ──────────────────
+const CAT: Record<string, { emoji: string; border: string; accent: string }> = {
+  bebidas:   { emoji: '🥤', border: 'border-blue-500',    accent: 'text-blue-700' },
+  snacks:    { emoji: '🍟', border: 'border-orange-500',  accent: 'text-orange-700' },
+  lácteos:   { emoji: '🥛', border: 'border-sky-500',     accent: 'text-sky-700' },
+  panaderia: { emoji: '🍞', border: 'border-amber-500',   accent: 'text-amber-700' },
+  panadería: { emoji: '🍞', border: 'border-amber-500',   accent: 'text-amber-700' },
+  frutas:    { emoji: '🍎', border: 'border-green-500',   accent: 'text-green-700' },
+  postres:   { emoji: '🍰', border: 'border-pink-500',    accent: 'text-pink-700' },
+  golosinas: { emoji: '🍬', border: 'border-purple-500',  accent: 'text-purple-700' },
+  alimentos: { emoji: '🍽️', border: 'border-emerald-500', accent: 'text-emerald-700' },
+}
 function catMeta(cat: string) {
   const key = cat.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-  return CAT[key] ?? { emoji: '📦', bg: 'bg-white', border: 'border-slate-200', accent: 'text-slate-600' }
+  return CAT[key] ?? { emoji: '📦', border: 'border-slate-400', accent: 'text-slate-600' }
 }
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
-
 interface Producto {
   id: number; codigo_barra: string; descripcion: string
   precio_actual: string; categoria_nombre: string
 }
-
 interface RestriccionHijo {
   id: number; tipo: string; descripcion: string | null
   severidad: 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA'; requiere_autorizacion: boolean
 }
-
 interface Tarjeta {
   nro_tarjeta: string; hijo_nombre: string; hijo_foto: string | null
   hijo_grado: string | null; hijo_restricciones: RestriccionHijo[]
@@ -89,11 +119,9 @@ interface Tarjeta {
   permite_saldo_negativo: boolean; cliente_id: number
   cliente_nombre: string; cliente_ruc: string
 }
-
 interface ItemCarrito { producto: Producto; cantidad: number }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
 const gs = (n: number | string | null | undefined) =>
   (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
 
@@ -111,12 +139,18 @@ function extractError(err: unknown): string {
   return 'Error al registrar la venta'
 }
 
-// ─── Tipos de flash ───────────────────────────────────────────────────────────
+// Detecta si un string es un código de tarjeta (no EAN)
+const isCardCode = (value: string): boolean => {
+  // Si contiene letras o guiones, o tiene exactamente 10 dígitos (personalizable)
+  if (!/^\d+$/.test(value)) return true
+  if (value.length === 10) return true // asumimos 10 dígitos = tarjeta
+  return false
+}
 
+// ─── Tipos de flash ───────────────────────────────────────────────────────────
 type Flash = 'none' | 'ok' | 'error' | 'restrict'
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-
 export default function ModoRecreo() {
   const navigate = useNavigate()
   const { getProductos, getCategorias } = useCatalogoStore()
@@ -130,7 +164,6 @@ export default function ModoRecreo() {
   const [tarjetaInput, setTarjetaInput] = useState('')
   const [tarjeta, setTarjeta] = useState<Tarjeta | null>(null)
   const [buscandoTarjeta, setBuscandoTarjeta] = useState(false)
-  const [scanMode, setScanMode] = useState<'tarjeta' | 'producto'>('tarjeta')
 
   // Catálogo
   const [catFiltro, setCatFiltro] = useState('')
@@ -144,6 +177,10 @@ export default function ModoRecreo() {
   const [flash, setFlash] = useState<Flash>('none')
   const [flashMsg, setFlashMsg] = useState('')
 
+  // Feedback visual de agregado
+  const [addedProductId, setAddedProductId] = useState<number | null>(null)
+  const addedTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
   // Reloj
   const [clock, setClock] = useState(() =>
     new Date().toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })
@@ -151,6 +188,10 @@ export default function ModoRecreo() {
 
   // Frecuencia de ventas
   const [salesMap, setSalesMap] = useState<Record<number, number>>(getSalesMap)
+
+  // Estadísticas diarias
+  const [dailyStats, setDailyStats] = useState<DailyStats>(getDailyStats)
+  const ventaStartTime = useRef<number>(0)
 
   // Refs
   const scannerRef = useRef<HTMLInputElement>(null)
@@ -162,6 +203,9 @@ export default function ModoRecreo() {
   const handleCobrarRef = useRef<() => void>(() => {})
   const handleCancelarRef = useRef<() => void>(() => {})
 
+  // Ref para debounce de re-escaneo
+  const lastScannedProduct = useRef<{ id: number; time: number } | null>(null)
+
   // Reloj
   useEffect(() => {
     const t = setInterval(() =>
@@ -170,7 +214,7 @@ export default function ModoRecreo() {
     return () => clearInterval(t)
   }, [])
 
-  // Carga inicial desde caché compartido
+  // Carga inicial
   useEffect(() => {
     Promise.all([getProductos(), getCategorias()])
       .then(([prods, cats]) => {
@@ -181,23 +225,52 @@ export default function ModoRecreo() {
       .finally(() => setLoadingProductos(false))
   }, [getProductos, getCategorias])
 
-  // Auto-foco en tarjeta (timeout para no interferir con el commit inicial)
+  // Auto-foco persistente
   useEffect(() => {
     const t = setTimeout(() => scannerRef.current?.focus(), 50)
     return () => clearTimeout(t)
   }, [])
+  useEffect(() => {
+    const handler = () => {
+      if (document.activeElement?.tagName === 'BODY') scannerRef.current?.focus()
+    }
+    window.addEventListener('focus', handler)
+    return () => window.removeEventListener('focus', handler)
+  }, [])
 
-  // Teclado global (usa refs para evitar re-register)
+  // Teclado global
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName.toLowerCase()
       const inInput = tag === 'input' || tag === 'textarea' || tag === 'select'
 
       if (e.key === 'F2') { e.preventDefault(); prodSearchRef.current?.focus(); return }
-      if (e.key === 'F3') { e.preventDefault(); setScanMode(prev => prev === 'tarjeta' ? 'producto' : 'tarjeta'); scannerRef.current?.focus(); return }
+      if (e.key === 'F3') { e.preventDefault(); scannerRef.current?.focus(); return }
       if (e.key === 'F9') { e.preventDefault(); handleCobrarRef.current(); return }
       if (e.key === 'Escape') { e.preventDefault(); handleCancelarRef.current(); return }
-
+      if (e.ctrlKey && e.key === 'Backspace') {
+        e.preventDefault()
+        setCarrito(prev => prev.slice(0, -1))
+        return
+      }
+      // Teclado numérico + / -
+      if (!inInput && e.key === '+') {
+        e.preventDefault()
+        const last = carrito[carrito.length - 1]
+        if (last) handleAgregarRef.current(last.producto)
+        return
+      }
+      if (!inInput && e.key === '-') {
+        e.preventDefault()
+        const last = carrito[carrito.length - 1]
+        if (last) {
+          setCarrito(prev => {
+            if (last.cantidad <= 1) return prev.slice(0, -1)
+            return prev.map(i => i.producto.id === last.producto.id ? { ...i, cantidad: i.cantidad - 1 } : i)
+          })
+        }
+        return
+      }
       // 1-9: agregar producto N del grid visible
       if (!inInput && /^[1-9]$/.test(e.key)) {
         const p = productosFiltradosRef.current[parseInt(e.key) - 1]
@@ -206,7 +279,7 @@ export default function ModoRecreo() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [carrito]) // dependencia de carrito para +/- último
 
   // Productos filtrados y ordenados por frecuencia
   const productosFiltrados = useMemo(() => {
@@ -222,6 +295,13 @@ export default function ModoRecreo() {
     productosFiltradosRef.current = sorted
     return sorted
   }, [productos, catFiltro, prodSearch, salesMap])
+
+  // Top 5 favoritos
+  const favoritos = useMemo(() => {
+    return [...productos]
+      .sort((a, b) => (salesMap[b.id] || 0) - (salesMap[a.id] || 0))
+      .slice(0, 5)
+  }, [productos, salesMap])
 
   // Totales
   const total = useMemo(() =>
@@ -263,7 +343,6 @@ export default function ModoRecreo() {
       sfx.card()
       setTarjeta(found)
       setCarrito([])
-      setScanMode('producto')
       const criticas = (found.hijo_restricciones ?? []).filter((r: RestriccionHijo) => r.severidad === 'CRITICA')
       if (criticas.length > 0) {
         sfx.restrict()
@@ -273,6 +352,7 @@ export default function ModoRecreo() {
         sfx.lowBal()
         toast(`Saldo bajo: ${gs(found.saldo_disponible || found.saldo_actual)}`, { icon: '⚠️' })
       }
+      ventaStartTime.current = performance.now()
     } catch {
       sfx.error(); toast.error('Error al buscar tarjeta')
     } finally {
@@ -307,6 +387,10 @@ export default function ModoRecreo() {
       if (ex) return prev.map(i => i.producto.id === producto.id ? { ...i, cantidad: i.cantidad + 1 } : i)
       return [...prev, { producto, cantidad: 1 }]
     })
+    // Feedback visual
+    setAddedProductId(producto.id)
+    clearTimeout(addedTimer.current)
+    addedTimer.current = setTimeout(() => setAddedProductId(null), 200)
   }, [isRestricto, saldoDisponible, tarjeta, total])
 
   // Quitar cantidad
@@ -326,6 +410,7 @@ export default function ModoRecreo() {
     if (!tarjeta) { toast.error('Escanear tarjeta del alumno'); scannerRef.current?.focus(); return }
     cobrandoRef.current = true
     setCobrando(true)
+    const inicio = ventaStartTime.current || performance.now()
     try {
       await api.post('/ventas/ventas/', {
         cliente: tarjeta.cliente_id,
@@ -342,6 +427,9 @@ export default function ModoRecreo() {
       sfx.ok()
       addSales(carrito.map(i => i.producto.id))
       setSalesMap(getSalesMap())
+      const tiempoMs = performance.now() - inicio
+      updateDailyStats(tiempoMs)
+      setDailyStats(getDailyStats())
       clearTimeout(flashTimer.current)
       setFlash('ok')
       setFlashMsg(`✅  ${tarjeta.hijo_nombre}  —  ${gs(total)}`)
@@ -349,7 +437,7 @@ export default function ModoRecreo() {
         setFlash('none')
         setCarrito([])
         setTarjeta(null)
-        setScanMode('tarjeta')
+        ventaStartTime.current = 0
         setTimeout(() => scannerRef.current?.focus(), 60)
       }, 2500)
     } catch (err) {
@@ -365,17 +453,51 @@ export default function ModoRecreo() {
   const handleCancelar = useCallback(() => {
     clearTimeout(flashTimer.current)
     setFlash('none'); setCarrito([]); setTarjeta(null)
-    setTarjetaInput(''); setProdSearch(''); setScanMode('tarjeta')
+    setTarjetaInput(''); setProdSearch(''); ventaStartTime.current = 0
     setTimeout(() => scannerRef.current?.focus(), 60)
   }, [])
 
-  // Sincronizar refs para keyboard handler
+  // Sincronizar refs
   handleAgregarRef.current  = handleAgregar
   handleCobrarRef.current   = handleCobrar
   handleCancelarRef.current = handleCancelar
 
-  // ─── JSX ─────────────────────────────────────────────────────────────────
+  // Procesar escaneo automático (Enter)
+  const processScan = useCallback(async (value: string) => {
+    if (!value.trim()) return
+    const trimmed = value.trim()
+    setTarjetaInput('')
+    if (isCardCode(trimmed)) {
+      // Es tarjeta
+      if (tarjeta) {
+        setCarrito([]) // Nueva tarjeta limpia carrito
+      }
+      await buscarTarjeta(trimmed)
+    } else {
+      // Es producto
+      if (!tarjeta) {
+        sfx.error(); toast.error('Escanee una tarjeta primero')
+        setTimeout(() => scannerRef.current?.focus(), 100)
+        return
+      }
+      const prod = productos.find(p => p.codigo_barra === trimmed)
+      if (prod) {
+        // Debounce de re-escaneo (<1s) para incrementar cantidad (manejado por handleAgregar)
+        const now = Date.now()
+        if (lastScannedProduct.current?.id === prod.id && (now - lastScannedProduct.current.time) < 1000) {
+          // ya se maneja el incremento en handleAgregar
+        }
+        lastScannedProduct.current = { id: prod.id, time: now }
+        handleAgregarRef.current(prod)
+        setTimeout(() => scannerRef.current?.focus(), 30)
+      } else {
+        sfx.error(); toast.error(`Código no encontrado: ${trimmed}`)
+        setTimeout(() => scannerRef.current?.focus(), 100)
+      }
+    }
+  }, [tarjeta, productos, buscarTarjeta])
 
+  // ─── JSX ─────────────────────────────────────────────────────────────────
   const flashCfg = {
     ok:       { overlay: 'bg-green-500/25', card: 'bg-green-950 border-green-500' },
     error:    { overlay: 'bg-red-500/25',   card: 'bg-red-950 border-red-500' },
@@ -383,37 +505,48 @@ export default function ModoRecreo() {
     none:     { overlay: '', card: '' },
   }[flash]
 
+  const avgTime = dailyStats.count > 0 ? (dailyStats.totalTime / dailyStats.count / 1000).toFixed(1) : '—'
+
   return (
-    <div className="fixed inset-0 bg-slate-50 text-slate-900 flex flex-col overflow-hidden" style={{ zIndex: 100 }} translate="no">
+    <div className="fixed inset-0 bg-white text-slate-900 flex flex-col overflow-hidden" style={{ zIndex: 100 }} translate="no">
 
       {/* ── Flash overlay ── */}
       {flash !== 'none' && (
         <div className={`absolute inset-0 flex items-center justify-center pointer-events-none ${flashCfg.overlay}`} style={{ zIndex: 200 }}>
-          <div className={`border-2 rounded-3xl px-14 py-8 text-center ${flashCfg.card}`}>
-            <p className="text-3xl font-black text-white">{flashMsg}</p>
+          <div className={`border-2 rounded-3xl px-16 py-10 text-center ${flashCfg.card}`}>
+            <p className="text-4xl font-black text-white">{flashMsg}</p>
             {flash === 'ok' && saldoTrasCompra !== null && (
-              <p className="text-slate-300 text-lg mt-2 tabular-nums">Saldo restante: {gs(saldoTrasCompra)}</p>
+              <p className="text-slate-300 text-xl mt-2 tabular-nums">Saldo restante: {gs(saldoTrasCompra)}</p>
             )}
           </div>
         </div>
       )}
 
       {/* ── Header ── */}
-      <header className="flex items-center justify-between px-4 py-0 bg-white border-b border-slate-200 h-11 shrink-0 shadow-sm">
-        <div className="flex items-center gap-3">
-          <img src="/logo_tita.png" alt="" className="h-6 w-auto bg-slate-100 rounded p-0.5" />
-          <div className="flex items-center gap-1.5 bg-yellow-50 border border-yellow-200 rounded-full px-2.5 py-0.5">
-            <Zap className="w-3 h-3 text-yellow-600" />
-            <span className="text-yellow-700 text-[11px] font-bold uppercase tracking-widest">Modo Recreo</span>
+      <header className="flex items-center justify-between px-4 py-1.5 bg-slate-900 text-white shadow-md h-14 shrink-0">
+        <div className="flex items-center gap-4">
+          <img src="/logo_tita.png" alt="" className="h-7 w-auto bg-white rounded p-0.5" />
+          <div className="flex items-center gap-1.5 bg-yellow-500/20 border border-yellow-400/30 rounded-full px-3 py-1">
+            <LightningIcon size={14} weight="fill" className="text-yellow-400" />
+            <span className="text-yellow-300 text-xs font-bold uppercase tracking-widest">Modo Recreo</span>
+          </div>
+          <div className="flex items-center gap-3 ml-4 text-[11px] text-slate-400">
+            <span className="flex items-center gap-1"><ClockIcon size={14} weight="fill" />{clock}</span>
+            <span>Ventas hoy: <strong className="text-white">{dailyStats.count}</strong></span>
+            <span>Tiempo medio: <strong className="text-white">{avgTime}s</strong></span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-slate-400 text-xs tabular-nums font-mono flex items-center gap-1">
-            <Clock className="w-3 h-3" />{clock}
-          </span>
+        <div className="flex items-center gap-4 text-[11px]">
+          <div className="flex items-center gap-3">
+            <span><kbd className="bg-slate-700 text-slate-300 rounded px-1.5 py-0.5 font-mono text-[10px] mr-1">F2</kbd>Buscar</span>
+            <span><kbd className="bg-slate-700 text-slate-300 rounded px-1.5 py-0.5 font-mono text-[10px] mr-1">F3</kbd>Escanear</span>
+            <span><kbd className="bg-slate-700 text-green-400 rounded px-1.5 py-0.5 font-mono text-[10px] mr-1">F9</kbd>Cobrar</span>
+            <span><kbd className="bg-slate-700 text-slate-300 rounded px-1.5 py-0.5 font-mono text-[10px] mr-1">Esc</kbd>Cancelar</span>
+            <span><kbd className="bg-slate-700 text-slate-300 rounded px-1.5 py-0.5 font-mono text-[10px] mr-1">+/-</kbd>Cant</span>
+          </div>
           <button onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium transition-colors cursor-pointer">
-            <X className="w-3 h-3" />Salir
+            className="flex items-center gap-1 px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium transition-colors cursor-pointer">
+            <XIcon size={14} weight="fill" />Salir
           </button>
         </div>
       </header>
@@ -422,102 +555,74 @@ export default function ModoRecreo() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ══ PANEL IZQUIERDO: ALUMNO ══ */}
-        <aside className="w-52 xl:w-60 bg-white border-r border-slate-200 flex flex-col shrink-0">
-          <div className="p-2.5 border-b border-slate-100 space-y-1.5">
+        <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0 shadow-inner">
+          <div className="p-3 border-b border-slate-100">
             <input
               ref={scannerRef}
               value={tarjetaInput}
               onChange={e => setTarjetaInput(e.target.value)}
-              onKeyDown={async e => {
-                if (e.key !== 'Enter') return
-                const value = tarjetaInput.trim()
-                if (!value) return
-                setTarjetaInput('')
-                if (scanMode === 'producto') {
-                  if (!tarjeta) {
-                    sfx.error(); toast.error('Escanee una tarjeta primero')
-                    setTimeout(() => scannerRef.current?.focus(), 100); return
-                  }
-                  const prod = productos.find(p => p.codigo_barra === value)
-                  if (prod) {
-                    handleAgregarRef.current(prod)
-                    setTimeout(() => scannerRef.current?.focus(), 30); return
-                  }
-                  sfx.error(); toast.error(`Código no encontrado: ${value}`)
-                  setTimeout(() => scannerRef.current?.focus(), 100); return
-                }
-                await buscarTarjeta(value)
+              onKeyDown={e => {
+                if (e.key === 'Enter') processScan(tarjetaInput)
               }}
-              placeholder={scanMode === 'tarjeta' ? 'Escanear tarjeta… (F3)' : tarjeta ? 'Escanear código de barra…' : 'Primero escanee una tarjeta'}
+              placeholder="Escanear tarjeta o código…"
               disabled={buscandoTarjeta}
-              className={`w-full bg-slate-50 border focus:ring-1 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all ${
-                scanMode === 'tarjeta'
-                  ? 'border-slate-300 focus:border-green-500 focus:ring-green-500/30'
-                  : 'border-blue-200 focus:border-blue-500 focus:ring-blue-500/30'
-              }`}
+              className="w-full bg-slate-50 border border-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all"
             />
-            <div className="flex gap-1">
-              <button
-                onClick={() => { setScanMode('tarjeta'); scannerRef.current?.focus() }}
-                className={`flex-1 text-[10px] font-bold py-1 rounded-lg transition-colors cursor-pointer ${scanMode === 'tarjeta' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
-              >🎫 Tarjeta</button>
-              <button
-                onClick={() => { setScanMode('producto'); scannerRef.current?.focus() }}
-                className={`flex-1 text-[10px] font-bold py-1 rounded-lg transition-colors cursor-pointer ${scanMode === 'producto' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
-              >📦 Producto</button>
-            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {tarjeta ? (
               <>
                 <div className="text-center">
                   {tarjeta.hijo_foto ? (
                     <img src={tarjeta.hijo_foto} alt={tarjeta.hijo_nombre}
-                      className="w-20 h-20 rounded-full object-cover border-2 border-green-400/60 mx-auto mb-2" />
+                      className="w-28 h-28 rounded-full object-cover border-4 border-green-500 mx-auto mb-3 shadow-md" />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-slate-100 border-2 border-green-200 flex items-center justify-center mx-auto mb-2">
-                      <User className="w-10 h-10 text-slate-300" />
+                    <div className="w-28 h-28 rounded-full bg-slate-100 border-4 border-green-300 flex items-center justify-center mx-auto mb-3">
+                      <UserIcon size={56} weight="fill" className="text-slate-400" />
                     </div>
                   )}
-                  <p className="text-slate-900 font-bold leading-tight">{tarjeta.hijo_nombre}</p>
-                  {tarjeta.hijo_grado && <p className="text-slate-500 text-xs mt-0.5">{tarjeta.hijo_grado}</p>}
+                  <p className="text-2xl font-black text-slate-900 leading-tight">{tarjeta.hijo_nombre}</p>
+                  {tarjeta.hijo_grado && <p className="text-slate-500 text-base mt-0.5">{tarjeta.hijo_grado}</p>}
                 </div>
 
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
-                  <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-1">Saldo</p>
-                  <p className={`text-3xl font-black tabular-nums leading-none ${
+                <div className={`rounded-2xl p-4 text-center border-2 ${
+                  (saldoDisponible ?? 0) < 5000 ? 'bg-red-50 border-red-400' :
+                  (saldoDisponible ?? 0) < 15000 ? 'bg-yellow-50 border-yellow-400' : 'bg-green-50 border-green-400'
+                }`}>
+                  <p className="text-slate-500 text-xs uppercase tracking-widest font-bold mb-1">Saldo</p>
+                  <p className={`text-4xl font-black tabular-nums leading-none ${
                     (saldoDisponible ?? 0) < 5000 ? 'text-red-600' :
                     (saldoDisponible ?? 0) < 15000 ? 'text-yellow-600' : 'text-green-600'
                   }`}>
                     {gs(tarjeta.saldo_disponible || tarjeta.saldo_actual)}
                   </p>
                   {saldoTrasCompra !== null && carrito.length > 0 && (
-                    <p className={`text-xs tabular-nums mt-1.5 font-semibold ${saldoTrasCompra < 0 ? 'text-red-600' : 'text-slate-500'}`}>
+                    <p className={`text-sm font-semibold mt-2 tabular-nums ${saldoTrasCompra < 0 ? 'text-red-600' : 'text-slate-600'}`}>
                       → {gs(saldoTrasCompra)}
                     </p>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
-                  <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                  <span className="text-green-700 text-xs font-bold">ACTIVA</span>
+                <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-lg px-4 py-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500 shrink-0" />
+                  <span className="text-green-700 text-sm font-bold">ACTIVA</span>
                 </div>
 
                 {tarjeta.hijo_restricciones?.length > 0 && (
                   <div>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                      <span className="text-red-500 text-[10px] font-black uppercase tracking-wider">Restricciones</span>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <WarningIcon size={16} weight="fill" className="text-red-500 shrink-0" />
+                      <span className="text-red-600 text-sm font-black uppercase tracking-wider">Restricciones</span>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {tarjeta.hijo_restricciones.map(r => (
-                        <div key={r.id} className="bg-red-50 border border-red-200 rounded-lg px-2 py-1 flex items-center gap-1.5">
-                          <span className="text-xs">🚫</span>
-                          <span className="text-red-600 text-xs leading-tight">{r.descripcion || r.tipo}</span>
-                          <span className={`ml-auto text-[9px] font-bold px-1 rounded ${
+                        <div key={r.id} className="bg-red-50 border border-red-300 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                          <span className="text-sm">🚫</span>
+                          <span className="text-red-600 text-sm leading-tight">{r.descripcion || r.tipo}</span>
+                          <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${
                             r.severidad === 'CRITICA' ? 'bg-red-600 text-white' :
-                            r.severidad === 'ALTA' ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-600'
+                            r.severidad === 'ALTA' ? 'bg-orange-500 text-white' : 'bg-slate-300 text-slate-700'
                           }`}>{r.severidad}</span>
                         </div>
                       ))}
@@ -526,10 +631,10 @@ export default function ModoRecreo() {
                 )}
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center h-40 text-center">
-                <CreditCard className="w-12 h-12 text-slate-300 mb-3" />
-                <p className="text-slate-500 text-sm font-semibold">Sin alumno</p>
-                <p className="text-slate-400 text-xs mt-1">Escanear tarjeta</p>
+              <div className="flex flex-col items-center justify-center h-48 text-center">
+                <CreditCardIcon size={64} weight="fill" className="text-slate-300 mb-4" />
+                <p className="text-slate-500 text-lg font-semibold">Sin alumno</p>
+                <p className="text-slate-400 text-sm mt-1">Escanear tarjeta para comenzar</p>
               </div>
             )}
           </div>
@@ -537,9 +642,9 @@ export default function ModoRecreo() {
 
         {/* ══ PANEL CENTRAL: PRODUCTOS ══ */}
         <main className="flex-1 flex flex-col overflow-hidden bg-slate-50">
-          <div className="px-3 pt-2.5 pb-2 border-b border-slate-200 space-y-2 shrink-0 bg-white">
+          <div className="px-4 pt-3 pb-2 border-b border-slate-200 space-y-3 shrink-0 bg-white">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              <MagnifyingGlassIcon size={20} weight="fill" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 ref={prodSearchRef}
                 value={prodSearch}
@@ -551,18 +656,18 @@ export default function ModoRecreo() {
                     setTimeout(() => scannerRef.current?.focus(), 50)
                   }
                 }}
-                placeholder="Buscar… (F2) — Enter agrega el primero"
-                className="w-full bg-white border border-slate-300 focus:border-green-500 focus:ring-1 focus:ring-green-500/30 rounded-xl pl-8 pr-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                placeholder="Buscar producto… (F2)"
+                className="w-full bg-white border-2 border-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 rounded-xl pl-11 pr-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all"
               />
             </div>
-            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
               {['', ...categorias].map(c => (
                 <button key={c || '__all__'}
                   onClick={() => setCatFiltro(c)}
-                  className={`shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-bold transition-colors cursor-pointer ${
                     catFiltro === c
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                      ? 'bg-slate-800 text-white'
+                      : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-100'
                   }`}>
                   {c || 'Todos'}
                 </button>
@@ -570,43 +675,74 @@ export default function ModoRecreo() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Fila de favoritos */}
+            {favoritos.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendUpIcon size={16} weight="fill" className="text-orange-500" />
+                  <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Más vendidos</span>
+                </div>
+                <div className="flex gap-3 overflow-x-auto">
+                  {favoritos.map(p => {
+                    const meta = catMeta(p.categoria_nombre)
+                    const restr = isRestricto(p)
+                    const bloqueado = !!restr && (restr.severidad === 'CRITICA' || restr.severidad === 'ALTA')
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => handleAgregar(p)}
+                        disabled={bloqueado}
+                        className={[
+                          'flex flex-col items-center justify-center shrink-0 w-36 h-28 rounded-2xl border-2 p-2 transition-all duration-100',
+                          bloqueado
+                            ? 'bg-red-50 border-red-300 opacity-60 cursor-not-allowed'
+                            : `bg-white ${meta.border} cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95`,
+                        ].join(' ')}
+                      >
+                        <span className="text-4xl mb-1">{meta.emoji}</span>
+                        <span className="text-xs text-slate-700 font-semibold leading-tight line-clamp-1">{p.descripcion}</span>
+                        <span className={`text-base font-black tabular-nums mt-0.5 ${meta.accent}`}>{gs(p.precio_actual)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Grid de productos */}
             {loadingProductos ? (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm">Cargando...</div>
+              <div className="flex items-center justify-center h-full text-slate-400 text-base">Cargando...</div>
             ) : productosFiltrados.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-slate-400 text-sm">Sin productos</div>
+              <div className="flex items-center justify-center h-32 text-slate-400 text-base">Sin productos</div>
             ) : (
-              <div className="grid grid-cols-3 xl:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-3 xl:grid-cols-4 gap-3">
                 {productosFiltrados.slice(0, 12).map((p, idx) => {
                   const meta = catMeta(p.categoria_nombre)
                   const restr = isRestricto(p)
                   const bloqueado = !!restr && (restr.severidad === 'CRITICA' || restr.severidad === 'ALTA')
-                  const precio = Number(p.precio_actual) || 0
+                  const isAdded = p.id === addedProductId
                   return (
                     <button
                       key={p.id}
                       onClick={() => handleAgregar(p)}
                       disabled={bloqueado}
-                      title={bloqueado ? `Restringido: ${restr?.descripcion}` : p.descripcion}
                       className={[
-                        'relative flex flex-col items-center justify-center text-center',
-                        'rounded-2xl border-2 p-3 min-h-[110px] xl:min-h-[120px]',
-                        'transition-all duration-100 select-none',
+                        'relative flex flex-col items-center justify-center text-center rounded-2xl border-2 p-4 min-h-[150px] transition-all duration-100 select-none',
                         bloqueado
-                          ? 'bg-red-50 border-red-200 opacity-60 cursor-not-allowed'
-                          : `${meta.bg} ${meta.border} cursor-pointer hover:shadow-md hover:scale-[1.03] active:scale-95`,
+                          ? 'bg-red-50 border-red-300 opacity-60 cursor-not-allowed'
+                          : `bg-white ${meta.border} cursor-pointer hover:shadow-md hover:scale-[1.03] active:scale-95`,
+                        isAdded && 'ring-4 ring-green-400 scale-105',
                       ].join(' ')}
                     >
                       {idx < 9 && (
-                        <span className="absolute top-1.5 left-2 text-[10px] font-bold text-slate-400/60">{idx + 1}</span>
+                        <span className="absolute top-1.5 left-2 text-xs font-bold text-slate-400/60">{idx + 1}</span>
                       )}
-                      {bloqueado && <span className="absolute top-1.5 right-2 text-base">🚫</span>}
-                      <span className="text-3xl mb-1 leading-none">{meta.emoji}</span>
-                      <span className="text-slate-800 text-[11px] font-semibold leading-tight line-clamp-2 px-1">
+                      {bloqueado && <span className="absolute top-1.5 right-2 text-lg">🚫</span>}
+                      <span className="text-4xl mb-1.5">{meta.emoji}</span>
+                      <span className={`text-lg font-black tabular-nums ${meta.accent}`}>{gs(p.precio_actual)}</span>
+                      <span className="text-slate-600 text-sm font-medium leading-tight line-clamp-2 mt-1 px-1">
                         {p.descripcion}
-                      </span>
-                      <span className={`text-sm font-black tabular-nums mt-1.5 ${meta.accent}`}>
-                        {gs(precio)}
                       </span>
                     </button>
                   )
@@ -617,50 +753,52 @@ export default function ModoRecreo() {
         </main>
 
         {/* ══ PANEL DERECHO: CARRITO + COBRO ══ */}
-        <aside className="w-56 xl:w-72 bg-white border-l border-slate-200 flex flex-col shrink-0">
-          <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
+        <aside className="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 shadow-inner">
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4 text-slate-500" />
-              <span className="text-sm font-bold text-slate-700">Carrito ({carrito.reduce((s,i)=>s+i.cantidad,0)})</span>
+              <ShoppingCartIcon size={20} weight="fill" className="text-slate-600" />
+              <span className="text-lg font-black text-slate-800">
+                🛒 {carrito.reduce((s,i)=>s+i.cantidad,0)} PRODUCTOS
+              </span>
             </div>
             {carrito.length > 0 && (
-              <button onClick={() => setCarrito([])} className="text-slate-400 hover:text-red-500 cursor-pointer transition-colors">
-                <X className="w-4 h-4" />
+              <button onClick={() => setCarrito([])} className="text-slate-400 hover:text-red-500 transition-colors">
+                <XIcon size={20} weight="fill" />
               </button>
             )}
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {carrito.length === 0 ? (
-              <div className="flex items-center justify-center h-20">
-                <p className="text-slate-300 text-sm">Vacío</p>
+              <div className="flex items-center justify-center h-32">
+                <p className="text-slate-300 text-base">Vacío</p>
               </div>
             ) : (
               <ul className="divide-y divide-slate-100">
                 {carrito.map(item => {
                   const precio = Number(item.producto.precio_actual) || 0
                   return (
-                    <li key={item.producto.id} className="px-3 py-2">
-                      <div className="flex items-start gap-1.5">
-                        <p className="text-xs text-slate-800 font-medium flex-1 leading-tight">{item.producto.descripcion}</p>
+                    <li key={item.producto.id} className="px-4 py-3">
+                      <div className="flex items-start gap-2">
+                        <p className="text-base text-slate-800 font-semibold flex-1 leading-tight">{item.producto.descripcion}</p>
                         <button onClick={() => setCarrito(p => p.filter(i => i.producto.id !== item.producto.id))}
-                          className="text-slate-400 hover:text-red-500 cursor-pointer shrink-0">
-                          <X className="w-3 h-3" />
+                          className="text-slate-400 hover:text-red-500 shrink-0">
+                          <XIcon size={16} weight="fill" />
                         </button>
                       </div>
-                      <div className="flex items-center justify-between mt-1.5 gap-2">
-                        <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2">
                           <button onClick={() => handleQuitar(item.producto.id)}
-                            className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer text-slate-600">
-                            <Minus className="w-2.5 h-2.5" />
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600">
+                            <MinusIcon size={14} weight="fill" />
                           </button>
-                          <span className="text-sm font-black text-slate-900 tabular-nums w-5 text-center">{item.cantidad}</span>
+                          <span className="text-lg font-black text-slate-900 tabular-nums w-6 text-center">{item.cantidad}</span>
                           <button onClick={() => handleAgregar(item.producto)}
-                            className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer text-slate-600">
-                            <Plus className="w-2.5 h-2.5" />
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600">
+                            <PlusIcon size={14} weight="fill" />
                           </button>
                         </div>
-                        <span className="text-xs font-bold text-emerald-600 tabular-nums">{gs(precio * item.cantidad)}</span>
+                        <span className="text-base font-bold text-emerald-600 tabular-nums">{gs(precio * item.cantidad)}</span>
                       </div>
                     </li>
                   )
@@ -669,21 +807,21 @@ export default function ModoRecreo() {
             )}
           </div>
 
-          <div className="border-t border-slate-200 p-3 space-y-2">
+          <div className="border-t-2 border-slate-200 p-4 space-y-3">
             <div className="flex items-baseline justify-between">
-              <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Total</span>
-              <span className="text-slate-900 text-2xl font-black tabular-nums">{gs(total)}</span>
+              <span className="text-slate-500 text-sm font-black uppercase tracking-widest">Total</span>
+              <span className="text-slate-900 text-4xl font-black tabular-nums">{gs(total)}</span>
             </div>
 
             {tarjeta ? (
-              <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-lg px-2.5 py-1.5">
-                <CreditCard className="w-3 h-3 text-green-600 shrink-0" />
-                <span className="text-green-700 text-[11px] font-semibold">Prepago automático</span>
+              <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-lg px-3 py-2">
+                <CreditCardIcon size={16} weight="fill" className="text-green-600 shrink-0" />
+                <span className="text-green-700 text-sm font-semibold">Prepago automático</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-                <Banknote className="w-3 h-3 text-slate-400 shrink-0" />
-                <span className="text-slate-400 text-[11px]">Escanear tarjeta primero</span>
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                <MoneyIcon size={16} weight="fill" className="text-slate-400 shrink-0" />
+                <span className="text-slate-400 text-sm">Escanear tarjeta</span>
               </div>
             )}
 
@@ -691,40 +829,28 @@ export default function ModoRecreo() {
               onClick={handleCobrar}
               disabled={carrito.length === 0 || cobrando || !tarjeta}
               className={[
-                'w-full py-4 rounded-2xl font-black text-base tracking-wide',
-                'flex items-center justify-center gap-2 transition-all duration-150',
+                'w-full py-5 rounded-2xl font-black text-xl tracking-wide flex items-center justify-center gap-3 transition-all duration-150',
                 carrito.length > 0 && tarjeta && !cobrando
-                  ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer active:scale-95 shadow-lg shadow-green-500/30'
+                  ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer active:scale-95 shadow-xl shadow-green-500/30'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed',
               ].join(' ')}
             >
               {cobrando
-                ? <><RefreshCw className="w-4 h-4 animate-spin" />Procesando…</>
-                : <><CheckCircle className="w-4 h-4" />COBRAR (F9)</>
+                ? <><SpinnerIcon size={24} weight="fill" className="animate-spin" />Procesando…</>
+                : <><CheckCircleIcon size={24} weight="fill" />COBRAR (F9)</>
               }
             </button>
 
             <button
               onClick={handleCancelar}
-              className="w-full py-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-400 hover:text-red-500 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 text-sm font-bold transition-colors cursor-pointer flex items-center justify-center gap-2"
             >
-              <XCircle className="w-3.5 h-3.5" />
+              <XCircleIcon size={16} weight="fill" />
               Cancelar (Esc)
             </button>
           </div>
         </aside>
       </div>
-
-      {/* ── Barra de atajos ── */}
-      <footer className="h-8 bg-white border-t border-slate-200 flex items-center px-4 gap-5 text-[10px] text-slate-500 shrink-0">
-        {[['F2','Buscar'],['F3','Tarjeta'],['F9','Cobrar'],['Esc','Cancelar'],['1–9','Producto rápido']].map(([k,v]) => (
-          <span key={k}>
-            <kbd className="bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 font-mono text-[9px] mr-1">{k}</kbd>
-            {v}
-          </span>
-        ))}
-        <span className="ml-auto text-slate-300">Modo Recreo v2 — {productosFiltrados.length} productos</span>
-      </footer>
     </div>
   )
 }
