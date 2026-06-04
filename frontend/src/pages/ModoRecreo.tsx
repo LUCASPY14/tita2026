@@ -103,10 +103,23 @@ function catMeta(cat: string) {
   return CAT[key] ?? { emoji: '📦', border: 'border-slate-400', accent: 'text-slate-600' }
 }
 
+// ─── Detección de tipo de código escaneado ────────────────────────────────────
+// Si el código empieza por CARD_PREFIX O contiene caracteres no numéricos
+// se trata como tarjeta. Ajustar el prefijo según el sistema de tarjetas.
+const CARD_PREFIX = 'T-'
+
+function detectInputType(value: string): 'card' | 'product' {
+  if (!value) return 'product'
+  if (value.startsWith(CARD_PREFIX)) return 'card'
+  if (!/^\d+$/.test(value)) return 'card'  // letras/guiones → tarjeta
+  return 'product'
+}
+
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 interface Producto {
   id: number; codigo_barra: string; descripcion: string
   precio_actual: string; categoria_nombre: string
+  stock_actual?: number | null  // presente cuando el backend lo incluye
 }
 interface RestriccionHijo {
   id: number; tipo: string; descripcion: string | null
@@ -137,14 +150,6 @@ function extractError(err: unknown): string {
     if (Array.isArray(first)) return String(first[0])
   }
   return 'Error al registrar la venta'
-}
-
-// Detecta si un string es un código de tarjeta (no EAN)
-const isCardCode = (value: string): boolean => {
-  // Si contiene letras o guiones, o tiene exactamente 10 dígitos (personalizable)
-  if (!/^\d+$/.test(value)) return true
-  if (value.length === 10) return true // asumimos 10 dígitos = tarjeta
-  return false
 }
 
 // ─── Tipos de flash ───────────────────────────────────────────────────────────
@@ -202,6 +207,9 @@ export default function ModoRecreo() {
   const handleAgregarRef = useRef<(p: Producto) => void>(() => {})
   const handleCobrarRef = useRef<() => void>(() => {})
   const handleCancelarRef = useRef<() => void>(() => {})
+
+  // Input con foco activo (para ring visual)
+  const [focusedInput, setFocusedInput] = useState<'scanner' | 'search' | null>(null)
 
   // Ref para debounce de re-escaneo
   const lastScannedProduct = useRef<{ id: number; time: number } | null>(null)
@@ -467,7 +475,7 @@ export default function ModoRecreo() {
     if (!value.trim()) return
     const trimmed = value.trim()
     setTarjetaInput('')
-    if (isCardCode(trimmed)) {
+    if (detectInputType(trimmed) === 'card') {
       // Es tarjeta
       if (tarjeta) {
         setCarrito([]) // Nueva tarjeta limpia carrito
@@ -561,12 +569,17 @@ export default function ModoRecreo() {
               ref={scannerRef}
               value={tarjetaInput}
               onChange={e => setTarjetaInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') processScan(tarjetaInput)
-              }}
+              onKeyDown={e => { if (e.key === 'Enter') processScan(tarjetaInput) }}
+              onFocus={() => setFocusedInput('scanner')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="Escanear tarjeta o código…"
               disabled={buscandoTarjeta}
-              className="w-full bg-slate-50 border border-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+              className={[
+                'w-full bg-slate-50 border rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all',
+                focusedInput === 'scanner'
+                  ? 'border-green-500 ring-4 ring-green-400/30 ring-offset-1'
+                  : 'border-slate-300',
+              ].join(' ')}
             />
           </div>
 
@@ -656,8 +669,15 @@ export default function ModoRecreo() {
                     setTimeout(() => scannerRef.current?.focus(), 50)
                   }
                 }}
+                onFocus={() => setFocusedInput('search')}
+                onBlur={() => setFocusedInput(null)}
                 placeholder="Buscar producto… (F2)"
-                className="w-full bg-white border-2 border-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 rounded-xl pl-11 pr-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                className={[
+                  'w-full bg-white border-2 rounded-xl pl-11 pr-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all',
+                  focusedInput === 'search'
+                    ? 'border-green-500 ring-4 ring-green-400/30 ring-offset-1'
+                    : 'border-slate-300',
+                ].join(' ')}
               />
             </div>
             <div className="flex gap-2 overflow-x-auto scrollbar-hide">
@@ -728,7 +748,7 @@ export default function ModoRecreo() {
                       onClick={() => handleAgregar(p)}
                       disabled={bloqueado}
                       className={[
-                        'relative flex flex-col items-center justify-center text-center rounded-2xl border-2 p-4 min-h-[150px] transition-all duration-100 select-none',
+                        'relative flex flex-col items-center justify-center text-center rounded-2xl border-2 p-3 min-h-[130px] transition-all duration-100 select-none',
                         bloqueado
                           ? 'bg-red-50 border-red-300 opacity-60 cursor-not-allowed'
                           : `bg-white ${meta.border} cursor-pointer hover:shadow-md hover:scale-[1.03] active:scale-95`,
@@ -738,10 +758,15 @@ export default function ModoRecreo() {
                       {idx < 9 && (
                         <span className="absolute top-1.5 left-2 text-xs font-bold text-slate-400/60">{idx + 1}</span>
                       )}
-                      {bloqueado && <span className="absolute top-1.5 right-2 text-lg">🚫</span>}
-                      <span className="text-4xl mb-1.5">{meta.emoji}</span>
-                      <span className={`text-lg font-black tabular-nums ${meta.accent}`}>{gs(p.precio_actual)}</span>
-                      <span className="text-slate-600 text-sm font-medium leading-tight line-clamp-2 mt-1 px-1">
+                      {bloqueado && <span className="absolute top-1.5 right-2 text-base">🚫</span>}
+                      {p.stock_actual != null && (
+                        <span className="absolute bottom-1.5 right-2 text-[10px] text-slate-400 font-medium tabular-nums">
+                          {p.stock_actual}u
+                        </span>
+                      )}
+                      <span className="text-3xl mb-1">{meta.emoji}</span>
+                      <span className={`text-base font-black tabular-nums ${meta.accent}`}>{gs(p.precio_actual)}</span>
+                      <span className="text-slate-600 text-xs font-medium leading-tight line-clamp-2 mt-0.5 px-1">
                         {p.descripcion}
                       </span>
                     </button>
@@ -770,8 +795,20 @@ export default function ModoRecreo() {
 
           <div className="flex-1 overflow-y-auto">
             {carrito.length === 0 ? (
-              <div className="flex items-center justify-center h-32">
-                <p className="text-slate-300 text-base">Vacío</p>
+              <div className="flex flex-col items-center justify-center h-full text-center px-4 py-6">
+                <ShoppingCartIcon size={40} weight="fill" className="text-slate-200 mb-3" />
+                <p className="text-slate-400 text-sm font-semibold mb-1">Sin productos</p>
+                <p className="text-slate-300 text-xs">Escanee tarjeta y seleccione productos</p>
+                <div className="mt-5 w-full border-t border-slate-100 pt-4 space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Ventas hoy</span>
+                    <span className="font-mono font-bold text-slate-600">{dailyStats.count}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Tiempo medio</span>
+                    <span className="font-mono font-bold text-slate-600">{avgTime}s</span>
+                  </div>
+                </div>
               </div>
             ) : (
               <ul className="divide-y divide-slate-100">
@@ -812,6 +849,14 @@ export default function ModoRecreo() {
               <span className="text-slate-500 text-sm font-black uppercase tracking-widest">Total</span>
               <span className="text-slate-900 text-4xl font-black tabular-nums">{gs(total)}</span>
             </div>
+            {tarjeta && (
+              <div className="flex items-baseline justify-between text-sm -mt-1">
+                <span className="text-slate-400">Restante tras cobro</span>
+                <span className={`font-bold tabular-nums ${(saldoTrasCompra ?? saldoDisponible ?? 0) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                  {gs(saldoTrasCompra ?? saldoDisponible ?? 0)}
+                </span>
+              </div>
+            )}
 
             {tarjeta ? (
               <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-lg px-3 py-2">
