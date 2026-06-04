@@ -80,7 +80,7 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Debug / test scripts (desarrollo local)
+# Debug / test scripts de desarrollo local (solo en raíz del proyecto y backend/)
 backend/debug_*.py
 backend/test_*.py
 backend/quick_*.py
@@ -89,7 +89,7 @@ backend/update_*.py
 backend/fix_*.py
 check_admin_perms.py
 fix_admin_lockout.py
-test_*.py
+/test_*.py
 
 # Archivos de credenciales locales
 CREDENCIALES_LOGIN.txt
