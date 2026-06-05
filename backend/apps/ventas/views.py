@@ -79,9 +79,8 @@ class VentaViewSet(viewsets.ModelViewSet):
             advertencias = verificar_alergenos_venta(hijo, productos)
 
         venta = self._registrar(serializer)
-        headers = self.get_success_headers(serializer.data)
-
         resp_data = VentaSerializer(venta).data
+        headers = self.get_success_headers(resp_data)
         if advertencias:
             resp_data = dict(resp_data)
             resp_data["advertencias_alergenos"] = advertencias
