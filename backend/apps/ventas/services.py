@@ -214,8 +214,10 @@ class VentaService:
                     creado_por=cajero,
                 )
 
-            # 5. Si es contado, crear pago automatico
-            if tipo == "CONTADO":
+            # 5. Si es contado con medio_pago explícito, crear pago automático.
+            # Las ventas con tarjeta prepago NO generan PagoVenta —
+            # el pago queda registrado en MovimientoTarjeta (paso 6).
+            if tipo == "CONTADO" and medio_pago is not None:
                 pago = PagoVenta.objects.create(
                     cliente=cliente,
                     venta=venta,
