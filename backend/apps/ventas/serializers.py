@@ -38,7 +38,9 @@ class VentaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Venta
         fields = "__all__"
-        read_only_fields = ["fecha_creacion"]
+        # cajero y fecha_creacion son campos de auditoría que el view asigna
+        # internamente — no se aceptan del cliente ni se validan en el input.
+        read_only_fields = ["fecha_creacion", "cajero"]
 
     def validate(self, attrs):
         # monto_total debe ser positivo
