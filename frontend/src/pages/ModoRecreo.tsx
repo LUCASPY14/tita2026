@@ -27,7 +27,6 @@ import {
   SpinnerIcon,
   ClockIcon,
   MagnifyingGlassIcon,
-  TrendUpIcon,
   MoneyIcon,
 } from '@phosphor-icons/react'
 import api from '../services/api'
@@ -146,8 +145,10 @@ function extractError(err: unknown): string {
   if (typeof d === 'object') {
     const obj = d as Record<string, unknown>
     if (obj.detail) return String(obj.detail)
+    if (obj.error)  return String(obj.error)
     const first = Object.values(obj)[0]
     if (Array.isArray(first)) return String(first[0])
+    if (typeof first === 'string') return first
   }
   return 'Error al registrar la venta'
 }

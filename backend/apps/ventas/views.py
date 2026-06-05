@@ -101,8 +101,30 @@ class VentaViewSet(viewsets.ModelViewSet):
         return Response(VentaSerializer(venta).data)
 
     def _registrar(self, serializer):
+        from decimal import Decimal
+        from apps.productos.models import Producto
+
         data = serializer.validated_data
-        items = self.request.data.get("items", [])
+        raw_items = self.request.data.get("items", [])
+
+        # Resolver IDs de producto a objetos Django (el servicio los necesita como modelos)
+        product_ids = [i.get("producto") for i in raw_items if i.get("producto")]
+        productos_map = {p.pk: p for p in Producto.objects.filter(pk__in=product_ids)}
+
+        items = []
+        for raw in raw_items:
+            producto = productos_map.get(raw.get("producto"))
+            if not producto:
+                continue
+            items.append({
+                "producto": producto,
+                "cantidad": Decimal(str(raw.get("cantidad", 1))),
+                "precio_unitario": Decimal(str(raw.get("precio_unitario", 0))),
+                "iva_10": Decimal(str(raw.get("iva_10", 0))),
+                "iva_5": Decimal(str(raw.get("iva_5", 0))),
+                "monto_exenta": Decimal(str(raw.get("monto_exenta", 0))),
+            })
+
         return VentaService.registrar_venta(
             cliente=data.get("cliente"),
             cajero=self.request.user,

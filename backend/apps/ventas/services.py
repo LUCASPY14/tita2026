@@ -47,9 +47,11 @@ class VentaService:
         if not items:
             raise ValidationError({"error": "Debe incluir al menos un producto."})
 
-        # Validar medio de pago obligatorio para contado
-        if tipo == "CONTADO" and medio_pago is None:
-            raise ValidationError({"error": "Las ventas al contado requieren un medio de pago."})
+        # Validar medio de pago — requerido para contado SIN tarjeta prepago
+        if tipo == "CONTADO" and medio_pago is None and tarjeta is None:
+            raise ValidationError({
+                "error": "Las ventas al contado requieren un medio de pago o tarjeta prepago."
+            })
 
         # Validar que el hijo pertenezca al cliente
         if hijo and hijo.cliente_responsable_id != cliente.pk:
