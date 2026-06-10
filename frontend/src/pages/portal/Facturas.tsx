@@ -32,6 +32,7 @@ function formatFecha(iso: string) {
 export default function PortalFacturas() {
   const [facturas, setFacturas] = useState<Factura[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingPdf, setLoadingPdf] = useState<number | null>(null)
 
   useEffect(() => {
     api.get('/usuarios/portal/mis-facturas/')
@@ -40,9 +41,22 @@ export default function PortalFacturas() {
       .finally(() => setLoading(false))
   }, [])
 
-  const abrirPdf = (id: number) => {
-    const base = (api.defaults.baseURL ?? '').replace(/\/$/, '')
-    window.open(`${base}/contabilidad/facturas/${id}/pdf/`, '_blank')
+  const abrirPdf = async (id: number) => {
+    setLoadingPdf(id)
+    try {
+      const res = await api.get(`/contabilidad/facturas/${id}/pdf/`, {
+        responseType: 'blob',
+      })
+      const blobUrl = URL.createObjectURL(
+        new Blob([res.data], { type: 'text/html; charset=utf-8' })
+      )
+      const win = window.open(blobUrl, '_blank')
+      if (win) setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000)
+    } catch {
+      toast.error('No se pudo abrir la factura')
+    } finally {
+      setLoadingPdf(null)
+    }
   }
 
   return (
@@ -73,10 +87,11 @@ export default function PortalFacturas() {
                   <button
                     type="button"
                     onClick={() => abrirPdf(f.id)}
-                    className="flex items-center gap-1.5 text-xs font-medium text-green-700 border border-green-200 rounded-xl px-3 py-1.5 hover:bg-green-50 transition-colors cursor-pointer"
+                    disabled={loadingPdf === f.id}
+                    className="flex items-center gap-1.5 text-xs font-medium text-green-700 border border-green-200 rounded-xl px-3 py-1.5 hover:bg-green-50 transition-colors cursor-pointer disabled:opacity-40"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    PDF
+                    {loadingPdf === f.id ? '…' : 'PDF'}
                   </button>
                 </div>
               </li>

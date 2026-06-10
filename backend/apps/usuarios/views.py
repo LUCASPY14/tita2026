@@ -342,6 +342,66 @@ class PortalHistorialConsumos(APIView):
         })
 
 
+class PortalHistorialCantina(APIView):
+    """
+    GET /api/usuarios/portal/historial-cantina/?hijo_id=X&page=1&page_size=15
+    Historial de compras en cantina (ventas con tarjeta RFID) del hijo autenticado.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.ventas.models import Venta
+
+        user = request.user
+        if not user.cliente:
+            return Response({"detail": "Sin cliente vinculado."}, status=400)
+
+        hijo_id = request.query_params.get("hijo_id")
+        if not hijo_id:
+            return Response({"detail": "Se requiere hijo_id."}, status=400)
+
+        hijo = user.cliente.hijos.filter(id=hijo_id, activo=True).first()
+        if not hijo:
+            return Response({"detail": "Hijo no encontrado."}, status=404)
+
+        page_size = min(int(request.query_params.get("page_size", 15)), 50)
+        page = max(int(request.query_params.get("page", 1)), 1)
+        offset = (page - 1) * page_size
+
+        qs = (
+            Venta.objects
+            .filter(hijo=hijo, estado=Venta.Estado.ACTIVA)
+            .prefetch_related("detalles", "detalles__producto")
+            .order_by("-fecha")
+        )
+        total = qs.count()
+        ventas = qs[offset:offset + page_size]
+
+        results = []
+        for v in ventas:
+            detalles = [
+                {
+                    "producto_nombre": d.producto.descripcion if d.producto else "—",
+                    "cantidad": int(d.cantidad),
+                    "precio_unitario": int(d.precio_unitario),
+                    "subtotal": int(d.subtotal),
+                }
+                for d in v.detalles.all()
+            ]
+            results.append({
+                "id": v.id,
+                "fecha": v.fecha.isoformat(),
+                "monto_total": int(v.monto_total),
+                "detalles": detalles,
+            })
+
+        return Response({
+            "count": total,
+            "next": total > offset + page_size,
+            "results": results,
+        })
+
+
 class PortalMisFacturas(APIView):
     """
     GET /api/v1/usuarios/portal/mis-facturas/

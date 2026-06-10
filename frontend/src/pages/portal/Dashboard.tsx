@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import {
   CreditCard, AlertTriangle, UtensilsCrossed, History,
   CalendarCheck, CheckCircle2, Clock, AlertCircle, RefreshCw, Wallet,
+  ShoppingBag, Lock, ChevronDown, ChevronUp, Eye, EyeOff,
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
@@ -66,9 +67,23 @@ interface Suscripcion {
   observaciones: string
 }
 
+interface DetalleCantina {
+  producto_nombre: string
+  cantidad: number
+  precio_unitario: number
+  subtotal: number
+}
+
+interface VentaCantina {
+  id: number
+  fecha: string
+  monto_total: number
+  detalles: DetalleCantina[]
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type HijoTab = 'resumen' | 'historial' | 'plan'
+type HijoTab = 'resumen' | 'historial' | 'cantina' | 'plan'
 
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -110,7 +125,137 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   )
 }
 
-function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: number } }) {
+function PinChangeSection({ clienteId }: { clienteId: number }) {
+  const [open, setOpen] = useState(false)
+  const [pinActual, setPinActual] = useState('')
+  const [pinNuevo, setPinNuevo] = useState('')
+  const [pinConfirmar, setPinConfirmar] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [showActual, setShowActual] = useState(false)
+  const [showNuevo, setShowNuevo] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (pinNuevo !== pinConfirmar) {
+      toast.error('Los PINs no coinciden')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await api.post(`/clientes/clientes/${clienteId}/cambiar-pin/`, {
+        pin_actual: pinActual,
+        pin_nuevo: pinNuevo,
+      })
+      toast.success('PIN actualizado correctamente')
+      setOpen(false)
+      setPinActual('')
+      setPinNuevo('')
+      setPinConfirmar('')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      toast.error(msg || 'Error al cambiar el PIN')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3.5 cursor-pointer hover:bg-slate-50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Lock className="w-4 h-4 text-slate-400" />
+          <span className="text-sm font-medium text-slate-700">Cambiar PIN de autorización</span>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+      </button>
+      {open && (
+        <form onSubmit={handleSubmit} className="border-t border-slate-100 px-4 py-4 space-y-3">
+          <div>
+            <label className="text-xs font-medium text-slate-500 block mb-1">PIN actual</label>
+            <div className="relative">
+              <input
+                type={showActual ? 'text' : 'password'}
+                value={pinActual}
+                onChange={e => setPinActual(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 pr-10"
+                placeholder="••••"
+                maxLength={4}
+                inputMode="numeric"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowActual(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer"
+                tabIndex={-1}
+              >
+                {showActual ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-500 block mb-1">PIN nuevo</label>
+            <div className="relative">
+              <input
+                type={showNuevo ? 'text' : 'password'}
+                value={pinNuevo}
+                onChange={e => setPinNuevo(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 pr-10"
+                placeholder="••••"
+                maxLength={4}
+                inputMode="numeric"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNuevo(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer"
+                tabIndex={-1}
+              >
+                {showNuevo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-500 block mb-1">Confirmar PIN nuevo</label>
+            <input
+              type="password"
+              value={pinConfirmar}
+              onChange={e => setPinConfirmar(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+              placeholder="••••"
+              maxLength={4}
+              inputMode="numeric"
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setPinActual(''); setPinNuevo(''); setPinConfirmar('') }}
+              className="flex-1 py-2.5 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || pinActual.length < 4 || pinNuevo.length < 4 || pinConfirmar.length < 4}
+              className="flex-1 py-2.5 text-sm text-white bg-green-600 rounded-xl hover:bg-green-700 transition-colors disabled:opacity-40 cursor-pointer font-medium"
+            >
+              {submitting ? 'Guardando…' : 'Guardar PIN'}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  )
+}
+
+function ResumenTab({ hijo, mes, clienteId }: { hijo: HijoData; mes: { anio: number; mes: number }; clienteId: number }) {
   const navigate = useNavigate()
 
   return (
@@ -148,7 +293,6 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
               )}
             </div>
           </div>
-          {/* Botón cargar saldo */}
           {hijo.tarjeta.estado === 'ACTIVA' && (
             <button
               type="button"
@@ -236,6 +380,9 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
           Sin cuenta de almuerzo en {MESES[mes.mes]}
         </div>
       )}
+
+      {/* PIN change */}
+      <PinChangeSection clienteId={clienteId} />
     </div>
   )
 }
@@ -298,6 +445,81 @@ function HistorialTab({ hijo }: { hijo: HijoData }) {
   )
 }
 
+function CantinaTab({
+  ventas,
+  loading,
+  hasMore,
+  onLoadMore,
+  expandedId,
+  onToggle,
+}: {
+  ventas: VentaCantina[] | undefined
+  loading: boolean
+  hasMore: boolean
+  onLoadMore: () => void
+  expandedId: number | null
+  onToggle: (id: number) => void
+}) {
+  if (loading && !ventas) return <Spinner className="mt-8" />
+
+  if (!ventas || ventas.length === 0) {
+    return (
+      <div className="py-12 text-center text-slate-400">
+        <ShoppingBag className="w-10 h-10 mx-auto mb-3 opacity-30" />
+        <p className="text-base">Sin compras en cantina</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {ventas.map(v => (
+        <div key={v.id} className="bg-white rounded-xl border border-slate-100 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => onToggle(v.id)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer hover:bg-slate-50 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-medium text-slate-800">{formatFecha(v.fecha)}</p>
+              <p className="text-xs text-slate-400">{`${v.detalles.length} ítem${v.detalles.length !== 1 ? 's' : ''}`}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <p className="text-sm font-semibold text-emerald-700 tabular-nums">{formatGs(v.monto_total)}</p>
+              {expandedId === v.id
+                ? <ChevronUp className="w-4 h-4 text-slate-400" />
+                : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            </div>
+          </button>
+          {expandedId === v.id && (
+            <div className="border-t border-slate-100 divide-y divide-slate-50">
+              {v.detalles.map((d, i) => (
+                <div key={i} className="flex items-center justify-between px-4 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs text-slate-400 tabular-nums shrink-0">{d.cantidad}×</span>
+                    <span className="text-sm text-slate-700 truncate">{d.producto_nombre}</span>
+                  </div>
+                  <span className="text-sm text-slate-600 tabular-nums shrink-0 ml-2">{formatGs(d.subtotal)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+      {hasMore && (
+        <button
+          type="button"
+          onClick={onLoadMore}
+          disabled={loading}
+          className="w-full py-2.5 text-sm text-green-700 font-medium border border-green-200 rounded-xl hover:bg-green-50 transition-colors disabled:opacity-40 cursor-pointer"
+        >
+          {loading ? 'Cargando…' : 'Ver más'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function PlanTab({ suscripciones, loading }: { suscripciones: Suscripcion[] | undefined; loading: boolean }) {
   if (loading) return <Spinner className="mt-8" />
 
@@ -352,10 +574,19 @@ export default function PortalDashboard() {
   const [error, setError] = useState(false)
   const [selectedHijoId, setSelectedHijoId] = useState<number | null>(null)
   const [tabs, setTabs] = useState<Record<number, HijoTab>>({})
+
+  // Plan tab state
   const [suscripciones, setSuscripciones] = useState<Record<number, Suscripcion[]>>({})
   const [loadingPlan, setLoadingPlan] = useState<Record<number, boolean>>({})
-  // Tracks which hijo plan requests have been initiated (prevents duplicate fetches)
   const planRequestedRef = useRef<Set<number>>(new Set())
+
+  // Cantina tab state
+  const [cantina, setCantina] = useState<Record<number, VentaCantina[]>>({})
+  const [loadingCantina, setLoadingCantina] = useState<Record<number, boolean>>({})
+  const [hasMoreCantina, setHasMoreCantina] = useState<Record<number, boolean>>({})
+  const [expandedCantinaId, setExpandedCantinaId] = useState<Record<number, number | null>>({})
+  const cantinaRequestedRef = useRef<Set<number>>(new Set())
+  const pageCantinaRef = useRef<Record<number, number>>({})
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -396,10 +627,40 @@ export default function PortalDashboard() {
     }
   }, [])
 
+  const loadCantina = useCallback(async (hijoId: number, loadMore = false) => {
+    if (!loadMore && cantinaRequestedRef.current.has(hijoId)) return
+    if (!loadMore) cantinaRequestedRef.current.add(hijoId)
+    const page = loadMore ? (pageCantinaRef.current[hijoId] ?? 1) + 1 : 1
+    pageCantinaRef.current[hijoId] = page
+    setLoadingCantina(prev => ({ ...prev, [hijoId]: true }))
+    try {
+      const { data: res } = await api.get('/usuarios/portal/historial-cantina/', {
+        params: { hijo_id: hijoId, page, page_size: 15 },
+      })
+      setCantina(prev => ({
+        ...prev,
+        [hijoId]: loadMore ? [...(prev[hijoId] ?? []), ...res.results] : res.results,
+      }))
+      setHasMoreCantina(prev => ({ ...prev, [hijoId]: Boolean(res.next) }))
+    } catch {
+      if (!loadMore) cantinaRequestedRef.current.delete(hijoId)
+    } finally {
+      setLoadingCantina(prev => ({ ...prev, [hijoId]: false }))
+    }
+  }, [])
+
+  const toggleCantinaRow = useCallback((hijoId: number, ventaId: number) => {
+    setExpandedCantinaId(prev => ({
+      ...prev,
+      [hijoId]: prev[hijoId] === ventaId ? null : ventaId,
+    }))
+  }, [])
+
   const setTab = useCallback((hijoId: number, tab: HijoTab) => {
     setTabs(prev => ({ ...prev, [hijoId]: tab }))
     if (tab === 'plan') loadPlan(hijoId)
-  }, [loadPlan])
+    if (tab === 'cantina') loadCantina(hijoId)
+  }, [loadPlan, loadCantina])
 
   if (loading) return <Spinner className="mt-12" />
 
@@ -495,6 +756,12 @@ export default function PortalDashboard() {
               Historial
             </span>
           </TabBtn>
+          <TabBtn active={tab === 'cantina'} onClick={() => setTab(hijo.id, 'cantina')}>
+            <span className="flex items-center gap-1.5">
+              <ShoppingBag className="w-3.5 h-3.5" />
+              Cantina
+            </span>
+          </TabBtn>
           <TabBtn active={tab === 'plan'} onClick={() => setTab(hijo.id, 'plan')}>
             <span className="flex items-center gap-1.5">
               <CalendarCheck className="w-3.5 h-3.5" />
@@ -505,8 +772,20 @@ export default function PortalDashboard() {
 
         {/* Tab content */}
         <div className="p-5">
-          {tab === 'resumen' && <ResumenTab hijo={hijo} mes={data.mes} />}
+          {tab === 'resumen' && (
+            <ResumenTab hijo={hijo} mes={data.mes} clienteId={data.cliente.id} />
+          )}
           {tab === 'historial' && <HistorialTab hijo={hijo} />}
+          {tab === 'cantina' && (
+            <CantinaTab
+              ventas={cantina[hijo.id]}
+              loading={loadingCantina[hijo.id] ?? false}
+              hasMore={hasMoreCantina[hijo.id] ?? false}
+              onLoadMore={() => loadCantina(hijo.id, true)}
+              expandedId={expandedCantinaId[hijo.id] ?? null}
+              onToggle={(ventaId) => toggleCantinaRow(hijo.id, ventaId)}
+            />
+          )}
           {tab === 'plan' && (
             <PlanTab
               suscripciones={suscripciones[hijo.id]}

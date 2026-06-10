@@ -15,7 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.permissions import IsAdmin, IsCajeroOrAdmin, IsStaffUser
+from common.permissions import IsAdmin, IsCajeroOrAdmin, IsStaffUser, IsStaffOrClienteWeb
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -358,10 +358,18 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura = FacturacionService.anular_factura(factura)
         return Response(FacturaSerializer(factura).data)
 
-    @action(detail=True, methods=["get"], url_path="pdf")
+    @action(detail=True, methods=["get"], url_path="pdf",
+            permission_classes=[IsStaffOrClienteWeb])
     def pdf(self, request, pk=None):
         """Retorna HTML imprimible de la factura (el navegador exporta a PDF)."""
         factura = self.get_object()
+
+        # CLIENTE_WEB solo puede ver sus propias facturas
+        if request.user.rol == "CLIENTE_WEB":
+            cliente = getattr(request.user, "cliente", None)
+            if not cliente or factura.cliente_id != cliente.pk:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied()
 
         # Determinar el concepto según el origen de la factura
         concepto = "Servicios"
