@@ -1,14 +1,11 @@
 /**
- * Modo Recreo v3 — POS ultra-rápido para recreo escolar.
- * Mejoras aplicadas:
- * - Escaneo inteligente (detecta automáticamente tarjeta/producto)
- * - Fila de favoritos (top 5 más vendidos)
- * - Feedback visual al agregar producto (parpadeo verde)
- * - Panel alumno dominante (foto, nombre, saldo gigantes)
- * - Total y botón COBRAR de gran tamaño
- * - Atajos visibles en header, Ctrl+Backspace, +/- numérico
- * - Colores de alto contraste, mejor aprovechamiento del espacio
- * - Íconos Phosphor (estilo fill) para mayor peso visual
+ * Modo Recreo v4 — POS escolar rápido.
+ * Mejoras v4:
+ * - Tema claro con alto contraste, tipografía grande y legible
+ * - Multi-medio de pago: Prepago, Efectivo, POS, Transferencia
+ * - Modal PIN del padre/tutor para autorizar ventas con saldo insuficiente
+ * - Calculadora de cambio para cobros en efectivo
+ * - Carga dinámica de medios de pago desde /core/medios-pago/
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -28,6 +25,10 @@ import {
   ClockIcon,
   MagnifyingGlassIcon,
   MoneyIcon,
+  LockKeyIcon,
+  BankIcon,
+  DeviceMobileIcon,
+  CashRegisterIcon,
 } from '@phosphor-icons/react'
 import api from '../services/api'
 import { useCatalogoStore } from '../store/catalogoStore'
@@ -85,32 +86,28 @@ const updateDailyStats = (timeMs: number) => {
   localStorage.setItem(DAILY_KEY, JSON.stringify(stats))
 }
 
-// ─── Metadata de categorías (ajustada para alto contraste) ──────────────────
-const CAT: Record<string, { emoji: string; border: string; accent: string }> = {
-  bebidas:   { emoji: '🥤', border: 'border-blue-500',    accent: 'text-blue-700' },
-  snacks:    { emoji: '🍟', border: 'border-orange-500',  accent: 'text-orange-700' },
-  lácteos:   { emoji: '🥛', border: 'border-sky-500',     accent: 'text-sky-700' },
-  panaderia: { emoji: '🍞', border: 'border-amber-500',   accent: 'text-amber-700' },
-  panadería: { emoji: '🍞', border: 'border-amber-500',   accent: 'text-amber-700' },
-  frutas:    { emoji: '🍎', border: 'border-green-500',   accent: 'text-green-700' },
-  postres:   { emoji: '🍰', border: 'border-pink-500',    accent: 'text-pink-700' },
-  golosinas: { emoji: '🍬', border: 'border-purple-500',  accent: 'text-purple-700' },
-  alimentos: { emoji: '🍽️', border: 'border-emerald-500', accent: 'text-emerald-700' },
+// ─── Metadata de categorías ───────────────────────────────────────────────────
+const CAT: Record<string, { emoji: string; bg: string; border: string; accent: string }> = {
+  bebidas:   { emoji: '🥤', bg: 'bg-blue-50',   border: 'border-blue-400',    accent: 'text-blue-700' },
+  snacks:    { emoji: '🍟', bg: 'bg-orange-50', border: 'border-orange-400',  accent: 'text-orange-700' },
+  lácteos:   { emoji: '🥛', bg: 'bg-sky-50',    border: 'border-sky-400',     accent: 'text-sky-700' },
+  panaderia: { emoji: '🍞', bg: 'bg-amber-50',  border: 'border-amber-400',   accent: 'text-amber-700' },
+  panadería: { emoji: '🍞', bg: 'bg-amber-50',  border: 'border-amber-400',   accent: 'text-amber-700' },
+  frutas:    { emoji: '🍎', bg: 'bg-green-50',  border: 'border-green-400',   accent: 'text-green-700' },
+  postres:   { emoji: '🍰', bg: 'bg-pink-50',   border: 'border-pink-400',    accent: 'text-pink-700' },
+  golosinas: { emoji: '🍬', bg: 'bg-purple-50', border: 'border-purple-400',  accent: 'text-purple-700' },
+  alimentos: { emoji: '🍽️', bg: 'bg-emerald-50',border: 'border-emerald-400', accent: 'text-emerald-700' },
 }
 function catMeta(cat: string) {
   const key = cat.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-  return CAT[key] ?? { emoji: '📦', border: 'border-slate-400', accent: 'text-slate-600' }
+  return CAT[key] ?? { emoji: '📦', bg: 'bg-slate-50', border: 'border-slate-300', accent: 'text-slate-600' }
 }
 
-// ─── Detección de tipo de código escaneado ────────────────────────────────────
-// Si el código empieza por CARD_PREFIX O contiene caracteres no numéricos
-// se trata como tarjeta. Ajustar el prefijo según el sistema de tarjetas.
 const CARD_PREFIX = 'T-'
-
 function detectInputType(value: string): 'card' | 'product' {
   if (!value) return 'product'
   if (value.startsWith(CARD_PREFIX)) return 'card'
-  if (!/^\d+$/.test(value)) return 'card'  // letras/guiones → tarjeta
+  if (!/^\d+$/.test(value)) return 'card'
   return 'product'
 }
 
@@ -118,7 +115,7 @@ function detectInputType(value: string): 'card' | 'product' {
 interface Producto {
   id: number; codigo_barra: string; descripcion: string
   precio_actual: string; categoria_nombre: string
-  stock_actual?: number | null  // presente cuando el backend lo incluye
+  stock_actual?: number | null
 }
 interface RestriccionHijo {
   id: number; tipo: string; descripcion: string | null
@@ -128,10 +125,14 @@ interface Tarjeta {
   nro_tarjeta: string; hijo_nombre: string; hijo_foto: string | null
   hijo_grado: string | null; hijo_restricciones: RestriccionHijo[]
   saldo_actual: string; saldo_disponible: string; estado: string
-  permite_saldo_negativo: boolean; cliente_id: number
-  cliente_nombre: string; cliente_ruc: string
+  permite_saldo_negativo: boolean; limite_credito: string
+  cliente_id: number; cliente_nombre: string; cliente_ruc: string
 }
 interface ItemCarrito { producto: Producto; cantidad: number }
+interface MedioPagoDB { id: number; descripcion: string; activo: boolean; requiere_validacion: boolean }
+
+type ModoPago = 'PREPAGO' | 'MEDIO'
+type Flash = 'none' | 'ok' | 'error' | 'restrict'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const gs = (n: number | string | null | undefined) =>
@@ -153,18 +154,150 @@ function extractError(err: unknown): string {
   return 'Error al registrar la venta'
 }
 
-// ─── Tipos de flash ───────────────────────────────────────────────────────────
-type Flash = 'none' | 'ok' | 'error' | 'restrict'
+// ─── Modal PIN ────────────────────────────────────────────────────────────────
+interface PinModalProps {
+  saldoActual: number
+  total: number
+  limiteCreditoTarjeta: number
+  onConfirm: (pin: string) => void
+  onCancel: () => void
+  loading: boolean
+}
+function PinModal({ saldoActual, total, limiteCreditoTarjeta, onConfirm, onCancel, loading }: PinModalProps) {
+  const [pin, setPin] = useState('')
+  const PIN_LEN = 4
+
+  const deficit = total - saldoActual
+  const puedeAutorizar = deficit <= limiteCreditoTarjeta
+
+  const press = (digit: string) => {
+    if (digit === '←') { setPin(p => p.slice(0, -1)); return }
+    if (pin.length < PIN_LEN) setPin(p => p + digit)
+  }
+
+  const confirm = () => {
+    if (pin.length === PIN_LEN && puedeAutorizar) onConfirm(pin)
+  }
+
+  const keys = ['1','2','3','4','5','6','7','8','9','←','0','✓']
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[300]" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        {/* Header */}
+        <div className="bg-amber-500 px-6 py-4 flex items-center gap-3">
+          <LockKeyIcon size={28} weight="fill" className="text-white" />
+          <div>
+            <p className="text-white font-black text-xl">Autorización requerida</p>
+            <p className="text-amber-100 text-sm">PIN del padre/tutor</p>
+          </div>
+        </div>
+
+        {/* Resumen financiero */}
+        <div className="px-6 py-4 bg-amber-50 border-b border-amber-200 grid grid-cols-3 gap-3 text-center">
+          <div>
+            <p className="text-amber-700 text-xs font-bold uppercase tracking-wide">Saldo actual</p>
+            <p className="text-amber-900 text-lg font-black tabular-nums">{gs(saldoActual)}</p>
+          </div>
+          <div>
+            <p className="text-slate-600 text-xs font-bold uppercase tracking-wide">Total compra</p>
+            <p className="text-slate-900 text-lg font-black tabular-nums">{gs(total)}</p>
+          </div>
+          <div>
+            <p className={`text-xs font-bold uppercase tracking-wide ${puedeAutorizar ? 'text-red-600' : 'text-red-700'}`}>Déficit</p>
+            <p className={`text-lg font-black tabular-nums ${puedeAutorizar ? 'text-red-600' : 'text-red-700'}`}>{gs(deficit)}</p>
+          </div>
+        </div>
+
+        {!puedeAutorizar && (
+          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-300 rounded-xl text-center">
+            <p className="text-red-700 font-bold text-sm">Excede el límite de crédito ({gs(limiteCreditoTarjeta)})</p>
+            <p className="text-red-600 text-xs mt-0.5">No es posible autorizar esta venta</p>
+          </div>
+        )}
+
+        {puedeAutorizar && (
+          <div className="px-6 pt-5 pb-2">
+            {/* Dots */}
+            <div className="flex justify-center gap-4 mb-6">
+              {Array.from({ length: PIN_LEN }).map((_, i) => (
+                <div key={i} className={`w-5 h-5 rounded-full border-2 transition-all ${
+                  i < pin.length ? 'bg-amber-500 border-amber-500 scale-110' : 'bg-white border-slate-300'
+                }`} />
+              ))}
+            </div>
+
+            {/* Numpad */}
+            <div className="grid grid-cols-3 gap-3">
+              {keys.map(k => {
+                const isBack = k === '←'
+                const isOk = k === '✓'
+                const disabled = isOk ? (pin.length !== PIN_LEN || loading) : (isBack ? pin.length === 0 : false)
+                return (
+                  <button
+                    key={k}
+                    onClick={() => { if (!loading) { isOk ? confirm() : press(k) } }}
+                    disabled={disabled}
+                    className={[
+                      'h-14 rounded-2xl text-xl font-black transition-all select-none',
+                      isOk
+                        ? 'bg-green-500 text-white hover:bg-green-600 disabled:opacity-40'
+                        : isBack
+                          ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30'
+                          : 'bg-slate-100 text-slate-900 hover:bg-amber-50 active:bg-amber-100',
+                      !disabled && 'active:scale-95 cursor-pointer',
+                      disabled && 'cursor-not-allowed',
+                    ].join(' ')}
+                  >
+                    {loading && isOk ? <SpinnerIcon size={20} className="animate-spin mx-auto" /> : k}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="px-6 py-4 flex gap-3">
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-base transition-colors cursor-pointer disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          {puedeAutorizar && (
+            <button
+              onClick={confirm}
+              disabled={pin.length !== PIN_LEN || loading}
+              className="flex-1 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-base transition-colors cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              {loading
+                ? <><SpinnerIcon size={18} className="animate-spin" />Verificando…</>
+                : <><CheckCircleIcon size={18} weight="fill" />Autorizar</>
+              }
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function ModoRecreo() {
   const navigate = useNavigate()
   const { getProductos, getCategorias } = useCatalogoStore()
 
+  // Caja abierta
+  interface CierreCajaInfo { id: number; caja_nombre: string; monto_inicial: string; fecha_apertura: string }
+  const [cierreCaja, setCierreCaja] = useState<CierreCajaInfo | null | false>(null) // null=cargando, false=no hay caja
+
   // Datos
   const [productos, setProductos] = useState<Producto[]>([])
   const [loadingProductos, setLoadingProductos] = useState(true)
   const [categorias, setCategorias] = useState<string[]>([])
+  const [mediosPago, setMediosPago] = useState<MedioPagoDB[]>([])
 
   // Tarjeta / alumno
   const [tarjetaInput, setTarjetaInput] = useState('')
@@ -199,20 +332,29 @@ export default function ModoRecreo() {
   const [dailyStats, setDailyStats] = useState<DailyStats>(getDailyStats)
   const ventaStartTime = useRef<number>(0)
 
+  // Modo de pago
+  const [modoPago, setModoPago] = useState<ModoPago>('PREPAGO')
+  const [medioPagoSelId, setMedioPagoSelId] = useState<number | null>(null)
+  const [montoEfectivo, setMontoEfectivo] = useState('')
+  const [referencia, setReferencia] = useState('')
+
+  // PIN modal
+  const [showPin, setShowPin] = useState(false)
+  const [pinLoading, setPinLoading] = useState(false)
+
+  // Input con foco activo
+  const [focusedInput, setFocusedInput] = useState<'scanner' | 'search' | 'efectivo' | null>(null)
+
   // Refs
   const scannerRef = useRef<HTMLInputElement>(null)
   const prodSearchRef = useRef<HTMLInputElement>(null)
+  const efectivoRef = useRef<HTMLInputElement>(null)
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const cobrandoRef = useRef(false)
   const productosFiltradosRef = useRef<Producto[]>([])
   const handleAgregarRef = useRef<(p: Producto) => void>(() => {})
   const handleCobrarRef = useRef<() => void>(() => {})
   const handleCancelarRef = useRef<() => void>(() => {})
-
-  // Input con foco activo (para ring visual)
-  const [focusedInput, setFocusedInput] = useState<'scanner' | 'search' | null>(null)
-
-  // Ref para debounce de re-escaneo
   const lastScannedProduct = useRef<{ id: number; time: number } | null>(null)
 
   // Reloj
@@ -225,16 +367,27 @@ export default function ModoRecreo() {
 
   // Carga inicial
   useEffect(() => {
-    Promise.all([getProductos(), getCategorias()])
-      .then(([prods, cats]) => {
+    Promise.all([
+      getProductos(),
+      getCategorias(),
+      api.get('/core/medios-pago/', { params: { activo: true } }),
+    ])
+      .then(([prods, cats, mpRes]) => {
         setProductos(prods as Producto[])
-        setCategorias(cats.map(c => c.nombre))
+        setCategorias(cats.map((c: { nombre: string }) => c.nombre))
+        const mp: MedioPagoDB[] = (mpRes.data.results ?? mpRes.data) as MedioPagoDB[]
+        setMediosPago(mp.filter(m => m.activo))
       })
       .catch(() => toast.error('Error al cargar datos'))
       .finally(() => setLoadingProductos(false))
+
+    // Verificar caja abierta (separado para no bloquear la carga del catálogo)
+    api.get('/contabilidad/cierres-caja/mi-caja/')
+      .then(res => setCierreCaja(res.data ?? false))
+      .catch(() => setCierreCaja(false))
   }, [getProductos, getCategorias])
 
-  // Auto-foco persistente
+  // Auto-foco persistente en scanner
   useEffect(() => {
     const t = setTimeout(() => scannerRef.current?.focus(), 50)
     return () => clearTimeout(t)
@@ -262,7 +415,6 @@ export default function ModoRecreo() {
         setCarrito(prev => prev.slice(0, -1))
         return
       }
-      // Teclado numérico + / -
       if (!inInput && e.key === '+') {
         e.preventDefault()
         const last = carrito[carrito.length - 1]
@@ -280,7 +432,6 @@ export default function ModoRecreo() {
         }
         return
       }
-      // 1-9: agregar producto N del grid visible
       if (!inInput && /^[1-9]$/.test(e.key)) {
         const p = productosFiltradosRef.current[parseInt(e.key) - 1]
         if (p) handleAgregarRef.current(p)
@@ -288,7 +439,7 @@ export default function ModoRecreo() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [carrito]) // dependencia de carrito para +/- último
+  }, [carrito])
 
   // Productos filtrados y ordenados por frecuencia
   const productosFiltrados = useMemo(() => {
@@ -322,6 +473,11 @@ export default function ModoRecreo() {
     : null
   const saldoTrasCompra = saldoDisponible !== null ? saldoDisponible - total : null
 
+  const vuelto = useMemo(() => {
+    const recibido = parseFloat(montoEfectivo.replace(/\./g, '').replace(',', '.')) || 0
+    return recibido - total
+  }, [montoEfectivo, total])
+
   // Check restricción
   const isRestricto = useCallback((producto: Producto): RestriccionHijo | null => {
     if (!tarjeta?.hijo_restricciones?.length) return null
@@ -341,8 +497,7 @@ export default function ModoRecreo() {
     setBuscandoTarjeta(true)
     try {
       const { data } = await api.get('/core/tarjetas/', { params: { search: nro } })
-      const found = (data.results ?? []).find(
-        (t: Tarjeta) => t.nro_tarjeta === nro)
+      const found = (data.results ?? []).find((t: Tarjeta) => t.nro_tarjeta === nro)
       if (!found) {
         sfx.error(); toast.error('Tarjeta no encontrada'); return
       }
@@ -383,9 +538,9 @@ export default function ModoRecreo() {
       flashTimer.current = setTimeout(() => setFlash('none'), 1800)
       return
     }
-    const precio = Number(producto.precio_actual) || 0
-    if (saldoDisponible !== null && !tarjeta?.permite_saldo_negativo) {
-      const nuevoTotal = total + precio
+    // Validar saldo solo en modo PREPAGO
+    if (modoPago === 'PREPAGO' && saldoDisponible !== null && !tarjeta?.permite_saldo_negativo) {
+      const nuevoTotal = total + (Number(producto.precio_actual) || 0)
       if (nuevoTotal > saldoDisponible) {
         sfx.error(); toast.error('Saldo insuficiente'); return
       }
@@ -396,11 +551,10 @@ export default function ModoRecreo() {
       if (ex) return prev.map(i => i.producto.id === producto.id ? { ...i, cantidad: i.cantidad + 1 } : i)
       return [...prev, { producto, cantidad: 1 }]
     })
-    // Feedback visual
     setAddedProductId(producto.id)
     clearTimeout(addedTimer.current)
     addedTimer.current = setTimeout(() => setAddedProductId(null), 200)
-  }, [isRestricto, saldoDisponible, tarjeta, total])
+  }, [isRestricto, saldoDisponible, tarjeta, total, modoPago])
 
   // Quitar cantidad
   const handleQuitar = useCallback((id: number) => {
@@ -413,26 +567,36 @@ export default function ModoRecreo() {
     })
   }, [])
 
-  // Cobrar
-  const handleCobrar = useCallback(async () => {
-    if (cobrandoRef.current || carrito.length === 0) return
-    if (!tarjeta) { toast.error('Escanear tarjeta del alumno'); scannerRef.current?.focus(); return }
+  // ─── Ejecución real del cobro ─────────────────────────────────────────────
+  const ejecutarCobro = useCallback(async (pinAutorizacion?: string) => {
+    if (cobrandoRef.current || carrito.length === 0 || !tarjeta) return
     cobrandoRef.current = true
     setCobrando(true)
     const inicio = ventaStartTime.current || performance.now()
+
     try {
-      await api.post('/ventas/ventas/', {
+      const payload: Record<string, unknown> = {
         cliente: tarjeta.cliente_id,
         tipo: 'CONTADO',
-        tarjeta: tarjeta.nro_tarjeta,
-        medio_pago: null,
         items: carrito.map(i => ({
           producto: i.producto.id,
           cantidad: i.cantidad,
           precio_unitario: Number(i.producto.precio_actual) || 0,
           iva_10: 0, iva_5: 0, monto_exenta: 0,
         })),
-      }, { timeout: 6000 })
+      }
+
+      if (modoPago === 'PREPAGO') {
+        payload.tarjeta = tarjeta.nro_tarjeta
+        payload.medio_pago = null
+        if (pinAutorizacion) payload.pin_autorizacion = pinAutorizacion
+      } else {
+        payload.tarjeta = null
+        payload.medio_pago = medioPagoSelId
+        if (referencia.trim()) payload.referencia = referencia.trim()
+      }
+
+      await api.post('/ventas/ventas/', payload, { timeout: 6000 })
       sfx.ok()
       addSales(carrito.map(i => i.producto.id))
       setSalesMap(getSalesMap())
@@ -446,6 +610,8 @@ export default function ModoRecreo() {
         setFlash('none')
         setCarrito([])
         setTarjeta(null)
+        setMontoEfectivo('')
+        setReferencia('')
         ventaStartTime.current = 0
         setTimeout(() => scannerRef.current?.focus(), 60)
       }, 2500)
@@ -456,13 +622,36 @@ export default function ModoRecreo() {
       cobrandoRef.current = false
       setCobrando(false)
     }
-  }, [carrito, tarjeta, total])
+  }, [carrito, tarjeta, total, modoPago, medioPagoSelId])
 
-  // Cancelar
+  // ─── Cobrar ───────────────────────────────────────────────────────────────
+  const handleCobrar = useCallback(async () => {
+    if (cobrandoRef.current || carrito.length === 0) return
+    if (!tarjeta) { toast.error('Escanear tarjeta del alumno'); scannerRef.current?.focus(); return }
+
+    if (modoPago === 'MEDIO' && !medioPagoSelId) {
+      toast.error('Seleccione un medio de pago'); return
+    }
+
+    if (modoPago === 'PREPAGO' && !tarjeta.permite_saldo_negativo) {
+      const saldoAct = Number(tarjeta.saldo_actual) || 0
+      if (total > saldoAct) {
+        // Insuficiente saldo — pedir PIN del padre
+        setShowPin(true)
+        return
+      }
+    }
+
+    await ejecutarCobro()
+  }, [carrito, tarjeta, total, modoPago, medioPagoSelId, ejecutarCobro])
+
+  // ─── Cancelar ─────────────────────────────────────────────────────────────
   const handleCancelar = useCallback(() => {
     clearTimeout(flashTimer.current)
     setFlash('none'); setCarrito([]); setTarjeta(null)
-    setTarjetaInput(''); setProdSearch(''); ventaStartTime.current = 0
+    setTarjetaInput(''); setProdSearch('')
+    setMontoEfectivo(''); setReferencia(''); setShowPin(false)
+    ventaStartTime.current = 0
     setTimeout(() => scannerRef.current?.focus(), 60)
   }, [])
 
@@ -477,13 +666,9 @@ export default function ModoRecreo() {
     const trimmed = value.trim()
     setTarjetaInput('')
     if (detectInputType(trimmed) === 'card') {
-      // Es tarjeta
-      if (tarjeta) {
-        setCarrito([]) // Nueva tarjeta limpia carrito
-      }
+      if (tarjeta) setCarrito([])
       await buscarTarjeta(trimmed)
     } else {
-      // Es producto
       if (!tarjeta) {
         sfx.error(); toast.error('Escanee una tarjeta primero')
         setTimeout(() => scannerRef.current?.focus(), 100)
@@ -491,10 +676,9 @@ export default function ModoRecreo() {
       }
       const prod = productos.find(p => p.codigo_barra === trimmed)
       if (prod) {
-        // Debounce de re-escaneo (<1s) para incrementar cantidad (manejado por handleAgregar)
         const now = Date.now()
         if (lastScannedProduct.current?.id === prod.id && (now - lastScannedProduct.current.time) < 1000) {
-          // ya se maneja el incremento en handleAgregar
+          // incremento manejado por handleAgregar
         }
         lastScannedProduct.current = { id: prod.id, time: now }
         handleAgregarRef.current(prod)
@@ -506,55 +690,139 @@ export default function ModoRecreo() {
     }
   }, [tarjeta, productos, buscarTarjeta])
 
-  // ─── JSX ─────────────────────────────────────────────────────────────────
+  // ─── Icono por descripción de medio de pago ───────────────────────────────
+  const iconMedio = (desc: string) => {
+    const d = desc.toLowerCase()
+    if (d.includes('pos') || d.includes('tarjet') || d.includes('débito') || d.includes('crédito'))
+      return <DeviceMobileIcon size={18} weight="fill" />
+    if (d.includes('transfer') || d.includes('banco'))
+      return <BankIcon size={18} weight="fill" />
+    return <MoneyIcon size={18} weight="fill" />
+  }
+
+  // ─── JSX ──────────────────────────────────────────────────────────────────
   const flashCfg = {
-    ok:       { overlay: 'bg-green-500/25', card: 'bg-green-950 border-green-500' },
-    error:    { overlay: 'bg-red-500/25',   card: 'bg-red-950 border-red-500' },
-    restrict: { overlay: 'bg-red-600/30',   card: 'bg-red-950 border-red-600' },
+    ok:       { overlay: 'bg-green-500/20', card: 'bg-white border-green-500 shadow-green-200' },
+    error:    { overlay: 'bg-red-500/20',   card: 'bg-white border-red-500 shadow-red-200' },
+    restrict: { overlay: 'bg-red-600/25',   card: 'bg-white border-red-600 shadow-red-200' },
     none:     { overlay: '', card: '' },
   }[flash]
 
   const avgTime = dailyStats.count > 0 ? (dailyStats.totalTime / dailyStats.count / 1000).toFixed(1) : '—'
 
+  const medioPagoSeleccionado = mediosPago.find(m => m.id === medioPagoSelId) ?? null
+
+  const referenciaRequerida = modoPago === 'MEDIO' && (medioPagoSeleccionado?.requiere_validacion ?? false)
+  const canCobrar = carrito.length > 0 && !cobrando && tarjeta &&
+    (modoPago === 'PREPAGO' || (modoPago === 'MEDIO' && medioPagoSelId !== null)) &&
+    (!referenciaRequerida || referencia.trim().length > 0)
+
+  // Pantalla de bloqueo: sin caja abierta
+  if (cierreCaja === false) {
+    return (
+      <div className="fixed inset-0 bg-slate-100 flex flex-col items-center justify-center" style={{ zIndex: 100 }}>
+        <div className="bg-white rounded-3xl shadow-2xl p-12 max-w-md w-full mx-4 text-center">
+          <div className="w-24 h-24 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-6">
+            <CashRegisterIcon size={52} weight="fill" className="text-orange-500" />
+          </div>
+          <h2 className="text-3xl font-black text-slate-900 mb-2">Caja no iniciada</h2>
+          <p className="text-slate-500 text-lg mb-8">Debés abrir una caja antes de usar el Modo Recreo.</p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => navigate('/cajas')}
+              className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-black text-lg rounded-2xl transition-colors cursor-pointer"
+            >
+              Ir a Cajas
+            </button>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-2xl transition-colors cursor-pointer"
+            >
+              Volver al inicio
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Cargando caja
+  if (cierreCaja === null) {
+    return (
+      <div className="fixed inset-0 bg-slate-100 flex items-center justify-center" style={{ zIndex: 100 }}>
+        <SpinnerIcon size={48} className="animate-spin text-slate-400" />
+      </div>
+    )
+  }
+
   return (
-    <div className="fixed inset-0 bg-white text-slate-900 flex flex-col overflow-hidden" style={{ zIndex: 100 }} translate="no">
+    <div className="fixed inset-0 bg-slate-100 text-slate-900 flex flex-col overflow-hidden" style={{ zIndex: 100 }} translate="no">
+
+      {/* ── PIN Modal ── */}
+      {showPin && tarjeta && (
+        <PinModal
+          saldoActual={Number(tarjeta.saldo_actual) || 0}
+          total={total}
+          limiteCreditoTarjeta={Number(tarjeta.limite_credito) || 0}
+          loading={pinLoading}
+          onCancel={() => { setShowPin(false); setTimeout(() => scannerRef.current?.focus(), 60) }}
+          onConfirm={async (pin) => {
+            setPinLoading(true)
+            try {
+              await ejecutarCobro(pin)
+              setShowPin(false)
+            } catch {
+              // error ya mostrado por ejecutarCobro
+            } finally {
+              setPinLoading(false)
+            }
+          }}
+        />
+      )}
 
       {/* ── Flash overlay ── */}
       {flash !== 'none' && (
         <div className={`absolute inset-0 flex items-center justify-center pointer-events-none ${flashCfg.overlay}`} style={{ zIndex: 200 }}>
-          <div className={`border-2 rounded-3xl px-16 py-10 text-center ${flashCfg.card}`}>
-            <p className="text-4xl font-black text-white">{flashMsg}</p>
-            {flash === 'ok' && saldoTrasCompra !== null && (
-              <p className="text-slate-300 text-xl mt-2 tabular-nums">Saldo restante: {gs(saldoTrasCompra)}</p>
+          <div className={`border-4 rounded-3xl px-16 py-10 text-center shadow-2xl ${flashCfg.card}`}>
+            <p className="text-5xl font-black text-slate-900">{flashMsg}</p>
+            {flash === 'ok' && saldoTrasCompra !== null && modoPago === 'PREPAGO' && (
+              <p className="text-slate-500 text-2xl mt-3 tabular-nums">Saldo restante: {gs(saldoTrasCompra)}</p>
             )}
           </div>
         </div>
       )}
 
       {/* ── Header ── */}
-      <header className="flex items-center justify-between px-4 py-1.5 bg-slate-900 text-white shadow-md h-14 shrink-0">
+      <header className="flex items-center justify-between px-5 py-2 bg-white border-b-2 border-slate-200 shadow-sm h-16 shrink-0">
         <div className="flex items-center gap-4">
-          <img src="/logo_tita.png" alt="" className="h-7 w-auto bg-white rounded p-0.5" />
-          <div className="flex items-center gap-1.5 bg-yellow-500/20 border border-yellow-400/30 rounded-full px-3 py-1">
-            <LightningIcon size={14} weight="fill" className="text-yellow-400" />
-            <span className="text-yellow-300 text-xs font-bold uppercase tracking-widest">Modo Recreo</span>
+          <img src="/logo_tita.png" alt="" className="h-9 w-auto rounded" />
+          <div className="flex items-center gap-2 bg-yellow-100 border border-yellow-300 rounded-full px-4 py-1.5">
+            <LightningIcon size={16} weight="fill" className="text-yellow-500" />
+            <span className="text-yellow-700 text-sm font-black uppercase tracking-widest">Modo Recreo</span>
           </div>
-          <div className="flex items-center gap-3 ml-4 text-[11px] text-slate-400">
-            <span className="flex items-center gap-1"><ClockIcon size={14} weight="fill" />{clock}</span>
-            <span>Ventas hoy: <strong className="text-white">{dailyStats.count}</strong></span>
-            <span>Tiempo medio: <strong className="text-white">{dailyStats.count > 0 ? `${avgTime}s` : '—'}</strong></span>
+          <div className="flex items-center gap-4 ml-2 text-sm text-slate-500">
+            <span className="flex items-center gap-1.5"><ClockIcon size={15} weight="fill" className="text-slate-400" />{clock}</span>
+            <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+              <CashRegisterIcon size={15} weight="fill" className="text-emerald-500" />
+              {cierreCaja.caja_nombre}
+            </span>
+            <span>Ventas hoy: <strong className="text-slate-800">{dailyStats.count}</strong></span>
+            <span>Promedio: <strong className="text-slate-800">{dailyStats.count > 0 ? `${avgTime}s` : '—'}</strong></span>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-[11px]">
-          <div className="flex items-center gap-3">
-            <span><kbd className="bg-slate-700 text-slate-300 rounded px-1.5 py-0.5 font-mono text-[10px] mr-1">F2</kbd>Buscar</span>
-            <span><kbd className="bg-slate-700 text-slate-300 rounded px-1.5 py-0.5 font-mono text-[10px] mr-1">F3</kbd>Escanear</span>
-            <span><kbd className="bg-slate-700 text-green-400 rounded px-1.5 py-0.5 font-mono text-[10px] mr-1">F9</kbd>Cobrar</span>
-            <span><kbd className="bg-slate-700 text-slate-300 rounded px-1.5 py-0.5 font-mono text-[10px] mr-1">Esc</kbd>Cancelar</span>
-            <span><kbd className="bg-slate-700 text-slate-300 rounded px-1.5 py-0.5 font-mono text-[10px] mr-1">+/-</kbd>Cant</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 text-xs text-slate-500">
+            {[['F2','Buscar'],['F3','Escanear'],['F9','Cobrar'],['Esc','Cancelar'],['±','Cant']].map(([k, l]) => (
+              <span key={k}>
+                <kbd className={`rounded px-1.5 py-0.5 font-mono mr-1 text-[11px] ${k === 'F9' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>{k}</kbd>
+                {l}
+              </span>
+            ))}
           </div>
-          <button onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1 px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium transition-colors cursor-pointer">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-lg text-sm font-medium transition-colors cursor-pointer border border-slate-200"
+          >
             <XIcon size={14} weight="fill" />Salir
           </button>
         </div>
@@ -564,7 +832,9 @@ export default function ModoRecreo() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ══ PANEL IZQUIERDO: ALUMNO ══ */}
-        <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0 shadow-inner">
+        <aside className="w-80 bg-white border-r-2 border-slate-200 flex flex-col shrink-0">
+
+          {/* Input scanner */}
           <div className="p-3 border-b border-slate-100">
             <input
               ref={scannerRef}
@@ -576,9 +846,9 @@ export default function ModoRecreo() {
               placeholder="Escanear tarjeta o código…"
               disabled={buscandoTarjeta}
               className={[
-                'w-full bg-slate-50 border rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all',
+                'w-full bg-slate-50 border-2 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all',
                 focusedInput === 'scanner'
-                  ? 'border-green-500 ring-4 ring-green-400/30 ring-offset-1'
+                  ? 'border-blue-500 ring-4 ring-blue-400/20'
                   : 'border-slate-300',
               ].join(' ')}
             />
@@ -587,51 +857,50 @@ export default function ModoRecreo() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {tarjeta ? (
               <>
+                {/* Foto y nombre */}
                 <div className="text-center">
                   {tarjeta.hijo_foto ? (
                     <img src={tarjeta.hijo_foto} alt={tarjeta.hijo_nombre}
-                      className="w-36 h-36 rounded-full object-cover border-4 border-green-500 mx-auto mb-3 shadow-md" />
+                      className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 mx-auto mb-3 shadow-md" />
                   ) : (
-                    <div className="w-36 h-36 rounded-full bg-slate-100 border-4 border-green-300 flex items-center justify-center mx-auto mb-3">
-                      <UserIcon size={72} weight="fill" className="text-slate-400" />
+                    <div className="w-32 h-32 rounded-full bg-slate-100 border-4 border-blue-300 flex items-center justify-center mx-auto mb-3">
+                      <UserIcon size={64} weight="fill" className="text-slate-400" />
                     </div>
                   )}
                   <p className="text-2xl font-black text-slate-900 leading-tight">{tarjeta.hijo_nombre}</p>
                   {tarjeta.hijo_grado && <p className="text-slate-500 text-base mt-0.5">{tarjeta.hijo_grado}</p>}
-                  <p className="text-slate-300 text-xs mt-1 font-mono tracking-wider">
-                    {tarjeta.nro_tarjeta}
-                  </p>
+                  <p className="text-slate-300 text-xs mt-1 font-mono tracking-wider">{tarjeta.nro_tarjeta}</p>
                 </div>
 
-                {/* Restricciones — siempre visibles, antes del saldo */}
+                {/* Restricciones */}
                 {tarjeta.hijo_restricciones?.length > 0 && (
-                  <div className="bg-red-50 border-2 border-red-400 rounded-xl p-2.5 space-y-1.5">
+                  <div className="bg-red-50 border-2 border-red-300 rounded-xl p-3 space-y-2">
                     <div className="flex items-center gap-1.5">
-                      <WarningIcon size={14} weight="fill" className="text-red-500 shrink-0" />
-                      <span className="text-red-600 text-xs font-black uppercase tracking-wider">
+                      <WarningIcon size={15} weight="fill" className="text-red-500 shrink-0" />
+                      <span className="text-red-700 text-sm font-black uppercase tracking-wide">
                         {tarjeta.hijo_restricciones.length} Restricción{tarjeta.hijo_restricciones.length > 1 ? 'es' : ''}
                       </span>
                     </div>
                     {tarjeta.hijo_restricciones.map(r => (
-                      <div key={r.id} className="flex items-center gap-1.5">
-                        <span className="text-xs">🚫</span>
-                        <span className="text-red-700 text-xs font-semibold leading-tight flex-1">{r.descripcion || r.tipo}</span>
-                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${
+                      <div key={r.id} className="flex items-center gap-2">
+                        <span className="text-sm">🚫</span>
+                        <span className="text-red-700 text-sm font-semibold leading-tight flex-1">{r.descripcion || r.tipo}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
                           r.severidad === 'CRITICA' ? 'bg-red-600 text-white' :
-                          r.severidad === 'ALTA' ? 'bg-orange-500 text-white' : 'bg-slate-300 text-slate-700'
+                          r.severidad === 'ALTA' ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-600'
                         }`}>{r.severidad}</span>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Saldo con labels explícitos */}
+                {/* Saldo */}
                 <div className={`rounded-2xl p-4 border-2 ${
-                  (saldoDisponible ?? 0) < 5000 ? 'bg-red-50 border-red-400' :
-                  (saldoDisponible ?? 0) < 15000 ? 'bg-yellow-50 border-yellow-400' : 'bg-green-50 border-green-400'
+                  (saldoDisponible ?? 0) < 5000 ? 'bg-red-50 border-red-300' :
+                  (saldoDisponible ?? 0) < 15000 ? 'bg-yellow-50 border-yellow-300' : 'bg-green-50 border-green-300'
                 }`}>
                   <div className="flex items-baseline justify-between mb-1">
-                    <p className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Saldo actual</p>
+                    <p className="text-slate-500 text-xs uppercase tracking-widest font-bold">Saldo actual</p>
                     <p className={`text-3xl font-black tabular-nums leading-none ${
                       (saldoDisponible ?? 0) < 5000 ? 'text-red-600' :
                       (saldoDisponible ?? 0) < 15000 ? 'text-yellow-600' : 'text-green-600'
@@ -639,26 +908,38 @@ export default function ModoRecreo() {
                       {gs(tarjeta.saldo_disponible || tarjeta.saldo_actual)}
                     </p>
                   </div>
-                  {carrito.length > 0 && saldoTrasCompra !== null && (
+                  {carrito.length > 0 && saldoTrasCompra !== null && modoPago === 'PREPAGO' && (
                     <div className="flex items-baseline justify-between border-t border-current/20 pt-1.5 mt-1.5">
-                      <p className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Después de compra</p>
+                      <p className="text-slate-500 text-xs uppercase tracking-widest font-bold">Tras compra</p>
                       <p className={`text-xl font-black tabular-nums ${saldoTrasCompra < 0 ? 'text-red-600' : 'text-slate-600'}`}>
                         {gs(saldoTrasCompra)}
                       </p>
                     </div>
                   )}
+                  {Number(tarjeta.limite_credito) > 0 && (
+                    <p className="text-xs text-slate-400 mt-1.5">
+                      Crédito disponible: <span className="font-bold">{gs(tarjeta.limite_credito)}</span>
+                    </p>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-lg px-4 py-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500 shrink-0" />
-                  <span className="text-green-700 text-sm font-bold">ACTIVA</span>
+                {/* Estado */}
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" />
+                  <span className="text-green-700 text-sm font-bold">Tarjeta ACTIVA</span>
+                </div>
+
+                {/* Padre */}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5">
+                  <p className="text-slate-400 text-xs uppercase tracking-wide font-bold mb-0.5">Padre/Tutor</p>
+                  <p className="text-slate-800 text-sm font-semibold leading-tight">{tarjeta.cliente_nombre}</p>
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center h-48 text-center">
-                <CreditCardIcon size={64} weight="fill" className="text-slate-300 mb-4" />
-                <p className="text-slate-500 text-lg font-semibold">Sin alumno</p>
-                <p className="text-slate-400 text-sm mt-1">Escanear tarjeta para comenzar</p>
+              <div className="flex flex-col items-center justify-center h-56 text-center">
+                <CreditCardIcon size={72} weight="fill" className="text-slate-200 mb-4" />
+                <p className="text-slate-600 text-xl font-bold">Sin alumno</p>
+                <p className="text-slate-400 text-base mt-1">Escanear tarjeta para comenzar</p>
               </div>
             )}
           </div>
@@ -666,7 +947,8 @@ export default function ModoRecreo() {
 
         {/* ══ PANEL CENTRAL: PRODUCTOS ══ */}
         <main className="flex-1 flex flex-col overflow-hidden bg-slate-50">
-          <div className="px-4 pt-3 pb-2 border-b border-slate-200 space-y-3 shrink-0 bg-white">
+          <div className="px-4 pt-3 pb-2 border-b border-slate-200 space-y-3 shrink-0 bg-white shadow-sm">
+            {/* Buscador */}
             <div className="relative">
               <MagnifyingGlassIcon size={20} weight="fill" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
@@ -684,21 +966,22 @@ export default function ModoRecreo() {
                 onBlur={() => setFocusedInput(null)}
                 placeholder="Buscar producto… (F2)"
                 className={[
-                  'w-full bg-white border-2 rounded-xl pl-11 pr-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all',
+                  'w-full bg-slate-50 border-2 rounded-xl pl-11 pr-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all',
                   focusedInput === 'search'
-                    ? 'border-green-500 ring-4 ring-green-400/30 ring-offset-1'
+                    ? 'border-blue-500 ring-4 ring-blue-400/20'
                     : 'border-slate-300',
                 ].join(' ')}
               />
             </div>
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {/* Filtros de categoría */}
+            <div className="flex gap-2 overflow-x-auto pb-0.5">
               {['', ...categorias].map(c => (
                 <button key={c || '__all__'}
                   onClick={() => setCatFiltro(c)}
                   className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-bold transition-colors cursor-pointer ${
                     catFiltro === c
                       ? 'bg-slate-800 text-white'
-                      : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-100'
+                      : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-50'
                   }`}>
                   {c || 'Todos'}
                 </button>
@@ -707,12 +990,12 @@ export default function ModoRecreo() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Fila de favoritos */}
+            {/* Favoritos */}
             {favoritos.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-base">🔥</span>
-                  <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Top más vendidos</span>
+                  <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Más vendidos</span>
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-1">
                   {favoritos.map(p => {
@@ -720,15 +1003,12 @@ export default function ModoRecreo() {
                     const restr = isRestricto(p)
                     const bloqueado = !!restr && (restr.severidad === 'CRITICA' || restr.severidad === 'ALTA')
                     return (
-                      <button
-                        key={p.id}
-                        onClick={() => handleAgregar(p)}
-                        disabled={bloqueado}
+                      <button key={p.id} onClick={() => handleAgregar(p)} disabled={bloqueado}
                         className={[
-                          'relative flex flex-col items-center justify-center shrink-0 w-32 h-24 rounded-2xl border-2 p-2 transition-all duration-100',
+                          'relative flex flex-col items-center justify-center shrink-0 w-36 h-28 rounded-2xl border-2 p-2 transition-all duration-100',
                           bloqueado
-                            ? 'bg-red-50 border-red-300 opacity-60 cursor-not-allowed'
-                            : `bg-white ${meta.border} cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95`,
+                            ? 'bg-red-50 border-red-200 opacity-50 cursor-not-allowed'
+                            : `${meta.bg} ${meta.border} cursor-pointer hover:shadow-md hover:scale-105 active:scale-95`,
                         ].join(' ')}
                       >
                         {p.stock_actual != null && p.stock_actual <= 3 && (
@@ -737,7 +1017,7 @@ export default function ModoRecreo() {
                           </span>
                         )}
                         <span className="text-3xl mb-0.5">{meta.emoji}</span>
-                        <span className="text-[11px] text-slate-700 font-semibold leading-tight line-clamp-1">{p.descripcion}</span>
+                        <span className="text-xs text-slate-700 font-semibold leading-tight line-clamp-1 text-center">{p.descripcion}</span>
                         <span className={`text-sm font-black tabular-nums mt-0.5 ${meta.accent}`}>{gs(p.precio_actual)}</span>
                       </button>
                     )
@@ -759,35 +1039,32 @@ export default function ModoRecreo() {
                   const bloqueado = !!restr && (restr.severidad === 'CRITICA' || restr.severidad === 'ALTA')
                   const isAdded = p.id === addedProductId
                   return (
-                    <button
-                      key={p.id}
-                      onClick={() => handleAgregar(p)}
-                      disabled={bloqueado}
+                    <button key={p.id} onClick={() => handleAgregar(p)} disabled={bloqueado}
                       className={[
-                        'relative flex flex-col items-center justify-center text-center rounded-2xl border-2 p-3 min-h-[130px] transition-all duration-100 select-none',
+                        'relative flex flex-col items-center justify-center text-center rounded-2xl border-2 p-3 min-h-[150px] transition-all duration-100 select-none',
                         bloqueado
-                          ? 'bg-red-50 border-red-300 opacity-60 cursor-not-allowed'
-                          : `bg-white ${meta.border} cursor-pointer hover:shadow-md hover:scale-[1.03] active:scale-95`,
-                        isAdded && 'ring-4 ring-green-400 scale-105',
+                          ? 'bg-red-50 border-red-200 opacity-50 cursor-not-allowed'
+                          : `${meta.bg} ${meta.border} cursor-pointer hover:shadow-md hover:scale-[1.03] active:scale-95`,
+                        isAdded && 'ring-4 ring-blue-400 scale-105',
                       ].join(' ')}
                     >
                       {idx < 9 && (
-                        <span className="absolute top-1.5 left-2 text-xs font-bold text-slate-400/60">{idx + 1}</span>
+                        <span className="absolute top-2 left-2.5 text-xs font-bold text-slate-300">{idx + 1}</span>
                       )}
-                      {bloqueado && <span className="absolute top-1.5 right-2 text-sm">🚫</span>}
+                      {bloqueado && <span className="absolute top-2 right-2 text-sm">🚫</span>}
                       {p.stock_actual != null && !bloqueado && (
-                        <span className={`absolute bottom-1 right-1.5 text-[9px] font-bold px-1 py-0.5 rounded tabular-nums ${
+                        <span className={`absolute bottom-1.5 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded tabular-nums ${
                           p.stock_actual === 0     ? 'bg-red-600 text-white' :
                           p.stock_actual <= 3      ? 'bg-red-100 text-red-700' :
                           p.stock_actual <= 10     ? 'bg-orange-100 text-orange-700' :
-                          'text-slate-300'
+                          'text-slate-200'
                         }`}>
                           {p.stock_actual === 0 ? 'AGOTADO' : `${p.stock_actual}u`}
                         </span>
                       )}
-                      <span className="text-3xl mb-1">{meta.emoji}</span>
-                      <span className={`text-base font-black tabular-nums ${meta.accent}`}>{gs(p.precio_actual)}</span>
-                      <span className="text-slate-600 text-xs font-medium leading-tight line-clamp-2 mt-0.5 px-1">
+                      <span className="text-4xl mb-1.5">{meta.emoji}</span>
+                      <span className={`text-lg font-black tabular-nums ${meta.accent}`}>{gs(p.precio_actual)}</span>
+                      <span className="text-slate-700 text-sm font-medium leading-tight line-clamp-2 mt-1 px-1">
                         {p.descripcion}
                       </span>
                     </button>
@@ -799,37 +1076,77 @@ export default function ModoRecreo() {
         </main>
 
         {/* ══ PANEL DERECHO: CARRITO + COBRO ══ */}
-        <aside className="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 shadow-inner">
+        <aside className="w-96 bg-white border-l-2 border-slate-200 flex flex-col shrink-0">
+
+          {/* Header carrito */}
           <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ShoppingCartIcon size={20} weight="fill" className="text-slate-600" />
+              <ShoppingCartIcon size={22} weight="fill" className="text-slate-600" />
               <span className="text-lg font-black text-slate-800">
-                🛒 {carrito.reduce((s,i)=>s+i.cantidad,0)} PRODUCTOS
+                {carrito.reduce((s, i) => s + i.cantidad, 0)} productos
               </span>
             </div>
             {carrito.length > 0 && (
-              <button onClick={() => setCarrito([])} className="text-slate-400 hover:text-red-500 transition-colors">
+              <button onClick={() => setCarrito([])} className="text-slate-400 hover:text-red-500 transition-colors p-1">
                 <XIcon size={20} weight="fill" />
               </button>
             )}
           </div>
 
+          {/* Selector de medio de pago */}
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Medio de pago</p>
+            <div className="flex flex-wrap gap-2">
+              {/* PREPAGO */}
+              <button
+                onClick={() => { setModoPago('PREPAGO'); setMedioPagoSelId(null) }}
+                className={[
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
+                  modoPago === 'PREPAGO'
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                    : 'bg-white border-slate-300 text-slate-600 hover:border-blue-300',
+                ].join(' ')}
+              >
+                <CreditCardIcon size={15} weight="fill" />
+                Prepago
+              </button>
+              {/* Medios dinámicos */}
+              {mediosPago.map(mp => (
+                <button key={mp.id}
+                  onClick={() => { setModoPago('MEDIO'); setMedioPagoSelId(mp.id) }}
+                  className={[
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
+                    modoPago === 'MEDIO' && medioPagoSelId === mp.id
+                      ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                      : 'bg-white border-slate-300 text-slate-600 hover:border-emerald-300',
+                  ].join(' ')}
+                >
+                  {iconMedio(mp.descripcion)}
+                  {mp.descripcion}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Lista del carrito */}
           <div className="flex-1 overflow-y-auto">
             {carrito.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-4 py-6">
-                <ShoppingCartIcon size={40} weight="fill" className="text-slate-200 mb-3" />
-                <p className="text-slate-400 text-sm font-semibold mb-1">Sin productos</p>
-                <p className="text-slate-300 text-xs">Escanee tarjeta y seleccione productos</p>
-                <div className="mt-5 w-full border-t border-slate-100 pt-4 space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Ventas hoy</span>
-                    <span className="font-mono font-bold text-slate-600">{dailyStats.count}</span>
+                <ShoppingCartIcon size={48} weight="fill" className="text-slate-200 mb-3" />
+                <p className="text-slate-500 text-base font-semibold mb-1">Sin productos</p>
+                <p className="text-slate-400 text-sm">Escanear tarjeta y seleccionar productos</p>
+                {dailyStats.count > 0 && (
+                  <div className="mt-6 w-full border-t border-slate-100 pt-4 space-y-2">
+                    <div className="flex justify-between text-sm px-4">
+                      <span className="text-slate-400">Ventas hoy</span>
+                      <span className="font-bold text-slate-700">{dailyStats.count}</span>
+                    </div>
+                    <div className="flex justify-between text-sm px-4">
+                      <span className="text-slate-400">Tiempo promedio</span>
+                      <span className="font-bold text-slate-700">{avgTime}s</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Tiempo medio</span>
-                    <span className="font-mono font-bold text-slate-600">{avgTime}s</span>
-                  </div>
-                </div>
+                )}
               </div>
             ) : (
               <ul className="divide-y divide-slate-100">
@@ -840,23 +1157,23 @@ export default function ModoRecreo() {
                       <div className="flex items-start gap-2">
                         <p className="text-base text-slate-800 font-semibold flex-1 leading-tight">{item.producto.descripcion}</p>
                         <button onClick={() => setCarrito(p => p.filter(i => i.producto.id !== item.producto.id))}
-                          className="text-slate-400 hover:text-red-500 shrink-0">
+                          className="text-slate-300 hover:text-red-500 transition-colors shrink-0 p-0.5">
                           <XIcon size={16} weight="fill" />
                         </button>
                       </div>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-2">
                           <button onClick={() => handleQuitar(item.producto.id)}
-                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600">
-                            <MinusIcon size={14} weight="fill" />
+                            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
+                            <MinusIcon size={15} weight="fill" />
                           </button>
-                          <span className="text-lg font-black text-slate-900 tabular-nums w-6 text-center">{item.cantidad}</span>
+                          <span className="text-xl font-black text-slate-900 tabular-nums w-7 text-center">{item.cantidad}</span>
                           <button onClick={() => handleAgregar(item.producto)}
-                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600">
-                            <PlusIcon size={14} weight="fill" />
+                            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
+                            <PlusIcon size={15} weight="fill" />
                           </button>
                         </div>
-                        <span className="text-base font-bold text-emerald-600 tabular-nums">{gs(precio * item.cantidad)}</span>
+                        <span className="text-base font-bold text-emerald-700 tabular-nums">{gs(precio * item.cantidad)}</span>
                       </div>
                     </li>
                   )
@@ -865,39 +1182,109 @@ export default function ModoRecreo() {
             )}
           </div>
 
-          <div className="border-t-2 border-slate-200 p-4 space-y-3">
+          {/* Footer: total + pago + botones */}
+          <div className="border-t-2 border-slate-200 p-4 space-y-3 bg-white">
+
+            {/* Total */}
             <div className="flex items-baseline justify-between">
               <span className="text-slate-500 text-sm font-black uppercase tracking-widest">Total</span>
               <span className="text-slate-900 text-4xl font-black tabular-nums">{gs(total)}</span>
             </div>
-            {tarjeta && (
+
+            {/* Restante (modo prepago) */}
+            {tarjeta && modoPago === 'PREPAGO' && (
               <div className="flex items-baseline justify-between text-sm -mt-1">
-                <span className="text-slate-400">Restante tras cobro</span>
+                <span className="text-slate-400">Saldo tras cobro</span>
                 <span className={`font-bold tabular-nums ${(saldoTrasCompra ?? saldoDisponible ?? 0) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                   {gs(saldoTrasCompra ?? saldoDisponible ?? 0)}
                 </span>
               </div>
             )}
 
-            {tarjeta ? (
-              <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-lg px-3 py-2">
-                <CreditCardIcon size={16} weight="fill" className="text-green-600 shrink-0" />
-                <span className="text-green-700 text-sm font-semibold">Prepago automático</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                <MoneyIcon size={16} weight="fill" className="text-slate-400 shrink-0" />
-                <span className="text-slate-400 text-sm">Escanear tarjeta</span>
+            {/* Campo efectivo + vuelto */}
+            {modoPago === 'MEDIO' && medioPagoSeleccionado &&
+             medioPagoSeleccionado.descripcion.toLowerCase().includes('efectivo') && (
+              <div className="space-y-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                <div className="flex items-center gap-2">
+                  <MoneyIcon size={16} weight="fill" className="text-emerald-600" />
+                  <p className="text-emerald-700 text-sm font-bold">Monto recibido</p>
+                </div>
+                <input
+                  ref={efectivoRef}
+                  value={montoEfectivo}
+                  onChange={e => setMontoEfectivo(e.target.value.replace(/[^\d]/g, ''))}
+                  onFocus={() => setFocusedInput('efectivo')}
+                  onBlur={() => setFocusedInput(null)}
+                  placeholder="0"
+                  inputMode="numeric"
+                  className="w-full bg-white border-2 border-emerald-300 rounded-lg px-3 py-2 text-xl font-black text-slate-900 tabular-nums text-right outline-none focus:border-emerald-500"
+                />
+                {montoEfectivo && (
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-emerald-700 text-sm font-bold">Vuelto:</span>
+                    <span className={`text-xl font-black tabular-nums ${vuelto < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                      {gs(vuelto)}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
+            {/* Nro. de transacción (POS / Transferencia / cualquier medio con requiere_validacion) */}
+            {modoPago === 'MEDIO' && medioPagoSeleccionado?.requiere_validacion && (
+              <div className="space-y-1.5 bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <label className="flex items-center gap-2 text-blue-700 text-sm font-bold">
+                  <CreditCardIcon size={15} weight="fill" />
+                  Nro. de transacción
+                  <span className="text-red-500 text-xs font-black">*</span>
+                </label>
+                <input
+                  value={referencia}
+                  onChange={e => setReferencia(e.target.value)}
+                  placeholder="Ingrese el código generado por el terminal"
+                  autoComplete="off"
+                  className="w-full bg-white border-2 border-blue-300 rounded-lg px-3 py-2 text-base font-mono font-semibold text-slate-900 outline-none focus:border-blue-500 placeholder:text-slate-300 placeholder:font-normal tracking-wider uppercase"
+                  onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                />
+                {referencia.trim() && (
+                  <p className="text-blue-600 text-xs font-mono tracking-widest uppercase">{referencia.trim()}</p>
+                )}
+              </div>
+            )}
+
+            {/* Info medio de pago seleccionado */}
+            {modoPago === 'PREPAGO' ? (
+              tarjeta ? (
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                  <CreditCardIcon size={16} weight="fill" className="text-blue-500 shrink-0" />
+                  <span className="text-blue-700 text-sm font-semibold">Descuento de saldo prepago</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                  <CreditCardIcon size={16} weight="fill" className="text-slate-300 shrink-0" />
+                  <span className="text-slate-400 text-sm">Escanear tarjeta del alumno</span>
+                </div>
+              )
+            ) : medioPagoSeleccionado ? (
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                {iconMedio(medioPagoSeleccionado.descripcion)}
+                <span className="text-emerald-700 text-sm font-semibold">{medioPagoSeleccionado.descripcion}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                <WarningIcon size={16} weight="fill" className="text-orange-400 shrink-0" />
+                <span className="text-orange-600 text-sm font-semibold">Seleccionar medio de pago</span>
+              </div>
+            )}
+
+            {/* Botón COBRAR */}
             <button
               onClick={handleCobrar}
-              disabled={carrito.length === 0 || cobrando || !tarjeta}
+              disabled={!canCobrar}
               className={[
                 'w-full py-5 rounded-2xl font-black text-xl tracking-wide flex items-center justify-center gap-3 transition-all duration-150',
-                carrito.length > 0 && tarjeta && !cobrando
-                  ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer active:scale-95 shadow-xl shadow-green-500/30'
+                canCobrar
+                  ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer active:scale-95 shadow-lg shadow-green-500/25'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed',
               ].join(' ')}
             >
@@ -907,6 +1294,7 @@ export default function ModoRecreo() {
               }
             </button>
 
+            {/* Botón CANCELAR */}
             <button
               onClick={handleCancelar}
               className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 text-sm font-bold transition-colors cursor-pointer flex items-center justify-center gap-2"
