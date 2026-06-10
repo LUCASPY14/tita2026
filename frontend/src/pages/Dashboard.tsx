@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   ShoppingCart, Users, Package, AlertTriangle, Banknote,
   TrendingUp, CreditCard, Truck, ArrowRight,
+  Zap, ChefHat, BarChart2, Wallet, UtensilsCrossed, Warehouse,
 } from 'lucide-react'
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
@@ -197,20 +198,26 @@ export default function Dashboard() {
   if (loading) return <Spinner className="mt-24" />
 
   const accesos = [
-    { path: '/ventas', label: 'Nueva Venta', icon: ShoppingCart, color: 'bg-blue-600', desc: 'Registrar venta en POS' },
-    { path: '/tarjetas', label: 'Recargar Tarjeta', icon: CreditCard, color: 'bg-emerald-600', desc: 'Carga de saldo' },
-    { path: '/caja', label: 'Gestionar Caja', icon: Banknote, color: 'bg-purple-600', desc: 'Abrir / cerrar caja' },
-    { path: '/compras', label: 'Nueva Compra', icon: Truck, color: 'bg-orange-600', desc: 'Registrar ingreso de stock' },
+    { path: '/modo-recreo',  label: 'Modo Recreo',     icon: Zap,            color: 'bg-green-600',   desc: 'POS — venta en recreo' },
+    { path: '/carga-saldo',  label: 'Recargar Tarjeta', icon: Wallet,         color: 'bg-emerald-600', desc: 'Carga de saldo RFID' },
+    { path: '/caja',         label: 'Gestionar Caja',  icon: Banknote,        color: 'bg-purple-600',  desc: 'Abrir / cerrar caja' },
+    { path: '/almuerzos',    label: 'Almuerzos',       icon: UtensilsCrossed, color: 'bg-amber-600',   desc: 'Gestión de almuerzos' },
+    { path: '/menu-diario',  label: 'Menú Diario',     icon: ChefHat,         color: 'bg-orange-600',  desc: 'Configurar menú del día' },
+    { path: '/clientes',     label: 'Clientes',        icon: Users,           color: 'bg-cyan-600',    desc: 'Ver y gestionar clientes' },
+    { path: '/inventario',   label: 'Inventario',      icon: Warehouse,       color: 'bg-slate-600',   desc: 'Stock y alertas' },
+    { path: '/reportes',     label: 'Reportes',        icon: BarChart2,       color: 'bg-rose-600',    desc: 'Ver reportes del período' },
+    { path: '/compras',      label: 'Compras',         icon: Truck,           color: 'bg-indigo-600',  desc: 'Registrar ingreso de stock' },
+    { path: '/facturacion',  label: 'Facturación',     icon: CreditCard,      color: 'bg-blue-600',    desc: 'Emitir facturas' },
   ]
 
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">
+        <h1 className="text-4xl font-bold text-slate-900">
           {saludo}, {user?.nombre ?? 'Usuario'}
         </h1>
-        <p className="text-base text-slate-500 mt-0.5">
+        <p className="text-lg text-slate-500 mt-0.5">
           Resumen del día — {new Date().toLocaleDateString('es-PY', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
           })}
@@ -220,15 +227,15 @@ export default function Dashboard() {
       {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {stats.map(({ label, value, sub, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-4">
+          <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-5">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide truncate">{label}</p>
-                <p className={`text-4xl font-bold mt-1 tabular-nums ${color}`}>{value}</p>
-                <p className="text-sm text-slate-400 mt-0.5 truncate">{sub}</p>
+                <p className={`text-5xl font-bold mt-1.5 tabular-nums ${color}`}>{value}</p>
+                <p className="text-base text-slate-400 mt-1 truncate">{sub}</p>
               </div>
-              <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
-                <Icon className={`w-5 h-5 ${color}`} />
+              <div className={`w-12 h-12 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
+                <Icon className={`w-6 h-6 ${color}`} />
               </div>
             </div>
           </div>
@@ -240,7 +247,7 @@ export default function Dashboard() {
         {/* Accesos rápidos */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-800">Accesos Rápidos</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Accesos Rápidos</h2>
           </div>
           <div className="p-5 grid grid-cols-2 gap-3">
             {accesos.map(({ path, label, icon: Icon, color, desc }) => (
@@ -265,7 +272,7 @@ export default function Dashboard() {
         {/* Estado del sistema */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-800">Estado del Sistema</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Estado del Sistema</h2>
           </div>
           <div className="px-6 py-4 space-y-3">
             {[
@@ -283,7 +290,7 @@ export default function Dashboard() {
           <div className="px-6 pb-5">
             <div className="flex items-center gap-2 mt-2 p-3 bg-green-50 rounded-xl">
               <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
-              <p className="text-sm text-green-700 font-medium">
+              <p className="text-base text-green-700 font-medium">
                 {r.cajasAbiertas > 0
                   ? `${r.cajasAbiertas} caja${r.cajasAbiertas !== 1 ? 's' : ''} en operación`
                   : 'Sin cajas abiertas hoy'}
@@ -297,13 +304,13 @@ export default function Dashboard() {
       {tendenciaData.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-slate-800">Tendencia de ventas — últimos 14 días</h2>
-            <span className="text-xs text-slate-400 tabular-nums">
+            <h2 className="text-lg font-semibold text-slate-800">Tendencia de ventas — últimos 14 días</h2>
+            <span className="text-sm text-slate-400 tabular-nums">
               {tendencia.reduce((s, d) => s + d.cantidad, 0)} ventas
             </span>
           </div>
           <div className="p-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart data={tendenciaData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="dia" tick={{ fontSize: 11, fill: '#94a3b8' }} interval={1} />
@@ -314,7 +321,7 @@ export default function Dashboard() {
                     name === 'Monto (k)' ? [`${formatGs((Number(v) || 0) * 1000)} Gs.`, 'Monto'] : [Number(v), String(name)]
                   }
                 />
-                <Legend formatter={(v) => <span className="text-xs text-slate-600">{v}</span>} />
+                <Legend formatter={(v) => <span className="text-sm text-slate-600">{v}</span>} />
                 <Area type="monotone" dataKey="Ventas" stroke="#22c55e" fill="#22c55e20" strokeWidth={2} dot={false} />
                 <Area type="monotone" dataKey="Monto (k)" stroke="#3b82f6" fill="#3b82f620" strokeWidth={2} dot={false} />
               </AreaChart>
@@ -329,13 +336,13 @@ export default function Dashboard() {
           {/* Distribución por tipo */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-800">Ventas por tipo — últimos 7 días</h2>
+              <h2 className="text-lg font-semibold text-slate-800">Ventas por tipo — últimos 7 días</h2>
               <span className="text-sm text-slate-400 tabular-nums">
                 {chart.cantidad_total} ventas · Gs. {chart.monto_total.toLocaleString('es-PY')}
               </span>
             </div>
             <div className="p-4 h-64">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <PieChart>
                   <Pie
                     data={pieDataFiltered}
@@ -367,10 +374,10 @@ export default function Dashboard() {
           {/* Comparativa por tipo */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
             <div className="px-6 py-4 border-b border-slate-100">
-              <h2 className="text-base font-semibold text-slate-800">Comparativa de ventas</h2>
+              <h2 className="text-lg font-semibold text-slate-800">Comparativa de ventas</h2>
             </div>
             <div className="p-4 h-64">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={barData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="tipo" tick={{ fontSize: 12, fill: '#64748b' }} />
