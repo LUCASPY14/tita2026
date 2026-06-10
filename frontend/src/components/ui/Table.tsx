@@ -66,7 +66,7 @@ export default function Table<T extends object>({
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap"
+                  className="px-4 py-3.5 text-base font-semibold text-slate-600 whitespace-nowrap"
                   style={col.width ? { width: col.width } : undefined}
                 >
                   {col.sortable ? (
@@ -108,7 +108,7 @@ export default function Table<T extends object>({
                 <td colSpan={columns.length} className="px-4 py-14 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <Inbox className="w-8 h-8 text-slate-300" />
-                    <span className="text-sm text-slate-400">Sin datos</span>
+                    <span className="text-base text-slate-400">Sin datos</span>
                   </div>
                 </td>
               </tr>
@@ -135,7 +135,7 @@ export default function Table<T extends object>({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-slate-500 px-1">
+        <div className="flex items-center justify-between text-base text-slate-500 px-1">
           <span>{total} registros</span>
           <div className="flex items-center gap-1">
             <button
@@ -155,7 +155,7 @@ export default function Table<T extends object>({
             }).map((p) => (
               <button
                 key={p}
-                className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`w-9 h-9 rounded-lg text-base font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   p === page
                     ? 'bg-green-600 text-white shadow-sm shadow-green-600/25'
                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'

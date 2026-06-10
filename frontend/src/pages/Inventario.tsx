@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   Package, Plus, Search, CheckCircle, XCircle, Clock,
@@ -356,7 +356,7 @@ export default function Inventario() {
       key: 'id',
       dataIndex: 'id',
       width: 60,
-      render: v => <span className="font-mono text-xs text-slate-500">#{v as number}</span>,
+      render: v => <span className="font-mono text-sm text-slate-500">#{v as number}</span>,
     },
     {
       title: 'Tipo',
@@ -496,8 +496,8 @@ export default function Inventario() {
   )
 
   // ── Styles ────────────────────────────────────────────────────────
-  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
-  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
+  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   const ALERTA_COLOR: Record<string, BadgeColor> = {
     STOCK_CERO: 'red',
@@ -537,7 +537,7 @@ export default function Inventario() {
     {
       title: 'Generada',
       key: 'fecha_generada',
-      render: (_, r) => <span className="text-xs text-slate-400">{formatFecha(r.fecha_generada)}</span>,
+      render: (_, r) => <span className="text-sm text-slate-400">{formatFecha(r.fecha_generada)}</span>,
     },
   ]
 
@@ -555,7 +555,7 @@ export default function Inventario() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Inventario</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Ajustes, movimientos de stock y lotes</p>
+          <p className="text-base text-slate-500 mt-0.5">Ajustes, movimientos de stock y lotes</p>
         </div>
         {tab === 'ajustes' && (
           <Button variant="primary" onClick={() => {
@@ -817,7 +817,7 @@ export default function Inventario() {
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-700">El ajuste quedará en estado PENDIENTE y debe ser aprobado por un administrador.</p>
+            <p className="text-sm text-amber-700">El ajuste quedará en estado PENDIENTE y debe ser aprobado por un administrador.</p>
           </div>
         </div>
       </Modal>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FileText, Search, Printer, XCircle, AlertTriangle } from 'lucide-react'
 import api from '../services/api'
@@ -295,8 +295,8 @@ export default function Facturacion() {
   ]
 
   // ── Styles ────────────────────────────────────────────────────────
-  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
-  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
+  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   // ── Render ────────────────────────────────────────────────────────
   return (
@@ -304,7 +304,7 @@ export default function Facturacion() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Facturación</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Emisión y gestión de facturas</p>
+        <p className="text-base text-slate-500 mt-0.5">Emisión y gestión de facturas</p>
       </div>
 
       {/* Tabs */}
@@ -340,7 +340,7 @@ export default function Facturacion() {
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-800">Ítems pendientes de facturar</h2>
-            <span className="text-xs text-slate-400">{pendientes.length} registros</span>
+            <span className="text-sm text-slate-400">{pendientes.length} registros</span>
           </div>
           <div className="p-1">
             <Table columns={colsPendientes} dataSource={pendientes} rowKey={r => `${r.tipo}-${r.id}`} loading={loadingPend} pageSize={20} />
@@ -435,7 +435,7 @@ export default function Facturacion() {
                 className={inputClass}
                 autoFocus
               />
-              <p className="text-xs text-slate-400 mt-1">Formato: 001-001-0000001</p>
+              <p className="text-sm text-slate-400 mt-1">Formato: 001-001-0000001</p>
             </div>
           </div>
         )}

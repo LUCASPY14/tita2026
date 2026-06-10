@@ -451,17 +451,17 @@ export default function Compras() {
       key: 'id',
       dataIndex: 'id',
       width: 60,
-      render: v => <span className="text-xs font-mono text-slate-500">#{v as number}</span>,
+      render: v => <span className="text-sm font-mono text-slate-500">#{v as number}</span>,
     },
     {
       title: 'Proveedor',
       key: 'proveedor',
-      render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.proveedor_nombre}</span>,
+      render: (_, r) => <span className="text-base font-medium text-slate-800">{r.proveedor_nombre}</span>,
     },
     {
       title: 'Fecha',
       key: 'fecha',
-      render: (_, r) => <span className="text-sm text-slate-600">{formatFecha(r.fecha)}</span>,
+      render: (_, r) => <span className="text-base text-slate-600">{formatFecha(r.fecha)}</span>,
     },
     {
       title: 'Total',
@@ -473,7 +473,7 @@ export default function Compras() {
       key: 'saldo',
       render: (_, r) => {
         const n = Number(r.saldo_pendiente) || 0
-        return <span className={`tabular-nums font-semibold text-sm ${n > 0 ? 'text-red-600' : 'text-slate-400'}`}>{formatGs(n)}</span>
+        return <span className={`tabular-nums font-semibold text-base ${n > 0 ? 'text-red-600' : 'text-slate-400'}`}>{formatGs(n)}</span>
       },
     },
     {
@@ -534,8 +534,8 @@ export default function Compras() {
       key: 'razon',
       render: (_, r) => (
         <div>
-          <p className="text-sm font-medium text-slate-800">{r.razon_social}</p>
-          <p className="text-xs text-slate-400">{r.ruc}</p>
+          <p className="text-base font-medium text-slate-800">{r.razon_social}</p>
+          <p className="text-sm text-slate-400">{r.ruc}</p>
         </div>
       ),
     },
@@ -544,8 +544,8 @@ export default function Compras() {
       key: 'contacto',
       render: (_, r) => (
         <div>
-          <p className="text-sm text-slate-600">{r.telefono || '—'}</p>
-          <p className="text-xs text-slate-400">{r.email || '—'}</p>
+          <p className="text-base text-slate-600">{r.telefono || '—'}</p>
+          <p className="text-sm text-slate-400">{r.email || '—'}</p>
         </div>
       ),
     },
@@ -555,7 +555,7 @@ export default function Compras() {
       render: (_, r) => {
         const n = Number(r.saldo_cuenta_corriente) || 0
         return (
-          <span className={`tabular-nums font-semibold text-sm ${n > 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+          <span className={`tabular-nums font-semibold text-base ${n > 0 ? 'text-red-600' : 'text-emerald-700'}`}>
             {formatGs(n)}
           </span>
         )
@@ -583,12 +583,12 @@ export default function Compras() {
     {
       title: 'Compra #',
       key: 'compra',
-      render: (_, r) => <span className="text-xs font-mono text-slate-500">#{r.compra}</span>,
+      render: (_, r) => <span className="text-sm font-mono text-slate-500">#{r.compra}</span>,
     },
     {
       title: 'Proveedor',
       key: 'prov',
-      render: (_, r) => <span className="text-sm text-slate-800">{r.proveedor_nombre}</span>,
+      render: (_, r) => <span className="text-base text-slate-800">{r.proveedor_nombre}</span>,
     },
     {
       title: 'Monto',
@@ -610,7 +610,7 @@ export default function Compras() {
     {
       title: 'Fecha',
       key: 'fecha',
-      render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha)}</span>,
+      render: (_, r) => <span className="text-base text-slate-500">{formatFecha(r.fecha)}</span>,
     },
   ]
 
@@ -618,7 +618,7 @@ export default function Compras() {
     {
       title: 'Fecha',
       key: 'fecha',
-      render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha)}</span>,
+      render: (_, r) => <span className="text-base text-slate-500">{formatFecha(r.fecha)}</span>,
     },
     {
       title: 'Tipo',
@@ -628,7 +628,7 @@ export default function Compras() {
     {
       title: 'Descripción',
       key: 'desc',
-      render: (_, r) => <span className="text-sm text-slate-600">{r.descripcion}</span>,
+      render: (_, r) => <span className="text-base text-slate-600">{r.descripcion}</span>,
     },
     {
       title: 'Monto',
@@ -640,14 +640,14 @@ export default function Compras() {
       key: 'saldo',
       render: (_, r) => {
         const n = Number(r.saldo_resultante) || 0
-        return <span className={`tabular-nums text-sm font-medium ${n > 0 ? 'text-red-600' : 'text-emerald-700'}`}>{formatGs(n)}</span>
+        return <span className={`tabular-nums text-base font-medium ${n > 0 ? 'text-red-600' : 'text-emerald-700'}`}>{formatGs(n)}</span>
       },
     },
   ]
 
   // ── Styles ──────────────────────────────────────────────────────
-  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
-  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
+  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   const TABS: { key: TabKey; label: string; icon: typeof Truck }[] = [
     { key: 'compras', label: 'Compras', icon: Truck },
@@ -662,7 +662,7 @@ export default function Compras() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Compras</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Gestión de compras, proveedores y pagos</p>
+          <p className="text-base text-slate-500 mt-0.5">Gestión de compras, proveedores y pagos</p>
         </div>
         {tab === 'compras' && (
           <Button variant="primary" onClick={openCreate}>
@@ -813,7 +813,7 @@ export default function Compras() {
       {tab === 'pagos' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-800">Pagos a Proveedores</h2>
+            <h2 className="text-base font-semibold text-slate-800">Pagos a Proveedores</h2>
           </div>
           <div className="p-1">
             <Table
@@ -847,8 +847,8 @@ export default function Compras() {
               { label: 'Nro. Factura', value: detailCompra.nro_factura_proveedor || '—' },
             ].map(({ label, value, warn }) => (
               <div key={label} className="bg-slate-50 rounded-xl px-3 py-3">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
-                <p className={`text-sm font-bold mt-0.5 tabular-nums ${warn ? 'text-red-600' : 'text-slate-800'}`}>{value}</p>
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+                <p className={`text-base font-bold mt-0.5 tabular-nums ${warn ? 'text-red-600' : 'text-slate-800'}`}>{value}</p>
               </div>
             ))}
           </div>
@@ -862,15 +862,15 @@ export default function Compras() {
             )}
           </div>
 
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Detalle de productos</h3>
+          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Detalle de productos</h3>
           <div className="border border-slate-200 rounded-xl overflow-hidden mb-4">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase">Producto</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-slate-500 uppercase">Cant.</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-slate-500 uppercase">Costo Unit.</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-slate-500 uppercase">Subtotal</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-slate-500 uppercase">Producto</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-slate-500 uppercase">Cant.</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-slate-500 uppercase">Costo Unit.</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-slate-500 uppercase">Subtotal</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1019,11 +1019,11 @@ export default function Compras() {
         <div className="space-y-4">
           <div className="bg-slate-50 rounded-xl px-4 py-3 flex justify-between items-center">
             <div>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Proveedor</p>
-              <p className="text-sm font-semibold text-slate-800">{pagoCompra?.proveedor_nombre}</p>
+              <p className="text-sm text-slate-500 font-medium uppercase tracking-wide">Proveedor</p>
+              <p className="text-base font-semibold text-slate-800">{pagoCompra?.proveedor_nombre}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Saldo Pendiente</p>
+              <p className="text-sm text-slate-500 font-medium uppercase tracking-wide">Saldo Pendiente</p>
               <p className="text-lg font-bold tabular-nums text-red-600">{formatGs(pagoCompra?.saldo_pendiente)}</p>
             </div>
           </div>
@@ -1075,11 +1075,11 @@ export default function Compras() {
         >
           <div className="bg-slate-50 rounded-xl px-4 py-3 flex justify-between items-center mb-4">
             <div>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">RUC</p>
-              <p className="text-sm font-semibold text-slate-800">{ccProveedor.ruc}</p>
+              <p className="text-sm text-slate-500 font-medium uppercase tracking-wide">RUC</p>
+              <p className="text-base font-semibold text-slate-800">{ccProveedor.ruc}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Saldo Actual</p>
+              <p className="text-sm text-slate-500 font-medium uppercase tracking-wide">Saldo Actual</p>
               <p className={`text-xl font-bold tabular-nums ${Number(ccProveedor.saldo_cuenta_corriente) > 0 ? 'text-red-600' : 'text-emerald-700'}`}>
                 {formatGs(ccProveedor.saldo_cuenta_corriente)}
               </p>

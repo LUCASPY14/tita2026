@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
-  Settings, Plus, Edit2, Tag, ListOrdered, CreditCard, Users,
+  Settings, Plus, Edit2, Trash2, Tag, ListOrdered, CreditCard, Users,
   GraduationCap, Building2, History, Shield, Eye, EyeOff,
   CheckCircle2, XCircle, Copy,
   UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent,
@@ -269,6 +269,10 @@ export default function Configuracion() {
   const [editingImp, setEditingImp] = useState<Impuesto | null>(null)
   const [impForm, setImpForm] = useState({ nombre: '', porcentaje: '', vigente_desde: '', vigente_hasta: '', activo: true })
   const [savingImp, setSavingImp] = useState(false)
+
+  // ── Eliminar (compartido) ─────────────────────────────────────────
+  const [deleteTarget, setDeleteTarget] = useState<{ url: string; label: string; reloadFn: () => void } | null>(null)
+  const [deletingTarget, setDeletingTarget] = useState(false)
 
   // ── Load categorías ───────────────────────────────────────────────
   const loadCategorias = useCallback(async () => {
@@ -747,6 +751,23 @@ export default function Configuracion() {
     finally { setSavingImp(false) }
   }, [impForm, editingImp, loadImpuestos])
 
+  // ── Eliminar (handler compartido) ────────────────────────────────
+  const confirmDelete = useCallback((url: string, label: string, reloadFn: () => void) => {
+    setDeleteTarget({ url, label, reloadFn })
+  }, [])
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return
+    setDeletingTarget(true)
+    try {
+      await api.delete(deleteTarget.url)
+      toast.success(`"${deleteTarget.label}" eliminado`)
+      setDeleteTarget(null)
+      deleteTarget.reloadFn()
+    } catch (err) { toast.error(extractErrorMessage(err)) }
+    finally { setDeletingTarget(false) }
+  }, [deleteTarget])
+
   // ── Medios pago CRUD ──────────────────────────────────────────────
   const openMp = useCallback((m?: MedioPago) => {
     setEditingMp(m ?? null)
@@ -773,12 +794,27 @@ export default function Configuracion() {
 
   // ── Columns ──────────────────────────────────────────────────────
 
+  const acciones = <T extends { id: number }>(
+    row: T,
+    label: string,
+    deleteUrl: string,
+    reloadFn: () => void,
+    onEdit: (r: T) => void,
+  ) => (
+    <div className="flex items-center gap-1">
+      <Button size="sm" variant="secondary" onClick={() => onEdit(row)}><Edit2 className="w-3.5 h-3.5" /></Button>
+      <Button size="sm" variant="danger" onClick={() => confirmDelete(deleteUrl, label, reloadFn)}>
+        <Trash2 className="w-3.5 h-3.5" />
+      </Button>
+    </div>
+  )
+
   const colsCat: Column<Categoria>[] = [
     { title: 'Nombre', key: 'nombre', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span> },
     { title: 'Descripción', key: 'desc', render: (_, r) => <span className="text-sm text-slate-500">{r.descripcion || '—'}</span> },
     {
-      title: '', key: 'acc', width: 80,
-      render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openCat(r)}><Edit2 className="w-3.5 h-3.5" /></Button>,
+      title: '', key: 'acc', width: 100,
+      render: (_, r) => acciones(r, r.nombre, `/productos/categorias/${r.id}/`, loadCategorias, openCat),
     },
   ]
 
@@ -791,8 +827,8 @@ export default function Configuracion() {
       render: (_, r) => <span className="tabular-nums text-sm text-slate-700">{Number(r.descuento_porcentaje) || 0}%</span>,
     },
     {
-      title: '', key: 'acc', width: 80,
-      render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openTc(r)}><Edit2 className="w-3.5 h-3.5" /></Button>,
+      title: '', key: 'acc', width: 100,
+      render: (_, r) => acciones(r, r.nombre, `/clientes/tipos-cliente/${r.id}/`, loadTiposCliente, openTc),
     },
   ]
 
@@ -805,8 +841,8 @@ export default function Configuracion() {
       render: (_, r) => <Badge color={r.es_precio_base ? 'green' : 'default'}>{r.es_precio_base ? 'Sí' : 'No'}</Badge>,
     },
     {
-      title: '', key: 'acc', width: 80,
-      render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openLp(r)}><Edit2 className="w-3.5 h-3.5" /></Button>,
+      title: '', key: 'acc', width: 100,
+      render: (_, r) => acciones(r, r.nombre, `/productos/listas-precio/${r.id}/`, loadListasPrecio, openLp),
     },
   ]
 
@@ -822,14 +858,14 @@ export default function Configuracion() {
       render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge>,
     },
     {
-      title: '', key: 'acc', width: 80,
-      render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openMp(r)}><Edit2 className="w-3.5 h-3.5" /></Button>,
+      title: '', key: 'acc', width: 100,
+      render: (_, r) => acciones(r, r.descripcion, `/core/medios-pago/${r.id}/`, loadMediosPago, openMp),
     },
   ]
 
   // ── Styles ────────────────────────────────────────────────────────
-  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
-  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
+  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   const toggleSwitch = (checked: boolean, onChange: (v: boolean) => void, label: string) => (
     <label className="flex items-center gap-3 cursor-pointer">
@@ -848,7 +884,7 @@ export default function Configuracion() {
     { title: 'Orden', key: 'orden', width: 70, render: (_, r) => <span className="tabular-nums text-sm text-slate-700">{r.orden}</span> },
     { title: 'Último', key: 'ultimo', width: 80, render: (_, r) => <Badge color={r.es_ultimo ? 'purple' : 'default'}>{r.es_ultimo ? 'Sí' : 'No'}</Badge> },
     { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
-    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openGr(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+    { title: '', key: 'acc', width: 100, render: (_, r) => acciones(r, r.nombre, `/clientes/grados/${r.id}/`, loadGrados, openGr) },
   ]
 
   const colsHist: Column<HistoricoPrecioItem>[] = [
@@ -884,7 +920,7 @@ export default function Configuracion() {
     { title: 'Postre', key: 'pos', width: 80, render: (_, r) => <Badge color={r.incluye_postre ? 'green' : 'default'}>{r.incluye_postre ? 'Sí' : 'No'}</Badge> },
     { title: 'Bebida', key: 'beb', width: 80, render: (_, r) => <Badge color={r.incluye_bebida ? 'green' : 'default'}>{r.incluye_bebida ? 'Sí' : 'No'}</Badge> },
     { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
-    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openTa(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+    { title: '', key: 'acc', width: 100, render: (_, r) => acciones(r, r.nombre, `/almuerzos/tipos-almuerzo/${r.id}/`, loadTiposAlmuerzo, openTa) },
   ]
 
   const colsPa: Column<PlanAlmuerzo>[] = [
@@ -893,14 +929,14 @@ export default function Configuracion() {
     { title: 'Precio mensual', key: 'precio', width: 150, render: (_, r) => <span className="tabular-nums text-sm text-slate-700">Gs. {(Number(r.precio_mensual) || 0).toLocaleString('es-PY')}</span> },
     { title: 'Cant./mes', key: 'cant', width: 100, render: (_, r) => <span className="tabular-nums text-sm text-slate-500">{r.cantidad_almuerzos_mes ?? '—'}</span> },
     { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
-    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openPa(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+    { title: '', key: 'acc', width: 100, render: (_, r) => acciones(r, r.nombre, `/almuerzos/planes-almuerzo/${r.id}/`, loadPlanesAlmuerzo, openPa) },
   ]
 
   const colsUm: Column<UnidadMedida>[] = [
     { title: 'Nombre', key: 'nombre', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span> },
     { title: 'Abreviatura', key: 'abrev', width: 130, render: (_, r) => <code className="text-sm text-slate-600 bg-slate-100 rounded px-2 py-0.5">{r.abreviatura}</code> },
     { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
-    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openUm(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+    { title: '', key: 'acc', width: 100, render: (_, r) => acciones(r, r.nombre, `/productos/unidades-medida/${r.id}/`, loadUnidadesMedida, openUm) },
   ]
 
   const colsAl: Column<Alergeno>[] = [
@@ -908,7 +944,7 @@ export default function Configuracion() {
     { title: 'Severidad', key: 'sev', width: 110, render: (_, r) => <Badge color={SEVERIDAD_COLOR[r.severidad] ?? 'default'}>{r.severidad}</Badge> },
     { title: 'Icono', key: 'icono', width: 70, render: (_, r) => <span className="text-lg">{r.icono || '—'}</span> },
     { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
-    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openAl(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+    { title: '', key: 'acc', width: 100, render: (_, r) => acciones(r, r.nombre, `/almuerzos/alergenos/${r.id}/`, loadAlergenos, openAl) },
   ]
 
   const colsImp: Column<Impuesto>[] = [
@@ -917,7 +953,7 @@ export default function Configuracion() {
     { title: 'Desde', key: 'desde', width: 120, render: (_, r) => <span className="text-xs text-slate-500">{r.vigente_desde ? new Date(r.vigente_desde).toLocaleDateString('es-PY') : '—'}</span> },
     { title: 'Hasta', key: 'hasta', width: 120, render: (_, r) => <span className="text-xs text-slate-500">{r.vigente_hasta ? new Date(r.vigente_hasta).toLocaleDateString('es-PY') : '—'}</span> },
     { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
-    { title: '', key: 'acc', width: 80, render: (_, r) => <Button size="sm" variant="secondary" onClick={() => openImp(r)}><Edit2 className="w-3.5 h-3.5" /></Button> },
+    { title: '', key: 'acc', width: 100, render: (_, r) => acciones(r, r.nombre, `/productos/impuestos/${r.id}/`, loadImpuestos, openImp) },
   ]
 
   const TABS: { key: TabKey; label: string; icon: typeof Settings }[] = [
@@ -943,7 +979,7 @@ export default function Configuracion() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Configuración</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Administración de catálogos del sistema</p>
+          <p className="text-base text-slate-500 mt-0.5">Administración de catálogos del sistema</p>
         </div>
         {['categorias','tipos_cliente','listas_precio','medios_pago','grados','tipos_almuerzo','planes_almuerzo','unidades_medida','alergenos','impuestos'].includes(tab) && (
           <Button variant="primary" onClick={() => {
@@ -1484,6 +1520,29 @@ export default function Configuracion() {
             <input value={alForm.palabras_clave} onChange={e => setAlForm(f => ({ ...f, palabras_clave: e.target.value }))} placeholder="trigo, harina, cebada" className={inputClass} />
           </div>
           {toggleSwitch(alForm.activo, v => setAlForm(f => ({ ...f, activo: v })), 'Activo')}
+        </div>
+      </Modal>
+
+      {/* ── Modal confirmar eliminación (compartido) ────────────────── */}
+      <Modal
+        open={!!deleteTarget}
+        title="Confirmar eliminación"
+        onOk={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        okText="Eliminar"
+        confirmLoading={deletingTarget}
+        width={400}
+      >
+        <div className="flex items-start gap-3 py-1">
+          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+            <Trash2 className="w-5 h-5 text-red-500" />
+          </div>
+          <div>
+            <p className="text-sm text-slate-700">
+              ¿Eliminar <strong className="text-slate-900">"{deleteTarget?.label}"</strong>?
+            </p>
+            <p className="text-xs text-slate-400 mt-1">Esta acción no se puede deshacer.</p>
+          </div>
         </div>
       </Modal>
 

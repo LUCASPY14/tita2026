@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { AlertTriangle, Plus, Edit2, Leaf } from 'lucide-react'
 import api from '../services/api'
@@ -164,8 +164,8 @@ export default function Alergenos() {
   }
 
   // ── Columns ───────────────────────────────────────────────────────
-  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors w-full'
-  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors w-full'
+  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   const colsAlg: Column<Alergeno>[] = [
     {
@@ -215,7 +215,7 @@ export default function Alergenos() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Alérgenos</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Gestión de alérgenos y asignación a productos</p>
+          <p className="text-base text-slate-500 mt-0.5">Gestión de alérgenos y asignación a productos</p>
         </div>
         {tab === 'alergenos' && (
           <Button variant="primary" onClick={openCreateAlg}>

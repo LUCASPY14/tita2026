@@ -93,7 +93,7 @@ export default function AppLayout() {
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
       <aside
         className={[
-          'bg-slate-950 text-white flex flex-col shrink-0',
+          'bg-white border-r border-slate-200 flex flex-col shrink-0',
           'transition-all duration-200 ease-in-out',
           collapsed ? 'w-16' : 'w-64',
         ].join(' ')}
@@ -101,19 +101,17 @@ export default function AppLayout() {
         {/* Logo */}
         <div
           className={[
-            'flex items-center h-14 border-b border-white/5 shrink-0',
+            'flex items-center h-14 border-b border-slate-200 shrink-0',
             collapsed ? 'justify-center px-3' : 'px-4 gap-2.5',
           ].join(' ')}
         >
-          <div className="bg-white rounded-lg p-0.5 shrink-0">
-            <img
-              src="/logo_tita.png"
-              alt="Cantina Tita"
-              className={collapsed ? 'h-7 w-auto' : 'h-9 w-auto'}
-            />
-          </div>
+          <img
+            src="/logo_tita.png"
+            alt="Cantina Tita"
+            className={collapsed ? 'h-7 w-auto' : 'h-9 w-auto'}
+          />
           {!collapsed && (
-            <span className="text-white/70 font-medium text-sm tracking-tight truncate">
+            <span className="text-slate-700 font-semibold text-base tracking-tight truncate">
               Sistema de Gestión
             </span>
           )}
@@ -136,23 +134,23 @@ export default function AppLayout() {
                   'transition-all duration-150 cursor-pointer group',
                   collapsed ? 'justify-center' : '',
                   active
-                    ? 'bg-green-500/15 text-green-400'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-200',
+                    ? 'bg-green-50 text-green-700'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800',
                 ].join(' ')}
               >
                 <Icon
                   className={[
                     'w-[18px] h-[18px] shrink-0 transition-colors',
                     active
-                      ? 'text-green-400'
-                      : 'text-slate-500 group-hover:text-slate-300',
+                      ? 'text-green-600'
+                      : 'text-slate-400 group-hover:text-slate-600',
                   ].join(' ')}
                 />
                 {!collapsed && (
                   <>
                     <span className="truncate flex-1 text-left">{label}</span>
                     {active && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
                     )}
                   </>
                 )}
@@ -162,13 +160,13 @@ export default function AppLayout() {
         </nav>
 
         {/* Collapse toggle */}
-        <div className="p-2 border-t border-white/5 shrink-0">
+        <div className="p-2 border-t border-slate-200 shrink-0">
           <button
             type="button"
             onClick={() => setCollapsed(!collapsed)}
             className={[
               'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-base',
-              'text-slate-500 hover:bg-white/5 hover:text-slate-300',
+              'text-slate-400 hover:bg-slate-100 hover:text-slate-600',
               'transition-colors duration-150 cursor-pointer',
               collapsed ? 'justify-center' : '',
             ].join(' ')}
@@ -180,7 +178,7 @@ export default function AppLayout() {
             ) : (
               <>
                 <PanelLeftClose className="w-[18px] h-[18px]" />
-                <span className="text-sm">Colapsar</span>
+                <span className="text-base">Colapsar</span>
               </>
             )}
           </button>
@@ -205,10 +203,10 @@ export default function AppLayout() {
                 {initials}
               </span>
               <div className="hidden sm:block text-left">
-                <p className="text-sm font-medium text-slate-700 leading-none">
+                <p className="text-base font-medium text-slate-700 leading-none">
                   {user?.nombre || 'Usuario'}
                 </p>
-                <p className="text-sm text-slate-400 mt-0.5 leading-none">
+                <p className="text-sm text-slate-500 mt-0.5 leading-none">
                   {ROL_LABEL[user?.rol ?? ''] || user?.rol || ''}
                 </p>
               </div>
@@ -223,10 +221,10 @@ export default function AppLayout() {
             {userMenuOpen && (
               <div role="menu" className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/60 z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-100">
-                  <p className="text-sm font-semibold text-slate-800 truncate">
+                  <p className="text-base font-semibold text-slate-800 truncate">
                     {user?.nombre} {user?.apellido}
                   </p>
-                  <p className="text-sm text-slate-400 mt-0.5 truncate">{user?.email}</p>
+                  <p className="text-sm text-slate-500 mt-0.5 truncate">{user?.email}</p>
                 </div>
                 <button
                   type="button"

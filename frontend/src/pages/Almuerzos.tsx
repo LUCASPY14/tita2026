@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   UtensilsCrossed, Plus, Search, Edit2, X,
@@ -775,8 +775,8 @@ export default function Almuerzos() {
   ]
 
   // ── Styles ────────────────────────────────────────────────────────
-  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
-  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
+  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   const toggleSwitch = (checked: boolean, onChange: (v: boolean) => void, label: string) => (
     <label className="flex items-center gap-3 cursor-pointer">
@@ -803,7 +803,7 @@ export default function Almuerzos() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Almuerzos</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Gestión de consumos, menú y suscripciones</p>
+          <p className="text-base text-slate-500 mt-0.5">Gestión de consumos, menú y suscripciones</p>
         </div>
         {tab === 'consumos' && (
           <Button variant="primary" onClick={() => setConsumoOpen(true)}>
@@ -838,7 +838,7 @@ export default function Almuerzos() {
                 <Icon className={`w-5 h-5 ${iconColor}`} />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
                 <p className={`text-xl font-bold mt-0.5 tabular-nums ${color}`}>{value}</p>
               </div>
             </div>
@@ -1088,15 +1088,15 @@ export default function Almuerzos() {
               <p className="text-xs text-slate-500 mt-1">{MESES[pagoCuenta.mes]} {pagoCuenta.anio} — {pagoCuenta.cantidad_almuerzos} almuerzos</p>
               <div className="flex gap-6 mt-3">
                 <div>
-                  <p className="text-xs text-slate-400">Total</p>
+                  <p className="text-sm text-slate-400">Total</p>
                   <p className="text-sm font-bold text-slate-800">{formatGs(pagoCuenta.monto_total)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Pagado</p>
+                  <p className="text-sm text-slate-400">Pagado</p>
                   <p className="text-sm font-bold text-emerald-700">{formatGs(pagoCuenta.monto_pagado)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Saldo</p>
+                  <p className="text-sm text-slate-400">Saldo</p>
                   <p className="text-sm font-bold text-red-600">{formatGs(pagoCuenta.saldo_pendiente)}</p>
                 </div>
               </div>

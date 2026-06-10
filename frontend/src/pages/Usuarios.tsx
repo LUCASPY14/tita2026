@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { UserPlus, Search, Edit2, Eye, EyeOff, Shield, Users, HardHat, Plus } from 'lucide-react'
 import api from '../services/api'
@@ -370,8 +370,8 @@ export default function Usuarios() {
       key: 'usuario',
       render: (_, r) => (
         <div>
-          <p className="text-sm font-semibold text-slate-800">{r.nombre_completo || `${r.nombre} ${r.apellido}`}</p>
-          <p className="text-xs text-slate-400">{r.email}</p>
+          <p className="text-base font-semibold text-slate-800">{r.nombre_completo || `${r.nombre} ${r.apellido}`}</p>
+          <p className="text-sm text-slate-400">{r.email}</p>
         </div>
       ),
     },
@@ -408,8 +408,8 @@ export default function Usuarios() {
   ]
 
   // ── Styles ────────────────────────────────────────────────────────
-  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
-  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
+  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   const ROLES_SISTEMA = [
     { value: 'ADMIN', label: 'Administrador' },
@@ -431,8 +431,8 @@ export default function Usuarios() {
       key: 'nombre',
       render: (_, r) => (
         <div>
-          <p className="text-sm font-medium text-slate-800">{r.nombre} {r.apellido}</p>
-          <p className="text-xs text-slate-400">{r.email || '—'}</p>
+          <p className="text-base font-medium text-slate-800">{r.nombre} {r.apellido}</p>
+          <p className="text-sm text-slate-400">{r.email || '—'}</p>
         </div>
       ),
     },
@@ -469,7 +469,7 @@ export default function Usuarios() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Usuarios</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Gestión de usuarios, roles y permisos</p>
+          <p className="text-base text-slate-500 mt-0.5">Gestión de usuarios, roles y permisos</p>
         </div>
         {tab === 'usuarios' && (
           <Button variant="primary" onClick={openCreate}>
@@ -574,7 +574,7 @@ export default function Usuarios() {
                 {Object.entries(permisosPorModulo).sort(([a], [b]) => a.localeCompare(b)).map(([modulo, permsInMod]) => (
                   <div key={modulo} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/80">
-                      <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider">{modulo}</h3>
+                      <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">{modulo}</h3>
                     </div>
                     <div className="divide-y divide-slate-50">
                       {permsInMod.map(p => {
@@ -586,8 +586,8 @@ export default function Usuarios() {
                             className="flex items-center justify-between px-5 py-3 hover:bg-slate-50/60 cursor-pointer transition-colors group"
                           >
                             <div className="flex-1 min-w-0 mr-4">
-                              <p className="text-sm font-medium text-slate-800 group-hover:text-slate-900">{p.nombre}</p>
-                              <p className="text-xs text-slate-400 font-mono mt-0.5">{p.codigo_permiso}</p>
+                              <p className="text-base font-medium text-slate-800 group-hover:text-slate-900">{p.nombre}</p>
+                              <p className="text-sm text-slate-400 font-mono mt-0.5">{p.codigo_permiso}</p>
                             </div>
                             <div className={`relative shrink-0 ${toggling ? 'opacity-50 pointer-events-none' : ''}`}>
                               <input

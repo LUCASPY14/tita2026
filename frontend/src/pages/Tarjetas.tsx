@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   CreditCard, Search, Plus, Lock, Unlock, History,
-  ArrowUp, ArrowDown,
+  ArrowUp, ArrowDown, Edit2,
 } from 'lucide-react'
 import api from '../services/api'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
@@ -103,6 +103,13 @@ interface TarjetaForm {
   fecha_vencimiento: string
 }
 
+interface TarjetaEditForm {
+  limite_credito: string
+  permite_saldo_negativo: boolean
+  estado: string
+  fecha_vencimiento: string
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ESTADO_COLOR: Record<string, BadgeColor> = {
@@ -170,6 +177,12 @@ export default function Tarjetas() {
   const [saving, setSaving] = useState(false)
 
   const [toggling, setToggling] = useState<string | null>(null)
+
+  const [editTarjeta, setEditTarjeta] = useState<Tarjeta | null>(null)
+  const [editForm, setEditForm] = useState<TarjetaEditForm>({
+    limite_credito: '', permite_saldo_negativo: false, estado: 'ACTIVA', fecha_vencimiento: '',
+  })
+  const [editSaving, setEditSaving] = useState(false)
 
   // ── Data loading ────────────────────────────────────────────────
 
@@ -265,6 +278,44 @@ export default function Tarjetas() {
     }
   }, [form, search, estadoFilter, loadTarjetas])
 
+  const openEdit = useCallback((t: Tarjeta) => {
+    setEditTarjeta(t)
+    setEditForm({
+      limite_credito: String(Number(t.limite_credito) || 0),
+      permite_saldo_negativo: t.permite_saldo_negativo,
+      estado: t.estado,
+      fecha_vencimiento: t.fecha_vencimiento ?? '',
+    })
+  }, [])
+
+  const handleEditSave = useCallback(async () => {
+    if (!editTarjeta) return
+    setEditSaving(true)
+    try {
+      await api.patch(`/core/tarjetas/${editTarjeta.nro_tarjeta}/`, {
+        limite_credito: Number(editForm.limite_credito) || 0,
+        permite_saldo_negativo: editForm.permite_saldo_negativo,
+        estado: editForm.estado,
+        fecha_vencimiento: editForm.fecha_vencimiento || null,
+      })
+      toast.success('Tarjeta actualizada')
+      setEditTarjeta(null)
+      loadTarjetas(search, estadoFilter, page)
+      if (detailTarjeta?.nro_tarjeta === editTarjeta.nro_tarjeta) {
+        setDetailTarjeta(prev => prev ? {
+          ...prev,
+          limite_credito: editForm.limite_credito,
+          permite_saldo_negativo: editForm.permite_saldo_negativo,
+          estado: editForm.estado,
+          fecha_vencimiento: editForm.fecha_vencimiento || null,
+        } : prev)
+      }
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setEditSaving(false)
+    }
+  }, [editTarjeta, editForm, search, estadoFilter, page, loadTarjetas, detailTarjeta])
 
   // ── Derived ─────────────────────────────────────────────────────
 
@@ -281,8 +332,8 @@ export default function Tarjetas() {
       key: 'nro',
       render: (_, r) => (
         <div>
-          <p className="font-mono text-sm font-semibold text-slate-800">{r.nro_tarjeta}</p>
-          <p className="text-xs text-slate-400">{r.codigo_barras || '—'}</p>
+          <p className="font-mono text-base font-semibold text-slate-800">{r.nro_tarjeta}</p>
+          <p className="text-sm text-slate-400">{r.codigo_barras || '—'}</p>
         </div>
       ),
     },
@@ -291,8 +342,8 @@ export default function Tarjetas() {
       key: 'hijo',
       render: (_, r) => (
         <div>
-          <p className="text-sm font-medium text-slate-800">{r.hijo_nombre}</p>
-          <p className="text-xs text-slate-400">{r.hijo_grado}</p>
+          <p className="text-base font-medium text-slate-800">{r.hijo_nombre}</p>
+          <p className="text-sm text-slate-400">{r.hijo_grado}</p>
         </div>
       ),
     },
@@ -301,8 +352,8 @@ export default function Tarjetas() {
       key: 'cliente',
       render: (_, r) => (
         <div>
-          <p className="text-sm text-slate-700">{r.cliente_nombre}</p>
-          <p className="text-xs text-slate-400">{r.cliente_ruc}</p>
+          <p className="text-base text-slate-700">{r.cliente_nombre}</p>
+          <p className="text-sm text-slate-400">{r.cliente_ruc}</p>
         </div>
       ),
     },
@@ -312,7 +363,7 @@ export default function Tarjetas() {
       render: (_, r) => {
         const n = Number(r.saldo_actual) || 0
         return (
-          <span className={`tabular-nums font-semibold text-sm ${n < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+          <span className={`tabular-nums font-semibold text-base ${n < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
             {formatGs(n)}
           </span>
         )
@@ -322,14 +373,14 @@ export default function Tarjetas() {
       title: 'Límite',
       key: 'limite',
       render: (_, r) => (
-        <span className="tabular-nums text-sm text-slate-500">{formatGs(r.limite_credito)}</span>
+        <span className="tabular-nums text-base text-slate-500">{formatGs(r.limite_credito)}</span>
       ),
     },
     {
       title: 'Vencimiento',
       key: 'vto',
       render: (_, r) => (
-        <span className="text-sm text-slate-600">{formatFechaCorta(r.fecha_vencimiento)}</span>
+        <span className="text-base text-slate-600">{formatFechaCorta(r.fecha_vencimiento)}</span>
       ),
     },
     {
@@ -340,12 +391,16 @@ export default function Tarjetas() {
     {
       title: '',
       key: 'acciones',
-      width: 130,
+      width: 160,
       render: (_, r) => (
         <div className="flex items-center gap-1.5">
           <Button size="sm" variant="secondary" onClick={() => openDetail(r)}>
             <History className="w-3.5 h-3.5" />
             Ver
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => openEdit(r)}>
+            <Edit2 className="w-3.5 h-3.5" />
+            Editar
           </Button>
           <Button
             size="sm"
@@ -367,7 +422,7 @@ export default function Tarjetas() {
     {
       title: 'Fecha',
       key: 'fecha',
-      render: (_, r) => <span className="text-xs text-slate-500">{formatFecha(r.fecha)}</span>,
+      render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha)}</span>,
     },
     {
       title: 'Tipo',
@@ -382,7 +437,7 @@ export default function Tarjetas() {
       render: (_, r) => {
         const isEntry = r.tipo === 'RECARGA' || r.tipo === 'REVERSO'
         return (
-          <span className={`tabular-nums font-semibold text-sm flex items-center gap-0.5 ${isEntry ? 'text-emerald-700' : 'text-slate-700'}`}>
+          <span className={`tabular-nums font-semibold text-base flex items-center gap-0.5 ${isEntry ? 'text-emerald-700' : 'text-slate-700'}`}>
             {isEntry ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
             {formatGs(r.monto)}
           </span>
@@ -392,13 +447,13 @@ export default function Tarjetas() {
     {
       title: 'Saldo ant.',
       key: 'saldo_ant',
-      render: (_, r) => <span className="tabular-nums text-sm text-slate-400">{formatGs(r.saldo_anterior)}</span>,
+      render: (_, r) => <span className="tabular-nums text-base text-slate-400">{formatGs(r.saldo_anterior)}</span>,
     },
     {
       title: 'Saldo result.',
       key: 'saldo_res',
       render: (_, r) => (
-        <span className={`tabular-nums text-sm font-medium ${Number(r.saldo_resultante) < 0 ? 'text-red-600' : 'text-slate-700'}`}>
+        <span className={`tabular-nums text-base font-medium ${Number(r.saldo_resultante) < 0 ? 'text-red-600' : 'text-slate-700'}`}>
           {formatGs(r.saldo_resultante)}
         </span>
       ),
@@ -406,7 +461,7 @@ export default function Tarjetas() {
     {
       title: 'Descripción',
       key: 'desc',
-      render: (_, r) => <span className="text-sm text-slate-400">{r.descripcion || '—'}</span>,
+      render: (_, r) => <span className="text-base text-slate-400">{r.descripcion || '—'}</span>,
     },
   ]
 
@@ -427,7 +482,7 @@ export default function Tarjetas() {
       title: 'Método',
       key: 'metodo',
       render: (_, r) => (
-        <span className="text-sm text-slate-600">{METODO_PAGO_LABEL[r.metodo_pago] ?? r.metodo_pago}</span>
+        <span className="text-base text-slate-600">{METODO_PAGO_LABEL[r.metodo_pago] ?? r.metodo_pago}</span>
       ),
     },
     {
@@ -438,14 +493,14 @@ export default function Tarjetas() {
     {
       title: 'Usuario',
       key: 'usuario',
-      render: (_, r) => <span className="text-sm text-slate-400">{r.usuario_nombre ?? '—'}</span>,
+      render: (_, r) => <span className="text-base text-slate-400">{r.usuario_nombre ?? '—'}</span>,
     },
   ]
 
   // ── Styles ──────────────────────────────────────────────────────
 
-  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
-  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+  const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
+  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   // ── Render ──────────────────────────────────────────────────────
 
@@ -455,7 +510,7 @@ export default function Tarjetas() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Tarjetas</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Gestión de tarjetas prepago de estudiantes</p>
+          <p className="text-base text-slate-500 mt-0.5">Gestión de tarjetas prepago de estudiantes</p>
         </div>
         <Button variant="primary" onClick={() => { setForm(FORM_INITIAL); setCreateOpen(true) }}>
           <Plus className="w-4 h-4" />
@@ -496,11 +551,11 @@ export default function Tarjetas() {
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+          <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-slate-400" />
             Tarjetas
           </h2>
-          <span className="text-xs text-slate-400">{total} registros</span>
+          <span className="text-sm text-slate-400">{total} registros</span>
         </div>
         <div className="p-1">
           <Table
@@ -534,7 +589,7 @@ export default function Tarjetas() {
               { label: 'Vencimiento', value: formatFechaCorta(detailTarjeta.fecha_vencimiento) },
             ].map(({ label, value, warn }) => (
               <div key={label} className="bg-slate-50 rounded-xl px-3 py-3">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
                 <p className={`text-base font-bold mt-0.5 tabular-nums ${warn ? 'text-red-600' : 'text-slate-800'}`}>{value}</p>
               </div>
             ))}
@@ -545,7 +600,7 @@ export default function Tarjetas() {
             <div className="flex items-center gap-2">
               <Badge color={ESTADO_COLOR[detailTarjeta.estado] ?? 'default'}>{detailTarjeta.estado}</Badge>
               {detailTarjeta.permite_saldo_negativo && <Badge color="yellow">Permite saldo negativo</Badge>}
-              <span className="text-xs text-slate-400">Cliente: {detailTarjeta.cliente_nombre}</span>
+              <span className="text-sm text-slate-400">Cliente: {detailTarjeta.cliente_nombre}</span>
             </div>
             <div className="flex gap-2">
               <Button
@@ -705,6 +760,83 @@ export default function Tarjetas() {
             <span className="text-sm text-slate-700">Permite saldo negativo</span>
           </label>
         </div>
+      </Modal>
+
+      {/* ── Edit Modal ────────────────────────────────────────────── */}
+      <Modal
+        open={!!editTarjeta}
+        title={editTarjeta ? `Editar Tarjeta — ${editTarjeta.nro_tarjeta}` : ''}
+        onOk={handleEditSave}
+        onCancel={() => setEditTarjeta(null)}
+        okText="Guardar Cambios"
+        confirmLoading={editSaving}
+        width={480}
+      >
+        {editTarjeta && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 rounded-xl px-4 py-3 text-sm text-slate-500">
+              Estudiante: <span className="font-semibold text-slate-800">{editTarjeta.hijo_nombre}</span>
+              {' · '} Cliente: <span className="font-semibold text-slate-800">{editTarjeta.cliente_nombre}</span>
+            </div>
+
+            <div>
+              <label className={labelClass}>Límite de Crédito (Gs.)</label>
+              <p className="text-xs text-slate-400 mb-1.5">
+                Monto máximo que puede gastar con saldo negativo, autorizado con PIN del padre
+              </p>
+              <input
+                type="number"
+                value={editForm.limite_credito}
+                onChange={e => setEditForm(f => ({ ...f, limite_credito: e.target.value }))}
+                placeholder="0"
+                min={0}
+                step={1000}
+                className={inputClass}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Estado</label>
+                <select
+                  value={editForm.estado}
+                  onChange={e => setEditForm(f => ({ ...f, estado: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="ACTIVA">Activa</option>
+                  <option value="BLOQUEADA">Bloqueada</option>
+                  <option value="CANCELADA">Cancelada</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Fecha de Vencimiento</label>
+                <input
+                  type="date"
+                  value={editForm.fecha_vencimiento}
+                  onChange={e => setEditForm(f => ({ ...f, fecha_vencimiento: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div className="relative shrink-0">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={editForm.permite_saldo_negativo}
+                  onChange={e => setEditForm(f => ({ ...f, permite_saldo_negativo: e.target.checked }))}
+                />
+                <div className="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-green-500 transition-colors" />
+                <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
+              </div>
+              <div>
+                <span className="text-sm font-medium text-slate-700">Permite saldo negativo</span>
+                <p className="text-xs text-slate-400">Activa la solicitud de PIN del padre cuando se excede el saldo</p>
+              </div>
+            </label>
+          </div>
+        )}
       </Modal>
 
     </div>

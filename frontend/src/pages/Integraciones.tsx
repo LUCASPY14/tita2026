@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Plug, FileText, Webhook, KeyRound, CheckCircle, XCircle } from 'lucide-react'
 import api from '../services/api'
@@ -276,7 +276,7 @@ export default function Integraciones() {
     <div className="p-4 md:p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Integraciones</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Configuración de APIs externas, webhooks y logs</p>
+        <p className="text-base text-slate-500 mt-0.5">Configuración de APIs externas, webhooks y logs</p>
       </div>
 
       <div className="border-b border-slate-200">

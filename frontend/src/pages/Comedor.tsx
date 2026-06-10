@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   CheckCircle, XCircle, UtensilsCrossed, Clock,
@@ -332,67 +332,67 @@ export default function Comedor() {
 
   return (
     <div
-      className="min-h-screen bg-slate-900 text-white flex flex-col select-none"
+      className="min-h-screen bg-slate-50 text-slate-900 flex flex-col select-none"
       onClick={handlePageClick}
     >
       {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-6 py-3 bg-slate-950 border-b border-white/5 shrink-0">
+      <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-slate-200 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
-          <div className="bg-white rounded-lg p-0.5">
-            <img src="/logo_tita.png" alt="Cantina Tita" className="h-7 w-auto" />
+          <div className="bg-green-50 rounded-xl p-1.5 border border-green-100">
+            <img src="/logo_tita.png" alt="Cantina Tita" className="h-9 w-auto" />
           </div>
           <div>
-            <p className="text-white font-bold text-sm tracking-tight">CANTINA TITA</p>
-            <p className="text-green-400 text-xs font-medium uppercase tracking-wider">Registro de Comedor</p>
+            <p className="text-slate-800 font-black text-base tracking-tight">CANTINA TITA</p>
+            <p className="text-green-600 text-sm font-bold uppercase tracking-wider">Registro de Comedor</p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-slate-400">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
             <Clock className="w-4 h-4" />
-            <span className="text-sm tabular-nums">{clock}</span>
+            <span className="text-base tabular-nums font-medium">{clock}</span>
           </div>
           {recientes.length > 0 && (
             <button
               onClick={e => { e.stopPropagation(); exportarPDF() }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-semibold text-slate-700 transition-colors cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" />
               PDF ({recientes.length})
             </button>
           )}
           <button
             onClick={e => { e.stopPropagation(); toggleFullscreen() }}
-            className="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors cursor-pointer"
+            className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer text-slate-600"
             title={fullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
           >
-            {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            {fullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
       {/* ── Body ───────────────────────────────────────────────── */}
-      <div className="flex-1 flex gap-0 overflow-hidden">
+      <div className="flex-1 flex overflow-hidden">
 
         {/* ── Panel izquierdo: scan ─────────────────────────────── */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8">
+        <div className="flex-1 flex flex-col items-center justify-center gap-8 p-10">
 
           {/* Contador de progreso */}
           {suscriptosHoy.length > 0 && (
-            <div className="w-full max-w-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">Almuerzos hoy</span>
-                <span className="text-white text-sm font-bold tabular-nums">
+            <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-slate-500 text-sm font-bold uppercase tracking-wider">Almuerzos hoy</span>
+                <span className="tabular-nums font-black text-2xl text-slate-800">
                   {consumidosHoy.size}
-                  <span className="text-slate-500 font-normal"> / {suscriptosHoy.length}</span>
+                  <span className="text-slate-400 font-normal text-lg"> / {suscriptosHoy.length}</span>
                 </span>
               </div>
-              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-2 bg-green-500 rounded-full transition-all duration-500"
+                  className="h-3 bg-green-500 rounded-full transition-all duration-500"
                   style={{ width: `${Math.round((consumidosHoy.size / suscriptosHoy.length) * 100)}%` }}
                 />
               </div>
-              <p className="text-slate-600 text-xs mt-1 text-right">
+              <p className="text-slate-400 text-sm mt-1.5 text-right font-medium">
                 {Math.round((consumidosHoy.size / suscriptosHoy.length) * 100)}% completado
               </p>
             </div>
@@ -401,41 +401,43 @@ export default function Comedor() {
           {/* Área de resultado */}
           {result ? (
             result.tipo === 'ok' ? (
-              <div className="w-full max-w-sm bg-green-500/10 border-2 border-green-500 rounded-3xl p-8 text-center animate-in fade-in zoom-in-95 duration-200">
-                <CheckCircle className="w-20 h-20 text-green-400 mx-auto mb-4" />
-                <p className="text-green-300 text-xs font-semibold uppercase tracking-widest mb-1">Ingreso registrado</p>
-                <p className="text-white text-3xl font-bold leading-tight mt-2">{result.nombre}</p>
-                {result.grado && <p className="text-slate-300 text-lg mt-1">{result.grado}</p>}
-                <div className="mt-4 bg-slate-800/60 rounded-xl px-4 py-2 inline-block">
-                  <p className="text-slate-400 text-xs">Saldo en tarjeta</p>
-                  <p className="text-emerald-400 text-xl font-bold tabular-nums">{formatGs(result.saldo)}</p>
+              <div className="w-full max-w-lg bg-green-50 border-2 border-green-400 rounded-3xl p-10 text-center animate-in fade-in zoom-in-95 duration-200 shadow-lg">
+                <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-5" />
+                <p className="text-green-600 text-base font-bold uppercase tracking-widest mb-2">Ingreso registrado</p>
+                <p className="text-slate-900 text-5xl font-black leading-tight mt-2">{result.nombre}</p>
+                {result.grado && <p className="text-slate-600 text-2xl mt-2 font-medium">{result.grado}</p>}
+                <div className="mt-6 bg-white border border-green-200 rounded-2xl px-6 py-3 inline-block shadow-sm">
+                  <p className="text-slate-500 text-sm">Saldo en tarjeta</p>
+                  <p className="text-emerald-600 text-3xl font-black tabular-nums">{formatGs(result.saldo)}</p>
                 </div>
                 {countdown !== null && (
-                  <p className="text-slate-500 text-sm mt-5 tabular-nums">
+                  <p className="text-slate-400 text-base mt-6 tabular-nums font-medium">
                     Próximo en {countdown}...
                   </p>
                 )}
               </div>
             ) : (
-              <div className="w-full max-w-sm bg-red-500/10 border-2 border-red-500 rounded-3xl p-8 text-center animate-in fade-in zoom-in-95 duration-200">
-                <XCircle className="w-20 h-20 text-red-400 mx-auto mb-4" />
-                <p className="text-red-300 text-xs font-semibold uppercase tracking-widest mb-2">Error</p>
-                <p className="text-white text-2xl font-bold">{result.message}</p>
+              <div className="w-full max-w-lg bg-red-50 border-2 border-red-400 rounded-3xl p-10 text-center animate-in fade-in zoom-in-95 duration-200 shadow-lg">
+                <XCircle className="w-24 h-24 text-red-500 mx-auto mb-5" />
+                <p className="text-red-500 text-base font-bold uppercase tracking-widest mb-2">Error</p>
+                <p className="text-slate-900 text-3xl font-bold">{result.message}</p>
                 {countdown !== null && (
-                  <p className="text-slate-500 text-sm mt-5">Reintentando en {countdown}...</p>
+                  <p className="text-slate-400 text-base mt-6 font-medium">Reintentando en {countdown}...</p>
                 )}
               </div>
             )
           ) : (
             <div className="text-center">
-              <UtensilsCrossed className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-300 text-xl font-semibold">Pasá la tarjeta</p>
-              <p className="text-slate-500 text-sm mt-1">o escribí el número y presioná Enter</p>
+              <div className="w-32 h-32 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6 shadow-sm">
+                <UtensilsCrossed className="w-16 h-16 text-green-500" />
+              </div>
+              <p className="text-slate-800 text-4xl font-black">Pasá la tarjeta</p>
+              <p className="text-slate-400 text-xl mt-2">o escribí el número y presioná Enter</p>
             </div>
           )}
 
           {/* Input de tarjeta */}
-          <div className="w-full max-w-sm" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-lg" onClick={e => e.stopPropagation()}>
             <input
               ref={inputRef}
               value={inputVal}
@@ -446,42 +448,46 @@ export default function Comedor() {
               autoComplete="off"
               autoFocus
               className={[
-                'w-full text-center text-2xl font-bold tracking-widest py-4 px-6',
-                'bg-slate-800 border-2 rounded-2xl outline-none transition-all duration-150',
-                'placeholder:text-slate-600 text-white',
+                'w-full text-center text-3xl font-black tracking-widest py-5 px-6',
+                'border-2 rounded-2xl outline-none transition-all duration-150 shadow-sm',
+                'placeholder:text-slate-300',
                 scanning
-                  ? 'border-slate-600 cursor-not-allowed'
-                  : 'border-slate-600 focus:border-green-500 focus:ring-2 focus:ring-green-500/20',
+                  ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                  : 'bg-white border-slate-300 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 text-slate-900',
               ].join(' ')}
             />
-            <p className="text-center text-slate-600 text-xs mt-2">
+            <p className="text-center text-slate-400 text-base mt-2.5 font-medium">
               {scanning ? 'Registrando...' : 'Enter para registrar · Esc para limpiar'}
             </p>
           </div>
         </div>
 
         {/* ── Panel derecho ────────────────────────────────────── */}
-        <div className="w-72 bg-slate-950 border-l border-white/5 flex flex-col shrink-0">
+        <div className="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0">
           {/* Toggle header */}
-          <div className="px-3 py-2 border-b border-white/5 flex items-center gap-1">
+          <div className="px-3 py-3 border-b border-slate-100 flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setPanelMode('recientes')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                panelMode === 'recientes' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold transition-colors cursor-pointer ${
+                panelMode === 'recientes'
+                  ? 'bg-green-100 text-green-700'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
               }`}
             >
-              <CheckCircle className="w-3.5 h-3.5" />
+              <CheckCircle className="w-4 h-4" />
               Recientes ({recientes.length})
             </button>
             <button
               type="button"
               onClick={() => setPanelMode('lista')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                panelMode === 'lista' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold transition-colors cursor-pointer ${
+                panelMode === 'lista'
+                  ? 'bg-green-100 text-green-700'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
               }`}
             >
-              <List className="w-3.5 h-3.5" />
+              <List className="w-4 h-4" />
               Lista de hoy
             </button>
           </div>
@@ -490,21 +496,22 @@ export default function Comedor() {
           {panelMode === 'recientes' && (
             <div className="flex-1 overflow-y-auto">
               {recientes.length === 0 ? (
-                <div className="flex items-center justify-center h-32">
-                  <p className="text-slate-600 text-sm">Sin ingresos aún</p>
+                <div className="flex flex-col items-center justify-center h-40 gap-2 text-slate-300">
+                  <CheckCircle className="w-10 h-10" />
+                  <p className="text-base font-medium">Sin ingresos aún</p>
                 </div>
               ) : (
-                <ul className="divide-y divide-white/5">
+                <ul className="divide-y divide-slate-100">
                   {recientes.map((r, i) => (
-                    <li key={r.id} className={`px-4 py-3 flex items-center gap-3 ${i === 0 ? 'bg-green-500/5' : ''}`}>
-                      <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                        <CheckCircle className={`w-4 h-4 ${i === 0 ? 'text-green-400' : 'text-slate-500'}`} />
+                    <li key={r.id} className={`px-4 py-3.5 flex items-center gap-3 ${i === 0 ? 'bg-green-50' : ''}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${i === 0 ? 'bg-green-100' : 'bg-slate-100'}`}>
+                        <CheckCircle className={`w-5 h-5 ${i === 0 ? 'text-green-600' : 'text-slate-400'}`} />
                       </div>
-                      <div className="min-w-0">
-                        <p className={`text-sm font-medium truncate ${i === 0 ? 'text-white' : 'text-slate-300'}`}>{r.nombre}</p>
-                        {r.grado && <p className="text-xs text-slate-500 truncate">{r.grado}</p>}
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-base font-semibold truncate ${i === 0 ? 'text-slate-900' : 'text-slate-700'}`}>{r.nombre}</p>
+                        {r.grado && <p className="text-sm text-slate-400 truncate">{r.grado}</p>}
                       </div>
-                      <span className="text-xs text-slate-500 tabular-nums shrink-0 ml-auto">{r.hora}</span>
+                      <span className="text-sm text-slate-400 tabular-nums shrink-0 font-medium">{r.hora}</span>
                     </li>
                   ))}
                 </ul>
@@ -515,33 +522,32 @@ export default function Comedor() {
           {/* Panel: lista de hoy */}
           {panelMode === 'lista' && (
             <>
-              <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between">
-                <p className="text-xs text-slate-500">
-                  <span className="text-green-400 font-semibold">{consumidosHoy.size}</span>
-                  {' / '}
-                  <span className="text-slate-400 font-semibold">{suscriptosHoy.length}</span>
-                  {' almorzaron'}
+              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <p className="text-base font-medium text-slate-600">
+                  <span className="text-green-600 font-black text-xl">{consumidosHoy.size}</span>
+                  <span className="text-slate-400"> / {suscriptosHoy.length}</span>
+                  <span className="text-slate-500"> almorzaron</span>
                 </p>
                 <button
                   type="button"
                   onClick={e => { e.stopPropagation(); cargarListaHoy() }}
-                  className="p-1 text-slate-500 hover:text-slate-300 cursor-pointer"
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
                   disabled={loadingLista}
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingLista ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 ${loadingLista ? 'animate-spin' : ''}`} />
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">
                 {loadingLista ? (
                   <div className="flex items-center justify-center h-20">
-                    <p className="text-slate-600 text-xs">Cargando...</p>
+                    <p className="text-slate-400 text-base">Cargando...</p>
                   </div>
                 ) : suscriptosHoy.length === 0 ? (
                   <div className="flex items-center justify-center h-20">
-                    <p className="text-slate-600 text-xs">Sin suscripciones activas hoy</p>
+                    <p className="text-slate-400 text-base text-center px-4">Sin suscripciones activas hoy</p>
                   </div>
                 ) : (
-                  <ul className="divide-y divide-white/5">
+                  <ul className="divide-y divide-slate-100">
                     {[...suscriptosHoy].sort((a, b) => {
                       const aOk = consumidosHoy.has(a.hijoId)
                       const bOk = consumidosHoy.has(b.hijoId)
@@ -550,16 +556,16 @@ export default function Comedor() {
                     }).map(s => {
                       const comio = consumidosHoy.has(s.hijoId)
                       return (
-                        <li key={s.hijoId} className="px-3 py-2.5 flex items-center gap-2.5">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${comio ? 'bg-green-500/20' : 'bg-slate-800'}`}>
+                        <li key={s.hijoId} className={`px-4 py-3 flex items-center gap-3 ${comio ? 'opacity-40' : ''}`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${comio ? 'bg-green-100' : 'bg-slate-100'}`}>
                             {comio
-                              ? <CheckCircle className="w-3.5 h-3.5 text-green-400" />
-                              : <XCircle className="w-3.5 h-3.5 text-slate-600" />
+                              ? <CheckCircle className="w-4 h-4 text-green-600" />
+                              : <XCircle className="w-4 h-4 text-slate-400" />
                             }
                           </div>
                           <div className="min-w-0">
-                            <p className={`text-xs font-medium truncate ${comio ? 'text-slate-400' : 'text-slate-200'}`}>{s.nombre}</p>
-                            {s.grado && <p className="text-xs text-slate-600 truncate">{s.grado}</p>}
+                            <p className={`text-sm font-semibold truncate ${comio ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{s.nombre}</p>
+                            {s.grado && <p className="text-sm text-slate-400 truncate">{s.grado}</p>}
                           </div>
                         </li>
                       )
