@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   Plus, Lock, CheckCircle, Banknote, LayoutGrid,
-  TrendingUp, Clock, ShoppingCart, CreditCard,
+  Clock, ShoppingCart, CreditCard,
+  Printer, ArrowUpCircle, ArrowDownCircle, RefreshCw,
 } from 'lucide-react'
 import api from '../services/api'
-import { useAuthStore } from '../store/authStore'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -20,6 +20,7 @@ interface CierreCaja {
   id: number
   caja: number
   caja_nombre: string
+  empleado: number
   empleado_nombre: string
   fecha_apertura: string
   fecha_cierre: string | null
@@ -29,6 +30,21 @@ interface CierreCaja {
   estado: 'ABIERTO' | 'CERRADO' | 'CONCILIADO'
   observaciones_conciliacion: string | null
 }
+
+interface ArqueoData {
+  monto_inicial: number
+  efectivo_esperado: number
+  efectivo_ingresos: number
+  efectivo_egresos: number
+  pos_total: number
+  prepago_total: number
+  ingresos_total: number
+  egresos_total: number
+  ingresos_por_medio: { medio: string; total: number }[]
+  egresos_por_medio: { medio: string; total: number }[]
+}
+
+interface MedioPago { id: number; descripcion: string; activo: boolean }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -67,15 +83,6 @@ const ESTADO_LABEL: Record<string, string> = {
   ABIERTO: 'Abierta', CERRADO: 'Cerrada', CONCILIADO: 'Conciliada',
 }
 
-// ─── Interfaces adicionales ───────────────────────────────────────────────────
-
-interface TurnoStats {
-  cantidadVentas: number
-  montoTotal: number
-  cargasCount: number
-  montoCargas: number
-}
-
 function elapsedLabel(isoApertura: string): string {
   const mins = Math.floor((Date.now() - new Date(isoApertura).getTime()) / 60000)
   if (mins < 60) return `${mins} min`
@@ -86,16 +93,20 @@ function elapsedLabel(isoApertura: string): string {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function CajaPage() {
-  const { user } = useAuthStore()
+
   const [cierres, setCierres] = useState<CierreCaja[]>([])
   const [cajas, setCajas] = useState<Caja[]>([])
+  const [mediosPago, setMediosPago] = useState<MedioPago[]>([])
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [filterEstado, setFilterEstado] = useState('')
   const [filterCaja, setFilterCaja] = useState('')
-  const [turnoStats, setTurnoStats] = useState<TurnoStats | null>(null)
-  const [loadingTurno, setLoadingTurno] = useState(false)
+
+  // Turno activo del usuario
+  const [miCierre, setMiCierre] = useState<CierreCaja | null | undefined>(undefined) // undefined = cargando
+  const [arqueo, setArqueo] = useState<ArqueoData | null>(null)
+  const [loadingArqueo, setLoadingArqueo] = useState(false)
 
   // Abrir caja modal
   const [abrirModal, setAbrirModal] = useState(false)
@@ -105,7 +116,10 @@ export default function CajaPage() {
 
   // Cerrar caja modal
   const [cerrarModal, setCerrarModal] = useState<CierreCaja | null>(null)
+  const [arqueoModal, setArqueoModal] = useState<ArqueoData | null>(null)
+  const [loadingArqueoModal, setLoadingArqueoModal] = useState(false)
   const [montoContado, setMontoContado] = useState('')
+  const [montoContadoDebounced, setMontoContadoDebounced] = useState('')
   const [cerrando, setCerrando] = useState(false)
 
   // Conciliar modal
@@ -113,10 +127,21 @@ export default function CajaPage() {
   const [obsConc, setObsConc] = useState('')
   const [conciliando, setConciliando] = useState(false)
 
+  // Movimiento manual modal
+  const [movModal, setMovModal] = useState(false)
+  const [movTipo, setMovTipo] = useState<'INGRESO' | 'EGRESO'>('INGRESO')
+  const [movMonto, setMovMonto] = useState('')
+  const [movMedioPago, setMovMedioPago] = useState('')
+  const [movDesc, setMovDesc] = useState('')
+  const [movSaving, setMovSaving] = useState(false)
+
   const abriendoRef = useRef(false)
   const cerrandoRef = useRef(false)
   const conciliandoRef = useRef(false)
+  const movSavingRef = useRef(false)
   const requestIdRef = useRef(0)
+
+  // ── Cargar lista de cierres ────────────────────────────────────────────────
 
   const loadCierres = useCallback(async () => {
     const requestId = ++requestIdRef.current
@@ -137,42 +162,41 @@ export default function CajaPage() {
     }
   }, [page, filterEstado, filterCaja])
 
-  useEffect(() => {
-    loadCierres()
-  }, [loadCierres])
+  useEffect(() => { loadCierres() }, [loadCierres])
 
-  // Carga stats del turno activo del cajero logueado
-  const loadTurnoStats = useCallback(async (apertura: string) => {
-    setLoadingTurno(true)
+  // ── Turno activo del usuario (mi-caja) ────────────────────────────────────
+
+  const loadMiCierre = useCallback(async () => {
     try {
-      const desde = new Date(apertura).toISOString().slice(0, 10)
-      const hasta = new Date().toISOString().slice(0, 10)
-      const [ventasRes, cargasRes] = await Promise.all([
-        api.get('/contabilidad/reportes/', { params: { fecha_desde: desde, fecha_hasta: hasta }, timeout: 8000 }),
-        api.get('/core/cargas-saldo/', { params: { page_size: 1, fecha_desde: desde }, timeout: 6000 }).catch(() => null),
-      ])
-      const v = ventasRes.data?.ventas ?? {}
-      setTurnoStats({
-        cantidadVentas: v.cantidad ?? 0,
-        montoTotal: Number(v.monto_total) || 0,
-        cargasCount: cargasRes?.data?.count ?? 0,
-        montoCargas: 0,
-      })
+      const { data } = await api.get('/contabilidad/cierres-caja/mi-caja/', { timeout: 6000 })
+      setMiCierre(data ?? null)
     } catch {
-      // silencioso — no es crítico
-    } finally {
-      setLoadingTurno(false)
+      setMiCierre(null)
     }
   }, [])
 
-  // Detectar turno activo y cargar sus stats
+  useEffect(() => { loadMiCierre() }, [loadMiCierre])
+
+  // ── Arqueo del turno activo ───────────────────────────────────────────────
+
+  const loadArqueo = useCallback(async (cierreId: number) => {
+    setLoadingArqueo(true)
+    try {
+      const { data } = await api.get(`/contabilidad/cierres-caja/${cierreId}/arqueo/`, { timeout: 6000 })
+      setArqueo(data)
+    } catch {
+      setArqueo(null)
+    } finally {
+      setLoadingArqueo(false)
+    }
+  }, [])
+
   useEffect(() => {
-    const miTurno = cierres.find(
-      c => c.estado === 'ABIERTO' && c.empleado_nombre === (user?.nombre ?? '')
-    )
-    if (miTurno) loadTurnoStats(miTurno.fecha_apertura)
-    else setTurnoStats(null)
-  }, [cierres, user, loadTurnoStats])
+    if (miCierre?.id) loadArqueo(miCierre.id)
+    else setArqueo(null)
+  }, [miCierre, loadArqueo])
+
+  // ── Datos auxiliares ──────────────────────────────────────────────────────
 
   useEffect(() => {
     api.get('/contabilidad/cajas/')
@@ -183,9 +207,19 @@ export default function CajaPage() {
         setCajaSeleccionada(primeraActiva ? String(primeraActiva.id) : '')
       })
       .catch(() => {})
+
+    api.get('/core/medios-pago/', { params: { activo: true } })
+      .then(({ data }) => setMediosPago(data.results ?? data))
+      .catch(() => {})
   }, [])
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // Debounce montoContado para no mostrar diferencias intermedias mientras se tipea
+  useEffect(() => {
+    const t = setTimeout(() => setMontoContadoDebounced(montoContado), 400)
+    return () => clearTimeout(t)
+  }, [montoContado])
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   async function abrirCaja() {
     if (abriendoRef.current) return
@@ -200,12 +234,27 @@ export default function CajaPage() {
       toast.success('Caja abierta')
       setAbrirModal(false)
       setMontoInicial('')
-      loadCierres()
+      await Promise.all([loadCierres(), loadMiCierre()])
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {
       abriendoRef.current = false
       setAbriendo(false)
+    }
+  }
+
+  async function openCerrarModal(cierre: CierreCaja) {
+    setCerrarModal(cierre)
+    setMontoContado('')
+    setArqueoModal(null)
+    setLoadingArqueoModal(true)
+    try {
+      const { data } = await api.get(`/contabilidad/cierres-caja/${cierre.id}/arqueo/`, { timeout: 8000 })
+      setArqueoModal(data)
+    } catch {
+      // modal se abre igual, sin desglose
+    } finally {
+      setLoadingArqueoModal(false)
     }
   }
 
@@ -217,9 +266,12 @@ export default function CajaPage() {
       await api.post(`/contabilidad/cierres-caja/${cerrarModal.id}/cerrar/`, {
         monto_contado_fisico: Number(montoContado) || 0,
       }, { timeout: 10000 })
-      toast.success('Caja cerrada')
+      // Cargar datos ANTES de cerrar el modal para evitar unmounts concurrentes
+      // que causan removeChild en la reconciliación de React
+      await Promise.all([loadCierres(), loadMiCierre()])
       setCerrarModal(null)
-      loadCierres()
+      setArqueoModal(null)
+      toast.success('Caja cerrada')
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {
@@ -236,9 +288,9 @@ export default function CajaPage() {
       await api.post(`/contabilidad/cierres-caja/${conciliarModal.id}/conciliar/`, {
         observaciones: obsConc,
       }, { timeout: 10000 })
-      toast.success('Cierre conciliado')
+      await loadCierres()
       setConciliarModal(null)
-      loadCierres()
+      toast.success('Cierre conciliado')
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {
@@ -247,7 +299,52 @@ export default function CajaPage() {
     }
   }
 
-  // ── Columns ──────────────────────────────────────────────────────────────────
+  async function confirmarMovimiento() {
+    if (movSavingRef.current || !miCierre) return
+    if (!movMonto || Number(movMonto) <= 0) { toast.error('Ingresá un monto válido'); return }
+    movSavingRef.current = true
+    setMovSaving(true)
+    try {
+      await api.post(`/contabilidad/cierres-caja/${miCierre.id}/registrar-movimiento/`, {
+        tipo: movTipo,
+        monto: Number(movMonto),
+        medio_pago: movMedioPago ? Number(movMedioPago) : null,
+        descripcion: movDesc,
+      }, { timeout: 10000 })
+      toast.success(`${movTipo === 'INGRESO' ? 'Ingreso' : 'Egreso'} registrado`)
+      setMovModal(false)
+      setMovMonto('')
+      setMovDesc('')
+      loadArqueo(miCierre.id)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      movSavingRef.current = false
+      setMovSaving(false)
+    }
+  }
+
+  function abrirMovModal(tipo: 'INGRESO' | 'EGRESO') {
+    setMovTipo(tipo)
+    setMovMonto('')
+    setMovMedioPago(mediosPago[0] ? String(mediosPago[0].id) : '')
+    setMovDesc('')
+    setMovModal(true)
+  }
+
+  function imprimirCierre(cierre: CierreCaja) {
+    const base = api.defaults.baseURL?.replace(/\/api\/v1\/?$/, '') ?? ''
+    window.open(`${base}/api/v1/contabilidad/cierres-caja/${cierre.id}/pdf/`, '_blank')
+  }
+
+  // ── Diferencia en vivo ────────────────────────────────────────────────────
+
+  const diferenciaViva = useMemo(() => {
+    if (!arqueoModal || !montoContadoDebounced) return null
+    return Number(montoContadoDebounced) - arqueoModal.efectivo_esperado
+  }, [arqueoModal, montoContadoDebounced])
+
+  // ── Columns ───────────────────────────────────────────────────────────────
 
   const columns = useMemo<Column<CierreCaja>[]>(() => [
     {
@@ -255,31 +352,25 @@ export default function CajaPage() {
       key: 'caja',
       render: (_, r) => (
         <div>
-          <p className="text-sm font-semibold text-slate-800">{r.caja_nombre}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{r.empleado_nombre}</p>
+          <p className="text-base font-semibold text-slate-800">{r.caja_nombre}</p>
+          <p className="text-sm text-slate-400 mt-0.5">{r.empleado_nombre}</p>
         </div>
       ),
     },
     {
       title: 'Apertura',
       key: 'apertura',
-      render: (_, r) => (
-        <span className="text-sm text-slate-600">{formatDatetime(r.fecha_apertura)}</span>
-      ),
+      render: (_, r) => <span className="text-base text-slate-600">{formatDatetime(r.fecha_apertura)}</span>,
     },
     {
       title: 'Cierre',
       key: 'cierre',
-      render: (_, r) => (
-        <span className="text-sm text-slate-600">{formatDatetime(r.fecha_cierre)}</span>
-      ),
+      render: (_, r) => <span className="text-base text-slate-600">{formatDatetime(r.fecha_cierre)}</span>,
     },
     {
       title: 'Monto Inicial',
       key: 'inicial',
-      render: (_, r) => (
-        <span className="tabular-nums text-sm text-slate-700">{formatGs(r.monto_inicial)}</span>
-      ),
+      render: (_, r) => <span className="tabular-nums text-base text-slate-700">{formatGs(r.monto_inicial)}</span>,
     },
     {
       title: 'Diferencia',
@@ -288,10 +379,7 @@ export default function CajaPage() {
         if (r.diferencia_efectivo === null) return <span className="text-slate-300">—</span>
         const n = Number(r.diferencia_efectivo) || 0
         return (
-          <span className={[
-            'tabular-nums text-sm font-semibold',
-            n === 0 ? 'text-emerald-700' : 'text-red-600',
-          ].join(' ')}>
+          <span className={['tabular-nums text-base font-semibold', n === 0 ? 'text-emerald-700' : 'text-red-600'].join(' ')}>
             {n > 0 ? '+' : ''}{formatGs(n)}
           </span>
         )
@@ -300,22 +388,18 @@ export default function CajaPage() {
     {
       title: 'Estado',
       key: 'estado',
-      render: (_, r) => (
-        <Badge color={ESTADO_COLOR[r.estado] ?? 'default'}>
-          {ESTADO_LABEL[r.estado] ?? r.estado}
-        </Badge>
-      ),
+      render: (_, r) => <Badge color={ESTADO_COLOR[r.estado] ?? 'default'}>{ESTADO_LABEL[r.estado] ?? r.estado}</Badge>,
     },
     {
       title: '',
       key: 'acciones',
-      width: 140,
+      width: 180,
       render: (_, r) => (
-        <div className="flex items-center gap-1.5 justify-end">
+        <div className="flex items-center gap-1 justify-end">
           {r.estado === 'ABIERTO' && (
             <button
-              onClick={() => { setCerrarModal(r); setMontoContado('') }}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              onClick={() => openCerrarModal(r)}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
               <Lock className="w-3 h-3" />
               Cerrar
@@ -324,18 +408,25 @@ export default function CajaPage() {
           {r.estado === 'CERRADO' && (
             <button
               onClick={() => { setConciliarModal(r); setObsConc('') }}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
             >
               <CheckCircle className="w-3 h-3" />
               Conciliar
             </button>
           )}
+          <button
+            onClick={() => imprimirCierre(r)}
+            className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
+            title="Imprimir cierre"
+          >
+            <Printer className="w-3.5 h-3.5" />
+          </button>
         </div>
       ),
     },
   ], [])
 
-  // ── Stats ────────────────────────────────────────────────────────────────────
+  // ── Stats rápidas ─────────────────────────────────────────────────────────
 
   const stats = useMemo(() => ({
     abiertas: cierres.filter(c => c.estado === 'ABIERTO').length,
@@ -346,17 +437,14 @@ export default function CajaPage() {
   const selectClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
   const cajaActiva = cajas.find(c => String(c.id) === cajaSeleccionada && c.activo)
 
-  const miTurnoAbierto = cierres.find(
-    c => c.estado === 'ABIERTO' && c.empleado_nombre === (user?.nombre ?? '')
-  ) ?? null
-
   return (
     <div className="p-4 md:p-6 space-y-5">
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Caja</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Apertura y cierre de cajas registradoras</p>
+          <p className="text-base text-slate-500 mt-0.5">Apertura y cierre de cajas registradoras</p>
         </div>
         <Button variant="primary" onClick={() => { setAbrirModal(true); setMontoInicial('') }}>
           <Plus className="w-4 h-4" />
@@ -365,75 +453,131 @@ export default function CajaPage() {
       </div>
 
       {/* ── Turno activo ─────────────────────────────────────────────────────── */}
-      {miTurnoAbierto && (
-        <div className="bg-green-950 border border-green-800 rounded-2xl px-5 py-4">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            {/* Título */}
+      {miCierre && (
+        <div className="bg-white border border-green-200 rounded-2xl overflow-hidden shadow-sm">
+          {/* Header del turno */}
+          <div className="bg-green-50 border-b border-green-200 px-5 py-3 flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <p className="text-green-300 text-sm font-semibold uppercase tracking-wide">
-                Turno activo — {miTurnoAbierto.caja_nombre}
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <p className="text-green-800 text-base font-semibold">
+                Turno activo — {miCierre.caja_nombre}
               </p>
             </div>
-            <div className="flex items-center gap-1.5 text-green-500 text-sm tabular-nums">
-              <Clock className="w-4 h-4" />
-              {elapsedLabel(miTurnoAbierto.fecha_apertura)}
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-green-600 text-sm tabular-nums">
+                <Clock className="w-4 h-4" />
+                {elapsedLabel(miCierre.fecha_apertura)}
+              </span>
+              <button
+                onClick={() => loadArqueo(miCierre.id)}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-green-700 hover:bg-green-100 rounded-lg transition-colors"
+                title="Actualizar arqueo"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Actualizar
+              </button>
+              <button
+                onClick={() => abrirMovModal('INGRESO')}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors"
+              >
+                <ArrowUpCircle className="w-3.5 h-3.5" />
+                Ingreso
+              </button>
+              <button
+                onClick={() => abrirMovModal('EGRESO')}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-orange-700 hover:bg-orange-50 border border-orange-200 rounded-lg transition-colors"
+              >
+                <ArrowDownCircle className="w-3.5 h-3.5" />
+                Egreso
+              </button>
             </div>
           </div>
 
-          {loadingTurno ? (
-            <p className="text-green-600 text-xs mt-3">Cargando stats del turno…</p>
-          ) : turnoStats ? (
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                {
-                  label: 'Ventas del turno',
-                  value: turnoStats.cantidadVentas,
-                  sub: formatGs(turnoStats.montoTotal),
-                  icon: ShoppingCart,
-                  color: 'text-green-300',
-                },
-                {
-                  label: 'Total cobrado',
-                  value: formatGs(turnoStats.montoTotal),
-                  sub: 'en ventas',
-                  icon: TrendingUp,
-                  color: 'text-emerald-300',
-                  isGs: true,
-                },
-                {
-                  label: 'Cargas de saldo',
-                  value: turnoStats.cargasCount,
-                  sub: 'recargas registradas',
-                  icon: CreditCard,
-                  color: 'text-cyan-300',
-                },
-                {
-                  label: 'Monto inicial',
-                  value: formatGs(miTurnoAbierto.monto_inicial),
-                  sub: 'en efectivo',
-                  icon: Banknote,
-                  color: 'text-slate-300',
-                  isGs: true,
-                },
-              ].map(({ label, value, sub, icon: Icon, color, isGs }) => (
-                <div key={label} className="bg-green-900/40 rounded-xl px-3 py-3">
+          {/* Arqueo en vivo — 4 columnas */}
+          <div className="px-5 py-4">
+            {loadingArqueo ? (
+              <p className="text-slate-400 text-sm">Cargando arqueo…</p>
+            ) : arqueo ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+                {/* Efectivo en cajón */}
+                <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <Icon className={`w-3.5 h-3.5 ${color}`} />
-                    <p className="text-green-500 text-xs font-medium uppercase tracking-wide truncate">{label}</p>
+                    <Banknote className="w-3.5 h-3.5 text-green-600" />
+                    <p className="text-green-700 text-xs font-semibold uppercase tracking-wide">Efectivo cajón</p>
                   </div>
-                  <p className={`font-bold tabular-nums leading-tight ${color} ${isGs ? 'text-base' : 'text-2xl'}`}>
-                    {value}
+                  <p className="text-green-800 font-bold text-lg tabular-nums leading-tight">
+                    {formatGs(arqueo.efectivo_esperado)}
                   </p>
-                  <p className="text-green-600 text-xs mt-0.5">{sub}</p>
+                  <p className="text-green-500 text-xs mt-0.5">
+                    inicial + {formatGs(arqueo.efectivo_ingresos)} − {formatGs(arqueo.efectivo_egresos)}
+                  </p>
+                  <p className="text-green-700 text-xs font-medium mt-1.5 bg-green-100 rounded px-1.5 py-0.5 inline-block">
+                    Contar billetes
+                  </p>
                 </div>
-              ))}
-            </div>
-          ) : null}
+
+                {/* POS / Terminal */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                    <p className="text-blue-700 text-xs font-semibold uppercase tracking-wide">POS / Transferencia</p>
+                  </div>
+                  <p className="text-blue-800 font-bold text-lg tabular-nums leading-tight">
+                    {formatGs(arqueo.pos_total)}
+                  </p>
+                  <p className="text-blue-500 text-xs mt-0.5">ventas con terminal</p>
+                  <p className="text-blue-700 text-xs font-medium mt-1.5 bg-blue-100 rounded px-1.5 py-0.5 inline-block">
+                    Cotejar con POS
+                  </p>
+                </div>
+
+                {/* Tarjeta prepago */}
+                <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <ShoppingCart className="w-3.5 h-3.5 text-purple-600" />
+                    <p className="text-purple-700 text-xs font-semibold uppercase tracking-wide">Prepago RFID</p>
+                  </div>
+                  <p className="text-purple-800 font-bold text-lg tabular-nums leading-tight">
+                    {formatGs(arqueo.prepago_total)}
+                  </p>
+                  <p className="text-purple-500 text-xs mt-0.5">ventas con tarjeta</p>
+                  <p className="text-purple-700 text-xs font-medium mt-1.5 bg-purple-100 rounded px-1.5 py-0.5 inline-block">
+                    Sin efectivo físico
+                  </p>
+                </div>
+
+                {/* Egresos manuales */}
+                <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <ArrowDownCircle className="w-3.5 h-3.5 text-orange-600" />
+                    <p className="text-orange-700 text-xs font-semibold uppercase tracking-wide">Egresos</p>
+                  </div>
+                  <p className="text-orange-800 font-bold text-lg tabular-nums leading-tight">
+                    {formatGs(arqueo.egresos_total)}
+                  </p>
+                  {arqueo.egresos_por_medio.length > 0 ? (
+                    <div className="mt-1.5 space-y-0.5">
+                      {arqueo.egresos_por_medio.map(m => (
+                        <p key={m.medio} className="text-orange-600 text-xs tabular-nums">
+                          {m.medio}: {m.total.toLocaleString('es-PY')} Gs.
+                        </p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-orange-400 text-xs mt-0.5">sin egresos</p>
+                  )}
+                </div>
+
+              </div>
+            ) : (
+              <p className="text-slate-400 text-sm">Sin movimientos registrados aún.</p>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Stats */}
+      {/* Stats rápidas */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Abiertas', value: stats.abiertas, color: 'text-green-600', icon: Banknote },
@@ -442,7 +586,7 @@ export default function CajaPage() {
         ].map(({ label, value, color, icon: Icon }) => (
           <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
               <p className={`text-2xl font-bold mt-0.5 tabular-nums ${color}`}>{value}</p>
             </div>
             <Icon className={`w-5 h-5 mt-1 ${color} opacity-40`} />
@@ -450,7 +594,7 @@ export default function CajaPage() {
         ))}
       </div>
 
-      {/* Filters */}
+      {/* Filtros */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex flex-wrap gap-3 items-center">
         <LayoutGrid className="w-4 h-4 text-slate-400" />
         <select value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1) }} className={selectClass}>
@@ -461,13 +605,11 @@ export default function CajaPage() {
         </select>
         <select value={filterCaja} onChange={e => { setFilterCaja(e.target.value); setPage(1) }} className={selectClass}>
           <option value="">Todas las cajas</option>
-          {cajas.map(c => (
-            <option key={c.id} value={c.id}>{c.nombre}</option>
-          ))}
+          {cajas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
         </select>
       </div>
 
-      {/* Table */}
+      {/* Tabla */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-1">
         <Table
           columns={columns}
@@ -481,7 +623,7 @@ export default function CajaPage() {
         />
       </div>
 
-      {/* ── Abrir Caja Modal ───────────────────────────────────────────────── */}
+      {/* ── Modal Abrir Caja ───────────────────────────────────────────────── */}
       <Modal
         open={abrirModal}
         title="Abrir Caja"
@@ -493,28 +635,24 @@ export default function CajaPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+            <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
               Caja
             </label>
             <select
               value={cajaSeleccionada}
               onChange={e => setCajaSeleccionada(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors"
             >
               <option value="">Seleccionar caja...</option>
               {cajas.filter(c => c.activo).map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}{c.ubicacion ? ` — ${c.ubicacion}` : ''}
-                </option>
+                <option key={c.id} value={c.id}>{c.nombre}{c.ubicacion ? ` — ${c.ubicacion}` : ''}</option>
               ))}
             </select>
           </div>
           {cajaActiva && (
             <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-2.5">
-              <p className="text-xs text-green-700 font-medium">{cajaActiva.nombre}</p>
-              {cajaActiva.ubicacion && (
-                <p className="text-xs text-green-600 mt-0.5">{cajaActiva.ubicacion}</p>
-              )}
+              <p className="text-sm text-green-700 font-medium">{cajaActiva.nombre}</p>
+              {cajaActiva.ubicacion && <p className="text-sm text-green-600 mt-0.5">{cajaActiva.ubicacion}</p>}
             </div>
           )}
           <Input
@@ -529,7 +667,7 @@ export default function CajaPage() {
         </div>
       </Modal>
 
-      {/* ── Cerrar Caja Modal ──────────────────────────────────────────────── */}
+      {/* ── Modal Cerrar Caja ──────────────────────────────────────────────── */}
       <Modal
         open={!!cerrarModal}
         title={`Cerrar Caja — ${cerrarModal?.caja_nombre ?? ''}`}
@@ -537,9 +675,10 @@ export default function CajaPage() {
         onOk={confirmarCierre}
         okText="Confirmar Cierre"
         confirmLoading={cerrando}
-        width={420}
+        width={500}
       >
         <div className="space-y-4">
+          {/* Info básica */}
           <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1.5 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-500">Apertura:</span>
@@ -550,6 +689,49 @@ export default function CajaPage() {
               <span className="font-semibold text-slate-800 tabular-nums">{formatGs(cerrarModal?.monto_inicial)}</span>
             </div>
           </div>
+
+          {/* Arqueo detallado */}
+          {loadingArqueoModal ? (
+            <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
+              <ShoppingCart className="w-4 h-4 animate-pulse" />
+              Cargando arqueo…
+            </div>
+          ) : arqueoModal ? (
+            <div className="border border-slate-200 rounded-xl overflow-hidden text-sm">
+              <div className="bg-slate-50 px-4 py-2 font-semibold text-slate-600 text-xs uppercase tracking-wide">
+                Desglose de movimientos
+              </div>
+              <div className="divide-y divide-slate-100">
+                {/* Ingresos */}
+                {arqueoModal.ingresos_por_medio.map(m => (
+                  <div key={m.medio} className="flex justify-between px-4 py-2">
+                    <span className="text-slate-600 flex items-center gap-1.5">
+                      <ArrowUpCircle className="w-3.5 h-3.5 text-green-500" />
+                      {m.medio}
+                    </span>
+                    <span className="font-medium text-green-700 tabular-nums">+{formatGs(m.total)}</span>
+                  </div>
+                ))}
+                {/* Egresos */}
+                {arqueoModal.egresos_por_medio.map(m => (
+                  <div key={m.medio} className="flex justify-between px-4 py-2">
+                    <span className="text-slate-600 flex items-center gap-1.5">
+                      <ArrowDownCircle className="w-3.5 h-3.5 text-orange-500" />
+                      {m.medio}
+                    </span>
+                    <span className="font-medium text-orange-700 tabular-nums">-{formatGs(m.total)}</span>
+                  </div>
+                ))}
+                {/* Total esperado */}
+                <div className="flex justify-between px-4 py-2.5 bg-blue-50">
+                  <span className="font-semibold text-blue-800">Efectivo esperado</span>
+                  <span className="font-bold text-blue-800 tabular-nums">{formatGs(arqueoModal.efectivo_esperado)}</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Input monto contado */}
           <Input
             label="Monto Contado en Efectivo (Gs.)"
             type="number"
@@ -557,15 +739,28 @@ export default function CajaPage() {
             value={montoContado}
             onChange={e => setMontoContado(e.target.value)}
             min={0}
-            step={10000}
           />
-          <p className="text-xs text-slate-400">
-            La diferencia entre el monto esperado y el contado quedará registrada.
-          </p>
+
+          {/* Diferencia en vivo */}
+          {diferenciaViva !== null && (
+            <div className={[
+              'flex justify-between px-4 py-2.5 rounded-xl text-sm font-semibold',
+              diferenciaViva === 0
+                ? 'bg-emerald-50 text-emerald-700'
+                : diferenciaViva > 0
+                ? 'bg-green-50 text-green-700'
+                : 'bg-red-50 text-red-700',
+            ].join(' ')}>
+              <span>Diferencia</span>
+              <span className="tabular-nums">
+                {diferenciaViva > 0 ? '+' : ''}{formatGs(diferenciaViva)}
+              </span>
+            </div>
+          )}
         </div>
       </Modal>
 
-      {/* ── Conciliar Modal ────────────────────────────────────────────────── */}
+      {/* ── Modal Conciliar ────────────────────────────────────────────────── */}
       <Modal
         open={!!conciliarModal}
         title={`Conciliar Cierre — ${conciliarModal?.caja_nombre ?? ''}`}
@@ -586,17 +781,14 @@ export default function CajaPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Diferencia:</span>
-                <span className={[
-                  'font-semibold tabular-nums',
-                  Number(conciliarModal.diferencia_efectivo) === 0 ? 'text-emerald-700' : 'text-red-600',
-                ].join(' ')}>
+                <span className={['font-semibold tabular-nums', Number(conciliarModal.diferencia_efectivo) === 0 ? 'text-emerald-700' : 'text-red-600'].join(' ')}>
                   {formatGs(conciliarModal.diferencia_efectivo)}
                 </span>
               </div>
             </div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+            <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
               Observaciones del Contador
             </label>
             <textarea
@@ -604,11 +796,85 @@ export default function CajaPage() {
               onChange={e => setObsConc(e.target.value)}
               rows={3}
               placeholder="Notas de conciliación (opcional)..."
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors resize-none"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors resize-none"
             />
           </div>
         </div>
       </Modal>
+
+      {/* ── Modal Movimiento Manual ─────────────────────────────────────────── */}
+      <Modal
+        open={movModal}
+        title={movTipo === 'INGRESO' ? 'Registrar Ingreso' : 'Registrar Egreso'}
+        onCancel={() => setMovModal(false)}
+        onOk={confirmarMovimiento}
+        okText={movTipo === 'INGRESO' ? 'Registrar Ingreso' : 'Registrar Egreso'}
+        confirmLoading={movSaving}
+        width={420}
+      >
+        <div className="space-y-4">
+          {/* Tipo toggle */}
+          <div className="flex gap-2">
+            {(['INGRESO', 'EGRESO'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setMovTipo(t)}
+                className={[
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors',
+                  movTipo === t
+                    ? t === 'INGRESO'
+                      ? 'bg-green-50 border-green-300 text-green-700'
+                      : 'bg-orange-50 border-orange-300 text-orange-700'
+                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50',
+                ].join(' ')}
+              >
+                {t === 'INGRESO'
+                  ? <ArrowUpCircle className="w-4 h-4" />
+                  : <ArrowDownCircle className="w-4 h-4" />}
+                {t === 'INGRESO' ? 'Ingreso' : 'Egreso'}
+              </button>
+            ))}
+          </div>
+
+          <Input
+            label="Monto (Gs.)"
+            type="number"
+            placeholder="0"
+            value={movMonto}
+            onChange={e => setMovMonto(e.target.value)}
+            min={1}
+            step={10000}
+          />
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              Medio de Pago
+            </label>
+            <select
+              value={movMedioPago}
+              onChange={e => setMovMedioPago(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors"
+            >
+              <option value="">Sin especificar</option>
+              {mediosPago.map(m => <option key={m.id} value={m.id}>{m.descripcion}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              Descripción
+            </label>
+            <input
+              type="text"
+              value={movDesc}
+              onChange={e => setMovDesc(e.target.value)}
+              placeholder={movTipo === 'INGRESO' ? 'Ej: Fondo de cambio adicional' : 'Ej: Compra de insumos'}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors"
+            />
+          </div>
+        </div>
+      </Modal>
+
     </div>
   )
 }
