@@ -72,7 +72,7 @@ INSTALLED_APPS = [
     "apps.contabilidad",
     "apps.notificaciones",
     "apps.api_integrations",
-
+    "channels",
 ]
 
 AUTH_USER_MODEL = "usuarios.Usuario"
@@ -99,6 +99,21 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "backend.urls"
 WSGI_APPLICATION = "backend.wsgi.application"
+ASGI_APPLICATION = "backend.asgi.application"
+
+if os.environ.get("USE_REDIS_CHANNELS", "False") == "True":
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [REDIS_URL]},
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }
 
 TEMPLATES = [
     {

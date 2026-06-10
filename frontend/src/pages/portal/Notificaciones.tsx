@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   Bell, AlertTriangle, CreditCard, UtensilsCrossed,
-  Calendar, Info, CheckCheck, RefreshCw,
+  Calendar, Info, CheckCheck, RefreshCw, Wifi, WifiOff,
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
@@ -11,6 +11,7 @@ import Button from '../../components/ui/Button'
 import type { LucideIcon } from 'lucide-react'
 
 const POLL_INTERVAL_MS = 30_000
+const WS_RECONNECT_MS  = 5_000
 
 interface Notificacion {
   id: number
@@ -24,20 +25,20 @@ interface Notificacion {
 
 const TIPO_ICON: Record<string, LucideIcon> = {
   SALDO_BAJO: AlertTriangle,
-  RECARGA: CreditCard,
-  CONSUMO: UtensilsCrossed,
+  RECARGA:    CreditCard,
+  CONSUMO:    UtensilsCrossed,
   VENCIMIENTO: Calendar,
-  ALMUERZO: UtensilsCrossed,
-  SISTEMA: Info,
+  ALMUERZO:   UtensilsCrossed,
+  SISTEMA:    Info,
 }
 
 const TIPO_COLOR: Record<string, string> = {
-  SALDO_BAJO: 'text-amber-500',
-  RECARGA: 'text-blue-500',
-  CONSUMO: 'text-green-500',
+  SALDO_BAJO:  'text-amber-500',
+  RECARGA:     'text-blue-500',
+  CONSUMO:     'text-green-500',
   VENCIMIENTO: 'text-orange-500',
-  ALMUERZO: 'text-green-500',
-  SISTEMA: 'text-slate-400',
+  ALMUERZO:    'text-green-500',
+  SISTEMA:     'text-slate-400',
 }
 
 function formatFecha(iso: string) {
@@ -47,15 +48,26 @@ function formatFecha(iso: string) {
   })
 }
 
+function buildWsUrl(): string {
+  const token = localStorage.getItem('access_token') ?? ''
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${proto}//${window.location.host}/ws/notificaciones/?token=${token}`
+}
+
 export default function PortalNotificaciones() {
   const { user } = useAuthStore()
-  const [notifs, setNotifs] = useState<Notificacion[]>([])
-  const [loading, setLoading] = useState(true)
-  const [marcando, setMarcando] = useState<number | null>(null)
+  const [notifs, setNotifs]               = useState<Notificacion[]>([])
+  const [loading, setLoading]             = useState(true)
+  const [marcando, setMarcando]           = useState<number | null>(null)
   const [marcandoTodas, setMarcandoTodas] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [refreshing, setRefreshing] = useState(false)
-  const isFetchingRef = useRef(false)
+  const [lastUpdated, setLastUpdated]     = useState<Date | null>(null)
+  const [refreshing, setRefreshing]       = useState(false)
+  const [wsOnline, setWsOnline]           = useState(false)
+  const isFetchingRef  = useRef(false)
+  const wsRef          = useRef<WebSocket | null>(null)
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // ── REST fetch (initial load + polling fallback) ───────────────────────────
 
   const cargar = useCallback(async (silent = false) => {
     if (!user) return
@@ -88,10 +100,60 @@ export default function PortalNotificaciones() {
 
   useEffect(() => { cargar() }, [cargar])
 
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+
+  const connectWs = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return
+
+    const ws = new WebSocket(buildWsUrl())
+    wsRef.current = ws
+
+    ws.onopen = () => {
+      setWsOnline(true)
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current)
+        reconnectTimer.current = null
+      }
+    }
+
+    ws.onmessage = (event) => {
+      try {
+        const notif: Notificacion = JSON.parse(event.data)
+        setNotifs(prev => {
+          if (prev.find(n => n.id === notif.id)) return prev
+          toast('Nueva notificación', { icon: '🔔' })
+          return [notif, ...prev]
+        })
+        setLastUpdated(new Date())
+      } catch { /* ignore malformed frames */ }
+    }
+
+    ws.onclose = () => {
+      setWsOnline(false)
+      // reconnect after a short delay
+      reconnectTimer.current = setTimeout(() => connectWs(), WS_RECONNECT_MS)
+    }
+
+    ws.onerror = () => ws.close()
+  }, [])
+
   useEffect(() => {
+    connectWs()
+    return () => {
+      wsRef.current?.close()
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
+    }
+  }, [connectWs])
+
+  // ── Polling fallback — only runs when WS is offline ───────────────────────
+
+  useEffect(() => {
+    if (wsOnline) return
     const id = setInterval(() => cargar(true), POLL_INTERVAL_MS)
     return () => clearInterval(id)
-  }, [cargar])
+  }, [wsOnline, cargar])
+
+  // ── Mark as read ──────────────────────────────────────────────────────────
 
   const marcarLeida = async (id: number) => {
     setMarcando(id)
@@ -140,6 +202,15 @@ export default function PortalNotificaciones() {
                 · actualizado {lastUpdated.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
               </p>
             )}
+            <span
+              title={wsOnline ? 'Tiempo real activo' : 'Sin tiempo real — actualizando cada 30s'}
+              className="flex items-center"
+            >
+              {wsOnline
+                ? <Wifi className="w-3.5 h-3.5 text-green-500" />
+                : <WifiOff className="w-3.5 h-3.5 text-slate-300" />
+              }
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2">

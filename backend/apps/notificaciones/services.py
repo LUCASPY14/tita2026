@@ -108,13 +108,14 @@ class NotificacionService:
         tipos_validos = {t[0] for t in Notificacion.Tipo.choices}
         tipo = solicitud.tipo if solicitud.tipo in tipos_validos else Notificacion.Tipo.SISTEMA
 
-        Notificacion.objects.create(
+        notif = Notificacion.objects.create(
             usuario=usuario,
             tipo=tipo,
             titulo=solicitud.tipo.replace("_", " ").capitalize(),
             mensaje=solicitud.mensaje,
             destino=Notificacion.Destino.SISTEMA,
         )
+        push_ws_notificacion(notif)
 
     @staticmethod
     def _enviar_email(solicitud):
@@ -139,6 +140,35 @@ class NotificacionService:
             cuerpo=solicitud.mensaje,
             estado=EmailEnviado.Estado.ENVIADO,
         )
+
+
+def push_ws_notificacion(notificacion) -> None:
+    """Envía la notificación recién creada al WebSocket del usuario en tiempo real."""
+    try:
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
+        group = f"notificaciones_{notificacion.usuario_id}"
+        async_to_sync(channel_layer.group_send)(
+            group,
+            {
+                "type": "notificacion.nueva",
+                "data": {
+                    "id": notificacion.pk,
+                    "tipo": notificacion.tipo,
+                    "titulo": notificacion.titulo,
+                    "mensaje": notificacion.mensaje,
+                    "destino": notificacion.destino,
+                    "leida": notificacion.leida,
+                    "fecha_envio": notificacion.fecha_envio.isoformat(),
+                },
+            },
+        )
+    except Exception:
+        pass
 
 
 class EmailService:
