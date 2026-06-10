@@ -53,8 +53,8 @@ class VentaViewSet(viewsets.ModelViewSet):
         from django.db.models.functions import Coalesce
         return (
             Venta.objects
-            .select_related("cliente", "cajero")
-            .prefetch_related("detalles")
+            .select_related("cliente", "cajero", "hijo", "hijo__grado")
+            .prefetch_related("detalles", "detalles__producto")
             .annotate(
                 _total_pagado=Coalesce(
                     Sum("aplicaciones_pago__monto_aplicado"),
@@ -102,9 +102,20 @@ class VentaViewSet(viewsets.ModelViewSet):
     def _registrar(self, serializer):
         from decimal import Decimal
         from apps.productos.models import Producto
+        from apps.contabilidad.models import CierreCaja
+        from rest_framework.exceptions import ValidationError as DRFValidationError
 
         data = serializer.validated_data
         raw_items = self.request.data.get("items", [])
+
+        # Verificar caja abierta — obligatorio para registrar ventas
+        cierre_caja = CierreCaja.objects.filter(
+            empleado=self.request.user, estado=CierreCaja.Estado.ABIERTO
+        ).select_related("caja").first()
+        if not cierre_caja:
+            raise DRFValidationError({
+                "error": "No hay una caja abierta. Abrí una caja antes de registrar ventas."
+            })
 
         # Resolver IDs de producto a objetos Django (el servicio los necesita como modelos)
         product_ids = [i.get("producto") for i in raw_items if i.get("producto")]
@@ -132,6 +143,9 @@ class VentaViewSet(viewsets.ModelViewSet):
             tarjeta=data.get("tarjeta"),
             hijo=data.get("hijo"),
             items=items,
+            pin_autorizacion=data.get("pin_autorizacion", ""),
+            referencia=data.get("referencia", ""),
+            cierre_caja=cierre_caja,
         )
 
 class DetalleVentaViewSet(viewsets.ModelViewSet):
@@ -265,4 +279,78 @@ class ReporteVentasProductoView(APIView):
             writer.writerow([f["descripcion"], f["categoria"], f["total_cantidad"], f["num_ventas"], f["total_monto"]])
         writer.writerow([])
         writer.writerow(["TOTAL GENERAL", "", "", "", total_general])
+        return response
+
+
+class ReporteVentasCajeroView(APIView):
+    """
+    GET /api/ventas/reporte-cajeros/?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+    Ventas agrupadas por cajero: cantidad, monto total y ticket promedio.
+    Opcional: ?formato=csv
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        from django.db.models import Count, Sum
+
+        desde = request.query_params.get("desde")
+        hasta = request.query_params.get("hasta")
+
+        if not desde or not hasta:
+            return Response(
+                {"error": "Se requieren los parámetros desde y hasta (YYYY-MM-DD)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        qs = (
+            Venta.objects
+            .filter(
+                fecha__date__gte=desde,
+                fecha__date__lte=hasta,
+                estado=Venta.Estado.ACTIVA,
+            )
+            .values("cajero__id", "cajero__nombre", "cajero__apellido", "cajero__email")
+            .annotate(
+                cantidad_ventas=Count("id"),
+                total_monto=Sum("monto_total"),
+            )
+            .order_by("-total_monto")
+        )
+
+        filas = []
+        for r in qs:
+            nombre = f"{r['cajero__nombre'] or ''} {r['cajero__apellido'] or ''}".strip()
+            filas.append({
+                "cajero_id": r["cajero__id"],
+                "username": r["cajero__email"] or "",
+                "nombre": nombre or r["cajero__email"] or "—",
+                "cantidad_ventas": r["cantidad_ventas"],
+                "monto_total": int(r["total_monto"] or 0),
+                "ticket_promedio": int((r["total_monto"] or 0) / r["cantidad_ventas"]) if r["cantidad_ventas"] else 0,
+            })
+
+        total_general = sum(f["monto_total"] for f in filas)
+
+        if request.query_params.get("formato") == "csv":
+            return self._exportar_csv(filas, desde, hasta, total_general)
+
+        return Response({
+            "periodo": {"desde": desde, "hasta": hasta},
+            "total_monto": total_general,
+            "cajeros": filas,
+        })
+
+    def _exportar_csv(self, filas, desde, hasta, total_general):
+        response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+        response["Content-Disposition"] = (
+            f'attachment; filename="ventas_cajero_{desde}_{hasta}.csv"'
+        )
+        writer = csv.writer(response)
+        writer.writerow(["REPORTE DE VENTAS POR CAJERO", f"{desde} al {hasta}"])
+        writer.writerow([])
+        writer.writerow(["Cajero", "Usuario", "Nro Ventas", "Total (Gs)", "Ticket Promedio (Gs)"])
+        for f in filas:
+            writer.writerow([f["nombre"], f["username"], f["cantidad_ventas"], f["monto_total"], f["ticket_promedio"]])
+        writer.writerow([])
+        writer.writerow(["TOTAL GENERAL", "", "", total_general, ""])
         return response

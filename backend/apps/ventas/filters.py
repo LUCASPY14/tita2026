@@ -8,4 +8,4 @@ class VentaFilter(django_filters.FilterSet):
 
     class Meta:
         model = Venta
-        fields = ["estado", "estado_pago", "tipo", "cliente", "fecha_desde", "fecha_hasta"]
+        fields = ["estado", "estado_pago", "tipo", "cliente", "hijo", "tarjeta", "fecha_desde", "fecha_hasta"]

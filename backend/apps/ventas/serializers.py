@@ -26,8 +26,23 @@ class DetalleVentaSerializer(serializers.ModelSerializer):
 
 class VentaSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.CharField(source="cliente.nombre_completo", read_only=True)
+    hijo_nombre = serializers.SerializerMethodField()
+    hijo_grado = serializers.SerializerMethodField()
     detalles = DetalleVentaSerializer(many=True, read_only=True)
     saldo_pendiente = serializers.SerializerMethodField()
+    # Campos write-only: solo fluyen al service, no se persisten en Venta
+    pin_autorizacion = serializers.CharField(write_only=True, required=False, allow_blank=True, default='')
+    referencia = serializers.CharField(write_only=True, required=False, allow_blank=True, default='')
+
+    def get_hijo_nombre(self, obj):
+        if obj.hijo:
+            return f"{obj.hijo.nombre} {obj.hijo.apellido}"
+        return None
+
+    def get_hijo_grado(self, obj):
+        if obj.hijo and obj.hijo.grado:
+            return str(obj.hijo.grado)
+        return None
 
     def get_saldo_pendiente(self, obj):
         total_pagado = getattr(obj, "_total_pagado", None)

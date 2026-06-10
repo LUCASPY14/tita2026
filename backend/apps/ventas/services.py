@@ -40,6 +40,9 @@ class VentaService:
         hijo=None,
         items: list = None,
         estado_pago: str = "PENDIENTE",
+        pin_autorizacion: str = "",
+        referencia: str = "",
+        cierre_caja=None,
     ) -> Venta:
         """
         Registra una venta completa con sus detalles.
@@ -153,13 +156,31 @@ class VentaService:
             # Validar saldo de tarjeta con objeto bloqueado
             if tipo == "CONTADO" and tarjeta_bloqueada:
                 if tarjeta_bloqueada.saldo_actual < monto_total and not tarjeta_bloqueada.permite_saldo_negativo:
-                    raise ValidationError({
-                        "error": "Saldo insuficiente en la tarjeta.",
-                        "saldo_actual": str(tarjeta_bloqueada.saldo_actual),
-                        "monto_venta": str(monto_total),
-                    })
+                    if pin_autorizacion:
+                        # PIN de padre/tutor: verificar y validar límite de crédito
+                        cliente_responsable = tarjeta_bloqueada.hijo.cliente_responsable
+                        if not cliente_responsable.check_pin(pin_autorizacion):
+                            raise ValidationError({"error": "PIN de autorización incorrecto."})
+                        deficit = monto_total - tarjeta_bloqueada.saldo_actual
+                        if deficit > tarjeta_bloqueada.limite_credito:
+                            raise ValidationError({
+                                "error": "La compra excede el límite de crédito autorizado.",
+                                "limite_credito": str(tarjeta_bloqueada.limite_credito),
+                                "deficit": str(deficit),
+                            })
+                        # PIN válido y dentro del límite — se permite saldo negativo para esta operación
+                    else:
+                        raise ValidationError({
+                            "error": "Saldo insuficiente en la tarjeta.",
+                            "saldo_actual": str(tarjeta_bloqueada.saldo_actual),
+                            "monto_venta": str(monto_total),
+                        })
 
             # 2. Crear Venta
+            # Si no se pasó hijo explícitamente pero hay tarjeta, tomarlo de la tarjeta
+            if hijo is None and tarjeta_bloqueada is not None:
+                hijo = tarjeta_bloqueada.hijo
+
             venta = Venta.objects.create(
                 cliente=cliente,
                 cajero=cajero,
@@ -167,6 +188,7 @@ class VentaService:
                 medio_pago=medio_pago,
                 hijo=hijo,
                 tarjeta=tarjeta_bloqueada,
+                caja=cierre_caja.caja if cierre_caja else None,
                 monto_total=monto_total,
                 monto_gravada_10=monto_gravada_10,
                 monto_gravada_5=monto_gravada_5,
@@ -224,6 +246,8 @@ class VentaService:
                     monto=monto_total,
                     medio_pago=medio_pago,
                     cajero=cajero,
+                    referencia=referencia or None,
+                    cierre_caja=cierre_caja,
                     estado=PagoVenta.Estado.CONCILIADO,
                 )
                 AplicacionPago.objects.create(
@@ -231,6 +255,16 @@ class VentaService:
                     venta=venta,
                     monto_aplicado=monto_total,
                 )
+                if cierre_caja:
+                    from apps.contabilidad.models import MovimientoCaja
+                    MovimientoCaja.objects.create(
+                        cierre=cierre_caja,
+                        tipo=MovimientoCaja.Tipo.INGRESO,
+                        monto=monto_total,
+                        descripcion=f"Venta #{venta.pk}",
+                        medio_pago=medio_pago,
+                        venta=venta,
+                    )
 
             # 6. Si es contado con tarjeta, descontar saldo
             if tipo == "CONTADO" and tarjeta_bloqueada:
@@ -247,6 +281,16 @@ class VentaService:
                     descripcion=f"Venta #{venta.pk}",
                     creado_por=cajero,
                 )
+                if cierre_caja:
+                    from apps.contabilidad.models import MovimientoCaja
+                    MovimientoCaja.objects.create(
+                        cierre=cierre_caja,
+                        tipo=MovimientoCaja.Tipo.INGRESO,
+                        monto=monto_total,
+                        descripcion=f"Venta #{venta.pk} - Tarjeta prepago",
+                        medio_pago=None,
+                        venta=venta,
+                    )
 
             return venta
 
