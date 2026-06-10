@@ -74,26 +74,29 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
+  const showCharts = user?.rol !== 'COCINA'
+
   useEffect(() => {
     const { desde, hasta } = getWeekRange()
-    Promise.all([
-      api.get('/contabilidad/dashboard/'),
-      api.get('/contabilidad/reportes/', { params: { fecha_desde: desde, fecha_hasta: hasta } }),
-      api.get('/contabilidad/dashboard/tendencia/', { params: { dias: 14 } }),
-    ])
+    const reqs: Promise<{ data: unknown }>[] = [api.get('/contabilidad/dashboard/')]
+    if (showCharts) {
+      reqs.push(
+        api.get('/contabilidad/reportes/', { params: { fecha_desde: desde, fecha_hasta: hasta } }),
+        api.get('/contabilidad/dashboard/tendencia/', { params: { dias: 14 } }),
+      )
+    }
+    Promise.all(reqs)
       .then(([dashRes, repRes, tendRes]) => {
-        setResumen(dashRes.data)
-        const v = repRes.data?.ventas
-        setChart({
-          por_tipo: v?.por_tipo ?? [],
-          monto_total: v?.monto_total ?? 0,
-          cantidad_total: v?.cantidad ?? 0,
-        })
-        setTendencia(tendRes.data?.data ?? [])
+        setResumen(dashRes.data as Resumen)
+        if (showCharts && repRes) {
+          const v = (repRes.data as { ventas?: { por_tipo?: VentaTipo[]; monto_total?: number; cantidad?: number } })?.ventas
+          setChart({ por_tipo: v?.por_tipo ?? [], monto_total: v?.monto_total ?? 0, cantidad_total: v?.cantidad ?? 0 })
+          setTendencia(((tendRes?.data as { data?: TendenciaPoint[] })?.data) ?? [])
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [showCharts])
 
   const hora = new Date().getHours()
   const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
@@ -103,7 +106,7 @@ export default function Dashboard() {
     [resumen]
   )
 
-  const stats = useMemo(() => [
+  const ALL_STATS = useMemo(() => [
     {
       label: 'Ventas Hoy', value: r.ventasHoy, sub: `${r.montoHoy.toLocaleString('es-PY')} Gs.`,
       icon: ShoppingCart, color: 'text-blue-600', bg: 'bg-blue-50',
@@ -127,6 +130,19 @@ export default function Dashboard() {
       icon: Banknote, color: 'text-purple-600', bg: 'bg-purple-50',
     },
   ], [r])
+
+  const STATS_POR_ROL: Record<string, string[]> = {
+    ADMIN:      ['Ventas Hoy', 'Clientes Activos', 'Productos', 'Alertas Stock', 'Cajas Abiertas'],
+    CAJERO:     ['Ventas Hoy', 'Alertas Stock', 'Cajas Abiertas'],
+    SUPERVISOR: ['Ventas Hoy', 'Clientes Activos', 'Productos', 'Alertas Stock', 'Cajas Abiertas'],
+    COBRADOR:   ['Ventas Hoy', 'Clientes Activos', 'Alertas Stock', 'Cajas Abiertas'],
+    COCINA:     ['Ventas Hoy', 'Cajas Abiertas'],
+  }
+
+  const stats = useMemo(() => {
+    const allowed = STATS_POR_ROL[user?.rol ?? '']
+    return allowed ? ALL_STATS.filter(s => allowed.includes(s.label)) : ALL_STATS
+  }, [ALL_STATS, user?.rol])
 
   const pieData = useMemo(
     () => (chart?.por_tipo ?? []).map(t => ({
@@ -197,18 +213,21 @@ export default function Dashboard() {
 
   if (loading) return <Spinner className="mt-24" />
 
+  const rol = user?.rol ?? ''
   const accesos = [
-    { path: '/modo-recreo',  label: 'Modo Recreo',     icon: Zap,            color: 'bg-green-600',   desc: 'POS — venta en recreo' },
-    { path: '/carga-saldo',  label: 'Recargar Tarjeta', icon: Wallet,         color: 'bg-emerald-600', desc: 'Carga de saldo RFID' },
-    { path: '/caja',         label: 'Gestionar Caja',  icon: Banknote,        color: 'bg-purple-600',  desc: 'Abrir / cerrar caja' },
-    { path: '/almuerzos',    label: 'Almuerzos',       icon: UtensilsCrossed, color: 'bg-amber-600',   desc: 'Gestión de almuerzos' },
-    { path: '/menu-diario',  label: 'Menú Diario',     icon: ChefHat,         color: 'bg-orange-600',  desc: 'Configurar menú del día' },
-    { path: '/clientes',     label: 'Clientes',        icon: Users,           color: 'bg-cyan-600',    desc: 'Ver y gestionar clientes' },
-    { path: '/inventario',   label: 'Inventario',      icon: Warehouse,       color: 'bg-slate-600',   desc: 'Stock y alertas' },
-    { path: '/reportes',     label: 'Reportes',        icon: BarChart2,       color: 'bg-rose-600',    desc: 'Ver reportes del período' },
-    { path: '/compras',      label: 'Compras',         icon: Truck,           color: 'bg-indigo-600',  desc: 'Registrar ingreso de stock' },
-    { path: '/facturacion',  label: 'Facturación',     icon: CreditCard,      color: 'bg-blue-600',    desc: 'Emitir facturas' },
-  ]
+    { path: '/modo-recreo',  label: 'Modo Recreo',      icon: Zap,            color: 'bg-green-600',   desc: 'POS — venta en recreo',        roles: ['ADMIN', 'CAJERO'] },
+    { path: '/carga-saldo',  label: 'Recargar Tarjeta', icon: Wallet,         color: 'bg-emerald-600', desc: 'Carga de saldo RFID',           roles: ['ADMIN', 'CAJERO'] },
+    { path: '/caja',         label: 'Gestionar Caja',   icon: Banknote,       color: 'bg-purple-600',  desc: 'Abrir / cerrar caja',           roles: ['ADMIN', 'CAJERO'] },
+    { path: '/almuerzos',    label: 'Almuerzos',        icon: UtensilsCrossed, color: 'bg-amber-600',  desc: 'Gestión de almuerzos',          roles: ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COCINA'] },
+    { path: '/comedor',      label: 'Comedor',          icon: ChefHat,        color: 'bg-teal-600',    desc: 'Registro de servicio comedor',  roles: ['ADMIN', 'COCINA'] },
+    { path: '/menu-diario',  label: 'Menú Diario',      icon: ChefHat,        color: 'bg-orange-600',  desc: 'Configurar menú del día',       roles: ['ADMIN', 'SUPERVISOR', 'COCINA'] },
+    { path: '/clientes',     label: 'Clientes',         icon: Users,          color: 'bg-cyan-600',    desc: 'Ver y gestionar clientes',      roles: ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR'] },
+    { path: '/tarjetas',     label: 'Tarjetas',         icon: CreditCard,     color: 'bg-sky-600',     desc: 'Gestión de tarjetas RFID',     roles: ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR'] },
+    { path: '/inventario',   label: 'Inventario',       icon: Warehouse,      color: 'bg-slate-600',   desc: 'Stock y alertas',               roles: ['ADMIN', 'SUPERVISOR'] },
+    { path: '/reportes',     label: 'Reportes',         icon: BarChart2,      color: 'bg-rose-600',    desc: 'Ver reportes del período',      roles: ['ADMIN', 'SUPERVISOR', 'COBRADOR'] },
+    { path: '/compras',      label: 'Compras',          icon: Truck,          color: 'bg-indigo-600',  desc: 'Registrar ingreso de stock',    roles: ['ADMIN', 'CAJERO', 'SUPERVISOR'] },
+    { path: '/facturacion',  label: 'Facturación',      icon: CreditCard,     color: 'bg-blue-600',    desc: 'Emitir facturas',               roles: ['ADMIN', 'CAJERO', 'COBRADOR'] },
+  ].filter(a => a.roles.includes(rol))
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -301,7 +320,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Tendencia de ventas ───────────────────────────────────────────────── */}
-      {tendenciaData.length > 0 && (
+      {showCharts && tendenciaData.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-800">Tendencia de ventas — últimos 14 días</h2>
@@ -331,7 +350,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Gráficos de la semana ─────────────────────────────────────────────── */}
-      {chart && chart.por_tipo.length > 0 && (
+      {showCharts && chart && chart.por_tipo.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Distribución por tipo */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
@@ -399,7 +418,7 @@ export default function Dashboard() {
       )}
 
       {/* Stock crítico alert */}
-      {r.stockBajo > 0 && (
+      {r.stockBajo > 0 && ['ADMIN', 'SUPERVISOR', 'CAJERO'].includes(rol) && (
         <div
           className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-3 cursor-pointer hover:bg-red-100 transition-colors group"
           onClick={() => navigate('/productos')}
