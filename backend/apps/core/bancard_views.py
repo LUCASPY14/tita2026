@@ -79,6 +79,13 @@ def bancard_iniciar(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    # ── Verificar que las claves Bancard están configuradas ──────────────────
+    if not bancard_service._public_key() or not bancard_service._private_key():
+        return Response(
+            {"detail": "La integración de pagos no está configurada. Contactá con la administración."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
     # ── Obtener cliente del usuario autenticado ──────────────────────────────
     cliente = getattr(request.user, "cliente", None)
 
