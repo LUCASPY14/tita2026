@@ -5,6 +5,12 @@ import functools
 from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
 
+# Roles internos del sistema (excluye CLIENTE_WEB)
+_STAFF_ROLES = frozenset({"ADMIN", "CAJERO", "COCINA", "SUPERVISOR", "COBRADOR"})
+
+# Roles que operan el POS directamente
+_POS_ROLES = frozenset({"ADMIN", "CAJERO"})
+
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -20,22 +26,22 @@ class IsAdmin(permissions.BasePermission):
 
 
 class IsCajeroOrAdmin(permissions.BasePermission):
-    """Cajeros y administradores."""
+    """Operadores del POS: cajeros y administradores."""
     def has_permission(self, request, view):
         return bool(
             request.user and
             request.user.is_authenticated and
-            request.user.rol in ("ADMIN", "CAJERO")
+            request.user.rol in _POS_ROLES
         )
 
 
 class IsStaffUser(permissions.BasePermission):
-    """Cualquier usuario interno (ADMIN, CAJERO, COCINA) — excluye CLIENTE_WEB."""
+    """Cualquier usuario interno (excluye CLIENTE_WEB)."""
     def has_permission(self, request, view):
         return bool(
             request.user and
             request.user.is_authenticated and
-            request.user.rol in ("ADMIN", "CAJERO", "COCINA")
+            request.user.rol in _STAFF_ROLES
         )
 
 
@@ -50,12 +56,12 @@ class IsClienteWeb(permissions.BasePermission):
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
-    """Solo ADMIN puede escribir; staff puede leer."""
+    """Solo ADMIN puede escribir; cualquier staff puede leer."""
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
         if request.method in permissions.SAFE_METHODS:
-            return request.user.rol in ("ADMIN", "CAJERO", "COCINA")
+            return request.user.rol in _STAFF_ROLES
         return request.user.rol == "ADMIN"
 
 
@@ -64,7 +70,7 @@ class IsStaffOrClienteWeb(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        if request.user.rol in ("ADMIN", "CAJERO", "COCINA"):
+        if request.user.rol in _STAFF_ROLES:
             return True
         if request.user.rol == "CLIENTE_WEB":
             return request.method in permissions.SAFE_METHODS
@@ -92,7 +98,7 @@ def require_permission(modulo: str, accion: str):
                 return view_func(self_or_view, request, *args, **kwargs)
             # Verificar en RolPermiso
             try:
-                from apps.usuarios.models import RolPermiso, Permiso
+                from apps.usuarios.models import RolPermiso
                 tiene = RolPermiso.objects.filter(
                     id_rol__nombre=user.rol,
                     id_permiso__modulo=modulo,

@@ -27,36 +27,49 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
+// Todos los roles internos del sistema
+const ALL_STAFF = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR', 'COCINA']
+const ADMIN_ONLY = ['ADMIN']
+const POS_ROLES = ['ADMIN', 'CAJERO']
+const REPORTING = ['ADMIN', 'SUPERVISOR', 'COBRADOR']
+const OPS_ROLES = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COCINA']
+const BILLING   = ['ADMIN', 'CAJERO', 'COBRADOR']
+const TARJETAS  = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
+const CLIENTES  = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
+
 interface NavItem {
   path: string
   label: string
   icon: LucideIcon
+  roles: string[]
 }
 
 const navItems: NavItem[] = [
-  { path: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
-  { path: '/modo-recreo',  label: 'Modo Recreo',  icon: Zap },
-  { path: '/almuerzos',    label: 'Almuerzos',    icon: UtensilsCrossed },
-  { path: '/comedor',      label: 'Comedor',      icon: Utensils },
-  { path: '/menu-diario',  label: 'Menú Diario',  icon: ChefHat },
-  { path: '/tarjetas',     label: 'Tarjetas',     icon: CreditCard },
-  { path: '/carga-saldo',  label: 'Carga Saldo',  icon: Wallet },
-  { path: '/clientes',     label: 'Clientes',     icon: Users },
-  { path: '/productos',    label: 'Productos',    icon: Package },
-  { path: '/compras',      label: 'Compras',      icon: Truck },
-  { path: '/caja',         label: 'Caja',         icon: Banknote },
-  { path: '/facturacion',  label: 'Facturación',  icon: FileText },
-  { path: '/reportes',     label: 'Reportes',     icon: BarChart2 },
-  { path: '/inventario',   label: 'Inventario',   icon: Warehouse },
-  { path: '/alergenos',    label: 'Alérgenos',    icon: Leaf },
-  { path: '/usuarios',     label: 'Usuarios',     icon: UserCog },
-  { path: '/integraciones',label: 'Integraciones',icon: Plug },
-  { path: '/configuracion',label: 'Configuración',icon: Settings },
+  { path: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard, roles: ALL_STAFF },
+  { path: '/modo-recreo',  label: 'Modo Recreo',  icon: Zap,             roles: POS_ROLES },
+  { path: '/almuerzos',    label: 'Almuerzos',    icon: UtensilsCrossed, roles: OPS_ROLES },
+  { path: '/comedor',      label: 'Comedor',      icon: Utensils,        roles: OPS_ROLES },
+  { path: '/menu-diario',  label: 'Menú Diario',  icon: ChefHat,         roles: OPS_ROLES },
+  { path: '/tarjetas',     label: 'Tarjetas',     icon: CreditCard,      roles: TARJETAS },
+  { path: '/carga-saldo',  label: 'Carga Saldo',  icon: Wallet,          roles: BILLING },
+  { path: '/clientes',     label: 'Clientes',     icon: Users,           roles: CLIENTES },
+  { path: '/productos',    label: 'Productos',    icon: Package,         roles: OPS_ROLES },
+  { path: '/compras',      label: 'Compras',      icon: Truck,           roles: ['ADMIN', 'CAJERO', 'SUPERVISOR'] },
+  { path: '/caja',         label: 'Caja',         icon: Banknote,        roles: ['ADMIN', 'CAJERO', 'SUPERVISOR'] },
+  { path: '/facturacion',  label: 'Facturación',  icon: FileText,        roles: BILLING },
+  { path: '/reportes',     label: 'Reportes',     icon: BarChart2,       roles: REPORTING },
+  { path: '/inventario',   label: 'Inventario',   icon: Warehouse,       roles: ['ADMIN', 'SUPERVISOR'] },
+  { path: '/alergenos',    label: 'Alérgenos',    icon: Leaf,            roles: OPS_ROLES },
+  { path: '/usuarios',     label: 'Usuarios',     icon: UserCog,         roles: ADMIN_ONLY },
+  { path: '/integraciones',label: 'Integraciones',icon: Plug,            roles: ADMIN_ONLY },
+  { path: '/configuracion',label: 'Configuración',icon: Settings,        roles: ADMIN_ONLY },
 ]
 
 const ROL_LABEL: Record<string, string> = {
   ADMIN:       'Administrador',
   CAJERO:      'Cajero',
+  SUPERVISOR:  'Supervisor',
+  COBRADOR:    'Cobrador',
   COCINA:      'Cocina',
   CLIENTE_WEB: 'Portal Padres',
 }
@@ -70,6 +83,7 @@ export default function AppLayout() {
   const { user, logout } = useAuthStore()
 
   const initials = (user?.nombre?.[0] ?? 'U').toUpperCase()
+  const visibleNav = navItems.filter(item => item.roles.includes(user?.rol ?? ''))
 
   const handleLogout = () => {
     logout()
@@ -119,7 +133,7 @@ export default function AppLayout() {
 
         {/* Nav */}
         <nav role="navigation" aria-label="Menú principal" className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ path, label, icon: Icon }) => {
+          {visibleNav.map(({ path, label, icon: Icon }) => {
             const active = location.pathname === path || location.pathname.startsWith(path + '/')
             return (
               <button

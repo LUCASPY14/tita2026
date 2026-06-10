@@ -43,6 +43,8 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     class Rol(models.TextChoices):
         ADMIN = "ADMIN", "Administrador"
         CAJERO = "CAJERO", "Cajero"
+        SUPERVISOR = "SUPERVISOR", "Supervisor"
+        COBRADOR = "COBRADOR", "Cobrador"
         COCINA = "COCINA", "Cocina"
         CLIENTE_WEB = "CLIENTE_WEB", "Cliente Portal Web"
 
@@ -120,7 +122,10 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     @property
     def es_empleado(self):
-        return self.rol in [self.Rol.ADMIN, self.Rol.CAJERO, self.Rol.COCINA]
+        return self.rol in [
+            self.Rol.ADMIN, self.Rol.CAJERO, self.Rol.SUPERVISOR,
+            self.Rol.COBRADOR, self.Rol.COCINA,
+        ]
 
     def save(self, *args, **kwargs):
         # is_superuser solo tiene sentido para ADMIN; evita escalada de privilegios en el admin Django.

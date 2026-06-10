@@ -120,28 +120,48 @@ export default function App() {
         <Route path="/recuperar-password" element={<RecuperarPassword />} />
         <Route path="/reset-password" element={<RestablecerPassword />} />
         <Route element={
-          <PrivateRoute roles={['ADMIN', 'CAJERO', 'COCINA']}>
+          <PrivateRoute roles={['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR', 'COCINA']}>
             <AppLayout />
           </PrivateRoute>
         }>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/ventas" element={<Navigate to="/modo-recreo" />} />
-          <Route path="/compras" element={<Compras />} />
-          <Route path="/clientes" element={<Clientes />} />
-          <Route path="/productos" element={<Productos />} />
-          <Route path="/tarjetas" element={<Tarjetas />} />
-          <Route path="/carga-saldo" element={<CargaSaldo />} />
-          <Route path="/caja" element={<Caja />} />
           <Route path="/almuerzos" element={<Almuerzos />} />
           <Route path="/comedor" element={<Comedor />} />
-          <Route path="/facturacion" element={<Facturacion />} />
-          <Route path="/reportes" element={<Reportes />} />
-          <Route path="/inventario" element={<Inventario />} />
-          <Route path="/usuarios" element={<Usuarios />} />
-          <Route path="/configuracion" element={<Configuracion />} />
           <Route path="/menu-diario" element={<MenuDiario />} />
+          <Route path="/tarjetas" element={<Tarjetas />} />
+          <Route path="/carga-saldo" element={<CargaSaldo />} />
+          <Route path="/clientes" element={<Clientes />} />
+          <Route path="/productos" element={<Productos />} />
+          <Route path="/compras" element={<Compras />} />
+          <Route path="/caja" element={<Caja />} />
+          <Route path="/facturacion" element={<Facturacion />} />
           <Route path="/alergenos" element={<Alergenos />} />
-          <Route path="/integraciones" element={<Integraciones />} />
+          <Route path="/reportes" element={
+            <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'COBRADOR']}>
+              <Reportes />
+            </PrivateRoute>
+          } />
+          <Route path="/inventario" element={
+            <PrivateRoute roles={['ADMIN', 'SUPERVISOR']}>
+              <Inventario />
+            </PrivateRoute>
+          } />
+          <Route path="/usuarios" element={
+            <PrivateRoute roles={['ADMIN']}>
+              <Usuarios />
+            </PrivateRoute>
+          } />
+          <Route path="/configuracion" element={
+            <PrivateRoute roles={['ADMIN']}>
+              <Configuracion />
+            </PrivateRoute>
+          } />
+          <Route path="/integraciones" element={
+            <PrivateRoute roles={['ADMIN']}>
+              <Integraciones />
+            </PrivateRoute>
+          } />
         </Route>
 
         {/* Modo Recreo — overlay full-screen, fuera del AppLayout */}
