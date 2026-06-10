@@ -14,6 +14,8 @@ interface ModalProps {
   width?: number
   /** null = no footer; ReactNode = custom footer; undefined = default OK/Cancel */
   footer?: ReactNode | null
+  /** Deshabilitar cierre con Escape (útil cuando hay un modal hijo abierto) */
+  disableEscape?: boolean
 }
 
 export default function Modal({
@@ -27,6 +29,7 @@ export default function Modal({
   children,
   width = 480,
   footer,
+  disableEscape = false,
 }: ModalProps) {
   useEffect(() => {
     if (!open) {
@@ -35,14 +38,17 @@ export default function Modal({
     }
     document.body.style.overflow = 'hidden'
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !confirmLoading) onCancel()
+      if (e.key === 'Escape' && !confirmLoading && !disableEscape) {
+        e.stopImmediatePropagation()
+        onCancel()
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.body.style.overflow = ''
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [open, onCancel, confirmLoading])
+  }, [open, onCancel, confirmLoading, disableEscape])
 
   if (!open) return null
 

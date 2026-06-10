@@ -5,6 +5,7 @@ import {
   Plus, Search, Users, Edit2, AlertTriangle,
   GraduationCap, Phone, Mail, ShieldAlert, Baby,
   UserPlus, Crown, Bell, Eye, Trash2, ChevronDown,
+  Camera, Upload, X, ShoppingBag,
 } from 'lucide-react'
 import api from '../services/api'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
@@ -226,13 +227,13 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
   })
 
   const selectClass = (hasError?: boolean) => [
-    'w-full border rounded-xl px-3 py-2 text-sm text-slate-900 bg-white',
+    'w-full border rounded-xl px-3 py-2 text-base text-slate-900 bg-white',
     'focus:outline-none focus:ring-2 transition-colors duration-150',
     hasError
       ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500'
       : 'border-slate-200 focus:ring-green-500/30 focus:border-green-500',
   ].join(' ')
-  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   return (
     <Modal
@@ -293,7 +294,7 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
             {...register('direccion')}
           />
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Ciudad</label>
+            <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Ciudad</label>
             <Combobox
               options={CIUDADES_PY.map(c => ({ value: c, label: c }))}
               value={ciudadVal || undefined}
@@ -387,9 +388,20 @@ interface HijoModalProps {
 function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) {
   const [form, setForm] = useState<HijoForm>(BLANK_HIJO)
   const [saving, setSaving] = useState(false)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [webcamActive, setWebcamActive] = useState(false)
+  const [webcamError, setWebcamError] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      stopWebcam()
+      return
+    }
     setForm(hijo
       ? {
           nombre: hijo.nombre,
@@ -400,7 +412,70 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
         }
       : BLANK_HIJO
     )
+    setPhotoFile(null)
+    setPhotoPreview(hijo?.foto_perfil ?? null)
+    setWebcamActive(false)
+    setWebcamError(null)
   }, [open, hijo])
+
+  // Wire stream to video element after webcam activates
+  useEffect(() => {
+    if (webcamActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current
+    }
+  }, [webcamActive])
+
+  function stopWebcam() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+    setWebcamActive(false)
+  }
+
+  async function startWebcam() {
+    setWebcamError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+      })
+      streamRef.current = stream
+      setWebcamActive(true)
+    } catch (err) {
+      const msg = (err as Error).message ?? ''
+      setWebcamError(
+        msg.toLowerCase().includes('denied') || msg.toLowerCase().includes('notallowed')
+          ? 'Permiso denegado. Habilitá el acceso a la cámara en tu navegador.'
+          : 'No se pudo acceder a la cámara.',
+      )
+    }
+  }
+
+  function capturePhoto() {
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    if (!video || !canvas) return
+    canvas.width = video.videoWidth || 640
+    canvas.height = video.videoHeight || 480
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(video, 0, 0)
+    canvas.toBlob((blob) => {
+      if (!blob) return
+      const file = new File([blob], 'foto_perfil.jpg', { type: 'image/jpeg' })
+      setPhotoFile(file)
+      setPhotoPreview(URL.createObjectURL(blob))
+      stopWebcam()
+    }, 'image/jpeg', 0.88)
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+    e.target.value = ''
+  }
 
   function setText(field: keyof HijoForm) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -413,20 +488,35 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
       return
     }
     setSaving(true)
-    const payload = {
-      ...form,
-      fecha_nacimiento: form.fecha_nacimiento || null,
-      grado: form.grado || null,
-      cliente_responsable: clienteId,
-    }
     try {
-      if (hijo) {
-        await api.patch(`/clientes/hijos/${hijo.id}/`, payload)
-        toast.success('Estudiante actualizado')
+      if (photoFile) {
+        const fd = new FormData()
+        fd.append('nombre', form.nombre)
+        fd.append('apellido', form.apellido)
+        fd.append('activo', String(form.activo))
+        fd.append('cliente_responsable', String(clienteId))
+        if (form.fecha_nacimiento) fd.append('fecha_nacimiento', form.fecha_nacimiento)
+        if (form.grado) fd.append('grado', form.grado)
+        fd.append('foto_perfil', photoFile)
+        if (hijo) {
+          await api.patch(`/clientes/hijos/${hijo.id}/`, fd)
+        } else {
+          await api.post('/clientes/hijos/', fd)
+        }
       } else {
-        await api.post('/clientes/hijos/', payload)
-        toast.success('Estudiante registrado')
+        const payload = {
+          ...form,
+          fecha_nacimiento: form.fecha_nacimiento || null,
+          grado: form.grado || null,
+          cliente_responsable: clienteId,
+        }
+        if (hijo) {
+          await api.patch(`/clientes/hijos/${hijo.id}/`, payload)
+        } else {
+          await api.post('/clientes/hijos/', payload)
+        }
       }
+      toast.success(hijo ? 'Estudiante actualizado' : 'Estudiante registrado')
       onSaved()
       onClose()
     } catch (err) {
@@ -436,17 +526,104 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
     }
   }
 
+  const initials = `${form.nombre?.[0] ?? ''}${form.apellido?.[0] ?? ''}`.toUpperCase()
+
   return (
     <Modal
       open={open}
       title={hijo ? 'Editar Estudiante' : 'Nuevo Estudiante'}
-      onCancel={onClose}
+      onCancel={() => { stopWebcam(); onClose() }}
       onOk={handleSave}
       okText={hijo ? 'Guardar Cambios' : 'Registrar'}
       confirmLoading={saving}
-      width={460}
+      width={500}
     >
       <div className="space-y-4">
+
+        {/* ── Foto de perfil ── */}
+        <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center border-2 border-white shadow shrink-0">
+            {photoPreview ? (
+              <img src={photoPreview} alt="Foto" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-blue-700 font-bold text-xl">{initials || '?'}</span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-600 mb-2">Foto del estudiante</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-slate-700"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Archivo
+              </button>
+              <button
+                type="button"
+                onClick={startWebcam}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-slate-700"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                Webcam
+              </button>
+              {photoPreview && (
+                <button
+                  type="button"
+                  onClick={() => { setPhotoFile(null); setPhotoPreview(null) }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 border border-red-100 rounded-lg transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Quitar
+                </button>
+              )}
+            </div>
+            {webcamError && (
+              <p className="text-xs text-red-500 mt-1.5">{webcamError}</p>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+
+        {/* ── Vista de webcam ── */}
+        {webcamActive && (
+          <div className="rounded-xl overflow-hidden border border-slate-200 bg-black">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full max-h-60 object-cover"
+            />
+            <div className="flex items-center justify-center gap-3 px-3 py-2 bg-slate-900">
+              <button
+                type="button"
+                onClick={capturePhoto}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                <Camera className="w-4 h-4" />
+                Capturar
+              </button>
+              <button
+                type="button"
+                onClick={stopWebcam}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+        <canvas ref={canvasRef} className="hidden" />
+
+        {/* ── Datos del estudiante ── */}
         <div className="grid grid-cols-2 gap-4">
           <Input label="Nombre *" value={form.nombre} onChange={setText('nombre')} placeholder="Juan" />
           <Input label="Apellido *" value={form.apellido} onChange={setText('apellido')} placeholder="García" />
@@ -507,8 +684,8 @@ function AgregarResponsableModal({ open, hijoId, onClose, onSaved }: AgregarResp
       .catch(() => toast.error('Error al cargar clientes'))
   }, [open])
 
-  const selectClass = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors'
-  const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+  const selectClass = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors'
+  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   async function handleSave() {
     if (!form.cliente) { toast.error('Seleccioná un cliente'); return }
@@ -690,7 +867,7 @@ function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
       >
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-500">
+            <p className="text-sm text-slate-500">
               Los responsables son contactados en orden de cobro cuando hay deuda pendiente.
             </p>
             <Button variant="primary" size="sm" onClick={() => setAgregarOpen(true)}>
@@ -728,7 +905,7 @@ function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-slate-800">{r.cliente_nombre}</span>
+                        <span className="text-base font-semibold text-slate-800">{r.cliente_nombre}</span>
                         {r.es_titular && (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
                             <Crown className="w-3 h-3" />
@@ -738,7 +915,7 @@ function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
                         <Badge color="default">{r.parentesco_display}</Badge>
                         {!r.activo && <Badge color="red">Inactivo</Badge>}
                       </div>
-                      <div className="mt-1 flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+                      <div className="mt-1 flex items-center gap-3 text-sm text-slate-400 flex-wrap">
                         <span className="font-mono">{r.cliente_ruc_ci}</span>
                         {r.cliente_telefono && (
                           <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{r.cliente_telefono}</span>
@@ -753,7 +930,7 @@ function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
                           onClick={() => handleToggle(r, 'recibe_notificaciones')}
                           title="Recibe notificaciones de cobro"
                           className={[
-                            'flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors',
+                            'flex items-center gap-1 text-sm px-2 py-0.5 rounded-full border transition-colors',
                             r.recibe_notificaciones
                               ? 'border-blue-200 bg-blue-50 text-blue-700'
                               : 'border-slate-200 bg-slate-50 text-slate-400 line-through',
@@ -766,7 +943,7 @@ function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
                           onClick={() => handleToggle(r, 'puede_ver_saldo')}
                           title="Puede ver saldo en el portal"
                           className={[
-                            'flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors',
+                            'flex items-center gap-1 text-sm px-2 py-0.5 rounded-full border transition-colors',
                             r.puede_ver_saldo
                               ? 'border-green-200 bg-green-50 text-green-700'
                               : 'border-slate-200 bg-slate-50 text-slate-400 line-through',
@@ -784,7 +961,7 @@ function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
                         <button
                           onClick={() => handleSetTitular(r)}
                           title="Designar como titular"
-                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                          className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                         >
                           <Crown className="w-3 h-3" />
                           Titular
@@ -793,7 +970,7 @@ function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
                       <button
                         onClick={() => handleToggle(r, 'activo')}
                         className={[
-                          'px-2 py-1 text-xs font-medium rounded-lg transition-colors',
+                          'px-2 py-1 text-sm font-medium rounded-lg transition-colors',
                           r.activo
                             ? 'text-slate-400 hover:text-orange-600 hover:bg-orange-50'
                             : 'text-slate-400 hover:text-green-600 hover:bg-green-50',
@@ -819,7 +996,7 @@ function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
           )}
 
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-xs text-slate-400">
+            <p className="text-sm text-slate-400">
               <ChevronDown className="w-3 h-3 inline mr-1" />
               El titular se sincroniza con el responsable financiero principal del alumno.
             </p>
@@ -840,6 +1017,201 @@ function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
 
 // ─── HijosModal ───────────────────────────────────────────────────────────────
 
+interface DetalleConsumo {
+  id: number
+  producto_nombre: string
+  cantidad: string
+  precio_unitario: string
+  subtotal: string
+}
+
+interface VentaConsumo {
+  id: number
+  fecha: string
+  monto_total: string
+  estado: string
+  detalles: DetalleConsumo[]
+}
+
+function formatFechaConsumo(iso: string) {
+  return new Date(iso).toLocaleString('es-PY', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+function formatGsConsumo(v: string | number) {
+  return (Number(v) || 0).toLocaleString('es-PY') + ' Gs.'
+}
+
+// ─── ConsumoModal ─────────────────────────────────────────────────────────────
+
+interface ConsumoModalProps {
+  open: boolean
+  hijo: Hijo | null
+  onClose: () => void
+}
+
+function ConsumoModal({ open, hijo, onClose }: ConsumoModalProps) {
+  const [ventas, setVentas] = useState<VentaConsumo[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const PAGE_SIZE = 15
+
+  const loadVentas = useCallback(async (p: number, append = false) => {
+    if (!hijo) return
+    append ? setLoadingMore(true) : setLoading(true)
+    try {
+      const { data } = await api.get('/ventas/ventas/', {
+        params: { hijo: hijo.id, page: p, page_size: PAGE_SIZE, ordering: '-fecha', estado: 'ACTIVA' },
+      })
+      setTotal(data.count ?? 0)
+      setVentas(prev => append ? [...prev, ...(data.results ?? [])] : (data.results ?? []))
+    } catch {
+      toast.error('Error al cargar el historial de consumo')
+    } finally {
+      append ? setLoadingMore(false) : setLoading(false)
+    }
+  }, [hijo])
+
+  useEffect(() => {
+    if (open) {
+      setPage(1)
+      setExpandedId(null)
+      loadVentas(1)
+    }
+  }, [open, loadVentas])
+
+  function handleVerMas() {
+    const next = page + 1
+    setPage(next)
+    loadVentas(next, true)
+  }
+
+  const totalGastado = ventas.reduce((s, v) => s + Number(v.monto_total), 0)
+
+  return (
+    <Modal
+      open={open}
+      title={`Consumo — ${hijo?.nombre ?? ''} ${hijo?.apellido ?? ''}`}
+      onCancel={onClose}
+      footer={null}
+      width={600}
+    >
+      <div className="space-y-3">
+        {loading ? (
+          <Spinner className="py-10" />
+        ) : ventas.length === 0 ? (
+          <div className="text-center py-12 text-slate-400">
+            <ShoppingBag className="w-10 h-10 mx-auto mb-2 opacity-30" />
+            <p className="text-sm font-medium">Sin compras registradas</p>
+          </div>
+        ) : (
+          <>
+            {/* Resumen */}
+            <div className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5 text-sm">
+              <span className="text-slate-500">{`${total} compra${total !== 1 ? 's' : ''}`}</span>
+              <span className="font-semibold text-slate-700 tabular-nums">
+                Mostradas: {formatGsConsumo(totalGastado)}
+              </span>
+            </div>
+
+            {/* Lista de ventas */}
+            <ul className="divide-y divide-slate-100 -mx-6 px-6">
+              {ventas.map(v => {
+                const isExp = expandedId === v.id
+                return (
+                  <li key={v.id} className="py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(isExp ? null : v.id)}
+                      className="w-full flex items-center justify-between gap-3 text-left hover:bg-slate-50 rounded-xl px-3 py-2 -mx-3 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-green-50 border border-green-100 flex items-center justify-center shrink-0">
+                          <ShoppingBag className="w-3.5 h-3.5 text-green-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-800">
+                            {`${v.detalles.length} ítem${v.detalles.length !== 1 ? 's' : ''}`}
+                            {v.detalles.length > 0 && (
+                              <span className="text-slate-400 font-normal">
+                                {' '}· {v.detalles.slice(0, 2).map(d => d.producto_nombre).join(', ')}
+                                {v.detalles.length > 2 ? '…' : ''}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5">{formatFechaConsumo(v.fecha)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-sm font-bold text-slate-700 tabular-nums">
+                          {formatGsConsumo(v.monto_total)}
+                        </span>
+                        <ChevronDown className={[
+                          'w-4 h-4 text-slate-400 transition-transform duration-150',
+                          isExp ? 'rotate-180' : '',
+                        ].join(' ')} />
+                      </div>
+                    </button>
+
+                    {/* Detalles expandidos */}
+                    {isExp && (
+                      <div className="mt-1.5 ml-11 bg-slate-50 rounded-xl px-3 py-2 space-y-1.5">
+                        {v.detalles.map(d => (
+                          <div key={d.id} className="flex items-baseline justify-between gap-3 text-sm">
+                            <span className="text-slate-700 min-w-0">
+                              <span className="font-semibold text-slate-500 tabular-nums mr-1.5">
+                                {Math.round(Number(d.cantidad))}×
+                              </span>
+                              {d.producto_nombre}
+                            </span>
+                            <div className="shrink-0 text-right">
+                              <span className="text-slate-500 text-xs tabular-nums">
+                                {formatGsConsumo(d.precio_unitario)} c/u
+                              </span>
+                              <span className="font-semibold text-slate-800 tabular-nums ml-2">
+                                {formatGsConsumo(d.subtotal)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="border-t border-slate-200 pt-1.5 flex justify-between text-sm">
+                          <span className="text-slate-500 font-medium">Total</span>
+                          <span className="font-bold text-slate-800 tabular-nums">{formatGsConsumo(v.monto_total)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+
+            {/* Ver más */}
+            {ventas.length < total && (
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={handleVerMas}
+                  disabled={loadingMore}
+                  className="text-sm text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
+                >
+                  {loadingMore ? 'Cargando…' : `Ver más (${total - ventas.length} restantes)`}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+// ─── HijosModal ────────────────────────────────────────────────────────────────
+
 interface HijosModalProps {
   open: boolean
   cliente: Cliente | null
@@ -852,6 +1224,7 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
   const [loading, setLoading] = useState(false)
   const [hijoModal, setHijoModal] = useState<{ open: boolean; hijo: Hijo | null }>({ open: false, hijo: null })
   const [responsablesModal, setResponsablesModal] = useState<{ open: boolean; hijo: Hijo | null }>({ open: false, hijo: null })
+  const [consumoModal, setConsumoModal] = useState<{ open: boolean; hijo: Hijo | null }>({ open: false, hijo: null })
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   const loadHijos = useCallback(async () => {
@@ -880,6 +1253,10 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
     if (open) {
       setExpandedId(null)
       loadHijos()
+    } else {
+      setConsumoModal({ open: false, hijo: null })
+      setHijoModal({ open: false, hijo: null })
+      setResponsablesModal({ open: false, hijo: null })
     }
   }, [open, loadHijos])
 
@@ -910,11 +1287,12 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
         onCancel={onClose}
         footer={null}
         width={620}
+        disableEscape={consumoModal.open || hijoModal.open || responsablesModal.open}
       >
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-slate-500">
-              {hijos.length} estudiante{hijos.length !== 1 ? 's' : ''} registrado{hijos.length !== 1 ? 's' : ''}
+              {`${hijos.length} estudiante${hijos.length !== 1 ? 's' : ''} registrado${hijos.length !== 1 ? 's' : ''}`}
             </p>
             <Button
               variant="primary"
@@ -961,7 +1339,7 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-slate-800">
+                          <span className="text-base font-semibold text-slate-800">
                             {hijo.apellido}, {hijo.nombre}
                           </span>
                           <Badge color={hijo.activo ? 'green' : 'red'}>
@@ -970,12 +1348,12 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
                           {activeRests.length > 0 && (
                             <Badge color={maxSeveridad(activeRests)}>
                               <ShieldAlert className="w-3 h-3 mr-1 inline-block" />
-                              {activeRests.length} restricción{activeRests.length !== 1 ? 'es' : ''}
+                              {`${activeRests.length} restricción${activeRests.length !== 1 ? 'es' : ''}`}
                             </Badge>
                           )}
                         </div>
                         {hijo.grado && (
-                          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                          <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-1">
                             <GraduationCap className="w-3 h-3 shrink-0" />
                             {hijo.grado}
                           </p>
@@ -987,15 +1365,23 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
                         {activeRests.length > 0 && (
                           <button
                             onClick={() => setExpandedId(isExpanded ? null : hijo.id)}
-                            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                           >
                             <AlertTriangle className="w-3 h-3" />
                             {isExpanded ? 'Ocultar' : 'Ver'}
                           </button>
                         )}
                         <button
+                          onClick={() => setConsumoModal({ open: true, hijo })}
+                          className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Ver historial de consumo"
+                        >
+                          <ShoppingBag className="w-3.5 h-3.5" />
+                          Consumo
+                        </button>
+                        <button
                           onClick={() => setResponsablesModal({ open: true, hijo })}
-                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                           title="Gestionar responsables"
                         >
                           <Users className="w-3.5 h-3.5" />
@@ -1011,7 +1397,7 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
                         <button
                           onClick={() => toggleActivo(hijo)}
                           className={[
-                            'px-2 py-1 text-xs font-medium rounded-lg transition-colors',
+                            'px-2 py-1 text-sm font-medium rounded-lg transition-colors',
                             hijo.activo
                               ? 'text-slate-400 hover:text-red-600 hover:bg-red-50'
                               : 'text-slate-400 hover:text-green-600 hover:bg-green-50',
@@ -1068,6 +1454,11 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
         open={responsablesModal.open}
         hijo={responsablesModal.hijo}
         onClose={() => setResponsablesModal({ open: false, hijo: null })}
+      />
+      <ConsumoModal
+        open={consumoModal.open}
+        hijo={consumoModal.hijo}
+        onClose={() => setConsumoModal({ open: false, hijo: null })}
       />
     </>
   )
@@ -1151,7 +1542,7 @@ export default function Clientes() {
       key: 'ruc_ci',
       dataIndex: 'ruc_ci',
       render: (v) => (
-        <span className="font-mono text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">
+        <span className="font-mono text-sm bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">
           {v as string}
         </span>
       ),
@@ -1161,9 +1552,9 @@ export default function Clientes() {
       key: 'cliente',
       render: (_, r) => (
         <div>
-          <p className="text-sm font-semibold text-slate-800">{r.apellidos}, {r.nombres}</p>
+          <p className="text-base font-semibold text-slate-800">{r.apellidos}, {r.nombres}</p>
           {r.tipo_cliente_nombre && (
-            <p className="text-xs text-slate-400 mt-0.5">{r.tipo_cliente_nombre}</p>
+            <p className="text-sm text-slate-400 mt-0.5">{r.tipo_cliente_nombre}</p>
           )}
         </div>
       ),
@@ -1172,7 +1563,7 @@ export default function Clientes() {
       title: 'Contacto',
       key: 'contacto',
       render: (_, r) => (
-        <div className="space-y-0.5 text-xs text-slate-500">
+        <div className="space-y-0.5 text-sm text-slate-500">
           {r.telefono && (
             <div className="flex items-center gap-1">
               <Phone className="w-3 h-3 shrink-0" />
@@ -1196,7 +1587,7 @@ export default function Clientes() {
         const saldo = Number(r.saldo_cuenta_corriente) || 0
         return (
           <span className={[
-            'tabular-nums text-sm font-semibold',
+            'tabular-nums text-base font-semibold',
             saldo > 0 ? 'text-red-600' : 'text-emerald-700',
           ].join(' ')}>
             {saldo > 0 ? '+' : ''}{formatGs(saldo)}
@@ -1208,7 +1599,7 @@ export default function Clientes() {
       title: 'Límite Créd.',
       key: 'limite',
       render: (_, r) => (
-        <span className="tabular-nums text-sm text-slate-600">{formatGs(r.limite_credito)}</span>
+        <span className="tabular-nums text-base text-slate-600">{formatGs(r.limite_credito)}</span>
       ),
     },
     {
@@ -1225,7 +1616,7 @@ export default function Clientes() {
         <div className="flex items-center gap-1.5 justify-end">
           <button
             onClick={() => setHijosModal({ open: true, cliente: r })}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
           >
             <Users className="w-3.5 h-3.5" />
             Hijos
@@ -1247,7 +1638,7 @@ export default function Clientes() {
     conDeuda: clientes.filter(c => (Number(c.saldo_cuenta_corriente) || 0) > 0).length,
   }), [clientes])
 
-  const selectClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
+  const selectClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -1255,7 +1646,7 @@ export default function Clientes() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Clientes</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Gestión de clientes y sus estudiantes</p>
+          <p className="text-base text-slate-500 mt-0.5">Gestión de clientes y sus estudiantes</p>
         </div>
         <Button variant="primary" onClick={() => setClienteModal({ open: true, cliente: null })}>
           <Plus className="w-4 h-4" />
@@ -1271,7 +1662,7 @@ export default function Clientes() {
           { label: 'Con Deuda', value: stats.conDeuda, color: 'text-red-600' },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
             <p className={`text-2xl font-bold mt-0.5 tabular-nums ${color}`}>{value}</p>
           </div>
         ))}
@@ -1282,7 +1673,7 @@ export default function Clientes() {
         <div className="flex-1 min-w-48 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
-            className="w-full border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-900 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors"
+            className="w-full border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-base text-slate-900 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors"
             placeholder="Buscar por nombre, apellido o RUC/CI..."
             value={searchInput}
             onChange={e => handleSearchChange(e.target.value)}
