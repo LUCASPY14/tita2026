@@ -5,14 +5,45 @@ const BRAND = 'Cantina Tita'
 const BRAND_COLOR: [number, number, number] = [22, 163, 74]  // green-600
 const GRAY: [number, number, number] = [100, 116, 139]       // slate-500
 
+// Precarga del logo al inicializar el módulo — disponible antes del primer PDF
+let LOGO_B64: string | null = null
+let LOGO_W = 0
+let LOGO_H = 0
+
+fetch('/logo_tita.png')
+  .then(r => r.blob())
+  .then(blob => new Promise<string>((resolve) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result as string)
+    reader.readAsDataURL(blob)
+  }))
+  .then(b64 => {
+    // Detectar dimensiones reales para escalar proporcionalmente a 12mm de alto
+    const img = new window.Image()
+    img.onload = () => {
+      const TARGET_H = 12
+      LOGO_H = TARGET_H
+      LOGO_W = (img.naturalWidth / img.naturalHeight) * TARGET_H
+      LOGO_B64 = b64
+    }
+    img.src = b64
+  })
+  .catch(() => {})
+
 function header(doc: jsPDF, title: string, subtitle?: string) {
   const W = doc.internal.pageSize.getWidth()
   doc.setFillColor(...BRAND_COLOR)
   doc.rect(0, 0, W, 18, 'F')
   doc.setTextColor(255, 255, 255)
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'bold')
-  doc.text(BRAND, 14, 11)
+  if (LOGO_B64) {
+    // Logo centrado verticalmente en la barra, margen izquierdo de 4mm
+    const y = (18 - LOGO_H) / 2
+    doc.addImage(LOGO_B64, 'PNG', 4, y, LOGO_W, LOGO_H)
+  } else {
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.text(BRAND, 14, 11)
+  }
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
   doc.text(title, W / 2, 11, { align: 'center' })
@@ -309,6 +340,93 @@ export function exportarAlmuerzosPDF(
     doc.save(`almuerzos_${suffix}.pdf`)
   } catch (err) {
     console.error('Error generando PDF de almuerzos:', err)
+    throw new Error('No se pudo generar el PDF')
+  }
+}
+
+// ─── Reporte de Consumo por Tarjeta ──────────────────────────────────────────
+
+interface DetalleConsumoPdf {
+  producto_nombre: string
+  cantidad: string
+  precio_unitario: string
+  subtotal: string
+}
+interface VentaConsumoPdf {
+  fecha: string
+  alumno: string
+  grado: string | null
+  tarjeta: string | null
+  monto_total: string
+  detalles: DetalleConsumoPdf[]
+}
+
+export function exportarConsumoPDF(ventas: VentaConsumoPdf[], desde: string, hasta: string, filtroTarjeta?: string) {
+  try {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+    const subtitle = filtroTarjeta
+      ? `Tarjeta: ${filtroTarjeta} — ${desde} al ${hasta}`
+      : `Período: ${desde} al ${hasta}`
+    let y = header(doc, 'Reporte de Consumo', subtitle)
+
+    const totalMonto = ventas.reduce((s, v) => s + Number(v.monto_total), 0)
+    doc.setFontSize(8.5)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(0, 0, 0)
+    doc.text(`Compras: ${ventas.length}   |   Total: ${gs(totalMonto)}`, 14, y)
+    y += 8
+
+    const fmt = (iso: string) => new Date(iso).toLocaleString('es-PY', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    })
+
+    const rows: string[][] = []
+    for (const v of ventas) {
+      if (v.detalles.length === 0) {
+        rows.push([fmt(v.fecha), v.alumno, v.grado ?? '', v.tarjeta ?? '', '—', '', '', '', gs(Number(v.monto_total))])
+      } else {
+        v.detalles.forEach((d, i) => {
+          rows.push([
+            i === 0 ? fmt(v.fecha) : '',
+            i === 0 ? v.alumno : '',
+            i === 0 ? (v.grado ?? '') : '',
+            i === 0 ? (v.tarjeta ?? '') : '',
+            d.producto_nombre,
+            d.cantidad,
+            gs(Number(d.precio_unitario)),
+            gs(Number(d.subtotal)),
+            i === 0 ? gs(Number(v.monto_total)) : '',
+          ])
+        })
+      }
+    }
+    rows.push(['', '', '', '', '', '', '', 'TOTAL', gs(totalMonto)])
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Fecha/Hora', 'Alumno', 'Grado', 'Tarjeta', 'Producto', 'Cant.', 'Precio Unit.', 'Subtotal', 'Total']],
+      body: rows,
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: BRAND_COLOR, textColor: [255, 255, 255], fontStyle: 'bold' },
+      columnStyles: {
+        5: { halign: 'center' },
+        6: { halign: 'right' },
+        7: { halign: 'right' },
+        8: { halign: 'right', fontStyle: 'bold' },
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      didParseCell: (data) => {
+        if (data.row.index === rows.length - 1 && data.section === 'body') {
+          data.cell.styles.fontStyle = 'bold'
+          data.cell.styles.fillColor = [240, 253, 244]
+        }
+      },
+    })
+
+    footer(doc)
+    doc.save(`consumo_${desde}_${hasta}.pdf`)
+  } catch (err) {
+    console.error('Error generando PDF de consumo:', err)
     throw new Error('No se pudo generar el PDF')
   }
 }
