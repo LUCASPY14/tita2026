@@ -56,6 +56,47 @@ class ClienteViewSet(viewsets.ModelViewSet):
     filterset_fields = ["activo", "tipo_cliente"]
     search_fields = ["ruc_ci", "nombres", "apellidos"]
 
+    @action(detail=True, methods=["post"], url_path="reset-pin",
+            permission_classes=[IsAdminOrReadOnly])
+    def reset_pin(self, request, pk=None):
+        """Solo ADMIN: resetea el PIN del cliente a '0000'."""
+        from common.permissions import IsAdmin
+        if request.user.rol != "ADMIN":
+            return Response({"error": "Solo el administrador puede resetear el PIN."},
+                            status=status.HTTP_403_FORBIDDEN)
+        cliente = self.get_object()
+        cliente.set_pin("0000")
+        return Response({"ok": True, "mensaje": "PIN reseteado a 0000."})
+
+    @action(detail=True, methods=["post"], url_path="cambiar-pin",
+            permission_classes=[IsAdminOrReadOnly])
+    def cambiar_pin(self, request, pk=None):
+        """El padre (CLIENTE_WEB) cambia su propio PIN. El admin puede cambiar cualquiera."""
+        cliente = self.get_object()
+        user = request.user
+
+        # Verificar que el cliente web solo modifique su propio PIN
+        if user.rol == "CLIENTE_WEB":
+            if not hasattr(user, "cliente") or user.cliente_id != cliente.pk:
+                return Response({"error": "No podés modificar el PIN de otro cliente."},
+                                status=status.HTTP_403_FORBIDDEN)
+
+        pin_actual = request.data.get("pin_actual", "")
+        pin_nuevo = request.data.get("pin_nuevo", "")
+
+        if not pin_nuevo or len(pin_nuevo) != 4 or not pin_nuevo.isdigit():
+            return Response({"error": "El PIN nuevo debe ser exactamente 4 dígitos."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Admin no necesita confirmar el PIN actual
+        if user.rol != "ADMIN":
+            if not cliente.check_pin(pin_actual):
+                return Response({"error": "PIN actual incorrecto."},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        cliente.set_pin(pin_nuevo)
+        return Response({"ok": True, "mensaje": "PIN actualizado correctamente."})
+
 
 class CuentaCorrienteClienteViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = CuentaCorrienteCliente.objects.select_related("cliente").all()

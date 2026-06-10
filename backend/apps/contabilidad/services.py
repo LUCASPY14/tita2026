@@ -44,6 +44,9 @@ class CajaService:
     def cerrar_caja(*, cierre, monto_contado: Decimal) -> CierreCaja:
         """
         Cierra una caja y calcula la diferencia.
+
+        diferencia_efectivo compara solo contra movimientos de EFECTIVO:
+        el cajero cuenta los billetes del cajón, no los pagos por POS ni prepago.
         """
         with transaction.atomic():
             cierre = CierreCaja.objects.select_for_update().get(pk=cierre.pk)
@@ -51,20 +54,28 @@ class CajaService:
             if cierre.estado != CierreCaja.Estado.ABIERTO:
                 raise ValidationError({"error": "La caja no esta abierta."})
 
-            ingresos = (
+            # Efectivo físico = movimientos con medio_pago EFECTIVO +
+            # egresos manuales sin medio_pago (retiros en cash sin especificar)
+            efectivo_ingresos = (
                 MovimientoCaja.objects.filter(
-                    cierre=cierre, tipo=MovimientoCaja.Tipo.INGRESO
+                    cierre=cierre,
+                    tipo=MovimientoCaja.Tipo.INGRESO,
+                    medio_pago__descripcion__iexact="efectivo",
                 ).aggregate(total=models.Sum("monto"))["total"]
             ) or Decimal("0")
 
-            egresos = (
+            efectivo_egresos = (
                 MovimientoCaja.objects.filter(
-                    cierre=cierre, tipo=MovimientoCaja.Tipo.EGRESO
+                    cierre=cierre,
+                    tipo=MovimientoCaja.Tipo.EGRESO,
+                ).filter(
+                    models.Q(medio_pago__descripcion__iexact="efectivo")
+                    | models.Q(medio_pago__isnull=True)
                 ).aggregate(total=models.Sum("monto"))["total"]
             ) or Decimal("0")
 
-            monto_esperado = cierre.monto_inicial + ingresos - egresos
-            diferencia = monto_contado - monto_esperado
+            efectivo_esperado = cierre.monto_inicial + efectivo_ingresos - efectivo_egresos
+            diferencia = monto_contado - efectivo_esperado
 
             cierre.monto_contado_fisico = monto_contado
             cierre.diferencia_efectivo = diferencia

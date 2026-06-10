@@ -575,7 +575,7 @@ class MenuDiario(models.Model):
     def tiene_alergenos(self):
         """True si algún producto del menú tiene alérgenos registrados."""
         return self.detalles.filter(
-            producto__productoalergeno__isnull=False
+            producto__alergenos__isnull=False
         ).exists()
 
 

@@ -56,7 +56,32 @@ class CierreCajaViewSet(viewsets.ModelViewSet):
     serializer_class = CierreCajaSerializer
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["caja", "estado"]
+    filterset_fields = ["caja", "estado", "empleado"]
+
+    @action(detail=False, methods=["get"], url_path="mi-caja")
+    def mi_caja(self, request):
+        """Retorna el CierreCaja ABIERTO del usuario autenticado, si existe."""
+        cierre = CierreCaja.objects.filter(
+            empleado=request.user, estado=CierreCaja.Estado.ABIERTO
+        ).select_related("caja").first()
+        if not cierre:
+            return Response(None, status=status.HTTP_200_OK)
+        return Response(CierreCajaSerializer(cierre).data)
+
+    def create(self, request, *args, **kwargs):
+        """Abre una caja usando CajaService para validar duplicados y asignar el empleado."""
+        from decimal import Decimal
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        cierre = CajaService.abrir_caja(
+            caja=data["caja"],
+            empleado=request.user,
+            monto_inicial=data.get("monto_inicial", Decimal("0")),
+        )
+        out = CierreCajaSerializer(cierre)
+        headers = self.get_success_headers(out.data)
+        return Response(out.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(detail=True, methods=["post"], url_path="conciliar")
     def conciliar(self, request, pk=None):
@@ -89,6 +114,133 @@ class CierreCajaViewSet(viewsets.ModelViewSet):
 
         cierre = CajaService.cerrar_caja(cierre=cierre, monto_contado=monto_contado)
         return Response(CierreCajaSerializer(cierre).data)
+
+    @action(detail=True, methods=["get"], url_path="arqueo")
+    def arqueo(self, request, pk=None):
+        """
+        GET /api/contabilidad/cierres-caja/{id}/arqueo/
+        Devuelve el arqueo separado en tres categorías:
+          - efectivo: billetes en cajón (medio_pago EFECTIVO)
+          - pos:      pagos con terminal POS / transferencia
+          - prepago:  ventas con tarjeta RFID (sin medio_pago físico)
+        """
+        from django.db.models import Sum as DSum, Q
+        cierre = self.get_object()
+
+        movs = MovimientoCaja.objects.filter(cierre=cierre).select_related("medio_pago")
+        ing = movs.filter(tipo=MovimientoCaja.Tipo.INGRESO)
+        egr = movs.filter(tipo=MovimientoCaja.Tipo.EGRESO)
+
+        # ── Totales globales ──────────────────────────────────────────────────
+        ingresos_total = int(ing.aggregate(t=DSum("monto"))["t"] or 0)
+        egresos_total  = int(egr.aggregate(t=DSum("monto"))["t"] or 0)
+
+        # ── Efectivo (cajón) ──────────────────────────────────────────────────
+        efectivo_ingresos = int(
+            ing.filter(medio_pago__descripcion__iexact="efectivo")
+               .aggregate(t=DSum("monto"))["t"] or 0
+        )
+        # Egresos EFECTIVO + sin medio_pago (retiros manuales en cash)
+        efectivo_egresos = int(
+            egr.filter(
+                Q(medio_pago__descripcion__iexact="efectivo") | Q(medio_pago__isnull=True)
+            ).aggregate(t=DSum("monto"))["t"] or 0
+        )
+        efectivo_esperado = int(cierre.monto_inicial) + efectivo_ingresos - efectivo_egresos
+
+        # ── POS / Transferencia (no cash) ─────────────────────────────────────
+        pos_total = int(
+            ing.filter(medio_pago__isnull=False)
+               .exclude(medio_pago__descripcion__iexact="efectivo")
+               .filter(
+                   Q(medio_pago__descripcion__icontains="pos")
+                   | Q(medio_pago__descripcion__icontains="tpv")
+                   | Q(medio_pago__descripcion__icontains="débito")
+                   | Q(medio_pago__descripcion__icontains="debito")
+                   | Q(medio_pago__descripcion__icontains="crédito")
+                   | Q(medio_pago__descripcion__icontains="credito")
+                   | Q(medio_pago__descripcion__icontains="transf")
+               )
+               .aggregate(t=DSum("monto"))["t"] or 0
+        )
+
+        # ── Prepago (tarjeta RFID, sin medio_pago físico) ─────────────────────
+        prepago_total = int(
+            ing.filter(medio_pago__isnull=True).aggregate(t=DSum("monto"))["t"] or 0
+        )
+
+        # ── Agrupado por medio para desglose visual ───────────────────────────
+        def agrupar(qs):
+            rows = (
+                qs.values("medio_pago__descripcion")
+                .annotate(total=DSum("monto"))
+                .order_by("-total")
+            )
+            return [
+                {"medio": r["medio_pago__descripcion"] or "Tarjeta prepago", "total": int(r["total"] or 0)}
+                for r in rows
+            ]
+
+        return Response({
+            "monto_inicial":      int(cierre.monto_inicial),
+            "efectivo_esperado":  efectivo_esperado,
+            "efectivo_ingresos":  efectivo_ingresos,
+            "efectivo_egresos":   efectivo_egresos,
+            "pos_total":          pos_total,
+            "prepago_total":      prepago_total,
+            "ingresos_total":     ingresos_total,
+            "egresos_total":      egresos_total,
+            "ingresos_por_medio": agrupar(ing),
+            "egresos_por_medio":  agrupar(egr),
+        })
+
+    @action(detail=True, methods=["post"], url_path="registrar-movimiento")
+    def registrar_movimiento(self, request, pk=None):
+        """
+        POST /api/contabilidad/cierres-caja/{id}/registrar-movimiento/
+        Registra un INGRESO o EGRESO manual en el cierre activo.
+        Body: { tipo, monto, medio_pago (id), descripcion }
+        """
+        from decimal import Decimal
+        from apps.core.models import MedioPago
+
+        cierre = self.get_object()
+        if cierre.estado != CierreCaja.Estado.ABIERTO:
+            return Response(
+                {"error": "Solo se pueden registrar movimientos en cajas ABIERTAS."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        tipo = request.data.get("tipo", "")
+        if tipo not in (MovimientoCaja.Tipo.INGRESO, MovimientoCaja.Tipo.EGRESO):
+            return Response({"error": "Tipo debe ser INGRESO o EGRESO."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            monto = Decimal(str(request.data.get("monto", 0)))
+        except Exception:
+            return Response({"error": "Monto inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if monto <= 0:
+            return Response({"error": "El monto debe ser mayor a 0."}, status=status.HTTP_400_BAD_REQUEST)
+
+        medio_pago_id = request.data.get("medio_pago")
+        medio_pago = None
+        if medio_pago_id:
+            try:
+                medio_pago = MedioPago.objects.get(pk=medio_pago_id)
+            except MedioPago.DoesNotExist:
+                return Response({"error": "Medio de pago no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        descripcion = request.data.get("descripcion", "")
+
+        mov = CajaService.registrar_movimiento(
+            cierre=cierre,
+            tipo=tipo,
+            monto=monto,
+            medio_pago=medio_pago,
+            descripcion=descripcion,
+        )
+        return Response(MovimientoCajaSerializer(mov).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["get"], url_path="pdf")
     def pdf(self, request, pk=None):
@@ -360,7 +512,8 @@ class DashboardResumenView(APIView):
         from apps.productos.models import Producto
         from apps.inventario.models import AlertaStock
 
-        hoy = timezone.now().date()
+        from django.utils.timezone import localdate
+        hoy = localdate()
 
         ventas_hoy = Venta.objects.filter(
             fecha__date=hoy,
@@ -400,8 +553,9 @@ class DashboardTendenciaView(APIView):
         from django.db.models.functions import TruncDate
         from apps.ventas.models import Venta
 
+        from django.utils.timezone import localdate
         dias = min(max(int(request.query_params.get("dias", 7)), 1), 90)
-        hasta = timezone.now().date()
+        hasta = localdate()
         desde = hasta - timedelta(days=dias - 1)
 
         ventas_qs = (

@@ -28,6 +28,8 @@ class CierreCajaSerializer(serializers.ModelSerializer):
         model = CierreCaja
         fields = "__all__"
         read_only_fields = [
+            "empleado",
+            "fecha_apertura",
             "fecha_creacion",
             "diferencia_efectivo",
             "monto_contado_fisico",
@@ -37,7 +39,10 @@ class CierreCajaSerializer(serializers.ModelSerializer):
 
 
 class MovimientoCajaSerializer(serializers.ModelSerializer):
-    medio_pago_nombre = serializers.CharField(source="medio_pago.descripcion", read_only=True)
+    medio_pago_nombre = serializers.SerializerMethodField()
+
+    def get_medio_pago_nombre(self, obj):
+        return obj.medio_pago.descripcion if obj.medio_pago_id else None
 
     class Meta:
         model = MovimientoCaja

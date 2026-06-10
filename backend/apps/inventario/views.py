@@ -212,6 +212,107 @@ class AlertaVencimientoViewSet(viewsets.ReadOnlyModelViewSet):
     ordering = ["-id"]
 
 
+class ReporteStockView(APIView):
+    """
+    GET /api/inventario/reporte-stock/
+    Inventario completo: stock actual, costo promedio, valor y alertas.
+    Opcional: ?solo_activos=1 (default) ?formato=csv
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        from datetime import timedelta
+        from django.db.models import Sum, Q, Value
+        from django.db.models.functions import Coalesce
+
+        solo_activos = request.query_params.get("solo_activos", "1") != "0"
+
+        qs = (
+            Stock.objects
+            .select_related("producto", "producto__categoria", "producto__unidad_medida")
+            .prefetch_related("producto__costos_historicos")
+            .filter(producto__activo=solo_activos)
+            .order_by("producto__descripcion")
+        )
+
+        # Anotar ventas de los últimos 30 días para calcular días de stock
+        hace_30_dias = timezone.now() - timedelta(days=30)
+        ventas_mes_map = dict(
+            MovimientoStock.objects
+            .filter(tipo=MovimientoStock.Tipo.EGRESO, fecha__gte=hace_30_dias)
+            .values("producto_id")
+            .annotate(total=Sum("cantidad"))
+            .values_list("producto_id", "total")
+        )
+
+        filas = []
+        for s in qs:
+            costos = list(s.producto.costos_historicos.all())
+            total_monto = sum(c.costo_unitario * c.cantidad_comprada for c in costos)
+            total_cant = sum(c.cantidad_comprada for c in costos)
+            costo_prom = int(total_monto / total_cant) if total_cant else 0
+            valor_inv = int(float(s.cantidad) * costo_prom)
+
+            ventas_mes = ventas_mes_map.get(s.producto_id, Decimal("0"))
+            if ventas_mes and ventas_mes > 0:
+                venta_diaria = float(ventas_mes) / 30
+                dias_stock = int(float(s.cantidad) / venta_diaria) if venta_diaria > 0 else None
+            else:
+                dias_stock = None
+
+            filas.append({
+                "producto_id": s.producto_id,
+                "descripcion": s.producto.descripcion,
+                "categoria": s.producto.categoria.nombre if s.producto.categoria else "",
+                "unidad": s.producto.unidad_medida.nombre if s.producto.unidad_medida else "",
+                "stock_actual": float(s.cantidad),
+                "stock_minimo": float(s.producto.stock_minimo),
+                "requiere_reposicion": bool(s.requiere_reposicion),
+                "costo_promedio": costo_prom,
+                "valor_inventario": valor_inv,
+                "dias_stock": dias_stock,
+            })
+
+        total_valor = sum(f["valor_inventario"] for f in filas)
+        productos_bajo_minimo = sum(1 for f in filas if f["requiere_reposicion"])
+
+        if request.query_params.get("formato") == "csv":
+            return self._exportar_csv(filas, total_valor)
+
+        return Response({
+            "resumen": {
+                "total_productos": len(filas),
+                "productos_bajo_minimo": productos_bajo_minimo,
+                "valor_total_inventario": total_valor,
+            },
+            "productos": filas,
+        })
+
+    def _exportar_csv(self, filas, total_valor):
+        import csv as csv_mod
+        from django.http import HttpResponse as HR
+        response = HR(content_type="text/csv; charset=utf-8-sig")
+        response["Content-Disposition"] = 'attachment; filename="reporte_stock.csv"'
+        writer = csv_mod.writer(response)
+        writer.writerow(["REPORTE DE INVENTARIO / STOCK"])
+        writer.writerow([])
+        writer.writerow([
+            "Producto", "Categoría", "Unidad", "Stock Actual", "Stock Mínimo",
+            "Estado", "Costo Prom. (Gs)", "Valor Inv. (Gs)", "Días Stock"
+        ])
+        for f in filas:
+            estado = "BAJO MÍNIMO" if f["requiere_reposicion"] else "OK"
+            writer.writerow([
+                f["descripcion"], f["categoria"], f["unidad"],
+                f["stock_actual"], f["stock_minimo"], estado,
+                f["costo_promedio"], f["valor_inventario"],
+                f["dias_stock"] if f["dias_stock"] is not None else "—",
+            ])
+        writer.writerow([])
+        writer.writerow(["VALOR TOTAL INVENTARIO", "", "", "", "", "", "", total_valor, ""])
+        return response
+
+
 class StockCriticoView(APIView):
     """
     GET /api/inventario/stock-critico/

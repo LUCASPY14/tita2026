@@ -10,6 +10,7 @@ from .views import (
     MedioPagoViewSet,
     LimiteTransaccionViewSet,
     RegistroAutorizacionViewSet,
+    ReporteTarjetasView,
 )
 from .bancard_views import bancard_iniciar, bancard_retorno, bancard_estado
 
@@ -25,6 +26,7 @@ router.register(r"registros-autorizacion", RegistroAutorizacionViewSet, basename
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("reporte-tarjetas/", ReporteTarjetasView.as_view(), name="reporte-tarjetas"),
     # Bancard vPOS
     path("bancard/iniciar/",              bancard_iniciar,              name="bancard-iniciar"),
     path("bancard/retorno/",              bancard_retorno,              name="bancard-retorno"),

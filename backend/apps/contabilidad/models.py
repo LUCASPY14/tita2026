@@ -103,14 +103,12 @@ class MovimientoCaja(models.Model):
     )
     tipo = models.CharField(max_length=10, choices=Tipo.choices)
     monto = models.DecimalField(max_digits=12, decimal_places=0)
-    monto_comision = models.DecimalField(
-        max_digits=12, decimal_places=0, default=0,
-        help_text="Comisión del medio de pago",
-    )
     fecha = models.DateTimeField(default=timezone.now)
     descripcion = models.CharField(max_length=200, blank=True, null=True)
     medio_pago = models.ForeignKey(
-        "core.MedioPago", models.PROTECT, related_name="movimientos_caja"
+        "core.MedioPago", models.SET_NULL,
+        null=True, blank=True,
+        related_name="movimientos_caja",
     )
     venta = models.ForeignKey(
         "ventas.Venta",

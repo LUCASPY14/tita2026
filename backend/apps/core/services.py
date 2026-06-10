@@ -35,6 +35,8 @@ class TarjetaService:
         medio_pago=None,
         metodo_pago: str = "EFECTIVO",
         referencia: str = "",
+        cierre_caja=None,
+        medio_pago_obj=None,
     ) -> CargaSaldo:
         """
         Carga saldo a una tarjeta.
@@ -44,6 +46,7 @@ class TarjetaService:
         2. Crear CargaSaldo
         3. Actualizar Tarjeta.saldo_actual
         4. Crear MovimientoTarjeta (RECARGA)
+        5. Crear MovimientoCaja INGRESO si hay cierre abierto
         """
         if monto <= 0:
             raise ValidationError({"error": "El monto debe ser mayor a 0."})
@@ -78,10 +81,20 @@ class TarjetaService:
                 creado_por=responsable,
             )
 
+            if cierre_caja:
+                from apps.contabilidad.models import MovimientoCaja
+                MovimientoCaja.objects.create(
+                    cierre=cierre_caja,
+                    tipo=MovimientoCaja.Tipo.INGRESO,
+                    monto=monto,
+                    descripcion=f"Recarga #{carga.pk} - {tarjeta}",
+                    medio_pago=medio_pago_obj,
+                )
+
             return carga
 
     @staticmethod
-    def confirmar_carga(*, carga, responsable) -> "CargaSaldo":
+    def confirmar_carga(*, carga, responsable, cierre_caja=None, medio_pago_obj=None) -> "CargaSaldo":
         """
         Confirma una CargaSaldo PENDIENTE: actualiza el saldo de la tarjeta
         y genera el MovimientoTarjeta correspondiente.
@@ -114,6 +127,16 @@ class TarjetaService:
                 descripcion=f"Recarga confirmada #{carga.pk}",
                 creado_por=responsable,
             )
+
+            if cierre_caja:
+                from apps.contabilidad.models import MovimientoCaja
+                MovimientoCaja.objects.create(
+                    cierre=cierre_caja,
+                    tipo=MovimientoCaja.Tipo.INGRESO,
+                    monto=carga.monto_cargado,
+                    descripcion=f"Recarga confirmada #{carga.pk} - {tarjeta}",
+                    medio_pago=medio_pago_obj,
+                )
 
             return carga
 
