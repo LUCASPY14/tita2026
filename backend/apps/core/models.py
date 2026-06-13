@@ -137,7 +137,9 @@ class MovimientoTarjeta(models.Model):
     # Auditoría
     creado_por = models.ForeignKey(
         "usuarios.Usuario",
-        models.PROTECT,
+        models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="movimientos_tarjeta_creados",
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
