@@ -11,7 +11,6 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from common.permissions import IsAdminOrReadOnly, IsStaffUser
 

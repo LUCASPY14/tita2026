@@ -24,7 +24,8 @@ from . import bancard_service
 
 logger = logging.getLogger(__name__)
 
-PORTAL_URL = lambda: getattr(settings, "PORTAL_FRONTEND_URL", "http://localhost:5173")
+def PORTAL_URL():
+    return getattr(settings, "PORTAL_FRONTEND_URL", "http://localhost:5173")
 
 
 # ─── POST /api/v1/bancard/iniciar/ ────────────────────────────────────────────

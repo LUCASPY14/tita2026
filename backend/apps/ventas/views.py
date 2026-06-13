@@ -4,7 +4,6 @@ Views para la app ventas
 
 import csv
 
-from django.db import models, transaction
 from django.http import HttpResponse
 
 from rest_framework import viewsets, status
@@ -93,7 +92,6 @@ class VentaViewSet(viewsets.ModelViewSet):
         try:
             venta = VentaService.anular_venta(venta, anulado_por=request.user)
         except Exception as e:
-            from rest_framework.exceptions import ValidationError as DRFValidationError
             if hasattr(e, "detail"):
                 return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

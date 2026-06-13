@@ -101,7 +101,7 @@ class NotificacionService:
     @staticmethod
     def _enviar_sistema(solicitud):
         try:
-            usuario = solicitud.cliente.usuario
+            usuario = solicitud.cliente.usuario_portal
         except Exception:
             raise ValueError(f"Cliente {solicitud.cliente} no tiene cuenta de usuario vinculada.")
 

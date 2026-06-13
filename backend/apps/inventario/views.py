@@ -9,7 +9,6 @@ from django.utils import timezone
 
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -222,8 +221,7 @@ class ReporteStockView(APIView):
 
     def get(self, request):
         from datetime import timedelta
-        from django.db.models import Sum, Q, Value
-        from django.db.models.functions import Coalesce
+        from django.db.models import Sum
 
         solo_activos = request.query_params.get("solo_activos", "1") != "0"
 

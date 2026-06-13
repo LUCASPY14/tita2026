@@ -38,7 +38,7 @@ BEGIN
         WHERE hijo_id    = v_hijo_id
           AND EXTRACT(YEAR  FROM fecha_consumo) = v_anio
           AND EXTRACT(MONTH FROM fecha_consumo) = v_mes
-          AND cobrado = false
+          AND ya_cobrado = false
     ) sub
     WHERE hijo_id = v_hijo_id
       AND anio    = v_anio

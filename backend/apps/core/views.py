@@ -214,7 +214,7 @@ class ReporteTarjetasView(APIView):
             recarga_filter &= date_q
             consumo_filter &= date_q
 
-        from django.db.models import DecimalField, IntegerField
+        from django.db.models import DecimalField
         from django.db.models.functions import Coalesce
         from django.db.models import Value
 
@@ -263,7 +263,11 @@ class ReporteTarjetasView(APIView):
             if desde and hasta:
                 writer.writerow([f"Período: {desde} al {hasta}"])
             writer.writerow([])
-            writer.writerow(["Nro Tarjeta", "Alumno", "Grado", "Saldo Actual (Gs)", "Recargado (Gs)", "Consumido (Gs)", "Nro Recargas", "Nro Consumos"])
+            writer.writerow([
+                "Nro Tarjeta", "Alumno", "Grado",
+                "Saldo Actual (Gs)", "Recargado (Gs)", "Consumido (Gs)",
+                "Nro Recargas", "Nro Consumos",
+            ])
             for f in filas:
                 writer.writerow([
                     f["nro_tarjeta"], f["alumno"], f["grado"],

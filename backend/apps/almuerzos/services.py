@@ -6,7 +6,6 @@ from datetime import date
 from decimal import Decimal
 
 from django.db import models, transaction
-from django.utils import timezone
 
 from rest_framework.exceptions import ValidationError
 

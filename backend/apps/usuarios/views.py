@@ -572,7 +572,7 @@ class TwoFAActivarView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        from .models import Autenticacion2FA, Intento2FA
+        from .models import Intento2FA
         codigo = request.data.get("codigo", "")
         ip = request.META.get("REMOTE_ADDR")
 
@@ -611,7 +611,7 @@ class TwoFAVerificarView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        from .models import Autenticacion2FA, Intento2FA
+        from .models import Intento2FA
         codigo = (request.data.get("codigo") or "").strip().upper()
         ip = request.META.get("REMOTE_ADDR")
 
@@ -654,7 +654,6 @@ class TwoFADesactivarView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        from .models import Autenticacion2FA
         usuario_id = request.data.get("usuario_id")
 
         if usuario_id and request.user.rol == Usuario.Rol.ADMIN:
@@ -688,7 +687,7 @@ class TwoFALoginVerificarView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        from .models import Autenticacion2FA, Intento2FA
+        from .models import Intento2FA
 
         pre_auth = request.data.get("pre_auth_token", "")
         codigo = (request.data.get("codigo") or "").strip()

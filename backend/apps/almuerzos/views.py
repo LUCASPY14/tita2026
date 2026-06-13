@@ -2,7 +2,7 @@
 Views para la app almuerzos
 """
 
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 
 from django.db import models, transaction
@@ -486,7 +486,6 @@ class ReporteAlmuerzosView(APIView):
     permission_classes = [IsStaffUser]
 
     def get(self, request):
-        from django.db.models import Count, Sum, Q
         from django.http import HttpResponse
 
         anio = request.query_params.get("anio")

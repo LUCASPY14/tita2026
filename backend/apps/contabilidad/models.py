@@ -3,7 +3,6 @@ Modelos de la app contabilidad
 Gestión de cajas, cierres, movimientos, facturación y comisiones
 """
 
-from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone

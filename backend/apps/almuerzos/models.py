@@ -4,7 +4,6 @@ Gestión de almuerzos escolares: precios, planes, suscripciones y consumo
 """
 
 from datetime import date
-from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -257,7 +256,7 @@ class RegistroConsumoAlmuerzo(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        if not self.costo_almuerzo:
+        if self.costo_almuerzo is None:
             if self.tipo_almuerzo_id and self.tipo_almuerzo and self.tipo_almuerzo.precio_unitario:
                 self.costo_almuerzo = self.tipo_almuerzo.precio_unitario
             elif self.fecha_consumo:

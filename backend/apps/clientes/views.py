@@ -3,7 +3,7 @@ Views para la app clientes
 """
 
 import csv
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 from django.http import HttpResponse
@@ -45,7 +45,7 @@ from .serializers import (
     RestriccionHijoSerializer,
     TipoClienteSerializer,
 )
-from .services import agregar_responsable, cambiar_titular
+from .services import cambiar_titular
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
@@ -60,7 +60,6 @@ class ClienteViewSet(viewsets.ModelViewSet):
             permission_classes=[IsAdminOrReadOnly])
     def reset_pin(self, request, pk=None):
         """Solo ADMIN: resetea el PIN del cliente a '0000'."""
-        from common.permissions import IsAdmin
         if request.user.rol != "ADMIN":
             return Response({"error": "Solo el administrador puede resetear el PIN."},
                             status=status.HTTP_403_FORBIDDEN)

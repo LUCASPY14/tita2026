@@ -3,8 +3,6 @@ Admin para la app core
 Gestión de tarjetas, movimientos, medios de pago, límites de transacción y autorizaciones
 """
 
-from turtle import color
-
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html

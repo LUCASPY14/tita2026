@@ -22,7 +22,7 @@ class TarjetaSerializer(serializers.ModelSerializer):
     hijo_grado = serializers.CharField(source="hijo.grado_nombre", read_only=True, allow_null=True)
     hijo_restricciones = serializers.SerializerMethodField()
     saldo_disponible = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
-    
+
     # Datos del cliente responsable (padre/tutor)
     cliente_id = serializers.IntegerField(source="hijo.cliente_responsable.id", read_only=True)
     cliente_nombre = serializers.CharField(source="hijo.cliente_responsable.nombre_completo", read_only=True)
@@ -44,7 +44,7 @@ class TarjetaSerializer(serializers.ModelSerializer):
     def get_hijo_restricciones(self, obj):
         if not obj.hijo:
             return []
-        
+
         restricciones = obj.hijo.restricciones.filter(activo=True)
         return [
             {
