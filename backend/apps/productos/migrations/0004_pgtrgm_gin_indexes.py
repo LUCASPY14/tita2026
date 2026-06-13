@@ -40,6 +40,9 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("productos", "0003_listaprecio_es_por_defecto"),
+        # GIN SQL toca compras_proveedor, clientes_cliente y clientes_hijo
+        ("compras",  "0003_compra_estado_entrega"),
+        ("clientes", "0001_initial"),
     ]
 
     operations = [
