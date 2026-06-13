@@ -351,9 +351,11 @@ class AplicacionPago(models.Model):
         if self.venta_id:
             saldo = self.venta.saldo_pendiente
             if self.monto_aplicado > saldo:
-                raise ValidationError(
-                    {"monto_aplicado": f"El monto (₲{self.monto_aplicado:,.0f}) supera el saldo pendiente de la venta (₲{saldo:,.0f})."}
-                )
+                raise ValidationError({
+                    "monto_aplicado": (
+                        f"El monto (₲{self.monto_aplicado:,.0f}) supera el saldo pendiente de la venta (₲{saldo:,.0f})."
+                    )
+                })
 
         if self.pago_id:
             ya_aplicado = (
@@ -363,9 +365,12 @@ class AplicacionPago(models.Model):
             ) or Decimal("0")
             disponible = self.pago.monto - ya_aplicado
             if self.monto_aplicado > disponible:
-                raise ValidationError(
-                    {"monto_aplicado": f"El monto (₲{self.monto_aplicado:,.0f}) supera el saldo disponible del pago (₲{disponible:,.0f})."}
-                )
+                raise ValidationError({
+                    "monto_aplicado": (
+                        f"El monto (₲{self.monto_aplicado:,.0f}) supera"
+                        f" el saldo disponible del pago (₲{disponible:,.0f})."
+                    )
+                })
 
 
 # ==============================================================================

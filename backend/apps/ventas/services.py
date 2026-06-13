@@ -4,21 +4,20 @@ Servicios de negocio para ventas
 
 from decimal import Decimal
 
-from django.db import models, transaction
-from django.utils import timezone
+from django.db import transaction
 
 from rest_framework.exceptions import ValidationError
 
 from apps.clientes.models import CuentaCorrienteCliente
 from apps.inventario.models import Stock, MovimientoStock
 from apps.core.models import Tarjeta, MovimientoTarjeta
-from .models import Venta, DetalleVenta, PagoVenta, AplicacionPago, NotaCredito
+from .models import Venta, DetalleVenta, PagoVenta, AplicacionPago
 
 
 class VentaService:
     """
     Servicio para registrar ventas.
-    
+
     Flujo completo:
     1. Bloquear stock y tarjeta con select_for_update()
     2. Validar stock disponible y saldo
@@ -63,7 +62,7 @@ class VentaService:
         with transaction.atomic():
             # 0. Bloquear stocks y tarjeta para evitar race conditions
             productos_con_stock = [item["producto"] for item in items if item["producto"].requiere_stock]
-            
+
             stocks_bloqueados = {}
             if productos_con_stock:
                 stocks_bloqueados = {
@@ -77,6 +76,8 @@ class VentaService:
             tarjeta_bloqueada = None
             if tipo == "CONTADO" and tarjeta:
                 tarjeta_bloqueada = Tarjeta.objects.select_for_update().get(pk=tarjeta.pk)
+                if tarjeta_bloqueada.estado != Tarjeta.Estado.ACTIVA:
+                    raise ValidationError({"error": "La tarjeta no está activa."})
 
             # Bloquear cuenta corriente si es a credito
             saldo_anterior_cc = Decimal("0")
@@ -91,6 +92,16 @@ class VentaService:
                 saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
 
             # 1. Calcular totales y validar
+            # Agregar ítems con el mismo producto para respetar unique_together(venta, producto)
+            merged: dict = {}
+            for item in items:
+                pid = item["producto"].pk
+                if pid in merged:
+                    merged[pid]["cantidad"] += item["cantidad"]
+                else:
+                    merged[pid] = dict(item)
+            items = list(merged.values())
+
             monto_total = Decimal("0")
             limite_credito = getattr(cliente, "limite_credito", None)
             monto_gravada_10 = Decimal("0")
