@@ -289,6 +289,27 @@ export default function ModoRecreo() {
   const navigate = useNavigate()
   const { getProductos, getCategorias } = useCatalogoStore()
 
+  // Conectividad
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  useEffect(() => {
+    const offlineToastId = 'offline-warning'
+    const goOffline = () => {
+      setIsOnline(false)
+      toast.error('Sin conexión — cobros deshabilitados', { id: offlineToastId, duration: Infinity })
+    }
+    const goOnline = () => {
+      setIsOnline(true)
+      toast.dismiss(offlineToastId)
+      toast.success('Conexión restaurada')
+    }
+    window.addEventListener('offline', goOffline)
+    window.addEventListener('online', goOnline)
+    return () => {
+      window.removeEventListener('offline', goOffline)
+      window.removeEventListener('online', goOnline)
+    }
+  }, [])
+
   // Caja abierta
   interface CierreCajaInfo { id: number; caja_nombre: string; monto_inicial: string; fecha_apertura: string }
   const [cierreCaja, setCierreCaja] = useState<CierreCajaInfo | null | false>(null) // null=cargando, false=no hay caja
@@ -713,7 +734,7 @@ export default function ModoRecreo() {
   const medioPagoSeleccionado = mediosPago.find(m => m.id === medioPagoSelId) ?? null
 
   const referenciaRequerida = modoPago === 'MEDIO' && (medioPagoSeleccionado?.requiere_validacion ?? false)
-  const canCobrar = carrito.length > 0 && !cobrando && tarjeta &&
+  const canCobrar = isOnline && carrito.length > 0 && !cobrando && tarjeta &&
     (modoPago === 'PREPAGO' || (modoPago === 'MEDIO' && medioPagoSelId !== null)) &&
     (!referenciaRequerida || referencia.trim().length > 0)
 
@@ -789,6 +810,14 @@ export default function ModoRecreo() {
               <p className="text-slate-500 text-2xl mt-3 tabular-nums">Saldo restante: {gs(saldoTrasCompra)}</p>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── Offline banner ── */}
+      {!isOnline && (
+        <div className="flex items-center justify-center gap-2 bg-red-600 text-white text-sm font-bold py-1.5 px-4 shrink-0">
+          <WarningIcon size={16} weight="fill" />
+          SIN CONEXIÓN — los cobros están deshabilitados hasta restaurar la red
         </div>
       )}
 
