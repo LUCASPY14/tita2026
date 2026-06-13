@@ -63,6 +63,10 @@ app.conf.beat_schedule = {
         "task": "apps.ventas.tasks.cerrar_cajas_automatico",
         "schedule": crontab(minute=0),  # Cada hora en punto
     },  # ── Almuerzos ─────────────────────────────────────────────────
+    "cerrar-cuentas-almuerzos-mes-anterior": {
+        "task": "apps.almuerzos.tasks.cerrar_cuentas_mes_anterior",
+        "schedule": crontab(hour=5, minute=0, day_of_month=1),  # Día 1 de cada mes 05:00 (antes de generar)
+    },
     "generar-cuentas-almuerzos-mensuales": {
         "task": "apps.almuerzos.tasks.generar_cuentas_mensuales",
         "schedule": crontab(hour=6, minute=0, day_of_month=1),  # Día 1 de cada mes 06:00
@@ -78,6 +82,7 @@ app.conf.timezone = "America/Asuncion"  # Paraguay timezone
 
 # Tareas críticas que disparan alerta cuando fallan
 _CRITICAL_TASKS = {
+    "apps.almuerzos.tasks.cerrar_cuentas_mes_anterior",
     "apps.almuerzos.tasks.generar_cuentas_mensuales",
     "apps.ventas.tasks.generar_resumen_diario_ventas",
     "apps.inventario.tasks.generar_resumen_diario_stock",
