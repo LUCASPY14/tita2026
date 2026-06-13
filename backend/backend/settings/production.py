@@ -286,6 +286,16 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
 # ==========================================
+# INTEGRACIONES DE PAGO
+# ==========================================
+
+# Bancard: forzar producción — en prod NUNCA debe quedar en sandbox
+BANCARD_SANDBOX = os.environ.get("BANCARD_SANDBOX", "False") == "True"
+
+# SIPAP: forzar ambiente producción
+SIPAP_AMBIENTE = os.environ.get("SIPAP_AMBIENTE", "produccion")
+
+# ==========================================
 # VALIDACIÓN
 # ==========================================
 
