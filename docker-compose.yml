@@ -1,0 +1,112 @@
+# docker-compose.yml — Cantina Tita v1
+#
+# Arquitectura:
+#   frontend  → Nginx (React SPA + proxy inverso)   puerto 80
+#   backend   → Django + Daphne ASGI                interno
+#   redis     → Para Django Channels + Celery        interno
+#   celery    → Worker de tareas (comentado: activar si se usan tareas async)
+#
+# PostgreSQL corre de forma NATIVA en Windows (no en Docker).
+# El backend se conecta a host.docker.internal (Docker Desktop para Windows).
+#
+# Primer uso:
+#   1. Copiar .env.production.example → backend/.env.production y rellenar
+#   2. docker compose build
+#   3. docker compose run --rm backend python manage.py migrate
+#   4. docker compose up -d
+#   5. Verificar: curl http://localhost/api/health/
+
+services:
+
+  # ── Frontend (Nginx + React build) ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cantina_net
+
+  # ── Backend (Django + Daphne ASGI) ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DJANGO_SETTINGS_MODULE: backend.settings.production
+      # PostgreSQL en host Windows — ajustar si el IP del servidor es distinto
+      DB_HOST: host.docker.internal
+      DB_PORT: "5432"
+      DB_NAME: cantina_tita
+      DB_USER: cantina_user
+      # Redis apunta al contenedor 'redis' (override sobre .env.production)
+      REDIS_URL: redis://redis:6379/1
+      # Resto de variables sensibles desde archivo .env.production
+    env_file:
+      - ./backend/.env.production
+    volumes:
+      - backend_media:/app/media
+      - backend_static:/app/staticfiles
+      - backend_logs:/app/logs
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - cantina_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ── Redis (Channels + Celery broker) ───────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    restart: unless-stopped
+    networks:
+      - cantina_net
+
+  # ── Celery Worker (activar descomentando cuando se usen tareas async) ───────
+  # celery:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   command: celery -A backend worker -l INFO --concurrency=2
+  #   environment:
+  #     DJANGO_SETTINGS_MODULE: backend.settings.production
+  #   env_file:
+  #     - ./backend/.env.production
+  #   volumes:
+  #     - backend_media:/app/media
+  #     - backend_logs:/app/logs
+  #   depends_on:
+  #     - redis
+  #     - backend
+  #   restart: unless-stopped
+  #   networks:
+  #     - cantina_net
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+
+networks:
+  cantina_net:
+    driver: bridge
+
+volumes:
+  backend_media:
+  backend_static:
+  backend_logs:
+  redis_data:
