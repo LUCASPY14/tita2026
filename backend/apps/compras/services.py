@@ -86,8 +86,9 @@ class CompraService:
                 producto=producto,
                 defaults={"cantidad": Decimal("0")},
             )
-            stock.cantidad = models.F("cantidad") + cantidad
-            stock.save()
+            Stock.objects.filter(pk=stock.pk).update(
+                cantidad=models.F("cantidad") + cantidad
+            )
             stock.refresh_from_db()
 
             MovimientoStock.objects.create(
