@@ -8,12 +8,16 @@ from datetime import date
 
 @pytest.fixture
 def hijo_con_grado(db, cliente):
-    from apps.clientes.models import Hijo
+    from apps.clientes.models import Hijo, Grado
+    grado, _ = Grado.objects.get_or_create(
+        nombre="1er grado",
+        defaults={"nivel": 1, "orden": 1, "activo": True},
+    )
     return Hijo.objects.create(
         nombre="María",
         apellido="López",
         cliente_responsable=cliente,
-        grado="1er grado",
+        grado=grado,
         activo=True,
     )
 

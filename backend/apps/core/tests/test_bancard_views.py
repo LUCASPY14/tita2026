@@ -2,9 +2,8 @@
 Tests para los endpoints de Bancard vPOS.
 Cubre: iniciar pago, retorno (mock), estado.
 """
-import uuid
 from decimal import Decimal
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from rest_framework.test import APIClient
@@ -206,7 +205,6 @@ class TestBancardRetorno:
     def test_retorno_aprobado_acredita_saldo(
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
     ):
-        from apps.core.models import Tarjeta
         mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-retorno-ok'}
         mock_confirmar.return_value = {
             'status': 'success',
@@ -239,7 +237,6 @@ class TestBancardRetorno:
     def test_retorno_rechazado_no_acredita(
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
     ):
-        from apps.core.models import Tarjeta, PagoBancard
         mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-retorno-bad'}
         mock_confirmar.return_value = {'status': 'error', 'messages': [{'dsc': 'Fondos insuficientes'}]}
 
@@ -260,3 +257,135 @@ class TestBancardRetorno:
 
         tarjeta.refresh_from_db()
         assert tarjeta.saldo_actual == saldo_inicial  # sin cambio
+
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_retorno_pago_ya_aprobado_redirige_sin_reprocessar(
+        self, mock_iniciar, api_cliente_web, hijo_con_tarjeta
+    ):
+        """Pago ya en estado APROBADO — segundo retorno redirige directamente."""
+        from apps.core.models import PagoBancard
+        mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-doble'}
+
+        client, _ = api_cliente_web
+        _, tarjeta = hijo_con_tarjeta
+
+        init_resp = client.post('/api/v1/core/bancard/iniciar/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta,
+            'monto': 100000,
+        })
+        shop_pid = init_resp.data['shop_process_id']
+
+        # Marcar como aprobado directamente en DB
+        PagoBancard.objects.filter(shop_process_id=shop_pid).update(
+            estado=PagoBancard.Estado.APROBADO
+        )
+
+        anon_client = APIClient()
+        resp = anon_client.get('/api/v1/core/bancard/retorno/', {'shop_process_id': shop_pid})
+        assert resp.status_code == 302
+        assert 'aprobado' in resp['Location']
+
+    @patch('apps.core.bancard_service.confirmar_pago')
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_retorno_error_acreditacion_registra_error(
+        self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
+    ):
+        """Fallo en acreditar_saldo → estado ERROR, redirige con estado=error."""
+        from apps.core.models import PagoBancard
+        mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-acr-err'}
+        mock_confirmar.return_value = {
+            'status': 'success',
+            'confirmation': {'response_code': '00'},
+        }
+
+        client, _ = api_cliente_web
+        _, tarjeta = hijo_con_tarjeta
+
+        init_resp = client.post('/api/v1/core/bancard/iniciar/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta,
+            'monto': 100000,
+        })
+        shop_pid = init_resp.data['shop_process_id']
+
+        with patch('apps.core.bancard_service.acreditar_saldo', side_effect=Exception("acreditación fallida")):
+            anon_client = APIClient()
+            resp = anon_client.get('/api/v1/core/bancard/retorno/', {'shop_process_id': shop_pid})
+
+        assert resp.status_code == 302
+        assert 'error' in resp['Location']
+        pago = PagoBancard.objects.get(shop_process_id=shop_pid)
+        assert pago.estado == PagoBancard.Estado.ERROR
+
+
+@pytest.mark.django_db
+class TestBancardIniciarEdgeCases:
+
+    def test_iniciar_sin_params_falla(self, api_cliente_web):
+        client, _ = api_cliente_web
+        resp = client.post('/api/v1/core/bancard/iniciar/', {}, format='json')
+        assert resp.status_code == 400
+
+    def test_iniciar_monto_no_numerico_falla(self, api_cliente_web, hijo_con_tarjeta):
+        client, _ = api_cliente_web
+        _, tarjeta = hijo_con_tarjeta
+        resp = client.post('/api/v1/core/bancard/iniciar/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta,
+            'monto': 'no_es_numero',
+        })
+        assert resp.status_code == 400
+
+    def test_iniciar_sin_claves_bancard_devuelve_503(self, api_cliente_web, hijo_con_tarjeta):
+        from django.test import override_settings
+        client, _ = api_cliente_web
+        _, tarjeta = hijo_con_tarjeta
+        with override_settings(BANCARD_PUBLIC_KEY='', BANCARD_PRIVATE_KEY=''):
+            resp = client.post('/api/v1/core/bancard/iniciar/', {
+                'nro_tarjeta': tarjeta.nro_tarjeta,
+                'monto': 100000,
+            })
+        assert resp.status_code == 503
+
+
+@pytest.mark.django_db
+class TestBancardEstadoPermiso:
+
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_estado_otro_cliente_devuelve_403(self, mock_iniciar, hijo_con_tarjeta, cliente, db):
+        """Un CLIENTE_WEB que no es dueño del pago recibe 403."""
+        from apps.usuarios.models import Usuario
+        from rest_framework.test import APIClient
+
+        mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-ajeno'}
+
+        # Crear dueño del pago — usuario vinculado al cliente fixture
+        owner = Usuario.objects.create_user(
+            email="owner_bancard@test.com",
+            password="test1234",
+            nombre="Owner",
+            apellido="Test",
+            rol=Usuario.Rol.CLIENTE_WEB,
+            cliente=cliente,
+        )
+        owner_client = APIClient()
+        owner_client.force_authenticate(user=owner)
+
+        _, tarjeta = hijo_con_tarjeta
+        init_resp = owner_client.post('/api/v1/core/bancard/iniciar/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta,
+            'monto': 100000,
+        })
+        shop_pid = init_resp.data['shop_process_id']
+
+        # Otro usuario sin ese cliente
+        otro_user = Usuario.objects.create_user(
+            email="otro_bancard@test.com",
+            password="test1234",
+            nombre="Otro",
+            apellido="Sin cliente",
+            rol=Usuario.Rol.CAJERO,
+        )
+        otro_client = APIClient()
+        otro_client.force_authenticate(user=otro_user)
+
+        resp = otro_client.get(f'/api/v1/core/bancard/estado/{shop_pid}/')
+        assert resp.status_code == 403

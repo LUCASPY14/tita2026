@@ -73,7 +73,6 @@ class TestVentaConTarjeta:
     def test_venta_tarjeta_descuenta_saldo(
         self, cliente, usuario_cajero, producto, stock_producto, tarjeta_activa
     ):
-        from apps.core.models import Tarjeta
         _registrar_venta_tarjeta(cliente, usuario_cajero, producto, stock_producto, tarjeta_activa)
         tarjeta_activa.refresh_from_db()
         assert tarjeta_activa.saldo_actual == Decimal("12000")
