@@ -79,7 +79,6 @@ class TestEmitirParaOrigen:
     def test_emitir_para_carga_saldo(self, carga_saldo):
         from apps.contabilidad.services import FacturacionService
         from apps.contabilidad.models import Factura
-        from apps.core.models import CargaSaldo
 
         factura = FacturacionService.emitir_para_origen(
             tipo="CARGA_SALDO",
@@ -131,7 +130,6 @@ class TestEmitirParaOrigen:
     def test_emitir_para_pago_almuerzo(self, pago_almuerzo):
         from apps.contabilidad.services import FacturacionService
         from apps.contabilidad.models import Factura
-        from apps.almuerzos.models import PagoCuentaAlmuerzo
 
         factura = FacturacionService.emitir_para_origen(
             tipo="PAGO_ALMUERZO",

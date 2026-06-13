@@ -59,20 +59,20 @@ def cierre_cerrado(db, caja, usuario_cajero):
 class TestCerrarCaja:
 
     def test_cajero_puede_cerrar(self, api_cajero, cierre_abierto):
-        url = f"/api/contabilidad/cierres-caja/{cierre_abierto.pk}/cerrar/"
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_abierto.pk}/cerrar/"
         resp = api_cajero.post(url, {"monto_contado_fisico": 105000}, format="json")
         assert resp.status_code == 200
         assert resp.data["estado"] == "CERRADO"
         assert resp.data["monto_contado_fisico"] == "105000"
 
     def test_cerrar_dos_veces_falla(self, api_cajero, cierre_abierto):
-        url = f"/api/contabilidad/cierres-caja/{cierre_abierto.pk}/cerrar/"
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_abierto.pk}/cerrar/"
         api_cajero.post(url, {"monto_contado_fisico": 100000}, format="json")
         resp = api_cajero.post(url, {"monto_contado_fisico": 100000}, format="json")
         assert resp.status_code == 400
 
     def test_sin_autenticacion_falla(self, api_client, cierre_abierto):
-        url = f"/api/contabilidad/cierres-caja/{cierre_abierto.pk}/cerrar/"
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_abierto.pk}/cerrar/"
         resp = api_client.post(url, {"monto_contado_fisico": 100000}, format="json")
         assert resp.status_code in (401, 403)
 
@@ -84,7 +84,7 @@ class TestCerrarCaja:
             monto=Decimal("20000"),
             medio_pago=medio_pago_efectivo,
         )
-        url = f"/api/contabilidad/cierres-caja/{cierre_abierto.pk}/cerrar/"
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_abierto.pk}/cerrar/"
         resp = api_cajero.post(url, {"monto_contado_fisico": 115000}, format="json")
         assert resp.status_code == 200
         # monto_esperado = 100000 + 20000 = 120000; contado = 115000 → diferencia = -5000
@@ -95,24 +95,23 @@ class TestCerrarCaja:
 class TestConciliarCaja:
 
     def test_admin_puede_conciliar(self, api_admin, cierre_cerrado):
-        url = f"/api/contabilidad/cierres-caja/{cierre_cerrado.pk}/conciliar/"
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_cerrado.pk}/conciliar/"
         resp = api_admin.post(url, {"observaciones": "Todo en orden"}, format="json")
         assert resp.status_code == 200
         assert resp.data["estado"] == "CONCILIADO"
 
     def test_cajero_puede_conciliar(self, api_cajero, cierre_cerrado):
-        url = f"/api/contabilidad/cierres-caja/{cierre_cerrado.pk}/conciliar/"
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_cerrado.pk}/conciliar/"
         resp = api_cajero.post(url, {}, format="json")
         assert resp.status_code == 200
 
     def test_conciliar_caja_abierta_falla(self, api_admin, cierre_abierto):
-        url = f"/api/contabilidad/cierres-caja/{cierre_abierto.pk}/conciliar/"
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_abierto.pk}/conciliar/"
         resp = api_admin.post(url, {}, format="json")
         assert resp.status_code == 400
 
     def test_observaciones_guardadas(self, api_admin, cierre_cerrado):
-        from apps.contabilidad.models import CierreCaja
-        url = f"/api/contabilidad/cierres-caja/{cierre_cerrado.pk}/conciliar/"
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_cerrado.pk}/conciliar/"
         api_admin.post(url, {"observaciones": "Diferencia justificada"}, format="json")
         cierre_cerrado.refresh_from_db()
         assert cierre_cerrado.observaciones_conciliacion == "Diferencia justificada"
@@ -122,14 +121,14 @@ class TestConciliarCaja:
 class TestCierrePDF:
 
     def test_pdf_retorna_html(self, api_admin, cierre_cerrado):
-        url = f"/api/contabilidad/cierres-caja/{cierre_cerrado.pk}/pdf/"
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_cerrado.pk}/pdf/"
         resp = api_admin.get(url)
         assert resp.status_code == 200
         assert "text/html" in resp["Content-Type"]
         assert b"Cierre de Caja" in resp.content
 
     def test_pdf_sin_autenticacion_falla(self, api_client, cierre_cerrado):
-        url = f"/api/contabilidad/cierres-caja/{cierre_cerrado.pk}/pdf/"
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_cerrado.pk}/pdf/"
         resp = api_client.get(url)
         assert resp.status_code in (401, 403)
 
@@ -138,15 +137,15 @@ class TestCierrePDF:
 class TestCajaPermissions:
 
     def test_anonimo_no_puede_listar_cierres(self, api_client):
-        resp = api_client.get("/api/contabilidad/cierres-caja/")
+        resp = api_client.get("/api/v1/contabilidad/cierres-caja/")
         assert resp.status_code in (401, 403)
 
     def test_cajero_puede_listar_cierres(self, api_cajero):
-        resp = api_cajero.get("/api/contabilidad/cierres-caja/")
+        resp = api_cajero.get("/api/v1/contabilidad/cierres-caja/")
         assert resp.status_code == 200
 
     def test_cajero_puede_crear_cierre(self, api_cajero, caja, usuario_cajero):
-        resp = api_cajero.post("/api/contabilidad/cierres-caja/", {
+        resp = api_cajero.post("/api/v1/contabilidad/cierres-caja/", {
             "caja": caja.pk,
             "empleado": usuario_cajero.pk,
             "monto_inicial": 50000,
