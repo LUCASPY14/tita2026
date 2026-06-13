@@ -79,27 +79,90 @@ services:
     networks:
       - cantina_net
 
-  # ── Celery Worker (activar descomentando cuando se usen tareas async) ───────
-  # celery:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   command: celery -A backend worker -l INFO --concurrency=2
-  #   environment:
-  #     DJANGO_SETTINGS_MODULE: backend.settings.production
-  #   env_file:
-  #     - ./backend/.env.production
-  #   volumes:
-  #     - backend_media:/app/media
-  #     - backend_logs:/app/logs
-  #   depends_on:
-  #     - redis
-  #     - backend
-  #   restart: unless-stopped
-  #   networks:
-  #     - cantina_net
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
+  # ── Celery Worker ───────────────────────────────────────────────────────────
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A backend worker -l INFO --concurrency=2
+    environment:
+      DJANGO_SETTINGS_MODULE: backend.settings.production
+      DB_HOST: host.docker.internal
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/1
+    env_file:
+      - ./backend/.env.production
+    volumes:
+      - backend_media:/app/media
+      - backend_logs:/app/logs
+    depends_on:
+      - redis
+      - backend
+    restart: unless-stopped
+    networks:
+      - cantina_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ── Celery Beat (scheduler de tareas periódicas) ────────────────────────────
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A backend beat -l INFO -s /app/logs/celerybeat-schedule
+    environment:
+      DJANGO_SETTINGS_MODULE: backend.settings.production
+      DB_HOST: host.docker.internal
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/1
+    env_file:
+      - ./backend/.env.production
+    volumes:
+      - backend_logs:/app/logs
+    depends_on:
+      - redis
+      - backend
+    restart: unless-stopped
+    networks:
+      - cantina_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ── Prometheus ──────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - cantina_net
+
+  # ── Grafana ─────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.6.1
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:-tita2026}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/cantina.json
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - cantina_net
 
 networks:
   cantina_net:
@@ -110,3 +173,5 @@ volumes:
   backend_static:
   backend_logs:
   redis_data:
+  prometheus_data:
+  grafana_data:

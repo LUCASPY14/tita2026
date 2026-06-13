@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "apps.notificaciones",
     "apps.api_integrations",
     "channels",
+    "django_prometheus",
 ]
 
 AUTH_USER_MODEL = "usuarios.Usuario"
@@ -82,6 +83,7 @@ AUTH_USER_MODEL = "usuarios.Usuario"
 # ==============================================================================
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",  # debe ser el primero
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -91,6 +93,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",   # debe ser el último
 ]
 
 # ==============================================================================

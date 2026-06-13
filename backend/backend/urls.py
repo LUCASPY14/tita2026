@@ -1,6 +1,7 @@
 ﻿from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.db import connection, OperationalError as DBError
 from django.http import JsonResponse
 from django.urls import include, path
 from apps.usuarios.views import CustomTokenObtainPairView
@@ -8,9 +9,32 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 
-# Health check
 def health_check(request):
-    return JsonResponse({"status": "ok", "version": "1.0"})
+    checks = {}
+    ok = True
+
+    # Database
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT 1")
+        checks["db"] = "ok"
+    except DBError as exc:
+        checks["db"] = str(exc)
+        ok = False
+
+    # Redis
+    try:
+        import redis as redis_lib
+        r = redis_lib.from_url(settings.REDIS_URL, socket_connect_timeout=2)
+        r.ping()
+        checks["redis"] = "ok"
+    except Exception as exc:
+        checks["redis"] = str(exc)
+        ok = False
+
+    status = "ok" if ok else "degraded"
+    return JsonResponse({"status": status, "version": "1.0", "checks": checks},
+                        status=200 if ok else 503)
 
 
 urlpatterns = [
@@ -19,6 +43,9 @@ urlpatterns = [
 
     # Health check
     path('api/health/', health_check, name='health-check'),
+
+    # Prometheus metrics (protegido por IP en producción via Nginx)
+    path('', include('django_prometheus.urls')),
 
     # OpenAPI / Swagger docs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
