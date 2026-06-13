@@ -42,6 +42,7 @@ def lista_precio(db):
 
 @pytest.fixture
 def cliente(db, tipo_cliente, lista_precio):
+    from decimal import Decimal
     from apps.clientes.models import Cliente
     return Cliente.objects.create(
         nombres="Juan",
@@ -49,6 +50,7 @@ def cliente(db, tipo_cliente, lista_precio):
         ruc_ci="1234567",
         tipo_cliente=tipo_cliente,
         lista_precio=lista_precio,
+        limite_credito=Decimal("999999"),
     )
 
 

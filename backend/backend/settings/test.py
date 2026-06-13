@@ -1,11 +1,12 @@
 """
-Configuración para tests
+Configuración de tests — única config activa (PostgreSQL).
+Base de datos: cantina_tita_test (configurable vía DB_TEST_NAME).
 """
 
 from .base import *
 
 DEBUG = True
-USE_TZ = False
+USE_TZ = True
 TIME_ZONE = "UTC"
 
 DATABASES = {
@@ -33,6 +34,9 @@ PASSWORD_HASHERS = [
 ]
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+BANCARD_PUBLIC_KEY = "test_public_key_xxx"
+BANCARD_PRIVATE_KEY = "test_private_key_xxx"
 
 LOGGING = {
     "version": 1,
