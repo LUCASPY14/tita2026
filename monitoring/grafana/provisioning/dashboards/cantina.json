@@ -1,16 +1,33 @@
 {
   "title": "Cantina Tita — Overview",
   "uid": "cantina-overview",
-  "version": 1,
+  "version": 2,
   "schemaVersion": 38,
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "interval",
+        "type": "interval",
+        "options": [
+          { "selected": true, "text": "1m", "value": "1m" },
+          { "selected": false, "text": "5m", "value": "5m" },
+          { "selected": false, "text": "1h", "value": "1h" }
+        ],
+        "current": { "text": "1m", "value": "1m" }
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1,
       "title": "Requests / segundo",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } }
+      },
       "targets": [
         {
           "expr": "rate(django_http_requests_total_by_method_total[1m])",
@@ -20,21 +37,27 @@
     },
     {
       "id": 2,
-      "title": "Latencia p95 (ms)",
+      "title": "Latencia p95 por endpoint (ms)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "color": { "mode": "palette-classic" } }
+      },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(django_http_requests_latency_seconds_by_view_method_bucket[5m])) * 1000",
+          "expr": "topk(10, histogram_quantile(0.95, sum by (view, le) (rate(django_http_requests_latency_seconds_by_view_method_bucket[5m]))) * 1000)",
           "legendFormat": "p95 {{view}}"
         }
       ]
     },
     {
       "id": 3,
-      "title": "Errores 4xx / 5xx",
+      "title": "Errores HTTP 4xx / 5xx",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } }
+      },
       "targets": [
         {
           "expr": "rate(django_http_responses_total_by_status_total{status=~\"4..|5..\"}[1m])",
@@ -47,6 +70,9 @@
       "title": "DB queries / segundo",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" }
+      },
       "targets": [
         {
           "expr": "rate(django_db_execute_total[1m])",
@@ -59,6 +85,13 @@
       "title": "Requests activos ahora",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
+      "fieldConfig": {
+        "defaults": { "thresholds": { "steps": [
+          { "color": "green", "value": null },
+          { "color": "yellow", "value": 20 },
+          { "color": "red", "value": 50 }
+        ]}}
+      },
       "targets": [
         {
           "expr": "django_http_requests_before_middlewares_total - django_http_responses_before_middlewares_total",
@@ -71,10 +104,119 @@
       "title": "Latencia p50 global (ms)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 16 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 300 },
+            { "color": "red", "value": 1000 }
+          ]}
+        }
+      },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, rate(django_http_requests_latency_seconds_by_view_method_bucket[5m])) * 1000",
           "legendFormat": "p50"
+        }
+      ]
+    },
+
+    {
+      "id": 7,
+      "title": "Ventas exitosas por hora",
+      "description": "Respuestas HTTP 201 al endpoint de ventas. Aproxima nuevas ventas creadas.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "displayName": "Ventas",
+          "color": { "mode": "fixed", "fixedColor": "green" }
+        }
+      },
+      "options": { "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "expr": "increase(django_http_responses_total_by_status_total{status=\"201\"}[1h])",
+          "legendFormat": "201 Created / hora"
+        },
+        {
+          "expr": "rate(django_http_responses_total_by_status_total{status=\"201\"}[5m]) * 3600",
+          "legendFormat": "Tasa proyectada (ventas/h)"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Tareas Celery fallidas (acumulado)",
+      "description": "Counter de fallos expuesto por el worker via prometheus_client. Requiere PushGateway o exposición de /metrics en el worker.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 1 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "expr": "increase(celery_task_failures_total[1h])",
+          "legendFormat": "Fallos: {{task_name}}"
+        },
+        {
+          "expr": "sum(increase(celery_task_failures_total[1h]))",
+          "legendFormat": "Total fallos / hora"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Top 10 — Latencia p95 por vista (tabla)",
+      "description": "Las 10 vistas con mayor p95 en la última hora.",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 28 },
+      "fieldConfig": {
+        "defaults": { "unit": "ms" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [
+              { "id": "displayName", "value": "Latencia p95 (ms)" },
+              {
+                "id": "thresholds",
+                "value": { "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 300 },
+                  { "color": "red", "value": 1000 }
+                ]}
+              },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "sortBy": [{ "displayName": "Latencia p95 (ms)", "desc": true }]
+      },
+      "targets": [
+        {
+          "expr": "topk(10, histogram_quantile(0.95, sum by (view) (rate(django_http_requests_latency_seconds_by_view_method_bucket[1h]))) * 1000)",
+          "legendFormat": "{{view}}",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "labelsToFields", "options": { "mode": "rows" } },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": { "label": "Endpoint", "Value": "Latencia p95 (ms)" }
+          }
         }
       ]
     }

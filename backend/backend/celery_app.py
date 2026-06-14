@@ -8,6 +8,26 @@ import os
 from celery import Celery
 from celery.schedules import crontab
 
+# Contadores Prometheus para monitoreo de Celery.
+# Se registran en el proceso del worker, no en el web process, por lo que
+# Prometheus solo los verá si hay un PushGateway o si el worker expone /metrics.
+# En esta arquitectura los usamos para logging estructurado y alertas Sentry.
+try:
+    from prometheus_client import Counter as _Counter
+    CELERY_TASK_FAILURES = _Counter(
+        "celery_task_failures_total",
+        "Total de tareas Celery que fallaron tras agotar reintentos",
+        ["task_name"],
+    )
+    CELERY_TASK_SUCCESS = _Counter(
+        "celery_task_success_total",
+        "Total de tareas Celery completadas exitosamente",
+        ["task_name"],
+    )
+except Exception:
+    CELERY_TASK_FAILURES = None
+    CELERY_TASK_SUCCESS = None
+
 logger = logging.getLogger(__name__)
 
 # Establecer módulo de settings de Django
@@ -54,6 +74,11 @@ app.conf.beat_schedule = {
         "task": "apps.inventario.tasks.generar_resumen_diario_stock",
         "schedule": crontab(hour=23, minute=55),  # Todos los días 23:55
     },
+    # ── Particionado DB ───────────────────────────────────────────────
+    "crear-particion-anio-siguiente": {
+        "task": "apps.core.tasks.crear_particion_anio_siguiente",
+        "schedule": crontab(hour=4, minute=0, day_of_month=1, month_of_year=12),  # 1 dic 04:00
+    },
     # ── Ventas ────────────────────────────────────────────────────────
     "resumen-diario-ventas": {
         "task": "apps.ventas.tasks.generar_resumen_diario_ventas",
@@ -97,6 +122,13 @@ def setup_task_failure_handler(sender, **kwargs):
     @task_failure.connect
     def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, einfo=None, **kw):
         task_name = getattr(sender, "name", "") or ""
+
+        if CELERY_TASK_FAILURES is not None:
+            try:
+                CELERY_TASK_FAILURES.labels(task_name=task_name).inc()
+            except Exception:
+                pass
+
         if task_name not in _CRITICAL_TASKS:
             return
         logger.error(
