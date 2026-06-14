@@ -6,9 +6,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY requirements.txt .
+# requirements.production.txt usa psycopg2 compilado (sin -binary).
+# El builder ya tiene gcc y libpq-dev, que son los únicos prerrequisitos de compilación.
+COPY requirements.txt requirements.production.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.production.txt
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM python:3.11-slim

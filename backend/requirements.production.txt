@@ -1,0 +1,72 @@
+﻿# ── Core Django ───────────────────────────────────────────────────────────────
+Django==4.2
+asgiref==3.11.1
+sqlparse==0.5.5
+
+# ── REST API ───────────────────────────────────────────────────────────────────
+djangorestframework==3.17.1
+djangorestframework_simplejwt==5.5.1
+PyJWT==2.12.1
+drf-spectacular==0.29.0
+uritemplate==4.2.0
+inflection==0.5.1
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+referencing==0.37.0
+rpds-py==0.30.0
+attrs==26.1.0
+
+# ── Django apps ────────────────────────────────────────────────────────────────
+django-cors-headers==4.9.0
+django-filter==25.1
+django-jazzmin==3.0.4
+django-simple-history==3.7.0
+
+# ── Base de datos ──────────────────────────────────────────────────────────────
+# Linux/prod:  reemplazar con psycopg2==2.9.12 (compilado, más estable)
+
+# ── WebSockets / ASGI ─────────────────────────────────────────────────────────
+channels==4.2.0
+channels-redis==4.2.1
+daphne==4.2.2          # servidor ASGI requerido para WebSockets en producción
+
+# ── Celery / tareas ───────────────────────────────────────────────────────────
+celery==5.6.3
+kombu==5.6.2
+amqp==5.3.1
+billiard==4.2.4
+vine==5.1.0
+click==8.4.0
+click-didyoumean==0.3.1
+click-plugins==1.1.1.2
+click-repl==0.3.0
+prompt_toolkit==3.0.52
+wcwidth==0.7.0
+
+# ── HTTP / networking ─────────────────────────────────────────────────────────
+requests==2.34.2
+certifi==2026.5.20
+charset-normalizer==3.4.7
+idna==3.18
+urllib3==2.7.0
+
+# ── Utilidades ────────────────────────────────────────────────────────────────
+python-dotenv==1.2.2
+python-dateutil==2.9.0.post0
+PyYAML==6.0.3
+tzdata==2026.2
+tzlocal==5.3.1
+typing_extensions==4.15.0
+packaging==26.2
+colorama==0.4.6
+Pygments==2.20.0
+six==1.17.0
+
+sentry-sdk[django]==2.25.1
+
+openpyxl==3.1.5
+
+django-prometheus==2.3.1
+
+
+psycopg2==2.9.12

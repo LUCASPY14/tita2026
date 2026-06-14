@@ -103,6 +103,7 @@ CREDENCIALES_PORTAL.md
 temp_logs/
 *.txt
 !requirements.txt
+!requirements.production.txt
 !README*.txt
 
 # Docker
