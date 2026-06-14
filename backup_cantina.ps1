@@ -7,10 +7,12 @@
 
 param(
     [string]$DbName = "cantina_tita",
-    [string]$PgUser = "postgres",
-    [string]$PgHost = "localhost",
-    [string]$PgPort = "5432",
-    [string]$PgBin  = "C:\Program Files\PostgreSQL\16\bin"
+    [string]$PgUser   = "postgres",
+    [string]$PgHost   = "localhost",
+    [string]$PgPort   = "5432",
+    [string]$PgBin    = "C:\Program Files\PostgreSQL\16\bin",
+    [string]$BackupDir = "C:\backups\cantina",
+    [int]   $Keep     = 30
 )
 
 $DIR     = "C:\backups\cantina"

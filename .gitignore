@@ -40,8 +40,8 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
 yarn.lock
+# package-lock.json debe versionarse para que 'npm ci' funcione en CI
 
 # Frontend build
 frontend/dist/

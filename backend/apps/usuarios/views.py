@@ -26,6 +26,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from common.permissions import IsAdmin
+from common.throttling import LoginRateThrottle
 
 
 # ── TOTP helpers (RFC 6238, sin dependencias externas) ────────────────────────
@@ -105,6 +106,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
       El cliente debe completar el login en POST /api/usuarios/2fa/login/.
     """
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request, *_args, **_kwargs):
         serializer = self.get_serializer(data=request.data)

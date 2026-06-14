@@ -241,8 +241,13 @@ if REDIS_URL:
 # SENTRY CONFIGURATION
 # ==========================================
 
-SENTRY_DSN = os.environ.get("SENTRY_DSN", None)
-if SENTRY_DSN:
+SENTRY_DSN = os.environ.get("SENTRY_DSN")
+if not SENTRY_DSN:
+    raise ValueError(
+        "SENTRY_DSN must be set in production! "
+        "Get the DSN from your Sentry project → Settings → Client Keys."
+    )
+if True:  # siempre inicializar cuando SENTRY_DSN está presente
     import sentry_sdk
     from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.django import DjangoIntegration
@@ -288,8 +293,10 @@ REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
     "rest_framework.renderers.JSONRenderer",
 ]
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
-    "anon": "100/hour",
-    "user": "1000/hour",
+    "anon": "60/hour",
+    "user": "500/hour",
+    "auth": "5/min",        # login: 5 intentos/minuto por IP
+    "sensitive": "50/hour", # carga de saldo, anulaciones
 }
 
 # ==========================================

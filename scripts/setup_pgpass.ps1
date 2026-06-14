@@ -18,7 +18,7 @@ param(
     [string]$PgHost = "localhost",
     [string]$PgPort = "5432",
     [string]$DbName = "cantina_tita",
-    [string]$PgUser = "cantina_user"
+    [string]$PgUser = "postgres"
 )
 
 # En Windows, PostgreSQL busca el archivo en %APPDATA%\postgresql\pgpass.conf

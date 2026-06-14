@@ -11,6 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.object_permissions import IsCajaOwnerOrAdmin
 from common.permissions import IsCajeroOrAdmin, IsAdmin, IsStaffUser
 from .filters import VentaFilter
 
@@ -40,7 +41,7 @@ from .serializers import (
 
 class VentaViewSet(viewsets.ModelViewSet):
     serializer_class = VentaSerializer
-    permission_classes = [IsCajeroOrAdmin]
+    permission_classes = [IsCajeroOrAdmin, IsCajaOwnerOrAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = VentaFilter
     search_fields = ["cliente__nombres", "cliente__apellidos", "cliente__ruc_ci"]
@@ -50,7 +51,7 @@ class VentaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         from django.db.models import DecimalField, Sum, Value
         from django.db.models.functions import Coalesce
-        return (
+        qs = (
             Venta.objects
             .select_related("cliente", "cajero", "hijo", "hijo__grado")
             .prefetch_related("detalles", "detalles__producto")
@@ -61,6 +62,11 @@ class VentaViewSet(viewsets.ModelViewSet):
                 )
             )
         )
+        # Cajeros solo ven sus propias ventas
+        user = self.request.user
+        if getattr(user, "rol", None) == "CAJERO":
+            qs = qs.filter(cajero=user)
+        return qs
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

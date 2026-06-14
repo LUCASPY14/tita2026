@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 
+from common.pagination import CursorResultsSetPagination
 from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -63,8 +64,10 @@ class MovimientoTarjetaViewSet(viewsets.ModelViewSet):
     queryset = MovimientoTarjeta.objects.select_related("tarjeta").all()
     serializer_class = MovimientoTarjetaSerializer
     permission_classes = [IsStaffOrClienteWeb]
-    filter_backends = [DjangoFilterBackend]
+    pagination_class = CursorResultsSetPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["tarjeta", "tipo"]
+    ordering = ["-fecha"]
 
 
 class TarjetaAutorizacionViewSet(viewsets.ModelViewSet):

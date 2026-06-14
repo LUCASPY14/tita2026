@@ -1,0 +1,105 @@
+{
+  "common": {
+    "save":        "Save",
+    "cancel":      "Cancel",
+    "delete":      "Delete",
+    "edit":        "Edit",
+    "create":      "Create",
+    "search":      "Search",
+    "loading":     "Loading...",
+    "error":       "Error",
+    "success":     "Success",
+    "confirm":     "Confirm",
+    "back":        "Back",
+    "yes":         "Yes",
+    "no":          "No",
+    "active":      "Active",
+    "inactive":    "Inactive",
+    "actions":     "Actions",
+    "new":         "New",
+    "name":        "Name",
+    "description": "Description",
+    "date":        "Date",
+    "total":       "Total",
+    "status":      "Status",
+    "noResults":   "No results"
+  },
+
+  "nav": {
+    "dashboard":    "Dashboard",
+    "products":     "Products",
+    "clients":      "Clients",
+    "cards":        "Cards",
+    "cashLoad":     "Load Balance",
+    "lunch":        "Lunches",
+    "diningRoom":   "Dining Room",
+    "purchases":    "Purchases",
+    "inventory":    "Inventory",
+    "billing":      "Billing",
+    "reports":      "Reports",
+    "users":        "Users",
+    "settings":     "Settings",
+    "integrations": "Integrations",
+    "pos":          "POS Mode",
+    "logout":       "Sign out"
+  },
+
+  "auth": {
+    "login":             "Sign in",
+    "logout":            "Sign out",
+    "email":             "Email",
+    "password":          "Password",
+    "forgotPassword":    "Forgot your password?",
+    "resetPassword":     "Reset password",
+    "recoverPassword":   "Recover password",
+    "loginError":        "Invalid credentials",
+    "sessionExpired":    "Your session expired. Please sign in again."
+  },
+
+  "pos": {
+    "title":             "POS Mode",
+    "scanCard":          "Scan or enter card number",
+    "addProduct":        "Add product",
+    "cart":              "Cart",
+    "charge":            "Charge",
+    "cancel":            "Cancel sale",
+    "balance":           "Available balance",
+    "insufficientFunds": "Insufficient balance",
+    "saleSuccess":       "Sale registered!",
+    "offlineWarning":    "Offline — sales are queued",
+    "offlineQueue_one":  "{{count}} sale offline",
+    "offlineQueue_other":"{{count}} sales offline",
+    "syncNow":           "Sync now",
+    "cashRegister":      "Cash register not open",
+    "openCashRegister":  "Go to Cash Registers",
+    "todaySales":        "Today's sales",
+    "avgTime":           "Avg. time"
+  },
+
+  "settings": {
+    "title":       "Settings",
+    "subtitle":    "System catalog management",
+    "categories":  "Categories",
+    "clientTypes": "Client Types",
+    "priceLists":  "Price Lists",
+    "payMethods":  "Payment Methods",
+    "grades":      "Grades",
+    "company":     "Company",
+    "priceHistory":"Price History",
+    "security":    "Security",
+    "lunchTypes":  "Lunch Types",
+    "lunchPlans":  "Lunch Plans",
+    "units":       "Units of Measure",
+    "allergens":   "Allergens",
+    "taxes":       "Taxes"
+  },
+
+  "errors": {
+    "generic":       "Something went wrong",
+    "network":       "Network error. Check your connection.",
+    "unauthorized":  "You don't have permission for this action.",
+    "notFound":      "Resource not found.",
+    "serverError":   "Server error. Please try again later.",
+    "backToHome":    "Back to home"
+  }
+}

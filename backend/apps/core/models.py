@@ -57,6 +57,10 @@ class Tarjeta(models.Model):
     class Meta:
         verbose_name = "Tarjeta"
         verbose_name_plural = "Tarjetas"
+        indexes = [
+            models.Index(fields=["estado"], name="idx_tarjeta_estado"),
+            models.Index(fields=["estado", "fecha_vencimiento"], name="idx_tarjeta_estado_vto"),
+        ]
 
     def __str__(self):
         return f"Tarjeta {self.nro_tarjeta} - {self.hijo}"
@@ -340,6 +344,9 @@ class ConsumoTarjeta(models.Model):
         verbose_name = "Consumo de Tarjeta"
         verbose_name_plural = "Consumos de Tarjetas"
         ordering = ["-fecha_consumo"]
+        indexes = [
+            models.Index(fields=["tarjeta", "fecha_consumo"], name="idx_consumo_tarj_fecha"),
+        ]
 
     def __str__(self):
         return f"Consumo {self.tarjeta} - ₲{self.monto_consumido:,.0f}"

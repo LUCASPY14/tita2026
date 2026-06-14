@@ -57,9 +57,24 @@ jobs:
         working-directory: backend
         run: python manage.py migrate --settings=backend.settings.base
 
-      - name: Run tests
+      - name: Run tests with coverage
         working-directory: backend
-        run: pytest --cov=apps --cov-report=term-missing -q --cov-fail-under=80
+        run: |
+          pytest \
+            --cov=apps \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            -q \
+            --cov-fail-under=80
+
+      - name: Upload backend coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: backend/coverage.xml
+          flags: backend
+          name: django-backend
+          fail_ci_if_error: false
 
   frontend:
     name: Frontend (React + TypeScript)
@@ -86,6 +101,15 @@ jobs:
       - name: Unit tests + coverage
         working-directory: frontend
         run: npm run coverage
+
+      - name: Upload frontend coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: frontend/coverage
+          flags: frontend
+          name: react-frontend
+          fail_ci_if_error: false
 
       - name: Build
         working-directory: frontend

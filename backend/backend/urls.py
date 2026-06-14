@@ -32,17 +32,33 @@ def health_check(request):
         checks["redis"] = str(exc)
         ok = False
 
+    # Celery workers
+    try:
+        from celery import current_app
+        ping = current_app.control.inspect(timeout=1.5).ping() or {}
+        worker_count = len(ping)
+        checks["celery"] = f"{worker_count} worker(s)" if worker_count else "no workers"
+        if worker_count == 0:
+            ok = False
+    except Exception as exc:
+        checks["celery"] = str(exc)
+        ok = False
+
     status = "ok" if ok else "degraded"
-    return JsonResponse({"status": status, "version": "1.0", "checks": checks},
-                        status=200 if ok else 503)
+    http_status = 200 if ok else 503
+    return JsonResponse(
+        {"status": status, "version": "1.0", "checks": checks},
+        status=http_status,
+    )
 
 
 urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
 
-    # Health check
+    # Health check (ambos path para compatibilidad)
     path('api/health/', health_check, name='health-check'),
+    path('api/v1/health/', health_check, name='health-check-v1'),
 
     # Prometheus metrics (protegido por IP en producción via Nginx)
     path('', include('django_prometheus.urls')),

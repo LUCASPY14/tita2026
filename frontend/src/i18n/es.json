@@ -1,0 +1,105 @@
+{
+  "common": {
+    "save":        "Guardar",
+    "cancel":      "Cancelar",
+    "delete":      "Eliminar",
+    "edit":        "Editar",
+    "create":      "Crear",
+    "search":      "Buscar",
+    "loading":     "Cargando...",
+    "error":       "Error",
+    "success":     "Éxito",
+    "confirm":     "Confirmar",
+    "back":        "Volver",
+    "yes":         "Sí",
+    "no":          "No",
+    "active":      "Activo",
+    "inactive":    "Inactivo",
+    "actions":     "Acciones",
+    "new":         "Nuevo",
+    "name":        "Nombre",
+    "description": "Descripción",
+    "date":        "Fecha",
+    "total":       "Total",
+    "status":      "Estado",
+    "noResults":   "Sin resultados"
+  },
+
+  "nav": {
+    "dashboard":    "Dashboard",
+    "products":     "Productos",
+    "clients":      "Clientes",
+    "cards":        "Tarjetas",
+    "cashLoad":     "Carga de Saldo",
+    "lunch":        "Almuerzos",
+    "diningRoom":   "Comedor",
+    "purchases":    "Compras",
+    "inventory":    "Inventario",
+    "billing":      "Facturación",
+    "reports":      "Reportes",
+    "users":        "Usuarios",
+    "settings":     "Configuración",
+    "integrations": "Integraciones",
+    "pos":          "Modo Recreo",
+    "logout":       "Salir"
+  },
+
+  "auth": {
+    "login":             "Iniciar Sesión",
+    "logout":            "Cerrar Sesión",
+    "email":             "Correo electrónico",
+    "password":          "Contraseña",
+    "forgotPassword":    "¿Olvidaste tu contraseña?",
+    "resetPassword":     "Restablecer contraseña",
+    "recoverPassword":   "Recuperar contraseña",
+    "loginError":        "Credenciales incorrectas",
+    "sessionExpired":    "Tu sesión expiró. Iniciá sesión nuevamente."
+  },
+
+  "pos": {
+    "title":             "Modo Recreo",
+    "scanCard":          "Escaneá o ingresá la tarjeta",
+    "addProduct":        "Agregar producto",
+    "cart":              "Carrito",
+    "charge":            "Cobrar",
+    "cancel":            "Cancelar venta",
+    "balance":           "Saldo disponible",
+    "insufficientFunds": "Saldo insuficiente",
+    "saleSuccess":       "¡Venta registrada!",
+    "offlineWarning":    "Sin conexión — ventas se guardan offline",
+    "offlineQueue_one":  "{{count}} venta offline",
+    "offlineQueue_other":"{{count}} ventas offline",
+    "syncNow":           "Sincronizar ahora",
+    "cashRegister":      "Caja no iniciada",
+    "openCashRegister":  "Ir a Cajas",
+    "todaySales":        "Ventas hoy",
+    "avgTime":           "Promedio"
+  },
+
+  "settings": {
+    "title":       "Configuración",
+    "subtitle":    "Administración de catálogos del sistema",
+    "categories":  "Categorías",
+    "clientTypes": "Tipos de Cliente",
+    "priceLists":  "Listas de Precio",
+    "payMethods":  "Medios de Pago",
+    "grades":      "Grados",
+    "company":     "Empresa",
+    "priceHistory":"Hist. Precios",
+    "security":    "Seguridad",
+    "lunchTypes":  "Tipos Almuerzo",
+    "lunchPlans":  "Planes Almuerzo",
+    "units":       "Unidades Medida",
+    "allergens":   "Alérgenos",
+    "taxes":       "Impuestos"
+  },
+
+  "errors": {
+    "generic":       "Algo salió mal",
+    "network":       "Error de red. Verificá tu conexión.",
+    "unauthorized":  "No tenés permisos para esta acción.",
+    "notFound":      "Recurso no encontrado.",
+    "serverError":   "Error del servidor. Intentá más tarde.",
+    "backToHome":    "Volver al inicio"
+  }
+}

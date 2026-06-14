@@ -12,6 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.pagination import CursorResultsSetPagination
 from common.permissions import IsAdmin, IsStaffUser
 from common.mixins import ExportCSVMixin
 
@@ -54,6 +55,7 @@ class MovimientoStockViewSet(ExportCSVMixin, viewsets.ReadOnlyModelViewSet):
     queryset = MovimientoStock.objects.select_related("producto").all()
     serializer_class = MovimientoStockSerializer
     permission_classes = [IsStaffUser]
+    pagination_class = CursorResultsSetPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = MovimientoStockFilter
     search_fields = ["producto__descripcion", "observaciones"]

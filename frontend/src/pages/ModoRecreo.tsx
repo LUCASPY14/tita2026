@@ -32,6 +32,7 @@ import {
 } from '@phosphor-icons/react'
 import api from '../services/api'
 import { useCatalogoStore } from '../store/catalogoStore'
+import { useOfflineQueue } from '../hooks/useOfflineQueue'
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 function tone(freq: number, ms: number, type: OscillatorType = 'sine', vol = 0.22) {
@@ -289,26 +290,20 @@ export default function ModoRecreo() {
   const navigate = useNavigate()
   const { getProductos, getCategorias } = useCatalogoStore()
 
-  // Conectividad
-  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  // Conectividad + cola offline
+  const { isOnline, pendingCount, syncing, syncNow } = useOfflineQueue()
   useEffect(() => {
     const offlineToastId = 'offline-warning'
-    const goOffline = () => {
-      setIsOnline(false)
-      toast.error('Sin conexión — cobros deshabilitados', { id: offlineToastId, duration: Infinity })
-    }
-    const goOnline = () => {
-      setIsOnline(true)
+    if (!isOnline) {
+      toast.error('Sin conexión — ventas se guardan offline', { id: offlineToastId, duration: Infinity })
+    } else {
       toast.dismiss(offlineToastId)
-      toast.success('Conexión restaurada')
+      if (pendingCount > 0) {
+        toast.success(`Conexión restaurada — sincronizando ${pendingCount} venta(s)...`)
+      }
     }
-    window.addEventListener('offline', goOffline)
-    window.addEventListener('online', goOnline)
-    return () => {
-      window.removeEventListener('offline', goOffline)
-      window.removeEventListener('online', goOnline)
-    }
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline])
 
   // Caja abierta
   interface CierreCajaInfo { id: number; caja_nombre: string; monto_inicial: string; fecha_apertura: string }
@@ -840,6 +835,20 @@ export default function ModoRecreo() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          {/* Badge de ventas offline pendientes */}
+          {pendingCount > 0 && (
+            <button
+              onClick={syncNow}
+              disabled={syncing || !isOnline}
+              title={isOnline ? 'Sincronizar ventas offline' : 'Sin conexión — se sincronizarán al reconectar'}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 border border-amber-300 text-amber-800 rounded-lg text-xs font-bold transition-colors cursor-pointer hover:bg-amber-200 disabled:opacity-60"
+            >
+              {syncing
+                ? <SpinnerIcon size={13} className="animate-spin" />
+                : <WarningIcon size={13} weight="fill" />}
+              {pendingCount} venta{pendingCount !== 1 ? 's' : ''} offline
+            </button>
+          )}
           <div className="flex items-center gap-3 text-xs text-slate-500">
             {[['F2','Buscar'],['F3','Escanear'],['F9','Cobrar'],['Esc','Cancelar'],['±','Cant']].map(([k, l]) => (
               <span key={k}>
