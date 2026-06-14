@@ -17,7 +17,17 @@ import requests as http_client
 from django.conf import settings
 from django.utils import timezone
 
+from common.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
+
 logger = logging.getLogger(__name__)
+
+# Abre el circuito tras 5 fallos consecutivos; intenta recuperar tras 60s.
+_bancard_cb = CircuitBreaker(
+    name="bancard",
+    failure_threshold=5,
+    recovery_timeout=60.0,
+    expected_exception=Exception,
+)
 
 # ─── Configuración ────────────────────────────────────────────────────────────
 
@@ -83,13 +93,17 @@ def iniciar_pago(
     }
 
     try:
-        resp = http_client.post(
-            f"{_base_url()}/vpos/api/0.3/single_buy",
-            json=payload,
-            timeout=30,
-            verify=False,  # sandbox usa certificado autofirmado
-        )
+        with _bancard_cb:
+            resp = http_client.post(
+                f"{_base_url()}/vpos/api/0.3/single_buy",
+                json=payload,
+                timeout=30,
+                verify=False,  # sandbox usa certificado autofirmado
+            )
         data = resp.json()
+    except CircuitBreakerOpen as exc:
+        logger.warning("Bancard iniciar_pago bloqueado por circuit breaker: %s", exc)
+        return {"status": "error", "messages": [{"dsc": "Gateway de pagos temporalmente no disponible. Intente en unos minutos."}]}
     except Exception as exc:
         logger.error("Bancard iniciar_pago error: %s", exc)
         return {"status": "error", "messages": [{"dsc": str(exc)}]}
@@ -115,13 +129,17 @@ def confirmar_pago(shop_process_id: str) -> dict:
     }
 
     try:
-        resp = http_client.post(
-            f"{_base_url()}/vpos/api/0.3/single_buy/{shop_process_id}",
-            json=payload,
-            timeout=30,
-            verify=False,
-        )
+        with _bancard_cb:
+            resp = http_client.post(
+                f"{_base_url()}/vpos/api/0.3/single_buy/{shop_process_id}",
+                json=payload,
+                timeout=30,
+                verify=False,
+            )
         data = resp.json()
+    except CircuitBreakerOpen as exc:
+        logger.warning("Bancard confirmar_pago bloqueado por circuit breaker shop=%s: %s", shop_process_id, exc)
+        return {"status": "error", "messages": [{"dsc": "Gateway de pagos temporalmente no disponible. Intente en unos minutos."}]}
     except Exception as exc:
         logger.error("Bancard confirmar_pago error shop=%s: %s", shop_process_id, exc)
         return {"status": "error", "messages": [{"dsc": str(exc)}]}
