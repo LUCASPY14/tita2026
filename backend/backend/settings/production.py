@@ -124,19 +124,22 @@ DATABASES = {
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
-            "style": "{",
-        },
-        "simple": {
-            "format": "{levelname} {message}",
-            "style": "{",
-        },
-    },
     "filters": {
         "require_debug_false": {
             "()": "django.utils.log.RequireDebugFalse",
+        },
+        "request_id": {
+            "()": "common.middleware.RequestIDFilter",
+        },
+    },
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} rid={request_id} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} rid={request_id} {message}",
+            "style": "{",
         },
     },
     "handlers": {
@@ -144,6 +147,7 @@ LOGGING = {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "simple",
+            "filters": ["request_id"],
         },
         "file": {
             "level": "INFO",
@@ -152,6 +156,7 @@ LOGGING = {
             "maxBytes": 10485760,  # 10MB
             "backupCount": 5,
             "formatter": "verbose",
+            "filters": ["request_id"],
         },
         "error_file": {
             "level": "ERROR",
@@ -160,6 +165,7 @@ LOGGING = {
             "maxBytes": 10485760,  # 10MB
             "backupCount": 10,
             "formatter": "verbose",
+            "filters": ["request_id"],
         },
         "mail_admins": {
             "level": "ERROR",
@@ -238,18 +244,40 @@ if REDIS_URL:
 SENTRY_DSN = os.environ.get("SENTRY_DSN", None)
 if SENTRY_DSN:
     import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+    import logging as _logging
 
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration()],
-        traces_sample_rate=0.1,
+        environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
+        release=os.environ.get("SENTRY_RELEASE", os.environ.get("GIT_COMMIT_SHA", "unknown")),
+        integrations=[
+            DjangoIntegration(
+                transaction_style="url",      # agrupa por URL pattern, no por función
+                middleware_spans=True,
+                signals_spans=False,          # demasiado ruido; activar si se investiga perf
+                cache_spans=True,
+            ),
+            CeleryIntegration(
+                monitor_beat_tasks=True,      # cron-monitor en Sentry para Beat tasks
+                propagate_traces=True,        # vincula task al request que la originó
+            ),
+            RedisIntegration(),
+            LoggingIntegration(
+                level=_logging.INFO,          # captura INFO+ como breadcrumbs
+                event_level=_logging.ERROR,   # convierte ERROR+ en Sentry events
+            ),
+        ],
+        traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        profiles_sample_rate=float(os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", "0.05")),
         sample_rate=1.0,
-        environment="production",
-        release=os.environ.get("GIT_COMMIT_SHA", "unknown"),
         send_default_pii=False,
         attach_stacktrace=True,
         max_breadcrumbs=50,
+        before_send=lambda event, hint: event,  # hook disponible para filtrar eventos
     )
 
 # ==========================================
