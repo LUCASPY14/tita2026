@@ -7,7 +7,14 @@ from datetime import timedelta
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="apps.inventario.tasks.alertar_stock_minimo")
+@shared_task(
+    name="apps.inventario.tasks.alertar_stock_minimo",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def alertar_stock_minimo():
     """Crea AlertaStock para productos cuyo stock está en o por debajo del mínimo."""
     from apps.inventario.models import Stock, AlertaStock
@@ -60,7 +67,14 @@ def alertar_stock_minimo():
     return {"alertas_creadas": creadas}
 
 
-@shared_task(name="apps.inventario.tasks.verificar_vencimientos")
+@shared_task(
+    name="apps.inventario.tasks.verificar_vencimientos",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def verificar_vencimientos():
     """Crea AlertaVencimiento para lotes próximos a vencer o ya vencidos."""
     from apps.inventario.models import LoteProducto, AlertaVencimiento
@@ -110,7 +124,14 @@ def verificar_vencimientos():
     return {"alertas_creadas": creadas}
 
 
-@shared_task(name="apps.inventario.tasks.generar_resumen_diario_stock")
+@shared_task(
+    name="apps.inventario.tasks.generar_resumen_diario_stock",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def generar_resumen_diario_stock():
     """Registra en log un resumen del estado del stock al cierre del día."""
     from apps.inventario.models import Stock, AlertaStock

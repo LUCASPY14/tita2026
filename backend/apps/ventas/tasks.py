@@ -7,7 +7,14 @@ from datetime import timedelta
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="apps.ventas.tasks.generar_resumen_diario_ventas")
+@shared_task(
+    name="apps.ventas.tasks.generar_resumen_diario_ventas",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def generar_resumen_diario_ventas():
     """Registra en log el resumen de ventas del día anterior."""
     from apps.ventas.models import Venta
@@ -29,7 +36,14 @@ def generar_resumen_diario_ventas():
     return resumen
 
 
-@shared_task(name="apps.ventas.tasks.cerrar_cajas_automatico")
+@shared_task(
+    name="apps.ventas.tasks.cerrar_cajas_automatico",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def cerrar_cajas_automatico():
     """Cierra automáticamente las cajas que quedaron abiertas del día anterior."""
     from apps.contabilidad.models import CierreCaja, MovimientoCaja

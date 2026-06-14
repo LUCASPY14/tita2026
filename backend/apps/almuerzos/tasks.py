@@ -9,7 +9,14 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="apps.almuerzos.tasks.cerrar_cuentas_mes_anterior")
+@shared_task(
+    name="apps.almuerzos.tasks.cerrar_cuentas_mes_anterior",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def cerrar_cuentas_mes_anterior():
     """
     Cierre mensual de cuentas de almuerzo del mes anterior.
@@ -117,7 +124,14 @@ def cerrar_cuentas_mes_anterior():
     }
 
 
-@shared_task(name="apps.almuerzos.tasks.generar_cuentas_mensuales")
+@shared_task(
+    name="apps.almuerzos.tasks.generar_cuentas_mensuales",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def generar_cuentas_mensuales():
     """
     Crea CuentaAlmuerzoMensual para el mes actual para cada hijo
@@ -165,7 +179,14 @@ def generar_cuentas_mensuales():
     return {"cuentas_creadas": creadas, "mes": mes, "anio": anio}
 
 
-@shared_task(name="apps.almuerzos.tasks.alertar_cuentas_vencidas")
+@shared_task(
+    name="apps.almuerzos.tasks.alertar_cuentas_vencidas",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def alertar_cuentas_vencidas():
     """
     Genera notificaciones para cuentas de almuerzo de meses anteriores

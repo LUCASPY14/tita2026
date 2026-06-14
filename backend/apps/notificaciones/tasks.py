@@ -6,7 +6,14 @@ from datetime import timedelta
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="apps.notificaciones.tasks.generar_alertas_saldo_bajo")
+@shared_task(
+    name="apps.notificaciones.tasks.generar_alertas_saldo_bajo",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def generar_alertas_saldo_bajo():
     """Genera notificaciones de saldo bajo para tarjetas que superaron el umbral."""
     from apps.core.models import Tarjeta
@@ -55,7 +62,14 @@ def generar_alertas_saldo_bajo():
     return {"notificaciones_creadas": creadas}
 
 
-@shared_task(name="apps.notificaciones.tasks.limpiar_notificaciones_antiguas")
+@shared_task(
+    name="apps.notificaciones.tasks.limpiar_notificaciones_antiguas",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def limpiar_notificaciones_antiguas():
     """Elimina notificaciones leídas con más de 90 días."""
     from apps.notificaciones.models import Notificacion
@@ -70,7 +84,14 @@ def limpiar_notificaciones_antiguas():
     return {"eliminadas": eliminadas}
 
 
-@shared_task(name="apps.notificaciones.tasks.enviar_emails_pendientes")
+@shared_task(
+    name="apps.notificaciones.tasks.enviar_emails_pendientes",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
 def enviar_emails_pendientes():
     """
     Procesa Notificaciones con destino=EMAIL aún no leídas y envía el email.
