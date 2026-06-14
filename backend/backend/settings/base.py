@@ -84,6 +84,7 @@ AUTH_USER_MODEL = "usuarios.Usuario"
 
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",  # debe ser el primero
+    "common.middleware.RequestIDMiddleware",                    # X-Request-ID → logs + Sentry
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -93,6 +94,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
+    "apps.usuarios.middleware.AuditContextMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",   # debe ser el último
 ]
 
@@ -314,14 +316,19 @@ LOGS_DIR.mkdir(exist_ok=True)
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "request_id": {
+            "()": "common.middleware.RequestIDFilter",
+        },
+    },
     "formatters": {
         "simple": {
-            "format": "[{levelname}] {asctime} | {message}",
+            "format": "[{levelname}] {asctime} | rid={request_id} | {message}",
             "style": "{",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
         "verbose": {
-            "format": "[{levelname}] {asctime} | {name} | {module}:{lineno} | {message}",
+            "format": "[{levelname}] {asctime} | rid={request_id} | {name} | {module}:{lineno} | {message}",
             "style": "{",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
@@ -331,6 +338,7 @@ LOGGING = {
             "level": "DEBUG" if DEBUG else "INFO",
             "class": "logging.StreamHandler",
             "formatter": "simple",
+            "filters": ["request_id"],
         },
         "file": {
             "level": "INFO",
@@ -339,6 +347,7 @@ LOGGING = {
             "maxBytes": 1024 * 1024 * 10,  # 10 MB
             "backupCount": 5,
             "formatter": "verbose",
+            "filters": ["request_id"],
         },
         "file_errors": {
             "level": "ERROR",
@@ -347,6 +356,7 @@ LOGGING = {
             "maxBytes": 1024 * 1024 * 5,  # 5 MB
             "backupCount": 3,
             "formatter": "verbose",
+            "filters": ["request_id"],
         },
     },
     "root": {
