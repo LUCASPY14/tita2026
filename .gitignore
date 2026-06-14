@@ -187,6 +187,10 @@ backend/gunicorn.ctl
 frontend/cypress/screenshots/
 frontend/cypress/videos/
 
+# Playwright test artifacts
+frontend/test-results/
+frontend/playwright-report/
+
 # Test run output files (backend)
 backend/*_result.txt
 backend/*_results.txt
