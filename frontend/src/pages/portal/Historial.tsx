@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { ChevronLeft, ChevronRight, UtensilsCrossed } from 'lucide-react'
 import api from '../../services/api'
-import Badge, { type BadgeColor } from '../../components/ui/Badge'
+import Badge from '../../components/ui/Badge'
 import Spinner from '../../components/ui/Spinner'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { Plus, Edit, UtensilsCrossed, AlertCircle, ChefHat } from 'lucide-react'
+import { Plus, Edit, AlertCircle, ChefHat } from 'lucide-react'
 import api from '../services/api'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -282,12 +282,6 @@ export default function MenuDiario() {
             page={page}
             total={total}
             onPageChange={p => { setPage(p); loadMenus(p) }}
-            emptyText={
-              <div className="flex flex-col items-center py-12 text-slate-400">
-                <UtensilsCrossed className="w-10 h-10 mb-3 opacity-40" />
-                <p className="text-sm">Sin menús registrados</p>
-              </div>
-            }
           />
         </div>
       </div>

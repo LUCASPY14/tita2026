@@ -6,7 +6,6 @@ import {
   UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent, Trash2,
 } from 'lucide-react'
 import api from '../services/api'
-import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { type DeleteTarget } from './configuracion/helpers'
 import TabCategorias from './configuracion/TabCategorias'

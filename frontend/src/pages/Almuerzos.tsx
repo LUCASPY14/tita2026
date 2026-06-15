@@ -915,7 +915,7 @@ export default function Almuerzos() {
                 Generar
               </Button>
               {cuentas.length > 0 && (
-                <Button variant="secondary" size="sm" onClick={() => exportarCuentasMensualesPDF(cuentas, filtroCuentaMes, filtroCuentaAnio)}>
+                <Button variant="secondary" size="sm" onClick={() => exportarCuentasMensualesPDF(cuentas, filtroCuentaMes !== '' ? filtroCuentaMes : undefined, filtroCuentaAnio !== '' ? filtroCuentaAnio : undefined)}>
                   <FileText className="w-3.5 h-3.5" />
                   PDF
                 </Button>
