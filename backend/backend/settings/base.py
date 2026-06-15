@@ -71,7 +71,6 @@ INSTALLED_APPS = [
     "apps.almuerzos",
     "apps.contabilidad",
     "apps.notificaciones",
-    "apps.api_integrations",
     "channels",
     "django_prometheus",
 ]
@@ -382,16 +381,6 @@ LOGGING = {
     },
 }
 
-# ==============================================================================
-# SIPAP — Pagos QR Paraguay (solo cuando se configure)
-# ==============================================================================
-
-SIPAP_AMBIENTE = os.environ.get("SIPAP_AMBIENTE", "sandbox")
-SIPAP_MERCHANT_ID = os.environ.get("SIPAP_MERCHANT_ID", "")
-SIPAP_API_KEY = os.environ.get("SIPAP_API_KEY", "")
-SIPAP_API_SECRET = os.environ.get("SIPAP_API_SECRET", "")
-SIPAP_BANCO_AGREGADOR = os.environ.get("SIPAP_BANCO_AGREGADOR", "")
-SIPAP_QR_EXPIRACION_MINUTOS = int(os.environ.get("SIPAP_QR_EXPIRACION_MINUTOS", "15"))
 
 # ==============================================================================
 # BANCARD — Pagos con tarjeta de débito/crédito (Visa/Mastercard)

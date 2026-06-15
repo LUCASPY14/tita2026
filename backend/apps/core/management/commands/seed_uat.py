@@ -11,7 +11,7 @@ Orden de ejecución:
   1. Catálogo base   (categorías, unidades, lista de precios, productos)
   2. Maestros        (grados, tipos de cliente, cajas, medios de pago)
   3. Usuarios demo   (create_demo_users)
-  4. Negocio         (seed_negocio — almuerzos, proveedores, stock, SIPAP)
+  4. Negocio         (seed_negocio — almuerzos, proveedores, stock)
   5. Familias UAT    (10 padres, 15 alumnos, tarjetas con saldo)
   6. Portal demo     (seed_portal_demo — usuario portal@tita.local)
 
@@ -218,7 +218,6 @@ class Command(BaseCommand):
             ("Efectivo",             False),
             ("Tarjeta RFID",         False),
             ("Transferencia",        True),
-            ("QR (SIPAP)",           True),
             ("POS (débito/crédito)", True),
         ]
         creados_m = 0

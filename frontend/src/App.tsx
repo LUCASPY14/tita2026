@@ -31,7 +31,6 @@ const Comedor           = lazy(() => import('./pages/Comedor'))
 const ModoRecreo        = lazy(() => import('./pages/ModoRecreo'))
 const MenuDiario        = lazy(() => import('./pages/MenuDiario'))
 const Alergenos         = lazy(() => import('./pages/Alergenos'))
-const Integraciones     = lazy(() => import('./pages/Integraciones'))
 
 // ── Lazy: portal de padres ────────────────────────────────────────────────────
 const PortalDashboard      = lazy(() => import('./pages/portal/Dashboard'))
@@ -172,11 +171,6 @@ export default function App() {
               <Route path="/configuracion" element={
                 <PrivateRoute roles={['ADMIN']}>
                   <Configuracion />
-                </PrivateRoute>
-              } />
-              <Route path="/integraciones" element={
-                <PrivateRoute roles={['ADMIN']}>
-                  <Integraciones />
                 </PrivateRoute>
               } />
             </Route>

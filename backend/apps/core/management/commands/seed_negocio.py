@@ -10,7 +10,6 @@ Módulos cubiertos:
   - Proveedores de compras
   - Stock inicial de productos
   - Roles-Permisos por rol
-  - Proveedor SIPAP + credencial sandbox
 """
 
 from datetime import date, timedelta
@@ -43,7 +42,6 @@ class Command(BaseCommand):
             self._seed_proveedores()
             self._seed_stock()
             self._seed_roles_permisos()
-            self._seed_sipap()
 
         self.stdout.write(self.style.SUCCESS("\nSeed completado exitosamente."))
 
@@ -55,7 +53,6 @@ class Command(BaseCommand):
         from apps.almuerzos.models import SuscripcionAlmuerzo, MenuDiario, PlanAlmuerzo, TipoAlmuerzo, PrecioAlmuerzo
         from apps.compras.models import Proveedor
         from apps.inventario.models import Stock
-        from apps.api_integrations.models import ProveedorApi
 
         self.stdout.write("  Reseteando datos seed...")
         SuscripcionAlmuerzo.objects.filter(descripcion_seed=True).delete() if hasattr(SuscripcionAlmuerzo, 'descripcion_seed') else None
@@ -66,7 +63,6 @@ class Command(BaseCommand):
         TipoAlmuerzo.objects.all().delete()
         Proveedor.objects.all().delete()
         Stock.objects.all().delete()
-        ProveedorApi.objects.filter(nombre="SIPAP").delete()
 
     # =========================================================================
     # ALMUERZO: tipos, planes, precio
@@ -386,48 +382,6 @@ class Command(BaseCommand):
                     total_creados += 1
 
         self.stdout.write(f"    RolPermiso: {total_creados} asignaciones creadas")
-
-    # =========================================================================
-    # SIPAP (QR PAGOS)
-    # =========================================================================
-
-    def _seed_sipap(self):
-        from apps.api_integrations.models import ProveedorApi, CredencialApi
-
-        self.stdout.write("\n[9/6] Proveedor SIPAP...")
-
-        proveedor, created = ProveedorApi.objects.get_or_create(
-            nombre="SIPAP",
-            defaults={
-                "descripcion": "Sistema de pagos QR del Banco Central del Paraguay",
-                "tipo_servicio": ProveedorApi.TipoServicio.PAGOS_QR,
-                "url_base": "https://api.sipap.com.py",
-                "version": "v1",
-                "documentacion": "https://docs.sipap.com.py",
-                "tipo_auth": ProveedorApi.TipoAuth.API_KEY,
-                "config_auth": {"header": "X-API-Key"},
-                "timeout": 15,
-                "max_reintentos": 3,
-                "activo": True,
-            },
-        )
-        self._log_created("ProveedorApi", "SIPAP", created)
-
-        cred, created = CredencialApi.objects.get_or_create(
-            proveedor=proveedor,
-            ambiente=CredencialApi.Ambiente.SANDBOX,
-            defaults={
-                "api_key": "SANDBOX_KEY_PLACEHOLDER",
-                "secret": "SANDBOX_SECRET_PLACEHOLDER",
-                "configuracion": {
-                    "merchant_id": "CANTINA_TITA_TEST",
-                    "callback_url": "http://localhost:8000/api/v1/integrations/webhooks/sipap/",
-                    "moneda": "PYG",
-                },
-                "activo": True,
-            },
-        )
-        self._log_created("CredencialApi", "SIPAP Sandbox", created)
 
     # =========================================================================
     # HELPERS

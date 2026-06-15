@@ -1029,7 +1029,6 @@ for venta in ventas_pendientes:
 - [Módulo de Clientes](../clientes/README.md) - Gestión de clientes
 - [Módulo de Productos](../productos/README.md) - Catálogo de productos
 - [Módulo Core](../core/README.md) - Tarjetas prepago
-- [Integración Facturación](../api_integrations/README.md) - SET Paraguay
 
 ### Normativa Paraguay
 

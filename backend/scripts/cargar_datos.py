@@ -73,7 +73,6 @@ medios_data = [
     ("POS Debito", True, True),
     ("POS Credito", True, True),
     ("Transferencia Bancaria", False, True),
-    ("QR SIPAP", False, True),
     ("Billetera Electronica", True, True),
     ("Cheque", False, True),
     ("Tarjeta Prepaga", False, False),
@@ -401,7 +400,6 @@ tarifas_data = [
     (MedioPago.objects.get(descripcion="POS Debito"), Decimal("2.50"), None),
     (MedioPago.objects.get(descripcion="POS Credito"), Decimal("3.50"), None),
     (MedioPago.objects.get(descripcion="Billetera Electronica"), Decimal("1.50"), None),
-    (MedioPago.objects.get(descripcion="QR SIPAP"), Decimal("1.00"), None),
 ]
 for medio, porc, fijo in tarifas_data:
     TarifaComision.objects.get_or_create(

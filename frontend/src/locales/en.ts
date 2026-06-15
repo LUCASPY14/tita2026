@@ -16,7 +16,6 @@ const en = {
     inventario: 'Inventory',
     alergenos: 'Allergens',
     usuarios: 'Users',
-    integraciones: 'Integrations',
     configuracion: 'Settings',
   },
   role: {

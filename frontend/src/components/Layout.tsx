@@ -25,7 +25,6 @@ import {
   Wallet,
   ChefHat,
   Leaf,
-  Plug,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -63,7 +62,6 @@ const navItems: NavItem[] = [
   { path: '/inventario',   labelKey: 'nav.inventario',   icon: Warehouse,       roles: ['ADMIN', 'SUPERVISOR'] },
   { path: '/alergenos',    labelKey: 'nav.alergenos',    icon: Leaf,            roles: OPS_ROLES },
   { path: '/usuarios',     labelKey: 'nav.usuarios',     icon: UserCog,         roles: ADMIN_ONLY },
-  { path: '/integraciones',labelKey: 'nav.integraciones',icon: Plug,            roles: ADMIN_ONLY },
   { path: '/configuracion',labelKey: 'nav.configuracion',icon: Settings,        roles: ADMIN_ONLY },
 ]
 

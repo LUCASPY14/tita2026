@@ -16,7 +16,6 @@ const es = {
     inventario: 'Inventario',
     alergenos: 'Alérgenos',
     usuarios: 'Usuarios',
-    integraciones: 'Integraciones',
     configuracion: 'Configuración',
   },
   role: {

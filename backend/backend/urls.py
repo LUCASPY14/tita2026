@@ -83,7 +83,6 @@ urlpatterns = [
     path('api/v1/contabilidad/', include('apps.contabilidad.urls')),
     path('api/v1/usuarios/', include('apps.usuarios.urls')),
     path('api/v1/notificaciones/', include('apps.notificaciones.urls')),
-    path('api/v1/integrations/', include('apps.api_integrations.urls')),
 ]
 
 if settings.DEBUG:
