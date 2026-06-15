@@ -32,7 +32,11 @@ vi.mock('../../services/api', () => ({
 }))
 
 vi.mock('react-hot-toast', () => ({
-  default: { error: vi.fn(), success: vi.fn() },
+  default: { error: vi.fn(), success: vi.fn(), dismiss: vi.fn() },
+}))
+
+vi.mock('../../hooks/useOfflineQueue', () => ({
+  useOfflineQueue: () => ({ isOnline: true, pendingCount: 0, syncing: false, syncNow: vi.fn() }),
 }))
 
 const mockGetProductos = vi.fn()

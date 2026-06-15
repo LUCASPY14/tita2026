@@ -5,11 +5,30 @@ const ADMIN = { id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'T
 const MENU_HOY = {
   id: 1,
   fecha: new Date().toISOString().split('T')[0],
-  tipo_almuerzo_nombre: 'Almuerzo Completo',
+  tipo_almuerzo: 1,
   plato_principal: 'Milanesa con puré',
+  guarnicion: 'Ensalada',
   postre: 'Flan',
   bebida: 'Jugo',
   activo: true,
+}
+
+// RegistroConsumo real fields: hijo_nombre, fecha_consumo, tipo_almuerzo_nombre, costo_almuerzo, estado, ya_cobrado
+const ALMUERZOS_LIST = {
+  results: [
+    {
+      id: 10,
+      hijo_nombre: 'Sofía Torres',
+      fecha_consumo: new Date().toISOString().split('T')[0],
+      tipo_almuerzo_nombre: 'Almuerzo Completo',
+      costo_almuerzo: 15000,
+      estado: 'REGISTRADO',
+      ya_cobrado: false,
+    },
+  ],
+  count: 1,
+  next: null,
+  previous: null,
 }
 
 const TARJETA_MOCK = {
@@ -21,23 +40,6 @@ const TARJETA_MOCK = {
   saldo_actual: 120000,
   saldo_disponible: 120000,
   estado: 'ACTIVA',
-}
-
-const ALMUERZOS_LIST = {
-  results: [
-    {
-      id: 10,
-      tarjeta_nro: '99887766',
-      hijo_nombre: 'Sofía Torres',
-      menu_descripcion: 'Almuerzo Completo',
-      fecha: new Date().toISOString().split('T')[0],
-      monto: 15000,
-      estado: 'REGISTRADO',
-    },
-  ],
-  count: 1,
-  next: null,
-  previous: null,
 }
 
 async function loginAs(page: Page, user: typeof ADMIN) {
@@ -64,10 +66,12 @@ async function loginAs(page: Page, user: typeof ADMIN) {
 test.describe('Almuerzos', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/almuerzos\/consumos/, (route) =>
+    // Registros de consumo: endpoint real es /almuerzos/registros-consumo/
+    await page.route(/\/api\/v1\/almuerzos\/registros-consumo/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ALMUERZOS_LIST) })
     )
-    await page.route(/\/api\/v1\/almuerzos\/menus/, (route) =>
+    // Menú: endpoint real es /almuerzos/menu/
+    await page.route(/\/api\/v1\/almuerzos\/menu/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [MENU_HOY], count: 1 }) })
     )
     await page.goto('/almuerzos')
@@ -79,10 +83,12 @@ test.describe('Almuerzos', () => {
   })
 
   test('muestra el listado de almuerzos del día', async ({ page }) => {
+    // hijo_nombre renderiza en columna "Estudiante"
     await expect(page.getByText('Sofía Torres').first()).toBeVisible({ timeout: 6000 })
   })
 
-  test('muestra el nombre del menú del día', async ({ page }) => {
+  test('muestra el tipo de almuerzo en la lista de consumos', async ({ page }) => {
+    // tipo_almuerzo_nombre renderiza en columna "Tipo"
     await expect(page.getByText('Almuerzo Completo').first()).toBeVisible({ timeout: 6000 })
   })
 

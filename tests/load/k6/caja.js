@@ -69,7 +69,12 @@ const CAJEROS = [
 ]
 
 // Tarjetas de prueba — deben existir en la DB de test con saldo suficiente
+// nro_tarjeta es PK CharField; se envía como valor del campo "tarjeta" en el payload de venta
 const TARJETAS_TEST = ['10000001', '10000002', '10000003', '10000004', '10000005']
+
+// ID del cliente k6 — impreso por `python manage.py seed_k6_fixtures`
+// Override: k6 run --env K6_CLIENTE_ID=<id> ...
+const CLIENTE_ID = parseInt(__ENV.K6_CLIENTE_ID || '1')
 
 // ─── Setup: autenticar todos los VUs ─────────────────────────────────────────
 export function setup() {
@@ -124,11 +129,11 @@ export default function main(data) {
 
   group('2. POST venta', () => {
     const payload = JSON.stringify({
-      cliente:       1,
-      caja:          idx + 1,
-      modo_pago:     'PREPAGO',
-      nro_tarjeta:   tarjeta,
-      items:         [{ producto: 1, cantidad: 1 }],
+      cliente:  CLIENTE_ID,
+      // "tarjeta" acepta el nro_tarjeta (PK CharField del modelo Tarjeta)
+      tarjeta:  tarjeta,
+      // precio_unitario requerido para que monto_total > 0 (validación del service)
+      items:    [{ producto: 1, cantidad: 1, precio_unitario: 5000 }],
     })
 
     const start = Date.now()

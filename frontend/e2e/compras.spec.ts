@@ -82,12 +82,14 @@ test.describe('Compras', () => {
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
   })
 
-  test('muestra compras recientes', async ({ page }) => {
-    await expect(page.getByText('Distribuidora El Sol').first()).toBeVisible({ timeout: 6000 })
+  test('muestra compras recientes en la tabla', async ({ page }) => {
+    // proveedor_nombre aparece en celdas td, no en <option> ocultas del filtro
+    await expect(page.locator('td').filter({ hasText: 'Distribuidora El Sol' }).first()).toBeVisible({ timeout: 6000 })
   })
 
-  test('muestra número de factura', async ({ page }) => {
-    await expect(page.getByText('F001-0000050').first()).toBeVisible({ timeout: 6000 })
+  test('muestra compra #50 en la tabla', async ({ page }) => {
+    // La columna ID muestra el número con prefijo '#'
+    await expect(page.getByText('#50').first()).toBeVisible({ timeout: 6000 })
   })
 
   test('nueva compra abre un formulario o modal', async ({ page }) => {
@@ -106,7 +108,7 @@ test.describe('Compras', () => {
     }
   })
 
-  test('segunda compra también se lista', async ({ page }) => {
-    await expect(page.getByText('F001-0000049').first()).toBeVisible({ timeout: 6000 })
+  test('segunda compra #49 también se lista', async ({ page }) => {
+    await expect(page.getByText('#49').first()).toBeVisible({ timeout: 6000 })
   })
 })

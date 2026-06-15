@@ -2,12 +2,20 @@ import { test, expect, type Page } from '@playwright/test'
 
 const ADMIN = { id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
 
-const STOCK_LIST = {
+// El tab por defecto en Inventario es "Ajustes" → endpoint /inventario/ajustes/
+// Los productos aparecen en el tab "Movimientos" → endpoint /inventario/movimientos/
+const AJUSTES_LIST = {
   results: [
-    { id: 1, producto: 1, producto_nombre: 'Harina 000', cantidad: 50, unidad_medida: 'KG', ubicacion: 'Depósito A' },
-    { id: 2, producto: 2, producto_nombre: 'Aceite Girasol', cantidad: 20, unidad_medida: 'LT', ubicacion: 'Depósito A' },
+    {
+      id: 1,
+      tipo: 'AJUSTE_POSITIVO',
+      estado: 'APROBADO',
+      motivo: 'Inventario mensual',
+      detalles: [{ producto: 1, cantidad: 25 }, { producto: 2, cantidad: 20 }],
+      fecha: new Date().toISOString(),
+    },
   ],
-  count: 2,
+  count: 1,
   next: null,
   previous: null,
 }
@@ -24,8 +32,18 @@ const MOVIMIENTOS_LIST = {
       fecha: new Date().toISOString(),
       observaciones: '',
     },
+    {
+      id: 101,
+      producto_nombre: 'Aceite Girasol',
+      tipo: 'ENTRADA',
+      motivo: 'COMPRA',
+      cantidad: 20,
+      stock_resultante: 20,
+      fecha: new Date().toISOString(),
+      observaciones: '',
+    },
   ],
-  count: 1,
+  count: 2,
   next: null,
   previous: null,
 }
@@ -56,9 +74,11 @@ async function loginAs(page: Page, user: typeof ADMIN) {
 test.describe('Inventario', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/inventario\/stock/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(STOCK_LIST) })
+    // Tab "Ajustes" (default): /inventario/ajustes/
+    await page.route(/\/api\/v1\/inventario\/ajustes/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AJUSTES_LIST) })
     )
+    // Tab "Movimientos": /inventario/movimientos/
     await page.route(/\/api\/v1\/inventario\/movimientos/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOVIMIENTOS_LIST) })
     )
@@ -73,12 +93,26 @@ test.describe('Inventario', () => {
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
   })
 
-  test('muestra productos en stock', async ({ page }) => {
-    await expect(page.getByText('Harina 000').first()).toBeVisible({ timeout: 6000 })
+  test('muestra ajuste con motivo en la lista', async ({ page }) => {
+    // Columna Motivo renderiza el texto del ajuste; no colisiona con dropdowns
+    await expect(page.getByText('Inventario mensual').first()).toBeVisible({ timeout: 6000 })
   })
 
-  test('muestra el stock de aceite girasol', async ({ page }) => {
-    await expect(page.getByText('Aceite Girasol').first()).toBeVisible({ timeout: 6000 })
+  test('muestra Harina 000 en historial de movimientos', async ({ page }) => {
+    // producto_nombre aparece en el tab "Movimientos"
+    const movTab = page.getByRole('button', { name: /movimientos/i }).first()
+    if (await movTab.isVisible()) {
+      await movTab.click()
+      await expect(page.getByText('Harina 000').first()).toBeVisible({ timeout: 6000 })
+    }
+  })
+
+  test('muestra Aceite Girasol en historial de movimientos', async ({ page }) => {
+    const movTab = page.getByRole('button', { name: /movimientos/i }).first()
+    if (await movTab.isVisible()) {
+      await movTab.click()
+      await expect(page.getByText('Aceite Girasol').first()).toBeVisible({ timeout: 6000 })
+    }
   })
 
   test('historial de movimientos es accesible', async ({ page }) => {
