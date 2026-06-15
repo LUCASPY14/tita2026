@@ -1,0 +1,42 @@
+const es = {
+  nav: {
+    dashboard: 'Dashboard',
+    modoRecreo: 'Modo Recreo',
+    almuerzos: 'Almuerzos',
+    comedor: 'Comedor',
+    menuDiario: 'Menú Diario',
+    tarjetas: 'Tarjetas',
+    cargaSaldo: 'Carga Saldo',
+    clientes: 'Clientes',
+    productos: 'Productos',
+    compras: 'Compras',
+    caja: 'Caja',
+    facturacion: 'Facturación',
+    reportes: 'Reportes',
+    inventario: 'Inventario',
+    alergenos: 'Alérgenos',
+    usuarios: 'Usuarios',
+    integraciones: 'Integraciones',
+    configuracion: 'Configuración',
+  },
+  role: {
+    ADMIN: 'Administrador',
+    CAJERO: 'Cajero',
+    SUPERVISOR: 'Supervisor',
+    COBRADOR: 'Cobrador',
+    COCINA: 'Cocina',
+    CLIENTE_WEB: 'Portal Padres',
+  },
+  layout: {
+    systemName: 'Sistema de Gestión',
+    collapse: 'Colapsar',
+    expandMenu: 'Expandir menú',
+    collapseMenu: 'Colapsar menú',
+    userMenu: 'Menú de usuario',
+    mainMenu: 'Menú principal',
+    defaultUser: 'Usuario',
+    logout: 'Cerrar sesión',
+  },
+} as const
+
+export default es
