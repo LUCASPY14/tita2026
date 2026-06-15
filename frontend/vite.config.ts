@@ -12,7 +12,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // injectManifest: el plugin usa public/sw.js como fuente en lugar de generar
+      // su propio SW con Workbox, evitando sobrescribir el SW custom.
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'sw.js',
+      injectRegister: null,     // main.tsx registra manualmente (solo en PROD)
       devOptions: { enabled: false },
       manifest: {
         name: 'Cantina Tita',
@@ -28,25 +33,8 @@ export default defineConfig({
           { src: '/logo_tita.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
-      workbox: {
-        navigateFallback: '/index.html',
-        runtimeCaching: [
-          {
-            urlPattern: /\.(?:js|css|woff2?)$/i,
-            handler: 'CacheFirst',
-            options: { cacheName: 'static-assets', expiration: { maxAgeSeconds: 31536000 } },
-          },
-          {
-            urlPattern: /\/api\/v1\/productos\//i,
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'api-catalogo', expiration: { maxEntries: 50, maxAgeSeconds: 3600 } },
-          },
-          {
-            urlPattern: /\/api\/v1\/core\/medios-pago\//i,
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'api-medios-pago', expiration: { maxEntries: 10, maxAgeSeconds: 86400 } },
-          },
-        ],
+      injectManifest: {
+        injectionPoint: undefined,  // no inyectar precache manifest; el SW custom maneja todo
       },
     }),
   ],
