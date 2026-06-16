@@ -65,6 +65,42 @@ self.addEventListener('fetch', event => {
   // Todo lo demás → red normal
 })
 
+// ─── Push notifications ───────────────────────────────────────────────────────
+self.addEventListener('push', event => {
+  if (!event.data) return
+  let payload
+  try { payload = event.data.json() } catch { payload = { title: 'Cantina Tita', body: event.data.text() } }
+  const {
+    title = 'Cantina Tita',
+    body  = '',
+    icon  = '/logo_tita.png',
+    url   = '/',
+  } = payload
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon,
+      badge: '/logo_tita.png',
+      tag:   'cantina-notif',
+      data:  { url },
+      requireInteraction: false,
+    })
+  )
+})
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const target = event.notification.data?.url || '/'
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
+        if ('focus' in client) { client.navigate(target); return client.focus() }
+      }
+      if (clients.openWindow) return clients.openWindow(target)
+    })
+  )
+})
+
 // ─── BackgroundSync: reintentar ventas pendientes ─────────────────────────────
 self.addEventListener('sync', event => {
   if (event.tag === SYNC_TAG) {

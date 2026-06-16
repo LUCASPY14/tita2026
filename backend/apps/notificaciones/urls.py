@@ -8,6 +8,8 @@ from .views import (
     EmailEnviadoViewSet,
     SolicitudNotificacionViewSet,
     EnviarNotificacionView,
+    VapidPublicKeyView,
+    PushSubscriptionView,
 )
 
 router = DefaultRouter()
@@ -19,5 +21,7 @@ router.register(r"solicitudes", SolicitudNotificacionViewSet, basename="solicitu
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("enviar/", EnviarNotificacionView.as_view(), name="notificaciones-enviar"),
+    path("enviar/",              EnviarNotificacionView.as_view(),  name="notificaciones-enviar"),
+    path("vapid-public-key/",   VapidPublicKeyView.as_view(),      name="vapid-public-key"),
+    path("push-subscription/",  PushSubscriptionView.as_view(),    name="push-subscription"),
 ]

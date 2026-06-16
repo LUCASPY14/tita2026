@@ -11,6 +11,30 @@ from django.utils import timezone
 # NOTIFICACIÓN (UNIFICADA)
 # ==============================================================================
 
+class PushSubscription(models.Model):
+    """Suscripción Web Push de un usuario (por dispositivo/navegador)."""
+
+    usuario = models.ForeignKey(
+        "usuarios.Usuario",
+        models.CASCADE,
+        related_name="push_subscriptions",
+    )
+    endpoint = models.URLField(max_length=2000, unique=True)
+    p256dh   = models.CharField(max_length=500)
+    auth     = models.CharField(max_length=200)
+    activa   = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Suscripción Push"
+        verbose_name_plural = "Suscripciones Push"
+        ordering = ["-fecha_creacion"]
+        indexes = [models.Index(fields=["usuario", "activa"])]
+
+    def __str__(self):
+        return f"Push {self.usuario} [{self.endpoint[:60]}…]"
+
+
 class Notificacion(models.Model):
     """Notificación enviada a un usuario del sistema."""
 

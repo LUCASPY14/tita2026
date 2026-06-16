@@ -433,6 +433,13 @@ PORTAL_FRONTEND_URL = os.environ.get("PORTAL_FRONTEND_URL", "http://localhost:51
 # ==============================================================================
 
 NOTIFICACIONES_ACTIVAS = os.environ.get("NOTIFICACIONES_ACTIVAS", "True") == "True"
+
+# VAPID keys para Web Push (PWA).  Generá las tuyas con:
+#   pip install pywebpush && vapid --applicationServerKey
+# y copiá los valores en .env
+VAPID_PUBLIC_KEY  = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+VAPID_ADMIN_EMAIL = os.environ.get("VAPID_ADMIN_EMAIL", "admin@cantina-tita.com")
 NOTIFICACION_SALDO_BAJO_DEFAULT = int(
     os.environ.get("NOTIFICACION_SALDO_BAJO", "10000")  # ₲10,000
 )

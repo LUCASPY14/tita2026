@@ -5,6 +5,7 @@ import AppLayout from './components/Layout'
 import PortalLayout from './components/PortalLayout'
 import Spinner from './components/ui/Spinner'
 import { useAuthStore } from './store/authStore'
+import { usePushNotifications } from './hooks/usePushNotifications'
 
 // ── Eager: rutas públicas y estructurales ─────────────────────────────────────
 import Login from './pages/Login'
@@ -86,6 +87,11 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
   return <>{children}</>
 }
 
+function PushSetup() {
+  usePushNotifications()
+  return null
+}
+
 function AuthMonitor() {
   const navigate = useNavigate()
   const { logout, user } = useAuthStore()
@@ -113,6 +119,7 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <AuthMonitor />
+        <PushSetup />
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Suspense fallback={<PageLoader />}>
           <Routes>

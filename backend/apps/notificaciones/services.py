@@ -171,6 +171,45 @@ def push_ws_notificacion(notificacion) -> None:
         pass
 
 
+def send_push_to_user(usuario_id: int, title: str, body: str, url: str = "/", icon: str = "/logo_tita.png") -> None:
+    """
+    Envía una Web Push notification a todas las suscripciones activas de un usuario.
+    Si VAPID_PRIVATE_KEY no está configurada, retorna silenciosamente.
+    """
+    from django.conf import settings
+
+    vapid_pk    = getattr(settings, "VAPID_PRIVATE_KEY", "")
+    vapid_email = getattr(settings, "VAPID_ADMIN_EMAIL", "admin@cantina-tita.com")
+    if not vapid_pk:
+        return
+
+    try:
+        import json
+        from pywebpush import webpush, WebPushException
+        from .models import PushSubscription
+
+        subs = list(PushSubscription.objects.filter(usuario_id=usuario_id, activa=True))
+        for sub in subs:
+            try:
+                webpush(
+                    subscription_info={
+                        "endpoint": sub.endpoint,
+                        "keys": {"p256dh": sub.p256dh, "auth": sub.auth},
+                    },
+                    data=json.dumps({"title": title, "body": body, "url": url, "icon": icon}),
+                    vapid_private_key=vapid_pk,
+                    vapid_claims={"sub": f"mailto:{vapid_email}"},
+                )
+            except WebPushException as exc:
+                resp = getattr(exc, "response", None)
+                if resp is not None and resp.status_code in (404, 410):
+                    sub.delete()
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
 class EmailService:
     """Envío directo de emails transaccionales (no ligados a SolicitudNotificacion)."""
 
