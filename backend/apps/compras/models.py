@@ -166,7 +166,8 @@ class Compra(models.Model):
 
     class EstadoEntrega(models.TextChoices):
         PENDIENTE = "PENDIENTE", "Pendiente"
-        RECIBIDA = "RECIBIDA", "Recibida"
+        PARCIAL   = "PARCIAL",   "Recepción parcial"
+        RECIBIDA  = "RECIBIDA",  "Recibida"
 
     proveedor = models.ForeignKey(
         Proveedor, models.PROTECT, related_name="compras"

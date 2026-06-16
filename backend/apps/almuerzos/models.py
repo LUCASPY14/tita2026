@@ -369,7 +369,11 @@ class CuentaAlmuerzoMensual(models.Model):
 # ==============================================================================
 
 class PagoCuentaAlmuerzo(models.Model):
-    """Pago realizado a una cuenta mensual de almuerzo."""
+    """
+    Pago de la cuenta mensual de consumo (pay-as-you-eat).
+    Liquida una CuentaAlmuerzoMensual generada por consumos reales del mes.
+    No confundir con PagoAlmuerzoMensual, que es la cuota fija de un plan.
+    """
 
     cuenta = models.ForeignKey(
         CuentaAlmuerzoMensual, models.PROTECT, related_name="pagos"
@@ -417,7 +421,11 @@ class PagoCuentaAlmuerzo(models.Model):
 # ==============================================================================
 
 class PagoAlmuerzoMensual(models.Model):
-    """Pago mensual de una suscripción de almuerzo."""
+    """
+    Cuota mensual de un plan de almuerzo (suscripción fija).
+    Liquida la SuscripcionAlmuerzo del mes, independientemente del consumo real.
+    No confundir con PagoCuentaAlmuerzo, que liquida consumos por cuenta corriente.
+    """
 
     class Estado(models.TextChoices):
         PENDIENTE = "PENDIENTE", "Pendiente"
