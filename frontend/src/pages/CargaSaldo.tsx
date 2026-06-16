@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   CreditCard, Search, CheckCircle, RefreshCw, History,
@@ -92,6 +93,7 @@ const ESTADO_COLOR: Record<string, BadgeColor> = {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function CargaSaldo() {
+  const { t } = useTranslation()
   // ── Búsqueda de tarjeta ──────────────────────────────────────────
   const [busqueda, setBusqueda] = useState('')
   const [tarjeta, setTarjeta] = useState<Tarjeta | null>(null)
@@ -318,9 +320,9 @@ export default function CargaSaldo() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Wallet className="w-6 h-6 text-green-600" />
-            Carga de Saldo
+            {t('cargaSaldo.title')}
           </h1>
-          <p className="text-base text-slate-500 mt-0.5">Recarga de saldo en tarjetas de estudiantes</p>
+          <p className="text-base text-slate-500 mt-0.5">{t('cargaSaldo.subtitle')}</p>
         </div>
         {tarjeta && (
           <button
@@ -328,7 +330,7 @@ export default function CargaSaldo() {
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
-            Nueva operación
+            {t('cargaSaldo.cargar')}
           </button>
         )}
       </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   CreditCard, Search, Plus, Lock, Unlock, History,
@@ -155,6 +156,7 @@ const FORM_INITIAL: TarjetaForm = {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Tarjetas() {
+  const { t } = useTranslation()
   const [tarjetas, setTarjetas] = useState<Tarjeta[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
@@ -509,12 +511,12 @@ export default function Tarjetas() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Tarjetas</h1>
-          <p className="text-base text-slate-500 mt-0.5">Gestión de tarjetas prepago de estudiantes</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('tarjetas.title')}</h1>
+          <p className="text-base text-slate-500 mt-0.5">{t('tarjetas.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={() => { setForm(FORM_INITIAL); setCreateOpen(true) }}>
           <Plus className="w-4 h-4" />
-          Nueva Tarjeta
+          {t('tarjetas.newTarjeta')}
         </Button>
       </div>
 

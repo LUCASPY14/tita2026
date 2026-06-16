@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { Plus, Edit, AlertCircle, ChefHat } from 'lucide-react'
@@ -45,6 +46,7 @@ function todayIso() {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function MenuDiario() {
+  const { t } = useTranslation()
   const [menus, setMenus] = useState<MenuDiario[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
@@ -170,17 +172,17 @@ export default function MenuDiario() {
 
   const cols: Column<MenuDiario>[] = [
     {
-      title: 'Fecha',
+      title: t('menuDiario.colFecha'),
       key: 'fecha',
       render: (_, r) => <span className="text-sm font-medium text-slate-800">{formatFecha(r.fecha)}</span>,
     },
     {
-      title: 'Plato Principal',
+      title: t('menuDiario.colPlato'),
       key: 'plato',
       render: (_, r) => <span className="text-sm text-slate-700">{r.plato_principal}</span>,
     },
     {
-      title: 'Guarnición / Postre',
+      title: t('menuDiario.colGuarn'),
       key: 'extras',
       render: (_, r) => (
         <div>
@@ -190,10 +192,10 @@ export default function MenuDiario() {
       ),
     },
     {
-      title: 'Estado',
+      title: t('common.status'),
       key: 'estado',
       width: 90,
-      render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Archivado'}</Badge>,
+      render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? t('common.active') : 'Archivado'}</Badge>,
     },
     {
       title: '',
@@ -203,7 +205,7 @@ export default function MenuDiario() {
         <div className="flex items-center gap-1.5">
           <Button size="sm" variant="secondary" onClick={() => openEdit(r)}>
             <Edit className="w-3.5 h-3.5" />
-            Editar
+            {t('common.edit')}
           </Button>
           <Button
             size="sm"
@@ -211,7 +213,7 @@ export default function MenuDiario() {
             onClick={() => toggleActivo(r)}
             disabled={togglingId === r.id}
           >
-            {r.activo ? 'Archivar' : 'Activar'}
+            {r.activo ? t('menuDiario.archivar') : t('menuDiario.activar')}
           </Button>
         </div>
       ),
@@ -224,12 +226,12 @@ export default function MenuDiario() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Menú Diario</h1>
-          <p className="text-base text-slate-500 mt-0.5">Gestión del menú del comedor escolar</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('menuDiario.title')}</h1>
+          <p className="text-base text-slate-500 mt-0.5">{t('menuDiario.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={() => openCreate()}>
           <Plus className="w-4 h-4" />
-          Nuevo Menú
+          {t('menuDiario.newMenu')}
         </Button>
       </div>
 
@@ -238,25 +240,25 @@ export default function MenuDiario() {
         <div className="bg-yellow-50 border border-yellow-200 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0" />
-            <p className="text-sm font-medium text-yellow-800">Sin menú publicado para hoy</p>
+            <p className="text-sm font-medium text-yellow-800">{t('menuDiario.noMenuHoy')}</p>
           </div>
           <Button size="sm" variant="primary" onClick={() => openCreate(todayIso())}>
             <Plus className="w-3.5 h-3.5" />
-            Publicar hoy
+            {t('menuDiario.publicarHoy')}
           </Button>
         </div>
       ) : (
         <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4">
           <div className="flex items-center gap-2 mb-3">
             <ChefHat className="w-4 h-4 text-green-600" />
-            <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Menú de hoy</p>
+            <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">{t('menuDiario.menuHoy')}</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Plato principal', value: menuHoy.plato_principal },
-              { label: 'Guarnición', value: menuHoy.guarnicion || '—' },
-              { label: 'Postre', value: menuHoy.postre || '—' },
-              { label: 'Bebida', value: menuHoy.bebida || '—' },
+              { label: t('menuDiario.platoP'), value: menuHoy.plato_principal },
+              { label: t('menuDiario.guarnicion'), value: menuHoy.guarnicion || '—' },
+              { label: t('menuDiario.postre'), value: menuHoy.postre || '—' },
+              { label: t('menuDiario.bebida'), value: menuHoy.bebida || '—' },
             ].map(({ label, value }) => (
               <div key={label}>
                 <p className="text-xs text-green-600 font-medium">{label}</p>
@@ -289,10 +291,10 @@ export default function MenuDiario() {
       {/* Modal */}
       <Modal
         open={modalOpen}
-        title={editingMenu ? `Editar Menú — ${formatFecha(editingMenu.fecha)}` : 'Nuevo Menú'}
+        title={editingMenu ? `${t('common.edit')} — ${formatFecha(editingMenu.fecha)}` : t('menuDiario.newMenu')}
         onOk={onSubmit}
         onCancel={() => setModalOpen(false)}
-        okText={editingMenu ? 'Guardar Cambios' : 'Publicar'}
+        okText={editingMenu ? t('common.save') : t('menuDiario.publicarHoy')}
         confirmLoading={saving}
         width={540}
       >

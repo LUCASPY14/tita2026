@@ -8,6 +8,7 @@
  * - Carga dinámica de medios de pago desde /core/medios-pago/
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
@@ -287,6 +288,7 @@ function PinModal({ saldoActual, total, limiteCreditoTarjeta, onConfirm, onCance
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function ModoRecreo() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { getProductos, getCategorias } = useCatalogoStore()
 
@@ -742,7 +744,7 @@ export default function ModoRecreo() {
             <CashRegisterIcon size={52} weight="fill" className="text-orange-500" />
           </div>
           <h2 className="text-3xl font-black text-slate-900 mb-2">Caja no iniciada</h2>
-          <p className="text-slate-500 text-lg mb-8">Debés abrir una caja antes de usar el Modo Recreo.</p>
+          <p className="text-slate-500 text-lg mb-8">{t('pos.cashRegister')}</p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() => navigate('/cajas')}
@@ -822,7 +824,7 @@ export default function ModoRecreo() {
           <img src="/logo_tita.png" alt="" className="h-9 w-auto rounded" />
           <div className="flex items-center gap-2 bg-yellow-100 border border-yellow-300 rounded-full px-4 py-1.5">
             <LightningIcon size={16} weight="fill" className="text-yellow-500" />
-            <span className="text-yellow-700 text-sm font-black uppercase tracking-widest">Modo Recreo</span>
+            <span className="text-yellow-700 text-sm font-black uppercase tracking-widest">{t('pos.title')}</span>
           </div>
           <div className="flex items-center gap-4 ml-2 text-sm text-slate-500">
             <span className="flex items-center gap-1.5"><ClockIcon size={15} weight="fill" className="text-slate-400" />{clock}</span>
@@ -830,7 +832,7 @@ export default function ModoRecreo() {
               <CashRegisterIcon size={15} weight="fill" className="text-emerald-500" />
               {cierreCaja.caja_nombre}
             </span>
-            <span>Ventas hoy: <strong className="text-slate-800">{dailyStats.count}</strong></span>
+            <span>{t('pos.todaySales')}: <strong className="text-slate-800">{dailyStats.count}</strong></span>
             <span>Promedio: <strong className="text-slate-800">{dailyStats.count > 0 ? `${avgTime}s` : '—'}</strong></span>
           </div>
         </div>
@@ -1176,7 +1178,7 @@ export default function ModoRecreo() {
                 {dailyStats.count > 0 && (
                   <div className="mt-6 w-full border-t border-slate-100 pt-4 space-y-2">
                     <div className="flex justify-between text-sm px-4">
-                      <span className="text-slate-400">Ventas hoy</span>
+                      <span className="text-slate-400">{t('pos.todaySales')}</span>
                       <span className="font-bold text-slate-700">{dailyStats.count}</span>
                     </div>
                     <div className="flex justify-between text-sm px-4">

@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { AlertTriangle, Plus, Edit2, Leaf } from 'lucide-react'
 import api from '../services/api'
@@ -65,6 +66,7 @@ function extractErrorMessage(err: unknown): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Alergenos() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<TabKey>('alergenos')
   const getProductos = useCatalogoStore(s => s.getProductos)
   const [productos, setProductos] = useState<Producto[]>([])
@@ -169,7 +171,7 @@ export default function Alergenos() {
 
   const colsAlg: Column<Alergeno>[] = [
     {
-      title: 'Alérgeno',
+      title: t('alergenos.colAlergeno'),
       key: 'nombre',
       render: (_, r) => (
         <div className="flex items-center gap-2">
@@ -178,31 +180,31 @@ export default function Alergenos() {
         </div>
       ),
     },
-    { title: 'Severidad', key: 'severidad', render: (_, r) => <Badge color={SEVERIDAD_COLOR[r.severidad] ?? 'default'}>{r.severidad}</Badge> },
-    { title: 'Descripción', key: 'desc', render: (_, r) => <span className="text-xs text-slate-500">{r.descripcion || '—'}</span> },
-    { title: 'Estado', key: 'activo', render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
+    { title: t('alergenos.colSeveridad'), key: 'severidad', render: (_, r) => <Badge color={SEVERIDAD_COLOR[r.severidad] ?? 'default'}>{r.severidad}</Badge> },
+    { title: t('common.description'), key: 'desc', render: (_, r) => <span className="text-xs text-slate-500">{r.descripcion || '—'}</span> },
+    { title: t('common.status'), key: 'activo', render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? t('common.active') : t('common.inactive')}</Badge> },
     {
       title: '', key: 'acc', width: 80,
       render: (_, r) => (
         <Button size="sm" variant="secondary" onClick={() => openEditAlg(r)}>
-          <Edit2 className="w-3.5 h-3.5" /> Editar
+          <Edit2 className="w-3.5 h-3.5" /> {t('common.edit')}
         </Button>
       ),
     },
   ]
 
   const colsAsig: Column<ProductoAlergeno>[] = [
-    { title: 'Producto', key: 'prod', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.producto_nombre}</span> },
-    { title: 'Alérgeno', key: 'alg', render: (_, r) => <span className="text-sm text-slate-700">{r.alergeno_nombre}</span> },
+    { title: t('alergenos.colProducto'), key: 'prod', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.producto_nombre}</span> },
+    { title: t('alergenos.colAlergeno'), key: 'alg', render: (_, r) => <span className="text-sm text-slate-700">{r.alergeno_nombre}</span> },
     {
-      title: 'Tipo', key: 'contiene',
+      title: t('alergenos.colTipo'), key: 'contiene',
       render: (_, r) => <Badge color={r.contiene ? 'red' : 'orange'}>{r.contiene ? 'Contiene' : 'Trazas'}</Badge>,
     },
     {
       title: '', key: 'acc', width: 80,
       render: (_, r) => (
         <Button size="sm" variant="ghost" onClick={() => handleDeleteAsig(r.id)}>
-          Quitar
+          {t('common.delete')}
         </Button>
       ),
     },
@@ -214,17 +216,17 @@ export default function Alergenos() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Alérgenos</h1>
-          <p className="text-base text-slate-500 mt-0.5">Gestión de alérgenos y asignación a productos</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('alergenos.title')}</h1>
+          <p className="text-base text-slate-500 mt-0.5">{t('alergenos.subtitle')}</p>
         </div>
         {tab === 'alergenos' && (
           <Button variant="primary" onClick={openCreateAlg}>
-            <Plus className="w-4 h-4" /> Nuevo Alérgeno
+            <Plus className="w-4 h-4" /> {t('alergenos.newAlergeno')}
           </Button>
         )}
         {tab === 'asignacion' && (
           <Button variant="primary" onClick={() => { setAsigForm({ producto: null, alergeno: null, contiene: true }); setAsigModalOpen(true) }}>
-            <Plus className="w-4 h-4" /> Asignar Alérgeno
+            <Plus className="w-4 h-4" /> {t('alergenos.asignar')}
           </Button>
         )}
       </div>
@@ -232,7 +234,7 @@ export default function Alergenos() {
       {/* Tabs */}
       <div className="border-b border-slate-200">
         <div className="flex gap-0">
-          {([['alergenos', 'Alérgenos', Leaf], ['asignacion', 'Asignación a Productos', AlertTriangle]] as const).map(([key, label, Icon]) => (
+          {([['alergenos', t('alergenos.tabList'), Leaf], ['asignacion', t('alergenos.tabAsignacion'), AlertTriangle]] as const).map(([key, label, Icon]) => (
             <button key={key} type="button" onClick={() => setTab(key as TabKey)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer ${tab === key ? 'border-green-600 text-green-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
               <Icon className="w-4 h-4" />{label}
@@ -264,9 +266,9 @@ export default function Alergenos() {
       )}
 
       {/* Modal alérgeno */}
-      <Modal open={algModalOpen} title={editingAlg ? 'Editar Alérgeno' : 'Nuevo Alérgeno'}
+      <Modal open={algModalOpen} title={editingAlg ? t('alergenos.modalEdit') : t('alergenos.modalCreate')}
         onOk={handleSaveAlg} onCancel={() => setAlgModalOpen(false)}
-        okText={editingAlg ? 'Guardar' : 'Crear'} confirmLoading={savingAlg} width={480}>
+        okText={editingAlg ? t('common.save') : t('common.create')} confirmLoading={savingAlg} width={480}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -300,9 +302,9 @@ export default function Alergenos() {
       </Modal>
 
       {/* Modal asignación */}
-      <Modal open={asigModalOpen} title="Asignar Alérgeno a Producto"
+      <Modal open={asigModalOpen} title={t('alergenos.modalAssign')}
         onOk={handleSaveAsig} onCancel={() => setAsigModalOpen(false)}
-        okText="Asignar" confirmLoading={savingAsig} width={440}>
+        okText={t('alergenos.asignar')} confirmLoading={savingAsig} width={440}>
         <div className="space-y-4">
           <div>
             <label className={labelClass}>Producto *</label>
@@ -323,8 +325,8 @@ export default function Alergenos() {
           <div>
             <label className={labelClass}>Tipo</label>
             <select value={String(asigForm.contiene)} onChange={e => setAsigForm(f => ({ ...f, contiene: e.target.value === 'true' }))} className={inputClass}>
-              <option value="true">Contiene el alérgeno</option>
-              <option value="false">Puede contener trazas</option>
+              <option value="true">{t('alergenos.optContiene')}</option>
+              <option value="false">{t('alergenos.optTrazas')}</option>
             </select>
           </div>
         </div>

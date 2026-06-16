@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import {
@@ -1469,6 +1470,7 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
 const PAGE_SIZE = 20
 
 export default function Clientes() {
+  const { t } = useTranslation()
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [tiposCliente, setTiposCliente] = useState<TipoCliente[]>([])
   const [listasPrecios, setListasPrecios] = useState<ListaPrecio[]>([])
@@ -1645,12 +1647,12 @@ export default function Clientes() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Clientes</h1>
-          <p className="text-base text-slate-500 mt-0.5">Gestión de clientes y sus estudiantes</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('clientes.title')}</h1>
+          <p className="text-base text-slate-500 mt-0.5">{t('clientes.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={() => setClienteModal({ open: true, cliente: null })}>
           <Plus className="w-4 h-4" />
-          Nuevo Cliente
+          {t('clientes.newCliente')}
         </Button>
       </div>
 

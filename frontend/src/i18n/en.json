@@ -101,5 +101,195 @@
     "notFound":      "Resource not found.",
     "serverError":   "Server error. Please try again later.",
     "backToHome":    "Back to home"
+  },
+
+  "alergenos": {
+    "title":         "Allergens",
+    "subtitle":      "Allergen management and product assignment",
+    "newAlergeno":   "New Allergen",
+    "asignar":       "Assign Allergen",
+    "tabList":       "Allergens",
+    "tabAsignacion": "Product Assignment",
+    "modalCreate":   "New Allergen",
+    "modalEdit":     "Edit Allergen",
+    "modalAssign":   "Assign Allergen to Product",
+    "colAlergeno":   "Allergen",
+    "colSeveridad":  "Severity",
+    "colProducto":   "Product",
+    "colTipo":       "Type",
+    "optContiene":   "Contains allergen",
+    "optTrazas":     "May contain traces"
+  },
+
+  "menuDiario": {
+    "title":         "Daily Menu",
+    "subtitle":      "School cafeteria menu management",
+    "newMenu":       "New Menu",
+    "noMenuHoy":     "No menu published for today",
+    "publicarHoy":   "Publish today",
+    "menuHoy":       "Today's menu",
+    "colFecha":      "Date",
+    "colPlato":      "Main Course",
+    "colGuarn":      "Side / Dessert",
+    "platoP":        "Main course",
+    "guarnicion":    "Side dish",
+    "postre":        "Dessert",
+    "bebida":        "Drink",
+    "archivar":      "Archive",
+    "activar":       "Activate"
+  },
+
+  "tarjetas": {
+    "title":         "Cards",
+    "subtitle":      "Student card and balance management",
+    "newTarjeta":    "New Card",
+    "colTarjeta":    "Card / Student",
+    "colSaldo":      "Balance",
+    "colEstado":     "Status",
+    "colAcciones":   "Actions",
+    "tabHistorial":  "History",
+    "bloquear":      "Block",
+    "desbloquear":   "Unblock",
+    "historial":     "History"
+  },
+
+  "cargaSaldo": {
+    "title":         "Load Balance",
+    "subtitle":      "Recharge student card balances",
+    "cargar":        "Load Balance",
+    "colFecha":      "Date",
+    "colTarjeta":    "Card",
+    "colMonto":      "Amount",
+    "colResponsable":"Processed by",
+    "colEstado":     "Status"
+  },
+
+  "clientes": {
+    "title":         "Clients",
+    "subtitle":      "Student and guardian management",
+    "newCliente":    "New Client",
+    "tabClientes":   "Clients",
+    "tabHijos":      "Students",
+    "colNombre":     "Name",
+    "colRuc":        "Tax ID / CI",
+    "colTipo":       "Type",
+    "colSaldo":      "Balance",
+    "colEstado":     "Status",
+    "modalCreate":   "New Client",
+    "modalEdit":     "Edit Client"
+  },
+
+  "productos": {
+    "title":         "Products",
+    "subtitle":      "Product and pricing management",
+    "newProducto":   "New Product",
+    "colProducto":   "Product",
+    "colCategoria":  "Category",
+    "colPrecio":     "Price",
+    "colStock":      "Stock",
+    "colEstado":     "Status",
+    "modalCreate":   "New Product",
+    "modalEdit":     "Edit Product"
+  },
+
+  "compras": {
+    "title":         "Purchases",
+    "subtitle":      "Purchase and supply records",
+    "newCompra":     "New Purchase",
+    "colFecha":      "Date",
+    "colProveedor":  "Supplier",
+    "colTotal":      "Total",
+    "colEstado":     "Status",
+    "modalCreate":   "New Purchase"
+  },
+
+  "cajas": {
+    "title":         "Cash Registers",
+    "subtitle":      "Cash register and daily closing control",
+    "newCaja":       "New Register",
+    "abrirCaja":     "Open Register",
+    "cerrarCaja":    "Close Register",
+    "colCaja":       "Register",
+    "colApertura":   "Opening",
+    "colCierre":     "Closing",
+    "colTotal":      "Total sold",
+    "colEstado":     "Status",
+    "tabCajas":      "Registers",
+    "tabCierres":    "Closings"
+  },
+
+  "facturacion": {
+    "title":         "Billing",
+    "subtitle":      "Invoice and receipt management",
+    "newFactura":    "New Invoice",
+    "colNumero":     "Invoice #",
+    "colFecha":      "Date",
+    "colCliente":    "Client",
+    "colTotal":      "Total",
+    "colEstado":     "Status"
+  },
+
+  "reportes": {
+    "title":         "Reports",
+    "subtitle":      "System reports and analytics",
+    "exportar":      "Export",
+    "filtrar":       "Filter",
+    "tabVentas":     "Sales",
+    "tabCobros":     "Payments",
+    "tabStock":      "Stock",
+    "tabAlmuerzos":  "Lunches"
+  },
+
+  "inventario": {
+    "title":         "Inventory",
+    "subtitle":      "Stock and inventory control",
+    "nuevoAjuste":   "New Adjustment",
+    "tabStock":      "Current Stock",
+    "tabMovimientos":"Movements",
+    "tabAjustes":    "Adjustments",
+    "tabLotes":      "Batches",
+    "colProducto":   "Product",
+    "colStock":      "Stock",
+    "colUnidad":     "Unit",
+    "colFecha":      "Date",
+    "colTipo":       "Type",
+    "colCantidad":   "Quantity",
+    "colMotivo":     "Reason",
+    "stockBajo":     "Low stock"
+  },
+
+  "usuarios": {
+    "title":         "Users",
+    "subtitle":      "System user management",
+    "newUsuario":    "New User",
+    "colNombre":     "Name",
+    "colEmail":      "Email",
+    "colRol":        "Role",
+    "colEstado":     "Status",
+    "colUltimoAcceso":"Last access",
+    "modalCreate":   "New User",
+    "modalEdit":     "Edit User"
+  },
+
+  "almuerzos": {
+    "title":         "Lunches",
+    "subtitle":      "School lunch plan management",
+    "tabPlanificacion": "Planning",
+    "tabInscripciones": "Enrollments",
+    "tabCuentas":    "Monthly Accounts",
+    "tabReportes":   "Reports",
+    "exportPDF":     "Export PDF",
+    "exportExcel":   "Export Excel"
+  },
+
+  "comedor": {
+    "title":         "Dining Room",
+    "subtitle":      "Cafeteria attendance control",
+    "registrar":     "Register Entry",
+    "colAlumno":     "Student",
+    "colFecha":      "Date / Time",
+    "colEstado":     "Status",
+    "presente":      "Present",
+    "ausente":       "Absent"
   }
 }

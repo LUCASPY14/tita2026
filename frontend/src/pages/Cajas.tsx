@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   Plus, Lock, CheckCircle, Banknote, LayoutGrid,
@@ -93,6 +94,7 @@ function elapsedLabel(isoApertura: string): string {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function CajaPage() {
+  const { t } = useTranslation()
 
   const [cierres, setCierres] = useState<CierreCaja[]>([])
   const [cajas, setCajas] = useState<Caja[]>([])
@@ -443,12 +445,12 @@ export default function CajaPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Caja</h1>
-          <p className="text-base text-slate-500 mt-0.5">Apertura y cierre de cajas registradoras</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('cajas.title')}</h1>
+          <p className="text-base text-slate-500 mt-0.5">{t('cajas.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={() => { setAbrirModal(true); setMontoInicial('') }}>
           <Plus className="w-4 h-4" />
-          Abrir Caja
+          {t('cajas.abrirCaja')}
         </Button>
       </div>
 

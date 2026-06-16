@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { FileText, Search, Printer, XCircle, AlertTriangle } from 'lucide-react'
 import api from '../services/api'
@@ -80,6 +81,7 @@ const TIPO_COLOR: Record<string, BadgeColor> = {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Facturacion() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<'pendientes' | 'emitidas'>('pendientes')
 
   const [pendientes, setPendientes] = useState<PendienteItem[]>([])
@@ -303,8 +305,8 @@ export default function Facturacion() {
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Facturación</h1>
-        <p className="text-base text-slate-500 mt-0.5">Emisión y gestión de facturas</p>
+        <h1 className="text-2xl font-bold text-slate-900">{t('facturacion.title')}</h1>
+        <p className="text-base text-slate-500 mt-0.5">{t('facturacion.subtitle')}</p>
       </div>
 
       {/* Tabs */}

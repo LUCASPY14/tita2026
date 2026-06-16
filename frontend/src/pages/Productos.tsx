@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   Plus, Search, Package, Edit2, AlertTriangle, Tag, TrendingDown,
@@ -281,7 +282,8 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
 
 const PAGE_SIZE = 25
 
-export default function Productos() {
+export default function Produtos() {
+  const { t } = useTranslation()
   const invalidateCatalogo = useCatalogoStore(state => state.invalidate)
   const [productos, setProductos] = useState<Producto[]>([])
   const [stockMap, setStockMap] = useState<Record<number, StockRecord>>({})
@@ -499,12 +501,12 @@ export default function Productos() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Productos</h1>
-          <p className="text-base text-slate-500 mt-0.5">Catálogo de productos e inventario</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('productos.title')}</h1>
+          <p className="text-base text-slate-500 mt-0.5">{t('productos.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={() => setModal({ open: true, producto: null })}>
           <Plus className="w-4 h-4" />
-          Nuevo Producto
+          {t('productos.newProducto')}
         </Button>
       </div>
 

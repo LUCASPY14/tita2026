@@ -101,5 +101,195 @@
     "notFound":      "Recurso no encontrado.",
     "serverError":   "Error del servidor. Intentá más tarde.",
     "backToHome":    "Volver al inicio"
+  },
+
+  "alergenos": {
+    "title":         "Alérgenos",
+    "subtitle":      "Gestión de alérgenos y asignación a productos",
+    "newAlergeno":   "Nuevo Alérgeno",
+    "asignar":       "Asignar Alérgeno",
+    "tabList":       "Alérgenos",
+    "tabAsignacion": "Asignación a Productos",
+    "modalCreate":   "Nuevo Alérgeno",
+    "modalEdit":     "Editar Alérgeno",
+    "modalAssign":   "Asignar Alérgeno a Producto",
+    "colAlergeno":   "Alérgeno",
+    "colSeveridad":  "Severidad",
+    "colProducto":   "Producto",
+    "colTipo":       "Tipo",
+    "optContiene":   "Contiene el alérgeno",
+    "optTrazas":     "Puede contener trazas"
+  },
+
+  "menuDiario": {
+    "title":         "Menú Diario",
+    "subtitle":      "Gestión del menú del comedor escolar",
+    "newMenu":       "Nuevo Menú",
+    "noMenuHoy":     "Sin menú publicado para hoy",
+    "publicarHoy":   "Publicar hoy",
+    "menuHoy":       "Menú de hoy",
+    "colFecha":      "Fecha",
+    "colPlato":      "Plato Principal",
+    "colGuarn":      "Guarnición / Postre",
+    "platoP":        "Plato principal",
+    "guarnicion":    "Guarnición",
+    "postre":        "Postre",
+    "bebida":        "Bebida",
+    "archivar":      "Archivar",
+    "activar":       "Activar"
+  },
+
+  "tarjetas": {
+    "title":         "Tarjetas",
+    "subtitle":      "Gestión de tarjetas y saldos de estudiantes",
+    "newTarjeta":    "Nueva Tarjeta",
+    "colTarjeta":    "Tarjeta / Alumno",
+    "colSaldo":      "Saldo",
+    "colEstado":     "Estado",
+    "colAcciones":   "Acciones",
+    "tabHistorial":  "Historial",
+    "bloquear":      "Bloquear",
+    "desbloquear":   "Desbloquear",
+    "historial":     "Historial"
+  },
+
+  "cargaSaldo": {
+    "title":         "Carga de Saldo",
+    "subtitle":      "Recarga de saldo en tarjetas de estudiantes",
+    "cargar":        "Cargar Saldo",
+    "colFecha":      "Fecha",
+    "colTarjeta":    "Tarjeta",
+    "colMonto":      "Monto",
+    "colResponsable":"Responsable",
+    "colEstado":     "Estado"
+  },
+
+  "clientes": {
+    "title":         "Clientes",
+    "subtitle":      "Gestión de estudiantes y responsables",
+    "newCliente":    "Nuevo Cliente",
+    "tabClientes":   "Clientes",
+    "tabHijos":      "Alumnos",
+    "colNombre":     "Nombre",
+    "colRuc":        "RUC / CI",
+    "colTipo":       "Tipo",
+    "colSaldo":      "Saldo",
+    "colEstado":     "Estado",
+    "modalCreate":   "Nuevo Cliente",
+    "modalEdit":     "Editar Cliente"
+  },
+
+  "productos": {
+    "title":         "Productos",
+    "subtitle":      "Gestión de productos y precios",
+    "newProducto":   "Nuevo Producto",
+    "colProducto":   "Producto",
+    "colCategoria":  "Categoría",
+    "colPrecio":     "Precio",
+    "colStock":      "Stock",
+    "colEstado":     "Estado",
+    "modalCreate":   "Nuevo Producto",
+    "modalEdit":     "Editar Producto"
+  },
+
+  "compras": {
+    "title":         "Compras",
+    "subtitle":      "Registro de compras e insumos",
+    "newCompra":     "Nueva Compra",
+    "colFecha":      "Fecha",
+    "colProveedor":  "Proveedor",
+    "colTotal":      "Total",
+    "colEstado":     "Estado",
+    "modalCreate":   "Nueva Compra"
+  },
+
+  "cajas": {
+    "title":         "Cajas",
+    "subtitle":      "Control de cajas y cierres del día",
+    "newCaja":       "Nueva Caja",
+    "abrirCaja":     "Abrir Caja",
+    "cerrarCaja":    "Cerrar Caja",
+    "colCaja":       "Caja",
+    "colApertura":   "Apertura",
+    "colCierre":     "Cierre",
+    "colTotal":      "Total vendido",
+    "colEstado":     "Estado",
+    "tabCajas":      "Cajas",
+    "tabCierres":    "Cierres"
+  },
+
+  "facturacion": {
+    "title":         "Facturación",
+    "subtitle":      "Gestión de facturas y talonario preimpreso",
+    "newFactura":    "Nueva Factura",
+    "colNumero":     "N° Factura",
+    "colFecha":      "Fecha",
+    "colCliente":    "Cliente",
+    "colTotal":      "Total",
+    "colEstado":     "Estado"
+  },
+
+  "reportes": {
+    "title":         "Reportes",
+    "subtitle":      "Reportes y análisis del sistema",
+    "exportar":      "Exportar",
+    "filtrar":       "Filtrar",
+    "tabVentas":     "Ventas",
+    "tabCobros":     "Cobros",
+    "tabStock":      "Stock",
+    "tabAlmuerzos":  "Almuerzos"
+  },
+
+  "inventario": {
+    "title":         "Inventario",
+    "subtitle":      "Control de stock e inventario",
+    "nuevoAjuste":   "Nuevo Ajuste",
+    "tabStock":      "Stock actual",
+    "tabMovimientos":"Movimientos",
+    "tabAjustes":    "Ajustes",
+    "tabLotes":      "Lotes",
+    "colProducto":   "Producto",
+    "colStock":      "Stock",
+    "colUnidad":     "Unidad",
+    "colFecha":      "Fecha",
+    "colTipo":       "Tipo",
+    "colCantidad":   "Cantidad",
+    "colMotivo":     "Motivo",
+    "stockBajo":     "Stock bajo"
+  },
+
+  "usuarios": {
+    "title":         "Usuarios",
+    "subtitle":      "Gestión de usuarios del sistema",
+    "newUsuario":    "Nuevo Usuario",
+    "colNombre":     "Nombre",
+    "colEmail":      "Email",
+    "colRol":        "Rol",
+    "colEstado":     "Estado",
+    "colUltimoAcceso":"Último acceso",
+    "modalCreate":   "Nuevo Usuario",
+    "modalEdit":     "Editar Usuario"
+  },
+
+  "almuerzos": {
+    "title":         "Almuerzos",
+    "subtitle":      "Gestión de planes de almuerzo escolar",
+    "tabPlanificacion": "Planificación",
+    "tabInscripciones": "Inscripciones",
+    "tabCuentas":    "Cuentas Mensuales",
+    "tabReportes":   "Reportes",
+    "exportPDF":     "Exportar PDF",
+    "exportExcel":   "Exportar Excel"
+  },
+
+  "comedor": {
+    "title":         "Comedor",
+    "subtitle":      "Control de asistencia al comedor",
+    "registrar":     "Registrar Entrada",
+    "colAlumno":     "Alumno",
+    "colFecha":      "Fecha / Hora",
+    "colEstado":     "Estado",
+    "presente":      "Presente",
+    "ausente":       "Ausente"
   }
 }

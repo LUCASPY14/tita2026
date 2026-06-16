@@ -1,4 +1,5 @@
 ﻿import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   BarChart2, Search, TrendingUp, ShoppingCart, FileText, Download,
@@ -157,6 +158,7 @@ type TabKey = 'ventas' | 'cuenta_corriente' | 'almuerzos' | 'productos' | 'cajer
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Reportes() {
+  const { t } = useTranslation()
   const today = new Date().toISOString().split('T')[0]
   const hoy = new Date()
   const [tab, setTab] = useState<TabKey>('ventas')
@@ -787,8 +789,8 @@ export default function Reportes() {
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Reportes</h1>
-        <p className="text-base text-slate-500 mt-0.5">Análisis de ventas, inventario y cuentas</p>
+        <h1 className="text-2xl font-bold text-slate-900">{t('reportes.title')}</h1>
+        <p className="text-base text-slate-500 mt-0.5">{t('reportes.subtitle')}</p>
       </div>
 
       {/* Tabs */}
@@ -931,9 +933,23 @@ export default function Reportes() {
               <Search className="w-4 h-4" />Generar Reporte
             </Button>
             {productosData && (
-              <Button variant="secondary" onClick={exportarProductosCSV} disabled={loadingProd}>
-                <Download className="w-4 h-4" />CSV
-              </Button>
+              <>
+                <Button variant="secondary" onClick={exportarProductosCSV} disabled={loadingProd}>
+                  <Download className="w-4 h-4" />CSV
+                </Button>
+                <Button variant="secondary" disabled={loadingProd} onClick={async () => {
+                  try {
+                    const res = await api.get('/ventas/reporte-productos/', {
+                      params: { desde: desdeProd, hasta: hastaProd, formato: 'pdf' },
+                      responseType: 'blob',
+                    })
+                    descargaBlob(res.data, `ventas_productos_${desdeProd}_${hastaProd}.pdf`)
+                    toast.success('PDF descargado')
+                  } catch { toast.error('Error al generar PDF') }
+                }}>
+                  <FileText className="w-4 h-4" />PDF
+                </Button>
+              </>
             )}
           </FilterBar>
 
@@ -976,9 +992,23 @@ export default function Reportes() {
               <Search className="w-4 h-4" />Generar Reporte
             </Button>
             {cajerosData && (
-              <Button variant="secondary" onClick={exportarCajerosCSV} disabled={loadingCaj}>
-                <Download className="w-4 h-4" />CSV
-              </Button>
+              <>
+                <Button variant="secondary" onClick={exportarCajerosCSV} disabled={loadingCaj}>
+                  <Download className="w-4 h-4" />CSV
+                </Button>
+                <Button variant="secondary" disabled={loadingCaj} onClick={async () => {
+                  try {
+                    const res = await api.get('/ventas/reporte-cajeros/', {
+                      params: { desde: desdeCaj, hasta: hastaCaj, formato: 'pdf' },
+                      responseType: 'blob',
+                    })
+                    descargaBlob(res.data, `ventas_cajeros_${desdeCaj}_${hastaCaj}.pdf`)
+                    toast.success('PDF descargado')
+                  } catch { toast.error('Error al generar PDF') }
+                }}>
+                  <FileText className="w-4 h-4" />PDF
+                </Button>
+              </>
             )}
           </FilterBar>
 
@@ -1096,9 +1126,24 @@ export default function Reportes() {
               <Search className="w-4 h-4" />Generar Reporte
             </Button>
             {tarjetasData && (
-              <Button variant="secondary" onClick={exportarTarjetasCSV} disabled={loadingTarj}>
-                <Download className="w-4 h-4" />CSV
-              </Button>
+              <>
+                <Button variant="secondary" onClick={exportarTarjetasCSV} disabled={loadingTarj}>
+                  <Download className="w-4 h-4" />CSV
+                </Button>
+                <Button variant="secondary" disabled={loadingTarj} onClick={async () => {
+                  try {
+                    const params: Record<string, string> = { formato: 'pdf' }
+                    if (desdeTarj) params.desde = desdeTarj
+                    if (hastaTarj) params.hasta = hastaTarj
+                    const res = await api.get('/core/reporte-tarjetas/', { params, responseType: 'blob' })
+                    const sufijo = desdeTarj && hastaTarj ? `_${desdeTarj}_${hastaTarj}` : ''
+                    descargaBlob(res.data, `reporte_tarjetas${sufijo}.pdf`)
+                    toast.success('PDF descargado')
+                  } catch { toast.error('Error al generar PDF') }
+                }}>
+                  <FileText className="w-4 h-4" />PDF
+                </Button>
+              </>
             )}
           </FilterBar>
 
@@ -1153,9 +1198,23 @@ export default function Reportes() {
               <Search className="w-4 h-4" />Cargar Inventario
             </Button>
             {stockData && (
-              <Button variant="secondary" onClick={exportarStockCSV} disabled={loadingStock}>
-                <Download className="w-4 h-4" />CSV
-              </Button>
+              <>
+                <Button variant="secondary" onClick={exportarStockCSV} disabled={loadingStock}>
+                  <Download className="w-4 h-4" />CSV
+                </Button>
+                <Button variant="secondary" disabled={loadingStock} onClick={async () => {
+                  try {
+                    const res = await api.get('/inventario/reporte-stock/', {
+                      params: { formato: 'pdf' },
+                      responseType: 'blob',
+                    })
+                    descargaBlob(res.data, 'reporte_stock.pdf')
+                    toast.success('PDF descargado')
+                  } catch { toast.error('Error al generar PDF') }
+                }}>
+                  <FileText className="w-4 h-4" />PDF
+                </Button>
+              </>
             )}
           </div>
 

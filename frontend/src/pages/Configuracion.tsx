@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   Settings, Tag, ListOrdered, CreditCard, Users,
@@ -27,23 +28,24 @@ type TabKey =
   | 'grados' | 'datos_empresa' | 'historial_precios' | 'seguridad'
   | 'tipos_almuerzo' | 'planes_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
 
-const TABS: { key: TabKey; label: string; icon: typeof Settings }[] = [
-  { key: 'categorias',        label: 'Categorías',       icon: Tag },
-  { key: 'tipos_cliente',     label: 'Tipos de Cliente', icon: Users },
-  { key: 'listas_precio',     label: 'Listas de Precio', icon: ListOrdered },
-  { key: 'medios_pago',       label: 'Medios de Pago',   icon: CreditCard },
-  { key: 'grados',            label: 'Grados',           icon: GraduationCap },
-  { key: 'datos_empresa',     label: 'Empresa',          icon: Building2 },
-  { key: 'historial_precios', label: 'Hist. Precios',    icon: History },
-  { key: 'seguridad',         label: 'Seguridad',        icon: Shield },
-  { key: 'tipos_almuerzo',    label: 'Tipos Almuerzo',   icon: UtensilsCrossed },
-  { key: 'planes_almuerzo',   label: 'Planes Almuerzo',  icon: Calendar },
-  { key: 'unidades_medida',   label: 'Unidades Medida',  icon: Ruler },
-  { key: 'alergenos',         label: 'Alérgenos',        icon: AlertTriangle },
-  { key: 'impuestos',         label: 'Impuestos',        icon: Percent },
+const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
+  { key: 'categorias',        labelKey: 'settings.categories',  icon: Tag },
+  { key: 'tipos_cliente',     labelKey: 'settings.clientTypes', icon: Users },
+  { key: 'listas_precio',     labelKey: 'settings.priceLists',  icon: ListOrdered },
+  { key: 'medios_pago',       labelKey: 'settings.payMethods',  icon: CreditCard },
+  { key: 'grados',            labelKey: 'settings.grades',      icon: GraduationCap },
+  { key: 'datos_empresa',     labelKey: 'settings.company',     icon: Building2 },
+  { key: 'historial_precios', labelKey: 'settings.priceHistory',icon: History },
+  { key: 'seguridad',         labelKey: 'settings.security',    icon: Shield },
+  { key: 'tipos_almuerzo',    labelKey: 'settings.lunchTypes',  icon: UtensilsCrossed },
+  { key: 'planes_almuerzo',   labelKey: 'settings.lunchPlans',  icon: Calendar },
+  { key: 'unidades_medida',   labelKey: 'settings.units',       icon: Ruler },
+  { key: 'alergenos',         labelKey: 'settings.allergens',   icon: AlertTriangle },
+  { key: 'impuestos',         labelKey: 'settings.taxes',       icon: Percent },
 ]
 
 export default function Configuracion() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<TabKey>('categorias')
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -70,13 +72,13 @@ export default function Configuracion() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Configuración</h1>
-        <p className="text-base text-slate-500 mt-0.5">Administración de catálogos del sistema</p>
+        <h1 className="text-2xl font-bold text-slate-900">{t('settings.title')}</h1>
+        <p className="text-base text-slate-500 mt-0.5">{t('settings.subtitle')}</p>
       </div>
 
       <div className="border-b border-slate-200">
         <div className="flex flex-wrap gap-0">
-          {TABS.map(({ key, label, icon: Icon }) => (
+          {TABS.map(({ key, labelKey, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -85,7 +87,7 @@ export default function Configuracion() {
               }`}
             >
               <Icon className="w-4 h-4" />
-              {label}
+              {t(labelKey)}
             </button>
           ))}
         </div>

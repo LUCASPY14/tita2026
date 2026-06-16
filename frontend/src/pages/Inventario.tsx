@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   Package, Plus, CheckCircle, XCircle,
@@ -124,6 +125,7 @@ const DETALLE_EMPTY: DetalleAjuste = { producto: null, cantidad: 1, motivo_detal
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Inventario() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<TabKey>('ajustes')
 
   const [productos, setProductos] = useState<Producto[]>([])
@@ -554,8 +556,8 @@ export default function Inventario() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Inventario</h1>
-          <p className="text-base text-slate-500 mt-0.5">Ajustes, movimientos de stock y lotes</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('inventario.title')}</h1>
+          <p className="text-base text-slate-500 mt-0.5">{t('inventario.subtitle')}</p>
         </div>
         {tab === 'ajustes' && (
           <Button variant="primary" onClick={() => {
@@ -563,7 +565,7 @@ export default function Inventario() {
             setAjusteOpen(true)
           }}>
             <Plus className="w-4 h-4" />
-            Nuevo Ajuste
+            {t('inventario.nuevoAjuste')}
           </Button>
         )}
       </div>

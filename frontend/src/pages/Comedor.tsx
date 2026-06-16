@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   CheckCircle, XCircle, UtensilsCrossed, Clock,
@@ -83,6 +84,7 @@ interface RegistroReciente {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Comedor() {
+  const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval>>(undefined)
   const focusTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -343,7 +345,7 @@ export default function Comedor() {
           </div>
           <div>
             <p className="text-slate-800 font-black text-base tracking-tight">CANTINA TITA</p>
-            <p className="text-green-600 text-sm font-bold uppercase tracking-wider">Registro de Comedor</p>
+            <p className="text-green-600 text-sm font-bold uppercase tracking-wider">{t('comedor.title')}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">

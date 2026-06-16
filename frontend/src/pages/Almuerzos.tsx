@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   UtensilsCrossed, Plus, Search, Edit2, X,
@@ -156,6 +157,7 @@ type TabKey = 'consumos' | 'cuentas' | 'suscripciones' | 'menu'
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Almuerzos() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<TabKey>('consumos')
 
   // ── Catalogs ─────────────────────────────────────────────────────
@@ -802,8 +804,8 @@ export default function Almuerzos() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Almuerzos</h1>
-          <p className="text-base text-slate-500 mt-0.5">Gestión de consumos, menú y suscripciones</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('almuerzos.title')}</h1>
+          <p className="text-base text-slate-500 mt-0.5">{t('almuerzos.subtitle')}</p>
         </div>
         {tab === 'consumos' && (
           <Button variant="primary" onClick={() => setConsumoOpen(true)}>
