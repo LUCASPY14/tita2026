@@ -257,7 +257,30 @@ class ReporteTarjetasView(APIView):
         total_recargado = sum(f["total_recargado"] for f in filas)
         total_consumido = sum(f["total_consumido"] for f in filas)
 
-        if request.query_params.get("formato") == "csv":
+        fmt = request.query_params.get("formato")
+
+        if fmt == "pdf":
+            from common.pdf_report import pdf_response
+            fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+            subtitle = f"Período: {desde} al {hasta}" if desde and hasta else "Saldos actuales"
+            rows = [
+                [f["nro_tarjeta"], f["alumno"], f["grado"] or "—",
+                 fmt_gs(f["saldo_actual"]), fmt_gs(f["total_recargado"]),
+                 fmt_gs(f["total_consumido"]), f["num_recargas"], f["num_consumos"]]
+                for f in filas
+            ]
+            periodo_fn = f"_{desde}_{hasta}" if desde and hasta else ""
+            return pdf_response(
+                filename=f"reporte_tarjetas{periodo_fn}.pdf",
+                title="Reporte de Tarjetas Prepago",
+                subtitle=subtitle,
+                headers=["Tarjeta", "Alumno", "Grado", "Saldo Actual", "Recargado", "Consumido", "Recargas", "Consumos"],
+                rows=rows,
+                totals=["TOTALES", "", "", fmt_gs(total_saldo), fmt_gs(total_recargado), fmt_gs(total_consumido), "", ""],
+                landscape=True,
+            )
+
+        if fmt == "csv":
             periodo = f"_{desde}_{hasta}" if desde and hasta else ""
             response = HR(content_type="text/csv; charset=utf-8-sig")
             response["Content-Disposition"] = f'attachment; filename="reporte_tarjetas{periodo}.csv"'

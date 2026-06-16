@@ -12,19 +12,11 @@ import {
 } from 'recharts'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
+import { useDashboardKPI } from '../hooks/useDashboardKPI'
 import Badge from '../components/ui/Badge'
 import Spinner from '../components/ui/Spinner'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
-
-interface Resumen {
-  ventasHoy: number
-  montoHoy: number
-  clientes: number
-  productos: number
-  stockBajo: number
-  cajasAbiertas: number
-}
 
 interface VentaTipo {
   tipo: string
@@ -66,28 +58,28 @@ const PIE_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6']
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [resumen, setResumen] = useState<Resumen | null>(null)
   const [chart, setChart] = useState<ChartData | null>(null)
   const [tendencia, setTendencia] = useState<TendenciaPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [hiddenPie, setHiddenPie] = useState<Set<string>>(new Set())
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { kpi: resumen, connected: wsConnected } = useDashboardKPI()
 
   const showCharts = user?.rol !== 'COCINA'
 
   useEffect(() => {
     const { desde, hasta } = getWeekRange()
-    const reqs: Promise<{ data: unknown }>[] = [api.get('/contabilidad/dashboard/')]
+    const reqs: Promise<{ data: unknown }>[] = []
     if (showCharts) {
       reqs.push(
         api.get('/contabilidad/reportes/', { params: { fecha_desde: desde, fecha_hasta: hasta } }),
         api.get('/contabilidad/dashboard/tendencia/', { params: { dias: 14 } }),
       )
     }
+    if (reqs.length === 0) { setLoading(false); return }
     Promise.all(reqs)
-      .then(([dashRes, repRes, tendRes]) => {
-        setResumen(dashRes.data as Resumen)
+      .then(([repRes, tendRes]) => {
         if (showCharts && repRes) {
           const v = (repRes.data as { ventas?: { por_tipo?: VentaTipo[]; monto_total?: number; cantidad?: number } })?.ventas
           setChart({ por_tipo: v?.por_tipo ?? [], monto_total: v?.monto_total ?? 0, cantidad_total: v?.cantidad ?? 0 })
@@ -124,6 +116,7 @@ export default function Dashboard() {
       icon: AlertTriangle,
       color: r.stockBajo > 0 ? 'text-red-600' : 'text-slate-400',
       bg: r.stockBajo > 0 ? 'bg-red-50' : 'bg-slate-50',
+      link: '/inventario',
     },
     {
       label: 'Cajas Abiertas', value: r.cajasAbiertas, sub: 'en operación',
@@ -232,21 +225,31 @@ export default function Dashboard() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-4xl font-bold text-slate-900">
-          {saludo}, {user?.nombre ?? 'Usuario'}
-        </h1>
-        <p className="text-lg text-slate-500 mt-0.5">
-          Resumen del día — {new Date().toLocaleDateString('es-PY', {
-            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-          })}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold text-slate-900">
+            {saludo}, {user?.nombre ?? 'Usuario'}
+          </h1>
+          <p className="text-lg text-slate-500 mt-0.5">
+            Resumen del día — {new Date().toLocaleDateString('es-PY', {
+              weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+            })}
+          </p>
+        </div>
+        <div className={`flex items-center gap-1.5 mt-1 text-xs font-medium px-2.5 py-1 rounded-full border ${
+          wsConnected
+            ? 'text-green-700 bg-green-50 border-green-200'
+            : 'text-slate-400 bg-slate-50 border-slate-200'
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`} />
+          {wsConnected ? 'En vivo' : 'Sin conexión'}
+        </div>
       </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {stats.map(({ label, value, sub, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-5">
+        {stats.map(({ label, value, sub, icon: Icon, color, bg, link }) => {
+          const inner = (
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide truncate">{label}</p>
@@ -257,8 +260,23 @@ export default function Dashboard() {
                 <Icon className={`w-6 h-6 ${color}`} />
               </div>
             </div>
-          </div>
-        ))}
+          )
+          return link ? (
+            <button
+              key={label}
+              type="button"
+              onClick={() => navigate(link)}
+              title={`Ver ${label}`}
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-5 text-left cursor-pointer hover:shadow-md hover:border-slate-200 transition-all"
+            >
+              {inner}
+            </button>
+          ) : (
+            <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-5">
+              {inner}
+            </div>
+          )
+        })}
       </div>
 
       {/* Main grid */}

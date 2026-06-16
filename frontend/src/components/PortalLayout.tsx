@@ -1,19 +1,21 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { useNotificaciones } from '../hooks/useNotificaciones'
 import { Home, Bell, LogOut, History, FileText, Wallet } from 'lucide-react'
 
 const navItems = [
-  { path: '/portal',              label: 'Inicio',     icon: Home,    exact: true  },
-  { path: '/portal/carga-saldo', label: 'Recargar',   icon: Wallet,  exact: false },
-  { path: '/portal/historial',   label: 'Historial',  icon: History, exact: false },
-  { path: '/portal/facturas',    label: 'Facturas',   icon: FileText,exact: false },
-  { path: '/portal/notificaciones', label: 'Alertas', icon: Bell,    exact: false },
+  { path: '/portal',                 label: 'Inicio',    icon: Home,    exact: true  },
+  { path: '/portal/carga-saldo',    label: 'Recargar',  icon: Wallet,  exact: false },
+  { path: '/portal/historial',      label: 'Historial', icon: History, exact: false },
+  { path: '/portal/facturas',       label: 'Facturas',  icon: FileText,exact: false },
+  { path: '/portal/notificaciones', label: 'Alertas',   icon: Bell,    exact: false },
 ]
 
 export default function PortalLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuthStore()
+  const { unreadCount, clearUnread } = useNotificaciones()
 
   const handleLogout = () => {
     logout()
@@ -55,11 +57,15 @@ export default function PortalLayout() {
             const active = exact
               ? location.pathname === path
               : location.pathname.startsWith(path)
+            const isBell = path === '/portal/notificaciones'
             return (
               <button
                 type="button"
                 key={path}
-                onClick={() => navigate(path)}
+                onClick={() => {
+                  if (isBell) clearUnread()
+                  navigate(path)
+                }}
                 aria-current={active ? 'page' : undefined}
                 className={[
                   'flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium',
@@ -67,7 +73,14 @@ export default function PortalLayout() {
                   active ? 'text-green-600' : 'text-slate-400 hover:text-slate-600',
                 ].join(' ')}
               >
-                <Icon className="w-5 h-5" />
+                <span className="relative">
+                  <Icon className="w-5 h-5" />
+                  {isBell && unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </span>
                 <span>{label}</span>
                 {active && (
                   <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-green-500 rounded-t" />

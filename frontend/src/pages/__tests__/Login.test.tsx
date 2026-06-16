@@ -7,7 +7,12 @@ const mockLogin = vi.fn()
 const mockNavigate = vi.fn()
 
 vi.mock('../../store/authStore', () => ({
-  useAuthStore: () => ({ login: mockLogin }),
+  useAuthStore: () => ({
+    login: mockLogin,
+    pending2FA: null,
+    verify2FA: vi.fn(),
+    cancelPending2FA: vi.fn(),
+  }),
 }))
 
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -91,7 +96,7 @@ describe('Login — validación', () => {
 
 describe('Login — submit exitoso', () => {
   it('llama a login() con email y contraseña correctos', async () => {
-    mockLogin.mockResolvedValueOnce(undefined)
+    mockLogin.mockResolvedValueOnce(true)
     renderLogin()
     await userEvent.type(screen.getByLabelText(/email/i), 'admin@tita.com')
     await userEvent.type(screen.getByLabelText(/contraseña/i), 'secreto123')
@@ -103,7 +108,7 @@ describe('Login — submit exitoso', () => {
   })
 
   it('navega a /dashboard tras login exitoso', async () => {
-    mockLogin.mockResolvedValueOnce(undefined)
+    mockLogin.mockResolvedValueOnce(true)
     renderLogin()
     await userEvent.type(screen.getByLabelText(/email/i), 'admin@tita.com')
     await userEvent.type(screen.getByLabelText(/contraseña/i), 'secreto123')
@@ -115,8 +120,8 @@ describe('Login — submit exitoso', () => {
   })
 
   it('el botón queda deshabilitado durante el submit', async () => {
-    let resolve: () => void
-    mockLogin.mockReturnValueOnce(new Promise<void>((r) => { resolve = r }))
+    let resolve: (v: boolean) => void
+    mockLogin.mockReturnValueOnce(new Promise<boolean>((r) => { resolve = r }))
     renderLogin()
     await userEvent.type(screen.getByLabelText(/email/i), 'admin@tita.com')
     await userEvent.type(screen.getByLabelText(/contraseña/i), 'secreto123')
@@ -173,7 +178,7 @@ describe('Login — UX', () => {
   })
 
   it('presionar Enter en el campo de contraseña ejecuta el submit', async () => {
-    mockLogin.mockResolvedValueOnce(undefined)
+    mockLogin.mockResolvedValueOnce(true)
     renderLogin()
     await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com')
     await userEvent.type(screen.getByLabelText(/contraseña/i), 'pass{Enter}')
@@ -184,7 +189,7 @@ describe('Login — UX', () => {
   })
 
   it('presionar Enter en el campo de email ejecuta el submit', async () => {
-    mockLogin.mockResolvedValueOnce(undefined)
+    mockLogin.mockResolvedValueOnce(true)
     renderLogin()
     await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com{Enter}')
 

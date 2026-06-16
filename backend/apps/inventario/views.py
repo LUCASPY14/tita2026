@@ -276,8 +276,11 @@ class ReporteStockView(APIView):
         total_valor = sum(f["valor_inventario"] for f in filas)
         productos_bajo_minimo = sum(1 for f in filas if f["requiere_reposicion"])
 
-        if request.query_params.get("formato") == "csv":
+        fmt = request.query_params.get("formato")
+        if fmt == "csv":
             return self._exportar_csv(filas, total_valor)
+        if fmt == "pdf":
+            return self._exportar_pdf(filas, total_valor, productos_bajo_minimo)
 
         return Response({
             "resumen": {
@@ -287,6 +290,34 @@ class ReporteStockView(APIView):
             },
             "productos": filas,
         })
+
+    def _exportar_pdf(self, filas, total_valor, productos_bajo_minimo):
+        from common.pdf_report import pdf_response
+        from datetime import date
+        fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+        rows = [
+            [
+                f["descripcion"],
+                f["categoria"] or "—",
+                f["unidad"] or "—",
+                f["stock_actual"],
+                f["stock_minimo"],
+                "⚠ Bajo" if f["requiere_reposicion"] else "OK",
+                fmt_gs(f["costo_promedio"]),
+                fmt_gs(f["valor_inventario"]),
+                f"{f['dias_stock']}d" if f["dias_stock"] is not None else "—",
+            ]
+            for f in filas
+        ]
+        return pdf_response(
+            filename=f"reporte_stock_{date.today()}.pdf",
+            title="Reporte de Inventario / Stock",
+            subtitle=f"Total: {len(filas)} productos | {productos_bajo_minimo} bajo mínimo",
+            headers=["Producto", "Categoría", "Unidad", "Stock", "Mínimo", "Estado", "Costo Prom.", "Valor Inv.", "Días Stock"],
+            rows=rows,
+            totals=["TOTAL", "", "", "", "", "", "", fmt_gs(total_valor), ""],
+            landscape=True,
+        )
 
     def _exportar_csv(self, filas, total_valor):
         import csv as csv_mod
