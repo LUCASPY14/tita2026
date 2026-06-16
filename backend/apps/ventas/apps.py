@@ -8,3 +8,6 @@ class VentasConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.ventas"
     verbose_name = "Ventas y Facturacion"
+
+    def ready(self):
+        import apps.ventas.signals  # noqa: F401

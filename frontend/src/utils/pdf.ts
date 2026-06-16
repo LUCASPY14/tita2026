@@ -246,6 +246,30 @@ export function exportarCuentasMensualesPDF(cuentas: CuentaMensual[], mes?: numb
       },
     })
 
+    // Firma al pie — se coloca en la última página antes del footer
+    const lastPage = doc.getNumberOfPages()
+    doc.setPage(lastPage)
+    const H = doc.internal.pageSize.getHeight()
+    const W = doc.internal.pageSize.getWidth()
+    const sigY = H - 32  // 32 mm desde el borde inferior (encima del footer)
+    const col1 = 20
+    const col2 = W / 2 + 10
+
+    doc.setDrawColor(...GRAY)
+    doc.setLineWidth(0.3)
+    doc.line(col1, sigY, col1 + 65, sigY)
+    doc.line(col2, sigY, col2 + 65, sigY)
+
+    doc.setFontSize(7.5)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...GRAY)
+    doc.text('Firma del Directivo / Administrador', col1, sigY + 4)
+    doc.text('Firma del Responsable / Padre', col2, sigY + 4)
+    doc.text('Nombre: ____________________________', col1, sigY + 9)
+    doc.text('Nombre: ____________________________', col2, sigY + 9)
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-PY')}`, col1, sigY + 14)
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-PY')}`, col2, sigY + 14)
+
     footer(doc)
     const suffix = (mes != null && anio != null) ? `${anio}_${String(mes).padStart(2, '0')}` : anio ?? 'todos'
     doc.save(`cuentas_almuerzos_${suffix}.pdf`)

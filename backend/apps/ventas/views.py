@@ -261,14 +261,34 @@ class ReporteVentasProductoView(APIView):
 
         total_general = sum(f["total_monto"] for f in filas)
 
-        if request.query_params.get("formato") == "csv":
+        fmt = request.query_params.get("formato")
+        if fmt == "csv":
             return self._exportar_csv(filas, desde, hasta, total_general)
+        if fmt == "pdf":
+            return self._exportar_pdf(filas, desde, hasta, total_general)
 
         return Response({
             "periodo": {"desde": desde, "hasta": hasta},
             "total_monto": total_general,
             "productos": filas,
         })
+
+    def _exportar_pdf(self, filas, desde, hasta, total_general):
+        from common.pdf_report import pdf_response
+        fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+        rows = [
+            [i + 1, f["descripcion"], f["categoria"] or "—",
+             f["total_cantidad"], f["num_ventas"], fmt_gs(f["total_monto"])]
+            for i, f in enumerate(filas)
+        ]
+        return pdf_response(
+            filename=f"ventas_productos_{desde}_{hasta}.pdf",
+            title="Productos más vendidos",
+            subtitle=f"Período: {desde} al {hasta}",
+            headers=["#", "Producto", "Categoría", "Cantidad", "N° Ventas", "Total (Gs.)"],
+            rows=rows,
+            totals=["TOTAL", "", "", "", "", fmt_gs(total_general)],
+        )
 
     def _exportar_csv(self, filas, desde, hasta, total_general):
         response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
@@ -335,14 +355,34 @@ class ReporteVentasCajeroView(APIView):
 
         total_general = sum(f["monto_total"] for f in filas)
 
-        if request.query_params.get("formato") == "csv":
+        fmt = request.query_params.get("formato")
+        if fmt == "csv":
             return self._exportar_csv(filas, desde, hasta, total_general)
+        if fmt == "pdf":
+            return self._exportar_pdf(filas, desde, hasta, total_general)
 
         return Response({
             "periodo": {"desde": desde, "hasta": hasta},
             "total_monto": total_general,
             "cajeros": filas,
         })
+
+    def _exportar_pdf(self, filas, desde, hasta, total_general):
+        from common.pdf_report import pdf_response
+        fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+        rows = [
+            [f["nombre"], f["username"], f["cantidad_ventas"],
+             fmt_gs(f["monto_total"]), fmt_gs(f["ticket_promedio"])]
+            for f in filas
+        ]
+        return pdf_response(
+            filename=f"ventas_cajeros_{desde}_{hasta}.pdf",
+            title="Ventas por Cajero",
+            subtitle=f"Período: {desde} al {hasta}",
+            headers=["Cajero", "Usuario", "N° Ventas", "Total (Gs.)", "Ticket Prom."],
+            rows=rows,
+            totals=["TOTAL", "", "", fmt_gs(total_general), ""],
+        )
 
     def _exportar_csv(self, filas, desde, hasta, total_general):
         response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
