@@ -91,6 +91,10 @@ check_admin_perms.py
 fix_admin_lockout.py
 /test_*.py
 
+# Scripts de diagnóstico locales en la raíz del proyecto
+/_list_admins.py
+/server.err
+
 # Archivos de credenciales locales
 CREDENCIALES_LOGIN.txt
 CREDENCIALES_PORTAL.md

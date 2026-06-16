@@ -1,0 +1,117 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+---
+name: Load Tests (k6)
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Lunes 02:00 UTC (fuera de horario escolar)
+  workflow_dispatch:      # Disparo manual desde la UI de GitHub
+
+jobs:
+  k6:
+    name: k6 — Carga en caja (5 VUs × 1 min)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: cantina_tita_k6
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DEBUG: "True"
+      SECRET_KEY: k6-ci-load-test-not-for-production
+      DB_NAME: cantina_tita_k6
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      REDIS_URL: redis://localhost:6379/0
+      USE_REDIS_CACHE: "False"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install Python dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Migrate and seed k6 fixtures
+        working-directory: backend
+        run: |
+          python manage.py migrate --settings=backend.settings.base
+          python manage.py seed_k6_fixtures --settings=backend.settings.base
+
+      - name: Start Django backend
+        working-directory: backend
+        run: |
+          nohup python manage.py runserver 0.0.0.0:8000 \
+            --settings=backend.settings.base \
+            --noreload > /tmp/django.log 2>&1 &
+          echo $! > /tmp/django.pid
+          # Esperar hasta que el servidor responda (max 30 s)
+          timeout 30 bash -c \
+            'until curl -sf http://localhost:8000/api/v1/health/ > /dev/null; do sleep 1; done'
+
+      - name: Install k6
+        run: |
+          sudo gpg --no-default-keyring \
+            --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] \
+            https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -qq && sudo apt-get install -y k6
+
+      - name: Run k6 load test — caja.js
+        run: |
+          k6 run \
+            --env BASE_URL=http://localhost:8000 \
+            --out json=k6-results-caja.json \
+            tests/load/k6/caja.js
+
+      - name: Run k6 load test — health.js
+        run: |
+          k6 run \
+            --env BASE_URL=http://localhost:8000 \
+            --out json=k6-results-health.json \
+            tests/load/k6/health.js
+
+      - name: Show Django logs on failure
+        if: failure()
+        run: cat /tmp/django.log || true
+
+      - name: Upload k6 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results-${{ github.run_id }}
+          path: k6-results-*.json
+          retention-days: 90
