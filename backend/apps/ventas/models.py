@@ -171,8 +171,13 @@ class DetalleVenta(models.Model):
     precio_unitario = models.DecimalField(
         max_digits=12, decimal_places=0, help_text="Precio unitario en Guaraníes"
     )
+    descuento = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0,
+        help_text="Descuento en Guaraníes. subtotal = precio_unitario×cantidad − descuento",
+    )
     subtotal = models.DecimalField(
-        max_digits=12, decimal_places=0, help_text="Subtotal en Guaraníes"
+        max_digits=12, decimal_places=0,
+        help_text="Subtotal neto en Guaraníes (ya con descuento aplicado)",
     )
 
     # Discriminación de IVA por producto (Paraguay)
@@ -189,6 +194,12 @@ class DetalleVenta(models.Model):
         indexes = [
             models.Index(fields=["venta"], name="idx_det_venta"),
             models.Index(fields=["producto"], name="idx_det_producto"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(descuento__gte=0),
+                name="chk_detalleventa_descuento_no_negativo",
+            ),
         ]
 
     def __str__(self):
