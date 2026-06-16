@@ -8,6 +8,8 @@ import hmac as hmac_mod
 import secrets
 import struct
 import time
+import uuid
+from datetime import timedelta
 
 from django.contrib.auth.tokens import default_token_generator
 from django.core import signing
@@ -67,6 +69,7 @@ from .models import (
     Permiso,
     RolPermiso,
     PerfilUsuario,
+    SesionActiva,
 )
 from .serializers import (
     UsuarioSerializer,
@@ -91,6 +94,52 @@ def _user_data(user):
         "rol": user.rol,
         "cliente_id": user.cliente_id if user.cliente else None,
     }
+
+
+# Número máximo de sesiones concurrentes por rol
+_MAX_SESIONES = {
+    "CAJERO": 1,
+    "COBRADOR": 1,
+    "COCINA": 1,
+    "SUPERVISOR": 2,
+    "ADMIN": 3,
+    "CLIENTE_WEB": 3,
+}
+
+
+def _registrar_sesion(user, request) -> str:
+    """
+    Crea una SesionActiva para el usuario.
+    - Auto-expira sesiones iniciadas hace más de 8 horas (access_token dura 1h,
+      por lo que cualquier sesión de 8h+ ya no puede tener token válido).
+    - Cierra las sesiones activas más antiguas si se supera el límite por rol.
+    - Devuelve el session_key UUID del nuevo registro.
+    """
+    ip = request.META.get("REMOTE_ADDR")
+    ua = (request.META.get("HTTP_USER_AGENT") or "")[:500]
+
+    SesionActiva.objects.filter(
+        usuario=user,
+        activa=True,
+        fecha_inicio__lt=timezone.now() - timedelta(hours=8),
+    ).update(activa=False)
+
+    max_s = _MAX_SESIONES.get(getattr(user, "rol", ""), 2)
+    activas_qs = SesionActiva.objects.filter(usuario=user, activa=True).order_by("fecha_inicio")
+    exceso = activas_qs.count() - (max_s - 1)
+    if exceso > 0:
+        ids_cerrar = list(activas_qs.values_list("id_sesion", flat=True)[:exceso])
+        SesionActiva.objects.filter(id_sesion__in=ids_cerrar).update(activa=False)
+
+    session_key = str(uuid.uuid4())
+    SesionActiva.objects.create(
+        usuario=user,
+        session_key=session_key,
+        ip_address=ip,
+        user_agent=ua,
+        activa=True,
+    )
+    return session_key
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -124,7 +173,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         except Exception:
             pass
 
-        return Response({**serializer.validated_data, "user": _user_data(user)})
+        session_key = _registrar_sesion(user, request)
+        return Response({**serializer.validated_data, "user": _user_data(user), "session_key": session_key})
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -733,9 +783,37 @@ class TwoFALoginVerificarView(APIView):
         auth.ultima_verificacion = timezone.now()
         auth.save(update_fields=["ultima_verificacion"])
 
+        session_key = _registrar_sesion(user, request)
         refresh = RefreshToken.for_user(user)
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
             "user": _user_data(user),
+            "session_key": session_key,
         })
+
+
+class LogoutView(APIView):
+    """
+    POST /api/v1/usuarios/logout/
+    Marca la SesionActiva como inactiva y blacklistea el refresh token.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        session_key = request.data.get("session_key", "")
+        if session_key:
+            SesionActiva.objects.filter(
+                usuario=request.user,
+                session_key=session_key,
+            ).update(activa=False)
+
+        refresh_token = request.data.get("refresh_token", "")
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except Exception:
+                pass
+
+        return Response({"detail": "Sesión cerrada."})

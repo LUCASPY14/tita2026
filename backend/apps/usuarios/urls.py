@@ -20,6 +20,7 @@ from .views import (
     TwoFAVerificarView,
     TwoFADesactivarView,
     TwoFALoginVerificarView,
+    LogoutView,
 )
 
 router = DefaultRouter()
@@ -44,4 +45,5 @@ urlpatterns = [
     path("2fa/verificar/", TwoFAVerificarView.as_view(), name="2fa-verificar"),
     path("2fa/desactivar/", TwoFADesactivarView.as_view(), name="2fa-desactivar"),
     path("2fa/login/", TwoFALoginVerificarView.as_view(), name="2fa-login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
 ]
