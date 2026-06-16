@@ -391,6 +391,105 @@ class NotaCreditoProveedor(models.Model):
         return f"NC #{self.pk} - {self.proveedor} - ₲{self.monto_total:,.0f}"
 
 
+# ==============================================================================
+# ORDEN DE COMPRA (OC) — workflow de aprobación
+# ==============================================================================
+
+class OrdenCompra(models.Model):
+    """
+    Orden de compra pre-compra que pasa por aprobación.
+
+    Flujo: BORRADOR → PENDIENTE → APROBADA → CONVERTIDA
+                               ↘ RECHAZADA
+    """
+
+    class Estado(models.TextChoices):
+        BORRADOR  = "BORRADOR",   "Borrador"
+        PENDIENTE = "PENDIENTE",  "Pendiente de aprobación"
+        APROBADA  = "APROBADA",   "Aprobada"
+        RECHAZADA = "RECHAZADA",  "Rechazada"
+        CONVERTIDA = "CONVERTIDA", "Convertida en Compra"
+
+    class TipoPago(models.TextChoices):
+        CONTADO = "CONTADO", "Contado"
+        CREDITO = "CREDITO", "Crédito"
+
+    proveedor = models.ForeignKey(
+        Proveedor, on_delete=models.PROTECT, related_name="ordenes_compra",
+    )
+    estado = models.CharField(
+        max_length=15, choices=Estado.choices, default=Estado.BORRADOR,
+    )
+    tipo_pago = models.CharField(
+        max_length=10, choices=TipoPago.choices, default=TipoPago.CONTADO,
+    )
+    monto_total = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0,
+    )
+    nro_factura_esperada = models.CharField(
+        max_length=50, blank=True, null=True,
+    )
+    observaciones = models.TextField(blank=True, null=True)
+    motivo_rechazo = models.CharField(max_length=500, blank=True, null=True)
+
+    aprobado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="ordenes_aprobadas",
+    )
+    fecha_aprobacion = models.DateTimeField(null=True, blank=True)
+
+    compra_generada = models.OneToOneField(
+        "Compra",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="orden_compra_origen",
+    )
+
+    creado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        on_delete=models.PROTECT,
+        related_name="ordenes_compra_creadas",
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Orden de Compra"
+        verbose_name_plural = "Órdenes de Compra"
+        ordering = ["-fecha_creacion"]
+        indexes = [
+            models.Index(fields=["proveedor", "estado"], name="idx_oc_prov_estado"),
+            models.Index(fields=["estado", "fecha_creacion"], name="idx_oc_estado_fecha"),
+        ]
+
+    def __str__(self):
+        return f"OC #{self.pk} — {self.proveedor} [{self.get_estado_display()}]"
+
+
+class DetalleOrdenCompra(models.Model):
+    """Productos incluidos en una Orden de Compra."""
+
+    orden = models.ForeignKey(
+        OrdenCompra, on_delete=models.CASCADE, related_name="detalles",
+    )
+    producto = models.ForeignKey(
+        "productos.Producto", on_delete=models.PROTECT, related_name="detalles_oc",
+    )
+    cantidad = models.DecimalField(max_digits=10, decimal_places=3)
+    costo_unitario = models.DecimalField(max_digits=12, decimal_places=0)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=0)
+
+    class Meta:
+        verbose_name = "Detalle de OC"
+        verbose_name_plural = "Detalles de OC"
+        unique_together = [("orden", "producto")]
+
+    def __str__(self):
+        return f"{self.producto} x {self.cantidad} (OC #{self.orden_id})"
+
+
 class DetalleNotaCreditoProveedor(models.Model):
     """Productos incluidos en una nota de crédito de proveedor."""
 

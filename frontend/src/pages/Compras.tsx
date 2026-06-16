@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import {
   Truck, Search, Plus, Eye, CreditCard,
   Building2, DollarSign, X, PackageCheck,
+  ClipboardList, CheckCircle, XCircle, ArrowRightCircle, Send,
 } from 'lucide-react'
 import api from '../services/api'
 import { useCatalogoStore } from '../store/catalogoStore'
+import { useAuthStore } from '../store/authStore'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -111,6 +114,33 @@ interface ItemForm {
   subtotal: number
 }
 
+interface DetalleOC {
+  id: number
+  producto: number
+  producto_nombre: string
+  cantidad: number
+  costo_unitario: string | number
+  subtotal: string | number
+}
+
+interface OrdenCompra {
+  id: number
+  proveedor: number
+  proveedor_nombre: string
+  estado: 'BORRADOR' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CONVERTIDA'
+  tipo_pago: string
+  monto_total: string | number
+  nro_factura_esperada: string | null
+  observaciones: string | null
+  motivo_rechazo: string | null
+  aprobado_por_nombre: string | null
+  fecha_aprobacion: string | null
+  compra_generada: number | null
+  creado_por_nombre: string
+  fecha_creacion: string
+  detalles: DetalleOC[]
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ESTADO_PAGO_COLOR: Record<string, BadgeColor> = {
@@ -135,7 +165,7 @@ const MEDIO_PAGO_COLOR: Record<string, BadgeColor> = {
   CHEQUE: 'purple',
 }
 
-type TabKey = 'compras' | 'proveedores' | 'pagos'
+type TabKey = 'compras' | 'proveedores' | 'pagos' | 'ordenes'
 
 interface CompraFormFields {
   proveedor_id: number | ''
@@ -148,6 +178,9 @@ const ITEM_EMPTY: ItemForm = { producto: null, cantidad: 1, costo_unitario: 0, s
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Compras() {
+  const { t } = useTranslation()
+  const { user } = useAuthStore()
+  const canApprove = user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR'
   const [tab, setTab] = useState<TabKey>('compras')
   const getProductos = useCatalogoStore(state => state.getProductos)
 
@@ -212,6 +245,42 @@ export default function Compras() {
   const [obsPago, setObsPago] = useState('')
   const [savingPago, setSavingPago] = useState(false)
   const [confirmandoEntrega, setConfirmandoEntrega] = useState<number | null>(null)
+
+  // ── Órdenes de Compra ───────────────────────────────────────────
+  const [ordenes, setOrdenes] = useState<OrdenCompra[]>([])
+  const [loadingOrdenes, setLoadingOrdenes] = useState(false)
+  const [pageOrdenes, setPageOrdenes] = useState(1)
+  const [totalOrdenes, setTotalOrdenes] = useState(0)
+  const [filterEstadoOC, setFilterEstadoOC] = useState('')
+  const requestIdOCRef = useRef(0)
+
+  // OC create/edit modal
+  const [ocModalOpen, setOcModalOpen] = useState(false)
+  const [editingOC, setEditingOC] = useState<OrdenCompra | null>(null)
+  const [ocItems, setOcItems] = useState<ItemForm[]>([{ ...ITEM_EMPTY }])
+  const [savingOC, setSavingOC] = useState(false)
+  const {
+    register: registerOC,
+    handleSubmit: handleSubmitOC,
+    reset: resetOC,
+    watch: watchOC,
+    setValue: setValueOC,
+    formState: { errors: ocErrors },
+  } = useForm<CompraFormFields>({
+    defaultValues: { proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' },
+  })
+  const proveedorIdOC = watchOC('proveedor_id')
+
+  // OC detail modal
+  const [detailOC, setDetailOC] = useState<OrdenCompra | null>(null)
+
+  // Rechazar modal
+  const [rechazarOC, setRechazarOC] = useState<OrdenCompra | null>(null)
+  const [motivoRechazo, setMotivoRechazo] = useState('')
+  const [savingRechazar, setSavingRechazar] = useState(false)
+
+  // Acción individual loading (submit/aprobar/convertir)
+  const [accionOCLoading, setAccionOCLoading] = useState<number | null>(null)
 
   // ── Cuenta corriente modal ──────────────────────────────────────
   const [ccProveedor, setCcProveedor] = useState<Proveedor | null>(null)
@@ -308,6 +377,126 @@ export default function Compras() {
   useEffect(() => {
     if (tab === 'pagos') loadPagos(pagePagos)
   }, [tab, pagePagos, loadPagos])
+
+  // ── Load órdenes de compra ───────────────────────────────────────
+  const loadOrdenes = useCallback(async (estado: string, p: number) => {
+    const requestId = ++requestIdOCRef.current
+    setLoadingOrdenes(true)
+    try {
+      const params: Record<string, unknown> = { page: p, page_size: 15 }
+      if (estado) params.estado = estado
+      const { data } = await api.get('/compras/ordenes/', { params })
+      if (requestId !== requestIdOCRef.current) return
+      setOrdenes(data.results ?? [])
+      setTotalOrdenes(data.count ?? 0)
+    } catch {
+      if (requestId !== requestIdOCRef.current) return
+      toast.error('Error al cargar órdenes de compra')
+    } finally {
+      if (requestId === requestIdOCRef.current) setLoadingOrdenes(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'ordenes') loadOrdenes(filterEstadoOC, pageOrdenes)
+  }, [tab, filterEstadoOC, pageOrdenes, loadOrdenes])
+
+  // ── OC actions ────────────────────────────────────────────────────
+  const handleOCAccion = useCallback(async (oc: OrdenCompra, accion: 'submit' | 'aprobar' | 'convertir') => {
+    setAccionOCLoading(oc.id)
+    try {
+      const { data } = await api.post(`/compras/ordenes/${oc.id}/${accion}/`)
+      const mensajes = { submit: 'OC enviada a revisión', aprobar: 'OC aprobada', convertir: 'Compra generada exitosamente' }
+      toast.success(mensajes[accion])
+      if (accion === 'convertir' && data.compra_id) {
+        toast.success(`Compra #${data.compra_id} creada`, { icon: '📦' })
+      }
+      loadOrdenes(filterEstadoOC, pageOrdenes)
+      if (detailOC?.id === oc.id) setDetailOC(null)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setAccionOCLoading(null)
+    }
+  }, [filterEstadoOC, pageOrdenes, loadOrdenes, detailOC])
+
+  const handleOCRechazar = useCallback(async () => {
+    if (!rechazarOC) return
+    const motivo = motivoRechazo.trim()
+    if (!motivo) { toast.error('Ingresá el motivo del rechazo'); return }
+    setSavingRechazar(true)
+    try {
+      await api.post(`/compras/ordenes/${rechazarOC.id}/rechazar/`, { motivo })
+      toast.success('OC rechazada')
+      setRechazarOC(null)
+      setMotivoRechazo('')
+      loadOrdenes(filterEstadoOC, pageOrdenes)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSavingRechazar(false)
+    }
+  }, [rechazarOC, motivoRechazo, filterEstadoOC, pageOrdenes, loadOrdenes])
+
+  const openCreateOC = useCallback(() => {
+    setEditingOC(null)
+    resetOC({ proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' })
+    setOcItems([{ ...ITEM_EMPTY }])
+    setOcModalOpen(true)
+  }, [resetOC])
+
+  const openEditOC = useCallback((oc: OrdenCompra) => {
+    if (oc.estado !== 'BORRADOR') { toast.error('Solo se puede editar una OC en Borrador'); return }
+    setEditingOC(oc)
+    resetOC({ proveedor_id: oc.proveedor, tipo_pago: oc.tipo_pago, nro_factura: oc.nro_factura_esperada || '' })
+    setOcItems(
+      oc.detalles?.length
+        ? oc.detalles.map(d => ({
+            producto: { id: d.producto, descripcion: d.producto_nombre, precio_actual: d.costo_unitario },
+            cantidad: d.cantidad,
+            costo_unitario: Number(d.costo_unitario) || 0,
+            subtotal: Number(d.subtotal) || 0,
+          }))
+        : [{ ...ITEM_EMPTY }]
+    )
+    setOcModalOpen(true)
+  }, [resetOC])
+
+  const ocTotal = useMemo(() => ocItems.reduce((s, i) => s + i.subtotal, 0), [ocItems])
+
+  const handleSaveOC = handleSubmitOC(async (fields) => {
+    if (ocItems.some(i => !i.producto)) {
+      toast.error('Completá todos los productos de la OC')
+      return
+    }
+    setSavingOC(true)
+    try {
+      const payload = {
+        proveedor: fields.proveedor_id,
+        tipo_pago: fields.tipo_pago,
+        nro_factura_esperada: fields.nro_factura,
+        items: ocItems.map(i => ({
+          producto: i.producto!.id,
+          cantidad: i.cantidad,
+          costo_unitario: i.costo_unitario,
+        })),
+      }
+      if (editingOC) {
+        await api.put(`/compras/ordenes/${editingOC.id}/`, payload)
+        toast.success('OC actualizada')
+      } else {
+        await api.post('/compras/ordenes/', payload)
+        toast.success('Orden de Compra creada en Borrador')
+      }
+      setOcModalOpen(false)
+      loadOrdenes(filterEstadoOC, 1)
+      setPageOrdenes(1)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSavingOC(false)
+    }
+  })
 
   // ── Open create modal ────────────────────────────────────────────
   const openCreate = useCallback(() => {
@@ -649,10 +838,107 @@ export default function Compras() {
   const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
   const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
+  const OC_ESTADO_COLOR: Record<string, BadgeColor> = {
+    BORRADOR:   'default',
+    PENDIENTE:  'orange',
+    APROBADA:   'green',
+    RECHAZADA:  'red',
+    CONVERTIDA: 'blue',
+  }
+
+  const OC_ESTADO_LABEL: Record<string, string> = {
+    BORRADOR:   'Borrador',
+    PENDIENTE:  'En revisión',
+    APROBADA:   'Aprobada',
+    RECHAZADA:  'Rechazada',
+    CONVERTIDA: 'Convertida',
+  }
+
+  const colsOrdenes: Column<OrdenCompra>[] = [
+    {
+      title: 'OC #',
+      key: 'id',
+      width: 65,
+      render: (_, r) => <span className="text-sm font-mono text-slate-500">#{r.id}</span>,
+    },
+    {
+      title: 'Proveedor',
+      key: 'proveedor',
+      render: (_, r) => <span className="text-base font-medium text-slate-800">{r.proveedor_nombre}</span>,
+    },
+    {
+      title: 'Tipo',
+      key: 'tipo',
+      render: (_, r) => <Badge color={TIPO_PAGO_COLOR[r.tipo_pago] ?? 'default'}>{r.tipo_pago}</Badge>,
+    },
+    {
+      title: 'Total estimado',
+      key: 'monto',
+      render: (_, r) => <span className="tabular-nums font-semibold text-slate-800">{formatGs(r.monto_total)}</span>,
+    },
+    {
+      title: 'Estado',
+      key: 'estado',
+      render: (_, r) => <Badge color={OC_ESTADO_COLOR[r.estado] ?? 'default'}>{OC_ESTADO_LABEL[r.estado] ?? r.estado}</Badge>,
+    },
+    {
+      title: 'Creada por',
+      key: 'creador',
+      render: (_, r) => <span className="text-sm text-slate-500">{r.creado_por_nombre}</span>,
+    },
+    {
+      title: 'Fecha',
+      key: 'fecha',
+      render: (_, r) => <span className="text-base text-slate-500">{formatFecha(r.fecha_creacion)}</span>,
+    },
+    {
+      title: '',
+      key: 'acciones',
+      width: 240,
+      render: (_, r) => {
+        const loading = accionOCLoading === r.id
+        return (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Button size="sm" variant="secondary" onClick={() => setDetailOC(r)}>
+              <Eye className="w-3.5 h-3.5" /> Ver
+            </Button>
+            {r.estado === 'BORRADOR' && (
+              <>
+                <Button size="sm" variant="secondary" onClick={() => openEditOC(r)}>Editar</Button>
+                <Button size="sm" variant="primary" disabled={loading} onClick={() => handleOCAccion(r, 'submit')}>
+                  <Send className="w-3.5 h-3.5" /> {loading ? '...' : 'Enviar'}
+                </Button>
+              </>
+            )}
+            {r.estado === 'PENDIENTE' && canApprove && (
+              <>
+                <Button size="sm" variant="primary" disabled={loading} onClick={() => handleOCAccion(r, 'aprobar')}>
+                  <CheckCircle className="w-3.5 h-3.5" /> {loading ? '...' : 'Aprobar'}
+                </Button>
+                <Button size="sm" variant="secondary" disabled={loading} onClick={() => { setRechazarOC(r); setMotivoRechazo('') }}>
+                  <XCircle className="w-3.5 h-3.5" /> Rechazar
+                </Button>
+              </>
+            )}
+            {r.estado === 'APROBADA' && canApprove && (
+              <Button size="sm" variant="primary" disabled={loading} onClick={() => handleOCAccion(r, 'convertir')}>
+                <ArrowRightCircle className="w-3.5 h-3.5" /> {loading ? '...' : 'Convertir'}
+              </Button>
+            )}
+            {r.estado === 'CONVERTIDA' && r.compra_generada && (
+              <span className="text-xs text-blue-600 font-medium">Compra #{r.compra_generada}</span>
+            )}
+          </div>
+        )
+      },
+    },
+  ]
+
   const TABS: { key: TabKey; label: string; icon: typeof Truck }[] = [
-    { key: 'compras', label: 'Compras', icon: Truck },
+    { key: 'ordenes',    label: 'Órdenes',    icon: ClipboardList },
+    { key: 'compras',    label: 'Compras',    icon: Truck },
     { key: 'proveedores', label: 'Proveedores', icon: Building2 },
-    { key: 'pagos', label: 'Pagos', icon: CreditCard },
+    { key: 'pagos',      label: 'Pagos',      icon: CreditCard },
   ]
 
   // ── Render ──────────────────────────────────────────────────────
@@ -661,13 +947,19 @@ export default function Compras() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Compras</h1>
-          <p className="text-base text-slate-500 mt-0.5">Gestión de compras, proveedores y pagos</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('compras.title')}</h1>
+          <p className="text-base text-slate-500 mt-0.5">{t('compras.subtitle')}</p>
         </div>
+        {tab === 'ordenes' && (
+          <Button variant="primary" onClick={openCreateOC}>
+            <Plus className="w-4 h-4" />
+            Nueva OC
+          </Button>
+        )}
         {tab === 'compras' && (
           <Button variant="primary" onClick={openCreate}>
             <Plus className="w-4 h-4" />
-            Nueva Compra
+            {t('compras.newCompra')}
           </Button>
         )}
       </div>
@@ -691,6 +983,43 @@ export default function Compras() {
           ))}
         </div>
       </div>
+
+      {/* ── Órdenes de Compra tab ────────────────────────────────── */}
+      {tab === 'ordenes' && (
+        <>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-wrap items-end gap-4">
+            <div>
+              <label className={labelClass}>Estado</label>
+              <select
+                value={filterEstadoOC}
+                onChange={e => { setFilterEstadoOC(e.target.value); setPageOrdenes(1) }}
+                className={`${inputClass} w-auto`}
+              >
+                <option value="">Todos</option>
+                <option value="BORRADOR">Borrador</option>
+                <option value="PENDIENTE">En revisión</option>
+                <option value="APROBADA">Aprobada</option>
+                <option value="RECHAZADA">Rechazada</option>
+                <option value="CONVERTIDA">Convertida</option>
+              </select>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-1">
+              <Table
+                columns={colsOrdenes}
+                dataSource={ordenes}
+                rowKey="id"
+                loading={loadingOrdenes}
+                pageSize={15}
+                page={pageOrdenes}
+                onPageChange={p => { setPageOrdenes(p); loadOrdenes(filterEstadoOC, p) }}
+                total={totalOrdenes}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Compras tab ──────────────────────────────────────────── */}
       {tab === 'compras' && (
@@ -1059,6 +1388,241 @@ export default function Compras() {
               rows={2}
               placeholder="Opcional..."
               className={`${inputClass} resize-none`}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── OC create/edit modal ─────────────────────────────────── */}
+      <Modal
+        open={ocModalOpen}
+        title={editingOC ? `Editar OC #${editingOC.id}` : 'Nueva Orden de Compra'}
+        onOk={handleSaveOC}
+        onCancel={() => setOcModalOpen(false)}
+        okText={editingOC ? 'Guardar Cambios' : 'Crear OC'}
+        confirmLoading={savingOC}
+        width={700}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Proveedor *</label>
+              <Combobox
+                options={proveedores.map(p => ({ value: p.id, label: p.razon_social }))}
+                value={proveedorIdOC || undefined}
+                onChange={v => setValueOC('proveedor_id', v as number)}
+                filterLocal
+                placeholder="Buscar proveedor..."
+              />
+              {ocErrors.proveedor_id && (
+                <p className="text-xs text-red-500 mt-0.5">{ocErrors.proveedor_id.message}</p>
+              )}
+            </div>
+            <div>
+              <label className={labelClass}>Tipo de Pago</label>
+              <select className={inputClass} {...registerOC('tipo_pago')}>
+                <option value="CONTADO">Contado</option>
+                <option value="CREDITO">Crédito</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>Nro. Factura Esperada</label>
+            <input
+              placeholder="001-001-0001234 (opcional)"
+              className={inputClass}
+              {...registerOC('nro_factura')}
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className={`${labelClass} mb-0`}>Productos *</label>
+              <Button size="sm" variant="ghost" onClick={() => setOcItems(prev => [...prev, { ...ITEM_EMPTY }])}>
+                <Plus className="w-3.5 h-3.5" /> Agregar
+              </Button>
+            </div>
+            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+              {ocItems.map((item, idx) => (
+                <div key={idx} className="flex gap-2 items-center bg-slate-50 rounded-xl px-3 py-2">
+                  <div className="flex-1">
+                    <Combobox
+                      options={productos.map(p => ({ value: p.id, label: p.descripcion, data: p }))}
+                      value={item.producto?.id}
+                      onChange={(_, opt) => {
+                        setOcItems(prev => prev.map((it, i) => {
+                          if (i !== idx) return it
+                          const p = opt.data as Producto
+                          const costo = Number(p.precio_actual) || 0
+                          return { ...it, producto: p, costo_unitario: costo, subtotal: it.cantidad * costo }
+                        }))
+                      }}
+                      filterLocal
+                      placeholder="Producto..."
+                    />
+                  </div>
+                  <input
+                    type="number" min={1} value={item.cantidad}
+                    onChange={e => setOcItems(prev => prev.map((it, i) => {
+                      if (i !== idx) return it
+                      const cant = Number(e.target.value) || 1
+                      return { ...it, cantidad: cant, subtotal: cant * it.costo_unitario }
+                    }))}
+                    className="w-16 border border-slate-200 rounded-xl px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+                  />
+                  <input
+                    type="number" min={0} value={item.costo_unitario}
+                    onChange={e => setOcItems(prev => prev.map((it, i) => {
+                      if (i !== idx) return it
+                      const costo = Number(e.target.value) || 0
+                      return { ...it, costo_unitario: costo, subtotal: it.cantidad * costo }
+                    }))}
+                    className="w-28 border border-slate-200 rounded-xl px-2 py-2 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+                    placeholder="Costo"
+                  />
+                  <span className="w-28 text-sm font-semibold text-right text-slate-700 tabular-nums">
+                    {formatGs(item.subtotal)}
+                  </span>
+                  <button
+                    onClick={() => setOcItems(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev)}
+                    className="p-1 text-slate-400 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
+              <span className="text-sm font-semibold text-slate-600">Total estimado</span>
+              <span className="text-lg font-bold text-emerald-700 tabular-nums">{formatGs(ocTotal)}</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── OC detail modal ───────────────────────────────────────── */}
+      {detailOC && (
+        <Modal
+          open
+          title={`OC #${detailOC.id} — ${detailOC.proveedor_nombre}`}
+          onCancel={() => setDetailOC(null)}
+          width={680}
+          footer={null}
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            {[
+              { label: 'Total', value: formatGs(detailOC.monto_total) },
+              { label: 'Tipo Pago', value: detailOC.tipo_pago },
+              { label: 'Fecha', value: formatFecha(detailOC.fecha_creacion) },
+              { label: 'Factura', value: detailOC.nro_factura_esperada || '—' },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-slate-50 rounded-xl px-3 py-3">
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+                <p className="text-base font-bold mt-0.5 text-slate-800">{value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <Badge color={OC_ESTADO_COLOR[detailOC.estado] ?? 'default'}>
+              {OC_ESTADO_LABEL[detailOC.estado] ?? detailOC.estado}
+            </Badge>
+            {detailOC.aprobado_por_nombre && (
+              <span className="text-sm text-slate-500">Aprobado por: <strong>{detailOC.aprobado_por_nombre}</strong></span>
+            )}
+          </div>
+          {detailOC.motivo_rechazo && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+              <p className="text-sm font-semibold text-red-700 mb-0.5">Motivo de rechazo</p>
+              <p className="text-sm text-red-600">{detailOC.motivo_rechazo}</p>
+            </div>
+          )}
+          {detailOC.observaciones && (
+            <p className="text-sm text-slate-500 mb-4">Obs: {detailOC.observaciones}</p>
+          )}
+
+          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Productos solicitados</h3>
+          <div className="border border-slate-200 rounded-xl overflow-hidden mb-5">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-slate-500 uppercase">Producto</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-slate-500 uppercase">Cant.</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-slate-500 uppercase">Costo Unit.</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-slate-500 uppercase">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {(detailOC.detalles ?? []).map(d => (
+                  <tr key={d.id}>
+                    <td className="px-4 py-2.5 text-slate-700">{d.producto_nombre}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{d.cantidad}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{formatGs(d.costo_unitario)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-800">{formatGs(d.subtotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Button variant="secondary" onClick={() => setDetailOC(null)}>Cerrar</Button>
+            <div className="flex items-center gap-2">
+              {detailOC.estado === 'BORRADOR' && (
+                <>
+                  <Button variant="secondary" onClick={() => { setDetailOC(null); openEditOC(detailOC) }}>Editar</Button>
+                  <Button variant="primary" disabled={accionOCLoading === detailOC.id}
+                    onClick={() => handleOCAccion(detailOC, 'submit')}>
+                    <Send className="w-4 h-4" /> Enviar a revisión
+                  </Button>
+                </>
+              )}
+              {detailOC.estado === 'PENDIENTE' && canApprove && (
+                <>
+                  <Button variant="secondary" onClick={() => { setDetailOC(null); setRechazarOC(detailOC); setMotivoRechazo('') }}>
+                    <XCircle className="w-4 h-4" /> Rechazar
+                  </Button>
+                  <Button variant="primary" disabled={accionOCLoading === detailOC.id}
+                    onClick={() => handleOCAccion(detailOC, 'aprobar')}>
+                    <CheckCircle className="w-4 h-4" /> Aprobar
+                  </Button>
+                </>
+              )}
+              {detailOC.estado === 'APROBADA' && canApprove && (
+                <Button variant="primary" disabled={accionOCLoading === detailOC.id}
+                  onClick={() => handleOCAccion(detailOC, 'convertir')}>
+                  <ArrowRightCircle className="w-4 h-4" /> Convertir en Compra
+                </Button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Rechazar OC modal ─────────────────────────────────────── */}
+      <Modal
+        open={!!rechazarOC}
+        title={`Rechazar OC #${rechazarOC?.id}`}
+        onOk={handleOCRechazar}
+        onCancel={() => { setRechazarOC(null); setMotivoRechazo('') }}
+        okText="Confirmar Rechazo"
+        confirmLoading={savingRechazar}
+        width={440}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            Vas a rechazar la OC de <strong>{rechazarOC?.proveedor_nombre}</strong> por{' '}
+            <strong>{formatGs(rechazarOC?.monto_total)}</strong>.
+          </p>
+          <div>
+            <label className={labelClass}>Motivo del rechazo *</label>
+            <textarea
+              value={motivoRechazo}
+              onChange={e => setMotivoRechazo(e.target.value)}
+              rows={3}
+              placeholder="Explicá el motivo del rechazo..."
+              className={`${inputClass} resize-none`}
+              autoFocus
             />
           </div>
         </div>

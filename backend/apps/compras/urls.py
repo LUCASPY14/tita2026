@@ -10,6 +10,7 @@ from .views import (
     AplicacionPagoCompraViewSet,
     NotaCreditoProveedorViewSet,
     DetalleNotaCreditoProveedorViewSet,
+    OrdenCompraViewSet,
 )
 
 router = DefaultRouter()
@@ -21,6 +22,7 @@ router.register(r"pagos", PagoProveedorViewSet, basename="pagos-proveedor")
 router.register(r"aplicaciones-pago", AplicacionPagoCompraViewSet, basename="aplicaciones-pago")
 router.register(r"notas-credito", NotaCreditoProveedorViewSet, basename="notas-credito-proveedor")
 router.register(r"detalles-nc", DetalleNotaCreditoProveedorViewSet, basename="detalles-nc")
+router.register(r"ordenes", OrdenCompraViewSet, basename="ordenes-compra")
 
 urlpatterns = [
     path("", include(router.urls)),
