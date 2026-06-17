@@ -1,0 +1,184 @@
+apiVersion: 1
+
+# ─── Punto de contacto: email al equipo administrador ─────────────────────────
+contactPoints:
+  - orgId: 1
+    name: email-admins
+    receivers:
+      - uid: cantina-email-receiver
+        type: email
+        settings:
+          addresses: admin@cantina-tita.com
+          singleEmail: false
+
+# ─── Política de notificaciones ───────────────────────────────────────────────
+policies:
+  - orgId: 1
+    receiver: email-admins
+    group_by: [alertname, severity]
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      - receiver: email-admins
+        matchers:
+          - severity = critical
+        repeat_interval: 1h
+
+# ─── Reglas de alerta ─────────────────────────────────────────────────────────
+groups:
+  - orgId: 1
+    name: Cantina Tita — Producción
+    folder: Alertas
+    interval: 1m
+    rules:
+
+      # ── 1. Tasa de errores HTTP 5xx > 5% ───────────────────────────────────
+      - uid: cantina-alert-5xx
+        title: Tasa de errores 5xx alta
+        condition: umbral
+        data:
+          - refId: tasa_errores
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: >
+                sum(rate(django_http_responses_total_by_status_total{status=~"5.."}[5m]))
+                /
+                sum(rate(django_http_responses_total_by_status_total[5m]))
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: tasa_errores
+          - refId: umbral
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: umbral
+              expression: tasa_errores
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.05]
+                  operator:
+                    type: and
+                  query:
+                    params: [tasa_errores]
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: NoData
+        execErrState: Alerting
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Errores HTTP 5xx superaron el 5% sostenido durante 5 minutos.
+          description: >
+            La tasa de respuestas 5xx supera el 5% del total de requests.
+            Revisar logs: docker compose logs --tail=100 backend
+
+      # ── 2. Latencia p95 > 1000 ms ──────────────────────────────────────────
+      - uid: cantina-alert-latencia
+        title: Latencia p95 alta (> 1 s)
+        condition: umbral
+        data:
+          - refId: latencia_p95
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: >
+                histogram_quantile(0.95,
+                  sum(rate(django_http_requests_latency_seconds_by_view_method_bucket[5m]))
+                  by (le)
+                ) * 1000
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: latencia_p95
+          - refId: umbral
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: umbral
+              expression: latencia_p95
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [1000]
+                  operator:
+                    type: and
+                  query:
+                    params: [latencia_p95]
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: NoData
+        execErrState: Alerting
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Latencia p95 de la API supera 1 segundo durante 5 minutos.
+          description: >
+            El percentil 95 de latencia de requests HTTP supera los 1000 ms.
+            Verificar carga en DB y workers Celery.
+
+      # ── 3. Tareas críticas de Celery fallidas ──────────────────────────────
+      - uid: cantina-alert-celery
+        title: Fallo en tarea crítica de Celery
+        condition: umbral
+        data:
+          - refId: fallos_celery
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: increase(celery_task_failures_total[5m])
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: fallos_celery
+          - refId: umbral
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: umbral
+              expression: fallos_celery
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+                  operator:
+                    type: and
+                  query:
+                    params: [fallos_celery]
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: NoData
+        execErrState: Alerting
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Una o más tareas de Celery fallaron en los últimos 5 minutos.
+          description: >
+            Verificar especialmente: cerrar_cuentas_mes_anterior,
+            generar_cuentas_mensuales, generar_resumen_diario_ventas,
+            generar_resumen_diario_stock.
+            Revisar: docker compose logs --tail=100 celery
