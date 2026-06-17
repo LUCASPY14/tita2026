@@ -100,6 +100,11 @@ app.conf.beat_schedule = {
         "task": "apps.almuerzos.tasks.alertar_cuentas_vencidas",
         "schedule": crontab(hour=8, minute=0, day_of_month=10),  # Día 10 de cada mes 08:00
     },
+    # ── Contabilidad ──────────────────────────────────────────────────
+    "refrescar-mv-balance-cliente": {
+        "task": "apps.contabilidad.tasks.refrescar_mv_balance_cliente",
+        "schedule": crontab(minute="*/15"),  # Cada 15 minutos
+    },
 
 }
 
