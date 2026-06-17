@@ -64,8 +64,16 @@ jobs:
             --cov=apps \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
+            --cov-report=html:htmlcov \
             -q \
             --cov-fail-under=80
+
+      - name: Upload backend coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-html
+          path: backend/htmlcov/
+          retention-days: 30
 
       - name: Upload backend coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -101,6 +109,13 @@ jobs:
       - name: Unit tests + coverage
         working-directory: frontend
         run: npm run coverage
+
+      - name: Upload frontend coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-html
+          path: frontend/coverage/
+          retention-days: 30
 
       - name: Upload frontend coverage to Codecov
         uses: codecov/codecov-action@v5
