@@ -225,6 +225,7 @@ REST_FRAMEWORK = {
         "anon": "200/hour",
         "user": "1000/hour",
         "auth": "5/min",
+        "sensitive": "50/hour",  # carga de saldo, anulaciones (se endurece en production.py)
     },
     "DATETIME_FORMAT": "%d/%m/%Y %H:%M",
     "DATE_FORMAT": "%d/%m/%Y",

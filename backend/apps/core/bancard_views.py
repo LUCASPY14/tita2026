@@ -15,9 +15,11 @@ from django.http import HttpResponseRedirect
 from django.utils import timezone
 
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from common.throttling import SensitiveEndpointThrottle
 
 from .models import PagoBancard, Tarjeta
 from . import bancard_service
@@ -32,6 +34,7 @@ def PORTAL_URL():
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@throttle_classes([SensitiveEndpointThrottle])
 def bancard_iniciar(request):
     """
     Body: { "nro_tarjeta": "...", "monto": 150000 }

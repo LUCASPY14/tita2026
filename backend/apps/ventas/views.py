@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 
 from common.object_permissions import IsCajaOwnerOrAdmin
 from common.permissions import IsCajeroOrAdmin, IsAdmin, IsStaffUser
+from common.throttling import SensitiveEndpointThrottle
 from .filters import VentaFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -91,7 +92,7 @@ class VentaViewSet(viewsets.ModelViewSet):
             resp_data["advertencias_alergenos"] = advertencias
         return Response(resp_data, status=status.HTTP_201_CREATED, headers=headers)
 
-    @action(detail=True, methods=["post"], url_path="anular", permission_classes=[IsAdmin])
+    @action(detail=True, methods=["post"], url_path="anular", permission_classes=[IsAdmin], throttle_classes=[SensitiveEndpointThrottle])
     def anular(self, request, pk=None):
         """Anula una venta activa revirtiendo stock, tarjeta y cuenta corriente."""
         venta = self.get_object()
