@@ -737,6 +737,7 @@ class TwoFALoginVerificarView(APIView):
     Emite el JWT real si el código TOTP (o backup code) es válido.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
         from .models import Intento2FA
