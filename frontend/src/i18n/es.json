@@ -70,7 +70,7 @@
     "offlineQueue_one":  "{{count}} venta offline",
     "offlineQueue_other":"{{count}} ventas offline",
     "syncNow":           "Sincronizar ahora",
-    "cashRegister":      "Caja no iniciada",
+    "cashRegister":      "Debés abrir una caja antes de usar el Modo Recreo.",
     "openCashRegister":  "Ir a Cajas",
     "todaySales":        "Ventas hoy",
     "avgTime":           "Promedio"
@@ -157,6 +157,7 @@
     "title":         "Carga de Saldo",
     "subtitle":      "Recarga de saldo en tarjetas de estudiantes",
     "cargar":        "Cargar Saldo",
+    "nueva":         "Nueva búsqueda",
     "colFecha":      "Fecha",
     "colTarjeta":    "Tarjeta",
     "colMonto":      "Monto",

@@ -122,6 +122,23 @@ export default function CargaSaldo() {
     return () => clearTimeout(limpiarTimerRef.current)
   }, [])
 
+  // ── Cargar historial ─────────────────────────────────────────────
+  const cargarHistorial = useCallback(async (nro: string) => {
+    setLoadingHistorial(true)
+    try {
+      const [movRes, cargaRes] = await Promise.all([
+        api.get('/core/movimientos-tarjeta/', { params: { tarjeta: nro, page_size: 20 } }),
+        api.get('/core/cargas-saldo/', { params: { tarjeta: nro, page_size: 20 } }),
+      ])
+      setMovimientos(movRes.data.results ?? movRes.data ?? [])
+      setCargas(cargaRes.data.results ?? cargaRes.data ?? [])
+    } catch {
+      // historial es secundario, no bloquear
+    } finally {
+      setLoadingHistorial(false)
+    }
+  }, [])
+
   // ── Buscar tarjeta ────────────────────────────────────────────────
   const buscarTarjeta = useCallback(async () => {
     const q = busqueda.trim()
@@ -148,23 +165,7 @@ export default function CargaSaldo() {
     } finally {
       setBuscando(false)
     }
-  }, [busqueda])
-
-  const cargarHistorial = useCallback(async (nro: string) => {
-    setLoadingHistorial(true)
-    try {
-      const [movRes, cargaRes] = await Promise.all([
-        api.get('/core/movimientos-tarjeta/', { params: { tarjeta: nro, page_size: 20 } }),
-        api.get('/core/cargas-saldo/', { params: { tarjeta: nro, page_size: 20 } }),
-      ])
-      setMovimientos(movRes.data.results ?? movRes.data ?? [])
-      setCargas(cargaRes.data.results ?? cargaRes.data ?? [])
-    } catch {
-      // historial es secundario, no bloquear
-    } finally {
-      setLoadingHistorial(false)
-    }
-  }, [])
+  }, [busqueda, cargarHistorial])
 
   // ── Confirmar carga pendiente ─────────────────────────────────────
   const confirmarCarga = useCallback(async (id: number) => {
@@ -330,7 +331,7 @@ export default function CargaSaldo() {
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
-            {t('cargaSaldo.cargar')}
+            {t('cargaSaldo.nueva')}
           </button>
         )}
       </div>
