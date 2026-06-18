@@ -1,4 +1,4 @@
-// eslint-disable-next-line react-refresh/only-export-components -- colores usados por importadores externos, no son componentes
+ 
 export type BadgeColor = 'green' | 'red' | 'orange' | 'yellow' | 'blue' | 'purple' | 'default'
 
 // eslint-disable-next-line react-refresh/only-export-components
