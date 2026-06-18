@@ -26,6 +26,7 @@ export function useNotificaciones() {
   const [wsOnline, setWsOnline] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const connectWsRef = useRef<(() => void) | null>(null)
 
   const fetchCount = useCallback(async () => {
     if (!user) return
@@ -37,6 +38,7 @@ export function useNotificaciones() {
     } catch { /* ignore network errors silently */ }
   }, [user])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchCount() }, [fetchCount])
 
   const connectWs = useCallback(() => {
@@ -62,11 +64,13 @@ export function useNotificaciones() {
 
     ws.onclose = () => {
       setWsOnline(false)
-      reconnectTimer.current = setTimeout(connectWs, RECONNECT_MS)
+      reconnectTimer.current = setTimeout(() => connectWsRef.current?.(), RECONNECT_MS)
     }
 
     ws.onerror = () => ws.close()
   }, [])
+
+  useEffect(() => { connectWsRef.current = connectWs }, [connectWs])
 
   useEffect(() => {
     if (!user) return

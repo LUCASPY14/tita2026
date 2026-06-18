@@ -24,6 +24,8 @@ export function useDashboardKPI() {
   const [connected, setConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Ref estable para llamar connect() desde el closure de onclose sin forward-reference
+  const connectRef = useRef<(() => void) | null>(null)
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
@@ -56,11 +58,14 @@ export function useDashboardKPI() {
 
     ws.onclose = () => {
       setConnected(false)
-      reconnectTimer.current = setTimeout(connect, RECONNECT_MS)
+      reconnectTimer.current = setTimeout(() => connectRef.current?.(), RECONNECT_MS)
     }
 
     ws.onerror = () => ws.close()
   }, [])
+
+  // Mantener la ref sincronizada con la versión más reciente de connect
+  useEffect(() => { connectRef.current = connect }, [connect])
 
   useEffect(() => {
     if (!user) return

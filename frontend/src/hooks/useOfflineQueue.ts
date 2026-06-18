@@ -86,6 +86,7 @@ export function useOfflineQueue() {
   }, [syncing, refreshCount])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshCount()
 
     const handleOnline  = () => { setIsOnline(true);  syncNow() }
