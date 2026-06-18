@@ -5,7 +5,7 @@ import {
   CreditCard, Search, CheckCircle, RefreshCw, History,
   ArrowUp, ArrowDown, X, Wallet,
 } from 'lucide-react'
-import api from '../services/api'
+import tarjetasService from '../services/tarjetas'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -127,11 +127,11 @@ export default function CargaSaldo() {
     setLoadingHistorial(true)
     try {
       const [movRes, cargaRes] = await Promise.all([
-        api.get('/core/movimientos-tarjeta/', { params: { tarjeta: nro, page_size: 20 } }),
-        api.get('/core/cargas-saldo/', { params: { tarjeta: nro, page_size: 20 } }),
+        tarjetasService.getMovimientos<Movimiento>(nro, 20),
+        tarjetasService.getCargas<CargaReciente>(nro, 20),
       ])
-      setMovimientos(movRes.data.results ?? movRes.data ?? [])
-      setCargas(cargaRes.data.results ?? cargaRes.data ?? [])
+      setMovimientos(movRes.data.results ?? [])
+      setCargas(cargaRes.data.results ?? [])
     } catch {
       // historial es secundario, no bloquear
     } finally {
@@ -149,9 +149,9 @@ export default function CargaSaldo() {
     setCargas([])
     setUltimaCarga(null)
     try {
-      const { data } = await api.get('/core/tarjetas/', { params: { search: q } })
+      const { data } = await tarjetasService.buscar<Tarjeta>(q)
       const found: Tarjeta | undefined = (data.results ?? []).find(
-        (t: Tarjeta) => t.nro_tarjeta === q || t.codigo_barras === q
+        (t) => t.nro_tarjeta === q || t.codigo_barras === q
       )
       if (!found) { toast.error('Tarjeta no encontrada'); return }
       if (found.estado !== 'ACTIVA') {
@@ -170,10 +170,10 @@ export default function CargaSaldo() {
   // ── Confirmar carga pendiente ─────────────────────────────────────
   const confirmarCarga = useCallback(async (id: number) => {
     try {
-      await api.post(`/core/cargas-saldo/${id}/confirmar/`)
+      await tarjetasService.confirmarCarga(id)
       toast.success('Carga confirmada')
       if (tarjeta) {
-        const { data } = await api.get(`/core/tarjetas/${tarjeta.nro_tarjeta}/`)
+        const { data } = await tarjetasService.getByNro<Tarjeta>(tarjeta.nro_tarjeta)
         setTarjeta(data)
         cargarHistorial(tarjeta.nro_tarjeta)
       }
@@ -190,14 +190,14 @@ export default function CargaSaldo() {
 
     setCargando(true)
     try {
-      const payload: Record<string, unknown> = {
-        tarjeta: tarjeta.nro_tarjeta,
+      const cargaPayload = {
+        tarjeta:      tarjeta.nro_tarjeta,
         monto_cargado: montoNum,
-        metodo_pago: metodo,
+        metodo_pago:  metodo,
+        ...(referencia.trim() ? { referencia: referencia.trim() } : {}),
       }
-      if (referencia.trim()) payload.referencia = referencia.trim()
 
-      const { data } = await api.post('/core/cargas-saldo/', payload)
+      const { data } = await tarjetasService.crearCarga(cargaPayload)
 
       const metodoInfo = METODOS.find(m => m.value === metodo)
       setUltimaCarga({ monto: montoNum, metodo, estado: data.estado ?? 'CONFIRMADA' })
@@ -209,7 +209,7 @@ export default function CargaSaldo() {
       }
 
       // Actualizar saldo de la tarjeta y recargar historial
-      const { data: tarjetaActualizada } = await api.get(`/core/tarjetas/${tarjeta.nro_tarjeta}/`)
+      const { data: tarjetaActualizada } = await tarjetasService.getByNro<Tarjeta>(tarjeta.nro_tarjeta)
       setTarjeta(tarjetaActualizada)
       cargarHistorial(tarjeta.nro_tarjeta)
 

@@ -5,7 +5,8 @@ import {
   CreditCard, Search, Plus, Lock, Unlock, History,
   ArrowUp, ArrowDown, Edit2,
 } from 'lucide-react'
-import api from '../services/api'
+import tarjetasService from '../services/tarjetas'
+import clientesService from '../services/clientes'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -195,7 +196,7 @@ export default function Tarjetas() {
       const params: Record<string, unknown> = { page: p, page_size: 15 }
       if (q) params.search = q
       if (estado) params.estado = estado
-      const { data } = await api.get('/core/tarjetas/', { params })
+      const { data } = await tarjetasService.listar<Tarjeta>(params)
       if (requestId !== requestIdRef.current) return
       setTarjetas(data.results ?? [])
       setTotal(data.count ?? 0)
@@ -223,11 +224,11 @@ export default function Tarjetas() {
     setLoadingDetail(true)
     try {
       const [movRes, cargaRes] = await Promise.all([
-        api.get('/core/movimientos-tarjeta/', { params: { tarjeta: t.nro_tarjeta, page_size: 200 } }),
-        api.get('/core/cargas-saldo/', { params: { tarjeta: t.nro_tarjeta, page_size: 200 } }),
+        tarjetasService.getMovimientos<MovimientoTarjeta>(t.nro_tarjeta, 200),
+        tarjetasService.getCargas<CargaSaldo>(t.nro_tarjeta, 200),
       ])
-      setMovimientos(movRes.data.results ?? movRes.data ?? [])
-      setCargas(cargaRes.data.results ?? cargaRes.data ?? [])
+      setMovimientos(movRes.data.results ?? [])
+      setCargas(cargaRes.data.results ?? [])
     } catch {
       toast.error('Error al cargar historial')
     } finally {
@@ -237,7 +238,7 @@ export default function Tarjetas() {
 
   useEffect(() => {
     if (createOpen && hijos.length === 0) {
-      api.get('/clientes/hijos/', { params: { activo: true, page_size: 500 } })
+      clientesService.getHijos<Hijo>({ activo: true, page_size: 500 })
         .then(({ data }) => setHijos(data.results ?? []))
         .catch(() => {})
     }
@@ -249,7 +250,7 @@ export default function Tarjetas() {
     const nuevoEstado = t.estado === 'ACTIVA' ? 'BLOQUEADA' : 'ACTIVA'
     setToggling(t.nro_tarjeta)
     try {
-      await api.patch(`/core/tarjetas/${t.nro_tarjeta}/`, { estado: nuevoEstado })
+      await tarjetasService.actualizar(t.nro_tarjeta, { estado: nuevoEstado })
       toast.success(nuevoEstado === 'BLOQUEADA' ? 'Tarjeta bloqueada' : 'Tarjeta activada')
       setDetailTarjeta(prev => prev?.nro_tarjeta === t.nro_tarjeta ? { ...prev, estado: nuevoEstado } : prev)
       loadTarjetas(search, estadoFilter, page)
@@ -264,7 +265,7 @@ export default function Tarjetas() {
     if (!form.nro_tarjeta || !form.hijo) { toast.error('Completá los campos obligatorios'); return }
     setSaving(true)
     try {
-      await api.post('/core/tarjetas/', {
+      await tarjetasService.crear({
         ...form,
         limite_credito: Number(form.limite_credito) || 0,
       })
@@ -294,7 +295,7 @@ export default function Tarjetas() {
     if (!editTarjeta) return
     setEditSaving(true)
     try {
-      await api.patch(`/core/tarjetas/${editTarjeta.nro_tarjeta}/`, {
+      await tarjetasService.actualizar(editTarjeta.nro_tarjeta, {
         limite_credito: Number(editForm.limite_credito) || 0,
         permite_saldo_negativo: editForm.permite_saldo_negativo,
         estado: editForm.estado,

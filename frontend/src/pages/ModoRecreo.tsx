@@ -32,6 +32,9 @@ import {
   CashRegisterIcon,
 } from '@phosphor-icons/react'
 import api from '../services/api'
+import tarjetasService from '../services/tarjetas'
+import ventasService from '../services/ventas'
+import cajasService from '../services/cajas'
 import { useCatalogoStore } from '../store/catalogoStore'
 import { useOfflineQueue } from '../hooks/useOfflineQueue'
 
@@ -400,7 +403,7 @@ export default function ModoRecreo() {
       .finally(() => setLoadingProductos(false))
 
     // Verificar caja abierta (separado para no bloquear la carga del catálogo)
-    api.get('/contabilidad/cierres-caja/mi-caja/')
+    cajasService.getMiCaja<CierreCajaInfo>()
       .then(res => setCierreCaja(res.data ?? false))
       .catch(() => setCierreCaja(false))
   }, [getProductos, getCategorias])
@@ -515,8 +518,8 @@ export default function ModoRecreo() {
     if (!nro || buscandoTarjeta) return
     setBuscandoTarjeta(true)
     try {
-      const { data } = await api.get('/core/tarjetas/', { params: { search: nro } })
-      const found = (data.results ?? []).find((t: Tarjeta) => t.nro_tarjeta === nro)
+      const { data } = await tarjetasService.buscar<Tarjeta>(nro)
+      const found = (data.results ?? []).find((t) => t.nro_tarjeta === nro)
       if (!found) {
         sfx.error(); toast.error('Tarjeta no encontrada'); return
       }
@@ -626,7 +629,7 @@ export default function ModoRecreo() {
           },
         })
       } else {
-        await api.post('/ventas/ventas/', payload, { timeout: 6000 })
+        await ventasService.crear(payload, 6000)
       }
       sfx.ok()
       addSales(carrito.map(i => i.producto.id))
