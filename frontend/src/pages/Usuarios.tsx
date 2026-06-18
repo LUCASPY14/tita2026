@@ -200,6 +200,7 @@ export default function Usuarios() {
 
   useEffect(() => {
     if (tab === 'permisos') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadRoles()
       loadPermisosAll()
     }
@@ -234,6 +235,7 @@ export default function Usuarios() {
 
   useEffect(() => {
     if (tab === 'empleados') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadEmpleados(1)
       loadRoles()
     }
@@ -276,6 +278,7 @@ export default function Usuarios() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (selectedRolId) loadRolPermisos(selectedRolId)
     else setRolPermisos([])
   }, [selectedRolId, loadRolPermisos])

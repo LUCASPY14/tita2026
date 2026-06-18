@@ -200,6 +200,7 @@ export default function Inventario() {
 
   useEffect(() => {
     if (tab === 'ajustes') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPageAjustes(1)
       loadAjustes(filterEstado, filterTipoAjuste, 1)
     }
@@ -259,6 +260,7 @@ export default function Inventario() {
 
   useEffect(() => {
     if (tab === 'lotes') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPageLotes(1)
       loadLotes(filterProductoLote, filterVencido, 1)
     }
@@ -287,6 +289,7 @@ export default function Inventario() {
 
   useEffect(() => {
     if (tab === 'alertas') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPageAlertas(1)
       loadAlertas(1)
     }

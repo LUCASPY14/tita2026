@@ -95,6 +95,7 @@ export default function Alergenos() {
     finally { setLoadingAlg(false) }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadAlergenos(1) }, [loadAlergenos])
 
   const openCreateAlg = () => {
@@ -143,6 +144,7 @@ export default function Alergenos() {
     finally { setLoadingAsig(false) }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (tab === 'asignacion') loadAsignaciones(1) }, [tab, loadAsignaciones])
 
   const handleSaveAsig = async () => {

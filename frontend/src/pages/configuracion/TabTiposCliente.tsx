@@ -24,6 +24,7 @@ export default function TabTiposCliente({ onDelete }: { onDelete: (t: DeleteTarg
     finally { setLoading(false) }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   const open = useCallback((t?: TipoCliente) => {

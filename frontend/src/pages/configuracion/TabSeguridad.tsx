@@ -28,6 +28,7 @@ export default function TabSeguridad() {
     finally { setLoading(false) }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); setStep('idle') }, [load])
 
   const iniciarSetup = async () => {

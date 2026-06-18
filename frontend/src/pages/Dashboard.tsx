@@ -77,6 +77,7 @@ export default function Dashboard() {
         api.get('/contabilidad/dashboard/tendencia/', { params: { dias: 14 } }),
       )
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (reqs.length === 0) { setLoading(false); return }
     Promise.all(reqs)
       .then(([repRes, tendRes]) => {

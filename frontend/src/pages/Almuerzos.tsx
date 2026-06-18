@@ -282,6 +282,7 @@ export default function Almuerzos() {
   }, [filtroCuentaMes, filtroCuentaAnio])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tab === 'cuentas') loadCuentas()
   }, [tab, loadCuentas])
 
@@ -299,6 +300,7 @@ export default function Almuerzos() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tab === 'suscripciones') loadSuscripciones()
   }, [tab, loadSuscripciones])
 
@@ -316,6 +318,7 @@ export default function Almuerzos() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tab === 'menu') loadMenu()
   }, [tab, loadMenu])
 

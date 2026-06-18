@@ -1,5 +1,7 @@
+// eslint-disable-next-line react-refresh/only-export-components -- colores usados por importadores externos, no son componentes
 export type BadgeColor = 'green' | 'red' | 'orange' | 'yellow' | 'blue' | 'purple' | 'default'
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const BADGE_COLORS: Record<BadgeColor, string> = {
   green:   'bg-green-100 text-green-700 ring-1 ring-inset ring-green-600/20',
   red:     'bg-red-100 text-red-700 ring-1 ring-inset ring-red-600/20',

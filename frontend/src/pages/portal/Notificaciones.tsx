@@ -66,6 +66,7 @@ export default function PortalNotificaciones() {
   const isFetchingRef  = useRef(false)
   const wsRef          = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const connectWsRef   = useRef<() => void>(() => {})
 
   // ── REST fetch (initial load + polling fallback) ───────────────────────────
 
@@ -98,6 +99,7 @@ export default function PortalNotificaciones() {
     }
   }, [user])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargar() }, [cargar])
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
@@ -130,12 +132,17 @@ export default function PortalNotificaciones() {
 
     ws.onclose = () => {
       setWsOnline(false)
-      // reconnect after a short delay
-      reconnectTimer.current = setTimeout(() => connectWs(), WS_RECONNECT_MS)
+      // reconnect after a short delay (use ref to avoid TDZ access)
+      reconnectTimer.current = setTimeout(() => connectWsRef.current(), WS_RECONNECT_MS)
     }
 
     ws.onerror = () => ws.close()
   }, [])
+
+  useEffect(() => {
+    // keep ref in sync so the onclose closure can call the latest version
+    connectWsRef.current = connectWs
+  })
 
   useEffect(() => {
     connectWs()

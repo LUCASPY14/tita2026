@@ -155,6 +155,34 @@ const AGING_COLOR: Record<string, BadgeColor> = {
 
 type TabKey = 'ventas' | 'cuenta_corriente' | 'almuerzos' | 'productos' | 'cajeros' | 'stock' | 'tarjetas' | 'consumo'
 
+// ─── Shared sub-components (defined outside Reportes to satisfy react-hooks/static-components) ──
+
+function KpiCard({ label, value, color = 'text-slate-800' }: { label: string; value: string | number; color?: string }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-4">
+      <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+      <p className={`text-lg font-bold mt-0.5 tabular-nums ${color}`}>{value}</p>
+    </div>
+  )
+}
+
+function FilterBar({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-wrap items-end gap-4">
+      {children}
+    </div>
+  )
+}
+
+function EmptyState({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="text-center py-20 text-slate-400">
+      <div className="w-12 h-12 mx-auto mb-3 opacity-30">{icon}</div>
+      <p className="text-sm font-medium">{text}</p>
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Reportes() {
@@ -762,26 +790,6 @@ export default function Reportes() {
     `flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
       tab === t ? 'border-green-600 text-green-700' : 'border-transparent text-slate-500 hover:text-slate-700'
     }`
-
-  const KpiCard = ({ label, value, color = 'text-slate-800' }: { label: string; value: string | number; color?: string }) => (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-4">
-      <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
-      <p className={`text-lg font-bold mt-0.5 tabular-nums ${color}`}>{value}</p>
-    </div>
-  )
-
-  const FilterBar = ({ children }: { children: React.ReactNode }) => (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-wrap items-end gap-4">
-      {children}
-    </div>
-  )
-
-  const EmptyState = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
-    <div className="text-center py-20 text-slate-400">
-      <div className="w-12 h-12 mx-auto mb-3 opacity-30">{icon}</div>
-      <p className="text-sm font-medium">{text}</p>
-    </div>
-  )
 
   // ─── JSX ─────────────────────────────────────────────────────────────────────
 

@@ -164,6 +164,7 @@ export default function CajaPage() {
     }
   }, [page, filterEstado, filterCaja])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadCierres() }, [loadCierres])
 
   // ── Turno activo del usuario (mi-caja) ────────────────────────────────────
@@ -177,6 +178,7 @@ export default function CajaPage() {
     }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadMiCierre() }, [loadMiCierre])
 
   // ── Arqueo del turno activo ───────────────────────────────────────────────
@@ -194,6 +196,7 @@ export default function CajaPage() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (miCierre?.id) loadArqueo(miCierre.id)
     else setArqueo(null)
   }, [miCierre, loadArqueo])

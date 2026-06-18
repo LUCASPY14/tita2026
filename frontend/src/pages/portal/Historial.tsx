@@ -84,6 +84,7 @@ export default function PortalHistorial() {
     }
   }, [selectedHijo, anio, mes])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargar() }, [cargar])
 
   const prevMes = () => {

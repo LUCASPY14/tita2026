@@ -152,7 +152,7 @@ export function exportarReporteVentasPDF(data: ReporteData, desde: string, hasta
     doc.save(`reporte_ventas_${desde}_${hasta}.pdf`)
   } catch (err) {
     console.error('Error generando PDF de ventas:', err)
-    throw new Error('No se pudo generar el PDF')
+    throw new Error('No se pudo generar el PDF', { cause: err })
   }
 }
 
@@ -188,7 +188,7 @@ export function exportarCuentaCorrientePDF(items: AgingItem[], totalDeuda: numbe
     doc.save(`cuenta_corriente_${fecha}.pdf`)
   } catch (err) {
     console.error('Error generando PDF de cuenta corriente:', err)
-    throw new Error('No se pudo generar el PDF')
+    throw new Error('No se pudo generar el PDF', { cause: err })
   }
 }
 
@@ -275,7 +275,7 @@ export function exportarCuentasMensualesPDF(cuentas: CuentaMensual[], mes?: numb
     doc.save(`cuentas_almuerzos_${suffix}.pdf`)
   } catch (err) {
     console.error('Error generando PDF de cuentas mensuales:', err)
-    throw new Error('No se pudo generar el PDF')
+    throw new Error('No se pudo generar el PDF', { cause: err })
   }
 }
 
@@ -364,7 +364,7 @@ export function exportarAlmuerzosPDF(
     doc.save(`almuerzos_${suffix}.pdf`)
   } catch (err) {
     console.error('Error generando PDF de almuerzos:', err)
-    throw new Error('No se pudo generar el PDF')
+    throw new Error('No se pudo generar el PDF', { cause: err })
   }
 }
 
@@ -451,7 +451,7 @@ export function exportarConsumoPDF(ventas: VentaConsumoPdf[], desde: string, has
     doc.save(`consumo_${desde}_${hasta}.pdf`)
   } catch (err) {
     console.error('Error generando PDF de consumo:', err)
-    throw new Error('No se pudo generar el PDF')
+    throw new Error('No se pudo generar el PDF', { cause: err })
   }
 }
 
@@ -486,6 +486,6 @@ export function exportarIngresosComedorPDF(ingresos: IngresoComedor[], fecha: st
     doc.save(`ingresos_comedor_${fecha}.pdf`)
   } catch (err) {
     console.error('Error generando PDF de ingresos comedor:', err)
-    throw new Error('No se pudo generar el PDF')
+    throw new Error('No se pudo generar el PDF', { cause: err })
   }
 }

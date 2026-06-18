@@ -137,6 +137,7 @@ export default function Facturacion() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tab === 'pendientes') loadPendientes()
     else {
       setPageFact(1)

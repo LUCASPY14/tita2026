@@ -25,6 +25,7 @@ export default function TabListasPrecio({ onDelete }: { onDelete: (t: DeleteTarg
     finally { setLoading(false) }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   const open = useCallback((l?: ListaPrecio) => {

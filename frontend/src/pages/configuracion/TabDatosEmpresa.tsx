@@ -28,6 +28,7 @@ export default function TabDatosEmpresa() {
   const [saving, setSaving] = useState(false)
   const savedRef = useRef<EmpForm | null>(null)
   const formRef = useRef(form)
+  // eslint-disable-next-line react-hooks/refs
   formRef.current = form
 
   const load = useCallback(async () => {
@@ -55,6 +56,7 @@ export default function TabDatosEmpresa() {
     finally { setLoading(false) }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   useEffect(() => {

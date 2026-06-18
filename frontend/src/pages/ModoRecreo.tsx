@@ -238,7 +238,7 @@ function PinModal({ saldoActual, total, limiteCreditoTarjeta, onConfirm, onCance
                 return (
                   <button
                     key={k}
-                    onClick={() => { if (!loading) { isOk ? confirm() : press(k) } }}
+                    onClick={() => { if (!loading) { if (isOk) { confirm() } else { press(k) } } }}
                     disabled={disabled}
                     className={[
                       'h-14 rounded-2xl text-xl font-black transition-all select-none',
@@ -470,6 +470,7 @@ export default function ModoRecreo() {
       (a, b) => ((salesMap[b.id] || 0) - (salesMap[a.id] || 0)) ||
                 a.descripcion.localeCompare(b.descripcion)
     )
+    // eslint-disable-next-line react-hooks/refs
     productosFiltradosRef.current = sorted
     return sorted
   }, [productos, catFiltro, prodSearch, salesMap])
@@ -673,10 +674,12 @@ export default function ModoRecreo() {
     setTimeout(() => scannerRef.current?.focus(), 60)
   }, [])
 
-  // Sincronizar refs
-  handleAgregarRef.current  = handleAgregar
-  handleCobrarRef.current   = handleCobrar
-  handleCancelarRef.current = handleCancelar
+  // Sincronizar refs (useEffect to avoid ref mutation during render)
+  useEffect(() => {
+    handleAgregarRef.current  = handleAgregar
+    handleCobrarRef.current   = handleCobrar
+    handleCancelarRef.current = handleCancelar
+  })
 
   // Procesar escaneo automático (Enter)
   const processScan = useCallback(async (value: string) => {

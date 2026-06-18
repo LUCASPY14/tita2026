@@ -27,6 +27,7 @@ export default function TabAlergenos({ onDelete }: { onDelete: (t: DeleteTarget)
     finally { setLoading(false) }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   const open = useCallback((a?: Alergeno) => {

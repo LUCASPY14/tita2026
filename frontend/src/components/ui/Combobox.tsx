@@ -32,14 +32,13 @@ export default function Combobox({
 
   const selected = options.find((o) => o.value === value)
 
-  const filtered = filterLocal
-    ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
-    : options
+  // Valor mostrado en el input: mientras se escribe usa query; al perder foco
+  // refleja la selección actual directamente (sin setState en efecto).
+  const displayValue = isFocused ? query : (selected?.label ?? '')
 
-  // Sync query with selected label only when not actively typing
-  useEffect(() => {
-    if (!isFocused) setQuery(selected?.label ?? '')
-  }, [selected?.label, isFocused])
+  const filtered = filterLocal
+    ? options.filter((o) => o.label.toLowerCase().includes(displayValue.toLowerCase()))
+    : options
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -76,8 +75,8 @@ export default function Combobox({
           'transition-colors duration-150',
         ].join(' ')}
         placeholder={placeholder}
-        value={query}
-        onFocus={() => { setOpen(true); setIsFocused(true) }}
+        value={displayValue}
+        onFocus={() => { setQuery(selected?.label ?? ''); setOpen(true); setIsFocused(true) }}
         onBlur={() => setIsFocused(false)}
         onChange={(e) => {
           setQuery(e.target.value)

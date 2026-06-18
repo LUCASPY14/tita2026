@@ -403,6 +403,7 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
       stopWebcam()
       return
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(hijo
       ? {
           nombre: hijo.nombre,
@@ -679,6 +680,7 @@ function AgregarResponsableModal({ open, hijoId, onClose, onSaved }: AgregarResp
 
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(BLANK_RESP)
     api.get('/clientes/clientes/', { params: { activo: 'true', page_size: 200 } })
       .then(({ data }) => setClientes(data.results ?? data))
@@ -824,6 +826,7 @@ function ResponsablesModal({ open, hijo, onClose }: ResponsablesModalProps) {
   }, [hijo])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open) loadResponsables()
   }, [open, loadResponsables])
 
@@ -1064,7 +1067,7 @@ function ConsumoModal({ open, hijo, onClose }: ConsumoModalProps) {
 
   const loadVentas = useCallback(async (p: number, append = false) => {
     if (!hijo) return
-    append ? setLoadingMore(true) : setLoading(true)
+    if (append) { setLoadingMore(true) } else { setLoading(true) }
     try {
       const { data } = await api.get('/ventas/ventas/', {
         params: { hijo: hijo.id, page: p, page_size: PAGE_SIZE, ordering: '-fecha', estado: 'ACTIVA' },
@@ -1074,12 +1077,13 @@ function ConsumoModal({ open, hijo, onClose }: ConsumoModalProps) {
     } catch {
       toast.error('Error al cargar el historial de consumo')
     } finally {
-      append ? setLoadingMore(false) : setLoading(false)
+      if (append) { setLoadingMore(false) } else { setLoading(false) }
     }
   }, [hijo])
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPage(1)
       setExpandedId(null)
       loadVentas(1)
@@ -1252,6 +1256,7 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setExpandedId(null)
       loadHijos()
     } else {
@@ -1519,6 +1524,7 @@ export default function Clientes() {
   }, [page, search, filterActivo, filterTipo])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadClientes()
   }, [loadClientes])
 

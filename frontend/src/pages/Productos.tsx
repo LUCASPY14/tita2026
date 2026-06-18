@@ -79,6 +79,40 @@ function formatGs(value: string | number | null | undefined): string {
   return (Number(value) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
+// ─── Toggle (standalone, outside ProductoModal to avoid static-component rule) ──
+
+function Toggle({ label, field, form, toggleBool }: {
+  label: string
+  field: keyof ProductoForm
+  form: ProductoForm
+  toggleBool: (field: keyof ProductoForm) => void
+}) {
+  const checked = form[field] as boolean
+  return (
+    <div className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
+      <span className="text-sm text-slate-700">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => toggleBool(field)}
+        className={[
+          'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30 shrink-0',
+          checked ? 'bg-green-500' : 'bg-slate-200',
+        ].join(' ')}
+      >
+        <span
+          className={[
+            'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200',
+            checked ? 'translate-x-5' : 'translate-x-0',
+          ].join(' ')}
+        />
+      </button>
+    </div>
+  )
+}
+
 // ─── ProductoModal ────────────────────────────────────────────────────────────
 
 const BLANK_FORM: ProductoForm = {
@@ -106,6 +140,7 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
 
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(producto
       ? {
           descripcion: producto.descripcion,
@@ -125,6 +160,7 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
 
   useEffect(() => {
     if (form.es_servicio) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(prev => ({ ...prev, requiere_stock: false, stock_minimo: '0' }))
     }
   }, [form.es_servicio])
@@ -171,33 +207,6 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
 
   const selectClass = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
   const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
-
-  function Toggle({ label, field }: { label: string; field: keyof ProductoForm }) {
-    const checked = form[field] as boolean
-    return (
-      <div className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
-        <span className="text-sm text-slate-700">{label}</span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          aria-label={label}
-          onClick={() => toggleBool(field)}
-          className={[
-            'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30 shrink-0',
-            checked ? 'bg-green-500' : 'bg-slate-200',
-          ].join(' ')}
-        >
-          <span
-            className={[
-              'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200',
-              checked ? 'translate-x-5' : 'translate-x-0',
-            ].join(' ')}
-          />
-        </button>
-      </div>
-    )
-  }
 
   return (
     <Modal
@@ -268,10 +277,10 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
         {/* Toggles */}
         <div className="border-t border-slate-100 pt-4 bg-slate-50/50 rounded-xl p-4">
           <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Comportamiento</p>
-          <Toggle label="Activo" field="activo" />
-          <Toggle label="Controla stock" field="requiere_stock" />
-          <Toggle label="Es servicio (sin stock físico)" field="es_servicio" />
-          <Toggle label="Permite stock negativo" field="permite_stock_negativo" />
+          <Toggle label="Activo" field="activo" form={form} toggleBool={toggleBool} />
+          <Toggle label="Controla stock" field="requiere_stock" form={form} toggleBool={toggleBool} />
+          <Toggle label="Es servicio (sin stock físico)" field="es_servicio" form={form} toggleBool={toggleBool} />
+          <Toggle label="Permite stock negativo" field="permite_stock_negativo" form={form} toggleBool={toggleBool} />
         </div>
       </div>
     </Modal>
@@ -315,6 +324,7 @@ export default function Produtos() {
     api.get('/productos/unidades-medida/')
       .then(({ data }) => setUnidades(data.results ?? data)).catch(() => {})
     // Load stock crítico count
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingCritico(true)
     api.get('/inventario/stock-critico/')
       .then(({ data }) => setStockCritico(data.total ?? 0))
@@ -354,10 +364,12 @@ export default function Produtos() {
   }, [page, search, filterActivo, filterCategoria, filterServicio])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProductos()
   }, [loadProductos])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadStock()
   }, [loadStock])
 

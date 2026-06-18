@@ -154,6 +154,7 @@ export default function Comedor() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (panelMode === 'lista') cargarListaHoy()
   }, [panelMode, cargarListaHoy])
 

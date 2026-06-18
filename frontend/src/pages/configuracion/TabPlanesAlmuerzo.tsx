@@ -27,6 +27,7 @@ export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTa
     finally { setLoading(false) }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   const open = useCallback((p?: PlanAlmuerzo) => {

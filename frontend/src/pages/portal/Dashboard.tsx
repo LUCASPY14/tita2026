@@ -608,6 +608,7 @@ export default function PortalDashboard() {
     }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargar() }, [user, cargar])
 
   const loadPlan = useCallback(async (hijoId: number) => {
