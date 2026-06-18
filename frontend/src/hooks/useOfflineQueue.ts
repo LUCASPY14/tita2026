@@ -43,6 +43,21 @@ async function deletePending(id: number): Promise<void> {
   })
 }
 
+async function addPending(item: Omit<PendingVenta, 'id' | 'timestamp'>): Promise<void> {
+  const db = await openIDB()
+  const record: PendingVenta = {
+    ...item,
+    id: Date.now(),
+    timestamp: new Date().toISOString(),
+  }
+  return new Promise((resolve, reject) => {
+    const tx  = db.transaction(IDB_STORE, 'readwrite')
+    const req = tx.objectStore(IDB_STORE).add(record)
+    req.onsuccess = () => resolve()
+    req.onerror   = () => reject(req.error)
+  })
+}
+
 /**
  * Hook para gestionar la cola offline de ventas.
  *
@@ -59,6 +74,11 @@ export function useOfflineQueue() {
     const items = await getPending().catch(() => [])
     setPendingCount(items.length)
   }, [])
+
+  const enqueue = useCallback(async (item: Omit<PendingVenta, 'id' | 'timestamp'>) => {
+    await addPending(item)
+    await refreshCount()
+  }, [refreshCount])
 
   const syncNow = useCallback(async () => {
     if (syncing || !navigator.onLine) return
@@ -105,5 +125,5 @@ export function useOfflineQueue() {
     }
   }, [refreshCount, syncNow])
 
-  return { isOnline, pendingCount, syncing, syncNow }
+  return { isOnline, pendingCount, syncing, syncNow, enqueue }
 }

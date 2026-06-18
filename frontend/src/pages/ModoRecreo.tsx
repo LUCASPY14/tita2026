@@ -293,7 +293,7 @@ export default function ModoRecreo() {
   const { getProductos, getCategorias } = useCatalogoStore()
 
   // Conectividad + cola offline
-  const { isOnline, pendingCount, syncing, syncNow } = useOfflineQueue()
+  const { isOnline, pendingCount, syncing, syncNow, enqueue } = useOfflineQueue()
   useEffect(() => {
     const offlineToastId = 'offline-warning'
     if (!isOnline) {
@@ -615,7 +615,19 @@ export default function ModoRecreo() {
         if (referencia.trim()) payload.referencia = referencia.trim()
       }
 
-      await api.post('/ventas/ventas/', payload, { timeout: 6000 })
+      if (!navigator.onLine) {
+        await enqueue({
+          url:     '/api/v1/ventas/ventas/',
+          method:  'POST',
+          body:    JSON.stringify(payload),
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('access_token') ?? ''}`,
+          },
+        })
+      } else {
+        await api.post('/ventas/ventas/', payload, { timeout: 6000 })
+      }
       sfx.ok()
       addSales(carrito.map(i => i.producto.id))
       setSalesMap(getSalesMap())
@@ -624,7 +636,11 @@ export default function ModoRecreo() {
       setDailyStats(getDailyStats())
       clearTimeout(flashTimer.current)
       setFlash('ok')
-      setFlashMsg(`✅  ${tarjeta.hijo_nombre}  —  ${gs(total)}`)
+      setFlashMsg(
+        navigator.onLine
+          ? `✅  ${tarjeta.hijo_nombre}  —  ${gs(total)}`
+          : `📶  ${tarjeta.hijo_nombre}  —  guardado offline`,
+      )
       flashTimer.current = setTimeout(() => {
         setFlash('none')
         setCarrito([])
@@ -641,7 +657,7 @@ export default function ModoRecreo() {
       cobrandoRef.current = false
       setCobrando(false)
     }
-  }, [carrito, tarjeta, total, modoPago, medioPagoSelId])
+  }, [carrito, tarjeta, total, modoPago, medioPagoSelId, enqueue])
 
   // ─── Cobrar ───────────────────────────────────────────────────────────────
   const handleCobrar = useCallback(async () => {
@@ -734,7 +750,8 @@ export default function ModoRecreo() {
   const medioPagoSeleccionado = mediosPago.find(m => m.id === medioPagoSelId) ?? null
 
   const referenciaRequerida = modoPago === 'MEDIO' && (medioPagoSeleccionado?.requiere_validacion ?? false)
-  const canCobrar = isOnline && carrito.length > 0 && !cobrando && tarjeta &&
+  // isOnline ya no bloquea: las ventas offline se encolan en IndexedDB
+  const canCobrar = carrito.length > 0 && !cobrando && tarjeta &&
     (modoPago === 'PREPAGO' || (modoPago === 'MEDIO' && medioPagoSelId !== null)) &&
     (!referenciaRequerida || referencia.trim().length > 0)
 
