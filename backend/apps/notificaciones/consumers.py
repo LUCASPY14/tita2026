@@ -27,9 +27,12 @@ def _authenticate(token_str: str):
 # ── NotificacionConsumer ──────────────────────────────────────────────────────
 
 class NotificacionConsumer(AsyncWebsocketConsumer):
+    _parse_token = staticmethod(_parse_token)
+    _authenticate = staticmethod(_authenticate)
+
     async def connect(self):
-        token_str = _parse_token(self.scope["query_string"].decode())
-        user = await _authenticate(token_str)
+        token_str = self._parse_token(self.scope["query_string"].decode())
+        user = await self._authenticate(token_str)
         if user is None:
             await self.close(code=4001)
             return
@@ -59,10 +62,12 @@ class DashboardConsumer(AsyncWebsocketConsumer):
     """
 
     GROUP = "dashboard_kpi"
+    _parse_token = staticmethod(_parse_token)
+    _authenticate = staticmethod(_authenticate)
 
     async def connect(self):
-        token_str = _parse_token(self.scope["query_string"].decode())
-        user = await _authenticate(token_str)
+        token_str = self._parse_token(self.scope["query_string"].decode())
+        user = await self._authenticate(token_str)
         if user is None:
             await self.close(code=4001)
             return

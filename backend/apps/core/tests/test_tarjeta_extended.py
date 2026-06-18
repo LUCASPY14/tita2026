@@ -25,6 +25,7 @@ def hijo(db, cliente):
 @pytest.fixture
 def tarjeta_con_credito(db, hijo):
     from apps.core.models import Tarjeta
+    # saldo=0 con límite de crédito: no necesita movimiento inicial
     return Tarjeta.objects.create(
         nro_tarjeta="TC_CRED01",
         hijo=hijo,
@@ -36,25 +37,46 @@ def tarjeta_con_credito(db, hijo):
 
 
 @pytest.fixture
-def tarjeta_saldo_cero(db, hijo):
+def tarjeta_saldo_cero(db, hijo, cliente):
     from apps.core.models import Tarjeta
-    return Tarjeta.objects.create(
+    from apps.core.services import TarjetaService
+    # El trigger fn_sync_saldo_tarjeta recalcula saldo_actual = SUM(movimientos).
+    # Hay que establecer el saldo inicial mediante una RECARGA para que el trigger
+    # tenga la base correcta cuando los tests añadan movimientos.
+    tarjeta = Tarjeta.objects.create(
         nro_tarjeta="TC_CERO01",
         hijo=hijo,
-        saldo_actual=Decimal("5000"),
+        saldo_actual=Decimal("0"),
         estado=Tarjeta.Estado.ACTIVA,
     )
+    TarjetaService.cargar_saldo(
+        tarjeta=tarjeta,
+        monto=Decimal("5000"),
+        cliente_origen=cliente,
+        responsable=None,
+    )
+    tarjeta.refresh_from_db()
+    return tarjeta
 
 
 @pytest.fixture
-def tarjeta_activa(db, hijo):
+def tarjeta_activa(db, hijo, cliente):
     from apps.core.models import Tarjeta
-    return Tarjeta.objects.create(
+    from apps.core.services import TarjetaService
+    tarjeta = Tarjeta.objects.create(
         nro_tarjeta="TC_ACT01",
         hijo=hijo,
-        saldo_actual=Decimal("20000"),
+        saldo_actual=Decimal("0"),
         estado=Tarjeta.Estado.ACTIVA,
     )
+    TarjetaService.cargar_saldo(
+        tarjeta=tarjeta,
+        monto=Decimal("20000"),
+        cliente_origen=cliente,
+        responsable=None,
+    )
+    tarjeta.refresh_from_db()
+    return tarjeta
 
 
 # ─── Saldo disponible con crédito ─────────────────────────────────────────────
@@ -122,7 +144,8 @@ class TestCadenaMovimientos:
         movimientos = list(
             MovimientoTarjeta.objects.filter(tarjeta=tarjeta_activa).order_by("id")
         )
-        assert len(movimientos) == 3
+        # 1 RECARGA del fixture (saldo inicial 20k) + 3 del test = 4 total
+        assert len(movimientos) == 4
         # El saldo_anterior de cada mov = saldo_resultante del anterior
         for i in range(1, len(movimientos)):
             assert movimientos[i].saldo_anterior == movimientos[i - 1].saldo_resultante

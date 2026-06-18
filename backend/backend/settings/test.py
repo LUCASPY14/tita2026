@@ -35,6 +35,14 @@ PASSWORD_HASHERS = [
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
+# DummyCache: los throttles de DRF usan el caché para contar requests;
+# con DummyCache nunca se acumula estado entre tests → sin falsos 429.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+    }
+}
+
 BANCARD_PUBLIC_KEY = "test_public_key_xxx"
 BANCARD_PRIVATE_KEY = "test_private_key_xxx"
 

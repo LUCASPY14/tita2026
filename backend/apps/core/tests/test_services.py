@@ -18,15 +18,24 @@ def hijo(db, cliente):
 
 
 @pytest.fixture
-def tarjeta_activa(db, hijo):
+def tarjeta_activa(db, hijo, cliente):
     from apps.core.models import Tarjeta
-    return Tarjeta.objects.create(
+    from apps.core.services import TarjetaService
+    tarjeta = Tarjeta.objects.create(
         nro_tarjeta="T001",
         hijo=hijo,
-        saldo_actual=Decimal("10000"),
+        saldo_actual=Decimal("0"),
         limite_credito=Decimal("0"),
         estado=Tarjeta.Estado.ACTIVA,
     )
+    TarjetaService.cargar_saldo(
+        tarjeta=tarjeta,
+        monto=Decimal("10000"),
+        cliente_origen=cliente,
+        responsable=None,
+    )
+    tarjeta.refresh_from_db()
+    return tarjeta
 
 
 @pytest.fixture

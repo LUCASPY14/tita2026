@@ -34,6 +34,7 @@ def api_cliente_web(api_client, db):
 def hijo_con_tarjeta(db, cliente):
     from apps.clientes.models import Hijo
     from apps.core.models import Tarjeta
+    from apps.core.services import TarjetaService
     hijo = Hijo.objects.create(
         nombre="Ana",
         apellido="García",
@@ -43,9 +44,14 @@ def hijo_con_tarjeta(db, cliente):
     tarjeta = Tarjeta.objects.create(
         nro_tarjeta="BANCARD001",
         hijo=hijo,
-        saldo_actual=Decimal("50000"),
+        saldo_actual=Decimal("0"),
         estado=Tarjeta.Estado.ACTIVA,
     )
+    TarjetaService.cargar_saldo(
+        tarjeta=tarjeta, monto=Decimal("50000"),
+        cliente_origen=cliente, responsable=None,
+    )
+    tarjeta.refresh_from_db()
     return hijo, tarjeta
 
 

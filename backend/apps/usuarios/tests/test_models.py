@@ -137,8 +137,10 @@ class TestModelosStr:
 
     def test_sesion_activa_str(self, db, usuario_admin):
         from apps.usuarios.models import SesionActiva
+        # ip_address requerido: el trigger fn_update_patron_acceso lo usa en INSERT
         s = SesionActiva.objects.create(
-            usuario=usuario_admin, session_key="abc123", activa=True
+            usuario=usuario_admin, session_key="abc123", activa=True,
+            ip_address="127.0.0.1",
         )
         assert "admin@test.com" in str(s)
 

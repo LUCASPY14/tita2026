@@ -20,14 +20,21 @@ def hijo(db, cliente):
 
 
 @pytest.fixture
-def tarjeta(db, hijo):
+def tarjeta(db, hijo, cliente):
     from apps.core.models import Tarjeta
-    return Tarjeta.objects.create(
+    from apps.core.services import TarjetaService
+    t = Tarjeta.objects.create(
         nro_tarjeta="CC-001",
         hijo=hijo,
-        saldo_actual=Decimal("20000"),
+        saldo_actual=Decimal("0"),
         estado=Tarjeta.Estado.ACTIVA,
     )
+    TarjetaService.cargar_saldo(
+        tarjeta=t, monto=Decimal("20000"),
+        cliente_origen=cliente, responsable=None,
+    )
+    t.refresh_from_db()
+    return t
 
 
 @pytest.fixture
@@ -116,8 +123,10 @@ class TestConfirmarCarga:
         saldo_antes = tarjeta.saldo_actual
         TarjetaService.confirmar_carga(carga=carga_pendiente, responsable=usuario_cajero)
 
+        # Filtrar por carga específica para no colisionar con el RECARGA del fixture
         mov = MovimientoTarjeta.objects.get(
-            tarjeta=tarjeta, tipo=MovimientoTarjeta.Tipo.RECARGA
+            tarjeta=tarjeta, tipo=MovimientoTarjeta.Tipo.RECARGA,
+            carga=carga_pendiente,
         )
         assert mov.saldo_anterior == saldo_antes
         assert mov.saldo_resultante == saldo_antes + Decimal("30000")

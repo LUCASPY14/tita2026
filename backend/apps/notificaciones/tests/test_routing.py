@@ -1,12 +1,13 @@
 """Tests for apps.notificaciones.routing — WebSocket URL configuration."""
 
 
-def test_websocket_urlpatterns_has_one_entry():
+def test_websocket_urlpatterns_count():
     from apps.notificaciones.routing import websocket_urlpatterns
-    assert len(websocket_urlpatterns) == 1
+    # notificaciones + dashboard
+    assert len(websocket_urlpatterns) == 2
 
 
-def test_websocket_urlpattern_callback_is_callable():
+def test_websocket_urlpattern_callbacks_are_callable():
     from apps.notificaciones.routing import websocket_urlpatterns
-    pattern = websocket_urlpatterns[0]
-    assert callable(pattern.callback)
+    for pattern in websocket_urlpatterns:
+        assert callable(pattern.callback)
