@@ -51,7 +51,7 @@ from .services import TarjetaService
 
 
 class TarjetaViewSet(viewsets.ModelViewSet):
-    queryset = Tarjeta.objects.select_related("hijo").all()
+    queryset = Tarjeta.objects.select_related("hijo__grado").all()
     serializer_class = TarjetaSerializer
     permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
