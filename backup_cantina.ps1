@@ -4,19 +4,26 @@
 #
 # Para registrar la tarea:
 #   schtasks /Create /TN "Backup Cantina" /TR "powershell -File C:\backups\backup_cantina.ps1" /SC DAILY /ST 02:00 /RU SYSTEM
+#
+# Cifrado GPG (opcional):
+#   .\backup_cantina.ps1 -GpgRecipient "admin@cantina.edu.py"
+#   Requiere: gpg instalado y la clave pública del destinatario importada.
+#   El .dump se cifra y el original se elimina; sólo queda el .dump.gpg.
+#   Para descifrar: gpg --output backup.dump --decrypt backup.dump.gpg
 
 param(
-    [string]$DbName = "cantina_tita",
-    [string]$PgUser   = "postgres",
-    [string]$PgHost   = "localhost",
-    [string]$PgPort   = "5432",
-    [string]$PgBin    = "C:\Program Files\PostgreSQL\16\bin",
-    [string]$BackupDir = "C:\backups\cantina",
-    [int]   $Keep     = 30
+    [string]$DbName      = "cantina_tita",
+    [string]$PgUser      = "postgres",
+    [string]$PgHost      = "localhost",
+    [string]$PgPort      = "5432",
+    [string]$PgBin       = "C:\Program Files\PostgreSQL\16\bin",
+    [string]$BackupDir   = "C:\backups\cantina",
+    [int]   $Keep        = 30,
+    [string]$GpgRecipient = ""   # email o key-ID GPG; vacío = sin cifrado
 )
 
-$DIR     = "C:\backups\cantina"
-$KEEP    = 30            # días a conservar
+$DIR     = $BackupDir
+$KEEP    = $Keep
 $FECHA   = Get-Date -Format "yyyyMMdd_HHmm"
 $ARCHIVO = "$DIR\cantina_$FECHA.dump"
 $LOG     = "$DIR\backup_$FECHA.log"
@@ -48,8 +55,36 @@ try {
     $size = [math]::Round((Get-Item $ARCHIVO).Length / 1MB, 2)
     "$(Get-Date) | OK | $ARCHIVO | $size MB" | Out-File $LOG
 
-    # Rotación: eliminar backups con más de $KEEP días
-    Get-ChildItem "$DIR\cantina_*.dump" |
+    # ── Cifrado GPG (opcional) ───────────────────────────────────────────────
+    if ($GpgRecipient) {
+        $gpgCmd = $null
+        try { $gpgCmd = Get-Command gpg -ErrorAction Stop } catch {}
+
+        if (-not $gpgCmd) {
+            "$(Get-Date) | WARNING | GPG no disponible — backup queda sin cifrar" | Add-Content $LOG
+            Write-Warning "gpg no está instalado. El backup quedó sin cifrar: $ARCHIVO"
+        } else {
+            $archivoGpg = "$ARCHIVO.gpg"
+            & gpg --batch --yes --trust-model always `
+                  --recipient $GpgRecipient `
+                  --output $archivoGpg `
+                  --encrypt $ARCHIVO
+
+            if ($LASTEXITCODE -eq 0) {
+                Remove-Item $ARCHIVO -Force
+                $ARCHIVO = $archivoGpg
+                $sizeGpg = [math]::Round((Get-Item $ARCHIVO).Length / 1MB, 2)
+                "$(Get-Date) | GPG OK | $ARCHIVO | $sizeGpg MB" | Add-Content $LOG
+                Write-Host "Backup cifrado con GPG: $ARCHIVO ($sizeGpg MB)"
+            } else {
+                "$(Get-Date) | WARNING | gpg falló — backup sin cifrar: $ARCHIVO" | Add-Content $LOG
+                Write-Warning "Cifrado GPG falló (exit $LASTEXITCODE). El backup quedó sin cifrar."
+            }
+        }
+    }
+
+    # Rotación: eliminar backups con más de $KEEP días (.dump y .dump.gpg)
+    Get-ChildItem "$DIR\cantina_*.dump", "$DIR\cantina_*.dump.gpg" -ErrorAction SilentlyContinue |
         Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$KEEP) } |
         Remove-Item -Force
 
