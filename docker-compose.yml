@@ -84,7 +84,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A backend worker -l INFO --concurrency=2
+    command: celery -A backend worker -l INFO --concurrency=${CELERY_CONCURRENCY:-4}
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
       DB_HOST: host.docker.internal

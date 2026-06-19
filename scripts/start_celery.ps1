@@ -3,7 +3,9 @@
 # Prerequisito: Redis corriendo (.\scripts\start_redis.ps1)
 
 param(
-    [string]$Concurrency = "2",
+    # 4 workers: I/O-bound tasks (DB + email) no saturan CPU.
+    # Con 14 tareas periódicas y dos cada 15 min en paralelo, 2 era el mínimo exacto.
+    [string]$Concurrency = "4",
     [string]$LogLevel = "info"
 )
 
