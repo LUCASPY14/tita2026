@@ -12,14 +12,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
-      // Solo se miden los archivos que tienen unit tests. Las páginas complejas
-      // (ModoRecreo, Almuerzos, Cajas, etc.) están cubiertas por E2E (Playwright).
+      // Solo se miden los archivos que tienen unit tests dedicados.
+      // Las páginas (Login, CargaSaldo, portal/*) están cubiertas por E2E Playwright.
       include: [
         'src/components/ui/**',
         'src/services/**',
         'src/store/**',
-        'src/pages/Login.tsx',
-        'src/pages/CargaSaldo.tsx',
       ],
       exclude: [
         'src/test/**',
@@ -33,10 +31,9 @@ export default defineConfig({
         lines:      75,
         statements: 75,
         branches:   70,
-        // Las páginas complejas (CargaSaldo, Login) tienen muchos handlers no
-        // alcanzables por unit tests; cubiertos por E2E. Umbral ajustado al
-        // nivel real del suite actual.
-        functions:  60,
+        // Servicios (cajas, clientes, ventas, tarjetas) tienen unit tests completos.
+        // Handlers de páginas complejas (CargaSaldo, Login) cubiertos por E2E.
+        functions:  75,
       },
     },
   },
