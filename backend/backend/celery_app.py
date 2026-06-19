@@ -100,10 +100,24 @@ app.conf.beat_schedule = {
         "task": "apps.almuerzos.tasks.alertar_cuentas_vencidas",
         "schedule": crontab(hour=8, minute=0, day_of_month=10),  # Día 10 de cada mes 08:00
     },
+    # ── Usuarios / Auditoría ──────────────────────────────────────────
+    "limpiar-audit-logs": {
+        "task": "apps.usuarios.tasks.limpiar_audit_logs",
+        "schedule": crontab(hour=1, minute=0, day_of_month=1),  # Día 1 de cada mes 01:00
+    },
     # ── Contabilidad ──────────────────────────────────────────────────
     "refrescar-mv-balance-cliente": {
         "task": "apps.contabilidad.tasks.refrescar_mv_balance_cliente",
         "schedule": crontab(minute="*/15"),  # Cada 15 minutos
+    },
+    # ── Compras ───────────────────────────────────────────────────────
+    "alertar-ordenes-compra-pendientes": {
+        "task": "apps.compras.tasks.alertar_ordenes_compra_pendientes",
+        "schedule": crontab(hour=9, minute=30),   # Todos los días 09:30
+    },
+    "alertar-compras-pendientes-pago": {
+        "task": "apps.compras.tasks.alertar_compras_pendientes_pago",
+        "schedule": crontab(hour=10, minute=0),   # Todos los días 10:00
     },
 
 }
