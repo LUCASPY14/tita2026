@@ -11,8 +11,17 @@ if (SENTRY_DSN) {
     dsn: SENTRY_DSN,
     environment: import.meta.env.MODE,
     release: import.meta.env.VITE_GIT_COMMIT_SHA as string | undefined,
+    integrations: [Sentry.browserTracingIntegration()],
     tracesSampleRate: 0.1,
     replaysOnErrorSampleRate: 0,
+    beforeSend(event) {
+      const err = event.exception?.values?.[0]
+      // Petición cancelada por AbortController (navegación rápida, etc.)
+      if (err?.type === 'AbortError') return null
+      // 401 de token caducado — flujo esperado, no es un bug
+      if (err?.value?.includes('status code 401')) return null
+      return event
+    },
   })
 }
 
