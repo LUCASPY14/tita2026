@@ -271,6 +271,30 @@ test.describe('Portal — Carga de Saldo', () => {
     await page.goto('/portal/carga-saldo?estado=rechazado')
     await expect(page.getByText('Pago rechazado')).toBeVisible({ timeout: 5000 })
   })
+
+  test('flujo completo — Ir a pagar llama a Bancard y procesa el retorno con aprobado', async ({ page }) => {
+    // El beforeEach ya cargó /mi-hijo/ con un hijo (Lucas García, tarjeta 12345678, saldo 85000).
+    // Al ser el único hijo se auto-selecciona. Mock del endpoint de iniciación Bancard:
+    await page.route(/\/api\/v1\/core\/bancard\/iniciar/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          redirect_url: 'http://localhost:5173/portal/carga-saldo?estado=aprobado&monto=100000',
+        }),
+      })
+    )
+
+    await page.getByRole('button', { name: '100k' }).click()
+    await expect(page.getByRole('button', { name: /Ir a pagar/ })).toBeEnabled({ timeout: 3000 })
+    await page.getByRole('button', { name: /Ir a pagar/ }).click()
+
+    // window.location.href redirige a la URL de retorno de Bancard
+    await expect(page).toHaveURL(/estado=aprobado/, { timeout: 8000 })
+    await expect(page.getByText('¡Pago aprobado!')).toBeVisible()
+    await expect(page.getByText(/100\.000/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Realizar otra carga' })).toBeVisible()
+  })
 })
 
 // ── Portal Historial ──────────────────────────────────────────────────────────
