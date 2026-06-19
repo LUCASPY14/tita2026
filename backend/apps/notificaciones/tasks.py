@@ -84,6 +84,9 @@ def limpiar_notificaciones_antiguas():
     return {"eliminadas": eliminadas}
 
 
+MAX_EMAIL_INTENTOS = 3
+
+
 @shared_task(
     name="apps.notificaciones.tasks.enviar_emails_pendientes",
     autoretry_for=(Exception,),
@@ -95,8 +98,12 @@ def limpiar_notificaciones_antiguas():
 def enviar_emails_pendientes():
     """
     Procesa Notificaciones con destino=EMAIL aún no leídas y envía el email.
-    Marca como leída cada una tras el intento (exitoso o fallido con error registrado).
-    Se ejecuta cada 15 minutos.
+
+    Retry logic:
+      - Éxito:   marca leida=True.
+      - Fallo:   incrementa email_intentos; NO marca leida para reintentar
+                 en la próxima ejecución (cada 15 min).
+      - Tras MAX_EMAIL_INTENTOS fallos: marca leida=True y loguea warning.
     """
     from apps.notificaciones.models import Notificacion
     from apps.notificaciones.services import EmailService
@@ -108,7 +115,20 @@ def enviar_emails_pendientes():
 
     enviados = 0
     errores = 0
+    descartados = 0
+
     for notif in pendientes:
+        if notif.email_intentos >= MAX_EMAIL_INTENTOS:
+            logger.warning(
+                "enviar_emails_pendientes: notif #%d descartada tras %d intentos — %s",
+                notif.pk, notif.email_intentos, notif.titulo,
+            )
+            notif.leida = True
+            notif.fecha_lectura = timezone.now()
+            notif.save(update_fields=["leida", "fecha_lectura"])
+            descartados += 1
+            continue
+
         try:
             if not notif.usuario.email:
                 raise ValueError("El usuario no tiene email registrado.")
@@ -118,17 +138,21 @@ def enviar_emails_pendientes():
                 asunto=notif.titulo,
                 cuerpo=notif.mensaje,
             )
+            notif.leida = True
+            notif.fecha_lectura = timezone.now()
+            notif.save(update_fields=["leida", "fecha_lectura", "email_intentos"])
             enviados += 1
         except Exception as exc:
-            logger.error("Error enviando email notif #%d: %s", notif.pk, exc)
+            notif.email_intentos += 1
+            notif.save(update_fields=["email_intentos"])
+            logger.error(
+                "Error enviando email notif #%d (intento %d/%d): %s",
+                notif.pk, notif.email_intentos, MAX_EMAIL_INTENTOS, exc,
+            )
             errores += 1
-        # Marcar leída independientemente del resultado para no reintentar indefinidamente
-        notif.leida = True
-        notif.fecha_lectura = timezone.now()
-        notif.save(update_fields=["leida", "fecha_lectura"])
 
     logger.info(
-        "enviar_emails_pendientes: %d enviados, %d errores",
-        enviados, errores,
+        "enviar_emails_pendientes: %d enviados, %d errores, %d descartados",
+        enviados, errores, descartados,
     )
-    return {"enviados": enviados, "errores": errores}
+    return {"enviados": enviados, "errores": errores, "descartados": descartados}

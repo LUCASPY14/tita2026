@@ -66,6 +66,10 @@ class Notificacion(models.Model):
     fecha_envio = models.DateTimeField(default=timezone.now)
     fecha_lectura = models.DateTimeField(blank=True, null=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    email_intentos = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Intentos de envío por email realizados (máx. 3 antes de descartar).",
+    )
 
     class Meta:
         verbose_name = "Notificación"

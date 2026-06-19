@@ -206,7 +206,7 @@ class TestEnviarEmailsPendientes:
     def test_sin_pendientes_retorna_cero(self, db):
         from apps.notificaciones.tasks import enviar_emails_pendientes
         result = enviar_emails_pendientes()
-        assert result == {"enviados": 0, "errores": 0}
+        assert result == {"enviados": 0, "errores": 0, "descartados": 0}
 
     def test_notif_email_enviada_y_marcada_leida(self, notif_email_pendiente):
         from apps.notificaciones.tasks import enviar_emails_pendientes
@@ -219,7 +219,8 @@ class TestEnviarEmailsPendientes:
         assert notif_email_pendiente.leida is True
         assert mock_send.called
 
-    def test_error_en_envio_incrementa_errores_y_marca_leida(self, notif_email_pendiente):
+    def test_error_en_envio_incrementa_intentos_no_marca_leida(self, notif_email_pendiente):
+        # Fallo: queda leida=False para reintentar; solo se incrementa email_intentos
         from apps.notificaciones.tasks import enviar_emails_pendientes
         with patch("apps.notificaciones.services.EmailService.enviar_simple") as mock_send:
             mock_send.side_effect = Exception("SMTP failure")
@@ -227,7 +228,8 @@ class TestEnviarEmailsPendientes:
         assert result["errores"] == 1
         assert result["enviados"] == 0
         notif_email_pendiente.refresh_from_db()
-        assert notif_email_pendiente.leida is True
+        assert notif_email_pendiente.leida is False
+        assert notif_email_pendiente.email_intentos == 1
 
     def test_notif_sin_email_usuario_cuenta_como_error(self, db, usuario_cajero):
         from apps.notificaciones.models import Notificacion
