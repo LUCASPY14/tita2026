@@ -204,7 +204,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "common.authentication.SesionActivaJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "common.permissions.IsStaffUser",
@@ -242,10 +242,43 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Cantina Tita API",
-    "DESCRIPTION": "API REST para el sistema de gestión de Cantina Tita",
+    "DESCRIPTION": (
+        "API REST para el sistema de gestión escolar Cantina Tita.\n\n"
+        "**Autenticación:** JWT Bearer — obtener token en `/api/token/`, "
+        "incluir como `Authorization: Bearer <access>`."
+    ),
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
+    # Seguridad: JWT Bearer para todos los endpoints por defecto
+    "SECURITY": [{"jwtAuth": []}],
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "jwtAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+            }
+        }
+    },
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+        "docExpansion": "none",
+        "filter": True,
+        "tryItOutEnabled": True,
+    },
+    "TAGS": [
+        {"name": "auth",          "description": "Autenticación y sesiones"},
+        {"name": "core",          "description": "Tarjetas, saldos, medios de pago"},
+        {"name": "ventas",        "description": "POS y ventas"},
+        {"name": "clientes",      "description": "Clientes y alumnos"},
+        {"name": "productos",     "description": "Catálogo de productos"},
+        {"name": "almuerzos",     "description": "Planes y suscripciones de almuerzo"},
+        {"name": "inventario",    "description": "Stock y movimientos"},
+        {"name": "contabilidad",  "description": "Cajas y cierres"},
+        {"name": "notificaciones","description": "Notificaciones push y email"},
+        {"name": "usuarios",      "description": "Usuarios y roles"},
+    ],
 }
 
 # ==============================================================================
@@ -292,6 +325,9 @@ CORS_ALLOW_CREDENTIALS = True
 # SIMPLE JWT
 # ==============================================================================
 
+# Inactividad máxima antes de expirar la sesión (validado en SesionActivaJWTAuthentication)
+SESSION_IDLE_TIMEOUT_HOURS = 8
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
@@ -331,6 +367,9 @@ LOGGING = {
             "format": "[{levelname}] {asctime} | rid={request_id} | {name} | {module}:{lineno} | {message}",
             "style": "{",
             "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+        "json": {
+            "()": "common.logging.JsonFormatter",
         },
     },
     "handlers": {
