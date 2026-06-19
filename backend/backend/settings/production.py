@@ -141,6 +141,9 @@ LOGGING = {
             "format": "{levelname} rid={request_id} {message}",
             "style": "{",
         },
+        "json": {
+            "()": "common.logging.JsonFormatter",
+        },
     },
     "handlers": {
         "console": {
@@ -255,6 +258,26 @@ if True:  # siempre inicializar cuando SENTRY_DSN está presente
     from sentry_sdk.integrations.redis import RedisIntegration
     import logging as _logging
 
+    def _sentry_before_send(event: dict, hint: dict) -> "dict | None":
+        # BrokenPipe / ConnectionReset — el cliente cortó la conexión; no es un bug
+        exc_info = hint.get("exc_info")
+        if exc_info:
+            exc_type = exc_info[0]
+            if exc_type is not None and issubclass(exc_type, (BrokenPipeError, ConnectionResetError)):
+                return None
+
+        # Silenciar eventos del health-check — ruido de uptime monitors
+        url_path = event.get("request", {}).get("url", "")
+        if "/api/health/" in url_path:
+            return None
+
+        # Añadir tags de contexto de negocio para facilitar búsqueda en Sentry
+        event.setdefault("tags", {})
+        event["tags"]["app"] = "cantina-tita"
+        event["tags"]["component"] = "backend"
+
+        return event
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
@@ -282,7 +305,7 @@ if True:  # siempre inicializar cuando SENTRY_DSN está presente
         send_default_pii=False,
         attach_stacktrace=True,
         max_breadcrumbs=50,
-        before_send=lambda event, hint: event,  # hook disponible para filtrar eventos
+        before_send=_sentry_before_send,
     )
 
 # ==========================================
@@ -336,5 +359,14 @@ _required_env_vars = ["SECRET_KEY", "ALLOWED_HOSTS", "DB_HOST", "DB_NAME"]
 for var in _required_env_vars:
     if not os.environ.get(var):
         raise ValueError(f"Environment variable {var} is required in production!")
+
+# ==========================================
+# LOGGING ESTRUCTURADO (JSON para ELK/Sentry)
+# En producción el console handler emite JSON — Docker/Filebeat lo recolecta.
+# ==========================================
+
+LOGGING["handlers"]["console"]["formatter"] = "json"
+LOGGING["handlers"]["file"]["formatter"]    = "json"
+LOGGING["handlers"]["error_file"]["formatter"] = "json"
 
 # Production settings loaded successfully
