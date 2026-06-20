@@ -6,6 +6,7 @@ import {
   ArrowUp, ArrowDown, X, Wallet,
 } from 'lucide-react'
 import tarjetasService from '../services/tarjetas'
+import { METODOS_PAGO as METODOS } from '../constants/mediosPago'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -73,13 +74,6 @@ interface CargaReciente {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const METODOS = [
-  { value: 'EFECTIVO',    label: 'Efectivo',             autoconfirma: true  },
-  { value: 'POS DEBITO',  label: 'POS Débito',           autoconfirma: true  },
-  { value: 'POS CREDITO', label: 'POS Crédito',          autoconfirma: true  },
-  { value: 'TRANSFERENCIA', label: 'Transferencia bancaria', autoconfirma: false },
-]
 
 const MONTOS_RAPIDOS = [10000, 20000, 50000, 100000, 200000]
 

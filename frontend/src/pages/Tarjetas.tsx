@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import tarjetasService from '../services/tarjetas'
 import clientesService from '../services/clientes'
+import { METODO_PAGO_LABEL } from '../constants/mediosPago'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -139,13 +140,6 @@ const ESTADO_CARGA_COLOR: Record<string, BadgeColor> = {
   CONFIRMADA: 'green',
   PENDIENTE: 'yellow',
   RECHAZADA: 'red',
-}
-
-const METODO_PAGO_LABEL: Record<string, string> = {
-  EFECTIVO: 'Efectivo',
-  'POS DEBITO': 'POS Débito',
-  'POS CREDITO': 'POS Crédito',
-  TRANSFERENCIA: 'Transferencia',
 }
 
 const FORM_INITIAL: TarjetaForm = {
