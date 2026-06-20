@@ -1,7 +1,8 @@
-"""Tests para apps.almuerzos.tasks — generar_cuentas_mensuales, alertar_cuentas_vencidas."""
+"""Tests para apps.almuerzos.tasks — cerrar_cuentas_mes_anterior, generar_cuentas_mensuales, alertar_cuentas_vencidas."""
 import pytest
 from decimal import Decimal
 from datetime import date, timedelta
+from unittest.mock import patch
 
 
 @pytest.fixture
@@ -161,3 +162,179 @@ class TestAlertarCuentasVencidas:
         )
         result = alertar_cuentas_vencidas()
         assert result["notificaciones_creadas"] == 0
+
+
+# ── cerrar_cuentas_mes_anterior ───────────────────────────────────────────────
+
+def _mes_anterior():
+    hoy = date.today()
+    mes_ant = hoy.month - 1 if hoy.month > 1 else 12
+    anio_ant = hoy.year if hoy.month > 1 else hoy.year - 1
+    return anio_ant, mes_ant
+
+
+@pytest.mark.django_db
+class TestCerrarCuentasMesAnterior:
+
+    def test_sin_cuentas_retorna_ceros(self, db):
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        result = cerrar_cuentas_mes_anterior()
+        assert result["actualizadas"] == 0
+        assert result["anuladas"] == 0
+
+    def test_retorna_anio_mes_del_mes_anterior(self, db):
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        anio_ant, mes_ant = _mes_anterior()
+        result = cerrar_cuentas_mes_anterior()
+        assert result["mes"] == mes_ant
+        assert result["anio"] == anio_ant
+
+    def test_anula_cuenta_sin_consumos(self, hijo_t):
+        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        anio_ant, mes_ant = _mes_anterior()
+        cuenta = CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
+            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
+        )
+        result = cerrar_cuentas_mes_anterior()
+        cuenta.refresh_from_db()
+        assert cuenta.estado == CuentaAlmuerzoMensual.Estado.ANULADO
+        assert result["anuladas"] == 1
+        assert result["actualizadas"] == 0
+
+    def test_actualiza_cuenta_con_registros_de_consumo(self, hijo_t, usuario_admin):
+        """
+        El task encuentra registros ya_cobrado=True/marcado_en_cuenta=False
+        y los procesa (actualizadas=1). El trigger PostgreSQL de la migration 0011
+        recalcula cantidad_almuerzos contando solo ya_cobrado=False, por lo que
+        no se verifica cantidad_almuerzos vía refresh_from_db — se verifica
+        el marcado de los registros y el return del task.
+        """
+        from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        anio_ant, mes_ant = _mes_anterior()
+        fecha_consumo = date(anio_ant, mes_ant, 1)
+        CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
+            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
+        )
+        registro = RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_t,
+            fecha_consumo=fecha_consumo,
+            costo_almuerzo=Decimal("15000"),
+            ya_cobrado=True,
+            marcado_en_cuenta=False,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            registrado_por=usuario_admin,
+        )
+        result = cerrar_cuentas_mes_anterior()
+        # El task procesó la cuenta (no la anuló porque hay 1 registro nuevo)
+        assert result["actualizadas"] == 1
+        assert result["anuladas"] == 0
+        # El registro quedó marcado como incluido en la cuenta
+        registro.refresh_from_db()
+        assert registro.marcado_en_cuenta is True
+
+    def test_registros_quedan_marcados_en_cuenta(self, hijo_t, usuario_admin):
+        from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        anio_ant, mes_ant = _mes_anterior()
+        fecha_consumo = date(anio_ant, mes_ant, 1)
+        CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
+            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
+        )
+        registro = RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_t,
+            fecha_consumo=fecha_consumo,
+            costo_almuerzo=Decimal("15000"),
+            ya_cobrado=True,
+            marcado_en_cuenta=False,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            registrado_por=usuario_admin,
+        )
+        cerrar_cuentas_mes_anterior()
+        registro.refresh_from_db()
+        assert registro.marcado_en_cuenta is True
+
+    def test_ignora_cuentas_ya_anuladas(self, hijo_t):
+        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        anio_ant, mes_ant = _mes_anterior()
+        CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
+            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+            estado=CuentaAlmuerzoMensual.Estado.ANULADO,
+        )
+        result = cerrar_cuentas_mes_anterior()
+        assert result["actualizadas"] == 0
+        assert result["anuladas"] == 0
+
+    def test_no_procesa_registros_ya_marcados(self, hijo_t, usuario_admin):
+        """
+        Solo los registros marcado_en_cuenta=False se incluyen en el cierre.
+        Con 1 registro ya marcado y 1 nuevo, el task cuenta solo el nuevo (actualizadas=1)
+        y no re-procesa el que ya estaba marcado.
+        """
+        from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        anio_ant, mes_ant = _mes_anterior()
+        fecha_consumo = date(anio_ant, mes_ant, 1)
+        CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
+            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
+        )
+        # Registro ya procesado anteriormente — no debe contarse de nuevo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_t,
+            fecha_consumo=fecha_consumo,
+            costo_almuerzo=Decimal("15000"),
+            ya_cobrado=True,
+            marcado_en_cuenta=True,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            registrado_por=usuario_admin,
+        )
+        # Registro nuevo — sí debe contarse
+        registro_nuevo = RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_t,
+            fecha_consumo=fecha_consumo,
+            costo_almuerzo=Decimal("15000"),
+            ya_cobrado=True,
+            marcado_en_cuenta=False,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            registrado_por=usuario_admin,
+        )
+        result = cerrar_cuentas_mes_anterior()
+        # Solo el registro nuevo se contó → actualizadas=1, no anulada
+        assert result["actualizadas"] == 1
+        assert result["anuladas"] == 0
+        registro_nuevo.refresh_from_db()
+        assert registro_nuevo.marcado_en_cuenta is True
+
+    @patch("apps.notificaciones.services.EmailService.enviar_simple")
+    def test_envia_email_al_admin_tras_cierre(self, mock_email, hijo_t):
+        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        anio_ant, mes_ant = _mes_anterior()
+        CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
+            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
+        )
+        with patch("django.conf.settings.ADMINS", [("Admin", "admin@test.com")]):
+            cerrar_cuentas_mes_anterior()
+        mock_email.assert_called_once()
+        kwargs = mock_email.call_args[1]
+        assert kwargs["destinatario_email"] == "admin@test.com"
+        assert "Cierre mensual" in kwargs["asunto"]
