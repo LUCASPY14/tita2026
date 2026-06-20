@@ -128,3 +128,136 @@ test.describe('Modo Recreo — flujo de venta con tarjeta', () => {
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
   })
 })
+
+// ── Fixtures comunes para los bloques de tests adicionales ─────────────────
+
+const TARJETA_MOCK = {
+  nro_tarjeta: 'T-001',
+  estado: 'ACTIVA',
+  saldo_actual: '100000',
+  saldo_disponible: '100000',
+  hijo_nombre: 'Juan Pérez',
+  hijo_grado: '3er Grado',
+  hijo_restricciones: [],
+  permite_saldo_negativo: false,
+  limite_credito: '0',
+  cliente_id: 1,
+}
+
+async function setupModoRecreo(page: import('@playwright/test').Page) {
+  await page.route(/\/api\/v1\/contabilidad\/cierres-caja/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CAJA_ABIERTA) })
+  )
+  await page.route(/\/api\/v1\/productos\/categorias/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: CATEGORIAS_MOCK, count: 2 }) })
+  )
+  await page.route(/\/api\/v1\/productos\/productos/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: PRODUCTOS_MOCK, count: 2 }) })
+  )
+}
+
+// ── Scan de tarjeta ────────────────────────────────────────────────────────
+
+test.describe('Modo Recreo — scan de tarjeta', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, CAJERO)
+    await setupModoRecreo(page)
+    await page.route(/\/api\/v1\/core\/tarjetas/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [TARJETA_MOCK], count: 1 }) })
+    )
+    await page.route(/\/api\/v1\/ventas\/ventas/, (route) =>
+      route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 99, monto_total: 5000, estado: 'COMPLETADA' }) })
+    )
+    await page.goto('/modo-recreo')
+    await expect(page.getByRole('button', { name: /Empanada/ }).first()).toBeVisible({ timeout: 8000 })
+  })
+
+  test('scan T-001 muestra nombre del alumno', async ({ page }) => {
+    const scanner = page.getByPlaceholder('Escanear tarjeta o código…')
+    await scanner.fill('T-001')
+    await scanner.press('Enter')
+    await expect(page.getByText('Juan Pérez')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('3er Grado')).toBeVisible()
+  })
+
+  test('flujo completo: scan → agregar producto → cobrar', async ({ page }) => {
+    const scanner = page.getByPlaceholder('Escanear tarjeta o código…')
+    await scanner.fill('T-001')
+    await scanner.press('Enter')
+    await expect(page.getByText('Juan Pérez')).toBeVisible({ timeout: 5000 })
+
+    await page.getByRole('button', { name: /Empanada/ }).first().click()
+    await expect(page.getByRole('listitem').filter({ hasText: 'Empanada' })).toBeVisible()
+
+    const cobrarBtn = page.getByRole('button', { name: /COBRAR/i })
+    await expect(cobrarBtn).toBeEnabled({ timeout: 3000 })
+    await cobrarBtn.click()
+
+    // Flash de éxito muestra el nombre del alumno
+    await expect(page.locator('p.text-5xl.font-black')).toContainText('Juan Pérez', { timeout: 5000 })
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible()
+  })
+
+  test('tarjeta no encontrada muestra toast de error', async ({ page }) => {
+    // Override LIFO: resultado vacío para cualquier tarjeta
+    await page.route(/\/api\/v1\/core\/tarjetas/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+    )
+    const scanner = page.getByPlaceholder('Escanear tarjeta o código…')
+    await scanner.fill('T-0000')
+    await scanner.press('Enter')
+    await expect(page.getByText('Tarjeta no encontrada')).toBeVisible({ timeout: 5000 })
+  })
+
+  test('scan de código de barras sin tarjeta previa muestra toast de error', async ({ page }) => {
+    const scanner = page.getByPlaceholder('Escanear tarjeta o código…')
+    await scanner.fill('7890000000001')  // código de barras numérico = producto
+    await scanner.press('Enter')
+    await expect(page.getByText('Escanee una tarjeta primero')).toBeVisible({ timeout: 5000 })
+  })
+})
+
+// ── Filtro por categoría ───────────────────────────────────────────────────
+
+test.describe('Modo Recreo — filtro por categoría', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, CAJERO)
+    await setupModoRecreo(page)
+    await page.goto('/modo-recreo')
+    await expect(page.getByRole('button', { name: /Empanada/ }).first()).toBeVisible({ timeout: 8000 })
+  })
+
+  test('filtrar por Comida oculta productos de Bebida', async ({ page }) => {
+    await page.getByRole('button', { name: 'Comida' }).click()
+    await expect(page.getByRole('button', { name: /Empanada/ }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: /Gaseosa/ })).not.toBeVisible()
+  })
+
+  test('volver a Todos muestra todos los productos', async ({ page }) => {
+    await page.getByRole('button', { name: 'Comida' }).click()
+    await expect(page.getByRole('button', { name: /Gaseosa/ })).not.toBeVisible()
+    await page.getByRole('button', { name: 'Todos' }).click()
+    await expect(page.getByRole('button', { name: /Gaseosa/ }).first()).toBeVisible()
+  })
+})
+
+// ── Sin caja abierta ───────────────────────────────────────────────────────
+
+test.describe('Modo Recreo — sin caja abierta', () => {
+  test('muestra pantalla de bloqueo cuando no hay caja', async ({ page }) => {
+    await loginAs(page, CAJERO)
+    // 404 → catch → setCierreCaja(false) → pantalla de bloqueo
+    await page.route(/\/api\/v1\/contabilidad\/cierres-caja/, (route) =>
+      route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ detail: 'No encontrado' }) })
+    )
+    await page.route(/\/api\/v1\/productos\/categorias/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+    )
+    await page.route(/\/api\/v1\/productos\/productos/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+    )
+    await page.goto('/modo-recreo')
+    await expect(page.getByRole('heading', { name: 'Caja no iniciada' })).toBeVisible({ timeout: 8000 })
+    await expect(page.getByRole('button', { name: 'Ir a Cajas' })).toBeVisible()
+  })
+})

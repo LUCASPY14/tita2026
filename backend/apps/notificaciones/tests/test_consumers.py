@@ -121,3 +121,76 @@ class TestNotificacionNueva:
         event = {"data": {"tipo": "SALDO_BAJO", "mensaje": "test"}}
         asyncio.run(consumer.notificacion_nueva(event))
         consumer.send.assert_called_once_with(text_data=json.dumps(event["data"]))
+
+
+# ── DashboardConsumer ──────────────────────────────────────────────────────────
+
+def _make_dashboard_consumer(query: str = ""):
+    from apps.notificaciones.consumers import DashboardConsumer
+    consumer = DashboardConsumer()
+    consumer.scope = {"query_string": query.encode()}
+    consumer.channel_name = "test_dash_channel"
+    consumer.close = AsyncMock()
+    consumer.accept = AsyncMock()
+    consumer.send = AsyncMock()
+    consumer.channel_layer = MagicMock()
+    consumer.channel_layer.group_add = AsyncMock()
+    consumer.channel_layer.group_discard = AsyncMock()
+    return consumer
+
+
+class TestDashboardConsumer:
+
+    def test_token_invalido_cierra_con_4001(self):
+        consumer = _make_dashboard_consumer(query="token=bad_token")
+        asyncio.run(consumer.connect())
+        consumer.close.assert_called_once_with(code=4001)
+        consumer.accept.assert_not_called()
+
+    def test_token_valido_acepta_y_une_al_grupo_dashboard_kpi(self):
+        consumer = _make_dashboard_consumer(query="token=good")
+        mock_user = MagicMock()
+        with patch.object(consumer, "_authenticate", new=AsyncMock(return_value=mock_user)):
+            with patch.object(consumer, "_get_kpis", new=AsyncMock(return_value={})):
+                asyncio.run(consumer.connect())
+        consumer.accept.assert_called_once()
+        consumer.channel_layer.group_add.assert_called_once_with("dashboard_kpi", "test_dash_channel")
+
+    def test_send_kpi_snapshot_on_connect(self):
+        import json
+        consumer = _make_dashboard_consumer(query="token=good")
+        mock_user = MagicMock()
+        kpis = {"ventasHoy": 5, "montoHoy": 25000, "clientes": 10, "productos": 3, "stockBajo": 0, "cajasAbiertas": 1}
+        with patch.object(consumer, "_authenticate", new=AsyncMock(return_value=mock_user)):
+            with patch.object(consumer, "_get_kpis", new=AsyncMock(return_value=kpis)):
+                asyncio.run(consumer.connect())
+        consumer.send.assert_called_once()
+        payload = json.loads(consumer.send.call_args[1]["text_data"])
+        assert payload["type"] == "kpi_snapshot"
+        assert payload["ventasHoy"] == 5
+        assert payload["montoHoy"] == 25000
+
+    def test_disconnect_llama_group_discard(self):
+        consumer = _make_dashboard_consumer()
+        asyncio.run(consumer.disconnect(1000))
+        consumer.channel_layer.group_discard.assert_called_once_with("dashboard_kpi", "test_dash_channel")
+
+    def test_kpi_update_envia_data(self):
+        import json
+        consumer = _make_dashboard_consumer()
+        event = {"data": {"ventasHoy": 10, "montoHoy": 50000}}
+        asyncio.run(consumer.kpi_update(event))
+        consumer.send.assert_called_once_with(text_data=json.dumps(event["data"]))
+
+    @pytest.mark.django_db
+    def test_get_kpis_retorna_estructura_correcta(self):
+        consumer = _make_dashboard_consumer()
+        result = asyncio.run(consumer._get_kpis())
+        assert "ventasHoy" in result
+        assert "montoHoy" in result
+        assert "clientes" in result
+        assert "productos" in result
+        assert "stockBajo" in result
+        assert "cajasAbiertas" in result
+        assert isinstance(result["ventasHoy"], int)
+        assert isinstance(result["montoHoy"], int)

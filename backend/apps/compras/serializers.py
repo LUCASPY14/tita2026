@@ -107,7 +107,7 @@ class DetalleOrdenCompraWriteSerializer(serializers.Serializer):
 
 class OrdenCompraSerializer(serializers.ModelSerializer):
     proveedor_nombre = serializers.CharField(source="proveedor.razon_social", read_only=True)
-    creado_por_nombre = serializers.CharField(source="creado_por.get_full_name", read_only=True)
+    creado_por_nombre = serializers.SerializerMethodField(read_only=True)
     aprobado_por_nombre = serializers.SerializerMethodField(read_only=True)
     detalles = DetalleOrdenCompraSerializer(many=True, read_only=True)
     items = DetalleOrdenCompraWriteSerializer(many=True, write_only=True, required=True)
@@ -121,10 +121,15 @@ class OrdenCompraSerializer(serializers.ModelSerializer):
             "fecha_creacion", "fecha_actualizacion",
         ]
 
+    @staticmethod
+    def _nombre_usuario(usuario) -> str:
+        return f"{usuario.nombre} {usuario.apellido}".strip() or usuario.email
+
+    def get_creado_por_nombre(self, obj):
+        return self._nombre_usuario(obj.creado_por) if obj.creado_por else None
+
     def get_aprobado_por_nombre(self, obj):
-        if obj.aprobado_por:
-            return obj.aprobado_por.get_full_name() or obj.aprobado_por.email
-        return None
+        return self._nombre_usuario(obj.aprobado_por) if obj.aprobado_por else None
 
     def create(self, validated_data):
         from decimal import Decimal

@@ -75,3 +75,43 @@ class TestExpirarRecargasPendientes:
         from apps.core.tasks import expirar_recargas_pendientes
         result = expirar_recargas_pendientes()
         assert result["expiradas"] == 1
+
+
+# ── crear_particion_anio_siguiente ────────────────────────────────────────────
+
+from unittest.mock import patch
+
+
+@pytest.mark.django_db
+class TestCrearParticionAnioSiguiente:
+
+    @patch("django.core.management.call_command")
+    def test_llama_create_year_partition(self, mock_cmd):
+        from apps.core.tasks import crear_particion_anio_siguiente
+        from django.utils import timezone
+        crear_particion_anio_siguiente()
+        mock_cmd.assert_called_once()
+        args, kwargs = mock_cmd.call_args
+        assert args[0] == "create_year_partition"
+        assert kwargs["year"] == timezone.now().year + 1
+
+    @patch("django.core.management.call_command")
+    def test_retorna_anio_siguiente(self, mock_cmd):
+        from apps.core.tasks import crear_particion_anio_siguiente
+        from django.utils import timezone
+        result = crear_particion_anio_siguiente()
+        assert result["año"] == timezone.now().year + 1
+
+    @patch("django.core.management.call_command")
+    def test_resultado_contiene_output(self, mock_cmd):
+        from apps.core.tasks import crear_particion_anio_siguiente
+        result = crear_particion_anio_siguiente()
+        assert "resultado" in result
+        assert isinstance(result["resultado"], str)
+
+    @patch("django.core.management.call_command")
+    def test_re_lanza_excepcion_si_falla(self, mock_cmd):
+        from apps.core.tasks import crear_particion_anio_siguiente
+        mock_cmd.side_effect = RuntimeError("partición ya existe")
+        with pytest.raises(RuntimeError, match="partición ya existe"):
+            crear_particion_anio_siguiente()
