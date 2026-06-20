@@ -239,6 +239,18 @@ export default function Reportes() {
     finally { setLoadingCc(false) }
   }
 
+  async function exportarCuentaCorrienteCSV() {
+    try {
+      const res = await api.get('/clientes/reporte-cuenta-corriente/', {
+        params: { formato: 'csv' },
+        responseType: 'blob',
+      })
+      const hoy2 = new Date().toISOString().split('T')[0]
+      descargaBlob(res.data, `cuenta_corriente_${hoy2}.csv`)
+      toast.success('CSV descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
   // ── Almuerzos ────────────────────────────────────────────────────────────────
   const [anioAlm, setAnioAlm] = useState(hoy.getFullYear())
   const [mesAlm, setMesAlm] = useState(hoy.getMonth() + 1)
@@ -1052,9 +1064,14 @@ export default function Reportes() {
             <div className="flex items-center gap-3">
               {ccData && <p className="text-sm text-slate-400">Generado: {new Date(ccData.fecha).toLocaleString('es-PY')}</p>}
               {ccData && ccDetalleSorted.length > 0 && (
-                <Button variant="secondary" onClick={() => exportarCuentaCorrientePDF(ccDetalleSorted, ccData.resumen.total_deuda, ccData.fecha)}>
-                  <FileText className="w-4 h-4" />PDF
-                </Button>
+                <>
+                  <Button variant="secondary" onClick={exportarCuentaCorrienteCSV}>
+                    <Download className="w-4 h-4" />CSV
+                  </Button>
+                  <Button variant="secondary" onClick={() => exportarCuentaCorrientePDF(ccDetalleSorted, ccData.resumen.total_deuda, ccData.fecha)}>
+                    <FileText className="w-4 h-4" />PDF
+                  </Button>
+                </>
               )}
             </div>
           </div>

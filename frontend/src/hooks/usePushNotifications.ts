@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import api from '../api/axios'
+import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
