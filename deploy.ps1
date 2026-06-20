@@ -227,6 +227,17 @@ if (-not $finalOk) {
     exit 1
 }
 
+# Smoke test extendido (verifica endpoints críticos — no bloquea el deploy)
+$smokeScript = Join-Path $PSScriptRoot "scripts\smoke-test.ps1"
+if (Test-Path $smokeScript) {
+    Log "Ejecutando smoke test de endpoints..." "Cyan"
+    $backendBase = $BackendHealthUrl -replace "/api/health/", ""
+    & $smokeScript -BaseUrl "http://localhost" -ApiUrl $backendBase
+    if ($LASTEXITCODE -ne 0) {
+        Log "Smoke test reportó fallos — revisar antes de habilitar tráfico" "Yellow"
+    }
+}
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 
 Write-Host ""

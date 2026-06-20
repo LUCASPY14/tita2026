@@ -4,106 +4,268 @@
 <meta charset="UTF-8">
 <title>Factura {{ factura.nro_factura }}</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; padding: 20px; }
-  .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
-  .header h1 { font-size: 20px; font-weight: bold; }
-  .header h2 { font-size: 14px; }
-  .header p { font-size: 11px; color: #444; }
-  .factura-nro { text-align: right; font-size: 14px; font-weight: bold; margin-bottom: 15px; }
-  .section { margin-bottom: 12px; }
-  .section label { font-weight: bold; display: inline-block; width: 130px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-  th { background: #f0f0f0; border: 1px solid #999; padding: 6px 8px; text-align: left; }
-  td { border: 1px solid #ccc; padding: 5px 8px; }
-  .totals { width: 50%; margin-left: auto; }
-  .totals td { font-size: 12px; }
-  .totals tr.total-row td { font-weight: bold; font-size: 13px; border-top: 2px solid #000; }
-  .footer { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px; font-size: 10px; color: #666; text-align: center; }
-  .firma { display: flex; justify-content: space-between; margin-top: 50px; }
-  .firma div { text-align: center; width: 40%; border-top: 1px solid #000; padding-top: 5px; }
-  @media print {
-    body { padding: 0; }
-    button { display: none; }
-    @page { margin: 15mm; }
+/*
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║  TALONARIO PREIMPRESO — Cantina Tita                            ║
+  ║  Formato: A5 horizontal (210 × 148 mm)                         ║
+  ║                                                                  ║
+  ║  El encabezado (razón social, RUC, dirección, timbrado) ya está ║
+  ║  impreso en el talonario físico. Este documento solo imprime    ║
+  ║  los datos variables sobre los campos del formulario.           ║
+  ║                                                                  ║
+  ║  CALIBRACIÓN: imprimir una prueba en papel A4, superponer al    ║
+  ║  talonario físico y ajustar las variables --pos-* hasta que los ║
+  ║  datos coincidan con los campos impresos.                       ║
+  ╚══════════════════════════════════════════════════════════════════╝
+*/
+:root {
+  /* ── Número de factura (esquina superior derecha) ── */
+  --nro-top:    21mm;
+  --nro-left:   128mm;
+
+  /* ── Fecha (junto al número) ── */
+  --fecha-top:  21mm;
+  --fecha-left: 168mm;
+
+  /* ── Datos del cliente ── */
+  --cliente-top:  38mm;
+  --cliente-left: 46mm;
+
+  --rucci-top:    45mm;
+  --rucci-left:   46mm;
+
+  /* ── Condición de venta (CONTADO / CRÉDITO) ── */
+  --cond-top:   45mm;
+  --cond-left:  148mm;
+
+  /* ── Línea de detalle (descripción + importe) ── */
+  --detalle-top:   62mm;
+  --detalle-left:  10mm;
+  --importe-top:   62mm;
+  --importe-right: 10mm;
+
+  /* ── Totales fiscales (columna derecha) ── */
+  --exenta-top:  100mm;
+  --iva5-top:    108mm;
+  --iva10-top:   116mm;
+  --total-top:   125mm;
+  --totales-right: 10mm;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
+
+/* ══════════════════════════════════════════════════════════════════
+   VISTA EN PANTALLA (preview antes de imprimir)
+   ══════════════════════════════════════════════════════════════════ */
+@media screen {
+  body { background: #f3f4f6; padding: 24px; }
+
+  .btn-print {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #1d4ed8; color: #fff; border: none; border-radius: 8px;
+    padding: 9px 22px; font-size: 14px; cursor: pointer; margin-bottom: 20px;
+    font-family: Arial, sans-serif;
   }
+  .btn-print:hover { background: #1e40af; }
+
+  .preview {
+    background: #fff; border-radius: 12px; padding: 24px 28px;
+    max-width: 620px; box-shadow: 0 2px 12px rgba(0,0,0,.12);
+  }
+
+  .preview-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .preview-nro { font-size: 19px; font-weight: 800; color: #111; font-family: 'Courier New', monospace; }
+  .preview-fecha { font-size: 13px; color: #6b7280; }
+
+  .anulada-badge {
+    display: inline-block; background: #fee2e2; color: #991b1b;
+    border: 1px solid #fca5a5; border-radius: 6px;
+    padding: 3px 10px; font-size: 12px; font-weight: 700;
+  }
+
+  .section-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: #9ca3af;
+    margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #f1f5f9;
+  }
+
+  .row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 6px 0; border-bottom: 1px solid #f8fafc;
+  }
+  .row:last-child { border-bottom: none; }
+  .row-label { font-size: 12px; color: #6b7280; }
+  .row-value { font-size: 13px; color: #111; font-weight: 500; text-align: right; max-width: 300px; }
+
+  .totals-box {
+    background: #f8fafc; border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+  }
+  .row-total-label { font-size: 14px; font-weight: 700; color: #111; }
+  .row-total-value { font-size: 16px; font-weight: 800; color: #1d4ed8; }
+
+  .nota {
+    background: #fefce8; border: 1px solid #fde68a; border-radius: 8px;
+    padding: 10px 14px; margin-top: 20px; font-size: 11px; color: #92400e; line-height: 1.5;
+  }
+  .nota code { background: #fef3c7; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+
+  /* Ocultar el layout de impresión en pantalla */
+  .print-layout { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   IMPRESIÓN (overlay sobre talonario preimpreso)
+   Los campos se posicionan exactamente sobre los espacios en blanco
+   del formulario físico. No se imprimen bordes ni encabezados.
+   ══════════════════════════════════════════════════════════════════ */
+@media print {
+  @page { size: A5 landscape; margin: 0; }
+  body { background: transparent; padding: 0; margin: 0; }
+
+  /* Ocultar el preview de pantalla */
+  .screen-preview { display: none !important; }
+
+  .print-layout {
+    position: relative;
+    width: 210mm;
+    height: 148mm;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  .pf {
+    position: absolute;
+    font-family: Arial, sans-serif;
+    font-size: 10pt;
+    color: #000;
+    line-height: 1;
+    background: transparent;
+  }
+
+  .pf-nro {
+    top: var(--nro-top); left: var(--nro-left);
+    font-size: 12pt; font-weight: bold; letter-spacing: 1.5px;
+    font-family: 'Courier New', monospace;
+  }
+  .pf-fecha     { top: var(--fecha-top);   left: var(--fecha-left);    }
+  .pf-cliente   { top: var(--cliente-top); left: var(--cliente-left);  max-width: 90mm; white-space: normal; line-height: 1.25; }
+  .pf-rucci     { top: var(--rucci-top);   left: var(--rucci-left);    }
+  .pf-cond      { top: var(--cond-top);    left: var(--cond-left);     }
+  .pf-detalle   { top: var(--detalle-top); left: var(--detalle-left);  max-width: 110mm; white-space: normal; line-height: 1.3; }
+  .pf-importe   { top: var(--importe-top); right: var(--importe-right); text-align: right; min-width: 36mm; }
+  .pf-exenta    { top: var(--exenta-top);  right: var(--totales-right); text-align: right; min-width: 36mm; }
+  .pf-iva5      { top: var(--iva5-top);    right: var(--totales-right); text-align: right; min-width: 36mm; }
+  .pf-iva10     { top: var(--iva10-top);   right: var(--totales-right); text-align: right; min-width: 36mm; }
+  .pf-total     {
+    top: var(--total-top); right: var(--totales-right);
+    text-align: right; min-width: 36mm;
+    font-size: 11pt; font-weight: bold;
+  }
+
+  .pf-anulada {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-size: 52pt; font-weight: bold;
+    color: rgba(200, 0, 0, 0.18);
+    white-space: nowrap; z-index: 99;
+    pointer-events: none; user-select: none;
+  }
+}
 </style>
 </head>
 <body>
 
-<button onclick="window.print()" style="float:right;padding:6px 16px;margin-bottom:10px;cursor:pointer;">
-  🖨️ Imprimir
-</button>
+<!-- ══════ PREVIEW EN PANTALLA ══════════════════════════════════════ -->
+<div class="screen-preview">
 
-<div class="header">
-  {% if empresa %}
-    <h1>{{ empresa.razon_social }}</h1>
-    <h2>{{ empresa.nombre_fantasia|default:'' }}</h2>
-    <p>RUC: {{ empresa.ruc }} | {{ empresa.direccion|default:'' }}</p>
-    <p>Tel: {{ empresa.telefono|default:'-' }} | {{ empresa.email|default:'' }}</p>
-  {% else %}
-    <h1>Cantina Tita</h1>
-    <p>Sistema de Gestión Escolar</p>
-  {% endif %}
+  <button class="btn-print" onclick="window.print()">
+    &#128438;&nbsp; Imprimir en talonario
+  </button>
+
+  <div class="preview">
+
+    <div class="preview-header">
+      <span class="preview-nro">{{ factura.nro_factura }}</span>
+      <span class="preview-fecha">{{ factura.fecha_emision|date:"d/m/Y H:i" }}</span>
+      {% if factura.estado == 'ANULADA' %}
+      <span class="anulada-badge">ANULADA</span>
+      {% endif %}
+    </div>
+
+    <div class="section-title">Cliente</div>
+    <div class="row">
+      <span class="row-label">Nombre</span>
+      <span class="row-value">{{ factura.cliente.nombre_completo|default:'—' }}</span>
+    </div>
+    {% if factura.cliente.ruc_ci %}
+    <div class="row">
+      <span class="row-label">RUC / CI</span>
+      <span class="row-value">{{ factura.cliente.ruc_ci }}</span>
+    </div>
+    {% endif %}
+    <div class="row">
+      <span class="row-label">Condición</span>
+      <span class="row-value">CONTADO</span>
+    </div>
+
+    <div class="section-title">Concepto</div>
+    <div class="row">
+      <span class="row-label">Descripción</span>
+      <span class="row-value">{{ concepto }}</span>
+    </div>
+
+    <div class="section-title">Importes</div>
+    <div class="totals-box">
+      <div class="row">
+        <span class="row-label">Exenta</span>
+        <span class="row-value">Gs. {{ factura.monto_exenta|floatformat:0 }}</span>
+      </div>
+      <div class="row">
+        <span class="row-label">IVA 5%</span>
+        <span class="row-value">Gs. {{ factura.iva_5|floatformat:0 }}</span>
+      </div>
+      <div class="row">
+        <span class="row-label">IVA 10%</span>
+        <span class="row-value">Gs. {{ factura.iva_10|floatformat:0 }}</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span class="row-total-label">TOTAL</span>
+        <span class="row-total-value">Gs. {{ factura.monto_total|floatformat:0 }}</span>
+      </div>
+    </div>
+
+    <div class="nota">
+      &#9432; Al imprimir se envía solo el texto al talonario preimpreso (A5 horizontal, sin bordes ni encabezado).<br>
+      Si los datos no quedan alineados con el formulario físico, ajustar las variables
+      <code>--pos-*</code> en <code>factura_print.html</code>.
+    </div>
+
+  </div>
 </div>
 
-<div class="factura-nro">
-  FACTURA N° {{ factura.nro_factura }}
-</div>
+<!-- ══════ LAYOUT DE IMPRESIÓN (invisible en pantalla) ══════════════ -->
+<div class="print-layout">
 
-<div class="section">
-  <p><label>Fecha:</label> {{ factura.fecha_emision|date:"d/m/Y H:i" }}</p>
-  <p><label>Cliente:</label> {{ factura.cliente.nombre_completo|default:'-' }}</p>
-  {% if factura.cliente.ruc_ci %}
-  <p><label>RUC/CI:</label> {{ factura.cliente.ruc_ci }}</p>
-  {% endif %}
-  <p><label>Condición:</label> CONTADO</p>
-</div>
-
-<table>
-  <thead>
-    <tr>
-      <th>Descripción</th>
-      <th style="width:80px;text-align:right">Monto</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>{{ concepto }}</td>
-      <td style="text-align:right">Gs. {{ factura.monto_total|floatformat:0 }}</td>
-    </tr>
-  </tbody>
-</table>
-
-<table class="totals">
-  <tr>
-    <td>Exenta:</td>
-    <td style="text-align:right">Gs. {{ factura.monto_exenta|floatformat:0 }}</td>
-  </tr>
-  <tr>
-    <td>IVA 5%:</td>
-    <td style="text-align:right">Gs. {{ factura.iva_5|floatformat:0 }}</td>
-  </tr>
-  <tr>
-    <td>IVA 10%:</td>
-    <td style="text-align:right">Gs. {{ factura.iva_10|floatformat:0 }}</td>
-  </tr>
-  <tr class="total-row">
-    <td>TOTAL:</td>
-    <td style="text-align:right">Gs. {{ factura.monto_total|floatformat:0 }}</td>
-  </tr>
-</table>
-
-<div class="firma">
-  <div>Vendedor</div>
-  <div>Cliente / Aclaración</div>
-</div>
-
-<div class="footer">
-  <p>Documento válido como comprobante de pago — {{ factura.nro_factura }}</p>
   {% if factura.estado == 'ANULADA' %}
-  <p style="color:red;font-weight:bold;font-size:14px;">⚠ FACTURA ANULADA</p>
+  <div class="pf pf-anulada">ANULADA</div>
   {% endif %}
+
+  <div class="pf pf-nro">{{ factura.nro_factura }}</div>
+  <div class="pf pf-fecha">{{ factura.fecha_emision|date:"d/m/Y" }}</div>
+  <div class="pf pf-cliente">{{ factura.cliente.nombre_completo|default:'' }}</div>
+  {% if factura.cliente.ruc_ci %}
+  <div class="pf pf-rucci">{{ factura.cliente.ruc_ci }}</div>
+  {% endif %}
+  <div class="pf pf-cond">CONTADO</div>
+  <div class="pf pf-detalle">{{ concepto }}</div>
+  <div class="pf pf-importe">{{ factura.monto_total|floatformat:0 }}</div>
+  <div class="pf pf-exenta">{{ factura.monto_exenta|floatformat:0 }}</div>
+  <div class="pf pf-iva5">{{ factura.iva_5|floatformat:0 }}</div>
+  <div class="pf pf-iva10">{{ factura.iva_10|floatformat:0 }}</div>
+  <div class="pf pf-total">{{ factura.monto_total|floatformat:0 }}</div>
+
 </div>
 
 </body>
