@@ -241,6 +241,137 @@ test.describe('Modo Recreo — filtro por categoría', () => {
   })
 })
 
+// ── Modo offline / degradación graceful ───────────────────────────────────────
+//
+// El SW (sw.js) maneja el cache en producción; en dev el SW no está activo.
+// Estos tests verifican el comportamiento de la app cuando la red falla:
+//   - Catálogo cargado previamente sigue siendo visible (mocks interceptan antes de red)
+//   - POST ventas con respuesta offline-queue (202 _queued) no rompe la app
+//   - POST ventas que falla con abort no muestra error boundary
+
+test.describe('Modo Recreo — modo offline / degradación', () => {
+  test('catálogo ya cargado permanece visible al simular pérdida de red', async ({ page, context }) => {
+    await loginAs(page, CAJERO)
+    await setupModoRecreo(page)
+    await page.goto('/modo-recreo')
+    // Esperar que el catálogo cargue con los mocks activos
+    await expect(page.getByRole('button', { name: /Empanada/ }).first()).toBeVisible({ timeout: 8000 })
+
+    // Desconectar la red — los mocks de page.route() siguen respondiendo
+    // porque interceptan antes del nivel de red
+    await context.setOffline(true)
+
+    // El catálogo ya estaba en el DOM; no debe desaparecer
+    await expect(page.getByRole('button', { name: /Empanada/ }).first()).toBeVisible()
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible()
+
+    await context.setOffline(false)
+  })
+
+  test('POST ventas con respuesta 202 queued no muestra error boundary', async ({ page }) => {
+    // El SW devuelve 202 { _queued: true } cuando encola una venta offline.
+    // La app debe manejar esto sin explotar.
+    await loginAs(page, CAJERO)
+    await setupModoRecreo(page)
+    // Mock POST ventas → 202 simulando respuesta del SW offline
+    await page.route(/\/api\/v1\/ventas\/ventas/, (route) => {
+      if (route.request().method() === 'POST') {
+        return route.fulfill({
+          status: 202, contentType: 'application/json',
+          body: JSON.stringify({ _queued: true, message: 'Venta guardada offline. Se sincronizará al reconectar.' }),
+        })
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+    })
+    await page.route(/\/api\/v1\/core\/tarjetas/, (route) =>
+      route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({
+          results: [{
+            nro_tarjeta: 'T-001', estado: 'ACTIVA', saldo_actual: '100000',
+            saldo_disponible: '100000', hijo_nombre: 'Juan Pérez', hijo_grado: '3er Grado',
+            hijo_restricciones: [], permite_saldo_negativo: false, limite_credito: '0', cliente_id: 1,
+          }],
+          count: 1,
+        }),
+      })
+    )
+    await page.goto('/modo-recreo')
+    await expect(page.getByRole('button', { name: /Empanada/ }).first()).toBeVisible({ timeout: 8000 })
+
+    // Scan tarjeta → luego agregar producto → cobrar
+    const scanner = page.getByPlaceholder('Escanear tarjeta o código…')
+    await scanner.fill('T-001')
+    await scanner.press('Enter')
+    await expect(page.getByText('Juan Pérez')).toBeVisible({ timeout: 5000 })
+    await page.getByRole('button', { name: /Empanada/ }).first().click()
+    await page.getByRole('button', { name: /COBRAR/i }).click()
+
+    // No debe mostrar error boundary
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible({ timeout: 5000 })
+  })
+
+  test('POST ventas abortado por red no muestra error boundary', async ({ page }) => {
+    await loginAs(page, CAJERO)
+    await setupModoRecreo(page)
+    // Abortar la petición de ventas (simula timeout/red caída)
+    await page.route(/\/api\/v1\/ventas\/ventas/, (route) => {
+      if (route.request().method() === 'POST') {
+        return route.abort('failed')
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+    })
+    await page.route(/\/api\/v1\/core\/tarjetas/, (route) =>
+      route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({
+          results: [{
+            nro_tarjeta: 'T-002', estado: 'ACTIVA', saldo_actual: '50000',
+            saldo_disponible: '50000', hijo_nombre: 'Ana García', hijo_grado: '4° A',
+            hijo_restricciones: [], permite_saldo_negativo: false, limite_credito: '0', cliente_id: 2,
+          }],
+          count: 1,
+        }),
+      })
+    )
+    await page.goto('/modo-recreo')
+    await expect(page.getByRole('button', { name: /Empanada/ }).first()).toBeVisible({ timeout: 8000 })
+
+    const scanner = page.getByPlaceholder('Escanear tarjeta o código…')
+    await scanner.fill('T-002')
+    await scanner.press('Enter')
+    await expect(page.getByText('Ana García')).toBeVisible({ timeout: 5000 })
+    await page.getByRole('button', { name: /Empanada/ }).first().click()
+    await page.getByRole('button', { name: /COBRAR/i }).click()
+
+    // La app no debe mostrar error boundary — puede mostrar toast de error
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible({ timeout: 5000 })
+  })
+
+  test('catálogo carga aunque tarjetas API falle (degradación parcial)', async ({ page }) => {
+    await loginAs(page, CAJERO)
+    // Caja y categorías/productos cargan normalmente
+    await page.route(/\/api\/v1\/contabilidad\/cierres-caja/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CAJA_ABIERTA) })
+    )
+    await page.route(/\/api\/v1\/productos\/categorias/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: CATEGORIAS_MOCK, count: 2 }) })
+    )
+    await page.route(/\/api\/v1\/productos\/productos/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: PRODUCTOS_MOCK, count: 2 }) })
+    )
+    // Tarjetas API falla con 503
+    await page.route(/\/api\/v1\/core\/tarjetas/, (route) =>
+      route.fulfill({ status: 503, contentType: 'application/json', body: '{"detail":"servicio no disponible"}' })
+    )
+    await page.goto('/modo-recreo')
+
+    // El catálogo debe seguir cargando aunque tarjetas falle
+    await expect(page.getByRole('button', { name: /Empanada/ }).first()).toBeVisible({ timeout: 8000 })
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible()
+  })
+})
+
 // ── Sin caja abierta ───────────────────────────────────────────────────────
 
 test.describe('Modo Recreo — sin caja abierta', () => {
