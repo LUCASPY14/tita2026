@@ -28,7 +28,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from common.permissions import IsAdmin
-from common.throttling import LoginRateThrottle
+from common.throttling import LoginRateThrottle, PortalRateThrottle
 
 
 # ── TOTP helpers (RFC 6238, sin dependencias externas) ────────────────────────
@@ -256,6 +256,7 @@ class PortalMiHijoView(APIView):
     Datos del portal para CLIENTE_WEB: hijos con tarjeta, consumos del mes y cuenta mensual.
     """
     permission_classes = [IsAuthenticated]
+    throttle_classes = [PortalRateThrottle]
 
     def get(self, request):
         user = request.user
@@ -349,6 +350,7 @@ class PortalHistorialConsumos(APIView):
     Historial de consumos de almuerzos de un hijo del padre autenticado.
     """
     permission_classes = [IsAuthenticated]
+    throttle_classes = [PortalRateThrottle]
 
     def get(self, request):
         from datetime import date
@@ -400,6 +402,7 @@ class PortalHistorialCantina(APIView):
     Historial de compras en cantina (ventas con tarjeta RFID) del hijo autenticado.
     """
     permission_classes = [IsAuthenticated]
+    throttle_classes = [PortalRateThrottle]
 
     def get(self, request):
         from apps.ventas.models import Venta
@@ -460,6 +463,7 @@ class PortalMisFacturas(APIView):
     Facturas emitidas para el cliente del padre autenticado.
     """
     permission_classes = [IsAuthenticated]
+    throttle_classes = [PortalRateThrottle]
 
     def get(self, request):
         from apps.contabilidad.models import Factura

@@ -84,6 +84,7 @@ AUTH_USER_MODEL = "usuarios.Usuario"
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",  # debe ser el primero
     "common.middleware.RequestIDMiddleware",                    # X-Request-ID → logs + Sentry
+    "common.middleware.APIVersionHeaderMiddleware",            # X-API-Version header
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -225,7 +226,9 @@ REST_FRAMEWORK = {
         "anon": "200/hour",
         "user": "1000/hour",
         "auth": "5/min",
-        "sensitive": "50/hour",  # carga de saldo, anulaciones (se endurece en production.py)
+        "sensitive": "50/hour",       # carga de saldo, anulaciones (se endurece en production.py)
+        "portal": "500/hour",         # portal de padres — por usuario autenticado
+        "bancard_retorno": "30/hour", # endpoint sin auth — por IP
     },
     "DATETIME_FORMAT": "%d/%m/%Y %H:%M",
     "DATE_FORMAT": "%d/%m/%Y",

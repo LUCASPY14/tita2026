@@ -19,7 +19,7 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from common.throttling import SensitiveEndpointThrottle
+from common.throttling import SensitiveEndpointThrottle, BancardRetornoThrottle
 
 from .models import PagoBancard, Tarjeta
 from . import bancard_service
@@ -143,6 +143,7 @@ def bancard_iniciar(request):
 
 @api_view(["GET"])
 @permission_classes([])
+@throttle_classes([BancardRetornoThrottle])
 def bancard_retorno(request):
     """
     Bancard redirige el navegador del padre a esta URL después del pago.
