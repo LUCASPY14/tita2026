@@ -10,11 +10,17 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 export function usePushNotifications() {
-  const { isAuthenticated } = useAuthStore()
-  const subscribed = useRef(false)
+  const { isAuthenticated, user } = useAuthStore()
+  // Track which user ID already registered push in this session.
+  // Resets when a different user logs in on the same device.
+  const subscribedUserId = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!isAuthenticated || subscribed.current) return
+    if (!isAuthenticated || !user) {
+      subscribedUserId.current = null
+      return
+    }
+    if (subscribedUserId.current === user.id) return
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
     if (Notification.permission === 'denied') return
 
@@ -38,7 +44,7 @@ export function usePushNotifications() {
 
         if (cancelled) return
         await api.post('/notificaciones/push-subscription/', sub.toJSON())
-        subscribed.current = true
+        subscribedUserId.current = user.id
       } catch {
         // Push notifications are optional — fail silently
       }
@@ -46,5 +52,5 @@ export function usePushNotifications() {
 
     trySubscribe()
     return () => { cancelled = true }
-  }, [isAuthenticated])
+  }, [isAuthenticated, user?.id])
 }
