@@ -181,6 +181,16 @@ def bancard_retorno(request):
         if response_code == "00" or resultado.get("status") == "success":
             try:
                 bancard_service.acreditar_saldo(pago)
+                # Refrescar mv_balance_cliente para que el portal refleje
+                # el nuevo saldo de inmediato sin esperar el ciclo de 15 min.
+                try:
+                    from celery import current_app
+                    current_app.send_task(
+                        "apps.contabilidad.tasks.refrescar_mv_balance_cliente",
+                        countdown=3,  # 3 s de gracia para que el commit llegue a la réplica
+                    )
+                except Exception:
+                    pass  # no crítico — el ciclo periódico de 15 min lo cubre
                 return HttpResponseRedirect(
                     f"{PORTAL_URL()}/portal/carga-saldo?estado=aprobado&monto={pago.monto}"
                 )
