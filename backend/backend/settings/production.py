@@ -250,8 +250,8 @@ if not SENTRY_DSN:
         "SENTRY_DSN must be set in production! "
         "Get the DSN from your Sentry project → Settings → Client Keys."
     )
-if True:  # siempre inicializar cuando SENTRY_DSN está presente
-    import sentry_sdk
+
+import sentry_sdk
     from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.django import DjangoIntegration
     from sentry_sdk.integrations.logging import LoggingIntegration
