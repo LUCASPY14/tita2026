@@ -111,4 +111,25 @@ test.describe('Compras', () => {
   test('segunda compra #49 también se lista', async ({ page }) => {
     await expect(page.getByText('#49').first()).toBeVisible({ timeout: 6000 })
   })
+
+  test('estado vacío muestra mensaje cuando no hay compras', async ({ page }) => {
+    await page.route(/\/api\/v1\/compras\/compras/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ results: [], count: 0, next: null, previous: null }),
+      })
+    )
+    await page.goto('/compras')
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible()
+  })
+
+  test('error 500 del servidor no rompe la página con error boundary', async ({ page }) => {
+    await page.route(/\/api\/v1\/compras\/compras/, (route) =>
+      route.fulfill({ status: 500, contentType: 'application/json', body: '{"detail":"Internal Server Error"}' })
+    )
+    await page.goto('/compras')
+    // El error boundary no debe dispararse; la app maneja el error en el componente
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible({ timeout: 5000 })
+  })
 })

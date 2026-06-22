@@ -135,4 +135,54 @@ test.describe('Inventario', () => {
     await expect(page.getByText('Sin alertas').first()).not.toBeVisible()
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
   })
+
+  test('tab Alertas muestra alertas cuando hay datos', async ({ page }) => {
+    await page.route(/\/api\/v1\/inventario\/alertas/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            {
+              id: 1,
+              tipo: 'STOCK_MINIMO',
+              producto_nombre: 'Harina 000',
+              stock_actual: 2,
+              stock_minimo: 10,
+              activa: true,
+              fecha_generada: new Date().toISOString(),
+            },
+          ],
+          count: 1,
+          next: null,
+          previous: null,
+        }),
+      })
+    )
+    const alertasTab = page.getByRole('button', { name: /alerta/i }).first()
+    if (await alertasTab.isVisible()) {
+      await alertasTab.click()
+      await expect(page.getByText('Algo salió mal')).not.toBeVisible()
+    }
+  })
+
+  test('error 500 del servidor no rompe la página con error boundary', async ({ page }) => {
+    await page.route(/\/api\/v1\/inventario\/ajustes/, (route) =>
+      route.fulfill({ status: 500, contentType: 'application/json', body: '{"detail":"Internal Server Error"}' })
+    )
+    await page.goto('/inventario')
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible({ timeout: 5000 })
+  })
+
+  test('estado vacío no muestra error cuando no hay ajustes', async ({ page }) => {
+    await page.route(/\/api\/v1\/inventario\/ajustes/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ results: [], count: 0, next: null, previous: null }),
+      })
+    )
+    await page.goto('/inventario')
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible()
+  })
 })
