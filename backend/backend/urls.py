@@ -9,46 +9,75 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 
-def health_check(request):
-    checks = {}
-    ok = True
-
-    # Database
+def _check_db():
     try:
         with connection.cursor() as cur:
             cur.execute("SELECT 1")
-        checks["db"] = "ok"
+        return "ok", True
     except DBError as exc:
-        checks["db"] = str(exc)
-        ok = False
+        return str(exc), False
 
-    # Redis
+
+def _check_redis():
     try:
         import redis as redis_lib
         r = redis_lib.from_url(settings.REDIS_URL, socket_connect_timeout=2)
         r.ping()
-        checks["redis"] = "ok"
+        return "ok", True
     except Exception as exc:
-        checks["redis"] = str(exc)
-        ok = False
+        return str(exc), False
 
-    # Celery workers
+
+def _check_celery():
     try:
         from celery import current_app
         ping = current_app.control.inspect(timeout=1.5).ping() or {}
         worker_count = len(ping)
-        checks["celery"] = f"{worker_count} worker(s)" if worker_count else "no workers"
-        if worker_count == 0:
-            ok = False
+        ok = worker_count > 0
+        return (f"{worker_count} worker(s)" if ok else "no workers"), ok
     except Exception as exc:
-        checks["celery"] = str(exc)
-        ok = False
+        return str(exc), False
 
+
+def health_check(request):
+    """
+    GET /api/health/ — verificación completa: DB + Redis + Celery.
+    Retorna 200 si todo OK, 503 si cualquier componente falla.
+    Usado por monitoreo externo (Prometheus, uptime monitors).
+    """
+    checks = {}
+    ok = True
+
+    checks["db"],    db_ok    = _check_db()
+    checks["redis"], redis_ok = _check_redis()
+    checks["celery"],cel_ok   = _check_celery()
+
+    ok = db_ok and redis_ok and cel_ok
     status = "ok" if ok else "degraded"
-    http_status = 200 if ok else 503
     return JsonResponse(
         {"status": status, "version": "1.0", "checks": checks},
-        status=http_status,
+        status=200 if ok else 503,
+    )
+
+
+def health_ready(request):
+    """
+    GET /api/health/ready/ — verificación de liveness: solo DB + Redis.
+    Retorna 200 si el proceso está listo para servir requests, sin importar
+    si los workers de Celery están activos.
+    Usado por el deploy script para el check intermedio del backend,
+    antes de que los workers hayan sido reiniciados.
+    """
+    checks = {}
+
+    checks["db"],    db_ok    = _check_db()
+    checks["redis"], redis_ok = _check_redis()
+
+    ok = db_ok and redis_ok
+    status = "ready" if ok else "not_ready"
+    return JsonResponse(
+        {"status": status, "checks": checks},
+        status=200 if ok else 503,
     )
 
 
@@ -56,9 +85,10 @@ urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
 
-    # Health check (ambos path para compatibilidad)
-    path('api/health/', health_check, name='health-check'),
-    path('api/v1/health/', health_check, name='health-check-v1'),
+    # Health check
+    path('api/health/',       health_check, name='health-check'),
+    path('api/health/ready/', health_ready, name='health-ready'),
+    path('api/v1/health/',    health_check, name='health-check-v1'),
 
     # Prometheus metrics (protegido por IP en producción via Nginx)
     path('', include('django_prometheus.urls')),
