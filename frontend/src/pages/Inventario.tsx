@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   Package, Plus, CheckCircle, XCircle,
-  TrendingUp, TrendingDown, AlertTriangle, X, Bell,
+  TrendingUp, TrendingDown, AlertTriangle, X, Bell, Clock,
 } from 'lucide-react'
 import api from '../services/api'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
@@ -95,6 +95,21 @@ interface AlertaStock {
   stock_actual: string | number
   stock_minimo: string | number
   activa: boolean
+  fecha_generada: string
+}
+
+interface AlertaVencimiento {
+  id: number
+  lote: number
+  lote_numero: string
+  producto_nombre: string
+  tipo: string
+  dias_restantes: number
+  fecha_vencimiento: string
+  cantidad_lote: string | number
+  accion_tomada: string | null
+  fecha_accion: string | null
+  responsable: number | null
   fecha_generada: string
 }
 
@@ -275,7 +290,7 @@ export default function Inventario() {
   const loadAlertas = useCallback(async (p: number) => {
     setLoadingAlertas(true)
     try {
-      const { data } = await api.get('/inventario/alertas/', {
+      const { data } = await api.get('/inventario/alertas-stock/', {
         params: { activa: true, page: p, page_size: 15 },
       })
       setAlertas(data.results ?? [])
@@ -294,6 +309,56 @@ export default function Inventario() {
       loadAlertas(1)
     }
   }, [tab, loadAlertas])
+
+  // ── Alertas de vencimiento ────────────────────────────────────────
+  const [alertasVenc, setAlertasVenc] = useState<AlertaVencimiento[]>([])
+  const [loadingAlertasVenc, setLoadingAlertasVenc] = useState(false)
+  const [totalAlertasVenc, setTotalAlertasVenc] = useState(0)
+  const [pageAlertasVenc, setPageAlertasVenc] = useState(1)
+  const [accionModal, setAccionModal] = useState<AlertaVencimiento | null>(null)
+  const [accionSeleccionada, setAccionSeleccionada] = useState('')
+  const [savingAccion, setSavingAccion] = useState(false)
+
+  const loadAlertasVenc = useCallback(async (p: number) => {
+    setLoadingAlertasVenc(true)
+    try {
+      const { data } = await api.get('/inventario/alertas-vencimiento/', {
+        params: { page: p, page_size: 15 },
+      })
+      setAlertasVenc(data.results ?? [])
+      setTotalAlertasVenc(data.count ?? 0)
+    } catch {
+      toast.error('Error al cargar alertas de vencimiento')
+    } finally {
+      setLoadingAlertasVenc(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'alertas') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPageAlertasVenc(1)
+      loadAlertasVenc(1)
+    }
+  }, [tab, loadAlertasVenc])
+
+  const handleRegistrarAccion = useCallback(async () => {
+    if (!accionModal || !accionSeleccionada) return
+    setSavingAccion(true)
+    try {
+      await api.post(`/inventario/alertas-vencimiento/${accionModal.id}/registrar-accion/`, {
+        accion_tomada: accionSeleccionada,
+      })
+      toast.success('Acción registrada correctamente')
+      setAccionModal(null)
+      setAccionSeleccionada('')
+      loadAlertasVenc(pageAlertasVenc)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSavingAccion(false)
+    }
+  }, [accionModal, accionSeleccionada, pageAlertasVenc, loadAlertasVenc])
 
   // ── Ajuste actions ────────────────────────────────────────────────
   const handleSaveAjuste = useCallback(async () => {
@@ -510,6 +575,93 @@ export default function Inventario() {
     STOCK_MINIMO: 'yellow',
   }
 
+  const VENC_COLOR: Record<string, BadgeColor> = {
+    VENCIDO: 'red',
+    '3_DIAS': 'red',
+    '7_DIAS': 'orange',
+    '15_DIAS': 'orange',
+    '30_DIAS': 'yellow',
+  }
+
+  const VENC_LABEL: Record<string, string> = {
+    VENCIDO: 'VENCIDO',
+    '3_DIAS': '≤ 3 días',
+    '7_DIAS': '≤ 7 días',
+    '15_DIAS': '≤ 15 días',
+    '30_DIAS': '≤ 30 días',
+  }
+
+  const ACCION_COLOR: Record<string, BadgeColor> = {
+    PENDIENTE: 'orange',
+    DESCUENTO: 'blue',
+    DEVUELTO: 'default',
+    DONADO: 'green',
+    DESCARTADO: 'red',
+    VENDIDO: 'green',
+  }
+
+  const colsAlertasVenc: Column<AlertaVencimiento>[] = [
+    {
+      title: 'Producto',
+      key: 'producto',
+      render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.producto_nombre}</span>,
+    },
+    {
+      title: 'Lote',
+      key: 'lote',
+      render: (_, r) => <span className="font-mono text-sm text-slate-500">{r.lote_numero}</span>,
+    },
+    {
+      title: 'Urgencia',
+      key: 'tipo',
+      render: (_, r) => (
+        <Badge color={VENC_COLOR[r.tipo] ?? 'default'}>{VENC_LABEL[r.tipo] ?? r.tipo}</Badge>
+      ),
+    },
+    {
+      title: 'Días',
+      key: 'dias',
+      render: (_, r) => (
+        <span className={`tabular-nums font-bold text-sm ${r.dias_restantes < 0 ? 'text-red-600' : r.dias_restantes <= 7 ? 'text-orange-600' : 'text-slate-700'}`}>
+          {r.dias_restantes < 0 ? `${Math.abs(r.dias_restantes)}d vencido` : `${r.dias_restantes}d`}
+        </span>
+      ),
+    },
+    {
+      title: 'Vence',
+      key: 'fecha_vencimiento',
+      render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha_vencimiento)}</span>,
+    },
+    {
+      title: 'Cant. lote',
+      key: 'cantidad',
+      render: (_, r) => <span className="tabular-nums text-sm text-slate-700">{Number(r.cantidad_lote)}</span>,
+    },
+    {
+      title: 'Acción',
+      key: 'accion',
+      render: (_, r) => (
+        <Badge color={ACCION_COLOR[r.accion_tomada ?? 'PENDIENTE'] ?? 'default'}>
+          {r.accion_tomada ?? 'PENDIENTE'}
+        </Badge>
+      ),
+    },
+    {
+      title: '',
+      key: 'btn',
+      width: 130,
+      render: (_, r) => (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => { setAccionModal(r); setAccionSeleccionada(r.accion_tomada ?? '') }}
+        >
+          Registrar acción
+        </Button>
+      ),
+    },
+  ]
+
   const colsAlertas: Column<AlertaStock>[] = [
     {
       title: 'Producto',
@@ -591,9 +743,9 @@ export default function Inventario() {
                   {lotesConAlerta}
                 </span>
               )}
-              {key === 'alertas' && totalAlertas > 0 && (
+              {key === 'alertas' && (totalAlertas + totalAlertasVenc) > 0 && (
                 <span className="bg-red-100 text-red-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">
-                  {totalAlertas}
+                  {totalAlertas + totalAlertasVenc}
                 </span>
               )}
             </button>
@@ -715,6 +867,14 @@ export default function Inventario() {
       {/* ── Alertas tab ──────────────────────────────────────────── */}
       {tab === 'alertas' && (
         <>
+          {/* Sección: Stock bajo mínimo */}
+          <div className="flex items-center gap-2 mb-1">
+            <Bell className="w-4 h-4 text-red-500" />
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Alertas de Stock</h2>
+            {totalAlertas > 0 && (
+              <span className="bg-red-100 text-red-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">{totalAlertas}</span>
+            )}
+          </div>
           {totalAlertas > 0 && (
             <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-3">
               <Bell className="w-4 h-4 text-red-500 shrink-0" />
@@ -734,6 +894,37 @@ export default function Inventario() {
                 page={pageAlertas}
                 total={totalAlertas}
                 onPageChange={p => { setPageAlertas(p); loadAlertas(p) }}
+              />
+            </div>
+          </div>
+
+          {/* Sección: Alertas de vencimiento */}
+          <div className="flex items-center gap-2 mt-4 mb-1">
+            <Clock className="w-4 h-4 text-orange-500" />
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Alertas de Vencimiento</h2>
+            {totalAlertasVenc > 0 && (
+              <span className="bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">{totalAlertasVenc}</span>
+            )}
+          </div>
+          {totalAlertasVenc > 0 && (
+            <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-5 py-3">
+              <Clock className="w-4 h-4 text-orange-500 shrink-0" />
+              <p className="text-sm text-orange-700 font-medium">
+                {totalAlertasVenc} lote(s) vencidos o próximos a vencer. Registrá la acción tomada para cada uno.
+              </p>
+            </div>
+          )}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-1">
+              <Table
+                columns={colsAlertasVenc}
+                dataSource={alertasVenc}
+                rowKey="id"
+                loading={loadingAlertasVenc}
+                pageSize={15}
+                page={pageAlertasVenc}
+                total={totalAlertasVenc}
+                onPageChange={p => { setPageAlertasVenc(p); loadAlertasVenc(p) }}
               />
             </div>
           </div>
@@ -859,6 +1050,43 @@ export default function Inventario() {
             ¿Rechazar el ajuste <span className="font-semibold">#{rechazar}</span>? No se realizará ningún cambio en el stock.
           </p>
         </div>
+      </Modal>
+
+      {/* ── Registrar acción vencimiento ──────────────────────────── */}
+      <Modal
+        open={!!accionModal}
+        title="Registrar Acción sobre Lote"
+        onOk={handleRegistrarAccion}
+        onCancel={() => { setAccionModal(null); setAccionSeleccionada('') }}
+        okText="Guardar"
+        confirmLoading={savingAccion}
+        width={440}
+      >
+        {accionModal && (
+          <div className="space-y-4 py-1">
+            <div className="bg-slate-50 rounded-xl px-4 py-3 text-sm text-slate-700 space-y-1">
+              <p><span className="font-semibold">Producto:</span> {accionModal.producto_nombre}</p>
+              <p><span className="font-semibold">Lote:</span> {accionModal.lote_numero}</p>
+              <p><span className="font-semibold">Vencimiento:</span> {formatFecha(accionModal.fecha_vencimiento)}</p>
+              <p><span className="font-semibold">Cantidad:</span> {Number(accionModal.cantidad_lote)}</p>
+            </div>
+            <div>
+              <label className={labelClass}>Acción tomada *</label>
+              <select
+                value={accionSeleccionada}
+                onChange={e => setAccionSeleccionada(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Seleccioná una acción...</option>
+                <option value="DESCUENTO">Descuento aplicado</option>
+                <option value="DEVUELTO">Devuelto a proveedor</option>
+                <option value="DONADO">Donado</option>
+                <option value="DESCARTADO">Descartado</option>
+                <option value="VENDIDO">Vendido a tiempo</option>
+              </select>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

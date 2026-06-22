@@ -203,7 +203,7 @@ class LoteProductoViewSet(viewsets.ModelViewSet):
 
 
 class AlertaVencimientoViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = AlertaVencimiento.objects.select_related("lote").all()
+    queryset = AlertaVencimiento.objects.select_related("lote__producto").all()
     serializer_class = AlertaVencimientoSerializer
     permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -211,6 +211,23 @@ class AlertaVencimientoViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ["lote__numero_lote", "lote__producto__descripcion"]
     ordering_fields = ["id"]
     ordering = ["-id"]
+
+    @action(detail=True, methods=["post"], url_path="registrar-accion")
+    def registrar_accion(self, request, pk=None):
+        """Registra la acción tomada sobre un lote próximo a vencer o vencido."""
+        alerta = self.get_object()
+        accion = request.data.get("accion_tomada")
+        opciones_validas = AlertaVencimiento.Accion.values
+        if accion not in opciones_validas:
+            return Response(
+                {"detail": f"Acción inválida. Opciones: {opciones_validas}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        alerta.accion_tomada = accion
+        alerta.fecha_accion = timezone.now()
+        alerta.responsable = request.user
+        alerta.save(update_fields=["accion_tomada", "fecha_accion", "responsable"])
+        return Response(AlertaVencimientoSerializer(alerta).data)
 
 
 class ReporteStockView(APIView):

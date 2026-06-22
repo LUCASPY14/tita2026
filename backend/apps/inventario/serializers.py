@@ -75,6 +75,7 @@ class AlertaStockSerializer(serializers.ModelSerializer):
 
 class AlertaVencimientoSerializer(serializers.ModelSerializer):
     lote_numero = serializers.CharField(source="lote.numero_lote", read_only=True)
+    producto_nombre = serializers.CharField(source="lote.producto.descripcion", read_only=True)
 
     class Meta:
         model = AlertaVencimiento
