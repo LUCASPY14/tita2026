@@ -1,5 +1,8 @@
 """
-RequestIDMiddleware — propaga X-Request-ID por todo el ciclo de vida del request.
+Middlewares compartidos:
+  - RequestIDMiddleware   — propaga X-Request-ID por todo el ciclo de vida del request.
+  - APIVersionHeaderMiddleware — inyecta X-API-Version en todas las respuestas /api/.
+
 
 Flujo:
   1. Si el cliente envía X-Request-ID se reutiliza (útil en cadenas de microservicios).
@@ -63,3 +66,36 @@ class RequestIDMiddleware:
             sentry_sdk.set_tag("request_id", request_id)
         except Exception:
             pass
+
+
+class APIVersionHeaderMiddleware:
+    """
+    Injects ``X-API-Version: 1.0.0`` on all /api/ responses.
+
+    When a future /api/v2/ is ready, mark v1 paths for removal by adding an
+    entry to _DEPRECATED_PREFIXES. See docs/api-deprecation-policy.md for the
+    full deprecation workflow (minimum 6-month notice, Sunset + Deprecation
+    headers per RFC 8594).
+
+    Example — deprecating /api/v1/old-endpoint/ with a 2027-01-01 sunset:
+        _DEPRECATED_PREFIXES = {
+            "/api/v1/old-endpoint/": "Sat, 01 Jan 2027 00:00:00 GMT",
+        }
+    """
+
+    _CURRENT_VERSION = "1.0.0"
+    _DEPRECATED_PREFIXES: dict[str, str] = {}  # path_prefix → RFC-7231 sunset date
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if request.path.startswith("/api/"):
+            response["X-API-Version"] = self._CURRENT_VERSION
+            for prefix, sunset in self._DEPRECATED_PREFIXES.items():
+                if request.path.startswith(prefix):
+                    response["Deprecation"] = "true"
+                    response["Sunset"] = sunset
+                    break
+        return response
