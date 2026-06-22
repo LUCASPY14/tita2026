@@ -43,7 +43,7 @@ function Test-Endpoint {
         }
     } catch {
         $webResp = $_.Exception.Response
-        if ($webResp -ne $null) {
+        if ($null -ne $webResp) {
             $code = [int]$webResp.StatusCode
             if ($Expected -contains $code) {
                 $ok = $true
@@ -94,7 +94,20 @@ Test-Endpoint "Ventas"                      "$ApiUrl/api/v1/ventas/ventas/"     
 Test-Endpoint "Facturas"                    "$ApiUrl/api/v1/contabilidad/facturas/"         @(401, 403)
 Test-Endpoint "Notificaciones"              "$ApiUrl/api/v1/notificaciones/notificaciones/" @(401, 403)
 
-# ── 3. Endpoints públicos / portal ───────────────────────────────
+# ── 3. Inventario — alertas (endpoint nuevo) ─────────────────────
+Write-Host ""
+Write-Host "  Inventario — alertas" -ForegroundColor Yellow
+Test-Endpoint "Alertas de stock"            "$ApiUrl/api/v1/inventario/alertas-stock/"       @(401, 403)
+Test-Endpoint "Alertas de vencimiento"      "$ApiUrl/api/v1/inventario/alertas-vencimiento/" @(401, 403)
+
+# ── 4. Bancard — requieren auth (401 sin token) ───────────────────
+Write-Host ""
+Write-Host "  Bancard vPOS (requieren auth)" -ForegroundColor Yellow
+Test-Endpoint "Bancard iniciar"             "$ApiUrl/api/v1/core/bancard/iniciar/"            @(401, 403, 405)
+Test-Endpoint "Bancard retorno (público)"   "$ApiUrl/api/v1/core/bancard/retorno/"            @(400, 404, 200)
+Test-Endpoint "Bancard estado (sin ID)"     "$ApiUrl/api/v1/core/bancard/estado/no-existe/"   @(401, 403, 404)
+
+# ── 5. Endpoints públicos / portal ───────────────────────────────
 Write-Host ""
 Write-Host "  Endpoints públicos" -ForegroundColor Yellow
 Test-Endpoint "Portal frontend"             "$BaseUrl/portal/"      @(200)
