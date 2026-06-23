@@ -27,21 +27,33 @@
 
   "nav": {
     "dashboard":    "Dashboard",
-    "products":     "Productos",
-    "clients":      "Clientes",
-    "cards":        "Tarjetas",
-    "cashLoad":     "Carga de Saldo",
-    "lunch":        "Almuerzos",
-    "diningRoom":   "Comedor",
-    "purchases":    "Compras",
-    "inventory":    "Inventario",
-    "billing":      "Facturación",
-    "reports":      "Reportes",
-    "users":        "Usuarios",
-    "settings":     "Configuración",
-    "integrations": "Integraciones",
-    "pos":          "Modo Recreo",
-    "logout":       "Salir"
+    "modoRecreo":   "Modo Recreo",
+    "almuerzos":    "Almuerzos",
+    "comedor":      "Comedor",
+    "menuDiario":   "Menú Diario",
+    "tarjetas":     "Tarjetas",
+    "cargaSaldo":   "Carga Saldo",
+    "clientes":     "Clientes",
+    "productos":    "Productos",
+    "compras":      "Compras",
+    "caja":         "Caja",
+    "facturacion":  "Facturación",
+    "reportes":     "Reportes",
+    "inventario":   "Inventario",
+    "alergenos":    "Alérgenos",
+    "usuarios":     "Usuarios",
+    "configuracion":"Configuración"
+  },
+
+  "layout": {
+    "systemName":   "Sistema de Gestión",
+    "mainMenu":     "Menú principal",
+    "expandMenu":   "Expandir menú",
+    "collapseMenu": "Colapsar menú",
+    "collapse":     "Colapsar",
+    "userMenu":     "Menú de usuario",
+    "defaultUser":  "Usuario",
+    "logout":       "Cerrar sesión"
   },
 
   "auth": {
