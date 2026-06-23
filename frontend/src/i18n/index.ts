@@ -14,12 +14,13 @@ i18n
       en: { translation: en },
     },
     fallbackLng: 'es',
-    supportedLngs: ['es', 'en'],
+    // 'languageOnly' normalizes regional variants: 'es-PY' → 'es', 'en-US' → 'en'
+    // Avoids supportedLngs strict-filtering rejecting regional codes in i18next v25
+    load: 'languageOnly',
     interpolation: {
       escapeValue: false, // React already escapes
     },
     detection: {
-      // Orden de detección: localStorage → navigator language → fallback
       order: ['localStorage', 'navigator'],
       caches: ['localStorage'],
       lookupLocalStorage: 'cantina_lang',
