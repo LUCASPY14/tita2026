@@ -50,8 +50,10 @@ interface Proveedor {
   id: number
   razon_social: string
   ruc: string
-  telefono: string
-  email: string
+  telefono: string | null
+  email: string | null
+  direccion: string | null
+  ciudad: string | null
   activo: boolean
   saldo_cuenta_corriente: number | string
 }
@@ -105,6 +107,13 @@ interface CuentaCorriente {
   monto: string | number
   saldo_resultante: string | number
   fecha: string
+}
+
+interface ProductoProveedorRecord {
+  id: number
+  producto: number
+  producto_nombre: string
+  precio_compra: number
 }
 
 interface ItemForm {
@@ -287,6 +296,20 @@ export default function Compras() {
   const [cuentaCorriente, setCuentaCorriente] = useState<CuentaCorriente[]>([])
   const [loadingCc, setLoadingCc] = useState(false)
 
+  // ── Proveedor modal ─────────────────────────────────────────────
+  const [provModalOpen, setProvModalOpen] = useState(false)
+  const [editingProv, setEditingProv] = useState<Proveedor | null>(null)
+  const [savingProv, setSavingProv] = useState(false)
+  const [provForm, setProvForm] = useState({
+    ruc: '', razon_social: '', telefono: '', email: '', direccion: '', ciudad: '', activo: true,
+  })
+
+  // ── Precios por proveedor (ProductoProveedor) ────────────────────
+  const [preciosProveedor, setPreciosProveedor] = useState<Record<number, number>>({})
+  const [preciosProveedorOC, setPreciosProveedorOC] = useState<Record<number, number>>({})
+  const [listaProdProveedor, setListaProdProveedor] = useState<ProductoProveedorRecord[]>([])
+  const [listaProdProveedorOC, setListaProdProveedorOC] = useState<ProductoProveedorRecord[]>([])
+
   // ── Load catalogs ────────────────────────────────────────────────
   useEffect(() => {
     api.get('/compras/proveedores/', { params: { activo: true, page_size: 500 } })
@@ -294,6 +317,43 @@ export default function Compras() {
       .catch(() => {})
     getProductos().then(prods => setProductos(prods as Producto[])).catch(() => {})
   }, [getProductos])
+
+  // ── Cargar precios por proveedor al seleccionarlo ────────────────
+  const fetchPreciosProveedor = useCallback(async (provId: number): Promise<{ map: Record<number, number>; list: ProductoProveedorRecord[] }> => {
+    try {
+      const { data } = await api.get('/compras/productos-proveedor/', { params: { proveedor: provId, page_size: 500 } })
+      const list = (data.results ?? []) as ProductoProveedorRecord[]
+      const map: Record<number, number> = {}
+      for (const pp of list) map[pp.producto] = Number(pp.precio_compra) || 0
+      return { map, list }
+    } catch {
+      return { map: {}, list: [] }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (proveedorId) {
+      fetchPreciosProveedor(Number(proveedorId)).then(({ map, list }) => {
+        setPreciosProveedor(map)
+        setListaProdProveedor(list)
+      })
+    } else {
+      setPreciosProveedor({})
+      setListaProdProveedor([])
+    }
+  }, [proveedorId, fetchPreciosProveedor])
+
+  useEffect(() => {
+    if (proveedorIdOC) {
+      fetchPreciosProveedor(Number(proveedorIdOC)).then(({ map, list }) => {
+        setPreciosProveedorOC(map)
+        setListaProdProveedorOC(list)
+      })
+    } else {
+      setPreciosProveedorOC({})
+      setListaProdProveedorOC([])
+    }
+  }, [proveedorIdOC, fetchPreciosProveedor])
 
   // ── Load compras ─────────────────────────────────────────────────
   const loadCompras = useCallback(async (search: string, estado: string, tipo: string, prov: string, entrega: string, p: number) => {
@@ -529,12 +589,34 @@ export default function Compras() {
       if (i !== index) return item
       const updated = { ...item, [field]: value }
       if (field === 'producto' && value) {
-        updated.costo_unitario = Number((value as Producto).precio_actual) || 0
+        const prodId = (value as Producto).id
+        const precioConocido = preciosProveedor[prodId]
+        if (precioConocido) {
+          updated.costo_unitario = precioConocido
+          updated.subtotal = updated.cantidad * precioConocido
+        } else {
+          updated.costo_unitario = 0
+          updated.subtotal = 0
+          api.get('/compras/detalles-compra/', { params: { producto: prodId, page_size: 1 } })
+            .then(res => {
+              const ultimo = res.data?.results?.[0]
+              if (ultimo) {
+                setItems(current => current.map((it, idx) =>
+                  idx === index && it.producto?.id === prodId
+                    ? { ...it, costo_unitario: Number(ultimo.costo_unitario) || 0, subtotal: it.cantidad * (Number(ultimo.costo_unitario) || 0) }
+                    : it
+                ))
+              }
+            })
+            .catch(() => {})
+        }
       }
-      updated.subtotal = updated.cantidad * updated.costo_unitario
+      if (field !== 'producto') {
+        updated.subtotal = updated.cantidad * updated.costo_unitario
+      }
       return updated
     }))
-  }, [])
+  }, [preciosProveedor])
 
   const total = useMemo(() => items.reduce((s, i) => s + i.subtotal, 0), [items])
 
@@ -618,6 +700,58 @@ export default function Compras() {
     }
   }, [searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, pageCompras, loadCompras])
 
+  // ── Proveedor CRUD ────────────────────────────────────────────────
+  const openNuevoProv = useCallback(() => {
+    setEditingProv(null)
+    setProvForm({ ruc: '', razon_social: '', telefono: '', email: '', direccion: '', ciudad: '', activo: true })
+    setProvModalOpen(true)
+  }, [])
+
+  const openEditProv = useCallback((p: Proveedor) => {
+    setEditingProv(p)
+    setProvForm({
+      ruc: p.ruc, razon_social: p.razon_social,
+      telefono: p.telefono ?? '', email: p.email ?? '',
+      direccion: p.direccion ?? '', ciudad: p.ciudad ?? '',
+      activo: p.activo,
+    })
+    setProvModalOpen(true)
+  }, [])
+
+  const handleSaveProv = useCallback(async () => {
+    if (!provForm.ruc.trim()) { toast.error('El RUC es obligatorio'); return }
+    if (!provForm.razon_social.trim()) { toast.error('La razón social es obligatoria'); return }
+    setSavingProv(true)
+    try {
+      const payload = {
+        ruc: provForm.ruc.trim(),
+        razon_social: provForm.razon_social.trim(),
+        telefono: provForm.telefono.trim() || null,
+        email: provForm.email.trim() || null,
+        direccion: provForm.direccion.trim() || null,
+        ciudad: provForm.ciudad.trim() || null,
+        activo: provForm.activo,
+      }
+      if (editingProv) {
+        await api.patch(`/compras/proveedores/${editingProv.id}/`, payload)
+        toast.success('Proveedor actualizado')
+      } else {
+        await api.post('/compras/proveedores/', payload)
+        toast.success('Proveedor registrado')
+      }
+      setProvModalOpen(false)
+      // Refrescar lista y catálogo
+      loadProveedores(searchProv, pageProveedores)
+      api.get('/compras/proveedores/', { params: { activo: true, page_size: 500 } })
+        .then(res => setProveedores(res.data.results ?? []))
+        .catch(() => {})
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSavingProv(false)
+    }
+  }, [provForm, editingProv, loadProveedores, searchProv, pageProveedores])
+
   // ── Cuenta corriente ─────────────────────────────────────────────
   const openCuentaCorriente = useCallback(async (p: Proveedor) => {
     setCcProveedor(p)
@@ -631,6 +765,41 @@ export default function Compras() {
       setLoadingCc(false)
     }
   }, [])
+
+  // ── Opciones de productos ordenadas por proveedor ───────────────
+  const opcionesProductoCompra = useMemo(() => {
+    const idsProveedor = new Set(listaProdProveedor.map(pp => pp.producto))
+    const provProds = listaProdProveedor.map(pp => {
+      const prod = productos.find(p => p.id === pp.producto)
+      if (!prod) return null
+      return {
+        value: prod.id,
+        label: `${prod.descripcion} — ${Number(pp.precio_compra).toLocaleString('es-PY')} Gs.`,
+        data: prod,
+      }
+    }).filter(Boolean) as { value: number; label: string; data: Producto }[]
+    const otros = productos
+      .filter(p => !idsProveedor.has(p.id))
+      .map(p => ({ value: p.id, label: p.descripcion, data: p }))
+    return [...provProds, ...otros]
+  }, [listaProdProveedor, productos])
+
+  const opcionesProductoOC = useMemo(() => {
+    const idsProveedor = new Set(listaProdProveedorOC.map(pp => pp.producto))
+    const provProds = listaProdProveedorOC.map(pp => {
+      const prod = productos.find(p => p.id === pp.producto)
+      if (!prod) return null
+      return {
+        value: prod.id,
+        label: `${prod.descripcion} — ${Number(pp.precio_compra).toLocaleString('es-PY')} Gs.`,
+        data: prod,
+      }
+    }).filter(Boolean) as { value: number; label: string; data: Producto }[]
+    const otros = productos
+      .filter(p => !idsProveedor.has(p.id))
+      .map(p => ({ value: p.id, label: p.descripcion, data: p }))
+    return [...provProds, ...otros]
+  }, [listaProdProveedorOC, productos])
 
   // ── Columns ─────────────────────────────────────────────────────
 
@@ -758,12 +927,17 @@ export default function Compras() {
     {
       title: '',
       key: 'acciones',
-      width: 120,
+      width: 160,
       render: (_, r) => (
-        <Button size="sm" variant="secondary" onClick={() => openCuentaCorriente(r)}>
-          <Building2 className="w-3.5 h-3.5" />
-          C/C
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={() => openEditProv(r)}>
+            Editar
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => openCuentaCorriente(r)}>
+            <Building2 className="w-3.5 h-3.5" />
+            C/C
+          </Button>
+        </div>
       ),
     },
   ]
@@ -1110,7 +1284,13 @@ export default function Compras() {
       {tab === 'proveedores' && (
         <>
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
-            <label className={labelClass}>Buscar proveedor</label>
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <label className={labelClass}>Buscar proveedor</label>
+              <Button size="sm" variant="primary" onClick={openNuevoProv}>
+                <Plus className="w-3.5 h-3.5" />
+                Nuevo Proveedor
+              </Button>
+            </div>
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
@@ -1292,7 +1472,7 @@ export default function Compras() {
                 <div key={idx} className="flex gap-2 items-center bg-slate-50 rounded-xl px-3 py-2">
                   <div className="flex-1">
                     <Combobox
-                      options={productos.map(p => ({ value: p.id, label: p.descripcion, data: p }))}
+                      options={opcionesProductoCompra}
                       value={item.producto?.id}
                       onChange={(_, opt) => actualizarItem(idx, 'producto', opt.data as Producto)}
                       filterLocal
@@ -1448,13 +1628,13 @@ export default function Compras() {
                 <div key={idx} className="flex gap-2 items-center bg-slate-50 rounded-xl px-3 py-2">
                   <div className="flex-1">
                     <Combobox
-                      options={productos.map(p => ({ value: p.id, label: p.descripcion, data: p }))}
+                      options={opcionesProductoOC}
                       value={item.producto?.id}
                       onChange={(_, opt) => {
                         setOcItems(prev => prev.map((it, i) => {
                           if (i !== idx) return it
                           const p = opt.data as Producto
-                          const costo = Number(p.precio_actual) || 0
+                          const costo = preciosProveedorOC[p.id] || 0
                           return { ...it, producto: p, costo_unitario: costo, subtotal: it.cantidad * costo }
                         }))
                       }}
@@ -1659,6 +1839,89 @@ export default function Compras() {
           </div>
         </Modal>
       )}
+
+      {/* ── Modal Nuevo / Editar Proveedor ───────────────────────── */}
+      <Modal
+        open={provModalOpen}
+        title={editingProv ? `Editar Proveedor — ${editingProv.razon_social}` : 'Nuevo Proveedor'}
+        onOk={handleSaveProv}
+        onCancel={() => setProvModalOpen(false)}
+        okText={editingProv ? 'Guardar Cambios' : 'Registrar'}
+        confirmLoading={savingProv}
+        width={560}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>RUC *</label>
+              <input
+                className={inputClass}
+                placeholder="80012345-6"
+                value={provForm.ruc}
+                onChange={e => setProvForm(f => ({ ...f, ruc: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Razón Social *</label>
+              <input
+                className={inputClass}
+                placeholder="Empresa S.A."
+                value={provForm.razon_social}
+                onChange={e => setProvForm(f => ({ ...f, razon_social: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Teléfono</label>
+              <input
+                className={inputClass}
+                placeholder="021-123456"
+                value={provForm.telefono}
+                onChange={e => setProvForm(f => ({ ...f, telefono: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Email</label>
+              <input
+                type="email"
+                className={inputClass}
+                placeholder="contacto@empresa.com"
+                value={provForm.email}
+                onChange={e => setProvForm(f => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Dirección</label>
+              <input
+                className={inputClass}
+                placeholder="Av. Principal 123"
+                value={provForm.direccion}
+                onChange={e => setProvForm(f => ({ ...f, direccion: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Ciudad</label>
+              <input
+                className={inputClass}
+                placeholder="Asunción"
+                value={provForm.ciudad}
+                onChange={e => setProvForm(f => ({ ...f, ciudad: e.target.value }))}
+              />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={provForm.activo}
+              onClick={() => setProvForm(f => ({ ...f, activo: !f.activo }))}
+              className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500/30 ${provForm.activo ? 'bg-green-500' : 'bg-slate-200'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${provForm.activo ? 'translate-x-4' : 'translate-x-0'}`} />
+            </button>
+            <span className="text-sm text-slate-700">Proveedor activo</span>
+          </label>
+        </div>
+      </Modal>
     </div>
   )
 }
