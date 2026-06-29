@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface Option {
   value: string | number
@@ -28,21 +29,55 @@ export default function Combobox({
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const selected = options.find((o) => o.value === value)
 
-  // Valor mostrado en el input: mientras se escribe usa query; al perder foco
-  // refleja la selección actual directamente (sin setState en efecto).
   const displayValue = isFocused ? query : (selected?.label ?? '')
 
   const filtered = filterLocal
     ? options.filter((o) => o.label.toLowerCase().includes(displayValue.toLowerCase()))
     : options
 
+  // Recalculate dropdown position based on input's viewport rect
+  const updatePosition = () => {
+    if (!inputRef.current) return
+    const rect = inputRef.current.getBoundingClientRect()
+    setDropdownStyle({
+      position: 'fixed',
+      top: rect.bottom + 6,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 9999,
+    })
+  }
+
+  useLayoutEffect(() => {
+    if (open) updatePosition()
+  }, [open, displayValue])
+
+  useEffect(() => {
+    if (!open) return
+    const handleScroll = () => updatePosition()
+    const handleResize = () => updatePosition()
+    window.addEventListener('scroll', handleScroll, true)
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [open])
+
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (
+        wrapperRef.current && !wrapperRef.current.contains(e.target as Node) &&
+        !(e.target as Element)?.closest('[data-combobox-dropdown]')
+      ) {
+        setOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -60,9 +95,40 @@ export default function Combobox({
     }
   }
 
+  const dropdown = open && (filtered.length > 0 || query.length > 0) ? createPortal(
+    <ul
+      data-combobox-dropdown
+      role="listbox"
+      style={dropdownStyle}
+      className="bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/60 max-h-52 overflow-y-auto"
+    >
+      {filtered.length > 0 ? (
+        filtered.map((opt) => (
+          <li
+            key={opt.value}
+            role="option"
+            aria-selected={opt.value === value}
+            className="px-3.5 py-3 text-base text-slate-700 hover:bg-green-50 hover:text-green-700 cursor-pointer transition-colors first:rounded-t-xl last:rounded-b-xl"
+            onMouseDown={() => {
+              onChange(opt.value, opt)
+              setQuery(opt.label)
+              setOpen(false)
+            }}
+          >
+            {opt.label}
+          </li>
+        ))
+      ) : (
+        <li className="px-3.5 py-3 text-base text-slate-400 text-center">Sin resultados</li>
+      )}
+    </ul>,
+    document.body,
+  ) : null
+
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <div ref={wrapperRef} className={`relative ${className}`}>
       <input
+        ref={inputRef}
         role="combobox"
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -85,32 +151,7 @@ export default function Combobox({
         }}
         onKeyDown={handleKeyDown}
       />
-      {open && (filtered.length > 0 || query.length > 0) && (
-        <ul
-          role="listbox"
-          className="absolute z-50 w-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/60 max-h-52 overflow-y-auto"
-        >
-          {filtered.length > 0 ? (
-            filtered.map((opt) => (
-              <li
-                key={opt.value}
-                role="option"
-                aria-selected={opt.value === value}
-                className="px-3.5 py-3 text-base text-slate-700 hover:bg-green-50 hover:text-green-700 cursor-pointer transition-colors first:rounded-t-xl last:rounded-b-xl"
-                onMouseDown={() => {
-                  onChange(opt.value, opt)
-                  setQuery(opt.label)
-                  setOpen(false)
-                }}
-              >
-                {opt.label}
-              </li>
-            ))
-          ) : (
-            <li className="px-3.5 py-3 text-base text-slate-400 text-center">Sin resultados</li>
-          )}
-        </ul>
-      )}
+      {dropdown}
     </div>
   )
 }
