@@ -68,12 +68,15 @@ interface ClienteForm {
   tipo_cliente: string
 }
 
+interface GradoOption { id: number; nombre: string; activo: boolean }
+
 interface Hijo {
   id: number
   nombre: string
   apellido: string
   fecha_nacimiento: string | null
-  grado: string | null
+  grado: number | null
+  grado_nombre: string | null
   foto_perfil: string | null
   activo: boolean
   cliente_responsable: number
@@ -393,10 +396,23 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [webcamActive, setWebcamActive] = useState(false)
   const [webcamError, setWebcamError] = useState<string | null>(null)
+  const [grados, setGrados] = useState<GradoOption[]>([])
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    api.get<{ results?: GradoOption[]; id?: number }[]>('/clientes/grados/')
+      .then(res => {
+        const data = res.data
+        const list = Array.isArray(data)
+          ? (data as GradoOption[])
+          : ((data as { results?: GradoOption[] }).results ?? [])
+        setGrados(list.filter(g => g.activo))
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!open) {
@@ -409,7 +425,7 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
           nombre: hijo.nombre,
           apellido: hijo.apellido,
           fecha_nacimiento: hijo.fecha_nacimiento ?? '',
-          grado: hijo.grado ?? '',
+          grado: hijo.grado ? String(hijo.grado) : '',
           activo: hijo.activo,
         }
       : BLANK_HIJO
@@ -498,7 +514,7 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
         fd.append('activo', String(form.activo))
         fd.append('cliente_responsable', String(clienteId))
         if (form.fecha_nacimiento) fd.append('fecha_nacimiento', form.fecha_nacimiento)
-        if (form.grado) fd.append('grado', form.grado)
+        if (form.grado) fd.append('grado', String(Number(form.grado)))
         fd.append('foto_perfil', photoFile)
         if (hijo) {
           await api.patch(`/clientes/hijos/${hijo.id}/`, fd)
@@ -509,7 +525,7 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
         const payload = {
           ...form,
           fecha_nacimiento: form.fecha_nacimiento || null,
-          grado: form.grado || null,
+          grado: form.grado ? Number(form.grado) : null,
           cliente_responsable: clienteId,
         }
         if (hijo) {
@@ -629,7 +645,19 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
         <div className="grid grid-cols-2 gap-4">
           <Input label="Nombre *" value={form.nombre} onChange={setText('nombre')} placeholder="Juan" />
           <Input label="Apellido *" value={form.apellido} onChange={setText('apellido')} placeholder="García" />
-          <Input label="Grado" value={form.grado} onChange={setText('grado')} placeholder="Ej: 5° Primaria A" />
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-slate-700">Grado</label>
+            <select
+              value={form.grado}
+              onChange={e => setForm(prev => ({ ...prev, grado: e.target.value }))}
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400"
+            >
+              <option value="">Sin grado</option>
+              {grados.map(g => (
+                <option key={g.id} value={String(g.id)}>{g.nombre}</option>
+              ))}
+            </select>
+          </div>
           <Input label="Fecha de Nacimiento" type="date" value={form.fecha_nacimiento} onChange={setText('fecha_nacimiento')} />
         </div>
         <div className="flex items-center gap-3">
@@ -1358,10 +1386,10 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
                             </Badge>
                           )}
                         </div>
-                        {hijo.grado && (
+                        {hijo.grado_nombre && (
                           <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-1">
                             <GraduationCap className="w-3 h-3 shrink-0" />
-                            {hijo.grado}
+                            {hijo.grado_nombre}
                           </p>
                         )}
                       </div>
