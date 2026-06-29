@@ -82,8 +82,8 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 // ── Guards ────────────────────────────────────────────────────────────────────
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { isAuthenticated, user } = useAuthStore()
-  if (!isAuthenticated) return <Navigate to="/login" />
-  if (roles && user && !roles.includes(user.rol)) return <Navigate to="/login" />
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (roles && user && !roles.includes(user.rol)) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
@@ -149,17 +149,61 @@ export default function App() {
             }>
               <Route path="/dashboard"     element={<Dashboard />} />
               <Route path="/ventas"        element={<Navigate to="/modo-recreo" />} />
-              <Route path="/almuerzos"     element={<Almuerzos />} />
-              <Route path="/comedor"       element={<Comedor />} />
-              <Route path="/menu-diario"   element={<MenuDiario />} />
-              <Route path="/tarjetas"      element={<Tarjetas />} />
-              <Route path="/carga-saldo"   element={<CargaSaldo />} />
-              <Route path="/clientes"      element={<Clientes />} />
-              <Route path="/productos"     element={<Productos />} />
-              <Route path="/compras"       element={<Compras />} />
-              <Route path="/caja"          element={<Caja />} />
-              <Route path="/facturacion"   element={<Facturacion />} />
-              <Route path="/alergenos"     element={<Alergenos />} />
+              <Route path="/almuerzos"     element={
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'COCINA']}>
+                  <Almuerzos />
+                </PrivateRoute>
+              } />
+              <Route path="/comedor"       element={
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'COCINA']}>
+                  <Comedor />
+                </PrivateRoute>
+              } />
+              <Route path="/menu-diario"   element={
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'COCINA']}>
+                  <MenuDiario />
+                </PrivateRoute>
+              } />
+              <Route path="/tarjetas"      element={
+                <PrivateRoute roles={['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']}>
+                  <Tarjetas />
+                </PrivateRoute>
+              } />
+              <Route path="/carga-saldo"   element={
+                <PrivateRoute roles={['ADMIN', 'CAJERO', 'COBRADOR']}>
+                  <CargaSaldo />
+                </PrivateRoute>
+              } />
+              <Route path="/clientes"      element={
+                <PrivateRoute roles={['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']}>
+                  <Clientes />
+                </PrivateRoute>
+              } />
+              <Route path="/productos"     element={
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR']}>
+                  <Productos />
+                </PrivateRoute>
+              } />
+              <Route path="/compras"       element={
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR']}>
+                  <Compras />
+                </PrivateRoute>
+              } />
+              <Route path="/caja"          element={
+                <PrivateRoute roles={['ADMIN', 'CAJERO', 'SUPERVISOR']}>
+                  <Caja />
+                </PrivateRoute>
+              } />
+              <Route path="/facturacion"   element={
+                <PrivateRoute roles={['ADMIN', 'COBRADOR']}>
+                  <Facturacion />
+                </PrivateRoute>
+              } />
+              <Route path="/alergenos"     element={
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'COCINA']}>
+                  <Alergenos />
+                </PrivateRoute>
+              } />
               <Route path="/reportes" element={
                 <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'COBRADOR']}>
                   <Reportes />

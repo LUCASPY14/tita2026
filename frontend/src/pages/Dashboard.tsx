@@ -127,9 +127,9 @@ export default function Dashboard() {
 
   const STATS_POR_ROL: Record<string, string[]> = {
     ADMIN:      ['Ventas Hoy', 'Clientes Activos', 'Productos', 'Alertas Stock', 'Cajas Abiertas'],
-    CAJERO:     ['Ventas Hoy', 'Alertas Stock', 'Cajas Abiertas'],
+    CAJERO:     ['Ventas Hoy', 'Cajas Abiertas'],
     SUPERVISOR: ['Ventas Hoy', 'Clientes Activos', 'Productos', 'Alertas Stock', 'Cajas Abiertas'],
-    COBRADOR:   ['Ventas Hoy', 'Clientes Activos', 'Alertas Stock', 'Cajas Abiertas'],
+    COBRADOR:   ['Ventas Hoy', 'Clientes Activos', 'Cajas Abiertas'],
     COCINA:     ['Ventas Hoy', 'Cajas Abiertas'],
   }
 
@@ -212,15 +212,15 @@ export default function Dashboard() {
     { path: '/modo-recreo',  label: 'Modo Recreo',      icon: Zap,            color: 'bg-green-600',   desc: 'POS — venta en recreo',        roles: ['ADMIN', 'CAJERO'] },
     { path: '/carga-saldo',  label: 'Recargar Tarjeta', icon: Wallet,         color: 'bg-emerald-600', desc: 'Carga de saldo RFID',           roles: ['ADMIN', 'CAJERO'] },
     { path: '/caja',         label: 'Gestionar Caja',   icon: Banknote,       color: 'bg-purple-600',  desc: 'Abrir / cerrar caja',           roles: ['ADMIN', 'CAJERO'] },
-    { path: '/almuerzos',    label: 'Almuerzos',        icon: UtensilsCrossed, color: 'bg-amber-600',  desc: 'Gestión de almuerzos',          roles: ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COCINA'] },
+    { path: '/almuerzos',    label: 'Almuerzos',        icon: UtensilsCrossed, color: 'bg-amber-600',  desc: 'Gestión de almuerzos',          roles: ['ADMIN', 'SUPERVISOR', 'COCINA'] },
     { path: '/comedor',      label: 'Comedor',          icon: ChefHat,        color: 'bg-teal-600',    desc: 'Registro de servicio comedor',  roles: ['ADMIN', 'COCINA'] },
     { path: '/menu-diario',  label: 'Menú Diario',      icon: ChefHat,        color: 'bg-orange-600',  desc: 'Configurar menú del día',       roles: ['ADMIN', 'SUPERVISOR', 'COCINA'] },
     { path: '/clientes',     label: 'Clientes',         icon: Users,          color: 'bg-cyan-600',    desc: 'Ver y gestionar clientes',      roles: ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR'] },
     { path: '/tarjetas',     label: 'Tarjetas',         icon: CreditCard,     color: 'bg-sky-600',     desc: 'Gestión de tarjetas RFID',     roles: ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR'] },
     { path: '/inventario',   label: 'Inventario',       icon: Warehouse,      color: 'bg-slate-600',   desc: 'Stock y alertas',               roles: ['ADMIN', 'SUPERVISOR'] },
     { path: '/reportes',     label: 'Reportes',         icon: BarChart2,      color: 'bg-rose-600',    desc: 'Ver reportes del período',      roles: ['ADMIN', 'SUPERVISOR', 'COBRADOR'] },
-    { path: '/compras',      label: 'Compras',          icon: Truck,          color: 'bg-indigo-600',  desc: 'Registrar ingreso de stock',    roles: ['ADMIN', 'CAJERO', 'SUPERVISOR'] },
-    { path: '/facturacion',  label: 'Facturación',      icon: CreditCard,     color: 'bg-blue-600',    desc: 'Emitir facturas',               roles: ['ADMIN', 'CAJERO', 'COBRADOR'] },
+    { path: '/compras',      label: 'Compras',          icon: Truck,          color: 'bg-indigo-600',  desc: 'Registrar ingreso de stock',    roles: ['ADMIN', 'SUPERVISOR'] },
+    { path: '/facturacion',  label: 'Facturación',      icon: CreditCard,     color: 'bg-blue-600',    desc: 'Emitir facturas',               roles: ['ADMIN', 'COBRADOR'] },
   ].filter(a => a.roles.includes(rol))
 
   return (
@@ -279,6 +279,24 @@ export default function Dashboard() {
           )
         })}
       </div>
+
+      {/* Banner: cajero sin caja abierta */}
+      {rol === 'CAJERO' && r.cajasAbiertas === 0 && (
+        <button
+          type="button"
+          onClick={() => navigate('/caja')}
+          className="w-full flex items-center gap-4 bg-orange-50 border border-orange-200 rounded-2xl px-5 py-4 hover:bg-orange-100 transition-colors group text-left"
+        >
+          <div className="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
+            <Banknote className="w-5 h-5 text-orange-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-semibold text-orange-800">No tenés una caja abierta</p>
+            <p className="text-sm text-orange-600 mt-0.5">Abrí tu caja antes de comenzar a trabajar</p>
+          </div>
+          <ArrowRight className="w-5 h-5 text-orange-400 group-hover:text-orange-600 transition-colors shrink-0" />
+        </button>
+      )}
 
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

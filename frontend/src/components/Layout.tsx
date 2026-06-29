@@ -29,14 +29,17 @@ import {
 } from 'lucide-react'
 
 // Todos los roles internos del sistema
-const ALL_STAFF = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR', 'COCINA']
-const ADMIN_ONLY = ['ADMIN']
-const POS_ROLES = ['ADMIN', 'CAJERO']
-const REPORTING = ['ADMIN', 'SUPERVISOR', 'COBRADOR']
-const OPS_ROLES = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COCINA']
-const BILLING   = ['ADMIN', 'CAJERO', 'COBRADOR']
-const TARJETAS  = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
-const CLIENTES  = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
+const ALL_STAFF      = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR', 'COCINA']
+const ADMIN_ONLY     = ['ADMIN']
+const POS_ROLES      = ['ADMIN', 'CAJERO']
+const REPORTING      = ['ADMIN', 'SUPERVISOR', 'COBRADOR']
+const OPS_ROLES      = ['ADMIN', 'SUPERVISOR', 'COCINA']        // sin CAJERO
+const CAJA_ROLES     = ['ADMIN', 'CAJERO', 'SUPERVISOR']
+const CARGA_ROLES    = ['ADMIN', 'CAJERO', 'COBRADOR']
+const FACTURACION    = ['ADMIN', 'COBRADOR']                    // sin CAJERO
+const COMPRAS_ROLES  = ['ADMIN', 'SUPERVISOR']                  // sin CAJERO
+const TARJETAS       = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
+const CLIENTES       = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
 
 interface NavItem {
   path: string
@@ -48,19 +51,19 @@ interface NavItem {
 const navItems: NavItem[] = [
   { path: '/dashboard',    labelKey: 'nav.dashboard',    icon: LayoutDashboard, roles: ALL_STAFF },
   { path: '/modo-recreo',  labelKey: 'nav.modoRecreo',   icon: Zap,             roles: POS_ROLES },
+  { path: '/caja',         labelKey: 'nav.caja',         icon: Banknote,        roles: CAJA_ROLES },
+  { path: '/carga-saldo',  labelKey: 'nav.cargaSaldo',   icon: Wallet,          roles: CARGA_ROLES },
+  { path: '/tarjetas',     labelKey: 'nav.tarjetas',     icon: CreditCard,      roles: TARJETAS },
+  { path: '/clientes',     labelKey: 'nav.clientes',     icon: Users,           roles: CLIENTES },
   { path: '/almuerzos',    labelKey: 'nav.almuerzos',    icon: UtensilsCrossed, roles: OPS_ROLES },
   { path: '/comedor',      labelKey: 'nav.comedor',      icon: Utensils,        roles: OPS_ROLES },
   { path: '/menu-diario',  labelKey: 'nav.menuDiario',   icon: ChefHat,         roles: OPS_ROLES },
-  { path: '/tarjetas',     labelKey: 'nav.tarjetas',     icon: CreditCard,      roles: TARJETAS },
-  { path: '/carga-saldo',  labelKey: 'nav.cargaSaldo',   icon: Wallet,          roles: BILLING },
-  { path: '/clientes',     labelKey: 'nav.clientes',     icon: Users,           roles: CLIENTES },
+  { path: '/alergenos',    labelKey: 'nav.alergenos',    icon: Leaf,            roles: OPS_ROLES },
   { path: '/productos',    labelKey: 'nav.productos',    icon: Package,         roles: OPS_ROLES },
-  { path: '/compras',      labelKey: 'nav.compras',      icon: Truck,           roles: ['ADMIN', 'CAJERO', 'SUPERVISOR'] },
-  { path: '/caja',         labelKey: 'nav.caja',         icon: Banknote,        roles: ['ADMIN', 'CAJERO', 'SUPERVISOR'] },
-  { path: '/facturacion',  labelKey: 'nav.facturacion',  icon: FileText,        roles: BILLING },
+  { path: '/compras',      labelKey: 'nav.compras',      icon: Truck,           roles: COMPRAS_ROLES },
+  { path: '/facturacion',  labelKey: 'nav.facturacion',  icon: FileText,        roles: FACTURACION },
   { path: '/reportes',     labelKey: 'nav.reportes',     icon: BarChart2,       roles: REPORTING },
   { path: '/inventario',   labelKey: 'nav.inventario',   icon: Warehouse,       roles: ['ADMIN', 'SUPERVISOR'] },
-  { path: '/alergenos',    labelKey: 'nav.alergenos',    icon: Leaf,            roles: OPS_ROLES },
   { path: '/usuarios',     labelKey: 'nav.usuarios',     icon: UserCog,         roles: ADMIN_ONLY },
   { path: '/configuracion',labelKey: 'nav.configuracion',icon: Settings,        roles: ADMIN_ONLY },
 ]
