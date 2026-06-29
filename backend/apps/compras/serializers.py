@@ -56,6 +56,21 @@ class CompraSerializer(serializers.ModelSerializer):
         read_only_fields = ["fecha_creacion"]
 
 
+class DetalleCompraWriteSerializer(serializers.Serializer):
+    producto = serializers.IntegerField()
+    cantidad = serializers.DecimalField(max_digits=10, decimal_places=3)
+    costo_unitario = serializers.DecimalField(max_digits=12, decimal_places=0)
+
+
+class CompraWriteSerializer(serializers.Serializer):
+    """Serializer de escritura para crear/editar compras vía CompraService."""
+    proveedor = serializers.IntegerField()
+    tipo_pago = serializers.ChoiceField(choices=["CONTADO", "CREDITO"])
+    nro_factura_proveedor = serializers.CharField(required=False, allow_blank=True, default="")
+    observaciones = serializers.CharField(required=False, allow_blank=True, default="")
+    items = DetalleCompraWriteSerializer(many=True)
+
+
 class PagoProveedorSerializer(serializers.ModelSerializer):
     proveedor_nombre = serializers.CharField(source="proveedor.razon_social", read_only=True)
     medio_pago_nombre = serializers.CharField(source="medio_pago.descripcion", read_only=True)

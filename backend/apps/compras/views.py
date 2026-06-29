@@ -32,6 +32,7 @@ from .serializers import (
     ProveedorSerializer,
     CuentaCorrienteProveedorSerializer,
     CompraSerializer,
+    CompraWriteSerializer,
     DetalleCompraSerializer,
     PagoProveedorSerializer,
     AplicacionPagoCompraSerializer,
@@ -71,7 +72,7 @@ class CuentaCorrienteProveedorViewSet(viewsets.ModelViewSet):
 
 class CompraViewSet(ExportCSVMixin, viewsets.ModelViewSet):
     serializer_class = CompraSerializer
-    permission_classes = [IsCajeroOrAdmin]
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = CompraFilter
     search_fields = ["proveedor__razon_social", "nro_factura_proveedor"]
@@ -98,6 +99,76 @@ class CompraViewSet(ExportCSVMixin, viewsets.ModelViewSet):
                 )
             )
         )
+
+    def _resolve_items(self, items_data):
+        from apps.productos.models import Producto
+        resolved = []
+        for item in items_data:
+            producto = Producto.objects.get(pk=item["producto"])
+            resolved.append({
+                "producto": producto,
+                "cantidad": item["cantidad"],
+                "costo_unitario": item["costo_unitario"],
+            })
+        return resolved
+
+    def create(self, request, *args, **kwargs):
+        write_ser = CompraWriteSerializer(data=request.data)
+        write_ser.is_valid(raise_exception=True)
+        data = write_ser.validated_data
+        try:
+            proveedor = Proveedor.objects.get(pk=data["proveedor"])
+        except Proveedor.DoesNotExist:
+            return Response({"proveedor": ["Proveedor no encontrado."]}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            items = self._resolve_items(data["items"])
+            compra = CompraService.registrar_compra(
+                proveedor=proveedor,
+                creado_por=request.user,
+                tipo_pago=data["tipo_pago"],
+                items=items,
+                nro_factura_proveedor=data.get("nro_factura_proveedor", ""),
+                observaciones=data.get("observaciones", ""),
+            )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        compra_data = self.get_queryset().get(pk=compra.pk)
+        return Response(CompraSerializer(compra_data).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        write_ser = CompraWriteSerializer(data=request.data, partial=partial)
+        write_ser.is_valid(raise_exception=True)
+        data = write_ser.validated_data
+        try:
+            proveedor = Proveedor.objects.get(pk=data["proveedor"])
+        except Proveedor.DoesNotExist:
+            return Response({"proveedor": ["Proveedor no encontrado."]}, status=status.HTTP_400_BAD_REQUEST)
+        from decimal import Decimal
+        from apps.productos.models import Producto as ProdModel
+        items = self._resolve_items(data.get("items", []))
+        instance.proveedor = proveedor
+        instance.tipo_pago = data.get("tipo_pago", instance.tipo_pago)
+        instance.nro_factura_proveedor = data.get("nro_factura_proveedor", instance.nro_factura_proveedor)
+        instance.observaciones = data.get("observaciones", instance.observaciones)
+        if items:
+            instance.detalles.all().delete()
+            monto_total = Decimal("0")
+            for item in items:
+                subtotal = item["cantidad"] * item["costo_unitario"]
+                monto_total += subtotal
+                DetalleCompra.objects.create(
+                    compra=instance,
+                    producto=item["producto"],
+                    cantidad=item["cantidad"],
+                    costo_unitario=item["costo_unitario"],
+                    subtotal=subtotal,
+                )
+            instance.monto_total = monto_total
+        instance.save()
+        compra_data = self.get_queryset().get(pk=instance.pk)
+        return Response(CompraSerializer(compra_data).data)
 
     @action(detail=True, methods=["post"], url_path="confirmar-entrega")
     def confirmar_entrega(self, request, pk=None):
