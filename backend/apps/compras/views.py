@@ -9,7 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from common.permissions import IsCajeroOrAdmin
+from common.permissions import IsCajeroOrAdmin, IsStaffUser
 from common.mixins import ExportCSVMixin
 from .filters import CompraFilter
 
@@ -155,7 +155,7 @@ class DetalleNotaCreditoProveedorViewSet(viewsets.ModelViewSet):
 class ProductoProveedorViewSet(viewsets.ModelViewSet):
     queryset = ProductoProveedor.objects.select_related("proveedor", "producto").all()
     serializer_class = ProductoProveedorSerializer
-    permission_classes = [IsCajeroOrAdmin]
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["proveedor", "producto"]
     search_fields = ["producto__descripcion"]
