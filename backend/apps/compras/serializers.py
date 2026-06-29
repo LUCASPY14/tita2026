@@ -81,6 +81,14 @@ class PagoProveedorSerializer(serializers.ModelSerializer):
         read_only_fields = ["fecha_creacion"]
 
 
+class PagoProveedorWriteSerializer(serializers.Serializer):
+    """Serializer de escritura para registrar un pago a proveedor."""
+    compra = serializers.IntegerField()
+    monto = serializers.DecimalField(max_digits=12, decimal_places=0)
+    medio_pago = serializers.IntegerField()
+    observaciones = serializers.CharField(required=False, allow_blank=True, default="")
+
+
 class AplicacionPagoCompraSerializer(serializers.ModelSerializer):
     class Meta:
         model = AplicacionPagoCompra

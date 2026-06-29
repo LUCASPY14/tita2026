@@ -2,6 +2,7 @@
 Views para la app compras
 """
 
+from django.db import models, transaction
 from django.db.models import DecimalField, Sum, Value
 from django.db.models.functions import Coalesce
 from rest_framework import viewsets, filters, status
@@ -35,6 +36,7 @@ from .serializers import (
     CompraWriteSerializer,
     DetalleCompraSerializer,
     PagoProveedorSerializer,
+    PagoProveedorWriteSerializer,
     AplicacionPagoCompraSerializer,
     NotaCreditoProveedorSerializer,
     DetalleNotaCreditoProveedorSerializer,
@@ -198,9 +200,48 @@ class DetalleCompraViewSet(viewsets.ModelViewSet):
 class PagoProveedorViewSet(viewsets.ModelViewSet):
     queryset = PagoProveedor.objects.select_related("proveedor", "medio_pago").all()
     serializer_class = PagoProveedorSerializer
-    permission_classes = [IsCajeroOrAdmin]
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["proveedor", "estado", "medio_pago"]
+
+    def create(self, request, *args, **kwargs):
+        from decimal import Decimal
+        from apps.core.models import MedioPago
+        write_ser = PagoProveedorWriteSerializer(data=request.data)
+        write_ser.is_valid(raise_exception=True)
+        data = write_ser.validated_data
+        try:
+            compra = Compra.objects.get(pk=data["compra"])
+        except Compra.DoesNotExist:
+            return Response({"compra": ["Compra no encontrada."]}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            medio_pago = MedioPago.objects.get(pk=data["medio_pago"])
+        except MedioPago.DoesNotExist:
+            return Response({"medio_pago": ["Medio de pago no encontrado."]}, status=status.HTTP_400_BAD_REQUEST)
+        monto = Decimal(str(data["monto"]))
+        with transaction.atomic():
+            pago = PagoProveedor.objects.create(
+                proveedor=compra.proveedor,
+                monto_total=monto,
+                medio_pago=medio_pago,
+                observaciones=data.get("observaciones") or "",
+                creado_por=request.user,
+            )
+            AplicacionPagoCompra.objects.create(
+                pago=pago,
+                compra=compra,
+                monto_aplicado=monto,
+            )
+            # Recalcular estado_pago de la compra
+            total_pagado = AplicacionPagoCompra.objects.filter(compra=compra).aggregate(
+                total=models.Sum("monto_aplicado")
+            )["total"] or Decimal("0")
+            if total_pagado >= compra.monto_total:
+                compra.estado_pago = "PAGADO"
+            elif total_pagado > 0:
+                compra.estado_pago = "PARCIAL"
+            compra.save(update_fields=["estado_pago"])
+        return Response(PagoProveedorSerializer(pago).data, status=status.HTTP_201_CREATED)
 
 
 class AplicacionPagoCompraViewSet(viewsets.ModelViewSet):

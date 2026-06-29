@@ -192,10 +192,12 @@ export default function Compras() {
   const canApprove = user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR'
   const [tab, setTab] = useState<TabKey>('compras')
   const getProductos = useCatalogoStore(state => state.getProductos)
+  const getMediosPago = useCatalogoStore(state => state.getMediosPago)
 
   // ── Catalogs ────────────────────────────────────────────────────
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [productos, setProductos] = useState<Producto[]>([])
+  const [mediosPago, setMediosPago] = useState<{ id: number; descripcion: string }[]>([])
 
   // ── Compras list ────────────────────────────────────────────────
   const [compras, setCompras] = useState<Compra[]>([])
@@ -250,7 +252,7 @@ export default function Compras() {
   const [pagoModalOpen, setPagoModalOpen] = useState(false)
   const [pagoCompra, setPagoCompra] = useState<Compra | null>(null)
   const [montoPago, setMontoPago] = useState('')
-  const [medioPago, setMedioPago] = useState('EFECTIVO')
+  const [medioPago, setMedioPago] = useState<number>(0)
   const [obsPago, setObsPago] = useState('')
   const [savingPago, setSavingPago] = useState(false)
   const [confirmandoEntrega, setConfirmandoEntrega] = useState<number | null>(null)
@@ -316,7 +318,8 @@ export default function Compras() {
       .then(res => setProveedores(res.data.results ?? []))
       .catch(() => {})
     getProductos().then(prods => setProductos(prods as Producto[])).catch(() => {})
-  }, [getProductos])
+    getMediosPago().then(mp => setMediosPago(mp as { id: number; descripcion: string }[])).catch(() => {})
+  }, [getProductos, getMediosPago])
 
   // ── Cargar precios por proveedor al seleccionarlo ────────────────
   const fetchPreciosProveedor = useCallback(async (provId: number): Promise<{ map: Record<number, number>; list: ProductoProveedorRecord[] }> => {
@@ -656,10 +659,11 @@ export default function Compras() {
   })
 
   // ── Open pago modal ──────────────────────────────────────────────
-  const openPago = useCallback((c: Compra) => {
+  const openPago = useCallback((c: Compra, mp: { id: number; descripcion: string }[]) => {
     setPagoCompra(c)
     setMontoPago(String(Number(c.saldo_pendiente) || ''))
-    setMedioPago('EFECTIVO')
+    const efectivo = mp.find(m => m.descripcion.toLowerCase().includes('efectivo'))
+    setMedioPago(efectivo?.id ?? mp[0]?.id ?? 0)
     setObsPago('')
     setPagoModalOpen(true)
   }, [])
@@ -671,7 +675,6 @@ export default function Compras() {
     try {
       await api.post('/compras/pagos/', {
         compra: pagoCompra!.id,
-        proveedor: pagoCompra!.proveedor,
         monto: montoNum,
         medio_pago: medioPago,
         observaciones: obsPago,
@@ -865,7 +868,7 @@ export default function Compras() {
             Editar
           </Button>
           {(r.estado_pago === 'PENDIENTE' || r.estado_pago === 'PARCIAL') && (
-            <Button size="sm" variant="primary" onClick={() => openPago(r)}>
+            <Button size="sm" variant="primary" onClick={() => openPago(r, mediosPago)}>
               <DollarSign className="w-3.5 h-3.5" />
               Pagar
             </Button>
@@ -1405,7 +1408,7 @@ export default function Compras() {
                 </Button>
               )}
               {(detailCompra.estado_pago === 'PENDIENTE' || detailCompra.estado_pago === 'PARCIAL') && (
-                <Button variant="primary" onClick={() => { setDetailCompra(null); openPago(detailCompra) }}>
+                <Button variant="primary" onClick={() => { setDetailCompra(null); openPago(detailCompra, mediosPago) }}>
                   <DollarSign className="w-4 h-4" />
                   Registrar Pago
                 </Button>
@@ -1553,10 +1556,10 @@ export default function Compras() {
 
           <div>
             <label className={labelClass}>Medio de Pago</label>
-            <select value={medioPago} onChange={e => setMedioPago(e.target.value)} className={inputClass}>
-              <option value="EFECTIVO">Efectivo</option>
-              <option value="TRANSFERENCIA">Transferencia</option>
-              <option value="CHEQUE">Cheque</option>
+            <select value={medioPago} onChange={e => setMedioPago(Number(e.target.value))} className={inputClass}>
+              {mediosPago.map(mp => (
+                <option key={mp.id} value={mp.id}>{mp.descripcion}</option>
+              ))}
             </select>
           </div>
 
