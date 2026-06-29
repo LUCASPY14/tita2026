@@ -20,6 +20,7 @@ export function usePushNotifications() {
       subscribedUserId.current = null
       return
     }
+    if (import.meta.env.DEV) return   // sin service worker ni VAPID en desarrollo
     if (subscribedUserId.current === user.id) return
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
     if (Notification.permission === 'denied') return
