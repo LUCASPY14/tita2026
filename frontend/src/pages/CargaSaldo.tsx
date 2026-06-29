@@ -181,6 +181,11 @@ export default function CargaSaldo() {
     const montoNum = Number(monto)
     if (!tarjeta) { toast.error('Buscá primero la tarjeta'); return }
     if (!montoNum || montoNum <= 0) { toast.error('Ingresá un monto válido'); return }
+    const metodoInfo = METODOS.find(m => m.value === metodo)
+    if (metodoInfo?.requiere_referencia && !referencia.trim()) {
+      toast.error('Ingresá el código de transacción')
+      return
+    }
 
     setCargando(true)
     try {
@@ -193,7 +198,6 @@ export default function CargaSaldo() {
 
       const { data } = await tarjetasService.crearCarga(cargaPayload)
 
-      const metodoInfo = METODOS.find(m => m.value === metodo)
       setUltimaCarga({ monto: montoNum, metodo, estado: data.estado ?? 'CONFIRMADA' })
 
       if (metodoInfo?.autoconfirma) {
@@ -452,7 +456,7 @@ export default function CargaSaldo() {
                     <button
                       key={m.value}
                       type="button"
-                      onClick={() => setMetodo(m.value)}
+                      onClick={() => { setMetodo(m.value); setReferencia('') }}
                       className={`px-3 py-3 rounded-xl text-sm font-bold text-left transition-colors cursor-pointer border-2 ${
                         metodo === m.value
                           ? 'bg-green-600 text-white border-green-600'
@@ -470,12 +474,12 @@ export default function CargaSaldo() {
                 </div>
               </div>
 
-              {!metodoSeleccionado?.autoconfirma && (
+              {metodoSeleccionado?.requiere_referencia && (
                 <Input
-                  label="Referencia / Comprobante"
+                  label={`Código de transacción${metodoSeleccionado.autoconfirma ? ' *' : ''}`}
                   value={referencia}
                   onChange={e => setReferencia(e.target.value)}
-                  placeholder="Nro. de transferencia..."
+                  placeholder={metodo === 'TRANSFERENCIA' ? 'Nro. de transferencia...' : 'Nro. de comprobante POS...'}
                 />
               )}
 
