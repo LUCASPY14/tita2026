@@ -15,6 +15,7 @@ from .models import (
     DetalleNotaCreditoProveedor,
     OrdenCompra,
     DetalleOrdenCompra,
+    ProductoProveedor,
 )
 
 
@@ -87,6 +88,18 @@ class NotaCreditoProveedorSerializer(serializers.ModelSerializer):
         model = NotaCreditoProveedor
         fields = "__all__"
         read_only_fields = ["fecha_creacion"]
+
+
+# ── Producto-Proveedor ────────────────────────────────────────────────────────
+
+class ProductoProveedorSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
+    proveedor_nombre = serializers.CharField(source="proveedor.razon_social", read_only=True)
+
+    class Meta:
+        model = ProductoProveedor
+        fields = "__all__"
+        read_only_fields = ["fecha_ultima_compra"]
 
 
 # ── Orden de Compra ───────────────────────────────────────────────────────────

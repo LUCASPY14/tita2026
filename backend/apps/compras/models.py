@@ -514,3 +514,50 @@ class DetalleNotaCreditoProveedor(models.Model):
 
     def __str__(self):
         return f"{self.producto} x {self.cantidad} (NC #{self.nota_credito_id})"
+
+
+# ==============================================================================
+# CATÁLOGO DE PRODUCTOS POR PROVEEDOR
+# ==============================================================================
+
+class ProductoProveedor(models.Model):
+    """
+    Relación entre un proveedor y los productos que suministra.
+    Se crea/actualiza automáticamente al confirmar la entrega de una compra.
+    Almacena el último precio de compra conocido para ese proveedor.
+    """
+
+    proveedor = models.ForeignKey(
+        Proveedor,
+        on_delete=models.CASCADE,
+        related_name="productos_proveedor",
+    )
+    producto = models.ForeignKey(
+        "productos.Producto",
+        on_delete=models.CASCADE,
+        related_name="proveedores_producto",
+    )
+    precio_compra = models.DecimalField(
+        max_digits=12,
+        decimal_places=0,
+        default=0,
+        help_text="Último precio de compra registrado (Gs.)",
+    )
+    fecha_ultima_compra = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha de la última compra confirmada",
+    )
+
+    class Meta:
+        verbose_name = "Producto de Proveedor"
+        verbose_name_plural = "Productos de Proveedor"
+        unique_together = [("proveedor", "producto")]
+        ordering = ["producto__descripcion"]
+        indexes = [
+            models.Index(fields=["proveedor"], name="idx_pp_proveedor"),
+            models.Index(fields=["producto"], name="idx_pp_producto"),
+        ]
+
+    def __str__(self):
+        return f"{self.producto} — {self.proveedor} @ ₲{self.precio_compra:,.0f}"

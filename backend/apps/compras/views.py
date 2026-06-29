@@ -25,6 +25,7 @@ from .models import (
     NotaCreditoProveedor,
     DetalleNotaCreditoProveedor,
     OrdenCompra,
+    ProductoProveedor,
 )
 from .services import CompraService
 from .serializers import (
@@ -37,6 +38,7 @@ from .serializers import (
     NotaCreditoProveedorSerializer,
     DetalleNotaCreditoProveedorSerializer,
     OrdenCompraSerializer,
+    ProductoProveedorSerializer,
 )
 
 
@@ -114,9 +116,12 @@ class CompraViewSet(ExportCSVMixin, viewsets.ModelViewSet):
 
 
 class DetalleCompraViewSet(viewsets.ModelViewSet):
-    queryset = DetalleCompra.objects.select_related("compra", "producto").all()
+    queryset = DetalleCompra.objects.select_related("compra", "producto").order_by("-compra__fecha", "-id")
     serializer_class = DetalleCompraSerializer
     permission_classes = [IsCajeroOrAdmin]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ["producto", "compra"]
+    ordering_fields = ["compra__fecha"]
 
 
 class PagoProveedorViewSet(viewsets.ModelViewSet):
@@ -145,6 +150,17 @@ class DetalleNotaCreditoProveedorViewSet(viewsets.ModelViewSet):
     queryset = DetalleNotaCreditoProveedor.objects.select_related("nota_credito", "producto").all()
     serializer_class = DetalleNotaCreditoProveedorSerializer
     permission_classes = [IsCajeroOrAdmin]
+
+
+class ProductoProveedorViewSet(viewsets.ModelViewSet):
+    queryset = ProductoProveedor.objects.select_related("proveedor", "producto").all()
+    serializer_class = ProductoProveedorSerializer
+    permission_classes = [IsCajeroOrAdmin]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["proveedor", "producto"]
+    search_fields = ["producto__descripcion"]
+    ordering_fields = ["producto__descripcion", "precio_compra", "fecha_ultima_compra"]
+    ordering = ["producto__descripcion"]
 
 
 class OrdenCompraViewSet(viewsets.ModelViewSet):

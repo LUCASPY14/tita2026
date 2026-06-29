@@ -14,6 +14,7 @@ from .models import (
     CuentaCorrienteProveedor,
     Compra,
     DetalleCompra,
+    ProductoProveedor,
 )
 
 
@@ -107,6 +108,15 @@ class CompraService:
                 costo_unitario=costo,
                 cantidad_comprada=cantidad,
                 fecha_compra=compra.fecha,
+            )
+
+            ProductoProveedor.objects.update_or_create(
+                proveedor=compra.proveedor,
+                producto=producto,
+                defaults={
+                    "precio_compra": costo,
+                    "fecha_ultima_compra": compra.fecha,
+                },
             )
 
     @staticmethod
