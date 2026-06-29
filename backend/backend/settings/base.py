@@ -230,8 +230,8 @@ REST_FRAMEWORK = {
         "portal": "500/hour",         # portal de padres — por usuario autenticado
         "bancard_retorno": "30/hour", # endpoint sin auth — por IP
     },
-    "DATETIME_FORMAT": "%d/%m/%Y %H:%M",
-    "DATE_FORMAT": "%d/%m/%Y",
+    "DATETIME_FORMAT": "iso-8601",
+    "DATE_FORMAT": "iso-8601",
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],

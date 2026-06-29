@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '../store/authStore'
+import api from '../services/api'
 
 const RECONNECT_MS = 5_000
+// Intervalo de polling REST cuando el WebSocket no está disponible
+const POLL_MS = 30_000
 
 export interface DashboardKPI {
   ventasHoy: number
@@ -18,14 +21,32 @@ function buildWsUrl(): string {
   return `${proto}//${window.location.host}/ws/dashboard/?token=${token}`
 }
 
+async function fetchKpiRest(): Promise<DashboardKPI> {
+  const res = await api.get<DashboardKPI>('/contabilidad/dashboard/')
+  return res.data
+}
+
 export function useDashboardKPI() {
   const { user } = useAuthStore()
   const [kpi, setKpi] = useState<DashboardKPI | null>(null)
   const [connected, setConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   // Ref estable para llamar connect() desde el closure de onclose sin forward-reference
   const connectRef = useRef<(() => void) | null>(null)
+
+  const stopPoll = useCallback(() => {
+    if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null }
+  }, [])
+
+  const startPoll = useCallback(() => {
+    stopPoll()
+    fetchKpiRest().then(setKpi).catch(() => {})
+    pollTimer.current = setInterval(() => {
+      fetchKpiRest().then(setKpi).catch(() => {})
+    }, POLL_MS)
+  }, [stopPoll])
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
@@ -34,6 +55,7 @@ export function useDashboardKPI() {
 
     ws.onopen = () => {
       setConnected(true)
+      stopPoll()
       if (reconnectTimer.current) {
         clearTimeout(reconnectTimer.current)
         reconnectTimer.current = null
@@ -58,11 +80,13 @@ export function useDashboardKPI() {
 
     ws.onclose = () => {
       setConnected(false)
+      // Fallback REST mientras el WS no esté disponible
+      startPoll()
       reconnectTimer.current = setTimeout(() => connectRef.current?.(), RECONNECT_MS)
     }
 
     ws.onerror = () => ws.close()
-  }, [])
+  }, [startPoll, stopPoll])
 
   // Mantener la ref sincronizada con la versión más reciente de connect
   useEffect(() => { connectRef.current = connect }, [connect])
@@ -73,8 +97,9 @@ export function useDashboardKPI() {
     return () => {
       wsRef.current?.close()
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
+      stopPoll()
     }
-  }, [connect, user])
+  }, [connect, user, stopPoll])
 
   return { kpi, connected }
 }

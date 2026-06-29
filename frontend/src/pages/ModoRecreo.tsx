@@ -706,16 +706,18 @@ export default function ModoRecreo() {
     const trimmed = value.trim()
     setTarjetaInput('')
     if (detectInputType(trimmed) === 'card') {
+      // Tiene prefijo T- o contiene caracteres no numéricos → definitivamente tarjeta
       if (tarjeta) setCarrito([])
       await buscarTarjeta(trimmed)
     } else {
-      if (!tarjeta) {
-        sfx.error(); toast.error('Escanee una tarjeta primero')
-        setTimeout(() => scannerRef.current?.focus(), 100)
-        return
-      }
+      // Todo dígitos: primero buscamos en productos locales (O(1), sin red)
       const prod = productos.find(p => p.codigo_barra === trimmed)
       if (prod) {
+        if (!tarjeta) {
+          sfx.error(); toast.error('Escanee una tarjeta primero')
+          setTimeout(() => scannerRef.current?.focus(), 100)
+          return
+        }
         const now = Date.now()
         if (lastScannedProduct.current?.id === prod.id && (now - lastScannedProduct.current.time) < 1000) {
           // incremento manejado por handleAgregar
@@ -724,8 +726,9 @@ export default function ModoRecreo() {
         handleAgregarRef.current(prod)
         setTimeout(() => scannerRef.current?.focus(), 30)
       } else {
-        sfx.error(); toast.error(`Código no encontrado: ${trimmed}`)
-        setTimeout(() => scannerRef.current?.focus(), 100)
+        // No es un producto conocido → intentar como número de tarjeta
+        if (tarjeta) setCarrito([])
+        await buscarTarjeta(trimmed)
       }
     }
   }, [tarjeta, productos, buscarTarjeta])
