@@ -80,7 +80,7 @@ METODOS_CONFIRMACION_INMEDIATA = ("EFECTIVO", "POS DEBITO", "POS CREDITO")
 
 
 class CargaSaldoViewSet(viewsets.ModelViewSet):
-    queryset = CargaSaldo.objects.select_related("tarjeta", "cliente_origen").all()
+    queryset = CargaSaldo.objects.select_related("tarjeta", "cliente_origen", "responsable").all()
     serializer_class = CargaSaldoSerializer
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend]

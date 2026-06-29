@@ -75,6 +75,8 @@ class TarjetaAutorizacionSerializer(serializers.ModelSerializer):
 
 
 class CargaSaldoSerializer(serializers.ModelSerializer):
+    usuario_nombre = serializers.CharField(source="responsable.nombre_completo", read_only=True, default=None)
+
     class Meta:
         model = CargaSaldo
         fields = "__all__"
