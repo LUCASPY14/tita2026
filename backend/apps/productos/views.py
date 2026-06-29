@@ -142,6 +142,36 @@ class ProductoViewSet(viewsets.ModelViewSet):
         super().perform_destroy(instance)
         _invalidar_cache("productos_list_")
 
+    @action(detail=True, methods=["post"], url_path="set-precio", permission_classes=[IsAdminOrReadOnly])
+    def set_precio(self, request, pk=None):
+        """POST /api/productos/productos/{id}/set-precio/ — crea o actualiza el precio en la lista por defecto."""
+        from decimal import Decimal, InvalidOperation
+        producto = self.get_object()
+        try:
+            precio = Decimal(str(request.data.get("precio", 0)))
+        except (InvalidOperation, TypeError):
+            return Response({"error": "Precio inválido."}, status=status.HTTP_400_BAD_REQUEST)
+        lista_defecto = ListaPrecio.objects.filter(es_por_defecto=True, activo=True).first()
+        if not lista_defecto:
+            return Response({"error": "No hay lista de precios por defecto activa."}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            existing = PrecioPorLista.objects.filter(producto=producto, lista=lista_defecto).first()
+            if existing:
+                old_price = existing.precio_unitario
+                existing.precio_unitario = precio
+                existing.save()
+                if precio != old_price:
+                    HistoricoPrecio.objects.create(
+                        producto=producto,
+                        precio_anterior=old_price,
+                        precio_nuevo=precio,
+                        modificado_por=request.user,
+                    )
+            else:
+                PrecioPorLista.objects.create(producto=producto, lista=lista_defecto, precio_unitario=precio)
+        _invalidar_cache("productos_list_")
+        return Response({"precio": str(precio)}, status=status.HTTP_200_OK)
+
 
 class UnidadMedidaViewSet(viewsets.ModelViewSet):
     queryset = UnidadMedida.objects.all()

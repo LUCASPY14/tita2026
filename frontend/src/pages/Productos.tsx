@@ -39,6 +39,7 @@ interface ProductoForm {
   codigo: string
   categoria: string
   unidad_medida: string
+  precio: string
   stock_minimo: string
   permite_stock_negativo: boolean
   es_servicio: boolean
@@ -118,6 +119,7 @@ function Toggle({ label, field, form, toggleBool }: {
 const BLANK_FORM: ProductoForm = {
   descripcion: '', codigo_barra: '', codigo: '',
   categoria: '', unidad_medida: '',
+  precio: '0',
   stock_minimo: '0',
   permite_stock_negativo: false,
   es_servicio: false,
@@ -148,6 +150,7 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
           codigo: producto.codigo ?? '',
           categoria: String(producto.categoria),
           unidad_medida: producto.unidad_medida ? String(producto.unidad_medida) : '',
+          precio: String(Number(producto.precio_actual) || 0),
           stock_minimo: producto.stock_minimo,
           permite_stock_negativo: producto.permite_stock_negativo,
           es_servicio: producto.es_servicio,
@@ -180,8 +183,9 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
       return
     }
     setSaving(true)
+    const { precio, ...rest } = form
     const payload = {
-      ...form,
+      ...rest,
       codigo_barra: form.codigo_barra || null,
       codigo: form.codigo || null,
       categoria: Number(form.categoria),
@@ -189,13 +193,17 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
       stock_minimo: Number(form.stock_minimo) || 0,
     }
     try {
+      let productoId: number
       if (producto) {
         await api.patch(`/productos/productos/${producto.id}/`, payload)
+        productoId = producto.id
         toast.success('Producto actualizado')
       } else {
-        await api.post('/productos/productos/', payload)
+        const { data } = await api.post('/productos/productos/', payload)
+        productoId = data.id
         toast.success('Producto creado')
       }
+      await api.post(`/productos/productos/${productoId}/set-precio/`, { precio: Number(precio) || 0 })
       onSaved()
       onClose()
     } catch (err) {
@@ -250,6 +258,24 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Precio */}
+        <div className="border-t border-slate-100 pt-4">
+          <label className={labelClass}>Precio de Venta (Gs.) *</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">₲</span>
+            <input
+              type="number"
+              min="0"
+              step="500"
+              value={form.precio}
+              onChange={e => setForm(prev => ({ ...prev, precio: e.target.value }))}
+              placeholder="0"
+              className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150"
+            />
+          </div>
+          <p className="text-xs text-slate-400 mt-1">Se aplica a la lista de precios por defecto</p>
         </div>
 
         {/* Stock */}
