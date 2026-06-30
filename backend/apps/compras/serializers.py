@@ -74,6 +74,11 @@ class CompraWriteSerializer(serializers.Serializer):
 class PagoProveedorSerializer(serializers.ModelSerializer):
     proveedor_nombre = serializers.CharField(source="proveedor.razon_social", read_only=True)
     medio_pago_nombre = serializers.CharField(source="medio_pago.descripcion", read_only=True)
+    compra_id = serializers.SerializerMethodField()
+
+    def get_compra_id(self, obj):
+        ap = obj.aplicaciones.first()
+        return ap.compra_id if ap else None
 
     class Meta:
         model = PagoProveedor

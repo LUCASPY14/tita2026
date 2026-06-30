@@ -198,7 +198,7 @@ class DetalleCompraViewSet(viewsets.ModelViewSet):
 
 
 class PagoProveedorViewSet(viewsets.ModelViewSet):
-    queryset = PagoProveedor.objects.select_related("proveedor", "medio_pago").all()
+    queryset = PagoProveedor.objects.select_related("proveedor", "medio_pago").prefetch_related("aplicaciones").all()
     serializer_class = PagoProveedorSerializer
     permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend]
@@ -226,6 +226,7 @@ class PagoProveedorViewSet(viewsets.ModelViewSet):
                 medio_pago=medio_pago,
                 observaciones=data.get("observaciones") or "",
                 creado_por=request.user,
+                estado=PagoProveedor.Estado.CONCILIADO,
             )
             AplicacionPagoCompra.objects.create(
                 pago=pago,

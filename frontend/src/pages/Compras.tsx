@@ -89,12 +89,12 @@ interface Compra {
 
 interface PagoProveedor {
   id: number
-  compra: number
+  compra_id: number | null
   proveedor: number
   proveedor_nombre: string
-  monto: string | number
+  monto_total: string | number
   fecha: string
-  medio_pago: string
+  medio_pago: number
   medio_pago_nombre: string
   observaciones: string
   estado: string
@@ -949,7 +949,7 @@ export default function Compras() {
     {
       title: 'Compra #',
       key: 'compra',
-      render: (_, r) => <span className="text-sm font-mono text-slate-500">#{r.compra}</span>,
+      render: (_, r) => <span className="text-sm font-mono text-slate-500">{r.compra_id ? `#${r.compra_id}` : '—'}</span>,
     },
     {
       title: 'Proveedor',
@@ -959,19 +959,19 @@ export default function Compras() {
     {
       title: 'Monto',
       key: 'monto',
-      render: (_, r) => <span className="tabular-nums font-semibold text-emerald-700">{formatGs(r.monto)}</span>,
+      render: (_, r) => <span className="tabular-nums font-semibold text-emerald-700">{formatGs(r.monto_total)}</span>,
     },
     {
       title: 'Medio',
       key: 'medio',
       render: (_, r) => (
-        <Badge color={MEDIO_PAGO_COLOR[r.medio_pago] ?? 'default'}>{r.medio_pago_nombre || r.medio_pago}</Badge>
+        <Badge color="default">{r.medio_pago_nombre}</Badge>
       ),
     },
     {
       title: 'Estado',
       key: 'estado',
-      render: (_, r) => <Badge color={r.estado === 'APROBADO' ? 'green' : 'orange'}>{r.estado}</Badge>,
+      render: (_, r) => <Badge color={r.estado === 'CONCILIADO' ? 'green' : r.estado === 'RECHAZADO' ? 'red' : 'orange'}>{r.estado}</Badge>,
     },
     {
       title: 'Fecha',
