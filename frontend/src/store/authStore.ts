@@ -11,6 +11,7 @@ interface User {
   apellido: string
   rol: string
   cliente_id?: number
+  debe_cambiar_contrasena: boolean
 }
 
 interface AuthState {

@@ -48,6 +48,47 @@ from .serializers import (
 from .services import cambiar_titular
 
 
+def _crear_usuario_portal(cliente):
+    """Crea (o vincula) un usuario CLIENTE_WEB para el cliente dado.
+
+    - Si ya tiene usuario portal, no hace nada.
+    - Usa el email del cliente como identificador; si no tiene email, genera
+      uno sintético: <ruc_ci_limpio>@portal.tita.local
+    - La contraseña inicial es el RUC/CI tal como está almacenado.
+    - El usuario queda marcado con debe_cambiar_contrasena=True.
+    """
+    from apps.usuarios.models import Usuario
+
+    if hasattr(cliente, "usuario_portal") and cliente.usuario_portal_id:
+        return
+
+    ruc_ci_limpio = cliente.ruc_ci.strip()
+    email = (cliente.email or "").strip()
+    if not email:
+        sufijo = ruc_ci_limpio.replace("-", "").replace(".", "")
+        email = f"{sufijo}@portal.tita.local"
+
+    if Usuario.objects.filter(email=email).exists():
+        # Ya existe un usuario con ese email: vincular si no tiene cliente
+        usuario = Usuario.objects.get(email=email)
+        if not usuario.cliente_id:
+            usuario.cliente = cliente
+            usuario.save(update_fields=["cliente"])
+        return
+
+    Usuario.objects.create_user(
+        email=email,
+        password=ruc_ci_limpio,
+        nombre=cliente.nombres,
+        apellido=cliente.apellidos,
+        rol=Usuario.Rol.CLIENTE_WEB,
+        is_active=True,
+        email_verificado=bool(cliente.email),
+        debe_cambiar_contrasena=True,
+        cliente=cliente,
+    )
+
+
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.select_related("tipo_cliente", "lista_precio").all()
     serializer_class = ClienteSerializer
@@ -55,6 +96,10 @@ class ClienteViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["activo", "tipo_cliente"]
     search_fields = ["ruc_ci", "nombres", "apellidos"]
+
+    def perform_create(self, serializer):
+        cliente = serializer.save()
+        _crear_usuario_portal(cliente)
 
     @action(detail=True, methods=["post"], url_path="reset-pin",
             permission_classes=[IsAdminOrReadOnly])

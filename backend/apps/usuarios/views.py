@@ -93,6 +93,7 @@ def _user_data(user):
         "apellido": user.apellido,
         "rol": user.rol,
         "cliente_id": user.cliente_id if user.cliente else None,
+        "debe_cambiar_contrasena": user.debe_cambiar_contrasena,
     }
 
 
@@ -143,8 +144,25 @@ def _registrar_sesion(user, request) -> str:
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """Expone self.user después de validate() para que el view lo consuma."""
-    pass
+    """
+    Login estándar por email, con soporte adicional de CI/RUC para el portal de padres.
+    Si el identificador no contiene '@', se interpreta como CI/RUC y se resuelve al
+    email del usuario portal vinculado al cliente con ese ruc_ci.
+    """
+
+    def validate(self, attrs):
+        identifier = attrs.get(self.username_field, "")
+        if "@" not in identifier:
+            # Buscar por CI/RUC → resolver al email del usuario portal
+            try:
+                from apps.clientes.models import Cliente
+                cliente = Cliente.objects.select_related("usuario_portal").get(
+                    ruc_ci=identifier.strip()
+                )
+                attrs[self.username_field] = cliente.usuario_portal.email
+            except Exception:
+                pass  # Dejamos que falle con "credenciales incorrectas"
+        return super().validate(attrs)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -211,8 +229,10 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     def cambiar_password(self, request):
         serializer = CambiarPasswordSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        request.user.set_password(serializer.validated_data['password_nuevo'])
-        request.user.save(update_fields=['password'])
+        user = request.user
+        user.set_password(serializer.validated_data['password_nuevo'])
+        user.debe_cambiar_contrasena = False
+        user.save(update_fields=['password', 'debe_cambiar_contrasena'])
         return Response({'detail': 'Contraseña actualizada correctamente.'})
 
 

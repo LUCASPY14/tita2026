@@ -23,8 +23,13 @@ export default function PortalLogin() {
     setLoading(true)
     try {
       await login(email, password)
-      toast.success('Bienvenido al portal')
-      navigate('/portal')
+      const { user } = useAuthStore.getState()
+      if (user?.debe_cambiar_contrasena) {
+        navigate('/portal/cambiar-contrasena', { replace: true })
+      } else {
+        toast.success('Bienvenido al portal')
+        navigate('/portal')
+      }
     } catch (err) {
       const e = err as { response?: { status?: number } }
       if (e?.response?.status === 401) {
@@ -114,12 +119,12 @@ export default function PortalLogin() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Email"
-            type="email"
-            placeholder="tucorreo@email.com"
+            label="CI/RUC"
+            type="text"
+            placeholder="Ej: 3331234-2"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
+            autoComplete="username"
             required
           />
           <Input

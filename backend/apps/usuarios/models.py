@@ -86,6 +86,10 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True, help_text="False si el usuario está deshabilitado")
     is_staff = models.BooleanField(default=False, help_text="Puede acceder al admin de Django")
     email_verificado = models.BooleanField(default=False, help_text="Email verificado")
+    debe_cambiar_contrasena = models.BooleanField(
+        default=False,
+        help_text="Obliga al usuario a cambiar su contraseña en el próximo ingreso",
+    )
 
     # Campos de auditoría
     fecha_creacion = models.DateTimeField(auto_now_add=True)

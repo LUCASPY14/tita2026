@@ -34,11 +34,12 @@ const MenuDiario        = lazy(() => import('./pages/MenuDiario'))
 const Alergenos         = lazy(() => import('./pages/Alergenos'))
 
 // ── Lazy: portal de padres ────────────────────────────────────────────────────
-const PortalDashboard      = lazy(() => import('./pages/portal/Dashboard'))
-const PortalNotificaciones = lazy(() => import('./pages/portal/Notificaciones'))
-const PortalHistorial      = lazy(() => import('./pages/portal/Historial'))
-const PortalFacturas       = lazy(() => import('./pages/portal/Facturas'))
-const PortalCargaSaldo     = lazy(() => import('./pages/portal/CargaSaldo'))
+const PortalDashboard        = lazy(() => import('./pages/portal/Dashboard'))
+const PortalNotificaciones   = lazy(() => import('./pages/portal/Notificaciones'))
+const PortalHistorial        = lazy(() => import('./pages/portal/Historial'))
+const PortalFacturas         = lazy(() => import('./pages/portal/Facturas'))
+const PortalCargaSaldo       = lazy(() => import('./pages/portal/CargaSaldo'))
+const PortalCambiarContrasena = lazy(() => import('./pages/portal/CambiarContrasena'))
 
 // ── Fallback de carga ─────────────────────────────────────────────────────────
 function PageLoader() {
@@ -84,6 +85,10 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
   const { isAuthenticated, user } = useAuthStore()
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (roles && user && !roles.includes(user.rol)) return <Navigate to="/dashboard" replace />
+  // Si es CLIENTE_WEB y debe cambiar contraseña, forzar la página de cambio
+  if (user?.rol === 'CLIENTE_WEB' && user?.debe_cambiar_contrasena) {
+    return <Navigate to="/portal/cambiar-contrasena" replace />
+  }
   return <>{children}</>
 }
 
@@ -124,8 +129,15 @@ export default function App() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Portal padres */}
-            <Route path="/portal/login"          element={<PortalLogin />} />
-            <Route path="/portal/reset-password" element={<PortalResetPassword />} />
+            <Route path="/portal/login"               element={<PortalLogin />} />
+            <Route path="/portal/reset-password"      element={<PortalResetPassword />} />
+            <Route path="/portal/cambiar-contrasena"  element={
+              <PrivateRoute roles={['CLIENTE_WEB']}>
+                <Suspense fallback={<PageLoader />}>
+                  <PortalCambiarContrasena />
+                </Suspense>
+              </PrivateRoute>
+            } />
             <Route path="/portal" element={
               <PrivateRoute roles={['CLIENTE_WEB']}>
                 <PortalLayout />
