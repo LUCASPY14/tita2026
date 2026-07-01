@@ -358,6 +358,7 @@ class PortalMiHijoView(APIView):
                 "id": user.cliente.id,
                 "nombre": user.cliente.nombre_completo,
                 "email": user.cliente.email,
+                "pin_es_defecto": user.cliente.check_pin("0000"),
             },
             "mes": {"anio": hoy.year, "mes": hoy.month},
             "hijos": hijos_data,

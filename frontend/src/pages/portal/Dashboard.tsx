@@ -52,7 +52,7 @@ interface HijoData {
 }
 
 interface PortalData {
-  cliente: { id: number; nombre: string; email: string }
+  cliente: { id: number; nombre: string; email: string; pin_es_defecto: boolean }
   mes: { anio: number; mes: number }
   hijos: HijoData[]
 }
@@ -735,6 +735,20 @@ export default function PortalDashboard() {
               {h.nombre}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Aviso PIN por defecto */}
+      {data.cliente.pin_es_defecto && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex gap-3 items-start">
+          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">PIN de autorización pendiente de cambio</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Tu PIN actual es <span className="font-bold">0000</span>. Cambialo desde la sección
+              {' '}<span className="font-medium">Resumen → Cambiar PIN</span> para mayor seguridad.
+            </p>
+          </div>
         </div>
       )}
 
