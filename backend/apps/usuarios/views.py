@@ -204,7 +204,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     ordering = ["-fecha_creacion"]
 
     def get_permissions(self):
-        if self.action == "me":
+        if self.action in ("me", "cambiar_password"):
             return [IsAuthenticated()]
         return [IsAdmin()]
 
