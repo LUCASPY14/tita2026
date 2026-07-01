@@ -10,6 +10,7 @@ from django.http import HttpResponse
 
 from rest_framework import viewsets, status
 from rest_framework.filters import SearchFilter
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -113,7 +114,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
         return Response({"ok": True, "mensaje": "PIN reseteado a 0000."})
 
     @action(detail=True, methods=["post"], url_path="cambiar-pin",
-            permission_classes=[IsStaffOrClienteWeb])
+            permission_classes=[IsAuthenticated])
     def cambiar_pin(self, request, pk=None):
         """El padre (CLIENTE_WEB) cambia su propio PIN. El admin puede cambiar cualquiera."""
         cliente = self.get_object()
