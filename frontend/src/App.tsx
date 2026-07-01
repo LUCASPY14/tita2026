@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, useEffect, type ReactNode } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import AppLayout from './components/Layout'
 import PortalLayout from './components/PortalLayout'
@@ -83,10 +83,15 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 // ── Guards ────────────────────────────────────────────────────────────────────
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { isAuthenticated, user } = useAuthStore()
+  const location = useLocation()
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (roles && user && !roles.includes(user.rol)) return <Navigate to="/dashboard" replace />
   // Si es CLIENTE_WEB y debe cambiar contraseña, forzar la página de cambio
-  if (user?.rol === 'CLIENTE_WEB' && user?.debe_cambiar_contrasena) {
+  if (
+    user?.rol === 'CLIENTE_WEB' &&
+    user?.debe_cambiar_contrasena &&
+    location.pathname !== '/portal/cambiar-contrasena'
+  ) {
     return <Navigate to="/portal/cambiar-contrasena" replace />
   }
   return <>{children}</>
