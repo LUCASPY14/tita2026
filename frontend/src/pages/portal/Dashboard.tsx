@@ -766,7 +766,7 @@ export default function PortalDashboard() {
           <TabBtn active={tab === 'plan'} onClick={() => setTab(hijo.id, 'plan')}>
             <span className="flex items-center gap-1.5">
               <CalendarCheck className="w-3.5 h-3.5" />
-              Plan
+              Almuerzos
             </span>
           </TabBtn>
         </div>

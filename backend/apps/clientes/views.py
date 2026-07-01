@@ -113,7 +113,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
         return Response({"ok": True, "mensaje": "PIN reseteado a 0000."})
 
     @action(detail=True, methods=["post"], url_path="cambiar-pin",
-            permission_classes=[IsAdminOrReadOnly])
+            permission_classes=[IsStaffOrClienteWeb])
     def cambiar_pin(self, request, pk=None):
         """El padre (CLIENTE_WEB) cambia su propio PIN. El admin puede cambiar cualquiera."""
         cliente = self.get_object()
