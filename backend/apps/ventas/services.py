@@ -295,25 +295,29 @@ class VentaService:
 
                 if tarjeta_bloqueada.saldo_actual < 0:
                     try:
-                        usuario_portal = (
-                            tarjeta_bloqueada.hijo.cliente_responsable.usuario_portal
-                        )
+                        cliente_resp = tarjeta_bloqueada.hijo.cliente_responsable
+                        usuario_portal = cliente_resp.usuario_portal
                         from apps.notificaciones.models import Notificacion
-                        from apps.notificaciones.services import push_ws_notificacion
+                        from apps.notificaciones.services import (
+                            push_ws_notificacion,
+                            _whatsapp_cliente,
+                        )
                         nombre_hijo = str(tarjeta_bloqueada.hijo)
                         deficit = abs(int(tarjeta_bloqueada.saldo_actual))
+                        msg = (
+                            f"Se registro una compra de Gs. {int(monto_total):,} para "
+                            f"{nombre_hijo}. Saldo actual: -Gs. {deficit:,}. "
+                            f"Por favor recarga la tarjeta."
+                        )
                         notif = Notificacion.objects.create(
                             usuario=usuario_portal,
                             tipo=Notificacion.Tipo.VENTA_DEUDA,
                             titulo="Venta con saldo insuficiente",
-                            mensaje=(
-                                f"Se registró una compra de Gs. {int(monto_total):,} para "
-                                f"{nombre_hijo}. Saldo actual: -Gs. {deficit:,}. "
-                                f"Por favor recargá la tarjeta."
-                            ),
+                            mensaje=msg,
                             destino=Notificacion.Destino.SISTEMA,
                         )
                         push_ws_notificacion(notif)
+                        _whatsapp_cliente(cliente_resp, msg)
                     except Exception:
                         pass
 

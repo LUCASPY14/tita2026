@@ -10,6 +10,25 @@ from django.utils import timezone
 from .models import EmailEnviado, Notificacion, SolicitudNotificacion
 
 
+def _whatsapp_cliente(cliente, mensaje: str) -> None:
+    """
+    Envía WhatsApp a un cliente si tiene teléfono configurado y las
+    notificaciones están activas. Silencioso ante cualquier error.
+    """
+    if not getattr(settings, "NOTIFICACIONES_ACTIVAS", False):
+        return
+    telefono = getattr(cliente, "telefono", None)
+    if not telefono:
+        return
+    try:
+        enviar_whatsapp(telefono, mensaje)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning(
+            "WhatsApp no enviado a cliente %s: fallo silencioso", cliente.pk
+        )
+
+
 def crear_solicitudes_cobro(hijos_con_deuda, mensaje_template=None):
     """
     Crea SolicitudNotificacion para todos los responsables que reciben notificaciones
@@ -26,6 +45,7 @@ def crear_solicitudes_cobro(hijos_con_deuda, mensaje_template=None):
     from apps.clientes.models import AlumnoResponsable
 
     solicitudes = []
+    mensajes_whatsapp = []  # (cliente, mensaje) para enviar después del bulk_create
     for hijo in hijos_con_deuda:
         responsables = (
             AlumnoResponsable.objects
@@ -43,7 +63,7 @@ def crear_solicitudes_cobro(hijos_con_deuda, mensaje_template=None):
                     f"Estimado/a {resp.cliente.nombre_completo}, "
                     f"le informamos que el alumno/a {hijo.nombre_completo} "
                     f"tiene saldo pendiente en la cantina. "
-                    f"Por favor regularice su situación. Gracias."
+                    f"Por favor regularice su situacion. Gracias."
                 )
             solicitudes.append(
                 SolicitudNotificacion(
@@ -53,9 +73,12 @@ def crear_solicitudes_cobro(hijos_con_deuda, mensaje_template=None):
                     mensaje=mensaje,
                 )
             )
+            mensajes_whatsapp.append((resp.cliente, mensaje))
 
     if solicitudes:
         SolicitudNotificacion.objects.bulk_create(solicitudes)
+        for cliente, mensaje in mensajes_whatsapp:
+            _whatsapp_cliente(cliente, mensaje)
 
     return len(solicitudes)
 

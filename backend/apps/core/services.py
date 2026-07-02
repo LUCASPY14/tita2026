@@ -91,6 +91,17 @@ class TarjetaService:
                     medio_pago=medio_pago_obj,
                 )
 
+            try:
+                from apps.notificaciones.services import _whatsapp_cliente
+                cliente_resp = tarjeta.hijo.cliente_responsable
+                _whatsapp_cliente(
+                    cliente_resp,
+                    f"Recarga exitosa: se acreditaron Gs. {int(monto):,} a la tarjeta de "
+                    f"{tarjeta.hijo.nombre_completo}. Nuevo saldo: Gs. {int(tarjeta.saldo_actual):,}.",
+                )
+            except Exception:
+                pass
+
             return carga
 
     @staticmethod
@@ -137,6 +148,17 @@ class TarjetaService:
                     descripcion=f"Recarga confirmada #{carga.pk} - {tarjeta}",
                     medio_pago=medio_pago_obj,
                 )
+
+            try:
+                from apps.notificaciones.services import _whatsapp_cliente
+                cliente_resp = tarjeta.hijo.cliente_responsable
+                _whatsapp_cliente(
+                    cliente_resp,
+                    f"Recarga exitosa: se acreditaron Gs. {int(carga.monto_cargado):,} a la tarjeta de "
+                    f"{tarjeta.hijo.nombre_completo}. Nuevo saldo: Gs. {int(tarjeta.saldo_actual):,}.",
+                )
+            except Exception:
+                pass
 
             return carga
 

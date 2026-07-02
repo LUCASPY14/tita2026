@@ -44,16 +44,20 @@ def generar_alertas_saldo_bajo():
         if not usuario:
             continue
 
+        msg_saldo = (
+            f"La tarjeta de {tarjeta.hijo.nombre_completo} tiene un saldo de "
+            f"Gs. {int(tarjeta.saldo_actual):,} por debajo del umbral configurado. "
+            f"Por favor recarga la tarjeta."
+        )
         Notificacion.objects.create(
             usuario=usuario,
             tipo=Notificacion.Tipo.SALDO_BAJO,
             titulo="Saldo bajo en tarjeta",
-            mensaje=(
-                f"La tarjeta de {tarjeta.hijo.nombre_completo} tiene un saldo de "
-                f"Gs. {int(tarjeta.saldo_actual):,} — por debajo del umbral configurado."
-            ),
+            mensaje=msg_saldo,
             destino=Notificacion.Destino.SISTEMA,
         )
+        from apps.notificaciones.services import _whatsapp_cliente
+        _whatsapp_cliente(tarjeta.hijo.cliente_responsable, msg_saldo)
         tarjeta.ultima_notificacion_saldo = timezone.now()
         tarjeta.save(update_fields=["ultima_notificacion_saldo"])
         creadas += 1
