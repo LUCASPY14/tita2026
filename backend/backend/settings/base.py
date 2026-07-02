@@ -477,6 +477,10 @@ PORTAL_FRONTEND_URL = os.environ.get("PORTAL_FRONTEND_URL", "http://localhost:51
 
 NOTIFICACIONES_ACTIVAS = os.environ.get("NOTIFICACIONES_ACTIVAS", "True") == "True"
 
+EVOLUTION_API_URL      = os.environ.get("EVOLUTION_API_URL", "")
+EVOLUTION_API_KEY      = os.environ.get("EVOLUTION_API_KEY", "")
+EVOLUTION_API_INSTANCE = os.environ.get("EVOLUTION_API_INSTANCE", "tita")
+
 # VAPID keys para Web Push (PWA).  Generá las tuyas con:
 #   pip install pywebpush && vapid --applicationServerKey
 # y copiá los valores en .env

@@ -229,3 +229,53 @@ class EmailService:
             cuerpo=cuerpo,
             estado=EmailEnviado.Estado.ENVIADO,
         )
+
+
+def enviar_whatsapp(numero: str, mensaje: str) -> dict:
+    """
+    Envía un mensaje de WhatsApp usando WAHA (WhatsApp HTTP API, self-hosted).
+
+    Args:
+        numero: Número en formato internacional sin '+', ej. "595981234567"
+        mensaje: Texto plano del mensaje
+
+    Returns:
+        dict con la respuesta de WAHA
+
+    Raises:
+        RuntimeError si EVOLUTION_API_URL no está configurada
+        requests.HTTPError si la API responde con error HTTP
+    """
+    import requests
+
+    base_url = getattr(settings, "EVOLUTION_API_URL", "").rstrip("/")
+    session  = getattr(settings, "EVOLUTION_API_INSTANCE", "default")
+
+    if not base_url:
+        raise RuntimeError(
+            "EVOLUTION_API_URL no está configurada en .env. "
+            "Iniciá WAHA con: docker run -d --name waha -p 3000:3000 devlikeapro/waha:latest"
+        )
+
+    # Normalizar: quitar espacios, guiones y '+' inicial
+    numero_limpio = numero.strip().lstrip("+").replace(" ", "").replace("-", "")
+    # WAHA usa el formato E.164 con sufijo @c.us para contactos individuales
+    chat_id = f"{numero_limpio}@c.us"
+
+    url = f"{base_url}/api/sendText"
+    headers = {"Content-Type": "application/json"}
+
+    # WAHA CORE no requiere auth; si se configura API key se agrega aquí
+    api_key = getattr(settings, "EVOLUTION_API_KEY", "")
+    if api_key:
+        headers["X-Api-Key"] = api_key
+
+    payload = {
+        "session": session,
+        "chatId": chat_id,
+        "text": mensaje,
+    }
+
+    resp = requests.post(url, json=payload, headers=headers, timeout=15)
+    resp.raise_for_status()
+    return resp.json()
