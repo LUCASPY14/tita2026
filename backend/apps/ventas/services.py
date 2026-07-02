@@ -292,6 +292,31 @@ class VentaService:
                     descripcion=f"Venta #{venta.pk}",
                     creado_por=cajero,
                 )
+
+                if tarjeta_bloqueada.saldo_actual < 0:
+                    try:
+                        usuario_portal = (
+                            tarjeta_bloqueada.hijo.cliente_responsable.usuario_portal
+                        )
+                        from apps.notificaciones.models import Notificacion
+                        from apps.notificaciones.services import push_ws_notificacion
+                        nombre_hijo = str(tarjeta_bloqueada.hijo)
+                        deficit = abs(int(tarjeta_bloqueada.saldo_actual))
+                        notif = Notificacion.objects.create(
+                            usuario=usuario_portal,
+                            tipo=Notificacion.Tipo.VENTA_DEUDA,
+                            titulo="Venta con saldo insuficiente",
+                            mensaje=(
+                                f"Se registró una compra de Gs. {int(monto_total):,} para "
+                                f"{nombre_hijo}. Saldo actual: -Gs. {deficit:,}. "
+                                f"Por favor recargá la tarjeta."
+                            ),
+                            destino=Notificacion.Destino.SISTEMA,
+                        )
+                        push_ws_notificacion(notif)
+                    except Exception:
+                        pass
+
                 if cierre_caja:
                     from apps.contabilidad.models import MovimientoCaja
                     MovimientoCaja.objects.create(

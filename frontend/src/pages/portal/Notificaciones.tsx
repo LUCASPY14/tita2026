@@ -24,12 +24,13 @@ interface Notificacion {
 }
 
 const TIPO_ICON: Record<string, LucideIcon> = {
-  SALDO_BAJO: AlertTriangle,
-  RECARGA:    CreditCard,
-  CONSUMO:    UtensilsCrossed,
+  SALDO_BAJO:  AlertTriangle,
+  RECARGA:     CreditCard,
+  CONSUMO:     UtensilsCrossed,
   VENCIMIENTO: Calendar,
-  ALMUERZO:   UtensilsCrossed,
-  SISTEMA:    Info,
+  ALMUERZO:    UtensilsCrossed,
+  SISTEMA:     Info,
+  VENTA_DEUDA: AlertTriangle,
 }
 
 const TIPO_COLOR: Record<string, string> = {
@@ -39,6 +40,7 @@ const TIPO_COLOR: Record<string, string> = {
   VENCIMIENTO: 'text-orange-500',
   ALMUERZO:    'text-green-500',
   SISTEMA:     'text-slate-400',
+  VENTA_DEUDA: 'text-red-500',
 }
 
 function formatFecha(iso: string) {

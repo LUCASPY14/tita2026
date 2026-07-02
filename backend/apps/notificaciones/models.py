@@ -39,12 +39,13 @@ class Notificacion(models.Model):
     """Notificación enviada a un usuario del sistema."""
 
     class Tipo(models.TextChoices):
-        SALDO_BAJO = "SALDO_BAJO", "Saldo bajo"
-        RECARGA = "RECARGA", "Recarga exitosa"
-        CONSUMO = "CONSUMO", "Consumo registrado"
+        SALDO_BAJO  = "SALDO_BAJO",  "Saldo bajo"
+        RECARGA     = "RECARGA",     "Recarga exitosa"
+        CONSUMO     = "CONSUMO",     "Consumo registrado"
         VENCIMIENTO = "VENCIMIENTO", "Vencimiento de tarjeta"
-        ALMUERZO = "ALMUERZO", "Cuenta de almuerzo"
-        SISTEMA = "SISTEMA", "Alerta del sistema"
+        ALMUERZO    = "ALMUERZO",    "Cuenta de almuerzo"
+        SISTEMA     = "SISTEMA",     "Alerta del sistema"
+        VENTA_DEUDA = "VENTA_DEUDA", "Venta con saldo negativo"
 
     class Destino(models.TextChoices):
         EMAIL = "EMAIL", "Email"
