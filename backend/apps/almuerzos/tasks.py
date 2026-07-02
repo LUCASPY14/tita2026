@@ -49,7 +49,7 @@ def cerrar_cuentas_mes_anterior():
         anio=anio_ant, mes=mes_ant
     ).exclude(
         estado=CuentaAlmuerzoMensual.Estado.ANULADO
-    ).select_related("hijo")
+    ).select_related("hijo__cliente_responsable")
 
     cerradas = anuladas = actualizadas = 0
 
@@ -90,6 +90,23 @@ def cerrar_cuentas_mes_anterior():
             # Marcar registros como incorporados a la cuenta
             registros_qs.update(marcado_en_cuenta=True)
             actualizadas += 1
+
+            # Notificar al padre con el resumen del mes
+            try:
+                from apps.notificaciones.services import _whatsapp_cliente
+                saldo_final = cuenta.monto_total - cuenta.monto_pagado
+                if saldo_final > 0:
+                    _whatsapp_cliente(
+                        cuenta.hijo.cliente_responsable,
+                        f"Resumen de almuerzos {mes_ant:02d}/{anio_ant} de "
+                        f"{cuenta.hijo.nombre_completo}: "
+                        f"{cuenta.cantidad_almuerzos} almuerzo(s), "
+                        f"total Gs. {int(cuenta.monto_total):,}. "
+                        f"Pendiente: Gs. {int(saldo_final):,}. "
+                        f"Podes pagar en la cantina."
+                    )
+            except Exception:
+                pass
 
     cerradas = actualizadas + anuladas
     logger.info(
@@ -210,28 +227,33 @@ def alertar_cuentas_vencidas():
         "hijo__cliente_responsable__usuario_portal"
     )
 
+    from apps.notificaciones.services import _whatsapp_cliente
     creadas = 0
     for cuenta in cuentas_pendientes:
+        saldo_pendiente = cuenta.monto_total - cuenta.monto_pagado
+        msg = (
+            f"Cuenta de almuerzos de {cuenta.hijo.nombre_completo} "
+            f"({cuenta.mes:02d}/{cuenta.anio}): "
+            f"Gs. {saldo_pendiente:,.0f} pendiente de pago. "
+            f"Por favor acercate a la cantina para regularizar."
+        )
+
         try:
             usuario = cuenta.hijo.cliente_responsable.usuario_portal
         except AttributeError:
-            continue
-        if not usuario:
-            continue
+            usuario = None
 
-        saldo_pendiente = cuenta.monto_total - cuenta.monto_pagado
-        Notificacion.objects.create(
-            usuario=usuario,
-            tipo=Notificacion.Tipo.ALMUERZO,
-            titulo="Cuenta de almuerzo pendiente de pago",
-            mensaje=(
-                f"La cuenta de almuerzo de {cuenta.hijo.nombre_completo} "
-                f"correspondiente a {cuenta.mes:02d}/{cuenta.anio} "
-                f"tiene un saldo pendiente de Gs. {saldo_pendiente:,.0f}."
-            ),
-            destino=Notificacion.Destino.SISTEMA,
-        )
-        creadas += 1
+        if usuario:
+            Notificacion.objects.create(
+                usuario=usuario,
+                tipo=Notificacion.Tipo.ALMUERZO,
+                titulo="Cuenta de almuerzo pendiente de pago",
+                mensaje=msg,
+                destino=Notificacion.Destino.SISTEMA,
+            )
+            creadas += 1
+
+        _whatsapp_cliente(cuenta.hijo.cliente_responsable, msg)
 
     logger.info("alertar_cuentas_vencidas: %d notificaciones creadas", creadas)
     return {"notificaciones_creadas": creadas}

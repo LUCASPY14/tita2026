@@ -263,6 +263,19 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             if es_primer_registro:
                 self._agregar_a_cuenta_mensual(registro)
 
+        if es_primer_registro:
+            try:
+                from apps.notificaciones.services import _whatsapp_cliente
+                cliente_resp = registro.hijo.cliente_responsable
+                _whatsapp_cliente(
+                    cliente_resp,
+                    f"{registro.hijo.nombre_completo} almuerzo hoy "
+                    f"{registro.fecha_consumo.strftime('%d/%m/%Y')}. "
+                    f"Costo: Gs. {int(registro.costo_almuerzo):,}."
+                )
+            except Exception:
+                pass
+
         return advertencias
 
     def _agregar_a_cuenta_mensual(self, registro):
@@ -387,6 +400,22 @@ class PagoAlmuerzoMensualViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["suscripcion", "estado"]
     ordering = ["-fecha_pago"]
+
+    def perform_create(self, serializer):
+        pago = serializer.save(estado=PagoAlmuerzoMensual.Estado.CONFIRMADO)
+        try:
+            from apps.notificaciones.services import _whatsapp_cliente
+            hijo = pago.suscripcion.hijo
+            cliente_resp = hijo.cliente_responsable
+            mes = pago.mes_pagado
+            _whatsapp_cliente(
+                cliente_resp,
+                f"Pago de almuerzo confirmado para {hijo.nombre_completo}: "
+                f"Gs. {int(pago.monto_pagado):,} correspondiente a "
+                f"{mes.strftime('%m/%Y')}. Gracias."
+            )
+        except Exception:
+            pass
 
 
 # ==============================================================================
