@@ -6,6 +6,10 @@ import {
   Users, AlertTriangle, UtensilsCrossed, Package, UserCheck, CreditCard,
   Trophy, ShoppingBag, ChevronDown, ChevronUp,
 } from 'lucide-react'
+import {
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
+} from 'recharts'
 import api from '../services/api'
 import { exportarReporteVentasPDF, exportarCuentaCorrientePDF, exportarAlmuerzosPDF, exportarConsumoPDF } from '../utils/pdf'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
@@ -105,6 +109,12 @@ interface TarjetasData {
   tarjetas: TarjetaReporte[]
 }
 
+interface TendenciaPoint {
+  fecha: string
+  cantidad: number
+  monto: number
+}
+
 interface DetalleConsumoRep {
   id: number
   producto_nombre: string
@@ -153,6 +163,14 @@ const AGING_COLOR: Record<string, BadgeColor> = {
   '0-30': 'green', '31-60': 'yellow', '61-90': 'orange', '90+': 'red',
 }
 
+const CHART_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6']
+
+function fmtGsShort(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`
+  return String(n)
+}
+
 type TabKey = 'ventas' | 'cuenta_corriente' | 'almuerzos' | 'productos' | 'cajeros' | 'stock' | 'tarjetas' | 'consumo'
 
 // ─── Shared sub-components (defined outside Reportes to satisfy react-hooks/static-components) ──
@@ -195,6 +213,7 @@ export default function Reportes() {
   const [desde, setDesde] = useState(today)
   const [hasta, setHasta] = useState(today)
   const [data, setData] = useState<ReporteData | null>(null)
+  const [tendencia, setTendencia] = useState<TendenciaPoint[]>([])
   const [loading, setLoading] = useState(false)
   const [sortTipo, setSortTipo] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null)
   const [sortCierres, setSortCierres] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null)
@@ -204,11 +223,13 @@ export default function Reportes() {
     if (desde > hasta) { toast.error('La fecha Desde no puede ser mayor a Hasta'); return }
     setLoading(true)
     try {
-      const { data: res } = await api.get('/contabilidad/reportes/', {
-        params: { fecha_desde: desde, fecha_hasta: hasta },
-      })
-      setData(res)
-    } catch { setData(null); toast.error('Error al cargar el reporte') }
+      const [repRes, tendRes] = await Promise.all([
+        api.get('/contabilidad/reportes/', { params: { fecha_desde: desde, fecha_hasta: hasta } }),
+        api.get('/contabilidad/dashboard/tendencia/', { params: { desde, hasta } }),
+      ])
+      setData(repRes.data)
+      setTendencia(tendRes.data?.data ?? [])
+    } catch { setData(null); setTendencia([]); toast.error('Error al cargar el reporte') }
     finally { setLoading(false) }
   }
 
@@ -905,6 +926,99 @@ export default function Reportes() {
                 </div>
               </div>
 
+              {/* ── Gráficos ─────────────────────────────────────────────────── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {tendencia.length > 1 && (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm lg:col-span-2">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                      <h2 className="text-sm font-semibold text-slate-800">Tendencia de ventas diarias</h2>
+                      <span className="text-sm text-slate-400 tabular-nums">{tendencia.length} días</span>
+                    </div>
+                    <div className="p-4 h-56">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <AreaChart
+                          data={tendencia.map(d => ({
+                            dia: new Date(d.fecha + 'T00:00:00').toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' }),
+                            Ventas: d.cantidad,
+                            'Monto (k)': Math.round(d.monto / 1000),
+                          }))}
+                          margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                          <XAxis dataKey="dia" tick={{ fontSize: 11, fill: '#94a3b8' }} interval={tendencia.length > 14 ? 2 : 0} />
+                          <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                          <Tooltip
+                            contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                            formatter={(v, name) =>
+                              name === 'Monto (k)' ? [`${fmtGsShort((Number(v) || 0) * 1000)} Gs.`, 'Monto'] : [Number(v), String(name)]
+                            }
+                          />
+                          <Legend formatter={v => <span className="text-sm text-slate-600">{v}</span>} />
+                          <Area type="monotone" dataKey="Ventas" stroke="#22c55e" fill="#22c55e20" strokeWidth={2} dot={false} />
+                          <Area type="monotone" dataKey="Monto (k)" stroke="#3b82f6" fill="#3b82f620" strokeWidth={2} dot={false} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+
+                {data.ventas.por_tipo.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+                    <div className="px-6 py-4 border-b border-slate-100">
+                      <h2 className="text-sm font-semibold text-slate-800">Ventas por tipo</h2>
+                    </div>
+                    <div className="p-4 h-56">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <BarChart
+                          data={tipoSorted.map(t => ({
+                            tipo: TIPO_LABEL[t.tipo] ?? t.tipo,
+                            Cantidad: t.cantidad,
+                            'Monto (k)': Math.round((Number(t.monto) || 0) / 1000),
+                          }))}
+                          margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                          <XAxis dataKey="tipo" tick={{ fontSize: 11, fill: '#64748b' }} />
+                          <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                          <Tooltip
+                            contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                            formatter={(v, name) =>
+                              name === 'Monto (k)' ? [`${fmtGsShort((Number(v) || 0) * 1000)} Gs.`, 'Monto'] : [Number(v), String(name)]
+                            }
+                          />
+                          <Legend formatter={v => <span className="text-sm text-slate-600">{v}</span>} />
+                          <Bar dataKey="Cantidad" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="Monto (k)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+
+                {data.ventas.por_tipo.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+                    <div className="px-6 py-4 border-b border-slate-100">
+                      <h2 className="text-sm font-semibold text-slate-800">Distribución por tipo</h2>
+                    </div>
+                    <div className="p-4 h-56">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <PieChart>
+                          <Pie
+                            data={tipoSorted.map(t => ({ name: TIPO_LABEL[t.tipo] ?? t.tipo, value: Number(t.monto) || 0 }))}
+                            cx="50%" cy="50%" innerRadius={50} outerRadius={80}
+                            paddingAngle={3} dataKey="value"
+                          >
+                            {tipoSorted.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip formatter={(v) => [`Gs. ${(Number(v) || 0).toLocaleString('es-PY')}`, 'Monto']} />
+                          <Legend formatter={v => <span className="text-sm text-slate-600">{v}</span>} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {data.ventas.por_tipo.length > 0 && (
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 border-b border-slate-100">
@@ -981,9 +1095,43 @@ export default function Reportes() {
                 <KpiCard label="Período" value={`${productosData.periodo.desde} — ${productosData.periodo.hasta}`} />
               </div>
 
+              {productosData.productos.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+                  <div className="px-6 py-4 border-b border-slate-100">
+                    <h2 className="text-sm font-semibold text-slate-800">Top 10 por monto vendido</h2>
+                  </div>
+                  <div className="p-4" style={{ height: `${Math.min(productosData.productos.length, 10) * 36 + 40}px`, minHeight: 200 }}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <BarChart
+                        layout="vertical"
+                        data={productosData.productos.slice(0, 10).map(p => ({
+                          nombre: p.descripcion.length > 22 ? p.descripcion.slice(0, 22) + '…' : p.descripcion,
+                          'Monto (k)': Math.round((Number(p.total_monto) || 0) / 1000),
+                          Cantidad: p.total_cantidad,
+                        }))}
+                        margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }}
+                          tickFormatter={v => fmtGsShort(Number(v) * 1000)} />
+                        <YAxis type="category" dataKey="nombre" width={140} tick={{ fontSize: 11, fill: '#64748b' }} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                          formatter={(v, name) =>
+                            name === 'Monto (k)' ? [`${fmtGsShort((Number(v) || 0) * 1000)} Gs.`, 'Monto'] : [Number(v), 'Cantidad']
+                          }
+                        />
+                        <Legend formatter={v => <span className="text-sm text-slate-600">{v}</span>} />
+                        <Bar dataKey="Monto (k)" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100">
-                  <h2 className="text-sm font-semibold text-slate-800">Ranking de productos</h2>
+                  <h2 className="text-sm font-semibold text-slate-800">Ranking completo</h2>
                   <p className="text-sm text-slate-400 mt-0.5">Ordenado por monto vendido</p>
                 </div>
                 <div className="p-1">
@@ -1039,6 +1187,41 @@ export default function Reportes() {
                 <KpiCard label="Cajeros activos" value={cajerosData.cajeros.length} />
                 <KpiCard label="Período" value={`${cajerosData.periodo.desde} — ${cajerosData.periodo.hasta}`} />
               </div>
+
+              {cajerosData.cajeros.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+                  <div className="px-6 py-4 border-b border-slate-100">
+                    <h2 className="text-sm font-semibold text-slate-800">Comparativa entre cajeros</h2>
+                  </div>
+                  <div className="p-4 h-64">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <BarChart
+                        data={cajerosData.cajeros.map(c => ({
+                          cajero: c.nombre.split(' ')[0],
+                          Ventas: c.cantidad_ventas,
+                          'Monto (k)': Math.round((Number(c.monto_total) || 0) / 1000),
+                          'Ticket Prom (k)': Math.round((Number(c.ticket_promedio) || 0) / 1000),
+                        }))}
+                        margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="cajero" tick={{ fontSize: 12, fill: '#64748b' }} />
+                        <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                          formatter={(v, name) =>
+                            name !== 'Ventas' ? [`${fmtGsShort((Number(v) || 0) * 1000)} Gs.`, name === 'Monto (k)' ? 'Monto' : 'Ticket prom.'] : [Number(v), 'Ventas']
+                          }
+                        />
+                        <Legend formatter={v => <span className="text-sm text-slate-600">{v}</span>} />
+                        <Bar dataKey="Ventas" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Monto (k)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Ticket Prom (k)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100">
@@ -1349,6 +1532,63 @@ export default function Reportes() {
                   </div>
                 ))}
               </div>
+
+              {almuerzosData.totales.monto_total > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+                    <div className="px-6 py-4 border-b border-slate-100">
+                      <h2 className="text-sm font-semibold text-slate-800">Distribución de cobros</h2>
+                    </div>
+                    <div className="p-4 h-56">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Pagado', value: almuerzosData.totales.monto_pagado },
+                              { name: 'Pendiente', value: almuerzosData.totales.monto_pendiente },
+                            ]}
+                            cx="50%" cy="50%" innerRadius={50} outerRadius={80}
+                            paddingAngle={3} dataKey="value"
+                          >
+                            <Cell fill="#22c55e" />
+                            <Cell fill="#f59e0b" />
+                          </Pie>
+                          <Tooltip formatter={(v) => [`Gs. ${(Number(v) || 0).toLocaleString('es-PY')}`, '']} />
+                          <Legend formatter={v => <span className="text-sm text-slate-600">{v}</span>} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+                    <div className="px-6 py-4 border-b border-slate-100">
+                      <h2 className="text-sm font-semibold text-slate-800">Alumnos por estado</h2>
+                    </div>
+                    <div className="p-4 h-56">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Al día', value: almuerzosData.totales.alumnos - almuerzosData.totales.con_deuda },
+                              { name: 'Con deuda', value: almuerzosData.totales.con_deuda },
+                            ]}
+                            cx="50%" cy="50%" innerRadius={50} outerRadius={80}
+                            paddingAngle={3} dataKey="value"
+                            label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                            labelLine={false}
+                          >
+                            <Cell fill="#22c55e" />
+                            <Cell fill="#ef4444" />
+                          </Pie>
+                          <Tooltip formatter={(v) => [Number(v), 'Alumnos']} />
+                          <Legend formatter={v => <span className="text-sm text-slate-600">{v}</span>} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="p-1">
                   <Table columns={colsAlmuerzos} dataSource={almuerzosData.filas} rowKey="hijo_id"

@@ -552,19 +552,33 @@ class DashboardResumenView(APIView):
 class DashboardTendenciaView(APIView):
     """
     GET /api/contabilidad/dashboard/tendencia/?dias=7
-    Ventas diarias de los últimos N días (máx 90) para el gráfico de tendencia.
+    GET /api/contabilidad/dashboard/tendencia/?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+    Ventas diarias para el gráfico de tendencia.
     """
     permission_classes = [IsStaffUser]
 
     def get(self, request):
+        from datetime import date
         from django.db.models import Count, Sum
         from django.db.models.functions import TruncDate
         from apps.ventas.models import Venta
 
         from django.utils.timezone import localdate
-        dias = min(max(int(request.query_params.get("dias", 7)), 1), 90)
-        hasta = localdate()
-        desde = hasta - timedelta(days=dias - 1)
+
+        desde_str = request.query_params.get("desde")
+        hasta_str = request.query_params.get("hasta")
+        if desde_str and hasta_str:
+            try:
+                desde = date.fromisoformat(desde_str)
+                hasta = date.fromisoformat(hasta_str)
+            except ValueError:
+                return Response({"error": "Formato de fecha inválido (YYYY-MM-DD)."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            dias = min(max(int(request.query_params.get("dias", 7)), 1), 90)
+            hasta = localdate()
+            desde = hasta - timedelta(days=dias - 1)
+
+        dias = (hasta - desde).days + 1
 
         ventas_qs = (
             Venta.objects
