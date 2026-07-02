@@ -6,6 +6,8 @@ import csv
 from datetime import date
 from decimal import Decimal
 
+from django.db.models import DecimalField, Q, Sum, Value
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 
 from rest_framework import viewsets, status
@@ -91,7 +93,15 @@ def _crear_usuario_portal(cliente):
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
-    queryset = Cliente.objects.select_related("tipo_cliente", "lista_precio").all()
+    queryset = Cliente.objects.select_related("tipo_cliente", "lista_precio").annotate(
+        saldo_negativo_tarjetas=Coalesce(
+            Sum(
+                "hijos__tarjeta__saldo_actual",
+                filter=Q(hijos__tarjeta__saldo_actual__lt=0),
+            ),
+            Value(0, output_field=DecimalField(max_digits=12, decimal_places=0)),
+        )
+    )
     serializer_class = ClienteSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]

@@ -51,6 +51,7 @@ interface Cliente {
   tipo_cliente: number
   tipo_cliente_nombre: string
   saldo_cuenta_corriente: string
+  saldo_negativo_tarjetas: string
 }
 
 interface ClienteForm {
@@ -1621,13 +1622,24 @@ export default function Clientes() {
       key: 'saldo',
       render: (_, r) => {
         const saldo = Number(r.saldo_cuenta_corriente) || 0
+        const negTarjetas = Number(r.saldo_negativo_tarjetas) || 0
         return (
-          <span className={[
-            'tabular-nums text-base font-semibold',
-            saldo > 0 ? 'text-red-600' : 'text-emerald-700',
-          ].join(' ')}>
-            {saldo > 0 ? '+' : ''}{formatGs(saldo)}
-          </span>
+          <div className="space-y-0.5">
+            <span className={[
+              'tabular-nums text-base font-semibold block',
+              saldo > 0 ? 'text-red-600' : 'text-emerald-700',
+            ].join(' ')}>
+              {saldo > 0 ? '+' : ''}{formatGs(saldo)}
+            </span>
+            {negTarjetas < 0 && (
+              <span className="flex items-center gap-1 text-xs font-medium text-amber-600" title="Tarjeta(s) de hijos con saldo negativo">
+                <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 3.5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4.5zm0 7a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75z"/>
+                </svg>
+                Tarjeta {formatGs(negTarjetas)}
+              </span>
+            )}
+          </div>
         )
       },
     },
@@ -1671,7 +1683,10 @@ export default function Clientes() {
 
   const stats = useMemo(() => ({
     activos: clientes.filter(c => c.activo).length,
-    conDeuda: clientes.filter(c => (Number(c.saldo_cuenta_corriente) || 0) > 0).length,
+    conDeuda: clientes.filter(c =>
+      (Number(c.saldo_cuenta_corriente) || 0) > 0 ||
+      (Number(c.saldo_negativo_tarjetas) || 0) < 0
+    ).length,
   }), [clientes])
 
   const selectClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
