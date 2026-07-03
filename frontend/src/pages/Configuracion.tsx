@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import {
   Settings, Tag, ListOrdered, CreditCard, Users,
   GraduationCap, Building2, History, Shield,
-  UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent, Trash2,
+  UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent, Trash2, DollarSign,
 } from 'lucide-react'
 import api from '../services/api'
 import Modal from '../components/ui/Modal'
@@ -19,6 +19,7 @@ import TabHistorialPrecios from './configuracion/TabHistorialPrecios'
 import TabSeguridad from './configuracion/TabSeguridad'
 import TabTiposAlmuerzo from './configuracion/TabTiposAlmuerzo'
 import TabPlanesAlmuerzo from './configuracion/TabPlanesAlmuerzo'
+import TabPreciosAlmuerzo from './configuracion/TabPreciosAlmuerzo'
 import TabUnidadesMedida from './configuracion/TabUnidadesMedida'
 import TabAlergenos from './configuracion/TabAlergenos'
 import TabImpuestos from './configuracion/TabImpuestos'
@@ -26,7 +27,7 @@ import TabImpuestos from './configuracion/TabImpuestos'
 type TabKey =
   | 'categorias' | 'tipos_cliente' | 'listas_precio' | 'medios_pago'
   | 'grados' | 'datos_empresa' | 'historial_precios' | 'seguridad'
-  | 'tipos_almuerzo' | 'planes_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
+  | 'tipos_almuerzo' | 'planes_almuerzo' | 'precios_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
 
 const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'categorias',        labelKey: 'settings.categories',  icon: Tag },
@@ -39,6 +40,7 @@ const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'seguridad',         labelKey: 'settings.security',    icon: Shield },
   { key: 'tipos_almuerzo',    labelKey: 'settings.lunchTypes',  icon: UtensilsCrossed },
   { key: 'planes_almuerzo',   labelKey: 'settings.lunchPlans',  icon: Calendar },
+  { key: 'precios_almuerzo',  labelKey: 'settings.lunchPrices', icon: DollarSign },
   { key: 'unidades_medida',   labelKey: 'settings.units',       icon: Ruler },
   { key: 'alergenos',         labelKey: 'settings.allergens',   icon: AlertTriangle },
   { key: 'impuestos',         labelKey: 'settings.taxes',       icon: Percent },
@@ -101,6 +103,7 @@ export default function Configuracion() {
         {tab === 'grados'            && <TabGrados          onDelete={confirmDelete} />}
         {tab === 'tipos_almuerzo'    && <TabTiposAlmuerzo   onDelete={confirmDelete} />}
         {tab === 'planes_almuerzo'   && <TabPlanesAlmuerzo  onDelete={confirmDelete} />}
+        {tab === 'precios_almuerzo'  && <TabPreciosAlmuerzo onDelete={confirmDelete} />}
         {tab === 'unidades_medida'   && <TabUnidadesMedida  onDelete={confirmDelete} />}
         {tab === 'alergenos'         && <TabAlergenos       onDelete={confirmDelete} />}
         {tab === 'impuestos'         && <TabImpuestos       onDelete={confirmDelete} />}

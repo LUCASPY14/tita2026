@@ -152,11 +152,21 @@ class SuscripcionAlmuerzo(models.Model):
         SUSPENDIDA = "SUSPENDIDA", "Suspendida"
         CANCELADA = "CANCELADA", "Cancelada"
 
+    class TipoCobro(models.TextChoices):
+        CUENTA = "CUENTA", "Por consumo (cuenta corriente)"
+        MENSUAL = "MENSUAL", "Cuota mensual fija"
+
     hijo = models.ForeignKey(
         "clientes.Hijo", models.PROTECT, related_name="suscripciones_almuerzo"
     )
     plan = models.ForeignKey(
         PlanAlmuerzo, models.PROTECT, related_name="suscripciones"
+    )
+    tipo_cobro = models.CharField(
+        max_length=10,
+        choices=TipoCobro.choices,
+        default=TipoCobro.CUENTA,
+        help_text="CUENTA = padre paga al final del mes según consumo real. MENSUAL = cuota fija por adelantado.",
     )
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField(blank=True, null=True)

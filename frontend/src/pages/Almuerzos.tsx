@@ -4,9 +4,10 @@ import toast from 'react-hot-toast'
 import {
   UtensilsCrossed, Plus, Search, Edit2, X,
   CheckCircle, Calendar, Users, BarChart2,
-  PauseCircle, Banknote, RefreshCw, EyeOff, Eye, FileText,
+  PauseCircle, Banknote, RefreshCw, EyeOff, Eye, FileText, Trash2,
 } from 'lucide-react'
 import api from '../services/api'
+import { useAuthStore } from '../store/authStore'
 import { exportarCuentasMensualesPDF } from '../utils/pdf'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -92,6 +93,7 @@ interface Suscripcion {
   hijo_nombre: string
   plan: number
   plan_nombre: string
+  tipo_cobro: 'CUENTA' | 'MENSUAL'
   estado: string
   fecha_inicio: string
   fecha_fin: string | null
@@ -158,6 +160,7 @@ type TabKey = 'consumos' | 'cuentas' | 'suscripciones' | 'menu'
 
 export default function Almuerzos() {
   const { t } = useTranslation()
+  const isAdmin = useAuthStore(s => s.user?.rol === 'ADMIN')
   const [tab, setTab] = useState<TabKey>('consumos')
 
   // ── Catalogs ─────────────────────────────────────────────────────
@@ -191,7 +194,7 @@ export default function Almuerzos() {
   const [suscripciones, setSuscripciones] = useState<Suscripcion[]>([])
   const [loadingSusc, setLoadingSusc] = useState(false)
   const [suscModalOpen, setSuscModalOpen] = useState(false)
-  const [suscForm, setSuscForm] = useState({ hijo: '', plan: '', fecha_inicio: todayISO() })
+  const [suscForm, setSuscForm] = useState({ hijo: '', plan: '', tipo_cobro: 'CUENTA', fecha_inicio: todayISO() })
   const [savingSusc, setSavingSusc] = useState(false)
 
   // ── Menú ──────────────────────────────────────────────────────────
@@ -395,11 +398,12 @@ export default function Almuerzos() {
       await api.post('/almuerzos/suscripciones/', {
         hijo: Number(suscForm.hijo),
         plan: Number(suscForm.plan),
+        tipo_cobro: suscForm.tipo_cobro,
         fecha_inicio: suscForm.fecha_inicio,
       })
       toast.success('Suscripción creada')
       setSuscModalOpen(false)
-      setSuscForm({ hijo: '', plan: '', fecha_inicio: todayISO() })
+      setSuscForm({ hijo: '', plan: '', tipo_cobro: 'CUENTA', fecha_inicio: todayISO() })
       loadSuscripciones()
     } catch (err) {
       toast.error(extractErrorMessage(err))
@@ -575,6 +579,25 @@ export default function Almuerzos() {
     }
   }, [loadRegistros, searchRegistros, pageRegistros])
 
+  // ── Eliminar consumo (solo ADMIN, solo ANULADO) ───────────────────
+  const [deleteConsumoId, setDeleteConsumoId] = useState<number | null>(null)
+  const [deletingConsumo, setDeletingConsumo] = useState(false)
+
+  const handleEliminarConsumo = useCallback(async () => {
+    if (!deleteConsumoId) return
+    setDeletingConsumo(true)
+    try {
+      await api.delete(`/almuerzos/registros-consumo/${deleteConsumoId}/`)
+      toast.success('Registro eliminado')
+      setDeleteConsumoId(null)
+      loadRegistros(searchRegistros, pageRegistros)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setDeletingConsumo(false)
+    }
+  }, [deleteConsumoId, loadRegistros, searchRegistros, pageRegistros])
+
   // ── Summary stats ──────────────────────────────────────────────────
   const mesActual = new Date().getMonth() + 1
   const anioActual = new Date().getFullYear()
@@ -624,13 +647,23 @@ export default function Almuerzos() {
     {
       title: '',
       key: 'acc',
-      width: 90,
-      render: (_, r) => r.estado === 'REGISTRADO' ? (
-        <Button size="sm" variant="danger" onClick={() => anularConsumo(r.id)}>
-          <X className="w-3.5 h-3.5" />
-          Anular
-        </Button>
-      ) : null,
+      width: 120,
+      render: (_, r) => (
+        <div className="flex gap-1.5">
+          {r.estado === 'REGISTRADO' && (
+            <Button size="sm" variant="danger" onClick={() => anularConsumo(r.id)}>
+              <X className="w-3.5 h-3.5" />
+              Anular
+            </Button>
+          )}
+          {r.estado === 'ANULADO' && isAdmin && (
+            <Button size="sm" variant="danger" onClick={() => setDeleteConsumoId(r.id)}>
+              <Trash2 className="w-3.5 h-3.5" />
+              Eliminar
+            </Button>
+          )}
+        </div>
+      ),
     },
   ]
 
@@ -696,6 +729,15 @@ export default function Almuerzos() {
       title: 'Plan',
       key: 'plan',
       render: (_, r) => <span className="text-sm text-slate-700">{r.plan_nombre}</span>,
+    },
+    {
+      title: 'Tipo de cobro',
+      key: 'tipo_cobro',
+      render: (_, r) => (
+        <Badge color={r.tipo_cobro === 'MENSUAL' ? 'blue' : 'orange'}>
+          {r.tipo_cobro === 'MENSUAL' ? 'Cuota fija' : 'Por consumo'}
+        </Badge>
+      ),
     },
     {
       title: 'Inicio',
@@ -817,7 +859,7 @@ export default function Almuerzos() {
           </Button>
         )}
         {tab === 'suscripciones' && (
-          <Button variant="primary" onClick={() => { setSuscForm({ hijo: '', plan: '', fecha_inicio: todayISO() }); setSuscModalOpen(true) }}>
+          <Button variant="primary" onClick={() => { setSuscForm({ hijo: '', plan: '', tipo_cobro: 'CUENTA', fecha_inicio: todayISO() }); setSuscModalOpen(true) }}>
             <Plus className="w-4 h-4" />
             Nueva Suscripción
           </Button>
@@ -1062,12 +1104,39 @@ export default function Almuerzos() {
           </div>
           <div>
             <label className={labelClass}>Plan *</label>
-            <select value={suscForm.plan} onChange={e => setSuscForm(f => ({ ...f, plan: e.target.value }))} className={inputClass}>
+            <select
+              value={suscForm.plan}
+              onChange={e => {
+                const planId = e.target.value
+                const plan = planes.find(p => String(p.id) === planId)
+                const tipoCobro = plan?.tipo === 'CANTIDAD' ? 'MENSUAL' : 'CUENTA'
+                setSuscForm(f => ({ ...f, plan: planId, tipo_cobro: tipoCobro }))
+              }}
+              className={inputClass}
+            >
               <option value="">Seleccionar...</option>
               {planes.filter(p => p.activo).map(p => (
                 <option key={p.id} value={p.id}>{p.nombre} — {formatGs(p.precio_mensual)}/mes</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className={labelClass}>Tipo de Cobro *</label>
+            <select
+              value={suscForm.tipo_cobro}
+              onChange={e => setSuscForm(f => ({ ...f, tipo_cobro: e.target.value }))}
+              className={inputClass}
+            >
+              <option value="CUENTA">Por consumo — padre paga al final del mes según lo que comió</option>
+              <option value="MENSUAL">Cuota mensual fija — padre paga por adelantado</option>
+            </select>
+            {suscForm.plan && (
+              <p className="text-xs text-slate-400 mt-1">
+                {suscForm.tipo_cobro === 'MENSUAL'
+                  ? `El padre paga ${formatGs(planes.find(p => String(p.id) === suscForm.plan)?.precio_mensual ?? 0)} al inicio de cada mes.`
+                  : 'La cuenta acumula Gs. por cada almuerzo registrado y el cajero cobra al mes siguiente.'}
+              </p>
+            )}
           </div>
           <div>
             <label className={labelClass}>Fecha de Inicio</label>
@@ -1210,6 +1279,27 @@ export default function Almuerzos() {
             <textarea value={editMenuForm.descripcion} onChange={e => setEditMenuForm(f => ({ ...f, descripcion: e.target.value }))} rows={2} className={`${inputClass} resize-none`} />
           </div>
           {toggleSwitch(editMenuForm.activo, v => setEditMenuForm(f => ({ ...f, activo: v })), 'Activo')}
+        </div>
+      </Modal>
+
+      {/* ── Confirmar eliminación consumo (solo ADMIN) ───────────── */}
+      <Modal
+        open={!!deleteConsumoId}
+        title="Eliminar registro de consumo"
+        onOk={handleEliminarConsumo}
+        onCancel={() => setDeleteConsumoId(null)}
+        okText="Eliminar definitivamente"
+        confirmLoading={deletingConsumo}
+        width={420}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-700">
+            Esta acción <span className="font-semibold text-red-600">no se puede deshacer</span>.
+            El registro será eliminado permanentemente de la base de datos.
+          </p>
+          <p className="text-xs text-slate-400">
+            Solo se pueden eliminar registros en estado ANULADO. La cuenta mensual del alumno ya fue corregida al anular.
+          </p>
         </div>
       </Modal>
 

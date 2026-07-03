@@ -102,6 +102,7 @@
     "security":    "Seguridad",
     "lunchTypes":  "Tipos Almuerzo",
     "lunchPlans":  "Planes Almuerzo",
+    "lunchPrices": "Precios Almuerzo",
     "units":       "Unidades Medida",
     "allergens":   "Alérgenos",
     "taxes":       "Impuestos"
