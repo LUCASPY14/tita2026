@@ -169,10 +169,19 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         return [IsStaffOrClienteWeb()]
 
     def destroy(self, request, *args, **kwargs):
-        return Response(
-            {"error": "Los registros de consumo no pueden eliminarse. Use el estado ANULADO."},
-            status=status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
+        if not (request.user and request.user.is_authenticated and request.user.rol == "ADMIN"):
+            return Response(
+                {"error": "Solo el Administrador puede eliminar registros de consumo."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        registro = self.get_object()
+        if registro.estado != RegistroConsumoAlmuerzo.Estado.ANULADO:
+            return Response(
+                {"error": "Solo se pueden eliminar registros en estado ANULADO. Anulá el registro primero."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        registro.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
     filterset_class = RegistroConsumoFilter
     search_fields = ["hijo__nombre", "hijo__apellido"]
     ordering = ["-fecha_consumo", "-hora_registro"]
