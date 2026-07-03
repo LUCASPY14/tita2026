@@ -9,6 +9,18 @@ import Modal from '../../components/ui/Modal'
 import { extractErrorMessage, inputClass, labelClass, toggleSwitch, type PlanAlmuerzo, type DeleteTarget } from './helpers'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const DIA_CODES = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM']
+
+function parseDias(raw: unknown): number[] {
+  if (Array.isArray(raw)) return raw as number[]
+  if (typeof raw === 'string' && raw)
+    return raw.split(',').map(d => DIA_CODES.indexOf(d.trim())).filter(i => i >= 0)
+  return []
+}
+
+function diasToString(indices: number[]): string {
+  return indices.map(i => DIA_CODES[i]).filter(Boolean).join(',')
+}
 
 export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTarget) => void }) {
   const [items, setItems] = useState<PlanAlmuerzo[]>([])
@@ -33,7 +45,7 @@ export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTa
   const open = useCallback((p?: PlanAlmuerzo) => {
     setEditing(p ?? null)
     setForm(p
-      ? { nombre: p.nombre, tipo: p.tipo, precio_mensual: String(p.precio_mensual), cantidad_almuerzos_mes: p.cantidad_almuerzos_mes != null ? String(p.cantidad_almuerzos_mes) : '', dias_semana_incluidos: p.dias_semana_incluidos ?? [], activo: p.activo }
+      ? { nombre: p.nombre, tipo: p.tipo, precio_mensual: String(p.precio_mensual), cantidad_almuerzos_mes: p.cantidad_almuerzos_mes != null ? String(p.cantidad_almuerzos_mes) : '', dias_semana_incluidos: parseDias(p.dias_semana_incluidos), activo: p.activo }
       : { nombre: '', tipo: 'CANTIDAD', precio_mensual: '', cantidad_almuerzos_mes: '', dias_semana_incluidos: [], activo: true })
     setModal(true)
   }, [])
@@ -55,6 +67,7 @@ export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTa
         ...form,
         precio_mensual: Number(form.precio_mensual) || 0,
         cantidad_almuerzos_mes: form.tipo === 'CANTIDAD' && form.cantidad_almuerzos_mes ? Number(form.cantidad_almuerzos_mes) : null,
+        dias_semana_incluidos: diasToString(form.dias_semana_incluidos),
       }
       if (editing) {
         await api.put(`/almuerzos/planes-almuerzo/${editing.id}/`, payload)
