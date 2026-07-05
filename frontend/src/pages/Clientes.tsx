@@ -6,8 +6,9 @@ import {
   Plus, Search, Users, Edit2, AlertTriangle,
   GraduationCap, Phone, Mail, ShieldAlert, Baby,
   UserPlus, Crown, Bell, Eye, Trash2, ChevronDown,
-  Camera, Upload, X, ShoppingBag,
+  Camera, Upload, X, ShoppingBag, Banknote, Printer,
 } from 'lucide-react'
+import { METODOS_PAGO as METODOS } from '../constants/mediosPago'
 import api from '../services/api'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -1499,6 +1500,241 @@ function HijosModal({ open, cliente, onClose }: HijosModalProps) {
   )
 }
 
+// ─── PagarCCModal ────────────────────────────────────────────────────────────
+
+interface PagoCC {
+  saldo_anterior: string | number
+  saldo_resultante: string | number
+  monto: string | number
+  descripcion: string
+}
+
+interface PagarCCModalProps {
+  open: boolean
+  cliente: Cliente | null
+  onClose: () => void
+  onSaved: () => void
+}
+
+function abrirReciboCC(cliente: Cliente, pago: PagoCC, metodo: string) {
+  const metodoLabel = METODOS.find(m => m.value === metodo)?.label ?? metodo
+  const win = window.open('', '_blank', 'width=420,height=580')
+  if (!win) { toast.error('Bloqueaste las ventanas emergentes'); return }
+  win.document.write(`<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"/><title>Recibo de Pago CC</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:monospace;font-size:13px;padding:16px;max-width:380px;margin:auto}
+  h1{font-size:16px;font-weight:bold;text-align:center;margin-bottom:4px}
+  .center{text-align:center}
+  .divider{border-top:1px dashed #000;margin:8px 0}
+  .row{display:flex;justify-content:space-between;margin:3px 0}
+  .label{color:#555}
+  .big{font-size:22px;font-weight:bold;text-align:center;margin:10px 0}
+  .footer{font-size:11px;text-align:center;color:#777;margin-top:12px}
+  @media print{body{padding:0}}
+</style>
+</head>
+<body>
+<h1>CANTINA ESCOLAR</h1>
+<p class="center">Recibo de Pago — Cuenta Corriente</p>
+<div class="divider"></div>
+<div class="row"><span class="label">Fecha:</span><span>${new Date().toLocaleString('es-PY')}</span></div>
+<div class="divider"></div>
+<div class="row"><span class="label">Cliente:</span><span>${cliente.apellidos}, ${cliente.nombres}</span></div>
+<div class="row"><span class="label">RUC/CI:</span><span>${cliente.ruc_ci}</span></div>
+<div class="divider"></div>
+<div class="row"><span class="label">Saldo anterior:</span><span>Gs. ${(Number(pago.saldo_anterior)||0).toLocaleString('es-PY')}</span></div>
+<div class="row"><span class="label">Método:</span><span>${metodoLabel}</span></div>
+<div class="big">Gs. ${(Number(pago.monto)||0).toLocaleString('es-PY')}</div>
+<div class="divider"></div>
+<div class="row"><span class="label">Saldo restante:</span><span>Gs. ${(Number(pago.saldo_resultante)||0).toLocaleString('es-PY')}</span></div>
+<div class="footer">Gracias por su pago.<br/>Conserve este comprobante.</div>
+<script>window.onload=function(){window.print()}<\/script>
+</body></html>`)
+  win.document.close()
+}
+
+function PagarCCModal({ open, cliente, onClose, onSaved }: PagarCCModalProps) {
+  const saldoActual = Number(cliente?.saldo_cuenta_corriente ?? 0)
+  const [monto, setMonto] = useState('')
+  const [metodo, setMetodo] = useState('EFECTIVO')
+  const [referencia, setReferencia] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [ultimoPago, setUltimoPago] = useState<PagoCC | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      setMonto(saldoActual > 0 ? String(saldoActual) : '')
+      setMetodo('EFECTIVO')
+      setReferencia('')
+      setUltimoPago(null)
+    }
+  }, [open, saldoActual])
+
+  const metodoInfo = METODOS.find(m => m.value === metodo)
+
+  async function handlePagar() {
+    const montoNum = Number(monto)
+    if (!montoNum || montoNum <= 0) { toast.error('Ingresá un monto válido'); return }
+    if (metodoInfo?.requiere_referencia && !referencia.trim()) {
+      toast.error('Ingresá el código de transacción'); return
+    }
+    setSaving(true)
+    try {
+      const desc = `Pago CC — ${metodo}${referencia ? ` (${referencia})` : ''}`
+      const { data } = await api.post('/clientes/cuentas-corrientes/', {
+        cliente: cliente!.id,
+        monto: montoNum,
+        descripcion: desc,
+      })
+      setUltimoPago(data)
+      toast.success(`Pago de ${(montoNum).toLocaleString('es-PY')} Gs. registrado`)
+      onSaved()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inputClass = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors'
+
+  return (
+    <Modal
+      open={open}
+      title={`Cobrar Cuenta Corriente — ${cliente?.apellidos ?? ''}, ${cliente?.nombres ?? ''}`}
+      onCancel={onClose}
+      footer={null}
+      width={480}
+    >
+      <div className="space-y-5">
+        {/* Saldo actual */}
+        <div className={`rounded-xl px-4 py-3 border ${saldoActual > 0 ? 'bg-orange-50 border-orange-200' : 'bg-emerald-50 border-emerald-200'}`}>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-0.5">Deuda actual</p>
+          <p className={`text-3xl font-black tabular-nums ${saldoActual > 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
+            {formatGs(saldoActual)}
+          </p>
+          {saldoActual === 0 && (
+            <p className="text-xs text-emerald-600 mt-0.5">Sin deuda pendiente</p>
+          )}
+        </div>
+
+        {!ultimoPago ? (
+          <>
+            {/* Monto */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Monto a cobrar (Gs.) *</label>
+              <input
+                type="number"
+                min={1}
+                step={1000}
+                value={monto}
+                onChange={e => setMonto(e.target.value)}
+                placeholder="0"
+                className="w-full text-center text-3xl font-black tracking-wider py-4 border-2 rounded-2xl outline-none bg-white border-slate-200 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 text-slate-900 placeholder:text-slate-300 transition-all"
+              />
+              {saldoActual > 0 && Number(monto) < saldoActual && (
+                <p className="text-xs text-slate-400 mt-1 text-center">Pago parcial — quedará saldo pendiente</p>
+              )}
+            </div>
+
+            {/* Método de pago */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Método de pago</label>
+              <div className="grid grid-cols-2 gap-2">
+                {METODOS.map(m => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => { setMetodo(m.value); setReferencia('') }}
+                    className={`px-3 py-2.5 rounded-xl text-sm font-bold text-left transition-colors cursor-pointer border-2 ${
+                      metodo === m.value
+                        ? 'bg-green-600 text-white border-green-600'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-green-400'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {metodoInfo?.requiere_referencia && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  Código de transacción *
+                </label>
+                <input
+                  value={referencia}
+                  onChange={e => setReferencia(e.target.value)}
+                  placeholder={metodo === 'TRANSFERENCIA' ? 'Nro. de transferencia...' : 'Nro. de comprobante POS...'}
+                  className={inputClass}
+                />
+              </div>
+            )}
+
+            {/* Botones */}
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={onClose}
+                className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handlePagar}
+                disabled={saving}
+                className="flex-1 py-3 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-black text-base rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <Banknote className="w-5 h-5" />
+                {saving ? 'Registrando...' : 'Registrar pago'}
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Resultado del pago */
+          <div className="space-y-4">
+            <div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-5 text-center">
+              <p className="text-emerald-700 font-bold text-lg mb-1">Pago registrado</p>
+              <p className="text-4xl font-black tabular-nums text-slate-800">{formatGs(ultimoPago.monto)}</p>
+              <p className="text-sm text-slate-500 mt-1">{METODOS.find(m => m.value === metodo)?.label}</p>
+              <div className="mt-3 pt-3 border-t border-emerald-200 text-sm text-slate-600">
+                <div className="flex justify-between">
+                  <span>Saldo anterior:</span>
+                  <span className="tabular-nums font-semibold">{formatGs(ultimoPago.saldo_anterior)}</span>
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span>Saldo restante:</span>
+                  <span className={`tabular-nums font-semibold ${Number(ultimoPago.saldo_resultante) > 0 ? 'text-orange-600' : 'text-emerald-700'}`}>
+                    {formatGs(ultimoPago.saldo_resultante)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => cliente && abrirReciboCC(cliente, ultimoPago, metodo)}
+                className="flex-1 flex items-center justify-center gap-2 py-3 border border-slate-200 hover:border-slate-400 text-slate-700 font-semibold text-sm rounded-xl transition-colors cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                Imprimir recibo
+              </button>
+              <button
+                onClick={onClose}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm rounded-xl transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 20
@@ -1521,6 +1757,9 @@ export default function Clientes() {
     open: false, cliente: null,
   })
   const [hijosModal, setHijosModal] = useState<{ open: boolean; cliente: Cliente | null }>({
+    open: false, cliente: null,
+  })
+  const [pagarCCModal, setPagarCCModal] = useState<{ open: boolean; cliente: Cliente | null }>({
     open: false, cliente: null,
   })
 
@@ -1662,6 +1901,16 @@ export default function Clientes() {
       key: 'acciones',
       render: (_, r) => (
         <div className="flex items-center gap-1.5 justify-end">
+          {(Number(r.saldo_cuenta_corriente) || 0) > 0 && (
+            <button
+              onClick={() => setPagarCCModal({ open: true, cliente: r })}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+              title="Registrar pago de cuenta corriente"
+            >
+              <Banknote className="w-3.5 h-3.5" />
+              Cobrar CC
+            </button>
+          )}
           <button
             onClick={() => setHijosModal({ open: true, cliente: r })}
             className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -1770,6 +2019,12 @@ export default function Clientes() {
         open={hijosModal.open}
         cliente={hijosModal.cliente}
         onClose={() => setHijosModal({ open: false, cliente: null })}
+      />
+      <PagarCCModal
+        open={pagarCCModal.open}
+        cliente={pagarCCModal.cliente}
+        onClose={() => setPagarCCModal({ open: false, cliente: null })}
+        onSaved={loadClientes}
       />
     </div>
   )

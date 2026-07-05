@@ -153,12 +153,42 @@ class ClienteViewSet(viewsets.ModelViewSet):
         return Response({"ok": True, "mensaje": "PIN actualizado correctamente."})
 
 
-class CuentaCorrienteClienteViewSet(viewsets.ReadOnlyModelViewSet):
+class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
     queryset = CuentaCorrienteCliente.objects.select_related("cliente").all()
     serializer_class = CuentaCorrienteClienteSerializer
     permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["cliente", "tipo"]
+    http_method_names = ["get", "post", "head", "options"]
+
+    def create(self, request, *args, **kwargs):
+        from decimal import Decimal, InvalidOperation
+        cliente_id = request.data.get("cliente")
+        monto_raw = request.data.get("monto")
+        descripcion = request.data.get("descripcion") or "Pago de cuenta corriente"
+
+        if not cliente_id:
+            return Response({"error": "El campo 'cliente' es obligatorio."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            monto = Decimal(str(monto_raw))
+            if monto <= 0:
+                raise ValueError
+        except (InvalidOperation, ValueError, TypeError):
+            return Response({"error": "El monto debe ser un número mayor a 0."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cliente = Cliente.objects.get(pk=cliente_id)
+        except Cliente.DoesNotExist:
+            return Response({"error": "Cliente no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        mov = CuentaCorrienteCliente.objects.create(
+            cliente=cliente,
+            tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+            monto=monto,
+            descripcion=descripcion,
+            creado_por=request.user,
+        )
+        return Response(self.get_serializer(mov).data, status=status.HTTP_201_CREATED)
 
 
 class TipoClienteViewSet(viewsets.ModelViewSet):
