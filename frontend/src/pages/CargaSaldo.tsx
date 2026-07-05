@@ -1,9 +1,9 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   CreditCard, Search, CheckCircle, RefreshCw, History,
-  ArrowUp, ArrowDown, X, Wallet,
+  ArrowUp, ArrowDown, X, Wallet, Printer, BookOpen, Banknote,
 } from 'lucide-react'
 import tarjetasService from '../services/tarjetas'
 import { METODOS_PAGO as METODOS } from '../constants/mediosPago'
@@ -50,6 +50,9 @@ interface Tarjeta {
   hijo_nombre: string
   hijo_grado: string
   cliente_nombre: string
+  cliente_id: number
+  cliente_saldo_cc: string | number
+  cliente_limite_credito: string | number
   saldo_actual: string | number
   saldo_disponible: string | number
   estado: string
@@ -73,6 +76,15 @@ interface CargaReciente {
   fecha_carga: string
 }
 
+interface UltimaCarga {
+  monto: number
+  metodo: string
+  tipoCobro: 'CONTADO' | 'CREDITO'
+  estado: string
+  tarjeta: Tarjeta
+  fecha: string
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MONTOS_RAPIDOS = [10000, 20000, 50000, 100000, 200000]
@@ -82,6 +94,56 @@ const TIPO_COLOR: Record<string, BadgeColor> = {
 }
 const ESTADO_COLOR: Record<string, BadgeColor> = {
   CONFIRMADA: 'green', PENDIENTE: 'yellow', RECHAZADA: 'red',
+}
+
+// ─── Receipt printer ─────────────────────────────────────────────────────────
+
+function abrirRecibo(carga: UltimaCarga) {
+  const metodoLabel = carga.tipoCobro === 'CREDITO'
+    ? 'Cuenta Corriente (Crédito)'
+    : (METODOS.find(m => m.value === carga.metodo)?.label ?? carga.metodo)
+
+  const win = window.open('', '_blank', 'width=420,height=600')
+  if (!win) { toast.error('Bloqueaste las ventanas emergentes'); return }
+
+  win.document.write(`<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Recibo de Recarga</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: monospace; font-size: 13px; padding: 16px; max-width: 380px; margin: auto; }
+  h1 { font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 4px; }
+  .center { text-align: center; }
+  .divider { border-top: 1px dashed #000; margin: 8px 0; }
+  .row { display: flex; justify-content: space-between; margin: 3px 0; }
+  .label { color: #555; }
+  .big { font-size: 22px; font-weight: bold; text-align: center; margin: 10px 0; }
+  .footer { font-size: 11px; text-align: center; color: #777; margin-top: 12px; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+<h1>CANTINA ESCOLAR</h1>
+<p class="center">Recibo de Recarga de Saldo</p>
+<div class="divider"></div>
+<div class="row"><span class="label">Fecha:</span><span>${new Date(carga.fecha).toLocaleString('es-PY')}</span></div>
+<div class="divider"></div>
+<div class="row"><span class="label">Alumno:</span><span>${carga.tarjeta.hijo_nombre}</span></div>
+<div class="row"><span class="label">Grado:</span><span>${carga.tarjeta.hijo_grado || '—'}</span></div>
+<div class="row"><span class="label">Tarjeta:</span><span>${carga.tarjeta.nro_tarjeta}</span></div>
+<div class="row"><span class="label">Responsable:</span><span>${carga.tarjeta.cliente_nombre}</span></div>
+<div class="divider"></div>
+<div class="row"><span class="label">Método:</span><span>${metodoLabel}</span></div>
+<div class="big">Gs. ${carga.monto.toLocaleString('es-PY')}</div>
+<div class="divider"></div>
+<div class="row"><span class="label">Nuevo saldo tarjeta:</span><span>Gs. ${Number(carga.tarjeta.saldo_disponible).toLocaleString('es-PY')}</span></div>
+<div class="footer">Gracias por su pago.<br/>Conserve este comprobante.</div>
+<script>window.onload = function(){ window.print(); }<\/script>
+</body>
+</html>`)
+  win.document.close()
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -96,6 +158,7 @@ export default function CargaSaldo() {
   const limpiarTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // ── Formulario de carga ──────────────────────────────────────────
+  const [tipoCobro, setTipoCobro] = useState<'CONTADO' | 'CREDITO'>('CONTADO')
   const [monto, setMonto] = useState('')
   const [metodo, setMetodo] = useState('EFECTIVO')
   const [referencia, setReferencia] = useState('')
@@ -108,7 +171,7 @@ export default function CargaSaldo() {
   const [historialTab, setHistorialTab] = useState<'movimientos' | 'cargas'>('movimientos')
 
   // ── Última operación exitosa ─────────────────────────────────────
-  const [ultimaCarga, setUltimaCarga] = useState<{ monto: number; metodo: string; estado: string } | null>(null)
+  const [ultimaCarga, setUltimaCarga] = useState<UltimaCarga | null>(null)
 
   // ── Auto-focus al inicio ──────────────────────────────────────────
   useEffect(() => {
@@ -181,37 +244,47 @@ export default function CargaSaldo() {
     const montoNum = Number(monto)
     if (!tarjeta) { toast.error('Buscá primero la tarjeta'); return }
     if (!montoNum || montoNum <= 0) { toast.error('Ingresá un monto válido'); return }
-    const metodoInfo = METODOS.find(m => m.value === metodo)
-    if (metodoInfo?.requiere_referencia && !referencia.trim()) {
+
+    const metodoEfectivo = tipoCobro === 'CREDITO' ? 'CUENTA_CORRIENTE' : metodo
+    const metodoInfo = METODOS.find(m => m.value === metodoEfectivo)
+
+    if (tipoCobro === 'CONTADO' && metodoInfo?.requiere_referencia && !referencia.trim()) {
       toast.error('Ingresá el código de transacción')
       return
     }
 
     setCargando(true)
     try {
-      const cargaPayload = {
-        tarjeta:      tarjeta.nro_tarjeta,
+      const cargaPayload: { tarjeta: string; monto_cargado: number; metodo_pago: string; referencia?: string } = {
+        tarjeta:       tarjeta.nro_tarjeta,
         monto_cargado: montoNum,
-        metodo_pago:  metodo,
+        metodo_pago:   metodoEfectivo,
         ...(referencia.trim() ? { referencia: referencia.trim() } : {}),
       }
 
       const { data } = await tarjetasService.crearCarga(cargaPayload)
 
-      setUltimaCarga({ monto: montoNum, metodo, estado: data.estado ?? 'CONFIRMADA' })
+      const { data: tarjetaActualizada } = await tarjetasService.getByNro<Tarjeta>(tarjeta.nro_tarjeta)
+      setTarjeta(tarjetaActualizada)
+      cargarHistorial(tarjeta.nro_tarjeta)
 
-      if (metodoInfo?.autoconfirma) {
+      setUltimaCarga({
+        monto: montoNum,
+        metodo: metodoEfectivo,
+        tipoCobro,
+        estado: data.estado ?? 'CONFIRMADA',
+        tarjeta: tarjetaActualizada,
+        fecha: new Date().toISOString(),
+      })
+
+      if (tipoCobro === 'CREDITO') {
+        toast.success(`Recarga de ${formatGs(montoNum)} acreditada a cuenta corriente`)
+      } else if (metodoInfo?.autoconfirma) {
         toast.success(`Recarga de ${formatGs(montoNum)} confirmada`)
       } else {
         toast.success(`Carga de ${formatGs(montoNum)} registrada — pendiente de confirmación`)
       }
 
-      // Actualizar saldo de la tarjeta y recargar historial
-      const { data: tarjetaActualizada } = await tarjetasService.getByNro<Tarjeta>(tarjeta.nro_tarjeta)
-      setTarjeta(tarjetaActualizada)
-      cargarHistorial(tarjeta.nro_tarjeta)
-
-      // Limpiar formulario para la próxima operación
       setMonto('')
       setReferencia('')
     } catch (err) {
@@ -219,7 +292,7 @@ export default function CargaSaldo() {
     } finally {
       setCargando(false)
     }
-  }, [tarjeta, monto, metodo, referencia, cargarHistorial])
+  }, [tarjeta, monto, metodo, tipoCobro, referencia, cargarHistorial])
 
   // ── Limpiar y nueva operación ─────────────────────────────────────
   const limpiar = useCallback(() => {
@@ -228,6 +301,7 @@ export default function CargaSaldo() {
     setMonto('')
     setReferencia('')
     setMetodo('EFECTIVO')
+    setTipoCobro('CONTADO')
     setMovimientos([])
     setCargas([])
     setUltimaCarga(null)
@@ -235,6 +309,8 @@ export default function CargaSaldo() {
   }, [])
 
   const metodoSeleccionado = METODOS.find(m => m.value === metodo)
+  const saldoCC = Number(tarjeta?.cliente_saldo_cc ?? 0)
+  const limiteCC = Number(tarjeta?.cliente_limite_credito ?? 0)
 
   // ── Columnas historial ────────────────────────────────────────────
   const colsMovimientos: Column<Movimiento>[] = [
@@ -291,7 +367,12 @@ export default function CargaSaldo() {
     {
       title: 'Método',
       key: 'metodo',
-      render: (_, r) => <span className="text-sm text-slate-600">{METODOS.find(m => m.value === r.metodo_pago)?.label ?? r.metodo_pago}</span>,
+      render: (_, r) => {
+        const label = r.metodo_pago === 'CUENTA_CORRIENTE'
+          ? 'Cuenta Corriente'
+          : (METODOS.find(m => m.value === r.metodo_pago)?.label ?? r.metodo_pago)
+        return <span className="text-sm text-slate-600">{label}</span>
+      },
     },
     {
       title: 'Estado',
@@ -398,11 +479,22 @@ export default function CargaSaldo() {
               <p className="text-slate-900 text-3xl font-black leading-tight">{tarjeta.hijo_nombre}</p>
               <p className="text-slate-500 text-lg mt-1">{tarjeta.hijo_grado} · {tarjeta.cliente_nombre}</p>
               <p className="text-slate-400 text-base font-mono mt-1">{tarjeta.nro_tarjeta}</p>
-              <div className="mt-4 pt-4 border-t border-emerald-200">
-                <p className="text-slate-500 text-sm font-semibold uppercase tracking-wide">Saldo disponible</p>
-                <p className={`text-4xl font-black tabular-nums mt-1 ${Number(tarjeta.saldo_disponible) < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-                  {formatGs(tarjeta.saldo_disponible)}
-                </p>
+              <div className="mt-4 pt-4 border-t border-emerald-200 grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide">Saldo tarjeta</p>
+                  <p className={`text-2xl font-black tabular-nums mt-0.5 ${Number(tarjeta.saldo_disponible) < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                    {formatGs(tarjeta.saldo_disponible)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide">Saldo CC</p>
+                  <p className={`text-2xl font-black tabular-nums mt-0.5 ${saldoCC > 0 ? 'text-orange-600' : 'text-slate-700'}`}>
+                    {formatGs(saldoCC)}
+                  </p>
+                  {saldoCC > 0 && (
+                    <p className="text-xs text-orange-500 mt-0.5">deuda pendiente</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -412,6 +504,52 @@ export default function CargaSaldo() {
                 <RefreshCw className="w-5 h-5 text-green-600" />
                 Nueva carga
               </p>
+
+              {/* Toggle contado / crédito */}
+              <div>
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-2.5">Tipo de cobro</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setTipoCobro('CONTADO'); setMetodo('EFECTIVO') }}
+                    className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-colors cursor-pointer border-2 ${
+                      tipoCobro === 'CONTADO'
+                        ? 'bg-green-600 text-white border-green-600'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-green-400'
+                    }`}
+                  >
+                    <Banknote className="w-4 h-4" />
+                    Contado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipoCobro('CREDITO')}
+                    className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-colors cursor-pointer border-2 ${
+                      tipoCobro === 'CREDITO'
+                        ? 'bg-orange-500 text-white border-orange-500'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-orange-400'
+                    }`}
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Crédito CC
+                  </button>
+                </div>
+                {tipoCobro === 'CREDITO' && (
+                  <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 space-y-0.5">
+                    <p className="text-xs text-orange-700 font-semibold">
+                      La recarga se acredita a cuenta corriente del responsable.
+                    </p>
+                    {limiteCC > 0 && (
+                      <p className="text-xs text-orange-600">
+                        Límite de crédito habilitado: {formatGs(limiteCC)}
+                      </p>
+                    )}
+                    <p className="text-xs text-orange-600">
+                      Deuda CC actual: {formatGs(saldoCC)}
+                    </p>
+                  </div>
+                )}
+              </div>
 
               {/* Montos rápidos */}
               <div>
@@ -448,33 +586,35 @@ export default function CargaSaldo() {
                 />
               </div>
 
-              {/* Método de pago */}
-              <div>
-                <p className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-2.5">Método de pago</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {METODOS.map(m => (
-                    <button
-                      key={m.value}
-                      type="button"
-                      onClick={() => { setMetodo(m.value); setReferencia('') }}
-                      className={`px-3 py-3 rounded-xl text-sm font-bold text-left transition-colors cursor-pointer border-2 ${
-                        metodo === m.value
-                          ? 'bg-green-600 text-white border-green-600'
-                          : 'bg-white text-slate-700 border-slate-200 hover:border-green-400'
-                      }`}
-                    >
-                      {m.label}
-                      {!m.autoconfirma && (
-                        <span className={`block text-xs mt-0.5 font-normal ${metodo === m.value ? 'text-green-100' : 'text-slate-400'}`}>
-                          queda pendiente
-                        </span>
-                      )}
-                    </button>
-                  ))}
+              {/* Método de pago (sólo en contado) */}
+              {tipoCobro === 'CONTADO' && (
+                <div>
+                  <p className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-2.5">Método de pago</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {METODOS.map(m => (
+                      <button
+                        key={m.value}
+                        type="button"
+                        onClick={() => { setMetodo(m.value); setReferencia('') }}
+                        className={`px-3 py-3 rounded-xl text-sm font-bold text-left transition-colors cursor-pointer border-2 ${
+                          metodo === m.value
+                            ? 'bg-green-600 text-white border-green-600'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-green-400'
+                        }`}
+                      >
+                        {m.label}
+                        {!m.autoconfirma && (
+                          <span className={`block text-xs mt-0.5 font-normal ${metodo === m.value ? 'text-green-100' : 'text-slate-400'}`}>
+                            queda pendiente
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {metodoSeleccionado?.requiere_referencia && (
+              {tipoCobro === 'CONTADO' && metodoSeleccionado?.requiere_referencia && (
                 <Input
                   label={`Código de transacción${metodoSeleccionado.autoconfirma ? ' *' : ''}`}
                   value={referencia}
@@ -486,26 +626,55 @@ export default function CargaSaldo() {
               <button
                 onClick={handleCargar}
                 disabled={cargando}
-                className="w-full py-4 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-lg font-black rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
+                className={`w-full py-4 disabled:opacity-50 text-white text-lg font-black rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer ${
+                  tipoCobro === 'CREDITO'
+                    ? 'bg-orange-500 hover:bg-orange-400'
+                    : 'bg-green-600 hover:bg-green-500'
+                }`}
               >
                 {cargando
                   ? <><RefreshCw className="w-5 h-5 animate-spin" /> Cargando...</>
-                  : <><RefreshCw className="w-5 h-5" />{metodoSeleccionado?.autoconfirma ? 'Cargar saldo' : 'Registrar carga pendiente'}</>
+                  : tipoCobro === 'CREDITO'
+                    ? <><BookOpen className="w-5 h-5" /> Cargar a cuenta corriente</>
+                    : <><RefreshCw className="w-5 h-5" />{metodoSeleccionado?.autoconfirma ? 'Cargar saldo' : 'Registrar carga pendiente'}</>
                 }
               </button>
             </div>
 
             {/* Resultado última operación */}
             {ultimaCarga && (
-              <div className={`rounded-2xl border-2 p-5 ${ultimaCarga.estado === 'CONFIRMADA' ? 'bg-emerald-50 border-emerald-300' : 'bg-amber-50 border-amber-300'}`}>
+              <div className={`rounded-2xl border-2 p-5 ${
+                ultimaCarga.tipoCobro === 'CREDITO'
+                  ? 'bg-orange-50 border-orange-300'
+                  : ultimaCarga.estado === 'CONFIRMADA'
+                    ? 'bg-emerald-50 border-emerald-300'
+                    : 'bg-amber-50 border-amber-300'
+              }`}>
                 <div className="flex items-center gap-3 mb-2">
-                  <CheckCircle className={`w-6 h-6 ${ultimaCarga.estado === 'CONFIRMADA' ? 'text-emerald-600' : 'text-amber-600'}`} />
-                  <span className={`text-base font-bold ${ultimaCarga.estado === 'CONFIRMADA' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                    {ultimaCarga.estado === 'CONFIRMADA' ? 'Carga realizada' : 'Carga registrada — pendiente'}
+                  <CheckCircle className={`w-6 h-6 ${ultimaCarga.tipoCobro === 'CREDITO' ? 'text-orange-600' : ultimaCarga.estado === 'CONFIRMADA' ? 'text-emerald-600' : 'text-amber-600'}`} />
+                  <span className={`text-base font-bold ${ultimaCarga.tipoCobro === 'CREDITO' ? 'text-orange-700' : ultimaCarga.estado === 'CONFIRMADA' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {ultimaCarga.tipoCobro === 'CREDITO'
+                      ? 'Carga a cuenta corriente'
+                      : ultimaCarga.estado === 'CONFIRMADA'
+                        ? 'Carga realizada'
+                        : 'Carga registrada — pendiente'
+                    }
                   </span>
                 </div>
                 <p className="text-3xl font-black tabular-nums text-slate-800">{formatGs(ultimaCarga.monto)}</p>
-                <p className="text-base text-slate-500 mt-0.5">{METODOS.find(m => m.value === ultimaCarga.metodo)?.label}</p>
+                <p className="text-base text-slate-500 mt-0.5">
+                  {ultimaCarga.tipoCobro === 'CREDITO'
+                    ? 'Cuenta Corriente (Crédito)'
+                    : METODOS.find(m => m.value === ultimaCarga.metodo)?.label
+                  }
+                </p>
+                <button
+                  onClick={() => abrirRecibo(ultimaCarga)}
+                  className="mt-3 flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:border-slate-400 text-slate-700 text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimir recibo
+                </button>
               </div>
             )}
           </div>

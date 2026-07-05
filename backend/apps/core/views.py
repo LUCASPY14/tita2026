@@ -112,6 +112,37 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             out = self.get_serializer(carga)
             return Response(out.data, status=status.HTTP_201_CREATED)
 
+        if metodo == "CUENTA_CORRIENTE":
+            from apps.clientes.models import CuentaCorrienteCliente
+            tarjeta_obj = data["tarjeta"]
+            tarjeta_obj = Tarjeta.objects.select_related(
+                "hijo__cliente_responsable"
+            ).get(pk=tarjeta_obj.pk)
+            cliente = tarjeta_obj.hijo.cliente_responsable
+
+            carga = TarjetaService.cargar_saldo(
+                tarjeta=tarjeta_obj,
+                monto=data["monto_cargado"],
+                cliente_origen=cliente,
+                responsable=request.user,
+                metodo_pago=metodo,
+                referencia=data.get("referencia") or "",
+            )
+
+            CuentaCorrienteCliente.objects.create(
+                cliente=cliente,
+                tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+                monto=data["monto_cargado"],
+                descripcion=(
+                    f"Recarga tarjeta {tarjeta_obj.nro_tarjeta}"
+                    f" - {tarjeta_obj.hijo.nombre_completo}"
+                ),
+                creado_por=request.user,
+            )
+
+            out = self.get_serializer(carga)
+            return Response(out.data, status=status.HTTP_201_CREATED)
+
         # Pagos por transferencia u otros: quedan PENDIENTE para confirmacion manual
         carga = serializer.save(responsable=self.request.user)
         headers = self.get_success_headers(serializer.data)

@@ -27,11 +27,22 @@ class TarjetaSerializer(serializers.ModelSerializer):
     cliente_id = serializers.IntegerField(source="hijo.cliente_responsable.id", read_only=True)
     cliente_nombre = serializers.CharField(source="hijo.cliente_responsable.nombre_completo", read_only=True)
     cliente_ruc = serializers.CharField(source="hijo.cliente_responsable.ruc_ci", read_only=True)
+    cliente_saldo_cc = serializers.SerializerMethodField()
+    cliente_limite_credito = serializers.DecimalField(
+        source="hijo.cliente_responsable.limite_credito",
+        max_digits=12, decimal_places=0, read_only=True,
+    )
 
     class Meta:
         model = Tarjeta
         fields = "__all__"
         read_only_fields = ["fecha_creacion", "ultima_notificacion_saldo"]
+
+    def get_cliente_saldo_cc(self, obj):
+        try:
+            return int(obj.hijo.cliente_responsable.saldo_cuenta_corriente)
+        except Exception:
+            return 0
 
     def get_hijo_foto(self, obj):
         if obj.hijo and obj.hijo.foto_perfil:
