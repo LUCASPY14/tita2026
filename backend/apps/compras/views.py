@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from common.permissions import IsCajeroOrAdmin, IsStaffUser
+from common.permissions import IsCajeroOrAdmin, IsAdminOrSupervisor, IsStaffUser
 from common.mixins import ExportCSVMixin
 from .filters import CompraFilter
 
@@ -200,7 +200,7 @@ class DetalleCompraViewSet(viewsets.ModelViewSet):
 class PagoProveedorViewSet(viewsets.ModelViewSet):
     queryset = PagoProveedor.objects.select_related("proveedor", "medio_pago").prefetch_related("aplicaciones").all()
     serializer_class = PagoProveedorSerializer
-    permission_classes = [IsStaffUser]
+    permission_classes = [IsAdminOrSupervisor]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["proveedor", "estado", "medio_pago"]
 
@@ -242,6 +242,18 @@ class PagoProveedorViewSet(viewsets.ModelViewSet):
             elif total_pagado > 0:
                 compra.estado_pago = "PARCIAL"
             compra.save(update_fields=["estado_pago"])
+
+            # Registrar movimiento CRÉDITO en cuenta corriente del proveedor
+            CuentaCorrienteProveedor.objects.create(
+                proveedor=compra.proveedor,
+                tipo=CuentaCorrienteProveedor.Tipo.CREDITO,
+                monto=monto,
+                pago=pago,
+                compra=compra,
+                descripcion=f"Pago compra #{compra.pk} - {medio_pago.descripcion}",
+                creado_por=request.user,
+            )
+
         return Response(PagoProveedorSerializer(pago).data, status=status.HTTP_201_CREATED)
 
 
@@ -252,17 +264,97 @@ class AplicacionPagoCompraViewSet(viewsets.ModelViewSet):
 
 
 class NotaCreditoProveedorViewSet(viewsets.ModelViewSet):
-    queryset = NotaCreditoProveedor.objects.select_related("proveedor").prefetch_related("detalles").all()
+    queryset = NotaCreditoProveedor.objects.select_related("proveedor", "compra_original").prefetch_related("detalles").all()
     serializer_class = NotaCreditoProveedorSerializer
-    permission_classes = [IsCajeroOrAdmin]
+    permission_classes = [IsAdminOrSupervisor]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["proveedor", "estado"]
+
+    def create(self, request, *args, **kwargs):
+        from decimal import Decimal, InvalidOperation
+
+        proveedor_id = request.data.get("proveedor")
+        monto_raw = request.data.get("monto_total")
+        compra_id = request.data.get("compra_original")
+        nro_factura = request.data.get("nro_factura_compra") or ""
+        observacion = request.data.get("observacion") or ""
+
+        if not proveedor_id:
+            return Response({"error": "El campo 'proveedor' es obligatorio."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            monto = Decimal(str(monto_raw))
+            if monto <= 0:
+                raise ValueError
+        except (InvalidOperation, ValueError, TypeError):
+            return Response({"error": "El monto debe ser un número mayor a 0."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            proveedor = Proveedor.objects.get(pk=proveedor_id)
+        except Proveedor.DoesNotExist:
+            return Response({"error": "Proveedor no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        compra = None
+        if compra_id:
+            try:
+                compra = Compra.objects.get(pk=compra_id, proveedor=proveedor)
+            except Compra.DoesNotExist:
+                return Response({"error": "Compra no encontrada para este proveedor."}, status=status.HTTP_404_NOT_FOUND)
+
+        with transaction.atomic():
+            nc = NotaCreditoProveedor.objects.create(
+                proveedor=proveedor,
+                compra_original=compra,
+                monto_total=monto,
+                nro_factura_compra=nro_factura,
+                observacion=observacion,
+                estado=NotaCreditoProveedor.Estado.EMITIDA,
+                creado_por=request.user,
+            )
+            desc = f"NC #{nc.pk}"
+            if compra:
+                desc += f" - Compra #{compra.pk}"
+            if observacion:
+                desc += f" - {observacion}"
+            CuentaCorrienteProveedor.objects.create(
+                proveedor=proveedor,
+                tipo=CuentaCorrienteProveedor.Tipo.NOTA_CREDITO,
+                monto=monto,
+                nota_credito=nc,
+                compra=compra,
+                descripcion=desc,
+                creado_por=request.user,
+            )
+
+        return Response(self.get_serializer(nc).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="anular")
+    def anular(self, request, pk=None):
+        nc = self.get_object()
+        if nc.estado == NotaCreditoProveedor.Estado.ANULADA:
+            return Response({"error": "La nota de crédito ya está anulada."}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            tiene_cc = CuentaCorrienteProveedor.objects.filter(nota_credito=nc).exists()
+            if tiene_cc:
+                # Revertir: la NC redujo la deuda → un DEBITO la restaura
+                CuentaCorrienteProveedor.objects.create(
+                    proveedor=nc.proveedor,
+                    tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+                    monto=nc.monto_total,
+                    nota_credito=nc,
+                    descripcion=f"Reversión por anulación NC #{nc.pk}",
+                    creado_por=request.user,
+                )
+            nc.estado = NotaCreditoProveedor.Estado.ANULADA
+            nc.save(update_fields=["estado"])
+
+        return Response(self.get_serializer(nc).data)
 
 
 class DetalleNotaCreditoProveedorViewSet(viewsets.ModelViewSet):
     queryset = DetalleNotaCreditoProveedor.objects.select_related("nota_credito", "producto").all()
     serializer_class = DetalleNotaCreditoProveedorSerializer
-    permission_classes = [IsCajeroOrAdmin]
+    permission_classes = [IsAdminOrSupervisor]
 
 
 class ProductoProveedorViewSet(viewsets.ModelViewSet):
