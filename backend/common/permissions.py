@@ -55,6 +55,16 @@ class IsClienteWeb(permissions.BasePermission):
         )
 
 
+class IsAdminOrSupervisor(permissions.BasePermission):
+    """Solo ADMIN y SUPERVISOR."""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.rol in {"ADMIN", "SUPERVISOR"}
+        )
+
+
 class IsAdminOrReadOnly(permissions.BasePermission):
     """Solo ADMIN puede escribir; cualquier staff puede leer."""
     def has_permission(self, request, view):
