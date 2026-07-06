@@ -6,7 +6,7 @@ import {
   Truck, Search, Plus, Eye, CreditCard,
   Building2, DollarSign, X, PackageCheck,
   ClipboardList, CheckCircle, XCircle, ArrowRightCircle, Send,
-  FileText, Ban,
+  FileText, Ban, Scan,
 } from 'lucide-react'
 import api from '../services/api'
 import { useCatalogoStore } from '../store/catalogoStore'
@@ -63,6 +63,8 @@ interface Producto {
   id: number
   descripcion: string
   precio_actual: string | number
+  codigo_barra?: string | null
+  codigo?: string | null
 }
 
 interface DetalleCompra {
@@ -271,6 +273,8 @@ export default function Compras() {
   const [editingCompra, setEditingCompra] = useState<Compra | null>(null)
   const [items, setItems] = useState<ItemForm[]>([{ ...ITEM_EMPTY }])
   const [savingCompra, setSavingCompra] = useState(false)
+  const [barcodeInput, setBarcodeInput] = useState('')
+  const barcodeRef = useRef<HTMLInputElement>(null)
 
   const {
     register: registerCompra,
@@ -498,6 +502,11 @@ export default function Compras() {
     if (tab === 'notas') loadNotas(pageNotas)
   }, [tab, pageNotas, loadNotas])
 
+  // auto-focus barcode input when compra modal opens
+  useEffect(() => {
+    if (compraModalOpen) setTimeout(() => barcodeRef.current?.focus(), 100)
+  }, [compraModalOpen])
+
   // ── Load órdenes de compra ───────────────────────────────────────
   const loadOrdenes = useCallback(async (estado: string, p: number) => {
     const requestId = ++requestIdOCRef.current
@@ -644,6 +653,45 @@ export default function Compras() {
     )
     setCompraModalOpen(true)
   }, [resetCompra])
+
+  // ── Barcode scan ─────────────────────────────────────────────────
+  const handleBarcodeScan = useCallback((code: string) => {
+    const trimmed = code.trim()
+    if (!trimmed) return
+    const found = productos.find(
+      p => (p.codigo_barra && p.codigo_barra === trimmed) || (p.codigo && p.codigo === trimmed)
+    )
+    if (!found) {
+      toast.error(`Código no encontrado: ${trimmed}`)
+      setBarcodeInput('')
+      return
+    }
+    setItems(prev => {
+      const idx = prev.findIndex(it => it.producto?.id === found.id)
+      if (idx >= 0) {
+        // ya está en la lista → incrementar cantidad
+        return prev.map((it, i) =>
+          i === idx
+            ? { ...it, cantidad: it.cantidad + 1, subtotal: (it.cantidad + 1) * it.costo_unitario }
+            : it
+        )
+      }
+      // producto nuevo → agregar fila (reemplazando la última vacía si existe)
+      const precioConocido = preciosProveedor[found.id] || 0
+      const newItem: ItemForm = {
+        producto: found,
+        cantidad: 1,
+        costo_unitario: precioConocido,
+        subtotal: precioConocido,
+        precio_venta: Number(found.precio_actual) || 0,
+      }
+      const ultimaVacia = prev.length === 1 && !prev[0].producto
+      return ultimaVacia ? [newItem] : [...prev, newItem]
+    })
+    setBarcodeInput('')
+    // mantener foco para el próximo scan
+    setTimeout(() => barcodeRef.current?.focus(), 50)
+  }, [productos, preciosProveedor])
 
   // ── Items management ─────────────────────────────────────────────
   const actualizarItem = useCallback((index: number, field: keyof ItemForm, value: unknown) => {
@@ -1804,6 +1852,23 @@ export default function Compras() {
                 <Plus className="w-3.5 h-3.5" />
                 Agregar
               </Button>
+            </div>
+
+            {/* ── Barcode scanner input ── */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative flex-1">
+                <Scan className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  ref={barcodeRef}
+                  type="text"
+                  value={barcodeInput}
+                  onChange={e => setBarcodeInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleBarcodeScan(barcodeInput) } }}
+                  placeholder="Escanear o escribir código de barras..."
+                  className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+                  autoComplete="off"
+                />
+              </div>
             </div>
 
             {/* encabezado de columnas */}
