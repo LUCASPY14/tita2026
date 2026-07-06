@@ -6,6 +6,7 @@ import {
   Truck, Search, Plus, Eye, CreditCard,
   Building2, DollarSign, X, PackageCheck,
   ClipboardList, CheckCircle, XCircle, ArrowRightCircle, Send,
+  FileText, Ban,
 } from 'lucide-react'
 import api from '../services/api'
 import { useCatalogoStore } from '../store/catalogoStore'
@@ -100,6 +101,19 @@ interface PagoProveedor {
   estado: string
 }
 
+interface NotaCredito {
+  id: number
+  proveedor: number
+  proveedor_nombre: string
+  compra_original: number | null
+  monto_total: string | number
+  nro_factura_compra: string | null
+  observacion: string | null
+  estado: 'EMITIDA' | 'APLICADA' | 'ANULADA'
+  fecha: string
+  fecha_creacion: string
+}
+
 interface CuentaCorriente {
   id: number
   tipo: string
@@ -121,6 +135,7 @@ interface ItemForm {
   cantidad: number
   costo_unitario: number
   subtotal: number
+  precio_venta: number
 }
 
 interface DetalleOC {
@@ -168,13 +183,15 @@ const ESTADO_ENTREGA_COLOR: Record<string, BadgeColor> = {
   RECIBIDA: 'green',
 }
 
-const MEDIO_PAGO_COLOR: Record<string, BadgeColor> = {
-  EFECTIVO: 'green',
-  TRANSFERENCIA: 'blue',
-  CHEQUE: 'purple',
-}
 
-type TabKey = 'compras' | 'proveedores' | 'pagos' | 'ordenes'
+
+type TabKey = 'compras' | 'proveedores' | 'pagos' | 'ordenes' | 'notas'
+
+const NC_ESTADO_COLOR: Record<string, BadgeColor> = {
+  EMITIDA: 'blue',
+  APLICADA: 'green',
+  ANULADA: 'default',
+}
 
 interface CompraFormFields {
   proveedor_id: number | ''
@@ -182,7 +199,7 @@ interface CompraFormFields {
   nro_factura: string
 }
 
-const ITEM_EMPTY: ItemForm = { producto: null, cantidad: 1, costo_unitario: 0, subtotal: 0 }
+const ITEM_EMPTY: ItemForm = { producto: null, cantidad: 1, costo_unitario: 0, subtotal: 0, precio_venta: 0 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -226,6 +243,25 @@ export default function Compras() {
   const [pagePagos, setPagePagos] = useState(1)
   const [totalPagos, setTotalPagos] = useState(0)
   const requestIdPagosRef = useRef(0)
+
+  // ── Notas de crédito list ────────────────────────────────────────
+  const [notas, setNotas] = useState<NotaCredito[]>([])
+  const [loadingNotas, setLoadingNotas] = useState(false)
+  const [pageNotas, setPageNotas] = useState(1)
+  const [totalNotas, setTotalNotas] = useState(0)
+  const requestIdNotasRef = useRef(0)
+
+  // ── NC modal ─────────────────────────────────────────────────────
+  const [ncModalOpen, setNcModalOpen] = useState(false)
+  const [savingNC, setSavingNC] = useState(false)
+  const [ncProveedorId, setNcProveedorId] = useState<number | ''>('')
+  const [ncCompraId, setNcCompraId] = useState<number | ''>('')
+  const [ncMonto, setNcMonto] = useState('')
+  const [ncNroFactura, setNcNroFactura] = useState('')
+  const [ncObservacion, setNcObservacion] = useState('')
+  const [ncComprasDisponibles, setNcComprasDisponibles] = useState<Compra[]>([])
+  const [detailNC, setDetailNC] = useState<NotaCredito | null>(null)
+  const [anulando, setAnulando] = useState<number | null>(null)
 
   // ── Compra detail modal ─────────────────────────────────────────
   const [detailCompra, setDetailCompra] = useState<Compra | null>(null)
@@ -441,6 +477,27 @@ export default function Compras() {
     if (tab === 'pagos') loadPagos(pagePagos)
   }, [tab, pagePagos, loadPagos])
 
+  // ── Load notas de crédito ────────────────────────────────────────
+  const loadNotas = useCallback(async (p: number) => {
+    const requestId = ++requestIdNotasRef.current
+    setLoadingNotas(true)
+    try {
+      const { data } = await api.get('/compras/notas-credito/', { params: { page: p, page_size: 15 } })
+      if (requestId !== requestIdNotasRef.current) return
+      setNotas(data.results ?? [])
+      setTotalNotas(data.count ?? 0)
+    } catch {
+      if (requestId !== requestIdNotasRef.current) return
+      toast.error('Error al cargar notas de crédito')
+    } finally {
+      if (requestId === requestIdNotasRef.current) setLoadingNotas(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'notas') loadNotas(pageNotas)
+  }, [tab, pageNotas, loadNotas])
+
   // ── Load órdenes de compra ───────────────────────────────────────
   const loadOrdenes = useCallback(async (estado: string, p: number) => {
     const requestId = ++requestIdOCRef.current
@@ -519,6 +576,7 @@ export default function Compras() {
             cantidad: d.cantidad,
             costo_unitario: Number(d.costo_unitario) || 0,
             subtotal: Number(d.subtotal) || 0,
+            precio_venta: 0,
           }))
         : [{ ...ITEM_EMPTY }]
     )
@@ -580,6 +638,7 @@ export default function Compras() {
             cantidad: d.cantidad,
             costo_unitario: Number(d.costo_unitario) || 0,
             subtotal: Number(d.subtotal) || 0,
+            precio_venta: 0,
           }))
         : [{ ...ITEM_EMPTY }]
     )
@@ -592,7 +651,10 @@ export default function Compras() {
       if (i !== index) return item
       const updated = { ...item, [field]: value }
       if (field === 'producto' && value) {
-        const prodId = (value as Producto).id
+        const prod = value as Producto
+        const prodId = prod.id
+        // Pre-rellenar precio de venta actual del producto
+        updated.precio_venta = Number(prod.precio_actual) || 0
         const precioConocido = preciosProveedor[prodId]
         if (precioConocido) {
           updated.costo_unitario = precioConocido
@@ -648,6 +710,16 @@ export default function Compras() {
         await api.post('/compras/compras/', payload)
         toast.success(`Compra registrada — ${formatGs(total)}`)
       }
+
+      // Actualizar precios de venta de los items que tengan precio definido
+      const actualizaciones = items
+        .filter(i => i.producto && i.precio_venta > 0)
+        .map(i => api.post(`/productos/productos/${i.producto!.id}/set-precio/`, { precio: i.precio_venta }))
+      if (actualizaciones.length > 0) {
+        await Promise.allSettled(actualizaciones)
+        toast.success(`Precios de venta actualizados (${actualizaciones.length} producto${actualizaciones.length > 1 ? 's' : ''})`)
+      }
+
       setCompraModalOpen(false)
       setPageCompras(1)
       loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, 1)
@@ -688,6 +760,69 @@ export default function Compras() {
       setSavingPago(false)
     }
   }, [montoPago, pagoCompra, medioPago, obsPago, searchCompras, filterEstado, filterTipo, filterProveedor, pageCompras, loadCompras])
+
+  // ── Notas de crédito ─────────────────────────────────────────────
+  const openCreateNC = useCallback(() => {
+    setNcProveedorId('')
+    setNcCompraId('')
+    setNcMonto('')
+    setNcNroFactura('')
+    setNcObservacion('')
+    setNcComprasDisponibles([])
+    setNcModalOpen(true)
+  }, [])
+
+  const handleNcProveedorChange = useCallback(async (provId: number | '') => {
+    setNcProveedorId(provId)
+    setNcCompraId('')
+    if (!provId) { setNcComprasDisponibles([]); return }
+    try {
+      const { data } = await api.get('/compras/compras/', {
+        params: { proveedor: provId, tipo_pago: 'CREDITO', page_size: 100 },
+      })
+      setNcComprasDisponibles(data.results ?? [])
+    } catch {
+      setNcComprasDisponibles([])
+    }
+  }, [])
+
+  const handleSaveNC = useCallback(async () => {
+    if (!ncProveedorId) { toast.error('Seleccioná un proveedor'); return }
+    const montoNum = Number(ncMonto) || 0
+    if (montoNum <= 0) { toast.error('Ingresá un monto válido'); return }
+    setSavingNC(true)
+    try {
+      await api.post('/compras/notas-credito/', {
+        proveedor: ncProveedorId,
+        compra_original: ncCompraId || null,
+        monto_total: montoNum,
+        nro_factura_compra: ncNroFactura || null,
+        observacion: ncObservacion || null,
+      })
+      toast.success('Nota de crédito registrada')
+      setNcModalOpen(false)
+      loadNotas(1)
+      setPageNotas(1)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSavingNC(false)
+    }
+  }, [ncProveedorId, ncCompraId, ncMonto, ncNroFactura, ncObservacion, loadNotas])
+
+  const handleAnularNC = useCallback(async (nc: NotaCredito) => {
+    if (!confirm(`¿Anular NC #${nc.id} de ${nc.proveedor_nombre} por ${formatGs(nc.monto_total)}?\nEsto revertirá el crédito en la cuenta corriente.`)) return
+    setAnulando(nc.id)
+    try {
+      await api.post(`/compras/notas-credito/${nc.id}/anular/`)
+      toast.success('Nota de crédito anulada')
+      loadNotas(pageNotas)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setAnulando(null)
+    }
+  }, [pageNotas, loadNotas])
 
   // ── Confirmar entrega ─────────────────────────────────────────────
   const handleConfirmarEntrega = useCallback(async (compra: Compra) => {
@@ -867,7 +1002,7 @@ export default function Compras() {
           <Button size="sm" variant="secondary" onClick={() => openEdit(r)}>
             Editar
           </Button>
-          {(r.estado_pago === 'PENDIENTE' || r.estado_pago === 'PARCIAL') && (
+          {canApprove && (r.estado_pago === 'PENDIENTE' || r.estado_pago === 'PARCIAL') && (
             <Button size="sm" variant="primary" onClick={() => openPago(r, mediosPago)}>
               <DollarSign className="w-3.5 h-3.5" />
               Pagar
@@ -1111,11 +1246,69 @@ export default function Compras() {
     },
   ]
 
+  const colsNotas: Column<NotaCredito>[] = [
+    {
+      title: 'NC #',
+      key: 'id',
+      render: (_, r) => <span className="text-sm font-semibold text-slate-500">#{r.id}</span>,
+    },
+    {
+      title: 'Proveedor',
+      key: 'proveedor',
+      render: (_, r) => <span className="text-base font-medium text-slate-800">{r.proveedor_nombre}</span>,
+    },
+    {
+      title: 'Monto',
+      key: 'monto_total',
+      render: (_, r) => <span className="text-base font-bold tabular-nums text-emerald-700">{formatGs(r.monto_total)}</span>,
+    },
+    {
+      title: 'Compra orig.',
+      key: 'compra_original',
+      render: (_, r) => r.compra_original
+        ? <span className="text-sm text-blue-600 font-medium">#{r.compra_original}</span>
+        : <span className="text-sm text-slate-400">—</span>,
+    },
+    {
+      title: 'Estado',
+      key: 'estado',
+      render: (_, r) => <Badge color={NC_ESTADO_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
+    },
+    {
+      title: 'Fecha',
+      key: 'fecha',
+      render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha)}</span>,
+    },
+    {
+      title: '',
+      key: 'acciones',
+      render: (_, r) => (
+        <div className="flex items-center gap-2 justify-end">
+          <Button size="sm" variant="secondary" onClick={() => setDetailNC(r)}>
+            <Eye className="w-3.5 h-3.5" /> Ver
+          </Button>
+          {canApprove && r.estado !== 'ANULADA' && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => handleAnularNC(r)}
+              disabled={anulando === r.id}
+            >
+              <Ban className="w-3.5 h-3.5" />
+              {anulando === r.id ? '...' : 'Anular'}
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ]
+
   const TABS: { key: TabKey; label: string; icon: typeof Truck }[] = [
     { key: 'ordenes',    label: 'Órdenes',    icon: ClipboardList },
     { key: 'compras',    label: 'Compras',    icon: Truck },
     { key: 'proveedores', label: 'Proveedores', icon: Building2 },
     { key: 'pagos',      label: 'Pagos',      icon: CreditCard },
+    { key: 'notas',      label: 'Notas C/C',  icon: FileText },
   ]
 
   // ── Render ──────────────────────────────────────────────────────
@@ -1137,6 +1330,12 @@ export default function Compras() {
           <Button variant="primary" onClick={openCreate}>
             <Plus className="w-4 h-4" />
             {t('compras.newCompra')}
+          </Button>
+        )}
+        {tab === 'notas' && canApprove && (
+          <Button variant="primary" onClick={openCreateNC}>
+            <Plus className="w-4 h-4" />
+            Nueva Nota C/C
           </Button>
         )}
       </div>
@@ -1342,6 +1541,143 @@ export default function Compras() {
         </div>
       )}
 
+      {/* ── Notas de crédito tab ─────────────────────────────────── */}
+      {tab === 'notas' && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h2 className="text-base font-semibold text-slate-800">Notas de Crédito de Proveedores</h2>
+          </div>
+          <div className="p-1">
+            <Table
+              columns={colsNotas}
+              dataSource={notas}
+              rowKey="id"
+              loading={loadingNotas}
+              pageSize={15}
+              page={pageNotas}
+              onPageChange={setPageNotas}
+              total={totalNotas}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── NC detail modal ───────────────────────────────────────── */}
+      {detailNC && (
+        <Modal
+          open
+          title={`Nota de Crédito #${detailNC.id} — ${detailNC.proveedor_nombre}`}
+          onCancel={() => setDetailNC(null)}
+          width={520}
+          footer={null}
+        >
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            {[
+              { label: 'Monto', value: formatGs(detailNC.monto_total) },
+              { label: 'Fecha', value: formatFecha(detailNC.fecha) },
+              { label: 'Compra origen', value: detailNC.compra_original ? `#${detailNC.compra_original}` : '—' },
+              { label: 'Nro. Factura', value: detailNC.nro_factura_compra || '—' },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-slate-50 rounded-xl px-3 py-3">
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+                <p className="text-base font-bold mt-0.5 text-slate-800">{value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 mb-4">
+            <Badge color={NC_ESTADO_COLOR[detailNC.estado] ?? 'default'}>{detailNC.estado}</Badge>
+          </div>
+          {detailNC.observacion && (
+            <p className="text-sm text-slate-500 mb-4">Observación: {detailNC.observacion}</p>
+          )}
+          <div className="flex items-center justify-between">
+            <Button variant="secondary" onClick={() => setDetailNC(null)}>Cerrar</Button>
+            {canApprove && detailNC.estado !== 'ANULADA' && (
+              <Button
+                variant="secondary"
+                onClick={() => { setDetailNC(null); handleAnularNC(detailNC) }}
+                disabled={anulando === detailNC.id}
+              >
+                <Ban className="w-4 h-4" />
+                Anular NC
+              </Button>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* ── NC create modal ───────────────────────────────────────── */}
+      <Modal
+        open={ncModalOpen}
+        title="Nueva Nota de Crédito"
+        onOk={handleSaveNC}
+        onCancel={() => setNcModalOpen(false)}
+        okText="Registrar"
+        confirmLoading={savingNC}
+        width={520}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className={labelClass}>Proveedor *</label>
+            <Combobox
+              options={proveedores.map(p => ({ value: p.id, label: p.razon_social }))}
+              value={ncProveedorId || undefined}
+              onChange={v => handleNcProveedorChange(v as number)}
+              filterLocal
+              placeholder="Buscar proveedor..."
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Compra de origen (opcional)</label>
+            <select
+              className={inputClass}
+              value={ncCompraId}
+              onChange={e => setNcCompraId(e.target.value ? Number(e.target.value) : '')}
+              disabled={!ncProveedorId}
+            >
+              <option value="">Sin compra asociada</option>
+              {ncComprasDisponibles.map(c => (
+                <option key={c.id} value={c.id}>
+                  #{c.id} — {formatGs(c.monto_total)} — {formatFecha(c.fecha)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Monto *</label>
+              <input
+                type="number"
+                min={1}
+                className={inputClass}
+                placeholder="0"
+                value={ncMonto}
+                onChange={e => setNcMonto(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Nro. Factura proveedor</label>
+              <input
+                className={inputClass}
+                placeholder="001-001-0000001"
+                value={ncNroFactura}
+                onChange={e => setNcNroFactura(e.target.value)}
+              />
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>Observación</label>
+            <textarea
+              className={`${inputClass} resize-none`}
+              rows={2}
+              placeholder="Devolución de mercadería, descuento, etc."
+              value={ncObservacion}
+              onChange={e => setNcObservacion(e.target.value)}
+            />
+          </div>
+        </div>
+      </Modal>
+
       {/* ── Compra detail modal ───────────────────────────────────── */}
       {detailCompra && (
         <Modal
@@ -1407,7 +1743,7 @@ export default function Compras() {
                   Confirmar Entrega
                 </Button>
               )}
-              {(detailCompra.estado_pago === 'PENDIENTE' || detailCompra.estado_pago === 'PARCIAL') && (
+              {canApprove && (detailCompra.estado_pago === 'PENDIENTE' || detailCompra.estado_pago === 'PARCIAL') && (
                 <Button variant="primary" onClick={() => { setDetailCompra(null); openPago(detailCompra, mediosPago) }}>
                   <DollarSign className="w-4 h-4" />
                   Registrar Pago
@@ -1470,7 +1806,16 @@ export default function Compras() {
               </Button>
             </div>
 
-            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+            {/* encabezado de columnas */}
+            <div className="flex gap-2 items-center px-3 mb-1">
+              <span className="flex-1 text-xs font-semibold text-slate-400 uppercase">Producto</span>
+              <span className="w-16 text-xs font-semibold text-slate-400 uppercase text-center">Cant.</span>
+              <span className="w-28 text-xs font-semibold text-slate-400 uppercase text-right">Costo compra</span>
+              <span className="w-28 text-xs font-semibold text-blue-400 uppercase text-right">P. venta</span>
+              <span className="w-24 text-xs font-semibold text-slate-400 uppercase text-right">Subtotal</span>
+              <span className="w-5" />
+            </div>
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
               {items.map((item, idx) => (
                 <div key={idx} className="flex gap-2 items-center bg-slate-50 rounded-xl px-3 py-2">
                   <div className="flex-1">
@@ -1497,7 +1842,15 @@ export default function Compras() {
                     className="w-28 border border-slate-200 rounded-xl px-2 py-2 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
                     placeholder="Costo"
                   />
-                  <span className="w-28 text-sm font-semibold text-right text-slate-700 tabular-nums">
+                  <input
+                    type="number"
+                    min={0}
+                    value={item.precio_venta || ''}
+                    onChange={e => actualizarItem(idx, 'precio_venta', Number(e.target.value) || 0)}
+                    className="w-28 border border-blue-200 rounded-xl px-2 py-2 text-sm text-right bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    placeholder="Opcional"
+                  />
+                  <span className="w-24 text-sm font-semibold text-right text-slate-700 tabular-nums">
                     {formatGs(item.subtotal)}
                   </span>
                   <button
