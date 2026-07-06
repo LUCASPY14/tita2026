@@ -223,6 +223,8 @@ class Compra(models.Model):
     @property
     def total_pagado(self):
         """Suma de pagos aplicados a esta compra."""
+        if self.tipo_pago == self.TipoPago.CONTADO:
+            return self.monto_total
         if hasattr(self, "_total_pagado"):
             return self._total_pagado
         total = self.aplicaciones_pago.aggregate(
@@ -232,7 +234,9 @@ class Compra(models.Model):
 
     @property
     def saldo_pendiente(self):
-        """Saldo pendiente de pago."""
+        """Saldo pendiente de pago. Las compras CONTADO siempre tienen saldo 0."""
+        if self.tipo_pago == self.TipoPago.CONTADO:
+            return Decimal("0")
         return self.monto_total - self.total_pagado
 
 

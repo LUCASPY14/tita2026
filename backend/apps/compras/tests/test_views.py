@@ -131,20 +131,25 @@ class TestOtrosViewSets:
         resp = api.get("/api/v1/compras/detalles-compra/")
         assert resp.status_code == 200
 
-    def test_pagos_list(self, api):
-        resp = api.get("/api/v1/compras/pagos/")
-        assert resp.status_code == 200
-
     def test_aplicaciones_pago_list(self, api):
         resp = api.get("/api/v1/compras/aplicaciones-pago/")
         assert resp.status_code == 200
 
-    def test_notas_credito_list(self, api):
-        resp = api.get("/api/v1/compras/notas-credito/")
+    # Pagos y notas de crédito requieren ADMIN o SUPERVISOR
+    def test_pagos_list(self, api_admin):
+        resp = api_admin.get("/api/v1/compras/pagos/")
         assert resp.status_code == 200
 
-    def test_detalles_nc_list(self, api):
-        resp = api.get("/api/v1/compras/detalles-nc/")
+    def test_pagos_list_cajero_retorna_403(self, api):
+        resp = api.get("/api/v1/compras/pagos/")
+        assert resp.status_code == 403
+
+    def test_notas_credito_list(self, api_admin):
+        resp = api_admin.get("/api/v1/compras/notas-credito/")
+        assert resp.status_code == 200
+
+    def test_detalles_nc_list(self, api_admin):
+        resp = api_admin.get("/api/v1/compras/detalles-nc/")
         assert resp.status_code == 200
 
 

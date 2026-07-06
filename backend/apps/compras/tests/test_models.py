@@ -23,6 +23,19 @@ def compra_contado(db, proveedor, usuario_cajero):
 
 
 @pytest.fixture
+def compra_credito(db, proveedor, usuario_cajero):
+    from apps.compras.models import Compra
+    return Compra.objects.create(
+        proveedor=proveedor,
+        creado_por=usuario_cajero,
+        tipo_pago=Compra.TipoPago.CREDITO,
+        monto_total=Decimal("500000"),
+        estado_pago=Compra.EstadoPago.PENDIENTE,
+        estado_entrega=Compra.EstadoEntrega.PENDIENTE,
+    )
+
+
+@pytest.fixture
 def pago_proveedor(db, proveedor, usuario_cajero, medio_pago_efectivo):
     from apps.compras.models import PagoProveedor
     return PagoProveedor.objects.create(
@@ -34,11 +47,11 @@ def pago_proveedor(db, proveedor, usuario_cajero, medio_pago_efectivo):
 
 
 @pytest.fixture
-def aplicacion_pago(db, pago_proveedor, compra_contado):
+def aplicacion_pago(db, pago_proveedor, compra_credito):
     from apps.compras.models import AplicacionPagoCompra
     return AplicacionPagoCompra.objects.create(
         pago=pago_proveedor,
-        compra=compra_contado,
+        compra=compra_credito,
         monto_aplicado=Decimal("200000"),
     )
 
@@ -158,20 +171,28 @@ class TestCompra:
     def test_str(self, compra_contado):
         assert "Dist. Test S.A." in str(compra_contado)
 
-    def test_total_pagado_sin_pagos(self, compra_contado):
-        assert compra_contado.total_pagado == Decimal("0")
+    # CONTADO: saldo siempre 0 (pagado al momento de la compra)
+    def test_contado_total_pagado_es_monto_total(self, compra_contado):
+        assert compra_contado.total_pagado == Decimal("500000")
 
-    def test_total_pagado_con_aplicacion(self, compra_contado, aplicacion_pago):
-        compra_contado.refresh_from_db()
-        assert compra_contado.total_pagado == Decimal("200000")
+    def test_contado_saldo_pendiente_es_cero(self, compra_contado):
+        assert compra_contado.saldo_pendiente == Decimal("0")
 
-    def test_saldo_pendiente(self, compra_contado, aplicacion_pago):
-        compra_contado.refresh_from_db()
-        assert compra_contado.saldo_pendiente == Decimal("300000")
+    # CREDITO: saldo se calcula en base a aplicaciones de pago
+    def test_credito_total_pagado_sin_pagos(self, compra_credito):
+        assert compra_credito.total_pagado == Decimal("0")
 
-    def test_total_pagado_usa_cached_si_existe(self, compra_contado):
-        compra_contado._total_pagado = Decimal("999")
-        assert compra_contado.total_pagado == Decimal("999")
+    def test_credito_total_pagado_con_aplicacion(self, compra_credito, aplicacion_pago):
+        compra_credito.refresh_from_db()
+        assert compra_credito.total_pagado == Decimal("200000")
+
+    def test_credito_saldo_pendiente(self, compra_credito, aplicacion_pago):
+        compra_credito.refresh_from_db()
+        assert compra_credito.saldo_pendiente == Decimal("300000")
+
+    def test_credito_total_pagado_usa_cached_si_existe(self, compra_credito):
+        compra_credito._total_pagado = Decimal("999")
+        assert compra_credito.total_pagado == Decimal("999")
 
 
 # ── Otros modelos ──────────────────────────────────────────────────────────────
