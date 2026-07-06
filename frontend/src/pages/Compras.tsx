@@ -655,19 +655,42 @@ export default function Compras() {
   }, [resetCompra])
 
   // ── Barcode scan ─────────────────────────────────────────────────
-  const handleBarcodeScan = useCallback((code: string) => {
+  const handleBarcodeScan = useCallback(async (code: string) => {
     const trimmed = code.trim()
     if (!trimmed) return
-    const found = productos.find(
+
+    // 1. Búsqueda local (productos ya cargados en memoria)
+    let found: Producto | undefined = productos.find(
       p => (p.codigo_barra && p.codigo_barra === trimmed) || (p.codigo && p.codigo === trimmed)
     )
+
+    // 2. Fallback API: cubre cache desactualizado o productos recién creados
+    if (!found) {
+      try {
+        const { data } = await api.get('/productos/productos/', {
+          params: { search: trimmed, page_size: 10, activo: true },
+        })
+        const results: Producto[] = Array.isArray(data) ? data : (data as { results: Producto[] }).results ?? []
+        found = results.find(
+          p => (p.codigo_barra && p.codigo_barra === trimmed) || (p.codigo && p.codigo === trimmed)
+        )
+        // Agregar al cache local para no volver a consultar el mismo código
+        if (found) {
+          setProductos(prev => prev.some(p => p.id === found!.id) ? prev : [...prev, found!])
+        }
+      } catch {
+        // ignorar error; si no se encuentra abajo mostramos el mensaje
+      }
+    }
+
     if (!found) {
       toast.error(`Código no encontrado: ${trimmed}`)
       setBarcodeInput('')
       return
     }
+
     setItems(prev => {
-      const idx = prev.findIndex(it => it.producto?.id === found.id)
+      const idx = prev.findIndex(it => it.producto?.id === found!.id)
       if (idx >= 0) {
         // ya está en la lista → incrementar cantidad
         return prev.map((it, i) =>
@@ -677,13 +700,13 @@ export default function Compras() {
         )
       }
       // producto nuevo → agregar fila (reemplazando la última vacía si existe)
-      const precioConocido = preciosProveedor[found.id] || 0
+      const precioConocido = preciosProveedor[found!.id] || 0
       const newItem: ItemForm = {
-        producto: found,
+        producto: found!,
         cantidad: 1,
         costo_unitario: precioConocido,
         subtotal: precioConocido,
-        precio_venta: Number(found.precio_actual) || 0,
+        precio_venta: Number(found!.precio_actual) || 0,
       }
       const ultimaVacia = prev.length === 1 && !prev[0].producto
       return ultimaVacia ? [newItem] : [...prev, newItem]

@@ -11,7 +11,8 @@ interface Producto {
   precio_actual?: string | number
   categoria: number | null
   categoria_nombre?: string
-  codigo_barra?: string
+  codigo_barra?: string | null
+  codigo?: string | null
   activo: boolean
   requiere_stock: boolean
   es_servicio?: boolean
