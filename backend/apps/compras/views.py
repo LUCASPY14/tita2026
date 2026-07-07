@@ -482,3 +482,300 @@ class OrdenCompraViewSet(viewsets.ModelViewSet):
             "orden": OrdenCompraSerializer(orden).data,
             "compra_id": compra.pk,
         })
+
+
+class ReporteComprasProveedoresView(APIView):
+    """
+    GET /api/compras/reporte-compras/?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+    Gasto por proveedor, tasa de entrega y funnel de órdenes de compra.
+    Opcional: ?formato=csv
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        import csv as csv_module
+        from django.http import HttpResponse as HR
+        from django.db.models import Count, Sum, Q
+
+        desde = request.query_params.get("desde")
+        hasta = request.query_params.get("hasta")
+
+        if not desde or not hasta:
+            return Response(
+                {"error": "Se requieren los parámetros desde y hasta (YYYY-MM-DD)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Gasto y fulfilment por proveedor
+        qs = (
+            Compra.objects
+            .filter(fecha__date__gte=desde, fecha__date__lte=hasta)
+            .values("proveedor__id", "proveedor__razon_social", "proveedor__ruc")
+            .annotate(
+                n_compras=Count("id"),
+                monto_total=Sum("monto_total"),
+                entregadas=Count("id", filter=Q(estado_entrega="RECIBIDA")),
+                entrega_parcial=Count("id", filter=Q(estado_entrega="PARCIAL")),
+                entrega_pendiente=Count("id", filter=Q(estado_entrega="PENDIENTE")),
+                pagadas=Count("id", filter=Q(estado_pago="PAGADO")),
+                pago_parcial=Count("id", filter=Q(estado_pago="PARCIAL")),
+                pago_pendiente=Count("id", filter=Q(estado_pago="PENDIENTE")),
+            )
+            .order_by("-monto_total")
+        )
+
+        por_proveedor = []
+        for r in qs:
+            n = r["n_compras"] or 1
+            por_proveedor.append({
+                "proveedor_id": r["proveedor__id"],
+                "proveedor": r["proveedor__razon_social"] or "",
+                "ruc": r["proveedor__ruc"] or "",
+                "n_compras": r["n_compras"],
+                "monto_total": int(r["monto_total"] or 0),
+                "entregadas": r["entregadas"],
+                "entrega_parcial": r["entrega_parcial"],
+                "entrega_pendiente": r["entrega_pendiente"],
+                "tasa_entrega": round(r["entregadas"] / n * 100, 1),
+                "pagadas": r["pagadas"],
+                "pago_parcial": r["pago_parcial"],
+                "pago_pendiente": r["pago_pendiente"],
+            })
+
+        # Funnel de órdenes de compra en el período
+        oc_qs = (
+            OrdenCompra.objects
+            .filter(fecha_creacion__date__gte=desde, fecha_creacion__date__lte=hasta)
+            .values("estado")
+            .annotate(n=Count("id"))
+        )
+        funnel = {e: 0 for e in ["BORRADOR", "PENDIENTE", "APROBADA", "RECHAZADA", "CONVERTIDA"]}
+        for r in oc_qs:
+            funnel[r["estado"]] = r["n"]
+        funnel["total"] = sum(funnel.values())
+
+        total_monto = sum(p["monto_total"] for p in por_proveedor)
+        total_compras = sum(p["n_compras"] for p in por_proveedor)
+
+        if request.query_params.get("formato") == "csv":
+            response = HR(content_type="text/csv; charset=utf-8-sig")
+            response["Content-Disposition"] = (
+                f'attachment; filename="compras_proveedores_{desde}_{hasta}.csv"'
+            )
+            writer = csv_module.writer(response)
+            writer.writerow(["REPORTE COMPRAS POR PROVEEDOR", f"{desde} al {hasta}"])
+            writer.writerow([])
+            writer.writerow(["Proveedor", "RUC", "N° Compras", "Monto Total (Gs)", "Entregadas", "% Entrega", "Pagadas"])
+            for p in por_proveedor:
+                writer.writerow([p["proveedor"], p["ruc"], p["n_compras"], p["monto_total"],
+                                  p["entregadas"], p["tasa_entrega"], p["pagadas"]])
+            writer.writerow([])
+            writer.writerow(["FUNNEL ÓRDENES DE COMPRA"])
+            for estado, n in funnel.items():
+                writer.writerow([estado, n])
+            return response
+
+        return Response({
+            "periodo": {"desde": desde, "hasta": hasta},
+            "resumen": {
+                "total_compras": total_compras,
+                "monto_total": total_monto,
+                "n_proveedores": len(por_proveedor),
+            },
+            "por_proveedor": por_proveedor,
+            "funnel_oc": funnel,
+        })
+
+
+class ReporteNotasCreditoCompraView(APIView):
+    """
+    GET /api/compras/reporte-notas-credito/?desde=YYYY-MM-DD&hasta=YYYY-MM-DD[&estado=]
+    Notas de crédito emitidas por proveedores: volumen, montos y quién las registra.
+    Opcional: ?formato=csv
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        import csv as csv_module
+        from django.http import HttpResponse as HR
+
+        desde = request.query_params.get("desde")
+        hasta = request.query_params.get("hasta")
+        estado_filtro = request.query_params.get("estado")
+
+        if not desde or not hasta:
+            return Response(
+                {"error": "Se requieren los parámetros desde y hasta (YYYY-MM-DD)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        qs = NotaCreditoProveedor.objects.filter(
+            fecha__date__gte=desde,
+            fecha__date__lte=hasta,
+        ).select_related("proveedor", "compra_original", "creado_por")
+
+        if estado_filtro:
+            qs = qs.filter(estado=estado_filtro)
+
+        filas = []
+        for nc in qs.order_by("-fecha"):
+            proveedor = nc.proveedor
+            registrado_por = nc.creado_por
+            filas.append({
+                "id": nc.pk,
+                "fecha": nc.fecha.strftime("%Y-%m-%d %H:%M"),
+                "proveedor_id": proveedor.pk if proveedor else None,
+                "proveedor": proveedor.razon_social if proveedor else "",
+                "ruc": getattr(proveedor, "ruc", "") or "",
+                "estado": nc.estado,
+                "observacion": nc.observacion or "",
+                "nro_factura_compra": nc.nro_factura_compra or "",
+                "monto_total": int(nc.monto_total),
+                "creado_por_id": registrado_por.pk if registrado_por else None,
+                "creado_por": (
+                    f"{registrado_por.nombre} {registrado_por.apellido}".strip()
+                    if registrado_por else ""
+                ),
+                "compra_original_id": nc.compra_original_id,
+            })
+
+        resumen = {
+            "total_emitidas": sum(1 for f in filas if f["estado"] == "EMITIDA"),
+            "total_aplicadas": sum(1 for f in filas if f["estado"] == "APLICADA"),
+            "total_anuladas": sum(1 for f in filas if f["estado"] == "ANULADA"),
+            "monto_emitidas": sum(f["monto_total"] for f in filas if f["estado"] == "EMITIDA"),
+            "monto_aplicadas": sum(f["monto_total"] for f in filas if f["estado"] == "APLICADA"),
+            "monto_anuladas": sum(f["monto_total"] for f in filas if f["estado"] == "ANULADA"),
+            "monto_total": sum(f["monto_total"] for f in filas if f["estado"] != "ANULADA"),
+        }
+
+        if request.query_params.get("formato") == "csv":
+            response = HR(content_type="text/csv; charset=utf-8-sig")
+            response["Content-Disposition"] = (
+                f'attachment; filename="notas_credito_compras_{desde}_{hasta}.csv"'
+            )
+            writer = csv_module.writer(response)
+            writer.writerow(["NOTAS DE CRÉDITO - COMPRAS", f"{desde} al {hasta}"])
+            writer.writerow([])
+            writer.writerow(["ID", "Fecha", "Proveedor", "RUC", "Estado", "Observación", "N° Factura", "Monto (Gs)", "Registrado por"])
+            for f in filas:
+                writer.writerow([
+                    f["id"], f["fecha"], f["proveedor"], f["ruc"],
+                    f["estado"], f["observacion"], f["nro_factura_compra"],
+                    f["monto_total"], f["creado_por"],
+                ])
+            writer.writerow([])
+            writer.writerow(["RESUMEN"])
+            writer.writerow(["Emitidas", resumen["total_emitidas"], resumen["monto_emitidas"]])
+            writer.writerow(["Aplicadas", resumen["total_aplicadas"], resumen["monto_aplicadas"]])
+            writer.writerow(["Anuladas", resumen["total_anuladas"], resumen["monto_anuladas"]])
+            return response
+
+        return Response({
+            "periodo": {"desde": desde, "hasta": hasta},
+            "resumen": resumen,
+            "detalle": filas,
+        })
+
+
+class ReporteAgingProveedoresView(APIView):
+    """
+    GET /api/compras/reporte-aging-proveedores/
+    Proveedores con saldo pendiente y distribución por aging (30/60/90/90+ días).
+    Opcional: ?formato=csv
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        import csv as csv_module
+        from datetime import date
+        from django.http import HttpResponse as HR
+        from django.db.models import OuterRef, Subquery
+
+        hoy = date.today()
+
+        ultimo_mov = (
+            CuentaCorrienteProveedor.objects
+            .filter(proveedor=OuterRef("pk"))
+            .order_by("-id")
+            .values("saldo_resultante")[:1]
+        )
+        proveedores_con_saldo = (
+            Proveedor.objects
+            .filter(activo=True)
+            .annotate(saldo_deuda=Subquery(ultimo_mov))
+            .filter(saldo_deuda__gt=0)
+            .order_by("-saldo_deuda")
+        )
+
+        filas = []
+        for proveedor in proveedores_con_saldo:
+            from decimal import Decimal
+            saldo = Decimal(str(proveedor.saldo_deuda or 0))
+
+            debito_antiguo = (
+                CuentaCorrienteProveedor.objects
+                .filter(proveedor=proveedor, tipo="DEBITO")
+                .order_by("fecha")
+                .values("fecha")
+                .first()
+            )
+            dias_atraso = 0
+            if debito_antiguo:
+                dias_atraso = (hoy - debito_antiguo["fecha"].date()).days
+
+            if dias_atraso <= 30:
+                bucket = "0-30"
+            elif dias_atraso <= 60:
+                bucket = "31-60"
+            elif dias_atraso <= 90:
+                bucket = "61-90"
+            else:
+                bucket = "90+"
+
+            filas.append({
+                "proveedor_id": proveedor.pk,
+                "proveedor": proveedor.razon_social,
+                "ruc": proveedor.ruc or "",
+                "telefono": proveedor.telefono or "",
+                "email": proveedor.email or "",
+                "saldo_deuda": int(saldo),
+                "dias_atraso": dias_atraso,
+                "aging": bucket,
+            })
+
+        aging_totales = {"0-30": 0, "31-60": 0, "61-90": 0, "90+": 0}
+        for f in filas:
+            aging_totales[f["aging"]] += f["saldo_deuda"]
+
+        total_deuda = sum(f["saldo_deuda"] for f in filas)
+
+        if request.query_params.get("formato") == "csv":
+            response = HR(content_type="text/csv; charset=utf-8-sig")
+            response["Content-Disposition"] = (
+                f'attachment; filename="aging_proveedores_{hoy}.csv"'
+            )
+            writer = csv_module.writer(response)
+            writer.writerow(["AGING CUENTAS A PAGAR - PROVEEDORES", str(hoy)])
+            writer.writerow([])
+            writer.writerow(["Proveedor", "RUC", "Teléfono", "Email", "Saldo (Gs)", "Días atraso", "Aging"])
+            for f in filas:
+                writer.writerow([
+                    f["proveedor"], f["ruc"], f["telefono"],
+                    f["email"], f["saldo_deuda"], f["dias_atraso"], f["aging"],
+                ])
+            writer.writerow([])
+            writer.writerow(["TOTALES POR AGING"])
+            for bucket, total in aging_totales.items():
+                writer.writerow([bucket, total])
+            return response
+
+        return Response({
+            "fecha": str(hoy),
+            "resumen": {
+                "proveedores_con_deuda": len(filas),
+                "total_deuda": total_deuda,
+                "aging": aging_totales,
+            },
+            "detalle": filas,
+        })

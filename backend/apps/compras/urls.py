@@ -12,6 +12,9 @@ from .views import (
     DetalleNotaCreditoProveedorViewSet,
     OrdenCompraViewSet,
     ProductoProveedorViewSet,
+    ReporteNotasCreditoCompraView,
+    ReporteAgingProveedoresView,
+    ReporteComprasProveedoresView,
 )
 
 router = DefaultRouter()
@@ -28,4 +31,7 @@ router.register(r"productos-proveedor", ProductoProveedorViewSet, basename="prod
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("reporte-compras/", ReporteComprasProveedoresView.as_view(), name="reporte-compras-proveedores"),
+    path("reporte-notas-credito/", ReporteNotasCreditoCompraView.as_view(), name="reporte-notas-credito-compras"),
+    path("reporte-aging-proveedores/", ReporteAgingProveedoresView.as_view(), name="reporte-aging-proveedores"),
 ]

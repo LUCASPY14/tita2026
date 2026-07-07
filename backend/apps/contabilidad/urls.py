@@ -11,6 +11,7 @@ from .views import (
     DashboardResumenView,
     DashboardTendenciaView,
     ReportePeriodoView,
+    ReporteDiferenciasCajaView,
 )
 
 router = DefaultRouter()
@@ -26,4 +27,5 @@ urlpatterns = [
     path("dashboard/", DashboardResumenView.as_view(), name="dashboard-resumen"),
     path("dashboard/tendencia/", DashboardTendenciaView.as_view(), name="dashboard-tendencia"),
     path("reportes/", ReportePeriodoView.as_view(), name="reportes-periodo"),
+    path("reporte-diferencias-caja/", ReporteDiferenciasCajaView.as_view(), name="reporte-diferencias-caja"),
 ]

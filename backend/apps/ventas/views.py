@@ -399,3 +399,176 @@ class ReporteVentasCajeroView(APIView):
         writer.writerow([])
         writer.writerow(["TOTAL GENERAL", "", "", total_general, ""])
         return response
+
+
+class ReporteMediosPagoView(APIView):
+    """
+    GET /api/ventas/reporte-medios-pago/?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+    Pagos agrupados por medio de pago: cantidad, monto y estado de conciliación.
+    Opcional: ?formato=csv
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        from django.db.models import Count, Sum, Q
+
+        desde = request.query_params.get("desde")
+        hasta = request.query_params.get("hasta")
+
+        if not desde or not hasta:
+            return Response(
+                {"error": "Se requieren los parámetros desde y hasta (YYYY-MM-DD)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from .models import PagoVenta
+        qs = (
+            PagoVenta.objects
+            .filter(
+                fecha__date__gte=desde,
+                fecha__date__lte=hasta,
+                estado__in=["PENDIENTE", "CONCILIADO"],
+            )
+            .values("medio_pago__id", "medio_pago__descripcion")
+            .annotate(
+                n_pagos=Count("id"),
+                monto_total=Sum("monto"),
+                n_conciliados=Count("id", filter=Q(estado="CONCILIADO")),
+                monto_conciliado=Sum("monto", filter=Q(estado="CONCILIADO")),
+                n_pendientes=Count("id", filter=Q(estado="PENDIENTE")),
+                monto_pendiente=Sum("monto", filter=Q(estado="PENDIENTE")),
+            )
+            .order_by("-monto_total")
+        )
+
+        filas = [
+            {
+                "medio_pago_id": r["medio_pago__id"],
+                "descripcion": r["medio_pago__descripcion"] or "Sin medio",
+                "n_pagos": r["n_pagos"],
+                "monto_total": int(r["monto_total"] or 0),
+                "n_conciliados": r["n_conciliados"],
+                "monto_conciliado": int(r["monto_conciliado"] or 0),
+                "n_pendientes": r["n_pendientes"],
+                "monto_pendiente": int(r["monto_pendiente"] or 0),
+            }
+            for r in qs
+        ]
+
+        total_pagos = sum(f["n_pagos"] for f in filas)
+        monto_total = sum(f["monto_total"] for f in filas)
+
+        if request.query_params.get("formato") == "csv":
+            response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+            response["Content-Disposition"] = (
+                f'attachment; filename="medios_pago_{desde}_{hasta}.csv"'
+            )
+            writer = csv.writer(response)
+            writer.writerow(["REPORTE MEDIOS DE PAGO", f"{desde} al {hasta}"])
+            writer.writerow([])
+            writer.writerow(["Medio de Pago", "N° Pagos", "Monto Total (Gs)", "Conciliados", "Monto Conciliado", "Pendientes", "Monto Pendiente"])
+            for f in filas:
+                writer.writerow([f["descripcion"], f["n_pagos"], f["monto_total"],
+                                  f["n_conciliados"], f["monto_conciliado"],
+                                  f["n_pendientes"], f["monto_pendiente"]])
+            writer.writerow([])
+            writer.writerow(["TOTAL", total_pagos, monto_total])
+            return response
+
+        return Response({
+            "periodo": {"desde": desde, "hasta": hasta},
+            "resumen": {
+                "total_pagos": total_pagos,
+                "monto_total": monto_total,
+                "n_medios": len(filas),
+            },
+            "por_medio_pago": filas,
+        })
+
+
+class ReporteNotasCreditoVentaView(APIView):
+    """
+    GET /api/ventas/reporte-notas-credito/?desde=YYYY-MM-DD&hasta=YYYY-MM-DD[&estado=]
+    Notas de crédito emitidas a clientes: volumen, montos y quién las autoriza.
+    Opcional: ?formato=csv
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        desde = request.query_params.get("desde")
+        hasta = request.query_params.get("hasta")
+        estado_filtro = request.query_params.get("estado")
+
+        if not desde or not hasta:
+            return Response(
+                {"error": "Se requieren los parámetros desde y hasta (YYYY-MM-DD)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        qs = NotaCredito.objects.filter(
+            fecha_emision__date__gte=desde,
+            fecha_emision__date__lte=hasta,
+        ).select_related("cliente", "venta_origen", "empleado_autoriza")
+
+        if estado_filtro:
+            qs = qs.filter(estado=estado_filtro)
+
+        filas = []
+        for nc in qs.order_by("-fecha_emision"):
+            cliente = nc.cliente
+            autorizador = nc.empleado_autoriza
+            filas.append({
+                "id": nc.pk,
+                "nro_nota_credito": nc.nro_nota_credito,
+                "fecha_emision": nc.fecha_emision.strftime("%Y-%m-%d %H:%M"),
+                "cliente_id": cliente.pk if cliente else None,
+                "cliente": cliente.nombre_completo if cliente else "",
+                "ruc_ci": getattr(cliente, "ruc_ci", "") or "",
+                "estado": nc.estado,
+                "motivo": nc.motivo,
+                "monto_total": int(nc.monto_total),
+                "empleado_autoriza_id": autorizador.pk if autorizador else None,
+                "empleado_autoriza": (
+                    f"{autorizador.nombre} {autorizador.apellido}".strip()
+                    if autorizador else ""
+                ),
+                "venta_origen_id": nc.venta_origen_id,
+            })
+
+        resumen = {
+            "total_emitidas": sum(1 for f in filas if f["estado"] == "EMITIDA"),
+            "total_aplicadas": sum(1 for f in filas if f["estado"] == "APLICADA"),
+            "total_anuladas": sum(1 for f in filas if f["estado"] == "ANULADA"),
+            "monto_emitidas": sum(f["monto_total"] for f in filas if f["estado"] == "EMITIDA"),
+            "monto_aplicadas": sum(f["monto_total"] for f in filas if f["estado"] == "APLICADA"),
+            "monto_anuladas": sum(f["monto_total"] for f in filas if f["estado"] == "ANULADA"),
+            "monto_total": sum(f["monto_total"] for f in filas if f["estado"] != "ANULADA"),
+        }
+
+        if request.query_params.get("formato") == "csv":
+            response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+            response["Content-Disposition"] = (
+                f'attachment; filename="notas_credito_ventas_{desde}_{hasta}.csv"'
+            )
+            writer = csv.writer(response)
+            writer.writerow(["NOTAS DE CRÉDITO - VENTAS", f"{desde} al {hasta}"])
+            writer.writerow([])
+            writer.writerow(["N° NC", "Fecha", "Cliente", "RUC/CI", "Estado", "Motivo", "Monto (Gs)", "Autorizado por"])
+            for f in filas:
+                writer.writerow([
+                    f["nro_nota_credito"], f["fecha_emision"], f["cliente"],
+                    f["ruc_ci"], f["estado"], f["motivo"],
+                    f["monto_total"], f["empleado_autoriza"],
+                ])
+            writer.writerow([])
+            writer.writerow(["RESUMEN"])
+            writer.writerow(["Emitidas", resumen["total_emitidas"], resumen["monto_emitidas"]])
+            writer.writerow(["Aplicadas", resumen["total_aplicadas"], resumen["monto_aplicadas"]])
+            writer.writerow(["Anuladas", resumen["total_anuladas"], resumen["monto_anuladas"]])
+            return response
+
+        return Response({
+            "periodo": {"desde": desde, "hasta": hasta},
+            "resumen": resumen,
+            "detalle": filas,
+        })

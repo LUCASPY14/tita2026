@@ -607,3 +607,118 @@ class DashboardTendenciaView(APIView):
             "hasta": hasta.isoformat(),
             "data": resultado,
         })
+
+
+class ReporteDiferenciasCajaView(APIView):
+    """
+    GET /api/contabilidad/reporte-diferencias-caja/?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+    Diferencias de caja por período: tendencia y resumen por empleado.
+    Opcional: ?formato=csv
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        from decimal import Decimal
+        from django.db.models import Count, Sum, Max, Min, Avg
+
+        desde = request.query_params.get("desde")
+        hasta = request.query_params.get("hasta")
+
+        if not desde or not hasta:
+            return Response(
+                {"error": "Se requieren los parámetros desde y hasta (YYYY-MM-DD)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cierres = (
+            CierreCaja.objects
+            .filter(
+                estado=CierreCaja.Estado.CERRADO,
+                fecha_cierre__date__gte=desde,
+                fecha_cierre__date__lte=hasta,
+                diferencia_efectivo__isnull=False,
+            )
+            .select_related("empleado", "caja")
+            .order_by("fecha_cierre")
+        )
+
+        # Tendencia: cada cierre como punto en el tiempo
+        tendencia = [
+            {
+                "fecha": c.fecha_cierre.strftime("%Y-%m-%d"),
+                "diferencia": int(c.diferencia_efectivo),
+                "empleado": f"{c.empleado.nombre} {c.empleado.apellido}".strip() if c.empleado else "",
+                "caja": c.caja.nombre if c.caja else "",
+                "cierre_id": c.pk,
+            }
+            for c in cierres
+        ]
+
+        # Resumen por empleado
+        por_empleado_qs = (
+            CierreCaja.objects
+            .filter(
+                estado=CierreCaja.Estado.CERRADO,
+                fecha_cierre__date__gte=desde,
+                fecha_cierre__date__lte=hasta,
+                diferencia_efectivo__isnull=False,
+            )
+            .values("empleado__id", "empleado__nombre", "empleado__apellido")
+            .annotate(
+                n_cierres=Count("id"),
+                diferencia_total=Sum("diferencia_efectivo"),
+                diferencia_promedio=Avg("diferencia_efectivo"),
+                mayor_diferencia=Max("diferencia_efectivo"),
+            )
+            .order_by("-diferencia_total")
+        )
+
+        por_empleado = [
+            {
+                "empleado_id": r["empleado__id"],
+                "empleado": f"{r['empleado__nombre'] or ''} {r['empleado__apellido'] or ''}".strip(),
+                "n_cierres": r["n_cierres"],
+                "diferencia_total": int(r["diferencia_total"] or 0),
+                "diferencia_promedio": int(r["diferencia_promedio"] or 0),
+                "mayor_diferencia": int(r["mayor_diferencia"] or 0),
+            }
+            for r in por_empleado_qs
+        ]
+
+        total_diferencia = sum(r["diferencia_total"] for r in por_empleado)
+        n_negativos = sum(1 for t in tendencia if t["diferencia"] < 0)
+        n_positivos = sum(1 for t in tendencia if t["diferencia"] > 0)
+        n_cero = sum(1 for t in tendencia if t["diferencia"] == 0)
+
+        if request.query_params.get("formato") == "csv":
+            response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+            response["Content-Disposition"] = (
+                f'attachment; filename="diferencias_caja_{desde}_{hasta}.csv"'
+            )
+            writer = csv.writer(response)
+            writer.writerow(["DIFERENCIAS DE CAJA", f"{desde} al {hasta}"])
+            writer.writerow([])
+            writer.writerow(["Resumen por Empleado"])
+            writer.writerow(["Empleado", "N° Cierres", "Diferencia Total (Gs)", "Promedio (Gs)", "Mayor (Gs)"])
+            for r in por_empleado:
+                writer.writerow([r["empleado"], r["n_cierres"], r["diferencia_total"],
+                                  r["diferencia_promedio"], r["mayor_diferencia"]])
+            writer.writerow([])
+            writer.writerow(["Detalle Cronológico"])
+            writer.writerow(["Fecha", "Caja", "Empleado", "Diferencia (Gs)"])
+            for t in tendencia:
+                writer.writerow([t["fecha"], t["caja"], t["empleado"], t["diferencia"]])
+            return response
+
+        return Response({
+            "periodo": {"desde": desde, "hasta": hasta},
+            "resumen": {
+                "total_diferencia": total_diferencia,
+                "n_cierres": len(tendencia),
+                "n_positivos": n_positivos,
+                "n_negativos": n_negativos,
+                "n_cero": n_cero,
+            },
+            "por_empleado": por_empleado,
+            "tendencia": tendencia,
+        })

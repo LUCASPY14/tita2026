@@ -590,3 +590,228 @@ class ReporteAlmuerzosView(APIView):
             "totales": totales,
             "detalle": filas,
         })
+
+
+class ReporteConsumoGradoView(APIView):
+    """
+    GET /api/almuerzos/reporte-consumo-grado/?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+    Consumos agrupados por grado: cantidad, tasa de rechazo y distribución horaria.
+    Opcional: ?formato=csv
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        from django.http import HttpResponse
+        from django.db.models import Count, Sum, Q
+        from django.db.models.functions import ExtractHour
+
+        desde = request.query_params.get("desde")
+        hasta = request.query_params.get("hasta")
+        if not desde or not hasta:
+            return Response(
+                {"error": "Se requieren los parámetros desde y hasta (YYYY-MM-DD)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        base_qs = RegistroConsumoAlmuerzo.objects.filter(
+            fecha_consumo__gte=desde,
+            fecha_consumo__lte=hasta,
+        )
+
+        # Agrupación por grado
+        por_grado_qs = (
+            base_qs
+            .values(
+                "hijo__grado__nombre",
+                "hijo__grado__nivel",
+                "hijo__grado__orden",
+            )
+            .annotate(
+                n_consumos=Count("id", filter=Q(estado="REGISTRADO")),
+                n_rechazados=Count("id", filter=Q(estado="RECHAZADO")),
+                n_anulados=Count("id", filter=Q(estado="ANULADO")),
+                monto_total=Sum("costo_almuerzo", filter=Q(estado="REGISTRADO")),
+            )
+            .order_by("hijo__grado__nivel", "hijo__grado__orden")
+        )
+
+        por_grado = []
+        for r in por_grado_qs:
+            total_registros = (r["n_consumos"] or 0) + (r["n_rechazados"] or 0)
+            tasa_rechazo = (
+                round(r["n_rechazados"] / total_registros * 100, 1)
+                if total_registros > 0 else 0.0
+            )
+            por_grado.append({
+                "grado": r["hijo__grado__nombre"] or "Sin grado",
+                "nivel": r["hijo__grado__nivel"],
+                "n_consumos": r["n_consumos"] or 0,
+                "n_rechazados": r["n_rechazados"] or 0,
+                "n_anulados": r["n_anulados"] or 0,
+                "tasa_rechazo": tasa_rechazo,
+                "monto_total": int(r["monto_total"] or 0),
+            })
+
+        # Distribución horaria (solo REGISTRADO)
+        horas_qs = (
+            base_qs
+            .filter(estado="REGISTRADO")
+            .annotate(hora=ExtractHour("hora_registro"))
+            .values("hora")
+            .annotate(n=Count("id"))
+            .order_by("hora")
+        )
+        horarios = [{"hora": r["hora"], "n": r["n"]} for r in horas_qs]
+
+        total_consumos = sum(r["n_consumos"] for r in por_grado)
+        total_rechazados = sum(r["n_rechazados"] for r in por_grado)
+        total_registros = total_consumos + total_rechazados
+        tasa_global = round(total_rechazados / total_registros * 100, 1) if total_registros > 0 else 0.0
+
+        if request.query_params.get("formato") == "csv":
+            resp = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+            resp["Content-Disposition"] = (
+                f'attachment; filename="consumo_grado_{desde}_{hasta}.csv"'
+            )
+            writer = csv.writer(resp)
+            writer.writerow(["CONSUMO POR GRADO", f"{desde} al {hasta}"])
+            writer.writerow([])
+            writer.writerow(["Grado", "Consumos", "Rechazados", "Anulados", "% Rechazo", "Monto (Gs)"])
+            for r in por_grado:
+                writer.writerow([r["grado"], r["n_consumos"], r["n_rechazados"],
+                                  r["n_anulados"], r["tasa_rechazo"], r["monto_total"]])
+            writer.writerow([])
+            writer.writerow(["Distribución horaria"])
+            writer.writerow(["Hora", "Consumos"])
+            for h in horarios:
+                writer.writerow([f"{h['hora']:02d}:00", h["n"]])
+            return resp
+
+        return Response({
+            "periodo": {"desde": desde, "hasta": hasta},
+            "resumen": {
+                "total_consumos": total_consumos,
+                "total_rechazados": total_rechazados,
+                "tasa_rechazo_global": tasa_global,
+            },
+            "por_grado": por_grado,
+            "horarios_pico": horarios,
+        })
+
+
+class ReporteCobranzaAlmuerzosView(APIView):
+    """
+    GET /api/almuerzos/reporte-cobranza/?anio=YYYY
+    Cobranza mensual de almuerzos: estado por mes, forma de cobro y tendencia de recupero.
+    Opcional: ?formato=csv
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        from django.http import HttpResponse
+        from django.db.models import Count, Sum, Q
+        import calendar
+
+        anio_raw = request.query_params.get("anio")
+        if not anio_raw:
+            return Response(
+                {"error": "Se requiere el parámetro anio (YYYY)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            anio = int(anio_raw)
+        except ValueError:
+            return Response({"error": "El parámetro anio debe ser un número."}, status=status.HTTP_400_BAD_REQUEST)
+
+        qs = CuentaAlmuerzoMensual.objects.filter(anio=anio).exclude(estado="ANULADO")
+
+        # Por mes
+        por_mes_qs = (
+            qs.values("mes")
+            .annotate(
+                n_alumnos=Count("id"),
+                pagados=Count("id", filter=Q(estado="PAGADO")),
+                parciales=Count("id", filter=Q(estado="PARCIAL")),
+                pendientes=Count("id", filter=Q(estado__in=["PENDIENTE", "VALIDACION"])),
+                monto_total=Sum("monto_total"),
+                monto_cobrado=Sum("monto_pagado"),
+            )
+            .order_by("mes")
+        )
+
+        MESES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                 "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+        por_mes = []
+        for r in por_mes_qs:
+            mt = int(r["monto_total"] or 0)
+            mc = int(r["monto_cobrado"] or 0)
+            tasa = round(mc / mt * 100, 1) if mt > 0 else 0.0
+            por_mes.append({
+                "mes": r["mes"],
+                "mes_nombre": MESES[r["mes"]],
+                "n_alumnos": r["n_alumnos"],
+                "pagados": r["pagados"],
+                "parciales": r["parciales"],
+                "pendientes": r["pendientes"],
+                "monto_total": mt,
+                "monto_cobrado": mc,
+                "monto_pendiente": mt - mc,
+                "tasa_cobro": tasa,
+            })
+
+        # Por forma de cobro
+        forma_qs = (
+            qs.values("forma_cobro")
+            .annotate(
+                n_cuentas=Count("id"),
+                monto_total=Sum("monto_total"),
+                monto_cobrado=Sum("monto_pagado"),
+            )
+            .order_by("-monto_total")
+        )
+        por_forma = [
+            {
+                "forma_cobro": r["forma_cobro"],
+                "n_cuentas": r["n_cuentas"],
+                "monto_total": int(r["monto_total"] or 0),
+                "monto_cobrado": int(r["monto_cobrado"] or 0),
+            }
+            for r in forma_qs
+        ]
+
+        monto_anual = sum(m["monto_total"] for m in por_mes)
+        cobrado_anual = sum(m["monto_cobrado"] for m in por_mes)
+        tasa_anual = round(cobrado_anual / monto_anual * 100, 1) if monto_anual > 0 else 0.0
+
+        if request.query_params.get("formato") == "csv":
+            resp = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+            resp["Content-Disposition"] = (
+                f'attachment; filename="cobranza_almuerzos_{anio}.csv"'
+            )
+            writer = csv.writer(resp)
+            writer.writerow(["COBRANZA ALMUERZOS", str(anio)])
+            writer.writerow([])
+            writer.writerow(["Mes", "Alumnos", "Pagados", "Parciales", "Pendientes",
+                              "Monto Total (Gs)", "Cobrado (Gs)", "Pendiente (Gs)", "% Cobro"])
+            for m in por_mes:
+                writer.writerow([m["mes_nombre"], m["n_alumnos"], m["pagados"],
+                                  m["parciales"], m["pendientes"], m["monto_total"],
+                                  m["monto_cobrado"], m["monto_pendiente"], m["tasa_cobro"]])
+            writer.writerow([])
+            writer.writerow(["TOTAL ANUAL", "", "", "", "",
+                              monto_anual, cobrado_anual, monto_anual - cobrado_anual, tasa_anual])
+            return resp
+
+        return Response({
+            "anio": anio,
+            "resumen": {
+                "monto_anual": monto_anual,
+                "cobrado_anual": cobrado_anual,
+                "pendiente_anual": monto_anual - cobrado_anual,
+                "tasa_cobro_anual": tasa_anual,
+                "meses_con_datos": len(por_mes),
+            },
+            "por_mes": por_mes,
+            "por_forma_cobro": por_forma,
+        })
