@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import tarjetasService from '../services/tarjetas'
 import clientesService from '../services/clientes'
+import api from '../services/api'
 import { METODO_PAGO_LABEL } from '../constants/mediosPago'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -54,16 +55,23 @@ function formatFechaCorta(iso: string | null | undefined): string {
 interface Tarjeta {
   nro_tarjeta: string
   codigo_barras: string
-  hijo_nombre: string
-  hijo_grado: string
-  cliente_nombre: string
-  cliente_ruc: string
+  es_alumno: boolean
+  hijo_nombre: string | null
+  hijo_grado: string | null
+  cliente_nombre: string | null
+  cliente_ruc: string | null
   saldo_actual: string | number
   saldo_disponible: string | number
   limite_credito: string | number
   estado: string
   fecha_vencimiento: string | null
   permite_saldo_negativo: boolean
+}
+
+interface ClienteBasico {
+  id: number
+  nombre_completo: string
+  ruc_ci: string
 }
 
 interface Hijo {
@@ -96,10 +104,14 @@ interface CargaSaldo {
   usuario_nombre?: string
 }
 
+type TipoTitular = 'alumno' | 'funcionario'
+
 interface TarjetaForm {
   nro_tarjeta: string
   codigo_barras: string
+  tipoTitular: TipoTitular
   hijo: number | ''
+  cliente_directo: number | ''
   limite_credito: string
   permite_saldo_negativo: boolean
   estado: string
@@ -143,7 +155,8 @@ const ESTADO_CARGA_COLOR: Record<string, BadgeColor> = {
 }
 
 const FORM_INITIAL: TarjetaForm = {
-  nro_tarjeta: '', codigo_barras: '', hijo: '',
+  nro_tarjeta: '', codigo_barras: '',
+  tipoTitular: 'alumno', hijo: '', cliente_directo: '',
   limite_credito: '', permite_saldo_negativo: false,
   estado: 'ACTIVA', fecha_vencimiento: '',
 }
@@ -170,6 +183,10 @@ export default function Tarjetas() {
 
   const [createOpen, setCreateOpen] = useState(false)
   const [hijos, setHijos] = useState<Hijo[]>([])
+  const [clientesSearch, setClientesSearch] = useState('')
+  const [clientes, setClientes] = useState<ClienteBasico[]>([])
+  const [loadingClientes, setLoadingClientes] = useState(false)
+  const clientesTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [form, setForm] = useState<TarjetaForm>(FORM_INITIAL)
   const [saving, setSaving] = useState(false)
 
@@ -238,6 +255,23 @@ export default function Tarjetas() {
     }
   }, [createOpen, hijos.length])
 
+  // Búsqueda debounced de clientes (docentes/funcionarios) para el modal de creación
+  useEffect(() => {
+    if (!createOpen || form.tipoTitular !== 'funcionario') return
+    clearTimeout(clientesTimer.current)
+    if (!clientesSearch.trim()) { setClientes([]); return }
+    clientesTimer.current = setTimeout(() => {
+      setLoadingClientes(true)
+      api.get<{ results?: ClienteBasico[]; count?: number }>('/clientes/clientes/', {
+        params: { search: clientesSearch, activo: true, page_size: 8 },
+      })
+        .then(({ data }) => setClientes(data.results ?? []))
+        .catch(() => setClientes([]))
+        .finally(() => setLoadingClientes(false))
+    }, 350)
+    return () => clearTimeout(clientesTimer.current)
+  }, [clientesSearch, createOpen, form.tipoTitular])
+
   // ── Actions ─────────────────────────────────────────────────────
 
   const toggleEstado = useCallback(async (t: Tarjeta) => {
@@ -256,16 +290,36 @@ export default function Tarjetas() {
   }, [search, estadoFilter, page, loadTarjetas])
 
   const handleCreate = useCallback(async () => {
-    if (!form.nro_tarjeta || !form.hijo) { toast.error('Completá los campos obligatorios'); return }
+    if (!form.nro_tarjeta) { toast.error('Ingresá el número de tarjeta'); return }
+    if (form.tipoTitular === 'alumno' && !form.hijo) {
+      toast.error('Seleccioná el estudiante'); return
+    }
+    if (form.tipoTitular === 'funcionario' && !form.cliente_directo) {
+      toast.error('Seleccioná el cliente (docente/funcionario)'); return
+    }
     setSaving(true)
     try {
-      await tarjetasService.crear({
-        ...form,
+      const payload: Record<string, unknown> = {
+        nro_tarjeta: form.nro_tarjeta,
+        codigo_barras: form.codigo_barras || null,
         limite_credito: Number(form.limite_credito) || 0,
-      })
+        permite_saldo_negativo: form.permite_saldo_negativo,
+        estado: form.estado,
+        fecha_vencimiento: form.fecha_vencimiento || null,
+      }
+      if (form.tipoTitular === 'alumno') {
+        payload.hijo = form.hijo
+        payload.cliente_directo = null
+      } else {
+        payload.hijo = null
+        payload.cliente_directo = form.cliente_directo
+      }
+      await tarjetasService.crear(payload)
       toast.success('Tarjeta creada')
       setCreateOpen(false)
       setForm(FORM_INITIAL)
+      setClientesSearch('')
+      setClientes([])
       setPage(1)
       loadTarjetas(search, estadoFilter, 1)
     } catch (err) {
@@ -335,12 +389,14 @@ export default function Tarjetas() {
       ),
     },
     {
-      title: 'Estudiante',
-      key: 'hijo',
+      title: 'Titular',
+      key: 'titular',
       render: (_, r) => (
         <div>
-          <p className="text-base font-medium text-slate-800">{r.hijo_nombre}</p>
-          <p className="text-sm text-slate-400">{r.hijo_grado}</p>
+          <p className="text-base font-medium text-slate-800">{r.hijo_nombre ?? '—'}</p>
+          <p className="text-sm text-slate-400">
+            {r.es_alumno ? (r.hijo_grado ?? '') : 'Docente / Funcionario'}
+          </p>
         </div>
       ),
     },
@@ -572,7 +628,7 @@ export default function Tarjetas() {
       {detailTarjeta && (
         <Modal
           open
-          title={`Tarjeta ${detailTarjeta.nro_tarjeta} — ${detailTarjeta.hijo_nombre}`}
+          title={`Tarjeta ${detailTarjeta.nro_tarjeta} — ${detailTarjeta.hijo_nombre ?? '—'}`}
           onCancel={() => setDetailTarjeta(null)}
           width={820}
           footer={null}
@@ -666,10 +722,10 @@ export default function Tarjetas() {
         open={createOpen}
         title="Nueva Tarjeta"
         onOk={handleCreate}
-        onCancel={() => setCreateOpen(false)}
+        onCancel={() => { setCreateOpen(false); setClientesSearch(''); setClientes([]) }}
         okText="Crear Tarjeta"
         confirmLoading={saving}
-        width={540}
+        width={560}
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -693,19 +749,85 @@ export default function Tarjetas() {
             </div>
           </div>
 
+          {/* Tipo de titular */}
           <div>
-            <label className={labelClass}>Estudiante *</label>
-            <select
-              value={form.hijo}
-              onChange={e => setForm(f => ({ ...f, hijo: Number(e.target.value) || '' }))}
-              className={inputClass}
-            >
-              <option value="">Seleccionar estudiante...</option>
-              {hijos.map(h => (
-                <option key={h.id} value={h.id}>{h.nombre} {h.apellido} — {h.grado}</option>
+            <label className={labelClass}>Tipo de titular *</label>
+            <div className="flex gap-3">
+              {(['alumno', 'funcionario'] as TipoTitular[]).map(tipo => (
+                <button
+                  key={tipo}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, tipoTitular: tipo, hijo: '', cliente_directo: '' }))}
+                  className={[
+                    'flex-1 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors cursor-pointer',
+                    form.tipoTitular === tipo
+                      ? 'bg-green-600 border-green-600 text-white'
+                      : 'bg-white border-slate-300 text-slate-600 hover:border-green-400',
+                  ].join(' ')}
+                >
+                  {tipo === 'alumno' ? '🎓 Estudiante' : '👤 Docente / Funcionario'}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
+
+          {/* Selector condicional según tipo */}
+          {form.tipoTitular === 'alumno' ? (
+            <div>
+              <label className={labelClass}>Estudiante *</label>
+              <select
+                value={form.hijo}
+                onChange={e => setForm(f => ({ ...f, hijo: Number(e.target.value) || '' }))}
+                className={inputClass}
+              >
+                <option value="">Seleccionar estudiante...</option>
+                {hijos.map(h => (
+                  <option key={h.id} value={h.id}>{h.nombre} {h.apellido} — {h.grado}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className={labelClass}>Docente / Funcionario *</label>
+              <input
+                value={clientesSearch}
+                onChange={e => { setClientesSearch(e.target.value); setForm(f => ({ ...f, cliente_directo: '' })) }}
+                placeholder="Buscar por nombre o cédula..."
+                className={inputClass}
+              />
+              {loadingClientes && (
+                <p className="text-xs text-slate-400 mt-1">Buscando...</p>
+              )}
+              {clientes.length > 0 && !form.cliente_directo && (
+                <ul className="border border-slate-200 rounded-xl mt-1 max-h-40 overflow-y-auto">
+                  {clientes.map(c => (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        onClick={() => { setForm(f => ({ ...f, cliente_directo: c.id })); setClientesSearch(c.nombre_completo) }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 cursor-pointer"
+                      >
+                        <span className="font-semibold text-slate-800">{c.nombre_completo}</span>
+                        <span className="text-slate-400 ml-2 text-xs">{c.ruc_ci}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {form.cliente_directo !== '' && (
+                <div className="mt-1 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+                  <span className="text-green-700 text-sm font-semibold">{clientesSearch}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setForm(f => ({ ...f, cliente_directo: '' })); setClientesSearch('') }}
+                    className="ml-auto text-slate-400 hover:text-red-500 text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -772,8 +894,11 @@ export default function Tarjetas() {
         {editTarjeta && (
           <div className="space-y-4">
             <div className="bg-slate-50 rounded-xl px-4 py-3 text-sm text-slate-500">
-              Estudiante: <span className="font-semibold text-slate-800">{editTarjeta.hijo_nombre}</span>
-              {' · '} Cliente: <span className="font-semibold text-slate-800">{editTarjeta.cliente_nombre}</span>
+              {editTarjeta.es_alumno ? 'Estudiante' : 'Docente / Funcionario'}:{' '}
+              <span className="font-semibold text-slate-800">{editTarjeta.hijo_nombre ?? '—'}</span>
+              {editTarjeta.es_alumno && (
+                <>{' · '} Responsable: <span className="font-semibold text-slate-800">{editTarjeta.cliente_nombre ?? '—'}</span></>
+              )}
             </div>
 
             <div>

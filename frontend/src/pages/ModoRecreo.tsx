@@ -127,13 +127,15 @@ interface RestriccionHijo {
   severidad: 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA'; requiere_autorizacion: boolean
 }
 interface Tarjeta {
-  nro_tarjeta: string; hijo_nombre: string; hijo_foto: string | null
+  nro_tarjeta: string; hijo_nombre: string | null; hijo_foto: string | null
   hijo_grado: string | null; hijo_restricciones: RestriccionHijo[]
   saldo_actual: string; saldo_disponible: string; estado: string
   permite_saldo_negativo: boolean; limite_credito: string
   cliente_id: number; cliente_nombre: string; cliente_ruc: string
   lista_precio_id: number | null; lista_es_default: boolean
+  es_alumno: boolean
 }
+interface ClienteBasico { id: number; nombre_completo: string; ruc_ci: string }
 interface ItemCarrito { producto: Producto; cantidad: number }
 interface MedioPagoDB { id: number; descripcion: string; activo: boolean; requiere_validacion: boolean }
 
@@ -328,6 +330,13 @@ export default function ModoRecreo() {
   // Precios de la lista asignada al cliente (vacío = usar precio_actual por defecto)
   const [preciosCliente, setPreciosCliente] = useState<Record<number, number>>({})
 
+  // Venta directa sin tarjeta (docentes/funcionarios sin RFID)
+  const [clienteDirecto, setClienteDirecto] = useState<ClienteBasico | null>(null)
+  const [clienteSearch, setClienteSearch] = useState('')
+  const [clienteResultados, setClienteResultados] = useState<ClienteBasico[]>([])
+  const [buscandoCliente, setBuscandoCliente] = useState(false)
+  const clienteSearchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
   // Catálogo
   const [catFiltro, setCatFiltro] = useState('')
   const [prodSearch, setProdSearch] = useState('')
@@ -410,6 +419,26 @@ export default function ModoRecreo() {
       .then(res => setCierreCaja(res.data ?? false))
       .catch(() => setCierreCaja(false))
   }, [getProductos, getCategorias])
+
+  // Búsqueda debounced de clientes para venta directa (sin tarjeta)
+  useEffect(() => {
+    if (tarjeta || clienteDirecto || modoPago !== 'MEDIO') {
+      setClienteResultados([])
+      return
+    }
+    clearTimeout(clienteSearchTimer.current)
+    if (!clienteSearch.trim()) { setClienteResultados([]); return }
+    clienteSearchTimer.current = setTimeout(() => {
+      setBuscandoCliente(true)
+      api.get<{ results?: ClienteBasico[] }>('/clientes/clientes/', {
+        params: { search: clienteSearch, activo: true, page_size: 6 },
+      })
+        .then(({ data }) => setClienteResultados(data.results ?? []))
+        .catch(() => setClienteResultados([]))
+        .finally(() => setBuscandoCliente(false))
+    }, 350)
+    return () => clearTimeout(clienteSearchTimer.current)
+  }, [clienteSearch, tarjeta, clienteDirecto, modoPago])
 
   // Auto-foco persistente en scanner
   useEffect(() => {
@@ -537,6 +566,9 @@ export default function ModoRecreo() {
       sfx.card()
       setTarjeta(found)
       setCarrito([])
+      setClienteDirecto(null)
+      setClienteSearch('')
+      setClienteResultados([])
 
       // Si el cliente tiene una lista de precios diferente a la por defecto, cargarla
       setPreciosCliente({})
@@ -614,14 +646,20 @@ export default function ModoRecreo() {
 
   // ─── Ejecución real del cobro ─────────────────────────────────────────────
   const ejecutarCobro = useCallback(async (pinAutorizacion?: string) => {
-    if (cobrandoRef.current || carrito.length === 0 || !tarjeta) return
+    if (cobrandoRef.current || carrito.length === 0) return
+    if (!tarjeta && !clienteDirecto) return
     cobrandoRef.current = true
     setCobrando(true)
     const inicio = ventaStartTime.current || performance.now()
 
     try {
+      const clienteId = tarjeta ? tarjeta.cliente_id : clienteDirecto!.id
+      const nombreDisplay = tarjeta
+        ? (tarjeta.hijo_nombre ?? tarjeta.cliente_nombre)
+        : clienteDirecto!.nombre_completo
+
       const payload: Record<string, unknown> = {
-        cliente: tarjeta.cliente_id,
+        cliente: clienteId,
         tipo: 'CONTADO',
         items: carrito.map(i => ({
           producto: i.producto.id,
@@ -631,7 +669,7 @@ export default function ModoRecreo() {
         })),
       }
 
-      if (modoPago === 'PREPAGO') {
+      if (modoPago === 'PREPAGO' && tarjeta) {
         payload.tarjeta = tarjeta.nro_tarjeta
         payload.medio_pago = null
         if (pinAutorizacion) payload.pin_autorizacion = pinAutorizacion
@@ -664,14 +702,17 @@ export default function ModoRecreo() {
       setFlash('ok')
       setFlashMsg(
         navigator.onLine
-          ? `✅  ${tarjeta.hijo_nombre}  —  ${gs(total)}`
-          : `📶  ${tarjeta.hijo_nombre}  —  guardado offline`,
+          ? `✅  ${nombreDisplay}  —  ${gs(total)}`
+          : `📶  ${nombreDisplay}  —  guardado offline`,
       )
       flashTimer.current = setTimeout(() => {
         setFlash('none')
         setCarrito([])
         setTarjeta(null)
         setPreciosCliente({})
+        setClienteDirecto(null)
+        setClienteSearch('')
+        setClienteResultados([])
         setMontoEfectivo('')
         setReferencia('')
         ventaStartTime.current = 0
@@ -684,34 +725,39 @@ export default function ModoRecreo() {
       cobrandoRef.current = false
       setCobrando(false)
     }
-  }, [carrito, tarjeta, total, modoPago, medioPagoSelId, enqueue, getPrecio])
+  }, [carrito, tarjeta, clienteDirecto, total, modoPago, medioPagoSelId, enqueue, getPrecio])
 
   // ─── Cobrar ───────────────────────────────────────────────────────────────
   const handleCobrar = useCallback(async () => {
     if (cobrandoRef.current || carrito.length === 0) return
-    if (!tarjeta) { toast.error('Escanear tarjeta del alumno'); scannerRef.current?.focus(); return }
+    if (!tarjeta && !clienteDirecto) {
+      toast.error('Escanear tarjeta o seleccionar cliente')
+      scannerRef.current?.focus()
+      return
+    }
 
     if (modoPago === 'MEDIO' && !medioPagoSelId) {
       toast.error('Seleccione un medio de pago'); return
     }
 
-    if (modoPago === 'PREPAGO' && !tarjeta.permite_saldo_negativo) {
+    if (modoPago === 'PREPAGO' && tarjeta && !tarjeta.permite_saldo_negativo) {
       const saldoAct = Number(tarjeta.saldo_actual) || 0
       if (total > saldoAct) {
-        // Insuficiente saldo — pedir PIN del padre
-        setShowPin(true)
-        return
+        // Insuficiente saldo — pedir PIN del padre (solo para alumnos)
+        if (tarjeta.es_alumno) { setShowPin(true); return }
+        toast.error('Saldo insuficiente en la tarjeta'); return
       }
     }
 
     await ejecutarCobro()
-  }, [carrito, tarjeta, total, modoPago, medioPagoSelId, ejecutarCobro])
+  }, [carrito, tarjeta, clienteDirecto, total, modoPago, medioPagoSelId, ejecutarCobro])
 
   // ─── Cancelar ─────────────────────────────────────────────────────────────
   const handleCancelar = useCallback(() => {
     clearTimeout(flashTimer.current)
     setFlash('none'); setCarrito([]); setTarjeta(null)
     setPreciosCliente({})
+    setClienteDirecto(null); setClienteSearch(''); setClienteResultados([])
     setTarjetaInput(''); setProdSearch('')
     setMontoEfectivo(''); setReferencia(''); setShowPin(false)
     ventaStartTime.current = 0
@@ -781,8 +827,9 @@ export default function ModoRecreo() {
   const medioPagoSeleccionado = mediosPago.find(m => m.id === medioPagoSelId) ?? null
 
   const referenciaRequerida = modoPago === 'MEDIO' && (medioPagoSeleccionado?.requiere_validacion ?? false)
+  const tieneTitular = tarjeta !== null || (modoPago === 'MEDIO' && clienteDirecto !== null)
   // isOnline ya no bloquea: las ventas offline se encolan en IndexedDB
-  const canCobrar = carrito.length > 0 && !cobrando && tarjeta &&
+  const canCobrar = carrito.length > 0 && !cobrando && tieneTitular &&
     (modoPago === 'PREPAGO' || (modoPago === 'MEDIO' && medioPagoSelId !== null)) &&
     (!referenciaRequerida || referencia.trim().length > 0)
 
@@ -951,20 +998,23 @@ export default function ModoRecreo() {
                 {/* Foto y nombre */}
                 <div className="text-center">
                   {tarjeta.hijo_foto ? (
-                    <img src={tarjeta.hijo_foto} alt={tarjeta.hijo_nombre}
+                    <img src={tarjeta.hijo_foto} alt={tarjeta.hijo_nombre ?? undefined}
                       className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 mx-auto mb-3 shadow-md" />
                   ) : (
                     <div className="w-32 h-32 rounded-full bg-slate-100 border-4 border-blue-300 flex items-center justify-center mx-auto mb-3">
                       <UserIcon size={64} weight="fill" className="text-slate-400" />
                     </div>
                   )}
-                  <p className="text-2xl font-black text-slate-900 leading-tight">{tarjeta.hijo_nombre}</p>
-                  {tarjeta.hijo_grado && <p className="text-slate-500 text-base mt-0.5">{tarjeta.hijo_grado}</p>}
+                  <p className="text-2xl font-black text-slate-900 leading-tight">{tarjeta.hijo_nombre ?? tarjeta.cliente_nombre}</p>
+                  {tarjeta.hijo_grado
+                    ? <p className="text-slate-500 text-base mt-0.5">{tarjeta.hijo_grado}</p>
+                    : <p className="text-slate-400 text-sm mt-0.5">Docente / Funcionario</p>
+                  }
                   <p className="text-slate-300 text-xs mt-1 font-mono tracking-wider">{tarjeta.nro_tarjeta}</p>
                 </div>
 
-                {/* Restricciones */}
-                {tarjeta.hijo_restricciones?.length > 0 && (
+                {/* Restricciones (solo alumnos) */}
+                {tarjeta.es_alumno && tarjeta.hijo_restricciones?.length > 0 && (
                   <div className="bg-red-50 border-2 border-red-300 rounded-xl p-3 space-y-2">
                     <div className="flex items-center gap-1.5">
                       <WarningIcon size={15} weight="fill" className="text-red-500 shrink-0" />
@@ -1020,12 +1070,75 @@ export default function ModoRecreo() {
                   <span className="text-green-700 text-sm font-bold">Tarjeta ACTIVA</span>
                 </div>
 
-                {/* Padre */}
-                <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5">
-                  <p className="text-slate-400 text-xs uppercase tracking-wide font-bold mb-0.5">Padre/Tutor</p>
-                  <p className="text-slate-800 text-sm font-semibold leading-tight">{tarjeta.cliente_nombre}</p>
-                </div>
+                {/* Responsable (solo alumnos) */}
+                {tarjeta.es_alumno && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5">
+                    <p className="text-slate-400 text-xs uppercase tracking-wide font-bold mb-0.5">Padre/Tutor</p>
+                    <p className="text-slate-800 text-sm font-semibold leading-tight">{tarjeta.cliente_nombre}</p>
+                  </div>
+                )}
               </>
+            ) : modoPago === 'MEDIO' ? (
+              /* ── Venta directa sin tarjeta ── */
+              <div className="space-y-3">
+                {clienteDirecto ? (
+                  <>
+                    <div className="text-center pt-2">
+                      <div className="w-20 h-20 rounded-full bg-emerald-100 border-4 border-emerald-400 flex items-center justify-center mx-auto mb-3">
+                        <UserIcon size={44} weight="fill" className="text-emerald-600" />
+                      </div>
+                      <p className="text-xl font-black text-slate-900 leading-tight">{clienteDirecto.nombre_completo}</p>
+                      <p className="text-slate-400 text-sm mt-0.5">{clienteDirecto.ruc_ci}</p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="text-emerald-700 text-sm font-bold">Venta directa</span>
+                    </div>
+                    <button
+                      onClick={() => { setClienteDirecto(null); setClienteSearch(''); setClienteResultados([]) }}
+                      className="w-full py-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 text-sm font-bold transition-colors cursor-pointer"
+                    >
+                      Cambiar cliente
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-slate-500 text-sm font-bold uppercase tracking-wide">Buscar cliente</p>
+                    <input
+                      value={clienteSearch}
+                      onChange={e => setClienteSearch(e.target.value)}
+                      placeholder="Nombre o cédula..."
+                      className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2.5 text-base text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/20"
+                    />
+                    {buscandoCliente && <p className="text-xs text-slate-400">Buscando...</p>}
+                    {clienteResultados.length > 0 && (
+                      <ul className="border border-slate-200 rounded-xl overflow-hidden">
+                        {clienteResultados.map(c => (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setClienteDirecto(c)
+                                setClienteSearch(c.nombre_completo)
+                                setClienteResultados([])
+                                ventaStartTime.current = performance.now()
+                              }}
+                              className="w-full text-left px-3 py-2.5 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-0"
+                            >
+                              <p className="text-sm font-semibold text-slate-800">{c.nombre_completo}</p>
+                              <p className="text-xs text-slate-400">{c.ruc_ci}</p>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {!buscandoCliente && clienteSearch.length > 1 && clienteResultados.length === 0 && (
+                      <p className="text-xs text-slate-400 text-center">Sin resultados</p>
+                    )}
+                    <p className="text-xs text-slate-300 text-center">O escanear tarjeta RFID</p>
+                  </>
+                )}
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-56 text-center">
                 <CreditCardIcon size={72} weight="fill" className="text-slate-200 mb-4" />
@@ -1190,7 +1303,7 @@ export default function ModoRecreo() {
             <div className="flex flex-wrap gap-2">
               {/* PREPAGO */}
               <button
-                onClick={() => { setModoPago('PREPAGO'); setMedioPagoSelId(null) }}
+                onClick={() => { setModoPago('PREPAGO'); setMedioPagoSelId(null); setClienteDirecto(null); setClienteSearch(''); setClienteResultados([]) }}
                 className={[
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
                   modoPago === 'PREPAGO'
