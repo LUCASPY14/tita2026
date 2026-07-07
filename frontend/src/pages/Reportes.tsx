@@ -171,7 +171,179 @@ function fmtGsShort(n: number): string {
   return String(n)
 }
 
-type TabKey = 'ventas' | 'cuenta_corriente' | 'almuerzos' | 'productos' | 'cajeros' | 'stock' | 'tarjetas' | 'consumo'
+type TabKey = 'ventas' | 'cuenta_corriente' | 'almuerzos' | 'productos' | 'cajeros' | 'stock' | 'tarjetas' | 'consumo' | 'notas_credito' | 'aging_proveedores' | 'compras_proveedores' | 'diferencias_caja' | 'medios_pago' | 'consumo_grado' | 'cobranza_almuerzos' | 'auditoria' | 'intentos_login' | 'personal_inactivo'
+
+// ─── Consumo por Grado ───────────────────────────────────────────────────────
+
+interface ConsumoGradoFila {
+  grado: string; nivel: number
+  n_consumos: number; n_rechazados: number; n_anulados: number
+  tasa_rechazo: number; monto_total: number
+}
+
+interface HorarioPico { hora: number; n: number }
+
+interface ConsumoGradoData {
+  periodo: { desde: string; hasta: string }
+  resumen: { total_consumos: number; total_rechazados: number; tasa_rechazo_global: number }
+  por_grado: ConsumoGradoFila[]
+  horarios_pico: HorarioPico[]
+}
+
+// ─── Cobranza Almuerzos ──────────────────────────────────────────────────────
+
+interface CobranzaMesFila {
+  mes: number; mes_nombre: string
+  n_alumnos: number; pagados: number; parciales: number; pendientes: number
+  monto_total: number; monto_cobrado: number; monto_pendiente: number; tasa_cobro: number
+}
+
+interface CobranzaFormaFila {
+  forma_cobro: string; n_cuentas: number; monto_total: number; monto_cobrado: number
+}
+
+interface CobranzaAlmuerzosData {
+  anio: number
+  resumen: { monto_anual: number; cobrado_anual: number; pendiente_anual: number; tasa_cobro_anual: number; meses_con_datos: number }
+  por_mes: CobranzaMesFila[]
+  por_forma_cobro: CobranzaFormaFila[]
+}
+
+// ─── Compras / Proveedores ───────────────────────────────────────────────────
+
+interface CompraProveedorFila {
+  proveedor_id: number; proveedor: string; ruc: string
+  n_compras: number; monto_total: number
+  entregadas: number; entrega_parcial: number; entrega_pendiente: number; tasa_entrega: number
+  pagadas: number; pago_parcial: number; pago_pendiente: number
+}
+
+interface FunnelOC { BORRADOR: number; PENDIENTE: number; APROBADA: number; RECHAZADA: number; CONVERTIDA: number; total: number }
+
+interface ComprasProveedoresData {
+  periodo: { desde: string; hasta: string }
+  resumen: { total_compras: number; monto_total: number; n_proveedores: number }
+  por_proveedor: CompraProveedorFila[]
+  funnel_oc: FunnelOC
+}
+
+// ─── Diferencias de Caja ─────────────────────────────────────────────────────
+
+interface DiferenciaEmpleado {
+  empleado_id: number; empleado: string
+  n_cierres: number; diferencia_total: number; diferencia_promedio: number; mayor_diferencia: number
+}
+
+interface TendenciaDiferencia { fecha: string; diferencia: number; empleado: string; caja: string; cierre_id: number }
+
+interface DiferenciasCajaData {
+  periodo: { desde: string; hasta: string }
+  resumen: { total_diferencia: number; n_cierres: number; n_positivos: number; n_negativos: number; n_cero: number }
+  por_empleado: DiferenciaEmpleado[]
+  tendencia: TendenciaDiferencia[]
+}
+
+// ─── Medios de Pago ──────────────────────────────────────────────────────────
+
+interface MedioPagoFila {
+  medio_pago_id: number; descripcion: string
+  n_pagos: number; monto_total: number
+  n_conciliados: number; monto_conciliado: number
+  n_pendientes: number; monto_pendiente: number
+}
+
+interface MediosPagoData {
+  periodo: { desde: string; hasta: string }
+  resumen: { total_pagos: number; monto_total: number; n_medios: number }
+  por_medio_pago: MedioPagoFila[]
+}
+
+// ─── Notas de Crédito ────────────────────────────────────────────────────────
+
+interface NCResumen {
+  total_emitidas: number; total_aplicadas: number; total_anuladas: number
+  monto_emitidas: number; monto_aplicadas: number; monto_anuladas: number
+  monto_total: number
+}
+
+interface NCVentaFila {
+  id: number; nro_nota_credito: string; fecha_emision: string
+  cliente_id: number; cliente: string; ruc_ci: string
+  estado: string; motivo: string; monto_total: number
+  empleado_autoriza: string; venta_origen_id: number | null
+}
+
+interface NCCompraFila {
+  id: number; fecha: string
+  proveedor_id: number; proveedor: string; ruc: string
+  estado: string; observacion: string; nro_factura_compra: string
+  monto_total: number; creado_por: string; compra_original_id: number | null
+}
+
+interface NCVentaData { periodo: { desde: string; hasta: string }; resumen: NCResumen; detalle: NCVentaFila[] }
+interface NCCompraData { periodo: { desde: string; hasta: string }; resumen: NCResumen; detalle: NCCompraFila[] }
+
+// ─── Aging Proveedores ───────────────────────────────────────────────────────
+
+interface AgingProveedorItem {
+  proveedor_id: number; proveedor: string; ruc: string; telefono: string
+  email: string; saldo_deuda: number; dias_atraso: number; aging: string
+}
+
+interface AgingProveedoresData {
+  fecha: string
+  resumen: {
+    proveedores_con_deuda: number; total_deuda: number
+    aging: { '0-30': number; '31-60': number; '61-90': number; '90+': number }
+  }
+  detalle: AgingProveedorItem[]
+}
+
+// ─── Auditoría ───────────────────────────────────────────────────────────────
+
+interface AuditoriaResultado { resultado: string; count: number }
+interface AuditoriaTop { operacion?: string; tabla_afectada?: string; count: number }
+interface AuditoriaFila {
+  id_auditoria: number; fecha_operacion: string; usuario__email: string | null
+  operacion: string; tabla_afectada: string | null; id_registro: number | null
+  resultado: string; ip_address: string | null; descripcion: string | null; mensaje_error: string | null
+}
+interface AuditoriaData {
+  resumen: {
+    total: number
+    por_resultado: AuditoriaResultado[]
+    top_operaciones: AuditoriaTop[]
+    top_tablas: AuditoriaTop[]
+  }
+  detalle: AuditoriaFila[]
+}
+
+// ─── Intentos de Login ───────────────────────────────────────────────────────
+
+interface IntentoPorIp { ip_address: string; n_fallidos: number }
+interface IntentoPorEmail { email: string; n_fallidos: number }
+interface IntentoPorMotivo { motivo_fallo: string; count: number }
+interface IntentoTendencia { fecha: string; total: number; fallidos: number; exitosos: number }
+interface IntentosLoginData {
+  resumen: { total: number; fallidos: number; exitosos: number; tasa_fallo: number }
+  por_ip: IntentoPorIp[]
+  por_email: IntentoPorEmail[]
+  por_motivo: IntentoPorMotivo[]
+  tendencia: IntentoTendencia[]
+}
+
+// ─── Personal Inactivo ───────────────────────────────────────────────────────
+
+interface PersonalPorRol { rol: string; total: number; activos: number; sin_acceso: number }
+interface PersonalFila {
+  id: number; email: string; nombre: string; apellido: string; rol: string
+  ultimo_acceso: string | null; fecha_creacion: string
+}
+interface PersonalInactivoData {
+  resumen: { total: number; activos: number; inactivos: number; sin_acceso: number; n_dias: number }
+  por_rol: PersonalPorRol[]
+  detalle: PersonalFila[]
+}
 
 // ─── Shared sub-components (defined outside Reportes to satisfy react-hooks/static-components) ──
 
@@ -814,6 +986,263 @@ export default function Reportes() {
     !searchTarj || t.alumno.toLowerCase().includes(searchTarj.toLowerCase()) || t.grado.toLowerCase().includes(searchTarj.toLowerCase())
   )
 
+  // ── Notas de Crédito ─────────────────────────────────────────────────────────
+  const hoyStr = today
+  const [ncDesde, setNcDesde] = useState(hoyStr.slice(0, 7) + '-01')
+  const [ncHasta, setNcHasta] = useState(hoyStr)
+  const [ncSubtab, setNcSubtab] = useState<'ventas' | 'compras'>('ventas')
+  const [ncVentaData, setNcVentaData] = useState<NCVentaData | null>(null)
+  const [ncCompraData, setNcCompraData] = useState<NCCompraData | null>(null)
+  const [loadingNc, setLoadingNc] = useState(false)
+  const [searchNc, setSearchNc] = useState('')
+
+  async function buscarNC() {
+    if (!ncDesde || !ncHasta) { toast.error('Seleccioná ambas fechas'); return }
+    setLoadingNc(true)
+    try {
+      const [ventaRes, compraRes] = await Promise.all([
+        api.get('/ventas/reporte-notas-credito/', { params: { desde: ncDesde, hasta: ncHasta } }),
+        api.get('/compras/reporte-notas-credito/', { params: { desde: ncDesde, hasta: ncHasta } }),
+      ])
+      setNcVentaData(ventaRes.data)
+      setNcCompraData(compraRes.data)
+    } catch { toast.error('Error al cargar notas de crédito') }
+    finally { setLoadingNc(false) }
+  }
+
+  async function exportarNcCSV() {
+    try {
+      const endpoint = ncSubtab === 'ventas' ? '/ventas/reporte-notas-credito/' : '/compras/reporte-notas-credito/'
+      const res = await api.get(endpoint, { params: { desde: ncDesde, hasta: ncHasta, formato: 'csv' }, responseType: 'blob' })
+      descargaBlob(res.data, `notas_credito_${ncSubtab}_${ncDesde}_${ncHasta}.csv`)
+      toast.success('CSV descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
+  const ncVentasFiltradas = (ncVentaData?.detalle ?? []).filter(f =>
+    !searchNc || f.cliente.toLowerCase().includes(searchNc.toLowerCase()) || f.nro_nota_credito.includes(searchNc)
+  )
+  const ncComprasFiltradas = (ncCompraData?.detalle ?? []).filter(f =>
+    !searchNc || f.proveedor.toLowerCase().includes(searchNc.toLowerCase())
+  )
+
+  const NC_ESTADO_COLOR: Record<string, BadgeColor> = { EMITIDA: 'blue', APLICADA: 'green', ANULADA: 'red' }
+
+  // ── Aging Proveedores ─────────────────────────────────────────────────────────
+  const [apData, setApData] = useState<AgingProveedoresData | null>(null)
+  const [loadingAp, setLoadingAp] = useState(false)
+  const [searchAp, setSearchAp] = useState('')
+
+
+  async function cargarAgingProveedores() {
+    setLoadingAp(true)
+    try {
+      const { data: res } = await api.get('/compras/reporte-aging-proveedores/')
+      setApData(res)
+    } catch { toast.error('Error al cargar aging de proveedores') }
+    finally { setLoadingAp(false) }
+  }
+
+  async function exportarApCSV() {
+    try {
+      const res = await api.get('/compras/reporte-aging-proveedores/', { params: { formato: 'csv' }, responseType: 'blob' })
+      descargaBlob(res.data, `aging_proveedores_${today}.csv`)
+      toast.success('CSV descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
+  const apDetalleFiltrado = (apData?.detalle ?? []).filter(d =>
+    !searchAp || d.proveedor.toLowerCase().includes(searchAp.toLowerCase()) || d.ruc.includes(searchAp)
+  )
+  const apDetalleSorted = apDetalleFiltrado.slice().sort((a, b) => b.saldo_deuda - a.saldo_deuda)
+
+  // ── Compras / Proveedores ─────────────────────────────────────────────────────
+  const primerDiaMes = today.slice(0, 7) + '-01'
+  const [cpDesde, setCpDesde] = useState(primerDiaMes)
+  const [cpHasta, setCpHasta] = useState(today)
+  const [cpData, setCpData] = useState<ComprasProveedoresData | null>(null)
+  const [loadingCp, setLoadingCp] = useState(false)
+  const [searchCp, setSearchCp] = useState('')
+
+  async function buscarCompras() {
+    if (!cpDesde || !cpHasta) { toast.error('Seleccioná ambas fechas'); return }
+    setLoadingCp(true)
+    try {
+      const { data: res } = await api.get('/compras/reporte-compras/', { params: { desde: cpDesde, hasta: cpHasta } })
+      setCpData(res)
+    } catch { toast.error('Error al cargar reporte de compras') }
+    finally { setLoadingCp(false) }
+  }
+
+  async function exportarCpCSV() {
+    try {
+      const res = await api.get('/compras/reporte-compras/', { params: { desde: cpDesde, hasta: cpHasta, formato: 'csv' }, responseType: 'blob' })
+      descargaBlob(res.data, `compras_proveedores_${cpDesde}_${cpHasta}.csv`)
+      toast.success('CSV descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
+  const cpFiltrado = (cpData?.por_proveedor ?? []).filter(p =>
+    !searchCp || p.proveedor.toLowerCase().includes(searchCp.toLowerCase()) || p.ruc.includes(searchCp)
+  )
+
+  // ── Diferencias de Caja ───────────────────────────────────────────────────────
+  const [dcDesde, setDcDesde] = useState(primerDiaMes)
+  const [dcHasta, setDcHasta] = useState(today)
+  const [dcData, setDcData] = useState<DiferenciasCajaData | null>(null)
+  const [loadingDc, setLoadingDc] = useState(false)
+
+  async function buscarDiferencias() {
+    if (!dcDesde || !dcHasta) { toast.error('Seleccioná ambas fechas'); return }
+    setLoadingDc(true)
+    try {
+      const { data: res } = await api.get('/contabilidad/reporte-diferencias-caja/', { params: { desde: dcDesde, hasta: dcHasta } })
+      setDcData(res)
+    } catch { toast.error('Error al cargar diferencias de caja') }
+    finally { setLoadingDc(false) }
+  }
+
+  async function exportarDcCSV() {
+    try {
+      const res = await api.get('/contabilidad/reporte-diferencias-caja/', { params: { desde: dcDesde, hasta: dcHasta, formato: 'csv' }, responseType: 'blob' })
+      descargaBlob(res.data, `diferencias_caja_${dcDesde}_${dcHasta}.csv`)
+      toast.success('CSV descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
+  // ── Medios de Pago ────────────────────────────────────────────────────────────
+  const [mpDesde, setMpDesde] = useState(primerDiaMes)
+  const [mpHasta, setMpHasta] = useState(today)
+  const [mpData, setMpData] = useState<MediosPagoData | null>(null)
+  const [loadingMp, setLoadingMp] = useState(false)
+
+  async function buscarMediosPago() {
+    if (!mpDesde || !mpHasta) { toast.error('Seleccioná ambas fechas'); return }
+    setLoadingMp(true)
+    try {
+      const { data: res } = await api.get('/ventas/reporte-medios-pago/', { params: { desde: mpDesde, hasta: mpHasta } })
+      setMpData(res)
+    } catch { toast.error('Error al cargar medios de pago') }
+    finally { setLoadingMp(false) }
+  }
+
+  async function exportarMpCSV() {
+    try {
+      const res = await api.get('/ventas/reporte-medios-pago/', { params: { desde: mpDesde, hasta: mpHasta, formato: 'csv' }, responseType: 'blob' })
+      descargaBlob(res.data, `medios_pago_${mpDesde}_${mpHasta}.csv`)
+      toast.success('CSV descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
+  const mpTotal = mpData?.resumen.monto_total ?? 0
+
+  // ── Consumo por Grado ─────────────────────────────────────────────────────────
+  const [cgDesde, setCgDesde] = useState(today.slice(0, 7) + '-01')
+  const [cgHasta, setCgHasta] = useState(today)
+  const [cgData, setCgData] = useState<ConsumoGradoData | null>(null)
+  const [loadingCg, setLoadingCg] = useState(false)
+
+  async function buscarConsumoGrado() {
+    if (!cgDesde || !cgHasta) { toast.error('Seleccioná ambas fechas'); return }
+    setLoadingCg(true)
+    try {
+      const { data: res } = await api.get('/almuerzos/reporte-consumo-grado/', { params: { desde: cgDesde, hasta: cgHasta } })
+      setCgData(res)
+    } catch { toast.error('Error al cargar consumo por grado') }
+    finally { setLoadingCg(false) }
+  }
+
+  async function exportarCgCSV() {
+    try {
+      const res = await api.get('/almuerzos/reporte-consumo-grado/', { params: { desde: cgDesde, hasta: cgHasta, formato: 'csv' }, responseType: 'blob' })
+      descargaBlob(res.data, `consumo_grado_${cgDesde}_${cgHasta}.csv`)
+      toast.success('CSV descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
+  // ── Cobranza Almuerzos ────────────────────────────────────────────────────────
+  const [cbAnio, setCbAnio] = useState(new Date().getFullYear())
+  const [cbData, setCbData] = useState<CobranzaAlmuerzosData | null>(null)
+  const [loadingCb, setLoadingCb] = useState(false)
+
+  async function buscarCobranza() {
+    setLoadingCb(true)
+    try {
+      const { data: res } = await api.get('/almuerzos/reporte-cobranza/', { params: { anio: cbAnio } })
+      setCbData(res)
+    } catch { toast.error('Error al cargar cobranza de almuerzos') }
+    finally { setLoadingCb(false) }
+  }
+
+  async function exportarCbCSV() {
+    try {
+      const res = await api.get('/almuerzos/reporte-cobranza/', { params: { anio: cbAnio, formato: 'csv' }, responseType: 'blob' })
+      descargaBlob(res.data, `cobranza_almuerzos_${cbAnio}.csv`)
+      toast.success('CSV descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
+  const FORMA_COBRO_LABEL: Record<string, string> = {
+    EFECTIVO: 'Efectivo', TRANSFERENCIA: 'Transferencia',
+    ONLINE: 'Online', DEBITO_AUTOMATICO: 'Débito automático',
+  }
+
+  // ── Auditoría ─────────────────────────────────────────────────────────────────
+  const [audDesde, setAudDesde] = useState(today)
+  const [audHasta, setAudHasta] = useState(today)
+  const [audOperacion, setAudOperacion] = useState('')
+  const [audTabla, setAudTabla] = useState('')
+  const [audResultado, setAudResultado] = useState('')
+  const [audData, setAudData] = useState<AuditoriaData | null>(null)
+  const [loadingAud, setLoadingAud] = useState(false)
+
+  async function buscarAuditoria() {
+    setLoadingAud(true)
+    try {
+      const params: Record<string, string> = { desde: audDesde, hasta: audHasta }
+      if (audOperacion) params.operacion = audOperacion
+      if (audTabla) params.tabla = audTabla
+      if (audResultado) params.resultado = audResultado
+      const { data: res } = await api.get('/usuarios/reporte-auditoria/', { params })
+      setAudData(res)
+    } catch { toast.error('Error al cargar el reporte de auditoría') }
+    finally { setLoadingAud(false) }
+  }
+
+  // ── Intentos de Login ─────────────────────────────────────────────────────────
+  const [ilDesde, setIlDesde] = useState(today)
+  const [ilHasta, setIlHasta] = useState(today)
+  const [ilData, setIlData] = useState<IntentosLoginData | null>(null)
+  const [loadingIl, setLoadingIl] = useState(false)
+
+  async function buscarIntentosLogin() {
+    setLoadingIl(true)
+    try {
+      const { data: res } = await api.get('/usuarios/reporte-intentos-login/', { params: { desde: ilDesde, hasta: ilHasta } })
+      setIlData(res)
+    } catch { toast.error('Error al cargar intentos de login') }
+    finally { setLoadingIl(false) }
+  }
+
+  // ── Personal Inactivo ─────────────────────────────────────────────────────────
+  const [piDias, setPiDias] = useState(30)
+  const [piData, setPiData] = useState<PersonalInactivoData | null>(null)
+  const [loadingPi, setLoadingPi] = useState(false)
+
+  async function buscarPersonalInactivo() {
+    setLoadingPi(true)
+    try {
+      const { data: res } = await api.get('/usuarios/reporte-personal-inactivo/', { params: { dias: piDias } })
+      setPiData(res)
+    } catch { toast.error('Error al cargar personal inactivo') }
+    finally { setLoadingPi(false) }
+  }
+
+  const ROL_LABEL: Record<string, string> = {
+    ADMIN: 'Administrador', SUPERVISOR: 'Supervisor', CAJERO: 'Cajero',
+    COBRADOR: 'Cobrador', COCINA: 'Cocina',
+  }
+
   // ── Styles ───────────────────────────────────────────────────────────────────
 
   const inputDateClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
@@ -860,6 +1289,36 @@ export default function Reportes() {
           </button>
           <button onClick={() => setTab('almuerzos')} className={tabClass('almuerzos')}>
             <UtensilsCrossed className="w-4 h-4" />Almuerzos
+          </button>
+          <button onClick={() => setTab('notas_credito')} className={tabClass('notas_credito')}>
+            <FileText className="w-4 h-4" />Notas de Crédito
+          </button>
+          <button onClick={() => { setTab('aging_proveedores'); if (!apData && !loadingAp) cargarAgingProveedores() }} className={tabClass('aging_proveedores')}>
+            <ShoppingCart className="w-4 h-4" />Aging Proveedores
+          </button>
+          <button onClick={() => setTab('compras_proveedores')} className={tabClass('compras_proveedores')}>
+            <ShoppingBag className="w-4 h-4" />Compras
+          </button>
+          <button onClick={() => setTab('diferencias_caja')} className={tabClass('diferencias_caja')}>
+            <AlertTriangle className="w-4 h-4" />Diferencias Caja
+          </button>
+          <button onClick={() => setTab('medios_pago')} className={tabClass('medios_pago')}>
+            <CreditCard className="w-4 h-4" />Medios de Pago
+          </button>
+          <button onClick={() => setTab('consumo_grado')} className={tabClass('consumo_grado')}>
+            <UtensilsCrossed className="w-4 h-4" />Consumo por Grado
+          </button>
+          <button onClick={() => setTab('cobranza_almuerzos')} className={tabClass('cobranza_almuerzos')}>
+            <TrendingUp className="w-4 h-4" />Cobranza Almuerzos
+          </button>
+          <button onClick={() => setTab('auditoria')} className={tabClass('auditoria')}>
+            <Search className="w-4 h-4" />Auditoría
+          </button>
+          <button onClick={() => setTab('intentos_login')} className={tabClass('intentos_login')}>
+            <AlertTriangle className="w-4 h-4" />Intentos Login
+          </button>
+          <button onClick={() => setTab('personal_inactivo')} className={tabClass('personal_inactivo')}>
+            <Users className="w-4 h-4" />Personal Inactivo
           </button>
         </div>
       </div>
@@ -1732,6 +2191,1168 @@ export default function Reportes() {
           )}
           {!consumoGenerated && !loadingConsumo && (
             <EmptyState icon={<ShoppingBag className="w-full h-full" />} text='Seleccioná un período y hacé clic en "Generar Reporte"' />
+          )}
+        </>
+      )}
+
+      {/* ── Notas de Crédito ─────────────────────────────────────────── */}
+      {tab === 'notas_credito' && (
+        <>
+          <FilterBar>
+            <div>
+              <label className={labelClass}>Desde</label>
+              <input type="date" value={ncDesde} onChange={e => setNcDesde(e.target.value)} className={inputDateClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Hasta</label>
+              <input type="date" value={ncHasta} onChange={e => setNcHasta(e.target.value)} className={inputDateClass} />
+            </div>
+            <Button onClick={buscarNC} loading={loadingNc}>Buscar</Button>
+            {(ncVentaData || ncCompraData) && (
+              <Button variant="secondary" onClick={exportarNcCSV}>
+                <Download className="w-4 h-4" />CSV
+              </Button>
+            )}
+          </FilterBar>
+
+          {(ncVentaData || ncCompraData) && (
+            <>
+              {/* Subtabs ventas / compras */}
+              <div className="border-b border-slate-200">
+                <div className="flex gap-0">
+                  <button
+                    onClick={() => { setNcSubtab('ventas'); setSearchNc('') }}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${ncSubtab === 'ventas' ? 'border-green-600 text-green-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Notas a Clientes {ncVentaData && `(${ncVentaData.detalle.length})`}
+                  </button>
+                  <button
+                    onClick={() => { setNcSubtab('compras'); setSearchNc('') }}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${ncSubtab === 'compras' ? 'border-green-600 text-green-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Notas de Proveedores {ncCompraData && `(${ncCompraData.detalle.length})`}
+                  </button>
+                </div>
+              </div>
+
+              {/* KPIs */}
+              {ncSubtab === 'ventas' && ncVentaData && (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <KpiCard label="Emitidas" value={`${ncVentaData.resumen.total_emitidas} (${formatGs(ncVentaData.resumen.monto_emitidas)})`} />
+                    <KpiCard label="Aplicadas" value={`${ncVentaData.resumen.total_aplicadas} (${formatGs(ncVentaData.resumen.monto_aplicadas)})`} color="text-green-700" />
+                    <KpiCard label="Anuladas" value={`${ncVentaData.resumen.total_anuladas} (${formatGs(ncVentaData.resumen.monto_anuladas)})`} color="text-slate-400" />
+                    <KpiCard label="Monto activo" value={formatGs(ncVentaData.resumen.monto_total)} color="text-blue-700" />
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="relative flex-1 max-w-xs">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text" placeholder="Buscar cliente o N° NC…"
+                          value={searchNc} onChange={e => setSearchNc(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+                        />
+                      </div>
+                    </div>
+                    {ncVentasFiltradas.length === 0
+                      ? <EmptyState icon={<FileText className="w-full h-full" />} text="Sin notas de crédito en el período" />
+                      : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-slate-100 text-left">
+                                {['N° NC', 'Fecha', 'Cliente', 'Estado', 'Motivo', 'Autorizado por', 'Monto'].map(h => (
+                                  <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                              {ncVentasFiltradas.map(f => (
+                                <tr key={f.id} className="hover:bg-slate-50 transition-colors">
+                                  <td className="py-2.5 pr-4 font-mono text-xs text-slate-500">{f.nro_nota_credito}</td>
+                                  <td className="py-2.5 pr-4 text-slate-600 whitespace-nowrap">{f.fecha_emision}</td>
+                                  <td className="py-2.5 pr-4">
+                                    <p className="font-medium text-slate-800">{f.cliente}</p>
+                                    <p className="text-xs text-slate-400">{f.ruc_ci}</p>
+                                  </td>
+                                  <td className="py-2.5 pr-4">
+                                    <Badge color={NC_ESTADO_COLOR[f.estado] ?? 'gray'}>{f.estado}</Badge>
+                                  </td>
+                                  <td className="py-2.5 pr-4 text-slate-600 max-w-[200px] truncate" title={f.motivo}>{f.motivo}</td>
+                                  <td className="py-2.5 pr-4 text-slate-600">{f.empleado_autoriza || '—'}</td>
+                                  <td className="py-2.5 tabular-nums font-bold text-red-600">{formatGs(f.monto_total)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )
+                    }
+                  </div>
+                </>
+              )}
+
+              {ncSubtab === 'compras' && ncCompraData && (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <KpiCard label="Emitidas" value={`${ncCompraData.resumen.total_emitidas} (${formatGs(ncCompraData.resumen.monto_emitidas)})`} />
+                    <KpiCard label="Aplicadas" value={`${ncCompraData.resumen.total_aplicadas} (${formatGs(ncCompraData.resumen.monto_aplicadas)})`} color="text-green-700" />
+                    <KpiCard label="Anuladas" value={`${ncCompraData.resumen.total_anuladas} (${formatGs(ncCompraData.resumen.monto_anuladas)})`} color="text-slate-400" />
+                    <KpiCard label="Monto activo" value={formatGs(ncCompraData.resumen.monto_total)} color="text-blue-700" />
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="relative flex-1 max-w-xs">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text" placeholder="Buscar proveedor…"
+                          value={searchNc} onChange={e => setSearchNc(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+                        />
+                      </div>
+                    </div>
+                    {ncComprasFiltradas.length === 0
+                      ? <EmptyState icon={<FileText className="w-full h-full" />} text="Sin notas de crédito de proveedores en el período" />
+                      : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-slate-100 text-left">
+                                {['Fecha', 'Proveedor', 'Estado', 'Observación', 'N° Factura', 'Registrado por', 'Monto'].map(h => (
+                                  <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                              {ncComprasFiltradas.map(f => (
+                                <tr key={f.id} className="hover:bg-slate-50 transition-colors">
+                                  <td className="py-2.5 pr-4 text-slate-600 whitespace-nowrap">{f.fecha}</td>
+                                  <td className="py-2.5 pr-4">
+                                    <p className="font-medium text-slate-800">{f.proveedor}</p>
+                                    <p className="text-xs text-slate-400">{f.ruc}</p>
+                                  </td>
+                                  <td className="py-2.5 pr-4">
+                                    <Badge color={NC_ESTADO_COLOR[f.estado] ?? 'gray'}>{f.estado}</Badge>
+                                  </td>
+                                  <td className="py-2.5 pr-4 text-slate-600 max-w-[180px] truncate" title={f.observacion}>{f.observacion || '—'}</td>
+                                  <td className="py-2.5 pr-4 font-mono text-xs text-slate-500">{f.nro_factura_compra || '—'}</td>
+                                  <td className="py-2.5 pr-4 text-slate-600">{f.creado_por || '—'}</td>
+                                  <td className="py-2.5 tabular-nums font-bold text-green-700">{formatGs(f.monto_total)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )
+                    }
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {!ncVentaData && !ncCompraData && !loadingNc && (
+            <EmptyState icon={<FileText className="w-full h-full" />} text='Seleccioná un período y hacé clic en "Buscar"' />
+          )}
+        </>
+      )}
+
+      {/* ── Aging Proveedores ─────────────────────────────────────────── */}
+      {tab === 'aging_proveedores' && (
+        <>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button onClick={cargarAgingProveedores} loading={loadingAp}>Actualizar</Button>
+              {apData && (
+                <Button variant="secondary" onClick={exportarApCSV}>
+                  <Download className="w-4 h-4" />CSV
+                </Button>
+              )}
+            </div>
+            {apData && (
+              <p className="text-sm text-slate-400">Al {apData.fecha}</p>
+            )}
+          </div>
+
+          {apData && (
+            <>
+              {apData.resumen.proveedores_con_deuda > 0 && apData.resumen.aging['90+'] > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                  <p className="text-sm text-red-700 font-medium">
+                    {`Hay deuda con proveedores mayor a 90 días: ${formatGs(apData.resumen.aging['90+'])}`}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <KpiCard label="Total a pagar" value={formatGs(apData.resumen.total_deuda)} color="text-red-600" />
+                <KpiCard label="Proveedores" value={apData.resumen.proveedores_con_deuda} />
+                <KpiCard label="0–30 días" value={formatGs(apData.resumen.aging['0-30'])} color="text-green-700" />
+                <KpiCard label="+90 días" value={formatGs(apData.resumen.aging['90+'])} color="text-red-600" />
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {(['0-30', '31-60', '61-90', '90+'] as const).map(bucket => (
+                  <div key={bucket} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3">
+                    <Badge color={AGING_COLOR[bucket]}>{bucket} días</Badge>
+                    <p className="text-lg font-bold tabular-nums mt-2 text-slate-800">{formatGs(apData.resumen.aging[bucket])}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="relative flex-1 max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text" placeholder="Buscar proveedor o RUC…"
+                      value={searchAp} onChange={e => setSearchAp(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+                    />
+                  </div>
+                </div>
+                {apDetalleSorted.length === 0
+                  ? <EmptyState icon={<ShoppingCart className="w-full h-full" />} text="Sin proveedores con deuda pendiente" />
+                  : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-left">
+                            {['Proveedor', 'Contacto', 'Saldo (Gs)', 'Días', 'Aging'].map(h => (
+                              <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {apDetalleSorted.map(r => (
+                            <tr key={r.proveedor_id} className="hover:bg-slate-50 transition-colors">
+                              <td className="py-2.5 pr-4">
+                                <p className="font-medium text-slate-800">{r.proveedor}</p>
+                                <p className="text-xs text-slate-400">{r.ruc || '—'}</p>
+                              </td>
+                              <td className="py-2.5 pr-4 text-sm text-slate-500">
+                                {r.telefono && <p>{r.telefono}</p>}
+                                {r.email && <p>{r.email}</p>}
+                                {!r.telefono && !r.email && <span className="text-slate-300">—</span>}
+                              </td>
+                              <td className="py-2.5 pr-4 tabular-nums font-bold text-red-600">{formatGs(r.saldo_deuda)}</td>
+                              <td className="py-2.5 pr-4 tabular-nums text-slate-600">{r.dias_atraso}d</td>
+                              <td className="py-2.5"><Badge color={AGING_COLOR[r.aging] ?? 'gray'}>{r.aging}</Badge></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                }
+              </div>
+            </>
+          )}
+
+          {!apData && !loadingAp && (
+            <EmptyState icon={<ShoppingCart className="w-full h-full" />} text="Hacé clic en Actualizar para cargar el reporte" />
+          )}
+        </>
+      )}
+
+      {/* ── Compras / Proveedores ─────────────────────────────────────── */}
+      {tab === 'compras_proveedores' && (
+        <>
+          <FilterBar>
+            <div>
+              <label className={labelClass}>Desde</label>
+              <input type="date" value={cpDesde} onChange={e => setCpDesde(e.target.value)} className={inputDateClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Hasta</label>
+              <input type="date" value={cpHasta} onChange={e => setCpHasta(e.target.value)} className={inputDateClass} />
+            </div>
+            <Button onClick={buscarCompras} loading={loadingCp}>Buscar</Button>
+            {cpData && (
+              <Button variant="secondary" onClick={exportarCpCSV}><Download className="w-4 h-4" />CSV</Button>
+            )}
+          </FilterBar>
+
+          {cpData && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <KpiCard label="Total comprado" value={formatGs(cpData.resumen.monto_total)} color="text-blue-700" />
+                <KpiCard label="Compras" value={cpData.resumen.total_compras} />
+                <KpiCard label="Proveedores" value={cpData.resumen.n_proveedores} />
+              </div>
+
+              {/* Funnel OC */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <p className="text-sm font-semibold text-slate-700 mb-3">Funnel Órdenes de Compra — {cpData.periodo.desde} al {cpData.periodo.hasta}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  {([
+                    { key: 'BORRADOR', label: 'Borrador', color: 'text-slate-500' },
+                    { key: 'PENDIENTE', label: 'Pendiente', color: 'text-yellow-600' },
+                    { key: 'APROBADA', label: 'Aprobada', color: 'text-blue-600' },
+                    { key: 'RECHAZADA', label: 'Rechazada', color: 'text-red-600' },
+                    { key: 'CONVERTIDA', label: 'Convertida', color: 'text-green-700' },
+                  ] as const).map(({ key, label, color }) => (
+                    <div key={key} className="text-center">
+                      <p className={`text-2xl font-bold tabular-nums ${color}`}>{cpData.funnel_oc[key]}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+                {cpData.funnel_oc.total > 0 && (
+                  <p className="text-xs text-slate-400 mt-3 text-right">
+                    Tasa de conversión: {cpData.funnel_oc.total > 0 ? Math.round(cpData.funnel_oc.CONVERTIDA / cpData.funnel_oc.total * 100) : 0}%
+                  </p>
+                )}
+              </div>
+
+              {/* Tabla por proveedor */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <p className="text-sm font-semibold text-slate-700 flex-1">Gasto y entrega por proveedor</p>
+                  <div className="relative max-w-xs w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text" placeholder="Buscar proveedor…"
+                      value={searchCp} onChange={e => setSearchCp(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+                    />
+                  </div>
+                </div>
+                {cpFiltrado.length === 0
+                  ? <EmptyState icon={<ShoppingBag className="w-full h-full" />} text="Sin compras en el período" />
+                  : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-left">
+                            {['Proveedor', 'N° Compras', 'Monto Total', 'Entregadas', '% Entrega', 'Pagadas'].map(h => (
+                              <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {cpFiltrado.map(p => (
+                            <tr key={p.proveedor_id} className="hover:bg-slate-50 transition-colors">
+                              <td className="py-2.5 pr-4">
+                                <p className="font-medium text-slate-800">{p.proveedor}</p>
+                                <p className="text-xs text-slate-400">{p.ruc || '—'}</p>
+                              </td>
+                              <td className="py-2.5 pr-4 tabular-nums text-slate-600">{p.n_compras}</td>
+                              <td className="py-2.5 pr-4 tabular-nums font-bold text-blue-700">{formatGs(p.monto_total)}</td>
+                              <td className="py-2.5 pr-4">
+                                <span className="tabular-nums text-slate-600">{p.entregadas}</span>
+                                {p.entrega_pendiente > 0 && (
+                                  <span className="ml-1.5 text-xs text-orange-500">({p.entrega_pendiente} pend.)</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 pr-4">
+                                <span className={`tabular-nums font-semibold text-sm ${p.tasa_entrega >= 90 ? 'text-green-700' : p.tasa_entrega >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                  {p.tasa_entrega}%
+                                </span>
+                              </td>
+                              <td className="py-2.5">
+                                <span className="tabular-nums text-slate-600">{p.pagadas}</span>
+                                {p.pago_pendiente > 0 && (
+                                  <span className="ml-1.5 text-xs text-red-500">({p.pago_pendiente} pend.)</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                }
+              </div>
+            </>
+          )}
+
+          {!cpData && !loadingCp && (
+            <EmptyState icon={<ShoppingBag className="w-full h-full" />} text='Seleccioná un período y hacé clic en "Buscar"' />
+          )}
+        </>
+      )}
+
+      {/* ── Diferencias de Caja ───────────────────────────────────────── */}
+      {tab === 'diferencias_caja' && (
+        <>
+          <FilterBar>
+            <div>
+              <label className={labelClass}>Desde</label>
+              <input type="date" value={dcDesde} onChange={e => setDcDesde(e.target.value)} className={inputDateClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Hasta</label>
+              <input type="date" value={dcHasta} onChange={e => setDcHasta(e.target.value)} className={inputDateClass} />
+            </div>
+            <Button onClick={buscarDiferencias} loading={loadingDc}>Buscar</Button>
+            {dcData && (
+              <Button variant="secondary" onClick={exportarDcCSV}><Download className="w-4 h-4" />CSV</Button>
+            )}
+          </FilterBar>
+
+          {dcData && (
+            <>
+              {dcData.resumen.n_positivos > 0 && (
+                <div className="bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0" />
+                  <p className="text-sm text-orange-700 font-medium">
+                    {`${dcData.resumen.n_positivos} cierre${dcData.resumen.n_positivos > 1 ? 's' : ''} con faltante — revisá el detalle por empleado.`}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <KpiCard label="Diferencia total" value={formatGs(dcData.resumen.total_diferencia)}
+                  color={dcData.resumen.total_diferencia > 0 ? 'text-red-600' : dcData.resumen.total_diferencia < 0 ? 'text-green-700' : 'text-slate-600'} />
+                <KpiCard label="Cierres" value={dcData.resumen.n_cierres} />
+                <KpiCard label="Con faltante" value={dcData.resumen.n_positivos} color={dcData.resumen.n_positivos > 0 ? 'text-red-600' : 'text-slate-600'} />
+                <KpiCard label="Con sobrante" value={dcData.resumen.n_negativos} color="text-green-700" />
+              </div>
+
+              {/* Resumen por empleado */}
+              {dcData.por_empleado.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">Diferencia por empleado</p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-left">
+                          {['Empleado', 'N° Cierres', 'Diferencia Total', 'Promedio', 'Mayor faltante'].map(h => (
+                            <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {dcData.por_empleado.map(r => (
+                          <tr key={r.empleado_id} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 pr-4 font-medium text-slate-800">{r.empleado}</td>
+                            <td className="py-2.5 pr-4 tabular-nums text-slate-600">{r.n_cierres}</td>
+                            <td className="py-2.5 pr-4">
+                              <span className={`tabular-nums font-bold text-sm ${r.diferencia_total > 0 ? 'text-red-600' : r.diferencia_total < 0 ? 'text-green-700' : 'text-slate-400'}`}>
+                                {formatGs(r.diferencia_total)}
+                              </span>
+                            </td>
+                            <td className="py-2.5 pr-4 tabular-nums text-slate-600">{formatGs(r.diferencia_promedio)}</td>
+                            <td className="py-2.5 tabular-nums text-red-600 font-semibold">{formatGs(r.mayor_diferencia)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Tendencia cronológica */}
+              {dcData.tendencia.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                  <p className="text-sm font-semibold text-slate-700 mb-4">Tendencia cronológica</p>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={dcData.tendencia} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="fecha" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false}
+                        tickFormatter={v => fmtGsShort(v)} />
+                      <Tooltip
+                        formatter={(v, _n, p) => [formatGs(Number(v)), p.payload.empleado]}
+                        labelFormatter={l => `Fecha: ${l}`}
+                        contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
+                      />
+                      <Bar dataKey="diferencia" name="Diferencia" fill="#f97316" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </>
+          )}
+
+          {!dcData && !loadingDc && (
+            <EmptyState icon={<AlertTriangle className="w-full h-full" />} text='Seleccioná un período y hacé clic en "Buscar"' />
+          )}
+        </>
+      )}
+
+      {/* ── Medios de Pago ────────────────────────────────────────────── */}
+      {tab === 'medios_pago' && (
+        <>
+          <FilterBar>
+            <div>
+              <label className={labelClass}>Desde</label>
+              <input type="date" value={mpDesde} onChange={e => setMpDesde(e.target.value)} className={inputDateClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Hasta</label>
+              <input type="date" value={mpHasta} onChange={e => setMpHasta(e.target.value)} className={inputDateClass} />
+            </div>
+            <Button onClick={buscarMediosPago} loading={loadingMp}>Buscar</Button>
+            {mpData && (
+              <Button variant="secondary" onClick={exportarMpCSV}><Download className="w-4 h-4" />CSV</Button>
+            )}
+          </FilterBar>
+
+          {mpData && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <KpiCard label="Total cobrado" value={formatGs(mpData.resumen.monto_total)} color="text-green-700" />
+                <KpiCard label="Pagos" value={mpData.resumen.total_pagos} />
+                <KpiCard label="Medios activos" value={mpData.resumen.n_medios} />
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <p className="text-sm font-semibold text-slate-700 mb-4">Distribución por medio de pago</p>
+                <div className="space-y-3">
+                  {mpData.por_medio_pago.map(f => {
+                    const pct = mpTotal > 0 ? Math.round(f.monto_total / mpTotal * 100) : 0
+                    return (
+                      <div key={f.medio_pago_id ?? f.descripcion}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-slate-700">{f.descripcion}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-slate-400">{f.n_pagos} pago{f.n_pagos !== 1 ? 's' : ''}</span>
+                            <span className="text-sm font-bold tabular-nums text-slate-800">{formatGs(f.monto_total)}</span>
+                            <span className="text-xs font-semibold text-slate-500 w-8 text-right">{pct}%</span>
+                          </div>
+                        </div>
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                        {f.n_pendientes > 0 && (
+                          <p className="text-xs text-orange-500 mt-0.5">
+                            {`${f.n_pendientes} pendiente${f.n_pendientes > 1 ? 's' : ''} sin conciliar — ${formatGs(f.monto_pendiente)}`}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <p className="text-sm font-semibold text-slate-700 mb-3">Detalle por medio de pago</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-left">
+                        {['Medio de Pago', 'N° Pagos', 'Monto Total', 'Conciliados', 'Monto Conciliado', 'Pendientes'].map(h => (
+                          <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {mpData.por_medio_pago.map(f => (
+                        <tr key={f.medio_pago_id ?? f.descripcion} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-2.5 pr-4 font-medium text-slate-800">{f.descripcion}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-slate-600">{f.n_pagos}</td>
+                          <td className="py-2.5 pr-4 tabular-nums font-bold text-slate-800">{formatGs(f.monto_total)}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-green-700">{f.n_conciliados}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-green-700">{formatGs(f.monto_conciliado)}</td>
+                          <td className="py-2.5">
+                            {f.n_pendientes > 0
+                              ? <span className="tabular-nums text-orange-600 font-medium">{f.n_pendientes} ({formatGs(f.monto_pendiente)})</span>
+                              : <span className="text-slate-300">—</span>
+                            }
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!mpData && !loadingMp && (
+            <EmptyState icon={<CreditCard className="w-full h-full" />} text='Seleccioná un período y hacé clic en "Buscar"' />
+          )}
+        </>
+      )}
+
+      {/* ── Consumo por Grado ─────────────────────────────────────────── */}
+      {tab === 'consumo_grado' && (
+        <>
+          <FilterBar>
+            <div>
+              <label className={labelClass}>Desde</label>
+              <input type="date" value={cgDesde} onChange={e => setCgDesde(e.target.value)} className={inputDateClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Hasta</label>
+              <input type="date" value={cgHasta} onChange={e => setCgHasta(e.target.value)} className={inputDateClass} />
+            </div>
+            <Button onClick={buscarConsumoGrado} loading={loadingCg}>Buscar</Button>
+            {cgData && (
+              <Button variant="secondary" onClick={exportarCgCSV}><Download className="w-4 h-4" />CSV</Button>
+            )}
+          </FilterBar>
+
+          {cgData && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <KpiCard label="Total consumos" value={cgData.resumen.total_consumos} color="text-green-700" />
+                <KpiCard label="Rechazados" value={cgData.resumen.total_rechazados}
+                  color={cgData.resumen.total_rechazados > 0 ? 'text-red-600' : 'text-slate-600'} />
+                <KpiCard label="Tasa de rechazo" value={`${cgData.resumen.tasa_rechazo_global}%`}
+                  color={cgData.resumen.tasa_rechazo_global > 5 ? 'text-red-600' : 'text-slate-600'} />
+              </div>
+
+              {/* Gráfico consumos por grado */}
+              {cgData.por_grado.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                  <p className="text-sm font-semibold text-slate-700 mb-4">Consumos por grado</p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={cgData.por_grado} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="grado" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        formatter={(v, n) => [v, n === 'n_consumos' ? 'Consumos' : 'Rechazados']}
+                        contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
+                      />
+                      <Legend formatter={n => n === 'n_consumos' ? 'Consumos' : 'Rechazados'} />
+                      <Bar dataKey="n_consumos" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="n_rechazados" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Tabla por grado */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <p className="text-sm font-semibold text-slate-700 mb-3">Detalle por grado</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-left">
+                        {['Grado', 'Consumos', 'Rechazados', 'Anulados', '% Rechazo', 'Monto'].map(h => (
+                          <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {cgData.por_grado.map(r => (
+                        <tr key={r.grado} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-2.5 pr-4 font-medium text-slate-800">{r.grado}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-green-700 font-semibold">{r.n_consumos}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-red-600">{r.n_rechazados || '—'}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-slate-400">{r.n_anulados || '—'}</td>
+                          <td className="py-2.5 pr-4">
+                            <span className={`tabular-nums font-semibold text-sm ${r.tasa_rechazo > 5 ? 'text-red-600' : r.tasa_rechazo > 0 ? 'text-yellow-600' : 'text-slate-400'}`}>
+                              {r.tasa_rechazo > 0 ? `${r.tasa_rechazo}%` : '—'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 tabular-nums text-slate-700">{formatGs(r.monto_total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Horarios pico */}
+              {cgData.horarios_pico.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                  <p className="text-sm font-semibold text-slate-700 mb-4">Distribución horaria de consumos</p>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart
+                      data={cgData.horarios_pico.map(h => ({ hora: `${String(h.hora).padStart(2, '0')}:00`, n: h.n }))}
+                      margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="hora" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        formatter={(v) => [v, 'Consumos']}
+                        contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
+                      />
+                      <Bar dataKey="n" name="Consumos" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </>
+          )}
+
+          {!cgData && !loadingCg && (
+            <EmptyState icon={<UtensilsCrossed className="w-full h-full" />} text='Seleccioná un período y hacé clic en "Buscar"' />
+          )}
+        </>
+      )}
+
+      {/* ── Cobranza Almuerzos ────────────────────────────────────────── */}
+      {tab === 'cobranza_almuerzos' && (
+        <>
+          <FilterBar>
+            <div>
+              <label className={labelClass}>Año</label>
+              <input
+                type="number" value={cbAnio}
+                onChange={e => setCbAnio(Number(e.target.value))}
+                min={2020} max={2030}
+                className={inputDateClass + ' w-28'}
+              />
+            </div>
+            <Button onClick={buscarCobranza} loading={loadingCb}>Buscar</Button>
+            {cbData && (
+              <Button variant="secondary" onClick={exportarCbCSV}><Download className="w-4 h-4" />CSV</Button>
+            )}
+          </FilterBar>
+
+          {cbData && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <KpiCard label="Facturado anual" value={formatGs(cbData.resumen.monto_anual)} />
+                <KpiCard label="Cobrado" value={formatGs(cbData.resumen.cobrado_anual)} color="text-green-700" />
+                <KpiCard label="Pendiente" value={formatGs(cbData.resumen.pendiente_anual)}
+                  color={cbData.resumen.pendiente_anual > 0 ? 'text-red-600' : 'text-slate-600'} />
+                <KpiCard label="Tasa de cobro" value={`${cbData.resumen.tasa_cobro_anual}%`}
+                  color={cbData.resumen.tasa_cobro_anual >= 90 ? 'text-green-700' : cbData.resumen.tasa_cobro_anual >= 70 ? 'text-yellow-600' : 'text-red-600'} />
+              </div>
+
+              {/* Gráfico tendencia por mes */}
+              {cbData.por_mes.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                  <p className="text-sm font-semibold text-slate-700 mb-4">Tendencia de cobro mensual — {cbData.anio}</p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={cbData.por_mes} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="mes_nombre" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false}
+                        tickFormatter={v => fmtGsShort(v)} />
+                      <Tooltip
+                        formatter={(v, n) => [formatGs(Number(v)), n === 'monto_cobrado' ? 'Cobrado' : 'Pendiente']}
+                        contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
+                      />
+                      <Legend formatter={n => n === 'monto_cobrado' ? 'Cobrado' : 'Pendiente'} />
+                      <Bar dataKey="monto_cobrado" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="monto_pendiente" stackId="a" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Tabla por mes */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <p className="text-sm font-semibold text-slate-700 mb-3">Estado de cobro por mes</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-left">
+                        {['Mes', 'Alumnos', 'Pagados', 'Parciales', 'Pendientes', 'Total', 'Cobrado', 'Pendiente', '% Cobro'].map(h => (
+                          <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {cbData.por_mes.map(m => (
+                        <tr key={m.mes} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-2.5 pr-4 font-medium text-slate-800">{m.mes_nombre}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-slate-600">{m.n_alumnos}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-green-700">{m.pagados}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-blue-600">{m.parciales || '—'}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-orange-600">{m.pendientes || '—'}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-slate-700">{formatGs(m.monto_total)}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-green-700">{formatGs(m.monto_cobrado)}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-red-600">{m.monto_pendiente > 0 ? formatGs(m.monto_pendiente) : '—'}</td>
+                          <td className="py-2.5">
+                            <span className={`tabular-nums font-semibold text-sm ${m.tasa_cobro >= 90 ? 'text-green-700' : m.tasa_cobro >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              {m.tasa_cobro}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Por forma de cobro */}
+              {cbData.por_forma_cobro.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">Distribución por forma de cobro</p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-left">
+                          {['Forma de cobro', 'Cuentas', 'Total', 'Cobrado', '% Cobro'].map(h => (
+                            <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {cbData.por_forma_cobro.map(f => {
+                          const tasa = f.monto_total > 0 ? Math.round(f.monto_cobrado / f.monto_total * 100) : 0
+                          return (
+                            <tr key={f.forma_cobro} className="hover:bg-slate-50 transition-colors">
+                              <td className="py-2.5 pr-4 font-medium text-slate-800">
+                                {FORMA_COBRO_LABEL[f.forma_cobro] ?? f.forma_cobro}
+                              </td>
+                              <td className="py-2.5 pr-4 tabular-nums text-slate-600">{f.n_cuentas}</td>
+                              <td className="py-2.5 pr-4 tabular-nums text-slate-700">{formatGs(f.monto_total)}</td>
+                              <td className="py-2.5 pr-4 tabular-nums text-green-700">{formatGs(f.monto_cobrado)}</td>
+                              <td className="py-2.5">
+                                <span className={`tabular-nums font-semibold text-sm ${tasa >= 90 ? 'text-green-700' : tasa >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                  {tasa}%
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {!cbData && !loadingCb && (
+            <EmptyState icon={<TrendingUp className="w-full h-full" />} text='Seleccioná el año y hacé clic en "Buscar"' />
+          )}
+        </>
+      )}
+
+      {/* ── Auditoría ───────────────────────────────────────────────── */}
+      {tab === 'auditoria' && (
+        <>
+          <FilterBar>
+            <div>
+              <label className={labelClass}>Desde</label>
+              <input type="date" value={audDesde} onChange={e => setAudDesde(e.target.value)} className={inputDateClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Hasta</label>
+              <input type="date" value={audHasta} onChange={e => setAudHasta(e.target.value)} className={inputDateClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Operación</label>
+              <input type="text" value={audOperacion} onChange={e => setAudOperacion(e.target.value)} placeholder="Filtrar..." className={inputDateClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Tabla</label>
+              <input type="text" value={audTabla} onChange={e => setAudTabla(e.target.value)} placeholder="Filtrar..." className={inputDateClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Resultado</label>
+              <select value={audResultado} onChange={e => setAudResultado(e.target.value)} className={inputDateClass}>
+                <option value="">Todos</option>
+                <option value="EXITO">Éxito</option>
+                <option value="ERROR">Error</option>
+              </select>
+            </div>
+            <Button onClick={buscarAuditoria} loading={loadingAud}>Buscar</Button>
+          </FilterBar>
+
+          {audData && (
+            <>
+              {/* KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KpiCard label="Total operaciones" value={audData.resumen.total.toLocaleString('es-PY')} />
+                {audData.resumen.por_resultado.map(r => (
+                  <KpiCard
+                    key={r.resultado}
+                    label={r.resultado}
+                    value={r.count.toLocaleString('es-PY')}
+                    color={r.resultado === 'EXITO' ? 'text-green-700' : 'text-red-600'}
+                  />
+                ))}
+              </div>
+
+              {/* Top operaciones + tablas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">Top operaciones</p>
+                  <div className="space-y-2">
+                    {audData.resumen.top_operaciones.map(op => (
+                      <div key={op.operacion} className="flex items-center justify-between text-sm">
+                        <span className="font-mono text-slate-700 truncate max-w-[70%]">{op.operacion}</span>
+                        <span className="tabular-nums font-semibold text-slate-900">{op.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">Top tablas afectadas</p>
+                  <div className="space-y-2">
+                    {audData.resumen.top_tablas.map(t => (
+                      <div key={t.tabla_afectada} className="flex items-center justify-between text-sm">
+                        <span className="font-mono text-slate-700 truncate max-w-[70%]">{t.tabla_afectada}</span>
+                        <span className="tabular-nums font-semibold text-slate-900">{t.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Detalle */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <p className="text-sm font-semibold text-slate-700 mb-3">
+                  Últimas {audData.detalle.length} operaciones
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-left">
+                        {['Fecha', 'Usuario', 'Operación', 'Tabla', 'ID Reg.', 'Resultado', 'IP', 'Descripción'].map(h => (
+                          <th key={h} className="pb-2 pr-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {audData.detalle.map(row => (
+                        <tr key={row.id_auditoria} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-2 pr-3 whitespace-nowrap text-slate-500 text-xs">{formatFecha(row.fecha_operacion)}</td>
+                          <td className="py-2 pr-3 text-slate-700 text-xs">{row.usuario__email ?? '—'}</td>
+                          <td className="py-2 pr-3 font-mono text-slate-800 text-xs">{row.operacion}</td>
+                          <td className="py-2 pr-3 font-mono text-slate-600 text-xs">{row.tabla_afectada ?? '—'}</td>
+                          <td className="py-2 pr-3 tabular-nums text-slate-500 text-xs">{row.id_registro ?? '—'}</td>
+                          <td className="py-2 pr-3">
+                            <span className={`text-xs font-semibold ${row.resultado === 'EXITO' ? 'text-green-700' : 'text-red-600'}`}>
+                              {row.resultado}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-3 font-mono text-slate-500 text-xs">{row.ip_address ?? '—'}</td>
+                          <td className="py-2 text-slate-600 text-xs max-w-xs truncate">
+                            {row.mensaje_error ? (
+                              <span className="text-red-600">{row.mensaje_error}</span>
+                            ) : (row.descripcion ?? '—')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!audData && !loadingAud && (
+            <EmptyState icon={<Search className="w-full h-full" />} text='Seleccioná un período y hacé clic en "Buscar"' />
+          )}
+        </>
+      )}
+
+      {/* ── Intentos de Login ───────────────────────────────────────── */}
+      {tab === 'intentos_login' && (
+        <>
+          <FilterBar>
+            <div>
+              <label className={labelClass}>Desde</label>
+              <input type="date" value={ilDesde} onChange={e => setIlDesde(e.target.value)} className={inputDateClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Hasta</label>
+              <input type="date" value={ilHasta} onChange={e => setIlHasta(e.target.value)} className={inputDateClass} />
+            </div>
+            <Button onClick={buscarIntentosLogin} loading={loadingIl}>Buscar</Button>
+          </FilterBar>
+
+          {ilData && (
+            <>
+              {/* KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KpiCard label="Total intentos" value={ilData.resumen.total.toLocaleString('es-PY')} />
+                <KpiCard label="Fallidos" value={ilData.resumen.fallidos.toLocaleString('es-PY')} color="text-red-600" />
+                <KpiCard label="Exitosos" value={ilData.resumen.exitosos.toLocaleString('es-PY')} color="text-green-700" />
+                <KpiCard label="Tasa de fallo" value={`${ilData.resumen.tasa_fallo}%`} color={ilData.resumen.tasa_fallo > 30 ? 'text-red-600' : 'text-yellow-600'} />
+              </div>
+
+              {/* Tendencia */}
+              {ilData.tendencia.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">Tendencia diaria</p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={ilData.tendencia}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="exitosos" name="Exitosos" fill="#22c55e" stackId="a" />
+                      <Bar dataKey="fallidos" name="Fallidos" fill="#ef4444" stackId="a" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Top IPs + Top emails */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">IPs con más fallos</p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-left">
+                          {['IP', 'Intentos fallidos'].map(h => (
+                            <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {ilData.por_ip.map(row => (
+                          <tr key={row.ip_address} className="hover:bg-slate-50">
+                            <td className="py-2 pr-4 font-mono text-slate-800">{row.ip_address}</td>
+                            <td className="py-2 tabular-nums font-semibold text-red-600">{row.n_fallidos}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">Emails con más fallos</p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-left">
+                          {['Email', 'Intentos fallidos'].map(h => (
+                            <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {ilData.por_email.map(row => (
+                          <tr key={row.email} className="hover:bg-slate-50">
+                            <td className="py-2 pr-4 text-slate-800 text-xs">{row.email}</td>
+                            <td className="py-2 tabular-nums font-semibold text-red-600">{row.n_fallidos}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Por motivo */}
+              {ilData.por_motivo.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">Fallos por motivo</p>
+                  <div className="space-y-2">
+                    {ilData.por_motivo.map(m => (
+                      <div key={m.motivo_fallo} className="flex items-center justify-between text-sm">
+                        <span className="text-slate-700">{m.motivo_fallo}</span>
+                        <span className="tabular-nums font-semibold text-red-600">{m.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {!ilData && !loadingIl && (
+            <EmptyState icon={<AlertTriangle className="w-full h-full" />} text='Seleccioná un período y hacé clic en "Buscar"' />
+          )}
+        </>
+      )}
+
+      {/* ── Personal Inactivo ────────────────────────────────────────── */}
+      {tab === 'personal_inactivo' && (
+        <>
+          <FilterBar>
+            <div>
+              <label className={labelClass}>Sin acceso hace más de (días)</label>
+              <input
+                type="number" min={1} max={365}
+                value={piDias}
+                onChange={e => setPiDias(Number(e.target.value))}
+                className={inputDateClass}
+                style={{ width: 100 }}
+              />
+            </div>
+            <Button onClick={buscarPersonalInactivo} loading={loadingPi}>Buscar</Button>
+          </FilterBar>
+
+          {piData && (
+            <>
+              {/* KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KpiCard label="Total personal" value={piData.resumen.total} />
+                <KpiCard label="Activos" value={piData.resumen.activos} color="text-green-700" />
+                <KpiCard label="Desactivados" value={piData.resumen.inactivos} color="text-slate-500" />
+                <KpiCard
+                  label={`Sin acceso +${piData.resumen.n_dias}d`}
+                  value={piData.resumen.sin_acceso}
+                  color={piData.resumen.sin_acceso > 0 ? 'text-red-600' : 'text-green-700'}
+                />
+              </div>
+
+              {/* Por rol */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <p className="text-sm font-semibold text-slate-700 mb-3">Resumen por rol</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-left">
+                        {['Rol', 'Total', 'Activos', 'Sin acceso'].map(h => (
+                          <th key={h} className="pb-2 pr-6 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {piData.por_rol.filter(r => r.total > 0).map(r => (
+                        <tr key={r.rol} className="hover:bg-slate-50">
+                          <td className="py-2.5 pr-6 font-medium text-slate-800">{ROL_LABEL[r.rol] ?? r.rol}</td>
+                          <td className="py-2.5 pr-6 tabular-nums text-slate-600">{r.total}</td>
+                          <td className="py-2.5 pr-6 tabular-nums text-green-700">{r.activos}</td>
+                          <td className="py-2.5 tabular-nums font-semibold">
+                            <span className={r.sin_acceso > 0 ? 'text-red-600' : 'text-slate-400'}>{r.sin_acceso}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Detalle */}
+              {piData.detalle.length > 0 ? (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">
+                    Usuarios sin acceso en los últimos {piData.resumen.n_dias} días ({piData.detalle.length})
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-left">
+                          {['Nombre', 'Email', 'Rol', 'Último acceso', 'Creado'].map(h => (
+                            <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {piData.detalle.map(u => (
+                          <tr key={u.id} className="hover:bg-slate-50">
+                            <td className="py-2.5 pr-4 font-medium text-slate-800">{u.nombre} {u.apellido}</td>
+                            <td className="py-2.5 pr-4 text-slate-600 text-xs">{u.email}</td>
+                            <td className="py-2.5 pr-4">
+                              <span className="text-xs font-semibold text-slate-500">{ROL_LABEL[u.rol] ?? u.rol}</span>
+                            </td>
+                            <td className="py-2.5 pr-4 tabular-nums text-xs text-slate-500">
+                              {u.ultimo_acceso ? formatFecha(u.ultimo_acceso) : <span className="text-orange-500 font-semibold">Nunca</span>}
+                            </td>
+                            <td className="py-2.5 tabular-nums text-xs text-slate-400">
+                              {new Date(u.fecha_creacion).toLocaleDateString('es-PY')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-green-50 rounded-2xl border border-green-100 p-6 text-center">
+                  <p className="text-green-700 font-semibold">Todo el personal activo accedió en los últimos {piData.resumen.n_dias} días</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {!piData && !loadingPi && (
+            <EmptyState icon={<Users className="w-full h-full" />} text='Ingresá el umbral de días y hacé clic en "Buscar"' />
           )}
         </>
       )}
