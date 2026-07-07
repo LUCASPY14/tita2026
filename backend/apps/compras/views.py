@@ -9,6 +9,7 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from common.permissions import IsCajeroOrAdmin, IsAdminOrSupervisor, IsStaffUser
 from common.mixins import ExportCSVMixin
