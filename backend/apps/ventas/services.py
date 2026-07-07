@@ -179,8 +179,8 @@ class VentaService:
             # Validar saldo de tarjeta con objeto bloqueado
             if tipo == "CONTADO" and tarjeta_bloqueada:
                 if tarjeta_bloqueada.saldo_actual < monto_total and not tarjeta_bloqueada.permite_saldo_negativo:
-                    if pin_autorizacion:
-                        # PIN de padre/tutor: verificar y validar límite de crédito
+                    if pin_autorizacion and tarjeta_bloqueada.hijo_id:
+                        # PIN de padre/tutor: solo aplica para tarjetas de alumnos
                         cliente_responsable = tarjeta_bloqueada.hijo.cliente_responsable
                         if not cliente_responsable.check_pin(pin_autorizacion):
                             raise ValidationError({"error": "PIN de autorización incorrecto."})
@@ -200,8 +200,8 @@ class VentaService:
                         })
 
             # 2. Crear Venta
-            # Si no se pasó hijo explícitamente pero hay tarjeta, tomarlo de la tarjeta
-            if hijo is None and tarjeta_bloqueada is not None:
+            # Si no se pasó hijo explícitamente pero hay tarjeta de alumno, tomarlo de la tarjeta
+            if hijo is None and tarjeta_bloqueada is not None and tarjeta_bloqueada.hijo_id:
                 hijo = tarjeta_bloqueada.hijo
 
             venta = Venta.objects.create(
@@ -305,7 +305,8 @@ class VentaService:
                     creado_por=cajero,
                 )
 
-                if tarjeta_bloqueada.saldo_actual < 0:
+                if tarjeta_bloqueada.saldo_actual < 0 and tarjeta_bloqueada.hijo_id:
+                    # Notificación de saldo negativo solo para tarjetas de alumnos (tienen padre/tutor)
                     try:
                         cliente_resp = tarjeta_bloqueada.hijo.cliente_responsable
                         usuario_portal = cliente_resp.usuario_portal

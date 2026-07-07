@@ -14,7 +14,7 @@ from simple_history.models import HistoricalRecords
 # ==============================================================================
 
 class Tarjeta(models.Model):
-    """Tarjeta RFID/código de barras asociada a un estudiante."""
+    """Tarjeta RFID/código de barras asociada a un estudiante o docente/funcionario."""
 
     class Estado(models.TextChoices):
         ACTIVA = "ACTIVA", "Activa"
@@ -26,11 +26,22 @@ class Tarjeta(models.Model):
     codigo_barras = models.CharField(
         max_length=50, unique=True, blank=True, null=True
     )
+    # Exactamente uno de los dos debe estar presente (garantizado por CheckConstraint)
     hijo = models.OneToOneField(
         "clientes.Hijo",
         models.PROTECT,
         related_name="tarjeta",
+        null=True,
+        blank=True,
         help_text="Estudiante dueño de la tarjeta",
+    )
+    cliente_directo = models.OneToOneField(
+        "clientes.Cliente",
+        models.PROTECT,
+        related_name="tarjeta_directa",
+        null=True,
+        blank=True,
+        help_text="Docente/funcionario dueño de la tarjeta (cuando no es alumno)",
     )
     saldo_actual = models.DecimalField(
         max_digits=12, decimal_places=0, default=0,
@@ -61,9 +72,16 @@ class Tarjeta(models.Model):
             models.Index(fields=["estado"], name="idx_tarjeta_estado"),
             models.Index(fields=["estado", "fecha_vencimiento"], name="idx_tarjeta_estado_vto"),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(hijo__isnull=False) | models.Q(cliente_directo__isnull=False),
+                name="tarjeta_tiene_titular",
+            )
+        ]
 
     def __str__(self):
-        return f"Tarjeta {self.nro_tarjeta} - {self.hijo}"
+        titular = self.hijo if self.hijo_id else self.cliente_directo
+        return f"Tarjeta {self.nro_tarjeta} - {titular}"
 
     @property
     def saldo_disponible(self):
@@ -81,6 +99,10 @@ class Tarjeta(models.Model):
     def clean(self):
         from django.core.exceptions import ValidationError
 
+        if not self.hijo_id and not self.cliente_directo_id:
+            raise ValidationError("La tarjeta debe tener un alumno o un cliente (docente/funcionario).")
+        if self.hijo_id and self.cliente_directo_id:
+            raise ValidationError("La tarjeta no puede tener alumno y cliente directo al mismo tiempo.")
         if self.hijo_id:
             existente = Tarjeta.objects.filter(hijo=self.hijo).exclude(
                 nro_tarjeta=self.nro_tarjeta
@@ -88,6 +110,14 @@ class Tarjeta(models.Model):
             if existente:
                 raise ValidationError({
                     "hijo": "Este estudiante ya tiene una tarjeta asociada."
+                })
+        if self.cliente_directo_id:
+            existente = Tarjeta.objects.filter(cliente_directo=self.cliente_directo).exclude(
+                nro_tarjeta=self.nro_tarjeta
+            ).first()
+            if existente:
+                raise ValidationError({
+                    "cliente_directo": "Este cliente ya tiene una tarjeta asociada."
                 })
 
 
