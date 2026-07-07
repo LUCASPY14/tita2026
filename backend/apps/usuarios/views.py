@@ -62,6 +62,9 @@ def _generate_backup_codes(n=8):
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters as drf_filters
 
+from django.db.models import Count, Q, Avg
+from django.db.models.functions import TruncDate
+
 from .models import (
     Usuario,
     Empleado,
@@ -70,6 +73,8 @@ from .models import (
     RolPermiso,
     PerfilUsuario,
     SesionActiva,
+    AuditoriaOperacion,
+    IntentoLogin,
 )
 from .serializers import (
     UsuarioSerializer,
@@ -841,5 +846,197 @@ class LogoutView(APIView):
                 token.blacklist()
             except Exception:
                 pass
+
+
+# ── Reportes de seguridad y auditoría ────────────────────────────────────────
+
+class ReporteAuditoriaView(APIView):
+    """
+    GET /api/v1/usuarios/reporte-auditoria/
+    Parámetros: desde, hasta (YYYY-MM-DD), operacion, tabla, resultado
+    """
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        desde = request.query_params.get("desde")
+        hasta = request.query_params.get("hasta")
+        operacion_f = request.query_params.get("operacion")
+        tabla_f = request.query_params.get("tabla")
+        resultado_f = request.query_params.get("resultado")
+
+        qs = AuditoriaOperacion.objects.all()
+        if desde:
+            qs = qs.filter(fecha_operacion__date__gte=desde)
+        if hasta:
+            qs = qs.filter(fecha_operacion__date__lte=hasta)
+        if operacion_f:
+            qs = qs.filter(operacion__icontains=operacion_f)
+        if tabla_f:
+            qs = qs.filter(tabla_afectada__icontains=tabla_f)
+        if resultado_f:
+            qs = qs.filter(resultado=resultado_f)
+
+        por_resultado = list(
+            qs.values("resultado").annotate(count=Count("id_auditoria")).order_by("-count")
+        )
+        top_operaciones = list(
+            qs.values("operacion").annotate(count=Count("id_auditoria")).order_by("-count")[:10]
+        )
+        top_tablas = list(
+            qs.exclude(tabla_afectada=None).exclude(tabla_afectada="")
+            .values("tabla_afectada").annotate(count=Count("id_auditoria")).order_by("-count")[:10]
+        )
+
+        total = qs.count()
+
+        detalle = list(
+            qs.select_related("usuario")
+            .order_by("-fecha_operacion")[:200]
+            .values(
+                "id_auditoria",
+                "fecha_operacion",
+                "usuario__email",
+                "operacion",
+                "tabla_afectada",
+                "id_registro",
+                "resultado",
+                "ip_address",
+                "descripcion",
+                "mensaje_error",
+            )
+        )
+
+        return Response({
+            "resumen": {
+                "total": total,
+                "por_resultado": por_resultado,
+                "top_operaciones": top_operaciones,
+                "top_tablas": top_tablas,
+            },
+            "detalle": detalle,
+        })
+
+
+class ReporteIntentosLoginView(APIView):
+    """
+    GET /api/v1/usuarios/reporte-intentos-login/
+    Parámetros: desde, hasta (YYYY-MM-DD)
+    """
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        desde = request.query_params.get("desde")
+        hasta = request.query_params.get("hasta")
+
+        qs = IntentoLogin.objects.all()
+        if desde:
+            qs = qs.filter(fecha_intento__date__gte=desde)
+        if hasta:
+            qs = qs.filter(fecha_intento__date__lte=hasta)
+
+        total = qs.count()
+        fallidos = qs.filter(exitoso=False).count()
+        exitosos = qs.filter(exitoso=True).count()
+        tasa_fallo = round(fallidos / total * 100, 1) if total else 0
+
+        qs_fallidos = qs.filter(exitoso=False)
+
+        por_ip = list(
+            qs_fallidos.values("ip_address")
+            .annotate(n_fallidos=Count("id_intento"))
+            .order_by("-n_fallidos")[:20]
+        )
+        por_email = list(
+            qs_fallidos.values("email")
+            .annotate(n_fallidos=Count("id_intento"))
+            .order_by("-n_fallidos")[:20]
+        )
+        por_motivo = list(
+            qs_fallidos.exclude(motivo_fallo=None).exclude(motivo_fallo="")
+            .values("motivo_fallo").annotate(count=Count("id_intento")).order_by("-count")
+        )
+
+        tendencia = list(
+            qs.annotate(fecha=TruncDate("fecha_intento"))
+            .values("fecha")
+            .annotate(
+                total=Count("id_intento"),
+                fallidos=Count("id_intento", filter=Q(exitoso=False)),
+                exitosos=Count("id_intento", filter=Q(exitoso=True)),
+            )
+            .order_by("fecha")
+        )
+
+        return Response({
+            "resumen": {
+                "total": total,
+                "fallidos": fallidos,
+                "exitosos": exitosos,
+                "tasa_fallo": tasa_fallo,
+            },
+            "por_ip": por_ip,
+            "por_email": por_email,
+            "por_motivo": por_motivo,
+            "tendencia": tendencia,
+        })
+
+
+class ReportePersonalInactivoView(APIView):
+    """
+    GET /api/v1/usuarios/reporte-personal-inactivo/
+    Parámetro: dias (default 30) — umbral de inactividad
+    """
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        try:
+            dias = int(request.query_params.get("dias", 30))
+        except (TypeError, ValueError):
+            dias = 30
+
+        umbral = timezone.now() - timedelta(days=dias)
+        roles_staff = ["ADMIN", "SUPERVISOR", "CAJERO", "COBRADOR", "COCINA"]
+
+        qs = Usuario.objects.filter(rol__in=roles_staff)
+        total = qs.count()
+        activos = qs.filter(is_active=True).count()
+        inactivos = qs.filter(is_active=False).count()
+        sin_acceso = qs.filter(
+            is_active=True
+        ).filter(
+            Q(ultimo_acceso__isnull=True) | Q(ultimo_acceso__lt=umbral)
+        ).count()
+
+        por_rol = []
+        for rol in roles_staff:
+            qs_rol = qs.filter(rol=rol)
+            por_rol.append({
+                "rol": rol,
+                "total": qs_rol.count(),
+                "activos": qs_rol.filter(is_active=True).count(),
+                "sin_acceso": qs_rol.filter(is_active=True).filter(
+                    Q(ultimo_acceso__isnull=True) | Q(ultimo_acceso__lt=umbral)
+                ).count(),
+            })
+
+        detalle = list(
+            qs.filter(is_active=True).filter(
+                Q(ultimo_acceso__isnull=True) | Q(ultimo_acceso__lt=umbral)
+            )
+            .order_by("ultimo_acceso")
+            .values("id", "email", "nombre", "apellido", "rol", "ultimo_acceso", "fecha_creacion")
+        )
+
+        return Response({
+            "resumen": {
+                "total": total,
+                "activos": activos,
+                "inactivos": inactivos,
+                "sin_acceso": sin_acceso,
+                "n_dias": dias,
+            },
+            "por_rol": por_rol,
+            "detalle": detalle,
+        })
 
         return Response({"detail": "Sesión cerrada."})
