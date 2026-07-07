@@ -132,6 +132,7 @@ interface Tarjeta {
   saldo_actual: string; saldo_disponible: string; estado: string
   permite_saldo_negativo: boolean; limite_credito: string
   cliente_id: number; cliente_nombre: string; cliente_ruc: string
+  lista_precio_id: number | null; lista_es_default: boolean
 }
 interface ItemCarrito { producto: Producto; cantidad: number }
 interface MedioPagoDB { id: number; descripcion: string; activo: boolean; requiere_validacion: boolean }
@@ -324,6 +325,8 @@ export default function ModoRecreo() {
   const [tarjetaInput, setTarjetaInput] = useState('')
   const [tarjeta, setTarjeta] = useState<Tarjeta | null>(null)
   const [buscandoTarjeta, setBuscandoTarjeta] = useState(false)
+  // Precios de la lista asignada al cliente (vacío = usar precio_actual por defecto)
+  const [preciosCliente, setPreciosCliente] = useState<Record<number, number>>({})
 
   // Catálogo
   const [catFiltro, setCatFiltro] = useState('')
@@ -485,10 +488,15 @@ export default function ModoRecreo() {
       .slice(0, 5)
   }, [productos, salesMap])
 
+  // Precio efectivo para un producto: usa la lista del cliente si está disponible
+  const getPrecio = useCallback((p: Producto) =>
+    preciosCliente[p.id] ?? Number(p.precio_actual) ?? 0
+  , [preciosCliente])
+
   // Totales
   const total = useMemo(() =>
-    carrito.reduce((s, i) => s + (Number(i.producto.precio_actual) || 0) * i.cantidad, 0),
-  [carrito])
+    carrito.reduce((s, i) => s + getPrecio(i.producto) * i.cantidad, 0),
+  [carrito, getPrecio])
 
   const saldoDisponible = tarjeta
     ? (Number(tarjeta.saldo_disponible) || Number(tarjeta.saldo_actual) || 0)
@@ -529,6 +537,21 @@ export default function ModoRecreo() {
       sfx.card()
       setTarjeta(found)
       setCarrito([])
+
+      // Si el cliente tiene una lista de precios diferente a la por defecto, cargarla
+      setPreciosCliente({})
+      if (!found.lista_es_default && found.lista_precio_id) {
+        try {
+          const { data } = await api.get('/productos/productos/', {
+            params: { lista_precio_id: found.lista_precio_id, activo: true },
+          })
+          const prods: Producto[] = data.results ?? data
+          const mapa: Record<number, number> = {}
+          prods.forEach(p => { mapa[p.id] = Number(p.precio_actual) || 0 })
+          setPreciosCliente(mapa)
+        } catch { /* precio por defecto como fallback */ }
+      }
+
       const criticas = (found.hijo_restricciones ?? []).filter((r: RestriccionHijo) => r.severidad === 'CRITICA')
       if (criticas.length > 0) {
         sfx.restrict()
@@ -562,7 +585,7 @@ export default function ModoRecreo() {
     }
     // Validar saldo solo en modo PREPAGO
     if (modoPago === 'PREPAGO' && saldoDisponible !== null && !tarjeta?.permite_saldo_negativo) {
-      const nuevoTotal = total + (Number(producto.precio_actual) || 0)
+      const nuevoTotal = total + getPrecio(producto)
       if (nuevoTotal > saldoDisponible) {
         sfx.error(); toast.error('Saldo insuficiente'); return
       }
@@ -576,7 +599,7 @@ export default function ModoRecreo() {
     setAddedProductId(producto.id)
     clearTimeout(addedTimer.current)
     addedTimer.current = setTimeout(() => setAddedProductId(null), 200)
-  }, [isRestricto, saldoDisponible, tarjeta, total, modoPago])
+  }, [isRestricto, saldoDisponible, tarjeta, total, modoPago, getPrecio])
 
   // Quitar cantidad
   const handleQuitar = useCallback((id: number) => {
@@ -603,7 +626,7 @@ export default function ModoRecreo() {
         items: carrito.map(i => ({
           producto: i.producto.id,
           cantidad: i.cantidad,
-          precio_unitario: Number(i.producto.precio_actual) || 0,
+          precio_unitario: getPrecio(i.producto),
           iva_10: 0, iva_5: 0, monto_exenta: 0,
         })),
       }
@@ -648,6 +671,7 @@ export default function ModoRecreo() {
         setFlash('none')
         setCarrito([])
         setTarjeta(null)
+        setPreciosCliente({})
         setMontoEfectivo('')
         setReferencia('')
         ventaStartTime.current = 0
@@ -660,7 +684,7 @@ export default function ModoRecreo() {
       cobrandoRef.current = false
       setCobrando(false)
     }
-  }, [carrito, tarjeta, total, modoPago, medioPagoSelId, enqueue])
+  }, [carrito, tarjeta, total, modoPago, medioPagoSelId, enqueue, getPrecio])
 
   // ─── Cobrar ───────────────────────────────────────────────────────────────
   const handleCobrar = useCallback(async () => {
@@ -687,6 +711,7 @@ export default function ModoRecreo() {
   const handleCancelar = useCallback(() => {
     clearTimeout(flashTimer.current)
     setFlash('none'); setCarrito([]); setTarjeta(null)
+    setPreciosCliente({})
     setTarjetaInput(''); setProdSearch('')
     setMontoEfectivo(''); setReferencia(''); setShowPin(false)
     ventaStartTime.current = 0
@@ -1084,7 +1109,7 @@ export default function ModoRecreo() {
                         )}
                         <span className="text-3xl mb-0.5">{meta.emoji}</span>
                         <span className="text-xs text-slate-700 font-semibold leading-tight line-clamp-1 text-center">{p.descripcion}</span>
-                        <span className={`text-sm font-black tabular-nums mt-0.5 ${meta.accent}`}>{gs(p.precio_actual)}</span>
+                        <span className={`text-sm font-black tabular-nums mt-0.5 ${meta.accent}`}>{gs(getPrecio(p))}</span>
                       </button>
                     )
                   })}
@@ -1129,7 +1154,7 @@ export default function ModoRecreo() {
                         </span>
                       )}
                       <span className="text-4xl mb-1.5">{meta.emoji}</span>
-                      <span className={`text-lg font-black tabular-nums ${meta.accent}`}>{gs(p.precio_actual)}</span>
+                      <span className={`text-lg font-black tabular-nums ${meta.accent}`}>{gs(getPrecio(p))}</span>
                       <span className="text-slate-700 text-sm font-medium leading-tight line-clamp-2 mt-1 px-1">
                         {p.descripcion}
                       </span>
@@ -1217,7 +1242,7 @@ export default function ModoRecreo() {
             ) : (
               <ul className="divide-y divide-slate-100">
                 {carrito.map(item => {
-                  const precio = Number(item.producto.precio_actual) || 0
+                  const precio = getPrecio(item.producto)
                   return (
                     <li key={item.producto.id} className="px-4 py-3">
                       <div className="flex items-start gap-2">

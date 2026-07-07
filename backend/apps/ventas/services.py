@@ -110,11 +110,23 @@ class VentaService:
             iva_10 = Decimal("0")
             iva_5 = Decimal("0")
 
+            # Precargar precios de la lista asignada al cliente si no es la lista por defecto.
+            # Una sola query cubre todos los productos de la venta.
+            precio_overrides: dict = {}
+            lista_precio_id = getattr(cliente, "lista_precio_id", None)
+            if lista_precio_id:
+                from apps.productos.models import PrecioPorLista
+                for row in PrecioPorLista.objects.filter(
+                    lista_id=lista_precio_id,
+                    lista__es_por_defecto=False,
+                ).values("producto_id", "precio_unitario"):
+                    precio_overrides[row["producto_id"]] = row["precio_unitario"]
+
             detalles_data = []
             for item in items:
                 producto = item["producto"]
                 cantidad = item["cantidad"]
-                precio = item.get("precio_unitario", Decimal("0"))
+                precio = precio_overrides.get(producto.pk, item.get("precio_unitario", Decimal("0")))
                 subtotal = cantidad * precio
                 item_iva_10 = item.get("iva_10", Decimal("0"))
                 item_iva_5 = item.get("iva_5", Decimal("0"))

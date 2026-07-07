@@ -91,11 +91,27 @@ class ProductoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         from apps.inventario.models import Stock
 
-        precio_default_sq = PrecioPorLista.objects.filter(
-            producto=OuterRef("pk"),
-            lista__es_por_defecto=True,
-            lista__activo=True,
-        ).values("precio_unitario")[:1]
+        lista_precio_id = self.request.query_params.get("lista_precio_id")
+
+        if lista_precio_id:
+            # Precio de la lista solicitada, con fallback a la lista por defecto
+            precio_principal_sq = PrecioPorLista.objects.filter(
+                producto=OuterRef("pk"),
+                lista_id=lista_precio_id,
+                lista__activo=True,
+            ).values("precio_unitario")[:1]
+            precio_default_sq = PrecioPorLista.objects.filter(
+                producto=OuterRef("pk"),
+                lista__es_por_defecto=True,
+                lista__activo=True,
+            ).values("precio_unitario")[:1]
+        else:
+            precio_principal_sq = PrecioPorLista.objects.filter(
+                producto=OuterRef("pk"),
+                lista__es_por_defecto=True,
+                lista__activo=True,
+            ).values("precio_unitario")[:1]
+            precio_default_sq = None
 
         precio_fallback_sq = PrecioPorLista.objects.filter(
             producto=OuterRef("pk"),
@@ -105,15 +121,19 @@ class ProductoViewSet(viewsets.ModelViewSet):
             producto=OuterRef("pk")
         ).values("cantidad")[:1]
 
+        coalesce_args = [Subquery(precio_principal_sq)]
+        if precio_default_sq is not None:
+            coalesce_args.append(Subquery(precio_default_sq))
+        coalesce_args += [
+            Subquery(precio_fallback_sq),
+            Value(0, output_field=DecimalField(max_digits=12, decimal_places=0)),
+        ]
+
         return (
             Producto.objects
             .select_related("categoria", "unidad_medida")
             .annotate(
-                _precio_actual=Coalesce(
-                    Subquery(precio_default_sq),
-                    Subquery(precio_fallback_sq),
-                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=0)),
-                ),
+                _precio_actual=Coalesce(*coalesce_args),
                 _stock_actual=Coalesce(
                     Subquery(stock_sq),
                     Value(0, output_field=DecimalField(max_digits=10, decimal_places=3)),

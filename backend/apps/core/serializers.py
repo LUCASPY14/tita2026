@@ -33,6 +33,12 @@ class TarjetaSerializer(serializers.ModelSerializer):
         max_digits=12, decimal_places=0, read_only=True,
     )
 
+    # Lista de precios asignada al cliente (para que el POS aplique precios correctos)
+    lista_precio_id = serializers.IntegerField(
+        source="hijo.cliente_responsable.lista_precio_id", read_only=True, allow_null=True,
+    )
+    lista_es_default = serializers.SerializerMethodField()
+
     class Meta:
         model = Tarjeta
         fields = "__all__"
@@ -43,6 +49,12 @@ class TarjetaSerializer(serializers.ModelSerializer):
             return int(obj.hijo.cliente_responsable.saldo_cuenta_corriente)
         except Exception:
             return 0
+
+    def get_lista_es_default(self, obj):
+        try:
+            return bool(obj.hijo.cliente_responsable.lista_precio.es_por_defecto)
+        except Exception:
+            return True
 
     def get_hijo_foto(self, obj):
         if obj.hijo and obj.hijo.foto_perfil:
