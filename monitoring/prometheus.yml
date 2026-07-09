@@ -15,3 +15,9 @@ scrape_configs:
     static_configs:
       - targets: ["redis:6379"]
     scrape_interval: 30s
+
+  - job_name: pushgateway
+    honor_labels: true
+    static_configs:
+      - targets: ["pushgateway:9091"]
+    scrape_interval: 30s

@@ -12,21 +12,38 @@ from celery.schedules import crontab
 # Se registran en el proceso del worker, no en el web process, por lo que
 # Prometheus solo los verá si hay un PushGateway o si el worker expone /metrics.
 # En esta arquitectura los usamos para logging estructurado y alertas Sentry.
+_PUSHGATEWAY_URL = os.environ.get("PUSHGATEWAY_URL", "http://pushgateway:9091")
+
 try:
-    from prometheus_client import Counter as _Counter
+    from prometheus_client import Counter as _Counter, push_to_gateway as _push_to_gateway, CollectorRegistry as _Registry
+    _CELERY_REGISTRY = _Registry()
     CELERY_TASK_FAILURES = _Counter(
         "celery_task_failures_total",
         "Total de tareas Celery que fallaron tras agotar reintentos",
         ["task_name"],
+        registry=_CELERY_REGISTRY,
     )
     CELERY_TASK_SUCCESS = _Counter(
         "celery_task_success_total",
         "Total de tareas Celery completadas exitosamente",
         ["task_name"],
+        registry=_CELERY_REGISTRY,
     )
 except Exception:
     CELERY_TASK_FAILURES = None
     CELERY_TASK_SUCCESS = None
+    _push_to_gateway = None
+    _CELERY_REGISTRY = None
+
+
+def _push_metrics(job: str = "celery") -> None:
+    """Envía métricas al PushGateway. Silencioso ante cualquier fallo."""
+    if _push_to_gateway is None or _CELERY_REGISTRY is None:
+        return
+    try:
+        _push_to_gateway(_PUSHGATEWAY_URL, job=job, registry=_CELERY_REGISTRY)
+    except Exception:
+        pass
 
 logger = logging.getLogger(__name__)
 
@@ -135,8 +152,8 @@ _CRITICAL_TASKS = {
 
 @app.on_after_finalize.connect
 def setup_task_failure_handler(sender, **kwargs):
-    """Registra el signal task_failure para alertar cuando fallen tareas críticas."""
-    from celery.signals import task_failure
+    """Registra signals task_failure y task_success para métricas y alertas."""
+    from celery.signals import task_failure, task_success
 
     @task_failure.connect
     def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, einfo=None, **kw):
@@ -145,6 +162,7 @@ def setup_task_failure_handler(sender, **kwargs):
         if CELERY_TASK_FAILURES is not None:
             try:
                 CELERY_TASK_FAILURES.labels(task_name=task_name).inc()
+                _push_metrics()
             except Exception:
                 pass
 
@@ -171,6 +189,16 @@ def setup_task_failure_handler(sender, **kwargs):
                 )
         except Exception as e:
             logger.exception("No se pudo enviar alerta de fallo: %s", e)
+
+    @task_success.connect
+    def on_task_success(sender=None, result=None, **kw):
+        task_name = getattr(sender, "name", "") or ""
+        if CELERY_TASK_SUCCESS is not None:
+            try:
+                CELERY_TASK_SUCCESS.labels(task_name=task_name).inc()
+                _push_metrics()
+            except Exception:
+                pass
 
 
 @app.task(bind=True, ignore_result=True)

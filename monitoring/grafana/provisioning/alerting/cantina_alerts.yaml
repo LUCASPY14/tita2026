@@ -8,7 +8,7 @@ contactPoints:
       - uid: cantina-email-receiver
         type: email
         settings:
-          addresses: admin@cantina-tita.com
+          addresses: ${GF_ADMIN_EMAIL:-admin@cantina-tita.com}
           singleEmail: false
 
 # ─── Política de notificaciones ───────────────────────────────────────────────

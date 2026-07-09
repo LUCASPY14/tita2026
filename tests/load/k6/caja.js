@@ -27,12 +27,20 @@ const ventaLatency   = new Trend('venta_post_ms', true)
 // ─── Opciones ─────────────────────────────────────────────────────────────────
 export const options = {
   scenarios: {
-    // Carga constante — 5 VUs durante 1 minuto (topología real)
+    // Carga constante — 5 cajeros durante 1 minuto (topología real: 5 PCs ModoRecreo)
     carga_sostenida: {
       executor: 'constant-vus',
       vus: 5,
       duration: '1m',
       tags: { scenario: 'carga_sostenida' },
+    },
+    // Admin + Comedor — 2 VUs concurrentes desde el inicio (topología real)
+    personal_admin_comedor: {
+      executor: 'constant-vus',
+      vus: 2,
+      duration: '1m',
+      startTime: '0s',
+      tags: { scenario: 'admin_comedor' },
     },
     // Pico breve — 15 VUs durante 20s (recreo largo)
     pico_recreo: {
@@ -60,12 +68,15 @@ const BASE_URL  = __ENV.BASE_URL || 'http://localhost:8000'
 const API       = `${BASE_URL}/api/v1`
 
 // Credenciales de prueba — deben existir en la DB de test
+// seed_k6_fixtures crea estos 7 usuarios (5 cajeros + admin + cocina)
 const CAJEROS = [
-  { email: 'cajero1@cantina.test', password: 'Test1234!' },
-  { email: 'cajero2@cantina.test', password: 'Test1234!' },
-  { email: 'cajero3@cantina.test', password: 'Test1234!' },
-  { email: 'cajero4@cantina.test', password: 'Test1234!' },
-  { email: 'cajero5@cantina.test', password: 'Test1234!' },
+  { email: 'cajero1@cantina.test',  password: 'Test1234!' },
+  { email: 'cajero2@cantina.test',  password: 'Test1234!' },
+  { email: 'cajero3@cantina.test',  password: 'Test1234!' },
+  { email: 'cajero4@cantina.test',  password: 'Test1234!' },
+  { email: 'cajero5@cantina.test',  password: 'Test1234!' },
+  { email: 'admin@cantina.test',    password: 'Test1234!' },
+  { email: 'cocina@cantina.test',   password: 'Test1234!' },
 ]
 
 // Tarjetas de prueba — deben existir en la DB de test con saldo suficiente

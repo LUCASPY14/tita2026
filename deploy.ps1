@@ -152,6 +152,25 @@ if ($hashAntes -eq $hashDespues) {
     git log --oneline "$hashAntes..$hashDespues" | ForEach-Object { Log "  + $_" "DarkGray" }
 }
 
+# Inyectar GIT_COMMIT_SHA en .env.production para que Sentry muestre el release exacto
+$commitSha = git rev-parse HEAD
+$envContent = Get-Content $envFile -Raw
+if ($envContent -match "GIT_COMMIT_SHA=") {
+    $envContent = $envContent -replace "GIT_COMMIT_SHA=.*", "GIT_COMMIT_SHA=$commitSha"
+} else {
+    $envContent += "`nGIT_COMMIT_SHA=$commitSha"
+}
+$envContent | Set-Content $envFile -Encoding utf8 -NoNewline
+Log "GIT_COMMIT_SHA=$($commitSha.Substring(0,7)) inyectado en .env.production" "DarkGray"
+
+# Exportar vars que docker compose build necesita para las build-args del frontend
+$env:GIT_COMMIT_SHA = $commitSha
+$env:VITE_SENTRY_DSN = (Get-Content $envFile | Select-String "^VITE_SENTRY_DSN=") -replace "^VITE_SENTRY_DSN=", ""
+if (-not $env:VITE_SENTRY_DSN) {
+    # Fallback: leer desde backend .env.production si está bajo el mismo nombre
+    $env:VITE_SENTRY_DSN = (Get-Content $envFile | Select-String "^SENTRY_DSN_FRONTEND=") -replace "^SENTRY_DSN_FRONTEND=", ""
+}
+
 # ── 3. Build de imágenes ─────────────────────────────────────────────────────
 
 Step "3/7  Construyendo imágenes Docker"
@@ -215,7 +234,7 @@ docker compose up -d --no-deps frontend
 if ($LASTEXITCODE -ne 0) { Die "frontend no pudo iniciar. Revisar: docker compose logs frontend" }
 
 # Monitoring (no crítico para el negocio)
-docker compose up -d prometheus grafana > $null 2>&1
+docker compose up -d prometheus pushgateway grafana > $null 2>&1
 
 # ── 7. Health check final ────────────────────────────────────────────────────
 

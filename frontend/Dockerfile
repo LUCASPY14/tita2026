@@ -7,6 +7,13 @@ COPY package.json package-lock.json ./
 RUN npm ci --frozen-lockfile
 
 COPY . .
+
+# Vite bakes VITE_* vars at build time — pass them as build args
+ARG VITE_SENTRY_DSN=""
+ARG VITE_GIT_COMMIT_SHA=""
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
+ENV VITE_GIT_COMMIT_SHA=$VITE_GIT_COMMIT_SHA
+
 RUN npm run build
 
 # ── Stage 2: serve with Nginx ─────────────────────────────────────────────────
