@@ -106,20 +106,6 @@ ROOT_URLCONF = "backend.urls"
 WSGI_APPLICATION = "backend.wsgi.application"
 ASGI_APPLICATION = "backend.asgi.application"
 
-if os.environ.get("USE_REDIS_CHANNELS", "False") == "True":
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {"hosts": [REDIS_URL]},
-        }
-    }
-else:
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer",
-        }
-    }
-
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -310,6 +296,24 @@ else:
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
             "LOCATION": "cantina-tita",
+        }
+    }
+
+# ==============================================================================
+# CHANNELS (REDIS_URL ya definido arriba)
+# ==============================================================================
+
+if os.environ.get("USE_REDIS_CHANNELS", "False") == "True":
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [REDIS_URL]},
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
         }
     }
 

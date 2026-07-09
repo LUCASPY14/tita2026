@@ -1,5 +1,5 @@
 ﻿# ── Core Django ───────────────────────────────────────────────────────────────
-Django==4.2
+Django>=5.2,<5.3
 asgiref==3.11.1
 sqlparse==0.5.5
 
@@ -65,8 +65,13 @@ six==1.17.0
 sentry-sdk[django]==2.25.1
 
 openpyxl==3.1.5
+reportlab==4.3.1
 
+# ── Push notifications ─────────────────────────────────────────────────────────
+pywebpush==1.14.1
+
+# ── Monitoreo ─────────────────────────────────────────────────────────────────
 django-prometheus==2.3.1
-
+prometheus-client==0.22.0
 
 psycopg2==2.9.12

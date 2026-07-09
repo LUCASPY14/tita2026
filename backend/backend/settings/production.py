@@ -252,61 +252,63 @@ if not SENTRY_DSN:
     )
 
 import sentry_sdk
-    from sentry_sdk.integrations.celery import CeleryIntegration
-    from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.logging import LoggingIntegration
-    from sentry_sdk.integrations.redis import RedisIntegration
-    import logging as _logging
+from sentry_sdk.integrations.celery import CeleryIntegration
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
+import logging as _logging
 
-    def _sentry_before_send(event: dict, hint: dict) -> "dict | None":
-        # BrokenPipe / ConnectionReset — el cliente cortó la conexión; no es un bug
-        exc_info = hint.get("exc_info")
-        if exc_info:
-            exc_type = exc_info[0]
-            if exc_type is not None and issubclass(exc_type, (BrokenPipeError, ConnectionResetError)):
-                return None
 
-        # Silenciar eventos del health-check — ruido de uptime monitors
-        url_path = event.get("request", {}).get("url", "")
-        if "/api/health/" in url_path:
+def _sentry_before_send(event: dict, hint: dict) -> "dict | None":
+    # BrokenPipe / ConnectionReset — el cliente cortó la conexión; no es un bug
+    exc_info = hint.get("exc_info")
+    if exc_info:
+        exc_type = exc_info[0]
+        if exc_type is not None and issubclass(exc_type, (BrokenPipeError, ConnectionResetError)):
             return None
 
-        # Añadir tags de contexto de negocio para facilitar búsqueda en Sentry
-        event.setdefault("tags", {})
-        event["tags"]["app"] = "cantina-tita"
-        event["tags"]["component"] = "backend"
+    # Silenciar eventos del health-check — ruido de uptime monitors
+    url_path = event.get("request", {}).get("url", "")
+    if "/api/health/" in url_path:
+        return None
 
-        return event
+    # Añadir tags de contexto de negocio para facilitar búsqueda en Sentry
+    event.setdefault("tags", {})
+    event["tags"]["app"] = "cantina-tita"
+    event["tags"]["component"] = "backend"
 
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
-        release=os.environ.get("SENTRY_RELEASE", os.environ.get("GIT_COMMIT_SHA", "unknown")),
-        integrations=[
-            DjangoIntegration(
-                transaction_style="url",      # agrupa por URL pattern, no por función
-                middleware_spans=True,
-                signals_spans=False,          # demasiado ruido; activar si se investiga perf
-                cache_spans=True,
-            ),
-            CeleryIntegration(
-                monitor_beat_tasks=True,      # cron-monitor en Sentry para Beat tasks
-                propagate_traces=True,        # vincula task al request que la originó
-            ),
-            RedisIntegration(),
-            LoggingIntegration(
-                level=_logging.INFO,          # captura INFO+ como breadcrumbs
-                event_level=_logging.ERROR,   # convierte ERROR+ en Sentry events
-            ),
-        ],
-        traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
-        profiles_sample_rate=float(os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", "0.05")),
-        sample_rate=1.0,
-        send_default_pii=False,
-        attach_stacktrace=True,
-        max_breadcrumbs=50,
-        before_send=_sentry_before_send,
-    )
+    return event
+
+
+sentry_sdk.init(
+    dsn=SENTRY_DSN,
+    environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
+    release=os.environ.get("SENTRY_RELEASE", os.environ.get("GIT_COMMIT_SHA", "unknown")),
+    integrations=[
+        DjangoIntegration(
+            transaction_style="url",      # agrupa por URL pattern, no por función
+            middleware_spans=True,
+            signals_spans=False,          # demasiado ruido; activar si se investiga perf
+            cache_spans=True,
+        ),
+        CeleryIntegration(
+            monitor_beat_tasks=True,      # cron-monitor en Sentry para Beat tasks
+            propagate_traces=True,        # vincula task al request que la originó
+        ),
+        RedisIntegration(),
+        LoggingIntegration(
+            level=_logging.INFO,          # captura INFO+ como breadcrumbs
+            event_level=_logging.ERROR,   # convierte ERROR+ en Sentry events
+        ),
+    ],
+    traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+    profiles_sample_rate=float(os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", "0.05")),
+    sample_rate=1.0,
+    send_default_pii=False,
+    attach_stacktrace=True,
+    max_breadcrumbs=50,
+    before_send=_sentry_before_send,
+)
 
 # ==========================================
 # DRF CONFIGURATION
@@ -343,7 +345,10 @@ SIMPLE_JWT = {
 # ==========================================
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
+}
 
 # ==========================================
 # INTEGRACIONES DE PAGO
@@ -370,5 +375,15 @@ for var in _required_env_vars:
 LOGGING["handlers"]["console"]["formatter"] = "json"
 LOGGING["handlers"]["file"]["formatter"]    = "json"
 LOGGING["handlers"]["error_file"]["formatter"] = "json"
+
+# ==========================================
+# API DOCS — solo admin en producción
+# ==========================================
+
+SPECTACULAR_SETTINGS["SERVE_PERMISSIONS"] = ["rest_framework.permissions.IsAdminUser"]
+SPECTACULAR_SETTINGS["SERVE_AUTHENTICATION"] = [
+    "rest_framework.authentication.SessionAuthentication",
+    "rest_framework_simplejwt.authentication.JWTAuthentication",
+]
 
 # Production settings loaded successfully
