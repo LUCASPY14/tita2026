@@ -222,7 +222,7 @@ def send_push_to_user(usuario_id: int, title: str, body: str, url: str = "/", ic
     from django.conf import settings
 
     vapid_pk    = getattr(settings, "VAPID_PRIVATE_KEY", "")
-    vapid_email = getattr(settings, "VAPID_ADMIN_EMAIL", "admin@cantina-tita.com")
+    vapid_email = getattr(settings, "VAPID_ADMIN_EMAIL", "admin@cantinatita.com")
     if not vapid_pk:
         return
 

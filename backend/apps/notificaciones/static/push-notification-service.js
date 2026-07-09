@@ -18,14 +18,14 @@ class PushNotificationService {
     this.setupVapidKeys();
     
     console.log('🔔 Push Notification Service initialized');
-    console.log('📧 Contact email:', process.env.VAPID_EMAIL || 'admin@cantina-tita.com');
+    console.log('📧 Contact email:', process.env.VAPID_EMAIL || 'admin@cantinatita.com');
   }
 
   setupVapidKeys() {
     // En desarrollo, generar keys o usar las del .env
     const publicKey = process.env.VAPID_PUBLIC_KEY;
     const privateKey = process.env.VAPID_PRIVATE_KEY;
-    const email = process.env.VAPID_EMAIL || 'admin@cantina-tita.com';
+    const email = process.env.VAPID_EMAIL || 'admin@cantinatita.com';
 
     if (publicKey && privateKey) {
       this.vapidKeys = { publicKey, privateKey };
