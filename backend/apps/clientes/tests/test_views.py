@@ -182,13 +182,14 @@ class TestCambiarPin:
         assert resp.status_code == 400
 
     def test_no_admin_no_puede_cambiar_pin(self, api_cajero, cliente):
-        # IsAdminOrReadOnly restringe POST solo a ADMIN
+        # cambiar_pin usa IsAuthenticated; cajero puede llamarlo pero
+        # sin pin_actual recibe 400 (PIN actual incorrecto)
         resp = api_cajero.post(
             f"/api/v1/clientes/clientes/{cliente.pk}/cambiar-pin/",
             {"pin_nuevo": "5678"},
             format="json",
         )
-        assert resp.status_code in (401, 403)
+        assert resp.status_code in (400, 403)
 
     def test_cliente_web_no_puede_cambiar_pin_ajeno(self, api_cliente_web, tipo_cliente, lista_precio):
         from apps.clientes.models import Cliente

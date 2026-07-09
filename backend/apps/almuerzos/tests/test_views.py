@@ -310,7 +310,7 @@ class TestRegistroConsumoDestroy:
             estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
         )
         resp = api_cajero.delete(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/")
-        assert resp.status_code == 405
+        assert resp.status_code == 403  # solo ADMIN puede eliminar
 
 
 @pytest.mark.django_db
