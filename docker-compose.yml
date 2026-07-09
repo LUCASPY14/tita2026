@@ -46,7 +46,7 @@ services:
       DB_HOST: host.docker.internal
       DB_PORT: "5432"
       DB_NAME: cantina_tita
-      DB_USER: cantina_user
+      DB_USER: app_cantina
       # Redis apunta al contenedor 'redis' (override sobre .env.production)
       REDIS_URL: redis://redis:6379/1
       # Resto de variables sensibles desde archivo .env.production
