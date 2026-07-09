@@ -847,6 +847,8 @@ class LogoutView(APIView):
             except Exception:
                 pass
 
+        return Response({"detail": "Sesión cerrada."})
+
 
 # ── Reportes de seguridad y auditoría ────────────────────────────────────────
 
@@ -1038,5 +1040,3 @@ class ReportePersonalInactivoView(APIView):
             "por_rol": por_rol,
             "detalle": detalle,
         })
-
-        return Response({"detail": "Sesión cerrada."})
