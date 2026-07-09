@@ -56,8 +56,20 @@ def generar_alertas_saldo_bajo():
             mensaje=msg_saldo,
             destino=Notificacion.Destino.SISTEMA,
         )
-        from apps.notificaciones.services import _whatsapp_cliente
-        _whatsapp_cliente(tarjeta.hijo.cliente_responsable, msg_saldo)
+        cliente = tarjeta.hijo.cliente_responsable
+        from apps.notificaciones.models import PreferenciaNotificacion, SolicitudNotificacion
+        wa_pref = PreferenciaNotificacion.objects.filter(
+            usuario=usuario,
+            tipo_notificacion="SALDO_BAJO",
+            whatsapp_activo=True,
+        ).exists()
+        if wa_pref and getattr(cliente, "telefono", None):
+            SolicitudNotificacion.objects.create(
+                cliente=cliente,
+                tipo="SALDO_BAJO",
+                destino=Notificacion.Destino.WHATSAPP,
+                mensaje=msg_saldo,
+            )
         tarjeta.ultima_notificacion_saldo = timezone.now()
         tarjeta.save(update_fields=["ultima_notificacion_saldo"])
         creadas += 1

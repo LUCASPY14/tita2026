@@ -45,7 +45,6 @@ def crear_solicitudes_cobro(hijos_con_deuda, mensaje_template=None):
     from apps.clientes.models import AlumnoResponsable
 
     solicitudes = []
-    mensajes_whatsapp = []  # (cliente, mensaje) para enviar después del bulk_create
     for hijo in hijos_con_deuda:
         responsables = (
             AlumnoResponsable.objects
@@ -73,12 +72,23 @@ def crear_solicitudes_cobro(hijos_con_deuda, mensaje_template=None):
                     mensaje=mensaje,
                 )
             )
-            mensajes_whatsapp.append((resp.cliente, mensaje))
-
+            from .models import PreferenciaNotificacion
+            tiene_whatsapp = PreferenciaNotificacion.objects.filter(
+                usuario=resp.cliente.usuario_portal,
+                tipo_notificacion="COBRO_PENDIENTE",
+                whatsapp_activo=True,
+            ).exists() if getattr(resp.cliente, "usuario_portal", None) else False
+            if tiene_whatsapp and getattr(resp.cliente, "telefono", None):
+                solicitudes.append(
+                    SolicitudNotificacion(
+                        cliente=resp.cliente,
+                        tipo="COBRO_PENDIENTE",
+                        destino=Notificacion.Destino.WHATSAPP,
+                        mensaje=mensaje,
+                    )
+                )
     if solicitudes:
         SolicitudNotificacion.objects.bulk_create(solicitudes)
-        for cliente, mensaje in mensajes_whatsapp:
-            _whatsapp_cliente(cliente, mensaje)
 
     return len(solicitudes)
 
@@ -107,6 +117,8 @@ class NotificacionService:
                         NotificacionService._enviar_sistema(solicitud)
                     elif solicitud.destino == Notificacion.Destino.EMAIL:
                         NotificacionService._enviar_email(solicitud)
+                    elif solicitud.destino == Notificacion.Destino.WHATSAPP:
+                        NotificacionService._enviar_whatsapp(solicitud)
 
                     solicitud.estado = SolicitudNotificacion.Estado.ENVIADA
                     solicitud.fecha_envio = timezone.now()
@@ -139,6 +151,14 @@ class NotificacionService:
             destino=Notificacion.Destino.SISTEMA,
         )
         push_ws_notificacion(notif)
+
+    @staticmethod
+    def _enviar_whatsapp(solicitud):
+        cliente = solicitud.cliente
+        telefono = getattr(cliente, "telefono", None)
+        if not telefono:
+            raise ValueError(f"Cliente {cliente} no tiene teléfono registrado.")
+        enviar_whatsapp(telefono, solicitud.mensaje)
 
     @staticmethod
     def _enviar_email(solicitud):

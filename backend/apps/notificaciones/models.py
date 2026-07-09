@@ -50,6 +50,7 @@ class Notificacion(models.Model):
     class Destino(models.TextChoices):
         EMAIL = "EMAIL", "Email"
         SISTEMA = "SISTEMA", "En sistema"
+        WHATSAPP = "WHATSAPP", "WhatsApp"
 
     usuario = models.ForeignKey(
         "usuarios.Usuario",
@@ -101,6 +102,7 @@ class PreferenciaNotificacion(models.Model):
     tipo_notificacion = models.CharField(max_length=50)
     email_activo = models.BooleanField(default=True)
     sistema_activo = models.BooleanField(default=True)
+    whatsapp_activo = models.BooleanField(default=False, help_text="Recibir alertas por WhatsApp")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
