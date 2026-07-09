@@ -157,6 +157,17 @@ services:
     networks:
       - cantina_net
 
+  # ── WAHA (WhatsApp self-hosted) ─────────────────────────────────────────────
+  waha:
+    image: devlikeapro/waha:latest
+    ports:
+      - "3001:3000"      # externo 3001 para no chocar con Grafana en 3000
+    volumes:
+      - waha_data:/app/.sessions
+    restart: unless-stopped
+    networks:
+      - cantina_net
+
   # ── Grafana ─────────────────────────────────────────────────────────────────
   grafana:
     image: grafana/grafana:11.6.1
@@ -185,6 +196,7 @@ volumes:
   backend_media:
   backend_static:
   backend_logs:
+  waha_data:
   redis_data:
   prometheus_data:
   grafana_data:
