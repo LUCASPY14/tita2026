@@ -8,6 +8,7 @@ import { useAuthStore } from './store/authStore'
 import { usePushNotifications } from './hooks/usePushNotifications'
 
 // ── Eager: rutas públicas y estructurales ─────────────────────────────────────
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import RecuperarPassword from './pages/RecuperarPassword'
 import RestablecerPassword from './pages/RestablecerPassword'
@@ -134,6 +135,9 @@ export default function App() {
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            {/* Landing pública */}
+            <Route path="/"                           element={<Landing />} />
+
             {/* Portal padres */}
             <Route path="/portal/login"               element={<PortalLogin />} />
             <Route path="/portal/reset-password"      element={<PortalResetPassword />} />
