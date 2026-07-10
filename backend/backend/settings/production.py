@@ -44,8 +44,9 @@ if not ALLOWED_HOSTS or ALLOWED_HOSTS == [""]:
 # HTTPS/SSL CONFIGURATION
 # ==========================================
 
-# Redirigir todo tráfico HTTP a HTTPS
+# Redirigir todo tráfico HTTP a HTTPS (excepto health check interno del container)
 SECURE_SSL_REDIRECT = True
+SECURE_REDIRECT_EXEMPT = [r"^api/health/"]
 
 # Proxy SSL Header (para Nginx/Apache)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -224,6 +225,20 @@ MANAGERS = ADMINS
 # ==========================================
 
 REDIS_URL = os.environ.get("REDIS_URL", None)
+
+# ==========================================
+# CELERY CONFIGURATION
+# ==========================================
+
+CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://redis:6379/1")
+CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", "redis://redis:6379/1")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "America/Asuncion"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_ACKS_LATE = True
+
 if REDIS_URL:
     CACHES = {
         "default": {
@@ -246,7 +261,7 @@ if REDIS_URL:
 
 SENTRY_DSN = os.environ.get("SENTRY_DSN")
 
-if SENTRY_DSN and not SENTRY_DSN.startswith("<"):
+if SENTRY_DSN and '<' not in SENTRY_DSN:
     import sentry_sdk
     import logging as _logging
     from sentry_sdk.integrations.celery import CeleryIntegration

@@ -23,12 +23,13 @@ django-jazzmin==3.0.4
 django-simple-history==3.7.0
 
 # ── Base de datos ──────────────────────────────────────────────────────────────
-# Linux/prod:  reemplazar con psycopg2==2.9.12 (compilado, más estable)
+# Docker: psycopg2-binary (precompilado, no requiere libc6-dev en la imagen)
 
 # ── WebSockets / ASGI ─────────────────────────────────────────────────────────
 channels==4.2.0
 channels-redis==4.2.1
 daphne==4.2.2          # servidor ASGI requerido para WebSockets en producción
+django-redis==5.4.0    # cache backend Redis para USE_REDIS_CACHE=True
 
 # ── Celery / tareas ───────────────────────────────────────────────────────────
 celery==5.6.3
@@ -74,4 +75,4 @@ pywebpush==1.14.1
 django-prometheus==2.3.1
 prometheus-client==0.22.0
 
-psycopg2==2.9.12
+psycopg2-binary==2.9.12

@@ -690,7 +690,7 @@ export default function ModoRecreo() {
           },
         })
       } else {
-        await ventasService.crear(payload, 6000)
+        await ventasService.crear(payload as unknown as Parameters<typeof ventasService.crear>[0], 6000)
       }
       sfx.ok()
       addSales(carrito.map(i => i.producto.id))

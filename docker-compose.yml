@@ -59,7 +59,7 @@ services:
     expose:
       - "8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')"]
+      test: ["CMD", "python", "-c", "import http.client; c=http.client.HTTPConnection('localhost',8000); c.request('GET','/api/health/ready/'); r=c.getresponse(); exit(0 if r.status==200 else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -87,7 +87,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A backend worker -l INFO --concurrency=${CELERY_CONCURRENCY:-4}
+    command: celery -A backend.celery_app worker -l INFO --concurrency=${CELERY_CONCURRENCY:-4}
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
       DB_HOST: host.docker.internal
@@ -112,7 +112,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A backend beat -l INFO -s /app/logs/celerybeat-schedule
+    command: celery -A backend.celery_app beat -l INFO -s /app/logs/celerybeat-schedule
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
       DB_HOST: host.docker.internal

@@ -128,7 +128,7 @@ describe('Login — submit exitoso', () => {
     await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
 
     expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeDisabled()
-    resolve!()
+    resolve!(true)
   })
 })
 

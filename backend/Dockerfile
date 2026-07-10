@@ -1,13 +1,7 @@
 # ── Stage 1: builder ─────────────────────────────────────────────────────────
 FROM python:3.11-slim AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
-
-# requirements.production.txt usa psycopg2 compilado (sin -binary).
-# El builder ya tiene gcc y libpq-dev, que son los únicos prerrequisitos de compilación.
 COPY requirements.txt requirements.production.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.production.txt
