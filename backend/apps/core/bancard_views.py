@@ -178,8 +178,8 @@ def bancard_retorno(request):
         confirmacion = resultado.get("confirmation", {})
         response_code = confirmacion.get("response_code", "")
 
-        # "00" = aprobado en Bancard
-        if response_code == "00" or resultado.get("status") == "success":
+        # "00" = aprobado en Bancard — única condición válida para acreditar
+        if response_code == "00":
             try:
                 bancard_service.acreditar_saldo(pago)
                 # Refrescar mv_balance_cliente para que el portal refleje

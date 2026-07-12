@@ -98,7 +98,7 @@ def iniciar_pago(
                 f"{_base_url()}/vpos/api/0.3/single_buy",
                 json=payload,
                 timeout=30,
-                verify=False,  # sandbox usa certificado autofirmado
+                verify=getattr(settings, "BANCARD_SANDBOX", True) is False,
             )
         data = resp.json()
     except CircuitBreakerOpen as exc:
@@ -134,7 +134,7 @@ def confirmar_pago(shop_process_id: str) -> dict:
                 f"{_base_url()}/vpos/api/0.3/single_buy/{shop_process_id}",
                 json=payload,
                 timeout=30,
-                verify=False,
+                verify=getattr(settings, "BANCARD_SANDBOX", True) is False,
             )
         data = resp.json()
     except CircuitBreakerOpen as exc:
