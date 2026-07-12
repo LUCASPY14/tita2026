@@ -44,11 +44,11 @@ if not ALLOWED_HOSTS or ALLOWED_HOSTS == [""]:
 # HTTPS/SSL CONFIGURATION
 # ==========================================
 
-# Redirigir todo tráfico HTTP a HTTPS (excepto health check interno del container)
-SECURE_SSL_REDIRECT = True
-SECURE_REDIRECT_EXEMPT = [r"^api/health/"]
+# SSL manejado por Cloudflare Tunnel — no redirigir desde Django
+# (el túnel termina TLS antes de llegar a nginx; Django ve HTTP interno)
+SECURE_SSL_REDIRECT = False
 
-# Proxy SSL Header (para Nginx/Apache)
+# Proxy SSL Header (para que request.is_secure() funcione correctamente)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # HTTP Strict Transport Security (HSTS)
@@ -206,14 +206,12 @@ LOGGING = {
 # EMAIL CONFIGURATION
 # ==========================================
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@cantina-tita.com")
-SERVER_EMAIL = DEFAULT_FROM_EMAIL
+EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+ANYMAIL = {
+    "RESEND_API_KEY": os.environ.get("RESEND_API_KEY", ""),
+}
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "notificaciones@cantinatita.com")
+SERVER_EMAIL = os.environ.get("SERVER_EMAIL", "admin@cantinatita.com")
 
 ADMINS = [
     ("Admin Team", os.environ.get("ADMIN_EMAIL", "admin@cantina-tita.com")),
