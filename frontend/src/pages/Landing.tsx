@@ -16,14 +16,14 @@ function LogoSinFondo({ src, alt, className }: { src: string; alt: string; class
       canvas.height = img.naturalHeight
       ctx.drawImage(img, 0, 0)
       const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      // Eliminar pixels blancos/casi blancos con borde suave
+      // Solo eliminar blanco/off-white puro del fondo exterior.
+      // La burbuja crema (b < 240) y los colores del logo se preservan intactos.
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i], g = data[i + 1], b = data[i + 2]
-        if (r > 245 && g > 245 && b > 245) {
-          data[i + 3] = 0
-        } else if (r > 220 && g > 220 && b > 220) {
+        if (r > 248 && g > 245 && b > 240) {
+          // blanco neutro/cálido del fondo PNG → transparente con suavizado mínimo
           const bright = (r + g + b) / 3
-          data[i + 3] = Math.round(((255 - bright) / 35) * 255)
+          data[i + 3] = Math.round(Math.max(0, (255 - bright) / 5) * 255)
         }
       }
       ctx.putImageData(new ImageData(data, canvas.width, canvas.height), 0, 0)
