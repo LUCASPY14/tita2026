@@ -19,12 +19,17 @@ function LogoSinFondo({ src, alt, className }: { src: string; alt: string; class
       const imageData = ctx.getImageData(0, 0, w, h)
       const { data } = imageData
 
-      const isBg = (i: number) =>
-        data[i] > 230 && data[i + 1] > 228 && data[i + 2] > 222
+      // Muestrear color de fondo desde la esquina superior-izquierda
+      const bgR = data[0], bgG = data[1], bgB = data[2]
+      const TOL = 28  // tolerancia de color para detectar el fondo
 
-      // BFS flood-fill desde los 4 bordes: solo elimina el blanco EXTERIOR.
-      // El texto blanco de "CANTINA" está dentro del contorno naranja y no
-      // es alcanzable desde los bordes, por lo que queda intacto.
+      const isBg = (i: number) =>
+        Math.abs(data[i] - bgR) < TOL &&
+        Math.abs(data[i + 1] - bgG) < TOL &&
+        Math.abs(data[i + 2] - bgB) < TOL
+
+      // BFS flood-fill desde los 4 bordes: marca solo el fondo EXTERIOR.
+      // El interior del contorno del logo no es alcanzable desde los bordes.
       const visited = new Uint8Array(w * h)
       const queue: number[] = []
 
@@ -43,17 +48,12 @@ function LogoSinFondo({ src, alt, className }: { src: string; alt: string; class
         if (x < w - 1) seed(px + 1)
       }
 
+      // Fondo exterior → blanco puro. Con mix-blend-mode:multiply en CSS,
+      // blanco × fondo-página = fondo-página (el rectángulo desaparece).
       for (let px = 0; px < w * h; px++) {
-        const i = px * 4
         if (visited[px]) {
-          // fondo exterior → transparente
-          data[i + 3] = 0
-        } else if (data[i] > 248 && data[i + 1] > 248 && data[i + 2] > 248) {
-          // blanco puro/neutro interior → texto "CANTINA" (la crema de la burbuja
-          // tiene blue ~220-245, no llega a 248, así no se toca)
-          data[i]     = 34
-          data[i + 1] = 139
-          data[i + 2] = 54
+          const i = px * 4
+          data[i] = 255; data[i + 1] = 255; data[i + 2] = 255; data[i + 3] = 255
         }
       }
       ctx.putImageData(new ImageData(data, canvas.width, canvas.height), 0, 0)
@@ -192,7 +192,7 @@ export default function Landing() {
           display: flex; align-items: center; justify-content: center;
           gap: 2.5rem; flex-wrap: wrap;
         }
-        .hero-logo { width: clamp(320px, 48vw, 520px); display: block; flex-shrink: 0; }
+        .hero-logo { width: clamp(320px, 48vw, 520px); display: block; flex-shrink: 0; mix-blend-mode: multiply; }
         .hero-text { max-width: 420px; }
         .badge {
           display: inline-flex; align-items: center; gap: .375rem;
