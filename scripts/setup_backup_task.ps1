@@ -13,12 +13,13 @@ param(
     [Parameter(Mandatory=$true)]
     [SecureString]$DbPassword,
 
-    [string]$ProjectRoot = "C:\tita2026",
-    [string]$BackupDir   = "C:\backups\cantina",
-    [string]$PgBin       = "C:\Program Files\PostgreSQL\16\bin",
-    [string]$PgUser      = "postgres",
-    [string]$PgHost      = "localhost",
-    [string]$PgPort      = "5432",
+    [string]$ProjectRoot  = "C:\tita2026",
+    [string]$BackupDir    = "C:\backups\cantina",
+    [string]$PgBin        = "C:\Program Files\PostgreSQL\16\bin",
+    [string]$PgUser       = "postgres",
+    [string]$PgHost       = "localhost",
+    [string]$PgPort       = "5432",
+    [string]$GpgRecipient = "",   # email GPG para cifrar el backup; vacío = sin cifrado
     [switch]$SkipNube
 )
 
@@ -76,9 +77,10 @@ if (-not (Test-Path $backupScript)) {
     Write-Warning "No se encontro $backupScript. La tarea se registrara igual; crear el script antes del primer backup."
 }
 
+$gpgArg = if ($GpgRecipient) { " -GpgRecipient `"$GpgRecipient`"" } else { "" }
 $taskAction = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
-    -Argument "-NonInteractive -NoProfile -File `"$backupScript`" -PgBin `"$PgBin`" -PgUser `"$PgUser`" -PgHost `"$PgHost`" -PgPort `"$PgPort`""
+    -Argument "-NonInteractive -NoProfile -File `"$backupScript`" -PgBin `"$PgBin`" -PgUser `"$PgUser`" -PgHost `"$PgHost`" -PgPort `"$PgPort`"$gpgArg"
 
 $taskTrigger = New-ScheduledTaskTrigger -Daily -At "02:00"
 
