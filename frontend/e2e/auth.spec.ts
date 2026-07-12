@@ -10,7 +10,7 @@ test.describe('RecuperarPassword', () => {
   test('email en blanco muestra error de validación', async ({ page }) => {
     await page.goto(`${BASE}/recuperar-password`)
     await page.getByRole('button', { name: 'Enviar enlace' }).click()
-    await expect(page.getByText('Ingresá tu email')).toBeVisible()
+    await expect(page.getByText('Ingresá tu email', { exact: true })).toBeVisible()
   })
 
   test('email con formato inválido muestra error de validación', async ({ page }) => {

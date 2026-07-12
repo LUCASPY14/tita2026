@@ -147,11 +147,11 @@ test.describe('Comedor — scan exitoso', () => {
   })
 
   test('muestra el nombre del alumno en grande', async ({ page }) => {
-    await expect(page.getByText('Lucía Martínez')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Lucía Martínez').first()).toBeVisible({ timeout: 6000 })
   })
 
   test('muestra el grado del alumno', async ({ page }) => {
-    await expect(page.getByText('2° A')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('2° A').first()).toBeVisible({ timeout: 6000 })
   })
 
   test('muestra el saldo en tarjeta', async ({ page }) => {
@@ -242,7 +242,7 @@ test.describe('Comedor — panel Lista de hoy', () => {
 
   test('click en Lista de hoy muestra suscriptos activos', async ({ page }) => {
     await page.getByRole('button', { name: 'Lista de hoy' }).click()
-    await expect(page.getByText('Lucía Martínez')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Lucía Martínez').first()).toBeVisible({ timeout: 6000 })
     await expect(page.getByText('Pedro López')).toBeVisible()
   })
 

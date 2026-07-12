@@ -52,17 +52,18 @@ test.describe('Reportes', () => {
   test('la página carga sin errores', async ({ page }) => {
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
     await expect(page.getByRole('heading', { name: 'Reportes' })).toBeVisible()
-    await expect(page.getByText('Análisis de ventas, inventario y cuentas')).toBeVisible()
+    await expect(page.getByText('Reportes y análisis del sistema')).toBeVisible()
   })
 
   test('muestra todos los tabs de reporte', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /Ventas y Cierres/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Productos/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Cajeros/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Cuenta Corriente/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Tarjetas/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Inventario/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Almuerzos/i })).toBeVisible()
+    const main = page.getByRole('main')
+    await expect(main.getByRole('button', { name: /Ventas y Cierres/i })).toBeVisible()
+    await expect(main.getByRole('button', { name: /Productos/i })).toBeVisible()
+    await expect(main.getByRole('button', { name: /Cajeros/i })).toBeVisible()
+    await expect(main.getByRole('button', { name: /Cuenta Corriente/i })).toBeVisible()
+    await expect(main.getByRole('button', { name: /Tarjetas/i })).toBeVisible()
+    await expect(main.getByRole('button', { name: /Inventario/i })).toBeVisible()
+    await expect(main.getByRole('button', { name: 'Almuerzos', exact: true })).toBeVisible()
   })
 
   test('tab Ventas y Cierres carga resumen de ventas', async ({ page }) => {
@@ -73,12 +74,12 @@ test.describe('Reportes', () => {
   })
 
   test('navegar a tab Productos no rompe la página', async ({ page }) => {
-    await page.getByRole('button', { name: /Productos/i }).click()
+    await page.getByRole('main').getByRole('button', { name: /Productos/i }).click()
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
   })
 
   test('navegar a tab Inventario no rompe la página', async ({ page }) => {
-    await page.getByRole('button', { name: /Inventario/i }).click()
+    await page.getByRole('main').getByRole('button', { name: /Inventario/i }).click()
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
   })
 })

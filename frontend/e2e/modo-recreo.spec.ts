@@ -93,7 +93,7 @@ test.describe('Modo Recreo — POS', () => {
     const SUPERVISOR = { id: 3, email: 'sup@cantina.com', nombre: 'Sup', apellido: 'Test', rol: 'SUPERVISOR' }
     await loginAs(page, SUPERVISOR as typeof ADMIN)
     await page.goto('/modo-recreo')
-    await expect(page).toHaveURL('/login')
+    await expect(page).toHaveURL('/dashboard')
   })
 })
 

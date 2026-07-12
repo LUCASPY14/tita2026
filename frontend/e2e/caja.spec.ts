@@ -110,24 +110,25 @@ test.describe('Caja — sin turno activo', () => {
   })
 
   test('muestra las tres tarjetas de estado', async ({ page }) => {
-    await expect(page.getByText('Abiertas')).toBeVisible()
-    await expect(page.getByText('Cerradas')).toBeVisible()
-    await expect(page.getByText('Conciliadas')).toBeVisible()
+    await expect(page.getByText('Abiertas').first()).toBeVisible()
+    await expect(page.getByText('Cerradas').first()).toBeVisible()
+    await expect(page.getByText('Conciliadas').first()).toBeVisible()
   })
 
   test('muestra el botón Abrir Caja', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'Abrir Caja' })).toBeVisible()
+    await expect(page.locator('button', { hasText: 'Abrir Caja' })).toBeVisible()
   })
 
   test('el modal de Abrir Caja aparece al hacer click', async ({ page }) => {
-    await page.getByRole('button', { name: 'Abrir Caja' }).click()
-    // Modal title y opciones de caja disponibles
-    await expect(page.getByText('Caja Principal')).toBeVisible({ timeout: 3000 })
-    await expect(page.getByText('Caja Comedor')).toBeVisible()
+    await page.locator('button', { hasText: 'Abrir Caja' }).click()
+    // El modal se abre y el selector contiene ambas cajas disponibles
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByRole('dialog')).toContainText('Caja Principal')
+    await expect(page.getByRole('dialog')).toContainText('Caja Comedor')
   })
 
   test('el modal de Abrir Caja tiene el campo de monto inicial', async ({ page }) => {
-    await page.getByRole('button', { name: 'Abrir Caja' }).click()
+    await page.locator('button', { hasText: 'Abrir Caja' }).click()
     await expect(page.getByLabel('Monto Inicial (Gs.)')).toBeVisible()
   })
 
@@ -160,14 +161,14 @@ test.describe('Caja — con turno activo', () => {
 
   test('muestra el banner de turno activo con el nombre de la caja', async ({ page }) => {
     await expect(page.getByText(/Turno activo/)).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText(/Caja Principal/)).toBeVisible()
+    await expect(page.getByText(/Caja Principal/).first()).toBeVisible()
   })
 
   test('muestra el arqueo en vivo con los cuatro paneles', async ({ page }) => {
     await expect(page.getByText('Efectivo cajón')).toBeVisible({ timeout: 5000 })
     await expect(page.getByText('POS / Transferencia')).toBeVisible()
     await expect(page.getByText('Prepago RFID')).toBeVisible()
-    await expect(page.getByText('Egresos')).toBeVisible()
+    await expect(page.getByText('Egresos').first()).toBeVisible()
   })
 
   test('la tabla muestra el botón Cerrar para la caja ABIERTO', async ({ page }) => {
@@ -245,7 +246,7 @@ test.describe('Caja — control de acceso', () => {
     await page.goto('/caja')
     await expect(page).toHaveURL('/caja')
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
-    await expect(page.getByRole('button', { name: 'Abrir Caja' })).toBeVisible()
+    await expect(page.locator('button', { hasText: 'Abrir Caja' })).toBeVisible()
   })
 
   test('ADMIN puede acceder a /caja', async ({ page }) => {

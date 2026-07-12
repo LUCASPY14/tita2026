@@ -7,23 +7,37 @@ const CLIENTES_MOCK = {
   results: [
     {
       id: 1,
-      nombre: 'María',
-      apellido: 'González',
+      nombres: 'María',
+      apellidos: 'González',
+      razon_social: null,
+      ruc_ci: '1234567-8',
       email: 'maria@ejemplo.com',
       telefono: '0981123456',
       activo: true,
+      tipo_cliente: 1,
       tipo_cliente_nombre: 'Regular',
-      saldo_deuda: 0,
+      saldo_cuenta_corriente: '0',
+      saldo_negativo_tarjetas: '0',
+      limite_credito: '0',
+      lista_precio: 1,
+      fecha_registro: '2026-01-01',
     },
     {
       id: 2,
-      nombre: 'Carlos',
-      apellido: 'Rodríguez',
+      nombres: 'Carlos',
+      apellidos: 'Rodríguez',
+      razon_social: null,
+      ruc_ci: '8765432-1',
       email: 'carlos@ejemplo.com',
       telefono: '0971654321',
       activo: true,
+      tipo_cliente: 1,
       tipo_cliente_nombre: 'Regular',
-      saldo_deuda: 15000,
+      saldo_cuenta_corriente: '15000',
+      saldo_negativo_tarjetas: '0',
+      limite_credito: '0',
+      lista_precio: 1,
+      fecha_registro: '2026-01-01',
     },
   ],
 }
@@ -68,7 +82,7 @@ test.describe('Clientes', () => {
   test('la página carga sin errores', async ({ page }) => {
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
     await expect(page.getByRole('heading', { name: 'Clientes' })).toBeVisible()
-    await expect(page.getByText('Gestión de clientes y sus estudiantes')).toBeVisible()
+    await expect(page.getByText('Gestión de estudiantes y responsables')).toBeVisible()
   })
 
   test('muestra el botón Nuevo Cliente', async ({ page }) => {
@@ -77,7 +91,7 @@ test.describe('Clientes', () => {
 
   test('muestra los stats de clientes', async ({ page }) => {
     await expect(page.getByText('Total')).toBeVisible()
-    await expect(page.getByText('Activos')).toBeVisible()
+    await expect(page.getByText('Activos').first()).toBeVisible()
     await expect(page.getByText('Con Deuda')).toBeVisible()
   })
 

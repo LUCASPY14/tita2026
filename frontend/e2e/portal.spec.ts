@@ -84,7 +84,7 @@ async function loginAsPortal(page: import('@playwright/test').Page) {
   )
 
   await page.goto('/portal/login')
-  await page.getByPlaceholder('tucorreo@email.com').fill(CLIENTE_WEB.email)
+  await page.getByPlaceholder('Ej: 3331234-2').fill(CLIENTE_WEB.email)
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Ingresar' }).click()
   await page.waitForURL('/portal')
@@ -99,7 +99,7 @@ test.describe('Portal — Login', () => {
 
   test('muestra el formulario del portal de padres', async ({ page }) => {
     await expect(page.getByText('Portal de Padres')).toBeVisible()
-    await expect(page.getByPlaceholder('tucorreo@email.com')).toBeVisible()
+    await expect(page.getByPlaceholder('Ej: 3331234-2')).toBeVisible()
     await expect(page.getByPlaceholder('••••••••')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Ingresar' })).toBeVisible()
   })
@@ -118,7 +118,7 @@ test.describe('Portal — Login', () => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MI_HIJO_MOCK) })
     )
 
-    await page.getByPlaceholder('tucorreo@email.com').fill(CLIENTE_WEB.email)
+    await page.getByPlaceholder('Ej: 3331234-2').fill(CLIENTE_WEB.email)
     await page.getByPlaceholder('••••••••').fill('password123')
     await page.getByRole('button', { name: 'Ingresar' }).click()
     await expect(page).toHaveURL('/portal')
@@ -128,7 +128,7 @@ test.describe('Portal — Login', () => {
     await page.route(/\/api\/token/, (route) =>
       route.fulfill({ status: 401, contentType: 'application/json', body: '{"detail":"No active account"}' })
     )
-    await page.getByPlaceholder('tucorreo@email.com').fill('wrong@example.com')
+    await page.getByPlaceholder('Ej: 3331234-2').fill('wrong@example.com')
     await page.getByPlaceholder('••••••••').fill('wrongpass')
     await page.getByRole('button', { name: 'Ingresar' }).click()
     await expect(page.getByText('Credenciales incorrectas')).toBeVisible()
@@ -169,10 +169,10 @@ test.describe('Portal — Dashboard', () => {
   })
 
   test('muestra las pestañas de navegación del hijo', async ({ page }) => {
-    await expect(page.getByRole('tab', { name: 'Resumen' })).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('tab', { name: 'Resumen' })).toBeVisible()
     await expect(page.getByRole('tab', { name: /Historial/ })).toBeVisible()
     await expect(page.getByRole('tab', { name: /Cantina/ })).toBeVisible()
-    await expect(page.getByRole('tab', { name: /Plan/ })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /Almuerzo/i })).toBeVisible()
   })
 
   test('muestra el botón Cargar saldo con tarjeta', async ({ page }) => {
@@ -230,9 +230,9 @@ test.describe('Portal — Carga de Saldo', () => {
   })
 
   test('muestra los botones de monto rápido', async ({ page }) => {
-    await expect(page.getByRole('button', { name: '50k' })).toBeVisible({ timeout: 5000 })
-    await expect(page.getByRole('button', { name: '100k' })).toBeVisible()
-    await expect(page.getByRole('button', { name: '150k' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '50k', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '100k', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '150k', exact: true })).toBeVisible()
   })
 
   test('el botón Ir a pagar está deshabilitado sin monto seleccionado', async ({ page }) => {
@@ -248,10 +248,10 @@ test.describe('Portal — Carga de Saldo', () => {
   })
 
   test('muestra el resumen antes de pagar al seleccionar monto', async ({ page }) => {
-    await page.getByRole('button', { name: '100k' }).click()
-    await expect(page.getByText('Resumen')).toBeVisible({ timeout: 3000 })
-    await expect(page.getByText('Lucas García')).toBeVisible()
-    await expect(page.getByText('12345678')).toBeVisible()
+    await page.getByRole('button', { name: '100k', exact: true }).click()
+    await expect(page.getByText('Resumen')).toBeVisible()
+    await expect(page.getByText('Lucas García').first()).toBeVisible()
+    await expect(page.getByText('12345678').first()).toBeVisible()
   })
 
   test('muestra resultado aprobado cuando Bancard redirige con estado=aprobado', async ({ page }) => {
@@ -322,7 +322,7 @@ test.describe('Portal — Historial de Almuerzos', () => {
   })
 
   test('muestra las estadísticas del mes', async ({ page }) => {
-    await expect(page.getByText('Almuerzos')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Almuerzos', { exact: true })).toBeVisible()
     await expect(page.getByText('Cobrados')).toBeVisible()
     await expect(page.getByText('Total')).toBeVisible()
   })
@@ -345,11 +345,11 @@ test.describe('Portal — Control de acceso', () => {
     )
     // Simular que el store ya tiene al ADMIN autenticado
     await page.goto('/portal/login')
-    await page.getByPlaceholder('tucorreo@email.com').fill(ADMIN.email)
+    await page.getByPlaceholder('Ej: 3331234-2').fill(ADMIN.email)
     await page.getByPlaceholder('••••••••').fill('password123')
     await page.getByRole('button', { name: 'Ingresar' }).click()
-    // El ADMIN no tiene rol CLIENTE_WEB → PrivateRoute redirige a /login
-    await expect(page).toHaveURL('/login')
+    // El ADMIN no tiene rol CLIENTE_WEB → PrivateRoute redirige a /dashboard
+    await expect(page).toHaveURL('/dashboard')
   })
 
   test('usuario sin autenticar en /portal redirige a /login', async ({ page }) => {

@@ -46,20 +46,20 @@ test.describe('Configuración', () => {
   })
 
   test('la tab Categorías es la activa por defecto y el botón Nuevo está visible', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /Nuevo/i })).toBeVisible()
+    await expect(page.locator('button', { hasText: /Nueva categ/i })).toBeVisible()
   })
 
   test('navegar a tab Medios Pago carga el contenido', async ({ page }) => {
-    await page.getByRole('button', { name: /Medios Pago/ }).click()
+    await page.getByRole('button', { name: /Medios de Pago/ }).click()
     // El catch-all devuelve results:[] así que la tabla carga vacía, sin errores
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
-    await expect(page.getByRole('button', { name: /Medios Pago/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Medios de Pago/ })).toBeVisible()
   })
 
   test('navegar a tab Empresa muestra el formulario de datos', async ({ page }) => {
     await page.getByRole('button', { name: /Empresa/ }).click()
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
     // El tab Empresa muestra campos de formulario, no tabla
-    await expect(page.getByText(/RUC|Razón Social|Nombre de Fantasía/i)).toBeVisible()
+    await expect(page.getByText(/RUC|Razón Social|Nombre de Fantasía/i).first()).toBeVisible()
   })
 })
