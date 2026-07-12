@@ -44,7 +44,17 @@ function LogoSinFondo({ src, alt, className }: { src: string; alt: string; class
       }
 
       for (let px = 0; px < w * h; px++) {
-        if (visited[px]) data[px * 4 + 3] = 0
+        const i = px * 4
+        if (visited[px]) {
+          // fondo exterior → transparente
+          data[i + 3] = 0
+        } else if (data[i] > 248 && data[i + 1] > 248 && data[i + 2] > 248) {
+          // blanco puro/neutro interior → texto "CANTINA" (la crema de la burbuja
+          // tiene blue ~220-245, no llega a 248, así no se toca)
+          data[i]     = 34
+          data[i + 1] = 139
+          data[i + 2] = 54
+        }
       }
       ctx.putImageData(new ImageData(data, canvas.width, canvas.height), 0, 0)
     }
@@ -314,7 +324,7 @@ export default function Landing() {
         {/* ── Hero: logo + legado ──────────────────────────────────────────── */}
         <section className="hero">
           <LogoSinFondo
-            src="/logo_tita.png"
+            src="/logo-cantina.png"
             alt="La Cantina de Tita"
             className="lf hero-logo"
           />
