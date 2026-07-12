@@ -15,14 +15,36 @@ function LogoSinFondo({ src, alt, className }: { src: string; alt: string; class
       canvas.width  = img.naturalWidth
       canvas.height = img.naturalHeight
       ctx.drawImage(img, 0, 0)
-      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      // Eliminar el fondo blanco/off-white del PNG.
-      // La burbuja crema tiene b≈215 (<232) y los colores del logo quedan intactos.
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i], g = data[i + 1], b = data[i + 2]
-        if (r > 240 && g > 238 && b > 232) {
-          data[i + 3] = 0
-        }
+      const w = canvas.width, h = canvas.height
+      const imageData = ctx.getImageData(0, 0, w, h)
+      const { data } = imageData
+
+      const isBg = (i: number) =>
+        data[i] > 230 && data[i + 1] > 228 && data[i + 2] > 222
+
+      // BFS flood-fill desde los 4 bordes: solo elimina el blanco EXTERIOR.
+      // El texto blanco de "CANTINA" está dentro del contorno naranja y no
+      // es alcanzable desde los bordes, por lo que queda intacto.
+      const visited = new Uint8Array(w * h)
+      const queue: number[] = []
+
+      const seed = (px: number) => {
+        if (!visited[px] && isBg(px * 4)) { visited[px] = 1; queue.push(px) }
+      }
+      for (let x = 0; x < w; x++) { seed(x); seed((h - 1) * w + x) }
+      for (let y = 0; y < h; y++) { seed(y * w); seed(y * w + w - 1) }
+
+      for (let head = 0; head < queue.length; head++) {
+        const px = queue[head]
+        const x = px % w, y = (px / w) | 0
+        if (y > 0)     seed(px - w)
+        if (y < h - 1) seed(px + w)
+        if (x > 0)     seed(px - 1)
+        if (x < w - 1) seed(px + 1)
+      }
+
+      for (let px = 0; px < w * h; px++) {
+        if (visited[px]) data[px * 4 + 3] = 0
       }
       ctx.putImageData(new ImageData(data, canvas.width, canvas.height), 0, 0)
     }
