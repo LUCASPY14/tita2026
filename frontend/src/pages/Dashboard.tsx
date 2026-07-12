@@ -228,10 +228,10 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-slate-900">
+          <h1 className="text-2xl sm:text-4xl font-bold text-slate-900">
             {saludo}, {user?.nombre ?? 'Usuario'}
           </h1>
-          <p className="text-lg text-slate-500 mt-0.5">
+          <p className="text-sm sm:text-lg text-slate-500 mt-0.5">
             Resumen del día — {new Date().toLocaleDateString('es-PY', {
               weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
             })}

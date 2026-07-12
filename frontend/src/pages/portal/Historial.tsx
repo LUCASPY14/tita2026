@@ -156,7 +156,7 @@ export default function PortalHistorial() {
 
       {/* Summary */}
       {data && !loading && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
             { label: 'Almuerzos', value: data.total },
             { label: 'Cobrados', value: data.cobrados },

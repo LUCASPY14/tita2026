@@ -202,7 +202,7 @@ function PinModal({ saldoActual, total, limiteCreditoTarjeta, onConfirm, onCance
         </div>
 
         {/* Resumen financiero */}
-        <div className="px-6 py-4 bg-amber-50 border-b border-amber-200 grid grid-cols-3 gap-3 text-center">
+        <div className="px-6 py-4 bg-amber-50 border-b border-amber-200 grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
           <div>
             <p className="text-amber-700 text-xs font-bold uppercase tracking-wide">Saldo actual</p>
             <p className="text-amber-900 text-lg font-black tabular-nums">{gs(saldoActual)}</p>
