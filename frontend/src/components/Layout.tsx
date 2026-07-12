@@ -27,7 +27,6 @@ import {
   Leaf,
   ShoppingCart,
   Menu,
-  X,
   type LucideIcon,
 } from 'lucide-react'
 
