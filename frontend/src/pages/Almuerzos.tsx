@@ -1092,8 +1092,8 @@ export default function Almuerzos() {
       >
         <div className="space-y-4">
           <div>
-            <label className={labelClass}>Estudiante *</label>
-            <select value={suscForm.hijo} onChange={e => setSuscForm(f => ({ ...f, hijo: e.target.value }))} className={inputClass}>
+            <label htmlFor="susc-estudiante" className={labelClass}>Estudiante *</label>
+            <select id="susc-estudiante" value={suscForm.hijo} onChange={e => setSuscForm(f => ({ ...f, hijo: e.target.value }))} className={inputClass}>
               <option value="">Seleccionar...</option>
               {hijos.map(h => (
                 <option key={h.id} value={h.id}>
@@ -1103,8 +1103,9 @@ export default function Almuerzos() {
             </select>
           </div>
           <div>
-            <label className={labelClass}>Plan *</label>
+            <label htmlFor="susc-plan" className={labelClass}>Plan *</label>
             <select
+              id="susc-plan"
               value={suscForm.plan}
               onChange={e => {
                 const planId = e.target.value

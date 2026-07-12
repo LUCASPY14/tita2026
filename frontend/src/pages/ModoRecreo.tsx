@@ -1195,8 +1195,8 @@ export default function ModoRecreo() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Favoritos */}
-            {favoritos.length > 0 && (
+            {/* Favoritos — solo cuando no hay filtro de categoría activo */}
+            {catFiltro === '' && favoritos.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-base">🔥</span>
