@@ -917,24 +917,24 @@ export default function ModoRecreo() {
       )}
 
       {/* ── Header ── */}
-      <header className="flex items-center justify-between px-5 py-2 bg-white border-b-2 border-slate-200 shadow-sm h-16 shrink-0">
-        <div className="flex items-center gap-4">
-          <img src="/logo_tita.png" alt="" className="h-9 w-auto rounded" />
-          <div className="flex items-center gap-2 bg-yellow-100 border border-yellow-300 rounded-full px-4 py-1.5">
+      <header className="flex items-center justify-between px-3 md:px-5 py-2 bg-white border-b-2 border-slate-200 shadow-sm h-14 md:h-16 shrink-0">
+        <div className="flex items-center gap-2 md:gap-4">
+          <img src="/logo_tita.png" alt="" className="h-8 md:h-9 w-auto rounded" />
+          <div className="flex items-center gap-2 bg-yellow-100 border border-yellow-300 rounded-full px-3 md:px-4 py-1.5">
             <LightningIcon size={16} weight="fill" className="text-yellow-500" />
-            <span className="text-yellow-700 text-sm font-black uppercase tracking-widest">{t('pos.title')}</span>
+            <span className="text-yellow-700 text-xs md:text-sm font-black uppercase tracking-widest">{t('pos.title')}</span>
           </div>
-          <div className="flex items-center gap-4 ml-2 text-sm text-slate-500">
+          <div className="hidden md:flex items-center gap-3 ml-1 text-sm text-slate-500">
             <span className="flex items-center gap-1.5"><ClockIcon size={15} weight="fill" className="text-slate-400" />{clock}</span>
             <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
               <CashRegisterIcon size={15} weight="fill" className="text-emerald-500" />
               {cierreCaja.caja_nombre}
             </span>
-            <span>{t('pos.todaySales')}: <strong className="text-slate-800">{dailyStats.count}</strong></span>
-            <span>Promedio: <strong className="text-slate-800">{dailyStats.count > 0 ? `${avgTime}s` : '—'}</strong></span>
+            <span className="hidden lg:inline">{t('pos.todaySales')}: <strong className="text-slate-800">{dailyStats.count}</strong></span>
+            <span className="hidden lg:inline">Promedio: <strong className="text-slate-800">{dailyStats.count > 0 ? `${avgTime}s` : '—'}</strong></span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           {/* Badge de ventas offline pendientes */}
           {pendingCount > 0 && (
             <button
@@ -949,7 +949,8 @@ export default function ModoRecreo() {
               {pendingCount} venta{pendingCount !== 1 ? 's' : ''} offline
             </button>
           )}
-          <div className="flex items-center gap-3 text-xs text-slate-500">
+          {/* Atajos de teclado — solo en desktop con teclado físico */}
+          <div className="hidden xl:flex items-center gap-3 text-xs text-slate-500">
             {[['F2','Buscar'],['F3','Escanear'],['F9','Cobrar'],['Esc','Cancelar'],['±','Cant']].map(([k, l]) => (
               <span key={k}>
                 <kbd className={`rounded px-1.5 py-0.5 font-mono mr-1 text-[11px] ${k === 'F9' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>{k}</kbd>
@@ -970,7 +971,7 @@ export default function ModoRecreo() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ══ PANEL IZQUIERDO: ALUMNO ══ */}
-        <aside className="w-80 bg-white border-r-2 border-slate-200 flex flex-col shrink-0">
+        <aside className="w-64 lg:w-80 bg-white border-r-2 border-slate-200 flex flex-col shrink-0">
 
           {/* Input scanner */}
           <div className="p-3 border-b border-slate-100">
@@ -1280,7 +1281,7 @@ export default function ModoRecreo() {
         </main>
 
         {/* ══ PANEL DERECHO: CARRITO + COBRO ══ */}
-        <aside className="w-96 bg-white border-l-2 border-slate-200 flex flex-col shrink-0">
+        <aside className="w-72 lg:w-96 bg-white border-l-2 border-slate-200 flex flex-col shrink-0">
 
           {/* Header carrito */}
           <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
