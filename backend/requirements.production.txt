@@ -51,6 +51,9 @@ charset-normalizer==3.4.7
 idna==3.18
 urllib3==2.7.0
 
+# ── Email transaccional ───────────────────────────────────────────────────────
+django-anymail[resend]==13.0
+
 # ── Utilidades ────────────────────────────────────────────────────────────────
 python-dotenv==1.2.2
 python-dateutil==2.9.0.post0

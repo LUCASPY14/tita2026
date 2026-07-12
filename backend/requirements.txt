@@ -73,5 +73,8 @@ prometheus-client==0.22.0
 openpyxl==3.1.5
 reportlab==4.3.1
 
+# -- Email transaccional -------------------------------------------------------
+django-anymail[resend]==13.0
+
 # -- Push notifications --------------------------------------------------------
 pywebpush==1.14.1
