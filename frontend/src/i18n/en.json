@@ -48,6 +48,7 @@
   "layout": {
     "systemName":   "Management System",
     "mainMenu":     "Main menu",
+    "openMenu":     "Open menu",
     "expandMenu":   "Expand menu",
     "collapseMenu": "Collapse menu",
     "collapse":     "Collapse",

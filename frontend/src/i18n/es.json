@@ -49,6 +49,7 @@
   "layout": {
     "systemName":   "Sistema de Gestión",
     "mainMenu":     "Menú principal",
+    "openMenu":     "Abrir menú",
     "expandMenu":   "Expandir menú",
     "collapseMenu": "Colapsar menú",
     "collapse":     "Colapsar",

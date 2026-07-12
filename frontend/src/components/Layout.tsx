@@ -26,6 +26,8 @@ import {
   ChefHat,
   Leaf,
   ShoppingCart,
+  Menu,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -73,6 +75,7 @@ const navItems: NavItem[] = [
 export default function AppLayout() {
   const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -98,34 +101,57 @@ export default function AppLayout() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [userMenuOpen])
 
+  // Bloquear scroll del body cuando el drawer mobile está abierto
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [mobileOpen])
+
   return (
     <div className="flex min-h-screen bg-slate-50">
+
+      {/* ── Overlay mobile (cierra drawer al tocar fuera) ───────────── */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden
+        />
+      )}
 
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
       <aside
         className={[
           'bg-white border-r border-slate-200 flex flex-col shrink-0',
           'transition-all duration-200 ease-in-out',
-          collapsed ? 'w-16' : 'w-64',
+          // Mobile: drawer fijo que desliza desde la izquierda
+          'fixed inset-y-0 left-0 z-40 w-72',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+          // Desktop: sidebar estático en el flujo
+          'lg:static lg:inset-y-auto lg:z-auto lg:translate-x-0',
+          collapsed ? 'lg:w-16' : 'lg:w-64',
         ].join(' ')}
       >
         {/* Logo */}
         <div
           className={[
             'flex items-center h-14 border-b border-slate-200 shrink-0',
-            collapsed ? 'justify-center px-3' : 'px-4 gap-2.5',
+            collapsed ? 'lg:justify-center lg:px-3 px-4 gap-2.5' : 'px-4 gap-2.5',
           ].join(' ')}
         >
           <img
             src="/logo_tita.png"
             alt="Cantina Tita"
-            className={collapsed ? 'h-7 w-auto' : 'h-9 w-auto'}
+            className={collapsed ? 'lg:h-7 h-9 w-auto' : 'h-9 w-auto'}
           />
-          {!collapsed && (
-            <span className="text-slate-700 font-semibold text-base tracking-tight truncate">
-              {t('layout.systemName')}
-            </span>
-          )}
+          <span
+            className={[
+              'text-slate-700 font-semibold text-base tracking-tight truncate',
+              collapsed ? 'lg:hidden' : '',
+            ].join(' ')}
+          >
+            {t('layout.systemName')}
+          </span>
         </div>
 
         {/* Nav */}
@@ -137,14 +163,14 @@ export default function AppLayout() {
               <button
                 type="button"
                 key={path}
-                onClick={() => navigate(path)}
+                onClick={() => { navigate(path); setMobileOpen(false) }}
                 title={collapsed ? label : undefined}
                 aria-label={collapsed ? label : undefined}
                 aria-current={active ? 'page' : undefined}
                 className={[
                   'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-medium',
                   'transition-all duration-150 cursor-pointer group',
-                  collapsed ? 'justify-center' : '',
+                  collapsed ? 'lg:justify-center' : '',
                   active
                     ? 'bg-green-50 text-green-700'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800',
@@ -158,21 +184,29 @@ export default function AppLayout() {
                       : 'text-slate-400 group-hover:text-slate-600',
                   ].join(' ')}
                 />
-                {!collapsed && (
-                  <>
-                    <span className="truncate flex-1 text-left">{label}</span>
-                    {active && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                    )}
-                  </>
+                <span
+                  className={[
+                    'truncate flex-1 text-left',
+                    collapsed ? 'lg:hidden' : '',
+                  ].join(' ')}
+                >
+                  {label}
+                </span>
+                {active && (
+                  <span
+                    className={[
+                      'w-1.5 h-1.5 rounded-full bg-green-500 shrink-0',
+                      collapsed ? 'lg:hidden' : '',
+                    ].join(' ')}
+                  />
                 )}
               </button>
             )
           })}
         </nav>
 
-        {/* Collapse toggle */}
-        <div className="p-2 border-t border-slate-200 shrink-0">
+        {/* Collapse toggle — solo desktop */}
+        <div className="hidden lg:block p-2 border-t border-slate-200 shrink-0">
           <button
             type="button"
             onClick={() => setCollapsed(!collapsed)}
@@ -201,55 +235,71 @@ export default function AppLayout() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200/80 px-4 flex items-center justify-end gap-3 shrink-0">
-          <LanguageSwitcher />
-          <div ref={userMenuRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setUserMenuOpen(!userMenuOpen)}
-              aria-expanded={userMenuOpen}
-              aria-haspopup="menu"
-              aria-label={t('layout.userMenu')}
-              className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
-            >
-              <span className="w-8 h-8 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-sm font-bold shrink-0">
-                {initials}
-              </span>
-              <div className="hidden sm:block text-left">
-                <p className="text-base font-medium text-slate-700 leading-none">
-                  {user?.nombre || t('layout.defaultUser')}
-                </p>
-                <p className="text-sm text-slate-500 mt-0.5 leading-none">
-                  {t(`role.${user?.rol}`, { defaultValue: user?.rol ?? '' })}
-                </p>
-              </div>
-              <ChevronDown
-                className={[
-                  'w-3.5 h-3.5 text-slate-400 transition-transform duration-150',
-                  userMenuOpen ? 'rotate-180' : '',
-                ].join(' ')}
-              />
-            </button>
+        <header className="h-14 lg:h-16 bg-white border-b border-slate-200/80 px-4 flex items-center justify-between gap-3 shrink-0">
 
-            {userMenuOpen && (
-              <div role="menu" className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/60 z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-100">
-                  <p className="text-base font-semibold text-slate-800 truncate">
-                    {user?.nombre} {user?.apellido}
+          {/* Hamburger — solo mobile */}
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="lg:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label={t('layout.openMenu')}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Spacer desktop (el hamburger no existe, empujamos el user menu a la derecha) */}
+          <div className="hidden lg:block flex-1" />
+
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <div ref={userMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                aria-expanded={userMenuOpen}
+                aria-haspopup="menu"
+                aria-label={t('layout.userMenu')}
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                <span className="w-8 h-8 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-sm font-bold shrink-0">
+                  {initials}
+                </span>
+                <div className="hidden sm:block text-left">
+                  <p className="text-base font-medium text-slate-700 leading-none">
+                    {user?.nombre || t('layout.defaultUser')}
                   </p>
-                  <p className="text-sm text-slate-500 mt-0.5 truncate">{user?.email}</p>
+                  <p className="text-sm text-slate-500 mt-0.5 leading-none">
+                    {t(`role.${user?.rol}`, { defaultValue: user?.rol ?? '' })}
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-base text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  {t('layout.logout')}
-                </button>
-              </div>
-            )}
+                <ChevronDown
+                  className={[
+                    'w-3.5 h-3.5 text-slate-400 transition-transform duration-150',
+                    userMenuOpen ? 'rotate-180' : '',
+                  ].join(' ')}
+                />
+              </button>
+
+              {userMenuOpen && (
+                <div role="menu" className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/60 z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <p className="text-base font-semibold text-slate-800 truncate">
+                      {user?.nombre} {user?.apellido}
+                    </p>
+                    <p className="text-sm text-slate-500 mt-0.5 truncate">{user?.email}</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-base text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    {t('layout.logout')}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
