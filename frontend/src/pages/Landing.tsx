@@ -1,5 +1,38 @@
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Users, LayoutDashboard, ShoppingCart, Eye, Smartphone, Bell, ArrowRight } from 'lucide-react'
+
+function LogoSinFondo({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      canvas.width  = img.naturalWidth
+      canvas.height = img.naturalHeight
+      ctx.drawImage(img, 0, 0)
+      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      // Eliminar pixels blancos/casi blancos con borde suave
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2]
+        if (r > 245 && g > 245 && b > 245) {
+          data[i + 3] = 0
+        } else if (r > 220 && g > 220 && b > 220) {
+          const bright = (r + g + b) / 3
+          data[i + 3] = Math.round(((255 - bright) / 35) * 255)
+        }
+      }
+      ctx.putImageData(new ImageData(data, canvas.width, canvas.height), 0, 0)
+    }
+    img.src = src
+  }, [src])
+
+  return <canvas ref={canvasRef} aria-label={alt} className={className} />
+}
 
 const ACCESS_CARDS = [
   {
@@ -129,7 +162,7 @@ export default function Landing() {
           display: flex; align-items: center; justify-content: center;
           gap: 2.5rem; flex-wrap: wrap;
         }
-        .hero-logo { width: clamp(240px, 36vw, 400px); display: block; flex-shrink: 0; }
+        .hero-logo { width: clamp(320px, 48vw, 520px); display: block; flex-shrink: 0; }
         .hero-text { max-width: 420px; }
         .badge {
           display: inline-flex; align-items: center; gap: .375rem;
@@ -243,7 +276,7 @@ export default function Landing() {
         /* ---------- responsive ---------- */
         @media (max-width: 700px) {
           .hero { flex-direction: column; text-align: center; padding: 2rem 1.25rem 1.75rem; gap: 1.5rem; }
-          .hero-logo { width: 160px; }
+          .hero-logo { width: 210px; }
           .hero-divider { margin-left: auto; margin-right: auto; }
           .cards-grid { grid-template-columns: 1fr; }
           .cards-section { padding: 1.25rem 1rem; }
@@ -260,11 +293,10 @@ export default function Landing() {
 
         {/* ── Hero: logo + legado ──────────────────────────────────────────── */}
         <section className="hero">
-          <img
+          <LogoSinFondo
             src="/logo_tita.png"
             alt="La Cantina de Tita"
             className="lf hero-logo"
-            draggable={false}
           />
 
           <div className="hero-text">
