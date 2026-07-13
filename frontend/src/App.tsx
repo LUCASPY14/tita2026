@@ -42,6 +42,7 @@ const PortalHistorial        = lazy(() => import('./pages/portal/Historial'))
 const PortalFacturas         = lazy(() => import('./pages/portal/Facturas'))
 const PortalCargaSaldo       = lazy(() => import('./pages/portal/CargaSaldo'))
 const PortalCambiarContrasena = lazy(() => import('./pages/portal/CambiarContrasena'))
+const PortalPagarAlmuerzo    = lazy(() => import('./pages/portal/PagarAlmuerzo'))
 
 // ── Fallback de carga ─────────────────────────────────────────────────────────
 function PageLoader() {
@@ -155,6 +156,7 @@ export default function App() {
             }>
               <Route index                        element={<PortalDashboard />} />
               <Route path="carga-saldo"           element={<PortalCargaSaldo />} />
+              <Route path="pagar-almuerzo"        element={<PortalPagarAlmuerzo />} />
               <Route path="notificaciones"        element={<PortalNotificaciones />} />
               <Route path="historial"             element={<PortalHistorial />} />
               <Route path="facturas"              element={<PortalFacturas />} />
