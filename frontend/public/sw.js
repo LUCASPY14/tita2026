@@ -16,12 +16,19 @@ const SYNC_TAG       = 'sync-ventas'
 const IDB_DB         = 'cantina-offline'
 const IDB_STORE      = 'pending-ventas'
 
-// URLs que cacheamos para catálogo
+// URLs que cacheamos para catálogo (ModoRecreo)
 const CATALOG_PATTERNS = [
   /\/api\/v1\/productos\/productos\//,
   /\/api\/v1\/core\/medios-pago\//,
 ]
 const TARJETA_PATTERN = /\/api\/v1\/core\/tarjetas\//
+
+// URLs del portal de padres — StaleWhileRevalidate (consulta rápida + actualiza en background)
+const PORTAL_PATTERNS = [
+  /\/api\/v1\/usuarios\/portal\//,
+  /\/api\/v1\/almuerzos\/suscripciones\//,
+  /\/api\/v1\/notificaciones\/notificaciones\//,
+]
 
 // ─── Install: pre-cache shell de la app ──────────────────────────────────────
 self.addEventListener('install', event => {
@@ -58,6 +65,12 @@ self.addEventListener('fetch', event => {
 
   // GET catálogo → StaleWhileRevalidate
   if (request.method === 'GET' && CATALOG_PATTERNS.some(p => p.test(url))) {
+    event.respondWith(staleWhileRevalidate(request))
+    return
+  }
+
+  // GET portal de padres → StaleWhileRevalidate (saldo, historial, notificaciones)
+  if (request.method === 'GET' && PORTAL_PATTERNS.some(p => p.test(url))) {
     event.respondWith(staleWhileRevalidate(request))
     return
   }
