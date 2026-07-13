@@ -337,6 +337,7 @@ class PortalMiHijoView(APIView):
             cuenta_data = None
             if cuenta:
                 cuenta_data = {
+                    "id": cuenta.id,
                     "cantidad_almuerzos": cuenta.cantidad_almuerzos,
                     "monto_total": int(cuenta.monto_total),
                     "monto_pagado": int(cuenta.monto_pagado),

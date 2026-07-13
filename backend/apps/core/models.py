@@ -519,8 +519,9 @@ class RegistroAutorizacion(models.Model):
 
 class PagoBancard(models.Model):
     """
-    Transacción de pago con tarjeta de débito/crédito a través de Bancard vPOS.
-    El flujo es: iniciar → redirigir a Bancard → confirmar → acreditar saldo.
+    Transacción de pago a través de Bancard vPOS.
+    Puede ser recarga de saldo de tarjeta (TARJETA) o pago de cuenta de almuerzo (ALMUERZO).
+    El flujo es: iniciar → redirigir a Bancard → confirmar → acreditar.
     """
 
     class Estado(models.TextChoices):
@@ -530,11 +531,28 @@ class PagoBancard(models.Model):
         CANCELADO = "CANCELADO", "Cancelado"
         ERROR     = "ERROR",     "Error"
 
+    class Tipo(models.TextChoices):
+        TARJETA  = "TARJETA",  "Recarga de tarjeta"
+        ALMUERZO = "ALMUERZO", "Pago de cuenta almuerzo"
+
+    tipo = models.CharField(
+        max_length=10, choices=Tipo.choices, default=Tipo.TARJETA,
+    )
     tarjeta = models.ForeignKey(
         Tarjeta,
         models.PROTECT,
+        null=True,
+        blank=True,
         related_name="pagos_bancard",
-        help_text="Tarjeta prepago que se recargará",
+        help_text="Tarjeta prepago que se recargará (solo tipo TARJETA)",
+    )
+    cuenta_almuerzo = models.ForeignKey(
+        "almuerzos.CuentaAlmuerzoMensual",
+        models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="pagos_bancard",
+        help_text="Cuenta mensual de almuerzo a abonar (solo tipo ALMUERZO)",
     )
     cliente = models.ForeignKey(
         "clientes.Cliente",
@@ -588,4 +606,5 @@ class PagoBancard(models.Model):
         ]
 
     def __str__(self):
-        return f"Bancard #{self.shop_process_id} - {self.tarjeta} - ₲{self.monto:,.0f} [{self.estado}]"
+        ref = self.tarjeta or self.cuenta_almuerzo or "—"
+        return f"Bancard #{self.shop_process_id} - {ref} - ₲{self.monto:,.0f} [{self.estado}]"

@@ -177,3 +177,35 @@ def acreditar_saldo(pago_bancard) -> None:
     pago_bancard.estado = pago_bancard.Estado.APROBADO
     pago_bancard.fecha_confirmacion = timezone.now()
     pago_bancard.save(update_fields=["carga_saldo", "estado", "fecha_confirmacion"])
+
+
+def acreditar_pago_almuerzo(pago_bancard) -> None:
+    """
+    Registra un PagoCuentaAlmuerzo y actualiza la CuentaAlmuerzoMensual.
+    Solo se llama cuando Bancard confirma el pago de tipo ALMUERZO como aprobado.
+    El registrado_por es el usuario CLIENTE_WEB del padre.
+    """
+    from decimal import Decimal
+    from django.db import transaction
+    from apps.almuerzos.models import CuentaAlmuerzoMensual, PagoCuentaAlmuerzo
+
+    usuario = pago_bancard.cliente.usuario
+    monto = Decimal(pago_bancard.monto)
+
+    with transaction.atomic():
+        cuenta = (
+            CuentaAlmuerzoMensual.objects
+            .select_for_update()
+            .get(pk=pago_bancard.cuenta_almuerzo_id)
+        )
+        PagoCuentaAlmuerzo.objects.create(
+            cuenta=cuenta,
+            monto=monto,
+            medio_pago="BANCARD",
+            referencia=pago_bancard.shop_process_id,
+            registrado_por=usuario,
+        )
+        cuenta.registrar_pago(monto)
+        pago_bancard.estado = pago_bancard.Estado.APROBADO
+        pago_bancard.fecha_confirmacion = timezone.now()
+        pago_bancard.save(update_fields=["estado", "fecha_confirmacion"])
