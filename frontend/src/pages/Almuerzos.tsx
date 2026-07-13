@@ -225,6 +225,12 @@ export default function Almuerzos() {
   const [editSuscForm, setEditSuscForm] = useState({ plan: '', fecha_fin: '' })
   const [savingEditSusc, setSavingEditSusc] = useState(false)
 
+  // ── Pago cuota mensual fija ───────────────────────────────────────
+  const [pagoMensualOpen, setPagoMensualOpen] = useState(false)
+  const [pagoMensualSusc, setPagoMensualSusc] = useState<Suscripcion | null>(null)
+  const [pagoMensualForm, setPagoMensualForm] = useState({ monto: '', mes_pagado: '' })
+  const [savingPagoMensual, setSavingPagoMensual] = useState(false)
+
   // ── Load catalogs ─────────────────────────────────────────────────
   useEffect(() => {
     Promise.all([
@@ -499,7 +505,7 @@ export default function Almuerzos() {
     if (!pagoForm.monto || Number(pagoForm.monto) <= 0) { toast.error('Ingresá el monto'); return }
     setSavingPago(true)
     try {
-      await api.post('/almuerzos/pagos-cuenta/', {
+      await api.post('/almuerzos/pagos-cuentas/', {
         cuenta: pagoCuenta.id,
         monto: Number(pagoForm.monto),
         medio_pago: pagoForm.medio_pago,
@@ -514,6 +520,42 @@ export default function Almuerzos() {
       setSavingPago(false)
     }
   }, [pagoCuenta, pagoForm, loadCuentas])
+
+  // ── Pago cuota mensual fija ───────────────────────────────────────
+  const openPagoMensual = useCallback((s: Suscripcion) => {
+    setPagoMensualSusc(s)
+    const plan = planes.find(p => p.id === s.plan)
+    const primerDiaMes = new Date()
+    primerDiaMes.setDate(1)
+    setPagoMensualForm({
+      monto: plan ? String(plan.precio_mensual) : '',
+      mes_pagado: primerDiaMes.toISOString().split('T')[0],
+    })
+    setPagoMensualOpen(true)
+  }, [planes])
+
+  const handlePagoMensual = useCallback(async () => {
+    if (!pagoMensualSusc) return
+    if (!pagoMensualForm.monto || Number(pagoMensualForm.monto) <= 0) { toast.error('Ingresá el monto'); return }
+    if (!pagoMensualForm.mes_pagado) { toast.error('Seleccioná el mes'); return }
+    setSavingPagoMensual(true)
+    try {
+      // mes_pagado debe ser el día 1 del mes seleccionado
+      const [y, m] = pagoMensualForm.mes_pagado.split('-')
+      const mesPagado = `${y}-${m}-01`
+      await api.post('/almuerzos/pagos-mensuales/', {
+        suscripcion: pagoMensualSusc.id,
+        monto_pagado: Number(pagoMensualForm.monto),
+        mes_pagado: mesPagado,
+      })
+      toast.success('Cuota mensual registrada')
+      setPagoMensualOpen(false)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSavingPagoMensual(false)
+    }
+  }, [pagoMensualSusc, pagoMensualForm])
 
   // ── Generar cuentas del mes ───────────────────────────────────────
   const handleGenerarCuentas = useCallback(async () => {
@@ -757,9 +799,15 @@ export default function Almuerzos() {
     {
       title: '',
       key: 'acc',
-      width: 160,
+      width: 200,
       render: (_, r) => r.estado === 'ACTIVA' ? (
         <div className="flex gap-1.5">
+          {r.tipo_cobro === 'MENSUAL' && (
+            <Button size="sm" variant="primary" onClick={() => openPagoMensual(r)}>
+              <Banknote className="w-3.5 h-3.5" />
+              Cuota
+            </Button>
+          )}
           <Button size="sm" variant="secondary" onClick={() => openEditSusc(r)}>
             <Edit2 className="w-3.5 h-3.5" />
           </Button>
@@ -1302,6 +1350,48 @@ export default function Almuerzos() {
             Solo se pueden eliminar registros en estado ANULADO. La cuenta mensual del alumno ya fue corregida al anular.
           </p>
         </div>
+      </Modal>
+
+      {/* ── Pago cuota mensual modal ──────────────────────────────── */}
+      <Modal
+        open={pagoMensualOpen}
+        title="Registrar Cuota Mensual"
+        onOk={handlePagoMensual}
+        onCancel={() => setPagoMensualOpen(false)}
+        okText="Registrar Cuota"
+        confirmLoading={savingPagoMensual}
+        width={440}
+      >
+        {pagoMensualSusc && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 rounded-xl p-4">
+              <p className="text-sm font-semibold text-slate-800">{pagoMensualSusc.hijo_nombre}</p>
+              <p className="text-xs text-slate-500 mt-1">
+                {planes.find(p => p.id === pagoMensualSusc.plan)?.nombre ?? 'Plan'} — Cuota fija mensual
+              </p>
+            </div>
+            <div>
+              <label className={labelClass}>Mes *</label>
+              <input
+                type="month"
+                value={pagoMensualForm.mes_pagado.slice(0, 7)}
+                onChange={e => setPagoMensualForm(f => ({ ...f, mes_pagado: `${e.target.value}-01` }))}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Monto (Gs.) *</label>
+              <input
+                type="number"
+                min={1}
+                step={1000}
+                value={pagoMensualForm.monto}
+                onChange={e => setPagoMensualForm(f => ({ ...f, monto: e.target.value }))}
+                className={inputClass}
+              />
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* ── Menú modal ────────────────────────────────────────────── */}
