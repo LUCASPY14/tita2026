@@ -6,6 +6,12 @@ on:
   schedule:
     - cron: '0 2 * * 1'  # Lunes 02:00 UTC (fuera de horario escolar)
   workflow_dispatch:      # Disparo manual desde la UI de GitHub
+    inputs:
+      smoke_only:
+        description: 'Smoke only — 1 VU × 30s en lugar del test completo'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   k6:
