@@ -125,8 +125,9 @@ if ($SkipNube) {
             Write-Warning "    rclone no encontrado. Instalar desde https://rclone.org y configurar remote 'gdrive'."
             Write-Warning "    Luego volver a ejecutar este script para registrar la tarea de nube."
         } else {
-            $actionNube  = New-ScheduledTaskAction -Execute "powershell.exe" `
-                -Argument "-NonInteractive -NoProfile -File `"$nubeScript`" -SoloUltimo"
+            $nubeArg = "-NonInteractive -NoProfile -File `"$nubeScript`" -SoloUltimo"
+            if ($GpgRecipient) { $nubeArg += " -RequireEncrypted" }
+            $actionNube  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $nubeArg
             $triggerNube = New-ScheduledTaskTrigger -Daily -At "02:30"
 
             $existingNube = Get-ScheduledTask -TaskName "Backup Cantina Nube" -ErrorAction SilentlyContinue

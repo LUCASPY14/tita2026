@@ -115,8 +115,8 @@ npm run lint         # ESLint + TypeScript check
 
 ### Backup de base de datos
 ```powershell
-# Primera vez (registra tarea programada Windows 02:00):
-.\scripts\setup_backup_task.ps1 -DbPassword "password_de_postgres"
+# Primera vez (registra tarea programada Windows 02:00, con cifrado GPG obligatorio):
+.\scripts\setup_backup_task.ps1 -DbPassword "password_de_postgres" -GpgRecipient "admin@cantinatita.com"
 
 # Backup manual:
 .\backup_cantina.ps1
@@ -177,7 +177,7 @@ Portal de padres (`/portal/*`) accesible desde internet via Bancard para recarga
 El límite de sesiones concurrentes se aplica automáticamente al hacer login
 (`apps/usuarios/views.py:_registrar_sesion`).
 
-## Tareas Celery periódicas (11 total)
+## Tareas Celery periódicas (17 total)
 
 | Tarea | Cuándo | Crítica |
 |-------|--------|---------|
@@ -194,6 +194,10 @@ El límite de sesiones concurrentes se aplica automáticamente al hacer login
 | `cerrar_cuentas_mes_anterior` | Día 1 de mes 05:00 | **Sí** |
 | `generar_cuentas_mensuales` | Día 1 de mes 06:00 | **Sí** |
 | `alertar_cuentas_vencidas` | Día 10 de mes 08:00 | No |
+| `limpiar_audit_logs` | Día 1 de mes 01:00 | No |
+| `refrescar_mv_balance_cliente` | Cada 15 min | No |
+| `alertar_ordenes_compra_pendientes` | Diario 09:30 | No |
+| `alertar_compras_pendientes_pago` | Diario 10:00 | No |
 
 Las tareas críticas envían email a `ADMINS` si fallan (configurado en `celery_app.py`).
 

@@ -99,6 +99,36 @@ class TestEnviarWhatsappService:
             NotificacionService._enviar_whatsapp(solicitud_whatsapp)
         mock_wa.assert_called_once_with("595981234567", "Su saldo es bajo.")
 
+    def test_fallback_email_creado_cuando_waha_falla(self, solicitud_whatsapp):
+        from apps.notificaciones.services import NotificacionService
+        from apps.notificaciones.models import Notificacion, SolicitudNotificacion
+        solicitud_whatsapp.cliente.email = "padre@test.com"
+        solicitud_whatsapp.cliente.save(update_fields=["email"])
+
+        with patch("apps.notificaciones.services.enviar_whatsapp", side_effect=RuntimeError("WAHA down")):
+            with pytest.raises(RuntimeError):
+                NotificacionService._enviar_whatsapp(solicitud_whatsapp)
+
+        assert SolicitudNotificacion.objects.filter(
+            cliente=solicitud_whatsapp.cliente,
+            destino=Notificacion.Destino.EMAIL,
+            tipo=solicitud_whatsapp.tipo,
+            mensaje=solicitud_whatsapp.mensaje,
+        ).exists()
+
+    def test_fallback_no_crea_solicitud_sin_email(self, solicitud_whatsapp):
+        from apps.notificaciones.services import NotificacionService
+        from apps.notificaciones.models import SolicitudNotificacion
+        solicitud_whatsapp.cliente.email = ""
+        solicitud_whatsapp.cliente.save(update_fields=["email"])
+
+        inicial = SolicitudNotificacion.objects.count()
+        with patch("apps.notificaciones.services.enviar_whatsapp", side_effect=RuntimeError("WAHA down")):
+            with pytest.raises(RuntimeError):
+                NotificacionService._enviar_whatsapp(solicitud_whatsapp)
+
+        assert SolicitudNotificacion.objects.count() == inicial
+
 
 # ── procesar_pendientes con destino WHATSAPP ──────────────────────────────────
 
