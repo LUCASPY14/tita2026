@@ -196,3 +196,35 @@ O desde el panel de administración:
 # Un solo comando para ver todo:
 docker compose ps ; curl http://localhost/api/health/
 ```
+
+---
+
+## Hoja de ruta de infraestructura — v2.0
+
+### PostgreSQL nativo → contenedor (recomendado para v2.0)
+
+PostgreSQL corre actualmente como servicio nativo en Windows. Las limitaciones son:
+- Las actualizaciones de Windows Update pueden interrumpir el servicio sin aviso
+- No hay aislamiento de recursos (RAM/CPU compartida con el OS)
+- La migración de versión mayor es manual
+
+**Camino de migración recomendado:**
+1. Activar WAL archiving primero (`scripts/setup_wal_archiving.ps1`)
+2. Agregar a `docker-compose.yml`:
+   ```yaml
+   postgres:
+     image: postgres:15
+     volumes:
+       - postgres_data:/var/lib/postgresql/data
+     environment:
+       POSTGRES_DB: cantina_tita
+       POSTGRES_USER: app_cantina
+       POSTGRES_PASSWORD: ${DB_PASSWORD}
+     ports:
+       - "5432:5432"
+   ```
+3. Migrar los datos con `pg_dump` / `pg_restore`
+4. Actualizar `DB_HOST` en `.env.production` de `host.docker.internal` a `postgres`
+5. Eliminar la dependencia `extra_hosts: host.docker.internal` de backend/celery
+
+No realizar este cambio en pleno año lectivo. Planificar para vacaciones de julio o enero.

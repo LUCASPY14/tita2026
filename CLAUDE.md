@@ -5,7 +5,7 @@
 | Capa | Tecnología |
 |------|-----------|
 | Base de datos | PostgreSQL 15 (nativo en Windows, **no** en Docker) |
-| Backend | Python 3.11 · Django 4.2 · DRF 3.17 · Daphne ASGI |
+| Backend | Python 3.11 · Django 5.2 LTS (soporte hasta abril 2028) · DRF 3.17 · Daphne ASGI |
 | Cola de tareas | Celery 5.6 + Redis 7 (broker y cache) |
 | WebSockets | Django Channels 4.2 |
 | Frontend | React 19 · TypeScript 6 · Vite 8 · Tailwind CSS 4 |
