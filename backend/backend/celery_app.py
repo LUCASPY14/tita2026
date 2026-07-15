@@ -136,6 +136,20 @@ app.conf.beat_schedule = {
         "task": "apps.compras.tasks.alertar_compras_pendientes_pago",
         "schedule": crontab(hour=10, minute=0),   # Todos los días 10:00
     },
+    # ── Productos ─────────────────────────────────────────────────────────
+    "sincronizar-costos-desde-compras": {
+        "task": "apps.productos.tasks.sincronizar_costos_desde_compras",
+        "schedule": crontab(hour=1, minute=30),   # Todos los días 01:30
+    },
+    # ── Clientes ──────────────────────────────────────────────────────
+    "alertar-saldo-negativo-prolongado": {
+        "task": "apps.clientes.tasks.alertar_saldo_negativo_prolongado",
+        "schedule": crontab(hour=9, minute=15),   # Todos los días 09:15
+    },
+    "resumen-mensual-deuda-clientes": {
+        "task": "apps.clientes.tasks.resumen_mensual_deuda_clientes",
+        "schedule": crontab(hour=8, minute=30, day_of_month=5),  # Día 5 de cada mes 08:30
+    },
 
 }
 
