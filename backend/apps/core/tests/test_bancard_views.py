@@ -445,6 +445,207 @@ class TestBancardRetornoEdgeCases:
         assert pago.estado == PagoBancard.Estado.RECHAZADO
 
 
+# ─── Fixtures para almuerzo ───────────────────────────────────────────────────
+
+@pytest.fixture
+def padre_con_cuenta(db, cliente, hijo_con_tarjeta):
+    """Padre (CLIENTE_WEB) vinculado al cliente fixture, con una CuentaAlmuerzoMensual."""
+    from apps.usuarios.models import Usuario
+    from apps.almuerzos.models import CuentaAlmuerzoMensual
+    hijo, _ = hijo_con_tarjeta
+    padre = Usuario.objects.create_user(
+        email="padre_almuerzo@test.com",
+        password="test1234",
+        nombre="Padre",
+        apellido="Almuerzo",
+        rol=Usuario.Rol.CLIENTE_WEB,
+        cliente=cliente,
+    )
+    cuenta = CuentaAlmuerzoMensual.objects.create(
+        hijo=hijo,
+        anio=2026,
+        mes=7,
+        cantidad_almuerzos=20,
+        monto_total=Decimal("150000"),
+        monto_pagado=Decimal("0"),
+        forma_cobro=CuentaAlmuerzoMensual.FormaCobro.ONLINE,
+    )
+    return padre, cuenta
+
+
+# ─── Tests iniciar pago almuerzo ──────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardIniciarAlmuerzo:
+
+    def test_no_cliente_web_recibe_403(self, api_cliente_web, padre_con_cuenta):
+        from rest_framework.test import APIClient
+        from apps.usuarios.models import Usuario
+        cajero = Usuario.objects.create_user(
+            email="cajero_alm@test.com", password="test",
+            nombre="Cajero", apellido="Test", rol=Usuario.Rol.CAJERO,
+        )
+        client = APIClient()
+        client.force_authenticate(user=cajero)
+        _, cuenta = padre_con_cuenta
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'cuenta_id': cuenta.pk, 'monto': 100000,
+        })
+        assert resp.status_code == 403
+
+    def test_sin_params_retorna_400(self, padre_con_cuenta):
+        from rest_framework.test import APIClient
+        padre, _ = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {})
+        assert resp.status_code == 400
+
+    def test_monto_invalido_retorna_400(self, padre_con_cuenta):
+        from rest_framework.test import APIClient
+        padre, cuenta = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'cuenta_id': cuenta.pk, 'monto': 'no_numero',
+        })
+        assert resp.status_code == 400
+
+    def test_monto_cero_retorna_400(self, padre_con_cuenta):
+        from rest_framework.test import APIClient
+        padre, cuenta = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'cuenta_id': cuenta.pk, 'monto': 0,
+        })
+        assert resp.status_code == 400
+
+    def test_cuenta_inexistente_retorna_404(self, padre_con_cuenta):
+        from rest_framework.test import APIClient
+        padre, _ = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'cuenta_id': 99999, 'monto': 100000,
+        })
+        assert resp.status_code == 404
+
+    def test_monto_supera_saldo_retorna_400(self, padre_con_cuenta):
+        from rest_framework.test import APIClient
+        padre, cuenta = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'cuenta_id': cuenta.pk, 'monto': int(cuenta.monto_total) + 1,
+        })
+        assert resp.status_code == 400
+        assert 'saldo' in resp.data['detail'].lower()
+
+    def test_sin_claves_bancard_retorna_503(self, padre_con_cuenta):
+        from django.test import override_settings
+        from rest_framework.test import APIClient
+        padre, cuenta = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        with override_settings(BANCARD_PUBLIC_KEY='', BANCARD_PRIVATE_KEY=''):
+            resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+                'cuenta_id': cuenta.pk, 'monto': 100000,
+            })
+        assert resp.status_code == 503
+
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_bancard_error_retorna_502(self, mock_iniciar, padre_con_cuenta):
+        mock_iniciar.return_value = {'status': 'error', 'messages': [{'dsc': 'Error Bancard'}]}
+        from rest_framework.test import APIClient
+        padre, cuenta = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'cuenta_id': cuenta.pk, 'monto': 100000,
+        })
+        assert resp.status_code == 502
+
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_bancard_ok_retorna_redirect_url(self, mock_iniciar, padre_con_cuenta):
+        mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-alm-ok'}
+        from rest_framework.test import APIClient
+        padre, cuenta = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'cuenta_id': cuenta.pk, 'monto': 100000,
+        })
+        assert resp.status_code == 201
+        assert 'redirect_url' in resp.data
+        assert 'shop_process_id' in resp.data
+
+    def test_cliente_web_sin_cliente_asociado_retorna_400(self, api_cliente_web, padre_con_cuenta):
+        """CLIENTE_WEB sin .cliente asociado → 400 (línea 179)."""
+        from rest_framework.test import APIClient
+        # api_cliente_web fixture crea usuario sin cliente vinculado
+        client, _ = api_cliente_web
+        _, cuenta = padre_con_cuenta
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'cuenta_id': cuenta.pk, 'monto': 100000,
+        })
+        assert resp.status_code == 400
+        assert 'cliente' in resp.data['detail'].lower()
+
+    def test_cuenta_al_dia_retorna_400(self, padre_con_cuenta, db):
+        """saldo_pendiente <= 0 → 400 (línea 188)."""
+        from rest_framework.test import APIClient
+        padre, cuenta = padre_con_cuenta
+        # Pagar toda la cuenta
+        cuenta.monto_pagado = cuenta.monto_total
+        cuenta.save(update_fields=["monto_pagado"])
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'cuenta_id': cuenta.pk, 'monto': 100000,
+        })
+        assert resp.status_code == 400
+        assert 'día' in resp.data['detail']
+
+
+# ─── Tests retorno almuerzo ───────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardRetornoAlmuerzo:
+
+    @patch('apps.core.bancard_service.acreditar_pago_almuerzo')
+    @patch('apps.core.bancard_service.confirmar_pago')
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_retorno_almuerzo_aprobado_redirige_a_pagar_almuerzo(
+        self, mock_iniciar, mock_confirmar, mock_acreditar, padre_con_cuenta,
+    ):
+        """Pago tipo ALMUERZO aprobado → llama acreditar_pago_almuerzo, redirige /pagar-almuerzo."""
+        mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-alm-ret'}
+        mock_confirmar.return_value = {
+            'status': 'success',
+            'confirmation': {'response_code': '00'},
+        }
+        from rest_framework.test import APIClient
+        padre, cuenta = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+
+        init_resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'cuenta_id': cuenta.pk, 'monto': 100000,
+        })
+        assert init_resp.status_code == 201
+        shop_pid = init_resp.data['shop_process_id']
+
+        anon = APIClient()
+        resp = anon.get('/api/v1/core/bancard/retorno/', {'shop_process_id': shop_pid})
+        assert resp.status_code == 302
+        assert 'pagar-almuerzo' in resp['Location']
+        assert 'aprobado' in resp['Location']
+        mock_acreditar.assert_called_once()
+
+
+# ─── Tests permisos de estado ─────────────────────────────────────────────────
+
 @pytest.mark.django_db
 class TestBancardEstadoPermiso:
 
