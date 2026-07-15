@@ -751,7 +751,9 @@ class ReporteAgingProveedoresView(APIView):
 
         total_deuda = sum(f["saldo_deuda"] for f in filas)
 
-        if request.query_params.get("formato") == "csv":
+        formato = request.query_params.get("formato")
+
+        if formato == "csv":
             response = HR(content_type="text/csv; charset=utf-8-sig")
             response["Content-Disposition"] = (
                 f'attachment; filename="aging_proveedores_{hoy}.csv"'
@@ -769,6 +771,64 @@ class ReporteAgingProveedoresView(APIView):
             writer.writerow(["TOTALES POR AGING"])
             for bucket, total in aging_totales.items():
                 writer.writerow([bucket, total])
+            return response
+
+        if formato == "excel":
+            import io
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment
+
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Aging Proveedores"
+
+            header_fill = PatternFill("solid", fgColor="1E3A5F")
+            header_font = Font(bold=True, color="FFFFFF")
+            total_font = Font(bold=True)
+            totals_fill = PatternFill("solid", fgColor="E8F0FE")
+
+            ws.append([f"AGING CUENTAS A PAGAR — PROVEEDORES — {hoy}"])
+            ws["A1"].font = Font(bold=True, size=13)
+            ws.append([])
+
+            headers = ["Proveedor", "RUC", "Teléfono", "Email", "Saldo (Gs)", "Días atraso", "Aging"]
+            ws.append(headers)
+            for cell in ws[ws.max_row]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal="center")
+
+            for f in filas:
+                ws.append([f["proveedor"], f["ruc"], f["telefono"],
+                            f["email"], f["saldo_deuda"], f["dias_atraso"], f["aging"]])
+
+            ws.append([])
+            ws.append(["TOTALES POR AGING", "", "", "", "", "", ""])
+            for cell in ws[ws.max_row]:
+                cell.font = total_font
+            for bucket, total in aging_totales.items():
+                row = [bucket, "", "", "", total, "", ""]
+                ws.append(row)
+                for cell in ws[ws.max_row]:
+                    cell.fill = totals_fill
+
+            ws.append([])
+            ws.append(["TOTAL DEUDA", "", "", "", total_deuda, "", ""])
+            for cell in ws[ws.max_row]:
+                cell.font = total_font
+
+            col_widths = [35, 14, 14, 28, 14, 14, 10]
+            for i, w in enumerate(col_widths, 1):
+                ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            response = HR(
+                buf.read(),
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+            response["Content-Disposition"] = f'attachment; filename="aging_proveedores_{hoy}.xlsx"'
             return response
 
         return Response({

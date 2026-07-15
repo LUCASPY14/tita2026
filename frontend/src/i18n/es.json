@@ -106,7 +106,8 @@
     "lunchPrices": "Precios Almuerzo",
     "units":       "Unidades Medida",
     "allergens":   "Alérgenos",
-    "taxes":       "Impuestos"
+    "taxes":       "Impuestos",
+    "whatsapp":    "WhatsApp"
   },
 
   "errors": {

@@ -784,7 +784,9 @@ class ReporteCobranzaAlmuerzosView(APIView):
         cobrado_anual = sum(m["monto_cobrado"] for m in por_mes)
         tasa_anual = round(cobrado_anual / monto_anual * 100, 1) if monto_anual > 0 else 0.0
 
-        if request.query_params.get("formato") == "csv":
+        formato = request.query_params.get("formato")
+
+        if formato == "csv":
             resp = HttpResponse(content_type="text/csv; charset=utf-8-sig")
             resp["Content-Disposition"] = (
                 f'attachment; filename="cobranza_almuerzos_{anio}.csv"'
@@ -801,6 +803,59 @@ class ReporteCobranzaAlmuerzosView(APIView):
             writer.writerow([])
             writer.writerow(["TOTAL ANUAL", "", "", "", "",
                               monto_anual, cobrado_anual, monto_anual - cobrado_anual, tasa_anual])
+            return resp
+
+        if formato == "excel":
+            import io
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment
+
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Cobranza Almuerzos"
+
+            header_fill = PatternFill("solid", fgColor="1E3A5F")
+            header_font = Font(bold=True, color="FFFFFF")
+            total_font = Font(bold=True)
+            totals_fill = PatternFill("solid", fgColor="E8F0FE")
+
+            ws.append([f"COBRANZA ALMUERZOS — {anio}"])
+            ws["A1"].font = Font(bold=True, size=13)
+            ws.append([])
+
+            headers = ["Mes", "Alumnos", "Pagados", "Parciales", "Pendientes",
+                       "Monto Total (Gs)", "Cobrado (Gs)", "Pendiente (Gs)", "% Cobro"]
+            ws.append(headers)
+            for cell in ws[ws.max_row]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal="center")
+
+            for m in por_mes:
+                ws.append([m["mes_nombre"], m["n_alumnos"], m["pagados"],
+                            m["parciales"], m["pendientes"], m["monto_total"],
+                            m["monto_cobrado"], m["monto_pendiente"], m["tasa_cobro"]])
+
+            ws.append([])
+            total_row = ["TOTAL ANUAL", "", "", "", "",
+                         monto_anual, cobrado_anual, monto_anual - cobrado_anual, tasa_anual]
+            ws.append(total_row)
+            for cell in ws[ws.max_row]:
+                cell.font = total_font
+                cell.fill = totals_fill
+
+            col_widths = [14, 10, 10, 10, 12, 18, 16, 18, 10]
+            for i, w in enumerate(col_widths, 1):
+                ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            resp = HttpResponse(
+                buf.read(),
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+            resp["Content-Disposition"] = f'attachment; filename="cobranza_almuerzos_{anio}.xlsx"'
             return resp
 
         return Response({

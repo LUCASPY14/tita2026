@@ -444,6 +444,18 @@ export default function Reportes() {
     } catch { toast.error('Error al exportar') }
   }
 
+  async function exportarCuentaCorrienteExcel() {
+    try {
+      const res = await api.get('/clientes/reporte-cuenta-corriente/', {
+        params: { formato: 'excel' },
+        responseType: 'blob',
+      })
+      const hoy2 = new Date().toISOString().split('T')[0]
+      descargaBlob(res.data, `cuenta_corriente_${hoy2}.xlsx`)
+      toast.success('Excel descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
   // ── Almuerzos ────────────────────────────────────────────────────────────────
   const [anioAlm, setAnioAlm] = useState(hoy.getFullYear())
   const [mesAlm, setMesAlm] = useState(hoy.getMonth() + 1)
@@ -1051,6 +1063,14 @@ export default function Reportes() {
     } catch { toast.error('Error al exportar') }
   }
 
+  async function exportarApExcel() {
+    try {
+      const res = await api.get('/compras/reporte-aging-proveedores/', { params: { formato: 'excel' }, responseType: 'blob' })
+      descargaBlob(res.data, `aging_proveedores_${today}.xlsx`)
+      toast.success('Excel descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
   const apDetalleFiltrado = (apData?.detalle ?? []).filter(d =>
     !searchAp || d.proveedor.toLowerCase().includes(searchAp.toLowerCase()) || d.ruc.includes(searchAp)
   )
@@ -1179,6 +1199,14 @@ export default function Reportes() {
       const res = await api.get('/almuerzos/reporte-cobranza/', { params: { anio: cbAnio, formato: 'csv' }, responseType: 'blob' })
       descargaBlob(res.data, `cobranza_almuerzos_${cbAnio}.csv`)
       toast.success('CSV descargado')
+    } catch { toast.error('Error al exportar') }
+  }
+
+  async function exportarCbExcel() {
+    try {
+      const res = await api.get('/almuerzos/reporte-cobranza/', { params: { anio: cbAnio, formato: 'excel' }, responseType: 'blob' })
+      descargaBlob(res.data, `cobranza_almuerzos_${cbAnio}.xlsx`)
+      toast.success('Excel descargado')
     } catch { toast.error('Error al exportar') }
   }
 
@@ -1709,6 +1737,9 @@ export default function Reportes() {
                 <>
                   <Button variant="secondary" onClick={exportarCuentaCorrienteCSV}>
                     <Download className="w-4 h-4" />CSV
+                  </Button>
+                  <Button variant="secondary" onClick={exportarCuentaCorrienteExcel}>
+                    <Download className="w-4 h-4" />Excel
                   </Button>
                   <Button variant="secondary" onClick={() => exportarCuentaCorrientePDF(ccDetalleSorted, ccData.resumen.total_deuda, ccData.fecha)}>
                     <FileText className="w-4 h-4" />PDF
@@ -2367,9 +2398,14 @@ export default function Reportes() {
             <div className="flex items-center gap-3">
               <Button onClick={cargarAgingProveedores} loading={loadingAp}>Actualizar</Button>
               {apData && (
-                <Button variant="secondary" onClick={exportarApCSV}>
-                  <Download className="w-4 h-4" />CSV
-                </Button>
+                <>
+                  <Button variant="secondary" onClick={exportarApCSV}>
+                    <Download className="w-4 h-4" />CSV
+                  </Button>
+                  <Button variant="secondary" onClick={exportarApExcel}>
+                    <Download className="w-4 h-4" />Excel
+                  </Button>
+                </>
               )}
             </div>
             {apData && (
@@ -2897,7 +2933,10 @@ export default function Reportes() {
             </div>
             <Button onClick={buscarCobranza} loading={loadingCb}>Buscar</Button>
             {cbData && (
-              <Button variant="secondary" onClick={exportarCbCSV}><Download className="w-4 h-4" />CSV</Button>
+              <>
+                <Button variant="secondary" onClick={exportarCbCSV}><Download className="w-4 h-4" />CSV</Button>
+                <Button variant="secondary" onClick={exportarCbExcel}><Download className="w-4 h-4" />Excel</Button>
+              </>
             )}
           </FilterBar>
 

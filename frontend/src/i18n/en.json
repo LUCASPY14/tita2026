@@ -104,7 +104,8 @@
     "lunchPlans":  "Lunch Plans",
     "units":       "Units of Measure",
     "allergens":   "Allergens",
-    "taxes":       "Taxes"
+    "taxes":       "Taxes",
+    "whatsapp":    "WhatsApp"
   },
 
   "errors": {

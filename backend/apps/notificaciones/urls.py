@@ -10,6 +10,7 @@ from .views import (
     EnviarNotificacionView,
     VapidPublicKeyView,
     PushSubscriptionView,
+    WAHAEstadoView,
 )
 
 router = DefaultRouter()
@@ -24,4 +25,5 @@ urlpatterns = [
     path("enviar/",              EnviarNotificacionView.as_view(),  name="notificaciones-enviar"),
     path("vapid-public-key/",   VapidPublicKeyView.as_view(),      name="vapid-public-key"),
     path("push-subscription/",  PushSubscriptionView.as_view(),    name="push-subscription"),
+    path("whatsapp-estado/",    WAHAEstadoView.as_view(),           name="whatsapp-estado"),
 ]
