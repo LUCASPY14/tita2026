@@ -933,3 +933,38 @@ class TestReporteCobranzaAlmuerzos:
         assert resp.status_code == 200
         content = resp.content.decode("utf-8-sig")
         assert "Marzo" in content
+
+    def test_excel_retorna_xlsx(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-cobranza/",
+            {"anio": "2026", "formato": "excel"},
+        )
+        assert resp.status_code == 200
+        assert "spreadsheetml" in resp["Content-Type"]
+        assert "attachment" in resp.get("Content-Disposition", "")
+        assert resp.get("Content-Disposition", "").endswith(".xlsx\"")
+
+    def test_excel_con_datos_genera_filas(self, api_admin):
+        import io
+        from decimal import Decimal
+        from openpyxl import load_workbook
+        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        from apps.clientes.models import Hijo
+        hijo = Hijo.objects.first()
+        if hijo:
+            CuentaAlmuerzoMensual.objects.create(
+                hijo=hijo,
+                anio=2026,
+                mes=3,
+                monto_total=Decimal("150000"),
+                monto_pagado=Decimal("150000"),
+                estado=CuentaAlmuerzoMensual.Estado.PAGADO,
+            )
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-cobranza/",
+            {"anio": "2026", "formato": "excel"},
+        )
+        assert resp.status_code == 200
+        wb = load_workbook(io.BytesIO(resp.content))
+        ws = wb.active
+        assert ws.max_row >= 2  # encabezado + al menos 1 fila

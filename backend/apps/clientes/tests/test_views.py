@@ -381,6 +381,28 @@ class TestReporteCuentaCorriente:
         resp = api_client.get("/api/v1/clientes/reporte-cuenta-corriente/")
         assert resp.status_code in (401, 403)
 
+    def test_excel_retorna_xlsx(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/clientes/reporte-cuenta-corriente/",
+            {"formato": "excel"},
+        )
+        assert resp.status_code == 200
+        assert "spreadsheetml" in resp["Content-Type"]
+        assert "attachment" in resp.get("Content-Disposition", "")
+        assert resp.get("Content-Disposition", "").endswith(".xlsx\"")
+
+    def test_excel_con_datos_genera_filas(self, api_admin, cuenta_con_deuda):
+        import io
+        from openpyxl import load_workbook
+        resp = api_admin.get(
+            "/api/v1/clientes/reporte-cuenta-corriente/",
+            {"formato": "excel"},
+        )
+        assert resp.status_code == 200
+        wb = load_workbook(io.BytesIO(resp.content))
+        ws = wb.active
+        assert ws.max_row >= 2  # encabezado + al menos 1 fila de datos
+
 
 # ── CuentaCorrienteClienteViewSet.create ─────────────────────────────────────
 

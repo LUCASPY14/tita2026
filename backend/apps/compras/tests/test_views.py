@@ -559,6 +559,37 @@ class TestReporteAgingProveedores:
         detalle = resp.data["detalle"]
         assert any(d["aging"] == "90+" for d in detalle)
 
+    def test_excel_retorna_xlsx(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-aging-proveedores/",
+            {"formato": "excel"},
+        )
+        assert resp.status_code == 200
+        assert "spreadsheetml" in resp["Content-Type"]
+        assert "attachment" in resp.get("Content-Disposition", "")
+        assert resp.get("Content-Disposition", "").endswith(".xlsx\"")
+
+    def test_excel_con_datos_genera_filas(self, api_admin, proveedor, usuario_cajero):
+        import io
+        from decimal import Decimal
+        from openpyxl import load_workbook
+        from apps.compras.models import CuentaCorrienteProveedor
+        CuentaCorrienteProveedor.objects.create(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+            monto=Decimal("100000"),
+            descripcion="Deuda test excel",
+            creado_por=usuario_cajero,
+        )
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-aging-proveedores/",
+            {"formato": "excel"},
+        )
+        assert resp.status_code == 200
+        wb = load_workbook(io.BytesIO(resp.content))
+        ws = wb.active
+        assert ws.max_row >= 2  # encabezado + al menos 1 fila de datos
+
 
 # ── CompraViewSet.create y update (líneas 107-174) ────────────────────────────
 
