@@ -8,10 +8,23 @@
 # También es llamado automáticamente por deploy.ps1 al final del paso 7.
 
 param(
-    [string]$BaseUrl    = "http://localhost",
-    [string]$ApiUrl     = "http://localhost:8000",
-    [int]   $TimeoutSec = 10
+    [string]$BaseUrl        = "http://localhost",
+    [string]$ApiUrl         = "http://localhost:8000",
+    [int]   $TimeoutSec     = 10,
+    [string]$DemoEmail      = "admin@tita.local",
+    [securestring]$DemoPassword = $null
 )
+
+# Contraseña por defecto del usuario demo (solo para smoke test local)
+if ($null -eq $DemoPassword) {
+    $DemoPassword = ConvertTo-SecureString "demo1234" -AsPlainText -Force
+}
+
+function ConvertFrom-SecureStringPlain([securestring]$ss) {
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
+    try { return [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+}
 
 $ErrorActionPreference = "Continue"
 $Passed = 0
@@ -113,6 +126,86 @@ Write-Host "  Endpoints públicos" -ForegroundColor Yellow
 Test-Endpoint "Portal frontend"             "$BaseUrl/portal/"      @(200)
 Test-Endpoint "Admin Django"                "$ApiUrl/admin/"        @(200, 301, 302)
 Test-Endpoint "API docs (Swagger)"          "$ApiUrl/api/v1/docs/"  @(200, 404)
+
+# ── 6. Autenticación JWT + endpoint autenticado ───────────────────
+Write-Host ""
+Write-Host "  Autenticación JWT" -ForegroundColor Yellow
+
+$accessToken = $null
+try {
+    $tokenBody = @{ email = $DemoEmail; password = (ConvertFrom-SecureStringPlain $DemoPassword) } | ConvertTo-Json
+    $tokenResp = Invoke-WebRequest -Uri "$ApiUrl/api/token/" -Method POST `
+        -Body $tokenBody -ContentType "application/json" `
+        -UseBasicParsing -TimeoutSec $TimeoutSec -ErrorAction Stop
+    $parsed = $tokenResp.Content | ConvertFrom-Json
+    $accessToken = $parsed.access
+    if ($null -ne $accessToken -and $accessToken.Length -gt 20) {
+        Write-Host ("    [OK] {0,-46} {1}" -f "POST /api/token/ con usuario demo", "200") -ForegroundColor Green
+        $script:Passed++
+    } else {
+        Write-Host ("   [ERR] {0,-46} {1}" -f "POST /api/token/ — respuesta sin access", "") -ForegroundColor Red
+        $script:Failed++
+    }
+} catch {
+    $hint = if ($_.Exception.Message -match "404") { "(usuario demo no existe — correr create_demo_users)" } else { $_.Exception.Message.Split([char]10)[0] }
+    Write-Host ("   [ERR] {0,-46} {1}" -f "POST /api/token/", $hint) -ForegroundColor Red
+    $script:Failed++
+}
+
+if ($null -ne $accessToken) {
+    $authHeaders = @{ Authorization = "Bearer $accessToken" }
+    $authOk = $false
+    try {
+        $r = Invoke-WebRequest -Uri "$ApiUrl/api/v1/ventas/ventas/" -Headers $authHeaders `
+            -UseBasicParsing -TimeoutSec $TimeoutSec -ErrorAction Stop
+        $authOk = ([int]$r.StatusCode -eq 200)
+    } catch { }
+    if ($authOk) {
+        Write-Host ("    [OK] {0,-46} {1}" -f "GET /api/v1/ventas/ventas/ con JWT", "200") -ForegroundColor Green
+        $script:Passed++
+    } else {
+        Write-Host ("   [ERR] {0,-46}" -f "GET /api/v1/ventas/ventas/ con JWT") -ForegroundColor Red
+        $script:Failed++
+    }
+} else {
+    Write-Host ("  [SKIP] GET /api/v1/ventas/ventas/ — sin token") -ForegroundColor DarkYellow
+}
+
+# ── 7. WebSocket ──────────────────────────────────────────────────
+Write-Host ""
+Write-Host "  WebSocket — notificaciones en tiempo real" -ForegroundColor Yellow
+
+if ($null -ne $accessToken) {
+    $wsBase = $ApiUrl -replace "^http", "ws"
+    $wsUrl  = "$wsBase/ws/notificaciones/?token=$accessToken"
+    $wsOk   = $false
+    try {
+        $ws  = [System.Net.WebSockets.ClientWebSocket]::new()
+        $ws.Options.SetRequestHeader("Origin", $BaseUrl)
+        $cts = [System.Threading.CancellationTokenSource]::new(6000)
+        $connectTask = $ws.ConnectAsync([Uri]$wsUrl, $cts.Token)
+        $connectTask.Wait(5000) | Out-Null
+        $wsOk = ($ws.State -eq [System.Net.WebSockets.WebSocketState]::Open)
+        if ($wsOk) {
+            $closeTask = $ws.CloseAsync(
+                [System.Net.WebSockets.WebSocketCloseStatus]::NormalClosure,
+                "smoke-test", [System.Threading.CancellationToken]::None
+            )
+            $closeTask.Wait(3000) | Out-Null
+        }
+        $ws.Dispose()
+    } catch { }
+
+    if ($wsOk) {
+        Write-Host ("    [OK] {0,-46}" -f "WS /ws/notificaciones/ → conexión abierta") -ForegroundColor Green
+        $script:Passed++
+    } else {
+        Write-Host ("   [ERR] {0,-46}" -f "WS /ws/notificaciones/ — no conectó") -ForegroundColor Red
+        $script:Failed++
+    }
+} else {
+    Write-Host ("  [SKIP] WS /ws/notificaciones/ — sin token") -ForegroundColor DarkYellow
+}
 
 # ── Resumen ───────────────────────────────────────────────────────
 $Total = $Passed + $Failed
