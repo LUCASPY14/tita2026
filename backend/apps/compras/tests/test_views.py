@@ -301,6 +301,30 @@ class TestOrdenCompraViewSet:
             resp = api_admin.post(f"/api/v1/compras/ordenes/{orden_aprobada.pk}/convertir/")
         assert resp.status_code == 400
 
+    def test_patch_borrador_reemplaza_items(self, api_admin, orden_borrador, producto):
+        """PATCH en BORRADOR: reemplaza los items y recalcula monto_total."""
+        from apps.compras.models import DetalleOrdenCompra
+        nuevo_costo = Decimal("8000")
+        resp = api_admin.patch(
+            f"/api/v1/compras/ordenes/{orden_borrador.pk}/",
+            {"items": [{"producto": producto.pk, "cantidad": "3", "costo_unitario": str(nuevo_costo)}]},
+            format="json",
+        )
+        assert resp.status_code == 200
+        orden_borrador.refresh_from_db()
+        assert orden_borrador.monto_total == Decimal("24000")
+        assert DetalleOrdenCompra.objects.filter(orden=orden_borrador).count() == 1
+
+    def test_patch_no_borrador_retorna_400(self, api_admin, orden_pendiente, producto):
+        """PATCH en estado distinto de BORRADOR → 400."""
+        resp = api_admin.patch(
+            f"/api/v1/compras/ordenes/{orden_pendiente.pk}/",
+            {"items": [{"producto": producto.pk, "cantidad": "1", "costo_unitario": "5000"}]},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "Borrador" in str(resp.data)
+
 
 # ── NotaCreditoProveedor con observacion ──────────────────────────────────────
 
