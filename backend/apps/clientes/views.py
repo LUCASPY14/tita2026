@@ -62,7 +62,7 @@ def _crear_usuario_portal(cliente):
     """
     from apps.usuarios.models import Usuario
 
-    if hasattr(cliente, "usuario_portal") and cliente.usuario_portal_id:
+    if hasattr(cliente, "usuario_portal"):
         return
 
     ruc_ci_limpio = cliente.ruc_ci.strip()
