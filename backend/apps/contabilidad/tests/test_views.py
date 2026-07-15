@@ -151,3 +151,121 @@ class TestCajaPermissions:
             "monto_inicial": 50000,
         }, format="json")
         assert resp.status_code == 201
+
+
+@pytest.mark.django_db
+class TestCierrePDFEmpresaError:
+    """Lines 262-263: except Exception: pass when DatosEmpresa.objects.first() raises."""
+
+    def test_pdf_empresa_error_aun_retorna_html(self, api_admin, cierre_cerrado):
+        from unittest.mock import patch
+        url = f"/api/v1/contabilidad/cierres-caja/{cierre_cerrado.pk}/pdf/"
+        with patch("apps.contabilidad.views.DatosEmpresa.objects") as mock_mgr:
+            mock_mgr.first.side_effect = Exception("DB error")
+            resp = api_admin.get(url)
+        assert resp.status_code == 200
+        assert "text/html" in resp["Content-Type"]
+
+
+@pytest.fixture
+def factura(db, cliente):
+    from apps.contabilidad.models import Factura
+    return Factura.objects.create(
+        nro_factura="001-001-0000001",
+        monto_total=Decimal("50000"),
+        cliente=cliente,
+    )
+
+
+@pytest.mark.django_db
+class TestFacturaPDF:
+    """Lines 390-391: FacturaViewSet.pdf action including DatosEmpresa error branch."""
+
+    def test_pdf_retorna_html(self, api_admin, factura):
+        resp = api_admin.get(f"/api/v1/contabilidad/facturas/{factura.pk}/pdf/")
+        assert resp.status_code == 200
+        assert "text/html" in resp["Content-Type"]
+
+    def test_pdf_empresa_error_aun_retorna_html(self, api_admin, factura):
+        from unittest.mock import patch
+        with patch("apps.contabilidad.views.DatosEmpresa.objects") as mock_mgr:
+            mock_mgr.first.side_effect = Exception("DB error")
+            resp = api_admin.get(f"/api/v1/contabilidad/facturas/{factura.pk}/pdf/")
+        assert resp.status_code == 200
+        assert "text/html" in resp["Content-Type"]
+
+    def test_pdf_sin_autenticacion_falla(self, api_client, factura):
+        resp = api_client.get(f"/api/v1/contabilidad/facturas/{factura.pk}/pdf/")
+        assert resp.status_code in (401, 403)
+
+
+@pytest.mark.django_db
+class TestDashboardTendenciaFechaInvalida:
+    """Lines 571-575: ValueError on invalid date format."""
+
+    def test_fecha_invalida_retorna_400(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/contabilidad/dashboard/tendencia/",
+            {"desde": "no-es-fecha", "hasta": "2026-12-31"},
+        )
+        assert resp.status_code == 400
+        assert "inválido" in resp.data["error"].lower()
+
+    def test_sin_params_usa_defaults(self, api_admin):
+        resp = api_admin.get("/api/v1/contabilidad/dashboard/tendencia/")
+        assert resp.status_code == 200
+        assert "data" in resp.data
+
+    def test_con_fechas_validas_retorna_rango(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/contabilidad/dashboard/tendencia/",
+            {"desde": "2026-01-01", "hasta": "2026-01-07"},
+        )
+        assert resp.status_code == 200
+        assert resp.data["dias"] == 7
+
+
+@pytest.mark.django_db
+class TestReporteDiferenciasCaja:
+    """Lines 621-713: ReporteDiferenciasCajaView.get full coverage."""
+
+    def test_sin_params_retorna_400(self, api_admin):
+        resp = api_admin.get("/api/v1/contabilidad/reporte-diferencias-caja/")
+        assert resp.status_code == 400
+
+    def test_con_fechas_retorna_estructura(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/contabilidad/reporte-diferencias-caja/",
+            {"desde": "2026-01-01", "hasta": "2026-12-31"},
+        )
+        assert resp.status_code == 200
+        assert "periodo" in resp.data
+        assert "resumen" in resp.data
+        assert "tendencia" in resp.data
+        assert "por_empleado" in resp.data
+
+    def test_con_cierre_incluye_datos(self, api_admin, cierre_cerrado):
+        from django.utils import timezone
+        resp = api_admin.get(
+            "/api/v1/contabilidad/reporte-diferencias-caja/",
+            {"desde": "2026-01-01", "hasta": "2099-12-31"},
+        )
+        assert resp.status_code == 200
+        assert resp.data["resumen"]["n_cierres"] >= 1
+        assert resp.data["resumen"]["total_diferencia"] == int(cierre_cerrado.diferencia_efectivo)
+
+    def test_csv_retorna_csv(self, api_admin, cierre_cerrado):
+        resp = api_admin.get(
+            "/api/v1/contabilidad/reporte-diferencias-caja/",
+            {"desde": "2026-01-01", "hasta": "2099-12-31", "formato": "csv"},
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp["Content-Type"]
+        assert b"DIFERENCIAS DE CAJA" in resp.content
+
+    def test_anonimo_no_puede_acceder(self, api_client):
+        resp = api_client.get(
+            "/api/v1/contabilidad/reporte-diferencias-caja/",
+            {"desde": "2026-01-01", "hasta": "2026-12-31"},
+        )
+        assert resp.status_code in (401, 403)
