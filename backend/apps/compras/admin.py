@@ -19,6 +19,8 @@ from .models import (
     AplicacionPagoCompra,
     NotaCreditoProveedor,
     DetalleNotaCreditoProveedor,
+    OrdenCompra,
+    DetalleOrdenCompra,
 )
 
 
@@ -460,3 +462,55 @@ class DetalleNotaCreditoProveedorAdmin(admin.ModelAdmin):
     def subtotal_display(self, obj):
         return f"₲{obj.subtotal:,.0f}"
     subtotal_display.short_description = "Subtotal"
+
+
+# ==============================================================================
+# ORDEN DE COMPRA
+# ==============================================================================
+
+class DetalleOrdenCompraInline(admin.TabularInline):
+    model = DetalleOrdenCompra
+    extra = 0
+    fields = ["producto", "cantidad", "costo_unitario", "subtotal"]
+    readonly_fields = ["subtotal"]
+    autocomplete_fields = ["producto"]
+
+
+@admin.register(OrdenCompra)
+class OrdenCompraAdmin(admin.ModelAdmin):
+    list_display = ["id", "proveedor_link", "estado_badge", "monto_total_display", "fecha_creacion"]
+    list_filter = ["estado"]
+    search_fields = ["proveedor__razon_social"]
+    readonly_fields = ["fecha_creacion"]
+    list_select_related = ["proveedor"]
+    ordering = ["-fecha_creacion"]
+    inlines = [DetalleOrdenCompraInline]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.estado in ("APROBADA", "CONVERTIDA", "RECHAZADA"):
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
+    def proveedor_link(self, obj):
+        url = reverse("admin:compras_proveedor_change", args=[obj.proveedor.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.proveedor.razon_social)
+    proveedor_link.short_description = "Proveedor"
+
+    def monto_total_display(self, obj):
+        return f"₲{obj.monto_total:,.0f}" if obj.monto_total else "-"
+    monto_total_display.short_description = "Total"
+
+    def estado_badge(self, obj):
+        colors = {
+            "BORRADOR": "#6c757d",
+            "PENDIENTE": "#ffc107",
+            "APROBADA": "#28a745",
+            "RECHAZADA": "#dc3545",
+            "CONVERTIDA": "#0d6efd",
+        }
+        color = colors.get(obj.estado, "#6c757d")
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color, obj.get_estado_display(),
+        )
+    estado_badge.short_description = "Estado"

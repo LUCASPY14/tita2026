@@ -21,6 +21,7 @@ from .models import (
     AutorizacionSaldoNegativo,
     Pais,
     Ciudad,
+    AlumnoResponsable,
 )
 
 
@@ -283,3 +284,12 @@ class CiudadAdmin(admin.ModelAdmin):
     list_display = ["nombre", "pais"]
     list_filter = ["pais"]
     search_fields = ["nombre"]
+
+
+@admin.register(AlumnoResponsable)
+class AlumnoResponsableAdmin(admin.ModelAdmin):
+    list_display = ["hijo", "cliente", "parentesco", "es_titular", "orden_cobro", "activo"]
+    list_filter = ["es_titular", "activo", "parentesco"]
+    search_fields = ["hijo__nombre", "hijo__apellido", "cliente__nombres", "cliente__apellidos"]
+    list_select_related = ["hijo", "cliente"]
+    ordering = ["hijo", "orden_cobro"]

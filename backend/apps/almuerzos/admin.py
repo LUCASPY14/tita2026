@@ -18,6 +18,8 @@ from .models import (
     PagoAlmuerzoMensual,
     Alergeno,
     ProductoAlergeno,
+    MenuDiario,
+    DetalleMenuDiario,
 )
 
 
@@ -453,6 +455,25 @@ class AlergenoAdmin(admin.ModelAdmin):
 # ==============================================================================
 # PRODUCTO - ALÉRGENO
 # ==============================================================================
+
+@admin.register(MenuDiario)
+class MenuDiarioAdmin(admin.ModelAdmin):
+    list_display = ["fecha", "plato_principal", "guarnicion", "postre", "bebida", "activo"]
+    list_filter = ["activo"]
+    search_fields = ["plato_principal", "guarnicion"]
+    date_hierarchy = "fecha"
+    ordering = ["-fecha"]
+    readonly_fields = ["fecha_creacion"]
+
+
+@admin.register(DetalleMenuDiario)
+class DetalleMenuDiarioAdmin(admin.ModelAdmin):
+    list_display = ["menu", "producto", "curso", "cantidad", "es_opcional"]
+    list_filter = ["curso", "es_opcional"]
+    search_fields = ["menu__plato_principal", "producto__descripcion"]
+    list_select_related = ["menu", "producto"]
+    ordering = ["-menu__fecha", "curso"]
+
 
 @admin.register(ProductoAlergeno)
 class ProductoAlergenoAdmin(admin.ModelAdmin):
