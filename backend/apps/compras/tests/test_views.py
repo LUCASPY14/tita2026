@@ -558,3 +558,276 @@ class TestReporteAgingProveedores:
         assert resp.status_code == 200
         detalle = resp.data["detalle"]
         assert any(d["aging"] == "90+" for d in detalle)
+
+
+# ── CompraViewSet.create y update (líneas 107-174) ────────────────────────────
+
+@pytest.mark.django_db
+class TestCompraViewSetCreateUpdate:
+    """Cubre CompraViewSet.create, _resolve_items y update."""
+
+    def test_create_compra_contado(self, api, proveedor, producto):
+        resp = api.post(
+            "/api/v1/compras/compras/",
+            {
+                "proveedor": proveedor.pk,
+                "tipo_pago": "CONTADO",
+                "items": [{"producto": producto.pk, "cantidad": "2", "costo_unitario": "5000"}],
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["monto_total"] == "10000"
+
+    def test_create_compra_credito(self, api, proveedor, producto):
+        resp = api.post(
+            "/api/v1/compras/compras/",
+            {
+                "proveedor": proveedor.pk,
+                "tipo_pago": "CREDITO",
+                "nro_factura_proveedor": "F-001",
+                "observaciones": "Entrega pendiente",
+                "items": [{"producto": producto.pk, "cantidad": "1", "costo_unitario": "15000"}],
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["tipo_pago"] == "CREDITO"
+
+    def test_create_proveedor_no_encontrado_retorna_400(self, api, producto):
+        resp = api.post(
+            "/api/v1/compras/compras/",
+            {
+                "proveedor": 99999,
+                "tipo_pago": "CONTADO",
+                "items": [{"producto": producto.pk, "cantidad": "1", "costo_unitario": "5000"}],
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "proveedor" in resp.data
+
+    def test_update_compra_cambia_proveedor_e_items(self, api, compra_contado, proveedor, producto):
+        from apps.compras.models import Proveedor
+        otro = Proveedor.objects.create(ruc="80003001-3", razon_social="Otro Proveedor")
+        resp = api.patch(
+            f"/api/v1/compras/compras/{compra_contado.pk}/",
+            {
+                "proveedor": otro.pk,
+                "tipo_pago": "CONTADO",
+                "items": [{"producto": producto.pk, "cantidad": "5", "costo_unitario": "2000"}],
+            },
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data["monto_total"] == "10000"
+
+    def test_update_proveedor_no_encontrado_retorna_400(self, api, compra_contado, producto):
+        resp = api.patch(
+            f"/api/v1/compras/compras/{compra_contado.pk}/",
+            {
+                "proveedor": 99999,
+                "tipo_pago": "CONTADO",
+                "items": [{"producto": producto.pk, "cantidad": "1", "costo_unitario": "5000"}],
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "proveedor" in resp.data
+
+
+# ── PagoProveedorViewSet.create (líneas 209-258) ──────────────────────────────
+
+@pytest.mark.django_db
+class TestPagoProveedorCreate:
+    """Cubre PagoProveedorViewSet.create y sus ramas de error."""
+
+    def test_create_pago_actualiza_estado_pagado(
+        self, api_admin, compra_credito, medio_pago_efectivo
+    ):
+        resp = api_admin.post(
+            "/api/v1/compras/pagos/",
+            {
+                "compra": compra_credito.pk,
+                "monto": str(compra_credito.monto_total),
+                "medio_pago": medio_pago_efectivo.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        compra_credito.refresh_from_db()
+        assert compra_credito.estado_pago == "PAGADO"
+
+    def test_create_pago_parcial_actualiza_estado_parcial(
+        self, api_admin, compra_credito, medio_pago_efectivo
+    ):
+        monto_parcial = compra_credito.monto_total / 2
+        resp = api_admin.post(
+            "/api/v1/compras/pagos/",
+            {
+                "compra": compra_credito.pk,
+                "monto": str(monto_parcial),
+                "medio_pago": medio_pago_efectivo.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        compra_credito.refresh_from_db()
+        assert compra_credito.estado_pago == "PARCIAL"
+
+    def test_create_pago_registra_movimiento_cc(
+        self, api_admin, compra_credito, medio_pago_efectivo
+    ):
+        from apps.compras.models import CuentaCorrienteProveedor
+        api_admin.post(
+            "/api/v1/compras/pagos/",
+            {
+                "compra": compra_credito.pk,
+                "monto": "5000",
+                "medio_pago": medio_pago_efectivo.pk,
+            },
+            format="json",
+        )
+        assert CuentaCorrienteProveedor.objects.filter(
+            proveedor=compra_credito.proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.CREDITO,
+        ).exists()
+
+    def test_create_pago_compra_no_encontrada_retorna_400(
+        self, api_admin, medio_pago_efectivo
+    ):
+        resp = api_admin.post(
+            "/api/v1/compras/pagos/",
+            {"compra": 99999, "monto": "5000", "medio_pago": medio_pago_efectivo.pk},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "compra" in resp.data
+
+    def test_create_pago_medio_pago_no_encontrado_retorna_400(
+        self, api_admin, compra_credito
+    ):
+        resp = api_admin.post(
+            "/api/v1/compras/pagos/",
+            {"compra": compra_credito.pk, "monto": "5000", "medio_pago": 99999},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "medio_pago" in resp.data
+
+
+# ── NotaCreditoProveedorViewSet.create — ramas de validación (líneas 283-316) ─
+
+@pytest.mark.django_db
+class TestNotaCreditoCreateValidaciones:
+    """Cubre las ramas de validación del create de NC que faltaban."""
+
+    def test_sin_proveedor_retorna_400(self, api_admin):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {"monto_total": "10000"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "proveedor" in resp.data["error"].lower()
+
+    def test_monto_cero_retorna_400(self, api_admin, proveedor):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {"proveedor": proveedor.pk, "monto_total": "0"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "monto" in resp.data["error"].lower()
+
+    def test_monto_texto_invalido_retorna_400(self, api_admin, proveedor):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {"proveedor": proveedor.pk, "monto_total": "no-es-numero"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "monto" in resp.data["error"].lower()
+
+    def test_proveedor_no_encontrado_retorna_404(self, api_admin):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {"proveedor": 99999, "monto_total": "10000"},
+            format="json",
+        )
+        assert resp.status_code == 404
+        assert "proveedor" in resp.data["error"].lower()
+
+    def test_compra_de_otro_proveedor_retorna_404(
+        self, api_admin, proveedor, compra_contado
+    ):
+        otro = __import__("apps.compras.models", fromlist=["Proveedor"]).Proveedor.objects.create(
+            ruc="80004001-4", razon_social="Otro Prov"
+        )
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {
+                "proveedor": otro.pk,
+                "monto_total": "5000",
+                "compra_original": compra_contado.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 404
+        assert "compra" in resp.data["error"].lower()
+
+    def test_create_con_compra_original_incluye_id_en_descripcion(
+        self, api_admin, proveedor, compra_contado
+    ):
+        from apps.compras.models import CuentaCorrienteProveedor
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {
+                "proveedor": proveedor.pk,
+                "monto_total": "5000",
+                "compra_original": compra_contado.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        cc = CuentaCorrienteProveedor.objects.filter(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.NOTA_CREDITO,
+        ).last()
+        assert f"Compra #{compra_contado.pk}" in cc.descripcion
+
+
+# ── NotaCreditoProveedorViewSet.anular (líneas 333-352) ───────────────────────
+
+@pytest.mark.django_db
+class TestNotaCreditoAnular:
+    """Cubre la action anular de NotaCreditoProveedorViewSet."""
+
+    @pytest.fixture
+    def nc(self, db, proveedor, usuario_admin, api_admin):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {"proveedor": proveedor.pk, "monto_total": "20000"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        return resp.data
+
+    def test_anular_nc_emitida_retorna_200_y_estado_anulada(self, api_admin, nc):
+        resp = api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        assert resp.status_code == 200
+        assert resp.data["estado"] == "ANULADA"
+
+    def test_anular_nc_emitida_crea_debito_en_cc(self, api_admin, nc, proveedor):
+        from apps.compras.models import CuentaCorrienteProveedor
+        api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        assert CuentaCorrienteProveedor.objects.filter(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+        ).exists()
+
+    def test_anular_dos_veces_retorna_400(self, api_admin, nc):
+        api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        resp = api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        assert resp.status_code == 400
+        assert "anulada" in resp.data["error"].lower()
