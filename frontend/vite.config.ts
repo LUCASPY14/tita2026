@@ -26,11 +26,11 @@ export default defineConfig({
         theme_color: '#1e40af',
         background_color: '#ffffff',
         display: 'standalone',
-        orientation: 'portrait',
+        orientation: 'any',
         start_url: '/modo-recreo',
         icons: [
-          { src: '/logo_tita.png', sizes: '192x192', type: 'image/png' },
-          { src: '/logo_tita.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icon-512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any maskable' },
         ],
       },
       injectManifest: {
