@@ -271,3 +271,290 @@ class TestOrdenCompraViewSet:
     def test_convertir_cajero_retorna_403(self, api, orden_aprobada):
         resp = api.post(f"/api/v1/compras/ordenes/{orden_aprobada.pk}/convertir/")
         assert resp.status_code == 403
+
+    def test_aprobar_no_pendiente_retorna_400(self, api_admin, orden_aprobada):
+        resp = api_admin.post(f"/api/v1/compras/ordenes/{orden_aprobada.pk}/aprobar/")
+        assert resp.status_code == 400
+        assert "Pendiente" in resp.data["error"]
+
+    def test_rechazar_no_pendiente_retorna_400(self, api_admin, orden_aprobada):
+        resp = api_admin.post(
+            f"/api/v1/compras/ordenes/{orden_aprobada.pk}/rechazar/",
+            {"motivo": "test"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "Pendiente" in resp.data["error"]
+
+    def test_convertir_no_aprobada_retorna_400(self, api_admin, orden_pendiente):
+        resp = api_admin.post(f"/api/v1/compras/ordenes/{orden_pendiente.pk}/convertir/")
+        assert resp.status_code == 400
+        assert "Aprobada" in resp.data["error"]
+
+    def test_convertir_validation_error_retorna_400(self, api_admin, orden_aprobada, producto):
+        from unittest.mock import patch
+        from rest_framework.exceptions import ValidationError
+        with patch(
+            "apps.compras.views.CompraService.registrar_compra",
+            side_effect=ValidationError({"items": "Error de validación"}),
+        ):
+            resp = api_admin.post(f"/api/v1/compras/ordenes/{orden_aprobada.pk}/convertir/")
+        assert resp.status_code == 400
+
+
+# ── NotaCreditoProveedor con observacion ──────────────────────────────────────
+
+@pytest.mark.django_db
+class TestNotaCreditoConObservacion:
+    """Línea 318: desc incluye observacion cuando se provee."""
+
+    def test_create_nc_con_observacion_crea_cc_con_desc(self, api_admin, proveedor):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {
+                "proveedor": proveedor.pk,
+                "monto_total": "50000",
+                "observacion": "Devolución de mercadería dañada",
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        from apps.compras.models import CuentaCorrienteProveedor
+        cc = CuentaCorrienteProveedor.objects.filter(proveedor=proveedor).first()
+        assert "Devolución" in cc.descripcion
+
+
+# ── ReporteComprasProveedoresView ─────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestReporteComprasProveedores:
+    """Líneas 555 (funnel loop) y 571 (CSV loop con datos)."""
+
+    def test_sin_params_retorna_400(self, api_admin):
+        resp = api_admin.get("/api/v1/compras/reporte-compras/")
+        assert resp.status_code == 400
+
+    def test_con_fechas_retorna_estructura(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-compras/",
+            {"desde": "2026-01-01", "hasta": "2026-12-31"},
+        )
+        assert resp.status_code == 200
+        assert "por_proveedor" in resp.data
+        assert "funnel_oc" in resp.data
+
+    def test_con_ordenes_llena_funnel(self, api_admin, orden_pendiente):
+        from django.utils import timezone
+        hoy = timezone.now().date().isoformat()
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-compras/",
+            {"desde": hoy, "hasta": hoy},
+        )
+        assert resp.status_code == 200
+        assert resp.data["funnel_oc"]["PENDIENTE"] >= 1
+
+    def test_formato_csv_con_datos_incluye_filas(
+        self, api_admin, compra_contado, proveedor
+    ):
+        from django.utils import timezone
+        hoy = timezone.now().date().isoformat()
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-compras/",
+            {"desde": hoy, "hasta": hoy, "formato": "csv"},
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp["Content-Type"]
+        content = resp.content.decode("utf-8-sig")
+        assert proveedor.razon_social in content
+
+
+# ── ReporteNotasCreditoCompraView ─────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestReporteNotasCreditoCompra:
+    """Líneas 600-675: reporte de notas de crédito — JSON y CSV."""
+
+    def test_sin_params_retorna_400(self, api_admin):
+        resp = api_admin.get("/api/v1/compras/reporte-notas-credito/")
+        assert resp.status_code == 400
+
+    def test_con_fechas_retorna_estructura(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-notas-credito/",
+            {"desde": "2026-01-01", "hasta": "2026-12-31"},
+        )
+        assert resp.status_code == 200
+        assert "detalle" in resp.data
+        assert "resumen" in resp.data
+
+    def test_con_datos_muestra_nc(self, api_admin, proveedor, usuario_admin):
+        from django.utils import timezone
+        from apps.compras.models import NotaCreditoProveedor
+        NotaCreditoProveedor.objects.create(
+            proveedor=proveedor,
+            monto_total=Decimal("30000"),
+            estado=NotaCreditoProveedor.Estado.EMITIDA,
+            creado_por=usuario_admin,
+        )
+        hoy = timezone.now().date().isoformat()
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-notas-credito/",
+            {"desde": hoy, "hasta": hoy},
+        )
+        assert resp.status_code == 200
+        assert len(resp.data["detalle"]) == 1
+        assert resp.data["resumen"]["total_emitidas"] == 1
+
+    def test_filtro_por_estado(self, api_admin, proveedor, usuario_admin):
+        from django.utils import timezone
+        from apps.compras.models import NotaCreditoProveedor
+        NotaCreditoProveedor.objects.create(
+            proveedor=proveedor, monto_total=Decimal("10000"),
+            estado=NotaCreditoProveedor.Estado.ANULADA, creado_por=usuario_admin,
+        )
+        hoy = timezone.now().date().isoformat()
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-notas-credito/",
+            {"desde": hoy, "hasta": hoy, "estado": "EMITIDA"},
+        )
+        assert resp.status_code == 200
+        assert len(resp.data["detalle"]) == 0
+
+    def test_formato_csv_con_datos_incluye_filas(self, api_admin, proveedor, usuario_admin):
+        from django.utils import timezone
+        from apps.compras.models import NotaCreditoProveedor
+        NotaCreditoProveedor.objects.create(
+            proveedor=proveedor, monto_total=Decimal("25000"),
+            estado=NotaCreditoProveedor.Estado.EMITIDA, creado_por=usuario_admin,
+        )
+        hoy = timezone.now().date().isoformat()
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-notas-credito/",
+            {"desde": hoy, "hasta": hoy, "formato": "csv"},
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp["Content-Type"]
+        content = resp.content.decode("utf-8-sig")
+        assert proveedor.razon_social in content
+
+
+# ── ReporteAgingProveedoresView ───────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestReporteAgingProveedores:
+    """Líneas 691-774: aging cuentas a pagar — JSON y CSV."""
+
+    def test_retorna_estructura(self, api_admin):
+        resp = api_admin.get("/api/v1/compras/reporte-aging-proveedores/")
+        assert resp.status_code == 200
+        assert "resumen" in resp.data
+        assert "detalle" in resp.data
+
+    def test_con_deuda_muestra_proveedor(
+        self, api_admin, proveedor, usuario_cajero, producto
+    ):
+        from apps.compras.services import CompraService
+        from django.utils import timezone
+        CompraService.registrar_compra(
+            proveedor=proveedor,
+            creado_por=usuario_cajero,
+            tipo_pago="CREDITO",
+            items=[{"producto": producto, "cantidad": Decimal("1"), "costo_unitario": Decimal("100000")}],
+        )
+        resp = api_admin.get("/api/v1/compras/reporte-aging-proveedores/")
+        assert resp.status_code == 200
+        assert resp.data["resumen"]["proveedores_con_deuda"] >= 1
+
+    def test_formato_csv_sin_datos_retorna_csv(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-aging-proveedores/",
+            {"formato": "csv"},
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp["Content-Type"]
+
+    def test_formato_csv_con_datos_incluye_proveedor(
+        self, api_admin, proveedor, usuario_cajero, producto
+    ):
+        from apps.compras.services import CompraService
+        from django.utils import timezone
+        CompraService.registrar_compra(
+            proveedor=proveedor,
+            creado_por=usuario_cajero,
+            tipo_pago="CREDITO",
+            items=[{"producto": producto, "cantidad": Decimal("2"), "costo_unitario": Decimal("50000")}],
+        )
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-aging-proveedores/",
+            {"formato": "csv"},
+        )
+        assert resp.status_code == 200
+        content = resp.content.decode("utf-8-sig")
+        assert proveedor.razon_social in content
+
+    def test_deuda_antigua_cae_en_bucket_31_60(
+        self, api_admin, proveedor, usuario_cajero
+    ):
+        """Deuda con 40 días de antigüedad → bucket 31-60 (líneas 730-731)."""
+        from apps.compras.models import CuentaCorrienteProveedor
+        from django.utils import timezone
+        from datetime import timedelta
+        cc = CuentaCorrienteProveedor.objects.create(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+            monto=Decimal("200000"),
+            descripcion="Deuda antigua",
+            creado_por=usuario_cajero,
+        )
+        # Retroceder fecha para que caiga en el bucket 31-60
+        CuentaCorrienteProveedor.objects.filter(pk=cc.pk).update(
+            fecha=timezone.now() - timedelta(days=40)
+        )
+        resp = api_admin.get("/api/v1/compras/reporte-aging-proveedores/")
+        assert resp.status_code == 200
+        detalle = resp.data["detalle"]
+        assert len(detalle) >= 1
+        assert detalle[0]["aging"] == "31-60"
+
+    def test_deuda_70_dias_cae_en_bucket_61_90(
+        self, api_admin, proveedor, usuario_cajero
+    ):
+        """Deuda con 70 días → bucket 61-90 (línea 733)."""
+        from apps.compras.models import CuentaCorrienteProveedor
+        from django.utils import timezone
+        from datetime import timedelta
+        cc = CuentaCorrienteProveedor.objects.create(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+            monto=Decimal("250000"),
+            descripcion="Deuda 70 días",
+            creado_por=usuario_cajero,
+        )
+        CuentaCorrienteProveedor.objects.filter(pk=cc.pk).update(
+            fecha=timezone.now() - timedelta(days=70)
+        )
+        resp = api_admin.get("/api/v1/compras/reporte-aging-proveedores/")
+        assert resp.status_code == 200
+        assert any(d["aging"] == "61-90" for d in resp.data["detalle"])
+
+    def test_deuda_muy_antigua_cae_en_bucket_90_mas(
+        self, api_admin, proveedor, usuario_cajero
+    ):
+        """Deuda con 100 días → bucket 90+ (líneas 734-735)."""
+        from apps.compras.models import CuentaCorrienteProveedor
+        from django.utils import timezone
+        from datetime import timedelta
+        cc = CuentaCorrienteProveedor.objects.create(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+            monto=Decimal("300000"),
+            descripcion="Deuda muy antigua",
+            creado_por=usuario_cajero,
+        )
+        CuentaCorrienteProveedor.objects.filter(pk=cc.pk).update(
+            fecha=timezone.now() - timedelta(days=100)
+        )
+        resp = api_admin.get("/api/v1/compras/reporte-aging-proveedores/")
+        assert resp.status_code == 200
+        detalle = resp.data["detalle"]
+        assert any(d["aging"] == "90+" for d in detalle)

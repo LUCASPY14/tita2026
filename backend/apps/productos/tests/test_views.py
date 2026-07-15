@@ -227,3 +227,105 @@ class TestHistoricoReporte:
     def test_requiere_autenticacion(self, api_client):
         resp = api_client.get("/api/v1/productos/historico-precios/reporte/")
         assert resp.status_code in (401, 403)
+
+
+# ── ProductoViewSet.set_precio ────────────────────────────────────────────────
+
+@pytest.fixture
+def lista_defecto(db):
+    from apps.productos.models import ListaPrecio
+    return ListaPrecio.objects.create(nombre="Defecto", activo=True, es_por_defecto=True)
+
+
+@pytest.fixture
+def producto_sin_precio_defecto(db, categoria, unidad_medida):
+    """Producto sin PrecioPorLista vinculado a la lista por defecto."""
+    from apps.productos.models import Producto
+    return Producto.objects.create(
+        descripcion="Sin precio defecto",
+        categoria=categoria,
+        unidad_medida=unidad_medida,
+        requiere_stock=False,
+        activo=True,
+    )
+
+
+@pytest.mark.django_db
+class TestSetPrecio:
+
+    def test_precio_invalido_retorna_400(self, api_admin, producto, lista_defecto):
+        resp = api_admin.post(
+            f"/api/v1/productos/productos/{producto.pk}/set-precio/",
+            {"precio": "no_es_numero"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "inválido" in resp.data["error"].lower()
+
+    def test_sin_lista_defecto_activa_retorna_400(self, api_admin, producto):
+        resp = api_admin.post(
+            f"/api/v1/productos/productos/{producto.pk}/set-precio/",
+            {"precio": "5000"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "defecto" in resp.data["error"].lower()
+
+    def test_actualiza_precio_existente_y_crea_historico(
+        self, api_admin, producto, lista_defecto,
+    ):
+        from decimal import Decimal
+        from apps.productos.models import PrecioPorLista, HistoricoPrecio
+        PrecioPorLista.objects.create(
+            producto=producto, lista=lista_defecto, precio_unitario=Decimal("3000")
+        )
+        resp = api_admin.post(
+            f"/api/v1/productos/productos/{producto.pk}/set-precio/",
+            {"precio": "5000"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data["precio"] == "5000"
+        assert HistoricoPrecio.objects.filter(
+            producto=producto, precio_anterior=3000, precio_nuevo=5000
+        ).exists()
+
+    def test_precio_igual_no_crea_historico(self, api_admin, producto, lista_defecto):
+        from decimal import Decimal
+        from apps.productos.models import PrecioPorLista, HistoricoPrecio
+        PrecioPorLista.objects.create(
+            producto=producto, lista=lista_defecto, precio_unitario=Decimal("3000")
+        )
+        antes = HistoricoPrecio.objects.count()
+        resp = api_admin.post(
+            f"/api/v1/productos/productos/{producto.pk}/set-precio/",
+            {"precio": "3000"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert HistoricoPrecio.objects.count() == antes
+
+    def test_crea_precio_nuevo_cuando_no_existe(
+        self, api_admin, producto_sin_precio_defecto, lista_defecto,
+    ):
+        from decimal import Decimal
+        from apps.productos.models import PrecioPorLista
+        resp = api_admin.post(
+            f"/api/v1/productos/productos/{producto_sin_precio_defecto.pk}/set-precio/",
+            {"precio": "4500"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert PrecioPorLista.objects.filter(
+            producto=producto_sin_precio_defecto,
+            lista=lista_defecto,
+            precio_unitario=Decimal("4500"),
+        ).exists()
+
+    def test_cajero_no_puede_usar_set_precio(self, api_cajero, producto, lista_defecto):
+        resp = api_cajero.post(
+            f"/api/v1/productos/productos/{producto.pk}/set-precio/",
+            {"precio": "5000"},
+            format="json",
+        )
+        assert resp.status_code in (401, 403)
