@@ -56,7 +56,8 @@ def _token(shop_process_id: str, suffix: str) -> str:
     suffix = "confirmacion"  para verificar resultado
     """
     raw = f"{_private_key()}{shop_process_id}{suffix}"
-    return hashlib.md5(raw.encode("utf-8")).hexdigest()
+    # MD5 es requerido por el protocolo Bancard vPOS — no es una elección de seguridad propia.
+    return hashlib.md5(raw.encode("utf-8"), usedforsecurity=False).hexdigest()  # nosec B324
 
 
 # ─── API calls ────────────────────────────────────────────────────────────────

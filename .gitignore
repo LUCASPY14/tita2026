@@ -108,6 +108,7 @@ temp_logs/
 *.txt
 !requirements.txt
 !requirements.production.txt
+!requirements-dev.txt
 !README*.txt
 
 # Docker

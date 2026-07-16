@@ -754,7 +754,7 @@ class TwoFADesactivarView(APIView):
 
         auth.habilitado = False
         auth.fecha_activacion = None
-        auth.secret_key = ""
+        auth.secret_key = ""  # nosec B105 — vaciando campo 2FA, no es una password hardcodeada
         auth.backup_codes = []
         auth.save(update_fields=["habilitado", "fecha_activacion", "secret_key", "backup_codes"])
         return Response({"detail": f"2FA desactivado para {target.email}."})

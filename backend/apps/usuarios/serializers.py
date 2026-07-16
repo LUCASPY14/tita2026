@@ -79,7 +79,7 @@ class CambiarPasswordSerializer(serializers.Serializer):
     def validate(self, data):
         if data.get("password_nuevo") == data.get("password_actual"):
             raise serializers.ValidationError(
-                {"password_nuevo": "La nueva contraseña debe ser diferente a la actual."}
+                {"password_nuevo": "La nueva contraseña debe ser diferente a la actual."}  # nosec B105
             )
         return data
 
