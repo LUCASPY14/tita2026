@@ -248,3 +248,75 @@ class TestEnviarEmailsPendientes:
         with patch("apps.notificaciones.services.EmailService.enviar_simple"):
             result = enviar_emails_pendientes()
         assert result["errores"] == 1
+
+    def test_descarta_notif_tras_max_intentos(self, notif_email_pendiente):
+        """Notificación con email_intentos >= MAX_EMAIL_INTENTOS se descarta."""
+        from apps.notificaciones.models import Notificacion
+        from apps.notificaciones.tasks import enviar_emails_pendientes, MAX_EMAIL_INTENTOS
+        Notificacion.objects.filter(pk=notif_email_pendiente.pk).update(
+            email_intentos=MAX_EMAIL_INTENTOS,
+        )
+        result = enviar_emails_pendientes()
+        assert result["descartados"] == 1
+        assert result["enviados"] == 0
+        notif_email_pendiente.refresh_from_db()
+        assert notif_email_pendiente.leida is True
+
+
+# ── generar_alertas_saldo_bajo — ramas adicionales ────────────────────────────
+
+@pytest.mark.django_db
+class TestGenerarAlertasSaldoBajoRamas:
+
+    def test_whatsapp_pref_activa_y_telefono_crea_solicitud(self, tarjeta_en_alerta, cliente_portal):
+        """Con PreferenciaNotificacion whatsapp_activo=True y telefono, crea SolicitudNotificacion."""
+        from apps.clientes.models import Cliente
+        from apps.notificaciones.models import PreferenciaNotificacion, SolicitudNotificacion
+        from apps.notificaciones.tasks import generar_alertas_saldo_bajo
+
+        usuario = cliente_portal.usuario_portal
+        PreferenciaNotificacion.objects.create(
+            usuario=usuario,
+            tipo_notificacion="SALDO_BAJO",
+            whatsapp_activo=True,
+        )
+        Cliente.objects.filter(pk=cliente_portal.pk).update(telefono="0981123456")
+
+        result = generar_alertas_saldo_bajo()
+        assert result["notificaciones_creadas"] >= 1
+        assert SolicitudNotificacion.objects.filter(tipo="SALDO_BAJO").exists()
+
+    def test_usuario_portal_none_no_crea_notif(self, db, tipo_cliente, lista_precio):
+        """usuario_portal retorna None (select_related cache) → rama `if not usuario` cubre línea 45."""
+        from apps.clientes.models import Cliente, Hijo
+        from apps.core.models import Tarjeta
+        from apps.notificaciones.tasks import generar_alertas_saldo_bajo
+        from unittest.mock import patch as _patch
+
+        # Tarjeta real en alerta, pero mockeamos el acceso a usuario_portal
+        # para que devuelva None sin lanzar AttributeError
+        cliente_sin_user = Cliente.objects.create(
+            nombres="Sin", apellidos="Usuario",
+            ruc_ci="SINUSR002",
+            tipo_cliente=tipo_cliente,
+            lista_precio=lista_precio,
+        )
+        hijo = Hijo.objects.create(
+            nombre="Sin", apellido="Usuario",
+            cliente_responsable=cliente_sin_user, activo=True,
+        )
+        Tarjeta.objects.create(
+            nro_tarjeta="SINUSR002",
+            hijo=hijo,
+            saldo_actual=Decimal("3000"),
+            saldo_alerta=Decimal("5000"),
+            notificar_saldo_bajo=True,
+            estado=Tarjeta.Estado.ACTIVA,
+        )
+        # Forzamos que la propiedad reversa devuelva None (cubre `if not usuario:`)
+        with _patch(
+            "apps.clientes.models.Cliente.usuario_portal",
+            new=property(lambda self: None),
+        ):
+            result = generar_alertas_saldo_bajo()
+        assert result["notificaciones_creadas"] == 0

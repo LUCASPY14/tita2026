@@ -176,3 +176,50 @@ class TestReporteTarjetas:
     def test_requiere_autenticacion(self, api_client):
         resp = api_client.get("/api/v1/core/reporte-tarjetas/")
         assert resp.status_code in (401, 403)
+
+    def test_formato_pdf_retorna_pdf(self, api_admin, tarjeta_core):
+        resp = api_admin.get("/api/v1/core/reporte-tarjetas/", {"formato": "pdf"})
+        assert resp.status_code == 200
+        assert "application/pdf" in resp["Content-Type"]
+
+
+# ── CargaSaldo CUENTA_CORRIENTE ───────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestCargaSaldoCuentaCorriente:
+
+    def test_cuenta_corriente_crea_movimiento_cc(self, api_cajero, tarjeta_core, usuario_cajero):
+        """POST con metodo_pago=CUENTA_CORRIENTE crea CargaSaldo y CuentaCorrienteCliente."""
+        from apps.clientes.models import CuentaCorrienteCliente
+        pre = CuentaCorrienteCliente.objects.count()
+        resp = api_cajero.post(
+            "/api/v1/core/cargas-saldo/",
+            {"tarjeta": tarjeta_core.pk, "monto_cargado": 20000, "metodo_pago": "CUENTA_CORRIENTE"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert CuentaCorrienteCliente.objects.count() == pre + 1
+        mov = CuentaCorrienteCliente.objects.latest("pk")
+        assert mov.tipo == CuentaCorrienteCliente.Tipo.DEBITO
+        assert mov.monto == Decimal("20000")
+
+
+# ── MedioPago — cache hit real ────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestMedioPagoCacheHit:
+
+    def test_cache_hit_retorna_respuesta_cacheada(self, api_cajero, medio_pago_efectivo):
+        """Cuando cache.get devuelve datos para la clave de medios_pago, los retorna directo."""
+        from unittest.mock import patch
+        cached_data = [{"id": 999, "descripcion": "CacheadoTest", "activo": True}]
+
+        def _cache_get(key, default=None):
+            if "medios_pago_list_" in key:
+                return cached_data
+            return default  # respetar el default para throttle/sesiones
+
+        with patch("apps.core.views.cache.get", side_effect=_cache_get):
+            resp = api_cajero.get("/api/v1/core/medios-pago/")
+        assert resp.status_code == 200
+        assert any(mp["descripcion"] == "CacheadoTest" for mp in resp.data)
