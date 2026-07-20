@@ -368,3 +368,109 @@ test.describe('Portal — Control de acceso', () => {
     await expect(page).toHaveURL('/login')
   })
 })
+
+// ── Portal Notificaciones ─────────────────────────────────────────────────────
+
+const NOTIFICACIONES_MOCK = {
+  results: [
+    {
+      id: 1, titulo: 'Saldo bajo', mensaje: 'El saldo de Lucas es menor a ₲5,000',
+      leida: false, fecha: '2026-06-15T09:00:00Z', tipo: 'SALDO_BAJO',
+    },
+    {
+      id: 2, titulo: 'Almuerzo consumido', mensaje: 'Lucas consumió almuerzo hoy',
+      leida: true, fecha: '2026-06-14T12:30:00Z', tipo: 'CONSUMO',
+    },
+  ],
+  count: 2, next: null, previous: null,
+}
+
+test.describe('Portal — Notificaciones', () => {
+  test('muestra la lista de notificaciones', async ({ page }) => {
+    await loginAsPortal(page)
+    await page.route(/\/api\/v1\/notificaciones\/notificaciones/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(NOTIFICACIONES_MOCK) })
+    )
+    await page.goto('/portal/notificaciones')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Saldo bajo')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Almuerzo consumido')).toBeVisible({ timeout: 5000 })
+  })
+
+  test('sin sesión redirige a /login', async ({ page }) => {
+    await page.goto('/portal/notificaciones')
+    await expect(page).toHaveURL('/login')
+  })
+})
+
+// ── Portal Facturas ───────────────────────────────────────────────────────────
+
+const FACTURAS_MOCK = {
+  results: [
+    {
+      id: 1, nro_factura: '001-001-0000001',
+      monto_total: '75000', fecha: '2026-06-01T00:00:00Z',
+      descripcion: 'Plan almuerzo junio',
+    },
+  ],
+  count: 1, next: null, previous: null,
+}
+
+test.describe('Portal — Facturas', () => {
+  test('muestra la lista de facturas del cliente', async ({ page }) => {
+    await loginAsPortal(page)
+    await page.route(/\/api\/v1\/contabilidad\/facturas/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FACTURAS_MOCK) })
+    )
+    await page.goto('/portal/facturas')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('001-001-0000001')).toBeVisible({ timeout: 5000 })
+  })
+
+  test('sin sesión redirige a /login', async ({ page }) => {
+    await page.goto('/portal/facturas')
+    await expect(page).toHaveURL('/login')
+  })
+})
+
+// ── Portal Pagar Almuerzo ─────────────────────────────────────────────────────
+
+test.describe('Portal — Pagar Almuerzo', () => {
+  test('carga la página sin errores', async ({ page }) => {
+    await loginAsPortal(page)
+    await page.route(/\/api\/v1\/almuerzos\/portal\/cuentas/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ results: [], count: 0 }) })
+    )
+    await page.goto('/portal/pagar-almuerzo')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible()
+    await expect(page.getByText(/almuerzo|pago|cuenta/i).first()).toBeVisible({ timeout: 5000 })
+  })
+
+  test('sin sesión redirige a /login', async ({ page }) => {
+    await page.goto('/portal/pagar-almuerzo')
+    await expect(page).toHaveURL('/login')
+  })
+})
+
+// ── Portal Cambiar Contraseña ─────────────────────────────────────────────────
+
+test.describe('Portal — Cambiar Contraseña', () => {
+  test('muestra el formulario de cambio de contraseña', async ({ page }) => {
+    await loginAsPortal(page)
+    await page.goto('/portal/cambiar-contrasena')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Algo salió mal')).not.toBeVisible()
+    await expect(
+      page.getByLabel(/contraseña actual|password actual/i)
+        .or(page.getByPlaceholder(/contraseña actual|password actual/i))
+        .or(page.getByText(/cambiar contraseña|nueva contraseña/i))
+    ).toBeVisible({ timeout: 5000 })
+  })
+
+  test('sin sesión redirige a /login', async ({ page }) => {
+    await page.goto('/portal/cambiar-contrasena')
+    await expect(page).toHaveURL('/login')
+  })
+})
