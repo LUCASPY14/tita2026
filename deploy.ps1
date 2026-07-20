@@ -234,7 +234,7 @@ docker compose up -d --no-deps frontend
 if ($LASTEXITCODE -ne 0) { Die "frontend no pudo iniciar. Revisar: docker compose logs frontend" }
 
 # Monitoring (no crítico para el negocio)
-docker compose up -d prometheus pushgateway grafana > $null 2>&1
+docker compose up -d prometheus pushgateway grafana redis_exporter > $null 2>&1
 
 # ── 7. Health check final ────────────────────────────────────────────────────
 

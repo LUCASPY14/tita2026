@@ -182,3 +182,52 @@ groups:
             generar_cuentas_mensuales, generar_resumen_diario_ventas,
             generar_resumen_diario_stock.
             Revisar: docker compose logs --tail=100 celery
+
+      # ── 4. Redis — memoria > 80% del límite configurado ───────────────────
+      - uid: cantina-alert-redis-memory
+        title: Redis memoria alta (> 80%)
+        condition: umbral
+        data:
+          - refId: redis_mem_ratio
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: >
+                redis_memory_used_bytes / redis_memory_max_bytes
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: redis_mem_ratio
+          - refId: umbral
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: umbral
+              expression: redis_mem_ratio
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.8]
+                  operator:
+                    type: and
+                  query:
+                    params: [redis_mem_ratio]
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: NoData
+        execErrState: Alerting
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Redis está usando más del 80% de su memoria máxima configurada.
+          description: >
+            Revisar maxmemory en redis.conf o aumentar la memoria disponible para el contenedor.
+            Si redis_memory_max_bytes es 0 (sin límite), esta alerta no se disparará —
+            configurar maxmemory en el comando del servicio redis.

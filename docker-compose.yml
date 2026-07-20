@@ -157,6 +157,19 @@ services:
     networks:
       - cantina_net
 
+  # ── Redis Exporter (métricas Prometheus de Redis) ───────────────────────────
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.67.0
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    expose:
+      - "9121"
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - cantina_net
+
   # ── WAHA (WhatsApp self-hosted) ─────────────────────────────────────────────
   waha:
     image: devlikeapro/waha:latest
