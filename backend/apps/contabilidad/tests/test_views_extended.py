@@ -180,7 +180,10 @@ class TestDashboardResumen:
     def test_retorna_campos_esperados(self, api_admin):
         resp = api_admin.get("/api/v1/contabilidad/dashboard/")
         assert resp.status_code == 200
-        for campo in ["ventasHoy", "montoHoy", "clientes", "productos", "stockBajo", "cajasAbiertas"]:
+        for campo in [
+            "ventasHoy", "montoHoy", "clientes", "productos", "stockBajo", "cajasAbiertas",
+            "recargasHoy", "montoRecargasHoy", "almuerzoHoy", "tarjetasEnAlerta",
+        ]:
             assert campo in resp.data
 
     def test_cajero_puede_acceder(self, api_cajero):

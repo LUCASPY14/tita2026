@@ -13,6 +13,10 @@ export interface DashboardKPI {
   productos: number
   stockBajo: number
   cajasAbiertas: number
+  recargasHoy: number
+  montoRecargasHoy: number
+  almuerzoHoy: number
+  tarjetasEnAlerta: number
 }
 
 function buildWsUrl(): string {
@@ -67,12 +71,16 @@ export function useDashboardKPI() {
         const msg = JSON.parse(event.data) as { type?: string } & Partial<DashboardKPI>
         if (msg.type === 'kpi_snapshot' || msg.type === 'kpi_update') {
           setKpi({
-            ventasHoy:     msg.ventasHoy     ?? 0,
-            montoHoy:      msg.montoHoy      ?? 0,
-            clientes:      msg.clientes      ?? 0,
-            productos:     msg.productos     ?? 0,
-            stockBajo:     msg.stockBajo     ?? 0,
-            cajasAbiertas: msg.cajasAbiertas ?? 0,
+            ventasHoy:        msg.ventasHoy        ?? 0,
+            montoHoy:         msg.montoHoy         ?? 0,
+            clientes:         msg.clientes         ?? 0,
+            productos:        msg.productos        ?? 0,
+            stockBajo:        msg.stockBajo        ?? 0,
+            cajasAbiertas:    msg.cajasAbiertas    ?? 0,
+            recargasHoy:      msg.recargasHoy      ?? 0,
+            montoRecargasHoy: msg.montoRecargasHoy ?? 0,
+            almuerzoHoy:      msg.almuerzoHoy      ?? 0,
+            tarjetasEnAlerta: msg.tarjetasEnAlerta ?? 0,
           })
         }
       } catch { /* ignore malformed frames */ }

@@ -514,11 +514,13 @@ class DashboardResumenView(APIView):
     permission_classes = [IsStaffUser]
 
     def get(self, request):
-        from django.db.models import Count, Sum
+        from django.db.models import Count, Sum, F
         from apps.ventas.models import Venta
         from apps.clientes.models import Cliente
         from apps.productos.models import Producto
         from apps.inventario.models import AlertaStock
+        from apps.core.models import CargaSaldo, Tarjeta
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
 
         from django.utils.timezone import localdate
         hoy = localdate()
@@ -526,26 +528,32 @@ class DashboardResumenView(APIView):
         ventas_hoy = Venta.objects.filter(
             fecha__date=hoy,
             estado=Venta.Estado.ACTIVA,
-        ).aggregate(
-            cantidad=Count("id"),
-            monto=Sum("monto_total"),
-        )
+        ).aggregate(cantidad=Count("id"), monto=Sum("monto_total"))
 
-        clientes_total = Cliente.objects.filter(activo=True).count()
-        productos_total = Producto.objects.filter(activo=True).count()
-        stock_bajo = AlertaStock.objects.filter(activa=True).count()
+        recargas_hoy = CargaSaldo.objects.filter(
+            fecha_carga__date=hoy,
+            estado=CargaSaldo.Estado.CONFIRMADA,
+        ).aggregate(cantidad=Count("id"), monto=Sum("monto_cargado"))
 
-        cajas_abiertas = CierreCaja.objects.filter(
-            estado=CierreCaja.Estado.ABIERTO
+        almuerzos_hoy = RegistroConsumoAlmuerzo.objects.filter(fecha_consumo=hoy).count()
+
+        tarjetas_alerta = Tarjeta.objects.filter(
+            notificar_saldo_bajo=True,
+            saldo_alerta__isnull=False,
+            saldo_actual__lte=F("saldo_alerta"),
         ).count()
 
         return Response({
-            "ventasHoy": ventas_hoy["cantidad"] or 0,
-            "montoHoy": int(ventas_hoy["monto"] or 0),
-            "clientes": clientes_total,
-            "productos": productos_total,
-            "stockBajo": stock_bajo,
-            "cajasAbiertas": cajas_abiertas,
+            "ventasHoy":        ventas_hoy["cantidad"] or 0,
+            "montoHoy":         int(ventas_hoy["monto"] or 0),
+            "clientes":         Cliente.objects.filter(activo=True).count(),
+            "productos":        Producto.objects.filter(activo=True).count(),
+            "stockBajo":        AlertaStock.objects.filter(activa=True).count(),
+            "cajasAbiertas":    CierreCaja.objects.filter(estado=CierreCaja.Estado.ABIERTO).count(),
+            "recargasHoy":      recargas_hoy["cantidad"] or 0,
+            "montoRecargasHoy": int(recargas_hoy["monto"] or 0),
+            "almuerzoHoy":      almuerzos_hoy,
+            "tarjetasEnAlerta": tarjetas_alerta,
         })
 
 
