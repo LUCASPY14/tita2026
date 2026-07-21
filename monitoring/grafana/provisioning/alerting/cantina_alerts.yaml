@@ -231,3 +231,104 @@ groups:
             Revisar maxmemory en redis.conf o aumentar la memoria disponible para el contenedor.
             Si redis_memory_max_bytes es 0 (sin límite), esta alerta no se disparará —
             configurar maxmemory en el comando del servicio redis.
+
+      # ── 5. Host Windows — disco C: > 85% ──────────────────────────────────
+      - uid: cantina-alert-disco-host
+        title: Disco C del servidor casi lleno (> 85%)
+        condition: umbral
+        data:
+          - refId: disco_uso
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: >
+                (windows_logical_disk_size_bytes{volume="C:"}
+                - windows_logical_disk_free_bytes{volume="C:"})
+                / windows_logical_disk_size_bytes{volume="C:"} * 100
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: disco_uso
+          - refId: umbral
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: umbral
+              expression: disco_uso
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [85]
+                  operator:
+                    type: and
+                  query:
+                    params: [disco_uso]
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: NoData
+        execErrState: Alerting
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: El disco C del servidor supera el 85% de uso.
+          description: >
+            Liberar espacio o ampliar el disco antes de que se llene.
+            Verificar backups en C:\backups\cantina\ y logs de Docker.
+            Requiere windows_exporter instalado como servicio en el host (puerto 9182).
+
+      # ── 6. Host Windows — RAM > 90% ────────────────────────────────────────
+      - uid: cantina-alert-ram-host
+        title: RAM del servidor alta (> 90%)
+        condition: umbral
+        data:
+          - refId: ram_uso
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: >
+                (windows_os_visible_memory_bytes - windows_os_physical_memory_free_bytes)
+                / windows_os_visible_memory_bytes * 100
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: ram_uso
+          - refId: umbral
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: umbral
+              expression: ram_uso
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [90]
+                  operator:
+                    type: and
+                  query:
+                    params: [ram_uso]
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: NoData
+        execErrState: Alerting
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: La RAM del servidor supera el 90% de uso sostenido.
+          description: >
+            Revisar procesos con mayor consumo de memoria en el servidor Windows.
+            Considerar reiniciar servicios no esenciales o ampliar la RAM.
+            Requiere windows_exporter instalado como servicio en el host (puerto 9182).

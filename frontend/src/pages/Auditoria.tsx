@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import api from '../services/api'
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
@@ -50,7 +49,6 @@ function ResultadoBadge({ resultado }: { resultado: string }) {
 // ── Componente principal ─────────────────────────────────────────────────────
 
 export default function Auditoria() {
-  const { t } = useTranslation()
 
   const [desde,      setDesde]      = useState(hace30Dias())
   const [hasta,      setHasta]      = useState(hoy())

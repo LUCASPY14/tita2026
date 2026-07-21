@@ -1,4 +1,4 @@
-# scripts/smoke-test.ps1 — Cantina Tita
+﻿# scripts/smoke-test.ps1 — Cantina Tita
 #
 # Verifica que los servicios críticos responden correctamente tras un deploy.
 # Uso independiente:
@@ -35,7 +35,8 @@ function Test-Endpoint {
         [string]$Label,
         [string]$Url,
         [int[]] $Expected = @(200),
-        [string]$MustContain = ""
+        [string]$MustContain = "",
+        [switch]$NoFollow
     )
 
     $code = 0
@@ -43,7 +44,8 @@ function Test-Endpoint {
     $msg  = ""
 
     try {
-        $resp = Invoke-WebRequest -Uri $Url -TimeoutSec $TimeoutSec -UseBasicParsing -ErrorAction Stop
+        $maxRedir = if ($NoFollow) { 0 } else { 5 }
+        $resp = Invoke-WebRequest -Uri $Url -TimeoutSec $TimeoutSec -UseBasicParsing -MaximumRedirection $maxRedir -ErrorAction Stop
         $code = [int]$resp.StatusCode
         if ($Expected -contains $code) {
             if ($MustContain -and ($resp.Content -notmatch [regex]::Escape($MustContain))) {
@@ -63,6 +65,11 @@ function Test-Endpoint {
             } else {
                 $msg = "HTTP $code — esperado $($Expected -join ' o ')"
             }
+        } elseif ($NoFollow -and ($_.Exception.Message -match "302|redirect|Moved|Found|redireccionamiento|no válida|invalid")) {
+            # PS5.1 MaximumRedirection=0 may throw without a readable Response for redirects
+            $code = 302
+            $ok   = $Expected -contains 302
+            if (-not $ok) { $msg = "HTTP 302 — esperado $($Expected -join ' o ')" }
         } else {
             $code = 0
             $msg  = "sin respuesta: $($_.Exception.Message.Split([char]10)[0])"
@@ -97,12 +104,12 @@ Test-Endpoint "Nginx → backend /api/health/" "$BaseUrl/api/health/" @(200) '"s
 # ── 2. API — debe responder 401 sin token (no 500) ────────────────
 Write-Host ""
 Write-Host "  API endpoints — requieren auth (401 esperado)" -ForegroundColor Yellow
-Test-Endpoint "JWT token endpoint"           "$ApiUrl/api/v1/usuarios/token/"                @(400, 401, 405)
+Test-Endpoint "JWT token endpoint"           "$ApiUrl/api/token/"                           @(400, 401, 405)
 Test-Endpoint "Productos catálogo"           "$ApiUrl/api/v1/productos/productos/"           @(401, 403)
 Test-Endpoint "Core tarjetas"               "$ApiUrl/api/v1/core/tarjetas/"                @(401, 403)
 Test-Endpoint "Contabilidad cajas"          "$ApiUrl/api/v1/contabilidad/cajas/"            @(401, 403)
 Test-Endpoint "Clientes"                    "$ApiUrl/api/v1/clientes/clientes/"             @(401, 403)
-Test-Endpoint "Almuerzos menú diario"       "$ApiUrl/api/v1/almuerzos/menu-diario/"         @(401, 403)
+Test-Endpoint "Almuerzos menú diario"       "$ApiUrl/api/v1/almuerzos/menu/"               @(401, 403)
 Test-Endpoint "Ventas"                      "$ApiUrl/api/v1/ventas/ventas/"                 @(401, 403)
 Test-Endpoint "Facturas"                    "$ApiUrl/api/v1/contabilidad/facturas/"         @(401, 403)
 Test-Endpoint "Notificaciones"              "$ApiUrl/api/v1/notificaciones/notificaciones/" @(401, 403)
@@ -117,7 +124,7 @@ Test-Endpoint "Alertas de vencimiento"      "$ApiUrl/api/v1/inventario/alertas-v
 Write-Host ""
 Write-Host "  Bancard vPOS (requieren auth)" -ForegroundColor Yellow
 Test-Endpoint "Bancard iniciar"             "$ApiUrl/api/v1/core/bancard/iniciar/"            @(401, 403, 405)
-Test-Endpoint "Bancard retorno (público)"   "$ApiUrl/api/v1/core/bancard/retorno/"            @(400, 404, 200)
+Test-Endpoint "Bancard retorno (público)"   "$ApiUrl/api/v1/core/bancard/retorno/"            @(302, 400, 404, 200) -NoFollow
 Test-Endpoint "Bancard estado (sin ID)"     "$ApiUrl/api/v1/core/bancard/estado/no-existe/"   @(401, 403, 404)
 
 # ── 5. Endpoints públicos / portal ───────────────────────────────

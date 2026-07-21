@@ -342,6 +342,126 @@
           "legendFormat": "Máximo configurado"
         }
       ]
+    },
+
+    {
+      "id": 15,
+      "title": "Host — CPU %",
+      "description": "Uso promedio de CPU del servidor Windows (windows_exporter:9182).",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 54 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 70 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "expr": "100 - (avg(rate(windows_cpu_time_total{mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "CPU %"
+        }
+      ]
+    },
+
+    {
+      "id": 16,
+      "title": "Host — RAM %",
+      "description": "Porcentaje de memoria RAM usada en el servidor Windows.",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 54 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 75 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "expr": "(windows_os_visible_memory_bytes - windows_os_physical_memory_free_bytes) / windows_os_visible_memory_bytes * 100",
+          "legendFormat": "RAM %"
+        }
+      ]
+    },
+
+    {
+      "id": 17,
+      "title": "Host — Disco C: %",
+      "description": "Porcentaje de disco usado en C: del servidor Windows.",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 54 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 75 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "expr": "(windows_logical_disk_size_bytes{volume=\"C:\"} - windows_logical_disk_free_bytes{volume=\"C:\"}) / windows_logical_disk_size_bytes{volume=\"C:\"} * 100",
+          "legendFormat": "Disco C: %"
+        }
+      ]
+    },
+
+    {
+      "id": 18,
+      "title": "Host — CPU y RAM — últimas 2h",
+      "description": "Evolución temporal de CPU y RAM del servidor Windows.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 58 },
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "min": 0, "max": 100, "color": { "mode": "palette-classic" } }
+      },
+      "targets": [
+        {
+          "expr": "100 - (avg(rate(windows_cpu_time_total{mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "CPU %"
+        },
+        {
+          "expr": "(windows_os_visible_memory_bytes - windows_os_physical_memory_free_bytes) / windows_os_visible_memory_bytes * 100",
+          "legendFormat": "RAM %"
+        }
+      ]
+    },
+
+    {
+      "id": 19,
+      "title": "Host — Discos — uso %",
+      "description": "Uso de cada volumen lógico del servidor Windows (excluye volúmenes de sistema).",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 58 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 75 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      },
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "(windows_logical_disk_size_bytes{volume=~\"[A-Z]:\"} - windows_logical_disk_free_bytes{volume=~\"[A-Z]:\"}) / windows_logical_disk_size_bytes{volume=~\"[A-Z]:\"} * 100",
+          "legendFormat": "{{volume}}"
+        }
+      ]
     }
   ]
 }

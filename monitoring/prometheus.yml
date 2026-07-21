@@ -21,3 +21,8 @@ scrape_configs:
     static_configs:
       - targets: ["pushgateway:9091"]
     scrape_interval: 30s
+
+  - job_name: windows_host
+    static_configs:
+      - targets: ["host.docker.internal:9182"]
+    scrape_interval: 30s

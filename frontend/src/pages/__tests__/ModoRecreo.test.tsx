@@ -259,20 +259,6 @@ function setupDataConTarjeta() {
   })
 }
 
-async function escanearTarjeta() {
-  const input = screen.getByPlaceholderText(/T-\|código/i)
-    ?? screen.getByRole('textbox', { name: '' })
-  // Buscar el input del scanner (primer input en el header del carrito)
-  const inputs = document.querySelectorAll('input')
-  const scannerInput = Array.from(inputs).find(
-    (el) => el.placeholder?.includes('T-') || el.closest('[data-scanner]')
-  )
-  if (scannerInput) {
-    await userEvent.type(scannerInput, 'T-00001{Enter}')
-  }
-  return screen.findByText('Ana López')
-}
-
 // ─── Tests: agregar al carrito ────────────────────────────────────────────────
 
 describe('ModoRecreo — agregar productos al carrito', () => {
