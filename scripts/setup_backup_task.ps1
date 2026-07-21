@@ -6,15 +6,15 @@
 #   .\scripts\setup_backup_task.ps1 -DbPassword "password_de_postgres"
 #
 # Que registra:
-#   "Backup Cantina Local"  -- 02:00 diario -- pg_dump a C:\backups\cantina\
+#   "Backup Cantina Local"  -- 02:00 diario -- pg_dump a D:\produccion_tita\backups\cantina\
 #   "Backup Cantina Nube"   -- 02:30 diario -- sube el dump a Google Drive (si rclone instalado)
 
 param(
     [Parameter(Mandatory=$true)]
     [SecureString]$DbPassword,
 
-    [string]$ProjectRoot  = "C:\tita2026",
-    [string]$BackupDir    = "C:\backups\cantina",
+    [string]$ProjectRoot  = "D:\tita2026",
+    [string]$BackupDir    = "D:\produccion_tita\backups\cantina",
     [string]$PgBin        = "C:\Program Files\PostgreSQL\16\bin",
     [string]$PgUser       = "postgres",
     [string]$PgHost       = "localhost",

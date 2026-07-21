@@ -72,7 +72,7 @@ Check "PostgreSQL service Running" ($pgSvc.Count -gt 0) "iniciar el servicio pos
 Write-Host ""
 Write-Host "[ Backups ]" -ForegroundColor DarkGray
 
-$backupDir = "C:\backups\cantina"
+$backupDir = "D:\produccion_tita\backups\cantina"
 if (Test-Path $backupDir) {
     $lastBackup = Get-ChildItem "$backupDir\cantina_*.dump","$backupDir\cantina_*.dump.gpg" -ErrorAction SilentlyContinue |
         Sort-Object LastWriteTime -Descending | Select-Object -First 1

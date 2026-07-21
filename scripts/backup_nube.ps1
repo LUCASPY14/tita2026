@@ -27,7 +27,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 
 param(
-    [string]$LocalDir         = "C:\backups\cantina",
+    [string]$LocalDir         = "D:\produccion_tita\backups\cantina",
     [string]$RemoteName       = "gdrive",                # nombre configurado en rclone
     [string]$RemotePath       = "backups/cantina_tita",  # carpeta dentro de Google Drive
     [string]$RcloneBin        = "rclone",                # rclone en PATH o ruta completa
