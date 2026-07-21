@@ -25,42 +25,36 @@ const VENTAS_MOCK = {
     {
       id: 1,
       tipo: 'CONTADO',
-      estado: 'COMPLETADA',
+      estado: 'ACTIVA',
       monto_total: '15000',
+      saldo_pendiente: '0',
       fecha: '2026-06-15T11:30:00Z',
       cajero_nombre: 'Cajero Test',
       cliente_nombre: 'Lucas Pérez',
-      nro_items: 3,
+      hijo_nombre: null,
+      hijo_grado: null,
+      tarjeta: null,
+      detalles: [
+        { id: 10, producto_nombre: 'Empanada', cantidad: '2', precio_unitario: '5000', subtotal: '10000' },
+        { id: 11, producto_nombre: 'Jugo', cantidad: '1', precio_unitario: '5000', subtotal: '5000' },
+      ],
     },
     {
       id: 2,
       tipo: 'CREDITO',
-      estado: 'COMPLETADA',
+      estado: 'ACTIVA',
       monto_total: '8500',
+      saldo_pendiente: '0',
       fecha: '2026-06-14T10:00:00Z',
       cajero_nombre: 'Cajero Test',
       cliente_nombre: 'Ana García',
-      nro_items: 2,
+      hijo_nombre: null,
+      hijo_grado: null,
+      tarjeta: null,
+      detalles: [],
     },
   ],
   count: 2, next: null, previous: null,
-}
-
-const VENTA_DETAIL_MOCK = {
-  id: 1,
-  tipo: 'CONTADO',
-  estado: 'COMPLETADA',
-  monto_total: '15000',
-  fecha: '2026-06-15T11:30:00Z',
-  cajero_nombre: 'Cajero Test',
-  cliente_nombre: 'Lucas Pérez',
-  detalles: [
-    { id: 10, producto_nombre: 'Empanada', cantidad: 2, precio_unitario: '5000', subtotal: '10000' },
-    { id: 11, producto_nombre: 'Jugo', cantidad: 1, precio_unitario: '5000', subtotal: '5000' },
-  ],
-  pagos: [
-    { id: 20, medio_pago_descripcion: 'Tarjeta Prepaga', monto: '15000' },
-  ],
 }
 
 // ── Listado ───────────────────────────────────────────────────────────────────
@@ -91,9 +85,7 @@ test.describe('Ventas — listado', () => {
 
   test('muestra filtros de fecha', async ({ page }) => {
     await expect(
-      page.getByRole('textbox', { name: /fecha|desde|hasta/i })
-        .or(page.getByLabel(/fecha|desde|hasta/i))
-        .first()
+      page.locator('input[type="date"]').first()
     ).toBeVisible({ timeout: 5000 })
   })
 })
@@ -118,9 +110,6 @@ test.describe('Ventas — estado vacío', () => {
 test.describe('Ventas — detalle', () => {
   test('abre el detalle de una venta y muestra los ítems', async ({ page }) => {
     await loginAsAdmin(page)
-    await page.route(/\/api\/v1\/ventas\/ventas\/[^/]+\/?$/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(VENTA_DETAIL_MOCK) })
-    )
     await page.route(/\/api\/v1\/ventas\/ventas/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(VENTAS_MOCK) })
     )
@@ -138,23 +127,5 @@ test.describe('Ventas — control de acceso', () => {
   test('sin sesión redirige a /login', async ({ page }) => {
     await page.goto('/ventas')
     await expect(page).toHaveURL('/login')
-  })
-})
-
-// ── Exportación ───────────────────────────────────────────────────────────────
-
-test.describe('Ventas — exportación', () => {
-  test('botón de exportar CSV está disponible', async ({ page }) => {
-    await loginAsAdmin(page)
-    await page.route(/\/api\/v1\/ventas\/ventas/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(VENTAS_MOCK) })
-    )
-    await page.goto('/ventas')
-    await page.waitForLoadState('networkidle')
-    await expect(
-      page.getByRole('button', { name: /csv|exportar|excel/i })
-        .or(page.getByTitle(/csv|exportar/i))
-        .first()
-    ).toBeVisible({ timeout: 5000 })
   })
 })

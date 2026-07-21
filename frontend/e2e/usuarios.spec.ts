@@ -44,7 +44,7 @@ const USUARIOS_MOCK = {
 test.describe('Usuarios — listado', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/usuarios\/usuarios/, (route) =>
+    await page.route(/\/api\/v1\/usuarios\/usuarios\/(?!me)/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(USUARIOS_MOCK) })
     )
     await page.goto('/usuarios')
@@ -62,8 +62,9 @@ test.describe('Usuarios — listado', () => {
   })
 
   test('muestra roles de los usuarios', async ({ page }) => {
-    await expect(page.getByText(/ADMIN|Admin/i).first()).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText(/CAJERO|Cajero/i).first()).toBeVisible({ timeout: 5000 })
+    // Scoped to table cells to avoid hidden <option> elements in modals
+    await expect(page.getByRole('cell').filter({ hasText: 'Administrador' }).first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('cell').filter({ hasText: 'Cajero' }).first()).toBeVisible({ timeout: 5000 })
   })
 
   test('muestra botón Nuevo Usuario', async ({ page }) => {
@@ -84,11 +85,8 @@ test.describe('Usuarios — control de acceso', () => {
   test('CAJERO es redirigido o ve acceso denegado', async ({ page }) => {
     await loginAs(page, CAJERO)
     await page.goto('/usuarios')
-    // Según permisos: redirige o muestra 403/acceso denegado
-    const url = page.url()
-    const forbidden = await page.getByText(/acceso denegado|no autorizado|403|forbidden/i).isVisible()
-    const redirected = !url.includes('/usuarios')
-    expect(redirected || forbidden).toBe(true)
+    // PrivateRoute roles={['ADMIN']} redirige a /dashboard cuando el rol no está autorizado
+    await expect(page).not.toHaveURL(/\/usuarios$/, { timeout: 5000 })
   })
 })
 
@@ -97,7 +95,7 @@ test.describe('Usuarios — control de acceso', () => {
 test.describe('Usuarios — crear', () => {
   test('abre el modal/formulario al hacer click en Nuevo Usuario', async ({ page }) => {
     await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/usuarios\/usuarios/, (route) =>
+    await page.route(/\/api\/v1\/usuarios\/usuarios\/(?!me)/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(USUARIOS_MOCK) })
     )
     await page.goto('/usuarios')
@@ -105,7 +103,7 @@ test.describe('Usuarios — crear', () => {
     await btn.waitFor({ state: 'visible', timeout: 5000 })
     await btn.click()
     await expect(
-      page.getByRole('dialog').or(page.getByRole('form')).or(page.getByText(/email|correo/i))
+      page.getByRole('dialog', { name: /nuevo usuario/i })
     ).toBeVisible({ timeout: 5000 })
   })
 })
@@ -115,7 +113,7 @@ test.describe('Usuarios — crear', () => {
 test.describe('Usuarios — filtros', () => {
   test('campo de búsqueda está presente', async ({ page }) => {
     await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/usuarios\/usuarios/, (route) =>
+    await page.route(/\/api\/v1\/usuarios\/usuarios\/(?!me)/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(USUARIOS_MOCK) })
     )
     await page.goto('/usuarios')

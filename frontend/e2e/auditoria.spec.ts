@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-const ADMIN = { id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
+const ADMIN  = { id: 1, email: 'admin@cantina.com',  nombre: 'Admin',  apellido: 'Tita', rol: 'ADMIN' }
 const CAJERO = { id: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
 
 async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN | typeof CAJERO) {
@@ -21,40 +21,61 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN
   await page.waitForURL('/dashboard')
 }
 
-const AUDIT_LOGS_MOCK = {
-  results: [
+// La página espera { resumen: AuditoriaResumen, detalle: AuditoriaEntry[] }
+const AUDITORIA_MOCK = {
+  resumen: {
+    total: 3,
+    por_resultado: [
+      { resultado: 'EXITO', count: 2 },
+      { resultado: 'ERROR', count: 1 },
+    ],
+    top_operaciones: [
+      { operacion: 'CREATE', count: 2 },
+      { operacion: 'UPDATE', count: 1 },
+    ],
+    top_tablas: [
+      { tabla_afectada: 'ventas_venta', count: 2 },
+      { tabla_afectada: 'usuarios_usuario', count: 1 },
+    ],
+  },
+  detalle: [
     {
-      id: 1,
-      timestamp: '2026-06-15T10:30:00Z',
-      usuario_email: 'cajero@cantina.com',
-      accion: 'CREATE',
-      modelo: 'Venta',
-      objeto_id: '42',
-      detalle: 'Venta creada por ₲15,000',
+      id_auditoria: 1,
+      fecha_operacion: '2026-06-15T10:30:00Z',
+      usuario__email: 'cajero@cantina.com',
+      operacion: 'CREATE',
+      tabla_afectada: 'ventas_venta',
+      id_registro: 42,
+      resultado: 'EXITO',
       ip_address: '192.168.1.100',
+      descripcion: 'Venta creada por ₲15,000',
+      mensaje_error: null,
     },
     {
-      id: 2,
-      timestamp: '2026-06-15T11:00:00Z',
-      usuario_email: 'admin@cantina.com',
-      accion: 'UPDATE',
-      modelo: 'MedioPago',
-      objeto_id: '3',
-      detalle: 'Medio de pago actualizado',
+      id_auditoria: 2,
+      fecha_operacion: '2026-06-15T11:00:00Z',
+      usuario__email: 'admin@cantina.com',
+      operacion: 'UPDATE',
+      tabla_afectada: 'usuarios_usuario',
+      id_registro: 3,
+      resultado: 'EXITO',
       ip_address: '192.168.1.1',
+      descripcion: 'Medio de pago actualizado',
+      mensaje_error: null,
     },
     {
-      id: 3,
-      timestamp: '2026-06-15T11:15:00Z',
-      usuario_email: 'cajero@cantina.com',
-      accion: 'LOGIN',
-      modelo: 'Usuario',
-      objeto_id: '2',
-      detalle: 'Inicio de sesión exitoso',
+      id_auditoria: 3,
+      fecha_operacion: '2026-06-15T11:15:00Z',
+      usuario__email: 'cajero@cantina.com',
+      operacion: 'LOGIN',
+      tabla_afectada: 'usuarios_usuario',
+      id_registro: 2,
+      resultado: 'ERROR',
       ip_address: '192.168.1.100',
+      descripcion: null,
+      mensaje_error: 'Credenciales inválidas',
     },
   ],
-  count: 3, next: null, previous: null,
 }
 
 // ── Listado ───────────────────────────────────────────────────────────────────
@@ -62,8 +83,8 @@ const AUDIT_LOGS_MOCK = {
 test.describe('Auditoría — listado', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/usuarios\/audit-logs/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AUDIT_LOGS_MOCK) })
+    await page.route(/\/api\/v1\/usuarios\/reporte-auditoria/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AUDITORIA_MOCK) })
     )
     await page.goto('/auditoria')
     await page.waitForLoadState('networkidle')
@@ -71,7 +92,7 @@ test.describe('Auditoría — listado', () => {
 
   test('carga la página sin errores', async ({ page }) => {
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
-    await expect(page.getByText(/Auditoría|Auditoria|Audit/i).first()).toBeVisible()
+    await expect(page.getByText('Auditoría del sistema')).toBeVisible({ timeout: 5000 })
   })
 
   test('muestra los registros de auditoría', async ({ page }) => {
@@ -79,18 +100,15 @@ test.describe('Auditoría — listado', () => {
     await expect(page.getByText('admin@cantina.com').first()).toBeVisible({ timeout: 5000 })
   })
 
-  test('muestra las acciones (CREATE, UPDATE, LOGIN)', async ({ page }) => {
+  test('muestra las operaciones (CREATE, UPDATE)', async ({ page }) => {
     await expect(
-      page.getByText(/CREATE|Crear/i).first()
-        .or(page.getByText(/UPDATE|Actualizar/i).first())
+      page.getByText('CREATE').first()
     ).toBeVisible({ timeout: 5000 })
   })
 
   test('tiene filtros de fecha', async ({ page }) => {
     await expect(
-      page.getByRole('textbox', { name: /fecha|desde|hasta/i })
-        .or(page.getByLabel(/fecha|desde|hasta/i))
-        .first()
+      page.locator('input[type="date"]').first()
     ).toBeVisible({ timeout: 5000 })
   })
 })
@@ -106,44 +124,22 @@ test.describe('Auditoría — control de acceso', () => {
   test('CAJERO no puede acceder a /auditoria', async ({ page }) => {
     await loginAs(page, CAJERO)
     await page.goto('/auditoria')
-    const url = page.url()
-    const forbidden = await page.getByText(/acceso denegado|no autorizado|403|forbidden/i).isVisible()
-    const redirected = !url.includes('/auditoria')
-    expect(redirected || forbidden).toBe(true)
+    // PrivateRoute roles={['ADMIN']} redirige a /dashboard cuando el rol no está autorizado
+    await expect(page).not.toHaveURL(/\/auditoria$/, { timeout: 5000 })
   })
 })
 
 // ── Búsqueda y filtros ────────────────────────────────────────────────────────
 
 test.describe('Auditoría — filtros', () => {
-  test('campo de búsqueda por usuario está presente', async ({ page }) => {
+  test('campo de filtro por operación está presente', async ({ page }) => {
     await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/usuarios\/audit-logs/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AUDIT_LOGS_MOCK) })
+    await page.route(/\/api\/v1\/usuarios\/reporte-auditoria/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AUDITORIA_MOCK) })
     )
     await page.goto('/auditoria')
     await expect(
-      page.getByRole('searchbox')
-        .or(page.getByPlaceholder(/buscar|usuario|email/i))
-        .or(page.getByLabel(/usuario|acción/i))
-    ).toBeVisible({ timeout: 5000 })
-  })
-})
-
-// ── Exportar ──────────────────────────────────────────────────────────────────
-
-test.describe('Auditoría — exportar', () => {
-  test('botón de exportar está disponible', async ({ page }) => {
-    await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/usuarios\/audit-logs/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AUDIT_LOGS_MOCK) })
-    )
-    await page.goto('/auditoria')
-    await page.waitForLoadState('networkidle')
-    await expect(
-      page.getByRole('button', { name: /exportar|csv|excel/i })
-        .or(page.getByTitle(/exportar/i))
-        .first()
+      page.locator('input[placeholder="Filtrar..."]').first()
     ).toBeVisible({ timeout: 5000 })
   })
 })

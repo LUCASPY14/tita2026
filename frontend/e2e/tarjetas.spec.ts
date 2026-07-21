@@ -69,7 +69,7 @@ test.describe('Tarjetas — listado', () => {
 
   test('carga la página sin errores', async ({ page }) => {
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
-    await expect(page.getByText('Tarjetas')).toBeVisible()
+    await expect(page.getByText('Tarjetas').first()).toBeVisible({ timeout: 8000 })
   })
 
   test('muestra tarjetas del listado', async ({ page }) => {
@@ -118,11 +118,10 @@ test.describe('Tarjetas — historial de movimientos', () => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOVIMIENTOS_MOCK) })
     )
     await page.goto('/tarjetas')
-    // Click en la primera tarjeta para ver detalles / historial
-    const firstRow = page.getByText('T-001234')
-    await firstRow.waitFor({ state: 'visible', timeout: 5000 })
-    await firstRow.click()
-    // Historial debería aparecer en un drawer o modal
-    await expect(page.getByText(/Historial|RECARGA|Recarga/i).first()).toBeVisible({ timeout: 5000 })
+    // Esperar que la tabla cargue, luego hacer click en "Ver" de la primera tarjeta
+    await page.getByText('T-001234').waitFor({ state: 'visible', timeout: 5000 })
+    await page.getByRole('button', { name: 'Ver' }).first().click()
+    // El modal de historial muestra la pestaña "Movimientos" con los datos de RECARGA
+    await expect(page.getByText(/Movimientos|RECARGA|Recarga/i).first()).toBeVisible({ timeout: 5000 })
   })
 })
