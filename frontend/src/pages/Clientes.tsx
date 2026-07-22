@@ -1537,7 +1537,7 @@ function abrirReciboCC(cliente: Cliente, pago: PagoCC, metodo: string) {
 </style>
 </head>
 <body>
-<h1>CANTINA ESCOLAR</h1>
+<h1>LA CANTINA DE TITA</h1>
 <p class="center">Recibo de Pago — Cuenta Corriente</p>
 <div class="divider"></div>
 <div class="row"><span class="label">Fecha:</span><span>${new Date().toLocaleString('es-PY')}</span></div>
@@ -1588,6 +1588,7 @@ function PagarCCModal({ open, cliente, onClose, onSaved }: PagarCCModalProps) {
         cliente: cliente!.id,
         monto: montoNum,
         descripcion: desc,
+        medio_pago: metodo,
       })
       setUltimoPago(data)
       toast.success(`Pago de ${(montoNum).toLocaleString('es-PY')} Gs. registrado`)

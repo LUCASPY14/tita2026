@@ -191,9 +191,14 @@ class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         from decimal import Decimal, InvalidOperation
+        from django.db import transaction
+        from apps.contabilidad.models import CierreCaja, MovimientoCaja
+        from apps.core.models import MedioPago
+
         cliente_id = request.data.get("cliente")
         monto_raw = request.data.get("monto")
         descripcion = request.data.get("descripcion") or "Pago de cuenta corriente"
+        metodo_pago = (request.data.get("medio_pago") or "").strip()
 
         if not cliente_id:
             return Response({"error": "El campo 'cliente' es obligatorio."}, status=status.HTTP_400_BAD_REQUEST)
@@ -209,13 +214,31 @@ class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
         except Cliente.DoesNotExist:
             return Response({"error": "Cliente no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        mov = CuentaCorrienteCliente.objects.create(
-            cliente=cliente,
-            tipo=CuentaCorrienteCliente.Tipo.CREDITO,
-            monto=monto,
-            descripcion=descripcion,
-            creado_por=request.user,
-        )
+        with transaction.atomic():
+            mov = CuentaCorrienteCliente.objects.create(
+                cliente=cliente,
+                tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+                monto=monto,
+                descripcion=descripcion,
+                creado_por=request.user,
+            )
+            # Registrar ingreso en caja si el usuario tiene un turno abierto
+            cierre = CierreCaja.objects.filter(
+                empleado=request.user, estado=CierreCaja.Estado.ABIERTO
+            ).first()
+            if cierre:
+                medio_pago_obj = (
+                    MedioPago.objects.filter(descripcion__iexact=metodo_pago).first()
+                    or MedioPago.objects.filter(descripcion__icontains=metodo_pago).first()
+                ) if metodo_pago else None
+                MovimientoCaja.objects.create(
+                    cierre=cierre,
+                    tipo=MovimientoCaja.Tipo.INGRESO,
+                    monto=monto,
+                    descripcion=f"Cobro CC — {cliente.nombres} {cliente.apellidos}",
+                    medio_pago=medio_pago_obj,
+                )
+
         return Response(self.get_serializer(mov).data, status=status.HTTP_201_CREATED)
 
 

@@ -51,6 +51,17 @@ from .serializers import (
 from .services import TarjetaService
 
 
+def _resolver_medio_pago(metodo: str) -> 'MedioPago | None':
+    """Busca MedioPago por nombre exacto (case-insensitive) con fallback
+    a búsqueda parcial para cubrir casos como TRANSFERENCIA → 'Transferencia Bancaria'."""
+    if not metodo:
+        return None
+    return (
+        MedioPago.objects.filter(descripcion__iexact=metodo).first()
+        or MedioPago.objects.filter(descripcion__icontains=metodo).first()
+    )
+
+
 class TarjetaViewSet(viewsets.ModelViewSet):
     queryset = Tarjeta.objects.select_related(
         "hijo__grado",
@@ -107,7 +118,7 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             cierre_caja = CierreCaja.objects.filter(
                 empleado=request.user, estado=CierreCaja.Estado.ABIERTO
             ).select_related("caja").first()
-            medio_pago_obj = MedioPago.objects.filter(descripcion__iexact=metodo).first()
+            medio_pago_obj = _resolver_medio_pago(metodo)
             nro_factura = (request.data.get("nro_factura") or "").strip()
 
             with _tx.atomic():
@@ -202,10 +213,7 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
         cierre_caja = CierreCaja.objects.filter(
             empleado=request.user, estado=CierreCaja.Estado.ABIERTO
         ).select_related("caja").first()
-        medio_pago_obj = (
-            MedioPago.objects.filter(descripcion__iexact=carga.metodo_pago).first()
-            if carga.metodo_pago else None
-        )
+        medio_pago_obj = _resolver_medio_pago(carga.metodo_pago)
         nro_factura = (request.data.get("nro_factura") or "").strip()
         with transaction.atomic():
             carga_confirmada = TarjetaService.confirmar_carga(
