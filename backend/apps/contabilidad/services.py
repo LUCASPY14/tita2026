@@ -249,3 +249,84 @@ class FacturacionService:
         ).select_related("cuenta__hijo__cliente_responsable").order_by("-fecha_pago")
 
         return {"cargas": cargas, "pagos": pagos}
+
+    @classmethod
+    def emitir_lote(cls, *, tipo: str, ids: list[int], nro_factura: str) -> Factura:
+        """
+        Emite UNA factura agrupando varias cargas de saldo o pagos de almuerzo.
+        tipo: CARGA_SALDO | PAGO_ALMUERZO
+        Todos los ids deben pertenecer al mismo cliente.
+        """
+        from apps.core.models import CargaSaldo
+        from apps.almuerzos.models import PagoCuentaAlmuerzo
+
+        if not ids:
+            raise ValidationError({"error": "Debe seleccionar al menos un ítem."})
+
+        with transaction.atomic():
+            if tipo == TIPO_CARGA_SALDO:
+                origenes = list(
+                    CargaSaldo.objects
+                    .select_related("tarjeta__hijo__cliente_responsable", "cliente_origen")
+                    .select_for_update(of=("self",))
+                    .filter(pk__in=ids)
+                )
+                if len(origenes) != len(ids):
+                    raise ValidationError({"error": "Uno o más ítems no existen."})
+
+                clientes = set()
+                for o in origenes:
+                    if o.estado != CargaSaldo.Estado.CONFIRMADA:
+                        raise ValidationError({"error": f"La carga #{o.pk} no está confirmada."})
+                    if o.factura_id:
+                        raise ValidationError({"error": f"La carga #{o.pk} ya tiene factura."})
+                    c = o.cliente_origen or (o.tarjeta.hijo.cliente_responsable if o.tarjeta and o.tarjeta.hijo else None)
+                    if not c:
+                        raise ValidationError({"error": f"La carga #{o.pk} no tiene cliente."})
+                    clientes.add(c.pk)
+
+                if len(clientes) > 1:
+                    raise ValidationError({"error": "Todos los ítems deben pertenecer al mismo cliente."})
+
+                cliente_obj = (origenes[0].cliente_origen
+                               or origenes[0].tarjeta.hijo.cliente_responsable)
+                monto_total = sum(o.monto_cargado for o in origenes)
+
+            elif tipo == TIPO_PAGO_ALMUERZO:
+                origenes = list(
+                    PagoCuentaAlmuerzo.objects
+                    .select_related("cuenta__hijo__cliente_responsable")
+                    .select_for_update()
+                    .filter(pk__in=ids)
+                )
+                if len(origenes) != len(ids):
+                    raise ValidationError({"error": "Uno o más ítems no existen."})
+
+                clientes = set()
+                for o in origenes:
+                    if o.factura_id:
+                        raise ValidationError({"error": f"El pago #{o.pk} ya tiene factura."})
+                    clientes.add(o.cuenta.hijo.cliente_responsable_id)
+
+                if len(clientes) > 1:
+                    raise ValidationError({"error": "Todos los ítems deben pertenecer al mismo cliente."})
+
+                cliente_obj = origenes[0].cuenta.hijo.cliente_responsable
+                monto_total = sum(o.monto for o in origenes)
+
+            else:
+                raise ValidationError({"error": f"Tipo desconocido: {tipo}."})
+
+            iva = cls._calcular_iva_10(monto_total)
+            factura = FacturacionService.emitir_factura(
+                cliente=cliente_obj,
+                nro_factura=nro_factura,
+                monto_total=monto_total,
+                **iva,
+            )
+
+            for o in origenes:
+                o.factura = factura
+                o.save(update_fields=["factura"])
+
+            return factura

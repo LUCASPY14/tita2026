@@ -404,12 +404,12 @@ class PagoCuentaAlmuerzo(models.Model):
         models.PROTECT,
         related_name="pagos_almuerzo_registrados",
     )
-    factura = models.OneToOneField(
+    factura = models.ForeignKey(
         "contabilidad.Factura",
         models.SET_NULL,
         null=True,
         blank=True,
-        related_name="pago_cuenta_almuerzo",
+        related_name="pagos_cuenta_almuerzo",
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 

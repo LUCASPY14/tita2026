@@ -1,7 +1,7 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { FileText, Search, Printer, XCircle, AlertTriangle } from 'lucide-react'
+import { FileText, Search, Printer, XCircle, AlertTriangle, CalendarDays, CheckSquare } from 'lucide-react'
 import api from '../services/api'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -42,7 +42,9 @@ function formatFecha(iso: string | null | undefined): string {
 interface PendienteItem {
   tipo: string
   id: number
+  cliente_id: number | null
   cliente_nombre: string
+  modalidad_facturacion: string
   descripcion: string
   monto: number
   fecha: string
@@ -78,11 +80,104 @@ const TIPO_COLOR: Record<string, BadgeColor> = {
   VENTA: 'green',
 }
 
+// ─── LoteModal ────────────────────────────────────────────────────────────────
+
+interface LoteModalProps {
+  open: boolean
+  items: PendienteItem[]
+  onClose: () => void
+  onSuccess: () => void
+}
+
+function LoteModal({ open, items, onClose, onSuccess }: LoteModalProps) {
+  const [nro, setNro] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { if (open) setNro('') }, [open])
+
+  const clienteNombre = items[0]?.cliente_nombre ?? ''
+  const total = items.reduce((s, i) => s + i.monto, 0)
+
+  const confirmar = async () => {
+    if (!nro.trim()) { toast.error('Ingresá el número de factura'); return }
+    if (items.length === 0) return
+    setSaving(true)
+    try {
+      await api.post('/contabilidad/facturas/emitir-lote/', {
+        tipo: items[0].tipo,
+        ids: items.map(i => i.id),
+        nro_factura: nro.trim(),
+      })
+      toast.success(`Factura ${nro} emitida por ${formatGs(total)}`)
+      onSuccess()
+      onClose()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      title="Emitir Factura Mensual"
+      onOk={confirmar}
+      onCancel={onClose}
+      confirmLoading={saving}
+      okText="Emitir Factura"
+      width={500}
+    >
+      <div className="space-y-4">
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-slate-500 font-medium">Cliente</span>
+            <span className="text-slate-800 font-semibold">{clienteNombre}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500 font-medium">Ítems seleccionados</span>
+            <span className="text-slate-700 font-semibold">{items.length}</span>
+          </div>
+          <div className="flex justify-between border-t border-blue-100 pt-2">
+            <span className="text-slate-500 font-medium">Total a facturar</span>
+            <span className="text-emerald-700 font-bold tabular-nums text-base">{formatGs(total)}</span>
+          </div>
+        </div>
+
+        {items.length > 0 && (
+          <div className="max-h-40 overflow-y-auto space-y-1">
+            {items.map(item => (
+              <div key={`${item.tipo}-${item.id}`} className="flex justify-between text-sm px-1 py-1 rounded hover:bg-slate-50">
+                <span className="text-slate-600 truncate max-w-[280px]">{item.descripcion}</span>
+                <span className="text-slate-800 font-semibold tabular-nums shrink-0 ml-2">{formatGs(item.monto)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+            Número de Factura *
+          </label>
+          <input
+            value={nro}
+            onChange={e => setNro(e.target.value)}
+            placeholder="001-001-0000001"
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150"
+            autoFocus
+          />
+          <p className="text-sm text-slate-400 mt-1">Formato: 001-001-0000001</p>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Facturacion() {
   const { t } = useTranslation()
-  const [tab, setTab] = useState<'pendientes' | 'emitidas'>('pendientes')
+  const [tab, setTab] = useState<'pendientes' | 'mensual' | 'emitidas'>('pendientes')
 
   const [pendientes, setPendientes] = useState<PendienteItem[]>([])
   const [loadingPend, setLoadingPend] = useState(false)
@@ -102,6 +197,12 @@ export default function Facturacion() {
 
   const [anulando, setAnulando] = useState<number | null>(null)
   const [confirmAnularId, setConfirmAnularId] = useState<Factura | null>(null)
+
+  // Mensual tab state
+  const now = new Date()
+  const [mesAnio, setMesAnio] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [loteModal, setLoteModal] = useState(false)
 
   // ── Load pendientes ──────────────────────────────────────────────
   const loadPendientes = useCallback(async () => {
@@ -137,8 +238,7 @@ export default function Facturacion() {
   }, [])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (tab === 'pendientes') loadPendientes()
+    if (tab === 'pendientes' || tab === 'mensual') loadPendientes()
     else {
       setPageFact(1)
       loadFacturas(searchFact, filterEstado, 1)
@@ -154,6 +254,78 @@ export default function Facturacion() {
     }, 350)
     return () => clearTimeout(searchTimer.current)
   }, [searchFact, filterEstado])
+
+  // Split items by modalidad
+  const itemsInmediata = useMemo(
+    () => pendientes.filter(p => p.modalidad_facturacion !== 'MENSUAL'),
+    [pendientes]
+  )
+  const itemsMensual = useMemo(
+    () => pendientes.filter(p => p.modalidad_facturacion === 'MENSUAL'),
+    [pendientes]
+  )
+
+  // Filter mensual items by selected month
+  const itemsMensualMes = useMemo(() => {
+    const [year, month] = mesAnio.split('-').map(Number)
+    return itemsMensual.filter(item => {
+      const d = new Date(item.fecha)
+      return d.getFullYear() === year && d.getMonth() + 1 === month
+    })
+  }, [itemsMensual, mesAnio])
+
+  // Group mensual items by client
+  const gruposMensual = useMemo(() => {
+    const map = new Map<number | null, { clienteId: number | null; clienteNombre: string; items: PendienteItem[] }>()
+    for (const item of itemsMensualMes) {
+      const key = item.cliente_id
+      if (!map.has(key)) {
+        map.set(key, { clienteId: key, clienteNombre: item.cliente_nombre, items: [] })
+      }
+      map.get(key)!.items.push(item)
+    }
+    return Array.from(map.values()).sort((a, b) => a.clienteNombre.localeCompare(b.clienteNombre))
+  }, [itemsMensualMes])
+
+  // Selected items for batch
+  const selectedItems = useMemo(
+    () => itemsMensualMes.filter(i => selected.has(`${i.tipo}-${i.id}`)),
+    [itemsMensualMes, selected]
+  )
+
+  // All selected items must belong to a single client and same type
+  const canEmitirLote = useMemo(() => {
+    if (selectedItems.length === 0) return false
+    const clientes = new Set(selectedItems.map(i => i.cliente_id))
+    const tipos = new Set(selectedItems.map(i => i.tipo))
+    return clientes.size === 1 && tipos.size === 1
+  }, [selectedItems])
+
+  const loteTotal = useMemo(
+    () => selectedItems.reduce((s, i) => s + i.monto, 0),
+    [selectedItems]
+  )
+
+  const toggleItem = (key: string) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const toggleClienteAll = (items: PendienteItem[], allChecked: boolean) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      for (const item of items) {
+        const key = `${item.tipo}-${item.id}`
+        if (allChecked) next.delete(key)
+        else next.add(key)
+      }
+      return next
+    })
+  }
 
   // ── Emitir ───────────────────────────────────────────────────────
   const emitirFactura = useCallback(async () => {
@@ -301,6 +473,11 @@ export default function Facturacion() {
   const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
   const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
+  const tabBtn = (active: boolean) => [
+    'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer',
+    active ? 'border-green-600 text-green-700' : 'border-transparent text-slate-500 hover:text-slate-700',
+  ].join(' ')
+
   // ── Render ────────────────────────────────────────────────────────
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -313,25 +490,24 @@ export default function Facturacion() {
       {/* Tabs */}
       <div className="border-b border-slate-200">
         <div className="flex gap-0">
-          <button
-            onClick={() => setTab('pendientes')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
-              tab === 'pendientes' ? 'border-green-600 text-green-700' : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Pendientes de facturar
-            {pendientes.length > 0 && (
+          <button onClick={() => setTab('pendientes')} className={tabBtn(tab === 'pendientes')}>
+            Pendientes
+            {itemsInmediata.length > 0 && (
               <span className="bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">
-                {pendientes.length}
+                {itemsInmediata.length}
               </span>
             )}
           </button>
-          <button
-            onClick={() => setTab('emitidas')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
-              tab === 'emitidas' ? 'border-green-600 text-green-700' : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
+          <button onClick={() => { setTab('mensual'); setSelected(new Set()) }} className={tabBtn(tab === 'mensual')}>
+            <CalendarDays className="w-4 h-4" />
+            Factura Mensual
+            {itemsMensual.length > 0 && (
+              <span className="bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">
+                {itemsMensual.length}
+              </span>
+            )}
+          </button>
+          <button onClick={() => setTab('emitidas')} className={tabBtn(tab === 'emitidas')}>
             <FileText className="w-4 h-4" />
             Facturas emitidas
           </button>
@@ -342,13 +518,116 @@ export default function Facturacion() {
       {tab === 'pendientes' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-800">Ítems pendientes de facturar</h2>
-            <span className="text-sm text-slate-400">{pendientes.length} registros</span>
+            <h2 className="text-sm font-semibold text-slate-800">Ítems pendientes de facturar (factura inmediata)</h2>
+            <span className="text-sm text-slate-400">{itemsInmediata.length} registros</span>
           </div>
           <div className="p-1">
-            <Table columns={colsPendientes} dataSource={pendientes} rowKey={r => `${r.tipo}-${r.id}`} loading={loadingPend} pageSize={20} />
+            <Table columns={colsPendientes} dataSource={itemsInmediata} rowKey={r => `${r.tipo}-${r.id}`} loading={loadingPend} pageSize={20} />
           </div>
         </div>
+      )}
+
+      {/* ── Mensual tab ──────────────────────────────────────────── */}
+      {tab === 'mensual' && (
+        <>
+          {/* Controls */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-wrap items-end gap-4">
+            <div>
+              <label className={labelClass}>Mes</label>
+              <input
+                type="month"
+                value={mesAnio}
+                onChange={e => { setMesAnio(e.target.value); setSelected(new Set()) }}
+                className={`${inputClass} w-auto`}
+              />
+            </div>
+            {selectedItems.length > 0 && (
+              <div className="flex items-center gap-3 ml-auto">
+                <span className="text-sm text-slate-600">
+                  <strong>{selectedItems.length}</strong> ítems seleccionados —{' '}
+                  <strong className="text-emerald-700">{formatGs(loteTotal)}</strong>
+                </span>
+                {canEmitirLote ? (
+                  <Button variant="primary" onClick={() => setLoteModal(true)}>
+                    <CheckSquare className="w-4 h-4" />
+                    Facturar seleccionados
+                  </Button>
+                ) : (
+                  <span className="text-xs text-red-500 font-medium">
+                    Solo podés facturar ítems del mismo cliente y tipo
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Grouped by client */}
+          {loadingPend ? (
+            <div className="text-center py-12 text-slate-400">Cargando...</div>
+          ) : gruposMensual.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-12 text-center text-slate-400">
+              No hay ítems pendientes de facturación mensual para este mes
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {gruposMensual.map(grupo => {
+                const itemKeys = grupo.items.map(i => `${i.tipo}-${i.id}`)
+                const allChecked = itemKeys.every(k => selected.has(k))
+                const someChecked = itemKeys.some(k => selected.has(k))
+                const grupoTotal = grupo.items.reduce((s, i) => s + i.monto, 0)
+
+                return (
+                  <div key={grupo.clienteId ?? grupo.clienteNombre} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    {/* Client header */}
+                    <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-3 bg-slate-50">
+                      <input
+                        type="checkbox"
+                        checked={allChecked}
+                        ref={el => { if (el) el.indeterminate = someChecked && !allChecked }}
+                        onChange={() => toggleClienteAll(grupo.items, allChecked)}
+                        className="w-4 h-4 rounded accent-blue-600"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-semibold text-slate-800">{grupo.clienteNombre}</span>
+                        <span className="ml-2 text-xs text-slate-400">{grupo.items.length} ítem{grupo.items.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <span className="text-sm font-bold tabular-nums text-emerald-700">{formatGs(grupoTotal)}</span>
+                    </div>
+
+                    {/* Items */}
+                    <div className="divide-y divide-slate-50">
+                      {grupo.items.map(item => {
+                        const key = `${item.tipo}-${item.id}`
+                        const checked = selected.has(key)
+                        return (
+                          <div
+                            key={key}
+                            onClick={() => toggleItem(key)}
+                            className={`flex items-center gap-3 px-5 py-3 cursor-pointer transition-colors ${checked ? 'bg-blue-50' : 'hover:bg-slate-50'}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleItem(key)}
+                              onClick={e => e.stopPropagation()}
+                              className="w-4 h-4 rounded accent-blue-600 shrink-0"
+                            />
+                            <Badge color={TIPO_COLOR[item.tipo] ?? 'default'}>
+                              {TIPO_LABEL[item.tipo] ?? item.tipo}
+                            </Badge>
+                            <span className="text-sm text-slate-700 flex-1 truncate">{item.descripcion}</span>
+                            <span className="text-sm text-slate-400 shrink-0">{formatFecha(item.fecha)}</span>
+                            <span className="text-sm font-semibold tabular-nums text-slate-800 shrink-0 ml-2">{formatGs(item.monto)}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* ── Emitidas tab ─────────────────────────────────────────── */}
@@ -398,7 +677,7 @@ export default function Facturacion() {
         </>
       )}
 
-      {/* ── Emitir modal ─────────────────────────────────────────── */}
+      {/* ── Emitir individual modal ───────────────────────────────── */}
       <Modal
         open={!!emitirModal}
         title="Emitir Factura"
@@ -443,6 +722,17 @@ export default function Facturacion() {
           </div>
         )}
       </Modal>
+
+      {/* ── Emitir lote modal ─────────────────────────────────────── */}
+      <LoteModal
+        open={loteModal}
+        items={selectedItems}
+        onClose={() => setLoteModal(false)}
+        onSuccess={() => {
+          setSelected(new Set())
+          loadPendientes()
+        }}
+      />
 
       {/* ── Confirm anular modal ──────────────────────────────────── */}
       <Modal

@@ -53,6 +53,7 @@ interface Cliente {
   tipo_cliente_nombre: string
   saldo_cuenta_corriente: string
   saldo_negativo_tarjetas: string
+  modalidad_facturacion: 'INMEDIATA' | 'MENSUAL'
 }
 
 interface ClienteForm {
@@ -68,6 +69,7 @@ interface ClienteForm {
   activo: boolean
   lista_precio: string
   tipo_cliente: string
+  modalidad_facturacion: 'INMEDIATA' | 'MENSUAL'
 }
 
 interface GradoOption { id: number; nombre: string; activo: boolean }
@@ -167,6 +169,7 @@ const BLANK_CLIENTE: ClienteForm = {
   nombres: '', apellidos: '', razon_social: '', ruc_ci: '',
   direccion: '', ciudad: '', telefono: '', email: '',
   limite_credito: '0', activo: true, lista_precio: '', tipo_cliente: '',
+  modalidad_facturacion: 'INMEDIATA',
 }
 
 interface ClienteModalProps {
@@ -185,6 +188,7 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
   })
   const activo = watch('activo')
   const ciudadVal = watch('ciudad')
+  const modalidadFacturacion = watch('modalidad_facturacion')
 
   useEffect(() => {
     if (!open) return
@@ -202,6 +206,7 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
           activo: cliente.activo,
           lista_precio: String(cliente.lista_precio),
           tipo_cliente: String(cliente.tipo_cliente),
+          modalidad_facturacion: cliente.modalidad_facturacion ?? 'INMEDIATA',
         }
       : BLANK_CLIENTE
     )
@@ -349,28 +354,54 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
           />
         </div>
 
-        {/* Estado */}
-        <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={activo}
-            onClick={() => setValue('activo', !activo)}
-            className={[
-              'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30',
-              activo ? 'bg-green-500' : 'bg-slate-200',
-            ].join(' ')}
-          >
-            <span
+        {/* Estado y facturación */}
+        <div className="border-t border-slate-100 pt-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={activo}
+              onClick={() => setValue('activo', !activo)}
               className={[
-                'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200',
-                activo ? 'translate-x-5' : 'translate-x-0',
+                'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30',
+                activo ? 'bg-green-500' : 'bg-slate-200',
               ].join(' ')}
-            />
-          </button>
-          <span className="text-sm text-slate-700 font-medium">
-            Cliente {activo ? 'activo' : 'inactivo'}
-          </span>
+            >
+              <span
+                className={[
+                  'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200',
+                  activo ? 'translate-x-5' : 'translate-x-0',
+                ].join(' ')}
+              />
+            </button>
+            <span className="text-sm text-slate-700 font-medium">
+              Cliente {activo ? 'activo' : 'inactivo'}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={modalidadFacturacion === 'MENSUAL'}
+              onClick={() => setValue('modalidad_facturacion', modalidadFacturacion === 'MENSUAL' ? 'INMEDIATA' : 'MENSUAL')}
+              className={[
+                'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30',
+                modalidadFacturacion === 'MENSUAL' ? 'bg-blue-500' : 'bg-slate-200',
+              ].join(' ')}
+            >
+              <span
+                className={[
+                  'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200',
+                  modalidadFacturacion === 'MENSUAL' ? 'translate-x-5' : 'translate-x-0',
+                ].join(' ')}
+              />
+            </button>
+            <span className="text-sm text-slate-700 font-medium">
+              {modalidadFacturacion === 'MENSUAL'
+                ? 'Factura mensual — acumula transacciones del mes'
+                : 'Factura inmediata — una factura por transacción'}
+            </span>
+          </div>
         </div>
       </div>
     </Modal>

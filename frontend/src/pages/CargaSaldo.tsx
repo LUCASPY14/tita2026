@@ -54,6 +54,7 @@ interface Tarjeta {
   cliente_id: number
   cliente_saldo_cc: string | number
   cliente_limite_credito: string | number
+  cliente_modalidad_facturacion: 'INMEDIATA' | 'MENSUAL'
   saldo_actual: string | number
   saldo_disponible: string | number
   estado: string
@@ -658,23 +659,32 @@ export default function CargaSaldo() {
 
               {tipoCobro === 'CONTADO' && metodoSeleccionado?.autoconfirma && (
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={emitirFacturaCarga}
-                      onChange={e => { setEmitirFacturaCarga(e.target.checked); setNroFacturaCarga('') }}
-                      className="w-4 h-4 rounded accent-green-600"
-                    />
-                    <span className="text-sm font-semibold text-slate-700">Emitir factura ahora</span>
-                  </label>
-                  {emitirFacturaCarga && (
-                    <input
-                      value={nroFacturaCarga}
-                      onChange={e => setNroFacturaCarga(e.target.value)}
-                      placeholder="001-001-0001234"
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150"
-                      autoFocus
-                    />
+                  {tarjeta?.cliente_modalidad_facturacion === 'MENSUAL' ? (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl">
+                      <span className="text-blue-600 text-base">🗓️</span>
+                      <span className="text-sm font-semibold text-blue-700">Factura mensual — se acumula para fin de mes</span>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={emitirFacturaCarga}
+                          onChange={e => { setEmitirFacturaCarga(e.target.checked); setNroFacturaCarga('') }}
+                          className="w-4 h-4 rounded accent-green-600"
+                        />
+                        <span className="text-sm font-semibold text-slate-700">Emitir factura ahora</span>
+                      </label>
+                      {emitirFacturaCarga && (
+                        <input
+                          value={nroFacturaCarga}
+                          onChange={e => setNroFacturaCarga(e.target.value)}
+                          placeholder="001-001-0001234"
+                          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150"
+                          autoFocus
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               )}

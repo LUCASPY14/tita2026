@@ -88,10 +88,18 @@ class EmitirFacturaSerializer(serializers.Serializer):
     nro_factura = serializers.CharField(max_length=20)
 
 
+class EmitirLoteSerializer(serializers.Serializer):
+    tipo = serializers.ChoiceField(choices=["CARGA_SALDO", "PAGO_ALMUERZO"])
+    ids = serializers.ListField(child=serializers.IntegerField(min_value=1), min_length=1)
+    nro_factura = serializers.CharField(max_length=20)
+
+
 class PendienteItemSerializer(serializers.Serializer):
     tipo = serializers.CharField()
     id = serializers.IntegerField()
+    cliente_id = serializers.IntegerField(allow_null=True)
     cliente_nombre = serializers.CharField()
+    modalidad_facturacion = serializers.CharField()
     descripcion = serializers.CharField()
     monto = serializers.IntegerField()
     fecha = serializers.DateTimeField()

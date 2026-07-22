@@ -128,6 +128,14 @@ class TarjetaSerializer(serializers.ModelSerializer):
         except Exception:
             return True
 
+    cliente_modalidad_facturacion = serializers.SerializerMethodField()
+
+    def get_cliente_modalidad_facturacion(self, obj):
+        try:
+            return self._get_cliente(obj).modalidad_facturacion
+        except Exception:
+            return "INMEDIATA"
+
 
 class MovimientoTarjetaSerializer(serializers.ModelSerializer):
     tarjeta_nro = serializers.CharField(source="tarjeta.nro_tarjeta", read_only=True)

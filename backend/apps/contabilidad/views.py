@@ -36,6 +36,7 @@ from .serializers import (
     FacturaSerializer,
     DatosEmpresaSerializer,
     EmitirFacturaSerializer,
+    EmitirLoteSerializer,
     PendienteItemSerializer,
 )
 from .services import CajaService, FacturacionService
@@ -331,15 +332,18 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         items = []
         for c in data["cargas"]:
-            nombre = ""
-            if c.cliente_origen:
-                nombre = c.cliente_origen.nombre_completo
-            elif c.tarjeta and c.tarjeta.hijo:
-                nombre = c.tarjeta.hijo.cliente_responsable.nombre_completo
+            cliente = c.cliente_origen or (
+                c.tarjeta.hijo.cliente_responsable if c.tarjeta and c.tarjeta.hijo else None
+            )
+            nombre = cliente.nombre_completo if cliente else "—"
+            cliente_id = cliente.pk if cliente else None
+            modalidad = cliente.modalidad_facturacion if cliente else "INMEDIATA"
             items.append({
                 "tipo": "CARGA_SALDO",
                 "id": c.pk,
+                "cliente_id": cliente_id,
                 "cliente_nombre": nombre,
+                "modalidad_facturacion": modalidad,
                 "descripcion": f"Carga de saldo tarjeta {c.tarjeta_id or '-'}",
                 "monto": int(c.monto_cargado),
                 "fecha": c.fecha_carga,
@@ -347,10 +351,13 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         for p in data["pagos"]:
             cuenta = p.cuenta
+            cliente = cuenta.hijo.cliente_responsable
             items.append({
                 "tipo": "PAGO_ALMUERZO",
                 "id": p.pk,
-                "cliente_nombre": cuenta.hijo.cliente_responsable.nombre_completo,
+                "cliente_id": cliente.pk,
+                "cliente_nombre": cliente.nombre_completo,
+                "modalidad_facturacion": cliente.modalidad_facturacion,
                 "descripcion": f"Pago almuerzo {cuenta.hijo.nombre_completo} — {cuenta.mes}/{cuenta.anio}",
                 "monto": int(p.monto),
                 "fecha": p.fecha_pago,
@@ -369,6 +376,19 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura = FacturacionService.emitir_para_origen(
             tipo=serializer.validated_data["tipo"],
             origen_id=serializer.validated_data["origen_id"],
+            nro_factura=serializer.validated_data["nro_factura"],
+        )
+        return Response(FacturaSerializer(factura).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["post"], url_path="emitir-lote")
+    def emitir_lote(self, request):
+        """Emite una factura agrupando varios ítems del mismo cliente."""
+        serializer = EmitirLoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        factura = FacturacionService.emitir_lote(
+            tipo=serializer.validated_data["tipo"],
+            ids=serializer.validated_data["ids"],
             nro_factura=serializer.validated_data["nro_factura"],
         )
         return Response(FacturaSerializer(factura).data, status=status.HTTP_201_CREATED)
@@ -395,11 +415,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         # Determinar el concepto según el origen de la factura
         concepto = "Servicios"
-        if hasattr(factura, "carga_saldo") and factura.carga_saldo:
-            carga = factura.carga_saldo
-            concepto = f"Carga de saldo tarjeta {carga.tarjeta_id}"
-        elif hasattr(factura, "pago_cuenta_almuerzo") and factura.pago_cuenta_almuerzo:
-            pago = factura.pago_cuenta_almuerzo
+        cargas = list(factura.cargas_saldo.all()[:5])
+        pagos_almuerzo = list(factura.pagos_cuenta_almuerzo.all()[:1])
+        if cargas:
+            if len(cargas) == 1:
+                concepto = f"Carga de saldo tarjeta {cargas[0].tarjeta_id}"
+            else:
+                concepto = f"Cargas de saldo — {len(cargas)} recargas"
+        elif pagos_almuerzo:
+            pago = pagos_almuerzo[0]
             cuenta = pago.cuenta
             concepto = (
                 f"Pago almuerzo — {cuenta.hijo.nombre_completo} "

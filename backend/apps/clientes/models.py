@@ -53,6 +53,16 @@ class Cliente(models.Model):
         max_length=128, blank=True, default='',
         help_text="PIN hasheado para autorizar ventas con saldo insuficiente",
     )
+    class ModalidadFacturacion(models.TextChoices):
+        INMEDIATA = "INMEDIATA", "Factura por transacción"
+        MENSUAL   = "MENSUAL",   "Factura mensual agrupada"
+
+    modalidad_facturacion = models.CharField(
+        max_length=10,
+        choices=ModalidadFacturacion.choices,
+        default=ModalidadFacturacion.INMEDIATA,
+        help_text="Cuándo se emite la factura: al momento o acumulada mensual",
+    )
     lista_precio = models.ForeignKey(
         "productos.ListaPrecio",
         models.PROTECT,

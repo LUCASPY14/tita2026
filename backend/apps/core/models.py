@@ -318,12 +318,12 @@ class CargaSaldo(models.Model):
     referencia_externa = models.CharField(
         max_length=200, blank=True, null=True
     )
-    factura = models.OneToOneField(
+    factura = models.ForeignKey(
         "contabilidad.Factura",
         models.SET_NULL,
         null=True,
         blank=True,
-        related_name="carga_saldo",
+        related_name="cargas_saldo",
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     history = HistoricalRecords()
