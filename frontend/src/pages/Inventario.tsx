@@ -800,10 +800,8 @@ export default function Inventario() {
               <label className={labelClass}>Tipo</label>
               <select value={filterTipoMov} onChange={e => setFilterTipoMov(e.target.value)} className={`${inputClass} w-auto`}>
                 <option value="">Todos</option>
-                <option value="ENTRADA">Entrada</option>
-                <option value="SALIDA">Salida</option>
-                <option value="AJUSTE">Ajuste</option>
-                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="INGRESO">Ingreso</option>
+                <option value="EGRESO">Egreso</option>
               </select>
             </div>
           </div>
