@@ -242,7 +242,7 @@ class FacturacionService:
         cargas = CargaSaldo.objects.filter(
             estado=CargaSaldo.Estado.CONFIRMADA,
             factura__isnull=True,
-        ).select_related("cliente_origen", "tarjeta__hijo").order_by("-fecha_carga")
+        ).select_related("cliente_origen", "tarjeta__hijo__cliente_responsable").order_by("-fecha_carga")
 
         pagos = PagoCuentaAlmuerzo.objects.filter(
             factura__isnull=True,

@@ -335,7 +335,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             if c.cliente_origen:
                 nombre = c.cliente_origen.nombre_completo
             elif c.tarjeta and c.tarjeta.hijo:
-                nombre = c.tarjeta.hijo.nombre_completo
+                nombre = c.tarjeta.hijo.cliente_responsable.nombre_completo
             items.append({
                 "tipo": "CARGA_SALDO",
                 "id": c.pk,
