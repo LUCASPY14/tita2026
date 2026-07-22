@@ -198,6 +198,11 @@ export default function Tarjetas() {
   })
   const [editSaving, setEditSaving] = useState(false)
 
+  // ── Confirmar carga modal ───────────────────────────────────────
+  const [confirmCargaId, setConfirmCargaId] = useState<number | null>(null)
+  const [confirmFactura, setConfirmFactura] = useState({ emitir: false, nro: '' })
+  const [confirmando, setConfirmando] = useState(false)
+
   // ── Data loading ────────────────────────────────────────────────
 
   const loadTarjetas = useCallback(async (q: string, estado: string, p: number) => {
@@ -367,6 +372,38 @@ export default function Tarjetas() {
       setEditSaving(false)
     }
   }, [editTarjeta, editForm, search, estadoFilter, page, loadTarjetas, detailTarjeta])
+
+  const openConfirmarCarga = useCallback((cargaId: number) => {
+    setConfirmCargaId(cargaId)
+    setConfirmFactura({ emitir: false, nro: '' })
+  }, [])
+
+  const handleConfirmarCarga = useCallback(async () => {
+    if (!confirmCargaId || !detailTarjeta) return
+    if (confirmFactura.emitir && !confirmFactura.nro.trim()) { toast.error('Ingresá el número de factura'); return }
+    setConfirmando(true)
+    try {
+      await tarjetasService.confirmarCarga(
+        confirmCargaId,
+        confirmFactura.emitir ? confirmFactura.nro.trim() : undefined,
+      )
+      toast.success('Carga confirmada')
+      setConfirmCargaId(null)
+      const [tarjetaRes, movRes, cargaRes] = await Promise.all([
+        tarjetasService.getByNro<Tarjeta>(detailTarjeta.nro_tarjeta),
+        tarjetasService.getMovimientos<MovimientoTarjeta>(detailTarjeta.nro_tarjeta, 200),
+        tarjetasService.getCargas<CargaSaldo>(detailTarjeta.nro_tarjeta, 200),
+      ])
+      setDetailTarjeta(tarjetaRes.data)
+      setMovimientos(movRes.data.results ?? [])
+      setCargas(cargaRes.data.results ?? [])
+      loadTarjetas(search, estadoFilter, page)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setConfirmando(false)
+    }
+  }, [confirmCargaId, confirmFactura, detailTarjeta, search, estadoFilter, page, loadTarjetas])
 
   // ── Derived ─────────────────────────────────────────────────────
 
@@ -547,6 +584,16 @@ export default function Tarjetas() {
       title: 'Usuario',
       key: 'usuario',
       render: (_, r) => <span className="text-base text-slate-400">{r.usuario_nombre ?? '—'}</span>,
+    },
+    {
+      title: '',
+      key: 'accion',
+      width: 110,
+      render: (_, r) => r.estado === 'PENDIENTE' ? (
+        <Button size="sm" variant="primary" onClick={() => openConfirmarCarga(r.id)}>
+          Confirmar
+        </Button>
+      ) : null,
     },
   ]
 
@@ -959,6 +1006,44 @@ export default function Tarjetas() {
             </label>
           </div>
         )}
+      </Modal>
+
+      {/* ── Confirmar carga modal ──────────────────────────────────── */}
+      <Modal
+        open={confirmCargaId !== null}
+        title="Confirmar Carga de Saldo"
+        onOk={handleConfirmarCarga}
+        onCancel={() => setConfirmCargaId(null)}
+        okText="Confirmar"
+        confirmLoading={confirmando}
+        width={400}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">¿Confirmás esta carga de saldo?</p>
+          <div className="pt-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={confirmFactura.emitir}
+                onChange={e => setConfirmFactura(f => ({ ...f, emitir: e.target.checked, nro: '' }))}
+                className="w-4 h-4 rounded accent-green-600"
+              />
+              <span className="text-sm font-semibold text-slate-700">Emitir factura ahora</span>
+            </label>
+            {confirmFactura.emitir && (
+              <div className="mt-2">
+                <label className={labelClass}>Nro. Factura *</label>
+                <input
+                  value={confirmFactura.nro}
+                  onChange={e => setConfirmFactura(f => ({ ...f, nro: e.target.value }))}
+                  placeholder="001-001-0001234"
+                  className={inputClass}
+                  autoFocus
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </Modal>
 
     </div>

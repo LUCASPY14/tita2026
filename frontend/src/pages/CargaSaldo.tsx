@@ -11,6 +11,7 @@ import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Table, { type Column } from '../components/ui/Table'
+import Modal from '../components/ui/Modal'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,8 @@ export default function CargaSaldo() {
   const [metodo, setMetodo] = useState('EFECTIVO')
   const [referencia, setReferencia] = useState('')
   const [cargando, setCargando] = useState(false)
+  const [emitirFacturaCarga, setEmitirFacturaCarga] = useState(false)
+  const [nroFacturaCarga, setNroFacturaCarga] = useState('')
 
   // ── Historial ────────────────────────────────────────────────────
   const [movimientos, setMovimientos] = useState<Movimiento[]>([])
@@ -172,6 +175,11 @@ export default function CargaSaldo() {
 
   // ── Última operación exitosa ─────────────────────────────────────
   const [ultimaCarga, setUltimaCarga] = useState<UltimaCarga | null>(null)
+
+  // ── Confirmar carga pendiente ─────────────────────────────────────
+  const [confirmCargaId, setConfirmCargaId] = useState<number | null>(null)
+  const [confirmFactura, setConfirmFactura] = useState({ emitir: false, nro: '' })
+  const [confirmando, setConfirmando] = useState(false)
 
   // ── Auto-focus al inicio ──────────────────────────────────────────
   useEffect(() => {
@@ -225,10 +233,22 @@ export default function CargaSaldo() {
   }, [busqueda, cargarHistorial])
 
   // ── Confirmar carga pendiente ─────────────────────────────────────
-  const confirmarCarga = useCallback(async (id: number) => {
+  const openConfirmarCarga = useCallback((id: number) => {
+    setConfirmCargaId(id)
+    setConfirmFactura({ emitir: false, nro: '' })
+  }, [])
+
+  const handleConfirmarCarga = useCallback(async () => {
+    if (!confirmCargaId) return
+    if (confirmFactura.emitir && !confirmFactura.nro.trim()) { toast.error('Ingresá el número de factura'); return }
+    setConfirmando(true)
     try {
-      await tarjetasService.confirmarCarga(id)
+      await tarjetasService.confirmarCarga(
+        confirmCargaId,
+        confirmFactura.emitir ? confirmFactura.nro.trim() : undefined,
+      )
       toast.success('Carga confirmada')
+      setConfirmCargaId(null)
       if (tarjeta) {
         const { data } = await tarjetasService.getByNro<Tarjeta>(tarjeta.nro_tarjeta)
         setTarjeta(data)
@@ -236,8 +256,10 @@ export default function CargaSaldo() {
       }
     } catch (err) {
       toast.error(extractErrorMessage(err))
+    } finally {
+      setConfirmando(false)
     }
-  }, [tarjeta, cargarHistorial])
+  }, [confirmCargaId, confirmFactura, tarjeta, cargarHistorial])
 
   // ── Realizar carga ────────────────────────────────────────────────
   const handleCargar = useCallback(async () => {
@@ -252,14 +274,21 @@ export default function CargaSaldo() {
       toast.error('Ingresá el código de transacción')
       return
     }
+    if (tipoCobro === 'CONTADO' && metodoInfo?.autoconfirma && emitirFacturaCarga && !nroFacturaCarga.trim()) {
+      toast.error('Ingresá el número de factura')
+      return
+    }
 
     setCargando(true)
     try {
-      const cargaPayload: { tarjeta: string; monto_cargado: number; metodo_pago: string; referencia?: string } = {
+      const cargaPayload: { tarjeta: string; monto_cargado: number; metodo_pago: string; referencia?: string; nro_factura?: string } = {
         tarjeta:       tarjeta.nro_tarjeta,
         monto_cargado: montoNum,
         metodo_pago:   metodoEfectivo,
         ...(referencia.trim() ? { referencia: referencia.trim() } : {}),
+        ...(tipoCobro === 'CONTADO' && metodoInfo?.autoconfirma && emitirFacturaCarga && nroFacturaCarga.trim()
+          ? { nro_factura: nroFacturaCarga.trim() }
+          : {}),
       }
 
       const { data } = await tarjetasService.crearCarga(cargaPayload)
@@ -287,6 +316,8 @@ export default function CargaSaldo() {
 
       setMonto('')
       setReferencia('')
+      setEmitirFacturaCarga(false)
+      setNroFacturaCarga('')
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {
@@ -302,6 +333,8 @@ export default function CargaSaldo() {
     setReferencia('')
     setMetodo('EFECTIVO')
     setTipoCobro('CONTADO')
+    setEmitirFacturaCarga(false)
+    setNroFacturaCarga('')
     setMovimientos([])
     setCargas([])
     setUltimaCarga(null)
@@ -384,7 +417,7 @@ export default function CargaSaldo() {
       key: 'accion',
       width: 110,
       render: (_, r) => r.estado === 'PENDIENTE' ? (
-        <Button size="sm" variant="primary" onClick={() => confirmarCarga(r.id)}>
+        <Button size="sm" variant="primary" onClick={() => openConfirmarCarga(r.id)}>
           Confirmar
         </Button>
       ) : null,
@@ -623,6 +656,29 @@ export default function CargaSaldo() {
                 />
               )}
 
+              {tipoCobro === 'CONTADO' && metodoSeleccionado?.autoconfirma && (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={emitirFacturaCarga}
+                      onChange={e => { setEmitirFacturaCarga(e.target.checked); setNroFacturaCarga('') }}
+                      className="w-4 h-4 rounded accent-green-600"
+                    />
+                    <span className="text-sm font-semibold text-slate-700">Emitir factura ahora</span>
+                  </label>
+                  {emitirFacturaCarga && (
+                    <input
+                      value={nroFacturaCarga}
+                      onChange={e => setNroFacturaCarga(e.target.value)}
+                      placeholder="001-001-0001234"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150"
+                      autoFocus
+                    />
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={handleCargar}
                 disabled={cargando}
@@ -714,6 +770,45 @@ export default function CargaSaldo() {
           </div>
         </div>
       )}
+
+      {/* ── Confirmar carga modal ─────────────────────────────────── */}
+      <Modal
+        open={confirmCargaId !== null}
+        title="Confirmar Carga de Saldo"
+        onOk={handleConfirmarCarga}
+        onCancel={() => setConfirmCargaId(null)}
+        okText="Confirmar"
+        confirmLoading={confirmando}
+        width={400}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">¿Confirmás esta carga de saldo?</p>
+          <div className="pt-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={confirmFactura.emitir}
+                onChange={e => setConfirmFactura(f => ({ ...f, emitir: e.target.checked, nro: '' }))}
+                className="w-4 h-4 rounded accent-green-600"
+              />
+              <span className="text-sm font-semibold text-slate-700">Emitir factura ahora</span>
+            </label>
+            {confirmFactura.emitir && (
+              <div className="mt-2">
+                <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Nro. Factura *</label>
+                <input
+                  value={confirmFactura.nro}
+                  onChange={e => setConfirmFactura(f => ({ ...f, nro: e.target.value }))}
+                  placeholder="001-001-0001234"
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full"
+                  autoFocus
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
+
     </div>
   )
 }
