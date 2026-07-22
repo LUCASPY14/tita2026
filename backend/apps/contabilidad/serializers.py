@@ -83,13 +83,13 @@ class CerrarCajaSerializer(serializers.Serializer):
 
 
 class EmitirFacturaSerializer(serializers.Serializer):
-    tipo = serializers.ChoiceField(choices=["CARGA_SALDO", "PAGO_ALMUERZO"])
+    tipo = serializers.ChoiceField(choices=["CARGA_SALDO", "PAGO_ALMUERZO", "VENTA"])
     origen_id = serializers.IntegerField(min_value=1)
     nro_factura = serializers.CharField(max_length=20)
 
 
 class EmitirLoteSerializer(serializers.Serializer):
-    tipo = serializers.ChoiceField(choices=["CARGA_SALDO", "PAGO_ALMUERZO"])
+    tipo = serializers.ChoiceField(choices=["CARGA_SALDO", "PAGO_ALMUERZO", "VENTA"])
     ids = serializers.ListField(child=serializers.IntegerField(min_value=1), min_length=1)
     nro_factura = serializers.CharField(max_length=20)
 

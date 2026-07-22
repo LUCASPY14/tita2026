@@ -42,6 +42,8 @@ class VentaService:
         pin_autorizacion: str = "",
         referencia: str = "",
         cierre_caja=None,
+        genera_factura_legal: bool = False,
+        nro_factura: str = "",
     ) -> Venta:
         """
         Registra una venta completa con sus detalles.
@@ -344,6 +346,31 @@ class VentaService:
                         medio_pago=None,
                         venta=venta,
                     )
+
+            # 7. Facturación opcional
+            # Solo aplica para ventas CONTADO con medio_pago real (no prepago).
+            # Si el cajero ingresó nro_factura → crea la Factura al instante.
+            # Si solo se marcó genera_factura_legal → queda pendiente para Facturación.
+            if nro_factura and tipo == "CONTADO" and medio_pago is not None:
+                from apps.contabilidad.services import FacturacionService
+                iva_dict = {
+                    "iva_10": iva_10,
+                    "iva_5": iva_5,
+                    "monto_exenta": monto_exenta,
+                }
+                factura = FacturacionService.emitir_factura(
+                    cliente=cliente,
+                    nro_factura=nro_factura,
+                    monto_total=monto_total,
+                    **iva_dict,
+                )
+                venta.factura = factura
+                venta.nro_factura = nro_factura
+                venta.genera_factura_legal = True
+                venta.save(update_fields=["factura", "nro_factura", "genera_factura_legal"])
+            elif genera_factura_legal and tipo == "CONTADO" and medio_pago is not None:
+                venta.genera_factura_legal = True
+                venta.save(update_fields=["genera_factura_legal"])
 
             return venta
 

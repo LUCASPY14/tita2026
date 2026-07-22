@@ -14,6 +14,7 @@ from .models import Caja, CierreCaja, MovimientoCaja, Factura
 
 TIPO_CARGA_SALDO = "CARGA_SALDO"
 TIPO_PAGO_ALMUERZO = "PAGO_ALMUERZO"
+TIPO_VENTA = "VENTA"
 
 
 class CajaService:
@@ -218,6 +219,29 @@ class FacturacionService:
                 monto = origen.monto
                 iva = cls._calcular_iva_10(monto)
 
+            elif tipo == TIPO_VENTA:
+                from apps.ventas.models import Venta as VentaModel
+                origen = (
+                    VentaModel.objects
+                    .select_related("cliente")
+                    .select_for_update(of=("self",))
+                    .get(pk=origen_id)
+                )
+                if origen.estado == VentaModel.Estado.ANULADA:
+                    raise ValidationError({"error": "No se puede facturar una venta anulada."})
+                if not origen.genera_factura_legal:
+                    raise ValidationError({"error": "La venta no está marcada para factura legal."})
+                if origen.factura_id:
+                    raise ValidationError({"error": "La venta ya tiene factura emitida."})
+
+                cliente = origen.cliente
+                monto = origen.monto_total
+                iva = {
+                    "iva_10": origen.iva_10,
+                    "iva_5": origen.iva_5,
+                    "monto_exenta": origen.monto_exenta,
+                }
+
             else:
                 raise ValidationError({"error": f"Tipo desconocido: {tipo}."})
 
@@ -229,15 +253,20 @@ class FacturacionService:
             )
 
             origen.factura = factura
-            origen.save(update_fields=["factura"])
+            if tipo == TIPO_VENTA:
+                origen.nro_factura = nro_factura
+                origen.save(update_fields=["factura", "nro_factura"])
+            else:
+                origen.save(update_fields=["factura"])
 
             return factura
 
     @staticmethod
     def get_pendientes() -> dict:
-        """Retorna cargas de saldo y pagos de almuerzo sin factura."""
+        """Retorna cargas de saldo, pagos de almuerzo y ventas sin factura."""
         from apps.core.models import CargaSaldo
         from apps.almuerzos.models import PagoCuentaAlmuerzo
+        from apps.ventas.models import Venta as VentaModel
 
         cargas = CargaSaldo.objects.filter(
             estado=CargaSaldo.Estado.CONFIRMADA,
@@ -248,7 +277,12 @@ class FacturacionService:
             factura__isnull=True,
         ).select_related("cuenta__hijo__cliente_responsable").order_by("-fecha_pago")
 
-        return {"cargas": cargas, "pagos": pagos}
+        ventas = VentaModel.objects.filter(
+            genera_factura_legal=True,
+            factura__isnull=True,
+        ).exclude(estado=VentaModel.Estado.ANULADA).select_related("cliente").order_by("-fecha")
+
+        return {"cargas": cargas, "pagos": pagos, "ventas": ventas}
 
     @classmethod
     def emitir_lote(cls, *, tipo: str, ids: list[int], nro_factura: str) -> Factura:
@@ -313,11 +347,43 @@ class FacturacionService:
 
                 cliente_obj = origenes[0].cuenta.hijo.cliente_responsable
                 monto_total = sum(o.monto for o in origenes)
+                iva = cls._calcular_iva_10(monto_total)
+
+            elif tipo == TIPO_VENTA:
+                from apps.ventas.models import Venta as VentaModel
+                origenes = list(
+                    VentaModel.objects
+                    .select_related("cliente")
+                    .select_for_update(of=("self",))
+                    .filter(pk__in=ids)
+                )
+                if len(origenes) != len(ids):
+                    raise ValidationError({"error": "Uno o más ventas no existen."})
+
+                clientes = set()
+                for o in origenes:
+                    if o.estado == VentaModel.Estado.ANULADA:
+                        raise ValidationError({"error": f"La venta #{o.pk} está anulada."})
+                    if not o.genera_factura_legal:
+                        raise ValidationError({"error": f"La venta #{o.pk} no requiere factura legal."})
+                    if o.factura_id:
+                        raise ValidationError({"error": f"La venta #{o.pk} ya tiene factura."})
+                    clientes.add(o.cliente_id)
+
+                if len(clientes) > 1:
+                    raise ValidationError({"error": "Todas las ventas deben pertenecer al mismo cliente."})
+
+                cliente_obj = origenes[0].cliente
+                monto_total = sum(o.monto_total for o in origenes)
+                iva = {
+                    "iva_10": sum(o.iva_10 for o in origenes),
+                    "iva_5": sum(o.iva_5 for o in origenes),
+                    "monto_exenta": sum(o.monto_exenta for o in origenes),
+                }
 
             else:
                 raise ValidationError({"error": f"Tipo desconocido: {tipo}."})
 
-            iva = cls._calcular_iva_10(monto_total)
             factura = FacturacionService.emitir_factura(
                 cliente=cliente_obj,
                 nro_factura=nro_factura,
@@ -327,6 +393,10 @@ class FacturacionService:
 
             for o in origenes:
                 o.factura = factura
-                o.save(update_fields=["factura"])
+                if tipo == TIPO_VENTA:
+                    o.nro_factura = nro_factura
+                    o.save(update_fields=["factura", "nro_factura"])
+                else:
+                    o.save(update_fields=["factura"])
 
             return factura

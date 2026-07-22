@@ -175,6 +175,8 @@ class VentaViewSet(viewsets.ModelViewSet):
             pin_autorizacion=data.get("pin_autorizacion", ""),
             referencia=data.get("referencia", ""),
             cierre_caja=cierre_caja,
+            genera_factura_legal=bool(self.request.data.get("genera_factura_legal", False)),
+            nro_factura=str(self.request.data.get("nro_factura", "") or "").strip(),
         )
 
 class DetalleVentaViewSet(viewsets.ModelViewSet):

@@ -134,8 +134,12 @@ interface Tarjeta {
   cliente_id: number; cliente_nombre: string; cliente_ruc: string
   lista_precio_id: number | null; lista_es_default: boolean
   es_alumno: boolean
+  cliente_modalidad_facturacion: 'INMEDIATA' | 'MENSUAL'
 }
-interface ClienteBasico { id: number; nombre_completo: string; ruc_ci: string }
+interface ClienteBasico {
+  id: number; nombre_completo: string; ruc_ci: string
+  modalidad_facturacion?: 'INMEDIATA' | 'MENSUAL'
+}
 interface ItemCarrito { producto: Producto; cantidad: number }
 interface MedioPagoDB { id: number; descripcion: string; activo: boolean; requiere_validacion: boolean }
 
@@ -370,6 +374,8 @@ export default function ModoRecreo() {
   const [medioPagoSelId, setMedioPagoSelId] = useState<number | null>(null)
   const [montoEfectivo, setMontoEfectivo] = useState('')
   const [referencia, setReferencia] = useState('')
+  const [generaFactura, setGeneraFactura] = useState(false)
+  const [nroFacturaVenta, setNroFacturaVenta] = useState('')
 
   // PIN modal
   const [showPin, setShowPin] = useState(false)
@@ -680,6 +686,10 @@ export default function ModoRecreo() {
         payload.tarjeta = null
         payload.medio_pago = medioPagoSelId
         if (referencia.trim()) payload.referencia = referencia.trim()
+        if (generaFactura) {
+          payload.genera_factura_legal = true
+          if (nroFacturaVenta.trim()) payload.nro_factura = nroFacturaVenta.trim()
+        }
       }
 
       if (!navigator.onLine) {
@@ -718,6 +728,8 @@ export default function ModoRecreo() {
         setClienteResultados([])
         setMontoEfectivo('')
         setReferencia('')
+        setGeneraFactura(false)
+        setNroFacturaVenta('')
         ventaStartTime.current = 0
         setTimeout(() => scannerRef.current?.focus(), 60)
       }, 2500)
@@ -762,7 +774,7 @@ export default function ModoRecreo() {
     setPreciosCliente({})
     setClienteDirecto(null); setClienteSearch(''); setClienteResultados([])
     setTarjetaInput(''); setProdSearch('')
-    setMontoEfectivo(''); setReferencia(''); setShowPin(false)
+    setMontoEfectivo(''); setReferencia(''); setGeneraFactura(false); setNroFacturaVenta(''); setShowPin(false)
     ventaStartTime.current = 0
     setTimeout(() => scannerRef.current?.focus(), 60)
   }, [])
@@ -831,6 +843,11 @@ export default function ModoRecreo() {
 
   // Forma de pago: CONTADO (pago inmediato) o CREDITO (va a cuenta corriente)
   const tipoVenta: 'CONTADO' | 'CREDITO' = modoPago === 'CREDITO' ? 'CREDITO' : 'CONTADO'
+
+  const clienteModalidad: 'INMEDIATA' | 'MENSUAL' =
+    tarjeta?.cliente_modalidad_facturacion ??
+    clienteDirecto?.modalidad_facturacion ??
+    'INMEDIATA'
 
   const referenciaRequerida = modoPago === 'MEDIO' && (medioPagoSeleccionado?.requiere_validacion ?? false)
   const tieneTitular = tarjeta !== null || ((modoPago === 'MEDIO' || modoPago === 'CREDITO') && clienteDirecto !== null)
@@ -1511,6 +1528,41 @@ export default function ModoRecreo() {
                 {referencia.trim() && (
                   <p className="text-blue-600 text-xs font-mono tracking-widest uppercase">{referencia.trim()}</p>
                 )}
+              </div>
+            )}
+
+            {/* Factura legal — solo CONTADO con medio real (no prepago, no crédito) */}
+            {modoPago === 'MEDIO' && medioPagoSelId !== null && (
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={generaFactura}
+                    onChange={e => { setGeneraFactura(e.target.checked); setNroFacturaVenta('') }}
+                    className="w-4 h-4 rounded accent-amber-600"
+                  />
+                  <span className="text-sm font-semibold text-slate-700">Emitir factura legal</span>
+                </label>
+                {generaFactura && clienteModalidad === 'MENSUAL' ? (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl">
+                    <span className="text-base">🗓️</span>
+                    <span className="text-sm font-semibold text-blue-700">Se acumula al lote mensual del cliente</span>
+                  </div>
+                ) : generaFactura ? (
+                  <div className="space-y-1">
+                    <input
+                      value={nroFacturaVenta}
+                      onChange={e => setNroFacturaVenta(e.target.value)}
+                      placeholder="001-001-0000001 (opcional)"
+                      className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-colors"
+                    />
+                    <p className="text-xs text-slate-400">
+                      {nroFacturaVenta.trim()
+                        ? 'Factura emitida al cobrar'
+                        : 'Sin número → queda pendiente en Facturación'}
+                    </p>
+                  </div>
+                ) : null}
               </div>
             )}
 

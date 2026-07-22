@@ -70,13 +70,13 @@ const ESTADO_COLOR: Record<string, BadgeColor> = {
 
 const TIPO_LABEL: Record<string, string> = {
   CARGA_SALDO: 'Carga de saldo',
-  ALMUERZO: 'Almuerzo',
+  PAGO_ALMUERZO: 'Almuerzo',
   VENTA: 'Venta',
 }
 
 const TIPO_COLOR: Record<string, BadgeColor> = {
   CARGA_SALDO: 'blue',
-  ALMUERZO: 'orange',
+  PAGO_ALMUERZO: 'orange',
   VENTA: 'green',
 }
 
