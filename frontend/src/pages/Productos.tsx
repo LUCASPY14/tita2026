@@ -31,6 +31,7 @@ interface Producto {
   requiere_stock: boolean
   activo: boolean
   precio_actual: string
+  stock_actual: string | null
 }
 
 interface ProductoForm {
@@ -45,18 +46,6 @@ interface ProductoForm {
   es_servicio: boolean
   requiere_stock: boolean
   activo: boolean
-}
-
-interface StockRecord {
-  id: number
-  producto: number
-  cantidad: string
-  producto_nombre: string
-  costo_promedio: string
-  valor_inventario: string
-  requiere_reposicion: boolean
-  dias_stock_disponible: number
-  fecha_actualizacion: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -321,7 +310,6 @@ export default function Produtos() {
   const { t } = useTranslation()
   const invalidateCatalogo = useCatalogoStore(state => state.invalidate)
   const [productos, setProductos] = useState<Producto[]>([])
-  const [stockMap, setStockMap] = useState<Record<number, StockRecord>>({})
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [unidades, setUnidades] = useState<UnidadMedida[]>([])
   const [loading, setLoading] = useState(false)
@@ -358,19 +346,6 @@ export default function Produtos() {
       .finally(() => setLoadingCritico(false))
   }, [])
 
-  // Load stock map (all stock records) once and on refresh
-  const loadStock = useCallback(async () => {
-    try {
-      const { data } = await api.get('/inventario/stock/', { params: { page_size: 500 } })
-      const records: StockRecord[] = data.results ?? data
-      const map: Record<number, StockRecord> = {}
-      records.forEach(s => { map[s.producto] = s })
-      setStockMap(map)
-    } catch {
-      // stock not critical for page load
-    }
-  }, [])
-
   const loadProductos = useCallback(async () => {
     setLoading(true)
     try {
@@ -394,11 +369,6 @@ export default function Produtos() {
     loadProductos()
   }, [loadProductos])
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadStock()
-  }, [loadStock])
-
   function handleSearchChange(value: string) {
     setSearchInput(value)
     clearTimeout(searchTimerRef.current)
@@ -417,7 +387,6 @@ export default function Produtos() {
 
   function handleSaved() {
     loadProductos()
-    loadStock()
     invalidateCatalogo()
   }
 
@@ -466,9 +435,10 @@ export default function Produtos() {
         if (!r.requiere_stock || r.es_servicio) {
           return <span className="text-sm text-slate-400">N/A</span>
         }
-        const s = stockMap[r.id]
-        if (!s) return <span className="text-sm text-slate-400">—</span>
-        const qty = Number(s.cantidad) || 0
+        if (r.stock_actual === null || r.stock_actual === undefined) {
+          return <span className="text-sm text-slate-400">—</span>
+        }
+        const qty = Number(r.stock_actual) || 0
         const min = Number(r.stock_minimo) || 0
         const isCritical = qty <= min && min > 0
         const isZero = qty <= 0
@@ -521,16 +491,15 @@ export default function Produtos() {
         </div>
       ),
     },
-  ], [stockMap])
+  ], [])
 
   const stats = useMemo(() => ({
     activos: productos.filter(p => p.activo).length,
     sinStock: productos.filter(p => {
       if (!p.requiere_stock || p.es_servicio) return false
-      const cantidad = stockMap[p.id] ? Number(stockMap[p.id].cantidad) : 0
-      return cantidad <= 0
+      return (Number(p.stock_actual) || 0) <= 0
     }).length,
-  }), [productos, stockMap])
+  }), [productos])
 
   const selectClass = 'min-w-[140px] border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
 

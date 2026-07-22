@@ -25,11 +25,20 @@ class CategoriaSerializer(serializers.ModelSerializer):
 class ProductoSerializer(serializers.ModelSerializer):
     categoria_nombre = serializers.CharField(source="categoria.nombre", read_only=True)
     precio_actual = serializers.SerializerMethodField()
+    stock_actual = serializers.SerializerMethodField()
 
     def get_precio_actual(self, obj):
-        # Usa la anotación _precio_actual del queryset cuando está disponible (evita N+1).
         annotated = getattr(obj, "_precio_actual", None)
         return annotated if annotated is not None else obj.precio_actual
+
+    def get_stock_actual(self, obj):
+        annotated = getattr(obj, "_stock_actual", None)
+        if annotated is not None:
+            return str(annotated)
+        try:
+            return str(obj.stock.cantidad)
+        except Exception:
+            return None
 
     class Meta:
         model = Producto
