@@ -29,6 +29,7 @@ interface Venta {
   tarjeta: string | null
   tipo: string
   estado: string
+  estado_pago: string
   monto_total: string
   saldo_pendiente: string
   detalles: DetalleVenta[]
@@ -308,7 +309,7 @@ export default function Ventas() {
             {ventas.map(v => {
               const isExp = expandedId === v.id
               const persona = v.hijo_nombre ?? v.cliente_nombre ?? '—'
-              const pendiente = Number(v.saldo_pendiente) > 0
+              const pendiente = (v.estado_pago === 'PENDIENTE' || v.estado_pago === 'PARCIAL') && Number(v.saldo_pendiente) > 0
 
               return (
                 <li key={v.id} className={v.estado === 'ANULADA' ? 'opacity-60' : ''}>
