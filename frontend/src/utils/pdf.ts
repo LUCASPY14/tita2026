@@ -197,78 +197,197 @@ export function exportarCuentaCorrientePDF(items: AgingItem[], totalDeuda: numbe
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-interface CuentaMensual {
-  hijo_nombre: string; anio: number; mes: number
+export interface CuentaMensual {
+  hijo: number
+  hijo_nombre: string
+  hijo_grado?: string
+  nro_tarjeta?: string
+  anio: number; mes: number
   cantidad_almuerzos: number; monto_total: string | number
   monto_pagado: string | number; saldo_pendiente: string | number; estado: string
+}
+
+export interface RegistroConsumoDetalle {
+  fecha_consumo: string
+  hora_registro: string
+  tipo_almuerzo_nombre?: string
+  costo_almuerzo: string | number
 }
 
 const ESTADO_COLOR: Record<string, [number, number, number]> = {
   PAGADO: [22, 163, 74], PENDIENTE: [234, 88, 12], PARCIAL: [37, 99, 235], ANULADO: [100, 116, 139],
 }
 
-export function exportarCuentasMensualesPDF(cuentas: CuentaMensual[], mes?: number, anio?: number) {
+function _firmas(doc: jsPDF) {
+  const lastPage = doc.getNumberOfPages()
+  doc.setPage(lastPage)
+  const H = doc.internal.pageSize.getHeight()
+  const W = doc.internal.pageSize.getWidth()
+  const sigY = H - 32
+  const col1 = 20
+  const col2 = W / 2 + 10
+  doc.setDrawColor(...GRAY)
+  doc.setLineWidth(0.3)
+  doc.line(col1, sigY, col1 + 65, sigY)
+  doc.line(col2, sigY, col2 + 65, sigY)
+  doc.setFontSize(7.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...GRAY)
+  doc.text('Firma del Directivo / Administrador', col1, sigY + 4)
+  doc.text('Firma del Responsable / Padre', col2, sigY + 4)
+  doc.text('Nombre: ____________________________', col1, sigY + 9)
+  doc.text('Nombre: ____________________________', col2, sigY + 9)
+  doc.text(`Fecha: ${new Date().toLocaleDateString('es-PY')}`, col1, sigY + 14)
+  doc.text(`Fecha: ${new Date().toLocaleDateString('es-PY')}`, col2, sigY + 14)
+}
+
+export function exportarCuentasMensualesPDF(
+  cuentas: CuentaMensual[],
+  mes?: number,
+  anio?: number,
+  detalles?: Map<number, RegistroConsumoDetalle[]>,
+) {
   try {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     const periodo = (mes != null && anio != null) ? `${MESES[mes]} ${anio}` : anio != null ? String(anio) : 'Todos los períodos'
-    let y = header(doc, 'Cuentas Mensuales de Almuerzos', `Período: ${periodo}`)
+    const lastAutoTable = () => (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
 
     const totalPendiente = cuentas.reduce((s, c) => s + (Number(c.saldo_pendiente) || 0), 0)
     const totalFacturado = cuentas.reduce((s, c) => s + (Number(c.monto_total) || 0), 0)
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(0, 0, 0)
-    doc.text(`Total facturado: ${gs(totalFacturado)}   |   Saldo pendiente: ${gs(totalPendiente)}   |   Cuentas: ${cuentas.length}`, 14, y)
-    y += 8
-
-    autoTable(doc, {
-      startY: y,
-      head: [['Estudiante', 'Período', 'Almuerzos', 'Total', 'Pagado', 'Saldo', 'Estado']],
-      body: cuentas.map(c => [
-        c.hijo_nombre,
-        `${MESES[c.mes]} ${c.anio}`,
-        c.cantidad_almuerzos,
-        gs(c.monto_total),
-        gs(c.monto_pagado),
-        gs(c.saldo_pendiente),
-        c.estado,
-      ]),
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: BRAND_COLOR, textColor: [255, 255, 255], fontStyle: 'bold' },
-      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'center' } },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      didParseCell: (data) => {
-        if (data.column.index === 6 && data.section === 'body') {
-          const estado = cuentas[data.row.index]?.estado
-          data.cell.styles.textColor = ESTADO_COLOR[estado] ?? GRAY
-          data.cell.styles.fontStyle = 'bold'
-        }
-      },
-    })
-
-    // Firma al pie — se coloca en la última página antes del footer
-    const lastPage = doc.getNumberOfPages()
-    doc.setPage(lastPage)
-    const H = doc.internal.pageSize.getHeight()
     const W = doc.internal.pageSize.getWidth()
-    const sigY = H - 32  // 32 mm desde el borde inferior (encima del footer)
-    const col1 = 20
-    const col2 = W / 2 + 10
+    const H = doc.internal.pageSize.getHeight()
 
-    doc.setDrawColor(...GRAY)
-    doc.setLineWidth(0.3)
-    doc.line(col1, sigY, col1 + 65, sigY)
-    doc.line(col2, sigY, col2 + 65, sigY)
+    if (detalles && detalles.size > 0) {
+      // ── Reporte detallado: una sección por alumno ──────────────────
+      let y = header(doc, 'Estado de Cuenta — Almuerzos', `Período: ${periodo}`)
 
-    doc.setFontSize(7.5)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(...GRAY)
-    doc.text('Firma del Directivo / Administrador', col1, sigY + 4)
-    doc.text('Firma del Responsable / Padre', col2, sigY + 4)
-    doc.text('Nombre: ____________________________', col1, sigY + 9)
-    doc.text('Nombre: ____________________________', col2, sigY + 9)
-    doc.text(`Fecha: ${new Date().toLocaleDateString('es-PY')}`, col1, sigY + 14)
-    doc.text(`Fecha: ${new Date().toLocaleDateString('es-PY')}`, col2, sigY + 14)
+      // Resumen general
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text(
+        `Total facturado: ${gs(totalFacturado)}   |   Saldo pendiente: ${gs(totalPendiente)}   |   Cuentas: ${cuentas.length}`,
+        14, y,
+      )
+      y += 10
+
+      const fmtFecha = (iso: string) =>
+        new Date(iso + 'T00:00:00').toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      const fmtHora = (t: string) => (t ?? '').substring(0, 5)
+
+      for (let i = 0; i < cuentas.length; i++) {
+        const c = cuentas[i]
+        const registros = detalles.get(c.hijo) ?? []
+
+        // Salto de página si queda poco espacio (< 50 mm)
+        if (y > H - 60) {
+          doc.addPage()
+          y = header(doc, 'Estado de Cuenta — Almuerzos', `Período: ${periodo}`)
+        }
+
+        // Encabezado del alumno
+        doc.setFillColor(241, 245, 249)  // slate-100
+        doc.rect(14, y - 4, W - 28, 10, 'F')
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(15, 23, 42)  // slate-900
+        doc.text(c.hijo_nombre, 16, y + 2)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8)
+        doc.setTextColor(...GRAY)
+        const meta: string[] = []
+        if (c.hijo_grado) meta.push(c.hijo_grado)
+        if (c.nro_tarjeta) meta.push(`Tarjeta: ${c.nro_tarjeta}`)
+        meta.push(`${MESES[c.mes]} ${c.anio}`)
+        doc.text(meta.join('  ·  '), W - 14, y + 2, { align: 'right' })
+        y += 10
+
+        if (registros.length > 0) {
+          autoTable(doc, {
+            startY: y,
+            head: [['Fecha', 'Hora', 'Tipo', 'Costo']],
+            body: registros.map(r => [
+              fmtFecha(r.fecha_consumo),
+              fmtHora(r.hora_registro),
+              r.tipo_almuerzo_nombre || 'Almuerzo',
+              gs(r.costo_almuerzo),
+            ]),
+            styles: { fontSize: 7.5, cellPadding: 1.8 },
+            headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+            columnStyles: { 0: { cellWidth: 28 }, 1: { cellWidth: 18, halign: 'center' }, 3: { halign: 'right', cellWidth: 28 } },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            margin: { left: 14, right: 14 },
+          })
+          y = lastAutoTable() + 3
+        } else {
+          doc.setFontSize(7.5)
+          doc.setTextColor(...GRAY)
+          doc.setFont('helvetica', 'italic')
+          doc.text('Sin registros de consumo en el período.', 16, y + 3)
+          y += 8
+        }
+
+        // Línea resumen
+        doc.setFillColor(240, 253, 244)  // green-50
+        doc.rect(14, y, W - 28, 8, 'F')
+        doc.setFontSize(7.5)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(0, 0, 0)
+        doc.text(
+          `${c.cantidad_almuerzos} almuerzos  ·  Total: ${gs(c.monto_total)}  ·  Pagado: ${gs(c.monto_pagado)}  ·  Saldo: ${gs(c.saldo_pendiente)}`,
+          16, y + 5,
+        )
+        const estadoColor = ESTADO_COLOR[c.estado] ?? GRAY
+        doc.setTextColor(...estadoColor)
+        doc.text(c.estado, W - 14, y + 5, { align: 'right' })
+        y += 14
+
+        // Separador entre alumnos (excepto el último)
+        if (i < cuentas.length - 1) {
+          doc.setDrawColor(226, 232, 240)
+          doc.setLineWidth(0.2)
+          doc.line(14, y - 5, W - 14, y - 5)
+        }
+      }
+
+      _firmas(doc)
+    } else {
+      // ── Reporte resumen (sin detalle) ──────────────────────────────
+      let y = header(doc, 'Cuentas Mensuales de Almuerzos', `Período: ${periodo}`)
+
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text(`Total facturado: ${gs(totalFacturado)}   |   Saldo pendiente: ${gs(totalPendiente)}   |   Cuentas: ${cuentas.length}`, 14, y)
+      y += 8
+
+      autoTable(doc, {
+        startY: y,
+        head: [['Estudiante', 'Período', 'Almuerzos', 'Total', 'Pagado', 'Saldo', 'Estado']],
+        body: cuentas.map(c => [
+          c.hijo_nombre,
+          `${MESES[c.mes]} ${c.anio}`,
+          c.cantidad_almuerzos,
+          gs(c.monto_total),
+          gs(c.monto_pagado),
+          gs(c.saldo_pendiente),
+          c.estado,
+        ]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: BRAND_COLOR, textColor: [255, 255, 255], fontStyle: 'bold' },
+        columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'center' } },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        didParseCell: (data) => {
+          if (data.column.index === 6 && data.section === 'body') {
+            const estado = cuentas[data.row.index]?.estado
+            data.cell.styles.textColor = ESTADO_COLOR[estado] ?? GRAY
+            data.cell.styles.fontStyle = 'bold'
+          }
+        },
+      })
+
+      _firmas(doc)
+    }
 
     footer(doc)
     const suffix = (mes != null && anio != null) ? `${anio}_${String(mes).padStart(2, '0')}` : anio ?? 'todos'

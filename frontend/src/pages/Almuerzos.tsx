@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
-import { exportarCuentasMensualesPDF } from '../utils/pdf'
+import { exportarCuentasMensualesPDF, type RegistroConsumoDetalle } from '../utils/pdf'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -124,6 +124,8 @@ interface CuentaMensual {
   id: number
   hijo: number
   hijo_nombre: string
+  hijo_grado: string
+  nro_tarjeta: string
   anio: number
   mes: number
   cantidad_almuerzos: number
@@ -211,12 +213,13 @@ export default function Almuerzos() {
   // ── Pago cuenta ───────────────────────────────────────────────────
   const [pagoOpen, setPagoOpen] = useState(false)
   const [pagoCuenta, setPagoCuenta] = useState<CuentaMensual | null>(null)
-  const [pagoForm, setPagoForm] = useState({ monto: '', medio_pago: 'EFECTIVO', referencia: '' })
+  const [pagoForm, setPagoForm] = useState({ monto: '', medio_pago: 'EFECTIVO', referencia: '', emitirFactura: false, nroFactura: '' })
   const [savingPago, setSavingPago] = useState(false)
 
   // ── Filtros y generación de cuentas ──────────────────────────────
   const [filtroCuentaMes, setFiltroCuentaMes] = useState<number | ''>('')
   const [filtroCuentaAnio, setFiltroCuentaAnio] = useState<number | ''>(new Date().getFullYear())
+  const [searchCuentas, setSearchCuentas] = useState('')
   const [generando, setGenerando] = useState(false)
 
   // ── Edit suscripcion ──────────────────────────────────────────────
@@ -496,13 +499,14 @@ export default function Almuerzos() {
   const openPagoCuenta = useCallback((c: CuentaMensual) => {
     setPagoCuenta(c)
     const pendiente = Number(c.saldo_pendiente) || (Number(c.monto_total) - Number(c.monto_pagado))
-    setPagoForm({ monto: String(pendiente > 0 ? pendiente : ''), medio_pago: 'EFECTIVO', referencia: '' })
+    setPagoForm({ monto: String(pendiente > 0 ? pendiente : ''), medio_pago: 'EFECTIVO', referencia: '', emitirFactura: false, nroFactura: '' })
     setPagoOpen(true)
   }, [])
 
   const handlePagar = useCallback(async () => {
     if (!pagoCuenta) return
     if (!pagoForm.monto || Number(pagoForm.monto) <= 0) { toast.error('Ingresá el monto'); return }
+    if (pagoForm.emitirFactura && !pagoForm.nroFactura.trim()) { toast.error('Ingresá el número de factura'); return }
     setSavingPago(true)
     try {
       await api.post('/almuerzos/pagos-cuentas/', {
@@ -510,6 +514,7 @@ export default function Almuerzos() {
         monto: Number(pagoForm.monto),
         medio_pago: pagoForm.medio_pago,
         referencia: pagoForm.referencia || undefined,
+        ...(pagoForm.emitirFactura && pagoForm.nroFactura.trim() ? { nro_factura: pagoForm.nroFactura.trim() } : {}),
       })
       toast.success('Pago registrado')
       setPagoOpen(false)
@@ -557,8 +562,19 @@ export default function Almuerzos() {
     }
   }, [pagoMensualSusc, pagoMensualForm])
 
+  // ── Exportar PDF con detalle ──────────────────────────────────────
+  const [exportandoPDF, setExportandoPDF] = useState(false)
+
   // ── Generar cuentas del mes ───────────────────────────────────────
   const handleGenerarCuentas = useCallback(async () => {
+    if (!filtroCuentaMes) {
+      toast.error('Seleccioná un mes específico para generar las cuentas')
+      return
+    }
+    if (!filtroCuentaAnio) {
+      toast.error('Ingresá el año para generar las cuentas')
+      return
+    }
     setGenerando(true)
     try {
       const body: Record<string, unknown> = {}
@@ -651,6 +667,46 @@ export default function Almuerzos() {
     facturadoMes: cuentas.filter(c => c.mes === mesActual && c.anio === anioActual).reduce((s, c) => s + (Number(c.monto_total) || 0), 0),
   }), [registros, cuentas, hoy, mesActual, anioActual])
 
+  const cuentasFiltradas = useMemo(() => {
+    const q = searchCuentas.trim().toLowerCase()
+    if (!q) return cuentas
+    return cuentas.filter(c =>
+      c.hijo_nombre.toLowerCase().includes(q) ||
+      (c.nro_tarjeta ?? '').toLowerCase().includes(q) ||
+      (c.hijo_grado ?? '').toLowerCase().includes(q)
+    )
+  }, [cuentas, searchCuentas])
+
+  const handleExportarPDF = useCallback(async () => {
+    if (!filtroCuentaAnio) return
+    setExportandoPDF(true)
+    try {
+      const anio = Number(filtroCuentaAnio)
+      const mes = filtroCuentaMes !== '' ? Number(filtroCuentaMes) : undefined
+      const fechaDesde = mes
+        ? `${anio}-${String(mes).padStart(2, '0')}-01`
+        : `${anio}-01-01`
+      const fechaHasta = mes
+        ? `${anio}-${String(mes).padStart(2, '0')}-${new Date(anio, mes, 0).getDate()}`
+        : `${anio}-12-31`
+
+      const { data } = await api.get('/almuerzos/registros-consumo/', {
+        params: { fecha_desde: fechaDesde, fecha_hasta: fechaHasta, ya_cobrado: true, estado: 'REGISTRADO', ordering: 'hijo,fecha_consumo', page_size: 1000 },
+      })
+      const registros: (RegistroConsumoDetalle & { hijo: number })[] = data.results ?? []
+      const detalleMap = new Map<number, RegistroConsumoDetalle[]>()
+      for (const r of registros) {
+        if (!detalleMap.has(r.hijo)) detalleMap.set(r.hijo, [])
+        detalleMap.get(r.hijo)!.push(r)
+      }
+      exportarCuentasMensualesPDF(cuentasFiltradas, mes, filtroCuentaAnio !== '' ? Number(filtroCuentaAnio) : undefined, detalleMap)
+    } catch {
+      toast.error('Error al generar PDF')
+    } finally {
+      setExportandoPDF(false)
+    }
+  }, [cuentasFiltradas, filtroCuentaMes, filtroCuentaAnio])
+
   // ── Columns ──────────────────────────────────────────────────────
 
   const colsRegistros: Column<RegistroConsumo>[] = [
@@ -713,7 +769,19 @@ export default function Almuerzos() {
     {
       title: 'Estudiante',
       key: 'hijo',
-      render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.hijo_nombre}</span>,
+      render: (_, r) => (
+        <div>
+          <p className="text-sm font-medium text-slate-800">{r.hijo_nombre}</p>
+          {r.hijo_grado && <p className="text-xs text-slate-400">{r.hijo_grado}</p>}
+        </div>
+      ),
+    },
+    {
+      title: 'Tarjeta',
+      key: 'tarjeta',
+      render: (_, r) => (
+        <span className="font-mono text-xs text-slate-500">{r.nro_tarjeta || '—'}</span>
+      ),
     },
     {
       title: 'Período',
@@ -1009,8 +1077,14 @@ export default function Almuerzos() {
                 <RefreshCw className="w-3.5 h-3.5" />
                 Generar
               </Button>
+              <input
+                placeholder="Buscar alumno, tarjeta, grado..."
+                value={searchCuentas}
+                onChange={e => setSearchCuentas(e.target.value)}
+                className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 w-52"
+              />
               {cuentas.length > 0 && (
-                <Button variant="secondary" size="sm" onClick={() => exportarCuentasMensualesPDF(cuentas, filtroCuentaMes !== '' ? filtroCuentaMes : undefined, filtroCuentaAnio !== '' ? filtroCuentaAnio : undefined)}>
+                <Button variant="secondary" size="sm" loading={exportandoPDF} onClick={handleExportarPDF}>
                   <FileText className="w-3.5 h-3.5" />
                   PDF
                 </Button>
@@ -1018,7 +1092,7 @@ export default function Almuerzos() {
             </div>
           </div>
           <div className="p-1">
-            <Table columns={colsCuentas} dataSource={cuentas} rowKey="id" loading={loadingCuentas} pageSize={15} />
+            <Table columns={colsCuentas} dataSource={cuentasFiltradas} rowKey="id" loading={loadingCuentas} pageSize={15} />
           </div>
         </div>
       )}
@@ -1259,6 +1333,29 @@ export default function Almuerzos() {
                 />
               </div>
             )}
+            <div className="pt-1">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={pagoForm.emitirFactura}
+                  onChange={e => setPagoForm(f => ({ ...f, emitirFactura: e.target.checked, nroFactura: '' }))}
+                  className="w-4 h-4 rounded accent-green-600"
+                />
+                <span className="text-sm font-semibold text-slate-700">Emitir factura ahora</span>
+              </label>
+              {pagoForm.emitirFactura && (
+                <div className="mt-2">
+                  <label className={labelClass}>Nro. Factura *</label>
+                  <input
+                    value={pagoForm.nroFactura}
+                    onChange={e => setPagoForm(f => ({ ...f, nroFactura: e.target.value }))}
+                    placeholder="001-001-0001234"
+                    className={inputClass}
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
       </Modal>

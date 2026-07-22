@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
@@ -46,7 +46,8 @@ interface CuentaCorrienteData {
 }
 
 interface AlmuerzoFila {
-  hijo_id: number; hijo: string; grado: string; cantidad_almuerzos: number
+  hijo_id: number; hijo: string; grado: string; nro_tarjeta: string
+  cantidad_almuerzos: number
   monto_total: number; monto_pagado: number; monto_pendiente: number; estado: string
 }
 
@@ -460,15 +461,23 @@ export default function Reportes() {
   const [anioAlm, setAnioAlm] = useState(hoy.getFullYear())
   const [mesAlm, setMesAlm] = useState(hoy.getMonth() + 1)
   const [gradoAlm, setGradoAlm] = useState('')
+  const [tarjetaAlm, setTarjetaAlm] = useState('')
   const [almuerzosData, setAlmuerzosData] = useState<AlmuerzosData | null>(null)
   const [loadingAlm, setLoadingAlm] = useState(false)
+
+  function almParams(extra?: Record<string, unknown>) {
+    return {
+      anio: anioAlm, mes: mesAlm,
+      ...(gradoAlm ? { grado: gradoAlm } : {}),
+      ...(tarjetaAlm ? { tarjeta: tarjetaAlm } : {}),
+      ...extra,
+    }
+  }
 
   async function cargarAlmuerzos() {
     setLoadingAlm(true)
     try {
-      const { data: res } = await api.get('/almuerzos/reportes/', {
-        params: { anio: anioAlm, mes: mesAlm, ...(gradoAlm ? { grado: gradoAlm } : {}) },
-      })
+      const { data: res } = await api.get('/almuerzos/reportes/', { params: almParams() })
       setAlmuerzosData(res)
     } catch { toast.error('Error al cargar reporte de almuerzos') }
     finally { setLoadingAlm(false) }
@@ -477,7 +486,7 @@ export default function Reportes() {
   async function exportarAlmuerzosCSV() {
     try {
       const res = await api.get('/almuerzos/reportes/', {
-        params: { anio: anioAlm, mes: mesAlm, ...(gradoAlm ? { grado: gradoAlm } : {}), formato: 'csv' },
+        params: almParams({ formato: 'csv' }),
         responseType: 'blob',
       })
       descargaBlob(res.data, `almuerzos_${anioAlm}_${String(mesAlm).padStart(2, '0')}.csv`)
@@ -492,6 +501,17 @@ export default function Reportes() {
       toast.success('PDF descargado')
     } catch { toast.error('Error al generar PDF') }
   }
+
+  const filasAlmVisibles = useMemo(() => {
+    const filas = almuerzosData?.filas ?? []
+    const g = gradoAlm.trim().toLowerCase()
+    const t = tarjetaAlm.trim().toLowerCase()
+    if (!g && !t) return filas
+    return filas.filter(r =>
+      (!g || r.grado.toLowerCase().includes(g) || r.hijo.toLowerCase().includes(g)) &&
+      (!t || r.nro_tarjeta.toLowerCase().includes(t))
+    )
+  }, [almuerzosData, gradoAlm, tarjetaAlm])
 
   // ── Productos más vendidos ───────────────────────────────────────────────────
   const [desdeProd, setDesdeProd] = useState(today)
@@ -808,6 +828,12 @@ export default function Reportes() {
           <p className="text-base font-medium text-slate-800">{r.hijo}</p>
           <p className="text-sm text-slate-400">{r.grado || '—'}</p>
         </div>
+      ),
+    },
+    {
+      title: 'Tarjeta', key: 'nro_tarjeta',
+      render: (_, r) => (
+        <span className="font-mono text-sm text-slate-600">{r.nro_tarjeta || '—'}</span>
       ),
     },
     {
@@ -1987,7 +2013,16 @@ export default function Reportes() {
                 placeholder="Filtrar por grado..."
                 value={gradoAlm}
                 onChange={e => setGradoAlm(e.target.value)}
-                className={`${inputDateClass} w-40`}
+                className={`${inputDateClass} w-36`}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Tarjeta</label>
+              <input
+                placeholder="Nro. de tarjeta..."
+                value={tarjetaAlm}
+                onChange={e => setTarjetaAlm(e.target.value)}
+                className={`${inputDateClass} w-36`}
               />
             </div>
             <Button variant="primary" onClick={cargarAlmuerzos} disabled={loadingAlm}>
@@ -2081,8 +2116,8 @@ export default function Reportes() {
 
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="p-1">
-                  <Table columns={colsAlmuerzos} dataSource={almuerzosData.filas} rowKey="hijo_id"
-                    loading={loadingAlm} pageSize={almuerzosData.filas.length} />
+                  <Table columns={colsAlmuerzos} dataSource={filasAlmVisibles} rowKey="hijo_id"
+                    loading={loadingAlm} pageSize={filasAlmVisibles.length || 1} />
                 </div>
               </div>
             </>
