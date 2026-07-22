@@ -29,6 +29,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from common.permissions import IsAdmin
 from common.throttling import LoginRateThrottle, PortalRateThrottle
+from .auditoria import registrar_auditoria
 
 
 # ── TOTP helpers (RFC 6238, sin dependencias externas) ────────────────────────
@@ -145,6 +146,8 @@ def _registrar_sesion(user, request) -> str:
         user_agent=ua,
         activa=True,
     )
+    user.ultimo_acceso = timezone.now()
+    user.save(update_fields=["ultimo_acceso"])
     return session_key
 
 
@@ -186,17 +189,65 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             serializer.is_valid(raise_exception=True)
         except TokenError as e:
             raise InvalidToken(e.args[0])
+        except Exception as e:
+            # Con ATOMIC_REQUESTS=True, un re-raise haría rollback de los registros
+            # de auditoría. Retornamos la Response directamente para que la transacción
+            # haga commit y queden persistidos IntentoLogin + AuditoriaOperacion.
+            email = (request.data.get("email") or request.data.get("username") or "")[:254]
+            motivo = str(getattr(e, "detail", e))[:100]
+            try:
+                IntentoLogin.objects.create(
+                    email=email or "unknown@audit",
+                    ip_address=request.META.get("REMOTE_ADDR") or "0.0.0.0",
+                    exitoso=False,
+                    motivo_fallo=motivo,
+                )
+            except Exception:
+                pass
+            registrar_auditoria(
+                request=request,
+                operacion="LOGIN",
+                tabla="usuarios_usuario",
+                descripcion=f"Login fallido para {email}",
+                resultado="FALLA",
+                mensaje_error=motivo,
+            )
+            err_status = getattr(e, "status_code", status.HTTP_401_UNAUTHORIZED)
+            err_detail = getattr(e, "detail", {"detail": str(e)})
+            return Response(err_detail, status=err_status)
 
         user = serializer.user
 
         try:
             if user.auth_2fa.habilitado:
                 pre_auth = signing.dumps({"user_id": user.id}, salt="2fa-pre-auth")
+                registrar_auditoria(
+                    usuario=user, request=request,
+                    operacion="LOGIN_2FA_INICIO",
+                    tabla="usuarios_usuario",
+                    id_registro=user.id,
+                    descripcion=f"Login paso 1 OK — esperando 2FA ({user.email})",
+                )
                 return Response({"requires_2fa": True, "pre_auth_token": pre_auth})
         except Exception:
             pass
 
         session_key = _registrar_sesion(user, request)
+        try:
+            IntentoLogin.objects.create(
+                email=user.email,
+                ip_address=request.META.get("REMOTE_ADDR") or "0.0.0.0",
+                exitoso=True,
+            )
+        except Exception:
+            pass
+        registrar_auditoria(
+            usuario=user, request=request,
+            operacion="LOGIN",
+            tabla="usuarios_usuario",
+            id_registro=user.id,
+            descripcion=f"Login exitoso ({user.email}) rol={user.rol}",
+        )
         return Response({**serializer.validated_data, "user": _user_data(user), "session_key": session_key})
 
 
@@ -218,6 +269,40 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             return UsuarioCreateSerializer
         return UsuarioSerializer
 
+    def perform_create(self, serializer):
+        usuario = serializer.save()
+        registrar_auditoria(
+            request=self.request,
+            operacion="CREAR_USUARIO",
+            tabla="usuarios_usuario",
+            id_registro=usuario.id,
+            descripcion=f"Usuario creado: {usuario.email} rol={usuario.rol}",
+        )
+
+    def perform_update(self, serializer):
+        anterior_rol = serializer.instance.rol
+        usuario = serializer.save()
+        desc = f"Usuario modificado: {usuario.email}"
+        if anterior_rol != usuario.rol:
+            desc += f" (rol {anterior_rol}→{usuario.rol})"
+        registrar_auditoria(
+            request=self.request,
+            operacion="MODIFICAR_USUARIO",
+            tabla="usuarios_usuario",
+            id_registro=usuario.id,
+            descripcion=desc,
+        )
+
+    def perform_destroy(self, instance):
+        registrar_auditoria(
+            request=self.request,
+            operacion="ELIMINAR_USUARIO",
+            tabla="usuarios_usuario",
+            id_registro=instance.id,
+            descripcion=f"Usuario eliminado: {instance.email} rol={instance.rol}",
+        )
+        instance.delete()
+
     @action(detail=False, methods=['get'])
     def me(self, request):
         user = request.user
@@ -238,6 +323,13 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         user.set_password(serializer.validated_data['password_nuevo'])
         user.debe_cambiar_contrasena = False
         user.save(update_fields=['password', 'debe_cambiar_contrasena'])
+        registrar_auditoria(
+            request=request,
+            operacion="CAMBIO_PASSWORD",
+            tabla="usuarios_usuario",
+            id_registro=user.id,
+            descripcion=f"Cambio de contraseña ({user.email})",
+        )
         return Response({'detail': 'Contraseña actualizada correctamente.'})
 
 
@@ -810,12 +902,28 @@ class TwoFALoginVerificarView(APIView):
         )
 
         if not valido:
+            registrar_auditoria(
+                usuario=user, request=request,
+                operacion="LOGIN_2FA",
+                tabla="usuarios_usuario",
+                id_registro=user.id,
+                descripcion=f"Código 2FA inválido ({user.email})",
+                resultado="FALLA",
+                mensaje_error="Código TOTP/backup incorrecto",
+            )
             return Response({"error": "Código inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
         auth.ultima_verificacion = timezone.now()
         auth.save(update_fields=["ultima_verificacion"])
 
         session_key = _registrar_sesion(user, request)
+        registrar_auditoria(
+            usuario=user, request=request,
+            operacion="LOGIN_2FA",
+            tabla="usuarios_usuario",
+            id_registro=user.id,
+            descripcion=f"Login 2FA exitoso ({user.email})",
+        )
         refresh = RefreshToken.for_user(user)
         return Response({
             "refresh": str(refresh),
@@ -848,6 +956,13 @@ class LogoutView(APIView):
             except Exception:
                 pass
 
+        registrar_auditoria(
+            request=request,
+            operacion="LOGOUT",
+            tabla="usuarios_usuario",
+            id_registro=request.user.id,
+            descripcion=f"Logout ({request.user.email})",
+        )
         return Response({"detail": "Sesión cerrada."})
 
 
