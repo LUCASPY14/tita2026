@@ -21,6 +21,7 @@ interface CierreCaja {
   id: number
   caja: number
   caja_nombre: string
+  caja_activo: boolean
   empleado: number
   empleado_nombre: string
   fecha_apertura: string
@@ -434,9 +435,9 @@ export default function CajaPage() {
   // ── Stats rápidas ─────────────────────────────────────────────────────────
 
   const stats = useMemo(() => ({
-    abiertas: cierres.filter(c => c.estado === 'ABIERTO').length,
-    cerradas: cierres.filter(c => c.estado === 'CERRADO').length,
-    conciliadas: cierres.filter(c => c.estado === 'CONCILIADO').length,
+    abiertas: cierres.filter(c => c.caja_activo && c.estado === 'ABIERTO').length,
+    cerradas: cierres.filter(c => c.caja_activo && c.estado === 'CERRADO').length,
+    conciliadas: cierres.filter(c => c.caja_activo && c.estado === 'CONCILIADO').length,
   }), [cierres])
 
   const selectClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
@@ -509,7 +510,7 @@ export default function CajaPage() {
                 <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Banknote className="w-3.5 h-3.5 text-green-600" />
-                    <p className="text-green-700 text-xs font-semibold uppercase tracking-wide">Efectivo cajón</p>
+                    <p className="text-green-700 text-xs font-semibold uppercase tracking-wide">Efectivo Caja</p>
                   </div>
                   <p className="text-green-800 font-bold text-lg tabular-nums leading-tight">
                     {formatGs(arqueo.efectivo_esperado)}

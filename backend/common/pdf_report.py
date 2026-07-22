@@ -65,7 +65,7 @@ def pdf_response(
     story = []
 
     # ── Header ────────────────────────────────────────────────────────────────
-    story.append(Paragraph("Cantina Tita", styles["brand"]))
+    story.append(Paragraph("La Cantina de Tita", styles["brand"]))
     story.append(Paragraph(title, styles["title"]))
     if subtitle:
         story.append(Paragraph(subtitle, styles["subtitle"]))

@@ -133,7 +133,7 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
             operacion="CERRAR_CAJA",
             tabla="contabilidad_cierrecaja",
             id_registro=cierre.id,
-            descripcion=f"Caja '{cierre.caja}' cerrada — contado={monto_contado} Gs. diferencia={cierre.diferencia} Gs.",
+            descripcion=f"Caja '{cierre.caja}' cerrada — contado={monto_contado} Gs. diferencia={cierre.diferencia_efectivo} Gs.",
         )
         return Response(CierreCajaSerializer(cierre).data)
 

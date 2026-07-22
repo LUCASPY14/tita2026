@@ -126,7 +126,7 @@ function abrirRecibo(carga: UltimaCarga) {
 </style>
 </head>
 <body>
-<h1>CANTINA ESCOLAR</h1>
+<h1>LA CANTINA DE TITA</h1>
 <p class="center">Recibo de Recarga de Saldo</p>
 <div class="divider"></div>
 <div class="row"><span class="label">Fecha:</span><span>${new Date(carga.fecha).toLocaleString('es-PY')}</span></div>

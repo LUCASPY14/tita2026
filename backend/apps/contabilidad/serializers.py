@@ -22,6 +22,7 @@ class CajaSerializer(serializers.ModelSerializer):
 
 class CierreCajaSerializer(serializers.ModelSerializer):
     caja_nombre = serializers.CharField(source="caja.nombre", read_only=True)
+    caja_activo = serializers.BooleanField(source="caja.activo", read_only=True)
     empleado_nombre = serializers.CharField(source="empleado.nombre_completo", read_only=True)
 
     class Meta:

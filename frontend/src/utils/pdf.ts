@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-const BRAND = 'Cantina Tita'
+const BRAND = 'La Cantina de Tita'
 const BRAND_COLOR: [number, number, number] = [22, 163, 74]  // green-600
 const GRAY: [number, number, number] = [100, 116, 139]       // slate-500
 
