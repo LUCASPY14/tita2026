@@ -273,12 +273,18 @@ class NotaCreditoProveedorViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         from decimal import Decimal, InvalidOperation
+        from apps.inventario.models import Stock, MovimientoStock
 
         proveedor_id = request.data.get("proveedor")
         monto_raw = request.data.get("monto_total")
         compra_id = request.data.get("compra_original")
         nro_factura = request.data.get("nro_factura_compra") or ""
         observacion = request.data.get("observacion") or ""
+        tipo_nc = request.data.get("tipo_nc") or NotaCreditoProveedor.TipoNC.AJUSTE_PRECIO
+        detalles_raw = request.data.get("detalles") or []
+
+        if tipo_nc not in NotaCreditoProveedor.TipoNC.values:
+            return Response({"error": "tipo_nc inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
         if not proveedor_id:
             return Response({"error": "El campo 'proveedor' es obligatorio."}, status=status.HTTP_400_BAD_REQUEST)
@@ -301,6 +307,27 @@ class NotaCreditoProveedorViewSet(viewsets.ModelViewSet):
             except Compra.DoesNotExist:
                 return Response({"error": "Compra no encontrada para este proveedor."}, status=status.HTTP_404_NOT_FOUND)
 
+        # Validate detalles if DEVOLUCION
+        detalles_validados = []
+        if tipo_nc == NotaCreditoProveedor.TipoNC.DEVOLUCION and detalles_raw:
+            from apps.productos.models import Producto
+            for i, det in enumerate(detalles_raw):
+                try:
+                    prod = Producto.objects.get(pk=det["producto"])
+                except (Producto.DoesNotExist, KeyError):
+                    return Response({"error": f"Detalle {i+1}: producto no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
+                try:
+                    cant = Decimal(str(det["cantidad"]))
+                    if cant <= 0:
+                        raise ValueError
+                except (InvalidOperation, ValueError, KeyError):
+                    return Response({"error": f"Detalle {i+1}: cantidad inválida."}, status=status.HTTP_400_BAD_REQUEST)
+                try:
+                    pu = Decimal(str(det.get("precio_unitario", 0)))
+                except (InvalidOperation, TypeError):
+                    pu = Decimal("0")
+                detalles_validados.append({"producto": prod, "cantidad": cant, "precio_unitario": pu})
+
         with transaction.atomic():
             nc = NotaCreditoProveedor.objects.create(
                 proveedor=proveedor,
@@ -308,6 +335,7 @@ class NotaCreditoProveedorViewSet(viewsets.ModelViewSet):
                 monto_total=monto,
                 nro_factura_compra=nro_factura,
                 observacion=observacion,
+                tipo_nc=tipo_nc,
                 estado=NotaCreditoProveedor.Estado.EMITIDA,
                 creado_por=request.user,
             )
@@ -326,10 +354,48 @@ class NotaCreditoProveedorViewSet(viewsets.ModelViewSet):
                 creado_por=request.user,
             )
 
+            # Generate stock EGRESO movements for devolución type
+            if tipo_nc == NotaCreditoProveedor.TipoNC.DEVOLUCION and detalles_validados:
+                for det in detalles_validados:
+                    prod = det["producto"]
+                    cant = det["cantidad"]
+                    pu = det["precio_unitario"]
+                    subtotal = (cant * pu).quantize(Decimal("1"))
+
+                    DetalleNotaCreditoProveedor.objects.create(
+                        nota_credito=nc,
+                        producto=prod,
+                        cantidad=cant,
+                        precio_unitario=pu,
+                        subtotal=subtotal,
+                    )
+
+                    if prod.requiere_stock and not prod.es_servicio:
+                        stock, _ = Stock.objects.get_or_create(
+                            producto=prod,
+                            defaults={"cantidad": Decimal("0")},
+                        )
+                        stock = Stock.objects.select_for_update().get(pk=stock.pk)
+                        stock.cantidad -= cant
+                        stock.save()
+                        MovimientoStock.objects.create(
+                            producto=prod,
+                            tipo=MovimientoStock.Tipo.EGRESO,
+                            motivo=MovimientoStock.Motivo.DEVOLUCION_PROVEEDOR,
+                            cantidad=cant,
+                            stock_resultante=stock.cantidad,
+                            nota_credito=nc,
+                            autorizado_por=request.user,
+                            observaciones=f"Devolución NC #{nc.pk}",
+                        )
+
         return Response(self.get_serializer(nc).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="anular")
     def anular(self, request, pk=None):
+        from decimal import Decimal
+        from apps.inventario.models import Stock, MovimientoStock
+
         nc = self.get_object()
         if nc.estado == NotaCreditoProveedor.Estado.ANULADA:
             return Response({"error": "La nota de crédito ya está anulada."}, status=status.HTTP_400_BAD_REQUEST)
@@ -346,6 +412,32 @@ class NotaCreditoProveedorViewSet(viewsets.ModelViewSet):
                     descripcion=f"Reversión por anulación NC #{nc.pk}",
                     creado_por=request.user,
                 )
+
+            # Reverse stock movements generated by this NC
+            movimientos_egreso = MovimientoStock.objects.select_for_update().filter(
+                nota_credito=nc, tipo=MovimientoStock.Tipo.EGRESO
+            ).select_related("producto")
+            for mov in movimientos_egreso:
+                prod = mov.producto
+                if prod.requiere_stock and not prod.es_servicio:
+                    stock, _ = Stock.objects.get_or_create(
+                        producto=prod,
+                        defaults={"cantidad": Decimal("0")},
+                    )
+                    stock = Stock.objects.select_for_update().get(pk=stock.pk)
+                    stock.cantidad += mov.cantidad
+                    stock.save()
+                    MovimientoStock.objects.create(
+                        producto=prod,
+                        tipo=MovimientoStock.Tipo.INGRESO,
+                        motivo=MovimientoStock.Motivo.DEVOLUCION_PROVEEDOR,
+                        cantidad=mov.cantidad,
+                        stock_resultante=stock.cantidad,
+                        nota_credito=nc,
+                        autorizado_por=request.user,
+                        observaciones=f"Reversión por anulación NC #{nc.pk}",
+                    )
+
             nc.estado = NotaCreditoProveedor.Estado.ANULADA
             nc.save(update_fields=["estado"])
 
@@ -714,16 +806,32 @@ class ReporteAgingProveedoresView(APIView):
             from decimal import Decimal
             saldo = Decimal(str(proveedor.saldo_deuda or 0))
 
-            debito_antiguo = (
+            ultimo_saldo_cero = (
                 CuentaCorrienteProveedor.objects
-                .filter(proveedor=proveedor, tipo="DEBITO")
-                .order_by("fecha")
-                .values("fecha")
+                .filter(proveedor=proveedor, saldo_resultante__lte=0)
+                .order_by("-fecha", "-id")
+                .values("id", "fecha")
                 .first()
             )
             dias_atraso = 0
-            if debito_antiguo:
-                dias_atraso = (hoy - debito_antiguo["fecha"].date()).days
+            if ultimo_saldo_cero:
+                inicio_ciclo = (
+                    CuentaCorrienteProveedor.objects
+                    .filter(proveedor=proveedor, id__gt=ultimo_saldo_cero["id"], saldo_resultante__gt=0)
+                    .order_by("fecha", "id")
+                    .values("fecha")
+                    .first()
+                )
+            else:
+                inicio_ciclo = (
+                    CuentaCorrienteProveedor.objects
+                    .filter(proveedor=proveedor, saldo_resultante__gt=0)
+                    .order_by("fecha", "id")
+                    .values("fecha")
+                    .first()
+                )
+            if inicio_ciclo:
+                dias_atraso = (hoy - inicio_ciclo["fecha"].date()).days
 
             if dias_atraso <= 30:
                 bucket = "0-30"

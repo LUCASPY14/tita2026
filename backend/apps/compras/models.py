@@ -359,6 +359,10 @@ class NotaCreditoProveedor(models.Model):
         APLICADA = "APLICADA", "Aplicada"
         ANULADA = "ANULADA", "Anulada"
 
+    class TipoNC(models.TextChoices):
+        AJUSTE_PRECIO = "AJUSTE_PRECIO", "Ajuste de precio"
+        DEVOLUCION = "DEVOLUCION", "Devolución de mercadería"
+
     proveedor = models.ForeignKey(
         Proveedor, models.PROTECT, related_name="notas_credito"
     )
@@ -377,6 +381,12 @@ class NotaCreditoProveedor(models.Model):
         max_length=50, blank=True, null=True, help_text="Nro de factura de la compra original"
     )
     observacion = models.CharField(max_length=255, blank=True, null=True)
+    tipo_nc = models.CharField(
+        max_length=20,
+        choices=TipoNC.choices,
+        default=TipoNC.AJUSTE_PRECIO,
+        help_text="Tipo de nota de crédito",
+    )
     estado = models.CharField(
         max_length=15, choices=Estado.choices, default=Estado.EMITIDA
     )

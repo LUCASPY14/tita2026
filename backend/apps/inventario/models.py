@@ -158,6 +158,13 @@ class MovimientoStock(models.Model):
         blank=True,
         related_name="movimientos",
     )
+    nota_credito = models.ForeignKey(
+        "compras.NotaCreditoProveedor",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos_stock",
+    )
 
     # Auditoría
     autorizado_por = models.ForeignKey(

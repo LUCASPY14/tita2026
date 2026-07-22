@@ -103,6 +103,13 @@ interface PagoProveedor {
   estado: string
 }
 
+interface NCDetalle {
+  producto: number
+  producto_nombre: string
+  cantidad: number
+  precio_unitario: number
+}
+
 interface NotaCredito {
   id: number
   proveedor: number
@@ -111,9 +118,11 @@ interface NotaCredito {
   monto_total: string | number
   nro_factura_compra: string | null
   observacion: string | null
+  tipo_nc: 'AJUSTE_PRECIO' | 'DEVOLUCION'
   estado: 'EMITIDA' | 'APLICADA' | 'ANULADA'
   fecha: string
   fecha_creacion: string
+  detalles: { id: number; producto: number; producto_nombre: string; cantidad: string; precio_unitario: string; subtotal: string }[]
 }
 
 interface CuentaCorriente {
@@ -261,6 +270,8 @@ export default function Compras() {
   const [ncMonto, setNcMonto] = useState('')
   const [ncNroFactura, setNcNroFactura] = useState('')
   const [ncObservacion, setNcObservacion] = useState('')
+  const [ncTipoNC, setNcTipoNC] = useState<'AJUSTE_PRECIO' | 'DEVOLUCION'>('AJUSTE_PRECIO')
+  const [ncDetalles, setNcDetalles] = useState<NCDetalle[]>([])
   const [ncComprasDisponibles, setNcComprasDisponibles] = useState<Compra[]>([])
   const [detailNC, setDetailNC] = useState<NotaCredito | null>(null)
   const [anulando, setAnulando] = useState<number | null>(null)
@@ -839,6 +850,8 @@ export default function Compras() {
     setNcMonto('')
     setNcNroFactura('')
     setNcObservacion('')
+    setNcTipoNC('AJUSTE_PRECIO')
+    setNcDetalles([])
     setNcComprasDisponibles([])
     setNcModalOpen(true)
   }, [])
@@ -846,10 +859,11 @@ export default function Compras() {
   const handleNcProveedorChange = useCallback(async (provId: number | '') => {
     setNcProveedorId(provId)
     setNcCompraId('')
+    setNcDetalles([])
     if (!provId) { setNcComprasDisponibles([]); return }
     try {
       const { data } = await api.get('/compras/compras/', {
-        params: { proveedor: provId, tipo_pago: 'CREDITO', page_size: 100 },
+        params: { proveedor: provId, page_size: 100 },
       })
       setNcComprasDisponibles(data.results ?? [])
     } catch {
@@ -861,6 +875,9 @@ export default function Compras() {
     if (!ncProveedorId) { toast.error('Seleccioná un proveedor'); return }
     const montoNum = Number(ncMonto) || 0
     if (montoNum <= 0) { toast.error('Ingresá un monto válido'); return }
+    if (ncTipoNC === 'DEVOLUCION' && ncDetalles.length === 0) {
+      toast.error('Agregá al menos un ítem para la devolución'); return
+    }
     setSavingNC(true)
     try {
       await api.post('/compras/notas-credito/', {
@@ -869,6 +886,12 @@ export default function Compras() {
         monto_total: montoNum,
         nro_factura_compra: ncNroFactura || null,
         observacion: ncObservacion || null,
+        tipo_nc: ncTipoNC,
+        detalles: ncTipoNC === 'DEVOLUCION' ? ncDetalles.map(d => ({
+          producto: d.producto,
+          cantidad: d.cantidad,
+          precio_unitario: d.precio_unitario,
+        })) : [],
       })
       toast.success('Nota de crédito registrada')
       setNcModalOpen(false)
@@ -879,10 +902,44 @@ export default function Compras() {
     } finally {
       setSavingNC(false)
     }
-  }, [ncProveedorId, ncCompraId, ncMonto, ncNroFactura, ncObservacion, loadNotas])
+  }, [ncProveedorId, ncCompraId, ncMonto, ncNroFactura, ncObservacion, ncTipoNC, ncDetalles, loadNotas])
+
+  const prefillDetallesFromCompra = useCallback((compraId: number | '') => {
+    if (!compraId) { setNcDetalles([]); return }
+    const compra = ncComprasDisponibles.find(c => c.id === compraId)
+    if (!compra?.detalles?.length) return
+    const items: NCDetalle[] = compra.detalles.map(d => ({
+      producto: d.producto,
+      producto_nombre: d.producto_nombre,
+      cantidad: Number(d.cantidad),
+      precio_unitario: Number(d.costo_unitario),
+    }))
+    setNcDetalles(items)
+    const total = items.reduce((s, d) => s + d.cantidad * d.precio_unitario, 0)
+    setNcMonto(String(Math.round(total)))
+  }, [ncComprasDisponibles])
+
+  const addNcDetalle = useCallback(() => {
+    setNcDetalles(prev => [...prev, { producto: 0, producto_nombre: '', cantidad: 1, precio_unitario: 0 }])
+  }, [])
+
+  const removeNcDetalle = useCallback((idx: number) => {
+    setNcDetalles(prev => prev.filter((_, i) => i !== idx))
+  }, [])
+
+  const updateNcDetalle = useCallback((idx: number, field: keyof NCDetalle, value: string | number) => {
+    setNcDetalles(prev => {
+      const next = [...prev]
+      next[idx] = { ...next[idx], [field]: value }
+      return next
+    })
+  }, [])
 
   const handleAnularNC = useCallback(async (nc: NotaCredito) => {
-    if (!confirm(`¿Anular NC #${nc.id} de ${nc.proveedor_nombre} por ${formatGs(nc.monto_total)}?\nEsto revertirá el crédito en la cuenta corriente.`)) return
+    const extraMsg = nc.tipo_nc === 'DEVOLUCION' && nc.detalles?.length
+      ? '\nTambién se revertirán los movimientos de stock.'
+      : ''
+    if (!confirm(`¿Anular NC #${nc.id} de ${nc.proveedor_nombre} por ${formatGs(nc.monto_total)}?\nEsto revertirá el crédito en la cuenta corriente.${extraMsg}`)) return
     setAnulando(nc.id)
     try {
       await api.post(`/compras/notas-credito/${nc.id}/anular/`)
@@ -1341,6 +1398,13 @@ export default function Compras() {
         : <span className="text-sm text-slate-400">—</span>,
     },
     {
+      title: 'Tipo',
+      key: 'tipo_nc',
+      render: (_, r) => r.tipo_nc === 'DEVOLUCION'
+        ? <Badge color="orange">Devolución</Badge>
+        : <Badge color="default">Ajuste precio</Badge>,
+    },
+    {
       title: 'Estado',
       key: 'estado',
       render: (_, r) => <Badge color={NC_ESTADO_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
@@ -1639,12 +1703,13 @@ export default function Compras() {
           open
           title={`Nota de Crédito #${detailNC.id} — ${detailNC.proveedor_nombre}`}
           onCancel={() => setDetailNC(null)}
-          width={520}
+          width={560}
           footer={null}
         >
-          <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="grid grid-cols-2 gap-3 mb-4">
             {[
               { label: 'Monto', value: formatGs(detailNC.monto_total) },
+              { label: 'Tipo', value: detailNC.tipo_nc === 'DEVOLUCION' ? 'Devolución mercadería' : 'Ajuste de precio' },
               { label: 'Fecha', value: formatFecha(detailNC.fecha) },
               { label: 'Compra origen', value: detailNC.compra_original ? `#${detailNC.compra_original}` : '—' },
               { label: 'Nro. Factura', value: detailNC.nro_factura_compra || '—' },
@@ -1655,11 +1720,36 @@ export default function Compras() {
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3">
             <Badge color={NC_ESTADO_COLOR[detailNC.estado] ?? 'default'}>{detailNC.estado}</Badge>
           </div>
           {detailNC.observacion && (
-            <p className="text-sm text-slate-500 mb-4">Observación: {detailNC.observacion}</p>
+            <p className="text-sm text-slate-500 mb-3">Obs.: {detailNC.observacion}</p>
+          )}
+          {detailNC.detalles?.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Ítems devueltos</p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-400 border-b">
+                    <th className="pb-1">Producto</th>
+                    <th className="pb-1 text-right">Cant.</th>
+                    <th className="pb-1 text-right">P.Unit.</th>
+                    <th className="pb-1 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detailNC.detalles.map(d => (
+                    <tr key={d.id} className="border-b border-slate-100">
+                      <td className="py-1">{d.producto_nombre}</td>
+                      <td className="py-1 text-right tabular-nums">{d.cantidad}</td>
+                      <td className="py-1 text-right tabular-nums">{formatGs(d.precio_unitario)}</td>
+                      <td className="py-1 text-right tabular-nums">{formatGs(d.subtotal)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           <div className="flex items-center justify-between">
             <Button variant="secondary" onClick={() => setDetailNC(null)}>Cerrar</Button>
@@ -1685,9 +1775,32 @@ export default function Compras() {
         onCancel={() => setNcModalOpen(false)}
         okText="Registrar"
         confirmLoading={savingNC}
-        width={520}
+        width={620}
       >
         <div className="space-y-4">
+          {/* Tipo NC */}
+          <div>
+            <label className={labelClass}>Tipo de nota de crédito *</label>
+            <div className="flex gap-3 mt-1">
+              {([
+                { value: 'AJUSTE_PRECIO', label: 'Ajuste de precio' },
+                { value: 'DEVOLUCION', label: 'Devolución de mercadería' },
+              ] as const).map(opt => (
+                <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm">
+                  <input
+                    type="radio"
+                    name="ncTipoNC"
+                    value={opt.value}
+                    checked={ncTipoNC === opt.value}
+                    onChange={() => { setNcTipoNC(opt.value); setNcDetalles([]) }}
+                    className="accent-blue-600"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div>
             <label className={labelClass}>Proveedor *</label>
             <Combobox
@@ -1703,7 +1816,11 @@ export default function Compras() {
             <select
               className={inputClass}
               value={ncCompraId}
-              onChange={e => setNcCompraId(e.target.value ? Number(e.target.value) : '')}
+              onChange={e => {
+                const id = e.target.value ? Number(e.target.value) : ''
+                setNcCompraId(id)
+                if (ncTipoNC === 'DEVOLUCION') prefillDetallesFromCompra(id)
+              }}
               disabled={!ncProveedorId}
             >
               <option value="">Sin compra asociada</option>
@@ -1714,6 +1831,95 @@ export default function Compras() {
               ))}
             </select>
           </div>
+
+          {/* Items table — only shown for DEVOLUCION */}
+          {ncTipoNC === 'DEVOLUCION' && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className={labelClass}>Ítems devueltos *</label>
+                <button
+                  type="button"
+                  onClick={addNcDetalle}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  + Agregar ítem
+                </button>
+              </div>
+              {ncDetalles.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">
+                  {ncCompraId ? 'La compra no tiene ítems registrados.' : 'No hay ítems. Seleccioná una compra para pre-llenar o agregá manualmente.'}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {ncDetalles.map((det, idx) => (
+                    <div key={idx} className="grid grid-cols-[1fr_80px_100px_28px] gap-1 items-center">
+                      <select
+                        className={`${inputClass} text-xs py-1`}
+                        value={det.producto}
+                        onChange={e => {
+                          const prod = productos.find(p => p.id === Number(e.target.value))
+                          updateNcDetalle(idx, 'producto', Number(e.target.value))
+                          if (prod) updateNcDetalle(idx, 'producto_nombre', prod.descripcion)
+                        }}
+                      >
+                        <option value={0}>Producto...</option>
+                        {productos.map(p => (
+                          <option key={p.id} value={p.id}>{p.descripcion}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min={0.001}
+                        step="0.001"
+                        className={`${inputClass} text-xs py-1`}
+                        placeholder="Cant."
+                        value={det.cantidad}
+                        onChange={e => {
+                          updateNcDetalle(idx, 'cantidad', Number(e.target.value))
+                          const total = ncDetalles.reduce((s, d, i) => {
+                            const cant = i === idx ? Number(e.target.value) : d.cantidad
+                            return s + cant * d.precio_unitario
+                          }, 0)
+                          setNcMonto(String(Math.round(total)))
+                        }}
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        className={`${inputClass} text-xs py-1`}
+                        placeholder="P.Unit."
+                        value={det.precio_unitario}
+                        onChange={e => {
+                          updateNcDetalle(idx, 'precio_unitario', Number(e.target.value))
+                          const total = ncDetalles.reduce((s, d, i) => {
+                            const pu = i === idx ? Number(e.target.value) : d.precio_unitario
+                            return s + d.cantidad * pu
+                          }, 0)
+                          setNcMonto(String(Math.round(total)))
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          removeNcDetalle(idx)
+                          const remaining = ncDetalles.filter((_, i) => i !== idx)
+                          const total = remaining.reduce((s, d) => s + d.cantidad * d.precio_unitario, 0)
+                          setNcMonto(remaining.length ? String(Math.round(total)) : '')
+                        }}
+                        className="text-red-400 hover:text-red-600 text-lg leading-none"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <p className="text-xs text-slate-500 text-right">
+                    Total calculado: <strong>{formatGs(ncDetalles.reduce((s, d) => s + d.cantidad * d.precio_unitario, 0))}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Monto *</label>
