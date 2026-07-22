@@ -15,6 +15,7 @@ from common.object_permissions import IsCajaOwnerOrAdmin
 from common.permissions import IsCajeroOrAdmin, IsAdmin, IsStaffUser
 from common.throttling import SensitiveEndpointThrottle
 from .filters import VentaFilter
+from apps.usuarios.auditoria import registrar_auditoria
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
@@ -85,6 +86,13 @@ class VentaViewSet(viewsets.ModelViewSet):
             advertencias = verificar_alergenos_venta(hijo, productos)
 
         venta = self._registrar(serializer)
+        registrar_auditoria(
+            request=request,
+            operacion="CREAR_VENTA",
+            tabla="ventas_venta",
+            id_registro=venta.id,
+            descripcion=f"Venta #{venta.id} {venta.tipo} {venta.monto_total} Gs.",
+        )
         resp_data = VentaSerializer(venta).data
         headers = self.get_success_headers(resp_data)
         if advertencias:
@@ -99,9 +107,25 @@ class VentaViewSet(viewsets.ModelViewSet):
         try:
             venta = VentaService.anular_venta(venta, anulado_por=request.user)
         except Exception as e:
+            registrar_auditoria(
+                request=request,
+                operacion="ANULAR_VENTA",
+                tabla="ventas_venta",
+                id_registro=venta.id,
+                descripcion=f"Intento fallido de anular venta #{venta.id}",
+                resultado="FALLA",
+                mensaje_error=str(e),
+            )
             if hasattr(e, "detail"):
                 return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        registrar_auditoria(
+            request=request,
+            operacion="ANULAR_VENTA",
+            tabla="ventas_venta",
+            id_registro=venta.id,
+            descripcion=f"Venta #{venta.id} anulada ({venta.monto_total} Gs.)",
+        )
         return Response(VentaSerializer(venta).data)
 
     def _registrar(self, serializer):
@@ -199,6 +223,16 @@ class NotaCreditoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["estado", "cliente"]
+
+    def perform_create(self, serializer):
+        nc = serializer.save()
+        registrar_auditoria(
+            request=self.request,
+            operacion="EMITIR_NOTA_CREDITO",
+            tabla="ventas_notacredito",
+            id_registro=nc.id,
+            descripcion=f"Nota de crédito #{nc.id} por {nc.monto_total} Gs. cliente={nc.cliente_id}",
+        )
 
 
 class DetalleNotaCreditoViewSet(viewsets.ModelViewSet):
