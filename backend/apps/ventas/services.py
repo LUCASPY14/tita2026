@@ -347,11 +347,10 @@ class VentaService:
                         venta=venta,
                     )
 
-            # 7. Facturación opcional
-            # Solo aplica para ventas CONTADO con medio_pago real (no prepago).
+            # 7. Facturación opcional (CONTADO con cualquier medio: prepago, efectivo, POS, etc.)
             # Si el cajero ingresó nro_factura → crea la Factura al instante.
             # Si solo se marcó genera_factura_legal → queda pendiente para Facturación.
-            if nro_factura and tipo == "CONTADO" and medio_pago is not None:
+            if tipo == "CONTADO" and nro_factura:
                 from apps.contabilidad.services import FacturacionService
                 iva_dict = {
                     "iva_10": iva_10,
@@ -368,7 +367,7 @@ class VentaService:
                 venta.nro_factura = nro_factura
                 venta.genera_factura_legal = True
                 venta.save(update_fields=["factura", "nro_factura", "genera_factura_legal"])
-            elif genera_factura_legal and tipo == "CONTADO" and medio_pago is not None:
+            elif tipo == "CONTADO" and genera_factura_legal:
                 venta.genera_factura_legal = True
                 venta.save(update_fields=["genera_factura_legal"])
 
