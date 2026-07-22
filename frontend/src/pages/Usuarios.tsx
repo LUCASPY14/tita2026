@@ -101,7 +101,9 @@ const ROL_COLOR: Record<string, BadgeColor> = {
 
 const ROL_LABEL: Record<string, string> = {
   ADMIN: 'Administrador',
+  SUPERVISOR: 'Supervisor',
   CAJERO: 'Cajero',
+  COBRADOR: 'Cobrador',
   COCINA: 'Cocina',
   CLIENTE_WEB: 'Portal Padres',
 }
@@ -418,7 +420,9 @@ export default function Usuarios() {
 
   const ROLES_SISTEMA = [
     { value: 'ADMIN', label: 'Administrador' },
+    { value: 'SUPERVISOR', label: 'Supervisor' },
     { value: 'CAJERO', label: 'Cajero' },
+    { value: 'COBRADOR', label: 'Cobrador' },
     { value: 'COCINA', label: 'Cocina' },
     { value: 'CLIENTE_WEB', label: 'Portal Padres' },
   ]
