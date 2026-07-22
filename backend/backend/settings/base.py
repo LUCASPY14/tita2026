@@ -389,19 +389,21 @@ LOGGING = {
         },
         "file": {
             "level": "INFO",
-            "class": "logging.handlers.RotatingFileHandler",
+            # FileHandler simple: evita el PermissionError de Windows al rotar
+            # (RotatingFileHandler usa os.rename() que falla si otro proceso
+            # tiene el archivo abierto). En producción (Linux/Docker) se usa
+            # RotatingFileHandler sin problemas.
+            "class": "logging.FileHandler",
             "filename": LOGS_DIR / "cantina.log",
-            "maxBytes": 1024 * 1024 * 10,  # 10 MB
-            "backupCount": 5,
+            "encoding": "utf-8",
             "formatter": "verbose",
             "filters": ["request_id"],
         },
         "file_errors": {
             "level": "ERROR",
-            "class": "logging.handlers.RotatingFileHandler",
+            "class": "logging.FileHandler",
             "filename": LOGS_DIR / "errors.log",
-            "maxBytes": 1024 * 1024 * 5,  # 5 MB
-            "backupCount": 3,
+            "encoding": "utf-8",
             "formatter": "verbose",
             "filters": ["request_id"],
         },
