@@ -829,6 +829,9 @@ export default function ModoRecreo() {
 
   const medioPagoSeleccionado = mediosPago.find(m => m.id === medioPagoSelId) ?? null
 
+  // Forma de pago: CONTADO (pago inmediato) o CREDITO (va a cuenta corriente)
+  const tipoVenta: 'CONTADO' | 'CREDITO' = modoPago === 'CREDITO' ? 'CREDITO' : 'CONTADO'
+
   const referenciaRequerida = modoPago === 'MEDIO' && (medioPagoSeleccionado?.requiere_validacion ?? false)
   const tieneTitular = tarjeta !== null || ((modoPago === 'MEDIO' || modoPago === 'CREDITO') && clienteDirecto !== null)
   // isOnline ya no bloquea: las ventas offline se encolan en IndexedDB
@@ -1303,52 +1306,88 @@ export default function ModoRecreo() {
             )}
           </div>
 
-          {/* Selector de medio de pago */}
-          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Medio de pago</p>
-            <div className="flex flex-wrap gap-2">
-              {/* PREPAGO */}
-              <button
-                onClick={() => { setModoPago('PREPAGO'); setMedioPagoSelId(null); setClienteDirecto(null); setClienteSearch(''); setClienteResultados([]) }}
-                className={[
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
-                  modoPago === 'PREPAGO'
-                    ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                    : 'bg-white border-slate-300 text-slate-600 hover:border-blue-300',
-                ].join(' ')}
-              >
-                <CreditCardIcon size={15} weight="fill" />
-                Prepago
-              </button>
-              {/* CRÉDITO / Cuenta corriente */}
-              <button
-                onClick={() => { setModoPago('CREDITO'); setMedioPagoSelId(null) }}
-                className={[
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
-                  modoPago === 'CREDITO'
-                    ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
-                    : 'bg-white border-slate-300 text-slate-600 hover:border-orange-300',
-                ].join(' ')}
-              >
-                <BankIcon size={15} weight="fill" />
-                Crédito
-              </button>
-              {/* Medios dinámicos (Contado) */}
-              {mediosPago.map(mp => (
-                <button key={mp.id}
-                  onClick={() => { setModoPago('MEDIO'); setMedioPagoSelId(mp.id) }}
+          {/* ── Selector de pago: dos niveles ── */}
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 space-y-3">
+
+            {/* Nivel 1: Forma de pago */}
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Forma de pago</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (modoPago === 'CREDITO') {
+                      setModoPago('PREPAGO')
+                      setClienteDirecto(null); setClienteSearch(''); setClienteResultados([])
+                    }
+                  }}
                   className={[
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
-                    modoPago === 'MEDIO' && medioPagoSelId === mp.id
-                      ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
-                      : 'bg-white border-slate-300 text-slate-600 hover:border-emerald-300',
+                    'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold border-2 transition-all cursor-pointer',
+                    tipoVenta === 'CONTADO'
+                      ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
+                      : 'bg-white border-slate-300 text-slate-600 hover:border-slate-400',
                   ].join(' ')}
                 >
-                  {iconMedio(mp.descripcion)}
-                  {mp.descripcion}
+                  <MoneyIcon size={15} weight="fill" />
+                  Contado
                 </button>
-              ))}
+                <button
+                  onClick={() => { setModoPago('CREDITO'); setMedioPagoSelId(null) }}
+                  className={[
+                    'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold border-2 transition-all cursor-pointer',
+                    tipoVenta === 'CREDITO'
+                      ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                      : 'bg-white border-slate-300 text-slate-600 hover:border-orange-300',
+                  ].join(' ')}
+                >
+                  <BankIcon size={15} weight="fill" />
+                  Crédito
+                </button>
+              </div>
             </div>
+
+            {/* Nivel 2: Medio de pago (solo Contado) */}
+            {tipoVenta === 'CONTADO' && (
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Medio de pago</p>
+                <div className="flex flex-wrap gap-2">
+                  {/* Prepago RFID */}
+                  <button
+                    onClick={() => { setModoPago('PREPAGO'); setMedioPagoSelId(null); setClienteDirecto(null); setClienteSearch(''); setClienteResultados([]) }}
+                    className={[
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
+                      modoPago === 'PREPAGO'
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                        : 'bg-white border-slate-300 text-slate-600 hover:border-blue-300',
+                    ].join(' ')}
+                  >
+                    <CreditCardIcon size={14} weight="fill" />
+                    Prepago
+                  </button>
+                  {/* Medios dinámicos */}
+                  {mediosPago.map(mp => (
+                    <button key={mp.id}
+                      onClick={() => { setModoPago('MEDIO'); setMedioPagoSelId(mp.id) }}
+                      className={[
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
+                        modoPago === 'MEDIO' && medioPagoSelId === mp.id
+                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                          : 'bg-white border-slate-300 text-slate-600 hover:border-emerald-300',
+                      ].join(' ')}
+                    >
+                      {iconMedio(mp.descripcion)}
+                      {mp.descripcion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Crédito: aviso */}
+            {tipoVenta === 'CREDITO' && (
+              <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 leading-snug">
+                La deuda queda registrada en la cuenta corriente del cliente.
+              </p>
+            )}
           </div>
 
           {/* Lista del carrito */}
@@ -1500,20 +1539,24 @@ export default function ModoRecreo() {
               </div>
             )}
 
-            {/* Botón COBRAR */}
+            {/* Botón COBRAR / ACREDITAR */}
             <button
               onClick={handleCobrar}
               disabled={!canCobrar}
               className={[
                 'w-full py-5 rounded-2xl font-black text-xl tracking-wide flex items-center justify-center gap-3 transition-all duration-150',
                 canCobrar
-                  ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer active:scale-95 shadow-lg shadow-green-500/25'
+                  ? tipoVenta === 'CREDITO'
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white cursor-pointer active:scale-95 shadow-lg shadow-orange-500/25'
+                    : 'bg-green-500 hover:bg-green-600 text-white cursor-pointer active:scale-95 shadow-lg shadow-green-500/25'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed',
               ].join(' ')}
             >
               {cobrando
                 ? <><SpinnerIcon size={24} weight="fill" className="animate-spin" />Procesando…</>
-                : <><CheckCircleIcon size={24} weight="fill" />COBRAR (F9)</>
+                : tipoVenta === 'CREDITO'
+                  ? <><BankIcon size={24} weight="fill" />ACREDITAR (F9)</>
+                  : <><CheckCircleIcon size={24} weight="fill" />COBRAR (F9)</>
               }
             </button>
 
