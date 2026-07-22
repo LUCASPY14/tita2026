@@ -20,6 +20,7 @@ from rest_framework.views import APIView
 from rest_framework import serializers as drf_serializers
 
 from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from apps.usuarios.auditoria import registrar_auditoria
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -180,8 +181,59 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 {"error": "Solo se pueden eliminar registros en estado ANULADO. Anulá el registro primero."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        registro.delete()
+        with transaction.atomic():
+            # Revertir el costo de la cuenta mensual si el registro fue cobrado
+            if registro.ya_cobrado and registro.costo_almuerzo:
+                cuenta = CuentaAlmuerzoMensual.objects.select_for_update().filter(
+                    hijo=registro.hijo,
+                    anio=registro.fecha_consumo.year,
+                    mes=registro.fecha_consumo.month,
+                ).first()
+                if cuenta:
+                    cuenta.cantidad_almuerzos = max(0, cuenta.cantidad_almuerzos - 1)
+                    cuenta.monto_total = max(0, cuenta.monto_total - registro.costo_almuerzo)
+                    cuenta._calcular_estado()
+                    cuenta.save(update_fields=["cantidad_almuerzos", "monto_total", "estado", "fecha_pago"])
+            registro.delete()
+        registrar_auditoria(
+            request=request,
+            operacion="ELIMINAR_REGISTRO_ALMUERZO",
+            tabla="almuerzos_registroconsumoalmuerzo",
+            descripcion=f"Registro ANULADO eliminado — hijo={registro.hijo_id} fecha={registro.fecha_consumo}",
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def perform_update(self, serializer):
+        registro_anterior = self.get_object()
+        estado_anterior = registro_anterior.estado
+        registro = serializer.save()
+
+        # Si se anuló un registro que estaba cobrado → descontar de la cuenta mensual
+        if (
+            estado_anterior == RegistroConsumoAlmuerzo.Estado.REGISTRADO
+            and registro.estado == RegistroConsumoAlmuerzo.Estado.ANULADO
+            and registro.ya_cobrado
+            and registro.costo_almuerzo
+        ):
+            with transaction.atomic():
+                cuenta = CuentaAlmuerzoMensual.objects.select_for_update().filter(
+                    hijo=registro.hijo,
+                    anio=registro.fecha_consumo.year,
+                    mes=registro.fecha_consumo.month,
+                ).first()
+                if cuenta:
+                    cuenta.cantidad_almuerzos = max(0, cuenta.cantidad_almuerzos - 1)
+                    cuenta.monto_total = max(0, cuenta.monto_total - registro.costo_almuerzo)
+                    cuenta._calcular_estado()
+                    cuenta.save(update_fields=["cantidad_almuerzos", "monto_total", "estado", "fecha_pago"])
+            registrar_auditoria(
+                request=self.request,
+                operacion="ANULAR_REGISTRO_ALMUERZO",
+                tabla="almuerzos_registroconsumoalmuerzo",
+                id_registro=registro.id,
+                descripcion=f"Consumo anulado — hijo={registro.hijo_id} fecha={registro.fecha_consumo} costo={registro.costo_almuerzo} Gs.",
+            )
+
     filterset_class = RegistroConsumoFilter
     search_fields = ["hijo__nombre", "hijo__apellido"]
     ordering = ["-fecha_consumo", "-hora_registro"]
@@ -310,6 +362,9 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         cuenta.cantidad_almuerzos = F("cantidad_almuerzos") + 1
         cuenta.monto_total = F("monto_total") + registro.costo_almuerzo
         cuenta.save(update_fields=["cantidad_almuerzos", "monto_total"])
+        # Recalcular estado: monto_total cambió, puede haber salido de PAGADO
+        cuenta.refresh_from_db(fields=["monto_total", "monto_pagado", "estado", "fecha_pago"])
+        cuenta.actualizar_estado()
 
 
 # ==============================================================================
@@ -317,7 +372,7 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 # ==============================================================================
 
 class CuentaAlmuerzoMensualViewSet(viewsets.ModelViewSet):
-    queryset = CuentaAlmuerzoMensual.objects.select_related("hijo").all()
+    queryset = CuentaAlmuerzoMensual.objects.select_related("hijo__grado", "hijo__tarjeta").all()
     serializer_class = CuentaAlmuerzoMensualSerializer
     permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
@@ -388,14 +443,29 @@ class PagoCuentaAlmuerzoViewSet(viewsets.ModelViewSet):
     ordering = ["-fecha_pago"]
 
     def perform_create(self, serializer):
+        nro_factura = (self.request.data.get("nro_factura") or "").strip()
         with transaction.atomic():
-            pago = serializer.save()
+            pago = serializer.save(registrado_por=self.request.user)
             cuenta = (
                 CuentaAlmuerzoMensual.objects
                 .select_for_update()
                 .get(pk=pago.cuenta_id)
             )
             cuenta.registrar_pago(pago.monto)
+            if nro_factura:
+                from apps.contabilidad.services import FacturacionService
+                FacturacionService.emitir_para_origen(
+                    tipo="PAGO_ALMUERZO",
+                    origen_id=pago.id,
+                    nro_factura=nro_factura,
+                )
+        registrar_auditoria(
+            request=self.request,
+            operacion="PAGO_CUENTA_ALMUERZO",
+            tabla="almuerzos_pagocuentaalmuerzo",
+            id_registro=pago.id,
+            descripcion=f"Pago {pago.monto} Gs. en cuenta almuerzo #{pago.cuenta_id}",
+        )
 
 
 # ==============================================================================
@@ -537,21 +607,27 @@ class ReporteAlmuerzosView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        tarjeta_filter = request.query_params.get("tarjeta")
+
         qs = CuentaAlmuerzoMensual.objects.filter(
             anio=anio, mes=mes
-        ).select_related("hijo__grado")
+        ).select_related("hijo__grado", "hijo__tarjeta")
 
         if hijo_id:
             qs = qs.filter(hijo_id=hijo_id)
         if grado:
             qs = qs.filter(hijo__grado__nombre__icontains=grado)
+        if tarjeta_filter:
+            qs = qs.filter(hijo__tarjeta__nro_tarjeta__icontains=tarjeta_filter)
 
         filas = []
         for c in qs.order_by("hijo__apellido", "hijo__nombre"):
+            tarjeta = getattr(c.hijo, "tarjeta", None)
             filas.append({
                 "hijo_id": c.hijo_id,
                 "hijo": c.hijo.nombre_completo,
                 "grado": c.hijo.grado.nombre if c.hijo.grado else "",
+                "nro_tarjeta": tarjeta.nro_tarjeta if tarjeta else "",
                 "cantidad_almuerzos": c.cantidad_almuerzos,
                 "monto_total": int(c.monto_total),
                 "monto_pagado": int(c.monto_pagado),
@@ -588,7 +664,7 @@ class ReporteAlmuerzosView(APIView):
         return Response({
             "periodo": {"anio": int(anio), "mes": int(mes)},
             "totales": totales,
-            "detalle": filas,
+            "filas": filas,
         })
 
 

@@ -369,7 +369,13 @@ class CuentaAlmuerzoMensual(models.Model):
 
     def registrar_pago(self, monto):
         """Incrementa monto_pagado, recalcula estado y persiste todo en un solo save."""
-        self.monto_pagado += monto
+        nuevo_pagado = self.monto_pagado + monto
+        if nuevo_pagado > self.monto_total:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                {"monto": f"El pago (₲{monto:,.0f}) supera el saldo pendiente (₲{self.saldo_pendiente:,.0f})."}
+            )
+        self.monto_pagado = nuevo_pagado
         self._calcular_estado()
         self.save(update_fields=["monto_pagado", "estado", "fecha_pago"])
 

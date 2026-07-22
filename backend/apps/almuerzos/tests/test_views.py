@@ -563,7 +563,7 @@ class TestReporteAlmuerzos:
         assert resp.status_code == 200
         assert "periodo" in resp.data
         assert "totales" in resp.data
-        assert "detalle" in resp.data
+        assert "filas" in resp.data
 
     def test_con_cuenta_mensual_muestra_alumno(self, api_admin, cuenta_mensual):
         hoy = date.today()
@@ -581,7 +581,7 @@ class TestReporteAlmuerzos:
             {"anio": str(hoy.year), "mes": str(hoy.month), "hijo": hijo_almuerzo.pk},
         )
         assert resp.status_code == 200
-        assert len(resp.data["detalle"]) == 1
+        assert len(resp.data["filas"]) == 1
 
     def test_filtro_por_grado(self, api_admin, cuenta_mensual, grado):
         hoy = date.today()
@@ -609,6 +609,26 @@ class TestReporteAlmuerzos:
         )
         assert resp.status_code == 200
         assert b"Pedro" in resp.content
+
+    def test_filtro_por_tarjeta(self, api_admin, cuenta_mensual, tarjeta_almuerzo):
+        hoy = date.today()
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reportes/",
+            {"anio": str(hoy.year), "mes": str(hoy.month), "tarjeta": "ALMZ-VIEW01"},
+        )
+        assert resp.status_code == 200
+        assert len(resp.data["filas"]) == 1
+        assert resp.data["filas"][0]["nro_tarjeta"] == "ALMZ-VIEW01"
+
+    def test_filas_incluyen_nro_tarjeta(self, api_admin, cuenta_mensual, tarjeta_almuerzo):
+        hoy = date.today()
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reportes/",
+            {"anio": str(hoy.year), "mes": str(hoy.month)},
+        )
+        assert resp.status_code == 200
+        assert len(resp.data["filas"]) >= 1
+        assert "nro_tarjeta" in resp.data["filas"][0]
 
     def test_requiere_autenticacion(self, api_client):
         resp = api_client.get("/api/v1/almuerzos/reportes/", {"anio": "2026", "mes": "5"})
