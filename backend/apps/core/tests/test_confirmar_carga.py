@@ -89,8 +89,11 @@ class TestConfirmarCarga:
 
         carga_pendiente.refresh_from_db()
         assert carga_pendiente.estado == CargaSaldo.Estado.CONFIRMADA
-        assert carga_pendiente.responsable == usuario_cajero
+        assert carga_pendiente.supervisor_aprobador == usuario_cajero
+        assert carga_pendiente.fecha_aprobacion is not None
         assert carga_pendiente.fecha_confirmacion is not None
+        # el responsable original no debe pisarse
+        assert carga_pendiente.responsable is None
 
         assert MovimientoTarjeta.objects.filter(
             tarjeta=tarjeta,

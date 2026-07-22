@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from apps.usuarios.auditoria import registrar_auditoria
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -111,6 +112,33 @@ class ClienteViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         cliente = serializer.save()
         _crear_usuario_portal(cliente)
+        registrar_auditoria(
+            request=self.request,
+            operacion="CREAR_CLIENTE",
+            tabla="clientes_cliente",
+            id_registro=cliente.id,
+            descripcion=f"Cliente creado: {cliente.nombres} {cliente.apellidos} RUC/CI={cliente.ruc_ci}",
+        )
+
+    def perform_update(self, serializer):
+        cliente = serializer.save()
+        registrar_auditoria(
+            request=self.request,
+            operacion="MODIFICAR_CLIENTE",
+            tabla="clientes_cliente",
+            id_registro=cliente.id,
+            descripcion=f"Cliente modificado: {cliente.nombres} {cliente.apellidos} RUC/CI={cliente.ruc_ci}",
+        )
+
+    def perform_destroy(self, instance):
+        registrar_auditoria(
+            request=self.request,
+            operacion="ELIMINAR_CLIENTE",
+            tabla="clientes_cliente",
+            id_registro=instance.id,
+            descripcion=f"Cliente eliminado: {instance.nombres} {instance.apellidos} RUC/CI={instance.ruc_ci}",
+        )
+        instance.delete()
 
     @action(detail=True, methods=["post"], url_path="reset-pin",
             permission_classes=[IsAdminOrReadOnly])
@@ -221,6 +249,26 @@ class HijoViewSet(viewsets.ModelViewSet):
             qs = qs.filter(cliente_responsable=cliente)
         return qs
 
+    def perform_create(self, serializer):
+        hijo = serializer.save()
+        registrar_auditoria(
+            request=self.request,
+            operacion="CREAR_HIJO",
+            tabla="clientes_hijo",
+            id_registro=hijo.id,
+            descripcion=f"Alumno creado: {hijo.nombre_completo} (cliente={hijo.cliente_responsable_id})",
+        )
+
+    def perform_destroy(self, instance):
+        registrar_auditoria(
+            request=self.request,
+            operacion="ELIMINAR_HIJO",
+            tabla="clientes_hijo",
+            id_registro=instance.id,
+            descripcion=f"Alumno eliminado: {instance.nombre_completo} (cliente={instance.cliente_responsable_id})",
+        )
+        instance.delete()
+
 
 class GradoViewSet(viewsets.ModelViewSet):
     queryset = Grado.objects.all()
@@ -308,17 +356,37 @@ class ReporteCuentaCorrienteView(APIView):
         for cliente in clientes_con_saldo:
             saldo = Decimal(str(cliente.saldo_deuda or 0))
 
-            # Buscar la venta pendiente más antigua para calcular aging
-            venta_antigua = (
+            # Aging = antigüedad del ciclo de deuda actual.
+            # Buscamos el último movimiento donde el saldo volvió a 0 (o quedó negativo),
+            # y contamos desde el primer movimiento posterior a ese punto.
+            ultimo_saldo_cero = (
                 CuentaCorrienteCliente.objects
-                .filter(cliente=cliente, tipo="DEBITO")
-                .order_by("fecha")
-                .values("fecha")
+                .filter(cliente=cliente, saldo_resultante__lte=0)
+                .order_by("-fecha", "-id")
+                .values("id", "fecha")
                 .first()
             )
             dias_atraso = 0
-            if venta_antigua:
-                dias_atraso = (hoy - venta_antigua["fecha"].date()).days
+            if ultimo_saldo_cero:
+                # Primer mov con saldo > 0 DESPUÉS del último cierre
+                inicio_ciclo = (
+                    CuentaCorrienteCliente.objects
+                    .filter(cliente=cliente, id__gt=ultimo_saldo_cero["id"], saldo_resultante__gt=0)
+                    .order_by("fecha", "id")
+                    .values("fecha")
+                    .first()
+                )
+            else:
+                # El saldo nunca fue 0: tomar el movimiento más antiguo con saldo > 0
+                inicio_ciclo = (
+                    CuentaCorrienteCliente.objects
+                    .filter(cliente=cliente, saldo_resultante__gt=0)
+                    .order_by("fecha", "id")
+                    .values("fecha")
+                    .first()
+                )
+            if inicio_ciclo:
+                dias_atraso = (hoy - inicio_ciclo["fecha"].date()).days
 
             if dias_atraso <= 30:
                 bucket = "0-30"

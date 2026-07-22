@@ -12,6 +12,7 @@ from rest_framework.response import Response
 
 from common.pagination import CursorResultsSetPagination
 from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from apps.usuarios.auditoria import registrar_auditoria
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -101,21 +102,38 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
         metodo = data.get("metodo_pago", "")
 
         if metodo in METODOS_CONFIRMACION_INMEDIATA:
+            from django.db import transaction as _tx
             from apps.contabilidad.models import CierreCaja
             cierre_caja = CierreCaja.objects.filter(
                 empleado=request.user, estado=CierreCaja.Estado.ABIERTO
             ).select_related("caja").first()
             medio_pago_obj = MedioPago.objects.filter(descripcion__iexact=metodo).first()
+            nro_factura = (request.data.get("nro_factura") or "").strip()
 
-            carga = TarjetaService.cargar_saldo(
-                tarjeta=data["tarjeta"],
-                monto=data["monto_cargado"],
-                cliente_origen=data.get("cliente_origen"),
-                responsable=self.request.user,
-                metodo_pago=metodo,
-                referencia=data.get("referencia") or "",
-                cierre_caja=cierre_caja,
-                medio_pago_obj=medio_pago_obj,
+            with _tx.atomic():
+                carga = TarjetaService.cargar_saldo(
+                    tarjeta=data["tarjeta"],
+                    monto=data["monto_cargado"],
+                    cliente_origen=data.get("cliente_origen"),
+                    responsable=self.request.user,
+                    metodo_pago=metodo,
+                    referencia=data.get("referencia") or "",
+                    cierre_caja=cierre_caja,
+                    medio_pago_obj=medio_pago_obj,
+                )
+                if nro_factura:
+                    from apps.contabilidad.services import FacturacionService
+                    FacturacionService.emitir_para_origen(
+                        tipo="CARGA_SALDO",
+                        origen_id=carga.id,
+                        nro_factura=nro_factura,
+                    )
+            registrar_auditoria(
+                request=request,
+                operacion="RECARGA_SALDO",
+                tabla="core_cargasaldo",
+                id_registro=carga.id,
+                descripcion=f"Recarga {data['monto_cargado']} Gs. en tarjeta {data['tarjeta'].nro_tarjeta} vía {metodo}",
             )
             out = self.get_serializer(carga)
             return Response(out.data, status=status.HTTP_201_CREATED)
@@ -148,11 +166,25 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
                 creado_por=request.user,
             )
 
+            registrar_auditoria(
+                request=request,
+                operacion="RECARGA_SALDO",
+                tabla="core_cargasaldo",
+                id_registro=carga.id,
+                descripcion=f"Recarga {data['monto_cargado']} Gs. en tarjeta {tarjeta_obj.nro_tarjeta} vía CUENTA_CORRIENTE",
+            )
             out = self.get_serializer(carga)
             return Response(out.data, status=status.HTTP_201_CREATED)
 
         # Pagos por transferencia u otros: quedan PENDIENTE para confirmacion manual
         carga = serializer.save(responsable=self.request.user)
+        registrar_auditoria(
+            request=request,
+            operacion="RECARGA_SALDO_PENDIENTE",
+            tabla="core_cargasaldo",
+            id_registro=carga.id,
+            descripcion=f"Recarga {carga.monto_cargado} Gs. en tarjeta {carga.tarjeta_id} vía {metodo} — PENDIENTE confirmación",
+        )
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -165,6 +197,7 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
                 {"error": f"Solo se pueden confirmar cargas PENDIENTE. Estado actual: {carga.estado}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        from django.db import transaction
         from apps.contabilidad.models import CierreCaja
         cierre_caja = CierreCaja.objects.filter(
             empleado=request.user, estado=CierreCaja.Estado.ABIERTO
@@ -173,11 +206,27 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             MedioPago.objects.filter(descripcion__iexact=carga.metodo_pago).first()
             if carga.metodo_pago else None
         )
-        carga_confirmada = TarjetaService.confirmar_carga(
-            carga=carga,
-            responsable=request.user,
-            cierre_caja=cierre_caja,
-            medio_pago_obj=medio_pago_obj,
+        nro_factura = (request.data.get("nro_factura") or "").strip()
+        with transaction.atomic():
+            carga_confirmada = TarjetaService.confirmar_carga(
+                carga=carga,
+                responsable=request.user,
+                cierre_caja=cierre_caja,
+                medio_pago_obj=medio_pago_obj,
+            )
+            if nro_factura:
+                from apps.contabilidad.services import FacturacionService
+                FacturacionService.emitir_para_origen(
+                    tipo="CARGA_SALDO",
+                    origen_id=carga_confirmada.id,
+                    nro_factura=nro_factura,
+                )
+        registrar_auditoria(
+            request=request,
+            operacion="CONFIRMAR_CARGA",
+            tabla="core_cargasaldo",
+            id_registro=carga_confirmada.id,
+            descripcion=f"Confirmación carga {carga_confirmada.monto_cargado} Gs. en tarjeta {carga_confirmada.tarjeta_id}",
         )
         return Response(self.get_serializer(carga_confirmada).data)
 

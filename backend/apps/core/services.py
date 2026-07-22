@@ -123,9 +123,11 @@ class TarjetaService:
             tarjeta.saldo_actual += carga.monto_cargado
             tarjeta.save()
 
+            now = timezone.now()
             carga.estado = CargaSaldo.Estado.CONFIRMADA
-            carga.responsable = responsable
-            carga.fecha_confirmacion = timezone.now()
+            carga.supervisor_aprobador = responsable
+            carga.fecha_aprobacion = now
+            carga.fecha_confirmacion = now
             carga.save()
 
             MovimientoTarjeta.objects.create(

@@ -12,6 +12,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.usuarios.auditoria import registrar_auditoria
 
 from common.object_permissions import CajaOwnerQuerysetMixin, IsCajaOwnerOrAdmin
 from common.permissions import IsAdmin, IsCajeroOrAdmin, IsStaffUser, IsStaffOrClienteWeb
@@ -79,6 +80,13 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
             empleado=request.user,
             monto_inicial=data.get("monto_inicial", Decimal("0")),
         )
+        registrar_auditoria(
+            request=request,
+            operacion="ABRIR_CAJA",
+            tabla="contabilidad_cierrecaja",
+            id_registro=cierre.id,
+            descripcion=f"Caja '{cierre.caja}' abierta con {cierre.monto_inicial} Gs.",
+        )
         out = CierreCajaSerializer(cierre)
         headers = self.get_success_headers(out.data)
         return Response(out.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -95,6 +103,13 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
         cierre.estado = CierreCaja.Estado.CONCILIADO
         cierre.observaciones_conciliacion = request.data.get("observaciones", "") or ""
         cierre.save(update_fields=["estado", "observaciones_conciliacion"])
+        registrar_auditoria(
+            request=request,
+            operacion="CONCILIAR_CAJA",
+            tabla="contabilidad_cierrecaja",
+            id_registro=cierre.id,
+            descripcion=f"Caja '{cierre.caja}' conciliada",
+        )
         return Response(CierreCajaSerializer(cierre).data)
 
     @action(detail=True, methods=["post"], url_path="cerrar")
@@ -113,6 +128,13 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
         monto_contado = Decimal(serializer.validated_data["monto_contado_fisico"])
 
         cierre = CajaService.cerrar_caja(cierre=cierre, monto_contado=monto_contado)
+        registrar_auditoria(
+            request=request,
+            operacion="CERRAR_CAJA",
+            tabla="contabilidad_cierrecaja",
+            id_registro=cierre.id,
+            descripcion=f"Caja '{cierre.caja}' cerrada — contado={monto_contado} Gs. diferencia={cierre.diferencia} Gs.",
+        )
         return Response(CierreCajaSerializer(cierre).data)
 
     @action(detail=True, methods=["get"], url_path="arqueo")
