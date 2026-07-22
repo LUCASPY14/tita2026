@@ -139,7 +139,7 @@ interface ClienteBasico { id: number; nombre_completo: string; ruc_ci: string }
 interface ItemCarrito { producto: Producto; cantidad: number }
 interface MedioPagoDB { id: number; descripcion: string; activo: boolean; requiere_validacion: boolean }
 
-type ModoPago = 'PREPAGO' | 'MEDIO'
+type ModoPago = 'PREPAGO' | 'MEDIO' | 'CREDITO'
 type Flash = 'none' | 'ok' | 'error' | 'restrict'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -422,7 +422,7 @@ export default function ModoRecreo() {
 
   // Búsqueda debounced de clientes para venta directa (sin tarjeta)
   useEffect(() => {
-    if (tarjeta || clienteDirecto || modoPago !== 'MEDIO') {
+    if (tarjeta || clienteDirecto || (modoPago !== 'MEDIO' && modoPago !== 'CREDITO')) {
       setClienteResultados([])
       return
     }
@@ -660,7 +660,7 @@ export default function ModoRecreo() {
 
       const payload: Record<string, unknown> = {
         cliente: clienteId,
-        tipo: 'CONTADO',
+        tipo: modoPago === 'CREDITO' ? 'CREDITO' : 'CONTADO',
         items: carrito.map(i => ({
           producto: i.producto.id,
           cantidad: i.cantidad,
@@ -673,6 +673,9 @@ export default function ModoRecreo() {
         payload.tarjeta = tarjeta.nro_tarjeta
         payload.medio_pago = null
         if (pinAutorizacion) payload.pin_autorizacion = pinAutorizacion
+      } else if (modoPago === 'CREDITO') {
+        payload.tarjeta = null
+        payload.medio_pago = null
       } else {
         payload.tarjeta = null
         payload.medio_pago = medioPagoSelId
@@ -827,10 +830,10 @@ export default function ModoRecreo() {
   const medioPagoSeleccionado = mediosPago.find(m => m.id === medioPagoSelId) ?? null
 
   const referenciaRequerida = modoPago === 'MEDIO' && (medioPagoSeleccionado?.requiere_validacion ?? false)
-  const tieneTitular = tarjeta !== null || (modoPago === 'MEDIO' && clienteDirecto !== null)
+  const tieneTitular = tarjeta !== null || ((modoPago === 'MEDIO' || modoPago === 'CREDITO') && clienteDirecto !== null)
   // isOnline ya no bloquea: las ventas offline se encolan en IndexedDB
   const canCobrar = carrito.length > 0 && !cobrando && tieneTitular &&
-    (modoPago === 'PREPAGO' || (modoPago === 'MEDIO' && medioPagoSelId !== null)) &&
+    (modoPago === 'PREPAGO' || modoPago === 'CREDITO' || (modoPago === 'MEDIO' && medioPagoSelId !== null)) &&
     (!referenciaRequerida || referencia.trim().length > 0)
 
   // Pantalla de bloqueo: sin caja abierta
@@ -1079,8 +1082,8 @@ export default function ModoRecreo() {
                   </div>
                 )}
               </>
-            ) : modoPago === 'MEDIO' ? (
-              /* ── Venta directa sin tarjeta ── */
+            ) : (modoPago === 'MEDIO' || modoPago === 'CREDITO') ? (
+              /* ── Venta directa sin tarjeta (Contado o Crédito) ── */
               <div className="space-y-3">
                 {clienteDirecto ? (
                   <>
@@ -1091,9 +1094,11 @@ export default function ModoRecreo() {
                       <p className="text-xl font-black text-slate-900 leading-tight">{clienteDirecto.nombre_completo}</p>
                       <p className="text-slate-400 text-sm mt-0.5">{clienteDirecto.ruc_ci}</p>
                     </div>
-                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="text-emerald-700 text-sm font-bold">Venta directa</span>
+                    <div className={`flex items-center gap-2 rounded-lg px-4 py-2 ${modoPago === 'CREDITO' ? 'bg-orange-50 border border-orange-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${modoPago === 'CREDITO' ? 'bg-orange-500' : 'bg-emerald-500'}`} />
+                      <span className={`text-sm font-bold ${modoPago === 'CREDITO' ? 'text-orange-700' : 'text-emerald-700'}`}>
+                        {modoPago === 'CREDITO' ? 'Crédito / Cuenta corriente' : 'Venta directa'}
+                      </span>
                     </div>
                     <button
                       onClick={() => { setClienteDirecto(null); setClienteSearch(''); setClienteResultados([]) }}
@@ -1315,7 +1320,20 @@ export default function ModoRecreo() {
                 <CreditCardIcon size={15} weight="fill" />
                 Prepago
               </button>
-              {/* Medios dinámicos */}
+              {/* CRÉDITO / Cuenta corriente */}
+              <button
+                onClick={() => { setModoPago('CREDITO'); setMedioPagoSelId(null) }}
+                className={[
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
+                  modoPago === 'CREDITO'
+                    ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                    : 'bg-white border-slate-300 text-slate-600 hover:border-orange-300',
+                ].join(' ')}
+              >
+                <BankIcon size={15} weight="fill" />
+                Crédito
+              </button>
+              {/* Medios dinámicos (Contado) */}
               {mediosPago.map(mp => (
                 <button key={mp.id}
                   onClick={() => { setModoPago('MEDIO'); setMedioPagoSelId(mp.id) }}
