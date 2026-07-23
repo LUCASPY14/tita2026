@@ -315,8 +315,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
     queryset = Factura.objects.select_related("cliente", "venta").all()
     serializer_class = FacturaSerializer
     permission_classes = [IsCajeroOrAdmin]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["estado", "cliente"]
+    search_fields = ["nro_factura", "cliente__nombres", "cliente__apellidos", "cliente__razon_social"]
+    ordering_fields = ["fecha_emision", "monto_total", "nro_factura"]
+    ordering = ["-fecha_emision"]
 
     def create(self, request, *args, **kwargs):
         """POST directo a /facturas/ debe usar el endpoint /facturas/emitir/."""
