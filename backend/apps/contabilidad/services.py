@@ -349,6 +349,7 @@ class FacturacionService:
                 cliente_obj = (origenes[0].cliente_origen
                                or origenes[0].tarjeta.hijo.cliente_responsable)
                 monto_total = sum(o.monto_cargado for o in origenes)
+                iva = cls._calcular_iva_10(monto_total)
 
             elif tipo == TIPO_PAGO_ALMUERZO:
                 origenes = list(
