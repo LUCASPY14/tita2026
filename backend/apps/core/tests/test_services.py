@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para core — TarjetaService (cargar_saldo, consumir_saldo).
 """
 import pytest
@@ -124,12 +124,12 @@ class TestCargarSaldo:
     def test_whatsapp_exception_no_interrumpe_carga(
         self, tarjeta_activa, cliente, usuario_cajero
     ):
-        """Si _whatsapp_cliente lanza excepción, la carga igual se completa."""
+        """Si whatsapp_cliente lanza excepción, la carga igual se completa."""
         from unittest.mock import patch
         from apps.core.services import TarjetaService
 
         with patch(
-            "apps.notificaciones.services._whatsapp_cliente",
+            "apps.notificaciones.services.whatsapp_cliente",
             side_effect=RuntimeError("WAHA caído"),
         ):
             carga = TarjetaService.cargar_saldo(
@@ -181,5 +181,25 @@ class TestConsumirSaldo:
             TarjetaService.consumir_saldo(
                 tarjeta=tarjeta_bloqueada,
                 monto=Decimal("1000"),
+                registrado_por=usuario_cajero,
+            )
+
+    def test_consumo_monto_cero_falla(self, tarjeta_activa, usuario_cajero):
+        from apps.core.services import TarjetaService
+
+        with pytest.raises(ValidationError, match="mayor a 0"):
+            TarjetaService.consumir_saldo(
+                tarjeta=tarjeta_activa,
+                monto=Decimal("0"),
+                registrado_por=usuario_cajero,
+            )
+
+    def test_consumo_monto_negativo_falla(self, tarjeta_activa, usuario_cajero):
+        from apps.core.services import TarjetaService
+
+        with pytest.raises(ValidationError, match="mayor a 0"):
+            TarjetaService.consumir_saldo(
+                tarjeta=tarjeta_activa,
+                monto=Decimal("-500"),
                 registrado_por=usuario_cajero,
             )

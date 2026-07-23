@@ -2,6 +2,7 @@
 Serializers para la app productos
 """
 
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from .models import (
@@ -37,7 +38,7 @@ class ProductoSerializer(serializers.ModelSerializer):
             return str(annotated)
         try:
             return str(obj.stock.cantidad)
-        except Exception:
+        except ObjectDoesNotExist:
             return None
 
     class Meta:

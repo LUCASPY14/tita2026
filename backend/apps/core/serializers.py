@@ -131,7 +131,7 @@ class TarjetaSerializer(serializers.ModelSerializer):
             return bool(self._get_cliente(obj).lista_precio.es_por_defecto)
         except AttributeError:
             logger.debug("TarjetaSerializer: lista_precio no disponible para tarjeta pk=%s", getattr(obj, 'pk', '?'))
-            return False
+            return True
 
     cliente_modalidad_facturacion = serializers.SerializerMethodField()
 

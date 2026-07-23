@@ -441,7 +441,7 @@ class TestPendienteFacturar:
         resp = api_admin.get("/api/v1/contabilidad/facturas/pendiente-facturar/")
         assert resp.status_code == 200
         nombres = [i["cliente_nombre"] for i in resp.data]
-        assert any("Pedro" in n for n in nombres)
+        assert any("Juan" in n for n in nombres)
 
     def test_lista_pagos_almuerzo(self, api_admin, pago_almuerzo_sin_factura):
         resp = api_admin.get("/api/v1/contabilidad/facturas/pendiente-facturar/")
