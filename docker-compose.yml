@@ -186,7 +186,7 @@ services:
     image: grafana/grafana:11.6.1
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:-tita2026}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:?Configurar GRAFANA_PASSWORD en el archivo .env}"
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/cantina.json
       GF_ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@cantinatita.com}"

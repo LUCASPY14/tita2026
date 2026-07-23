@@ -8,7 +8,13 @@ from .base import *
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*").split(",")]
+_allowed_hosts = os.getenv("ALLOWED_HOSTS", "")
+if not _allowed_hosts:
+    raise ValueError(
+        "La variable de entorno ALLOWED_HOSTS es requerida en el módulo de settings Docker. "
+        "Ejemplo: ALLOWED_HOSTS=miservidor.local,127.0.0.1"
+    )
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts.split(",") if h.strip()]
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-this-key")
 
