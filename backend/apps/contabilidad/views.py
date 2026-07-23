@@ -3,6 +3,7 @@ Views para la app contabilidad
 """
 
 import csv
+import logging
 from datetime import timedelta
 
 from django.http import HttpResponse
@@ -40,6 +41,8 @@ from .serializers import (
     PendienteItemSerializer,
 )
 from .services import CajaService, FacturacionService
+
+logger = logging.getLogger(__name__)
 
 
 class CajaViewSet(viewsets.ModelViewSet):
@@ -283,7 +286,7 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
         try:
             empresa = DatosEmpresa.objects.first()
         except Exception:
-            pass
+            logger.warning("DatosEmpresa no disponible (cierre print)", exc_info=True)
 
         html = render_to_string("contabilidad/cierre_print.html", {
             "cierre": cierre,
@@ -463,7 +466,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         try:
             empresa = DatosEmpresa.objects.first()
         except Exception:
-            pass
+            logger.warning("DatosEmpresa no disponible (factura print)", exc_info=True)
 
         html = render_to_string("contabilidad/factura_print.html", {
             "factura": factura,

@@ -5,6 +5,7 @@ Views para la app usuarios
 import base64
 import hashlib
 import hmac as hmac_mod
+import logging
 import secrets
 import struct
 import time
@@ -13,6 +14,7 @@ from datetime import timedelta
 
 from django.contrib.auth.tokens import default_token_generator
 from django.core import signing
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -30,6 +32,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from common.permissions import IsAdmin
 from common.throttling import LoginRateThrottle, PortalRateThrottle
 from .auditoria import registrar_auditoria
+
+logger = logging.getLogger(__name__)
 
 
 # ── TOTP helpers (RFC 6238, sin dependencias externas) ────────────────────────
@@ -203,7 +207,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     motivo_fallo=motivo,
                 )
             except Exception:
-                pass
+                logger.warning("No se pudo registrar IntentoLogin (login fallido)", exc_info=True)
             registrar_auditoria(
                 request=request,
                 operacion="LOGIN",
@@ -229,7 +233,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     descripcion=f"Login paso 1 OK — esperando 2FA ({user.email})",
                 )
                 return Response({"requires_2fa": True, "pre_auth_token": pre_auth})
-        except Exception:
+        except ObjectDoesNotExist:
             pass
 
         session_key = _registrar_sesion(user, request)
@@ -240,7 +244,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 exitoso=True,
             )
         except Exception:
-            pass
+            logger.warning("No se pudo registrar IntentoLogin (login exitoso)", exc_info=True)
         registrar_auditoria(
             usuario=user, request=request,
             operacion="LOGIN",

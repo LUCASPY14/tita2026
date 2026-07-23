@@ -301,8 +301,8 @@ def bancard_retorno(request):
                             "apps.contabilidad.tasks.refrescar_mv_balance_cliente",
                             countdown=3,
                         )
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning("No se pudo programar refrescar_mv_balance_cliente: %s", exc)
                     return HttpResponseRedirect(
                         f"{PORTAL_URL()}/portal/carga-saldo?estado=aprobado&monto={pago.monto}"
                     )

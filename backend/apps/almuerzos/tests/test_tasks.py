@@ -208,10 +208,10 @@ class TestCerrarCuentasMesAnterior:
     def test_actualiza_cuenta_con_registros_de_consumo(self, hijo_t, usuario_admin):
         """
         El task encuentra registros ya_cobrado=True/marcado_en_cuenta=False
-        y los procesa (actualizadas=1). El trigger PostgreSQL de la migration 0011
-        recalcula cantidad_almuerzos contando solo ya_cobrado=False, por lo que
-        no se verifica cantidad_almuerzos vía refresh_from_db — se verifica
-        el marcado de los registros y el return del task.
+        y los procesa (actualizadas=1). El trigger (migration 0014) sobreescribe
+        cantidad_almuerzos/monto_total al final de la transacción, por lo que
+        el valor definitivo en DB es el del trigger. Se verifica el marcado de
+        los registros y el return del task.
         """
         from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
         from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior

@@ -2,9 +2,12 @@
 Servicios de negocio para ventas
 """
 
+import logging
 from decimal import Decimal
 
 from django.db import transaction
+
+logger = logging.getLogger(__name__)
 
 from rest_framework.exceptions import ValidationError
 
@@ -315,7 +318,7 @@ class VentaService:
                         from apps.notificaciones.models import Notificacion
                         from apps.notificaciones.services import (
                             push_ws_notificacion,
-                            _whatsapp_cliente,
+                            whatsapp_cliente,
                         )
                         nombre_hijo = str(tarjeta_bloqueada.hijo)
                         deficit = abs(int(tarjeta_bloqueada.saldo_actual))
@@ -332,9 +335,13 @@ class VentaService:
                             destino=Notificacion.Destino.SISTEMA,
                         )
                         push_ws_notificacion(notif)
-                        _whatsapp_cliente(cliente_resp, msg)
+                        whatsapp_cliente(cliente_resp, msg)
                     except Exception:
-                        pass
+                        logger.warning(
+                            "No se pudo enviar notificación de saldo negativo para tarjeta %s",
+                            tarjeta_bloqueada.pk,
+                            exc_info=True,
+                        )
 
                 if cierre_caja:
                     from apps.contabilidad.models import MovimientoCaja

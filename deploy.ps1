@@ -272,7 +272,7 @@ Write-Host "║   Commit:  $(git rev-parse --short HEAD)" -ForegroundColor Green
 Write-Host "║   App:     http://localhost" -ForegroundColor Green
 Write-Host "║   Admin:   http://localhost/admin/" -ForegroundColor Green
 Write-Host "║   API:     http://localhost/api/v1/docs/" -ForegroundColor Green
-Write-Host "║   Grafana: http://localhost:3000  (admin / tita2026)" -ForegroundColor Green
+Write-Host "║   Grafana: http://localhost:3000  (admin / ver GRAFANA_PASSWORD en .env.production)" -ForegroundColor Green
 Write-Host "╚══════════════════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
 Write-Host "Para ver logs en vivo:" -ForegroundColor DarkGray
