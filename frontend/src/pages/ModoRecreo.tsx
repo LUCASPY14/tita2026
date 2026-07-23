@@ -1384,7 +1384,7 @@ export default function ModoRecreo() {
                   {/* Medios dinámicos */}
                   {mediosPago.map(mp => (
                     <button key={mp.id}
-                      onClick={() => { setModoPago('MEDIO'); setMedioPagoSelId(mp.id) }}
+                      onClick={() => { setModoPago('MEDIO'); setMedioPagoSelId(mp.id); setGeneraFactura(true) }}
                       className={[
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
                         modoPago === 'MEDIO' && medioPagoSelId === mp.id
