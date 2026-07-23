@@ -67,7 +67,7 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         "hijo__grado",
         "hijo__cliente_responsable__lista_precio",
         "cliente_directo__lista_precio",
-    ).all()
+    ).prefetch_related("hijo__restricciones").all()
     serializer_class = TarjetaSerializer
     permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
