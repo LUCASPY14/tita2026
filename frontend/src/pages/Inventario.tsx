@@ -190,7 +190,7 @@ export default function Inventario() {
   useEffect(() => {
     api.get('/productos/productos/', { params: { page_size: 500 } })
       .then(({ data }) => setProductos(data.results ?? []))
-      .catch(() => {})
+      .catch(() => toast.error('Error al cargar productos'))
   }, [])
 
   // ── Load ajustes ──────────────────────────────────────────────────

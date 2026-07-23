@@ -256,7 +256,7 @@ export default function Tarjetas() {
     if (createOpen && hijos.length === 0) {
       clientesService.getHijos<Hijo>({ activo: true, page_size: 500 })
         .then(({ data }) => setHijos(data.results ?? []))
-        .catch(() => {})
+        .catch(() => toast.error('Error al cargar alumnos'))
     }
   }, [createOpen, hijos.length])
 

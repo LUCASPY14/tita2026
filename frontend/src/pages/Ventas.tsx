@@ -127,7 +127,7 @@ export default function Ventas() {
         `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`)
       )
       setCajeros(todos)
-    }).catch(() => {})
+    }).catch(() => toast.error('Error al cargar lista de usuarios'))
   }, [isAdmin])
 
   // ── Fetch ventas ─────────────────────────────────────────────────────────────

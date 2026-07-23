@@ -447,7 +447,7 @@ function HijoModal({ open, hijo, clienteId, onClose, onSaved }: HijoModalProps) 
           : ((data as { results?: GradoOption[] }).results ?? [])
         setGrados(list.filter(g => g.activo))
       })
-      .catch(() => {})
+      .catch(() => toast.error('Error al cargar grados'))
   }, [])
 
   useEffect(() => {
@@ -1820,8 +1820,8 @@ export default function Clientes() {
   const requestIdRef = useRef(0)
 
   useEffect(() => {
-    api.get('/clientes/tipos-cliente/').then(({ data }) => setTiposCliente(data.results ?? data)).catch(() => {})
-    api.get('/productos/listas-precio/').then(({ data }) => setListasPrecios(data.results ?? data)).catch(() => {})
+    api.get('/clientes/tipos-cliente/').then(({ data }) => setTiposCliente(data.results ?? data)).catch(() => toast.error('Error al cargar tipos de cliente'))
+    api.get('/productos/listas-precio/').then(({ data }) => setListasPrecios(data.results ?? data)).catch(() => toast.error('Error al cargar listas de precio'))
   }, [])
 
   const loadClientes = useCallback(async () => {

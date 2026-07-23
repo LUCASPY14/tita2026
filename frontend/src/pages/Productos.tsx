@@ -334,15 +334,15 @@ export default function Produtos() {
   // Load catalogs once
   useEffect(() => {
     api.get('/productos/categorias/', { params: { activo: true } })
-      .then(({ data }) => setCategorias(data.results ?? data)).catch(() => {})
+      .then(({ data }) => setCategorias(data.results ?? data)).catch(() => toast.error('Error al cargar categorías'))
     api.get('/productos/unidades-medida/')
-      .then(({ data }) => setUnidades(data.results ?? data)).catch(() => {})
+      .then(({ data }) => setUnidades(data.results ?? data)).catch(() => toast.error('Error al cargar unidades de medida'))
     // Load stock crítico count
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingCritico(true)
     api.get('/inventario/stock-critico/')
       .then(({ data }) => setStockCritico(data.total ?? 0))
-      .catch(() => {})
+      .catch(() => toast.error('Error al cargar stock crítico'))
       .finally(() => setLoadingCritico(false))
   }, [])
 

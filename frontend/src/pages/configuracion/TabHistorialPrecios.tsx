@@ -43,7 +43,7 @@ export default function TabHistorialPrecios() {
   useEffect(() => {
     api.get('/productos/productos/', { params: { page_size: 200 } })
       .then(({ data }) => setProductosLookup(data.results ?? []))
-      .catch(() => {})
+      .catch(() => toast.error('Error al cargar productos'))
   }, [])
 
   const columns: Column<HistoricoPrecioItem>[] = [

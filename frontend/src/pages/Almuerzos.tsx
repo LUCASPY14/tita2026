@@ -244,7 +244,7 @@ export default function Almuerzos() {
       setHijos(hRes.data.results ?? [])
       setTiposAlmuerzo(tRes.data.results ?? [])
       setPlanes(pRes.data.results ?? [])
-    }).catch(() => {})
+    }).catch(() => toast.error('Error al cargar datos iniciales'))
   }, [])
 
   // ── Load consumos ─────────────────────────────────────────────────

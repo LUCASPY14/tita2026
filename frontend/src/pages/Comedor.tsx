@@ -179,7 +179,7 @@ export default function Comedor() {
         const ids = new Set<number>((r.data.results ?? []).map((x: { hijo: number }) => x.hijo))
         setConsumidosHoy(ids)
       })
-      .catch(() => {})
+      .catch(() => toast.error('Error al cargar registros del día'))
   }, [])
 
   // fullscreen API

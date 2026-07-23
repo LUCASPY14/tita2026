@@ -367,9 +367,9 @@ export default function Compras() {
   useEffect(() => {
     api.get('/compras/proveedores/', { params: { activo: true, page_size: 500 } })
       .then(res => setProveedores(res.data.results ?? []))
-      .catch(() => {})
-    getProductos().then(prods => setProductos(prods as Producto[])).catch(() => {})
-    getMediosPago().then(mp => setMediosPago(mp as { id: number; descripcion: string }[])).catch(() => {})
+      .catch(() => toast.error('Error al cargar proveedores'))
+    getProductos().then(prods => setProductos(prods as Producto[])).catch(() => toast.error('Error al cargar productos'))
+    getMediosPago().then(mp => setMediosPago(mp as { id: number; descripcion: string }[])).catch(() => toast.error('Error al cargar medios de pago'))
   }, [getProductos, getMediosPago])
 
   // ── Cargar precios por proveedor al seleccionarlo ────────────────
@@ -755,7 +755,7 @@ export default function Compras() {
                 ))
               }
             })
-            .catch(() => {})
+            .catch(() => toast.error('Error al cargar precio del producto'))
         }
       }
       if (field !== 'producto') {
@@ -1010,7 +1010,7 @@ export default function Compras() {
       loadProveedores(searchProv, pageProveedores)
       api.get('/compras/proveedores/', { params: { activo: true, page_size: 500 } })
         .then(res => setProveedores(res.data.results ?? []))
-        .catch(() => {})
+        .catch(() => toast.error('Error al actualizar lista de proveedores'))
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {

@@ -212,11 +212,11 @@ export default function CajaPage() {
         const primeraActiva = lista.find(c => c.activo)
         setCajaSeleccionada(primeraActiva ? String(primeraActiva.id) : '')
       })
-      .catch(() => {})
+      .catch(() => toast.error('Error al cargar cajas'))
 
     api.get('/core/medios-pago/', { params: { activo: true } })
       .then(({ data }) => setMediosPago(data.results ?? data))
-      .catch(() => {})
+      .catch(() => toast.error('Error al cargar medios de pago'))
   }, [])
 
   // Debounce montoContado para no mostrar diferencias intermedias mientras se tipea

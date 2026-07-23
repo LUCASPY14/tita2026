@@ -87,7 +87,7 @@ export default function Dashboard() {
           setTendencia(((tendRes?.data as { data?: TendenciaPoint[] })?.data) ?? [])
         }
       })
-      .catch(() => {})
+      .catch(() => toast.error('Error al cargar estadísticas del dashboard'))
       .finally(() => setLoading(false))
   }, [showCharts])
 

@@ -72,7 +72,7 @@ export default function Alergenos() {
   const [productos, setProductos] = useState<Producto[]>([])
 
   useEffect(() => {
-    getProductos().then(p => setProductos(p as Producto[])).catch(() => {})
+    getProductos().then(p => setProductos(p as Producto[])).catch(() => toast.error('Error al cargar productos'))
   }, [getProductos])
 
   // ── Alérgenos CRUD ────────────────────────────────────────────────
