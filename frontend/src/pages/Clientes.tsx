@@ -396,11 +396,14 @@ function ClienteModal({ open, cliente, tiposCliente, listasPrecios, onClose, onS
                 ].join(' ')}
               />
             </button>
-            <span className="text-sm text-slate-700 font-medium">
-              {modalidadFacturacion === 'MENSUAL'
-                ? 'Factura mensual — acumula transacciones del mes'
-                : 'Factura inmediata — una factura por transacción'}
-            </span>
+            <div>
+              <span className="text-sm text-slate-700 font-medium">Factura mensual</span>
+              <p className="text-xs text-slate-400">
+                {modalidadFacturacion === 'MENSUAL'
+                  ? 'Acumula transacciones del mes para emitir una sola factura'
+                  : 'Una factura por transacción (por defecto)'}
+              </p>
+            </div>
           </div>
         </div>
       </div>
