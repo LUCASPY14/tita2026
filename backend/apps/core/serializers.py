@@ -2,6 +2,8 @@
 Serializers para la app core
 """
 
+import logging
+
 from rest_framework import serializers
 
 from .models import (
@@ -14,6 +16,8 @@ from .models import (
     LimiteTransaccion,
     RegistroAutorizacion,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class TarjetaSerializer(serializers.ModelSerializer):
@@ -89,51 +93,52 @@ class TarjetaSerializer(serializers.ModelSerializer):
     def get_cliente_id(self, obj):
         try:
             return self._get_cliente(obj).pk
-        except Exception:
+        except AttributeError:
             return None
 
     def get_cliente_nombre(self, obj):
         try:
             return self._get_cliente(obj).nombre_completo
-        except Exception:
+        except AttributeError:
             return None
 
     def get_cliente_ruc(self, obj):
         try:
             return self._get_cliente(obj).ruc_ci
-        except Exception:
+        except AttributeError:
             return None
 
     def get_cliente_saldo_cc(self, obj):
         try:
             return int(self._get_cliente(obj).saldo_cuenta_corriente)
-        except Exception:
+        except AttributeError:
             return 0
 
     def get_cliente_limite_credito(self, obj):
         try:
             return int(self._get_cliente(obj).limite_credito)
-        except Exception:
+        except AttributeError:
             return 0
 
     def get_lista_precio_id(self, obj):
         try:
             return self._get_cliente(obj).lista_precio_id
-        except Exception:
+        except AttributeError:
             return None
 
     def get_lista_es_default(self, obj):
         try:
             return bool(self._get_cliente(obj).lista_precio.es_por_defecto)
-        except Exception:
-            return True
+        except AttributeError:
+            logger.debug("TarjetaSerializer: lista_precio no disponible para tarjeta pk=%s", getattr(obj, 'pk', '?'))
+            return False
 
     cliente_modalidad_facturacion = serializers.SerializerMethodField()
 
     def get_cliente_modalidad_facturacion(self, obj):
         try:
             return self._get_cliente(obj).modalidad_facturacion
-        except Exception:
+        except AttributeError:
             return "INMEDIATA"
 
 
