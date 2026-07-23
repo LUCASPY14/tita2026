@@ -2,7 +2,10 @@
 Views para la app almuerzos
 """
 
+import logging
 from datetime import date
+
+logger = logging.getLogger(__name__)
 from decimal import Decimal
 
 from django.db import models, transaction
@@ -335,7 +338,7 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                     f"Costo: Gs. {int(registro.costo_almuerzo):,}."
                 )
             except Exception:
-                pass
+                logger.warning("WhatsApp: fallo al notificar almuerzo de %s", registro.hijo.pk, exc_info=True)
 
         return advertencias
 
@@ -494,7 +497,7 @@ class PagoAlmuerzoMensualViewSet(viewsets.ModelViewSet):
                 f"{mes.strftime('%m/%Y')}. Gracias."
             )
         except Exception:
-            pass
+            logger.warning("WhatsApp: fallo al notificar pago de almuerzo pk=%s", pago.pk, exc_info=True)
 
 
 # ==============================================================================

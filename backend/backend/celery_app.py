@@ -213,7 +213,10 @@ def setup_task_failure_handler(sender, **kwargs):
                 pass
 
 
+_logger = logging.getLogger(__name__)
+
+
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
     """Tarea de debug"""
-    print(f"Request: {self.request!r}")
+    _logger.debug("Request: %s", self.request)
