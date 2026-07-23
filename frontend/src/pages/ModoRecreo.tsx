@@ -374,7 +374,6 @@ export default function ModoRecreo() {
   const [medioPagoSelId, setMedioPagoSelId] = useState<number | null>(null)
   const [montoEfectivo, setMontoEfectivo] = useState('')
   const [referencia, setReferencia] = useState('')
-  const [generaFactura, setGeneraFactura] = useState(false)
   const [nroFacturaVenta, setNroFacturaVenta] = useState('')
 
   // PIN modal
@@ -687,10 +686,8 @@ export default function ModoRecreo() {
         payload.tarjeta = null
         payload.medio_pago = medioPagoSelId
         if (referencia.trim()) payload.referencia = referencia.trim()
-        if (generaFactura) {
-          payload.genera_factura_legal = true
-          if (nroFacturaVenta.trim()) payload.nro_factura = nroFacturaVenta.trim()
-        }
+        payload.genera_factura_legal = true
+        if (nroFacturaVenta.trim()) payload.nro_factura = nroFacturaVenta.trim()
       }
 
       if (!navigator.onLine) {
@@ -729,7 +726,6 @@ export default function ModoRecreo() {
         setClienteResultados([])
         setMontoEfectivo('')
         setReferencia('')
-        setGeneraFactura(false)
         setNroFacturaVenta('')
         ventaStartTime.current = 0
         setTimeout(() => scannerRef.current?.focus(), 60)
@@ -775,7 +771,7 @@ export default function ModoRecreo() {
     setPreciosCliente({})
     setClienteDirecto(null); setClienteSearch(''); setClienteResultados([])
     setTarjetaInput(''); setProdSearch('')
-    setMontoEfectivo(''); setReferencia(''); setGeneraFactura(false); setNroFacturaVenta(''); setShowPin(false)
+    setMontoEfectivo(''); setReferencia(''); setNroFacturaVenta(''); setShowPin(false)
     ventaStartTime.current = 0
     setTimeout(() => scannerRef.current?.focus(), 60)
   }, [])
@@ -1384,7 +1380,7 @@ export default function ModoRecreo() {
                   {/* Medios dinámicos */}
                   {mediosPago.map(mp => (
                     <button key={mp.id}
-                      onClick={() => { setModoPago('MEDIO'); setMedioPagoSelId(mp.id); setGeneraFactura(true) }}
+                      onClick={() => { setModoPago('MEDIO'); setMedioPagoSelId(mp.id) }}
                       className={[
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
                         modoPago === 'MEDIO' && medioPagoSelId === mp.id
@@ -1532,29 +1528,21 @@ export default function ModoRecreo() {
               </div>
             )}
 
-            {/* Factura legal — solo cuando se paga con dinero real (Efectivo/POS/Transferencia), no Prepago ni Crédito */}
+            {/* Factura legal — toda venta MEDIO va a Facturación; el nro es opcional (emite al instante) */}
             {modoPago === 'MEDIO' && medioPagoSelId !== null && (
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={generaFactura}
-                    onChange={e => { setGeneraFactura(e.target.checked); setNroFacturaVenta('') }}
-                    className="w-4 h-4 rounded accent-amber-600"
-                  />
-                  <span className="text-sm font-semibold text-slate-700">Emitir factura legal</span>
-                </label>
-                {generaFactura && clienteModalidad === 'MENSUAL' ? (
+              <div className="space-y-1.5">
+                {clienteModalidad === 'MENSUAL' ? (
                   <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl">
                     <span className="text-base">🗓️</span>
                     <span className="text-sm font-semibold text-blue-700">Se acumula al lote mensual del cliente</span>
                   </div>
-                ) : generaFactura ? (
+                ) : (
                   <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nro. factura (opcional)</p>
                     <input
                       value={nroFacturaVenta}
                       onChange={e => setNroFacturaVenta(e.target.value)}
-                      placeholder="001-001-0000001 (opcional)"
+                      placeholder="001-001-0000001"
                       className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-colors"
                     />
                     <p className="text-xs text-slate-400">
@@ -1563,7 +1551,7 @@ export default function ModoRecreo() {
                         : 'Sin número → queda pendiente en Facturación'}
                     </p>
                   </div>
-                ) : null}
+                )}
               </div>
             )}
 
