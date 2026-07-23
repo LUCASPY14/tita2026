@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from datetime import timedelta
 
 from celery import shared_task
@@ -31,7 +31,7 @@ def alertar_saldo_negativo_prolongado():
     """
     from apps.clientes.models import Cliente, CuentaCorrienteCliente
     from apps.notificaciones.models import Notificacion
-    from apps.notificaciones.services import _whatsapp_cliente
+    from apps.notificaciones.services import whatsapp_cliente
     from apps.usuarios.models import Usuario
 
     hoy = timezone.now().date()
@@ -100,7 +100,7 @@ def alertar_saldo_negativo_prolongado():
 
         # WhatsApp (silencioso si NOTIFICACIONES_ACTIVAS=False)
         try:
-            _whatsapp_cliente(cliente, msg)
+            whatsapp_cliente(cliente, msg)
         except Exception as exc:
             logger.warning("No se pudo enviar WhatsApp a %s: %s", cliente, exc)
 

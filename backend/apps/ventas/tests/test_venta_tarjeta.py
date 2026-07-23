@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para ventas realizadas con tarjeta prepago del estudiante.
 Cubre: descuento de saldo en tarjeta, venta con saldo insuficiente,
 venta con tarjeta bloqueada, reverso de saldo al anular.
@@ -202,7 +202,7 @@ class TestVentaNotificacionSaldoNegativo:
     ):
         from unittest.mock import patch
         with patch("apps.notificaciones.services.push_ws_notificacion") as mock_push, \
-             patch("apps.notificaciones.services._whatsapp_cliente") as mock_wa:
+             patch("apps.notificaciones.services.whatsapp_cliente") as mock_wa:
             venta = self._venta(cliente, usuario_cajero, producto, stock_producto, tarjeta_neg)
 
         assert venta is not None

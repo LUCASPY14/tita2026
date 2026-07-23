@@ -1,6 +1,6 @@
-"""
+﻿"""
 Tests para gaps de cobertura en notificaciones/services.py — lógica WhatsApp.
-Cubre: _whatsapp_cliente (ramas NOTIFICACIONES_ACTIVAS, sin teléfono, excepción),
+Cubre: whatsapp_cliente (ramas NOTIFICACIONES_ACTIVAS, sin teléfono, excepción),
        NotificacionService._enviar_whatsapp, crear_solicitudes_cobro (rama WA),
        send_push_to_user (sin VAPID_PRIVATE_KEY), procesar_pendientes WHATSAPP.
 """
@@ -48,38 +48,38 @@ def solicitud_sin_telefono(db, cliente):
     )
 
 
-# ── _whatsapp_cliente ─────────────────────────────────────────────────────────
+# ── whatsapp_cliente ─────────────────────────────────────────────────────────
 
 @pytest.mark.django_db
 class TestWhatsappClienteHelper:
 
     def test_no_envía_si_notificaciones_inactivas(self, cliente_con_telefono):
-        from apps.notificaciones.services import _whatsapp_cliente
+        from apps.notificaciones.services import whatsapp_cliente
         with patch("apps.notificaciones.services.enviar_whatsapp") as mock_wa:
             with patch("django.conf.settings.NOTIFICACIONES_ACTIVAS", False):
-                _whatsapp_cliente(cliente_con_telefono, "hola")
+                whatsapp_cliente(cliente_con_telefono, "hola")
         mock_wa.assert_not_called()
 
     def test_no_envía_si_sin_telefono(self, cliente):
-        from apps.notificaciones.services import _whatsapp_cliente
+        from apps.notificaciones.services import whatsapp_cliente
         cliente.telefono = ""
         with patch("apps.notificaciones.services.enviar_whatsapp") as mock_wa:
             with patch("django.conf.settings.NOTIFICACIONES_ACTIVAS", True):
-                _whatsapp_cliente(cliente, "hola")
+                whatsapp_cliente(cliente, "hola")
         mock_wa.assert_not_called()
 
     def test_silencia_excepcion(self, cliente_con_telefono):
-        from apps.notificaciones.services import _whatsapp_cliente
+        from apps.notificaciones.services import whatsapp_cliente
         with patch("apps.notificaciones.services.enviar_whatsapp", side_effect=RuntimeError("error")):
             with patch("django.conf.settings.NOTIFICACIONES_ACTIVAS", True):
                 # No debe lanzar excepción
-                _whatsapp_cliente(cliente_con_telefono, "hola")
+                whatsapp_cliente(cliente_con_telefono, "hola")
 
     def test_envía_si_activo_y_tiene_telefono(self, cliente_con_telefono):
-        from apps.notificaciones.services import _whatsapp_cliente
+        from apps.notificaciones.services import whatsapp_cliente
         with patch("apps.notificaciones.services.enviar_whatsapp") as mock_wa:
             with patch("django.conf.settings.NOTIFICACIONES_ACTIVAS", True):
-                _whatsapp_cliente(cliente_con_telefono, "mensaje test")
+                whatsapp_cliente(cliente_con_telefono, "mensaje test")
         mock_wa.assert_called_once_with("595981234567", "mensaje test")
 
 

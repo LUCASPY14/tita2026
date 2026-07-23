@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests de vistas de almuerzos.
 Cubre: PrecioAlmuerzoViewSet, TipoAlmuerzoViewSet, PlanAlmuerzoViewSet,
 SuscripcionAlmuerzoViewSet, RegistroConsumoAlmuerzoViewSet (create + validaciones),
@@ -744,14 +744,14 @@ class TestRegistroConsumoDestroyAdmin:
 
 @pytest.mark.django_db
 class TestRegistroConsumoWhatsappFallback:
-    """Líneas 285-286: _whatsapp_cliente lanza excepción → se ignora, create igual exitoso."""
+    """Líneas 285-286: whatsapp_cliente lanza excepción → se ignora, create igual exitoso."""
 
     def test_create_exitoso_aunque_whatsapp_falle(
         self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo
     ):
         from unittest.mock import patch
         with patch(
-            "apps.notificaciones.services._whatsapp_cliente",
+            "apps.notificaciones.services.whatsapp_cliente",
             side_effect=Exception("WhatsApp caído"),
         ):
             resp = api_cajero.post(
@@ -789,7 +789,7 @@ class TestPagoAlmuerzoMensualCreate:
     ):
         from unittest.mock import patch
         with patch(
-            "apps.notificaciones.services._whatsapp_cliente",
+            "apps.notificaciones.services.whatsapp_cliente",
             side_effect=Exception("WhatsApp caído"),
         ):
             resp = api_admin.post(

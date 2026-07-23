@@ -1,4 +1,4 @@
-"""
+﻿"""
 Servicio para procesar y enviar notificaciones.
 """
 
@@ -10,7 +10,7 @@ from django.utils import timezone
 from .models import EmailEnviado, Notificacion, SolicitudNotificacion
 
 
-def _whatsapp_cliente(cliente, mensaje: str) -> None:
+def whatsapp_cliente(cliente, mensaje: str) -> None:
     """
     Envía WhatsApp a un cliente si tiene teléfono configurado y las
     notificaciones están activas. Silencioso ante cualquier error.

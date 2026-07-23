@@ -1,4 +1,4 @@
-"""Tests para apps.clientes.tasks — alertar_saldo_negativo_prolongado,
+﻿"""Tests para apps.clientes.tasks — alertar_saldo_negativo_prolongado,
 resumen_mensual_deuda_clientes."""
 import pytest
 from decimal import Decimal
@@ -163,7 +163,7 @@ class TestAlertarSaldoNegativoProlongado:
 
     def test_deuda_antigua_genera_alerta(self, cliente_con_deuda_antigua, admin):
         from apps.clientes.tasks import alertar_saldo_negativo_prolongado
-        with patch("apps.notificaciones.services._whatsapp_cliente"):
+        with patch("apps.notificaciones.services.whatsapp_cliente"):
             result = alertar_saldo_negativo_prolongado()
         assert result["clientes_alertados"] == 1
 
@@ -185,7 +185,7 @@ class TestAlertarSaldoNegativoProlongado:
     def test_notificacion_admin_creada(self, cliente_con_deuda_antigua, admin):
         from apps.notificaciones.models import Notificacion
         from apps.clientes.tasks import alertar_saldo_negativo_prolongado
-        with patch("apps.notificaciones.services._whatsapp_cliente"):
+        with patch("apps.notificaciones.services.whatsapp_cliente"):
             alertar_saldo_negativo_prolongado()
         assert Notificacion.objects.filter(
             usuario=admin,
@@ -195,7 +195,7 @@ class TestAlertarSaldoNegativoProlongado:
     def test_notificacion_portal_creada(self, cliente_con_portal, admin):
         from apps.notificaciones.models import Notificacion
         from apps.clientes.tasks import alertar_saldo_negativo_prolongado
-        with patch("apps.notificaciones.services._whatsapp_cliente"):
+        with patch("apps.notificaciones.services.whatsapp_cliente"):
             alertar_saldo_negativo_prolongado()
         usuario_portal = cliente_con_portal.usuario_portal
         assert Notificacion.objects.filter(
@@ -205,14 +205,14 @@ class TestAlertarSaldoNegativoProlongado:
 
     def test_whatsapp_llamado_por_cliente_alertado(self, cliente_con_deuda_antigua, admin):
         from apps.clientes.tasks import alertar_saldo_negativo_prolongado
-        with patch("apps.notificaciones.services._whatsapp_cliente") as mock_wa:
+        with patch("apps.notificaciones.services.whatsapp_cliente") as mock_wa:
             alertar_saldo_negativo_prolongado()
         mock_wa.assert_called_once()
         assert mock_wa.call_args[0][0] == cliente_con_deuda_antigua
 
     def test_whatsapp_error_no_interrumpe_tarea(self, cliente_con_deuda_antigua, admin):
         from apps.clientes.tasks import alertar_saldo_negativo_prolongado
-        with patch("apps.notificaciones.services._whatsapp_cliente", side_effect=Exception("WAHA down")):
+        with patch("apps.notificaciones.services.whatsapp_cliente", side_effect=Exception("WAHA down")):
             result = alertar_saldo_negativo_prolongado()
         assert result["clientes_alertados"] == 1
 
@@ -221,7 +221,7 @@ class TestAlertarSaldoNegativoProlongado:
         cliente_sin_deuda, cliente_inactivo_con_deuda, admin,
     ):
         from apps.clientes.tasks import alertar_saldo_negativo_prolongado
-        with patch("apps.notificaciones.services._whatsapp_cliente"):
+        with patch("apps.notificaciones.services.whatsapp_cliente"):
             result = alertar_saldo_negativo_prolongado()
         assert result["clientes_alertados"] == 1
 

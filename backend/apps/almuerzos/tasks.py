@@ -1,6 +1,6 @@
-import calendar
+﻿import calendar
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from celery import shared_task
 from django.db import transaction
@@ -40,7 +40,7 @@ def cerrar_cuentas_mes_anterior():
     hoy = timezone.now().date()
     # Mes anterior
     primer_dia_mes = date(hoy.year, hoy.month, 1)
-    ultimo_dia_mes_ant = primer_dia_mes - timezone.timedelta(days=1)
+    ultimo_dia_mes_ant = primer_dia_mes - timedelta(days=1)
     anio_ant, mes_ant = ultimo_dia_mes_ant.year, ultimo_dia_mes_ant.month
 
     logger.info("cerrar_cuentas_mes_anterior: cerrando %02d/%d", mes_ant, anio_ant)
@@ -93,10 +93,10 @@ def cerrar_cuentas_mes_anterior():
 
             # Notificar al padre con el resumen del mes
             try:
-                from apps.notificaciones.services import _whatsapp_cliente
+                from apps.notificaciones.services import whatsapp_cliente
                 saldo_final = cuenta.monto_total - cuenta.monto_pagado
                 if saldo_final > 0:
-                    _whatsapp_cliente(
+                    whatsapp_cliente(
                         cuenta.hijo.cliente_responsable,
                         f"Resumen de almuerzos {mes_ant:02d}/{anio_ant} de "
                         f"{cuenta.hijo.nombre_completo}: "
@@ -106,7 +106,11 @@ def cerrar_cuentas_mes_anterior():
                         f"Podes pagar en la cantina."
                     )
             except Exception:
-                pass
+                logger.warning(
+                    "No se pudo enviar WhatsApp de resumen al responsable de %s (%02d/%d)",
+                    cuenta.hijo.nombre_completo, mes_ant, anio_ant,
+                    exc_info=True,
+                )
 
     cerradas = actualizadas + anuladas
     logger.info(
@@ -227,7 +231,7 @@ def alertar_cuentas_vencidas():
         "hijo__cliente_responsable__usuario_portal"
     )
 
-    from apps.notificaciones.services import _whatsapp_cliente
+    from apps.notificaciones.services import whatsapp_cliente
     creadas = 0
     for cuenta in cuentas_pendientes:
         saldo_pendiente = cuenta.monto_total - cuenta.monto_pagado
@@ -253,7 +257,7 @@ def alertar_cuentas_vencidas():
             )
             creadas += 1
 
-        _whatsapp_cliente(cuenta.hijo.cliente_responsable, msg)
+        whatsapp_cliente(cuenta.hijo.cliente_responsable, msg)
 
     logger.info("alertar_cuentas_vencidas: %d notificaciones creadas", creadas)
     return {"notificaciones_creadas": creadas}
