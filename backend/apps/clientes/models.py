@@ -182,6 +182,16 @@ class CuentaCorrienteCliente(models.Model):
         related_name="movimientos_cuenta",
     )
 
+    # Facturación — solo aplica a movimientos tipo CREDITO (cobros)
+    factura = models.ForeignKey(
+        "contabilidad.Factura",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos_cuenta",
+    )
+    genera_factura_legal = models.BooleanField(default=False)
+
     # Auditoría
     creado_por = models.ForeignKey(
         "usuarios.Usuario",

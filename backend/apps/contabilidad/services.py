@@ -15,6 +15,7 @@ from .models import Caja, CierreCaja, MovimientoCaja, Factura
 TIPO_CARGA_SALDO = "CARGA_SALDO"
 TIPO_PAGO_ALMUERZO = "PAGO_ALMUERZO"
 TIPO_VENTA = "VENTA"
+TIPO_PAGO_CREDITO = "PAGO_CREDITO"
 
 
 class CajaService:
@@ -242,6 +243,22 @@ class FacturacionService:
                     "monto_exenta": origen.monto_exenta,
                 }
 
+            elif tipo == TIPO_PAGO_CREDITO:
+                from apps.clientes.models import CuentaCorrienteCliente as CCModel
+                origen = (
+                    CCModel.objects
+                    .select_related("cliente")
+                    .select_for_update(of=("self",))
+                    .get(pk=origen_id)
+                )
+                if not origen.genera_factura_legal:
+                    raise ValidationError({"error": "El pago no está marcado para factura legal."})
+                if origen.factura_id:
+                    raise ValidationError({"error": "Este pago ya tiene factura emitida."})
+                cliente = origen.cliente
+                monto = origen.monto
+                iva = cls._calcular_iva_10(monto)
+
             else:
                 raise ValidationError({"error": f"Tipo desconocido: {tipo}."})
 
@@ -263,10 +280,11 @@ class FacturacionService:
 
     @staticmethod
     def get_pendientes() -> dict:
-        """Retorna cargas de saldo, pagos de almuerzo y ventas sin factura."""
+        """Retorna cargas de saldo, pagos de almuerzo, ventas y pagos de crédito sin factura."""
         from apps.core.models import CargaSaldo
         from apps.almuerzos.models import PagoCuentaAlmuerzo
         from apps.ventas.models import Venta as VentaModel
+        from apps.clientes.models import CuentaCorrienteCliente
 
         cargas = CargaSaldo.objects.filter(
             estado=CargaSaldo.Estado.CONFIRMADA,
@@ -282,7 +300,13 @@ class FacturacionService:
             factura__isnull=True,
         ).exclude(estado=VentaModel.Estado.ANULADA).select_related("cliente").order_by("-fecha")
 
-        return {"cargas": cargas, "pagos": pagos, "ventas": ventas}
+        pagos_credito = CuentaCorrienteCliente.objects.filter(
+            tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+            genera_factura_legal=True,
+            factura__isnull=True,
+        ).select_related("cliente").order_by("-fecha")
+
+        return {"cargas": cargas, "pagos": pagos, "ventas": ventas, "pagos_credito": pagos_credito}
 
     @classmethod
     def emitir_lote(cls, *, tipo: str, ids: list[int], nro_factura: str) -> Factura:
@@ -380,6 +404,32 @@ class FacturacionService:
                     "iva_5": sum(o.iva_5 for o in origenes),
                     "monto_exenta": sum(o.monto_exenta for o in origenes),
                 }
+
+            elif tipo == TIPO_PAGO_CREDITO:
+                from apps.clientes.models import CuentaCorrienteCliente as CCModel
+                origenes = list(
+                    CCModel.objects
+                    .select_related("cliente")
+                    .select_for_update(of=("self",))
+                    .filter(pk__in=ids)
+                )
+                if len(origenes) != len(ids):
+                    raise ValidationError({"error": "Uno o más pagos no existen."})
+
+                clientes = set()
+                for o in origenes:
+                    if not o.genera_factura_legal:
+                        raise ValidationError({"error": f"El pago #{o.pk} no requiere factura legal."})
+                    if o.factura_id:
+                        raise ValidationError({"error": f"El pago #{o.pk} ya tiene factura."})
+                    clientes.add(o.cliente_id)
+
+                if len(clientes) > 1:
+                    raise ValidationError({"error": "Todos los pagos deben pertenecer al mismo cliente."})
+
+                cliente_obj = origenes[0].cliente
+                monto_total = sum(o.monto for o in origenes)
+                iva = cls._calcular_iva_10(monto_total)
 
             else:
                 raise ValidationError({"error": f"Tipo desconocido: {tipo}."})

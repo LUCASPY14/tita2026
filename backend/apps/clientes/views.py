@@ -214,6 +214,9 @@ class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
         except Cliente.DoesNotExist:
             return Response({"error": "Cliente no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
+        genera_factura_legal = bool(request.data.get("genera_factura_legal", False))
+        nro_factura = str(request.data.get("nro_factura", "") or "").strip()
+
         with transaction.atomic():
             mov = CuentaCorrienteCliente.objects.create(
                 cliente=cliente,
@@ -238,6 +241,20 @@ class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
                     descripcion=f"Cobro CC — {cliente.nombres} {cliente.apellidos}",
                     medio_pago=medio_pago_obj,
                 )
+
+            # Facturación
+            if genera_factura_legal:
+                if nro_factura:
+                    from apps.contabilidad.services import FacturacionService
+                    factura = FacturacionService.emitir_factura(
+                        cliente=cliente,
+                        nro_factura=nro_factura,
+                        monto_total=monto,
+                        **FacturacionService._calcular_iva_10(monto),
+                    )
+                    mov.factura = factura
+                mov.genera_factura_legal = True
+                mov.save(update_fields=["factura", "genera_factura_legal"])
 
         return Response(self.get_serializer(mov).data, status=status.HTTP_201_CREATED)
 

@@ -376,6 +376,19 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 "fecha": v.fecha,
             })
 
+        for pc in data["pagos_credito"]:
+            cliente = pc.cliente
+            items.append({
+                "tipo": "PAGO_CREDITO",
+                "id": pc.pk,
+                "cliente_id": cliente.pk if cliente else None,
+                "cliente_nombre": cliente.nombre_completo if cliente else "—",
+                "modalidad_facturacion": cliente.modalidad_facturacion if cliente else "INMEDIATA",
+                "descripcion": f"Cobro crédito #{pc.pk} — {int(pc.monto):,} Gs.",
+                "monto": int(pc.monto),
+                "fecha": pc.fecha,
+            })
+
         items.sort(key=lambda x: x["fecha"], reverse=True)
         serializer = PendienteItemSerializer(items, many=True)
         return Response(serializer.data)

@@ -1592,6 +1592,7 @@ function PagarCCModal({ open, cliente, onClose, onSaved }: PagarCCModalProps) {
   const [monto, setMonto] = useState('')
   const [metodo, setMetodo] = useState('EFECTIVO')
   const [referencia, setReferencia] = useState('')
+  const [nroFactura, setNroFactura] = useState('')
   const [saving, setSaving] = useState(false)
   const [ultimoPago, setUltimoPago] = useState<PagoCC | null>(null)
 
@@ -1600,6 +1601,7 @@ function PagarCCModal({ open, cliente, onClose, onSaved }: PagarCCModalProps) {
       setMonto(saldoActual > 0 ? String(saldoActual) : '')
       setMetodo('EFECTIVO')
       setReferencia('')
+      setNroFactura('')
       setUltimoPago(null)
     }
   }, [open, saldoActual])
@@ -1620,6 +1622,8 @@ function PagarCCModal({ open, cliente, onClose, onSaved }: PagarCCModalProps) {
         monto: montoNum,
         descripcion: desc,
         medio_pago: metodo,
+        genera_factura_legal: true,
+        ...(nroFactura.trim() ? { nro_factura: nroFactura.trim() } : {}),
       })
       setUltimoPago(data)
       toast.success(`Pago de ${(montoNum).toLocaleString('es-PY')} Gs. registrado`)
@@ -1706,6 +1710,20 @@ function PagarCCModal({ open, cliente, onClose, onSaved }: PagarCCModalProps) {
                 />
               </div>
             )}
+
+            {/* Nro. factura opcional */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Nro. factura (opcional)</label>
+              <input
+                value={nroFactura}
+                onChange={e => setNroFactura(e.target.value)}
+                placeholder="001-001-0000001"
+                className={inputClass}
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                {nroFactura.trim() ? 'Factura emitida al registrar el pago' : 'Sin número → queda pendiente en Facturación'}
+              </p>
+            </div>
 
             {/* Botones */}
             <div className="flex gap-3 pt-1">

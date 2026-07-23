@@ -72,12 +72,14 @@ const TIPO_LABEL: Record<string, string> = {
   CARGA_SALDO: 'Carga de saldo',
   PAGO_ALMUERZO: 'Almuerzo',
   VENTA: 'Venta',
+  PAGO_CREDITO: 'Cobro crédito',
 }
 
 const TIPO_COLOR: Record<string, BadgeColor> = {
   CARGA_SALDO: 'blue',
   PAGO_ALMUERZO: 'orange',
   VENTA: 'green',
+  PAGO_CREDITO: 'purple',
 }
 
 // ─── LoteModal ────────────────────────────────────────────────────────────────
