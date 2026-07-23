@@ -200,6 +200,10 @@ export default function Facturacion() {
   const [anulando, setAnulando] = useState<number | null>(null)
   const [confirmAnularId, setConfirmAnularId] = useState<Factura | null>(null)
 
+  // Pendientes tab multi-select
+  const [selectedPend, setSelectedPend] = useState<Set<string>>(new Set())
+  const [lotePendModal, setLotePendModal] = useState(false)
+
   // Mensual tab state
   const now = new Date()
   const [mesAnio, setMesAnio] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
@@ -329,6 +333,30 @@ export default function Facturacion() {
     })
   }
 
+  // Pendientes multi-select helpers
+  const selectedPendItems = useMemo(
+    () => itemsInmediata.filter(i => selectedPend.has(`${i.tipo}-${i.id}`)),
+    [itemsInmediata, selectedPend]
+  )
+  const canEmitirLotePend = useMemo(() => {
+    if (selectedPendItems.length < 2) return false
+    const clientes = new Set(selectedPendItems.map(i => i.cliente_id))
+    const tipos = new Set(selectedPendItems.map(i => i.tipo))
+    return clientes.size === 1 && tipos.size === 1
+  }, [selectedPendItems])
+  const lotePendTotal = useMemo(
+    () => selectedPendItems.reduce((s, i) => s + i.monto, 0),
+    [selectedPendItems]
+  )
+  const togglePendItem = (key: string) => {
+    setSelectedPend(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
   // ── Emitir ───────────────────────────────────────────────────────
   const emitirFactura = useCallback(async () => {
     if (!emitirModal) return
@@ -370,6 +398,22 @@ export default function Facturacion() {
   // ── Columns ──────────────────────────────────────────────────────
 
   const colsPendientes: Column<PendienteItem>[] = [
+    {
+      title: '',
+      key: 'check',
+      width: 36,
+      render: (_, r) => {
+        const key = `${r.tipo}-${r.id}`
+        return (
+          <input
+            type="checkbox"
+            checked={selectedPend.has(key)}
+            onChange={() => togglePendItem(key)}
+            className="w-4 h-4 rounded accent-green-600 cursor-pointer"
+          />
+        )
+      },
+    },
     {
       title: 'Tipo',
       key: 'tipo',
@@ -518,15 +562,59 @@ export default function Facturacion() {
 
       {/* ── Pendientes tab ───────────────────────────────────────── */}
       {tab === 'pendientes' && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-800">Ítems pendientes de facturar (factura inmediata)</h2>
-            <span className="text-sm text-slate-400">{itemsInmediata.length} registros</span>
+        <>
+          {/* Barra de acción lote */}
+          {selectedPend.size > 0 && (
+            <div className="bg-slate-800 text-white rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
+              <div className="flex items-center gap-3 text-sm">
+                <CheckSquare className="w-4 h-4 text-green-400 shrink-0" />
+                <span className="font-semibold">{selectedPend.size} ítem{selectedPend.size !== 1 ? 's' : ''} seleccionado{selectedPend.size !== 1 ? 's' : ''}</span>
+                {selectedPend.size >= 2 && (
+                  <span className="text-slate-300">— Total: <span className="font-bold text-white tabular-nums">{formatGs(lotePendTotal)}</span></span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {!canEmitirLotePend && selectedPend.size >= 2 && (
+                  <span className="text-xs text-amber-300 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Mismo cliente y tipo
+                  </span>
+                )}
+                <button
+                  onClick={() => setSelectedPend(new Set())}
+                  className="text-slate-400 hover:text-white text-xs px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  Limpiar
+                </button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={!canEmitirLotePend}
+                  onClick={() => setLotePendModal(true)}
+                >
+                  Emitir lote ({selectedPend.size})
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-800">Ítems pendientes de facturar</h2>
+              <span className="text-sm text-slate-400">{itemsInmediata.length} registros</span>
+            </div>
+            <div className="p-1">
+              <Table columns={colsPendientes} dataSource={itemsInmediata} rowKey={r => `${r.tipo}-${r.id}`} loading={loadingPend} pageSize={20} />
+            </div>
           </div>
-          <div className="p-1">
-            <Table columns={colsPendientes} dataSource={itemsInmediata} rowKey={r => `${r.tipo}-${r.id}`} loading={loadingPend} pageSize={20} />
-          </div>
-        </div>
+
+          <LoteModal
+            open={lotePendModal}
+            items={selectedPendItems}
+            onClose={() => setLotePendModal(false)}
+            onSuccess={() => { setSelectedPend(new Set()); loadPendientes() }}
+          />
+        </>
       )}
 
       {/* ── Mensual tab ──────────────────────────────────────────── */}
