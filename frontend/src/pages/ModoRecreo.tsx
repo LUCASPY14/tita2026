@@ -679,10 +679,7 @@ export default function ModoRecreo() {
         payload.tarjeta = tarjeta.nro_tarjeta
         payload.medio_pago = null
         if (pinAutorizacion) payload.pin_autorizacion = pinAutorizacion
-        if (generaFactura) {
-          payload.genera_factura_legal = true
-          if (nroFacturaVenta.trim()) payload.nro_factura = nroFacturaVenta.trim()
-        }
+        // Prepago: no genera factura, es consumo de saldo precargado
       } else if (modoPago === 'CREDITO') {
         payload.tarjeta = null
         payload.medio_pago = null
@@ -1535,8 +1532,8 @@ export default function ModoRecreo() {
               </div>
             )}
 
-            {/* Factura legal — disponible para cualquier CONTADO (prepago o medio real), no crédito */}
-            {tipoVenta === 'CONTADO' && (tarjeta !== null || (modoPago === 'MEDIO' && medioPagoSelId !== null)) && (
+            {/* Factura legal — solo cuando se paga con dinero real (Efectivo/POS/Transferencia), no Prepago ni Crédito */}
+            {modoPago === 'MEDIO' && medioPagoSelId !== null && (
               <div className="space-y-2">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
