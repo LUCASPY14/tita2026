@@ -6,7 +6,12 @@ costo en cuenta mensual, límite de crédito mensual.
 import pytest
 from decimal import Decimal
 from datetime import date, timedelta
+from freezegun import freeze_time
 from rest_framework.exceptions import ValidationError
+
+# Fecha fija para todos los tests — evita fragilidad en inicio/fin de mes
+# y garantiza que "mañana" sea siempre una fecha futura relativa al freeze.
+HOY = date(2026, 7, 15)
 
 
 @pytest.fixture
@@ -58,7 +63,7 @@ def precio_almuerzo(db):
     from apps.almuerzos.models import PrecioAlmuerzo
     return PrecioAlmuerzo.objects.create(
         precio_unitario=Decimal("15000"),
-        fecha_inicio_vigencia=date.today() - timedelta(days=30),
+        fecha_inicio_vigencia=HOY - timedelta(days=30),
         activo=True,
     )
 
@@ -91,13 +96,14 @@ def suscripcion_activa(db, hijo_almuerzo, plan_sin_limite):
     return SuscripcionAlmuerzo.objects.create(
         hijo=hijo_almuerzo,
         plan=plan_sin_limite,
-        fecha_inicio=date.today(),
+        fecha_inicio=HOY,
         estado=SuscripcionAlmuerzo.Estado.ACTIVA,
     )
 
 
 # ── AlmuerzoService.get_precio_activo ─────────────────────────────────────────
 
+@freeze_time("2026-07-15")
 @pytest.mark.django_db
 class TestGetPrecioActivo:
 
@@ -115,6 +121,7 @@ class TestGetPrecioActivo:
 
 # ── AlmuerzoService.registrar_consumo ─────────────────────────────────────────
 
+@freeze_time("2026-07-15")
 @pytest.mark.django_db
 class TestRegistrarConsumo:
 
@@ -124,10 +131,9 @@ class TestRegistrarConsumo:
         from apps.almuerzos.services import AlmuerzoService
         from apps.almuerzos.models import CuentaAlmuerzoMensual
 
-        hoy = date.today()
         registro = AlmuerzoService.registrar_consumo(
             hijo=hijo_almuerzo,
-            fecha_consumo=hoy,
+            fecha_consumo=HOY,
             nro_tarjeta=tarjeta_almuerzo,
             registrado_por=usuario_cajero,
             suscripcion=suscripcion_activa,
@@ -136,7 +142,7 @@ class TestRegistrarConsumo:
         assert registro.ya_cobrado is True
         assert registro.costo_almuerzo == Decimal("15000")
         cuenta = CuentaAlmuerzoMensual.objects.get(
-            hijo=hijo_almuerzo, anio=hoy.year, mes=hoy.month
+            hijo=hijo_almuerzo, anio=HOY.year, mes=HOY.month
         )
         assert cuenta.cantidad_almuerzos == 1
         assert cuenta.monto_total == Decimal("15000")
@@ -146,17 +152,16 @@ class TestRegistrarConsumo:
     ):
         from apps.almuerzos.services import AlmuerzoService
 
-        hoy = date.today()
         AlmuerzoService.registrar_consumo(
             hijo=hijo_almuerzo,
-            fecha_consumo=hoy,
+            fecha_consumo=HOY,
             nro_tarjeta=tarjeta_almuerzo,
             registrado_por=usuario_cajero,
             suscripcion=suscripcion_activa,
         )
         segundo = AlmuerzoService.registrar_consumo(
             hijo=hijo_almuerzo,
-            fecha_consumo=hoy,
+            fecha_consumo=HOY,
             nro_tarjeta=tarjeta_almuerzo,
             registrado_por=usuario_cajero,
             suscripcion=suscripcion_activa,
@@ -171,11 +176,10 @@ class TestRegistrarConsumo:
         from apps.almuerzos.services import AlmuerzoService
         from django.core.exceptions import ValidationError as DjangoValidationError
 
-        hoy = date.today()
         for _ in range(2):
             AlmuerzoService.registrar_consumo(
                 hijo=hijo_almuerzo,
-                fecha_consumo=hoy,
+                fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
                 suscripcion=suscripcion_activa,
@@ -184,7 +188,7 @@ class TestRegistrarConsumo:
         with pytest.raises(DjangoValidationError):
             AlmuerzoService.registrar_consumo(
                 hijo=hijo_almuerzo,
-                fecha_consumo=hoy,
+                fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
                 suscripcion=suscripcion_activa,
@@ -198,7 +202,7 @@ class TestRegistrarConsumo:
         with pytest.raises(ValidationError, match="bloqueada"):
             AlmuerzoService.registrar_consumo(
                 hijo=hijo_almuerzo,
-                fecha_consumo=date.today(),
+                fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_bloqueada_almuerzo,
                 registrado_por=usuario_cajero,
             )
@@ -208,7 +212,7 @@ class TestRegistrarConsumo:
     ):
         from apps.almuerzos.services import AlmuerzoService
 
-        manana = date.today() + timedelta(days=1)
+        manana = HOY + timedelta(days=1)
         with pytest.raises(ValidationError, match="futura"):
             AlmuerzoService.registrar_consumo(
                 hijo=hijo_almuerzo,
@@ -223,7 +227,7 @@ class TestRegistrarConsumo:
         with pytest.raises(ValidationError, match="tarjeta"):
             AlmuerzoService.registrar_consumo(
                 hijo=hijo_almuerzo,
-                fecha_consumo=date.today(),
+                fecha_consumo=HOY,
                 nro_tarjeta=None,
                 registrado_por=usuario_cajero,
             )
@@ -236,7 +240,7 @@ class TestRegistrarConsumo:
         with pytest.raises(ValidationError, match="precio"):
             AlmuerzoService.registrar_consumo(
                 hijo=hijo_almuerzo,
-                fecha_consumo=date.today(),
+                fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
             )
@@ -257,14 +261,14 @@ class TestRegistrarConsumo:
         suscripcion = SuscripcionAlmuerzo.objects.create(
             hijo=hijo_almuerzo,
             plan=plan,
-            fecha_inicio=date.today(),
+            fecha_inicio=HOY,
             estado=SuscripcionAlmuerzo.Estado.ACTIVA,
         )
 
         with pytest.raises(ValidationError, match="[Ll]imite"):
             AlmuerzoService.registrar_consumo(
                 hijo=hijo_almuerzo,
-                fecha_consumo=date.today(),
+                fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
                 suscripcion=suscripcion,
@@ -284,14 +288,14 @@ class TestRegistrarConsumo:
         suscripcion = SuscripcionAlmuerzo.objects.create(
             hijo=hijo_almuerzo,
             plan=plan,
-            fecha_inicio=date.today(),
+            fecha_inicio=HOY,
             estado=SuscripcionAlmuerzo.Estado.SUSPENDIDA,
         )
 
         with pytest.raises(ValidationError, match="[Aa]ctiva"):
             AlmuerzoService.registrar_consumo(
                 hijo=hijo_almuerzo,
-                fecha_consumo=date.today(),
+                fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
                 suscripcion=suscripcion,
@@ -320,7 +324,7 @@ class TestRegistrarConsumo:
         with pytest.raises(ValidationError, match="pertenece"):
             AlmuerzoService.registrar_consumo(
                 hijo=hijo_almuerzo,
-                fecha_consumo=date.today(),
+                fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_otro,
                 registrado_por=usuario_cajero,
             )
@@ -338,7 +342,7 @@ class TestRegistrarConsumo:
         )
         registro = AlmuerzoService.registrar_consumo(
             hijo=hijo_almuerzo,
-            fecha_consumo=date.today(),
+            fecha_consumo=HOY,
             nro_tarjeta=tarjeta_almuerzo,
             registrado_por=usuario_cajero,
             suscripcion=suscripcion_activa,

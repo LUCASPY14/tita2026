@@ -246,7 +246,7 @@ def bancard_iniciar_almuerzo(request):
 # ─── GET /api/v1/bancard/retorno/ ─────────────────────────────────────────────
 
 @api_view(["GET"])
-@permission_classes([])
+@permission_classes([])   # intencional: Bancard redirige el navegador del padre sin sesión activa
 @throttle_classes([BancardRetornoThrottle])
 def bancard_retorno(request):
     """
@@ -255,6 +255,10 @@ def bancard_retorno(request):
 
     Confirma el pago con la API de Bancard, acredita el saldo y redirige
     al portal con el resultado.
+
+    Sin autenticación porque Bancard controla la redirección y el padre
+    no tiene token en ese momento. El shop_process_id es el único secreto;
+    BancardRetornoThrottle mitiga fuerza bruta.
     """
     shop_process_id = request.GET.get("shop_process_id", "")
 
