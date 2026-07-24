@@ -172,7 +172,7 @@ services:
 
   # ── WAHA (WhatsApp self-hosted) ─────────────────────────────────────────────
   waha:
-    image: devlikeapro/waha:latest
+    image: devlikeapro/waha:latest-2026.6.2
     ports:
       - "3001:3000"      # externo 3001 para no chocar con Grafana en 3000
     volumes:

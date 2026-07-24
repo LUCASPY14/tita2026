@@ -177,7 +177,7 @@ Portal de padres (`/portal/*`) accesible desde internet via Bancard para recarga
 El límite de sesiones concurrentes se aplica automáticamente al hacer login
 (`apps/usuarios/views.py:_registrar_sesion`).
 
-## Tareas Celery periódicas (17 total)
+## Tareas Celery periódicas (19 activas)
 
 | Tarea | Cuándo | Crítica |
 |-------|--------|---------|
@@ -190,7 +190,6 @@ El límite de sesiones concurrentes se aplica automáticamente al hacer login
 | `verificar_vencimientos` | Diario 09:00 | No |
 | `generar_resumen_diario_stock` | Diario 23:55 | **Sí** |
 | `generar_resumen_diario_ventas` | Diario 23:50 | **Sí** |
-| `cerrar_cajas_automatico` | Cada hora | No |
 | `cerrar_cuentas_mes_anterior` | Día 1 de mes 05:00 | **Sí** |
 | `generar_cuentas_mensuales` | Día 1 de mes 06:00 | **Sí** |
 | `alertar_cuentas_vencidas` | Día 10 de mes 08:00 | No |
@@ -198,8 +197,13 @@ El límite de sesiones concurrentes se aplica automáticamente al hacer login
 | `refrescar_mv_balance_cliente` | Cada 15 min | No |
 | `alertar_ordenes_compra_pendientes` | Diario 09:30 | No |
 | `alertar_compras_pendientes_pago` | Diario 10:00 | No |
+| `sincronizar_costos_desde_compras` | Diario 01:30 | No |
+| `alertar_saldo_negativo_prolongado` | Diario 09:15 | No |
+| `resumen_mensual_deuda_clientes` | Día 5 de mes 08:30 | No |
 
 Las tareas críticas envían email a `ADMINS` si fallan (configurado en `celery_app.py`).
+
+> `cerrar_cajas_automatico` está desactivada en el beat (`celery_app.py:104`); el cierre de caja es manual.
 
 ## Convenciones importantes
 
@@ -217,9 +221,10 @@ Las tareas críticas envían email a `ADMINS` si fallan (configurado en `celery_
 - i18n en `src/i18n/es.json` — agregar toda cadena nueva aquí
 
 ### Tests
-- Backend: cobertura mínima 80% forzada por CI (`--cov-fail-under=80`)
+- Backend: cobertura mínima 95% forzada por CI (`--cov-fail-under=95`)
 - E2E Playwright: usar patrón LIFO para mocks — registrar catch-all primero, específicos después
-- Tests backend: usar Factory Boy + Faker, nunca fixtures de Django para datos complejos
+- Tests backend: usar `Model.objects.create()` con datos explícitos; no usar fixtures de Django para datos complejos
+- Tests que dependan de fechas: usar `freezegun` (`@freeze_time`) con una fecha fija; nunca `date.today()` sin freeze
 
 ### Base de datos
 - Tablas de alto volumen (`movimientos`, `ventas`) usan particionamiento por año

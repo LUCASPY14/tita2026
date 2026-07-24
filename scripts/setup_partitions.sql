@@ -3,7 +3,7 @@
 -- por año (PostgreSQL declarative partitioning, RANGE sobre fecha).
 --
 -- APLICAR CUANDO: la tabla supere ~200.000 filas (revisar con db_health_check.sql).
--- PREREQUISITO: PostgreSQL 14+ (ya confirmado en el sistema).
+-- PREREQUISITO: PostgreSQL 15+ (soporta PK sin incluir columna de partición).
 --
 -- ┌──────────────────────────────────────────────────────────────────────────┐
 -- │  INSTRUCCIONES DE USO                                                    │
@@ -11,55 +11,81 @@
 -- │  1. Hacer backup COMPLETO antes de ejecutar:                             │
 -- │       .\backup_cantina.ps1                                               │
 -- │                                                                          │
--- │  2. Ejecutar en psql (connectado como superusuario):                     │
+-- │  2. Detener todos los servicios (backend, celery) para evitar writes     │
+-- │     concurrentes durante la migración.                                   │
+-- │                                                                          │
+-- │  3. Ejecutar en psql como el usuario de la DB:                           │
+-- │       psql -U cantina_dev -d cantina_tita_dev                            │
 -- │       \i C:/tita2026/scripts/setup_partitions.sql                        │
 -- │                                                                          │
--- │  3. Verificar que Django sigue funcionando:                              │
+-- │  4. Verificar que Django sigue funcionando:                              │
 -- │       python manage.py check                                             │
 -- │       pytest                                                             │
 -- │                                                                          │
--- │  4. Crear particiones futuras con el management command:                 │
--- │       python manage.py create_year_partition --year 2027                 │
+-- │  5. Crear particiones futuras con el management command:                 │
+-- │       python manage.py create_year_partition --year 2028                 │
 -- └──────────────────────────────────────────────────────────────────────────┘
 
 -- ============================================================================
 -- TABLA: core_movimientotarjeta
 -- Crece ~N_transacciones_día * 365 filas/año.
--- Columna de partición: fecha (timestamp with time zone)
+-- Columna de partición: fecha (timestamptz)
+-- Trigger: trg_sync_saldo_tarjeta (recreado después de la migración de datos)
 -- ============================================================================
 
 BEGIN;
 
--- 1. Renombrar la tabla original
-ALTER TABLE core_movimientotarjeta RENAME TO core_movimientotarjeta_old;
+-- Bloquear la tabla original para prevenir writes durante la migración
+LOCK TABLE core_movimientotarjeta IN ACCESS EXCLUSIVE MODE;
 
--- 2. Crear nueva tabla particionada (misma estructura)
+-- 1. Mover el trigger ANTES de renombrar (se moverá con la tabla al renombrar)
+--    Lo eliminamos del _old para que no recalcule saldos durante el INSERT masivo
+ALTER TABLE core_movimientotarjeta RENAME TO core_movimientotarjeta_old;
+DROP TRIGGER IF EXISTS trg_sync_saldo_tarjeta ON core_movimientotarjeta_old;
+
+-- Al renombrar la tabla, los índices NO se renombran automáticamente en PostgreSQL.
+-- Hay que hacerlo manualmente para liberar los nombres y poder recrearlos en la nueva tabla.
+ALTER INDEX IF EXISTS core_movimientotarjeta_pkey                 RENAME TO core_movimientotarjeta_old_pkey;
+ALTER INDEX IF EXISTS core_movimientotarjeta_tarjeta_id_1ac33c9b  RENAME TO core_movimientotarjeta_old_tarjeta_id;
+ALTER INDEX IF EXISTS core_movimientotarjeta_carga_id_5f45c578    RENAME TO core_movimientotarjeta_old_carga_id;
+ALTER INDEX IF EXISTS core_movimientotarjeta_consumo_id_891746a1  RENAME TO core_movimientotarjeta_old_consumo_id;
+ALTER INDEX IF EXISTS core_movimientotarjeta_creado_por_id_b0ef7395 RENAME TO core_movimientotarjeta_old_creado_por_id;
+ALTER INDEX IF EXISTS idx_mov_tarj_fecha            RENAME TO idx_mov_tarj_fecha_old;
+ALTER INDEX IF EXISTS idx_mov_tarj_solo_fecha       RENAME TO idx_mov_tarj_solo_fecha_old;
+ALTER INDEX IF EXISTS idx_mov_tarj_tarjeta_id_desc  RENAME TO idx_mov_tarj_tarjeta_id_desc_old;
+ALTER INDEX IF EXISTS idx_mov_tarj_tipo             RENAME TO idx_mov_tarj_tipo_old;
+
+-- 2. Crear nueva tabla particionada con el esquema exacto de la BD actual
 CREATE TABLE core_movimientotarjeta (
-    id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    tarjeta_id  varchar(20) NOT NULL
-                    REFERENCES core_tarjeta(nro_tarjeta) DEFERRABLE INITIALLY DEFERRED,
-    fecha       timestamptz NOT NULL DEFAULT now(),
-    tipo        varchar(10) NOT NULL,
-    monto       numeric(12, 0) NOT NULL,
-    saldo_anterior   numeric(12, 0) NOT NULL,
-    saldo_resultante numeric(12, 0) NOT NULL,
-    descripcion varchar(255),
-    carga_id    bigint REFERENCES core_cargasaldo(id) ON DELETE SET NULL,
-    consumo_id  bigint REFERENCES core_consumotarjeta(id) ON DELETE SET NULL,
-    creado_por_id bigint NOT NULL REFERENCES usuarios_usuario(id),
-    fecha_creacion timestamptz NOT NULL DEFAULT now()
+    id               bigint GENERATED BY DEFAULT AS IDENTITY,
+    fecha            timestamptz NOT NULL,
+    tipo             character varying(10) NOT NULL,
+    monto            numeric(12,0) NOT NULL,
+    saldo_anterior   numeric(12,0) NOT NULL,
+    saldo_resultante numeric(12,0) NOT NULL,
+    descripcion      character varying(255),
+    fecha_creacion   timestamptz NOT NULL DEFAULT now(),
+    carga_id         bigint,
+    consumo_id       bigint,
+    creado_por_id    bigint,
+    tarjeta_id       character varying(20) NOT NULL,
+    -- Sin PK declarada: PG16 exigiría incluir 'fecha' en la PK compuesta.
+    -- La unicidad de 'id' la garantiza la secuencia IDENTITY; nada hace FK a esta tabla.
+    CONSTRAINT "core_movimientotarje_tarjeta_id_1ac33c9b_fk_core_tarj"
+        FOREIGN KEY (tarjeta_id) REFERENCES core_tarjeta(nro_tarjeta) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT "core_movimientotarjeta_carga_id_5f45c578_fk_core_cargasaldo_id"
+        FOREIGN KEY (carga_id) REFERENCES core_cargasaldo(id) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT "core_movimientotarje_consumo_id_891746a1_fk_core_cons"
+        FOREIGN KEY (consumo_id) REFERENCES core_consumotarjeta(id) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT "core_movimientotarjeta_creado_por_id_b0ef7395_fk_usuarios_id"
+        FOREIGN KEY (creado_por_id) REFERENCES usuarios(id) DEFERRABLE INITIALLY DEFERRED
 ) PARTITION BY RANGE (fecha);
 
--- 3. Crear índices en la tabla raíz (se heredan a las particiones)
-CREATE INDEX idx_mov_tarj_fecha ON core_movimientotarjeta (tarjeta_id, fecha);
-CREATE INDEX idx_mov_tarj_tipo  ON core_movimientotarjeta (tarjeta_id, tipo);
-
--- 4. Crear partición para datos históricos (antes de 2025)
+-- 3. Crear particiones (datos históricos + años activos)
 CREATE TABLE core_movimientotarjeta_old_data
     PARTITION OF core_movimientotarjeta
     FOR VALUES FROM (MINVALUE) TO ('2025-01-01 00:00:00+00');
 
--- 5. Crear partición por año (2025, 2026, ...)
 CREATE TABLE core_movimientotarjeta_2025
     PARTITION OF core_movimientotarjeta
     FOR VALUES FROM ('2025-01-01 00:00:00+00') TO ('2026-01-01 00:00:00+00');
@@ -72,9 +98,26 @@ CREATE TABLE core_movimientotarjeta_2027
     PARTITION OF core_movimientotarjeta
     FOR VALUES FROM ('2027-01-01 00:00:00+00') TO ('2028-01-01 00:00:00+00');
 
--- 6. Migrar datos de la tabla original
+-- 4. Crear índices en la tabla raíz (se heredan automáticamente a las particiones)
+--    Nombres iguales a los originales para que Django no intente recrearlos
+CREATE INDEX "core_movimientotarjeta_tarjeta_id_1ac33c9b" ON core_movimientotarjeta (tarjeta_id);
+CREATE INDEX "core_movimientotarjeta_carga_id_5f45c578"   ON core_movimientotarjeta (carga_id);
+CREATE INDEX "core_movimientotarjeta_consumo_id_891746a1" ON core_movimientotarjeta (consumo_id);
+CREATE INDEX "core_movimientotarjeta_creado_por_id_b0ef7395" ON core_movimientotarjeta (creado_por_id);
+CREATE INDEX idx_mov_tarj_fecha         ON core_movimientotarjeta (tarjeta_id, fecha);
+CREATE INDEX idx_mov_tarj_tipo          ON core_movimientotarjeta (tarjeta_id, tipo);
+CREATE INDEX idx_mov_tarj_solo_fecha    ON core_movimientotarjeta (fecha);
+CREATE INDEX idx_mov_tarj_tarjeta_id_desc ON core_movimientotarjeta (tarjeta_id, id DESC);
+
+-- 5. Migrar datos de la tabla original
 INSERT INTO core_movimientotarjeta
 SELECT * FROM core_movimientotarjeta_old;
+
+-- 6. Reposicionar la secuencia de identidad al máximo id existente
+SELECT setval(
+    pg_get_serial_sequence('core_movimientotarjeta', 'id'),
+    COALESCE((SELECT MAX(id) FROM core_movimientotarjeta), 1)
+);
 
 -- 7. Verificar que los conteos coincidan
 DO $$
@@ -87,77 +130,96 @@ BEGIN
     IF cnt_old <> cnt_new THEN
         RAISE EXCEPTION 'Conteo no coincide: old=% new=%', cnt_old, cnt_new;
     END IF;
-    RAISE NOTICE 'OK: % filas migradas correctamente', cnt_new;
+    RAISE NOTICE 'OK: % filas migradas correctamente a core_movimientotarjeta', cnt_new;
 END;
 $$;
 
--- 8. Eliminar tabla original (hacer DESPUÉS de verificar)
--- DROP TABLE core_movimientotarjeta_old;
+-- 8. Recrear el trigger de sincronización de saldo en la tabla particionada
+CREATE TRIGGER trg_sync_saldo_tarjeta
+    AFTER INSERT OR UPDATE OF monto, tipo
+    ON core_movimientotarjeta
+    FOR EACH ROW EXECUTE FUNCTION fn_sync_saldo_tarjeta();
+
+-- 9. Eliminar tabla original (descomentar después de verificar en producción)
+DROP TABLE core_movimientotarjeta_old;
 
 COMMIT;
 
 
 -- ============================================================================
--- TABLA: usuarios_auditoriaoperacion
--- Crece con cada operación registrada (audit log).
--- Columna de partición: timestamp
+-- TABLA: auditoria_operaciones  (app: usuarios, model: AuditoriaOperacion)
+-- Crece con cada operación auditada.
+-- Columna de partición: fecha_operacion (timestamptz)
 -- ============================================================================
 
 BEGIN;
 
-ALTER TABLE usuarios_auditoriaoperacion RENAME TO usuarios_auditoriaoperacion_old;
+LOCK TABLE auditoria_operaciones IN ACCESS EXCLUSIVE MODE;
 
-CREATE TABLE usuarios_auditoriaoperacion (
-    id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    usuario_id  bigint REFERENCES usuarios_usuario(id) ON DELETE SET NULL,
-    timestamp   timestamptz NOT NULL DEFAULT now(),
-    accion      varchar(100) NOT NULL,
-    modelo      varchar(100),
-    objeto_id   varchar(50),
-    descripcion text,
-    ip_address  inet,
-    user_agent  text,
-    datos_antes jsonb,
-    datos_despues jsonb
-) PARTITION BY RANGE (timestamp);
+ALTER TABLE auditoria_operaciones RENAME TO auditoria_operaciones_old;
+ALTER INDEX IF EXISTS auditoria_operaciones_pkey               RENAME TO auditoria_operaciones_old_pkey;
+ALTER INDEX IF EXISTS auditoria_operaciones_usuario_id_861f2b37 RENAME TO auditoria_operaciones_old_usuario_id;
 
-CREATE INDEX idx_auditoria_ts   ON usuarios_auditoriaoperacion (timestamp DESC);
-CREATE INDEX idx_auditoria_user ON usuarios_auditoriaoperacion (usuario_id, timestamp DESC);
+CREATE TABLE auditoria_operaciones (
+    id_auditoria   integer GENERATED BY DEFAULT AS IDENTITY,
+    operacion      character varying(100) NOT NULL,
+    tabla_afectada character varying(100),
+    id_registro    integer,
+    descripcion    text,
+    datos_anteriores jsonb,
+    datos_nuevos   jsonb,
+    ip_address     inet,
+    fecha_operacion timestamptz NOT NULL DEFAULT now(),
+    resultado      character varying(20) NOT NULL,
+    mensaje_error  text,
+    usuario_id     bigint,
+    -- Sin PK declarada: misma razón que core_movimientotarjeta.
+    CONSTRAINT "auditoria_operaciones_usuario_id_861f2b37_fk_usuarios_id"
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) DEFERRABLE INITIALLY DEFERRED
+) PARTITION BY RANGE (fecha_operacion);
 
-CREATE TABLE usuarios_auditoriaoperacion_old_data
-    PARTITION OF usuarios_auditoriaoperacion
+CREATE TABLE auditoria_operaciones_old_data
+    PARTITION OF auditoria_operaciones
     FOR VALUES FROM (MINVALUE) TO ('2025-01-01 00:00:00+00');
 
-CREATE TABLE usuarios_auditoriaoperacion_2025
-    PARTITION OF usuarios_auditoriaoperacion
+CREATE TABLE auditoria_operaciones_2025
+    PARTITION OF auditoria_operaciones
     FOR VALUES FROM ('2025-01-01 00:00:00+00') TO ('2026-01-01 00:00:00+00');
 
-CREATE TABLE usuarios_auditoriaoperacion_2026
-    PARTITION OF usuarios_auditoriaoperacion
+CREATE TABLE auditoria_operaciones_2026
+    PARTITION OF auditoria_operaciones
     FOR VALUES FROM ('2026-01-01 00:00:00+00') TO ('2027-01-01 00:00:00+00');
 
-CREATE TABLE usuarios_auditoriaoperacion_2027
-    PARTITION OF usuarios_auditoriaoperacion
+CREATE TABLE auditoria_operaciones_2027
+    PARTITION OF auditoria_operaciones
     FOR VALUES FROM ('2027-01-01 00:00:00+00') TO ('2028-01-01 00:00:00+00');
 
-INSERT INTO usuarios_auditoriaoperacion
-SELECT * FROM usuarios_auditoriaoperacion_old;
+CREATE INDEX "auditoria_operaciones_usuario_id_861f2b37" ON auditoria_operaciones (usuario_id);
+CREATE INDEX idx_auditoria_fecha_op ON auditoria_operaciones (fecha_operacion DESC);
+
+INSERT INTO auditoria_operaciones
+SELECT * FROM auditoria_operaciones_old;
+
+SELECT setval(
+    pg_get_serial_sequence('auditoria_operaciones', 'id_auditoria'),
+    COALESCE((SELECT MAX(id_auditoria) FROM auditoria_operaciones), 1)
+);
 
 DO $$
 DECLARE
     cnt_old bigint;
     cnt_new bigint;
 BEGIN
-    SELECT COUNT(*) INTO cnt_old FROM usuarios_auditoriaoperacion_old;
-    SELECT COUNT(*) INTO cnt_new FROM usuarios_auditoriaoperacion;
+    SELECT COUNT(*) INTO cnt_old FROM auditoria_operaciones_old;
+    SELECT COUNT(*) INTO cnt_new FROM auditoria_operaciones;
     IF cnt_old <> cnt_new THEN
         RAISE EXCEPTION 'Conteo no coincide: old=% new=%', cnt_old, cnt_new;
     END IF;
-    RAISE NOTICE 'OK: % filas migradas correctamente', cnt_new;
+    RAISE NOTICE 'OK: % filas migradas correctamente a auditoria_operaciones', cnt_new;
 END;
 $$;
 
--- DROP TABLE usuarios_auditoriaoperacion_old;
+DROP TABLE auditoria_operaciones_old;
 
 COMMIT;
 
@@ -166,8 +228,8 @@ COMMIT;
 -- Verificar estado de particionamiento
 -- ============================================================================
 SELECT
-    parent.relname                          AS tabla_raiz,
-    child.relname                           AS particion,
+    parent.relname                             AS tabla_raiz,
+    child.relname                              AS particion,
     pg_get_expr(child.relpartbound, child.oid) AS rango,
     pg_size_pretty(pg_relation_size(child.oid)) AS tamanio
 FROM
@@ -175,6 +237,6 @@ FROM
     JOIN pg_class parent ON pg_inherits.inhparent = parent.oid
     JOIN pg_class child  ON pg_inherits.inhrelid  = child.oid
 WHERE
-    parent.relname IN ('core_movimientotarjeta', 'usuarios_auditoriaoperacion')
+    parent.relname IN ('core_movimientotarjeta', 'auditoria_operaciones')
 ORDER BY
     parent.relname, child.relname;
