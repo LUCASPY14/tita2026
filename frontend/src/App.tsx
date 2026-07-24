@@ -127,7 +127,7 @@ function AuthMonitor() {
 export default function App() {
   const { loadUser } = useAuthStore()
 
-  useEffect(() => { loadUser() }, [])
+  useEffect(() => { loadUser() }, [loadUser])
 
   return (
     <ErrorBoundary>
