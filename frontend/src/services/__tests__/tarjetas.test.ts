@@ -106,7 +106,7 @@ describe('tarjetasService', () => {
     it('envía POST al endpoint de confirmación con el id', async () => {
       vi.mocked(api.post).mockResolvedValue({ data: {} })
       await tarjetasService.confirmarCarga(7)
-      expect(api.post).toHaveBeenCalledWith('/core/cargas-saldo/7/confirmar/')
+      expect(api.post).toHaveBeenCalledWith('/core/cargas-saldo/7/confirmar/', {})
     })
   })
 })
