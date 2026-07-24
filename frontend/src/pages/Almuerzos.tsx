@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
@@ -9,163 +9,30 @@ import {
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { exportarCuentasMensualesPDF, type RegistroConsumoDetalle } from '../utils/pdf'
-import Badge, { type BadgeColor } from '../components/ui/Badge'
+import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
-import Modal from '../components/ui/Modal'
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function extractErrorMessage(err: unknown): string {
-  const e = err as { response?: { data?: unknown } }
-  const data = e?.response?.data
-  if (!data) return 'Error inesperado'
-  if (typeof data === 'string') return data
-  if (typeof data === 'object') {
-    const d = data as Record<string, unknown>
-    if (d.detail) return String(d.detail)
-    const first = Object.values(d)[0]
-    if (Array.isArray(first)) return String(first[0])
-    return JSON.stringify(data)
-  }
-  return 'Error inesperado'
-}
-
-function formatGs(n: number | string | null | undefined): string {
-  return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
-}
-
-function todayISO() {
-  return new Date().toISOString().split('T')[0]
-}
-
-function formatFecha(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const [y, m, d] = iso.split('-')
-  return `${d}/${m}/${y}`
-}
-
-const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-
-
-// ─── Interfaces ───────────────────────────────────────────────────────────────
-
-interface Hijo {
-  id: number
-  nombre: string
-  apellido: string
-  grado: string
-  nombre_completo?: string
-}
-
-interface TarjetaBusqueda {
-  nro_tarjeta: string
-  hijo_nombre: string
-  saldo_actual: string | number
-  estado: string
-}
-
-interface TipoAlmuerzo {
-  id: number
-  nombre: string
-  descripcion: string
-  precio_unitario: string | number
-  incluye_plato_principal: boolean
-  incluye_postre: boolean
-  incluye_bebida: boolean
-  activo: boolean
-}
-
-interface PlanAlmuerzo {
-  id: number
-  nombre: string
-  tipo: string
-  precio_mensual: string | number
-  cantidad_almuerzos_mes: number | null
-  dias_semana_incluidos: number[]
-  activo: boolean
-}
-
-interface Suscripcion {
-  id: number
-  hijo: number
-  hijo_nombre: string
-  plan: number
-  plan_nombre: string
-  tipo_cobro: 'CUENTA' | 'MENSUAL'
-  estado: string
-  fecha_inicio: string
-  fecha_fin: string | null
-}
-
-interface MenuDiario {
-  id: number
-  fecha: string
-  plato_principal: string
-  guarnicion: string
-  postre: string
-  bebida: string
-  descripcion: string
-  activo: boolean
-}
-
-interface RegistroConsumo {
-  id: number
-  hijo_nombre: string
-  fecha_consumo: string
-  tipo_almuerzo_nombre: string
-  costo_almuerzo: string | number
-  estado: string
-  ya_cobrado: boolean
-}
-
-interface CuentaMensual {
-  id: number
-  hijo: number
-  hijo_nombre: string
-  hijo_grado: string
-  nro_tarjeta: string
-  anio: number
-  mes: number
-  cantidad_almuerzos: number
-  monto_total: string | number
-  monto_pagado: string | number
-  saldo_pendiente: string | number
-  estado: string
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const ESTADO_REGISTRO_COLOR: Record<string, BadgeColor> = {
-  REGISTRADO: 'green',
-  RECHAZADO: 'red',
-  ANULADO: 'default',
-}
-
-const ESTADO_CUENTA_COLOR: Record<string, BadgeColor> = {
-  PENDIENTE: 'orange',
-  PAGADO: 'green',
-  PARCIAL: 'blue',
-  ANULADO: 'default',
-}
-
-const ESTADO_SUSCRIPCION_COLOR: Record<string, BadgeColor> = {
-  ACTIVA: 'green',
-  INACTIVA: 'default',
-  SUSPENDIDA: 'orange',
-}
-
-type TabKey = 'consumos' | 'cuentas' | 'suscripciones' | 'menu'
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
+import ModalConsumo from './almuerzos/ModalConsumo'
+import ModalSuscripcion from './almuerzos/ModalSuscripcion'
+import ModalPagoCuenta from './almuerzos/ModalPagoCuenta'
+import ModalEditSusc from './almuerzos/ModalEditSusc'
+import ModalMenu from './almuerzos/ModalMenu'
+import ModalEditMenu from './almuerzos/ModalEditMenu'
+import ModalConfirmarEliminar from './almuerzos/ModalConfirmarEliminar'
+import ModalPagoMensual from './almuerzos/ModalPagoMensual'
+import {
+  extractErrorMessage, formatGs, formatFecha, todayISO, MESES,
+  ESTADO_REGISTRO_COLOR, ESTADO_CUENTA_COLOR, ESTADO_SUSCRIPCION_COLOR,
+  type TabKey, type Hijo, type TipoAlmuerzo, type PlanAlmuerzo, type Suscripcion,
+  type MenuDiario, type RegistroConsumo, type CuentaMensual,
+} from './almuerzos/shared'
 
 export default function Almuerzos() {
   const { t } = useTranslation()
   const isAdmin = useAuthStore(s => s.user?.rol === 'ADMIN')
   const [tab, setTab] = useState<TabKey>('consumos')
 
-  // ── Catalogs ─────────────────────────────────────────────────────
+  // ── Catálogos ─────────────────────────────────────────────────────
   const [hijos, setHijos] = useState<Hijo[]>([])
   const [tiposAlmuerzo, setTiposAlmuerzo] = useState<TipoAlmuerzo[]>([])
   const [planes, setPlanes] = useState<PlanAlmuerzo[]>([])
@@ -178,63 +45,35 @@ export default function Almuerzos() {
   const [totalRegistros, setTotalRegistros] = useState(0)
   const searchTimerReg = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  // ── Consumo modal ─────────────────────────────────────────────────
+  // ── Modal open states ─────────────────────────────────────────────
   const [consumoOpen, setConsumoOpen] = useState(false)
-  const [tarjetaSearch, setTarjetaSearch] = useState('')
-  const [tarjeta, setTarjeta] = useState<TarjetaBusqueda | null>(null)
-  const [tarjetaBuscando, setTarjetaBuscando] = useState(false)
-  const [hijoId, setHijoId] = useState<number | ''>('')
-  const [tipoAlmuerzoId, setTipoAlmuerzoId] = useState<number | ''>('')
-  const [fechaConsumo, setFechaConsumo] = useState(todayISO())
-  const [registrando, setRegistrando] = useState(false)
+  const [suscModalOpen, setSuscModalOpen] = useState(false)
+  const [menuModalOpen, setMenuModalOpen] = useState(false)
+  const [pagoCuenta, setPagoCuenta] = useState<CuentaMensual | null>(null)
+  const [editingSusc, setEditingSusc] = useState<Suscripcion | null>(null)
+  const [editingMenu, setEditingMenu] = useState<MenuDiario | null>(null)
+  const [deleteConsumoId, setDeleteConsumoId] = useState<number | null>(null)
+  const [pagoMensualSusc, setPagoMensualSusc] = useState<Suscripcion | null>(null)
 
   // ── Cuentas ───────────────────────────────────────────────────────
   const [cuentas, setCuentas] = useState<CuentaMensual[]>([])
   const [loadingCuentas, setLoadingCuentas] = useState(false)
-
-  // ── Suscripciones ─────────────────────────────────────────────────
-  const [suscripciones, setSuscripciones] = useState<Suscripcion[]>([])
-  const [loadingSusc, setLoadingSusc] = useState(false)
-  const [suscModalOpen, setSuscModalOpen] = useState(false)
-  const [suscForm, setSuscForm] = useState({ hijo: '', plan: '', tipo_cobro: 'CUENTA', fecha_inicio: todayISO() })
-  const [savingSusc, setSavingSusc] = useState(false)
-
-  // ── Menú ──────────────────────────────────────────────────────────
-  const [menu, setMenu] = useState<MenuDiario[]>([])
-  const [loadingMenu, setLoadingMenu] = useState(false)
-  const [menuModalOpen, setMenuModalOpen] = useState(false)
-  const [menuForm, setMenuForm] = useState({ fecha: todayISO(), plato_principal: '', guarnicion: '', postre: '', bebida: '', descripcion: '' })
-  const [savingMenu, setSavingMenu] = useState(false)
-  const [editingMenu, setEditingMenu] = useState<MenuDiario | null>(null)
-  const [editMenuOpen, setEditMenuOpen] = useState(false)
-  const [editMenuForm, setEditMenuForm] = useState({ fecha: '', plato_principal: '', guarnicion: '', postre: '', bebida: '', descripcion: '', activo: true })
-  const [savingEditMenu, setSavingEditMenu] = useState(false)
-
-  // ── Pago cuenta ───────────────────────────────────────────────────
-  const [pagoOpen, setPagoOpen] = useState(false)
-  const [pagoCuenta, setPagoCuenta] = useState<CuentaMensual | null>(null)
-  const [pagoForm, setPagoForm] = useState({ monto: '', medio_pago: 'EFECTIVO', referencia: '', emitirFactura: false, nroFactura: '' })
-  const [savingPago, setSavingPago] = useState(false)
-
-  // ── Filtros y generación de cuentas ──────────────────────────────
   const [filtroCuentaMes, setFiltroCuentaMes] = useState<number | ''>('')
   const [filtroCuentaAnio, setFiltroCuentaAnio] = useState<number | ''>(new Date().getFullYear())
   const [searchCuentas, setSearchCuentas] = useState('')
   const [generando, setGenerando] = useState(false)
 
-  // ── Edit suscripcion ──────────────────────────────────────────────
-  const [editingSusc, setEditingSusc] = useState<Suscripcion | null>(null)
-  const [editSuscOpen, setEditSuscOpen] = useState(false)
-  const [editSuscForm, setEditSuscForm] = useState({ plan: '', fecha_fin: '' })
-  const [savingEditSusc, setSavingEditSusc] = useState(false)
+  // ── Suscripciones ─────────────────────────────────────────────────
+  const [suscripciones, setSuscripciones] = useState<Suscripcion[]>([])
+  const [loadingSusc, setLoadingSusc] = useState(false)
 
-  // ── Pago cuota mensual fija ───────────────────────────────────────
-  const [pagoMensualOpen, setPagoMensualOpen] = useState(false)
-  const [pagoMensualSusc, setPagoMensualSusc] = useState<Suscripcion | null>(null)
-  const [pagoMensualForm, setPagoMensualForm] = useState({ monto: '', mes_pagado: '' })
-  const [savingPagoMensual, setSavingPagoMensual] = useState(false)
+  // ── Menú ──────────────────────────────────────────────────────────
+  const [menu, setMenu] = useState<MenuDiario[]>([])
+  const [loadingMenu, setLoadingMenu] = useState(false)
 
-  // ── Load catalogs ─────────────────────────────────────────────────
+  const [exportandoPDF, setExportandoPDF] = useState(false)
+
+  // ── Load catálogos ────────────────────────────────────────────────
   useEffect(() => {
     Promise.all([
       api.get('/clientes/hijos/', { params: { page_size: 500 } }),
@@ -316,7 +155,7 @@ export default function Almuerzos() {
     if (tab === 'suscripciones') loadSuscripciones()
   }, [tab, loadSuscripciones])
 
-  // ── Load menu ─────────────────────────────────────────────────────
+  // ── Load menú ─────────────────────────────────────────────────────
   const loadMenu = useCallback(async () => {
     setLoadingMenu(true)
     try {
@@ -344,82 +183,16 @@ export default function Almuerzos() {
     return () => window.removeEventListener('comedor:registro', handler)
   }, [tab, searchRegistros, pageRegistros, loadRegistros, loadCuentas])
 
-  // ── Tarjeta search ────────────────────────────────────────────────
-  const buscarTarjeta = useCallback(async (nro?: string) => {
-    const searchValue = nro ?? tarjetaSearch.trim()
-    if (!searchValue) { toast.error('Ingresá un número de tarjeta'); return }
-    setTarjetaBuscando(true)
+  // ── Acciones inline de tablas ─────────────────────────────────────
+  const anularConsumo = useCallback(async (id: number) => {
     try {
-      const { data } = await api.get('/core/tarjetas/', { params: { search: searchValue }, timeout: 6000 })
-      const found = (data.results ?? []).find((t: TarjetaBusqueda) => t.nro_tarjeta === searchValue)
-      if (!found) { toast.error('Tarjeta no encontrada'); return }
-      if (found.estado !== 'ACTIVA') { toast.error(`Tarjeta ${found.estado}`); return }
-      setTarjeta(found)
-      const h = hijos.find(x => `${x.nombre} ${x.apellido}` === found.hijo_nombre || x.nombre_completo === found.hijo_nombre)
-      if (h) setHijoId(h.id)
-      toast.success(found.hijo_nombre)
-    } catch {
-      toast.error('Error al buscar tarjeta')
-    } finally {
-      setTarjetaBuscando(false)
-      setTarjetaSearch('')
-    }
-  }, [tarjetaSearch, hijos])
-
-  const handleRegistrarConsumo = useCallback(async () => {
-    if (!hijoId) { toast.error('Seleccioná un estudiante'); return }
-    if (!tarjeta) { toast.error('Buscá la tarjeta del estudiante'); return }
-    const h = hijos.find(x => x.id === Number(hijoId))
-    if (h) {
-      const coincide = tarjeta.hijo_nombre === `${h.nombre} ${h.apellido}` || tarjeta.hijo_nombre === h.nombre_completo
-      if (!coincide) { toast.error('La tarjeta no pertenece al estudiante seleccionado'); return }
-    }
-    setRegistrando(true)
-    try {
-      const payload: Record<string, unknown> = {
-        hijo: hijoId,
-        fecha_consumo: fechaConsumo,
-        nro_tarjeta: tarjeta.nro_tarjeta,
-      }
-      if (tipoAlmuerzoId) payload.tipo_almuerzo = tipoAlmuerzoId
-      await api.post('/almuerzos/registros-consumo/', payload)
-      toast.success('Consumo registrado')
-      setConsumoOpen(false)
-      setTarjeta(null)
-      setTarjetaSearch('')
-      setHijoId('')
-      setTipoAlmuerzoId('')
-      setFechaConsumo(todayISO())
-      setPageRegistros(1)
-      loadRegistros('', 1)
+      await api.patch(`/almuerzos/registros-consumo/${id}/`, { estado: 'ANULADO' })
+      toast.success('Consumo anulado')
+      loadRegistros(searchRegistros, pageRegistros)
     } catch (err) {
       toast.error(extractErrorMessage(err))
-    } finally {
-      setRegistrando(false)
     }
-  }, [hijoId, tarjeta, hijos, fechaConsumo, tipoAlmuerzoId, loadRegistros])
-
-  // ── Suscripciones ──────────────────────────────────────────────────
-  const handleSaveSusc = useCallback(async () => {
-    if (!suscForm.hijo || !suscForm.plan) { toast.error('Completá todos los campos'); return }
-    setSavingSusc(true)
-    try {
-      await api.post('/almuerzos/suscripciones/', {
-        hijo: Number(suscForm.hijo),
-        plan: Number(suscForm.plan),
-        tipo_cobro: suscForm.tipo_cobro,
-        fecha_inicio: suscForm.fecha_inicio,
-      })
-      toast.success('Suscripción creada')
-      setSuscModalOpen(false)
-      setSuscForm({ hijo: '', plan: '', tipo_cobro: 'CUENTA', fecha_inicio: todayISO() })
-      loadSuscripciones()
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setSavingSusc(false)
-    }
-  }, [suscForm, loadSuscripciones])
+  }, [loadRegistros, searchRegistros, pageRegistros])
 
   const cancelarSusc = useCallback(async (id: number) => {
     try {
@@ -431,59 +204,15 @@ export default function Almuerzos() {
     }
   }, [loadSuscripciones])
 
-  // ── Menú ───────────────────────────────────────────────────────────
-  const handleSaveMenu = useCallback(async () => {
-    if (!menuForm.fecha || !menuForm.plato_principal) { toast.error('Ingresá la fecha y el plato principal'); return }
-    setSavingMenu(true)
+  const suspenderSusc = useCallback(async (id: number) => {
     try {
-      await api.post('/almuerzos/menu/', {
-        fecha: menuForm.fecha,
-        plato_principal: menuForm.plato_principal,
-        guarnicion: menuForm.guarnicion,
-        postre: menuForm.postre,
-        bebida: menuForm.bebida,
-        descripcion: menuForm.descripcion,
-      })
-      toast.success('Menú registrado')
-      setMenuModalOpen(false)
-      setMenuForm({ fecha: todayISO(), plato_principal: '', guarnicion: '', postre: '', bebida: '', descripcion: '' })
-      loadMenu()
+      await api.patch(`/almuerzos/suscripciones/${id}/`, { estado: 'SUSPENDIDA' })
+      toast.success('Suscripción suspendida')
+      loadSuscripciones()
     } catch (err) {
       toast.error(extractErrorMessage(err))
-    } finally {
-      setSavingMenu(false)
     }
-  }, [menuForm, loadMenu])
-
-  // ── Edit menú ─────────────────────────────────────────────────────
-  const openEditMenu = useCallback((m: MenuDiario) => {
-    setEditingMenu(m)
-    setEditMenuForm({
-      fecha: m.fecha,
-      plato_principal: m.plato_principal,
-      guarnicion: m.guarnicion,
-      postre: m.postre,
-      bebida: m.bebida,
-      descripcion: m.descripcion,
-      activo: m.activo,
-    })
-    setEditMenuOpen(true)
-  }, [])
-
-  const handleSaveEditMenu = useCallback(async () => {
-    if (!editingMenu || !editMenuForm.plato_principal) { toast.error('Ingresá el plato principal'); return }
-    setSavingEditMenu(true)
-    try {
-      await api.put(`/almuerzos/menu/${editingMenu.id}/`, editMenuForm)
-      toast.success('Menú actualizado')
-      setEditMenuOpen(false)
-      loadMenu()
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setSavingEditMenu(false)
-    }
-  }, [editingMenu, editMenuForm, loadMenu])
+  }, [loadSuscripciones])
 
   const toggleMenuActivo = useCallback(async (m: MenuDiario) => {
     try {
@@ -495,77 +224,7 @@ export default function Almuerzos() {
     }
   }, [loadMenu])
 
-  // ── Pago cuenta ───────────────────────────────────────────────────
-  const openPagoCuenta = useCallback((c: CuentaMensual) => {
-    setPagoCuenta(c)
-    const pendiente = Number(c.saldo_pendiente) || (Number(c.monto_total) - Number(c.monto_pagado))
-    setPagoForm({ monto: String(pendiente > 0 ? pendiente : ''), medio_pago: 'EFECTIVO', referencia: '', emitirFactura: false, nroFactura: '' })
-    setPagoOpen(true)
-  }, [])
-
-  const handlePagar = useCallback(async () => {
-    if (!pagoCuenta) return
-    if (!pagoForm.monto || Number(pagoForm.monto) <= 0) { toast.error('Ingresá el monto'); return }
-    if (pagoForm.emitirFactura && !pagoForm.nroFactura.trim()) { toast.error('Ingresá el número de factura'); return }
-    setSavingPago(true)
-    try {
-      await api.post('/almuerzos/pagos-cuentas/', {
-        cuenta: pagoCuenta.id,
-        monto: Number(pagoForm.monto),
-        medio_pago: pagoForm.medio_pago,
-        referencia: pagoForm.referencia || undefined,
-        ...(pagoForm.emitirFactura && pagoForm.nroFactura.trim() ? { nro_factura: pagoForm.nroFactura.trim() } : {}),
-      })
-      toast.success('Pago registrado')
-      setPagoOpen(false)
-      loadCuentas()
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setSavingPago(false)
-    }
-  }, [pagoCuenta, pagoForm, loadCuentas])
-
-  // ── Pago cuota mensual fija ───────────────────────────────────────
-  const openPagoMensual = useCallback((s: Suscripcion) => {
-    setPagoMensualSusc(s)
-    const plan = planes.find(p => p.id === s.plan)
-    const primerDiaMes = new Date()
-    primerDiaMes.setDate(1)
-    setPagoMensualForm({
-      monto: plan ? String(plan.precio_mensual) : '',
-      mes_pagado: primerDiaMes.toISOString().split('T')[0],
-    })
-    setPagoMensualOpen(true)
-  }, [planes])
-
-  const handlePagoMensual = useCallback(async () => {
-    if (!pagoMensualSusc) return
-    if (!pagoMensualForm.monto || Number(pagoMensualForm.monto) <= 0) { toast.error('Ingresá el monto'); return }
-    if (!pagoMensualForm.mes_pagado) { toast.error('Seleccioná el mes'); return }
-    setSavingPagoMensual(true)
-    try {
-      // mes_pagado debe ser el día 1 del mes seleccionado
-      const [y, m] = pagoMensualForm.mes_pagado.split('-')
-      const mesPagado = `${y}-${m}-01`
-      await api.post('/almuerzos/pagos-mensuales/', {
-        suscripcion: pagoMensualSusc.id,
-        monto_pagado: Number(pagoMensualForm.monto),
-        mes_pagado: mesPagado,
-      })
-      toast.success('Cuota mensual registrada')
-      setPagoMensualOpen(false)
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setSavingPagoMensual(false)
-    }
-  }, [pagoMensualSusc, pagoMensualForm])
-
-  // ── Exportar PDF con detalle ──────────────────────────────────────
-  const [exportandoPDF, setExportandoPDF] = useState(false)
-
-  // ── Generar cuentas del mes ───────────────────────────────────────
+  // ── Generar cuentas ───────────────────────────────────────────────
   const handleGenerarCuentas = useCallback(async () => {
     if (!filtroCuentaMes) {
       toast.error('Seleccioná un mes específico para generar las cuentas')
@@ -590,83 +249,7 @@ export default function Almuerzos() {
     }
   }, [filtroCuentaAnio, filtroCuentaMes, loadCuentas])
 
-  // ── Suspender suscripcion ─────────────────────────────────────────
-  const suspenderSusc = useCallback(async (id: number) => {
-    try {
-      await api.patch(`/almuerzos/suscripciones/${id}/`, { estado: 'SUSPENDIDA' })
-      toast.success('Suscripción suspendida')
-      loadSuscripciones()
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    }
-  }, [loadSuscripciones])
-
-  // ── Edit suscripcion ──────────────────────────────────────────────
-  const openEditSusc = useCallback((s: Suscripcion) => {
-    setEditingSusc(s)
-    setEditSuscForm({ plan: String(s.plan), fecha_fin: s.fecha_fin ?? '' })
-    setEditSuscOpen(true)
-  }, [])
-
-  const handleSaveEditSusc = useCallback(async () => {
-    if (!editingSusc || !editSuscForm.plan) { toast.error('Seleccioná un plan'); return }
-    setSavingEditSusc(true)
-    try {
-      await api.patch(`/almuerzos/suscripciones/${editingSusc.id}/`, {
-        plan: Number(editSuscForm.plan),
-        fecha_fin: editSuscForm.fecha_fin || null,
-      })
-      toast.success('Suscripción actualizada')
-      setEditSuscOpen(false)
-      loadSuscripciones()
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setSavingEditSusc(false)
-    }
-  }, [editingSusc, editSuscForm, loadSuscripciones])
-
-  // ── Anular consumo ────────────────────────────────────────────────
-  const anularConsumo = useCallback(async (id: number) => {
-    try {
-      await api.patch(`/almuerzos/registros-consumo/${id}/`, { estado: 'ANULADO' })
-      toast.success('Consumo anulado')
-      loadRegistros(searchRegistros, pageRegistros)
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    }
-  }, [loadRegistros, searchRegistros, pageRegistros])
-
-  // ── Eliminar consumo (solo ADMIN, solo ANULADO) ───────────────────
-  const [deleteConsumoId, setDeleteConsumoId] = useState<number | null>(null)
-  const [deletingConsumo, setDeletingConsumo] = useState(false)
-
-  const handleEliminarConsumo = useCallback(async () => {
-    if (!deleteConsumoId) return
-    setDeletingConsumo(true)
-    try {
-      await api.delete(`/almuerzos/registros-consumo/${deleteConsumoId}/`)
-      toast.success('Registro eliminado')
-      setDeleteConsumoId(null)
-      loadRegistros(searchRegistros, pageRegistros)
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setDeletingConsumo(false)
-    }
-  }, [deleteConsumoId, loadRegistros, searchRegistros, pageRegistros])
-
-  // ── Summary stats ──────────────────────────────────────────────────
-  const mesActual = new Date().getMonth() + 1
-  const anioActual = new Date().getFullYear()
-  const hoy = todayISO()
-
-  const stats = useMemo(() => ({
-    consumosHoy: registros.filter(r => r.fecha_consumo === hoy).length,
-    cuentasPendientes: cuentas.filter(c => c.estado !== 'PAGADO' && c.estado !== 'ANULADO').length,
-    facturadoMes: cuentas.filter(c => c.mes === mesActual && c.anio === anioActual).reduce((s, c) => s + (Number(c.monto_total) || 0), 0),
-  }), [registros, cuentas, hoy, mesActual, anioActual])
-
+  // ── Exportar PDF ──────────────────────────────────────────────────
   const cuentasFiltradas = useMemo(() => {
     const q = searchCuentas.trim().toLowerCase()
     if (!q) return cuentas
@@ -693,9 +276,9 @@ export default function Almuerzos() {
       const { data } = await api.get('/almuerzos/registros-consumo/', {
         params: { fecha_desde: fechaDesde, fecha_hasta: fechaHasta, ya_cobrado: true, estado: 'REGISTRADO', ordering: 'hijo,fecha_consumo', page_size: 1000 },
       })
-      const registros: (RegistroConsumoDetalle & { hijo: number })[] = data.results ?? []
+      const registrosData: (RegistroConsumoDetalle & { hijo: number })[] = data.results ?? []
       const detalleMap = new Map<number, RegistroConsumoDetalle[]>()
-      for (const r of registros) {
+      for (const r of registrosData) {
         if (!detalleMap.has(r.hijo)) detalleMap.set(r.hijo, [])
         detalleMap.get(r.hijo)!.push(r)
       }
@@ -707,8 +290,18 @@ export default function Almuerzos() {
     }
   }, [cuentasFiltradas, filtroCuentaMes, filtroCuentaAnio])
 
-  // ── Columns ──────────────────────────────────────────────────────
+  // ── Stats ─────────────────────────────────────────────────────────
+  const mesActual = new Date().getMonth() + 1
+  const anioActual = new Date().getFullYear()
+  const hoy = todayISO()
 
+  const stats = useMemo(() => ({
+    consumosHoy: registros.filter(r => r.fecha_consumo === hoy).length,
+    cuentasPendientes: cuentas.filter(c => c.estado !== 'PAGADO' && c.estado !== 'ANULADO').length,
+    facturadoMes: cuentas.filter(c => c.mes === mesActual && c.anio === anioActual).reduce((s, c) => s + (Number(c.monto_total) || 0), 0),
+  }), [registros, cuentas, hoy, mesActual, anioActual])
+
+  // ── Columnas ──────────────────────────────────────────────────────
   const colsRegistros: Column<RegistroConsumo>[] = [
     {
       title: 'Estudiante',
@@ -821,7 +414,7 @@ export default function Almuerzos() {
       key: 'acc',
       width: 80,
       render: (_, r) => (r.estado !== 'PAGADO' && r.estado !== 'ANULADO') ? (
-        <Button size="sm" variant="primary" onClick={() => openPagoCuenta(r)}>
+        <Button size="sm" variant="primary" onClick={() => setPagoCuenta(r)}>
           <Banknote className="w-3.5 h-3.5" />
           Pagar
         </Button>
@@ -871,12 +464,12 @@ export default function Almuerzos() {
       render: (_, r) => r.estado === 'ACTIVA' ? (
         <div className="flex gap-1.5">
           {r.tipo_cobro === 'MENSUAL' && (
-            <Button size="sm" variant="primary" onClick={() => openPagoMensual(r)}>
+            <Button size="sm" variant="primary" onClick={() => setPagoMensualSusc(r)}>
               <Banknote className="w-3.5 h-3.5" />
               Cuota
             </Button>
           )}
-          <Button size="sm" variant="secondary" onClick={() => openEditSusc(r)}>
+          <Button size="sm" variant="secondary" onClick={() => setEditingSusc(r)}>
             <Edit2 className="w-3.5 h-3.5" />
           </Button>
           <Button size="sm" variant="secondary" onClick={() => suspenderSusc(r.id)}>
@@ -926,7 +519,7 @@ export default function Almuerzos() {
       width: 100,
       render: (_, r) => (
         <div className="flex gap-1.5">
-          <Button size="sm" variant="secondary" onClick={() => openEditMenu(r)}>
+          <Button size="sm" variant="secondary" onClick={() => setEditingMenu(r)}>
             <Edit2 className="w-3.5 h-3.5" />
           </Button>
           <Button size="sm" variant={r.activo ? 'danger' : 'secondary'} onClick={() => toggleMenuActivo(r)}>
@@ -937,20 +530,7 @@ export default function Almuerzos() {
     },
   ]
 
-  // ── Styles ────────────────────────────────────────────────────────
   const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
-  const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
-
-  const toggleSwitch = (checked: boolean, onChange: (v: boolean) => void, label: string) => (
-    <label className="flex items-center gap-3 cursor-pointer">
-      <div className="relative shrink-0">
-        <input type="checkbox" className="sr-only peer" checked={checked} onChange={e => onChange(e.target.checked)} />
-        <div className="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-green-500 transition-colors" />
-        <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
-      </div>
-      <span className="text-sm text-slate-700">{label}</span>
-    </label>
-  )
 
   const TABS: { key: TabKey; label: string; icon: typeof UtensilsCrossed }[] = [
     { key: 'consumos',      label: 'Consumos',          icon: UtensilsCrossed },
@@ -975,7 +555,7 @@ export default function Almuerzos() {
           </Button>
         )}
         {tab === 'suscripciones' && (
-          <Button variant="primary" onClick={() => { setSuscForm({ hijo: '', plan: '', tipo_cobro: 'CUENTA', fecha_inicio: todayISO() }); setSuscModalOpen(true) }}>
+          <Button variant="primary" onClick={() => setSuscModalOpen(true)}>
             <Plus className="w-4 h-4" />
             Nueva Suscripción
           </Button>
@@ -988,7 +568,7 @@ export default function Almuerzos() {
         )}
       </div>
 
-      {/* Summary cards (only on consumos/cuentas) */}
+      {/* Summary cards */}
       {(tab === 'consumos' || tab === 'cuentas') && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
@@ -1121,441 +701,53 @@ export default function Almuerzos() {
         </div>
       )}
 
-      {/* ── Registrar consumo modal ───────────────────────────────── */}
-      <Modal
+      {/* ── Modales ───────────────────────────────────────────────── */}
+      <ModalConsumo
         open={consumoOpen}
-        title="Registrar Consumo de Almuerzo"
-        onOk={handleRegistrarConsumo}
-        onCancel={() => { setConsumoOpen(false); setTarjeta(null); setTarjetaSearch('') }}
-        okText="Registrar"
-        confirmLoading={registrando}
-        width={480}
-      >
-        <div className="space-y-4">
-          <div className="bg-slate-50 rounded-xl p-4">
-            <label className={labelClass}>Tarjeta del Estudiante</label>
-            <div className="flex gap-2">
-              <input
-                placeholder="Nro. tarjeta"
-                value={tarjetaSearch}
-                onChange={e => setTarjetaSearch(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) buscarTarjeta(v) } }}
-                className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
-              />
-              <Button size="sm" variant="secondary" loading={tarjetaBuscando} onClick={() => buscarTarjeta()}>
-                <Search className="w-3.5 h-3.5" />
-                Buscar
-              </Button>
-            </div>
-            {tarjeta && (
-              <div className="mt-2 flex items-center gap-2 bg-green-50 rounded-lg px-3 py-2">
-                <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-                <span className="text-sm font-medium text-green-800">{tarjeta.hijo_nombre}</span>
-                <span className="text-xs text-green-600 ml-auto">Saldo: {formatGs(tarjeta.saldo_actual)}</span>
-                <button onClick={() => { setTarjeta(null); setTarjetaSearch('') }} className="text-slate-400 hover:text-red-500 cursor-pointer">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className={labelClass}>Estudiante *</label>
-            <select
-              value={hijoId}
-              onChange={e => setHijoId(Number(e.target.value) || '')}
-              className={inputClass}
-              disabled={!!tarjeta}
-            >
-              <option value="">Seleccionar...</option>
-              {hijos.map(h => (
-                <option key={h.id} value={h.id}>
-                  {h.nombre_completo ?? `${h.nombre} ${h.apellido}`} — {h.grado}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className={labelClass}>Tipo de Almuerzo (opcional)</label>
-            <select
-              value={tipoAlmuerzoId}
-              onChange={e => setTipoAlmuerzoId(Number(e.target.value) || '')}
-              className={inputClass}
-            >
-              <option value="">Sin especificar</option>
-              {tiposAlmuerzo.filter(t => t.activo).map(t => (
-                <option key={t.id} value={t.id}>{t.nombre} — {formatGs(t.precio_unitario)}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className={labelClass}>Fecha</label>
-            <input
-              type="date"
-              value={fechaConsumo}
-              onChange={e => setFechaConsumo(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-        </div>
-      </Modal>
-
-      {/* ── Suscripción modal ─────────────────────────────────────── */}
-      <Modal
+        hijos={hijos}
+        tiposAlmuerzo={tiposAlmuerzo}
+        onClose={() => setConsumoOpen(false)}
+        onSaved={() => { setPageRegistros(1); loadRegistros('', 1) }}
+      />
+      <ModalSuscripcion
         open={suscModalOpen}
-        title="Nueva Suscripción"
-        onOk={handleSaveSusc}
-        onCancel={() => setSuscModalOpen(false)}
-        okText="Suscribir"
-        confirmLoading={savingSusc}
-        width={440}
-      >
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="susc-estudiante" className={labelClass}>Estudiante *</label>
-            <select id="susc-estudiante" value={suscForm.hijo} onChange={e => setSuscForm(f => ({ ...f, hijo: e.target.value }))} className={inputClass}>
-              <option value="">Seleccionar...</option>
-              {hijos.map(h => (
-                <option key={h.id} value={h.id}>
-                  {h.nombre_completo ?? `${h.nombre} ${h.apellido}`} — {h.grado}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="susc-plan" className={labelClass}>Plan *</label>
-            <select
-              id="susc-plan"
-              value={suscForm.plan}
-              onChange={e => {
-                const planId = e.target.value
-                const plan = planes.find(p => String(p.id) === planId)
-                const tipoCobro = plan?.tipo === 'CANTIDAD' ? 'MENSUAL' : 'CUENTA'
-                setSuscForm(f => ({ ...f, plan: planId, tipo_cobro: tipoCobro }))
-              }}
-              className={inputClass}
-            >
-              <option value="">Seleccionar...</option>
-              {planes.filter(p => p.activo).map(p => (
-                <option key={p.id} value={p.id}>{p.nombre} — {formatGs(p.precio_mensual)}/mes</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Tipo de Cobro *</label>
-            <select
-              value={suscForm.tipo_cobro}
-              onChange={e => setSuscForm(f => ({ ...f, tipo_cobro: e.target.value }))}
-              className={inputClass}
-            >
-              <option value="CUENTA">Por consumo — padre paga al final del mes según lo que comió</option>
-              <option value="MENSUAL">Cuota mensual fija — padre paga por adelantado</option>
-            </select>
-            {suscForm.plan && (
-              <p className="text-xs text-slate-400 mt-1">
-                {suscForm.tipo_cobro === 'MENSUAL'
-                  ? `El padre paga ${formatGs(planes.find(p => String(p.id) === suscForm.plan)?.precio_mensual ?? 0)} al inicio de cada mes.`
-                  : 'La cuenta acumula Gs. por cada almuerzo registrado y el cajero cobra al mes siguiente.'}
-              </p>
-            )}
-          </div>
-          <div>
-            <label className={labelClass}>Fecha de Inicio</label>
-            <input type="date" value={suscForm.fecha_inicio} onChange={e => setSuscForm(f => ({ ...f, fecha_inicio: e.target.value }))} className={inputClass} />
-          </div>
-        </div>
-      </Modal>
-
-      {/* ── Pago cuenta modal ─────────────────────────────────────── */}
-      <Modal
-        open={pagoOpen}
-        title="Registrar Pago de Cuenta"
-        onOk={handlePagar}
-        onCancel={() => setPagoOpen(false)}
-        okText="Registrar Pago"
-        confirmLoading={savingPago}
-        width={440}
-      >
-        {pagoCuenta && (
-          <div className="space-y-4">
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-sm font-semibold text-slate-800">{pagoCuenta.hijo_nombre}</p>
-              <p className="text-xs text-slate-500 mt-1">{MESES[pagoCuenta.mes]} {pagoCuenta.anio} — {pagoCuenta.cantidad_almuerzos} almuerzos</p>
-              <div className="flex gap-6 mt-3">
-                <div>
-                  <p className="text-sm text-slate-400">Total</p>
-                  <p className="text-sm font-bold text-slate-800">{formatGs(pagoCuenta.monto_total)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400">Pagado</p>
-                  <p className="text-sm font-bold text-emerald-700">{formatGs(pagoCuenta.monto_pagado)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400">Saldo</p>
-                  <p className="text-sm font-bold text-red-600">{formatGs(pagoCuenta.saldo_pendiente)}</p>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className={labelClass}>Monto (Gs.) *</label>
-              <input
-                type="number"
-                min={1}
-                step={1000}
-                value={pagoForm.monto}
-                onChange={e => setPagoForm(f => ({ ...f, monto: e.target.value }))}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Medio de Pago</label>
-              <select
-                value={pagoForm.medio_pago}
-                onChange={e => setPagoForm(f => ({ ...f, medio_pago: e.target.value }))}
-                className={inputClass}
-              >
-                <option value="EFECTIVO">Efectivo</option>
-                <option value="TRANSFERENCIA">Transferencia</option>
-                <option value="TARJETA">Tarjeta</option>
-                <option value="CHEQUE">Cheque</option>
-              </select>
-            </div>
-            {pagoForm.medio_pago !== 'EFECTIVO' && (
-              <div>
-                <label className={labelClass}>Referencia</label>
-                <input
-                  value={pagoForm.referencia}
-                  onChange={e => setPagoForm(f => ({ ...f, referencia: e.target.value }))}
-                  placeholder="Nro. de transferencia, cheque, etc."
-                  className={inputClass}
-                />
-              </div>
-            )}
-            <div className="pt-1">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={pagoForm.emitirFactura}
-                  onChange={e => setPagoForm(f => ({ ...f, emitirFactura: e.target.checked, nroFactura: '' }))}
-                  className="w-4 h-4 rounded accent-green-600"
-                />
-                <span className="text-sm font-semibold text-slate-700">Emitir factura ahora</span>
-              </label>
-              {pagoForm.emitirFactura && (
-                <div className="mt-2">
-                  <label className={labelClass}>Nro. Factura *</label>
-                  <input
-                    value={pagoForm.nroFactura}
-                    onChange={e => setPagoForm(f => ({ ...f, nroFactura: e.target.value }))}
-                    placeholder="001-001-0001234"
-                    className={inputClass}
-                    autoFocus
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* ── Edit suscripción modal ────────────────────────────────── */}
-      <Modal
-        open={editSuscOpen}
-        title="Editar Suscripción"
-        onOk={handleSaveEditSusc}
-        onCancel={() => setEditSuscOpen(false)}
-        okText="Guardar"
-        confirmLoading={savingEditSusc}
-        width={440}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>Plan *</label>
-            <select value={editSuscForm.plan} onChange={e => setEditSuscForm(f => ({ ...f, plan: e.target.value }))} className={inputClass}>
-              <option value="">Seleccionar...</option>
-              {planes.filter(p => p.activo).map(p => (
-                <option key={p.id} value={p.id}>{p.nombre} — {formatGs(p.precio_mensual)}/mes</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Fecha de Fin (opcional)</label>
-            <input type="date" value={editSuscForm.fecha_fin} onChange={e => setEditSuscForm(f => ({ ...f, fecha_fin: e.target.value }))} className={inputClass} />
-          </div>
-        </div>
-      </Modal>
-
-      {/* ── Edit menú modal ───────────────────────────────────────── */}
-      <Modal
-        open={editMenuOpen}
-        title="Editar Menú"
-        onOk={handleSaveEditMenu}
-        onCancel={() => setEditMenuOpen(false)}
-        okText="Guardar"
-        confirmLoading={savingEditMenu}
-        width={560}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>Fecha *</label>
-            <input type="date" value={editMenuForm.fecha} onChange={e => setEditMenuForm(f => ({ ...f, fecha: e.target.value }))} className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Plato principal *</label>
-            <input value={editMenuForm.plato_principal} onChange={e => setEditMenuForm(f => ({ ...f, plato_principal: e.target.value }))} className={inputClass} />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className={labelClass}>Guarnición</label>
-              <input value={editMenuForm.guarnicion} onChange={e => setEditMenuForm(f => ({ ...f, guarnicion: e.target.value }))} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>Postre</label>
-              <input value={editMenuForm.postre} onChange={e => setEditMenuForm(f => ({ ...f, postre: e.target.value }))} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>Bebida</label>
-              <input value={editMenuForm.bebida} onChange={e => setEditMenuForm(f => ({ ...f, bebida: e.target.value }))} className={inputClass} />
-            </div>
-          </div>
-          <div>
-            <label className={labelClass}>Notas</label>
-            <textarea value={editMenuForm.descripcion} onChange={e => setEditMenuForm(f => ({ ...f, descripcion: e.target.value }))} rows={2} className={`${inputClass} resize-none`} />
-          </div>
-          {toggleSwitch(editMenuForm.activo, v => setEditMenuForm(f => ({ ...f, activo: v })), 'Activo')}
-        </div>
-      </Modal>
-
-      {/* ── Confirmar eliminación consumo (solo ADMIN) ───────────── */}
-      <Modal
-        open={!!deleteConsumoId}
-        title="Eliminar registro de consumo"
-        onOk={handleEliminarConsumo}
-        onCancel={() => setDeleteConsumoId(null)}
-        okText="Eliminar definitivamente"
-        confirmLoading={deletingConsumo}
-        width={420}
-      >
-        <div className="space-y-3">
-          <p className="text-sm text-slate-700">
-            Esta acción <span className="font-semibold text-red-600">no se puede deshacer</span>.
-            El registro será eliminado permanentemente de la base de datos.
-          </p>
-          <p className="text-xs text-slate-400">
-            Solo se pueden eliminar registros en estado ANULADO. La cuenta mensual del alumno ya fue corregida al anular.
-          </p>
-        </div>
-      </Modal>
-
-      {/* ── Pago cuota mensual modal ──────────────────────────────── */}
-      <Modal
-        open={pagoMensualOpen}
-        title="Registrar Cuota Mensual"
-        onOk={handlePagoMensual}
-        onCancel={() => setPagoMensualOpen(false)}
-        okText="Registrar Cuota"
-        confirmLoading={savingPagoMensual}
-        width={440}
-      >
-        {pagoMensualSusc && (
-          <div className="space-y-4">
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-sm font-semibold text-slate-800">{pagoMensualSusc.hijo_nombre}</p>
-              <p className="text-xs text-slate-500 mt-1">
-                {planes.find(p => p.id === pagoMensualSusc.plan)?.nombre ?? 'Plan'} — Cuota fija mensual
-              </p>
-            </div>
-            <div>
-              <label className={labelClass}>Mes *</label>
-              <input
-                type="month"
-                value={pagoMensualForm.mes_pagado.slice(0, 7)}
-                onChange={e => setPagoMensualForm(f => ({ ...f, mes_pagado: `${e.target.value}-01` }))}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Monto (Gs.) *</label>
-              <input
-                type="number"
-                min={1}
-                step={1000}
-                value={pagoMensualForm.monto}
-                onChange={e => setPagoMensualForm(f => ({ ...f, monto: e.target.value }))}
-                className={inputClass}
-              />
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* ── Menú modal ────────────────────────────────────────────── */}
-      <Modal
+        hijos={hijos}
+        planes={planes}
+        onClose={() => setSuscModalOpen(false)}
+        onSaved={loadSuscripciones}
+      />
+      <ModalPagoCuenta
+        cuenta={pagoCuenta}
+        onClose={() => setPagoCuenta(null)}
+        onSaved={loadCuentas}
+      />
+      <ModalEditSusc
+        susc={editingSusc}
+        planes={planes}
+        onClose={() => setEditingSusc(null)}
+        onSaved={loadSuscripciones}
+      />
+      <ModalMenu
         open={menuModalOpen}
-        title="Agregar al Menú"
-        onOk={handleSaveMenu}
-        onCancel={() => setMenuModalOpen(false)}
-        okText="Guardar"
-        confirmLoading={savingMenu}
-        width={560}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>Fecha *</label>
-            <input type="date" value={menuForm.fecha} onChange={e => setMenuForm(f => ({ ...f, fecha: e.target.value }))} className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Plato principal *</label>
-            <input
-              value={menuForm.plato_principal}
-              onChange={e => setMenuForm(f => ({ ...f, plato_principal: e.target.value }))}
-              placeholder="Ej: Milanesa con papas"
-              className={inputClass}
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className={labelClass}>Guarnición</label>
-              <input
-                value={menuForm.guarnicion}
-                onChange={e => setMenuForm(f => ({ ...f, guarnicion: e.target.value }))}
-                placeholder="Ej: Ensalada"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Postre</label>
-              <input
-                value={menuForm.postre}
-                onChange={e => setMenuForm(f => ({ ...f, postre: e.target.value }))}
-                placeholder="Ej: Fruta"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Bebida</label>
-              <input
-                value={menuForm.bebida}
-                onChange={e => setMenuForm(f => ({ ...f, bebida: e.target.value }))}
-                placeholder="Ej: Jugo"
-                className={inputClass}
-              />
-            </div>
-          </div>
-          <div>
-            <label className={labelClass}>Notas</label>
-            <textarea
-              value={menuForm.descripcion}
-              onChange={e => setMenuForm(f => ({ ...f, descripcion: e.target.value }))}
-              rows={2}
-              placeholder="Información adicional..."
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-        </div>
-      </Modal>
+        onClose={() => setMenuModalOpen(false)}
+        onSaved={loadMenu}
+      />
+      <ModalEditMenu
+        menu={editingMenu}
+        onClose={() => setEditingMenu(null)}
+        onSaved={loadMenu}
+      />
+      <ModalConfirmarEliminar
+        consumoId={deleteConsumoId}
+        onClose={() => setDeleteConsumoId(null)}
+        onSaved={() => loadRegistros(searchRegistros, pageRegistros)}
+      />
+      <ModalPagoMensual
+        susc={pagoMensualSusc}
+        planes={planes}
+        onClose={() => setPagoMensualSusc(null)}
+        onSaved={loadSuscripciones}
+      />
     </div>
   )
 }
