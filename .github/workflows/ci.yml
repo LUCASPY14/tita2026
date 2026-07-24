@@ -53,6 +53,10 @@ jobs:
         working-directory: backend
         run: pip install -r requirements.txt pytest pytest-django pytest-cov bandit
 
+      - name: Lint (Ruff)
+        working-directory: backend
+        run: ruff check apps/ --output-format=github
+
       - name: Security scan (Bandit)
         working-directory: backend
         run: |
