@@ -3,179 +3,17 @@ import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { FileText, Search, Printer, XCircle, AlertTriangle, CalendarDays, CheckSquare } from 'lucide-react'
 import api from '../services/api'
-import Badge, { type BadgeColor } from '../components/ui/Badge'
+import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
-import Modal from '../components/ui/Modal'
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function extractErrorMessage(err: unknown): string {
-  const e = err as { response?: { data?: unknown } }
-  const data = e?.response?.data
-  if (!data) return 'Error inesperado'
-  if (typeof data === 'string') return data
-  if (typeof data === 'object') {
-    const d = data as Record<string, unknown>
-    if (d.detail) return String(d.detail)
-    const first = Object.values(d)[0]
-    if (Array.isArray(first)) return String(first[0])
-    return JSON.stringify(data)
-  }
-  return 'Error inesperado'
-}
-
-function formatGs(n: number | string | null | undefined): string {
-  return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
-}
-
-function formatFecha(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
-// ─── Interfaces ───────────────────────────────────────────────────────────────
-
-interface PendienteItem {
-  tipo: string
-  id: number
-  cliente_id: number | null
-  cliente_nombre: string
-  modalidad_facturacion: string
-  descripcion: string
-  monto: number
-  fecha: string
-}
-
-interface Factura {
-  id: number
-  nro_factura: string
-  cliente: number | null
-  cliente_nombre: string
-  monto_total: string | number
-  iva_10: string | number
-  estado: string
-  fecha_emision: string
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const ESTADO_COLOR: Record<string, BadgeColor> = {
-  EMITIDA: 'green',
-  ANULADA: 'red',
-}
-
-const TIPO_LABEL: Record<string, string> = {
-  CARGA_SALDO: 'Carga de saldo',
-  PAGO_ALMUERZO: 'Almuerzo',
-  VENTA: 'Venta',
-  PAGO_CREDITO: 'Cobro crédito',
-}
-
-const TIPO_COLOR: Record<string, BadgeColor> = {
-  CARGA_SALDO: 'blue',
-  PAGO_ALMUERZO: 'orange',
-  VENTA: 'green',
-  PAGO_CREDITO: 'purple',
-}
-
-// ─── LoteModal ────────────────────────────────────────────────────────────────
-
-interface LoteModalProps {
-  open: boolean
-  items: PendienteItem[]
-  onClose: () => void
-  onSuccess: () => void
-}
-
-function LoteModal({ open, items, onClose, onSuccess }: LoteModalProps) {
-  const [nro, setNro] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => { if (open) setNro('') }, [open])
-
-  const clienteNombre = items[0]?.cliente_nombre ?? ''
-  const total = items.reduce((s, i) => s + i.monto, 0)
-
-  const confirmar = async () => {
-    if (!nro.trim()) { toast.error('Ingresá el número de factura'); return }
-    if (items.length === 0) return
-    setSaving(true)
-    try {
-      await api.post('/contabilidad/facturas/emitir-lote/', {
-        tipo: items[0].tipo,
-        ids: items.map(i => i.id),
-        nro_factura: nro.trim(),
-      })
-      toast.success(`Factura ${nro} emitida por ${formatGs(total)}`)
-      onSuccess()
-      onClose()
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Modal
-      open={open}
-      title="Emitir Factura Mensual"
-      onOk={confirmar}
-      onCancel={onClose}
-      confirmLoading={saving}
-      okText="Emitir Factura"
-      width={500}
-    >
-      <div className="space-y-4">
-        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-slate-500 font-medium">Cliente</span>
-            <span className="text-slate-800 font-semibold">{clienteNombre}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-500 font-medium">Ítems seleccionados</span>
-            <span className="text-slate-700 font-semibold">{items.length}</span>
-          </div>
-          <div className="flex justify-between border-t border-blue-100 pt-2">
-            <span className="text-slate-500 font-medium">Total a facturar</span>
-            <span className="text-emerald-700 font-bold tabular-nums text-base">{formatGs(total)}</span>
-          </div>
-        </div>
-
-        {items.length > 0 && (
-          <div className="max-h-40 overflow-y-auto space-y-1">
-            {items.map(item => (
-              <div key={`${item.tipo}-${item.id}`} className="flex justify-between text-sm px-1 py-1 rounded hover:bg-slate-50">
-                <span className="text-slate-600 truncate max-w-[280px]">{item.descripcion}</span>
-                <span className="text-slate-800 font-semibold tabular-nums shrink-0 ml-2">{formatGs(item.monto)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-            Número de Factura *
-          </label>
-          <input
-            value={nro}
-            onChange={e => setNro(e.target.value)}
-            placeholder="001-001-0000001"
-            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150"
-            autoFocus
-          />
-          <p className="text-sm text-slate-400 mt-1">Formato: 001-001-0000001</p>
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
+import {
+  formatGs, formatFecha,
+  type PendienteItem, type Factura,
+  ESTADO_COLOR, TIPO_LABEL, TIPO_COLOR,
+} from './facturacion/shared'
+import LoteModal from './facturacion/LoteModal'
+import ModalEmitir from './facturacion/ModalEmitir'
+import ModalAnular from './facturacion/ModalAnular'
 
 export default function Facturacion() {
   const { t } = useTranslation()
@@ -194,10 +32,6 @@ export default function Facturacion() {
   const requestIdRef = useRef(0)
 
   const [emitirModal, setEmitirModal] = useState<PendienteItem | null>(null)
-  const [nroFactura, setNroFactura] = useState('')
-  const [emitiendo, setEmitiendo] = useState(false)
-
-  const [anulando, setAnulando] = useState<number | null>(null)
   const [confirmAnularId, setConfirmAnularId] = useState<Factura | null>(null)
 
   // Pendientes tab multi-select
@@ -357,51 +191,11 @@ export default function Facturacion() {
     })
   }
 
-  // ── Emitir ───────────────────────────────────────────────────────
-  const emitirFactura = useCallback(async () => {
-    if (!emitirModal) return
-    if (!nroFactura.trim()) { toast.error('Ingresá el número de factura'); return }
-    setEmitiendo(true)
-    try {
-      await api.post('/contabilidad/facturas/emitir/', {
-        tipo: emitirModal.tipo,
-        origen_id: emitirModal.id,
-        nro_factura: nroFactura.trim(),
-      })
-      toast.success(`Factura ${nroFactura} emitida`)
-      setEmitirModal(null)
-      setNroFactura('')
-      loadPendientes()
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setEmitiendo(false)
-    }
-  }, [emitirModal, nroFactura, loadPendientes])
-
-  // ── Anular ───────────────────────────────────────────────────────
-  const anularFactura = useCallback(async () => {
-    if (!confirmAnularId) return
-    setAnulando(confirmAnularId.id)
-    try {
-      await api.post(`/contabilidad/facturas/${confirmAnularId.id}/anular/`)
-      toast.success('Factura anulada')
-      setConfirmAnularId(null)
-      loadFacturas(searchFact, filterEstado, pageFact)
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setAnulando(null)
-    }
-  }, [confirmAnularId, searchFact, filterEstado, pageFact, loadFacturas])
-
   // ── Columns ──────────────────────────────────────────────────────
 
   const colsPendientes: Column<PendienteItem>[] = [
     {
-      title: '',
-      key: 'check',
-      width: 36,
+      title: '', key: 'check', width: 36,
       render: (_, r) => {
         const key = `${r.tipo}-${r.id}`
         return (
@@ -415,36 +209,29 @@ export default function Facturacion() {
       },
     },
     {
-      title: 'Tipo',
-      key: 'tipo',
+      title: 'Tipo', key: 'tipo',
       render: (_, r) => <Badge color={TIPO_COLOR[r.tipo] ?? 'default'}>{TIPO_LABEL[r.tipo] ?? r.tipo}</Badge>,
     },
     {
-      title: 'Cliente',
-      key: 'cliente',
+      title: 'Cliente', key: 'cliente',
       render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.cliente_nombre}</span>,
     },
     {
-      title: 'Descripción',
-      key: 'desc',
+      title: 'Descripción', key: 'desc',
       render: (_, r) => <span className="text-sm text-slate-600">{r.descripcion}</span>,
     },
     {
-      title: 'Monto',
-      key: 'monto',
+      title: 'Monto', key: 'monto',
       render: (_, r) => <span className="tabular-nums font-semibold text-slate-800">{formatGs(r.monto)}</span>,
     },
     {
-      title: 'Fecha',
-      key: 'fecha',
+      title: 'Fecha', key: 'fecha',
       render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha)}</span>,
     },
     {
-      title: '',
-      key: 'accion',
-      width: 90,
+      title: '', key: 'accion', width: 90,
       render: (_, r) => (
-        <Button size="sm" variant="primary" onClick={() => { setEmitirModal(r); setNroFactura('') }}>
+        <Button size="sm" variant="primary" onClick={() => setEmitirModal(r)}>
           Emitir
         </Button>
       ),
@@ -453,39 +240,31 @@ export default function Facturacion() {
 
   const colsFacturas: Column<Factura>[] = [
     {
-      title: 'Nro. Factura',
-      key: 'nro',
+      title: 'Nro. Factura', key: 'nro',
       render: (_, r) => <span className="font-mono text-sm font-semibold text-slate-800">{r.nro_factura}</span>,
     },
     {
-      title: 'Cliente',
-      key: 'cliente',
+      title: 'Cliente', key: 'cliente',
       render: (_, r) => <span className="text-sm text-slate-700">{r.cliente_nombre}</span>,
     },
     {
-      title: 'Monto',
-      key: 'monto',
+      title: 'Monto', key: 'monto',
       render: (_, r) => <span className="tabular-nums font-semibold text-slate-800">{formatGs(r.monto_total)}</span>,
     },
     {
-      title: 'IVA 10%',
-      key: 'iva',
+      title: 'IVA 10%', key: 'iva',
       render: (_, r) => <span className="tabular-nums text-sm text-slate-500">{formatGs(r.iva_10)}</span>,
     },
     {
-      title: 'Estado',
-      key: 'estado',
+      title: 'Estado', key: 'estado',
       render: (_, r) => <Badge color={ESTADO_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
     },
     {
-      title: 'Fecha',
-      key: 'fecha',
+      title: 'Fecha', key: 'fecha',
       render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha_emision)}</span>,
     },
     {
-      title: '',
-      key: 'acciones',
-      width: 130,
+      title: '', key: 'acciones', width: 130,
       render: (_, r) => (
         <div className="flex gap-1.5">
           <Button
@@ -506,7 +285,7 @@ export default function Facturacion() {
             PDF
           </Button>
           {r.estado === 'EMITIDA' && (
-            <Button size="sm" variant="danger" loading={anulando === r.id} onClick={() => setConfirmAnularId(r)}>
+            <Button size="sm" variant="danger" onClick={() => setConfirmAnularId(r)}>
               <XCircle className="w-3.5 h-3.5" />
             </Button>
           )}
@@ -527,13 +306,11 @@ export default function Facturacion() {
   // ── Render ────────────────────────────────────────────────────────
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">{t('facturacion.title')}</h1>
         <p className="text-base text-slate-500 mt-0.5">{t('facturacion.subtitle')}</p>
       </div>
 
-      {/* Tabs */}
       <div className="border-b border-slate-200">
         <div className="flex gap-0">
           <button onClick={() => setTab('pendientes')} className={tabBtn(tab === 'pendientes')}>
@@ -563,7 +340,6 @@ export default function Facturacion() {
       {/* ── Pendientes tab ───────────────────────────────────────── */}
       {tab === 'pendientes' && (
         <>
-          {/* Barra de acción lote */}
           {selectedPend.size > 0 && (
             <div className="bg-slate-800 text-white rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
               <div className="flex items-center gap-3 text-sm">
@@ -620,7 +396,6 @@ export default function Facturacion() {
       {/* ── Mensual tab ──────────────────────────────────────────── */}
       {tab === 'mensual' && (
         <>
-          {/* Controls */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-wrap items-end gap-4">
             <div>
               <label className={labelClass}>Mes</label>
@@ -651,7 +426,6 @@ export default function Facturacion() {
             )}
           </div>
 
-          {/* Grouped by client */}
           {loadingPend ? (
             <div className="text-center py-12 text-slate-400">Cargando...</div>
           ) : gruposMensual.length === 0 ? (
@@ -668,7 +442,6 @@ export default function Facturacion() {
 
                 return (
                   <div key={grupo.clienteId ?? grupo.clienteNombre} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                    {/* Client header */}
                     <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-3 bg-slate-50">
                       <input
                         type="checkbox"
@@ -684,7 +457,6 @@ export default function Facturacion() {
                       <span className="text-sm font-bold tabular-nums text-emerald-700">{formatGs(grupoTotal)}</span>
                     </div>
 
-                    {/* Items */}
                     <div className="divide-y divide-slate-50">
                       {grupo.items.map(item => {
                         const key = `${item.tipo}-${item.id}`
@@ -767,87 +539,25 @@ export default function Facturacion() {
         </>
       )}
 
-      {/* ── Emitir individual modal ───────────────────────────────── */}
-      <Modal
-        open={!!emitirModal}
-        title="Emitir Factura"
-        onOk={emitirFactura}
-        onCancel={() => setEmitirModal(null)}
-        confirmLoading={emitiendo}
-        okText="Emitir"
-        width={460}
-      >
-        {emitirModal && (
-          <div className="space-y-4">
-            <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-medium">Cliente</span>
-                <span className="text-slate-800 font-semibold">{emitirModal.cliente_nombre}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-medium">Concepto</span>
-                <span className="text-slate-700">{emitirModal.descripcion}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-medium">Monto</span>
-                <span className="text-emerald-700 font-bold tabular-nums">{formatGs(emitirModal.monto)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-medium">Tipo</span>
-                <Badge color={TIPO_COLOR[emitirModal.tipo] ?? 'default'}>{TIPO_LABEL[emitirModal.tipo] ?? emitirModal.tipo}</Badge>
-              </div>
-            </div>
-
-            <div>
-              <label className={labelClass}>Número de Factura *</label>
-              <input
-                value={nroFactura}
-                onChange={e => setNroFactura(e.target.value)}
-                placeholder="001-001-0000001"
-                className={inputClass}
-                autoFocus
-              />
-              <p className="text-sm text-slate-400 mt-1">Formato: 001-001-0000001</p>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* ── Emitir lote modal ─────────────────────────────────────── */}
+      {/* ── Emitir lote modal (mensual) ───────────────────────────── */}
       <LoteModal
         open={loteModal}
         items={selectedItems}
         onClose={() => setLoteModal(false)}
-        onSuccess={() => {
-          setSelected(new Set())
-          loadPendientes()
-        }}
+        onSuccess={() => { setSelected(new Set()); loadPendientes() }}
       />
 
-      {/* ── Confirm anular modal ──────────────────────────────────── */}
-      <Modal
-        open={!!confirmAnularId}
-        title="Anular Factura"
-        onOk={anularFactura}
-        onCancel={() => setConfirmAnularId(null)}
-        confirmLoading={!!anulando}
-        okText="Anular"
-        width={400}
-      >
-        {confirmAnularId && (
-          <div className="flex items-start gap-3 py-2">
-            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-slate-800">
-                ¿Anular factura {confirmAnularId.nro_factura}?
-              </p>
-              <p className="text-sm text-slate-500 mt-1">
-                Esta acción no se puede deshacer. La factura quedará marcada como ANULADA.
-              </p>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <ModalEmitir
+        item={emitirModal}
+        onClose={() => setEmitirModal(null)}
+        onSaved={() => { setEmitirModal(null); loadPendientes() }}
+      />
+
+      <ModalAnular
+        factura={confirmAnularId}
+        onClose={() => setConfirmAnularId(null)}
+        onSaved={() => loadFacturas(searchFact, filterEstado, pageFact)}
+      />
     </div>
   )
 }

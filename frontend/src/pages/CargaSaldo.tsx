@@ -7,148 +7,16 @@ import {
 } from 'lucide-react'
 import tarjetasService from '../services/tarjetas'
 import { METODOS_PAGO as METODOS } from '../constants/mediosPago'
-import Badge, { type BadgeColor } from '../components/ui/Badge'
+import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Table, { type Column } from '../components/ui/Table'
-import Modal from '../components/ui/Modal'
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function extractErrorMessage(err: unknown): string {
-  const e = err as { response?: { data?: unknown } }
-  const data = e?.response?.data
-  if (!data) return 'Error inesperado'
-  if (typeof data === 'string') return data
-  if (typeof data === 'object') {
-    const d = data as Record<string, unknown>
-    if (d.detail) return String(d.detail)
-    if (d.error) return String(d.error)
-    const first = Object.values(d)[0]
-    if (Array.isArray(first)) return String(first[0])
-    return JSON.stringify(data)
-  }
-  return 'Error inesperado'
-}
-
-function formatGs(n: number | string | null | undefined): string {
-  return 'Gs. ' + (Number(n) || 0).toLocaleString('es-PY')
-}
-
-function formatFecha(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
-// ─── Interfaces ───────────────────────────────────────────────────────────────
-
-interface Tarjeta {
-  nro_tarjeta: string
-  codigo_barras: string | null
-  hijo_nombre: string
-  hijo_grado: string
-  cliente_nombre: string
-  cliente_id: number
-  cliente_saldo_cc: string | number
-  cliente_limite_credito: string | number
-  cliente_modalidad_facturacion: 'INMEDIATA' | 'MENSUAL'
-  saldo_actual: string | number
-  saldo_disponible: string | number
-  estado: string
-}
-
-interface Movimiento {
-  id: number
-  tipo: string
-  monto: string | number
-  saldo_anterior: string | number
-  saldo_resultante: string | number
-  descripcion: string
-  fecha: string
-}
-
-interface CargaReciente {
-  id: number
-  monto_cargado: string | number
-  metodo_pago: string
-  estado: string
-  fecha_carga: string
-}
-
-interface UltimaCarga {
-  monto: number
-  metodo: string
-  tipoCobro: 'CONTADO' | 'CREDITO'
-  estado: string
-  tarjeta: Tarjeta
-  fecha: string
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const MONTOS_RAPIDOS = [10000, 20000, 50000, 100000, 200000]
-
-const TIPO_COLOR: Record<string, BadgeColor> = {
-  RECARGA: 'green', CONSUMO: 'blue', AJUSTE: 'orange', REVERSO: 'purple',
-}
-const ESTADO_COLOR: Record<string, BadgeColor> = {
-  CONFIRMADA: 'green', PENDIENTE: 'yellow', RECHAZADA: 'red',
-}
-
-// ─── Receipt printer ─────────────────────────────────────────────────────────
-
-function abrirRecibo(carga: UltimaCarga) {
-  const metodoLabel = carga.tipoCobro === 'CREDITO'
-    ? 'Cuenta Corriente (Crédito)'
-    : (METODOS.find(m => m.value === carga.metodo)?.label ?? carga.metodo)
-
-  const win = window.open('', '_blank', 'width=420,height=600')
-  if (!win) { toast.error('Bloqueaste las ventanas emergentes'); return }
-
-  win.document.write(`<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8" />
-<title>Recibo de Recarga</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: monospace; font-size: 13px; padding: 16px; max-width: 380px; margin: auto; }
-  h1 { font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 4px; }
-  .center { text-align: center; }
-  .divider { border-top: 1px dashed #000; margin: 8px 0; }
-  .row { display: flex; justify-content: space-between; margin: 3px 0; }
-  .label { color: #555; }
-  .big { font-size: 22px; font-weight: bold; text-align: center; margin: 10px 0; }
-  .footer { font-size: 11px; text-align: center; color: #777; margin-top: 12px; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-<h1>LA CANTINA DE TITA</h1>
-<p class="center">Recibo de Recarga de Saldo</p>
-<div class="divider"></div>
-<div class="row"><span class="label">Fecha:</span><span>${new Date(carga.fecha).toLocaleString('es-PY')}</span></div>
-<div class="divider"></div>
-<div class="row"><span class="label">Alumno:</span><span>${carga.tarjeta.hijo_nombre}</span></div>
-<div class="row"><span class="label">Grado:</span><span>${carga.tarjeta.hijo_grado || '—'}</span></div>
-<div class="row"><span class="label">Tarjeta:</span><span>${carga.tarjeta.nro_tarjeta}</span></div>
-<div class="row"><span class="label">Responsable:</span><span>${carga.tarjeta.cliente_nombre}</span></div>
-<div class="divider"></div>
-<div class="row"><span class="label">Método:</span><span>${metodoLabel}</span></div>
-<div class="big">Gs. ${carga.monto.toLocaleString('es-PY')}</div>
-<div class="divider"></div>
-<div class="row"><span class="label">Nuevo saldo tarjeta:</span><span>Gs. ${Number(carga.tarjeta.saldo_disponible).toLocaleString('es-PY')}</span></div>
-<div class="footer">Gracias por su pago.<br/>Conserve este comprobante.</div>
-<script>window.onload = function(){ window.print(); }<\/script>
-</body>
-</html>`)
-  win.document.close()
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
+import {
+  extractErrorMessage, formatGs, formatFecha, abrirRecibo,
+  type Tarjeta, type Movimiento, type CargaReciente, type UltimaCarga,
+  MONTOS_RAPIDOS, TIPO_COLOR, ESTADO_COLOR,
+} from './cargasaldo/shared'
+import ModalConfirmarCarga from './cargasaldo/ModalConfirmarCarga'
 
 export default function CargaSaldo() {
   const { t } = useTranslation()
@@ -179,8 +47,6 @@ export default function CargaSaldo() {
 
   // ── Confirmar carga pendiente ─────────────────────────────────────
   const [confirmCargaId, setConfirmCargaId] = useState<number | null>(null)
-  const [confirmFactura, setConfirmFactura] = useState({ emitir: false, nro: '' })
-  const [confirmando, setConfirmando] = useState(false)
 
   // ── Auto-focus al inicio ──────────────────────────────────────────
   useEffect(() => {
@@ -232,35 +98,6 @@ export default function CargaSaldo() {
       setBuscando(false)
     }
   }, [busqueda, cargarHistorial])
-
-  // ── Confirmar carga pendiente ─────────────────────────────────────
-  const openConfirmarCarga = useCallback((id: number) => {
-    setConfirmCargaId(id)
-    setConfirmFactura({ emitir: false, nro: '' })
-  }, [])
-
-  const handleConfirmarCarga = useCallback(async () => {
-    if (!confirmCargaId) return
-    if (confirmFactura.emitir && !confirmFactura.nro.trim()) { toast.error('Ingresá el número de factura'); return }
-    setConfirmando(true)
-    try {
-      await tarjetasService.confirmarCarga(
-        confirmCargaId,
-        confirmFactura.emitir ? confirmFactura.nro.trim() : undefined,
-      )
-      toast.success('Carga confirmada')
-      setConfirmCargaId(null)
-      if (tarjeta) {
-        const { data } = await tarjetasService.getByNro<Tarjeta>(tarjeta.nro_tarjeta)
-        setTarjeta(data)
-        cargarHistorial(tarjeta.nro_tarjeta)
-      }
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setConfirmando(false)
-    }
-  }, [confirmCargaId, confirmFactura, tarjeta, cargarHistorial])
 
   // ── Realizar carga ────────────────────────────────────────────────
   const handleCargar = useCallback(async () => {
@@ -418,7 +255,7 @@ export default function CargaSaldo() {
       key: 'accion',
       width: 110,
       render: (_, r) => r.estado === 'PENDIENTE' ? (
-        <Button size="sm" variant="primary" onClick={() => openConfirmarCarga(r.id)}>
+        <Button size="sm" variant="primary" onClick={() => setConfirmCargaId(r.id)}>
           Confirmar
         </Button>
       ) : null,
@@ -781,44 +618,17 @@ export default function CargaSaldo() {
         </div>
       )}
 
-      {/* ── Confirmar carga modal ─────────────────────────────────── */}
-      <Modal
-        open={confirmCargaId !== null}
-        title="Confirmar Carga de Saldo"
-        onOk={handleConfirmarCarga}
-        onCancel={() => setConfirmCargaId(null)}
-        okText="Confirmar"
-        confirmLoading={confirmando}
-        width={400}
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">¿Confirmás esta carga de saldo?</p>
-          <div className="pt-1">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={confirmFactura.emitir}
-                onChange={e => setConfirmFactura(f => ({ ...f, emitir: e.target.checked, nro: '' }))}
-                className="w-4 h-4 rounded accent-green-600"
-              />
-              <span className="text-sm font-semibold text-slate-700">Emitir factura ahora</span>
-            </label>
-            {confirmFactura.emitir && (
-              <div className="mt-2">
-                <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Nro. Factura *</label>
-                <input
-                  value={confirmFactura.nro}
-                  onChange={e => setConfirmFactura(f => ({ ...f, nro: e.target.value }))}
-                  placeholder="001-001-0001234"
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full"
-                  autoFocus
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </Modal>
-
+      <ModalConfirmarCarga
+        cargaId={confirmCargaId}
+        onClose={() => setConfirmCargaId(null)}
+        onSaved={async () => {
+          if (tarjeta) {
+            const { data } = await tarjetasService.getByNro<Tarjeta>(tarjeta.nro_tarjeta)
+            setTarjeta(data)
+            cargarHistorial(tarjeta.nro_tarjeta)
+          }
+        }}
+      />
     </div>
   )
 }
