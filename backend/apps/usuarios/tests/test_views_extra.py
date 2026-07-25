@@ -2,9 +2,12 @@
 Tests para gaps de cobertura en usuarios/views.py.
 Cubre: LogoutView (con y sin session_key/refresh_token),
        login por CI/RUC (CustomTokenObtainPairSerializer),
-       ReporteAuditoriaView, ReporteIntentosLoginView, ReportePersonalInactivoView.
+       ReporteAuditoriaView, ReporteIntentosLoginView, ReportePersonalInactivoView,
+       bloqueo automático de cuenta (BloqueoCuenta + cache).
 """
 import pytest
+from django.core.cache import cache
+from django.test import override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -163,7 +166,8 @@ class TestReporteIntentosLogin:
         resp = api_admin.get(self.URL)
         assert resp.status_code == 200
         assert "resumen" in resp.data
-        assert resp.data["resumen"]["total"] == 0
+        assert resp.data["resumen"]["total_intentos"] == 0
+        assert resp.data["resumen"]["ips_bloqueadas"] == 0
 
     def test_con_intento_fallido(self, db, api_admin):
         from apps.usuarios.models import IntentoLogin
@@ -176,8 +180,47 @@ class TestReporteIntentosLogin:
         resp = api_admin.get(self.URL)
         assert resp.status_code == 200
         assert resp.data["resumen"]["fallidos"] >= 1
-        assert len(resp.data["por_ip"]) >= 1
-        assert len(resp.data["por_email"]) >= 1
+        assert len(resp.data["top_ips"]) >= 1
+        assert len(resp.data["top_emails"]) >= 1
+        # Verificar shape de top_ips
+        ip_row = resp.data["top_ips"][0]
+        assert "ip" in ip_row
+        assert "exitosos" in ip_row
+        assert "fallidos" in ip_row
+        assert "bloqueada" in ip_row
+        # Verificar shape de top_emails
+        email_row = resp.data["top_emails"][0]
+        assert "email" in email_row
+        assert "fallidos" in email_row
+        assert "ultimo_intento" in email_row
+
+    def test_por_motivo_shape(self, db, api_admin):
+        from apps.usuarios.models import IntentoLogin
+        IntentoLogin.objects.create(
+            email="a@b.com", exitoso=False, ip_address="1.1.1.1",
+            motivo_fallo="Contraseña incorrecta",
+        )
+        resp = api_admin.get(self.URL)
+        assert len(resp.data["por_motivo"]) >= 1
+        m = resp.data["por_motivo"][0]
+        assert "motivo" in m
+        assert "n" in m
+
+    def test_ip_bloqueada_aparece_en_reporte(self, db, api_admin, usuario_cajero):
+        from apps.usuarios.models import IntentoLogin, BloqueoCuenta
+        IntentoLogin.objects.create(
+            email=usuario_cajero.email, exitoso=False, ip_address="9.9.9.9",
+        )
+        BloqueoCuenta.objects.create(
+            usuario=usuario_cajero, motivo="Test", ip_address="9.9.9.9", estado=True,
+        )
+        resp = api_admin.get(self.URL)
+        assert resp.data["resumen"]["ips_bloqueadas"] >= 1
+        fila_bloqueada = next(
+            (r for r in resp.data["top_ips"] if r["ip"] == "9.9.9.9"), None
+        )
+        assert fila_bloqueada is not None
+        assert fila_bloqueada["bloqueada"] is True
 
     def test_filtro_fecha_desde_hasta(self, api_admin):
         resp = api_admin.get(self.URL, {"desde": "2026-01-01", "hasta": "2026-12-31"})
@@ -230,3 +273,112 @@ class TestReportePersonalInactivo:
     def test_requiere_autenticacion(self):
         resp = APIClient().get(self.URL)
         assert resp.status_code in (401, 403)
+
+
+# ── Bloqueo automático de cuenta ──────────────────────────────────────────────
+
+_LOCMEM_CACHE = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "test-bloqueo",
+    }
+}
+_LOGIN_URL = "/api/token/"
+
+
+@pytest.mark.django_db
+class TestBloqueoCuentaManual:
+    """BloqueoCuenta creado a mano → el login lo detecta y devuelve 403."""
+
+    def test_login_rechazado_con_bloqueo_activo(self, usuario_cajero):
+        from apps.usuarios.models import BloqueoCuenta
+        from django.utils import timezone
+        from datetime import timedelta
+        BloqueoCuenta.objects.create(
+            usuario=usuario_cajero,
+            motivo="Bloqueo manual de test",
+            fecha_desbloqueo=timezone.now() + timedelta(hours=1),
+            estado=True,
+        )
+        resp = APIClient().post(
+            _LOGIN_URL,
+            {"email": usuario_cajero.email, "password": "test1234"},
+            format="json",
+        )
+        assert resp.status_code == 403
+        assert "bloqueada" in resp.data["detail"].lower()
+
+    def test_bloqueo_expirado_se_limpia_y_permite_login(self, usuario_cajero):
+        from apps.usuarios.models import BloqueoCuenta
+        from django.utils import timezone
+        from datetime import timedelta
+        BloqueoCuenta.objects.create(
+            usuario=usuario_cajero,
+            motivo="Bloqueo vencido",
+            fecha_desbloqueo=timezone.now() - timedelta(minutes=1),
+            estado=True,
+        )
+        resp = APIClient().post(
+            _LOGIN_URL,
+            {"email": usuario_cajero.email, "password": "test1234"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        # El bloqueo expirado se marcó como estado=False inline
+        assert BloqueoCuenta.objects.filter(usuario=usuario_cajero, estado=False).exists()
+
+
+@pytest.mark.django_db
+class TestBloqueoCuentaAutomatico:
+    """N fallos consecutivos → bloqueo automático vía cache."""
+
+    @override_settings(
+        CACHES=_LOCMEM_CACHE,
+        LOGIN_MAX_INTENTOS=3,
+        LOGIN_VENTANA_MINUTOS=15,
+        LOGIN_BLOQUEO_MINUTOS=30,
+    )
+    def test_N_fallos_crean_bloqueo_y_devuelven_429(self, db, usuario_cajero):
+        from apps.usuarios.models import BloqueoCuenta
+        cache.clear()
+        client = APIClient()
+        payload = {"email": usuario_cajero.email, "password": "MALA"}
+
+        for i in range(3):
+            resp = client.post(_LOGIN_URL, payload, format="json")
+            assert resp.status_code == 401, f"Intento {i+1} debería ser 401"
+
+        # El 4° intento debe ser bloqueado por cache (429)
+        resp = client.post(_LOGIN_URL, payload, format="json")
+        assert resp.status_code == 429
+
+        # Y se creó BloqueoCuenta en DB
+        assert BloqueoCuenta.objects.filter(usuario=usuario_cajero, estado=True).exists()
+        cache.clear()
+
+    @override_settings(
+        CACHES=_LOCMEM_CACHE,
+        LOGIN_MAX_INTENTOS=3,
+        LOGIN_VENTANA_MINUTOS=15,
+        LOGIN_BLOQUEO_MINUTOS=30,
+    )
+    def test_login_exitoso_limpia_contador(self, db, usuario_cajero):
+        """Dos fallos + login exitoso → el contador se borra → otro fallo no bloquea."""
+        from apps.usuarios.models import BloqueoCuenta
+        cache.clear()
+        client = APIClient()
+        email = usuario_cajero.email
+
+        # Dos fallos
+        for _ in range(2):
+            client.post(_LOGIN_URL, {"email": email, "password": "MALA"}, format="json")
+
+        # Login exitoso → limpia contadores
+        resp = client.post(_LOGIN_URL, {"email": email, "password": "test1234"}, format="json")
+        assert resp.status_code == 200
+
+        # Un fallo después del login exitoso → no bloquea (contador fue borrado)
+        resp = client.post(_LOGIN_URL, {"email": email, "password": "MALA"}, format="json")
+        assert resp.status_code == 401
+        assert not BloqueoCuenta.objects.filter(usuario=usuario_cajero, estado=True).exists()
+        cache.clear()

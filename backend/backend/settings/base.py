@@ -40,6 +40,11 @@ if DEBUG and not SECRET_KEY:
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+# Bloqueo automático tras N intentos fallidos de login
+LOGIN_MAX_INTENTOS    = int(os.environ.get("LOGIN_MAX_INTENTOS",    "5"))   # fallos antes de bloquear
+LOGIN_VENTANA_MINUTOS = int(os.environ.get("LOGIN_VENTANA_MINUTOS", "15"))  # ventana de conteo
+LOGIN_BLOQUEO_MINUTOS = int(os.environ.get("LOGIN_BLOQUEO_MINUTOS", "30"))  # duración del bloqueo
+
 # ==============================================================================
 # APLICACIONES
 # ==============================================================================

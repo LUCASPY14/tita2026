@@ -64,10 +64,13 @@ def _verify_totp(secret_b32, codigo, step=30, tolerance=1):
 def _generate_backup_codes(n=8):
     return [secrets.token_hex(3).upper() for _ in range(n)]
 
+from django.conf import settings as django_settings
+from django.core.cache import cache
+
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters as drf_filters
 
-from django.db.models import Count, Q, Avg
+from django.db.models import Count, Max, Q, Avg
 from django.db.models.functions import TruncDate
 
 from .models import (
@@ -80,6 +83,7 @@ from .models import (
     SesionActiva,
     AuditoriaOperacion,
     IntentoLogin,
+    BloqueoCuenta,
 )
 from .serializers import (
     UsuarioSerializer,
@@ -155,6 +159,73 @@ def _registrar_sesion(user, request) -> str:
     return session_key
 
 
+# ── Bloqueo automático de cuenta ──────────────────────────────────────────────
+
+def _cache_key_email(email: str) -> str:
+    h = hashlib.sha256(email.lower().encode()).hexdigest()[:20]
+    return f"login_fail:email:{h}"
+
+
+def _cache_key_ip(ip: str) -> str:
+    return f"login_fail:ip:{ip}"
+
+
+def _esta_bloqueado_cache(email: str, ip: str) -> bool:
+    """Chequeo O(1) en cache antes de autenticar."""
+    max_i = django_settings.LOGIN_MAX_INTENTOS
+    if email and cache.get(_cache_key_email(email), 0) >= max_i:
+        return True
+    if ip and cache.get(_cache_key_ip(ip), 0) >= max_i:
+        return True
+    return False
+
+
+def _registrar_fallo_login(email: str, ip: str) -> None:
+    """
+    Incrementa contadores de fallos en cache y crea BloqueoCuenta cuando se
+    supera LOGIN_MAX_INTENTOS. La ventana de conteo expira sola (TTL en cache).
+    """
+    max_i    = django_settings.LOGIN_MAX_INTENTOS
+    ventana  = django_settings.LOGIN_VENTANA_MINUTOS * 60
+    bloqueo  = django_settings.LOGIN_BLOQUEO_MINUTOS
+
+    # Incrementar contador por email (no atómico en LocMemCache, aceptable para este caso)
+    count_email = 0
+    if email:
+        count_email = cache.get(_cache_key_email(email), 0) + 1
+        cache.set(_cache_key_email(email), count_email, timeout=ventana)
+
+    # Incrementar contador por IP
+    if ip:
+        count_ip = cache.get(_cache_key_ip(ip), 0) + 1
+        cache.set(_cache_key_ip(ip), count_ip, timeout=ventana)
+
+    # Si el email supera el umbral y el usuario existe, crear BloqueoCuenta
+    if email and count_email >= max_i:
+        try:
+            user = Usuario.objects.only("id").get(email__iexact=email, is_active=True)
+            if not BloqueoCuenta.objects.filter(usuario=user, estado=True).exists():
+                BloqueoCuenta.objects.create(
+                    usuario=user,
+                    motivo=f"Bloqueo automático: {count_email} intentos fallidos en {django_settings.LOGIN_VENTANA_MINUTOS} min",
+                    fecha_desbloqueo=timezone.now() + timedelta(minutes=bloqueo),
+                    ip_address=ip or None,
+                    estado=True,
+                )
+        except Usuario.DoesNotExist:
+            pass
+
+
+def _limpiar_contadores_login(email: str, ip: str) -> None:
+    """Borra los contadores de fallo al producirse un login exitoso."""
+    if email:
+        cache.delete(_cache_key_email(email))
+    if ip:
+        cache.delete(_cache_key_ip(ip))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Login estándar por email, con soporte adicional de CI/RUC para el portal de padres.
@@ -188,6 +259,40 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     throttle_classes = [LoginRateThrottle]
 
     def post(self, request, *_args, **_kwargs):
+        email = (request.data.get("email") or request.data.get("username") or "").strip().lower()[:254]
+        ip    = request.META.get("REMOTE_ADDR") or "0.0.0.0"
+
+        # ── 1. Check cache (O(1) — cubre bloqueos automáticos recientes) ──────
+        if _esta_bloqueado_cache(email, ip):
+            return Response(
+                {"detail": "Demasiados intentos fallidos. Intentá de nuevo en unos minutos."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        # ── 2. Check BloqueoCuenta DB (cubre bloqueos manuales y persistentes) ─
+        if email:
+            try:
+                _check_user = Usuario.objects.only("id").get(email__iexact=email, is_active=True)
+                bloqueo = (
+                    BloqueoCuenta.objects
+                    .filter(usuario=_check_user, estado=True)
+                    .order_by("-fecha_bloqueo")
+                    .first()
+                )
+                if bloqueo:
+                    if bloqueo.fecha_desbloqueo and bloqueo.fecha_desbloqueo <= timezone.now():
+                        # Expiró — limpiar inline
+                        bloqueo.estado = False
+                        bloqueo.save(update_fields=["estado"])
+                    else:
+                        msg = "Cuenta bloqueada temporalmente."
+                        if bloqueo.fecha_desbloqueo:
+                            msg += f" Disponible después de las {bloqueo.fecha_desbloqueo.strftime('%H:%M')}."
+                        return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+            except Usuario.DoesNotExist:
+                pass
+
+        # ── 3. Autenticar ─────────────────────────────────────────────────────
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
@@ -197,12 +302,12 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             # Con ATOMIC_REQUESTS=True, un re-raise haría rollback de los registros
             # de auditoría. Retornamos la Response directamente para que la transacción
             # haga commit y queden persistidos IntentoLogin + AuditoriaOperacion.
-            email = (request.data.get("email") or request.data.get("username") or "")[:254]
             motivo = str(getattr(e, "detail", e))[:100]
+            _registrar_fallo_login(email, ip)
             try:
                 IntentoLogin.objects.create(
                     email=email or "unknown@audit",
-                    ip_address=request.META.get("REMOTE_ADDR") or "0.0.0.0",
+                    ip_address=ip,
                     exitoso=False,
                     motivo_fallo=motivo,
                 )
@@ -220,7 +325,9 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             err_detail = getattr(e, "detail", {"detail": str(e)})
             return Response(err_detail, status=err_status)
 
+        # ── 4. Login exitoso — limpiar contadores ─────────────────────────────
         user = serializer.user
+        _limpiar_contadores_login(email, ip)
 
         try:
             if user.auth_2fa.habilitado:
@@ -240,7 +347,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         try:
             IntentoLogin.objects.create(
                 email=user.email,
-                ip_address=request.META.get("REMOTE_ADDR") or "0.0.0.0",
+                ip_address=ip,
                 exitoso=True,
             )
         except Exception:
@@ -1056,27 +1163,50 @@ class ReporteIntentosLoginView(APIView):
         if hasta:
             qs = qs.filter(fecha_intento__date__lte=hasta)
 
-        total = qs.count()
+        total    = qs.count()
         fallidos = qs.filter(exitoso=False).count()
         exitosos = qs.filter(exitoso=True).count()
         tasa_fallo = round(fallidos / total * 100, 1) if total else 0
 
-        qs_fallidos = qs.filter(exitoso=False)
+        # IPs con BloqueoCuenta activo (para marcar columna "bloqueada" en el reporte)
+        ips_bloqueadas_set = set(
+            BloqueoCuenta.objects.filter(estado=True)
+            .exclude(ip_address=None)
+            .values_list("ip_address", flat=True)
+        )
 
-        por_ip = list(
-            qs_fallidos.values("ip_address")
-            .annotate(n_fallidos=Count("id_intento"))
-            .order_by("-n_fallidos")[:20]
+        top_ips = [
+            {
+                "ip": row["ip_address"],
+                "exitosos": row["_exitosos"],
+                "fallidos": row["_fallidos"],
+                "bloqueada": row["ip_address"] in ips_bloqueadas_set,
+            }
+            for row in qs.values("ip_address").annotate(
+                _exitosos=Count("id_intento", filter=Q(exitoso=True)),
+                _fallidos=Count("id_intento", filter=Q(exitoso=False)),
+            ).order_by("-_fallidos")[:20]
+        ]
+
+        top_emails = list(
+            qs.filter(exitoso=False)
+            .values("email")
+            .annotate(
+                fallidos=Count("id_intento"),
+                ultimo_intento=Max("fecha_intento"),
+            )
+            .order_by("-fallidos")[:20]
+            .values("email", "fallidos", "ultimo_intento")
         )
-        por_email = list(
-            qs_fallidos.values("email")
-            .annotate(n_fallidos=Count("id_intento"))
-            .order_by("-n_fallidos")[:20]
-        )
-        por_motivo = list(
-            qs_fallidos.exclude(motivo_fallo=None).exclude(motivo_fallo="")
-            .values("motivo_fallo").annotate(count=Count("id_intento")).order_by("-count")
-        )
+
+        por_motivo = [
+            {"motivo": r["motivo_fallo"], "n": r["_n"]}
+            for r in qs.filter(exitoso=False)
+            .exclude(motivo_fallo=None).exclude(motivo_fallo="")
+            .values("motivo_fallo")
+            .annotate(_n=Count("id_intento"))
+            .order_by("-_n")
+        ]
 
         tendencia = list(
             qs.annotate(fecha=TruncDate("fecha_intento"))
@@ -1091,13 +1221,14 @@ class ReporteIntentosLoginView(APIView):
 
         return Response({
             "resumen": {
-                "total": total,
+                "total_intentos": total,
                 "fallidos": fallidos,
                 "exitosos": exitosos,
                 "tasa_fallo": tasa_fallo,
+                "ips_bloqueadas": len(ips_bloqueadas_set),
             },
-            "por_ip": por_ip,
-            "por_email": por_email,
+            "top_ips": top_ips,
+            "top_emails": top_emails,
             "por_motivo": por_motivo,
             "tendencia": tendencia,
         })
