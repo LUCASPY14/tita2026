@@ -112,7 +112,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A backend.celery_app beat -l INFO -s /app/logs/celerybeat-schedule
+    command: celery -A backend.celery_app beat -l INFO -s /app/beatdata/celerybeat-schedule
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
       DB_HOST: host.docker.internal
@@ -122,6 +122,7 @@ services:
       - ./backend/.env.production
     volumes:
       - backend_logs:/app/logs
+      - celerybeat_data:/app/beatdata
     depends_on:
       - redis
       - backend
@@ -209,6 +210,7 @@ volumes:
   backend_media:
   backend_static:
   backend_logs:
+  celerybeat_data:
   waha_data:
   redis_data:
   prometheus_data:

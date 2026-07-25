@@ -188,8 +188,8 @@ El límite de sesiones concurrentes se aplica automáticamente al hacer login
 | `enviar_emails_pendientes` | Cada 15 min | No |
 | `alertar_stock_minimo` | Diario 07:00 | No |
 | `verificar_vencimientos` | Diario 09:00 | No |
-| `generar_resumen_diario_stock` | Diario 23:55 | **Sí** |
-| `generar_resumen_diario_ventas` | Diario 23:50 | **Sí** |
+| `generar_resumen_diario_stock` | Diario 23:55 | No |
+| `generar_resumen_diario_ventas` | Diario 23:50 | No |
 | `cerrar_cuentas_mes_anterior` | Día 1 de mes 05:00 | **Sí** |
 | `generar_cuentas_mensuales` | Día 1 de mes 06:00 | **Sí** |
 | `alertar_cuentas_vencidas` | Día 10 de mes 08:00 | No |
@@ -201,7 +201,7 @@ El límite de sesiones concurrentes se aplica automáticamente al hacer login
 | `alertar_saldo_negativo_prolongado` | Diario 09:15 | No |
 | `resumen_mensual_deuda_clientes` | Día 5 de mes 08:30 | No |
 
-Las tareas críticas envían email a `ADMINS` si fallan (configurado en `celery_app.py`).
+Las tareas críticas envían email a `ADMINS` si fallan (configurado en `celery_app.py`). `generar_resumen_diario_ventas` y `generar_resumen_diario_stock` solo escriben logs y tienen `autoretry_for=(Exception,)` — no están en `_CRITICAL_TASKS`.
 
 > `cerrar_cajas_automatico` está desactivada en el beat (`celery_app.py:104`); el cierre de caja es manual.
 
