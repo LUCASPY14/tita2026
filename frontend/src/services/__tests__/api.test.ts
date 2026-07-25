@@ -189,3 +189,41 @@ describe('api — error de red (sin response)', () => {
     )
   })
 })
+
+describe('api — cola de requests durante refresh en vuelo', () => {
+  it('resuelve requests en cola cuando el refresh en vuelo tiene éxito', async () => {
+    localStorage.setItem('refresh_token', 'ref')
+
+    let resolveRefresh!: (v: unknown) => void
+    mocks.mockPost.mockReturnValueOnce(new Promise(r => { resolveRefresh = r }))
+    mocks.mockRetry.mockResolvedValue({ data: 'ok' })
+
+    // Primera 401: inicia el refresh, isRefreshing=true y queda suspendida en el await
+    const promise1 = mocks.responseErrFn!(makeError401())
+    // Segunda 401: llega con isRefreshing=true → se encola (cubre líneas 37-43)
+    const promise2 = mocks.responseErrFn!(makeError401())
+
+    resolveRefresh({ data: { access: 'tok_nuevo', refresh: 'ref_nuevo' } })
+
+    await Promise.all([promise1, promise2])
+
+    expect(mocks.mockRetry).toHaveBeenCalledTimes(2)
+    expect(localStorage.getItem('access_token')).toBe('tok_nuevo')
+  })
+
+  it('rechaza requests en cola cuando el refresh falla (processQueue error, línea 23)', async () => {
+    localStorage.setItem('refresh_token', 'ref')
+
+    let rejectRefresh!: (err: unknown) => void
+    mocks.mockPost.mockReturnValueOnce(new Promise((_, r) => { rejectRefresh = r }))
+
+    const promise1 = mocks.responseErrFn!(makeError401())
+    const promise2 = mocks.responseErrFn!(makeError401())  // queda encolada
+
+    rejectRefresh(new Error('Refresh failed'))
+
+    const [r1, r2] = await Promise.allSettled([promise1, promise2])
+    expect(r1.status).toBe('rejected')
+    expect(r2.status).toBe('rejected')
+  })
+})

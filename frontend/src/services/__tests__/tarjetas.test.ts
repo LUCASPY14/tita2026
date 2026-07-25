@@ -108,5 +108,11 @@ describe('tarjetasService', () => {
       await tarjetasService.confirmarCarga(7)
       expect(api.post).toHaveBeenCalledWith('/core/cargas-saldo/7/confirmar/', {})
     })
+
+    it('incluye nro_factura en el body cuando se provee', async () => {
+      vi.mocked(api.post).mockResolvedValue({ data: {} })
+      await tarjetasService.confirmarCarga(7, 'F-001')
+      expect(api.post).toHaveBeenCalledWith('/core/cargas-saldo/7/confirmar/', { nro_factura: 'F-001' })
+    })
   })
 })

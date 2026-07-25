@@ -101,6 +101,26 @@ describe('catalogoStore — getMediosPago', () => {
 
     expect(result).toEqual([MEDIO])
   })
+
+  it('devuelve array vacío y limpia loadingMediosPago al fallar la API sin caché', async () => {
+    vi.mocked(api.get).mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await useCatalogoStore.getState().getMediosPago()
+
+    expect(result).toEqual([])
+    expect(useCatalogoStore.getState().loadingMediosPago).toBe(false)
+  })
+})
+
+describe('catalogoStore — getCategorias (error)', () => {
+  it('devuelve array vacío y limpia loadingCategorias al fallar la API sin caché', async () => {
+    vi.mocked(api.get).mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await useCatalogoStore.getState().getCategorias()
+
+    expect(result).toEqual([])
+    expect(useCatalogoStore.getState().loadingCategorias).toBe(false)
+  })
 })
 
 describe('catalogoStore — invalidate', () => {
