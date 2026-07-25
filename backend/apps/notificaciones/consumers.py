@@ -45,7 +45,7 @@ class NotificacionConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive(self, text_data=None, bytes_data=None):
-        pass
+        pass  # canal unidireccional — el servidor solo emite, no recibe
 
     async def notificacion_nueva(self, event):
         await self.send(text_data=json.dumps(event["data"]))

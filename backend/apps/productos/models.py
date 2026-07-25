@@ -5,6 +5,7 @@ Gestión de productos, categorías, listas de precios y unidades de medida
 
 from decimal import Decimal
 
+from django.core.cache import cache
 from django.db import models, transaction
 
 
@@ -127,7 +128,11 @@ class Producto(models.Model):
 
     @property
     def precio_actual(self):
-        lista_defecto = ListaPrecio.objects.filter(activo=True, es_por_defecto=True).first()
+        lista_defecto = cache.get_or_set(
+            "lista_defecto_activa",
+            lambda: ListaPrecio.objects.filter(activo=True, es_por_defecto=True).first(),
+            300,
+        )
         if lista_defecto:
             precio = self.precios.filter(lista=lista_defecto).first()
             if precio:
@@ -183,6 +188,7 @@ class ListaPrecio(models.Model):
                 super().save(*args, **kwargs)
         else:
             super().save(*args, **kwargs)
+        cache.delete("lista_defecto_activa")
 
 
 # ==============================================================================
