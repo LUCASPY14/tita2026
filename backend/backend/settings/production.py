@@ -40,6 +40,13 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 if not ALLOWED_HOSTS or ALLOWED_HOSTS == [""]:
     raise ValueError("ALLOWED_HOSTS must be set in production!")
 
+# 4. BANCARD_RETURN_URL - URL de retorno de pagos Bancard (no puede ser localhost)
+if not os.environ.get("BANCARD_RETURN_URL"):
+    raise ValueError(
+        "BANCARD_RETURN_URL must be set in production! "
+        "Example: https://cantinatita.com/api/v1/bancard/retorno/"
+    )
+
 # ==========================================
 # HTTPS/SSL CONFIGURATION
 # ==========================================

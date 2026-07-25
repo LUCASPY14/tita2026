@@ -107,7 +107,7 @@ def bancard_iniciar(request):
     )
 
     # ── Llamar a Bancard ─────────────────────────────────────────────────────
-    return_url = getattr(settings, "BANCARD_RETURN_URL", "http://localhost:8000/api/v1/bancard/retorno/")
+    return_url = settings.BANCARD_RETURN_URL
     cancel_url = getattr(settings, "BANCARD_CANCEL_URL", f"{PORTAL_URL()}/portal/carga-saldo?estado=cancelado")
 
     resultado = bancard_service.iniciar_pago(
@@ -211,7 +211,7 @@ def bancard_iniciar_almuerzo(request):
         ip_origen=request.META.get("REMOTE_ADDR"),
     )
 
-    return_url = getattr(settings, "BANCARD_RETURN_URL", "http://localhost:8000/api/v1/bancard/retorno/")
+    return_url = settings.BANCARD_RETURN_URL
     cancel_url = getattr(settings, "BANCARD_CANCEL_URL_ALMUERZO",
                          f"{PORTAL_URL()}/portal/pagar-almuerzo?estado=cancelado")
 
