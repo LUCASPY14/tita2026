@@ -74,7 +74,7 @@ class Tarjeta(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(hijo__isnull=False) | models.Q(cliente_directo__isnull=False),
+                condition=models.Q(hijo__isnull=False) | models.Q(cliente_directo__isnull=False),
                 name="tarjeta_tiene_titular",
             )
         ]
@@ -396,6 +396,7 @@ class MedioPago(models.Model):
     class Meta:
         verbose_name = "Medio de Pago"
         verbose_name_plural = "Medios de Pago"
+        ordering = ["descripcion"]
 
     def __str__(self):
         return self.descripcion

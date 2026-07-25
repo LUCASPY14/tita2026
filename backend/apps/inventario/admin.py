@@ -4,6 +4,7 @@ Gestión de stock, movimientos, ajustes, lotes, costos y alertas
 """
 
 from django.contrib import admin
+from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.utils.html import format_html
 
@@ -66,8 +67,8 @@ class StockAdmin(admin.ModelAdmin):
 
     def requiere_reposicion_badge(self, obj):
         if obj.requiere_reposicion:
-            return format_html('<span style="color:#dc3545;">⚠ Reponer</span>')
-        return format_html('<span style="color:#28a745;">✓ OK</span>')
+            return mark_safe('<span style="color:#dc3545;">⚠ Reponer</span>')
+        return mark_safe('<span style="color:#28a745;">✓ OK</span>')
     requiere_reposicion_badge.short_description = "Reposición"
 
 

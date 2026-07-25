@@ -553,6 +553,7 @@ class ProductoAlergeno(models.Model):
     class Meta:
         verbose_name = "Producto-Alérgeno"
         verbose_name_plural = "Productos-Alérgenos"
+        ordering = ["producto", "alergeno"]
         constraints = [
             UniqueConstraint(fields=["producto", "alergeno"], name="unique_producto_alergeno")
         ]
@@ -655,7 +656,7 @@ class DetalleMenuDiario(models.Model):
                 name="uq_menu_producto_curso",
             ),
             models.CheckConstraint(
-                check=models.Q(cantidad__gt=0),
+                condition=models.Q(cantidad__gt=0),
                 name="chk_detalle_menu_cantidad_positiva",
             ),
         ]

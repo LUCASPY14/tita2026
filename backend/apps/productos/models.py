@@ -290,6 +290,7 @@ class ProductoImpuesto(models.Model):
     class Meta:
         verbose_name = "Impuesto de Producto"
         verbose_name_plural = "Impuestos de Productos"
+        ordering = ["producto", "impuesto"]
         unique_together = [("producto", "impuesto")]
 
     def __str__(self):

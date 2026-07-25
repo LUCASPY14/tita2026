@@ -102,7 +102,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
             ),
             Value(0, output_field=DecimalField(max_digits=12, decimal_places=0)),
         )
-    )
+    ).order_by("apellidos", "nombres")
     serializer_class = ClienteSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]

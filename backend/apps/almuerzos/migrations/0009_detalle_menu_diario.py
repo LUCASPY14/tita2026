@@ -35,6 +35,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='detallemenudiario',
-            constraint=models.CheckConstraint(check=models.Q(('cantidad__gt', 0)), name='chk_detalle_menu_cantidad_positiva'),
+            constraint=models.CheckConstraint(condition=models.Q(('cantidad__gt', 0)), name='chk_detalle_menu_cantidad_positiva'),
         ),
     ]

@@ -203,6 +203,7 @@ class Rol(models.Model):
         db_table = "roles"
         verbose_name = "Rol"
         verbose_name_plural = "Roles"
+        ordering = ["nombre_rol"]
 
     def __str__(self):
         return self.nombre_rol
@@ -251,6 +252,7 @@ class RolPermiso(models.Model):
         db_table = "roles_permisos"
         verbose_name = "Rol-Permiso"
         verbose_name_plural = "Roles-Permisos"
+        ordering = ["id_rol", "id_permiso"]
         unique_together = [["id_rol", "id_permiso"]]
 
     def __str__(self):
@@ -283,6 +285,7 @@ class PerfilUsuario(models.Model):
         db_table = "perfiles_usuario"
         verbose_name = "Perfil de Usuario"
         verbose_name_plural = "Perfiles de Usuarios"
+        ordering = ["id_perfil"]
 
     def __str__(self):
         return f"Perfil de {self.usuario.nombre_completo}"

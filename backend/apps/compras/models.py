@@ -342,6 +342,7 @@ class AplicacionPagoCompra(models.Model):
     class Meta:
         verbose_name = "Aplicación de Pago"
         verbose_name_plural = "Aplicaciones de Pagos"
+        ordering = ["id"]
 
     def __str__(self):
         return f"₲{self.monto_aplicado:,.0f} → Compra #{self.compra_id}"
@@ -525,6 +526,7 @@ class DetalleNotaCreditoProveedor(models.Model):
     class Meta:
         verbose_name = "Detalle de NC de Proveedor"
         verbose_name_plural = "Detalles de NC de Proveedores"
+        ordering = ["id"]
 
     def __str__(self):
         return f"{self.producto} x {self.cantidad} (NC #{self.nota_credito_id})"

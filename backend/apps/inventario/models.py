@@ -294,6 +294,7 @@ class DetalleAjuste(models.Model):
     class Meta:
         verbose_name = "Detalle de Ajuste"
         verbose_name_plural = "Detalles de Ajustes"
+        ordering = ["id"]
         unique_together = [("ajuste", "producto")]
 
     def __str__(self):

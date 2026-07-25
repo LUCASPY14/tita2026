@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="detalleventa",
             constraint=models.CheckConstraint(
-                check=models.Q(descuento__gte=0),
+                condition=models.Q(descuento__gte=0),
                 name="chk_detalleventa_descuento_no_negativo",
             ),
         ),

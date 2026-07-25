@@ -4,6 +4,7 @@ Gestión de tarjetas, movimientos, medios de pago, límites de transacción y au
 """
 
 from django.contrib import admin
+from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.utils.html import format_html
 
@@ -367,7 +368,7 @@ class MedioPagoAdmin(admin.ModelAdmin):
 
     def requiere_validacion_badge(self, obj):
         if obj.requiere_validacion:
-            return format_html('<span style="color:#0d6efd;">✓</span>')
+            return mark_safe('<span style="color:#0d6efd;">✓</span>')
         return "-"
     requiere_validacion_badge.short_description = "Validación"
 

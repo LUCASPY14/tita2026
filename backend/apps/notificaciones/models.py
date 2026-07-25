@@ -109,6 +109,7 @@ class PreferenciaNotificacion(models.Model):
     class Meta:
         verbose_name = "Preferencia de Notificación"
         verbose_name_plural = "Preferencias de Notificaciones"
+        ordering = ["usuario", "tipo_notificacion"]
         unique_together = [("usuario", "tipo_notificacion")]
 
     def __str__(self):
