@@ -239,14 +239,16 @@ export interface AuditoriaData {
   detalle: AuditoriaFila[]
 }
 
-export interface IntentoPorIp { ip_address: string; n_fallidos: number }
-export interface IntentoPorEmail { email: string; n_fallidos: number }
-export interface IntentoPorMotivo { motivo_fallo: string; count: number }
+export interface TopIpRow { ip: string; exitosos: number; fallidos: number; bloqueada: boolean }
+export interface TopEmailRow { email: string; fallidos: number; ultimo_intento: string }
+export interface IntentoPorMotivo { motivo: string; n: number }
 export interface IntentoTendencia { fecha: string; total: number; fallidos: number; exitosos: number }
 export interface IntentosLoginData {
-  resumen: { total: number; fallidos: number; exitosos: number; tasa_fallo: number }
-  por_ip: IntentoPorIp[]; por_email: IntentoPorEmail[]
-  por_motivo: IntentoPorMotivo[]; tendencia: IntentoTendencia[]
+  resumen: { total_intentos: number; fallidos: number; exitosos: number; tasa_fallo: number; ips_bloqueadas: number }
+  top_ips: TopIpRow[]
+  top_emails: TopEmailRow[]
+  por_motivo: IntentoPorMotivo[]
+  tendencia: IntentoTendencia[]
 }
 
 export interface PersonalPorRol { rol: string; total: number; activos: number; sin_acceso: number }
