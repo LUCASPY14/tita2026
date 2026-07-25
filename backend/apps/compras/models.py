@@ -131,9 +131,11 @@ class CuentaCorrienteProveedor(models.Model):
     def save(self, *args, **kwargs):
         """Calcula automáticamente el saldo resultante con bloqueo pesimista."""
         with transaction.atomic():
+            # Lock the proveedor row (always exists) so concurrent movements can't
+            # read the same saldo_anterior — including the first concurrent movement.
+            Proveedor.objects.select_for_update().get(pk=self.proveedor_id)
             ultimo = (
                 CuentaCorrienteProveedor.objects
-                .select_for_update()
                 .filter(proveedor=self.proveedor)
                 .order_by("-id")
                 .first()

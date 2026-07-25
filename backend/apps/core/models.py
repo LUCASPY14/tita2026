@@ -4,7 +4,7 @@ Tarjetas, movimientos de tarjeta, medios de pago, límites de transacción y aut
 """
 
 from decimal import Decimal
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
@@ -193,21 +193,24 @@ class MovimientoTarjeta(models.Model):
 
     def save(self, *args, **kwargs):
         """Calcula automáticamente el saldo resultante."""
-        if self.saldo_anterior is None:
-            ultimo = (
-                MovimientoTarjeta.objects
-                .filter(tarjeta=self.tarjeta)
-                .order_by("-id")
-                .first()
-            )
-            self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
+        with transaction.atomic():
+            if self.saldo_anterior is None:
+                # Lock the tarjeta row so concurrent movements can't read the same saldo_anterior.
+                Tarjeta.objects.select_for_update().get(pk=self.tarjeta_id)
+                ultimo = (
+                    MovimientoTarjeta.objects
+                    .filter(tarjeta=self.tarjeta)
+                    .order_by("-id")
+                    .first()
+                )
+                self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
 
-        if self.tipo in (self.Tipo.RECARGA, self.Tipo.REVERSO):
-            self.saldo_resultante = self.saldo_anterior + self.monto
-        else:
-            self.saldo_resultante = self.saldo_anterior - self.monto
+            if self.tipo in (self.Tipo.RECARGA, self.Tipo.REVERSO):
+                self.saldo_resultante = self.saldo_anterior + self.monto
+            else:
+                self.saldo_resultante = self.saldo_anterior - self.monto
 
-        super().save(*args, **kwargs)
+            super().save(*args, **kwargs)
 
 
 # ==============================================================================
