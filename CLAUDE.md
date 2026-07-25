@@ -4,7 +4,7 @@
 
 | Capa | Tecnología |
 |------|-----------|
-| Base de datos | PostgreSQL 15 (nativo en Windows, **no** en Docker) |
+| Base de datos | PostgreSQL 16 (contenedor Docker, volumen `postgres_data`) |
 | Backend | Python 3.11 · Django 5.2 LTS (soporte hasta abril 2028) · DRF 3.17 · Daphne ASGI |
 | Cola de tareas | Celery 5.6 + Redis 7 (broker y cache) |
 | WebSockets | Django Channels 4.2 |
@@ -18,11 +18,17 @@
 
 ## Setup de desarrollo
 
-### PostgreSQL (nativo Windows)
+### PostgreSQL (Docker)
 ```
-# La base de datos corre directamente en Windows, no en Docker.
-# Asegurarse de que el servicio "postgresql-x64-16" esté activo.
-# Base de datos: cantina_tita | Puerto: 5432
+# PostgreSQL 16 corre en el contenedor 'postgres' del compose.
+# Datos persistidos en volumen Docker 'postgres_data'.
+# Base de datos: cantina_tita | Puerto: 5432 (interno, no expuesto al host)
+#
+# Migración inicial desde nativo (una sola vez):
+#   pg_dump -U app_cantina cantina_tita > cantina_backup.sql
+#   docker compose up -d postgres
+#   docker compose exec -T postgres psql -U app_cantina cantina_tita < cantina_backup.sql
+#   Stop-Service postgresql-x64-16 ; Set-Service postgresql-x64-16 -StartupType Disabled
 ```
 
 ### Backend
@@ -134,8 +140,9 @@ LAN escolar (7 PCs)
 └── 5 PCs Cajeros   → http://localhost/modo-recreo  (POS, instalado como PWA)
 
 Servidor (1 PC dedicado)
-├── PostgreSQL 15       (nativo Windows, puerto 5432)
+├── Cloudflare Tunnel   (servicio nativo Windows, cloudflared.exe)
 ├── Docker Desktop
+│   ├── postgres        (PostgreSQL 16, volumen postgres_data)
 │   ├── frontend        (Nginx + React SPA, puerto 80)
 │   ├── backend         (Django + Daphne, puerto interno 8000)
 │   ├── redis           (broker + cache, puerto interno 6379)

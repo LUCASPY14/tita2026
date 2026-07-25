@@ -108,18 +108,7 @@ if (-not (Test-Path $envFile)) {
 }
 Log ".env.production: OK" "Green"
 
-# Verificar que PostgreSQL es accesible antes de continuar
-$pgOk = $false
-try {
-    $conn = New-Object System.Net.Sockets.TcpClient
-    $conn.Connect("localhost", 5432)
-    $conn.Close()
-    $pgOk = $true
-} catch {}
-if (-not $pgOk) {
-    Die "PostgreSQL no responde en localhost:5432.`n  Verificar que el servicio 'postgresql-x64-16' está activo."
-}
-Log "PostgreSQL:     OK" "Green"
+Log "PostgreSQL:     se verificará al levantar el contenedor" "DarkGray"
 
 # ── 2. Git pull ─────────────────────────────────────────────────────────────
 
@@ -208,7 +197,23 @@ Log "Archivos estáticos recolectados." "Green"
 
 Step "6/7  Reiniciando servicios"
 
-# Redis primero (backend lo necesita para arrancar)
+# PostgreSQL primero — el backend espera su healthcheck antes de arrancar
+Log "Reiniciando postgres..."
+docker compose up -d postgres
+if ($LASTEXITCODE -ne 0) { Die "postgres no pudo iniciar. Revisar: docker compose logs postgres" }
+# Esperar hasta que pg_isready responda (el healthcheck tarda ~15s en pasar)
+$pgReady = $false
+for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Seconds 2
+    $pgState = docker compose ps postgres --format "{{.Health}}" 2>$null
+    if ($pgState -eq "healthy") { $pgReady = $true; break }
+}
+if (-not $pgReady) {
+    Die "PostgreSQL no alcanzó estado healthy en 60s.`n  Revisar: docker compose logs postgres"
+}
+Log "  PostgreSQL OK" "Green"
+
+# Redis (broker de Celery y Channels)
 Log "Reiniciando redis..."
 docker compose up -d redis
 if ($LASTEXITCODE -ne 0) { Die "redis no pudo iniciar. Revisar: docker compose logs redis" }
@@ -223,7 +228,7 @@ if (-not $backendOk) {
     Die "El backend no respondió en 90 segundos.`n  Revisar: docker compose logs --tail=80 backend"
 }
 
-# Workers (dependen del backend y redis)
+# Workers (dependen del backend, redis y postgres — ya saludables)
 Log "Reiniciando workers (celery, celery-beat)..."
 docker compose up -d --no-deps celery celery-beat
 if ($LASTEXITCODE -ne 0) { Log "Advertencia: workers no pudieron iniciar. Revisar logs." "Yellow" }

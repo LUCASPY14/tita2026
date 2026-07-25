@@ -3,11 +3,12 @@
 # Arquitectura:
 #   frontend  → Nginx (React SPA + proxy inverso)   puerto 80
 #   backend   → Django + Daphne ASGI                interno
+#   postgres  → PostgreSQL 16                        interno
 #   redis     → Para Django Channels + Celery        interno
-#   celery    → Worker de tareas (comentado: activar si se usan tareas async)
+#   celery    → Worker de tareas async
+#   celery-beat → Scheduler de tareas periódicas
 #
-# PostgreSQL corre de forma NATIVA en Windows (no en Docker).
-# El backend se conecta a host.docker.internal (Docker Desktop para Windows).
+# Cloudflare Tunnel corre como servicio nativo de Windows (no en Docker).
 #
 # Primer uso:
 #   1. Copiar .env.production.example → backend/.env.production y rellenar
@@ -15,6 +16,12 @@
 #   3. docker compose run --rm backend python manage.py migrate
 #   4. docker compose up -d
 #   5. Verificar: curl http://localhost/api/health/
+#
+# Migración desde PostgreSQL nativo:
+#   1. pg_dump -U app_cantina cantina_tita > cantina_backup.sql
+#   2. docker compose up -d postgres
+#   3. docker compose exec -T postgres psql -U app_cantina cantina_tita < cantina_backup.sql
+#   4. Stop-Service postgresql-x64-16 (deshabilitar inicio automático)
 
 services:
 
@@ -42,14 +49,11 @@ services:
       dockerfile: Dockerfile
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
-      # PostgreSQL en host Windows — ajustar si el IP del servidor es distinto
-      DB_HOST: host.docker.internal
+      DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: cantina_tita
       DB_USER: app_cantina
-      # Redis apunta al contenedor 'redis' (override sobre .env.production)
       REDIS_URL: redis://redis:6379/1
-      # Resto de variables sensibles desde archivo .env.production
     env_file:
       - ./backend/.env.production
     volumes:
@@ -58,6 +62,9 @@ services:
       - backend_logs:/app/logs
     expose:
       - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import http.client; c=http.client.HTTPConnection('localhost',8000); c.request('GET','/api/health/ready/'); r=c.getresponse(); exit(0 if r.status==200 else 1)"]
       interval: 30s
@@ -67,8 +74,27 @@ services:
     restart: unless-stopped
     networks:
       - cantina_net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+
+  # ── PostgreSQL 16 ──────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cantina_tita
+      POSTGRES_USER: app_cantina
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?Configurar DB_PASSWORD en .env.production}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_cantina -d cantina_tita"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - cantina_net
 
   # ── Redis (Channels + Celery broker) ───────────────────────────────────────
   redis:
@@ -90,7 +116,7 @@ services:
     command: celery -A backend.celery_app worker -l INFO --concurrency=${CELERY_CONCURRENCY:-4}
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
-      DB_HOST: host.docker.internal
+      DB_HOST: postgres
       DB_PORT: "5432"
       REDIS_URL: redis://redis:6379/1
     env_file:
@@ -99,13 +125,15 @@ services:
       - backend_media:/app/media
       - backend_logs:/app/logs
     depends_on:
-      - redis
-      - backend
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - cantina_net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   # ── Celery Beat (scheduler de tareas periódicas) ────────────────────────────
   celery-beat:
@@ -115,7 +143,7 @@ services:
     command: celery -A backend.celery_app beat -l INFO -s /app/beatdata/celerybeat-schedule
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
-      DB_HOST: host.docker.internal
+      DB_HOST: postgres
       DB_PORT: "5432"
       REDIS_URL: redis://redis:6379/1
     env_file:
@@ -124,13 +152,15 @@ services:
       - backend_logs:/app/logs
       - celerybeat_data:/app/beatdata
     depends_on:
-      - redis
-      - backend
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - cantina_net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   # ── Prometheus ──────────────────────────────────────────────────────────────
   prometheus:
@@ -207,6 +237,7 @@ networks:
     driver: bridge
 
 volumes:
+  postgres_data:
   backend_media:
   backend_static:
   backend_logs:
