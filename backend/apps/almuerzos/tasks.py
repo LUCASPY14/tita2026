@@ -52,6 +52,7 @@ def cerrar_cuentas_mes_anterior():
     ).select_related("hijo__cliente_responsable")
 
     cerradas = anuladas = actualizadas = 0
+    notif_pendientes = []
 
     with transaction.atomic():
         for cuenta in cuentas:
@@ -91,26 +92,35 @@ def cerrar_cuentas_mes_anterior():
             registros_qs.update(marcado_en_cuenta=True)
             actualizadas += 1
 
-            # Notificar al padre con el resumen del mes
-            try:
-                from apps.notificaciones.services import whatsapp_cliente
-                saldo_final = cuenta.monto_total - cuenta.monto_pagado
-                if saldo_final > 0:
-                    whatsapp_cliente(
-                        cuenta.hijo.cliente_responsable,
-                        f"Resumen de almuerzos {mes_ant:02d}/{anio_ant} de "
-                        f"{cuenta.hijo.nombre_completo}: "
-                        f"{cuenta.cantidad_almuerzos} almuerzo(s), "
-                        f"total Gs. {int(cuenta.monto_total):,}. "
-                        f"Pendiente: Gs. {int(saldo_final):,}. "
-                        f"Podes pagar en la cantina."
-                    )
-            except Exception:
-                logger.warning(
-                    "No se pudo enviar WhatsApp de resumen al responsable de %s (%02d/%d)",
-                    cuenta.hijo.nombre_completo, mes_ant, anio_ant,
-                    exc_info=True,
-                )
+            # Recopilar notificación — se envía tras confirmar la transacción
+            saldo_final = cuenta.monto_total - cuenta.monto_pagado
+            if saldo_final > 0:
+                notif_pendientes.append((
+                    cuenta.hijo.cliente_responsable,
+                    cuenta.hijo.nombre_completo,
+                    cuenta.cantidad_almuerzos,
+                    cuenta.monto_total,
+                    saldo_final,
+                ))
+
+    from apps.notificaciones.services import whatsapp_cliente
+    for responsable, nombre_hijo, cantidad_alm, monto_total, saldo_final in notif_pendientes:
+        try:
+            whatsapp_cliente(
+                responsable,
+                f"Resumen de almuerzos {mes_ant:02d}/{anio_ant} de "
+                f"{nombre_hijo}: "
+                f"{cantidad_alm} almuerzo(s), "
+                f"total Gs. {int(monto_total):,}. "
+                f"Pendiente: Gs. {int(saldo_final):,}. "
+                f"Podes pagar en la cantina."
+            )
+        except Exception:
+            logger.warning(
+                "No se pudo enviar WhatsApp de resumen al responsable de %s (%02d/%d)",
+                nombre_hijo, mes_ant, anio_ant,
+                exc_info=True,
+            )
 
     cerradas = actualizadas + anuladas
     logger.info(

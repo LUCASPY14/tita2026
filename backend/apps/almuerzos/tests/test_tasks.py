@@ -3,6 +3,7 @@ import pytest
 from decimal import Decimal
 from datetime import date, timedelta
 from unittest.mock import patch
+from freezegun import freeze_time
 
 
 @pytest.fixture
@@ -81,6 +82,7 @@ def cuenta_mes_anterior(db, hijo_t):
 
 # ── generar_cuentas_mensuales ──────────────────────────────────────────────────
 
+@freeze_time("2026-07-15")
 @pytest.mark.django_db
 class TestGenerarCuentasMensuales:
 
@@ -173,6 +175,7 @@ def _mes_anterior():
     return anio_ant, mes_ant
 
 
+@freeze_time("2026-07-15")
 @pytest.mark.django_db
 class TestCerrarCuentasMesAnterior:
 
