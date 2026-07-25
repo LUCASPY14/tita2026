@@ -1,19 +1,19 @@
-﻿import { useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  ShoppingCartIcon, XIcon, XCircleIcon, CheckCircleIcon, SpinnerIcon,
-  PlusIcon, MinusIcon, MoneyIcon, BankIcon, DeviceMobileIcon,
-  CreditCardIcon, WarningIcon,
-} from '@phosphor-icons/react'
+  ShoppingCart, X, XCircle, CheckCircle, Loader2,
+  Plus, Minus, Banknote, Landmark, Smartphone,
+  CreditCard, AlertTriangle,
+} from 'lucide-react'
 import { gs, type Producto, type ItemCarrito, type MedioPagoDB, type ModoPago, type DailyStats } from './shared'
 
 function iconMedio(desc: string) {
   const d = desc.toLowerCase()
   if (d.includes('pos') || d.includes('tarjet') || d.includes('débito') || d.includes('crédito'))
-    return <DeviceMobileIcon size={18} weight="fill" />
+    return <Smartphone size={18} />
   if (d.includes('transfer') || d.includes('banco'))
-    return <BankIcon size={18} weight="fill" />
-  return <MoneyIcon size={18} weight="fill" />
+    return <Landmark size={18} />
+  return <Banknote size={18} />
 }
 
 interface Props {
@@ -70,14 +70,14 @@ export default function PanelCarrito({
       {/* Header carrito */}
       <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <ShoppingCartIcon size={22} weight="fill" className="text-slate-600" />
+          <ShoppingCart size={22} className="text-slate-600" />
           <span className="text-lg font-black text-slate-800">
             {carrito.reduce((s, i) => s + i.cantidad, 0)} productos
           </span>
         </div>
         {carrito.length > 0 && (
           <button onClick={() => onSetCarrito([])} className="text-slate-400 hover:text-red-500 transition-colors p-1">
-            <XIcon size={20} weight="fill" />
+            <X size={20} />
           </button>
         )}
       </div>
@@ -96,7 +96,7 @@ export default function PanelCarrito({
                   : 'bg-white border-slate-300 text-slate-600 hover:border-slate-400',
               ].join(' ')}
             >
-              <MoneyIcon size={15} weight="fill" />
+              <Banknote size={15} />
               Contado
             </button>
             <button
@@ -108,7 +108,7 @@ export default function PanelCarrito({
                   : 'bg-white border-slate-300 text-slate-600 hover:border-orange-300',
               ].join(' ')}
             >
-              <BankIcon size={15} weight="fill" />
+              <Landmark size={15} />
               Crédito
             </button>
           </div>
@@ -127,7 +127,7 @@ export default function PanelCarrito({
                     : 'bg-white border-slate-300 text-slate-600 hover:border-blue-300',
                 ].join(' ')}
               >
-                <CreditCardIcon size={14} weight="fill" />
+                <CreditCard size={14} />
                 Prepago
               </button>
               {mediosPago.map(mp => (
@@ -159,7 +159,7 @@ export default function PanelCarrito({
       <div className="flex-1 overflow-y-auto">
         {carrito.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4 py-6">
-            <ShoppingCartIcon size={48} weight="fill" className="text-slate-200 mb-3" />
+            <ShoppingCart size={48} className="text-slate-200 mb-3" />
             <p className="text-slate-500 text-base font-semibold mb-1">Sin productos</p>
             <p className="text-slate-400 text-sm">Escanear tarjeta y seleccionar productos</p>
             {dailyStats.count > 0 && (
@@ -185,19 +185,19 @@ export default function PanelCarrito({
                     <p className="text-base text-slate-800 font-semibold flex-1 leading-tight">{item.producto.descripcion}</p>
                     <button onClick={() => onSetCarrito(p => p.filter(i => i.producto.id !== item.producto.id))}
                       className="text-slate-300 hover:text-red-500 transition-colors shrink-0 p-0.5">
-                      <XIcon size={16} weight="fill" />
+                      <X size={16} />
                     </button>
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-2">
                       <button onClick={() => onQuitar(item.producto.id)}
                         className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
-                        <MinusIcon size={15} weight="fill" />
+                        <Minus size={15} />
                       </button>
                       <span className="text-xl font-black text-slate-900 tabular-nums w-7 text-center">{item.cantidad}</span>
                       <button onClick={() => onAgregar(item.producto)}
                         className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
-                        <PlusIcon size={15} weight="fill" />
+                        <Plus size={15} />
                       </button>
                     </div>
                     <span className="text-base font-bold text-emerald-700 tabular-nums">{gs(precio * item.cantidad)}</span>
@@ -230,7 +230,7 @@ export default function PanelCarrito({
          medioPagoSeleccionado.descripcion.toLowerCase().includes('efectivo') && (
           <div className="space-y-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
             <div className="flex items-center gap-2">
-              <MoneyIcon size={16} weight="fill" className="text-emerald-600" />
+              <Banknote size={16} className="text-emerald-600" />
               <p className="text-emerald-700 text-sm font-bold">Monto recibido</p>
             </div>
             <input
@@ -260,7 +260,7 @@ export default function PanelCarrito({
         {modoPago === 'MEDIO' && medioPagoSeleccionado?.requiere_validacion && (
           <div className="space-y-1.5 bg-blue-50 border border-blue-200 rounded-xl p-3">
             <label className="flex items-center gap-2 text-blue-700 text-sm font-bold">
-              <CreditCardIcon size={15} weight="fill" />
+              <CreditCard size={15} />
               Nro. de transacción
               <span className="text-red-500 text-xs font-black">*</span>
             </label>
@@ -307,12 +307,12 @@ export default function PanelCarrito({
         {modoPago === 'PREPAGO' ? (
           tarjeta ? (
             <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-              <CreditCardIcon size={16} weight="fill" className="text-blue-500 shrink-0" />
+              <CreditCard size={16} className="text-blue-500 shrink-0" />
               <span className="text-blue-700 text-sm font-semibold">Descuento de saldo prepago</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-              <CreditCardIcon size={16} weight="fill" className="text-slate-300 shrink-0" />
+              <CreditCard size={16} className="text-slate-300 shrink-0" />
               <span className="text-slate-400 text-sm">Escanear tarjeta del alumno</span>
             </div>
           )
@@ -323,7 +323,7 @@ export default function PanelCarrito({
           </div>
         ) : (
           <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
-            <WarningIcon size={16} weight="fill" className="text-orange-400 shrink-0" />
+            <AlertTriangle size={16} className="text-orange-400 shrink-0" />
             <span className="text-orange-600 text-sm font-semibold">Seleccionar medio de pago</span>
           </div>
         )}
@@ -341,10 +341,10 @@ export default function PanelCarrito({
           ].join(' ')}
         >
           {cobrando
-            ? <><SpinnerIcon size={24} weight="fill" className="animate-spin" />Procesando…</>
+            ? <><Loader2 size={24} className="animate-spin" />Procesando…</>
             : tipoVenta === 'CREDITO'
-              ? <><BankIcon size={24} weight="fill" />ACREDITAR (F9)</>
-              : <><CheckCircleIcon size={24} weight="fill" />COBRAR (F9)</>
+              ? <><Landmark size={24} />ACREDITAR (F9)</>
+              : <><CheckCircle size={24} />COBRAR (F9)</>
           }
         </button>
 
@@ -352,7 +352,7 @@ export default function PanelCarrito({
           onClick={onCancelar}
           className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 text-sm font-bold transition-colors cursor-pointer flex items-center justify-center gap-2"
         >
-          <XCircleIcon size={16} weight="fill" />
+          <XCircle size={16} />
           Cancelar (Esc)
         </button>
       </div>

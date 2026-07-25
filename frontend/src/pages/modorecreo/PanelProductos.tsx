@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MagnifyingGlassIcon } from '@phosphor-icons/react'
+import { Search } from 'lucide-react'
 import { gs, catMeta, type Producto, type RestriccionHijo } from './shared'
 
 interface Props {
@@ -31,7 +31,7 @@ export default function PanelProductos({
     <main className="flex-1 flex flex-col overflow-hidden bg-slate-50">
       <div className="px-4 pt-3 pb-2 border-b border-slate-200 space-y-3 shrink-0 bg-white shadow-sm">
         <div className="relative">
-          <MagnifyingGlassIcon size={20} weight="fill" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             ref={prodSearchRef}
             value={prodSearch}

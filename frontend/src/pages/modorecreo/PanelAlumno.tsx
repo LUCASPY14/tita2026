@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { UserIcon, CreditCardIcon, WarningIcon } from '@phosphor-icons/react'
+import { User, CreditCard, AlertTriangle } from 'lucide-react'
 import { gs, type Tarjeta, type ClienteBasico, type ModoPago } from './shared'
 
 interface Props {
@@ -61,7 +61,7 @@ export default function PanelAlumno({
                   className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 mx-auto mb-3 shadow-md" />
               ) : (
                 <div className="w-32 h-32 rounded-full bg-slate-100 border-4 border-blue-300 flex items-center justify-center mx-auto mb-3">
-                  <UserIcon size={64} weight="fill" className="text-slate-400" />
+                  <User size={64} className="text-slate-400" />
                 </div>
               )}
               <p className="text-2xl font-black text-slate-900 leading-tight">{tarjeta.hijo_nombre ?? tarjeta.cliente_nombre}</p>
@@ -75,7 +75,7 @@ export default function PanelAlumno({
             {tarjeta.es_alumno && tarjeta.hijo_restricciones?.length > 0 && (
               <div className="bg-red-50 border-2 border-red-300 rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-1.5">
-                  <WarningIcon size={15} weight="fill" className="text-red-500 shrink-0" />
+                  <AlertTriangle size={15} className="text-red-500 shrink-0" />
                   <span className="text-red-700 text-sm font-black uppercase tracking-wide">
                     {tarjeta.hijo_restricciones.length} Restricción{tarjeta.hijo_restricciones.length > 1 ? 'es' : ''}
                   </span>
@@ -139,7 +139,7 @@ export default function PanelAlumno({
               <>
                 <div className="text-center pt-2">
                   <div className="w-20 h-20 rounded-full bg-emerald-100 border-4 border-emerald-400 flex items-center justify-center mx-auto mb-3">
-                    <UserIcon size={44} weight="fill" className="text-emerald-600" />
+                    <User size={44} className="text-emerald-600" />
                   </div>
                   <p className="text-xl font-black text-slate-900 leading-tight">{clienteDirecto.nombre_completo}</p>
                   <p className="text-slate-400 text-sm mt-0.5">{clienteDirecto.ruc_ci}</p>
@@ -192,7 +192,7 @@ export default function PanelAlumno({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-56 text-center">
-            <CreditCardIcon size={72} weight="fill" className="text-slate-200 mb-4" />
+            <CreditCard size={72} className="text-slate-200 mb-4" />
             <p className="text-slate-600 text-xl font-bold">Sin alumno</p>
             <p className="text-slate-400 text-base mt-1">Escanear tarjeta para comenzar</p>
           </div>

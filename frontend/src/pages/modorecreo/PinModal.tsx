@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircleIcon, LockKeyIcon, SpinnerIcon } from '@phosphor-icons/react'
+import { CheckCircle, KeyRound, Loader2 } from 'lucide-react'
 import { gs } from './shared'
 
 interface Props {
@@ -33,7 +33,7 @@ export default function PinModal({ saldoActual, total, limiteCreditoTarjeta, onC
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[300]" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
         <div className="bg-amber-500 px-6 py-4 flex items-center gap-3">
-          <LockKeyIcon size={28} weight="fill" className="text-white" />
+          <KeyRound size={28} className="text-white" />
           <div>
             <p className="text-white font-black text-xl">Autorización requerida</p>
             <p className="text-amber-100 text-sm">PIN del padre/tutor</p>
@@ -93,7 +93,7 @@ export default function PinModal({ saldoActual, total, limiteCreditoTarjeta, onC
                       disabled && 'cursor-not-allowed',
                     ].join(' ')}
                   >
-                    {loading && isOk ? <SpinnerIcon size={20} className="animate-spin mx-auto" /> : k}
+                    {loading && isOk ? <Loader2 size={20} className="animate-spin mx-auto" /> : k}
                   </button>
                 )
               })}
@@ -116,8 +116,8 @@ export default function PinModal({ saldoActual, total, limiteCreditoTarjeta, onC
               className="flex-1 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-base transition-colors cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {loading
-                ? <><SpinnerIcon size={18} className="animate-spin" />Verificando…</>
-                : <><CheckCircleIcon size={18} weight="fill" />Autorizar</>
+                ? <><Loader2 size={18} className="animate-spin" />Verificando…</>
+                : <><CheckCircle size={18} />Autorizar</>
               }
             </button>
           )}

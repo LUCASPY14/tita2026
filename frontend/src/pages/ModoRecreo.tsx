@@ -2,9 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import {
-  LightningIcon, XIcon, WarningIcon, SpinnerIcon, ClockIcon, CashRegisterIcon,
-} from '@phosphor-icons/react'
+import { Zap, X, AlertTriangle, Loader2, Clock, Store } from 'lucide-react'
 import api from '../services/api'
 import tarjetasService from '../services/tarjetas'
 import ventasService from '../services/ventas'
@@ -482,7 +480,7 @@ export default function ModoRecreo() {
   if (cierreCaja === false) return <CajaBlockedScreen />
   if (cierreCaja === null) return (
     <div className="fixed inset-0 bg-slate-100 flex items-center justify-center" style={{ zIndex: 100 }}>
-      <SpinnerIcon size={48} className="animate-spin text-slate-400" />
+      <Loader2 size={48} className="animate-spin text-slate-400" />
     </div>
   )
 
@@ -518,7 +516,7 @@ export default function ModoRecreo() {
 
       {!isOnline && (
         <div className="flex items-center justify-center gap-2 bg-red-600 text-white text-sm font-bold py-1.5 px-4 shrink-0">
-          <WarningIcon size={16} weight="fill" />
+          <AlertTriangle size={16} />
           SIN CONEXIÓN — los cobros están deshabilitados hasta restaurar la red
         </div>
       )}
@@ -527,13 +525,13 @@ export default function ModoRecreo() {
         <div className="flex items-center gap-2 md:gap-4">
           <img src="/logo_tita.png" alt="" className="h-8 md:h-9 w-auto rounded" />
           <div className="flex items-center gap-2 bg-yellow-100 border border-yellow-300 rounded-full px-3 md:px-4 py-1.5">
-            <LightningIcon size={16} weight="fill" className="text-yellow-500" />
+            <Zap size={16} className="text-yellow-500" />
             <span className="text-yellow-700 text-xs md:text-sm font-black uppercase tracking-widest">{t('pos.title')}</span>
           </div>
           <div className="hidden md:flex items-center gap-3 ml-1 text-sm text-slate-500">
-            <span className="flex items-center gap-1.5"><ClockIcon size={15} weight="fill" className="text-slate-400" />{clock}</span>
+            <span className="flex items-center gap-1.5"><Clock size={15} className="text-slate-400" />{clock}</span>
             <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
-              <CashRegisterIcon size={15} weight="fill" className="text-emerald-500" />
+              <Store size={15} className="text-emerald-500" />
               {cierreCaja.caja_nombre}
             </span>
             <span className="hidden lg:inline">{t('pos.todaySales')}: <strong className="text-slate-800">{dailyStats.count}</strong></span>
@@ -548,7 +546,7 @@ export default function ModoRecreo() {
               title={isOnline ? 'Sincronizar ventas offline' : 'Sin conexión — se sincronizarán al reconectar'}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 border border-amber-300 text-amber-800 rounded-lg text-xs font-bold transition-colors cursor-pointer hover:bg-amber-200 disabled:opacity-60"
             >
-              {syncing ? <SpinnerIcon size={13} className="animate-spin" /> : <WarningIcon size={13} weight="fill" />}
+              {syncing ? <Loader2 size={13} className="animate-spin" /> : <AlertTriangle size={13} />}
               {pendingCount} venta{pendingCount !== 1 ? 's' : ''} offline
             </button>
           )}
@@ -564,7 +562,7 @@ export default function ModoRecreo() {
             onClick={() => navigate('/dashboard')}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-lg text-sm font-medium transition-colors cursor-pointer border border-slate-200"
           >
-            <XIcon size={14} weight="fill" />Salir
+            <X size={14} />Salir
           </button>
         </div>
       </header>

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CashRegisterIcon } from '@phosphor-icons/react'
+import { Store } from 'lucide-react'
 
 export default function CajaBlockedScreen() {
   const navigate = useNavigate()
@@ -9,7 +9,7 @@ export default function CajaBlockedScreen() {
     <div className="fixed inset-0 bg-slate-100 flex flex-col items-center justify-center" style={{ zIndex: 100 }}>
       <div className="bg-white rounded-3xl shadow-2xl p-12 max-w-md w-full mx-4 text-center">
         <div className="w-24 h-24 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-6">
-          <CashRegisterIcon size={52} weight="fill" className="text-orange-500" />
+          <Store size={52} className="text-orange-500" />
         </div>
         <h2 className="text-3xl font-black text-slate-900 mb-2">Caja no iniciada</h2>
         <p className="text-slate-500 text-lg mb-8">{t('pos.cashRegister')}</p>
