@@ -157,8 +157,6 @@ app.conf.timezone = "America/Asuncion"  # Paraguay timezone
 _CRITICAL_TASKS = {
     "apps.almuerzos.tasks.cerrar_cuentas_mes_anterior",
     "apps.almuerzos.tasks.generar_cuentas_mensuales",
-    "apps.ventas.tasks.generar_resumen_diario_ventas",
-    "apps.inventario.tasks.generar_resumen_diario_stock",
 }
 
 
