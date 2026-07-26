@@ -3,29 +3,19 @@
 # Ejecutar UNA VEZ en el servidor de produccion como Administrador.
 #
 # Uso:
-#   .\scripts\setup_backup_task.ps1 -DbPassword "password_de_postgres"
+#   .\scripts\setup_backup_task.ps1
 #
 # Que registra:
-#   "Backup Cantina Local"  -- 02:00 diario -- pg_dump a D:\produccion_tita\backups\cantina\
+#   "Backup Cantina Local"  -- 02:00 diario -- pg_dump via docker exec
 #   "Backup Cantina Nube"   -- 02:30 diario -- sube el dump a Google Drive (si rclone instalado)
+#
+# No se necesita -DbPassword: las credenciales se leen de backend\.env.production en cada backup.
 
 param(
-    [Parameter(Mandatory=$true)]
-    [SecureString]$DbPassword,
-
     [string]$ProjectRoot  = "D:\tita2026",
     [string]$BackupDir    = "D:\produccion_tita\backups\cantina",
-    [string]$PgBin        = "C:\Program Files\PostgreSQL\16\bin",
-    [string]$PgUser       = "postgres",
-    [string]$PgHost       = "localhost",
-    [string]$PgPort       = "5432",
-    [string]$GpgRecipient = "",   # email GPG para cifrar el backup; vacío = sin cifrado
+    [string]$GpgRecipient = "",   # email GPG para cifrar el backup; vacio = sin cifrado
     [switch]$SkipNube
-)
-
-# Convertir SecureString a plain text para pgpass.conf (necesario para el archivo de credenciales de PostgreSQL)
-$DbPasswordPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-    [Runtime.InteropServices.Marshal]::SecureStringToBSTR($DbPassword)
 )
 
 # -- Verificar que se ejecuta como administrador --
@@ -36,11 +26,18 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
     exit 1
 }
 
+# -- Verificar que .env.production existe (backup_cantina.ps1 lo necesita) --
+$envFile = Join-Path $ProjectRoot "backend\.env.production"
+if (-not (Test-Path $envFile)) {
+    Write-Error "No se encontro $envFile. Completar la configuracion de produccion primero."
+    exit 1
+}
+
 Write-Host "=== INSTALACION DE BACKUPS AUTOMATICOS - CANTINA TITA ===" -ForegroundColor Cyan
 Write-Host ""
 
 # -- 1. Crear directorio de backups --
-Write-Host "1/4 Creando directorio de backups: $BackupDir" -ForegroundColor Yellow
+Write-Host "1/3 Creando directorio de backups: $BackupDir" -ForegroundColor Yellow
 if (-not (Test-Path $BackupDir)) {
     New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
     Write-Host "    Directorio creado." -ForegroundColor Green
@@ -48,39 +45,18 @@ if (-not (Test-Path $BackupDir)) {
     Write-Host "    Ya existe." -ForegroundColor Gray
 }
 
-# -- 2. Configurar pgpass.conf para la cuenta SYSTEM --
-Write-Host "2/4 Configurando pgpass.conf para la cuenta SYSTEM..." -ForegroundColor Yellow
-
-$pgpassScript = Join-Path $ProjectRoot "scripts\setup_pgpass.ps1"
-if (Test-Path $pgpassScript) {
-    & powershell -File $pgpassScript -Password $DbPasswordPlain -PgUser $PgUser -PgHost $PgHost -PgPort $PgPort
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "setup_pgpass.ps1 fallo."
-        exit 1
-    }
-}
-
-$pgpassSystemDir  = "C:\Windows\System32\config\systemprofile\AppData\Roaming\postgresql"
-$pgpassSystemFile = Join-Path $pgpassSystemDir "pgpass.conf"
-if (-not (Test-Path $pgpassSystemDir)) {
-    New-Item -ItemType Directory -Path $pgpassSystemDir -Force | Out-Null
-}
-$entry = "${PgHost}:${PgPort}:*:${PgUser}:${DbPasswordPlain}"
-$entry | Out-File -FilePath $pgpassSystemFile -Encoding ascii -Force
-Write-Host "    pgpass.conf configurado para SYSTEM: $pgpassSystemFile" -ForegroundColor Green
-
-# -- 3. Registrar tarea: Backup Local (02:00 diario) --
-Write-Host "3/4 Registrando tarea 'Backup Cantina Local' (02:00 diario)..." -ForegroundColor Yellow
+# -- 2. Registrar tarea: Backup Local (02:00 diario) --
+Write-Host "2/3 Registrando tarea 'Backup Cantina Local' (02:00 diario)..." -ForegroundColor Yellow
 
 $backupScript = Join-Path $ProjectRoot "backup_cantina.ps1"
 if (-not (Test-Path $backupScript)) {
-    Write-Warning "No se encontro $backupScript. La tarea se registrara igual; crear el script antes del primer backup."
+    Write-Warning "No se encontro $backupScript."
 }
 
 $gpgArg = if ($GpgRecipient) { " -GpgRecipient `"$GpgRecipient`"" } else { "" }
 $taskAction = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
-    -Argument "-NonInteractive -NoProfile -File `"$backupScript`" -PgBin `"$PgBin`" -PgUser `"$PgUser`" -PgHost `"$PgHost`" -PgPort `"$PgPort`"$gpgArg"
+    -Argument "-NonInteractive -NoProfile -ExecutionPolicy Bypass -File `"$backupScript`" -ProjectRoot `"$ProjectRoot`"$gpgArg"
 
 $taskTrigger = New-ScheduledTaskTrigger -Daily -At "02:00"
 
@@ -92,40 +68,37 @@ $taskSettings = New-ScheduledTaskSettingsSet `
 
 $taskPrincipal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 
-$existingLocal = Get-ScheduledTask -TaskName "Backup Cantina Local" -ErrorAction SilentlyContinue
-if ($existingLocal) {
+$existing = Get-ScheduledTask -TaskName "Backup Cantina Local" -ErrorAction SilentlyContinue
+if ($existing) {
     Write-Host "    Tarea ya existe -- actualizando..." -ForegroundColor Gray
     Set-ScheduledTask -TaskName "Backup Cantina Local" `
         -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings | Out-Null
 } else {
     Register-ScheduledTask -TaskName "Backup Cantina Local" `
         -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings -Principal $taskPrincipal `
-        -Description "Backup diario de cantina_tita a $BackupDir (pg_dump format custom)" | Out-Null
+        -Description "Backup diario de cantina_tita a $BackupDir via docker exec pg_dump" | Out-Null
 }
 Write-Host "    [OK] Tarea 'Backup Cantina Local' registrada." -ForegroundColor Green
 
-# -- 4. Registrar tarea: Backup Nube (02:30 diario, opcional) --
+# -- 3. Registrar tarea: Backup Nube (02:30 diario, opcional) --
 if ($SkipNube) {
-    Write-Host "4/4 Saltando backup a la nube (-SkipNube)." -ForegroundColor Gray
+    Write-Host "3/3 Saltando backup a la nube (-SkipNube)." -ForegroundColor Gray
 } else {
-    Write-Host "4/4 Registrando tarea 'Backup Cantina Nube' (02:30 diario)..." -ForegroundColor Yellow
+    Write-Host "3/3 Registrando tarea 'Backup Cantina Nube' (02:30 diario)..." -ForegroundColor Yellow
 
     $nubeScript = Join-Path $ProjectRoot "scripts\backup_nube.ps1"
     if (-not (Test-Path $nubeScript)) {
         Write-Warning "    No se encontro $nubeScript. Saltando tarea de nube."
     } else {
         $rcloneOk = $null
-        try {
-            $rcloneOk = Get-Command rclone -ErrorAction Stop
-        } catch {
-            $rcloneOk = $null
-        }
+        try { $rcloneOk = Get-Command rclone -ErrorAction Stop } catch {}
 
         if (-not $rcloneOk) {
-            Write-Warning "    rclone no encontrado. Instalar desde https://rclone.org y configurar remote 'gdrive'."
+            Write-Warning "    rclone no encontrado en PATH."
+            Write-Warning "    Instalar desde https://rclone.org y configurar remote 'gdrive'."
             Write-Warning "    Luego volver a ejecutar este script para registrar la tarea de nube."
         } else {
-            $nubeArg = "-NonInteractive -NoProfile -File `"$nubeScript`" -SoloUltimo"
+            $nubeArg = "-NonInteractive -NoProfile -ExecutionPolicy Bypass -File `"$nubeScript`" -SoloUltimo"
             if ($GpgRecipient) { $nubeArg += " -RequireEncrypted" }
             $actionNube  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $nubeArg
             $triggerNube = New-ScheduledTaskTrigger -Daily -At "02:30"
@@ -154,7 +127,7 @@ if (-not $SkipNube) {
     Write-Host "  - Backup Cantina Nube   02:30 diario -> gdrive:backups/cantina_tita (si rclone OK)"
 }
 Write-Host ""
-Write-Host "Para ejecutar un backup ahora:"
+Write-Host "Para ejecutar un backup ahora (prueba):"
 Write-Host "  powershell -File `"$backupScript`""
 Write-Host ""
 Write-Host "Para restaurar desde un backup:"
