@@ -369,7 +369,13 @@ class CuentaAlmuerzoMensual(models.Model):
 
     def registrar_pago(self, monto):
         """Incrementa monto_pagado, recalcula estado y persiste todo en un solo save."""
-        self.monto_pagado += monto
+        nuevo_pagado = self.monto_pagado + monto
+        if nuevo_pagado > self.monto_total:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                {"monto": f"El pago (₲{monto:,.0f}) supera el saldo pendiente (₲{self.saldo_pendiente:,.0f})."}
+            )
+        self.monto_pagado = nuevo_pagado
         self._calcular_estado()
         self.save(update_fields=["monto_pagado", "estado", "fecha_pago"])
 
@@ -398,12 +404,12 @@ class PagoCuentaAlmuerzo(models.Model):
         models.PROTECT,
         related_name="pagos_almuerzo_registrados",
     )
-    factura = models.OneToOneField(
+    factura = models.ForeignKey(
         "contabilidad.Factura",
         models.SET_NULL,
         null=True,
         blank=True,
-        related_name="pago_cuenta_almuerzo",
+        related_name="pagos_cuenta_almuerzo",
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
@@ -547,6 +553,7 @@ class ProductoAlergeno(models.Model):
     class Meta:
         verbose_name = "Producto-Alérgeno"
         verbose_name_plural = "Productos-Alérgenos"
+        ordering = ["producto", "alergeno"]
         constraints = [
             UniqueConstraint(fields=["producto", "alergeno"], name="unique_producto_alergeno")
         ]
@@ -649,7 +656,7 @@ class DetalleMenuDiario(models.Model):
                 name="uq_menu_producto_curso",
             ),
             models.CheckConstraint(
-                check=models.Q(cantidad__gt=0),
+                condition=models.Q(cantidad__gt=0),
                 name="chk_detalle_menu_cantidad_positiva",
             ),
         ]

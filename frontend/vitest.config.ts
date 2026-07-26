@@ -12,8 +12,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
-      // Solo se miden los archivos que tienen unit tests dedicados.
-      // Las páginas (Login, CargaSaldo, portal/*) están cubiertas por E2E Playwright.
+      // Cobertura medida solo en las capas con unit tests dedicados.
+      // Páginas (ModoRecreo, CargaSaldo, Login, portal/*) tienen tests unitarios
+      // para regresión, pero su cobertura primaria es E2E Playwright — excluirlas
+      // del umbral evita que las ~300 arrow functions en JSX diluyan la métrica.
       include: [
         'src/components/ui/**',
         'src/services/**',
@@ -28,12 +30,10 @@ export default defineConfig({
         'src/components/ui/LanguageSwitcher.tsx',
       ],
       thresholds: {
-        lines:      75,
-        statements: 75,
-        branches:   70,
-        // Servicios (cajas, clientes, ventas, tarjetas) tienen unit tests completos.
-        // Handlers de páginas complejas (CargaSaldo, Login) cubiertos por E2E.
-        functions:  75,
+        lines:      85,
+        statements: 85,
+        branches:   85,
+        functions:  85,
       },
     },
   },

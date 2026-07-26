@@ -68,11 +68,11 @@ const tarjetasService = {
       params: { tarjeta: nro_tarjeta, page_size },
     }),
 
-  crearCarga: (data: { tarjeta: string; monto_cargado: number; metodo_pago: string; referencia?: string }) =>
+  crearCarga: (data: { tarjeta: string; monto_cargado: number; metodo_pago: string; referencia?: string; nro_factura?: string }) =>
     api.post<CargaSaldo>('/core/cargas-saldo/', data),
 
-  confirmarCarga: (id: number) =>
-    api.post(`/core/cargas-saldo/${id}/confirmar/`),
+  confirmarCarga: (id: number, nro_factura?: string) =>
+    api.post(`/core/cargas-saldo/${id}/confirmar/`, nro_factura ? { nro_factura } : {}),
 }
 
 export default tarjetasService

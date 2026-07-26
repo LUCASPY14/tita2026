@@ -271,3 +271,616 @@ class TestOrdenCompraViewSet:
     def test_convertir_cajero_retorna_403(self, api, orden_aprobada):
         resp = api.post(f"/api/v1/compras/ordenes/{orden_aprobada.pk}/convertir/")
         assert resp.status_code == 403
+
+    def test_aprobar_no_pendiente_retorna_400(self, api_admin, orden_aprobada):
+        resp = api_admin.post(f"/api/v1/compras/ordenes/{orden_aprobada.pk}/aprobar/")
+        assert resp.status_code == 400
+        assert "Pendiente" in resp.data["error"]
+
+    def test_rechazar_no_pendiente_retorna_400(self, api_admin, orden_aprobada):
+        resp = api_admin.post(
+            f"/api/v1/compras/ordenes/{orden_aprobada.pk}/rechazar/",
+            {"motivo": "test"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "Pendiente" in resp.data["error"]
+
+    def test_convertir_no_aprobada_retorna_400(self, api_admin, orden_pendiente):
+        resp = api_admin.post(f"/api/v1/compras/ordenes/{orden_pendiente.pk}/convertir/")
+        assert resp.status_code == 400
+        assert "Aprobada" in resp.data["error"]
+
+    def test_convertir_validation_error_retorna_400(self, api_admin, orden_aprobada, producto):
+        from unittest.mock import patch
+        from rest_framework.exceptions import ValidationError
+        with patch(
+            "apps.compras.views.CompraService.registrar_compra",
+            side_effect=ValidationError({"items": "Error de validación"}),
+        ):
+            resp = api_admin.post(f"/api/v1/compras/ordenes/{orden_aprobada.pk}/convertir/")
+        assert resp.status_code == 400
+
+    def test_patch_borrador_reemplaza_items(self, api_admin, orden_borrador, producto):
+        """PATCH en BORRADOR: reemplaza los items y recalcula monto_total."""
+        from apps.compras.models import DetalleOrdenCompra
+        nuevo_costo = Decimal("8000")
+        resp = api_admin.patch(
+            f"/api/v1/compras/ordenes/{orden_borrador.pk}/",
+            {"items": [{"producto": producto.pk, "cantidad": "3", "costo_unitario": str(nuevo_costo)}]},
+            format="json",
+        )
+        assert resp.status_code == 200
+        orden_borrador.refresh_from_db()
+        assert orden_borrador.monto_total == Decimal("24000")
+        assert DetalleOrdenCompra.objects.filter(orden=orden_borrador).count() == 1
+
+    def test_patch_no_borrador_retorna_400(self, api_admin, orden_pendiente, producto):
+        """PATCH en estado distinto de BORRADOR → 400."""
+        resp = api_admin.patch(
+            f"/api/v1/compras/ordenes/{orden_pendiente.pk}/",
+            {"items": [{"producto": producto.pk, "cantidad": "1", "costo_unitario": "5000"}]},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "Borrador" in str(resp.data)
+
+
+# ── NotaCreditoProveedor con observacion ──────────────────────────────────────
+
+@pytest.mark.django_db
+class TestNotaCreditoConObservacion:
+    """Línea 318: desc incluye observacion cuando se provee."""
+
+    def test_create_nc_con_observacion_crea_cc_con_desc(self, api_admin, proveedor):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {
+                "proveedor": proveedor.pk,
+                "monto_total": "50000",
+                "observacion": "Devolución de mercadería dañada",
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        from apps.compras.models import CuentaCorrienteProveedor
+        cc = CuentaCorrienteProveedor.objects.filter(proveedor=proveedor).first()
+        assert "Devolución" in cc.descripcion
+
+
+# ── ReporteComprasProveedoresView ─────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestReporteComprasProveedores:
+    """Líneas 555 (funnel loop) y 571 (CSV loop con datos)."""
+
+    def test_sin_params_retorna_400(self, api_admin):
+        resp = api_admin.get("/api/v1/compras/reporte-compras/")
+        assert resp.status_code == 400
+
+    def test_con_fechas_retorna_estructura(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-compras/",
+            {"desde": "2026-01-01", "hasta": "2026-12-31"},
+        )
+        assert resp.status_code == 200
+        assert "por_proveedor" in resp.data
+        assert "funnel_oc" in resp.data
+
+    def test_con_ordenes_llena_funnel(self, api_admin, orden_pendiente):
+        from django.utils import timezone
+        hoy = timezone.now().date().isoformat()
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-compras/",
+            {"desde": hoy, "hasta": hoy},
+        )
+        assert resp.status_code == 200
+        assert resp.data["funnel_oc"]["PENDIENTE"] >= 1
+
+    def test_formato_csv_con_datos_incluye_filas(
+        self, api_admin, compra_contado, proveedor
+    ):
+        from django.utils import timezone
+        hoy = timezone.now().date().isoformat()
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-compras/",
+            {"desde": hoy, "hasta": hoy, "formato": "csv"},
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp["Content-Type"]
+        content = resp.content.decode("utf-8-sig")
+        assert proveedor.razon_social in content
+
+
+# ── ReporteNotasCreditoCompraView ─────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestReporteNotasCreditoCompra:
+    """Líneas 600-675: reporte de notas de crédito — JSON y CSV."""
+
+    def test_sin_params_retorna_400(self, api_admin):
+        resp = api_admin.get("/api/v1/compras/reporte-notas-credito/")
+        assert resp.status_code == 400
+
+    def test_con_fechas_retorna_estructura(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-notas-credito/",
+            {"desde": "2026-01-01", "hasta": "2026-12-31"},
+        )
+        assert resp.status_code == 200
+        assert "detalle" in resp.data
+        assert "resumen" in resp.data
+
+    def test_con_datos_muestra_nc(self, api_admin, proveedor, usuario_admin):
+        from django.utils import timezone
+        from apps.compras.models import NotaCreditoProveedor
+        NotaCreditoProveedor.objects.create(
+            proveedor=proveedor,
+            monto_total=Decimal("30000"),
+            estado=NotaCreditoProveedor.Estado.EMITIDA,
+            creado_por=usuario_admin,
+        )
+        hoy = timezone.now().date().isoformat()
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-notas-credito/",
+            {"desde": hoy, "hasta": hoy},
+        )
+        assert resp.status_code == 200
+        assert len(resp.data["detalle"]) == 1
+        assert resp.data["resumen"]["total_emitidas"] == 1
+
+    def test_filtro_por_estado(self, api_admin, proveedor, usuario_admin):
+        from django.utils import timezone
+        from apps.compras.models import NotaCreditoProveedor
+        NotaCreditoProveedor.objects.create(
+            proveedor=proveedor, monto_total=Decimal("10000"),
+            estado=NotaCreditoProveedor.Estado.ANULADA, creado_por=usuario_admin,
+        )
+        hoy = timezone.now().date().isoformat()
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-notas-credito/",
+            {"desde": hoy, "hasta": hoy, "estado": "EMITIDA"},
+        )
+        assert resp.status_code == 200
+        assert len(resp.data["detalle"]) == 0
+
+    def test_formato_csv_con_datos_incluye_filas(self, api_admin, proveedor, usuario_admin):
+        from django.utils import timezone
+        from apps.compras.models import NotaCreditoProveedor
+        NotaCreditoProveedor.objects.create(
+            proveedor=proveedor, monto_total=Decimal("25000"),
+            estado=NotaCreditoProveedor.Estado.EMITIDA, creado_por=usuario_admin,
+        )
+        hoy = timezone.now().date().isoformat()
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-notas-credito/",
+            {"desde": hoy, "hasta": hoy, "formato": "csv"},
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp["Content-Type"]
+        content = resp.content.decode("utf-8-sig")
+        assert proveedor.razon_social in content
+
+
+# ── ReporteAgingProveedoresView ───────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestReporteAgingProveedores:
+    """Líneas 691-774: aging cuentas a pagar — JSON y CSV."""
+
+    def test_retorna_estructura(self, api_admin):
+        resp = api_admin.get("/api/v1/compras/reporte-aging-proveedores/")
+        assert resp.status_code == 200
+        assert "resumen" in resp.data
+        assert "detalle" in resp.data
+
+    def test_con_deuda_muestra_proveedor(
+        self, api_admin, proveedor, usuario_cajero, producto
+    ):
+        from apps.compras.services import CompraService
+        CompraService.registrar_compra(
+            proveedor=proveedor,
+            creado_por=usuario_cajero,
+            tipo_pago="CREDITO",
+            items=[{"producto": producto, "cantidad": Decimal("1"), "costo_unitario": Decimal("100000")}],
+        )
+        resp = api_admin.get("/api/v1/compras/reporte-aging-proveedores/")
+        assert resp.status_code == 200
+        assert resp.data["resumen"]["proveedores_con_deuda"] >= 1
+
+    def test_formato_csv_sin_datos_retorna_csv(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-aging-proveedores/",
+            {"formato": "csv"},
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp["Content-Type"]
+
+    def test_formato_csv_con_datos_incluye_proveedor(
+        self, api_admin, proveedor, usuario_cajero, producto
+    ):
+        from apps.compras.services import CompraService
+        CompraService.registrar_compra(
+            proveedor=proveedor,
+            creado_por=usuario_cajero,
+            tipo_pago="CREDITO",
+            items=[{"producto": producto, "cantidad": Decimal("2"), "costo_unitario": Decimal("50000")}],
+        )
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-aging-proveedores/",
+            {"formato": "csv"},
+        )
+        assert resp.status_code == 200
+        content = resp.content.decode("utf-8-sig")
+        assert proveedor.razon_social in content
+
+    def test_deuda_antigua_cae_en_bucket_31_60(
+        self, api_admin, proveedor, usuario_cajero
+    ):
+        """Deuda con 40 días de antigüedad → bucket 31-60 (líneas 730-731)."""
+        from apps.compras.models import CuentaCorrienteProveedor
+        from django.utils import timezone
+        from datetime import timedelta
+        cc = CuentaCorrienteProveedor.objects.create(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+            monto=Decimal("200000"),
+            descripcion="Deuda antigua",
+            creado_por=usuario_cajero,
+        )
+        # Retroceder fecha para que caiga en el bucket 31-60
+        CuentaCorrienteProveedor.objects.filter(pk=cc.pk).update(
+            fecha=timezone.now() - timedelta(days=40)
+        )
+        resp = api_admin.get("/api/v1/compras/reporte-aging-proveedores/")
+        assert resp.status_code == 200
+        detalle = resp.data["detalle"]
+        assert len(detalle) >= 1
+        assert detalle[0]["aging"] == "31-60"
+
+    def test_deuda_70_dias_cae_en_bucket_61_90(
+        self, api_admin, proveedor, usuario_cajero
+    ):
+        """Deuda con 70 días → bucket 61-90 (línea 733)."""
+        from apps.compras.models import CuentaCorrienteProveedor
+        from django.utils import timezone
+        from datetime import timedelta
+        cc = CuentaCorrienteProveedor.objects.create(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+            monto=Decimal("250000"),
+            descripcion="Deuda 70 días",
+            creado_por=usuario_cajero,
+        )
+        CuentaCorrienteProveedor.objects.filter(pk=cc.pk).update(
+            fecha=timezone.now() - timedelta(days=70)
+        )
+        resp = api_admin.get("/api/v1/compras/reporte-aging-proveedores/")
+        assert resp.status_code == 200
+        assert any(d["aging"] == "61-90" for d in resp.data["detalle"])
+
+    def test_deuda_muy_antigua_cae_en_bucket_90_mas(
+        self, api_admin, proveedor, usuario_cajero
+    ):
+        """Deuda con 100 días → bucket 90+ (líneas 734-735)."""
+        from apps.compras.models import CuentaCorrienteProveedor
+        from django.utils import timezone
+        from datetime import timedelta
+        cc = CuentaCorrienteProveedor.objects.create(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+            monto=Decimal("300000"),
+            descripcion="Deuda muy antigua",
+            creado_por=usuario_cajero,
+        )
+        CuentaCorrienteProveedor.objects.filter(pk=cc.pk).update(
+            fecha=timezone.now() - timedelta(days=100)
+        )
+        resp = api_admin.get("/api/v1/compras/reporte-aging-proveedores/")
+        assert resp.status_code == 200
+        detalle = resp.data["detalle"]
+        assert any(d["aging"] == "90+" for d in detalle)
+
+    def test_excel_retorna_xlsx(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-aging-proveedores/",
+            {"formato": "excel"},
+        )
+        assert resp.status_code == 200
+        assert "spreadsheetml" in resp["Content-Type"]
+        assert "attachment" in resp.get("Content-Disposition", "")
+        assert resp.get("Content-Disposition", "").endswith(".xlsx\"")
+
+    def test_excel_con_datos_genera_filas(self, api_admin, proveedor, usuario_cajero):
+        import io
+        from decimal import Decimal
+        from openpyxl import load_workbook
+        from apps.compras.models import CuentaCorrienteProveedor
+        CuentaCorrienteProveedor.objects.create(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+            monto=Decimal("100000"),
+            descripcion="Deuda test excel",
+            creado_por=usuario_cajero,
+        )
+        resp = api_admin.get(
+            "/api/v1/compras/reporte-aging-proveedores/",
+            {"formato": "excel"},
+        )
+        assert resp.status_code == 200
+        wb = load_workbook(io.BytesIO(resp.content))
+        ws = wb.active
+        assert ws.max_row >= 2  # encabezado + al menos 1 fila de datos
+
+
+# ── CompraViewSet.create y update (líneas 107-174) ────────────────────────────
+
+@pytest.mark.django_db
+class TestCompraViewSetCreateUpdate:
+    """Cubre CompraViewSet.create, _resolve_items y update."""
+
+    def test_create_compra_contado(self, api, proveedor, producto):
+        resp = api.post(
+            "/api/v1/compras/compras/",
+            {
+                "proveedor": proveedor.pk,
+                "tipo_pago": "CONTADO",
+                "items": [{"producto": producto.pk, "cantidad": "2", "costo_unitario": "5000"}],
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["monto_total"] == "10000"
+
+    def test_create_compra_credito(self, api, proveedor, producto):
+        resp = api.post(
+            "/api/v1/compras/compras/",
+            {
+                "proveedor": proveedor.pk,
+                "tipo_pago": "CREDITO",
+                "nro_factura_proveedor": "F-001",
+                "observaciones": "Entrega pendiente",
+                "items": [{"producto": producto.pk, "cantidad": "1", "costo_unitario": "15000"}],
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["tipo_pago"] == "CREDITO"
+
+    def test_create_proveedor_no_encontrado_retorna_400(self, api, producto):
+        resp = api.post(
+            "/api/v1/compras/compras/",
+            {
+                "proveedor": 99999,
+                "tipo_pago": "CONTADO",
+                "items": [{"producto": producto.pk, "cantidad": "1", "costo_unitario": "5000"}],
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "proveedor" in resp.data
+
+    def test_update_compra_cambia_proveedor_e_items(self, api, compra_contado, proveedor, producto):
+        from apps.compras.models import Proveedor
+        otro = Proveedor.objects.create(ruc="80003001-3", razon_social="Otro Proveedor")
+        resp = api.patch(
+            f"/api/v1/compras/compras/{compra_contado.pk}/",
+            {
+                "proveedor": otro.pk,
+                "tipo_pago": "CONTADO",
+                "items": [{"producto": producto.pk, "cantidad": "5", "costo_unitario": "2000"}],
+            },
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data["monto_total"] == "10000"
+
+    def test_update_proveedor_no_encontrado_retorna_400(self, api, compra_contado, producto):
+        resp = api.patch(
+            f"/api/v1/compras/compras/{compra_contado.pk}/",
+            {
+                "proveedor": 99999,
+                "tipo_pago": "CONTADO",
+                "items": [{"producto": producto.pk, "cantidad": "1", "costo_unitario": "5000"}],
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "proveedor" in resp.data
+
+
+# ── PagoProveedorViewSet.create (líneas 209-258) ──────────────────────────────
+
+@pytest.mark.django_db
+class TestPagoProveedorCreate:
+    """Cubre PagoProveedorViewSet.create y sus ramas de error."""
+
+    def test_create_pago_actualiza_estado_pagado(
+        self, api_admin, compra_credito, medio_pago_efectivo
+    ):
+        resp = api_admin.post(
+            "/api/v1/compras/pagos/",
+            {
+                "compra": compra_credito.pk,
+                "monto": str(compra_credito.monto_total),
+                "medio_pago": medio_pago_efectivo.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        compra_credito.refresh_from_db()
+        assert compra_credito.estado_pago == "PAGADO"
+
+    def test_create_pago_parcial_actualiza_estado_parcial(
+        self, api_admin, compra_credito, medio_pago_efectivo
+    ):
+        monto_parcial = compra_credito.monto_total / 2
+        resp = api_admin.post(
+            "/api/v1/compras/pagos/",
+            {
+                "compra": compra_credito.pk,
+                "monto": str(monto_parcial),
+                "medio_pago": medio_pago_efectivo.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        compra_credito.refresh_from_db()
+        assert compra_credito.estado_pago == "PARCIAL"
+
+    def test_create_pago_registra_movimiento_cc(
+        self, api_admin, compra_credito, medio_pago_efectivo
+    ):
+        from apps.compras.models import CuentaCorrienteProveedor
+        api_admin.post(
+            "/api/v1/compras/pagos/",
+            {
+                "compra": compra_credito.pk,
+                "monto": "5000",
+                "medio_pago": medio_pago_efectivo.pk,
+            },
+            format="json",
+        )
+        assert CuentaCorrienteProveedor.objects.filter(
+            proveedor=compra_credito.proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.CREDITO,
+        ).exists()
+
+    def test_create_pago_compra_no_encontrada_retorna_400(
+        self, api_admin, medio_pago_efectivo
+    ):
+        resp = api_admin.post(
+            "/api/v1/compras/pagos/",
+            {"compra": 99999, "monto": "5000", "medio_pago": medio_pago_efectivo.pk},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "compra" in resp.data
+
+    def test_create_pago_medio_pago_no_encontrado_retorna_400(
+        self, api_admin, compra_credito
+    ):
+        resp = api_admin.post(
+            "/api/v1/compras/pagos/",
+            {"compra": compra_credito.pk, "monto": "5000", "medio_pago": 99999},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "medio_pago" in resp.data
+
+
+# ── NotaCreditoProveedorViewSet.create — ramas de validación (líneas 283-316) ─
+
+@pytest.mark.django_db
+class TestNotaCreditoCreateValidaciones:
+    """Cubre las ramas de validación del create de NC que faltaban."""
+
+    def test_sin_proveedor_retorna_400(self, api_admin):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {"monto_total": "10000"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "proveedor" in resp.data["error"].lower()
+
+    def test_monto_cero_retorna_400(self, api_admin, proveedor):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {"proveedor": proveedor.pk, "monto_total": "0"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "monto" in resp.data["error"].lower()
+
+    def test_monto_texto_invalido_retorna_400(self, api_admin, proveedor):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {"proveedor": proveedor.pk, "monto_total": "no-es-numero"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "monto" in resp.data["error"].lower()
+
+    def test_proveedor_no_encontrado_retorna_404(self, api_admin):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {"proveedor": 99999, "monto_total": "10000"},
+            format="json",
+        )
+        assert resp.status_code == 404
+        assert "proveedor" in resp.data["error"].lower()
+
+    def test_compra_de_otro_proveedor_retorna_404(
+        self, api_admin, proveedor, compra_contado
+    ):
+        otro = __import__("apps.compras.models", fromlist=["Proveedor"]).Proveedor.objects.create(
+            ruc="80004001-4", razon_social="Otro Prov"
+        )
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {
+                "proveedor": otro.pk,
+                "monto_total": "5000",
+                "compra_original": compra_contado.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 404
+        assert "compra" in resp.data["error"].lower()
+
+    def test_create_con_compra_original_incluye_id_en_descripcion(
+        self, api_admin, proveedor, compra_contado
+    ):
+        from apps.compras.models import CuentaCorrienteProveedor
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {
+                "proveedor": proveedor.pk,
+                "monto_total": "5000",
+                "compra_original": compra_contado.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        cc = CuentaCorrienteProveedor.objects.filter(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.NOTA_CREDITO,
+        ).last()
+        assert f"Compra #{compra_contado.pk}" in cc.descripcion
+
+
+# ── NotaCreditoProveedorViewSet.anular (líneas 333-352) ───────────────────────
+
+@pytest.mark.django_db
+class TestNotaCreditoAnular:
+    """Cubre la action anular de NotaCreditoProveedorViewSet."""
+
+    @pytest.fixture
+    def nc(self, db, proveedor, usuario_admin, api_admin):
+        resp = api_admin.post(
+            "/api/v1/compras/notas-credito/",
+            {"proveedor": proveedor.pk, "monto_total": "20000"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        return resp.data
+
+    def test_anular_nc_emitida_retorna_200_y_estado_anulada(self, api_admin, nc):
+        resp = api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        assert resp.status_code == 200
+        assert resp.data["estado"] == "ANULADA"
+
+    def test_anular_nc_emitida_crea_debito_en_cc(self, api_admin, nc, proveedor):
+        from apps.compras.models import CuentaCorrienteProveedor
+        api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        assert CuentaCorrienteProveedor.objects.filter(
+            proveedor=proveedor,
+            tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
+        ).exists()
+
+    def test_anular_dos_veces_retorna_400(self, api_admin, nc):
+        api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        resp = api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        assert resp.status_code == 400
+        assert "anulada" in resp.data["error"].lower()

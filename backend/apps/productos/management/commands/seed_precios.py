@@ -8,7 +8,7 @@ Los productos sin ventas previas quedan con el precio que el operador
 indique en --precio-base (default 0) para que se carguen manualmente.
 """
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.db import transaction
 
 
@@ -48,7 +48,6 @@ class Command(BaseCommand):
         # Para cada producto, tomamos el precio_unitario de la venta más reciente
         # (las ventas reales son la fuente de verdad del precio cobrado).
         from django.db.models import Max
-        from apps.ventas.models import Venta
 
         ultimas_ventas = (
             DetalleVenta.objects
@@ -128,6 +127,6 @@ class Command(BaseCommand):
             f"\nListo: {creados} creados, {actualizados} actualizados, {sin_cambio} sin cambio."
         ))
         self.stdout.write(
-            f"Los productos con precio Gs. 0 deben actualizarse manualmente "
-            f"desde Configuracion > Listas de Precios."
+            "Los productos con precio Gs. 0 deben actualizarse manualmente "
+            "desde Configuracion > Listas de Precios."
         )

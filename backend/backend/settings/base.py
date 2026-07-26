@@ -40,6 +40,11 @@ if DEBUG and not SECRET_KEY:
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+# Bloqueo automático tras N intentos fallidos de login
+LOGIN_MAX_INTENTOS    = int(os.environ.get("LOGIN_MAX_INTENTOS",    "5"))   # fallos antes de bloquear
+LOGIN_VENTANA_MINUTOS = int(os.environ.get("LOGIN_VENTANA_MINUTOS", "15"))  # ventana de conteo
+LOGIN_BLOQUEO_MINUTOS = int(os.environ.get("LOGIN_BLOQUEO_MINUTOS", "30"))  # duración del bloqueo
+
 # ==============================================================================
 # APLICACIONES
 # ==============================================================================
@@ -197,9 +202,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "common.permissions.IsStaffUser",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "common.pagination.StandardResultsSetPagination",
     "PAGE_SIZE": 20,
-    "MAX_PAGE_SIZE": 100,
+    "MAX_PAGE_SIZE": 500,
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
@@ -389,19 +394,21 @@ LOGGING = {
         },
         "file": {
             "level": "INFO",
-            "class": "logging.handlers.RotatingFileHandler",
+            # FileHandler simple: evita el PermissionError de Windows al rotar
+            # (RotatingFileHandler usa os.rename() que falla si otro proceso
+            # tiene el archivo abierto). En producción (Linux/Docker) se usa
+            # RotatingFileHandler sin problemas.
+            "class": "logging.FileHandler",
             "filename": LOGS_DIR / "cantina.log",
-            "maxBytes": 1024 * 1024 * 10,  # 10 MB
-            "backupCount": 5,
+            "encoding": "utf-8",
             "formatter": "verbose",
             "filters": ["request_id"],
         },
         "file_errors": {
             "level": "ERROR",
-            "class": "logging.handlers.RotatingFileHandler",
+            "class": "logging.FileHandler",
             "filename": LOGS_DIR / "errors.log",
-            "maxBytes": 1024 * 1024 * 5,  # 5 MB
-            "backupCount": 3,
+            "encoding": "utf-8",
             "formatter": "verbose",
             "filters": ["request_id"],
         },

@@ -34,6 +34,7 @@ interface ConsumoReciente {
 }
 
 interface CuentaMensual {
+  id: number
   cantidad_almuerzos: number
   monto_total: number
   monto_pagado: number
@@ -358,14 +359,24 @@ function ResumenTab({ hijo, mes, clienteId }: { hijo: HijoData; mes: { anio: num
             </div>
           </div>
           {hijo.cuenta_mensual.monto_pendiente > 0 && (
-            <div className="px-4 py-3 bg-red-50 border-t border-red-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-red-500" />
-                <p className="text-sm font-medium text-red-700">Pendiente de pago</p>
+            <div className="px-4 py-3 bg-red-50 border-t border-red-100 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Clock className="w-4 h-4 text-red-500 shrink-0" />
+                <p className="text-sm font-medium text-red-700 truncate">Pendiente de pago</p>
               </div>
-              <p className="text-sm font-bold text-red-700 tabular-nums">
-                {formatGs(hijo.cuenta_mensual.monto_pendiente)}
-              </p>
+              <div className="flex items-center gap-3 shrink-0">
+                <p className="text-sm font-bold text-red-700 tabular-nums">
+                  {formatGs(hijo.cuenta_mensual.monto_pendiente)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/portal/pagar-almuerzo?cuenta_id=${hijo.cuenta_mensual!.id}&monto=${hijo.cuenta_mensual!.monto_pendiente}`)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  <Wallet className="w-3.5 h-3.5" />
+                  Pagar
+                </button>
+              </div>
             </div>
           )}
           {hijo.cuenta_mensual.monto_pendiente === 0 && (

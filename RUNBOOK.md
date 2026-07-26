@@ -180,6 +180,115 @@ O desde el panel de administración:
 
 ---
 
+## 9. PWA en PCs cajeros — instalación y mantenimiento
+
+> Los 5 PCs cajeros usan **ModoRecreo** instalado como PWA (Progressive Web App) en Chrome.
+> La PWA funciona sin conexión: las ventas se guardan en IndexedDB y se sincronizan al reconectar.
+
+### 9.1 Instalación inicial (hacer en cada PC cajero)
+
+**Prerrequisitos:**
+- Chrome 90 o superior instalado
+- PC conectada a la LAN de la cantina (puede hacer ping al servidor)
+- El servidor (`docker compose up -d`) debe estar corriendo
+
+**Pasos:**
+
+```powershell
+# Desde el servidor, ejecutar este script en cada PC cajero
+# (o copiarlo a la PC cajero y ejecutarlo localmente)
+.\scripts\install-pwa-cajero.ps1
+```
+
+El script verifica los prerrequisitos y abre Chrome guiando la instalación.
+Si el servidor no es `localhost` (la PC cajero accede por IP):
+
+```powershell
+.\scripts\install-pwa-cajero.ps1 -ServidorUrl http://192.168.1.100
+```
+
+**Instalación manual** (si el script no está disponible):
+1. Abrir Chrome → `http://localhost/modo-recreo`
+2. Esperar que cargue; buscar el ícono de instalación (□↑) en la barra de direcciones
+3. Clic en ese ícono → **Instalar**
+4. La app abre como ventana independiente
+5. Anclar el ícono "Cantina" a la Barra de tareas
+
+### 9.2 Verificar que la PWA está correctamente instalada
+
+```powershell
+.\scripts\install-pwa-cajero.ps1 -SoloValidar
+```
+
+Verifica: Chrome versión, health del servidor, SW accesible, manifest válido, íconos OK.
+
+### 9.3 Configurar inicio automático con Windows
+
+Para que la PWA arranque sola cuando el PC cajero enciende:
+
+```powershell
+# Primero instalar la PWA (9.1), luego ejecutar:
+.\scripts\install-pwa-cajero.ps1 -ConfigurarInicio
+```
+
+El script copia el acceso directo de Chrome App a la carpeta de Inicio de Windows (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`).
+
+### 9.4 Actualizar la PWA después de un deploy
+
+El Service Worker se actualiza automáticamente: Chrome verifica `sw.js` en cada navegación.
+Si un cajero no recibe la actualización:
+
+```powershell
+# En Chrome de la PC cajero, abrir la consola (F12) y ejecutar:
+# navigator.serviceWorker.getRegistration().then(r => r.update())
+# O directamente: ir a chrome://serviceworker-internals/ → Unregister → recargar
+```
+
+Forma más rápida en el PC cajero:
+1. Abrir la PWA
+2. Menú de Chrome (⋮) → `Más herramientas` → `Herramientas para desarrolladores`
+3. Pestaña **Application** → **Service Workers** → clic en **Update**
+4. Recargar la app
+
+### 9.5 Reinstalar la PWA (si hay problemas)
+
+```powershell
+# 1. Desinstalar la PWA actual desde Chrome:
+#    chrome://apps/ → clic derecho en "Cantina" → "Desinstalar"
+# 2. Limpiar el Service Worker:
+#    chrome://serviceworker-internals/ → Unregister del sw.js de localhost
+# 3. Limpiar caché y datos del sitio:
+#    chrome://settings/siteData → buscar "localhost" → Eliminar
+# 4. Reinstalar:
+.\scripts\install-pwa-cajero.ps1
+```
+
+### 9.6 Comportamiento offline del ModoRecreo
+
+| Situación | Comportamiento |
+|-----------|---------------|
+| Sin conexión al servidor | El cajero ve el banner "Sin conexión — ventas se guardan offline" |
+| Ventas realizadas offline | Se encolan en IndexedDB del browser |
+| Al reconectar | Las ventas pendientes se sincronizan automáticamente (BackgroundSync) |
+| Catálogo de productos | Disponible offline (StaleWhileRevalidate) |
+| Consulta de saldo de tarjeta | Muestra último saldo cacheado si no hay red |
+
+Si las ventas offline no se sincronizan al reconectar, forzar sync manualmente:
+1. Abrir la PWA → F12 → Application → Background Sync
+2. Clic en **Push** en la fila `sync-ventas`
+
+### 9.7 Checklist de 5 PCs cajeros
+
+| PC | Ubicación | Chrome ≥90 | PWA instalada | Inicio automático | Verificado |
+|----|-----------|:----------:|:-------------:|:-----------------:|:----------:|
+| Cajero 1 | Puesto 1 | ☐ | ☐ | ☐ | ☐ |
+| Cajero 2 | Puesto 2 | ☐ | ☐ | ☐ | ☐ |
+| Cajero 3 | Puesto 3 | ☐ | ☐ | ☐ | ☐ |
+| Cajero 4 | Puesto 4 | ☐ | ☐ | ☐ | ☐ |
+| Cajero 5 | Puesto 5 | ☐ | ☐ | ☐ | ☐ |
+
+---
+
 ## Contactos de emergencia
 
 | Situación | Contacto |
@@ -196,3 +305,35 @@ O desde el panel de administración:
 # Un solo comando para ver todo:
 docker compose ps ; curl http://localhost/api/health/
 ```
+
+---
+
+## Hoja de ruta de infraestructura — v2.0
+
+### PostgreSQL nativo → contenedor (recomendado para v2.0)
+
+PostgreSQL corre actualmente como servicio nativo en Windows. Las limitaciones son:
+- Las actualizaciones de Windows Update pueden interrumpir el servicio sin aviso
+- No hay aislamiento de recursos (RAM/CPU compartida con el OS)
+- La migración de versión mayor es manual
+
+**Camino de migración recomendado:**
+1. Activar WAL archiving primero (`scripts/setup_wal_archiving.ps1`)
+2. Agregar a `docker-compose.yml`:
+   ```yaml
+   postgres:
+     image: postgres:15
+     volumes:
+       - postgres_data:/var/lib/postgresql/data
+     environment:
+       POSTGRES_DB: cantina_tita
+       POSTGRES_USER: app_cantina
+       POSTGRES_PASSWORD: ${DB_PASSWORD}
+     ports:
+       - "5432:5432"
+   ```
+3. Migrar los datos con `pg_dump` / `pg_restore`
+4. Actualizar `DB_HOST` en `.env.production` de `host.docker.internal` a `postgres`
+5. Eliminar la dependencia `extra_hosts: host.docker.internal` de backend/celery
+
+No realizar este cambio en pleno año lectivo. Planificar para vacaciones de julio o enero.

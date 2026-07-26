@@ -204,3 +204,30 @@ describe('authStore', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(true)
   })
 })
+
+describe('authStore — inicialización del módulo con sesión previa', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('inicia el timer de inactividad si access_token ya existe al cargar el módulo', async () => {
+    // access_token en localStorage hace que isAuthenticated initialice en true
+    localStorage.setItem('access_token', 'tok')
+
+    // vi.resetModules limpia la caché de módulos; el próximo import() crea
+    // una instancia fresca de authStore que ejecuta el bloque de init
+    vi.resetModules()
+    const { useAuthStore: freshStore } = await import('../authStore')
+
+    expect(freshStore.getState().isAuthenticated).toBe(true)
+
+    // Si resetInactivityTimer fue invocado durante la inicialización,
+    // avanzar 15 min + 1 s debe disparar el auto-logout
+    vi.advanceTimersByTime(15 * 60 * 1000 + 1_000)
+    expect(freshStore.getState().isAuthenticated).toBe(false)
+  })
+})

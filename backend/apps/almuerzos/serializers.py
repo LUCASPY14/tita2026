@@ -117,7 +117,13 @@ class RegistroConsumoAlmuerzoSerializer(serializers.ModelSerializer):
 
 class CuentaAlmuerzoMensualSerializer(serializers.ModelSerializer):
     hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
+    hijo_grado = serializers.CharField(source="hijo.grado.nombre", read_only=True, default="")
+    nro_tarjeta = serializers.SerializerMethodField()
     saldo_pendiente = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+
+    def get_nro_tarjeta(self, obj):
+        tarjeta = getattr(obj.hijo, "tarjeta", None)
+        return tarjeta.nro_tarjeta if tarjeta else ""
 
     class Meta:
         model = CuentaAlmuerzoMensual
@@ -137,7 +143,7 @@ class PagoCuentaAlmuerzoSerializer(serializers.ModelSerializer):
     class Meta:
         model = PagoCuentaAlmuerzo
         fields = "__all__"
-        read_only_fields = ["fecha_creacion"]
+        read_only_fields = ["fecha_creacion", "registrado_por", "factura"]
 
     def validate(self, data):
         cuenta = data.get("cuenta")

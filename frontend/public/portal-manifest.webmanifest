@@ -1,0 +1,15 @@
+{
+  "name": "Portal Tita — Cantina Escolar",
+  "short_name": "Portal Tita",
+  "description": "Consultá saldo, consumos y recargá la cuenta de tu hijo/a en la cantina",
+  "theme_color": "#f97316",
+  "background_color": "#fffbf0",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/portal",
+  "scope": "/portal",
+  "icons": [
+    { "src": "/icon-portal-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-portal-512.webp", "sizes": "512x512", "type": "image/webp", "purpose": "any maskable" }
+  ]
+}

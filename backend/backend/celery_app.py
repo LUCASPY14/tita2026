@@ -101,10 +101,8 @@ app.conf.beat_schedule = {
         "task": "apps.ventas.tasks.generar_resumen_diario_ventas",
         "schedule": crontab(hour=23, minute=50),  # Todos los días 23:50
     },
-    "cierre-automatico-cajas": {
-        "task": "apps.ventas.tasks.cerrar_cajas_automatico",
-        "schedule": crontab(minute=0),  # Cada hora en punto
-    },  # ── Almuerzos ─────────────────────────────────────────────────
+    # "cierre-automatico-cajas" desactivado — el cierre de caja es manual.
+    # ── Almuerzos ─────────────────────────────────────────────────
     "cerrar-cuentas-almuerzos-mes-anterior": {
         "task": "apps.almuerzos.tasks.cerrar_cuentas_mes_anterior",
         "schedule": crontab(hour=5, minute=0, day_of_month=1),  # Día 1 de cada mes 05:00 (antes de generar)
@@ -136,6 +134,20 @@ app.conf.beat_schedule = {
         "task": "apps.compras.tasks.alertar_compras_pendientes_pago",
         "schedule": crontab(hour=10, minute=0),   # Todos los días 10:00
     },
+    # ── Productos ─────────────────────────────────────────────────────────
+    "sincronizar-costos-desde-compras": {
+        "task": "apps.productos.tasks.sincronizar_costos_desde_compras",
+        "schedule": crontab(hour=1, minute=30),   # Todos los días 01:30
+    },
+    # ── Clientes ──────────────────────────────────────────────────────
+    "alertar-saldo-negativo-prolongado": {
+        "task": "apps.clientes.tasks.alertar_saldo_negativo_prolongado",
+        "schedule": crontab(hour=9, minute=15),   # Todos los días 09:15
+    },
+    "resumen-mensual-deuda-clientes": {
+        "task": "apps.clientes.tasks.resumen_mensual_deuda_clientes",
+        "schedule": crontab(hour=8, minute=30, day_of_month=5),  # Día 5 de cada mes 08:30
+    },
 
 }
 
@@ -145,8 +157,6 @@ app.conf.timezone = "America/Asuncion"  # Paraguay timezone
 _CRITICAL_TASKS = {
     "apps.almuerzos.tasks.cerrar_cuentas_mes_anterior",
     "apps.almuerzos.tasks.generar_cuentas_mensuales",
-    "apps.ventas.tasks.generar_resumen_diario_ventas",
-    "apps.inventario.tasks.generar_resumen_diario_stock",
 }
 
 
@@ -201,7 +211,10 @@ def setup_task_failure_handler(sender, **kwargs):
                 pass
 
 
+_logger = logging.getLogger(__name__)
+
+
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
     """Tarea de debug"""
-    print(f"Request: {self.request!r}")
+    _logger.debug("Request: %s", self.request)

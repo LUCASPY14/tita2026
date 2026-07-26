@@ -34,6 +34,7 @@ const ModoRecreo        = lazy(() => import('./pages/ModoRecreo'))
 const MenuDiario        = lazy(() => import('./pages/MenuDiario'))
 const Alergenos         = lazy(() => import('./pages/Alergenos'))
 const Ventas            = lazy(() => import('./pages/Ventas'))
+const Auditoria         = lazy(() => import('./pages/Auditoria'))
 
 // ── Lazy: portal de padres ────────────────────────────────────────────────────
 const PortalDashboard        = lazy(() => import('./pages/portal/Dashboard'))
@@ -42,6 +43,7 @@ const PortalHistorial        = lazy(() => import('./pages/portal/Historial'))
 const PortalFacturas         = lazy(() => import('./pages/portal/Facturas'))
 const PortalCargaSaldo       = lazy(() => import('./pages/portal/CargaSaldo'))
 const PortalCambiarContrasena = lazy(() => import('./pages/portal/CambiarContrasena'))
+const PortalPagarAlmuerzo    = lazy(() => import('./pages/portal/PagarAlmuerzo'))
 
 // ── Fallback de carga ─────────────────────────────────────────────────────────
 function PageLoader() {
@@ -125,7 +127,7 @@ function AuthMonitor() {
 export default function App() {
   const { loadUser } = useAuthStore()
 
-  useEffect(() => { loadUser() }, [])
+  useEffect(() => { loadUser() }, [loadUser])
 
   return (
     <ErrorBoundary>
@@ -155,6 +157,7 @@ export default function App() {
             }>
               <Route index                        element={<PortalDashboard />} />
               <Route path="carga-saldo"           element={<PortalCargaSaldo />} />
+              <Route path="pagar-almuerzo"        element={<PortalPagarAlmuerzo />} />
               <Route path="notificaciones"        element={<PortalNotificaciones />} />
               <Route path="historial"             element={<PortalHistorial />} />
               <Route path="facturas"              element={<PortalFacturas />} />
@@ -248,6 +251,11 @@ export default function App() {
               <Route path="/configuracion" element={
                 <PrivateRoute roles={['ADMIN']}>
                   <Configuracion />
+                </PrivateRoute>
+              } />
+              <Route path="/auditoria" element={
+                <PrivateRoute roles={['ADMIN']}>
+                  <Auditoria />
                 </PrivateRoute>
               } />
             </Route>

@@ -176,3 +176,170 @@ class TestEmitirParaOrigenSinCliente:
                 origen_id=carga.pk,
                 nro_factura="001-001-8888882",
             )
+
+
+# ── FacturacionService.emitir_para_origen — rama VENTA ───────────────────────
+
+@pytest.mark.django_db
+class TestEmitirParaOrigenVenta:
+
+    def _crear_venta(self, cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto):
+        from apps.ventas.services import VentaService
+        venta = VentaService.registrar_venta(
+            cliente=cliente,
+            cajero=usuario_cajero,
+            tipo="CONTADO",
+            medio_pago=medio_pago_efectivo,
+            items=[{
+                "producto": producto,
+                "cantidad": Decimal("1"),
+                "precio_unitario": Decimal("5000"),
+            }],
+            genera_factura_legal=True,
+        )
+        return venta
+
+    def test_emitir_para_venta_ok(
+        self, cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto
+    ):
+        from apps.contabilidad.services import FacturacionService
+        from apps.contabilidad.models import Factura
+
+        venta = self._crear_venta(
+            cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto
+        )
+        factura = FacturacionService.emitir_para_origen(
+            tipo="VENTA",
+            origen_id=venta.pk,
+            nro_factura="001-001-7001001",
+        )
+        assert factura.estado == Factura.Estado.EMITIDA
+        assert factura.monto_total == venta.monto_total
+        venta.refresh_from_db()
+        assert venta.factura_id == factura.pk
+        assert venta.nro_factura == "001-001-7001001"
+
+    def test_venta_anulada_falla(
+        self, cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto, usuario_admin
+    ):
+        from apps.contabilidad.services import FacturacionService
+        from apps.ventas.services import VentaService
+
+        venta = self._crear_venta(
+            cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto
+        )
+        VentaService.anular_venta(venta, anulado_por=usuario_admin)
+
+        with pytest.raises(ValidationError, match="anulada"):
+            FacturacionService.emitir_para_origen(
+                tipo="VENTA",
+                origen_id=venta.pk,
+                nro_factura="001-001-7001002",
+            )
+
+    def test_venta_sin_factura_legal_falla(
+        self, cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto
+    ):
+        from apps.contabilidad.services import FacturacionService
+        from apps.ventas.services import VentaService
+
+        venta = VentaService.registrar_venta(
+            cliente=cliente,
+            cajero=usuario_cajero,
+            tipo="CONTADO",
+            medio_pago=medio_pago_efectivo,
+            items=[{
+                "producto": producto,
+                "cantidad": Decimal("1"),
+                "precio_unitario": Decimal("5000"),
+            }],
+            genera_factura_legal=False,
+        )
+        with pytest.raises(ValidationError, match="factura legal"):
+            FacturacionService.emitir_para_origen(
+                tipo="VENTA",
+                origen_id=venta.pk,
+                nro_factura="001-001-7001003",
+            )
+
+    def test_venta_ya_facturada_falla(
+        self, cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto
+    ):
+        from apps.contabilidad.services import FacturacionService
+
+        venta = self._crear_venta(
+            cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto
+        )
+        FacturacionService.emitir_para_origen(
+            tipo="VENTA",
+            origen_id=venta.pk,
+            nro_factura="001-001-7001004",
+        )
+        with pytest.raises(ValidationError, match="ya tiene factura"):
+            FacturacionService.emitir_para_origen(
+                tipo="VENTA",
+                origen_id=venta.pk,
+                nro_factura="001-001-7001005",
+            )
+
+
+# ── FacturacionService.emitir_para_origen — rama PAGO_CREDITO ────────────────
+
+@pytest.mark.django_db
+class TestEmitirParaOrigenPagoCredito:
+
+    def _crear_pago_cc(self, cliente, usuario_cajero, genera_factura=True):
+        from apps.clientes.models import CuentaCorrienteCliente
+        from decimal import Decimal
+        return CuentaCorrienteCliente.objects.create(
+            cliente=cliente,
+            tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+            monto=Decimal("20000"),
+            saldo_anterior=Decimal("20000"),
+            saldo_resultante=Decimal("0"),
+            descripcion="Pago test",
+            genera_factura_legal=genera_factura,
+            creado_por=usuario_cajero,
+        )
+
+    def test_emitir_para_pago_credito_ok(self, cliente, usuario_cajero):
+        from apps.contabilidad.services import FacturacionService
+        from apps.contabilidad.models import Factura
+
+        pago_cc = self._crear_pago_cc(cliente, usuario_cajero)
+        factura = FacturacionService.emitir_para_origen(
+            tipo="PAGO_CREDITO",
+            origen_id=pago_cc.pk,
+            nro_factura="001-001-6001001",
+        )
+        assert factura.estado == Factura.Estado.EMITIDA
+        assert factura.monto_total == Decimal("20000")
+        pago_cc.refresh_from_db()
+        assert pago_cc.factura_id == factura.pk
+
+    def test_pago_credito_sin_factura_legal_falla(self, cliente, usuario_cajero):
+        from apps.contabilidad.services import FacturacionService
+
+        pago_cc = self._crear_pago_cc(cliente, usuario_cajero, genera_factura=False)
+        with pytest.raises(ValidationError, match="factura legal"):
+            FacturacionService.emitir_para_origen(
+                tipo="PAGO_CREDITO",
+                origen_id=pago_cc.pk,
+                nro_factura="001-001-6001002",
+            )
+
+    def test_pago_credito_ya_facturado_falla(self, cliente, usuario_cajero):
+        from apps.contabilidad.services import FacturacionService
+
+        pago_cc = self._crear_pago_cc(cliente, usuario_cajero)
+        FacturacionService.emitir_para_origen(
+            tipo="PAGO_CREDITO",
+            origen_id=pago_cc.pk,
+            nro_factura="001-001-6001003",
+        )
+        with pytest.raises(ValidationError, match="ya tiene factura"):
+            FacturacionService.emitir_para_origen(
+                tipo="PAGO_CREDITO",
+                origen_id=pago_cc.pk,
+                nro_factura="001-001-6001004",
+            )

@@ -4,7 +4,7 @@ Tarjetas, movimientos de tarjeta, medios de pago, límites de transacción y aut
 """
 
 from decimal import Decimal
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
@@ -74,7 +74,7 @@ class Tarjeta(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(hijo__isnull=False) | models.Q(cliente_directo__isnull=False),
+                condition=models.Q(hijo__isnull=False) | models.Q(cliente_directo__isnull=False),
                 name="tarjeta_tiene_titular",
             )
         ]
@@ -193,21 +193,24 @@ class MovimientoTarjeta(models.Model):
 
     def save(self, *args, **kwargs):
         """Calcula automáticamente el saldo resultante."""
-        if self.saldo_anterior is None:
-            ultimo = (
-                MovimientoTarjeta.objects
-                .filter(tarjeta=self.tarjeta)
-                .order_by("-id")
-                .first()
-            )
-            self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
+        with transaction.atomic():
+            if self.saldo_anterior is None:
+                # Lock the tarjeta row so concurrent movements can't read the same saldo_anterior.
+                Tarjeta.objects.select_for_update().get(pk=self.tarjeta_id)
+                ultimo = (
+                    MovimientoTarjeta.objects
+                    .filter(tarjeta=self.tarjeta)
+                    .order_by("-id")
+                    .first()
+                )
+                self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
 
-        if self.tipo in (self.Tipo.RECARGA, self.Tipo.REVERSO):
-            self.saldo_resultante = self.saldo_anterior + self.monto
-        else:
-            self.saldo_resultante = self.saldo_anterior - self.monto
+            if self.tipo in (self.Tipo.RECARGA, self.Tipo.REVERSO):
+                self.saldo_resultante = self.saldo_anterior + self.monto
+            else:
+                self.saldo_resultante = self.saldo_anterior - self.monto
 
-        super().save(*args, **kwargs)
+            super().save(*args, **kwargs)
 
 
 # ==============================================================================
@@ -318,12 +321,12 @@ class CargaSaldo(models.Model):
     referencia_externa = models.CharField(
         max_length=200, blank=True, null=True
     )
-    factura = models.OneToOneField(
+    factura = models.ForeignKey(
         "contabilidad.Factura",
         models.SET_NULL,
         null=True,
         blank=True,
-        related_name="carga_saldo",
+        related_name="cargas_saldo",
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     history = HistoricalRecords()
@@ -396,6 +399,7 @@ class MedioPago(models.Model):
     class Meta:
         verbose_name = "Medio de Pago"
         verbose_name_plural = "Medios de Pago"
+        ordering = ["descripcion"]
 
     def __str__(self):
         return self.descripcion
@@ -519,8 +523,9 @@ class RegistroAutorizacion(models.Model):
 
 class PagoBancard(models.Model):
     """
-    Transacción de pago con tarjeta de débito/crédito a través de Bancard vPOS.
-    El flujo es: iniciar → redirigir a Bancard → confirmar → acreditar saldo.
+    Transacción de pago a través de Bancard vPOS.
+    Puede ser recarga de saldo de tarjeta (TARJETA) o pago de cuenta de almuerzo (ALMUERZO).
+    El flujo es: iniciar → redirigir a Bancard → confirmar → acreditar.
     """
 
     class Estado(models.TextChoices):
@@ -530,11 +535,28 @@ class PagoBancard(models.Model):
         CANCELADO = "CANCELADO", "Cancelado"
         ERROR     = "ERROR",     "Error"
 
+    class Tipo(models.TextChoices):
+        TARJETA  = "TARJETA",  "Recarga de tarjeta"
+        ALMUERZO = "ALMUERZO", "Pago de cuenta almuerzo"
+
+    tipo = models.CharField(
+        max_length=10, choices=Tipo.choices, default=Tipo.TARJETA,
+    )
     tarjeta = models.ForeignKey(
         Tarjeta,
         models.PROTECT,
+        null=True,
+        blank=True,
         related_name="pagos_bancard",
-        help_text="Tarjeta prepago que se recargará",
+        help_text="Tarjeta prepago que se recargará (solo tipo TARJETA)",
+    )
+    cuenta_almuerzo = models.ForeignKey(
+        "almuerzos.CuentaAlmuerzoMensual",
+        models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="pagos_bancard",
+        help_text="Cuenta mensual de almuerzo a abonar (solo tipo ALMUERZO)",
     )
     cliente = models.ForeignKey(
         "clientes.Cliente",
@@ -588,4 +610,5 @@ class PagoBancard(models.Model):
         ]
 
     def __str__(self):
-        return f"Bancard #{self.shop_process_id} - {self.tarjeta} - ₲{self.monto:,.0f} [{self.estado}]"
+        ref = self.tarjeta or self.cuenta_almuerzo or "—"
+        return f"Bancard #{self.shop_process_id} - {ref} - ₲{self.monto:,.0f} [{self.estado}]"

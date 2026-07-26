@@ -110,9 +110,8 @@ def require_permission(modulo: str, accion: str):
             try:
                 from apps.usuarios.models import RolPermiso
                 tiene = RolPermiso.objects.filter(
-                    id_rol__nombre=user.rol,
-                    id_permiso__modulo=modulo,
-                    id_permiso__accion=accion,
+                    id_rol__nombre_rol=user.get_rol_display(),
+                    id_permiso__codigo_permiso=f"{modulo}_{accion}",
                 ).exists()
             except Exception:
                 tiene = False

@@ -1,0 +1,54 @@
+# docker-compose.staging.yml — Cantina Tita
+#
+# Ambiente de staging: corre en el mismo servidor que producción pero
+# en puertos distintos (8080 en lugar de 80) y con la base de datos
+# de staging (cantina_tita_staging).
+#
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+#
+# Prerequisitos:
+#   1. Crear la base de datos de staging en PostgreSQL:
+#        CREATE DATABASE cantina_tita_staging OWNER app_cantina;
+#   2. Copiar y completar variables de staging:
+#        copy backend\.env.production.example backend\.env.staging
+#      Ajustar: DB_NAME=cantina_tita_staging, BANCARD_*=sandbox values
+#   3. Migrar:
+#        docker compose -f docker-compose.yml -f docker-compose.staging.yml \
+#          run --rm backend python manage.py migrate
+
+services:
+
+  frontend:
+    ports:
+      - "8080:80"       # staging en :8080, producción en :80
+    environment:
+      - NGINX_ENV=staging
+
+  backend:
+    environment:
+      DJANGO_SETTINGS_MODULE: backend.settings.production
+      DB_NAME: cantina_tita_staging
+    env_file:
+      - ./backend/.env.staging
+
+  celery:
+    env_file:
+      - ./backend/.env.staging
+    environment:
+      DB_NAME: cantina_tita_staging
+
+  celery-beat:
+    env_file:
+      - ./backend/.env.staging
+    environment:
+      DB_NAME: cantina_tita_staging
+
+  # Prometheus y Grafana en puertos separados para staging
+  prometheus:
+    ports:
+      - "9190:9090"
+
+  grafana:
+    ports:
+      - "3100:3000"

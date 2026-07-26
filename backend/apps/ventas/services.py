@@ -2,9 +2,12 @@
 Servicios de negocio para ventas
 """
 
+import logging
 from decimal import Decimal
 
 from django.db import transaction
+
+logger = logging.getLogger(__name__)
 
 from rest_framework.exceptions import ValidationError
 
@@ -42,6 +45,8 @@ class VentaService:
         pin_autorizacion: str = "",
         referencia: str = "",
         cierre_caja=None,
+        genera_factura_legal: bool = False,
+        nro_factura: str = "",
     ) -> Venta:
         """
         Registra una venta completa con sus detalles.
@@ -313,7 +318,7 @@ class VentaService:
                         from apps.notificaciones.models import Notificacion
                         from apps.notificaciones.services import (
                             push_ws_notificacion,
-                            _whatsapp_cliente,
+                            whatsapp_cliente,
                         )
                         nombre_hijo = str(tarjeta_bloqueada.hijo)
                         deficit = abs(int(tarjeta_bloqueada.saldo_actual))
@@ -330,9 +335,13 @@ class VentaService:
                             destino=Notificacion.Destino.SISTEMA,
                         )
                         push_ws_notificacion(notif)
-                        _whatsapp_cliente(cliente_resp, msg)
+                        whatsapp_cliente(cliente_resp, msg)
                     except Exception:
-                        pass
+                        logger.warning(
+                            "No se pudo enviar notificación de saldo negativo para tarjeta %s",
+                            tarjeta_bloqueada.pk,
+                            exc_info=True,
+                        )
 
                 if cierre_caja:
                     from apps.contabilidad.models import MovimientoCaja
@@ -344,6 +353,30 @@ class VentaService:
                         medio_pago=None,
                         venta=venta,
                     )
+
+            # 7. Facturación opcional (CONTADO con cualquier medio: prepago, efectivo, POS, etc.)
+            # Si el cajero ingresó nro_factura → crea la Factura al instante.
+            # Si solo se marcó genera_factura_legal → queda pendiente para Facturación.
+            if tipo == "CONTADO" and nro_factura:
+                from apps.contabilidad.services import FacturacionService
+                iva_dict = {
+                    "iva_10": iva_10,
+                    "iva_5": iva_5,
+                    "monto_exenta": monto_exenta,
+                }
+                factura = FacturacionService.emitir_factura(
+                    cliente=cliente,
+                    nro_factura=nro_factura,
+                    monto_total=monto_total,
+                    **iva_dict,
+                )
+                venta.factura = factura
+                venta.nro_factura = nro_factura
+                venta.genera_factura_legal = True
+                venta.save(update_fields=["factura", "nro_factura", "genera_factura_legal"])
+            elif tipo == "CONTADO" and genera_factura_legal:
+                venta.genera_factura_legal = True
+                venta.save(update_fields=["genera_factura_legal"])
 
             return venta
 

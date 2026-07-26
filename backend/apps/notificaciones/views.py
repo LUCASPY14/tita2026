@@ -82,7 +82,10 @@ class VapidPublicKeyView(APIView):
         from django.conf import settings
         pk = getattr(settings, "VAPID_PUBLIC_KEY", "")
         if not pk:
-            return Response({"error": "Push notifications no configuradas en este servidor."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response(
+                {"error": "Push notifications no configuradas en este servidor."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return Response({"publicKey": pk})
 
 
@@ -101,7 +104,10 @@ class PushSubscriptionView(APIView):
         p256dh   = keys.get("p256dh", "")
         auth     = keys.get("auth", "")
         if not endpoint or not p256dh or not auth:
-            return Response({"error": "endpoint, keys.p256dh y keys.auth son requeridos."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "endpoint, keys.p256dh y keys.auth son requeridos."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         _, created = PushSubscription.objects.update_or_create(
             endpoint=endpoint,
             defaults={"usuario": request.user, "p256dh": p256dh, "auth": auth, "activa": True},
@@ -132,3 +138,82 @@ class EnviarNotificacionView(APIView):
         resultado = NotificacionService.procesar_pendientes(solicitud_ids=solicitud_ids)
         http_status = status.HTTP_200_OK if resultado["enviadas"] > 0 else status.HTTP_207_MULTI_STATUS
         return Response(resultado, status=http_status)
+
+
+class WAHAEstadoView(APIView):
+    """
+    GET  /api/notificaciones/whatsapp-estado/
+    Devuelve el estado de la sesión WAHA y si está disponible su QR.
+
+    POST /api/notificaciones/whatsapp-estado/
+    Body: {"telefono": "595981234567", "mensaje": "Prueba"}
+    Envía un mensaje de prueba para verificar la conexión.
+    """
+    permission_classes = [IsAdmin]
+
+    def _waha_headers(self):
+        from django.conf import settings
+        api_key = getattr(settings, "EVOLUTION_API_KEY", "")
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["X-Api-Key"] = api_key
+        return headers
+
+    def get(self, request):
+        import requests as req_lib
+        from django.conf import settings
+
+        base_url = getattr(settings, "EVOLUTION_API_URL", "").rstrip("/")
+        session  = getattr(settings, "EVOLUTION_API_INSTANCE", "default")
+
+        if not base_url:
+            return Response({
+                "configurado": False,
+                "conectado": False,
+                "session": session,
+                "mensaje": "EVOLUTION_API_URL no está configurada en .env",
+            })
+
+        headers = self._waha_headers()
+        try:
+            resp = req_lib.get(f"{base_url}/api/sessions", headers=headers, timeout=5)
+            resp.raise_for_status()
+            sessions = resp.json()
+            # WAHA devuelve lista de sesiones; buscamos la nuestra por nombre
+            session_info = next(
+                (s for s in sessions if s.get("name") == session),
+                None,
+            )
+            conectado = bool(session_info and session_info.get("status") == "WORKING")
+            return Response({
+                "configurado": True,
+                "conectado": conectado,
+                "session": session,
+                "estado": session_info.get("status") if session_info else "NOT_FOUND",
+                "nombre": session_info.get("name") if session_info else None,
+            })
+        except req_lib.RequestException as exc:
+            return Response({
+                "configurado": True,
+                "conectado": False,
+                "session": session,
+                "error": str(exc),
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    def post(self, request):
+        telefono = (request.data.get("telefono") or "").strip()
+        mensaje  = (request.data.get("mensaje") or "Mensaje de prueba — Cantina Tita").strip()
+
+        if not telefono:
+            return Response(
+                {"error": "El campo 'telefono' es requerido (formato: 595981234567)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            from .services import enviar_whatsapp
+            resultado = enviar_whatsapp(telefono, mensaje)
+            return Response({"ok": True, "waha_response": resultado})
+        except RuntimeError as exc:
+            return Response({"ok": False, "error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except Exception as exc:
+            return Response({"ok": False, "error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)

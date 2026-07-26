@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests de vistas de almuerzos.
 Cubre: PrecioAlmuerzoViewSet, TipoAlmuerzoViewSet, PlanAlmuerzoViewSet,
 SuscripcionAlmuerzoViewSet, RegistroConsumoAlmuerzoViewSet (create + validaciones),
@@ -563,7 +563,7 @@ class TestReporteAlmuerzos:
         assert resp.status_code == 200
         assert "periodo" in resp.data
         assert "totales" in resp.data
-        assert "detalle" in resp.data
+        assert "filas" in resp.data
 
     def test_con_cuenta_mensual_muestra_alumno(self, api_admin, cuenta_mensual):
         hoy = date.today()
@@ -581,7 +581,7 @@ class TestReporteAlmuerzos:
             {"anio": str(hoy.year), "mes": str(hoy.month), "hijo": hijo_almuerzo.pk},
         )
         assert resp.status_code == 200
-        assert len(resp.data["detalle"]) == 1
+        assert len(resp.data["filas"]) == 1
 
     def test_filtro_por_grado(self, api_admin, cuenta_mensual, grado):
         hoy = date.today()
@@ -609,6 +609,26 @@ class TestReporteAlmuerzos:
         )
         assert resp.status_code == 200
         assert b"Pedro" in resp.content
+
+    def test_filtro_por_tarjeta(self, api_admin, cuenta_mensual, tarjeta_almuerzo):
+        hoy = date.today()
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reportes/",
+            {"anio": str(hoy.year), "mes": str(hoy.month), "tarjeta": "ALMZ-VIEW01"},
+        )
+        assert resp.status_code == 200
+        assert len(resp.data["filas"]) == 1
+        assert resp.data["filas"][0]["nro_tarjeta"] == "ALMZ-VIEW01"
+
+    def test_filas_incluyen_nro_tarjeta(self, api_admin, cuenta_mensual, tarjeta_almuerzo):
+        hoy = date.today()
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reportes/",
+            {"anio": str(hoy.year), "mes": str(hoy.month)},
+        )
+        assert resp.status_code == 200
+        assert len(resp.data["filas"]) >= 1
+        assert "nro_tarjeta" in resp.data["filas"][0]
 
     def test_requiere_autenticacion(self, api_client):
         resp = api_client.get("/api/v1/almuerzos/reportes/", {"anio": "2026", "mes": "5"})
@@ -678,3 +698,293 @@ class TestDetalleMenuPermisos:
             format="json",
         )
         assert resp.status_code in (201, 400)
+
+
+# ── RegistroConsumo destroy (admin) ───────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestRegistroConsumoDestroyAdmin:
+    """Líneas 177-184: destroy con ADMIN — solo permite borrar registros ANULADOS."""
+
+    def _registro(self, hijo, tarjeta, cajero, estado):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        return RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo,
+            fecha_consumo=date.today() - timedelta(days=2),
+            costo_almuerzo=Decimal("15000"),
+            ya_cobrado=True,
+            nro_tarjeta=tarjeta,
+            registrado_por=cajero,
+            estado=estado,
+        )
+
+    def test_admin_elimina_registro_anulado_204(
+        self, api_admin, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero
+    ):
+        registro = self._registro(
+            hijo_almuerzo, tarjeta_almuerzo, usuario_cajero,
+            "ANULADO",
+        )
+        resp = api_admin.delete(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/")
+        assert resp.status_code == 204
+
+    def test_admin_no_puede_eliminar_no_anulado_400(
+        self, api_admin, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero
+    ):
+        registro = self._registro(
+            hijo_almuerzo, tarjeta_almuerzo, usuario_cajero,
+            "REGISTRADO",
+        )
+        resp = api_admin.delete(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/")
+        assert resp.status_code == 400
+        assert "ANULADO" in resp.data["error"]
+
+
+# ── RegistroConsumo: WhatsApp except silente ──────────────────────────────────
+
+@pytest.mark.django_db
+class TestRegistroConsumoWhatsappFallback:
+    """Líneas 285-286: whatsapp_cliente lanza excepción → se ignora, create igual exitoso."""
+
+    def test_create_exitoso_aunque_whatsapp_falle(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo
+    ):
+        from unittest.mock import patch
+        with patch(
+            "apps.notificaciones.services.whatsapp_cliente",
+            side_effect=Exception("WhatsApp caído"),
+        ):
+            resp = api_cajero.post(
+                "/api/v1/almuerzos/registros-consumo/",
+                {
+                    "hijo": hijo_almuerzo.pk,
+                    "fecha_consumo": str(date.today()),
+                    "nro_tarjeta": tarjeta_almuerzo.pk,
+                },
+                format="json",
+            )
+        assert resp.status_code == 201
+
+
+# ── PagoAlmuerzoMensual create ────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestPagoAlmuerzoMensualCreate:
+    """Líneas 414-427: perform_create del ViewSet de pagos de almuerzo mensual."""
+
+    def test_create_pago_mensual_201(self, api_admin, suscripcion_activa):
+        resp = api_admin.post(
+            "/api/v1/almuerzos/pagos-mensuales/",
+            {
+                "suscripcion": suscripcion_activa.pk,
+                "monto_pagado": "200000",
+                "mes_pagado": str(date.today().replace(day=1)),
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+
+    def test_create_pago_mensual_whatsapp_falla_igual_201(
+        self, api_admin, suscripcion_activa
+    ):
+        from unittest.mock import patch
+        with patch(
+            "apps.notificaciones.services.whatsapp_cliente",
+            side_effect=Exception("WhatsApp caído"),
+        ):
+            resp = api_admin.post(
+                "/api/v1/almuerzos/pagos-mensuales/",
+                {
+                    "suscripcion": suscripcion_activa.pk,
+                    "monto_pagado": "100000",
+                    "mes_pagado": str(date.today().replace(day=1)),
+                },
+                format="json",
+            )
+        assert resp.status_code == 201
+
+
+# ── ReporteConsumoGradoView ───────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestReporteConsumoGrado:
+    """Líneas 604-690: reporte consumo por grado — JSON y CSV."""
+
+    def test_sin_params_retorna_400(self, api_admin):
+        resp = api_admin.get("/api/v1/almuerzos/reporte-consumo-grado/")
+        assert resp.status_code == 400
+
+    def test_con_fechas_retorna_estructura(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-consumo-grado/",
+            {"desde": "2026-01-01", "hasta": "2026-12-31"},
+        )
+        assert resp.status_code == 200
+        assert "por_grado" in resp.data
+        assert "horarios_pico" in resp.data
+        assert "resumen" in resp.data
+
+    def test_con_datos_calcula_tasa_rechazo(
+        self, api_admin, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo
+    ):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo,
+            fecha_consumo=date(2026, 6, 10),
+            costo_almuerzo=Decimal("15000"),
+            ya_cobrado=True,
+            nro_tarjeta=tarjeta_almuerzo,
+            registrado_por=usuario_cajero,
+            estado="REGISTRADO",
+        )
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo,
+            fecha_consumo=date(2026, 6, 11),
+            costo_almuerzo=Decimal("15000"),
+            ya_cobrado=False,
+            nro_tarjeta=tarjeta_almuerzo,
+            registrado_por=usuario_cajero,
+            estado="RECHAZADO",
+        )
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-consumo-grado/",
+            {"desde": "2026-06-01", "hasta": "2026-06-30"},
+        )
+        assert resp.status_code == 200
+        grados = resp.data["por_grado"]
+        assert len(grados) == 1
+        assert grados[0]["tasa_rechazo"] == 50.0
+
+    def test_formato_csv_retorna_descarga(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-consumo-grado/",
+            {"desde": "2026-01-01", "hasta": "2026-12-31", "formato": "csv"},
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp["Content-Type"]
+        assert "attachment" in resp["Content-Disposition"]
+
+    def test_formato_csv_con_datos_incluye_filas(
+        self, api_admin, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo
+    ):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo,
+            fecha_consumo=date(2026, 5, 10),
+            costo_almuerzo=Decimal("15000"),
+            ya_cobrado=True,
+            nro_tarjeta=tarjeta_almuerzo,
+            registrado_por=usuario_cajero,
+            estado="REGISTRADO",
+        )
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-consumo-grado/",
+            {"desde": "2026-05-01", "hasta": "2026-05-31", "formato": "csv"},
+        )
+        assert resp.status_code == 200
+        content = resp.content.decode("utf-8-sig")
+        assert "3er grado" in content
+
+
+# ── ReporteCobranzaAlmuerzosView ──────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestReporteCobranzaAlmuerzos:
+    """Líneas 711-806: reporte cobranza por año — JSON y CSV."""
+
+    def test_sin_anio_retorna_400(self, api_admin):
+        resp = api_admin.get("/api/v1/almuerzos/reporte-cobranza/")
+        assert resp.status_code == 400
+
+    def test_anio_invalido_retorna_400(self, api_admin):
+        resp = api_admin.get("/api/v1/almuerzos/reporte-cobranza/", {"anio": "no_anio"})
+        assert resp.status_code == 400
+
+    def test_con_anio_retorna_estructura(self, api_admin):
+        resp = api_admin.get("/api/v1/almuerzos/reporte-cobranza/", {"anio": "2026"})
+        assert resp.status_code == 200
+        assert "por_mes" in resp.data
+        assert "por_forma_cobro" in resp.data
+        assert "resumen" in resp.data
+
+    def test_con_cuentas_calcula_totales(
+        self, api_admin, hijo_almuerzo, grado
+    ):
+        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_almuerzo,
+            anio=2026, mes=6,
+            cantidad_almuerzos=10,
+            monto_total=Decimal("150000"),
+            monto_pagado=Decimal("100000"),
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+        )
+        resp = api_admin.get("/api/v1/almuerzos/reporte-cobranza/", {"anio": "2026"})
+        assert resp.status_code == 200
+        assert resp.data["resumen"]["monto_anual"] == 150000
+        assert resp.data["resumen"]["cobrado_anual"] == 100000
+
+    def test_formato_csv_retorna_descarga(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-cobranza/",
+            {"anio": "2026", "formato": "csv"},
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp["Content-Type"]
+        assert "attachment" in resp["Content-Disposition"]
+
+    def test_formato_csv_con_datos_incluye_filas(
+        self, api_admin, hijo_almuerzo
+    ):
+        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_almuerzo,
+            anio=2026, mes=3,
+            cantidad_almuerzos=8,
+            monto_total=Decimal("120000"),
+            monto_pagado=Decimal("120000"),
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+            estado=CuentaAlmuerzoMensual.Estado.PAGADO,
+        )
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-cobranza/",
+            {"anio": "2026", "formato": "csv"},
+        )
+        assert resp.status_code == 200
+        content = resp.content.decode("utf-8-sig")
+        assert "Marzo" in content
+
+    def test_excel_retorna_xlsx(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-cobranza/",
+            {"anio": "2026", "formato": "excel"},
+        )
+        assert resp.status_code == 200
+        assert "spreadsheetml" in resp["Content-Type"]
+        assert "attachment" in resp.get("Content-Disposition", "")
+        assert resp.get("Content-Disposition", "").endswith(".xlsx\"")
+
+    def test_excel_con_datos_genera_filas(self, api_admin):
+        import io
+        from decimal import Decimal
+        from openpyxl import load_workbook
+        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        from apps.clientes.models import Hijo
+        hijo = Hijo.objects.first()
+        if hijo:
+            CuentaAlmuerzoMensual.objects.create(
+                hijo=hijo,
+                anio=2026,
+                mes=3,
+                monto_total=Decimal("150000"),
+                monto_pagado=Decimal("150000"),
+                estado=CuentaAlmuerzoMensual.Estado.PAGADO,
+            )
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-cobranza/",
+            {"anio": "2026", "formato": "excel"},
+        )
+        assert resp.status_code == 200
+        wb = load_workbook(io.BytesIO(resp.content))
+        ws = wb.active
+        assert ws.max_row >= 2  # encabezado + al menos 1 fila

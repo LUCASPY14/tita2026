@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import {
   ShoppingCart, Users, Package, AlertTriangle, Banknote,
   TrendingUp, CreditCard, Truck, ArrowRight,
-  Zap, ChefHat, BarChart2, Wallet, UtensilsCrossed, Warehouse,
+  Zap, ChefHat, BarChart2, Wallet, UtensilsCrossed, Warehouse, RefreshCw,
 } from 'lucide-react'
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   AreaChart, Area,
 } from 'recharts'
+import toast from 'react-hot-toast'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { useDashboardKPI } from '../hooks/useDashboardKPI'
@@ -87,7 +88,7 @@ export default function Dashboard() {
           setTendencia(((tendRes?.data as { data?: TendenciaPoint[] })?.data) ?? [])
         }
       })
-      .catch(() => {})
+      .catch(() => toast.error('Error al cargar estadísticas del dashboard'))
       .finally(() => setLoading(false))
   }, [showCharts])
 
@@ -95,7 +96,11 @@ export default function Dashboard() {
   const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
 
   const r = useMemo(
-    () => resumen ?? { ventasHoy: 0, montoHoy: 0, clientes: 0, productos: 0, stockBajo: 0, cajasAbiertas: 0 },
+    () => resumen ?? {
+      ventasHoy: 0, montoHoy: 0, clientes: 0, productos: 0,
+      stockBajo: 0, cajasAbiertas: 0,
+      recargasHoy: 0, montoRecargasHoy: 0, almuerzoHoy: 0, tarjetasEnAlerta: 0,
+    },
     [resumen]
   )
 
@@ -123,14 +128,30 @@ export default function Dashboard() {
       label: 'Cajas Abiertas', value: r.cajasAbiertas, sub: 'en operación',
       icon: Banknote, color: 'text-purple-600', bg: 'bg-purple-50',
     },
+    {
+      label: 'Recargas Hoy', value: r.recargasHoy,
+      sub: `${r.montoRecargasHoy.toLocaleString('es-PY')} Gs.`,
+      icon: RefreshCw, color: 'text-teal-600', bg: 'bg-teal-50',
+    },
+    {
+      label: 'Almuerzos Hoy', value: r.almuerzoHoy, sub: 'consumidos',
+      icon: UtensilsCrossed, color: 'text-amber-600', bg: 'bg-amber-50',
+    },
+    {
+      label: 'Tarjetas Alerta', value: r.tarjetasEnAlerta, sub: 'saldo bajo',
+      icon: CreditCard,
+      color: r.tarjetasEnAlerta > 0 ? 'text-orange-600' : 'text-slate-400',
+      bg: r.tarjetasEnAlerta > 0 ? 'bg-orange-50' : 'bg-slate-50',
+      link: '/tarjetas',
+    },
   ], [r])
 
   const STATS_POR_ROL: Record<string, string[]> = {
-    ADMIN:      ['Ventas Hoy', 'Clientes Activos', 'Productos', 'Alertas Stock', 'Cajas Abiertas'],
-    CAJERO:     ['Ventas Hoy', 'Cajas Abiertas'],
-    SUPERVISOR: ['Ventas Hoy', 'Clientes Activos', 'Productos', 'Alertas Stock', 'Cajas Abiertas'],
+    ADMIN:      ['Ventas Hoy', 'Recargas Hoy', 'Almuerzos Hoy', 'Tarjetas Alerta', 'Alertas Stock', 'Cajas Abiertas'],
+    CAJERO:     ['Ventas Hoy', 'Recargas Hoy', 'Cajas Abiertas'],
+    SUPERVISOR: ['Ventas Hoy', 'Recargas Hoy', 'Almuerzos Hoy', 'Alertas Stock', 'Cajas Abiertas'],
     COBRADOR:   ['Ventas Hoy', 'Clientes Activos', 'Cajas Abiertas'],
-    COCINA:     ['Ventas Hoy', 'Cajas Abiertas'],
+    COCINA:     ['Almuerzos Hoy', 'Cajas Abiertas'],
   }
 
   const stats = useMemo(() => {

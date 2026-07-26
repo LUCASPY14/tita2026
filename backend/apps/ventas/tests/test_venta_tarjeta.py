@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para ventas realizadas con tarjeta prepago del estudiante.
 Cubre: descuento de saldo en tarjeta, venta con saldo insuficiente,
 venta con tarjeta bloqueada, reverso de saldo al anular.
@@ -152,3 +152,93 @@ class TestVentaConTarjeta:
         assert venta.monto_total == Decimal("9000")
         tarjeta_activa.refresh_from_db()
         assert tarjeta_activa.saldo_actual == Decimal("6000")
+
+
+@pytest.mark.django_db
+class TestVentaNotificacionSaldoNegativo:
+    """Lines 308-335 of ventas/services.py: portal notification when saldo goes negative."""
+
+    @pytest.fixture
+    def tarjeta_neg(self, db, hijo):
+        from apps.core.models import Tarjeta
+        return Tarjeta.objects.create(
+            nro_tarjeta="VENTA_NEG01",
+            hijo=hijo,
+            saldo_actual=Decimal("1000"),
+            estado=Tarjeta.Estado.ACTIVA,
+            permite_saldo_negativo=True,
+            limite_credito=Decimal("50000"),
+        )
+
+    @pytest.fixture
+    def usuario_portal(self, db, cliente):
+        from apps.usuarios.models import Usuario
+        return Usuario.objects.create_user(
+            email="portal_padre_neg@test.com",
+            password="test1234",
+            nombre="Padre",
+            apellido="Portal",
+            rol=Usuario.Rol.CLIENTE_WEB,
+            cliente=cliente,
+        )
+
+    def _venta(self, cliente, cajero, producto, stock_producto, tarjeta):
+        from apps.ventas.services import VentaService
+        return VentaService.registrar_venta(
+            cliente=cliente,
+            cajero=cajero,
+            tipo="CONTADO",
+            tarjeta=tarjeta,
+            items=[{
+                "producto": producto,
+                "cantidad": Decimal("1"),
+                "precio_unitario": Decimal("3000"),
+            }],
+        )
+
+    def test_notifica_portal_cuando_saldo_negativo(
+        self, cliente, usuario_cajero, producto, stock_producto,
+        tarjeta_neg, usuario_portal,
+    ):
+        from unittest.mock import patch
+        with patch("apps.notificaciones.services.push_ws_notificacion") as mock_push, \
+             patch("apps.notificaciones.services.whatsapp_cliente") as mock_wa:
+            venta = self._venta(cliente, usuario_cajero, producto, stock_producto, tarjeta_neg)
+
+        assert venta is not None
+        tarjeta_neg.refresh_from_db()
+        assert tarjeta_neg.saldo_actual < 0
+        mock_push.assert_called_once()
+        mock_wa.assert_called_once()
+
+    def test_notificacion_exception_no_bloquea_venta(
+        self, cliente, usuario_cajero, producto, stock_producto,
+        tarjeta_neg, usuario_portal,
+    ):
+        from unittest.mock import patch
+        with patch(
+            "apps.notificaciones.services.push_ws_notificacion",
+            side_effect=Exception("WS error"),
+        ):
+            venta = self._venta(cliente, usuario_cajero, producto, stock_producto, tarjeta_neg)
+
+        assert venta is not None
+
+    def test_sin_usuario_portal_fallback_silencioso(
+        self, cliente, usuario_cajero, producto, stock_producto,
+        tarjeta_neg,
+        # usuario_portal NOT created → RelatedObjectDoesNotExist → caught by except
+    ):
+        from apps.ventas.services import VentaService
+        venta = VentaService.registrar_venta(
+            cliente=cliente,
+            cajero=usuario_cajero,
+            tipo="CONTADO",
+            tarjeta=tarjeta_neg,
+            items=[{
+                "producto": producto,
+                "cantidad": Decimal("1"),
+                "precio_unitario": Decimal("3000"),
+            }],
+        )
+        assert venta is not None

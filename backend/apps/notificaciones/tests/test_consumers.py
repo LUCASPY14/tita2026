@@ -186,11 +186,9 @@ class TestDashboardConsumer:
     def test_get_kpis_retorna_estructura_correcta(self):
         consumer = _make_dashboard_consumer()
         result = asyncio.run(consumer._get_kpis())
-        assert "ventasHoy" in result
-        assert "montoHoy" in result
-        assert "clientes" in result
-        assert "productos" in result
-        assert "stockBajo" in result
-        assert "cajasAbiertas" in result
-        assert isinstance(result["ventasHoy"], int)
-        assert isinstance(result["montoHoy"], int)
+        for campo in [
+            "ventasHoy", "montoHoy", "clientes", "productos", "stockBajo", "cajasAbiertas",
+            "recargasHoy", "montoRecargasHoy", "almuerzoHoy", "tarjetasEnAlerta",
+        ]:
+            assert campo in result, f"Campo '{campo}' ausente en _get_kpis()"
+            assert isinstance(result[campo], int), f"Campo '{campo}' debería ser int"

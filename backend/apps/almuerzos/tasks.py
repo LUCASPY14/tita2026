@@ -1,6 +1,6 @@
-import calendar
+﻿import calendar
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from celery import shared_task
 from django.db import transaction
@@ -40,7 +40,7 @@ def cerrar_cuentas_mes_anterior():
     hoy = timezone.now().date()
     # Mes anterior
     primer_dia_mes = date(hoy.year, hoy.month, 1)
-    ultimo_dia_mes_ant = primer_dia_mes - timezone.timedelta(days=1)
+    ultimo_dia_mes_ant = primer_dia_mes - timedelta(days=1)
     anio_ant, mes_ant = ultimo_dia_mes_ant.year, ultimo_dia_mes_ant.month
 
     logger.info("cerrar_cuentas_mes_anterior: cerrando %02d/%d", mes_ant, anio_ant)
@@ -52,6 +52,7 @@ def cerrar_cuentas_mes_anterior():
     ).select_related("hijo__cliente_responsable")
 
     cerradas = anuladas = actualizadas = 0
+    notif_pendientes = []
 
     with transaction.atomic():
         for cuenta in cuentas:
@@ -91,22 +92,35 @@ def cerrar_cuentas_mes_anterior():
             registros_qs.update(marcado_en_cuenta=True)
             actualizadas += 1
 
-            # Notificar al padre con el resumen del mes
-            try:
-                from apps.notificaciones.services import _whatsapp_cliente
-                saldo_final = cuenta.monto_total - cuenta.monto_pagado
-                if saldo_final > 0:
-                    _whatsapp_cliente(
-                        cuenta.hijo.cliente_responsable,
-                        f"Resumen de almuerzos {mes_ant:02d}/{anio_ant} de "
-                        f"{cuenta.hijo.nombre_completo}: "
-                        f"{cuenta.cantidad_almuerzos} almuerzo(s), "
-                        f"total Gs. {int(cuenta.monto_total):,}. "
-                        f"Pendiente: Gs. {int(saldo_final):,}. "
-                        f"Podes pagar en la cantina."
-                    )
-            except Exception:
-                pass
+            # Recopilar notificación — se envía tras confirmar la transacción
+            saldo_final = cuenta.monto_total - cuenta.monto_pagado
+            if saldo_final > 0:
+                notif_pendientes.append((
+                    cuenta.hijo.cliente_responsable,
+                    cuenta.hijo.nombre_completo,
+                    cuenta.cantidad_almuerzos,
+                    cuenta.monto_total,
+                    saldo_final,
+                ))
+
+    from apps.notificaciones.services import whatsapp_cliente
+    for responsable, nombre_hijo, cantidad_alm, monto_total, saldo_final in notif_pendientes:
+        try:
+            whatsapp_cliente(
+                responsable,
+                f"Resumen de almuerzos {mes_ant:02d}/{anio_ant} de "
+                f"{nombre_hijo}: "
+                f"{cantidad_alm} almuerzo(s), "
+                f"total Gs. {int(monto_total):,}. "
+                f"Pendiente: Gs. {int(saldo_final):,}. "
+                f"Podes pagar en la cantina."
+            )
+        except Exception:
+            logger.warning(
+                "No se pudo enviar WhatsApp de resumen al responsable de %s (%02d/%d)",
+                nombre_hijo, mes_ant, anio_ant,
+                exc_info=True,
+            )
 
     cerradas = actualizadas + anuladas
     logger.info(
@@ -155,7 +169,6 @@ def generar_cuentas_mensuales():
     con suscripción activa que no tenga cuenta aún.
     Se ejecuta el día 1 de cada mes a las 06:00.
     """
-    import calendar
     from datetime import date
     from django.db import models as db_models
     from apps.almuerzos.models import SuscripcionAlmuerzo, CuentaAlmuerzoMensual
@@ -227,7 +240,7 @@ def alertar_cuentas_vencidas():
         "hijo__cliente_responsable__usuario_portal"
     )
 
-    from apps.notificaciones.services import _whatsapp_cliente
+    from apps.notificaciones.services import whatsapp_cliente
     creadas = 0
     for cuenta in cuentas_pendientes:
         saldo_pendiente = cuenta.monto_total - cuenta.monto_pagado
@@ -253,7 +266,7 @@ def alertar_cuentas_vencidas():
             )
             creadas += 1
 
-        _whatsapp_cliente(cuenta.hijo.cliente_responsable, msg)
+        whatsapp_cliente(cuenta.hijo.cliente_responsable, msg)
 
     logger.info("alertar_cuentas_vencidas: %d notificaciones creadas", creadas)
     return {"notificaciones_creadas": creadas}

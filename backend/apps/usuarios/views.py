@@ -5,6 +5,7 @@ Views para la app usuarios
 import base64
 import hashlib
 import hmac as hmac_mod
+import logging
 import secrets
 import struct
 import time
@@ -13,6 +14,7 @@ from datetime import timedelta
 
 from django.contrib.auth.tokens import default_token_generator
 from django.core import signing
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -29,6 +31,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from common.permissions import IsAdmin
 from common.throttling import LoginRateThrottle, PortalRateThrottle
+from .auditoria import registrar_auditoria
+
+logger = logging.getLogger(__name__)
 
 
 # ── TOTP helpers (RFC 6238, sin dependencias externas) ────────────────────────
@@ -59,10 +64,13 @@ def _verify_totp(secret_b32, codigo, step=30, tolerance=1):
 def _generate_backup_codes(n=8):
     return [secrets.token_hex(3).upper() for _ in range(n)]
 
+from django.conf import settings as django_settings
+from django.core.cache import cache
+
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters as drf_filters
 
-from django.db.models import Count, Q, Avg
+from django.db.models import Count, Max, Q
 from django.db.models.functions import TruncDate
 
 from .models import (
@@ -75,6 +83,7 @@ from .models import (
     SesionActiva,
     AuditoriaOperacion,
     IntentoLogin,
+    BloqueoCuenta,
 )
 from .serializers import (
     UsuarioSerializer,
@@ -145,8 +154,80 @@ def _registrar_sesion(user, request) -> str:
         user_agent=ua,
         activa=True,
     )
+    user.ultimo_acceso = timezone.now()
+    user.save(update_fields=["ultimo_acceso"])
     return session_key
 
+
+# ── Bloqueo automático de cuenta ──────────────────────────────────────────────
+
+def _cache_key_email(email: str) -> str:
+    h = hashlib.sha256(email.lower().encode()).hexdigest()[:20]
+    return f"login_fail:email:{h}"
+
+
+def _cache_key_ip(ip: str) -> str:
+    return f"login_fail:ip:{ip}"
+
+
+def _esta_bloqueado_cache(email: str, ip: str) -> bool:
+    """Chequeo O(1) en cache antes de autenticar."""
+    max_i = django_settings.LOGIN_MAX_INTENTOS
+    if email and cache.get(_cache_key_email(email), 0) >= max_i:
+        return True
+    if ip and cache.get(_cache_key_ip(ip), 0) >= max_i:
+        return True
+    return False
+
+
+def _registrar_fallo_login(email: str, ip: str) -> None:
+    """
+    Incrementa contadores de fallos en cache y crea BloqueoCuenta cuando se
+    supera LOGIN_MAX_INTENTOS. La ventana de conteo expira sola (TTL en cache).
+    """
+    max_i    = django_settings.LOGIN_MAX_INTENTOS
+    ventana  = django_settings.LOGIN_VENTANA_MINUTOS * 60
+    bloqueo  = django_settings.LOGIN_BLOQUEO_MINUTOS
+
+    # Incrementar contador por email (no atómico en LocMemCache, aceptable para este caso)
+    count_email = 0
+    if email:
+        count_email = cache.get(_cache_key_email(email), 0) + 1
+        cache.set(_cache_key_email(email), count_email, timeout=ventana)
+
+    # Incrementar contador por IP
+    if ip:
+        count_ip = cache.get(_cache_key_ip(ip), 0) + 1
+        cache.set(_cache_key_ip(ip), count_ip, timeout=ventana)
+
+    # Si el email supera el umbral y el usuario existe, crear BloqueoCuenta
+    if email and count_email >= max_i:
+        try:
+            user = Usuario.objects.only("id").get(email__iexact=email, is_active=True)
+            if not BloqueoCuenta.objects.filter(usuario=user, estado=True).exists():
+                BloqueoCuenta.objects.create(
+                    usuario=user,
+                    motivo=(
+                        f"Bloqueo automático: {count_email} intentos fallidos"
+                        f" en {django_settings.LOGIN_VENTANA_MINUTOS} min"
+                    ),
+                    fecha_desbloqueo=timezone.now() + timedelta(minutes=bloqueo),
+                    ip_address=ip or None,
+                    estado=True,
+                )
+        except Usuario.DoesNotExist:
+            pass
+
+
+def _limpiar_contadores_login(email: str, ip: str) -> None:
+    """Borra los contadores de fallo al producirse un login exitoso."""
+    if email:
+        cache.delete(_cache_key_email(email))
+    if ip:
+        cache.delete(_cache_key_ip(ip))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
@@ -181,22 +262,106 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     throttle_classes = [LoginRateThrottle]
 
     def post(self, request, *_args, **_kwargs):
+        email = (request.data.get("email") or request.data.get("username") or "").strip().lower()[:254]
+        ip    = request.META.get("REMOTE_ADDR") or "0.0.0.0"  # nosec B104
+
+        # ── 1. Check cache (O(1) — cubre bloqueos automáticos recientes) ──────
+        if _esta_bloqueado_cache(email, ip):
+            return Response(
+                {"detail": "Demasiados intentos fallidos. Intentá de nuevo en unos minutos."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        # ── 2. Check BloqueoCuenta DB (cubre bloqueos manuales y persistentes) ─
+        if email:
+            try:
+                _check_user = Usuario.objects.only("id").get(email__iexact=email, is_active=True)
+                bloqueo = (
+                    BloqueoCuenta.objects
+                    .filter(usuario=_check_user, estado=True)
+                    .order_by("-fecha_bloqueo")
+                    .first()
+                )
+                if bloqueo:
+                    if bloqueo.fecha_desbloqueo and bloqueo.fecha_desbloqueo <= timezone.now():
+                        # Expiró — limpiar inline
+                        bloqueo.estado = False
+                        bloqueo.save(update_fields=["estado"])
+                    else:
+                        msg = "Cuenta bloqueada temporalmente."
+                        if bloqueo.fecha_desbloqueo:
+                            msg += f" Disponible después de las {bloqueo.fecha_desbloqueo.strftime('%H:%M')}."
+                        return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+            except Usuario.DoesNotExist:
+                pass
+
+        # ── 3. Autenticar ─────────────────────────────────────────────────────
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
         except TokenError as e:
             raise InvalidToken(e.args[0])
+        except Exception as e:
+            # Con ATOMIC_REQUESTS=True, un re-raise haría rollback de los registros
+            # de auditoría. Retornamos la Response directamente para que la transacción
+            # haga commit y queden persistidos IntentoLogin + AuditoriaOperacion.
+            motivo = str(getattr(e, "detail", e))[:100]
+            _registrar_fallo_login(email, ip)
+            try:
+                IntentoLogin.objects.create(
+                    email=email or "unknown@audit",
+                    ip_address=ip,
+                    exitoso=False,
+                    motivo_fallo=motivo,
+                )
+            except Exception:
+                logger.warning("No se pudo registrar IntentoLogin (login fallido)", exc_info=True)
+            registrar_auditoria(
+                request=request,
+                operacion="LOGIN",
+                tabla="usuarios_usuario",
+                descripcion=f"Login fallido para {email}",
+                resultado="FALLA",
+                mensaje_error=motivo,
+            )
+            err_status = getattr(e, "status_code", status.HTTP_401_UNAUTHORIZED)
+            err_detail = getattr(e, "detail", {"detail": str(e)})
+            return Response(err_detail, status=err_status)
 
+        # ── 4. Login exitoso — limpiar contadores ─────────────────────────────
         user = serializer.user
+        _limpiar_contadores_login(email, ip)
 
         try:
             if user.auth_2fa.habilitado:
                 pre_auth = signing.dumps({"user_id": user.id}, salt="2fa-pre-auth")
+                registrar_auditoria(
+                    usuario=user, request=request,
+                    operacion="LOGIN_2FA_INICIO",
+                    tabla="usuarios_usuario",
+                    id_registro=user.id,
+                    descripcion=f"Login paso 1 OK — esperando 2FA ({user.email})",
+                )
                 return Response({"requires_2fa": True, "pre_auth_token": pre_auth})
-        except Exception:
+        except ObjectDoesNotExist:
             pass
 
         session_key = _registrar_sesion(user, request)
+        try:
+            IntentoLogin.objects.create(
+                email=user.email,
+                ip_address=ip,
+                exitoso=True,
+            )
+        except Exception:
+            logger.warning("No se pudo registrar IntentoLogin (login exitoso)", exc_info=True)
+        registrar_auditoria(
+            usuario=user, request=request,
+            operacion="LOGIN",
+            tabla="usuarios_usuario",
+            id_registro=user.id,
+            descripcion=f"Login exitoso ({user.email}) rol={user.rol}",
+        )
         return Response({**serializer.validated_data, "user": _user_data(user), "session_key": session_key})
 
 
@@ -218,6 +383,40 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             return UsuarioCreateSerializer
         return UsuarioSerializer
 
+    def perform_create(self, serializer):
+        usuario = serializer.save()
+        registrar_auditoria(
+            request=self.request,
+            operacion="CREAR_USUARIO",
+            tabla="usuarios_usuario",
+            id_registro=usuario.id,
+            descripcion=f"Usuario creado: {usuario.email} rol={usuario.rol}",
+        )
+
+    def perform_update(self, serializer):
+        anterior_rol = serializer.instance.rol
+        usuario = serializer.save()
+        desc = f"Usuario modificado: {usuario.email}"
+        if anterior_rol != usuario.rol:
+            desc += f" (rol {anterior_rol}→{usuario.rol})"
+        registrar_auditoria(
+            request=self.request,
+            operacion="MODIFICAR_USUARIO",
+            tabla="usuarios_usuario",
+            id_registro=usuario.id,
+            descripcion=desc,
+        )
+
+    def perform_destroy(self, instance):
+        registrar_auditoria(
+            request=self.request,
+            operacion="ELIMINAR_USUARIO",
+            tabla="usuarios_usuario",
+            id_registro=instance.id,
+            descripcion=f"Usuario eliminado: {instance.email} rol={instance.rol}",
+        )
+        instance.delete()
+
     @action(detail=False, methods=['get'])
     def me(self, request):
         user = request.user
@@ -238,6 +437,13 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         user.set_password(serializer.validated_data['password_nuevo'])
         user.debe_cambiar_contrasena = False
         user.save(update_fields=['password', 'debe_cambiar_contrasena'])
+        registrar_auditoria(
+            request=request,
+            operacion="CAMBIO_PASSWORD",
+            tabla="usuarios_usuario",
+            id_registro=user.id,
+            descripcion=f"Cambio de contraseña ({user.email})",
+        )
         return Response({'detail': 'Contraseña actualizada correctamente.'})
 
 
@@ -337,6 +543,7 @@ class PortalMiHijoView(APIView):
             cuenta_data = None
             if cuenta:
                 cuenta_data = {
+                    "id": cuenta.id,
                     "cantidad_almuerzos": cuenta.cantidad_almuerzos,
                     "monto_total": int(cuenta.monto_total),
                     "monto_pagado": int(cuenta.monto_pagado),
@@ -753,7 +960,7 @@ class TwoFADesactivarView(APIView):
 
         auth.habilitado = False
         auth.fecha_activacion = None
-        auth.secret_key = ""
+        auth.secret_key = ""  # nosec B105 — vaciando campo 2FA, no es una password hardcodeada
         auth.backup_codes = []
         auth.save(update_fields=["habilitado", "fecha_activacion", "secret_key", "backup_codes"])
         return Response({"detail": f"2FA desactivado para {target.email}."})
@@ -809,12 +1016,28 @@ class TwoFALoginVerificarView(APIView):
         )
 
         if not valido:
+            registrar_auditoria(
+                usuario=user, request=request,
+                operacion="LOGIN_2FA",
+                tabla="usuarios_usuario",
+                id_registro=user.id,
+                descripcion=f"Código 2FA inválido ({user.email})",
+                resultado="FALLA",
+                mensaje_error="Código TOTP/backup incorrecto",
+            )
             return Response({"error": "Código inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
         auth.ultima_verificacion = timezone.now()
         auth.save(update_fields=["ultima_verificacion"])
 
         session_key = _registrar_sesion(user, request)
+        registrar_auditoria(
+            usuario=user, request=request,
+            operacion="LOGIN_2FA",
+            tabla="usuarios_usuario",
+            id_registro=user.id,
+            descripcion=f"Login 2FA exitoso ({user.email})",
+        )
         refresh = RefreshToken.for_user(user)
         return Response({
             "refresh": str(refresh),
@@ -847,6 +1070,13 @@ class LogoutView(APIView):
             except Exception:
                 pass
 
+        registrar_auditoria(
+            request=request,
+            operacion="LOGOUT",
+            tabla="usuarios_usuario",
+            id_registro=request.user.id,
+            descripcion=f"Logout ({request.user.email})",
+        )
         return Response({"detail": "Sesión cerrada."})
 
 
@@ -936,27 +1166,50 @@ class ReporteIntentosLoginView(APIView):
         if hasta:
             qs = qs.filter(fecha_intento__date__lte=hasta)
 
-        total = qs.count()
+        total    = qs.count()
         fallidos = qs.filter(exitoso=False).count()
         exitosos = qs.filter(exitoso=True).count()
         tasa_fallo = round(fallidos / total * 100, 1) if total else 0
 
-        qs_fallidos = qs.filter(exitoso=False)
+        # IPs con BloqueoCuenta activo (para marcar columna "bloqueada" en el reporte)
+        ips_bloqueadas_set = set(
+            BloqueoCuenta.objects.filter(estado=True)
+            .exclude(ip_address=None)
+            .values_list("ip_address", flat=True)
+        )
 
-        por_ip = list(
-            qs_fallidos.values("ip_address")
-            .annotate(n_fallidos=Count("id_intento"))
-            .order_by("-n_fallidos")[:20]
+        top_ips = [
+            {
+                "ip": row["ip_address"],
+                "exitosos": row["_exitosos"],
+                "fallidos": row["_fallidos"],
+                "bloqueada": row["ip_address"] in ips_bloqueadas_set,
+            }
+            for row in qs.values("ip_address").annotate(
+                _exitosos=Count("id_intento", filter=Q(exitoso=True)),
+                _fallidos=Count("id_intento", filter=Q(exitoso=False)),
+            ).order_by("-_fallidos")[:20]
+        ]
+
+        top_emails = list(
+            qs.filter(exitoso=False)
+            .values("email")
+            .annotate(
+                fallidos=Count("id_intento"),
+                ultimo_intento=Max("fecha_intento"),
+            )
+            .order_by("-fallidos")[:20]
+            .values("email", "fallidos", "ultimo_intento")
         )
-        por_email = list(
-            qs_fallidos.values("email")
-            .annotate(n_fallidos=Count("id_intento"))
-            .order_by("-n_fallidos")[:20]
-        )
-        por_motivo = list(
-            qs_fallidos.exclude(motivo_fallo=None).exclude(motivo_fallo="")
-            .values("motivo_fallo").annotate(count=Count("id_intento")).order_by("-count")
-        )
+
+        por_motivo = [
+            {"motivo": r["motivo_fallo"], "n": r["_n"]}
+            for r in qs.filter(exitoso=False)
+            .exclude(motivo_fallo=None).exclude(motivo_fallo="")
+            .values("motivo_fallo")
+            .annotate(_n=Count("id_intento"))
+            .order_by("-_n")
+        ]
 
         tendencia = list(
             qs.annotate(fecha=TruncDate("fecha_intento"))
@@ -971,13 +1224,14 @@ class ReporteIntentosLoginView(APIView):
 
         return Response({
             "resumen": {
-                "total": total,
+                "total_intentos": total,
                 "fallidos": fallidos,
                 "exitosos": exitosos,
                 "tasa_fallo": tasa_fallo,
+                "ips_bloqueadas": len(ips_bloqueadas_set),
             },
-            "por_ip": por_ip,
-            "por_email": por_email,
+            "top_ips": top_ips,
+            "top_emails": top_emails,
             "por_motivo": por_motivo,
             "tendencia": tendencia,
         })

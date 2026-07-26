@@ -1,7 +1,8 @@
 """
 Tests de vistas de inventario.
 Cubre: StockViewSet, MovimientoStockViewSet (CSV), AjusteInventarioViewSet
-(aprobar/rechazar), ViewSets simples, ReporteStockView, StockCriticoView.
+(aprobar/rechazar), ViewSets simples, ReporteStockView, StockCriticoView,
+AlertaVencimientoViewSet.registrar_accion, ReporteStockView._exportar_pdf.
 """
 import pytest
 from decimal import Decimal
@@ -248,3 +249,68 @@ class TestReporteStockConMovimientos:
         resp = api_admin.get("/api/v1/inventario/reporte-stock/", {"formato": "csv"})
         assert resp.status_code == 200
         assert b"Agua mineral" in resp.content
+
+
+# ── AlertaVencimientoViewSet.registrar_accion ─────────────────────────────────
+
+@pytest.fixture
+def lote_con_alerta(db, producto, usuario_cajero):
+    from datetime import date, timedelta
+    from apps.inventario.models import LoteProducto, AlertaVencimiento
+    lote = LoteProducto.objects.create(
+        producto=producto,
+        numero_lote="L-TEST-001",
+        fecha_vencimiento=date.today() + timedelta(days=10),
+        cantidad_inicial=Decimal("50"),
+        cantidad_disponible=Decimal("50"),
+    )
+    alerta = AlertaVencimiento.objects.create(
+        lote=lote,
+        tipo=AlertaVencimiento.TipoAlerta.DIAS_15,
+        dias_restantes=10,
+        fecha_vencimiento=lote.fecha_vencimiento,
+        cantidad_lote=lote.cantidad_disponible,
+        accion_tomada=AlertaVencimiento.Accion.PENDIENTE,
+    )
+    return alerta
+
+
+@pytest.mark.django_db
+class TestAlertaVencimientoRegistrarAccion:
+
+    def test_accion_valida_actualiza_alerta(self, api_admin, lote_con_alerta):
+        url = f"/api/v1/inventario/alertas-vencimiento/{lote_con_alerta.pk}/registrar-accion/"
+        resp = api_admin.post(url, {"accion_tomada": "DESCARTADO"}, format="json")
+        assert resp.status_code == 200
+        lote_con_alerta.refresh_from_db()
+        assert lote_con_alerta.accion_tomada == "DESCARTADO"
+        assert lote_con_alerta.fecha_accion is not None
+        assert lote_con_alerta.responsable is not None
+
+    def test_accion_invalida_retorna_400(self, api_admin, lote_con_alerta):
+        url = f"/api/v1/inventario/alertas-vencimiento/{lote_con_alerta.pk}/registrar-accion/"
+        resp = api_admin.post(url, {"accion_tomada": "ACCION_INVALIDA"}, format="json")
+        assert resp.status_code == 400
+        assert "Acción inválida" in str(resp.data)
+
+    def test_accion_sin_autenticacion_retorna_401(self, api_client, lote_con_alerta):
+        url = f"/api/v1/inventario/alertas-vencimiento/{lote_con_alerta.pk}/registrar-accion/"
+        resp = api_client.post(url, {"accion_tomada": "DONADO"}, format="json")
+        assert resp.status_code in (401, 403)
+
+
+# ── ReporteStockView._exportar_pdf ───────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestReporteStockPDF:
+
+    def test_formato_pdf_retorna_pdf(self, api_admin):
+        resp = api_admin.get("/api/v1/inventario/reporte-stock/", {"formato": "pdf"})
+        assert resp.status_code == 200
+        assert resp["Content-Type"] == "application/pdf"
+        assert "reporte_stock_" in resp.get("Content-Disposition", "")
+
+    def test_pdf_con_stock_incluye_datos(self, api_admin, stock_producto):
+        resp = api_admin.get("/api/v1/inventario/reporte-stock/", {"formato": "pdf"})
+        assert resp.status_code == 200
+        assert resp.content[:4] == b"%PDF"

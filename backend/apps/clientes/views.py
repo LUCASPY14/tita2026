@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from apps.usuarios.auditoria import registrar_auditoria
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -62,7 +63,7 @@ def _crear_usuario_portal(cliente):
     """
     from apps.usuarios.models import Usuario
 
-    if hasattr(cliente, "usuario_portal") and cliente.usuario_portal_id:
+    if hasattr(cliente, "usuario_portal"):
         return
 
     ruc_ci_limpio = cliente.ruc_ci.strip()
@@ -101,7 +102,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
             ),
             Value(0, output_field=DecimalField(max_digits=12, decimal_places=0)),
         )
-    )
+    ).order_by("apellidos", "nombres")
     serializer_class = ClienteSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
@@ -111,6 +112,33 @@ class ClienteViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         cliente = serializer.save()
         _crear_usuario_portal(cliente)
+        registrar_auditoria(
+            request=self.request,
+            operacion="CREAR_CLIENTE",
+            tabla="clientes_cliente",
+            id_registro=cliente.id,
+            descripcion=f"Cliente creado: {cliente.nombres} {cliente.apellidos} RUC/CI={cliente.ruc_ci}",
+        )
+
+    def perform_update(self, serializer):
+        cliente = serializer.save()
+        registrar_auditoria(
+            request=self.request,
+            operacion="MODIFICAR_CLIENTE",
+            tabla="clientes_cliente",
+            id_registro=cliente.id,
+            descripcion=f"Cliente modificado: {cliente.nombres} {cliente.apellidos} RUC/CI={cliente.ruc_ci}",
+        )
+
+    def perform_destroy(self, instance):
+        registrar_auditoria(
+            request=self.request,
+            operacion="ELIMINAR_CLIENTE",
+            tabla="clientes_cliente",
+            id_registro=instance.id,
+            descripcion=f"Cliente eliminado: {instance.nombres} {instance.apellidos} RUC/CI={instance.ruc_ci}",
+        )
+        instance.delete()
 
     @action(detail=True, methods=["post"], url_path="reset-pin",
             permission_classes=[IsAdminOrReadOnly])
@@ -163,9 +191,14 @@ class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         from decimal import Decimal, InvalidOperation
+        from django.db import transaction
+        from apps.contabilidad.models import CierreCaja, MovimientoCaja
+        from apps.core.models import MedioPago
+
         cliente_id = request.data.get("cliente")
         monto_raw = request.data.get("monto")
         descripcion = request.data.get("descripcion") or "Pago de cuenta corriente"
+        metodo_pago = (request.data.get("medio_pago") or "").strip()
 
         if not cliente_id:
             return Response({"error": "El campo 'cliente' es obligatorio."}, status=status.HTTP_400_BAD_REQUEST)
@@ -181,13 +214,48 @@ class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
         except Cliente.DoesNotExist:
             return Response({"error": "Cliente no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        mov = CuentaCorrienteCliente.objects.create(
-            cliente=cliente,
-            tipo=CuentaCorrienteCliente.Tipo.CREDITO,
-            monto=monto,
-            descripcion=descripcion,
-            creado_por=request.user,
-        )
+        genera_factura_legal = bool(request.data.get("genera_factura_legal", False))
+        nro_factura = str(request.data.get("nro_factura", "") or "").strip()
+
+        with transaction.atomic():
+            mov = CuentaCorrienteCliente.objects.create(
+                cliente=cliente,
+                tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+                monto=monto,
+                descripcion=descripcion,
+                creado_por=request.user,
+            )
+            # Registrar ingreso en caja si el usuario tiene un turno abierto
+            cierre = CierreCaja.objects.filter(
+                empleado=request.user, estado=CierreCaja.Estado.ABIERTO
+            ).first()
+            if cierre:
+                medio_pago_obj = (
+                    MedioPago.objects.filter(descripcion__iexact=metodo_pago).first()
+                    or MedioPago.objects.filter(descripcion__icontains=metodo_pago).first()
+                ) if metodo_pago else None
+                MovimientoCaja.objects.create(
+                    cierre=cierre,
+                    tipo=MovimientoCaja.Tipo.INGRESO,
+                    monto=monto,
+                    descripcion=f"Cobro CC — {cliente.nombres} {cliente.apellidos}",
+                    medio_pago=medio_pago_obj,
+                )
+
+            # Facturación
+            if genera_factura_legal:
+                if nro_factura:
+                    from apps.contabilidad.services import FacturacionService
+                    factura = FacturacionService.emitir_factura(
+                        cliente=cliente,
+                        nro_factura=nro_factura,
+                        monto_total=monto,
+                        **FacturacionService._calcular_iva_10(monto),
+                    )
+                    mov.factura = factura
+                mov.genera_factura_legal = True
+                mov.save(update_fields=["factura", "genera_factura_legal"])
+
         return Response(self.get_serializer(mov).data, status=status.HTTP_201_CREATED)
 
 
@@ -220,6 +288,26 @@ class HijoViewSet(viewsets.ModelViewSet):
                 return qs.none()
             qs = qs.filter(cliente_responsable=cliente)
         return qs
+
+    def perform_create(self, serializer):
+        hijo = serializer.save()
+        registrar_auditoria(
+            request=self.request,
+            operacion="CREAR_HIJO",
+            tabla="clientes_hijo",
+            id_registro=hijo.id,
+            descripcion=f"Alumno creado: {hijo.nombre_completo} (cliente={hijo.cliente_responsable_id})",
+        )
+
+    def perform_destroy(self, instance):
+        registrar_auditoria(
+            request=self.request,
+            operacion="ELIMINAR_HIJO",
+            tabla="clientes_hijo",
+            id_registro=instance.id,
+            descripcion=f"Alumno eliminado: {instance.nombre_completo} (cliente={instance.cliente_responsable_id})",
+        )
+        instance.delete()
 
 
 class GradoViewSet(viewsets.ModelViewSet):
@@ -308,17 +396,37 @@ class ReporteCuentaCorrienteView(APIView):
         for cliente in clientes_con_saldo:
             saldo = Decimal(str(cliente.saldo_deuda or 0))
 
-            # Buscar la venta pendiente más antigua para calcular aging
-            venta_antigua = (
+            # Aging = antigüedad del ciclo de deuda actual.
+            # Buscamos el último movimiento donde el saldo volvió a 0 (o quedó negativo),
+            # y contamos desde el primer movimiento posterior a ese punto.
+            ultimo_saldo_cero = (
                 CuentaCorrienteCliente.objects
-                .filter(cliente=cliente, tipo="DEBITO")
-                .order_by("fecha")
-                .values("fecha")
+                .filter(cliente=cliente, saldo_resultante__lte=0)
+                .order_by("-fecha", "-id")
+                .values("id", "fecha")
                 .first()
             )
             dias_atraso = 0
-            if venta_antigua:
-                dias_atraso = (hoy - venta_antigua["fecha"].date()).days
+            if ultimo_saldo_cero:
+                # Primer mov con saldo > 0 DESPUÉS del último cierre
+                inicio_ciclo = (
+                    CuentaCorrienteCliente.objects
+                    .filter(cliente=cliente, id__gt=ultimo_saldo_cero["id"], saldo_resultante__gt=0)
+                    .order_by("fecha", "id")
+                    .values("fecha")
+                    .first()
+                )
+            else:
+                # El saldo nunca fue 0: tomar el movimiento más antiguo con saldo > 0
+                inicio_ciclo = (
+                    CuentaCorrienteCliente.objects
+                    .filter(cliente=cliente, saldo_resultante__gt=0)
+                    .order_by("fecha", "id")
+                    .values("fecha")
+                    .first()
+                )
+            if inicio_ciclo:
+                dias_atraso = (hoy - inicio_ciclo["fecha"].date()).days
 
             if dias_atraso <= 30:
                 bucket = "0-30"
@@ -347,7 +455,9 @@ class ReporteCuentaCorrienteView(APIView):
 
         total_deuda = sum(f["saldo_deuda"] for f in filas)
 
-        if request.query_params.get("formato") == "csv":
+        formato = request.query_params.get("formato")
+
+        if formato == "csv":
             resp = HttpResponse(content_type="text/csv; charset=utf-8-sig")
             resp["Content-Disposition"] = (
                 f'attachment; filename="cuenta_corriente_{hoy}.csv"'
@@ -363,6 +473,64 @@ class ReporteCuentaCorrienteView(APIView):
             writer.writerow(["TOTALES POR AGING"])
             for bucket, total in aging_totales.items():
                 writer.writerow([bucket, total])
+            return resp
+
+        if formato == "excel":
+            import io
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment
+
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Cuenta Corriente"
+
+            header_fill = PatternFill("solid", fgColor="1E3A5F")
+            header_font = Font(bold=True, color="FFFFFF")
+            total_font = Font(bold=True)
+            totals_fill = PatternFill("solid", fgColor="E8F0FE")
+
+            ws.append([f"REPORTE CUENTA CORRIENTE — {hoy}"])
+            ws["A1"].font = Font(bold=True, size=13)
+            ws.append([])
+
+            headers = ["Cliente", "RUC/CI", "Teléfono", "Email", "Saldo (Gs)", "Días atraso", "Aging"]
+            ws.append(headers)
+            for cell in ws[ws.max_row]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal="center")
+
+            for f in filas:
+                ws.append([f["cliente"], f["ruc_ci"], f["telefono"],
+                            f["email"], f["saldo_deuda"], f["dias_atraso"], f["aging"]])
+
+            ws.append([])
+            ws.append(["TOTALES POR AGING", "", "", "", "", "", ""])
+            for cell in ws[ws.max_row]:
+                cell.font = total_font
+            for bucket, total in aging_totales.items():
+                row = [bucket, "", "", "", total, "", ""]
+                ws.append(row)
+                for cell in ws[ws.max_row]:
+                    cell.fill = totals_fill
+
+            ws.append([])
+            ws.append(["TOTAL DEUDA", "", "", "", total_deuda, "", ""])
+            for cell in ws[ws.max_row]:
+                cell.font = total_font
+
+            col_widths = [35, 14, 14, 28, 14, 14, 10]
+            for i, w in enumerate(col_widths, 1):
+                ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            resp = HttpResponse(
+                buf.read(),
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+            resp["Content-Disposition"] = f'attachment; filename="cuenta_corriente_{hoy}.xlsx"'
             return resp
 
         return Response({

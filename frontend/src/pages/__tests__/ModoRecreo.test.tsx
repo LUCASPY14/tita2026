@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import ModoRecreo from '../ModoRecreo'
@@ -36,7 +36,7 @@ vi.mock('react-hot-toast', () => ({
 }))
 
 vi.mock('../../hooks/useOfflineQueue', () => ({
-  useOfflineQueue: () => ({ isOnline: true, pendingCount: 0, syncing: false, syncNow: vi.fn() }),
+  useOfflineQueue: () => ({ isOnline: true, pendingCount: 0, syncing: false, syncNow: vi.fn(), enqueue: vi.fn() }),
 }))
 
 const mockGetProductos = vi.fn()
@@ -45,7 +45,18 @@ vi.mock('../../store/catalogoStore', () => ({
   useCatalogoStore: () => ({ getProductos: mockGetProductos, getCategorias: mockGetCategorias }),
 }))
 
+const mockTarjetasBuscar = vi.fn()
+vi.mock('../../services/tarjetas', () => ({
+  default: { buscar: (...args: unknown[]) => mockTarjetasBuscar(...args) },
+}))
+
+const mockVentasCrear = vi.fn()
+vi.mock('../../services/ventas', () => ({
+  default: { crear: (...args: unknown[]) => mockVentasCrear(...args) },
+}))
+
 import api from '../../services/api'
+import toast from 'react-hot-toast'
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -220,5 +231,242 @@ describe('ModoRecreo — carrito', () => {
     render(<ModoRecreo />)
     await waitForProducts()
     expect(screen.getByText('Modo Recreo')).toBeInTheDocument()
+  })
+})
+
+// ─── Fixtures tarjeta ─────────────────────────────────────────────────────────
+
+const TARJETA_ACTIVA = {
+  nro_tarjeta: 'T-00001',
+  hijo_nombre: 'Ana López',
+  hijo_grado: '4° A',
+  cliente_id: 10,
+  cliente_nombre: 'María López',
+  saldo_actual: '80000',
+  saldo_disponible: '80000',
+  estado: 'ACTIVA',
+  es_alumno: true,
+  permite_saldo_negativo: false,
+  lista_es_default: true,
+  lista_precio_id: null,
+  hijo_restricciones: [],
+}
+
+function setupDataConTarjeta() {
+  setupData()
+  mockTarjetasBuscar.mockResolvedValueOnce({
+    data: { results: [TARJETA_ACTIVA] },
+  })
+}
+
+// ─── Tests: agregar al carrito ────────────────────────────────────────────────
+
+describe('ModoRecreo — agregar productos al carrito', () => {
+  it('agrega producto al carrito al hacer click en el botón del grid', async () => {
+    setupData()
+    render(<ModoRecreo />)
+    await waitForProducts()
+    // Los botones del grid de productos contienen el nombre del producto
+    const botonesJugo = screen.getAllByText('Jugo de naranja')
+    // Click en el primero que sea un button (grid, no carrito)
+    const boton = botonesJugo.map(el => el.closest('button')).find(b => b)
+    expect(boton).toBeTruthy()
+    await userEvent.click(boton!)
+    // El carrito pasa de "0 productos" a "1 producto"
+    expect(screen.getByText(/1 producto/)).toBeInTheDocument()
+  })
+
+  it('incrementa la cantidad al agregar el mismo producto dos veces', async () => {
+    setupData()
+    render(<ModoRecreo />)
+    await waitForProducts()
+    const botonesJugo = screen.getAllByText('Jugo de naranja')
+    const boton = botonesJugo.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(boton)
+    await userEvent.click(boton)
+    // El reducer de cantidad total muestra "2 productos"
+    expect(screen.getByText('2 productos')).toBeInTheDocument()
+  })
+
+  it('actualiza el total al agregar un producto', async () => {
+    setupData()
+    render(<ModoRecreo />)
+    await waitForProducts()
+    // Antes de agregar: el precio del grid ya muestra "5.000 Gs." (precio del producto)
+    const antesCount = screen.queryAllByText('5.000 Gs.').length
+    const botonesJugo = screen.getAllByText('Jugo de naranja')
+    const boton = botonesJugo.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(boton)
+    // Después de agregar: el precio aparece también en el total del carrito
+    expect(screen.queryAllByText('5.000 Gs.').length).toBeGreaterThan(antesCount)
+  })
+})
+
+// ─── Tests: cobro sin tarjeta ─────────────────────────────────────────────────
+
+describe('ModoRecreo — validaciones de cobro', () => {
+  it('el botón COBRAR está deshabilitado con items pero sin tarjeta/cliente', async () => {
+    setupData()
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    // Agregar producto al carrito
+    const botonesJugo = screen.getAllByText('Jugo de naranja')
+    const boton = botonesJugo.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(boton)
+
+    // Con items en carrito pero sin tarjeta, el botón sigue deshabilitado
+    const btnCobrar = screen.getByRole('button', { name: /cobrar/i })
+    expect(btnCobrar).toBeDisabled()
+  })
+
+  it('el botón COBRAR está deshabilitado con carrito vacío', async () => {
+    setupData()
+    render(<ModoRecreo />)
+    await waitForProducts()
+    const btnCobrar = screen.getByRole('button', { name: /cobrar/i })
+    expect(btnCobrar).toBeDisabled()
+  })
+})
+
+// ─── Tests: buscarTarjeta via mock directo ────────────────────────────────────
+
+describe('ModoRecreo — búsqueda de tarjeta', () => {
+  it('muestra error si la tarjeta no existe', async () => {
+    setupData()
+    mockTarjetasBuscar.mockResolvedValueOnce({ data: { results: [] } })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'T-99999{Enter}')
+    // Esperar la respuesta del mock
+    expect(await screen.findByText('Modo Recreo')).toBeInTheDocument()
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith('Tarjeta no encontrada')
+  })
+
+  it('muestra nombre del alumno al encontrar tarjeta activa', async () => {
+    setupDataConTarjeta()
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'T-00001{Enter}')
+    expect(await screen.findByText('Ana López')).toBeInTheDocument()
+  })
+})
+
+// ─── Tests: quitar del carrito ────────────────────────────────────────────────
+
+describe('ModoRecreo — quitar del carrito', () => {
+  it('decrementa cantidad al presionar el botón − en el ítem del carrito', async () => {
+    setupData()
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const botonesJugo = screen.getAllByText('Jugo de naranja')
+    const btnAgregar = botonesJugo.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(btnAgregar)
+    await userEvent.click(btnAgregar)
+    expect(screen.getByText('2 productos')).toBeInTheDocument()
+
+    // El <li> del carrito contiene: [X, Minus, Plus]
+    const cartJugo = screen.getAllByText('Jugo de naranja').find(el => el.closest('li'))!
+    const li = cartJugo.closest('li')!
+    const btnsEnLi = within(li).getAllByRole('button')
+    // btnsEnLi[0]=X(remove all), btnsEnLi[1]=Minus, btnsEnLi[2]=Plus
+    await userEvent.click(btnsEnLi[1])
+    expect(screen.getByText('1 productos')).toBeInTheDocument()
+  })
+
+  it('elimina el ítem cuando la cantidad llega a 0', async () => {
+    setupData()
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const botonesJugo = screen.getAllByText('Jugo de naranja')
+    const btnAgregar = botonesJugo.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(btnAgregar)
+    expect(screen.getByText('1 productos')).toBeInTheDocument()
+
+    const cartJugo = screen.getAllByText('Jugo de naranja').find(el => el.closest('li'))!
+    const li = cartJugo.closest('li')!
+    const btnsEnLi = within(li).getAllByRole('button')
+    await userEvent.click(btnsEnLi[1]) // Minus: 1 → 0 → item desaparece
+    expect(screen.getByText('0 productos')).toBeInTheDocument()
+  })
+})
+
+// ─── Tests: cobro exitoso ─────────────────────────────────────────────────────
+
+describe('ModoRecreo — cobro exitoso', () => {
+  it('llama a ventasService.crear al cobrar con tarjeta activa y carrito con ítems', async () => {
+    setupDataConTarjeta()
+    mockVentasCrear.mockResolvedValueOnce({})
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    // Escanear tarjeta
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'T-00001{Enter}')
+    await screen.findByText('Ana López')
+
+    // Agregar un producto
+    const botonesJugo = screen.getAllByText('Jugo de naranja')
+    const btnAgregar = botonesJugo.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(btnAgregar)
+
+    // Botón COBRAR habilitado (tarjeta + PREPAGO + carrito)
+    const btnCobrar = screen.getByRole('button', { name: /cobrar/i })
+    expect(btnCobrar).toBeEnabled()
+
+    await userEvent.click(btnCobrar)
+
+    await waitFor(() => {
+      expect(mockVentasCrear).toHaveBeenCalledOnce()
+    })
+    expect(mockVentasCrear).toHaveBeenCalledWith(
+      expect.objectContaining({ tarjeta: 'T-00001', tipo: 'CONTADO' }),
+      expect.any(Number),
+    )
+  })
+
+  it('muestra toast.error si ventasService.crear lanza error', async () => {
+    setupDataConTarjeta()
+    mockVentasCrear.mockRejectedValueOnce(new Error('Error de red'))
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'T-00001{Enter}')
+    await screen.findByText('Ana López')
+
+    const botonesJugo = screen.getAllByText('Jugo de naranja')
+    const btnAgregar = botonesJugo.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(btnAgregar)
+
+    await userEvent.click(screen.getByRole('button', { name: /cobrar/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalled()
+    })
+  })
+})
+
+// ─── Tests: cancelar ─────────────────────────────────────────────────────────
+
+describe('ModoRecreo — cancelar', () => {
+  it('vacía el carrito al presionar "Cancelar (Esc)"', async () => {
+    setupData()
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const botonesJugo = screen.getAllByText('Jugo de naranja')
+    const btnAgregar = botonesJugo.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(btnAgregar)
+    expect(screen.getByText('1 productos')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Cancelar/i }))
+    expect(screen.getByText('0 productos')).toBeInTheDocument()
   })
 })

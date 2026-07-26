@@ -17,7 +17,7 @@ from common.permissions import IsAdmin, IsStaffUser
 from common.mixins import ExportCSVMixin
 
 from django_filters.rest_framework import DjangoFilterBackend
-from .filters import MovimientoStockFilter, AlertaStockFilter, LoteProductoFilter, AlertaVencimientoFilter
+from .filters import MovimientoStockFilter, LoteProductoFilter, AlertaVencimientoFilter
 
 from .models import (
     Stock,
@@ -79,6 +79,38 @@ class AjusteInventarioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["tipo", "estado"]
+
+    def create(self, request, *args, **kwargs):
+        from apps.productos.models import Producto
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+
+        detalles_raw = request.data.get("detalles", [])
+        if not detalles_raw:
+            raise DRFValidationError({"detalles": "Debe incluir al menos un producto."})
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            ajuste = AjusteInventario.objects.create(
+                tipo=serializer.validated_data["tipo"],
+                motivo=serializer.validated_data.get("motivo", ""),
+                solicitado_por=request.user,
+                estado=AjusteInventario.Estado.PENDIENTE,
+            )
+            for item in detalles_raw:
+                try:
+                    producto = Producto.objects.get(pk=item["producto"])
+                except (Producto.DoesNotExist, KeyError):
+                    raise DRFValidationError({"detalles": f"Producto {item.get('producto')} no encontrado."})
+                DetalleAjuste.objects.create(
+                    ajuste=ajuste,
+                    producto=producto,
+                    cantidad=Decimal(str(item.get("cantidad", 1))),
+                )
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(AjusteInventarioSerializer(ajuste).data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(detail=True, methods=["post"], url_path="aprobar", permission_classes=[IsAdmin])
     def aprobar(self, request, pk=None):
@@ -181,14 +213,67 @@ class CostoHistoricoViewSet(viewsets.ModelViewSet):
 
 
 class AlertaStockViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = AlertaStock.objects.select_related("producto").all()
+    """
+    Calcula alertas de stock en tiempo real desde la tabla Stock,
+    sin depender de que la tarea Celery haya corrido.
+    """
     serializer_class = AlertaStockSerializer
     permission_classes = [IsStaffUser]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_class = AlertaStockFilter
-    search_fields = ["producto__descripcion"]
-    ordering_fields = ["id"]
-    ordering = ["-id"]
+
+    def get_queryset(self):
+        stocks = (
+            Stock.objects
+            .select_related("producto")
+            .filter(
+                producto__stock_minimo__gt=0,
+                producto__requiere_stock=True,
+                cantidad__lte=models.F("producto__stock_minimo"),
+            )
+        )
+        search = self.request.query_params.get("search")
+        if search:
+            stocks = stocks.filter(producto__descripcion__icontains=search)
+
+        # Construimos AlertaStock virtuales (sin guardar en BD)
+        alertas = []
+        for s in stocks:
+            minimo = s.producto.stock_minimo
+            if s.cantidad <= 0:
+                tipo = AlertaStock.TipoAlerta.STOCK_CERO
+            elif minimo and s.cantidad <= minimo * Decimal("0.5"):
+                tipo = AlertaStock.TipoAlerta.STOCK_CRITICO
+            else:
+                tipo = AlertaStock.TipoAlerta.STOCK_MINIMO
+
+            alerta = AlertaStock(
+                producto=s.producto,
+                tipo=tipo,
+                stock_actual=s.cantidad,
+                stock_minimo=minimo,
+                activa=True,
+                fecha_generada=timezone.now(),
+            )
+            alertas.append(alerta)
+        return alertas
+
+    def list(self, request, *args, **kwargs):
+        alertas = self.get_queryset()
+        data = [
+            {
+                "id": i + 1,
+                "producto": a.producto_id,
+                "producto_nombre": a.producto.descripcion,
+                "tipo": a.tipo,
+                "stock_actual": str(a.stock_actual),
+                "stock_minimo": str(a.stock_minimo),
+                "activa": True,
+                "notificacion_enviada": False,
+                "fecha_generada": a.fecha_generada.isoformat(),
+                "fecha_resuelta": None,
+            }
+            for i, a in enumerate(alertas)
+        ]
+        return Response({"count": len(data), "results": data})
 
 
 class LoteProductoViewSet(viewsets.ModelViewSet):
@@ -311,7 +396,8 @@ class ReporteStockView(APIView):
     def _exportar_pdf(self, filas, total_valor, productos_bajo_minimo):
         from common.pdf_report import pdf_response
         from datetime import date
-        fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+        def fmt_gs(n):
+            return f"{int(n):,} Gs.".replace(",", ".")
         rows = [
             [
                 f["descripcion"],
@@ -330,7 +416,10 @@ class ReporteStockView(APIView):
             filename=f"reporte_stock_{date.today()}.pdf",
             title="Reporte de Inventario / Stock",
             subtitle=f"Total: {len(filas)} productos | {productos_bajo_minimo} bajo mínimo",
-            headers=["Producto", "Categoría", "Unidad", "Stock", "Mínimo", "Estado", "Costo Prom.", "Valor Inv.", "Días Stock"],
+            headers=[
+                "Producto", "Categoría", "Unidad", "Stock", "Mínimo",
+                "Estado", "Costo Prom.", "Valor Inv.", "Días Stock",
+            ],
             rows=rows,
             totals=["TOTAL", "", "", "", "", "", "", fmt_gs(total_valor), ""],
             landscape=True,

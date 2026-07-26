@@ -29,6 +29,7 @@ interface Venta {
   tarjeta: string | null
   tipo: string
   estado: string
+  estado_pago: string
   monto_total: string
   saldo_pendiente: string
   detalles: DetalleVenta[]
@@ -111,12 +112,22 @@ export default function Ventas() {
   const requestIdRef = useRef(0)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  // ── Cargar cajeros (solo ADMIN) ──────────────────────────────────────────────
+  // ── Cargar cajeros + admins (solo visible para ADMIN) ───────────────────────
   useEffect(() => {
     if (!isAdmin) return
-    api.get('/usuarios/usuarios/', { params: { rol: 'CAJERO', page_size: 100 } })
-      .then(r => setCajeros(r.data?.results ?? []))
-      .catch(() => {})
+    Promise.all([
+      api.get('/usuarios/usuarios/', { params: { rol: 'CAJERO', page_size: 100 } }),
+      api.get('/usuarios/usuarios/', { params: { rol: 'ADMIN', page_size: 100 } }),
+    ]).then(([cajRes, admRes]) => {
+      const todos: CajeroOption[] = [
+        ...(cajRes.data?.results ?? []),
+        ...(admRes.data?.results ?? []),
+      ]
+      todos.sort((a, b) =>
+        `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`)
+      )
+      setCajeros(todos)
+    }).catch(() => toast.error('Error al cargar lista de usuarios'))
   }, [isAdmin])
 
   // ── Fetch ventas ─────────────────────────────────────────────────────────────
@@ -231,10 +242,6 @@ export default function Ventas() {
                 <label className={labelClass}>Tipo</label>
                 <select value={tipo} onChange={e => setTipo(e.target.value)} className={inputClass}>
                   <option value="">Todos</option>
-                  <option value="VENTA_TARJETA">Tarjeta prepago</option>
-                  <option value="VENTA_EFECTIVO">Efectivo</option>
-                  <option value="CONSUMO_ALMUERZO">Almuerzo</option>
-                  <option value="CARGA_SALDO">Carga de saldo</option>
                   <option value="CONTADO">Contado</option>
                   <option value="CREDITO">Crédito</option>
                 </select>
@@ -302,7 +309,7 @@ export default function Ventas() {
             {ventas.map(v => {
               const isExp = expandedId === v.id
               const persona = v.hijo_nombre ?? v.cliente_nombre ?? '—'
-              const pendiente = Number(v.saldo_pendiente) > 0
+              const pendiente = (v.estado_pago === 'PENDIENTE' || v.estado_pago === 'PARCIAL') && Number(v.saldo_pendiente) > 0
 
               return (
                 <li key={v.id} className={v.estado === 'ANULADA' ? 'opacity-60' : ''}>

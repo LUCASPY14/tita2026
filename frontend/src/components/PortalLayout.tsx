@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useNotificaciones } from '../hooks/useNotificaciones'
-import { Home, Bell, LogOut, History, FileText, Wallet } from 'lucide-react'
+import { Home, Bell, LogOut, History, FileText, Wallet, Download } from 'lucide-react'
 
 const navItems = [
   { path: '/portal',                 label: 'Inicio',    icon: Home,    exact: true  },
@@ -16,6 +17,39 @@ export default function PortalLayout() {
   const location = useLocation()
   const { user, logout } = useAuthStore()
   const { unreadCount, clearUnread } = useNotificaciones()
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(
+    () => (window as unknown as Record<string, unknown>).__pwaPrompt as Event ?? null
+  )
+
+  // Apuntar al manifest del portal mientras el usuario está en /portal
+  useEffect(() => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')
+    const prev = link?.getAttribute('href') ?? '/manifest.webmanifest'
+    link?.setAttribute('href', '/portal-manifest.webmanifest')
+    return () => { link?.setAttribute('href', prev) }
+  }, [])
+
+  // Escuchar el prompt si llegó después del montaje
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+      ;(window as unknown as Record<string, unknown>).__pwaPrompt = e
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!installPrompt) return
+    const prompt = installPrompt as Event & { prompt(): void; userChoice: Promise<{ outcome: string }> }
+    prompt.prompt()
+    const { outcome } = await prompt.userChoice
+    if (outcome === 'accepted') {
+      setInstallPrompt(null)
+      ;(window as unknown as Record<string, unknown>).__pwaPrompt = null
+    }
+  }
 
   const handleLogout = () => {
     logout()
@@ -31,8 +65,19 @@ export default function PortalLayout() {
             <img src="/logo_tita.png" alt="Cantina Tita" className="h-8 w-auto" />
             <p className="text-xs text-slate-400 hidden sm:block">Portal de Padres</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="text-sm text-slate-600 hidden sm:block">{user?.nombre}</span>
+            {installPrompt && (
+              <button
+                type="button"
+                onClick={handleInstall}
+                title="Instalar app en este dispositivo"
+                className="flex items-center gap-1.5 text-xs text-orange-500 hover:text-orange-700 border border-orange-200 rounded-lg px-3 py-1.5 hover:bg-orange-50 transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Instalar</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={handleLogout}

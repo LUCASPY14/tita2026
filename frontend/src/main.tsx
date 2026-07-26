@@ -25,12 +25,16 @@ if (SENTRY_DSN) {
   })
 }
 
-// Service Worker — offline POS support for ModoRecreo
+// Service Worker — offline support (ModoRecreo POS + Portal de Padres)
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
-    // SW registration is best-effort; app works normally without it
-  })
+  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {})
 }
+
+// Capturar el prompt de instalación PWA antes de que el browser lo descarte
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault()
+  ;(window as unknown as Record<string, unknown>).__pwaPrompt = e
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

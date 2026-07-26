@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests para TarjetaService.confirmar_carga.
 Cubre: carga pendiente confirmada, doble confirmación, tarjeta bloqueada,
 y recarga con cierre de caja.
@@ -89,8 +89,11 @@ class TestConfirmarCarga:
 
         carga_pendiente.refresh_from_db()
         assert carga_pendiente.estado == CargaSaldo.Estado.CONFIRMADA
-        assert carga_pendiente.responsable == usuario_cajero
+        assert carga_pendiente.supervisor_aprobador == usuario_cajero
+        assert carga_pendiente.fecha_aprobacion is not None
         assert carga_pendiente.fecha_confirmacion is not None
+        # el responsable original no debe pisarse
+        assert carga_pendiente.responsable is None
 
         assert MovimientoTarjeta.objects.filter(
             tarjeta=tarjeta,
@@ -156,3 +159,25 @@ class TestConfirmarCarga:
             tipo=MovimientoCaja.Tipo.INGRESO,
             monto=Decimal("30000"),
         ).exists()
+
+    def test_whatsapp_exception_no_interrumpe_confirmacion(
+        self, tarjeta, carga_pendiente, usuario_cajero
+    ):
+        """Si whatsapp_cliente falla en confirmar_carga, la carga igual queda CONFIRMADA."""
+        from unittest.mock import patch
+        from apps.core.services import TarjetaService
+        from apps.core.models import CargaSaldo
+
+        with patch(
+            "apps.notificaciones.services.whatsapp_cliente",
+            side_effect=RuntimeError("WAHA caído"),
+        ):
+            TarjetaService.confirmar_carga(
+                carga=carga_pendiente,
+                responsable=usuario_cajero,
+            )
+
+        carga_pendiente.refresh_from_db()
+        assert carga_pendiente.estado == CargaSaldo.Estado.CONFIRMADA
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == Decimal("50000")

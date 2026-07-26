@@ -57,7 +57,7 @@ class TestToken:
         from apps.core.bancard_service import _token
         shop_id = "12345"
         suffix = "request"
-        expected = hashlib.md5(f"mysecret{shop_id}{suffix}".encode()).hexdigest()
+        expected = hashlib.md5(f"mysecret{shop_id}{suffix}".encode(), usedforsecurity=False).hexdigest()
         assert _token(shop_id, suffix) == expected
 
     @override_settings(BANCARD_PRIVATE_KEY="k")

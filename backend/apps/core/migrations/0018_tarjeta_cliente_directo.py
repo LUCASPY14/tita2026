@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="tarjeta",
             constraint=models.CheckConstraint(
-                check=models.Q(hijo__isnull=False) | models.Q(cliente_directo__isnull=False),
+                condition=models.Q(hijo__isnull=False) | models.Q(cliente_directo__isnull=False),
                 name="tarjeta_tiene_titular",
             ),
         ),

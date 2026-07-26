@@ -3,10 +3,13 @@ Servicios de negocio para core
 Tarjetas, recargas y consumos
 """
 
+import logging
 from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 from rest_framework.exceptions import ValidationError
 
@@ -92,15 +95,19 @@ class TarjetaService:
                 )
 
             try:
-                from apps.notificaciones.services import _whatsapp_cliente
+                from apps.notificaciones.services import whatsapp_cliente
                 cliente_resp = tarjeta.hijo.cliente_responsable
-                _whatsapp_cliente(
+                whatsapp_cliente(
                     cliente_resp,
                     f"Recarga exitosa: se acreditaron Gs. {int(monto):,} a la tarjeta de "
                     f"{tarjeta.hijo.nombre_completo}. Nuevo saldo: Gs. {int(tarjeta.saldo_actual):,}.",
                 )
             except Exception:
-                pass
+                logger.warning(
+                    "WhatsApp de recarga no enviado para tarjeta %s",
+                    tarjeta.pk,
+                    exc_info=True,
+                )
 
             return carga
 
@@ -123,9 +130,11 @@ class TarjetaService:
             tarjeta.saldo_actual += carga.monto_cargado
             tarjeta.save()
 
+            now = timezone.now()
             carga.estado = CargaSaldo.Estado.CONFIRMADA
-            carga.responsable = responsable
-            carga.fecha_confirmacion = timezone.now()
+            carga.supervisor_aprobador = responsable
+            carga.fecha_aprobacion = now
+            carga.fecha_confirmacion = now
             carga.save()
 
             MovimientoTarjeta.objects.create(
@@ -150,15 +159,19 @@ class TarjetaService:
                 )
 
             try:
-                from apps.notificaciones.services import _whatsapp_cliente
+                from apps.notificaciones.services import whatsapp_cliente
                 cliente_resp = tarjeta.hijo.cliente_responsable
-                _whatsapp_cliente(
+                whatsapp_cliente(
                     cliente_resp,
                     f"Recarga exitosa: se acreditaron Gs. {int(carga.monto_cargado):,} a la tarjeta de "
                     f"{tarjeta.hijo.nombre_completo}. Nuevo saldo: Gs. {int(tarjeta.saldo_actual):,}.",
                 )
             except Exception:
-                pass
+                logger.warning(
+                    "WhatsApp de confirmación no enviado para tarjeta %s",
+                    tarjeta.pk,
+                    exc_info=True,
+                )
 
             return carga
 

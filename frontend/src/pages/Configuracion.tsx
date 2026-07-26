@@ -5,6 +5,7 @@ import {
   Settings, Tag, ListOrdered, CreditCard, Users,
   GraduationCap, Building2, History, Shield,
   UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent, Trash2, DollarSign,
+  MessageCircle,
 } from 'lucide-react'
 import api from '../services/api'
 import Modal from '../components/ui/Modal'
@@ -23,11 +24,13 @@ import TabPreciosAlmuerzo from './configuracion/TabPreciosAlmuerzo'
 import TabUnidadesMedida from './configuracion/TabUnidadesMedida'
 import TabAlergenos from './configuracion/TabAlergenos'
 import TabImpuestos from './configuracion/TabImpuestos'
+import TabWhatsApp from './configuracion/TabWhatsApp'
 
 type TabKey =
   | 'categorias' | 'tipos_cliente' | 'listas_precio' | 'medios_pago'
   | 'grados' | 'datos_empresa' | 'historial_precios' | 'seguridad'
   | 'tipos_almuerzo' | 'planes_almuerzo' | 'precios_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
+  | 'whatsapp'
 
 const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'categorias',        labelKey: 'settings.categories',  icon: Tag },
@@ -44,6 +47,7 @@ const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'unidades_medida',   labelKey: 'settings.units',       icon: Ruler },
   { key: 'alergenos',         labelKey: 'settings.allergens',   icon: AlertTriangle },
   { key: 'impuestos',         labelKey: 'settings.taxes',       icon: Percent },
+  { key: 'whatsapp',          labelKey: 'settings.whatsapp',    icon: MessageCircle },
 ]
 
 export default function Configuracion() {
@@ -110,6 +114,7 @@ export default function Configuracion() {
         {tab === 'datos_empresa'     && <TabDatosEmpresa />}
         {tab === 'historial_precios' && <TabHistorialPrecios />}
         {tab === 'seguridad'         && <TabSeguridad />}
+        {tab === 'whatsapp'          && <TabWhatsApp />}
       </div>
 
       <Modal

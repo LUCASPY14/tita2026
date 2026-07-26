@@ -190,6 +190,7 @@ class DetalleVenta(models.Model):
     class Meta:
         verbose_name = "Detalle de Venta"
         verbose_name_plural = "Detalles de Venta"
+        ordering = ["id"]
         unique_together = [("venta", "producto")]
         indexes = [
             models.Index(fields=["venta"], name="idx_det_venta"),
@@ -197,7 +198,7 @@ class DetalleVenta(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(descuento__gte=0),
+                condition=models.Q(descuento__gte=0),
                 name="chk_detalleventa_descuento_no_negativo",
             ),
         ]
@@ -351,6 +352,7 @@ class AplicacionPago(models.Model):
     class Meta:
         verbose_name = "Aplicación de Pago"
         verbose_name_plural = "Aplicaciones de Pagos"
+        ordering = ["id"]
 
     def __str__(self):
         return f"₲{self.monto_aplicado:,.0f} → Venta #{self.venta_id}"

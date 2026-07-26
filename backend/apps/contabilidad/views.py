@@ -3,6 +3,7 @@ Views para la app contabilidad
 """
 
 import csv
+import logging
 from datetime import timedelta
 
 from django.http import HttpResponse
@@ -12,6 +13,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.usuarios.auditoria import registrar_auditoria
 
 from common.object_permissions import CajaOwnerQuerysetMixin, IsCajaOwnerOrAdmin
 from common.permissions import IsAdmin, IsCajeroOrAdmin, IsStaffUser, IsStaffOrClienteWeb
@@ -35,9 +37,12 @@ from .serializers import (
     FacturaSerializer,
     DatosEmpresaSerializer,
     EmitirFacturaSerializer,
+    EmitirLoteSerializer,
     PendienteItemSerializer,
 )
 from .services import CajaService, FacturacionService
+
+logger = logging.getLogger(__name__)
 
 
 class CajaViewSet(viewsets.ModelViewSet):
@@ -79,6 +84,13 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
             empleado=request.user,
             monto_inicial=data.get("monto_inicial", Decimal("0")),
         )
+        registrar_auditoria(
+            request=request,
+            operacion="ABRIR_CAJA",
+            tabla="contabilidad_cierrecaja",
+            id_registro=cierre.id,
+            descripcion=f"Caja '{cierre.caja}' abierta con {cierre.monto_inicial} Gs.",
+        )
         out = CierreCajaSerializer(cierre)
         headers = self.get_success_headers(out.data)
         return Response(out.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -95,6 +107,13 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
         cierre.estado = CierreCaja.Estado.CONCILIADO
         cierre.observaciones_conciliacion = request.data.get("observaciones", "") or ""
         cierre.save(update_fields=["estado", "observaciones_conciliacion"])
+        registrar_auditoria(
+            request=request,
+            operacion="CONCILIAR_CAJA",
+            tabla="contabilidad_cierrecaja",
+            id_registro=cierre.id,
+            descripcion=f"Caja '{cierre.caja}' conciliada",
+        )
         return Response(CierreCajaSerializer(cierre).data)
 
     @action(detail=True, methods=["post"], url_path="cerrar")
@@ -113,6 +132,16 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
         monto_contado = Decimal(serializer.validated_data["monto_contado_fisico"])
 
         cierre = CajaService.cerrar_caja(cierre=cierre, monto_contado=monto_contado)
+        registrar_auditoria(
+            request=request,
+            operacion="CERRAR_CAJA",
+            tabla="contabilidad_cierrecaja",
+            id_registro=cierre.id,
+            descripcion=(
+                f"Caja '{cierre.caja}' cerrada — contado={monto_contado} Gs."
+                f" diferencia={cierre.diferencia_efectivo} Gs."
+            ),
+        )
         return Response(CierreCajaSerializer(cierre).data)
 
     @action(detail=True, methods=["get"], url_path="arqueo")
@@ -260,7 +289,7 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
         try:
             empresa = DatosEmpresa.objects.first()
         except Exception:
-            pass
+            logger.warning("DatosEmpresa no disponible (cierre print)", exc_info=True)
 
         html = render_to_string("contabilidad/cierre_print.html", {
             "cierre": cierre,
@@ -292,8 +321,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
     queryset = Factura.objects.select_related("cliente", "venta").all()
     serializer_class = FacturaSerializer
     permission_classes = [IsCajeroOrAdmin]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["estado", "cliente"]
+    search_fields = ["nro_factura", "cliente__nombres", "cliente__apellidos", "cliente__razon_social"]
+    ordering_fields = ["fecha_emision", "monto_total", "nro_factura"]
+    ordering = ["-fecha_emision"]
 
     def create(self, request, *args, **kwargs):
         """POST directo a /facturas/ debe usar el endpoint /facturas/emitir/."""
@@ -309,15 +341,18 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         items = []
         for c in data["cargas"]:
-            nombre = ""
-            if c.cliente_origen:
-                nombre = c.cliente_origen.nombre_completo
-            elif c.tarjeta and c.tarjeta.hijo:
-                nombre = c.tarjeta.hijo.nombre_completo
+            cliente = c.cliente_origen or (
+                c.tarjeta.hijo.cliente_responsable if c.tarjeta and c.tarjeta.hijo else None
+            )
+            nombre = cliente.nombre_completo if cliente else "—"
+            cliente_id = cliente.pk if cliente else None
+            modalidad = cliente.modalidad_facturacion if cliente else "INMEDIATA"
             items.append({
                 "tipo": "CARGA_SALDO",
                 "id": c.pk,
+                "cliente_id": cliente_id,
                 "cliente_nombre": nombre,
+                "modalidad_facturacion": modalidad,
                 "descripcion": f"Carga de saldo tarjeta {c.tarjeta_id or '-'}",
                 "monto": int(c.monto_cargado),
                 "fecha": c.fecha_carga,
@@ -325,13 +360,42 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         for p in data["pagos"]:
             cuenta = p.cuenta
+            cliente = cuenta.hijo.cliente_responsable
             items.append({
                 "tipo": "PAGO_ALMUERZO",
                 "id": p.pk,
-                "cliente_nombre": cuenta.hijo.cliente_responsable.nombre_completo,
+                "cliente_id": cliente.pk,
+                "cliente_nombre": cliente.nombre_completo,
+                "modalidad_facturacion": cliente.modalidad_facturacion,
                 "descripcion": f"Pago almuerzo {cuenta.hijo.nombre_completo} — {cuenta.mes}/{cuenta.anio}",
                 "monto": int(p.monto),
                 "fecha": p.fecha_pago,
+            })
+
+        for v in data["ventas"]:
+            cliente = v.cliente
+            items.append({
+                "tipo": "VENTA",
+                "id": v.pk,
+                "cliente_id": cliente.pk if cliente else None,
+                "cliente_nombre": cliente.nombre_completo if cliente else "—",
+                "modalidad_facturacion": cliente.modalidad_facturacion if cliente else "INMEDIATA",
+                "descripcion": f"Venta #{v.pk} — {v.get_tipo_display()} — {int(v.monto_total):,} Gs.",
+                "monto": int(v.monto_total),
+                "fecha": v.fecha,
+            })
+
+        for pc in data["pagos_credito"]:
+            cliente = pc.cliente
+            items.append({
+                "tipo": "PAGO_CREDITO",
+                "id": pc.pk,
+                "cliente_id": cliente.pk if cliente else None,
+                "cliente_nombre": cliente.nombre_completo if cliente else "—",
+                "modalidad_facturacion": cliente.modalidad_facturacion if cliente else "INMEDIATA",
+                "descripcion": f"Cobro crédito #{pc.pk} — {int(pc.monto):,} Gs.",
+                "monto": int(pc.monto),
+                "fecha": pc.fecha,
             })
 
         items.sort(key=lambda x: x["fecha"], reverse=True)
@@ -347,6 +411,19 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura = FacturacionService.emitir_para_origen(
             tipo=serializer.validated_data["tipo"],
             origen_id=serializer.validated_data["origen_id"],
+            nro_factura=serializer.validated_data["nro_factura"],
+        )
+        return Response(FacturaSerializer(factura).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["post"], url_path="emitir-lote")
+    def emitir_lote(self, request):
+        """Emite una factura agrupando varios ítems del mismo cliente."""
+        serializer = EmitirLoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        factura = FacturacionService.emitir_lote(
+            tipo=serializer.validated_data["tipo"],
+            ids=serializer.validated_data["ids"],
             nro_factura=serializer.validated_data["nro_factura"],
         )
         return Response(FacturaSerializer(factura).data, status=status.HTTP_201_CREATED)
@@ -373,11 +450,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         # Determinar el concepto según el origen de la factura
         concepto = "Servicios"
-        if hasattr(factura, "carga_saldo") and factura.carga_saldo:
-            carga = factura.carga_saldo
-            concepto = f"Carga de saldo tarjeta {carga.tarjeta_id}"
-        elif hasattr(factura, "pago_cuenta_almuerzo") and factura.pago_cuenta_almuerzo:
-            pago = factura.pago_cuenta_almuerzo
+        cargas = list(factura.cargas_saldo.all()[:5])
+        pagos_almuerzo = list(factura.pagos_cuenta_almuerzo.all()[:1])
+        if cargas:
+            if len(cargas) == 1:
+                concepto = f"Carga de saldo tarjeta {cargas[0].tarjeta_id}"
+            else:
+                concepto = f"Cargas de saldo — {len(cargas)} recargas"
+        elif pagos_almuerzo:
+            pago = pagos_almuerzo[0]
             cuenta = pago.cuenta
             concepto = (
                 f"Pago almuerzo — {cuenta.hijo.nombre_completo} "
@@ -388,7 +469,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         try:
             empresa = DatosEmpresa.objects.first()
         except Exception:
-            pass
+            logger.warning("DatosEmpresa no disponible (factura print)", exc_info=True)
 
         html = render_to_string("contabilidad/factura_print.html", {
             "factura": factura,
@@ -514,11 +595,13 @@ class DashboardResumenView(APIView):
     permission_classes = [IsStaffUser]
 
     def get(self, request):
-        from django.db.models import Count, Sum
+        from django.db.models import Count, Sum, F
         from apps.ventas.models import Venta
         from apps.clientes.models import Cliente
         from apps.productos.models import Producto
         from apps.inventario.models import AlertaStock
+        from apps.core.models import CargaSaldo, Tarjeta
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
 
         from django.utils.timezone import localdate
         hoy = localdate()
@@ -526,26 +609,32 @@ class DashboardResumenView(APIView):
         ventas_hoy = Venta.objects.filter(
             fecha__date=hoy,
             estado=Venta.Estado.ACTIVA,
-        ).aggregate(
-            cantidad=Count("id"),
-            monto=Sum("monto_total"),
-        )
+        ).aggregate(cantidad=Count("id"), monto=Sum("monto_total"))
 
-        clientes_total = Cliente.objects.filter(activo=True).count()
-        productos_total = Producto.objects.filter(activo=True).count()
-        stock_bajo = AlertaStock.objects.filter(activa=True).count()
+        recargas_hoy = CargaSaldo.objects.filter(
+            fecha_carga__date=hoy,
+            estado=CargaSaldo.Estado.CONFIRMADA,
+        ).aggregate(cantidad=Count("id"), monto=Sum("monto_cargado"))
 
-        cajas_abiertas = CierreCaja.objects.filter(
-            estado=CierreCaja.Estado.ABIERTO
+        almuerzos_hoy = RegistroConsumoAlmuerzo.objects.filter(fecha_consumo=hoy).count()
+
+        tarjetas_alerta = Tarjeta.objects.filter(
+            notificar_saldo_bajo=True,
+            saldo_alerta__isnull=False,
+            saldo_actual__lte=F("saldo_alerta"),
         ).count()
 
         return Response({
-            "ventasHoy": ventas_hoy["cantidad"] or 0,
-            "montoHoy": int(ventas_hoy["monto"] or 0),
-            "clientes": clientes_total,
-            "productos": productos_total,
-            "stockBajo": stock_bajo,
-            "cajasAbiertas": cajas_abiertas,
+            "ventasHoy":        ventas_hoy["cantidad"] or 0,
+            "montoHoy":         int(ventas_hoy["monto"] or 0),
+            "clientes":         Cliente.objects.filter(activo=True).count(),
+            "productos":        Producto.objects.filter(activo=True).count(),
+            "stockBajo":        AlertaStock.objects.filter(activa=True).count(),
+            "cajasAbiertas":    CierreCaja.objects.filter(estado=CierreCaja.Estado.ABIERTO).count(),
+            "recargasHoy":      recargas_hoy["cantidad"] or 0,
+            "montoRecargasHoy": int(recargas_hoy["monto"] or 0),
+            "almuerzoHoy":      almuerzos_hoy,
+            "tarjetasEnAlerta": tarjetas_alerta,
         })
 
 
@@ -572,7 +661,10 @@ class DashboardTendenciaView(APIView):
                 desde = date.fromisoformat(desde_str)
                 hasta = date.fromisoformat(hasta_str)
             except ValueError:
-                return Response({"error": "Formato de fecha inválido (YYYY-MM-DD)."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "Formato de fecha inválido (YYYY-MM-DD)."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         else:
             dias = min(max(int(request.query_params.get("dias", 7)), 1), 90)
             hasta = localdate()
@@ -618,8 +710,7 @@ class ReporteDiferenciasCajaView(APIView):
     permission_classes = [IsStaffUser]
 
     def get(self, request):
-        from decimal import Decimal
-        from django.db.models import Count, Sum, Max, Min, Avg
+        from django.db.models import Count, Sum, Max, Avg
 
         desde = request.query_params.get("desde")
         hasta = request.query_params.get("hasta")

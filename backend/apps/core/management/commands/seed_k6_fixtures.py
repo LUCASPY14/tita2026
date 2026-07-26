@@ -282,8 +282,7 @@ class Command(BaseCommand):
 
     def _reset_sequence(self, table_name):
         """Sincroniza la secuencia autoincrement tras insertar con ID explícito."""
+        # table_name siempre es un literal hardcoded del mismo archivo, nunca input externo
+        sql = f"SELECT setval(pg_get_serial_sequence('{table_name}', 'id'), GREATEST(MAX(id), 1)) FROM {table_name}"  # nosec B608
         with connection.cursor() as cur:
-            cur.execute(
-                f"SELECT setval(pg_get_serial_sequence('{table_name}', 'id'), "
-                f"GREATEST(MAX(id), 1)) FROM {table_name}"
-            )
+            cur.execute(sql)

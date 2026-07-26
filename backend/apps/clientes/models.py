@@ -53,6 +53,16 @@ class Cliente(models.Model):
         max_length=128, blank=True, default='',
         help_text="PIN hasheado para autorizar ventas con saldo insuficiente",
     )
+    class ModalidadFacturacion(models.TextChoices):
+        INMEDIATA = "INMEDIATA", "Factura por transacción"
+        MENSUAL   = "MENSUAL",   "Factura mensual agrupada"
+
+    modalidad_facturacion = models.CharField(
+        max_length=10,
+        choices=ModalidadFacturacion.choices,
+        default=ModalidadFacturacion.INMEDIATA,
+        help_text="Cuándo se emite la factura: al momento o acumulada mensual",
+    )
     lista_precio = models.ForeignKey(
         "productos.ListaPrecio",
         models.PROTECT,
@@ -171,6 +181,16 @@ class CuentaCorrienteCliente(models.Model):
         blank=True,
         related_name="movimientos_cuenta",
     )
+
+    # Facturación — solo aplica a movimientos tipo CREDITO (cobros)
+    factura = models.ForeignKey(
+        "contabilidad.Factura",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos_cuenta",
+    )
+    genera_factura_legal = models.BooleanField(default=False)
 
     # Auditoría
     creado_por = models.ForeignKey(

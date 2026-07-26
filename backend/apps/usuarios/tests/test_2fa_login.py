@@ -49,7 +49,6 @@ def _pre_auth_token(user: Usuario) -> str:
 
 def _expired_pre_auth_token(user: Usuario) -> str:
     """Token firmado hace 6 minutos → superó el TTL de 300 s."""
-    import datetime
     from unittest.mock import patch
 
     six_min_ago = time.time() - 360

@@ -4,6 +4,7 @@ Gestión de tarjetas, movimientos, medios de pago, límites de transacción y au
 """
 
 from django.contrib import admin
+from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.utils.html import format_html
 
@@ -16,6 +17,7 @@ from .models import (
     MedioPago,
     LimiteTransaccion,
     RegistroAutorizacion,
+    PagoBancard,
 )
 
 
@@ -366,7 +368,7 @@ class MedioPagoAdmin(admin.ModelAdmin):
 
     def requiere_validacion_badge(self, obj):
         if obj.requiere_validacion:
-            return format_html('<span style="color:#0d6efd;">✓</span>')
+            return mark_safe('<span style="color:#0d6efd;">✓</span>')  # nosec B308
         return "-"
     requiere_validacion_badge.short_description = "Validación"
 
@@ -495,3 +497,51 @@ class RegistroAutorizacionAdmin(admin.ModelAdmin):
         url = reverse("admin:usuarios_usuario_change", args=[obj.autorizador.pk])
         return format_html('<a href="{}">{}</a>', url, obj.autorizador.nombre_completo)
     autorizador_link.short_description = "Autorizador"
+
+
+# ==============================================================================
+# PAGO BANCARD
+# ==============================================================================
+
+@admin.register(PagoBancard)
+class PagoBancardAdmin(admin.ModelAdmin):
+    list_display = ["id", "tipo_badge", "monto_display", "estado_badge", "shop_process_id", "fecha_creacion"]
+    list_filter = ["estado", "tipo"]
+    search_fields = ["shop_process_id", "descripcion"]
+    readonly_fields = [f.name for f in PagoBancard._meta.fields]
+    ordering = ["-fecha_creacion"]
+    date_hierarchy = "fecha_creacion"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def tipo_badge(self, obj):
+        colors = {"TARJETA": "#0d6efd", "ALMUERZO": "#28a745"}
+        color = colors.get(obj.tipo, "#6c757d")
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color, obj.get_tipo_display(),
+        )
+    tipo_badge.short_description = "Tipo"
+
+    def monto_display(self, obj):
+        return f"₲{obj.monto:,.0f}"
+    monto_display.short_description = "Monto"
+
+    def estado_badge(self, obj):
+        colors = {
+            "PENDIENTE": "#ffc107",
+            "APROBADO":  "#28a745",
+            "RECHAZADO": "#dc3545",
+            "CANCELADO": "#6c757d",
+            "ERROR":     "#dc3545",
+        }
+        color = colors.get(obj.estado, "#6c757d")
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
+            color, obj.get_estado_display(),
+        )
+    estado_badge.short_description = "Estado"

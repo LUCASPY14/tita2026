@@ -27,12 +27,13 @@
 # ────────────────────────────────────────────────────────────────────────────
 
 param(
-    [string]$LocalDir    = "C:\backups\cantina",
-    [string]$RemoteName  = "gdrive",                     # nombre configurado en rclone
-    [string]$RemotePath  = "backups/cantina_tita",       # carpeta dentro de Google Drive
-    [string]$RcloneBin   = "rclone",                     # rclone en PATH o ruta completa
-    [int]   $KeepRemote  = 7,                            # semanas a conservar en la nube
-    [switch]$SoloUltimo  = $false                        # solo subir el último .dump
+    [string]$LocalDir         = "D:\produccion_tita\backups\cantina",
+    [string]$RemoteName       = "gdrive",                # nombre configurado en rclone
+    [string]$RemotePath       = "backups/cantina_tita",  # carpeta dentro de Google Drive
+    [string]$RcloneBin        = "rclone",                # rclone en PATH o ruta completa
+    [int]   $KeepRemote       = 7,                       # semanas a conservar en la nube
+    [switch]$SoloUltimo       = $false,                  # solo subir el último .dump
+    [switch]$RequireEncrypted = $false                   # fallar si el backup no está cifrado con GPG
 )
 
 $LOG_DIR = "$LocalDir\logs"
@@ -62,21 +63,38 @@ try {
 }
 
 # ── Determinar qué archivos subir ─────────────────────────────────────────────
-$dumps = Get-ChildItem "$LocalDir\cantina_*.dump" -ErrorAction SilentlyContinue |
+# Priorizar archivos cifrados (.dump.gpg) sobre los sin cifrar (.dump)
+$dumpsGpg  = Get-ChildItem "$LocalDir\cantina_*.dump.gpg" -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending
+$dumpsPlain = Get-ChildItem "$LocalDir\cantina_*.dump" -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTime -Descending
 
-if ($dumps.Count -eq 0) {
-    Write-Log "No hay archivos .dump en $LocalDir. Ejecutar backup_cantina.ps1 primero." "WARN"
+if ($dumpsGpg.Count -eq 0 -and $dumpsPlain.Count -eq 0) {
+    Write-Log "No hay archivos .dump ni .dump.gpg en $LocalDir. Ejecutar backup_cantina.ps1 primero." "WARN"
     exit 0
 }
 
+# Si hay dumps sin cifrar y RequireEncrypted está activo, abortar
+if ($RequireEncrypted -and $dumpsPlain.Count -gt 0 -and $dumpsGpg.Count -eq 0) {
+    Write-Log "ERROR: Se encontraron backups sin cifrar y -RequireEncrypted está activo. Configurar -GpgRecipient en backup_cantina.ps1." "ERROR"
+    exit 1
+}
+
+# Advertencia si se van a subir dumps sin cifrar
+if ($dumpsPlain.Count -gt 0 -and $dumpsGpg.Count -eq 0) {
+    Write-Log "ADVERTENCIA: Los backups a subir no están cifrados con GPG. Los datos de alumnos quedarán expuestos en la nube. Configurar -GpgRecipient en backup_cantina.ps1." "WARN"
+}
+
+# Preferir cifrados; si no hay, usar los sin cifrar
+$pool = if ($dumpsGpg.Count -gt 0) { $dumpsGpg } else { $dumpsPlain }
+
 if ($SoloUltimo) {
-    $archivos = @($dumps[0])
+    $archivos = @($pool[0])
     Write-Log "Modo SoloUltimo: subiendo $($archivos[0].Name)"
 } else {
     # Subir todos los dumps de los últimos 7 días
     $cutoff = (Get-Date).AddDays(-7)
-    $archivos = $dumps | Where-Object { $_.LastWriteTime -ge $cutoff }
+    $archivos = $pool | Where-Object { $_.LastWriteTime -ge $cutoff }
     Write-Log "Archivos a subir (últimos 7 días): $($archivos.Count)"
 }
 

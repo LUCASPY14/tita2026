@@ -1,4 +1,4 @@
-"""
+﻿"""
 Servicio para procesar y enviar notificaciones.
 """
 
@@ -10,7 +10,7 @@ from django.utils import timezone
 from .models import EmailEnviado, Notificacion, SolicitudNotificacion
 
 
-def _whatsapp_cliente(cliente, mensaje: str) -> None:
+def whatsapp_cliente(cliente, mensaje: str) -> None:
     """
     Envía WhatsApp a un cliente si tiene teléfono configurado y las
     notificaciones están activas. Silencioso ante cualquier error.
@@ -154,11 +154,30 @@ class NotificacionService:
 
     @staticmethod
     def _enviar_whatsapp(solicitud):
+        import logging
+        logger = logging.getLogger(__name__)
+
         cliente = solicitud.cliente
         telefono = getattr(cliente, "telefono", None)
         if not telefono:
             raise ValueError(f"Cliente {cliente} no tiene teléfono registrado.")
-        enviar_whatsapp(telefono, solicitud.mensaje)
+        try:
+            enviar_whatsapp(telefono, solicitud.mensaje)
+        except Exception as exc:
+            logger.warning(
+                "WhatsApp falló para solicitud %s (cliente %s): %s — intentando fallback por email.",
+                solicitud.pk, cliente.pk, exc,
+            )
+            # Fallback a email si el cliente tiene dirección registrada
+            if getattr(cliente, "email", None):
+                SolicitudNotificacion.objects.create(
+                    cliente=cliente,
+                    tipo=solicitud.tipo,
+                    destino=Notificacion.Destino.EMAIL,
+                    mensaje=solicitud.mensaje,
+                )
+                logger.info("Solicitud de email de fallback creada para cliente %s.", cliente.pk)
+            raise
 
     @staticmethod
     def _enviar_email(solicitud):

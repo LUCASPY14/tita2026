@@ -4,8 +4,8 @@
 
 | Capa | Tecnología |
 |------|-----------|
-| Base de datos | PostgreSQL 15 (nativo en Windows, **no** en Docker) |
-| Backend | Python 3.11 · Django 4.2 · DRF 3.17 · Daphne ASGI |
+| Base de datos | PostgreSQL 16 (contenedor Docker, volumen `postgres_data`) |
+| Backend | Python 3.11 · Django 5.2 LTS (soporte hasta abril 2028) · DRF 3.17 · Daphne ASGI |
 | Cola de tareas | Celery 5.6 + Redis 7 (broker y cache) |
 | WebSockets | Django Channels 4.2 |
 | Frontend | React 19 · TypeScript 6 · Vite 8 · Tailwind CSS 4 |
@@ -18,11 +18,17 @@
 
 ## Setup de desarrollo
 
-### PostgreSQL (nativo Windows)
+### PostgreSQL (Docker)
 ```
-# La base de datos corre directamente en Windows, no en Docker.
-# Asegurarse de que el servicio "postgresql-x64-16" esté activo.
-# Base de datos: cantina_tita | Puerto: 5432
+# PostgreSQL 16 corre en el contenedor 'postgres' del compose.
+# Datos persistidos en volumen Docker 'postgres_data'.
+# Base de datos: cantina_tita | Puerto: 5432 (interno, no expuesto al host)
+#
+# Migración inicial desde nativo (una sola vez):
+#   pg_dump -U app_cantina cantina_tita > cantina_backup.sql
+#   docker compose up -d postgres
+#   docker compose exec -T postgres psql -U app_cantina cantina_tita < cantina_backup.sql
+#   Stop-Service postgresql-x64-16 ; Set-Service postgresql-x64-16 -StartupType Disabled
 ```
 
 ### Backend
@@ -115,8 +121,8 @@ npm run lint         # ESLint + TypeScript check
 
 ### Backup de base de datos
 ```powershell
-# Primera vez (registra tarea programada Windows 02:00):
-.\scripts\setup_backup_task.ps1 -DbPassword "password_de_postgres"
+# Primera vez (registra tarea programada Windows 02:00, con cifrado GPG obligatorio):
+.\scripts\setup_backup_task.ps1 -DbPassword "password_de_postgres" -GpgRecipient "admin@cantinatita.com"
 
 # Backup manual:
 .\backup_cantina.ps1
@@ -134,8 +140,9 @@ LAN escolar (7 PCs)
 └── 5 PCs Cajeros   → http://localhost/modo-recreo  (POS, instalado como PWA)
 
 Servidor (1 PC dedicado)
-├── PostgreSQL 15       (nativo Windows, puerto 5432)
+├── Cloudflare Tunnel   (servicio nativo Windows, cloudflared.exe)
 ├── Docker Desktop
+│   ├── postgres        (PostgreSQL 16, volumen postgres_data)
 │   ├── frontend        (Nginx + React SPA, puerto 80)
 │   ├── backend         (Django + Daphne, puerto interno 8000)
 │   ├── redis           (broker + cache, puerto interno 6379)
@@ -177,7 +184,7 @@ Portal de padres (`/portal/*`) accesible desde internet via Bancard para recarga
 El límite de sesiones concurrentes se aplica automáticamente al hacer login
 (`apps/usuarios/views.py:_registrar_sesion`).
 
-## Tareas Celery periódicas (11 total)
+## Tareas Celery periódicas (19 activas)
 
 | Tarea | Cuándo | Crítica |
 |-------|--------|---------|
@@ -188,14 +195,22 @@ El límite de sesiones concurrentes se aplica automáticamente al hacer login
 | `enviar_emails_pendientes` | Cada 15 min | No |
 | `alertar_stock_minimo` | Diario 07:00 | No |
 | `verificar_vencimientos` | Diario 09:00 | No |
-| `generar_resumen_diario_stock` | Diario 23:55 | **Sí** |
-| `generar_resumen_diario_ventas` | Diario 23:50 | **Sí** |
-| `cerrar_cajas_automatico` | Cada hora | No |
+| `generar_resumen_diario_stock` | Diario 23:55 | No |
+| `generar_resumen_diario_ventas` | Diario 23:50 | No |
 | `cerrar_cuentas_mes_anterior` | Día 1 de mes 05:00 | **Sí** |
 | `generar_cuentas_mensuales` | Día 1 de mes 06:00 | **Sí** |
 | `alertar_cuentas_vencidas` | Día 10 de mes 08:00 | No |
+| `limpiar_audit_logs` | Día 1 de mes 01:00 | No |
+| `refrescar_mv_balance_cliente` | Cada 15 min | No |
+| `alertar_ordenes_compra_pendientes` | Diario 09:30 | No |
+| `alertar_compras_pendientes_pago` | Diario 10:00 | No |
+| `sincronizar_costos_desde_compras` | Diario 01:30 | No |
+| `alertar_saldo_negativo_prolongado` | Diario 09:15 | No |
+| `resumen_mensual_deuda_clientes` | Día 5 de mes 08:30 | No |
 
-Las tareas críticas envían email a `ADMINS` si fallan (configurado en `celery_app.py`).
+Las tareas críticas envían email a `ADMINS` si fallan (configurado en `celery_app.py`). `generar_resumen_diario_ventas` y `generar_resumen_diario_stock` solo escriben logs y tienen `autoretry_for=(Exception,)` — no están en `_CRITICAL_TASKS`.
+
+> `cerrar_cajas_automatico` está desactivada en el beat (`celery_app.py:104`); el cierre de caja es manual.
 
 ## Convenciones importantes
 
@@ -213,9 +228,10 @@ Las tareas críticas envían email a `ADMINS` si fallan (configurado en `celery_
 - i18n en `src/i18n/es.json` — agregar toda cadena nueva aquí
 
 ### Tests
-- Backend: cobertura mínima 80% forzada por CI (`--cov-fail-under=80`)
+- Backend: cobertura mínima 95% forzada por CI (`--cov-fail-under=95`)
 - E2E Playwright: usar patrón LIFO para mocks — registrar catch-all primero, específicos después
-- Tests backend: usar Factory Boy + Faker, nunca fixtures de Django para datos complejos
+- Tests backend: usar `Model.objects.create()` con datos explícitos; no usar fixtures de Django para datos complejos
+- Tests que dependan de fechas: usar `freezegun` (`@freeze_time`) con una fecha fija; nunca `date.today()` sin freeze
 
 ### Base de datos
 - Tablas de alto volumen (`movimientos`, `ventas`) usan particionamiento por año

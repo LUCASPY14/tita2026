@@ -219,6 +219,249 @@
           }
         }
       ]
+    },
+
+    {
+      "id": 10,
+      "title": "Ventas por cajero — últimas 8 horas",
+      "description": "Cantidad de ventas creadas (HTTP 201 en /ventas/) agrupadas por usuario autenticado. Requiere etiqueta 'user' en métricas.",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "displayName": "${__series.name}",
+          "color": { "mode": "palette-classic" },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 50 },
+            { "color": "red", "value": 150 }
+          ]}
+        }
+      },
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["sum"] } },
+      "targets": [
+        {
+          "expr": "sum by (view) (increase(django_http_responses_total_by_status_view_method_total{status=\"201\",view=~\".*venta.*\"}[8h]))",
+          "legendFormat": "{{view}}"
+        }
+      ]
+    },
+
+    {
+      "id": 11,
+      "title": "Recargas Bancard — estado últimas 24h",
+      "description": "Retornos de Bancard: 200 = aprobado, 4xx = rechazado/error.",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }
+      },
+      "options": { "pieType": "donut", "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "expr": "sum by (status) (increase(django_http_responses_total_by_status_view_method_total{view=~\".*bancard.*\"}[24h]))",
+          "legendFormat": "HTTP {{status}}"
+        }
+      ]
+    },
+
+    {
+      "id": 12,
+      "title": "Tareas Celery críticas — estado últimas 24h",
+      "description": "Monitoreo de las 4 tareas críticas: resumen diario ventas/stock, cerrar y generar cuentas mensuales.",
+      "type": "table",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 44 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Fallos" },
+            "properties": [
+              { "id": "thresholds", "value": { "steps": [
+                { "color": "green", "value": null },
+                { "color": "red", "value": 1 }
+              ]}},
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum by (task_name) (increase(celery_task_failures_total{task_name=~\".*resumen_diario.*|.*cerrar_cuentas.*|.*generar_cuentas.*\"}[24h]))",
+          "legendFormat": "{{task_name}}",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "labelsToFields", "options": { "mode": "rows" } },
+        { "id": "organize", "options": { "renameByName": { "label": "Tarea", "Value": "Fallos" } } }
+      ]
+    },
+
+    {
+      "id": 13,
+      "title": "WebSocket — conexiones activas",
+      "description": "Conexiones Django Channels activas (consumidores de notificaciones).",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 50 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 20 },
+            { "color": "red", "value": 50 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "expr": "django_channels_websocket_connections_total - django_channels_websocket_disconnections_total",
+          "legendFormat": "WS activos"
+        }
+      ]
+    },
+
+    {
+      "id": 14,
+      "title": "Redis — uso de memoria",
+      "type": "timeseries",
+      "gridPos": { "h": 4, "w": 18, "x": 6, "y": 50 },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "color": { "mode": "palette-classic" } }
+      },
+      "targets": [
+        {
+          "expr": "redis_memory_used_bytes",
+          "legendFormat": "Usado"
+        },
+        {
+          "expr": "redis_memory_max_bytes",
+          "legendFormat": "Máximo configurado"
+        }
+      ]
+    },
+
+    {
+      "id": 15,
+      "title": "Host — CPU %",
+      "description": "Uso promedio de CPU del servidor Windows (windows_exporter:9182).",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 54 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 70 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "expr": "100 - (avg(rate(windows_cpu_time_total{mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "CPU %"
+        }
+      ]
+    },
+
+    {
+      "id": 16,
+      "title": "Host — RAM %",
+      "description": "Porcentaje de memoria RAM usada en el servidor Windows.",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 54 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 75 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "expr": "(windows_os_visible_memory_bytes - windows_os_physical_memory_free_bytes) / windows_os_visible_memory_bytes * 100",
+          "legendFormat": "RAM %"
+        }
+      ]
+    },
+
+    {
+      "id": 17,
+      "title": "Host — Disco C: %",
+      "description": "Porcentaje de disco usado en C: del servidor Windows.",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 54 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 75 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "expr": "(windows_logical_disk_size_bytes{volume=\"C:\"} - windows_logical_disk_free_bytes{volume=\"C:\"}) / windows_logical_disk_size_bytes{volume=\"C:\"} * 100",
+          "legendFormat": "Disco C: %"
+        }
+      ]
+    },
+
+    {
+      "id": 18,
+      "title": "Host — CPU y RAM — últimas 2h",
+      "description": "Evolución temporal de CPU y RAM del servidor Windows.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 58 },
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "min": 0, "max": 100, "color": { "mode": "palette-classic" } }
+      },
+      "targets": [
+        {
+          "expr": "100 - (avg(rate(windows_cpu_time_total{mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "CPU %"
+        },
+        {
+          "expr": "(windows_os_visible_memory_bytes - windows_os_physical_memory_free_bytes) / windows_os_visible_memory_bytes * 100",
+          "legendFormat": "RAM %"
+        }
+      ]
+    },
+
+    {
+      "id": 19,
+      "title": "Host — Discos — uso %",
+      "description": "Uso de cada volumen lógico del servidor Windows (excluye volúmenes de sistema).",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 58 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 75 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      },
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "(windows_logical_disk_size_bytes{volume=~\"[A-Z]:\"} - windows_logical_disk_free_bytes{volume=~\"[A-Z]:\"}) / windows_logical_disk_size_bytes{volume=~\"[A-Z]:\"} * 100",
+          "legendFormat": "{{volume}}"
+        }
+      ]
     }
   ]
 }

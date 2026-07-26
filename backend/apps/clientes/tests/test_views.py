@@ -380,3 +380,202 @@ class TestReporteCuentaCorriente:
     def test_requiere_autenticacion(self, api_client):
         resp = api_client.get("/api/v1/clientes/reporte-cuenta-corriente/")
         assert resp.status_code in (401, 403)
+
+    def test_excel_retorna_xlsx(self, api_admin):
+        resp = api_admin.get(
+            "/api/v1/clientes/reporte-cuenta-corriente/",
+            {"formato": "excel"},
+        )
+        assert resp.status_code == 200
+        assert "spreadsheetml" in resp["Content-Type"]
+        assert "attachment" in resp.get("Content-Disposition", "")
+        assert resp.get("Content-Disposition", "").endswith(".xlsx\"")
+
+    def test_excel_con_datos_genera_filas(self, api_admin, cuenta_con_deuda):
+        import io
+        from openpyxl import load_workbook
+        resp = api_admin.get(
+            "/api/v1/clientes/reporte-cuenta-corriente/",
+            {"formato": "excel"},
+        )
+        assert resp.status_code == 200
+        wb = load_workbook(io.BytesIO(resp.content))
+        ws = wb.active
+        assert ws.max_row >= 2  # encabezado + al menos 1 fila de datos
+
+
+# ── CuentaCorrienteClienteViewSet.create ─────────────────────────────────────
+
+@pytest.mark.django_db
+class TestCuentaCorrienteCreate:
+
+    def test_sin_cliente_retorna_400(self, api_cajero):
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"monto": "10000"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "cliente" in str(resp.data)
+
+    def test_monto_cero_retorna_400(self, api_cajero, cliente):
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"cliente": cliente.pk, "monto": "0"},
+            format="json",
+        )
+        assert resp.status_code == 400
+
+    def test_monto_negativo_retorna_400(self, api_cajero, cliente):
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"cliente": cliente.pk, "monto": "-5000"},
+            format="json",
+        )
+        assert resp.status_code == 400
+
+    def test_monto_no_numerico_retorna_400(self, api_cajero, cliente):
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"cliente": cliente.pk, "monto": "no_es_numero"},
+            format="json",
+        )
+        assert resp.status_code == 400
+
+    def test_cliente_inexistente_retorna_404(self, api_cajero):
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"cliente": 999_999, "monto": "10000"},
+            format="json",
+        )
+        assert resp.status_code == 404
+
+    def test_happy_path_crea_movimiento_credito(self, api_cajero, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        # Deuda previa para que haya saldo_anterior
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente,
+            tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("30000"),
+            saldo_anterior=Decimal("0"),
+            saldo_resultante=Decimal("30000"),
+            creado_por=usuario_cajero,
+        )
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"cliente": cliente.pk, "monto": "20000", "descripcion": "Pago parcial"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["tipo"] == "CREDITO"
+        assert Decimal(resp.data["monto"]) == Decimal("20000")
+
+
+# ── ClienteViewSet.perform_create → _crear_usuario_portal ────────────────────
+
+@pytest.mark.django_db
+class TestCrearUsuarioPortal:
+
+    def test_post_cliente_crea_usuario_portal_con_email_sintetico(
+        self, api_admin, tipo_cliente, lista_precio,
+    ):
+        """Crear un cliente sin email vía API genera un CLIENTE_WEB con email sintético."""
+        from apps.usuarios.models import Usuario
+        resp = api_admin.post(
+            "/api/v1/clientes/clientes/",
+            {
+                "nombres": "Portal",
+                "apellidos": "Nuevo",
+                "ruc_ci": "PORTAL99",
+                "tipo_cliente": tipo_cliente.pk,
+                "lista_precio": lista_precio.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert Usuario.objects.filter(
+            rol=Usuario.Rol.CLIENTE_WEB,
+            email__contains="portal.tita.local",
+        ).exists()
+
+    def test_post_cliente_con_email_existente_sin_cliente_vincula_usuario(
+        self, api_admin, tipo_cliente, lista_precio,
+    ):
+        """Si ya existe un Usuario con ese email y sin cliente, se lo vincula en lugar de crear uno nuevo."""
+        from apps.usuarios.models import Usuario
+        usuario_previo = Usuario.objects.create_user(
+            email="padre@escuela.com",
+            password="x",
+            nombre="Pre",
+            apellido="Existente",
+            rol=Usuario.Rol.CLIENTE_WEB,
+        )
+        resp = api_admin.post(
+            "/api/v1/clientes/clientes/",
+            {
+                "nombres": "Pre",
+                "apellidos": "Existente",
+                "ruc_ci": "PRE001",
+                "email": "padre@escuela.com",
+                "tipo_cliente": tipo_cliente.pk,
+                "lista_precio": lista_precio.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        usuario_previo.refresh_from_db()
+        assert usuario_previo.cliente_id is not None
+        # No se creó un segundo usuario con ese email
+        assert Usuario.objects.filter(email="padre@escuela.com").count() == 1
+
+    def test_cliente_ya_con_portal_no_crea_segundo_usuario(
+        self, api_admin, tipo_cliente, lista_precio,
+    ):
+        """Si el cliente ya tiene usuario_portal, _crear_usuario_portal retorna sin crear otro."""
+        from apps.clientes.models import Cliente
+        from apps.usuarios.models import Usuario
+        from apps.clientes.views import _crear_usuario_portal
+        cliente = Cliente.objects.create(
+            nombres="Ya",
+            apellidos="Tiene",
+            ruc_ci="YATIENE01",
+            tipo_cliente=tipo_cliente,
+            lista_precio=lista_precio,
+        )
+        Usuario.objects.create_user(
+            email="yatiene@test.com",
+            password="x",
+            nombre="Ya",
+            apellido="Tiene",
+            rol=Usuario.Rol.CLIENTE_WEB,
+            cliente=cliente,
+        )
+        before = Usuario.objects.count()
+        _crear_usuario_portal(cliente)  # debe ser no-op
+        assert Usuario.objects.count() == before
+
+
+# ── AlumnoResponsableViewSet.set_titular — ValueError ────────────────────────
+
+@pytest.mark.django_db
+class TestSetTitularError:
+
+    def test_responsable_inactivo_retorna_400(
+        self, api_admin, hijo_fixture, cliente, usuario_admin,
+    ):
+        """Intentar poner como titular a un responsable inactivo retorna 400."""
+        from apps.clientes.models import AlumnoResponsable
+        responsable_inactivo = AlumnoResponsable.objects.create(
+            hijo=hijo_fixture,
+            cliente=cliente,
+            parentesco="TIO",
+            es_titular=False,
+            orden_cobro=2,
+            activo=False,
+            agregado_por=usuario_admin,
+        )
+        resp = api_admin.post(
+            f"/api/v1/clientes/responsables/{responsable_inactivo.pk}/set_titular/"
+        )
+        assert resp.status_code == 400
+        assert "inactivo" in str(resp.data).lower()

@@ -131,9 +131,11 @@ class CuentaCorrienteProveedor(models.Model):
     def save(self, *args, **kwargs):
         """Calcula automáticamente el saldo resultante con bloqueo pesimista."""
         with transaction.atomic():
+            # Lock the proveedor row (always exists) so concurrent movements can't
+            # read the same saldo_anterior — including the first concurrent movement.
+            Proveedor.objects.select_for_update().get(pk=self.proveedor_id)
             ultimo = (
                 CuentaCorrienteProveedor.objects
-                .select_for_update()
                 .filter(proveedor=self.proveedor)
                 .order_by("-id")
                 .first()
@@ -342,6 +344,7 @@ class AplicacionPagoCompra(models.Model):
     class Meta:
         verbose_name = "Aplicación de Pago"
         verbose_name_plural = "Aplicaciones de Pagos"
+        ordering = ["id"]
 
     def __str__(self):
         return f"₲{self.monto_aplicado:,.0f} → Compra #{self.compra_id}"
@@ -358,6 +361,10 @@ class NotaCreditoProveedor(models.Model):
         EMITIDA = "EMITIDA", "Emitida"
         APLICADA = "APLICADA", "Aplicada"
         ANULADA = "ANULADA", "Anulada"
+
+    class TipoNC(models.TextChoices):
+        AJUSTE_PRECIO = "AJUSTE_PRECIO", "Ajuste de precio"
+        DEVOLUCION = "DEVOLUCION", "Devolución de mercadería"
 
     proveedor = models.ForeignKey(
         Proveedor, models.PROTECT, related_name="notas_credito"
@@ -377,6 +384,12 @@ class NotaCreditoProveedor(models.Model):
         max_length=50, blank=True, null=True, help_text="Nro de factura de la compra original"
     )
     observacion = models.CharField(max_length=255, blank=True, null=True)
+    tipo_nc = models.CharField(
+        max_length=20,
+        choices=TipoNC.choices,
+        default=TipoNC.AJUSTE_PRECIO,
+        help_text="Tipo de nota de crédito",
+    )
     estado = models.CharField(
         max_length=15, choices=Estado.choices, default=Estado.EMITIDA
     )
@@ -515,6 +528,7 @@ class DetalleNotaCreditoProveedor(models.Model):
     class Meta:
         verbose_name = "Detalle de NC de Proveedor"
         verbose_name_plural = "Detalles de NC de Proveedores"
+        ordering = ["id"]
 
     def __str__(self):
         return f"{self.producto} x {self.cantidad} (NC #{self.nota_credito_id})"

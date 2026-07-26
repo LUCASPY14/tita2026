@@ -15,6 +15,7 @@ from common.object_permissions import IsCajaOwnerOrAdmin
 from common.permissions import IsCajeroOrAdmin, IsAdmin, IsStaffUser
 from common.throttling import SensitiveEndpointThrottle
 from .filters import VentaFilter
+from apps.usuarios.auditoria import registrar_auditoria
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
@@ -85,6 +86,13 @@ class VentaViewSet(viewsets.ModelViewSet):
             advertencias = verificar_alergenos_venta(hijo, productos)
 
         venta = self._registrar(serializer)
+        registrar_auditoria(
+            request=request,
+            operacion="CREAR_VENTA",
+            tabla="ventas_venta",
+            id_registro=venta.id,
+            descripcion=f"Venta #{venta.id} {venta.tipo} {venta.monto_total} Gs.",
+        )
         resp_data = VentaSerializer(venta).data
         headers = self.get_success_headers(resp_data)
         if advertencias:
@@ -92,16 +100,35 @@ class VentaViewSet(viewsets.ModelViewSet):
             resp_data["advertencias_alergenos"] = advertencias
         return Response(resp_data, status=status.HTTP_201_CREATED, headers=headers)
 
-    @action(detail=True, methods=["post"], url_path="anular", permission_classes=[IsAdmin], throttle_classes=[SensitiveEndpointThrottle])
+    @action(
+        detail=True, methods=["post"], url_path="anular",
+        permission_classes=[IsAdmin], throttle_classes=[SensitiveEndpointThrottle],
+    )
     def anular(self, request, pk=None):
         """Anula una venta activa revirtiendo stock, tarjeta y cuenta corriente."""
         venta = self.get_object()
         try:
             venta = VentaService.anular_venta(venta, anulado_por=request.user)
         except Exception as e:
+            registrar_auditoria(
+                request=request,
+                operacion="ANULAR_VENTA",
+                tabla="ventas_venta",
+                id_registro=venta.id,
+                descripcion=f"Intento fallido de anular venta #{venta.id}",
+                resultado="FALLA",
+                mensaje_error=str(e),
+            )
             if hasattr(e, "detail"):
                 return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        registrar_auditoria(
+            request=request,
+            operacion="ANULAR_VENTA",
+            tabla="ventas_venta",
+            id_registro=venta.id,
+            descripcion=f"Venta #{venta.id} anulada ({venta.monto_total} Gs.)",
+        )
         return Response(VentaSerializer(venta).data)
 
     def _registrar(self, serializer):
@@ -151,6 +178,8 @@ class VentaViewSet(viewsets.ModelViewSet):
             pin_autorizacion=data.get("pin_autorizacion", ""),
             referencia=data.get("referencia", ""),
             cierre_caja=cierre_caja,
+            genera_factura_legal=bool(self.request.data.get("genera_factura_legal", False)),
+            nro_factura=str(self.request.data.get("nro_factura", "") or "").strip(),
         )
 
 class DetalleVentaViewSet(viewsets.ModelViewSet):
@@ -199,6 +228,16 @@ class NotaCreditoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["estado", "cliente"]
+
+    def perform_create(self, serializer):
+        nc = serializer.save()
+        registrar_auditoria(
+            request=self.request,
+            operacion="EMITIR_NOTA_CREDITO",
+            tabla="ventas_notacredito",
+            id_registro=nc.id,
+            descripcion=f"Nota de crédito #{nc.id} por {nc.monto_total} Gs. cliente={nc.cliente_id}",
+        )
 
 
 class DetalleNotaCreditoViewSet(viewsets.ModelViewSet):
@@ -276,7 +315,9 @@ class ReporteVentasProductoView(APIView):
 
     def _exportar_pdf(self, filas, desde, hasta, total_general):
         from common.pdf_report import pdf_response
-        fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+
+        def fmt_gs(n):
+            return f"{int(n):,} Gs.".replace(",", ".")
         rows = [
             [i + 1, f["descripcion"], f["categoria"] or "—",
              f["total_cantidad"], f["num_ventas"], fmt_gs(f["total_monto"])]
@@ -370,7 +411,8 @@ class ReporteVentasCajeroView(APIView):
 
     def _exportar_pdf(self, filas, desde, hasta, total_general):
         from common.pdf_report import pdf_response
-        fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+        def fmt_gs(n):
+            return f"{int(n):,} Gs.".replace(",", ".")
         rows = [
             [f["nombre"], f["username"], f["cantidad_ventas"],
              fmt_gs(f["monto_total"]), fmt_gs(f["ticket_promedio"])]
@@ -466,7 +508,10 @@ class ReporteMediosPagoView(APIView):
             writer = csv.writer(response)
             writer.writerow(["REPORTE MEDIOS DE PAGO", f"{desde} al {hasta}"])
             writer.writerow([])
-            writer.writerow(["Medio de Pago", "N° Pagos", "Monto Total (Gs)", "Conciliados", "Monto Conciliado", "Pendientes", "Monto Pendiente"])
+            writer.writerow([
+                "Medio de Pago", "N° Pagos", "Monto Total (Gs)",
+                "Conciliados", "Monto Conciliado", "Pendientes", "Monto Pendiente",
+            ])
             for f in filas:
                 writer.writerow([f["descripcion"], f["n_pagos"], f["monto_total"],
                                   f["n_conciliados"], f["monto_conciliado"],
