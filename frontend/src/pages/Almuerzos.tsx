@@ -282,7 +282,7 @@ export default function Almuerzos() {
         if (!detalleMap.has(r.hijo)) detalleMap.set(r.hijo, [])
         detalleMap.get(r.hijo)!.push(r)
       }
-      exportarCuentasMensualesPDF(cuentasFiltradas, mes, filtroCuentaAnio !== '' ? Number(filtroCuentaAnio) : undefined, detalleMap)
+      exportarCuentasMensualesPDF(cuentasFiltradas, mes, Number(filtroCuentaAnio), detalleMap)
     } catch {
       toast.error('Error al generar PDF')
     } finally {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
-  ArrowRightCircle, Ban, Building2, CheckCircle, ClipboardList,
+  ArrowRightCircle, Building2, CheckCircle, ClipboardList,
   CreditCard, DollarSign, Eye, FileText, PackageCheck,
   Plus, Search, Send, Truck, XCircle,
 } from 'lucide-react'

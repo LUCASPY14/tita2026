@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   BarChart2, Trophy, UserCheck, Users, CreditCard, ShoppingBag,
   Package, UtensilsCrossed, FileText, ShoppingCart, AlertTriangle,
-  TrendingUp, Search, LogIn, Shield, DollarSign,
+  Search, LogIn, Shield, DollarSign,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { type TabKey } from './reportes/shared'

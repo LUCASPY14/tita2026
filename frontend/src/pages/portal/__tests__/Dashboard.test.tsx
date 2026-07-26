@@ -31,19 +31,28 @@ const HIJO_BASE = {
   nombre: 'Juan García',
   grado: '3° A',
   tarjeta: { nro_tarjeta: 'T-001', saldo_actual: 75_000, estado: 'ACTIVA', en_alerta: false },
-  restricciones: [],
-  consumos_mes: { total: 0, cobrados: 0, ultimos: [] },
-  cuenta_mensual: null,
+  restricciones: [] as { tipo: string; severidad: string; descripcion: string; requiere_autorizacion: boolean }[],
+  consumos_mes: {
+    total: 0, cobrados: 0,
+    ultimos: [] as { fecha_consumo: string; costo_almuerzo: string; ya_cobrado: boolean }[],
+  },
+  cuenta_mensual: null as {
+    id: number; cantidad_almuerzos: number; monto_total: number
+    monto_pagado: number; monto_pendiente: number; estado: string
+  } | null,
 }
 
 const HIJO_CON_CUENTA = {
   ...HIJO_BASE,
   id: 1,
-  consumos_mes: { total: 5, cobrados: 3, ultimos: [] },
+  consumos_mes: {
+    total: 5, cobrados: 3,
+    ultimos: [] as { fecha_consumo: string; costo_almuerzo: string; ya_cobrado: boolean }[],
+  },
   cuenta_mensual: {
     id: 10, cantidad_almuerzos: 5, monto_total: 100_000,
     monto_pagado: 100_000, monto_pendiente: 0, estado: 'PAGADO',
-  },
+  } as { id: number; cantidad_almuerzos: number; monto_total: number; monto_pagado: number; monto_pendiente: number; estado: string } | null,
 }
 
 const HIJO2 = {
@@ -60,7 +69,7 @@ const PORTAL_DATA = {
   hijos: [HIJO_CON_CUENTA],
 }
 
-function setupPortal(override: Partial<typeof PORTAL_DATA> = {}) {
+function setupPortal(override: Record<string, unknown> = {}) {
   vi.mocked(api.get).mockImplementation((url: string) => {
     if (url === '/usuarios/portal/mi-hijo/') return Promise.resolve({ data: { ...PORTAL_DATA, ...override } })
     if (url === '/almuerzos/suscripciones/') return Promise.resolve({ data: { results: [] } })

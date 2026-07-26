@@ -33,6 +33,7 @@ RUN python -c "import json,pathlib; pathlib.Path('/usr/local/lib/python3.11/site
 # Recolectar archivos estáticos en tiempo de build
 # Usa SECRET_KEY temporal; las credenciales de DB no son necesarias para collectstatic
 RUN SECRET_KEY=build-only ALLOWED_HOSTS=localhost DB_HOST=localhost DB_NAME=x DB_USER=x DB_PASSWORD=x \
+    BANCARD_RETURN_URL=https://build-placeholder/api/v1/bancard/retorno/ \
     DJANGO_SETTINGS_MODULE=backend.settings.production \
     python manage.py collectstatic --noinput --clear
 

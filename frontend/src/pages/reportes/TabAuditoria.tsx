@@ -111,7 +111,7 @@ export default function TabAuditoria() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-400">{op.n} eventos</span>
                         <button
-                          onClick={() => { setAudOperacion(op.operacion); buscarAuditoria() }}
+                          onClick={() => { setAudOperacion(op.operacion ?? ''); buscarAuditoria() }}
                           className="text-xs text-green-600 hover:underline"
                         >filtrar</button>
                       </div>
@@ -131,7 +131,7 @@ export default function TabAuditoria() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-400">{t.n} eventos</span>
                         <button
-                          onClick={() => { setAudTabla(t.tabla); buscarAuditoria() }}
+                          onClick={() => { setAudTabla(t.tabla ?? ''); buscarAuditoria() }}
                           className="text-xs text-green-600 hover:underline"
                         >filtrar</button>
                       </div>

@@ -10,6 +10,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   AreaChart, Area,
 } from 'recharts'
+import toast from 'react-hot-toast'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { useDashboardKPI } from '../hooks/useDashboardKPI'

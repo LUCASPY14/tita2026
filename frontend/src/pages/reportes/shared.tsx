@@ -132,18 +132,17 @@ export interface ConsumoGradoData {
 }
 
 export interface CobranzaMesFila {
-  mes: number; mes_nombre: string
-  n_alumnos: number; pagados: number; parciales: number; pendientes: number
-  monto_total: number; monto_cobrado: number; monto_pendiente: number; tasa_cobro: number
+  mes: number
+  cobrado: number; pendiente: number; facturado: number; tasa_cobranza: number; n_cobros: number
 }
 
 export interface CobranzaFormaFila {
-  forma_cobro: string; n_cuentas: number; monto_total: number; monto_cobrado: number
+  forma_cobro: string; n_cobros: number; monto: number; porcentaje: number
 }
 
 export interface CobranzaAlmuerzosData {
   anio: number
-  resumen: { monto_anual: number; cobrado_anual: number; pendiente_anual: number; tasa_cobro_anual: number; meses_con_datos: number }
+  resumen: { total_cobrado: number; total_pendiente: number; n_cobros: number; tasa_cobranza: number }
   por_mes: CobranzaMesFila[]
   por_forma_cobro: CobranzaFormaFila[]
 }
@@ -227,15 +226,16 @@ export interface AgingProveedoresData {
   detalle: AgingProveedorItem[]
 }
 
-export interface AuditoriaResultado { resultado: string; count: number }
-export interface AuditoriaTop { operacion?: string; tabla_afectada?: string; count: number }
+export interface AuditoriaTop { operacion?: string; tabla?: string; n: number }
 export interface AuditoriaFila {
-  id_auditoria: number; fecha_operacion: string; usuario__email: string | null
-  operacion: string; tabla_afectada: string | null; id_registro: number | null
-  resultado: string; ip_address: string | null; descripcion: string | null; mensaje_error: string | null
+  fecha: string; usuario: string | null
+  operacion: string; tabla: string | null; objeto_id: number | null
+  resultado: string; ip: string | null; descripcion: string | null; mensaje_error: string | null
 }
 export interface AuditoriaData {
-  resumen: { total: number; por_resultado: AuditoriaResultado[]; top_operaciones: AuditoriaTop[]; top_tablas: AuditoriaTop[] }
+  resumen: { total_eventos: number; por_resultado: { EXITO: number; ERROR: number; DENEGADO: number } }
+  top_operaciones: AuditoriaTop[]
+  top_tablas: AuditoriaTop[]
   detalle: AuditoriaFila[]
 }
 

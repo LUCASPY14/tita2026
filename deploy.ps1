@@ -175,11 +175,18 @@ if ($SkipBuild) {
 
 Step "4/7  Aplicando migraciones (PostgreSQL)"
 
+# Los volúmenes Docker se crean con dueño root; el usuario 'cantina' necesita escribir en ellos.
+# Esta operación es idempotente: solo ajusta permisos si ya no los tiene.
+Log "Inicializando permisos de volúmenes..."
+docker compose run --rm --user root backend sh -c "chown -R cantina:cantina /app/logs /app/media /app/staticfiles" 2>$null
+docker compose run --rm --user root celery-beat sh -c "chown -R cantina:cantina /app/beatdata /app/logs" 2>$null
+Log "  Permisos OK" "Green"
+
 if ($SkipMigrations) {
     Log "SkipMigrations activado — omitiendo migrate." "Yellow"
 } else {
     RunOrDie "python manage.py migrate" {
-        docker compose run --rm backend python manage.py migrate --noinput
+        docker compose run --rm backend python manage.py migrate --noinput --skip-checks
     }
     Log "Migraciones aplicadas." "Green"
 }

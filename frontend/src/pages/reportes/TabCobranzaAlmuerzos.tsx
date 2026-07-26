@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import {
-  formatGs, descargaBlob, today,
+  formatGs, descargaBlob,
   FORMA_COBRO_LABEL,
   FilterBar, EmptyState, KpiCard,
   type CobranzaAlmuerzosData,
