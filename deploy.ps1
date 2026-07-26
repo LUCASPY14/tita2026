@@ -22,7 +22,7 @@ param(
     [string]$HealthUrl       = "http://localhost/api/health/",
     # /ready/ solo verifica DB + Redis, no Celery.
     # Los workers no han sido reiniciados todavía cuando se hace este check.
-    [string]$BackendHealthUrl = "http://localhost:8000/api/health/ready/"
+    [string]$BackendHealthUrl = "http://localhost/api/health/ready/"
 )
 
 $ErrorActionPreference = "Stop"
