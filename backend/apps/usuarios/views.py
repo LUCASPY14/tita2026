@@ -70,7 +70,7 @@ from django.core.cache import cache
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters as drf_filters
 
-from django.db.models import Count, Max, Q, Avg
+from django.db.models import Count, Max, Q
 from django.db.models.functions import TruncDate
 
 from .models import (
@@ -207,7 +207,10 @@ def _registrar_fallo_login(email: str, ip: str) -> None:
             if not BloqueoCuenta.objects.filter(usuario=user, estado=True).exists():
                 BloqueoCuenta.objects.create(
                     usuario=user,
-                    motivo=f"Bloqueo automático: {count_email} intentos fallidos en {django_settings.LOGIN_VENTANA_MINUTOS} min",
+                    motivo=(
+                        f"Bloqueo automático: {count_email} intentos fallidos"
+                        f" en {django_settings.LOGIN_VENTANA_MINUTOS} min"
+                    ),
                     fecha_desbloqueo=timezone.now() + timedelta(minutes=bloqueo),
                     ip_address=ip or None,
                     estado=True,

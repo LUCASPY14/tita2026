@@ -17,7 +17,7 @@ from common.permissions import IsAdmin, IsStaffUser
 from common.mixins import ExportCSVMixin
 
 from django_filters.rest_framework import DjangoFilterBackend
-from .filters import MovimientoStockFilter, AlertaStockFilter, LoteProductoFilter, AlertaVencimientoFilter
+from .filters import MovimientoStockFilter, LoteProductoFilter, AlertaVencimientoFilter
 
 from .models import (
     Stock,
@@ -221,7 +221,6 @@ class AlertaStockViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsStaffUser]
 
     def get_queryset(self):
-        from apps.productos.models import Producto
         stocks = (
             Stock.objects
             .select_related("producto")
@@ -397,7 +396,8 @@ class ReporteStockView(APIView):
     def _exportar_pdf(self, filas, total_valor, productos_bajo_minimo):
         from common.pdf_report import pdf_response
         from datetime import date
-        fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+        def fmt_gs(n):
+            return f"{int(n):,} Gs.".replace(",", ".")
         rows = [
             [
                 f["descripcion"],
@@ -416,7 +416,10 @@ class ReporteStockView(APIView):
             filename=f"reporte_stock_{date.today()}.pdf",
             title="Reporte de Inventario / Stock",
             subtitle=f"Total: {len(filas)} productos | {productos_bajo_minimo} bajo mínimo",
-            headers=["Producto", "Categoría", "Unidad", "Stock", "Mínimo", "Estado", "Costo Prom.", "Valor Inv.", "Días Stock"],
+            headers=[
+                "Producto", "Categoría", "Unidad", "Stock", "Mínimo",
+                "Estado", "Costo Prom.", "Valor Inv.", "Días Stock",
+            ],
             rows=rows,
             totals=["TOTAL", "", "", "", "", "", "", fmt_gs(total_valor), ""],
             landscape=True,

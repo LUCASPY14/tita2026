@@ -137,7 +137,10 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
             operacion="CERRAR_CAJA",
             tabla="contabilidad_cierrecaja",
             id_registro=cierre.id,
-            descripcion=f"Caja '{cierre.caja}' cerrada — contado={monto_contado} Gs. diferencia={cierre.diferencia_efectivo} Gs.",
+            descripcion=(
+                f"Caja '{cierre.caja}' cerrada — contado={monto_contado} Gs."
+                f" diferencia={cierre.diferencia_efectivo} Gs."
+            ),
         )
         return Response(CierreCajaSerializer(cierre).data)
 
@@ -658,7 +661,10 @@ class DashboardTendenciaView(APIView):
                 desde = date.fromisoformat(desde_str)
                 hasta = date.fromisoformat(hasta_str)
             except ValueError:
-                return Response({"error": "Formato de fecha inválido (YYYY-MM-DD)."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "Formato de fecha inválido (YYYY-MM-DD)."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         else:
             dias = min(max(int(request.query_params.get("dias", 7)), 1), 90)
             hasta = localdate()
@@ -704,8 +710,7 @@ class ReporteDiferenciasCajaView(APIView):
     permission_classes = [IsStaffUser]
 
     def get(self, request):
-        from decimal import Decimal
-        from django.db.models import Count, Sum, Max, Min, Avg
+        from django.db.models import Count, Sum, Max, Avg
 
         desde = request.query_params.get("desde")
         hasta = request.query_params.get("hasta")

@@ -100,7 +100,10 @@ class VentaViewSet(viewsets.ModelViewSet):
             resp_data["advertencias_alergenos"] = advertencias
         return Response(resp_data, status=status.HTTP_201_CREATED, headers=headers)
 
-    @action(detail=True, methods=["post"], url_path="anular", permission_classes=[IsAdmin], throttle_classes=[SensitiveEndpointThrottle])
+    @action(
+        detail=True, methods=["post"], url_path="anular",
+        permission_classes=[IsAdmin], throttle_classes=[SensitiveEndpointThrottle],
+    )
     def anular(self, request, pk=None):
         """Anula una venta activa revirtiendo stock, tarjeta y cuenta corriente."""
         venta = self.get_object()
@@ -312,7 +315,9 @@ class ReporteVentasProductoView(APIView):
 
     def _exportar_pdf(self, filas, desde, hasta, total_general):
         from common.pdf_report import pdf_response
-        fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+
+        def fmt_gs(n):
+            return f"{int(n):,} Gs.".replace(",", ".")
         rows = [
             [i + 1, f["descripcion"], f["categoria"] or "—",
              f["total_cantidad"], f["num_ventas"], fmt_gs(f["total_monto"])]
@@ -406,7 +411,8 @@ class ReporteVentasCajeroView(APIView):
 
     def _exportar_pdf(self, filas, desde, hasta, total_general):
         from common.pdf_report import pdf_response
-        fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+        def fmt_gs(n):
+            return f"{int(n):,} Gs.".replace(",", ".")
         rows = [
             [f["nombre"], f["username"], f["cantidad_ventas"],
              fmt_gs(f["monto_total"]), fmt_gs(f["ticket_promedio"])]
@@ -502,7 +508,10 @@ class ReporteMediosPagoView(APIView):
             writer = csv.writer(response)
             writer.writerow(["REPORTE MEDIOS DE PAGO", f"{desde} al {hasta}"])
             writer.writerow([])
-            writer.writerow(["Medio de Pago", "N° Pagos", "Monto Total (Gs)", "Conciliados", "Monto Conciliado", "Pendientes", "Monto Pendiente"])
+            writer.writerow([
+                "Medio de Pago", "N° Pagos", "Monto Total (Gs)",
+                "Conciliados", "Monto Conciliado", "Pendientes", "Monto Pendiente",
+            ])
             for f in filas:
                 writer.writerow([f["descripcion"], f["n_pagos"], f["monto_total"],
                                   f["n_conciliados"], f["monto_conciliado"],

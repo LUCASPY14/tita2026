@@ -82,7 +82,10 @@ class VapidPublicKeyView(APIView):
         from django.conf import settings
         pk = getattr(settings, "VAPID_PUBLIC_KEY", "")
         if not pk:
-            return Response({"error": "Push notifications no configuradas en este servidor."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response(
+                {"error": "Push notifications no configuradas en este servidor."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return Response({"publicKey": pk})
 
 
@@ -101,7 +104,10 @@ class PushSubscriptionView(APIView):
         p256dh   = keys.get("p256dh", "")
         auth     = keys.get("auth", "")
         if not endpoint or not p256dh or not auth:
-            return Response({"error": "endpoint, keys.p256dh y keys.auth son requeridos."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "endpoint, keys.p256dh y keys.auth son requeridos."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         _, created = PushSubscription.objects.update_or_create(
             endpoint=endpoint,
             defaults={"usuario": request.user, "p256dh": p256dh, "auth": auth, "activa": True},

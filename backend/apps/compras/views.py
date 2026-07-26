@@ -149,7 +149,6 @@ class CompraViewSet(ExportCSVMixin, viewsets.ModelViewSet):
         except Proveedor.DoesNotExist:
             return Response({"proveedor": ["Proveedor no encontrado."]}, status=status.HTTP_400_BAD_REQUEST)
         from decimal import Decimal
-        from apps.productos.models import Producto as ProdModel
         items = self._resolve_items(data.get("items", []))
         instance.proveedor = proveedor
         instance.tipo_pago = data.get("tipo_pago", instance.tipo_pago)
@@ -265,7 +264,12 @@ class AplicacionPagoCompraViewSet(viewsets.ModelViewSet):
 
 
 class NotaCreditoProveedorViewSet(viewsets.ModelViewSet):
-    queryset = NotaCreditoProveedor.objects.select_related("proveedor", "compra_original").prefetch_related("detalles").all()
+    queryset = (
+        NotaCreditoProveedor.objects
+        .select_related("proveedor", "compra_original")
+        .prefetch_related("detalles")
+        .all()
+    )
     serializer_class = NotaCreditoProveedorSerializer
     permission_classes = [IsAdminOrSupervisor]
     filter_backends = [DjangoFilterBackend]
@@ -305,7 +309,10 @@ class NotaCreditoProveedorViewSet(viewsets.ModelViewSet):
             try:
                 compra = Compra.objects.get(pk=compra_id, proveedor=proveedor)
             except Compra.DoesNotExist:
-                return Response({"error": "Compra no encontrada para este proveedor."}, status=status.HTTP_404_NOT_FOUND)
+                return Response(
+                    {"error": "Compra no encontrada para este proveedor."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
         # Validate detalles if DEVOLUCION
         detalles_validados = []
@@ -315,7 +322,10 @@ class NotaCreditoProveedorViewSet(viewsets.ModelViewSet):
                 try:
                     prod = Producto.objects.get(pk=det["producto"])
                 except (Producto.DoesNotExist, KeyError):
-                    return Response({"error": f"Detalle {i+1}: producto no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(
+                        {"error": f"Detalle {i+1}: producto no encontrado."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 try:
                     cant = Decimal(str(det["cantidad"]))
                     if cant <= 0:
@@ -517,7 +527,10 @@ class OrdenCompraViewSet(viewsets.ModelViewSet):
         orden.aprobado_por = request.user
         orden.fecha_aprobacion = timezone.now()
         orden.motivo_rechazo = None
-        orden.save(update_fields=["estado", "aprobado_por", "fecha_aprobacion", "motivo_rechazo", "fecha_actualizacion"])
+        orden.save(update_fields=[
+            "estado", "aprobado_por", "fecha_aprobacion",
+            "motivo_rechazo", "fecha_actualizacion",
+        ])
         return Response(OrdenCompraSerializer(orden).data)
 
     @action(detail=True, methods=["post"])
@@ -658,7 +671,10 @@ class ReporteComprasProveedoresView(APIView):
             writer = csv_module.writer(response)
             writer.writerow(["REPORTE COMPRAS POR PROVEEDOR", f"{desde} al {hasta}"])
             writer.writerow([])
-            writer.writerow(["Proveedor", "RUC", "N° Compras", "Monto Total (Gs)", "Entregadas", "% Entrega", "Pagadas"])
+            writer.writerow([
+                "Proveedor", "RUC", "N° Compras", "Monto Total (Gs)",
+                "Entregadas", "% Entrega", "Pagadas",
+            ])
             for p in por_proveedor:
                 writer.writerow([p["proveedor"], p["ruc"], p["n_compras"], p["monto_total"],
                                   p["entregadas"], p["tasa_entrega"], p["pagadas"]])
@@ -750,7 +766,10 @@ class ReporteNotasCreditoCompraView(APIView):
             writer = csv_module.writer(response)
             writer.writerow(["NOTAS DE CRÉDITO - COMPRAS", f"{desde} al {hasta}"])
             writer.writerow([])
-            writer.writerow(["ID", "Fecha", "Proveedor", "RUC", "Estado", "Observación", "N° Factura", "Monto (Gs)", "Registrado por"])
+            writer.writerow([
+                "ID", "Fecha", "Proveedor", "RUC", "Estado",
+                "Observación", "N° Factura", "Monto (Gs)", "Registrado por",
+            ])
             for f in filas:
                 writer.writerow([
                     f["id"], f["fecha"], f["proveedor"], f["ruc"],

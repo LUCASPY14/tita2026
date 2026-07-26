@@ -234,7 +234,10 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 operacion="ANULAR_REGISTRO_ALMUERZO",
                 tabla="almuerzos_registroconsumoalmuerzo",
                 id_registro=registro.id,
-                descripcion=f"Consumo anulado — hijo={registro.hijo_id} fecha={registro.fecha_consumo} costo={registro.costo_almuerzo} Gs.",
+                descripcion=(
+                    f"Consumo anulado — hijo={registro.hijo_id} "
+                    f"fecha={registro.fecha_consumo} costo={registro.costo_almuerzo} Gs."
+                ),
             )
 
     filterset_class = RegistroConsumoFilter
@@ -789,7 +792,6 @@ class ReporteCobranzaAlmuerzosView(APIView):
     def get(self, request):
         from django.http import HttpResponse
         from django.db.models import Count, Sum, Q
-        import calendar
 
         anio_raw = request.query_params.get("anio")
         if not anio_raw:

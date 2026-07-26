@@ -338,7 +338,10 @@ class FacturacionService:
                         raise ValidationError({"error": f"La carga #{o.pk} no está confirmada."})
                     if o.factura_id:
                         raise ValidationError({"error": f"La carga #{o.pk} ya tiene factura."})
-                    c = o.cliente_origen or (o.tarjeta.hijo.cliente_responsable if o.tarjeta and o.tarjeta.hijo else None)
+                    c = o.cliente_origen or (
+                        o.tarjeta.hijo.cliente_responsable
+                        if o.tarjeta and o.tarjeta.hijo else None
+                    )
                     if not c:
                         raise ValidationError({"error": f"La carga #{o.pk} no tiene cliente."})
                     clientes.add(c.pk)

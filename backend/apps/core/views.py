@@ -144,7 +144,10 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
                 operacion="RECARGA_SALDO",
                 tabla="core_cargasaldo",
                 id_registro=carga.id,
-                descripcion=f"Recarga {data['monto_cargado']} Gs. en tarjeta {data['tarjeta'].nro_tarjeta} vía {metodo}",
+                descripcion=(
+                    f"Recarga {data['monto_cargado']} Gs. en tarjeta"
+                    f" {data['tarjeta'].nro_tarjeta} vía {metodo}"
+                ),
             )
             out = self.get_serializer(carga)
             return Response(out.data, status=status.HTTP_201_CREATED)
@@ -182,7 +185,10 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
                 operacion="RECARGA_SALDO",
                 tabla="core_cargasaldo",
                 id_registro=carga.id,
-                descripcion=f"Recarga {data['monto_cargado']} Gs. en tarjeta {tarjeta_obj.nro_tarjeta} vía CUENTA_CORRIENTE",
+                descripcion=(
+                    f"Recarga {data['monto_cargado']} Gs. en tarjeta"
+                    f" {tarjeta_obj.nro_tarjeta} vía CUENTA_CORRIENTE"
+                ),
             )
             out = self.get_serializer(carga)
             return Response(out.data, status=status.HTTP_201_CREATED)
@@ -194,7 +200,10 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             operacion="RECARGA_SALDO_PENDIENTE",
             tabla="core_cargasaldo",
             id_registro=carga.id,
-            descripcion=f"Recarga {carga.monto_cargado} Gs. en tarjeta {carga.tarjeta_id} vía {metodo} — PENDIENTE confirmación",
+            descripcion=(
+                f"Recarga {carga.monto_cargado} Gs. en tarjeta"
+                f" {carga.tarjeta_id} vía {metodo} — PENDIENTE confirmación"
+            ),
         )
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -234,7 +243,10 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             operacion="CONFIRMAR_CARGA",
             tabla="core_cargasaldo",
             id_registro=carga_confirmada.id,
-            descripcion=f"Confirmación carga {carga_confirmada.monto_cargado} Gs. en tarjeta {carga_confirmada.tarjeta_id}",
+            descripcion=(
+                f"Confirmación carga {carga_confirmada.monto_cargado} Gs."
+                f" en tarjeta {carga_confirmada.tarjeta_id}"
+            ),
         )
         return Response(self.get_serializer(carga_confirmada).data)
 
@@ -357,7 +369,8 @@ class ReporteTarjetasView(APIView):
 
         if fmt == "pdf":
             from common.pdf_report import pdf_response
-            fmt_gs = lambda n: f"{int(n):,} Gs.".replace(",", ".")
+            def fmt_gs(n):
+                return f"{int(n):,} Gs.".replace(",", ".")
             subtitle = f"Período: {desde} al {hasta}" if desde and hasta else "Saldos actuales"
             rows = [
                 [f["nro_tarjeta"], f["alumno"], f["grado"] or "—",
@@ -366,13 +379,21 @@ class ReporteTarjetasView(APIView):
                 for f in filas
             ]
             periodo_fn = f"_{desde}_{hasta}" if desde and hasta else ""
+            headers = [
+                "Tarjeta", "Alumno", "Grado", "Saldo Actual",
+                "Recargado", "Consumido", "Recargas", "Consumos",
+            ]
+            totals = [
+                "TOTALES", "", "", fmt_gs(total_saldo),
+                fmt_gs(total_recargado), fmt_gs(total_consumido), "", "",
+            ]
             return pdf_response(
                 filename=f"reporte_tarjetas{periodo_fn}.pdf",
                 title="Reporte de Tarjetas Prepago",
                 subtitle=subtitle,
-                headers=["Tarjeta", "Alumno", "Grado", "Saldo Actual", "Recargado", "Consumido", "Recargas", "Consumos"],
+                headers=headers,
                 rows=rows,
-                totals=["TOTALES", "", "", fmt_gs(total_saldo), fmt_gs(total_recargado), fmt_gs(total_consumido), "", ""],
+                totals=totals,
                 landscape=True,
             )
 

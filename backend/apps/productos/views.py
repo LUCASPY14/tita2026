@@ -173,7 +173,10 @@ class ProductoViewSet(viewsets.ModelViewSet):
             return Response({"error": "Precio inválido."}, status=status.HTTP_400_BAD_REQUEST)
         lista_defecto = ListaPrecio.objects.filter(es_por_defecto=True, activo=True).first()
         if not lista_defecto:
-            return Response({"error": "No hay lista de precios por defecto activa."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "No hay lista de precios por defecto activa."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         with transaction.atomic():
             existing = PrecioPorLista.objects.filter(producto=producto, lista=lista_defecto).first()
             if existing:

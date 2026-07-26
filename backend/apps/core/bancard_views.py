@@ -155,7 +155,10 @@ def bancard_iniciar_almuerzo(request):
     Respuesta: { "shop_process_id": "...", "redirect_url": "https://vpos.infonet.com.py/..." }
     """
     if request.user.rol != "CLIENTE_WEB":
-        return Response({"detail": "Solo los padres pueden pagar almuerzos desde el portal."}, status=status.HTTP_403_FORBIDDEN)
+        return Response(
+            {"detail": "Solo los padres pueden pagar almuerzos desde el portal."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
     cuenta_id = request.data.get("cuenta_id")
     monto_raw = request.data.get("monto")
@@ -176,7 +179,10 @@ def bancard_iniciar_almuerzo(request):
 
     cliente = getattr(request.user, "cliente", None)
     if cliente is None:
-        return Response({"detail": "Tu usuario no tiene un perfil de cliente asociado."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "Tu usuario no tiene un perfil de cliente asociado."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         cuenta = CuentaAlmuerzoMensual.objects.get(pk=cuenta_id, hijo__cliente_responsable=cliente)

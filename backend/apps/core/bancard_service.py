@@ -104,7 +104,9 @@ def iniciar_pago(
         data = resp.json()
     except CircuitBreakerOpen as exc:
         logger.warning("Bancard iniciar_pago bloqueado por circuit breaker: %s", exc)
-        return {"status": "error", "messages": [{"dsc": "Gateway de pagos temporalmente no disponible. Intente en unos minutos."}]}
+        return {"status": "error", "messages": [
+            {"dsc": "Gateway de pagos temporalmente no disponible. Intente en unos minutos."}
+        ]}
     except Exception as exc:
         logger.error("Bancard iniciar_pago error: %s", exc)
         return {"status": "error", "messages": [{"dsc": str(exc)}]}
@@ -140,7 +142,9 @@ def confirmar_pago(shop_process_id: str) -> dict:
         data = resp.json()
     except CircuitBreakerOpen as exc:
         logger.warning("Bancard confirmar_pago bloqueado por circuit breaker shop=%s: %s", shop_process_id, exc)
-        return {"status": "error", "messages": [{"dsc": "Gateway de pagos temporalmente no disponible. Intente en unos minutos."}]}
+        return {"status": "error", "messages": [
+            {"dsc": "Gateway de pagos temporalmente no disponible. Intente en unos minutos."}
+        ]}
     except Exception as exc:
         logger.error("Bancard confirmar_pago error shop=%s: %s", shop_process_id, exc)
         return {"status": "error", "messages": [{"dsc": str(exc)}]}
