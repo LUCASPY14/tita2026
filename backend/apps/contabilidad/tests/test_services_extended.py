@@ -185,7 +185,6 @@ class TestEmitirParaOrigenVenta:
 
     def _crear_venta(self, cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto):
         from apps.ventas.services import VentaService
-        from apps.ventas.models import Venta
         venta = VentaService.registrar_venta(
             cliente=cliente,
             cajero=usuario_cajero,

@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Sum
 from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
 
 

@@ -50,7 +50,7 @@ def tarjeta_docente(db, cliente):
 @pytest.fixture
 def tarjeta_sin_titular():
     """Mock de tarjeta sin hijo ni cliente_directo — para testear los except del serializer."""
-    from unittest.mock import MagicMock, PropertyMock
+    from unittest.mock import MagicMock
     t = MagicMock()
     t.nro_tarjeta = "T999"
     t.hijo_id = None

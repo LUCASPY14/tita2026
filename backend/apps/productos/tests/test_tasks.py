@@ -1,7 +1,6 @@
 """Tests para apps.productos.tasks — sincronizar_costos_desde_compras."""
 import pytest
 from decimal import Decimal
-from django.utils import timezone
 
 
 # ── fixtures ───────────────────────────────────────────────────────────────────
@@ -124,7 +123,6 @@ class TestSincronizarCostosDesdeCompras:
     def test_multiples_compras_solo_recibidas_procesadas(
         self, proveedor, usuario_admin, producto, producto2,
     ):
-        from apps.inventario.models import CostoHistorico
         from apps.productos.tasks import sincronizar_costos_desde_compras
         _compra(proveedor, usuario_admin, [(producto, 5, 1000)], estado_entrega="RECIBIDA")
         _compra(proveedor, usuario_admin, [(producto2, 3, 2000)], estado_entrega="PENDIENTE")
@@ -139,7 +137,7 @@ class TestSincronizarCostosDesdeCompras:
         Después de sincronizar, Stock.costo_promedio refleja los costos registrados.
         Crea dos compras recibidas y verifica que costo_promedio sea el promedio ponderado.
         """
-        from apps.inventario.models import Stock, CostoHistorico
+        from apps.inventario.models import Stock
         from apps.productos.tasks import sincronizar_costos_desde_compras
 
         Stock.objects.get_or_create(producto=producto, defaults={"cantidad": Decimal("20")})

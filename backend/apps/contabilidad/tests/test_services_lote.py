@@ -263,7 +263,7 @@ class TestEmitirLotePagoAlmuerzo:
         self, cuenta_mensual, hijo_2, cliente_2, usuario_cajero
     ):
         from apps.contabilidad.services import FacturacionService
-        from apps.almuerzos.models import CuentaAlmuerzoMensual, PagoCuentaAlmuerzo
+        from apps.almuerzos.models import CuentaAlmuerzoMensual
 
         cuenta_2 = CuentaAlmuerzoMensual.objects.create(
             hijo=hijo_2,

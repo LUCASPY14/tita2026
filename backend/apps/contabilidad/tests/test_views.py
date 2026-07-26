@@ -245,7 +245,6 @@ class TestReporteDiferenciasCaja:
         assert "por_empleado" in resp.data
 
     def test_con_cierre_incluye_datos(self, api_admin, cierre_cerrado):
-        from django.utils import timezone
         resp = api_admin.get(
             "/api/v1/contabilidad/reporte-diferencias-caja/",
             {"desde": "2026-01-01", "hasta": "2099-12-31"},

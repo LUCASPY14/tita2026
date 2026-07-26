@@ -387,7 +387,6 @@ class TestBancardRetornoEdgeCases:
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
     ):
         """Bancard responde 'success' pero sin objeto confirmation → debe manejar gracefully."""
-        from apps.core.models import PagoBancard
         mock_iniciar.return_value  = {'status': 'success', 'process_id': 'proc-empty-conf'}
         mock_confirmar.return_value = {'status': 'success', 'confirmation': {}}  # sin payment_id ni response_code
 
@@ -582,7 +581,6 @@ class TestBancardIniciarAlmuerzo:
 
     def test_cliente_web_sin_cliente_asociado_retorna_400(self, api_cliente_web, padre_con_cuenta):
         """CLIENTE_WEB sin .cliente asociado → 400 (línea 179)."""
-        from rest_framework.test import APIClient
         # api_cliente_web fixture crea usuario sin cliente vinculado
         client, _ = api_cliente_web
         _, cuenta = padre_con_cuenta

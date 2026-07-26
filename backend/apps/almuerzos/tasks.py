@@ -169,7 +169,6 @@ def generar_cuentas_mensuales():
     con suscripción activa que no tenga cuenta aún.
     Se ejecuta el día 1 de cada mes a las 06:00.
     """
-    import calendar
     from datetime import date
     from django.db import models as db_models
     from apps.almuerzos.models import SuscripcionAlmuerzo, CuentaAlmuerzoMensual

@@ -5,8 +5,7 @@ Cubre: whatsapp_cliente (ramas NOTIFICACIONES_ACTIVAS, sin teléfono, excepción
        send_push_to_user (sin VAPID_PRIVATE_KEY), procesar_pendientes WHATSAPP.
 """
 import pytest
-from unittest.mock import patch, MagicMock
-from decimal import Decimal
+from unittest.mock import patch
 
 
 @pytest.fixture

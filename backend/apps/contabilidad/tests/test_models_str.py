@@ -4,7 +4,6 @@ Cobertura de __str__ en contabilidad/models.py:
 """
 import pytest
 from decimal import Decimal
-from django.utils import timezone
 
 
 @pytest.fixture

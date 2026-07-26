@@ -478,7 +478,6 @@ class TestReporteAgingProveedores:
         self, api_admin, proveedor, usuario_cajero, producto
     ):
         from apps.compras.services import CompraService
-        from django.utils import timezone
         CompraService.registrar_compra(
             proveedor=proveedor,
             creado_por=usuario_cajero,
@@ -501,7 +500,6 @@ class TestReporteAgingProveedores:
         self, api_admin, proveedor, usuario_cajero, producto
     ):
         from apps.compras.services import CompraService
-        from django.utils import timezone
         CompraService.registrar_compra(
             proveedor=proveedor,
             creado_por=usuario_cajero,

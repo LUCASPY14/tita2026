@@ -89,7 +89,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _get_kpis(self) -> dict:
-        from django.db.models import Count, Sum, F, Q
+        from django.db.models import Count, Sum, F
         from django.utils.timezone import localdate
         from apps.ventas.models import Venta
         from apps.clientes.models import Cliente

@@ -82,7 +82,6 @@ class TestStockModel:
 
     def test_clean_cantidad_negativa_sin_permiso(self, stock, producto):
         """cantidad < 0 y no permite_stock_negativo → ValidationError (línea 87)."""
-        from apps.inventario.models import Stock
         stock.cantidad = Decimal("-1")
         with pytest.raises(ValidationError, match="stock negativo"):
             stock.clean()
