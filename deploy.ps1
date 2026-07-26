@@ -214,7 +214,7 @@ if ($LASTEXITCODE -ne 0) { Die "postgres no pudo iniciar. Revisar: docker compos
 $pgReady = $false
 for ($i = 0; $i -lt 30; $i++) {
     Start-Sleep -Seconds 2
-    $pgState = docker compose ps postgres --format "{{.Health}}" 2>$null
+    $pgState = (docker compose ps postgres --format "{{.Health}}").Trim()
     if ($pgState -eq "healthy") { $pgReady = $true; break }
 }
 if (-not $pgReady) {
@@ -248,7 +248,9 @@ docker compose up -d --no-deps frontend
 if ($LASTEXITCODE -ne 0) { Die "frontend no pudo iniciar. Revisar: docker compose logs frontend" }
 
 # Monitoring (no crítico para el negocio)
-docker compose up -d prometheus pushgateway grafana redis_exporter > $null 2>&1
+$_prev = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+docker compose up -d prometheus pushgateway grafana redis_exporter
+$ErrorActionPreference = $_prev
 
 # ── 7. Health check final ────────────────────────────────────────────────────
 
