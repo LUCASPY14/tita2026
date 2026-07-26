@@ -1,21 +1,20 @@
 # backup_cantina.ps1
-# Backup logico diario de cantina_tita (PostgreSQL)
+# Backup logico diario de cantina_tita via docker exec (PostgreSQL en Docker).
 # Configurar como tarea programada de Windows -- ejecutar a las 02:00 diariamente.
 #
 # Para registrar la tarea:
-#   .\scripts\setup_backup_task.ps1 -DbPassword (Read-Host -AsSecureString) -GpgRecipient "admin@cantinatita.com"
+#   .\scripts\setup_backup_task.ps1
 #
-# Cifrado GPG:
+# Para ejecutar manualmente:
+#   .\backup_cantina.ps1
+#
+# Cifrado GPG (opcional):
 #   .\backup_cantina.ps1 -GpgRecipient "admin@cantinatita.com"
 #   Requiere: gpg instalado y la clave publica importada.
 #   Para descifrar: gpg --output backup.dump --decrypt backup.dump.gpg
 
 param(
-    [string]$DbName       = "cantina_tita",
-    [string]$PgUser       = "postgres",
-    [string]$PgHost       = "localhost",
-    [string]$PgPort       = "5432",
-    [string]$PgBin        = "C:\Program Files\PostgreSQL\16\bin",
+    [string]$ProjectRoot  = "D:\tita2026",
     [string]$BackupDir    = "D:\produccion_tita\backups\cantina",
     [int]   $Keep         = 30,
     [string]$GpgRecipient = ""
@@ -24,29 +23,58 @@ param(
 $FECHA   = Get-Date -Format "yyyyMMdd_HHmm"
 $ARCHIVO = "$BackupDir\cantina_$FECHA.dump"
 $LOG     = "$BackupDir\backup_$FECHA.log"
+$TMP     = "/tmp/cantina_backup_$FECHA.dump"
 
 if (-not (Test-Path $BackupDir)) { New-Item -ItemType Directory -Path $BackupDir | Out-Null }
 
-if (-not $env:PGPASSWORD) {
-    $pgpass = Join-Path $env:APPDATA "postgresql\pgpass.conf"
-    if (-not (Test-Path $pgpass)) {
-        Write-Error "Sin credenciales. Ejecutar: scripts\setup_pgpass.ps1 -Password <password>"
-        exit 1
-    }
+# Leer credenciales desde .env.production (nunca se guardan en el script)
+$envFile = Join-Path $ProjectRoot "backend\.env.production"
+if (-not (Test-Path $envFile)) {
+    Write-Error "No se encontro $envFile. Verificar que el proyecto esta en $ProjectRoot."
+    exit 1
+}
+$envLines = Get-Content $envFile
+function Get-EnvVar([string]$name) {
+    $line = $envLines | Where-Object { $_ -match "^${name}=" } | Select-Object -First 1
+    if ($line) { return ($line -split "=", 2)[1].Trim() }
+    return ""
+}
+$DB_NAME     = Get-EnvVar "DB_NAME"
+$DB_USER     = Get-EnvVar "DB_USER"
+$DB_PASSWORD = Get-EnvVar "DB_PASSWORD"
+
+if (-not $DB_NAME -or -not $DB_USER -or -not $DB_PASSWORD) {
+    Write-Error "Faltan DB_NAME, DB_USER o DB_PASSWORD en $envFile."
+    exit 1
+}
+
+# Verificar que el contenedor postgres esta corriendo
+$CONTAINER = "tita2026-postgres-1"
+$pgState = (docker inspect --format "{{.State.Running}}" $CONTAINER 2>$null)
+if ($pgState -ne "true") {
+    "$(Get-Date) | ERROR | Contenedor '$CONTAINER' no esta corriendo" | Out-File $LOG -Encoding utf8
+    Write-Error "Contenedor '$CONTAINER' no esta corriendo. Verificar: docker compose ps"
+    exit 1
 }
 
 try {
-    & (Join-Path $PgBin "pg_dump.exe") `
-        -h $PgHost -p $PgPort -U $PgUser `
-        --format=custom --compress=9 `
-        --file=$ARCHIVO `
-        $DbName
+    # 1. pg_dump dentro del contenedor → archivo temporal en /tmp del contenedor
+    docker exec -e "PGPASSWORD=$DB_PASSWORD" $CONTAINER `
+        pg_dump -U $DB_USER --format=custom --compress=9 -f $TMP $DB_NAME
 
     if ($LASTEXITCODE -ne 0) { throw "pg_dump fallo con codigo $LASTEXITCODE" }
+
+    # 2. Copiar dump desde el contenedor al host
+    docker cp "${CONTAINER}:${TMP}" $ARCHIVO
+    if ($LASTEXITCODE -ne 0) { throw "docker cp fallo al copiar el dump al host" }
+
+    # 3. Limpiar archivo temporal del contenedor
+    docker exec $CONTAINER rm -f $TMP
 
     $sizeMB = [math]::Round((Get-Item $ARCHIVO).Length / 1MB, 2)
     "$(Get-Date) | OK | $ARCHIVO | $sizeMB MB" | Out-File $LOG -Encoding utf8
 
+    # 4. Cifrado GPG (opcional)
     if ($GpgRecipient) {
         $gpgCmd = $null
         try { $gpgCmd = Get-Command gpg -ErrorAction Stop } catch {}
@@ -74,15 +102,15 @@ try {
         }
     }
 
-    # Rotacion: eliminar backups con mas de $Keep dias
+    # 5. Rotacion: eliminar backups con mas de $Keep dias
     Get-ChildItem "$BackupDir\cantina_*.dump", "$BackupDir\cantina_*.dump.gpg" -ErrorAction SilentlyContinue |
         Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$Keep) } |
         Remove-Item -Force
 
     Write-Host "Backup OK: $ARCHIVO ($sizeMB MB)" -ForegroundColor Green
 
-    # Backup a la nube (opcional - requiere rclone)
-    $scriptNube = Join-Path (Split-Path $MyInvocation.MyCommand.Path) "scripts\backup_nube.ps1"
+    # 6. Backup a la nube (opcional - requiere rclone)
+    $scriptNube = Join-Path $ProjectRoot "scripts\backup_nube.ps1"
     if (Test-Path $scriptNube) {
         $rcloneOk = $null
         try { $rcloneOk = Get-Command rclone -ErrorAction Stop } catch {}
@@ -96,6 +124,4 @@ try {
     "$(Get-Date) | ERROR | $_" | Out-File $LOG -Encoding utf8
     Write-Error "Backup FALLIDO: $_"
     exit 1
-} finally {
-    Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
 }
