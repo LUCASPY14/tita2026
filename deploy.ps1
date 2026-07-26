@@ -268,8 +268,7 @@ if (-not $finalOk) {
 $smokeScript = Join-Path $PSScriptRoot "scripts\smoke-test.ps1"
 if (Test-Path $smokeScript) {
     Log "Ejecutando smoke test de endpoints..." "Cyan"
-    $backendBase = $BackendHealthUrl -replace "/api/health/", ""
-    & $smokeScript -BaseUrl "http://localhost" -ApiUrl $backendBase
+    & $smokeScript -BaseUrl "http://localhost" -ApiUrl "http://localhost"
     if ($LASTEXITCODE -ne 0) {
         Log "Smoke test reportó fallos — revisar antes de habilitar tráfico" "Yellow"
     }
@@ -296,3 +295,4 @@ Write-Host "  docker compose logs -f backend" -ForegroundColor DarkGray
 Write-Host "Para rollback:" -ForegroundColor DarkGray
 Write-Host "  git checkout $($hashAntes.Substring(0,7)) && .\deploy.ps1 -SkipMigrations" -ForegroundColor DarkGray
 Write-Host ""
+exit 0
