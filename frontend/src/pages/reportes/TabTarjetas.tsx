@@ -5,7 +5,7 @@ import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
 import {
-  formatGs, descargaBlob, today,
+  formatGs, descargaBlob,
   FilterBar, EmptyState, KpiCard,
   type TarjetasData, type TarjetaReporte,
 } from './shared'

@@ -251,13 +251,13 @@ export interface IntentosLoginData {
   tendencia: IntentoTendencia[]
 }
 
-export interface PersonalPorRol { rol: string; total: number; activos: number; sin_acceso: number }
+export interface PersonalPorRol { rol: string; n: number }
 export interface PersonalFila {
-  id: number; email: string; nombre: string; apellido: string; rol: string
-  ultimo_acceso: string | null; fecha_creacion: string
+  usuario_id: number; email: string; nombre: string; rol: string
+  ultima_actividad: string | null; dias_inactivo: number
 }
 export interface PersonalInactivoData {
-  resumen: { total: number; activos: number; inactivos: number; sin_acceso: number; n_dias: number }
+  resumen: { total_inactivos: number; promedio_dias_inactivo: number; max_dias_inactivo: number }
   por_rol: PersonalPorRol[]; detalle: PersonalFila[]
 }
 
