@@ -263,7 +263,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
     def post(self, request, *_args, **_kwargs):
         email = (request.data.get("email") or request.data.get("username") or "").strip().lower()[:254]
-        ip    = request.META.get("REMOTE_ADDR") or "0.0.0.0"
+        ip    = request.META.get("REMOTE_ADDR") or "0.0.0.0"  # nosec B104
 
         # ── 1. Check cache (O(1) — cubre bloqueos automáticos recientes) ──────
         if _esta_bloqueado_cache(email, ip):

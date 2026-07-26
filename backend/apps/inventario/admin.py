@@ -67,8 +67,8 @@ class StockAdmin(admin.ModelAdmin):
 
     def requiere_reposicion_badge(self, obj):
         if obj.requiere_reposicion:
-            return mark_safe('<span style="color:#dc3545;">⚠ Reponer</span>')
-        return mark_safe('<span style="color:#28a745;">✓ OK</span>')
+            return mark_safe('<span style="color:#dc3545;">⚠ Reponer</span>')  # nosec B308
+        return mark_safe('<span style="color:#28a745;">✓ OK</span>')  # nosec B308
     requiere_reposicion_badge.short_description = "Reposición"
 
 

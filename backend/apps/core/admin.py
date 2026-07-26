@@ -368,7 +368,7 @@ class MedioPagoAdmin(admin.ModelAdmin):
 
     def requiere_validacion_badge(self, obj):
         if obj.requiere_validacion:
-            return mark_safe('<span style="color:#0d6efd;">✓</span>')
+            return mark_safe('<span style="color:#0d6efd;">✓</span>')  # nosec B308
         return "-"
     requiere_validacion_badge.short_description = "Validación"
 
