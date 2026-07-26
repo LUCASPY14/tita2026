@@ -1,4 +1,4 @@
-# deploy.ps1 — Cantina Tita v1
+﻿# deploy.ps1 — Cantina Tita v1
 #
 # Despliega la última versión desde el repositorio a producción.
 # Ejecutar desde la raíz del proyecto (D:\tita2026\) como Administrador.
@@ -178,8 +178,10 @@ Step "4/7  Aplicando migraciones (PostgreSQL)"
 # Los volúmenes Docker se crean con dueño root; el usuario 'cantina' necesita escribir en ellos.
 # Esta operación es idempotente: solo ajusta permisos si ya no los tiene.
 Log "Inicializando permisos de volúmenes..."
-docker compose run --rm --user root backend sh -c "chown -R cantina:cantina /app/logs /app/media /app/staticfiles" 2>$null
-docker compose run --rm --user root celery-beat sh -c "chown -R cantina:cantina /app/beatdata /app/logs" 2>$null
+$_prev = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+docker compose run --rm --user root backend sh -c "chown -R cantina:cantina /app/logs /app/media /app/staticfiles"
+docker compose run --rm --user root celery-beat sh -c "chown -R cantina:cantina /app/beatdata /app/logs"
+$ErrorActionPreference = $_prev
 Log "  Permisos OK" "Green"
 
 if ($SkipMigrations) {
