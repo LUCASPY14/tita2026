@@ -1,7 +1,7 @@
 {
   "title": "Cantina Tita — Overview",
   "uid": "cantina-overview",
-  "version": 2,
+  "version": 3,
   "schemaVersion": 38,
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
@@ -11,7 +11,7 @@
         "name": "interval",
         "type": "interval",
         "options": [
-          { "selected": true, "text": "1m", "value": "1m" },
+          { "selected": true,  "text": "1m", "value": "1m" },
           { "selected": false, "text": "5m", "value": "5m" },
           { "selected": false, "text": "1h", "value": "1h" }
         ],
@@ -20,26 +20,118 @@
     ]
   },
   "panels": [
+
+    {
+      "id": 20,
+      "title": "Django",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "UP",   "color": "green" } } },
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red"   } } }
+          ],
+          "thresholds": { "steps": [
+            { "color": "red",   "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [ { "expr": "up{job=\"django\"}", "legendFormat": "" } ]
+    },
+
+    {
+      "id": 21,
+      "title": "Redis",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "UP",   "color": "green" } } },
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red"   } } }
+          ],
+          "thresholds": { "steps": [
+            { "color": "red",   "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [ { "expr": "up{job=\"redis\"}", "legendFormat": "" } ]
+    },
+
+    {
+      "id": 22,
+      "title": "Windows Host",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "UP",   "color": "green" } } },
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red"   } } }
+          ],
+          "thresholds": { "steps": [
+            { "color": "red",   "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [ { "expr": "up{job=\"windows_host\"}", "legendFormat": "" } ]
+    },
+
+    {
+      "id": 5,
+      "title": "Requests activos ahora",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 20 },
+            { "color": "red",    "value": 50 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        {
+          "expr": "django_http_requests_before_middlewares_total - django_http_responses_before_middlewares_total",
+          "legendFormat": "activos"
+        }
+      ]
+    },
+
     {
       "id": 1,
       "title": "Requests / segundo",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
       "fieldConfig": {
         "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } }
       },
       "targets": [
         {
-          "expr": "rate(django_http_requests_total_by_method_total[1m])",
+          "expr": "rate(django_http_requests_total_by_method_total[$interval])",
           "legendFormat": "{{method}}"
         }
       ]
     },
+
     {
       "id": 2,
       "title": "Latencia p95 por endpoint (ms)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
       "fieldConfig": {
         "defaults": { "unit": "ms", "color": { "mode": "palette-classic" } }
       },
@@ -50,70 +142,55 @@
         }
       ]
     },
+
     {
       "id": 3,
       "title": "Errores HTTP 4xx / 5xx",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
       "fieldConfig": {
         "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } }
       },
       "targets": [
         {
-          "expr": "rate(django_http_responses_total_by_status_total{status=~\"4..|5..\"}[1m])",
+          "expr": "rate(django_http_responses_total_by_status_total{status=~\"4..|5..\"}[$interval])",
           "legendFormat": "HTTP {{status}}"
         }
       ]
     },
+
     {
       "id": 4,
       "title": "DB queries / segundo",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
       "fieldConfig": {
         "defaults": { "unit": "reqps" }
       },
       "targets": [
         {
-          "expr": "rate(django_db_execute_total[1m])",
+          "expr": "rate(django_db_execute_total[$interval])",
           "legendFormat": "{{vendor}} {{alias}}"
         }
       ]
     },
-    {
-      "id": 5,
-      "title": "Requests activos ahora",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
-      "fieldConfig": {
-        "defaults": { "thresholds": { "steps": [
-          { "color": "green", "value": null },
-          { "color": "yellow", "value": 20 },
-          { "color": "red", "value": 50 }
-        ]}}
-      },
-      "targets": [
-        {
-          "expr": "django_http_requests_before_middlewares_total - django_http_responses_before_middlewares_total",
-          "legendFormat": "activos"
-        }
-      ]
-    },
+
     {
       "id": 6,
       "title": "Latencia p50 global (ms)",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 16 },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 20 },
       "fieldConfig": {
         "defaults": {
           "unit": "ms",
           "thresholds": { "steps": [
-            { "color": "green", "value": null },
+            { "color": "green",  "value": null },
             { "color": "yellow", "value": 300 },
-            { "color": "red", "value": 1000 }
+            { "color": "red",    "value": 1000 }
           ]}
         }
       },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, rate(django_http_requests_latency_seconds_by_view_method_bucket[5m])) * 1000",
@@ -123,11 +200,75 @@
     },
 
     {
+      "id": 23,
+      "title": "Django — Memoria RSS",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 20 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": { "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 300000000 },
+            { "color": "red",    "value": 460000000 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{job=\"django\"}",
+          "legendFormat": "RSS"
+        }
+      ]
+    },
+
+    {
+      "id": 13,
+      "title": "Redis — canales pub/sub",
+      "description": "Suscripciones activas al channel layer de Django Channels (correlaciona con conexiones WebSocket abiertas).",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 20 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 50 },
+            { "color": "red",    "value": 100 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [
+        { "expr": "redis_pubsub_channels", "legendFormat": "pub/sub" }
+      ]
+    },
+
+    {
+      "id": 24,
+      "title": "Redis — keys en DB1 (cache/channels)",
+      "description": "Total de keys en la base de datos Redis 1 usada por Django (cache + channel layer).",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 20 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "steps": [ { "color": "blue", "value": null } ] }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [
+        { "expr": "redis_db_keys{db=\"db1\"}", "legendFormat": "keys DB1" }
+      ]
+    },
+
+    {
       "id": 7,
       "title": "Ventas exitosas por hora",
       "description": "Respuestas HTTP 201 al endpoint de ventas. Aproxima nuevas ventas creadas.",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -147,39 +288,38 @@
         }
       ]
     },
+
     {
       "id": 8,
-      "title": "Tareas Celery fallidas (acumulado)",
-      "description": "Counter de fallos expuesto por el worker via prometheus_client. Requiere PushGateway o exposición de /metrics en el worker.",
+      "title": "Memoria RSS — Django y Redis",
+      "description": "Memoria física usada por el proceso Django (backend + celery) y Redis. Útil para detectar memory leaks.",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
       "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": { "mode": "palette-classic" },
-          "thresholds": { "steps": [
-            { "color": "green", "value": null },
-            { "color": "red", "value": 1 }
-          ]}
-        }
+        "defaults": { "unit": "bytes", "color": { "mode": "palette-classic" } }
       },
       "targets": [
         {
-          "expr": "increase(celery_task_failures_total[1h])",
-          "legendFormat": "Fallos: {{task_name}}"
+          "expr": "process_resident_memory_bytes{job=\"django\"}",
+          "legendFormat": "Django RSS"
         },
         {
-          "expr": "sum(increase(celery_task_failures_total[1h]))",
-          "legendFormat": "Total fallos / hora"
+          "expr": "process_resident_memory_bytes{job=\"redis\"}",
+          "legendFormat": "Redis RSS"
+        },
+        {
+          "expr": "redis_memory_used_bytes",
+          "legendFormat": "Redis mem usada"
         }
       ]
     },
+
     {
       "id": 9,
       "title": "Top 10 — Latencia p95 por vista (tabla)",
       "description": "Las 10 vistas con mayor p95 en la última hora.",
       "type": "table",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 28 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
       "fieldConfig": {
         "defaults": { "unit": "ms" },
         "overrides": [
@@ -190,9 +330,9 @@
               {
                 "id": "thresholds",
                 "value": { "steps": [
-                  { "color": "green", "value": null },
+                  { "color": "green",  "value": null },
                   { "color": "yellow", "value": 300 },
-                  { "color": "red", "value": 1000 }
+                  { "color": "red",    "value": 1000 }
                 ]}
               },
               { "id": "custom.displayMode", "value": "color-background" }
@@ -214,9 +354,7 @@
         { "id": "labelsToFields", "options": { "mode": "rows" } },
         {
           "id": "organize",
-          "options": {
-            "renameByName": { "label": "Endpoint", "Value": "Latencia p95 (ms)" }
-          }
+          "options": { "renameByName": { "label": "Endpoint", "Value": "Latencia p95 (ms)" } }
         }
       ]
     },
@@ -224,18 +362,18 @@
     {
       "id": 10,
       "title": "Ventas por cajero — últimas 8 horas",
-      "description": "Cantidad de ventas creadas (HTTP 201 en /ventas/) agrupadas por usuario autenticado. Requiere etiqueta 'user' en métricas.",
+      "description": "Cantidad de ventas creadas (HTTP 201 en /ventas/) agrupadas por vista.",
       "type": "bargauge",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
           "displayName": "${__series.name}",
           "color": { "mode": "palette-classic" },
           "thresholds": { "steps": [
-            { "color": "green", "value": null },
+            { "color": "green",  "value": null },
             { "color": "yellow", "value": 50 },
-            { "color": "red", "value": 150 }
+            { "color": "red",    "value": 150 }
           ]}
         }
       },
@@ -253,7 +391,7 @@
       "title": "Recargas Bancard — estado últimas 24h",
       "description": "Retornos de Bancard: 200 = aprobado, 4xx = rechazado/error.",
       "type": "piechart",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
       "fieldConfig": {
         "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }
       },
@@ -268,59 +406,41 @@
 
     {
       "id": 12,
-      "title": "Tareas Celery críticas — estado últimas 24h",
-      "description": "Monitoreo de las 4 tareas críticas: resumen diario ventas/stock, cerrar y generar cuentas mensuales.",
+      "title": "DB — Latencia p95 de queries (últimas 6h)",
+      "description": "Percentil 95 de duración de queries por tipo de operación. Útil para detectar queries lentas.",
       "type": "table",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 44 },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 48 },
       "fieldConfig": {
-        "defaults": { "unit": "short" },
+        "defaults": { "unit": "ms" },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Fallos" },
+            "matcher": { "id": "byName", "options": "Value" },
             "properties": [
-              { "id": "thresholds", "value": { "steps": [
-                { "color": "green", "value": null },
-                { "color": "red", "value": 1 }
-              ]}},
+              { "id": "displayName", "value": "p95 (ms)" },
+              {
+                "id": "thresholds",
+                "value": { "steps": [
+                  { "color": "green",  "value": null },
+                  { "color": "yellow", "value": 100 },
+                  { "color": "red",    "value": 500 }
+                ]}
+              },
               { "id": "custom.displayMode", "value": "color-background" }
             ]
           }
         ]
       },
+      "options": { "sortBy": [{ "displayName": "p95 (ms)", "desc": true }] },
       "targets": [
         {
-          "expr": "sum by (task_name) (increase(celery_task_failures_total{task_name=~\".*resumen_diario.*|.*cerrar_cuentas.*|.*generar_cuentas.*\"}[24h]))",
-          "legendFormat": "{{task_name}}",
+          "expr": "histogram_quantile(0.95, sum by (alias, le) (rate(django_db_query_duration_seconds_bucket[6h]))) * 1000",
+          "legendFormat": "{{alias}}",
           "instant": true
         }
       ],
       "transformations": [
         { "id": "labelsToFields", "options": { "mode": "rows" } },
-        { "id": "organize", "options": { "renameByName": { "label": "Tarea", "Value": "Fallos" } } }
-      ]
-    },
-
-    {
-      "id": 13,
-      "title": "WebSocket — conexiones activas",
-      "description": "Conexiones Django Channels activas (consumidores de notificaciones).",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 50 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": { "steps": [
-            { "color": "green", "value": null },
-            { "color": "yellow", "value": 20 },
-            { "color": "red", "value": 50 }
-          ]}
-        }
-      },
-      "targets": [
-        {
-          "expr": "django_channels_websocket_connections_total - django_channels_websocket_disconnections_total",
-          "legendFormat": "WS activos"
-        }
+        { "id": "organize", "options": { "renameByName": { "label": "Conexión DB", "Value": "p95 (ms)" } } }
       ]
     },
 
@@ -328,38 +448,47 @@
       "id": 14,
       "title": "Redis — uso de memoria",
       "type": "timeseries",
-      "gridPos": { "h": 4, "w": 18, "x": 6, "y": 50 },
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 54 },
       "fieldConfig": {
         "defaults": { "unit": "bytes", "color": { "mode": "palette-classic" } }
       },
       "targets": [
-        {
-          "expr": "redis_memory_used_bytes",
-          "legendFormat": "Usado"
-        },
-        {
-          "expr": "redis_memory_max_bytes",
-          "legendFormat": "Máximo configurado"
-        }
+        { "expr": "redis_memory_used_bytes",      "legendFormat": "Usado" },
+        { "expr": "redis_memory_used_peak_bytes",  "legendFormat": "Pico histórico" },
+        { "expr": "redis_memory_max_bytes",        "legendFormat": "Límite configurado" }
+      ]
+    },
+
+    {
+      "id": 25,
+      "title": "Redis — conexiones clientes",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 54 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }
+      },
+      "targets": [
+        { "expr": "redis_connected_clients",  "legendFormat": "Clientes" },
+        { "expr": "redis_blocked_clients",    "legendFormat": "Bloqueados" }
       ]
     },
 
     {
       "id": 15,
       "title": "Host — CPU %",
-      "description": "Uso promedio de CPU del servidor Windows (windows_exporter:9182).",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 54 },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 62 },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "thresholds": { "steps": [
-            { "color": "green", "value": null },
+            { "color": "green",  "value": null },
             { "color": "yellow", "value": 70 },
-            { "color": "red", "value": 90 }
+            { "color": "red",    "value": 90 }
           ]}
         }
       },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
         {
           "expr": "100 - (avg(rate(windows_cpu_time_total{mode=\"idle\"}[5m])) * 100)",
@@ -371,19 +500,19 @@
     {
       "id": 16,
       "title": "Host — RAM %",
-      "description": "Porcentaje de memoria RAM usada en el servidor Windows.",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 54 },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 62 },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "thresholds": { "steps": [
-            { "color": "green", "value": null },
+            { "color": "green",  "value": null },
             { "color": "yellow", "value": 75 },
-            { "color": "red", "value": 90 }
+            { "color": "red",    "value": 90 }
           ]}
         }
       },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
         {
           "expr": "(windows_os_visible_memory_bytes - windows_os_physical_memory_free_bytes) / windows_os_visible_memory_bytes * 100",
@@ -395,19 +524,19 @@
     {
       "id": 17,
       "title": "Host — Disco C: %",
-      "description": "Porcentaje de disco usado en C: del servidor Windows.",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 54 },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 62 },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "thresholds": { "steps": [
-            { "color": "green", "value": null },
+            { "color": "green",  "value": null },
             { "color": "yellow", "value": 75 },
-            { "color": "red", "value": 90 }
+            { "color": "red",    "value": 90 }
           ]}
         }
       },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
         {
           "expr": "(windows_logical_disk_size_bytes{volume=\"C:\"} - windows_logical_disk_free_bytes{volume=\"C:\"}) / windows_logical_disk_size_bytes{volume=\"C:\"} * 100",
@@ -419,9 +548,8 @@
     {
       "id": 18,
       "title": "Host — CPU y RAM — últimas 2h",
-      "description": "Evolución temporal de CPU y RAM del servidor Windows.",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 58 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 66 },
       "fieldConfig": {
         "defaults": { "unit": "percent", "min": 0, "max": 100, "color": { "mode": "palette-classic" } }
       },
@@ -440,18 +568,17 @@
     {
       "id": 19,
       "title": "Host — Discos — uso %",
-      "description": "Uso de cada volumen lógico del servidor Windows (excluye volúmenes de sistema).",
       "type": "bargauge",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 58 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 66 },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "min": 0,
           "max": 100,
           "thresholds": { "steps": [
-            { "color": "green", "value": null },
+            { "color": "green",  "value": null },
             { "color": "yellow", "value": 75 },
-            { "color": "red", "value": 90 }
+            { "color": "red",    "value": 90 }
           ]}
         }
       },
@@ -463,5 +590,6 @@
         }
       ]
     }
+
   ]
 }
