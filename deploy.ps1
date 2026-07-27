@@ -121,7 +121,7 @@ if ($currentBranch -ne $Branch) {
     if ($LASTEXITCODE -ne 0) { Die "No se pudo cambiar a '$Branch'. Resolver conflictos manualmente." }
 }
 
-$dirty = git status --porcelain
+$dirty = (git status --porcelain) | Where-Object { $_ -notmatch '^\?\?' }
 if ($dirty) {
     Log "Cambios locales sin commitear — haciendo stash..." "Yellow"
     git stash
@@ -130,7 +130,8 @@ if ($dirty) {
 }
 
 $hashAntes = git rev-parse HEAD
-git pull origin $Branch
+# --quiet suprime "From https://..." en stderr que PS 5.1 interpreta como error
+git pull origin $Branch --quiet
 if ($LASTEXITCODE -ne 0) { Die "git pull falló. Verificar conectividad y permisos del repo." }
 $hashDespues = git rev-parse HEAD
 
