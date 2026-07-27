@@ -313,10 +313,12 @@ export default function Ventas() {
 
               return (
                 <li key={v.id} className={v.estado === 'ANULADA' ? 'opacity-60' : ''}>
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setExpandedId(isExp ? null : v.id)}
-                    className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-slate-50 transition-colors group"
+                    onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setExpandedId(isExp ? null : v.id)}
+                    className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-slate-50 transition-colors group cursor-pointer"
                   >
                     {/* Icono */}
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
@@ -372,7 +374,7 @@ export default function Ventas() {
                         : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
                       }
                     </div>
-                  </button>
+                  </div>
 
                   {/* Detalles expandidos */}
                   {isExp && (
