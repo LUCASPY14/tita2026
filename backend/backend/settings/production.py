@@ -280,6 +280,14 @@ if SENTRY_DSN and '<' not in SENTRY_DSN:
             exc_type = exc_info[0]
             if exc_type is not None and issubclass(exc_type, (BrokenPipeError, ConnectionResetError)):
                 return None
+            # StopConsumer + TimeoutError de Redis: ocurre cuando el navegador cierra
+            # la pestaña mientras hay un WebSocket abierto — asyncio cancela la tarea
+            # y eso se propaga como TimeoutError al leer de Redis. No es un error real.
+            exc_name = getattr(exc_type, "__name__", "")
+            if exc_name == "StopConsumer":
+                return None
+            if exc_name == "TimeoutError" and "redis" in str(hint.get("exc_info", ("", "", ""))[1]).lower():
+                return None
         url_path = event.get("request", {}).get("url", "")
         if "/api/health/" in url_path:
             return None
