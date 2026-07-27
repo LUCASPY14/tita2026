@@ -216,6 +216,14 @@ test.describe('Almuerzos — Cuentas Mensuales', () => {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ cuentas_creadas: 1 }) })
     })
     await page.getByRole('button', { name: 'Cuentas Mensuales' }).click()
+
+    // handleGenerarCuentas valida que filtroCuentaMes y filtroCuentaAnio estén definidos
+    // antes de llamar al endpoint — hay que seleccionarlos primero
+    const selectMes = page.locator('select').first()
+    await selectMes.selectOption({ index: 1 })        // Enero (cualquier mes ≠ '')
+    const inputAnio = page.getByPlaceholder('Año')
+    await inputAnio.fill('2026')
+
     await page.getByRole('button', { name: /Generar/i }).click()
     await expect(async () => {
       expect(generarCalled).toBe(true)

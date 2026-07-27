@@ -165,7 +165,7 @@ test.describe('Caja — con turno activo', () => {
   })
 
   test('muestra el arqueo en vivo con los cuatro paneles', async ({ page }) => {
-    await expect(page.getByText('Efectivo cajón')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Efectivo Caja')).toBeVisible({ timeout: 5000 })
     await expect(page.getByText('POS / Transferencia')).toBeVisible()
     await expect(page.getByText('Prepago RFID')).toBeVisible()
     await expect(page.getByText('Egresos').first()).toBeVisible()

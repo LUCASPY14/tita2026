@@ -405,21 +405,21 @@ test.describe('Portal — Notificaciones', () => {
 
 // ── Portal Facturas ───────────────────────────────────────────────────────────
 
-const FACTURAS_MOCK = {
-  results: [
-    {
-      id: 1, nro_factura: '001-001-0000001',
-      monto_total: '75000', fecha: '2026-06-01T00:00:00Z',
-      descripcion: 'Plan almuerzo junio',
-    },
-  ],
-  count: 1, next: null, previous: null,
-}
+const FACTURAS_MOCK = [
+  {
+    id: 1, nro_factura: '001-001-0000001',
+    monto_total: '75000', iva_10: '6818',
+    fecha_emision: '2026-06-01T00:00:00Z',
+    estado: 'EMITIDA',
+  },
+]
 
 test.describe('Portal — Facturas', () => {
   test('muestra la lista de facturas del cliente', async ({ page }) => {
     await loginAsPortal(page)
-    await page.route(/\/api\/v1\/contabilidad\/facturas/, (route) =>
+    // El componente llama a /usuarios/portal/mis-facturas/ (no /contabilidad/facturas)
+    // y espera un array directo, no una respuesta paginada
+    await page.route(/\/api\/v1\/usuarios\/portal\/mis-facturas/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FACTURAS_MOCK) })
     )
     await page.goto('/portal/facturas')
@@ -462,11 +462,8 @@ test.describe('Portal — Cambiar Contraseña', () => {
     await page.goto('/portal/cambiar-contrasena')
     await page.waitForLoadState('networkidle')
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
-    await expect(
-      page.getByLabel(/contraseña actual|password actual/i)
-        .or(page.getByPlaceholder(/contraseña actual|password actual/i))
-        .or(page.getByText(/cambiar contraseña|nueva contraseña/i))
-    ).toBeVisible({ timeout: 5000 })
+    // El h1 del componente dice exactamente "Cambiar contraseña"
+    await expect(page.getByRole('heading', { name: 'Cambiar contraseña' })).toBeVisible({ timeout: 5000 })
   })
 
   test('sin sesión redirige a /login', async ({ page }) => {
