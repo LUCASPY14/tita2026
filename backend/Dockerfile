@@ -1,6 +1,9 @@
 # ── Stage 1: builder ─────────────────────────────────────────────────────────
 FROM python:3.11-slim AS builder
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY requirements.txt requirements.production.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -8,6 +11,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 && rm -rf /var/lib/apt/lists/*

@@ -38,6 +38,23 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rolldownOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('node_modules/jspdf') || id.includes('node_modules/jspdf-autotable')) {
+            return 'vendor-pdf'
+          }
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-') || id.includes('node_modules/victory-vendor')) {
+            return 'vendor-charts'
+          }
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/') || id.includes('node_modules/react-router')) {
+            return 'vendor-react'
+          }
+        }
+      }
+    }
+  },
   server: {
     port: 5173,
     proxy: {

@@ -12,7 +12,7 @@
 | Estado | Zustand 5 |
 | PWA | `vite-plugin-pwa` + service worker custom (`frontend/public/sw.js`) |
 | CI/CD | GitHub Actions (`.github/workflows/ci.yml`) |
-| Contenedores | Docker Compose — PostgreSQL corre **fuera** del compose |
+| Contenedores | Docker Compose — PostgreSQL corre **dentro** del compose |
 | Monitoring | Prometheus + Grafana (`:9090`, `:3000`) |
 | Errores | Sentry (backend + frontend) |
 
@@ -22,7 +22,7 @@
 ```
 # PostgreSQL 16 corre en el contenedor 'postgres' del compose.
 # Datos persistidos en volumen Docker 'postgres_data'.
-# Base de datos: cantina_tita | Puerto: 5432 (interno, no expuesto al host)
+# Puerto 5432 expuesto en 127.0.0.1 (para pytest local y herramientas de DB).
 #
 # Migración inicial desde nativo (una sola vez):
 #   pg_dump -U app_cantina cantina_tita > cantina_backup.sql
@@ -121,8 +121,11 @@ npm run lint         # ESLint + TypeScript check
 
 ### Backup de base de datos
 ```powershell
-# Primera vez (registra tarea programada Windows 02:00, con cifrado GPG obligatorio):
-.\scripts\setup_backup_task.ps1 -DbPassword "password_de_postgres" -GpgRecipient "admin@cantinatita.com"
+# Primera vez (registra tarea programada Windows 02:00):
+# Las credenciales DB se leen de backend\.env.production en cada backup.
+.\scripts\setup_backup_task.ps1
+# Con cifrado GPG opcional:
+.\scripts\setup_backup_task.ps1 -GpgRecipient "admin@cantinatita.com"
 
 # Backup manual:
 .\backup_cantina.ps1
@@ -148,9 +151,10 @@ Servidor (1 PC dedicado)
 │   ├── redis           (broker + cache, puerto interno 6379)
 │   ├── celery          (worker)
 │   ├── celery-beat     (scheduler)
-│   ├── prometheus      (métricas, puerto 9090)
-│   └── grafana         (dashboards, puerto 3000)
-└── Backups             (C:\backups\cantina\, tarea programada 02:00)
+│   ├── waha            (WhatsApp self-hosted, 127.0.0.1:3001)
+│   ├── prometheus      (métricas, 127.0.0.1:9090)
+│   └── grafana         (dashboards, 127.0.0.1:3000)
+└── Backups             (D:\produccion_tita\backups\cantina\, tarea programada 02:00)
 ```
 
 Portal de padres (`/portal/*`) accesible desde internet via Bancard para recargas.
@@ -235,11 +239,21 @@ Las tareas críticas envían email a `ADMINS` si fallan (configurado en `celery_
 
 ### Base de datos
 - Tablas de alto volumen (`movimientos`, `ventas`) usan particionamiento por año
-- PostgreSQL nativo en Windows — el backup automático corre a las 02:00 via Task Scheduler
+- PostgreSQL corre en Docker (contenedor `postgres`, volumen `postgres_data`) — backup via `docker exec pg_dump`
 - No usar `datetime.now()` en modelos — siempre `django.utils.timezone.now()` (aware)
 
 ## Variables de entorno
 
+Hay dos archivos de entorno:
+- `backend/.env.production` — variables del backend Django (secretos, DB, Redis, Bancard, etc.)
+- `D:\tita2026\.env` — variables para docker-compose (build args + `DB_PASSWORD`, `GRAFANA_PASSWORD`, `WAHA_API_KEY`)
+
 Ver `backend/.env.production.example` para la lista completa con descripción.
 Variables mínimas para desarrollo: `SECRET_KEY`, `DB_*`.
 Variables para portal de padres con Bancard: `BANCARD_*`, `PORTAL_FRONTEND_URL`.
+
+### Notas de configuración Docker
+- `ALLOWED_HOSTS` debe incluir `backend` (nombre del servicio) para que Prometheus scrapee `/metrics`
+- `REDIS_URL=redis://redis:6379/1` — DB 1 para Django/Celery; DB 0 libre
+- `WAHA_API_KEY` debe estar en `.env` raíz Y en `backend/.env.production` como `EVOLUTION_API_KEY`
+- Puertos de monitoring solo en `127.0.0.1` (prometheus:9090, grafana:3000, waha:3001)

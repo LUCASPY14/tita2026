@@ -1,12 +1,16 @@
 # docker-compose.yml — Cantina Tita v1
 #
 # Arquitectura:
-#   frontend  → Nginx (React SPA + proxy inverso)   puerto 80
-#   backend   → Django + Daphne ASGI                interno
-#   postgres  → PostgreSQL 16                        interno
-#   redis     → Para Django Channels + Celery        interno
-#   celery    → Worker de tareas async
-#   celery-beat → Scheduler de tareas periódicas
+#   frontend    → Nginx (React SPA + proxy inverso)   puerto 80
+#   backend     → Django + Daphne ASGI                interno
+#   postgres    → PostgreSQL 16                        interno
+#   redis       → Para Django Channels + Celery        interno
+#   celery      → Worker de tareas async               (comparte imagen con backend)
+#   celery-beat → Scheduler de tareas periódicas       (comparte imagen con backend)
+#   prometheus  → Métricas                             127.0.0.1:9090
+#   grafana     → Dashboards                           127.0.0.1:3000
+#   pushgateway → Métricas Celery                      127.0.0.1:9091
+#   waha        → WhatsApp self-hosted                 127.0.0.1:3001
 #
 # Cloudflare Tunnel corre como servicio nativo de Windows (no en Docker).
 #
@@ -16,12 +20,6 @@
 #   3. docker compose run --rm backend python manage.py migrate
 #   4. docker compose up -d
 #   5. Verificar: curl http://localhost/api/health/
-#
-# Migración desde PostgreSQL nativo:
-#   1. pg_dump -U app_cantina cantina_tita > cantina_backup.sql
-#   2. docker compose up -d postgres
-#   3. docker compose exec -T postgres psql -U app_cantina cantina_tita < cantina_backup.sql
-#   4. Stop-Service postgresql-x64-16 (deshabilitar inicio automático)
 
 services:
 
@@ -33,8 +31,11 @@ services:
       args:
         VITE_SENTRY_DSN: "${VITE_SENTRY_DSN:-}"
         VITE_GIT_COMMIT_SHA: "${GIT_COMMIT_SHA:-}"
+    volumes:
+      - backend_static:/app/staticfiles:ro
     ports:
       - "80:80"
+    mem_limit: 128m
     depends_on:
       backend:
         condition: service_healthy
@@ -43,17 +44,17 @@ services:
       - cantina_net
 
   # ── Backend (Django + Daphne ASGI) ─────────────────────────────────────────
+  # celery y celery-beat reusan esta misma imagen (image: tita2026-backend)
+  # para evitar rebuilds duplicados desde el mismo Dockerfile.
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: tita2026-backend
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
       DB_HOST: postgres
       DB_PORT: "5432"
-      DB_NAME: cantina_tita
-      DB_USER: app_cantina
-      REDIS_URL: redis://redis:6379/1
     env_file:
       - ./backend/.env.production
     volumes:
@@ -62,6 +63,7 @@ services:
       - backend_logs:/app/logs
     expose:
       - "8000"
+    mem_limit: 512m
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,8 +86,9 @@ services:
       POSTGRES_PASSWORD: "${DB_PASSWORD:?Configurar DB_PASSWORD en .env.production}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    expose:
-      - "5432"
+    ports:
+      - "127.0.0.1:5432:5432"
+    mem_limit: 512m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app_cantina -d cantina_tita"]
       interval: 10s
@@ -104,26 +107,25 @@ services:
       - redis_data:/data
     expose:
       - "6379"
+    mem_limit: 256m
     restart: unless-stopped
     networks:
       - cantina_net
 
   # ── Celery Worker ───────────────────────────────────────────────────────────
   celery:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: tita2026-backend
     command: celery -A backend.celery_app worker -l INFO --concurrency=${CELERY_CONCURRENCY:-4}
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
       DB_HOST: postgres
       DB_PORT: "5432"
-      REDIS_URL: redis://redis:6379/1
     env_file:
       - ./backend/.env.production
     volumes:
       - backend_media:/app/media
       - backend_logs:/app/logs
+    mem_limit: 512m
     depends_on:
       postgres:
         condition: service_healthy
@@ -137,20 +139,18 @@ services:
 
   # ── Celery Beat (scheduler de tareas periódicas) ────────────────────────────
   celery-beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: tita2026-backend
     command: celery -A backend.celery_app beat -l INFO -s /app/beatdata/celerybeat-schedule
     environment:
       DJANGO_SETTINGS_MODULE: backend.settings.production
       DB_HOST: postgres
       DB_PORT: "5432"
-      REDIS_URL: redis://redis:6379/1
     env_file:
       - ./backend/.env.production
     volumes:
       - backend_logs:/app/logs
       - celerybeat_data:/app/beatdata
+    mem_limit: 256m
     depends_on:
       postgres:
         condition: service_healthy
@@ -174,7 +174,8 @@ services:
       - "--storage.tsdb.retention.time=30d"
       - "--web.enable-lifecycle"
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
+    mem_limit: 256m
     restart: unless-stopped
     networks:
       - cantina_net
@@ -183,7 +184,8 @@ services:
   pushgateway:
     image: prom/pushgateway:v1.10.0
     ports:
-      - "9091:9091"
+      - "127.0.0.1:9091:9091"
+    mem_limit: 64m
     restart: unless-stopped
     networks:
       - cantina_net
@@ -195,6 +197,7 @@ services:
       REDIS_ADDR: redis://redis:6379
     expose:
       - "9121"
+    mem_limit: 64m
     depends_on:
       - redis
     restart: unless-stopped
@@ -204,10 +207,13 @@ services:
   # ── WAHA (WhatsApp self-hosted) ─────────────────────────────────────────────
   waha:
     image: devlikeapro/waha:latest-2026.6.2
+    environment:
+      WHATSAPP_API_KEY: "${WAHA_API_KEY:-}"
     ports:
-      - "3001:3000"      # externo 3001 para no chocar con Grafana en 3000
+      - "127.0.0.1:3001:3000"
     volumes:
       - waha_data:/app/.sessions
+    mem_limit: 1g
     restart: unless-stopped
     networks:
       - cantina_net
@@ -225,7 +231,8 @@ services:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+    mem_limit: 256m
     depends_on:
       - prometheus
     restart: unless-stopped

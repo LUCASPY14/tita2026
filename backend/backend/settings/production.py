@@ -102,7 +102,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "django_prometheus.db.backends.postgresql",
         "NAME": os.environ.get("DB_NAME", "cantina_tita"),
         "USER": os.environ.get("DB_USER", "cantina_user"),
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),

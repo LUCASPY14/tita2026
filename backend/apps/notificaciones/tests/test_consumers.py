@@ -2,6 +2,7 @@
 import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+from asgiref.sync import sync_to_async
 
 
 def _make_consumer(query: str = ""):
@@ -55,17 +56,18 @@ class TestAuthenticate:
         result = asyncio.run(consumer._authenticate(str(token)))
         assert result is None
 
+    @pytest.mark.anyio
     @pytest.mark.django_db(transaction=True)
-    def test_token_valido_user_existente_retorna_usuario(self):
+    async def test_token_valido_user_existente_retorna_usuario(self):
         from apps.usuarios.models import Usuario
         from rest_framework_simplejwt.tokens import AccessToken
-        usuario = Usuario.objects.create_user(
+        usuario = await sync_to_async(Usuario.objects.create_user)(
             email="ws_auth@test.com", password="test1234",
             nombre="WS", apellido="Test", rol=Usuario.Rol.CAJERO,
         )
         token = AccessToken.for_user(usuario)
         consumer = _make_consumer()
-        result = asyncio.run(consumer._authenticate(str(token)))
+        result = await consumer._authenticate(str(token))
         assert result is not None
         assert result.pk == usuario.pk
 

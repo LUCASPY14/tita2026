@@ -20,7 +20,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-this-key")
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "django_prometheus.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "cantina_tita"),
         "USER": os.getenv("DB_USER", "cantina_user"),
         "PASSWORD": os.getenv("DB_PASSWORD", ""),
