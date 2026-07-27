@@ -25,7 +25,10 @@ param(
     [string]$BackendHealthUrl = "http://localhost/api/health/ready/"
 )
 
-$ErrorActionPreference = "Stop"
+# "Stop" solo para cmdlets de PowerShell; los comandos nativos (git, docker)
+# se verifican manualmente vía $LASTEXITCODE — su stderr informacional no debe
+# disparar Stop en PS 5.1 donde stderr de nativos genera ErrorRecord.
+$ErrorActionPreference = "Continue"
 $START = Get-Date
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
