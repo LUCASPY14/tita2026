@@ -26,6 +26,7 @@ import {
   ChefHat,
   Leaf,
   ShoppingCart,
+  HandCoins,
   Menu,
   type LucideIcon,
 } from 'lucide-react'
@@ -39,6 +40,7 @@ const OPS_ROLES      = ['ADMIN', 'SUPERVISOR', 'COCINA']        // sin CAJERO
 const CAJA_ROLES     = ['ADMIN', 'CAJERO', 'SUPERVISOR']
 const CARGA_ROLES    = ['ADMIN', 'CAJERO', 'COBRADOR']
 const FACTURACION    = ['ADMIN', 'COBRADOR']                    // sin CAJERO
+const COBROS_ROLES   = ['ADMIN', 'SUPERVISOR', 'COBRADOR']
 const COMPRAS_ROLES  = ['ADMIN', 'SUPERVISOR']                  // sin CAJERO
 const TARJETAS       = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
 const CLIENTES       = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
@@ -63,7 +65,8 @@ const navItems: NavItem[] = [
   { path: '/alergenos',    labelKey: 'nav.alergenos',    icon: Leaf,            roles: OPS_ROLES },
   { path: '/productos',    labelKey: 'nav.productos',    icon: Package,         roles: OPS_ROLES },
   { path: '/compras',      labelKey: 'nav.compras',      icon: Truck,           roles: COMPRAS_ROLES },
-  { path: '/ventas',       labelKey: 'nav.ventas',       icon: ShoppingCart,    roles: ['ADMIN', 'SUPERVISOR', 'CAJERO', 'COBRADOR'] },
+  { path: '/ventas',       labelKey: 'nav.ventas',       icon: ShoppingCart,    roles: ['ADMIN', 'SUPERVISOR', 'CAJERO'] },
+  { path: '/cobros',       labelKey: 'nav.cobros',       icon: HandCoins,       roles: COBROS_ROLES },
   { path: '/facturacion',  labelKey: 'nav.facturacion',  icon: FileText,        roles: FACTURACION },
   { path: '/reportes',     labelKey: 'nav.reportes',     icon: BarChart2,       roles: REPORTING },
   { path: '/inventario',   labelKey: 'nav.inventario',   icon: Warehouse,       roles: ['ADMIN', 'SUPERVISOR'] },

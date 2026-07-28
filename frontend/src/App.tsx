@@ -34,6 +34,7 @@ const ModoRecreo        = lazy(() => import('./pages/ModoRecreo'))
 const MenuDiario        = lazy(() => import('./pages/MenuDiario'))
 const Alergenos         = lazy(() => import('./pages/Alergenos'))
 const Ventas            = lazy(() => import('./pages/Ventas'))
+const Cobros            = lazy(() => import('./pages/Cobros'))
 const Auditoria         = lazy(() => import('./pages/Auditoria'))
 
 // ── Lazy: portal de padres ────────────────────────────────────────────────────
@@ -174,8 +175,13 @@ export default function App() {
             }>
               <Route path="/dashboard"     element={<Dashboard />} />
               <Route path="/ventas"        element={
-                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'CAJERO', 'COBRADOR']}>
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'CAJERO']}>
                   <Ventas />
+                </PrivateRoute>
+              } />
+              <Route path="/cobros"        element={
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'COBRADOR']}>
+                  <Cobros />
                 </PrivateRoute>
               } />
               <Route path="/almuerzos"     element={

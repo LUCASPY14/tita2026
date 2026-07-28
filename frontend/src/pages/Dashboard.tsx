@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   ShoppingCart, Users, Package, AlertTriangle, Banknote,
   TrendingUp, CreditCard, Truck, ArrowRight,
-  Zap, ChefHat, BarChart2, Wallet, UtensilsCrossed, Warehouse, RefreshCw,
+  Zap, ChefHat, BarChart2, Wallet, UtensilsCrossed, Warehouse, RefreshCw, HandCoins,
 } from 'lucide-react'
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
@@ -150,7 +150,7 @@ export default function Dashboard() {
     ADMIN:      ['Ventas Hoy', 'Recargas Hoy', 'Almuerzos Hoy', 'Tarjetas Alerta', 'Alertas Stock', 'Cajas Abiertas'],
     CAJERO:     ['Ventas Hoy', 'Recargas Hoy', 'Cajas Abiertas'],
     SUPERVISOR: ['Ventas Hoy', 'Recargas Hoy', 'Almuerzos Hoy', 'Alertas Stock', 'Cajas Abiertas'],
-    COBRADOR:   ['Ventas Hoy', 'Clientes Activos', 'Cajas Abiertas'],
+    COBRADOR:   ['Recargas Hoy', 'Clientes Activos', 'Cajas Abiertas'],
     COCINA:     ['Almuerzos Hoy', 'Cajas Abiertas'],
   }
 
@@ -236,6 +236,7 @@ export default function Dashboard() {
     { path: '/almuerzos',    label: 'Almuerzos',        icon: UtensilsCrossed, color: 'bg-amber-600',  desc: 'Gestión de almuerzos',          roles: ['ADMIN', 'SUPERVISOR', 'COCINA'] },
     { path: '/comedor',      label: 'Comedor',          icon: ChefHat,        color: 'bg-teal-600',    desc: 'Registro de servicio comedor',  roles: ['ADMIN', 'COCINA'] },
     { path: '/menu-diario',  label: 'Menú Diario',      icon: ChefHat,        color: 'bg-orange-600',  desc: 'Configurar menú del día',       roles: ['ADMIN', 'SUPERVISOR', 'COCINA'] },
+    { path: '/cobros',       label: 'Cobranza',         icon: HandCoins,      color: 'bg-orange-600',  desc: 'Cobros y estado de cuentas',    roles: ['ADMIN', 'SUPERVISOR', 'COBRADOR'] },
     { path: '/clientes',     label: 'Clientes',         icon: Users,          color: 'bg-cyan-600',    desc: 'Ver y gestionar clientes',      roles: ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR'] },
     { path: '/tarjetas',     label: 'Tarjetas',         icon: CreditCard,     color: 'bg-sky-600',     desc: 'Gestión de tarjetas RFID',     roles: ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR'] },
     { path: '/inventario',   label: 'Inventario',       icon: Warehouse,      color: 'bg-slate-600',   desc: 'Stock y alertas',               roles: ['ADMIN', 'SUPERVISOR'] },
