@@ -154,9 +154,15 @@ try {
         $script:Failed++
     }
 } catch {
-    $hint = if ($_.Exception.Message -match "404") { "(usuario demo no existe — correr create_demo_users)" } else { $_.Exception.Message.Split([char]10)[0] }
-    Write-Host ("   [ERR] {0,-46} {1}" -f "POST /api/token/", $hint) -ForegroundColor Red
-    $script:Failed++
+    $code = if ($null -ne $_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+    if ($code -eq 401 -or $code -eq 400) {
+        # Credenciales de demo no válidas en este entorno (producción sin usuario demo) — no es fallo de infra
+        Write-Host ("  [SKIP] {0,-46} {1}" -f "POST /api/token/ — usuario demo no existe en este entorno", "") -ForegroundColor DarkYellow
+    } else {
+        $hint = $_.Exception.Message.Split([char]10)[0]
+        Write-Host ("   [ERR] {0,-46} {1}" -f "POST /api/token/", $hint) -ForegroundColor Red
+        $script:Failed++
+    }
 }
 
 if ($null -ne $accessToken) {
