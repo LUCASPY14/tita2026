@@ -25,6 +25,18 @@ export interface Usuario {
   is_active: boolean
 }
 
+export interface UsuarioPortal {
+  id: number
+  email: string
+  nombre: string
+  apellido: string
+  nombre_completo: string
+  is_active: boolean
+  cliente_id: number | null
+  cliente_ruc_ci: string | null
+  ultimo_acceso: string | null
+}
+
 export interface UsuarioForm {
   email: string
   nombre: string
@@ -112,4 +124,4 @@ export const EMP_FORM_INITIAL: EmpleadoForm = {
   nombre: '', apellido: '', email: '', telefono: '', fecha_ingreso: '', id_rol: '', estado: true,
 }
 
-export type TabKey = 'usuarios' | 'permisos' | 'empleados'
+export type TabKey = 'usuarios' | 'empleados' | 'permisos' | 'portal'

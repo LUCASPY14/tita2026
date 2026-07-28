@@ -429,6 +429,33 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             'cliente_id': user.cliente_id if user.cliente else None,
         })
 
+    @action(detail=True, methods=["post"], url_path="resetear-password")
+    def resetear_password(self, request, pk=None):
+        """Resetea la contraseña de un usuario CLIENTE_WEB a su RUC/CI."""
+        usuario = self.get_object()
+        if usuario.rol != Usuario.Rol.CLIENTE_WEB:
+            return Response(
+                {"detail": "Solo se puede resetear contraseña de usuarios del portal."},
+                status=400,
+            )
+        if not usuario.cliente:
+            return Response(
+                {"detail": "El usuario no tiene cliente vinculado."},
+                status=400,
+            )
+        nueva_password = usuario.cliente.ruc_ci.strip()
+        usuario.set_password(nueva_password)
+        usuario.debe_cambiar_contrasena = True
+        usuario.save(update_fields=["password", "debe_cambiar_contrasena"])
+        registrar_auditoria(
+            request=request,
+            operacion="RESET_PASSWORD_PORTAL",
+            tabla="usuarios_usuario",
+            id_registro=usuario.id,
+            descripcion=f"Contraseña reseteada al CI/RUC para {usuario.email}",
+        )
+        return Response({"detail": "Contraseña reseteada al CI/RUC del cliente."})
+
     @action(detail=False, methods=['post'], url_path='cambiar-password')
     def cambiar_password(self, request):
         serializer = CambiarPasswordSerializer(data=request.data, context={'request': request})

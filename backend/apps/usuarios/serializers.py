@@ -17,6 +17,20 @@ from .models import (
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
+    cliente_ruc_ci = serializers.SerializerMethodField()
+    password = serializers.CharField(write_only=True, required=False, min_length=6)
+
+    def get_cliente_ruc_ci(self, obj):
+        return obj.cliente.ruc_ci if obj.cliente_id else None
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        instance = super().update(instance, validated_data)
+        if password:
+            instance.set_password(password)
+            instance.save(update_fields=["password"])
+        return instance
+
     class Meta:
         model = Usuario
         fields = [
@@ -27,10 +41,12 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "rol",
             "nombre_completo",
             "cliente_id",
+            "cliente_ruc_ci",
             "is_active",
             "ultimo_acceso",
+            "password",
         ]
-        read_only_fields = ["fecha_creacion", "ultimo_acceso"]
+        read_only_fields = ["fecha_creacion", "ultimo_acceso", "cliente_ruc_ci"]
 
 
 class UsuarioCreateSerializer(serializers.ModelSerializer):

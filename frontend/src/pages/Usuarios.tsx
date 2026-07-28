@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { UserPlus, Search, Edit2, Shield, Users, HardHat, Plus, Pencil, Trash2 } from 'lucide-react'
+import { UserPlus, Search, Edit2, Shield, Users, HardHat, Plus, Pencil, Trash2, Globe, RefreshCw, KeyRound } from 'lucide-react'
 import api from '../services/api'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
 import {
   extractErrorMessage,
-  type Usuario, type Rol, type Permiso, type RolPermiso, type Empleado, type TabKey,
+  type Usuario, type UsuarioPortal, type Rol, type Permiso, type RolPermiso, type Empleado, type TabKey,
   ROL_COLOR, ROL_LABEL, ROLES_SISTEMA,
 } from './usuarios/shared'
 import ModalUsuario from './usuarios/ModalUsuario'
@@ -39,6 +39,15 @@ export default function Usuarios() {
   const [rolPermisos, setRolPermisos] = useState<RolPermiso[]>([])
   const [loadingRolPermisos, setLoadingRolPermisos] = useState(false)
   const [togglingPermiso, setTogglingPermiso] = useState<number | null>(null)
+
+  // ── Portal Padres ─────────────────────────────────────────────────
+  const [padres, setPadres] = useState<UsuarioPortal[]>([])
+  const [loadingPadres, setLoadingPadres] = useState(false)
+  const [totalPadres, setTotalPadres] = useState(0)
+  const [pagePadres, setPagePadres] = useState(1)
+  const [searchPadres, setSearchPadres] = useState('')
+  const [resettingId, setResettingId] = useState<number | null>(null)
+  const searchPadresTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // ── Rol CRUD ──────────────────────────────────────────────────────
   const [rolModal, setRolModal] = useState<{ open: boolean; rol: Rol | null }>({ open: false, rol: null })
@@ -138,6 +147,62 @@ export default function Usuarios() {
       loadRoles()
     }
   }, [tab, loadEmpleados, loadRoles])
+
+  const loadPadres = useCallback(async (q: string, p: number) => {
+    setLoadingPadres(true)
+    try {
+      const params: Record<string, unknown> = { page: p, page_size: 15, rol: 'CLIENTE_WEB' }
+      if (q) params.search = q
+      const { data } = await api.get('/usuarios/usuarios/', { params })
+      setPadres(data.results ?? [])
+      setTotalPadres(data.count ?? 0)
+    } catch {
+      toast.error('Error al cargar usuarios del portal')
+    } finally {
+      setLoadingPadres(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'portal') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPagePadres(1)
+      loadPadres(searchPadres, 1)
+    }
+  }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (tab !== 'portal') return
+    clearTimeout(searchPadresTimer.current)
+    searchPadresTimer.current = setTimeout(() => {
+      setPagePadres(1)
+      loadPadres(searchPadres, 1)
+    }, 350)
+    return () => clearTimeout(searchPadresTimer.current)
+  }, [searchPadres, loadPadres, tab])
+
+  const resetearPassword = useCallback(async (padre: UsuarioPortal) => {
+    if (!window.confirm(`¿Resetear contraseña de ${padre.nombre_completo} al CI/RUC ${padre.cliente_ruc_ci}?`)) return
+    setResettingId(padre.id)
+    try {
+      await api.post(`/usuarios/usuarios/${padre.id}/resetear-password/`)
+      toast.success(`Contraseña reseteada — el padre deberá cambiarla al ingresar`)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setResettingId(null)
+    }
+  }, [])
+
+  const toggleActivoPadre = useCallback(async (padre: UsuarioPortal) => {
+    try {
+      await api.patch(`/usuarios/usuarios/${padre.id}/`, { is_active: !padre.is_active })
+      toast.success(padre.is_active ? 'Acceso desactivado' : 'Acceso activado')
+      loadPadres(searchPadres, pagePadres)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    }
+  }, [loadPadres, searchPadres, pagePadres])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -278,9 +343,82 @@ export default function Usuarios() {
   ]
 
   const TABS = [
-    { key: 'usuarios' as TabKey, label: 'Usuarios', icon: Users },
-    { key: 'empleados' as TabKey, label: 'Empleados', icon: HardHat },
-    { key: 'permisos' as TabKey, label: 'Roles y Permisos', icon: Shield },
+    { key: 'usuarios'  as TabKey, label: 'Usuarios',        icon: Users    },
+    { key: 'empleados' as TabKey, label: 'Empleados',        icon: HardHat  },
+    { key: 'permisos'  as TabKey, label: 'Roles y Permisos', icon: Shield   },
+    { key: 'portal'    as TabKey, label: 'Portal Padres',    icon: Globe    },
+  ]
+
+  const colsPadres: Column<UsuarioPortal>[] = [
+    {
+      title: 'Padre / Tutor',
+      key: 'nombre',
+      render: (_, r) => (
+        <div>
+          <p className="text-base font-semibold text-slate-800">{r.nombre_completo || `${r.nombre} ${r.apellido}`}</p>
+          <p className="text-sm text-slate-400 font-mono">{r.cliente_ruc_ci ?? '—'}</p>
+        </div>
+      ),
+    },
+    {
+      title: 'Email / Acceso',
+      key: 'email',
+      render: (_, r) => {
+        const esSintetico = r.email.endsWith('@portal.tita.local')
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500 truncate max-w-[180px]">{r.email}</span>
+            <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${esSintetico ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+              {esSintetico ? 'Sintético' : 'Real'}
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      title: 'Último acceso',
+      key: 'ultimo_acceso',
+      render: (_, r) => (
+        <span className="text-sm text-slate-500">
+          {r.ultimo_acceso
+            ? new Date(r.ultimo_acceso).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : <span className="text-slate-300 italic">Nunca ingresó</span>}
+        </span>
+      ),
+    },
+    {
+      title: 'Estado',
+      key: 'estado',
+      render: (_, r) => <Badge color={r.is_active ? 'green' : 'default'}>{r.is_active ? 'Activo' : 'Inactivo'}</Badge>,
+    },
+    {
+      title: '',
+      key: 'acciones',
+      width: 200,
+      render: (_, r) => (
+        <div className="flex gap-1.5 justify-end">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => resetearPassword(r)}
+            disabled={resettingId === r.id}
+            title="Resetear contraseña al CI/RUC"
+          >
+            {resettingId === r.id
+              ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              : <KeyRound className="w-3.5 h-3.5" />}
+            Resetear
+          </Button>
+          <Button
+            size="sm"
+            variant={r.is_active ? 'danger' : 'primary'}
+            onClick={() => toggleActivoPadre(r)}
+          >
+            {r.is_active ? 'Desactivar' : 'Activar'}
+          </Button>
+        </div>
+      ),
+    },
   ]
 
   // ── Render ────────────────────────────────────────────────────────
@@ -488,6 +626,38 @@ export default function Usuarios() {
             />
           </div>
         </div>
+      )}
+
+      {/* ── Portal Padres tab ──────────────────────────────────── */}
+      {tab === 'portal' && (
+        <>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex items-center gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <input
+                placeholder="Nombre o CI/RUC..."
+                value={searchPadres}
+                onChange={e => setSearchPadres(e.target.value)}
+                className={`${inputClass} pl-9`}
+              />
+            </div>
+            <p className="text-sm text-slate-400 shrink-0">{totalPadres} padre{totalPadres !== 1 ? 's' : ''}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-1">
+              <Table
+                columns={colsPadres}
+                dataSource={padres}
+                rowKey="id"
+                loading={loadingPadres}
+                pageSize={15}
+                page={pagePadres}
+                total={totalPadres}
+                onPageChange={p => { setPagePadres(p); loadPadres(searchPadres, p) }}
+              />
+            </div>
+          </div>
+        </>
       )}
 
       <ModalUsuario
