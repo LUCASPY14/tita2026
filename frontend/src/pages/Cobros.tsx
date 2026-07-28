@@ -17,9 +17,13 @@ interface DeudorRow {
 }
 
 interface ReporteCuenta {
-  clientes: DeudorRow[]
-  total_deuda: number
-  aging_totales: Record<string, number>
+  fecha: string
+  resumen: {
+    clientes_con_deuda: number
+    total_deuda: number
+    aging: Record<string, number>
+  }
+  detalle: DeudorRow[]
 }
 
 const AGING_BADGE: Record<string, string> = {
@@ -72,7 +76,7 @@ export default function Cobros() {
     }
   }
 
-  const filas = (reporte?.clientes ?? []).filter(r =>
+  const filas = (reporte?.detalle ?? []).filter(r =>
     r.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
     r.ruc_ci.includes(busqueda)
   )
@@ -98,15 +102,15 @@ export default function Cobros() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Total deuda</p>
-          <p className="text-2xl font-black tabular-nums text-orange-600">{formatGs(reporte?.total_deuda ?? 0)}</p>
+          <p className="text-2xl font-black tabular-nums text-orange-600">{formatGs(reporte?.resumen.total_deuda ?? 0)}</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Clientes con deuda</p>
-          <p className="text-2xl font-black tabular-nums text-slate-800">{reporte?.clientes.length ?? 0}</p>
+          <p className="text-2xl font-black tabular-nums text-slate-800">{reporte?.resumen.clientes_con_deuda ?? 0}</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Vencidas +90 días</p>
-          <p className="text-2xl font-black tabular-nums text-red-600">{formatGs(reporte?.aging_totales?.['90+'] ?? 0)}</p>
+          <p className="text-2xl font-black tabular-nums text-red-600">{formatGs(reporte?.resumen.aging?.['90+'] ?? 0)}</p>
         </div>
       </div>
 
