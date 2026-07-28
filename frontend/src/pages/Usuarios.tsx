@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { UserPlus, Search, Edit2, Shield, Users, HardHat, Plus } from 'lucide-react'
+import { UserPlus, Search, Edit2, Shield, Users, HardHat, Plus, Pencil, Trash2 } from 'lucide-react'
 import api from '../services/api'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -13,6 +13,7 @@ import {
 } from './usuarios/shared'
 import ModalUsuario from './usuarios/ModalUsuario'
 import ModalEmpleado from './usuarios/ModalEmpleado'
+import ModalRol from './usuarios/ModalRol'
 
 export default function Usuarios() {
   const { t } = useTranslation()
@@ -38,6 +39,10 @@ export default function Usuarios() {
   const [rolPermisos, setRolPermisos] = useState<RolPermiso[]>([])
   const [loadingRolPermisos, setLoadingRolPermisos] = useState(false)
   const [togglingPermiso, setTogglingPermiso] = useState<number | null>(null)
+
+  // ── Rol CRUD ──────────────────────────────────────────────────────
+  const [rolModal, setRolModal] = useState<{ open: boolean; rol: Rol | null }>({ open: false, rol: null })
+  const [deletingRolId, setDeletingRolId] = useState<number | null>(null)
 
   // ── Load usuarios ─────────────────────────────────────────────────
   const loadUsuarios = useCallback(async (q: string, rol: string, p: number) => {
@@ -158,6 +163,22 @@ export default function Usuarios() {
       setTogglingPermiso(null)
     }
   }, [selectedRolId, rolPermisos, loadRolPermisos])
+
+  // ── Eliminar rol ──────────────────────────────────────────────────
+  const deleteRol = useCallback(async (rolId: number) => {
+    if (!window.confirm('¿Eliminar este rol? Los empleados asignados quedarán sin rol.')) return
+    setDeletingRolId(rolId)
+    try {
+      await api.delete(`/usuarios/roles/${rolId}/`)
+      toast.success('Rol eliminado')
+      setSelectedRolId(prev => (prev === rolId ? null : prev))
+      loadRoles()
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setDeletingRolId(null)
+    }
+  }, [loadRoles])
 
   // ── Toggle activo ─────────────────────────────────────────────────
   const toggleActivo = useCallback(async (u: Usuario) => {
@@ -283,6 +304,12 @@ export default function Usuarios() {
             Nuevo Empleado
           </Button>
         )}
+        {tab === 'permisos' && (
+          <Button variant="primary" onClick={() => setRolModal({ open: true, rol: null })}>
+            <Plus className="w-4 h-4" />
+            Nuevo Rol
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -354,16 +381,40 @@ export default function Usuarios() {
         <div className="space-y-5">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
             <label className={labelClass}>Rol</label>
-            <select
-              value={selectedRolId ?? ''}
-              onChange={e => setSelectedRolId(Number(e.target.value) || null)}
-              className={`${inputClass} max-w-xs`}
-            >
-              <option value="">— Elegí un rol —</option>
-              {roles.map(r => (
-                <option key={r.id_rol} value={r.id_rol}>{r.nombre_rol}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={selectedRolId ?? ''}
+                onChange={e => setSelectedRolId(Number(e.target.value) || null)}
+                className={`${inputClass} max-w-xs`}
+              >
+                <option value="">— Elegí un rol —</option>
+                {roles.map(r => (
+                  <option key={r.id_rol} value={r.id_rol}>{r.nombre_rol}{!r.estado ? ' (inactivo)' : ''}</option>
+                ))}
+              </select>
+              {selectedRolId && (() => {
+                const rol = roles.find(r => r.id_rol === selectedRolId) ?? null
+                return (
+                  <>
+                    <button
+                      onClick={() => setRolModal({ open: true, rol })}
+                      title="Editar nombre / descripción"
+                      className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors cursor-pointer"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => deleteRol(selectedRolId)}
+                      disabled={deletingRolId === selectedRolId}
+                      title="Eliminar rol"
+                      className="p-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </>
+                )
+              })()}
+            </div>
           </div>
 
           {selectedRolId && (
@@ -452,6 +503,13 @@ export default function Usuarios() {
         roles={roles}
         onClose={() => setEmpModalOpen(false)}
         onSaved={() => loadEmpleados(pageEmp)}
+      />
+
+      <ModalRol
+        open={rolModal.open}
+        rol={rolModal.rol}
+        onClose={() => setRolModal({ open: false, rol: null })}
+        onSaved={() => { loadRoles(); if (!rolModal.rol) setSelectedRolId(null) }}
       />
     </div>
   )

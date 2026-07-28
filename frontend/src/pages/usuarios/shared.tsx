@@ -74,6 +74,7 @@ export interface EmpleadoForm {
   apellido: string
   email: string
   telefono: string
+  fecha_ingreso: string
   id_rol: number | ''
   estado: boolean
 }
@@ -108,7 +109,7 @@ export const FORM_INITIAL: UsuarioForm = {
 }
 
 export const EMP_FORM_INITIAL: EmpleadoForm = {
-  nombre: '', apellido: '', email: '', telefono: '', id_rol: '', estado: true,
+  nombre: '', apellido: '', email: '', telefono: '', fecha_ingreso: '', id_rol: '', estado: true,
 }
 
 export type TabKey = 'usuarios' | 'permisos' | 'empleados'

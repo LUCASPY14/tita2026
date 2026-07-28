@@ -27,6 +27,7 @@ export default function ModalEmpleado({ open, editingEmp, roles, onClose, onSave
         apellido: editingEmp.apellido,
         email: editingEmp.email ?? '',
         telefono: editingEmp.telefono ?? '',
+        fecha_ingreso: editingEmp.fecha_ingreso ?? '',
         id_rol: editingEmp.id_rol,
         estado: editingEmp.estado,
       })
@@ -87,6 +88,10 @@ export default function ModalEmpleado({ open, editingEmp, roles, onClose, onSave
         <div>
           <label className={labelClass}>Teléfono</label>
           <input value={empForm.telefono} onChange={e => setEmpForm(f => ({ ...f, telefono: e.target.value }))} placeholder="0981 xxxxxx" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Fecha de ingreso</label>
+          <input type="date" value={empForm.fecha_ingreso} onChange={e => setEmpForm(f => ({ ...f, fecha_ingreso: e.target.value }))} className={inputClass} />
         </div>
         <div>
           <label className={labelClass}>Rol *</label>
