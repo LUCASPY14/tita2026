@@ -49,4 +49,4 @@ EXPOSE 8000
 
 # Daphne: servidor ASGI para HTTP + WebSockets
 # La variable DJANGO_SETTINGS_MODULE se pasa via docker-compose
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "--ping-interval", "30", "--ping-timeout", "10", "backend.asgi:application"]
