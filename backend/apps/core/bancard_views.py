@@ -255,14 +255,18 @@ def bancard_iniciar_almuerzo(request):
 # Webhook que Bancard llama al completarse un pago (sin autenticación JWT).
 # Debe responder 200 con {"status": "success"} en < 30 segundos.
 
-@api_view(["POST"])
+@api_view(["POST", "GET"])
 @permission_classes([])
 @throttle_classes([BancardRetornoThrottle])
 def bancard_confirmar(request):
     """
     Bancard hace POST aquí al finalizar una transacción (single_buy_confirm).
     Verifica el token, acredita el saldo y responde {"status": "success"}.
+    GET se usa solo para que el panel Bancard valide que la URL existe.
     """
+    if request.method == "GET":
+        return Response({"status": "ok"})
+
     operation = request.data.get("operation", {})
     shop_process_id = str(operation.get("shop_process_id", ""))
     token_recibido  = operation.get("token", "")
