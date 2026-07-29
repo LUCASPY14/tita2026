@@ -138,7 +138,9 @@ def bancard_iniciar(request):
 
     return Response({
         "shop_process_id": shop_process_id,
+        "process_id": process_id,
         "redirect_url": redirect_url,
+        "script_url": bancard_service.checkout_script_url(),
     }, status=status.HTTP_201_CREATED)
 
 
@@ -247,7 +249,9 @@ def bancard_iniciar_almuerzo(request):
 
     return Response({
         "shop_process_id": shop_process_id,
+        "process_id": process_id,
         "redirect_url": bancard_service.pago_url(process_id),
+        "script_url": bancard_service.checkout_script_url(),
     }, status=status.HTTP_201_CREATED)
 
 

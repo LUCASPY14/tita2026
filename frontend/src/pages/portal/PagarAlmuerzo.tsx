@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
@@ -7,6 +7,16 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import Spinner from '../../components/ui/Spinner'
+
+declare global {
+  interface Window {
+    Bancard?: {
+      Checkout: {
+        createForm: (containerId: string, processId: string) => void
+      }
+    }
+  }
+}
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -99,7 +109,11 @@ export default function PagarAlmuerzo() {
   const [loading, setLoading]       = useState(true)
   const [cuentaSeleccionada, setCuentaSeleccionada] = useState<CuentaAlmuerzo | null>(null)
   const [montoCustom, setMontoCustom] = useState('')
-  const [iniciando, setIniciando]   = useState(false)
+  const [iniciando, setIniciando]         = useState(false)
+  const [pagoEnProceso, setPagoEnProceso] = useState(false)
+  const [processId, setProcessId]         = useState<string | null>(null)
+  const [scriptUrl, setScriptUrl]         = useState<string | null>(null)
+  const scriptRef = useRef<HTMLScriptElement | null>(null)
 
   const cargarCuentas = useCallback(async () => {
     setLoading(true)
@@ -149,7 +163,9 @@ export default function PagarAlmuerzo() {
         cuenta_id: cuentaSeleccionada.id,
         monto: montoEfectivo,
       })
-      window.location.href = data.redirect_url
+      setProcessId(data.process_id)
+      setScriptUrl(data.script_url)
+      setPagoEnProceso(true)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })
         ?.response?.data?.detail ?? 'Error al iniciar el pago'
@@ -158,10 +174,72 @@ export default function PagarAlmuerzo() {
     }
   }, [cuentaSeleccionada, montoValido, montoEfectivo, iniciando])
 
+  useEffect(() => {
+    if (!pagoEnProceso || !processId || !scriptUrl) return
+
+    if (scriptRef.current) {
+      scriptRef.current.remove()
+      scriptRef.current = null
+    }
+
+    const script = document.createElement('script')
+    script.src = scriptUrl
+    script.async = true
+    script.onload = () => {
+      window.Bancard?.Checkout.createForm('bancard-checkout-container-almuerzo', processId)
+    }
+    script.onerror = () => {
+      toast.error('Error al cargar el formulario de pago')
+      setPagoEnProceso(false)
+      setProcessId(null)
+      setScriptUrl(null)
+      setIniciando(false)
+    }
+    scriptRef.current = script
+    document.body.appendChild(script)
+
+    return () => {
+      scriptRef.current?.remove()
+      scriptRef.current = null
+    }
+  }, [pagoEnProceso, processId, scriptUrl])
+
   const handleNuevoPago = () => {
     setSearchParams({})
     setMontoCustom('')
     cargarCuentas()
+  }
+
+  // ── Formulario embebido Bancard ────────────────────────────────────────────
+  if (pagoEnProceso) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-slate-900">Pago de Almuerzo</h1>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="mb-4">
+            <p className="text-base font-semibold text-slate-800">Ingresá los datos de tu tarjeta</p>
+            <p className="text-sm text-slate-500 mt-0.5">
+              El formulario es provisto por Bancard — tus datos de tarjeta son seguros.
+            </p>
+          </div>
+          <div id="bancard-checkout-container-almuerzo" className="min-h-[420px]" />
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setPagoEnProceso(false)
+                setProcessId(null)
+                setScriptUrl(null)
+                setIniciando(false)
+              }}
+              className="text-sm text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
+            >
+              ← Cancelar y volver
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // ── Resultado de Bancard ───────────────────────────────────────────────────

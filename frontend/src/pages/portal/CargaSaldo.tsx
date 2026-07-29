@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
@@ -8,6 +8,16 @@ import {
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 import Spinner from '../../components/ui/Spinner'
+
+declare global {
+  interface Window {
+    Bancard?: {
+      Checkout: {
+        createForm: (containerId: string, processId: string) => void
+      }
+    }
+  }
+}
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -101,7 +111,11 @@ export default function CargaSaldo() {
   const [usandoCustom, setUsandoCustom] = useState(false)
 
   // Proceso de pago
-  const [iniciando, setIniciando] = useState(false)
+  const [iniciando, setIniciando]         = useState(false)
+  const [pagoEnProceso, setPagoEnProceso] = useState(false)
+  const [processId, setProcessId]         = useState<string | null>(null)
+  const [scriptUrl, setScriptUrl]         = useState<string | null>(null)
+  const scriptRef = useRef<HTMLScriptElement | null>(null)
 
   // ── Cargar hijos con tarjeta ───────────────────────────────────────────────
   const cargarHijos = useCallback(async () => {
@@ -152,8 +166,9 @@ export default function CargaSaldo() {
         nro_tarjeta: hijoSeleccionado.nro_tarjeta,
         monto: montoEfectivo,
       })
-      // Redirigir al portal de pago de Bancard
-      window.location.href = data.redirect_url
+      setProcessId(data.process_id)
+      setScriptUrl(data.script_url)
+      setPagoEnProceso(true)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })
         ?.response?.data?.detail ?? 'Error al iniciar el pago'
@@ -161,6 +176,37 @@ export default function CargaSaldo() {
       setIniciando(false)
     }
   }, [hijoSeleccionado, montoValido, montoEfectivo, iniciando])
+
+  // ── Cargar script Bancard y renderizar formulario embebido ─────────────────
+  useEffect(() => {
+    if (!pagoEnProceso || !processId || !scriptUrl) return
+
+    if (scriptRef.current) {
+      scriptRef.current.remove()
+      scriptRef.current = null
+    }
+
+    const script = document.createElement('script')
+    script.src = scriptUrl
+    script.async = true
+    script.onload = () => {
+      window.Bancard?.Checkout.createForm('bancard-checkout-container', processId)
+    }
+    script.onerror = () => {
+      toast.error('Error al cargar el formulario de pago')
+      setPagoEnProceso(false)
+      setProcessId(null)
+      setScriptUrl(null)
+      setIniciando(false)
+    }
+    scriptRef.current = script
+    document.body.appendChild(script)
+
+    return () => {
+      scriptRef.current?.remove()
+      scriptRef.current = null
+    }
+  }, [pagoEnProceso, processId, scriptUrl])
 
   // ── Nuevo pago tras resultado ──────────────────────────────────────────────
   const handleNuevoPago = () => {
@@ -172,6 +218,38 @@ export default function CargaSaldo() {
   }
 
   // ─── Renderizado ─────────────────────────────────────────────────────────
+
+  // Formulario embebido de Bancard (iframe via JS SDK)
+  if (pagoEnProceso) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-slate-900">Carga de Saldo</h1>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="mb-4">
+            <p className="text-base font-semibold text-slate-800">Ingresá los datos de tu tarjeta</p>
+            <p className="text-sm text-slate-500 mt-0.5">
+              El formulario es provisto por Bancard — tus datos de tarjeta son seguros.
+            </p>
+          </div>
+          <div id="bancard-checkout-container" className="min-h-[420px]" />
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setPagoEnProceso(false)
+                setProcessId(null)
+                setScriptUrl(null)
+                setIniciando(false)
+              }}
+              className="text-sm text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
+            >
+              ← Cancelar y volver
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Mostrar resultado si Bancard redirigió de vuelta
   if (estadoRetorno) {
@@ -366,8 +444,8 @@ export default function CargaSaldo() {
         <div>
           <p className="text-sm font-medium text-slate-700">Pago seguro con Bancard</p>
           <p className="text-sm text-slate-500 mt-0.5">
-            Al presionar «Ir a pagar», serás redirigido a la plataforma segura de Bancard
-            donde ingresarás tu CI, número de tarjeta (Visa o Mastercard), vencimiento y CVV.
+            Al presionar «Ir a pagar», se abrirá el formulario seguro de Bancard en esta misma
+            página. Ingresá tu CI, número de tarjeta (Visa o Mastercard), vencimiento y CVV.
             Cantina Tita no almacena datos de tarjeta.
           </p>
         </div>

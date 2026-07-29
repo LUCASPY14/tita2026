@@ -201,8 +201,13 @@ def rollback(shop_process_id: str) -> dict:
 # ─── URL del hosted payment page ──────────────────────────────────────────────
 
 def pago_url(process_id: str) -> str:
-    """URL de Bancard donde el titular ingresa sus datos de tarjeta."""
+    """URL de Bancard donde el titular ingresa sus datos de tarjeta (método redirect)."""
     return f"{_base_url()}/payment-card?process_id={process_id}"
+
+
+def checkout_script_url() -> str:
+    """URL del script JS de Bancard Checkout para renderizar el formulario embebido."""
+    return f"{_base_url()}/checkout/javascript/dist/bancard-checkout-3.0.0.js"
 
 
 # ─── Acreditar saldo ──────────────────────────────────────────────────────────
