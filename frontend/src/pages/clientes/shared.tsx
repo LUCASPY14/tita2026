@@ -221,7 +221,7 @@ export function abrirReciboCC(cliente: Cliente, pago: PagoCC, metodo: string) {
 </style>
 </head>
 <body>
-<h1>Cantina Escolar</h1>
+<h1>La Cantina de Tita</h1>
 <p class="center">Recibo de Pago</p>
 <div class="divider"></div>
 <div class="row"><span class="label">Cliente:</span><span>${cliente.apellidos}, ${cliente.nombres}</span></div>
