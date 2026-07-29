@@ -49,15 +49,31 @@ def _private_key() -> str:
 
 # ─── Tokens ───────────────────────────────────────────────────────────────────
 
-def _token(shop_process_id: str, suffix: str) -> str:
-    """
-    MD5(private_key + shop_process_id + suffix)
-    suffix = "request"       para crear transacción
-    suffix = "confirmacion"  para verificar resultado
-    """
-    raw = f"{_private_key()}{shop_process_id}{suffix}"
+def _md5(*parts: str) -> str:
     # MD5 es requerido por el protocolo Bancard vPOS — no es una elección de seguridad propia.
-    return hashlib.md5(raw.encode("utf-8"), usedforsecurity=False).hexdigest()  # nosec B324
+    return hashlib.md5("".join(parts).encode("utf-8"), usedforsecurity=False).hexdigest()  # nosec B324
+
+
+def _token_single_buy(shop_process_id: str, monto: int) -> str:
+    """md5(private_key + shop_process_id + amount + currency)"""
+    amount = f"{int(monto)}.00"
+    return _md5(_private_key(), str(shop_process_id), amount, "PYG")
+
+
+def _token_confirm_webhook(shop_process_id: str, monto: int) -> str:
+    """md5(private_key + shop_process_id + 'confirm' + amount + currency) — verifica webhook entrante."""
+    amount = f"{int(monto)}.00"
+    return _md5(_private_key(), str(shop_process_id), "confirm", amount, "PYG")
+
+
+def _token_get_confirmation(shop_process_id: str) -> str:
+    """md5(private_key + shop_process_id + 'get_confirmation')"""
+    return _md5(_private_key(), str(shop_process_id), "get_confirmation")
+
+
+def _token_rollback(shop_process_id: str) -> str:
+    """md5(private_key + shop_process_id + 'rollback' + '0.00')"""
+    return _md5(_private_key(), str(shop_process_id), "rollback", "0.00")
 
 
 # ─── API calls ────────────────────────────────────────────────────────────────
@@ -82,14 +98,13 @@ def iniciar_pago(
     payload = {
         "public_key": _public_key(),
         "operation": {
-            "token": _token(shop_process_id, "request"),
+            "token": _token_single_buy(shop_process_id, monto),
             "shop_process_id": shop_process_id,
             "amount": f"{int(monto)}.00",
             "currency": "PYG",
             "description": descripcion[:20],  # Bancard limita a 20 chars
             "return_url": return_url,
             "cancel_url": cancel_url,
-            "zimple": False,
         },
     }
 
@@ -115,18 +130,18 @@ def iniciar_pago(
     return data
 
 
-def confirmar_pago(shop_process_id: str) -> dict:
+def get_confirmation(shop_process_id: str) -> dict:
     """
-    Consulta el resultado de una transacción ya procesada por el titular.
+    Consulta el resultado de una transacción (get_single_buy_confirmation).
 
     Retorna el JSON de Bancard con el campo "status":
-      "success" + "confirmation" con payment_id y response_code
+      "success" + "confirmation" con response_code
       "error"   + "messages" con descripción
     """
     payload = {
         "public_key": _public_key(),
         "operation": {
-            "token": _token(shop_process_id, "confirmacion"),
+            "token": _token_get_confirmation(shop_process_id),
             "shop_process_id": shop_process_id,
         },
     }
@@ -134,22 +149,52 @@ def confirmar_pago(shop_process_id: str) -> dict:
     try:
         with _bancard_cb:
             resp = http_client.post(
-                f"{_base_url()}/vpos/api/0.3/single_buy/{shop_process_id}",
+                f"{_base_url()}/vpos/api/0.3/single_buy/confirmations",
                 json=payload,
                 timeout=30,
                 verify=getattr(settings, "BANCARD_SANDBOX", True) is False,
             )
         data = resp.json()
     except CircuitBreakerOpen as exc:
-        logger.warning("Bancard confirmar_pago bloqueado por circuit breaker shop=%s: %s", shop_process_id, exc)
+        logger.warning("Bancard get_confirmation bloqueado por circuit breaker shop=%s: %s", shop_process_id, exc)
         return {"status": "error", "messages": [
             {"dsc": "Gateway de pagos temporalmente no disponible. Intente en unos minutos."}
         ]}
     except Exception as exc:
-        logger.error("Bancard confirmar_pago error shop=%s: %s", shop_process_id, exc)
+        logger.error("Bancard get_confirmation error shop=%s: %s", shop_process_id, exc)
         return {"status": "error", "messages": [{"dsc": str(exc)}]}
 
-    logger.info("Bancard confirmar_pago shop=%s status=%s", shop_process_id, data.get("status"))
+    logger.info("Bancard get_confirmation shop=%s status=%s", shop_process_id, data.get("status"))
+    return data
+
+
+def rollback(shop_process_id: str) -> dict:
+    """Reversa una transacción (single_buy_rollback)."""
+    payload = {
+        "public_key": _public_key(),
+        "operation": {
+            "token": _token_rollback(shop_process_id),
+            "shop_process_id": shop_process_id,
+        },
+    }
+
+    try:
+        with _bancard_cb:
+            resp = http_client.post(
+                f"{_base_url()}/vpos/api/0.3/single_buy/rollback",
+                json=payload,
+                timeout=30,
+                verify=getattr(settings, "BANCARD_SANDBOX", True) is False,
+            )
+        data = resp.json()
+    except CircuitBreakerOpen as exc:
+        logger.warning("Bancard rollback bloqueado shop=%s: %s", shop_process_id, exc)
+        return {"status": "error", "messages": [{"dsc": "Gateway no disponible."}]}
+    except Exception as exc:
+        logger.error("Bancard rollback error shop=%s: %s", shop_process_id, exc)
+        return {"status": "error", "messages": [{"dsc": str(exc)}]}
+
+    logger.info("Bancard rollback shop=%s status=%s", shop_process_id, data.get("status"))
     return data
 
 

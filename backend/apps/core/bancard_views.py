@@ -4,7 +4,8 @@ Vistas para la integración Bancard vPOS.
 Endpoints:
   POST /api/v1/bancard/iniciar/                → Recarga de tarjeta prepago
   POST /api/v1/bancard/iniciar-almuerzo/       → Pago de cuenta mensual de almuerzo
-  GET  /api/v1/bancard/retorno/                → Bancard redirige aquí tras el pago (ambos tipos)
+  POST /api/v1/bancard/confirmar/              → Webhook: Bancard notifica resultado de pago (sin auth)
+  GET  /api/v1/bancard/retorno/                → Bancard redirige el browser aquí tras el pago
   GET  /api/v1/bancard/estado/<spid>/          → Consulta estado de un pago
 """
 
@@ -20,10 +21,11 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from common.throttling import SensitiveEndpointThrottle, BancardRetornoThrottle
+from common.throttling import SensitiveEndpointThrottle
 
 from .models import PagoBancard, Tarjeta
 from . import bancard_service
+from common.throttling import BancardRetornoThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -249,22 +251,90 @@ def bancard_iniciar_almuerzo(request):
     }, status=status.HTTP_201_CREATED)
 
 
+# ─── POST /api/v1/bancard/confirmar/ ─────────────────────────────────────────
+# Webhook que Bancard llama al completarse un pago (sin autenticación JWT).
+# Debe responder 200 con {"status": "success"} en < 30 segundos.
+
+@api_view(["POST"])
+@permission_classes([])
+@throttle_classes([BancardRetornoThrottle])
+def bancard_confirmar(request):
+    """
+    Bancard hace POST aquí al finalizar una transacción (single_buy_confirm).
+    Verifica el token, acredita el saldo y responde {"status": "success"}.
+    """
+    operation = request.data.get("operation", {})
+    shop_process_id = str(operation.get("shop_process_id", ""))
+    token_recibido  = operation.get("token", "")
+    response_code   = operation.get("response_code", "")
+    monto_raw       = operation.get("amount", "0")
+
+    if not shop_process_id:
+        return Response({"status": "error"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        monto = int(float(monto_raw))
+    except (TypeError, ValueError):
+        monto = 0
+
+    # Verificar token Bancard: md5(private_key + shop_process_id + "confirm" + amount + currency)
+    token_esperado = bancard_service._token_confirm_webhook(shop_process_id, monto)
+    if token_recibido != token_esperado:
+        logger.warning("Bancard confirmar: token inválido shop=%s", shop_process_id)
+        return Response({"status": "error"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        pago = PagoBancard.objects.get(shop_process_id=shop_process_id)
+    except PagoBancard.DoesNotExist:
+        logger.warning("Bancard confirmar: PagoBancard no encontrado shop=%s", shop_process_id)
+        return Response({"status": "success"})  # Siempre 200 para no re-intentos de Bancard
+
+    # Idempotente: si ya fue procesado no volver a acreditar
+    if pago.estado != PagoBancard.Estado.PENDIENTE:
+        return Response({"status": "success"})
+
+    pago.bancard_response = request.data
+    pago.save(update_fields=["bancard_response"])
+
+    if response_code == "00":
+        es_almuerzo = pago.tipo == PagoBancard.Tipo.ALMUERZO
+        try:
+            if es_almuerzo:
+                bancard_service.acreditar_pago_almuerzo(pago)
+            else:
+                bancard_service.acreditar_saldo(pago)
+                try:
+                    from celery import current_app
+                    current_app.send_task(
+                        "apps.contabilidad.tasks.refrescar_mv_balance_cliente",
+                        countdown=3,
+                    )
+                except Exception as exc:
+                    logger.warning("No se pudo programar refrescar_mv_balance_cliente: %s", exc)
+        except Exception as exc:
+            logger.error("Bancard confirmar: error acreditando shop=%s: %s", shop_process_id, exc)
+            pago.estado = PagoBancard.Estado.ERROR
+            pago.save(update_fields=["estado"])
+    else:
+        pago.estado = PagoBancard.Estado.RECHAZADO
+        pago.fecha_confirmacion = timezone.now()
+        pago.save(update_fields=["estado", "fecha_confirmacion"])
+        logger.info("Bancard confirmar: pago rechazado shop=%s code=%s", shop_process_id, response_code)
+
+    return Response({"status": "success"})
+
+
 # ─── GET /api/v1/bancard/retorno/ ─────────────────────────────────────────────
 
 @api_view(["GET"])
-@permission_classes([])   # intencional: Bancard redirige el navegador del padre sin sesión activa
+@permission_classes([])   # Bancard redirige el browser del padre sin sesión activa
 @throttle_classes([BancardRetornoThrottle])
 def bancard_retorno(request):
     """
-    Bancard redirige el navegador del padre a esta URL después del pago.
-    Query params: shop_process_id (siempre), status (opcional en sandbox).
-
-    Confirma el pago con la API de Bancard, acredita el saldo y redirige
-    al portal con el resultado.
-
-    Sin autenticación porque Bancard controla la redirección y el padre
-    no tiene token en ese momento. El shop_process_id es el único secreto;
-    BancardRetornoThrottle mitiga fuerza bruta.
+    Bancard redirige el navegador del padre aquí tras completar el pago.
+    El webhook POST /confirmar/ ya procesó el resultado — aquí solo leemos
+    el estado y redirigimos al portal.
+    Si el webhook todavía no llegó, consultamos a Bancard como fallback.
     """
     shop_process_id = request.GET.get("shop_process_id", "")
 
@@ -276,63 +346,53 @@ def bancard_retorno(request):
     except PagoBancard.DoesNotExist:
         return HttpResponseRedirect(f"{PORTAL_URL()}/portal/carga-saldo?estado=error&msg=no_encontrado")
 
-    # Ya procesado anteriormente (doble redirect)
-    if pago.estado != PagoBancard.Estado.PENDIENTE:
-        estado_frontend = "aprobado" if pago.estado == PagoBancard.Estado.APROBADO else "rechazado"
+    destino_base = "pagar-almuerzo" if pago.tipo == PagoBancard.Tipo.ALMUERZO else "carga-saldo"
+
+    # Si el webhook ya procesó el pago, redirigir directamente
+    if pago.estado == PagoBancard.Estado.APROBADO:
         return HttpResponseRedirect(
-            f"{PORTAL_URL()}/portal/carga-saldo?estado={estado_frontend}&monto={pago.monto}"
+            f"{PORTAL_URL()}/portal/{destino_base}?estado=aprobado&monto={pago.monto}"
+        )
+    if pago.estado == PagoBancard.Estado.RECHAZADO:
+        return HttpResponseRedirect(
+            f"{PORTAL_URL()}/portal/{destino_base}?estado=rechazado&monto={pago.monto}"
+        )
+    if pago.estado == PagoBancard.Estado.ERROR:
+        return HttpResponseRedirect(
+            f"{PORTAL_URL()}/portal/{destino_base}?estado=error&msg=acreditacion"
         )
 
-    # ── Confirmar con Bancard ────────────────────────────────────────────────
-    resultado = bancard_service.confirmar_pago(shop_process_id)
+    # Fallback: webhook aún no llegó — consultar estado a Bancard
+    resultado = bancard_service.get_confirmation(shop_process_id)
     pago.bancard_response = resultado
     pago.save(update_fields=["bancard_response"])
 
-    if resultado.get("status") == "success":
-        confirmacion = resultado.get("confirmation", {})
-        response_code = confirmacion.get("response_code", "")
+    confirmacion = resultado.get("confirmation", {})
+    response_code = confirmacion.get("response_code", "")
 
-        # "00" = aprobado en Bancard — única condición válida para acreditar
-        if response_code == "00":
-            es_almuerzo = pago.tipo == PagoBancard.Tipo.ALMUERZO
-            try:
-                if es_almuerzo:
-                    bancard_service.acreditar_pago_almuerzo(pago)
-                    return HttpResponseRedirect(
-                        f"{PORTAL_URL()}/portal/pagar-almuerzo?estado=aprobado&monto={pago.monto}"
-                    )
-                else:
-                    bancard_service.acreditar_saldo(pago)
-                    # Refrescar mv_balance_cliente para que el portal refleje
-                    # el nuevo saldo de inmediato sin esperar el ciclo de 15 min.
-                    try:
-                        from celery import current_app
-                        current_app.send_task(
-                            "apps.contabilidad.tasks.refrescar_mv_balance_cliente",
-                            countdown=3,
-                        )
-                    except Exception as exc:
-                        logger.warning("No se pudo programar refrescar_mv_balance_cliente: %s", exc)
-                    return HttpResponseRedirect(
-                        f"{PORTAL_URL()}/portal/carga-saldo?estado=aprobado&monto={pago.monto}"
-                    )
-            except Exception as exc:
-                logger.error("Error acreditando pago shop=%s tipo=%s: %s", shop_process_id, pago.tipo, exc)
-                pago.estado = PagoBancard.Estado.ERROR
-                pago.save(update_fields=["estado"])
-                destino = "pagar-almuerzo" if es_almuerzo else "carga-saldo"
-                return HttpResponseRedirect(
-                    f"{PORTAL_URL()}/portal/{destino}?estado=error&msg=acreditacion"
-                )
+    if resultado.get("status") == "success" and response_code == "00":
+        es_almuerzo = pago.tipo == PagoBancard.Tipo.ALMUERZO
+        try:
+            if es_almuerzo:
+                bancard_service.acreditar_pago_almuerzo(pago)
+            else:
+                bancard_service.acreditar_saldo(pago)
+        except Exception as exc:
+            logger.error("Retorno fallback: error acreditando shop=%s: %s", shop_process_id, exc)
+            pago.estado = PagoBancard.Estado.ERROR
+            pago.save(update_fields=["estado"])
+            return HttpResponseRedirect(
+                f"{PORTAL_URL()}/portal/{destino_base}?estado=error&msg=acreditacion"
+            )
+        return HttpResponseRedirect(
+            f"{PORTAL_URL()}/portal/{destino_base}?estado=aprobado&monto={pago.monto}"
+        )
 
-    # Pago rechazado o error
     pago.estado = PagoBancard.Estado.RECHAZADO
     pago.fecha_confirmacion = timezone.now()
     pago.save(update_fields=["estado", "fecha_confirmacion"])
-
-    destino = "pagar-almuerzo" if pago.tipo == PagoBancard.Tipo.ALMUERZO else "carga-saldo"
     return HttpResponseRedirect(
-        f"{PORTAL_URL()}/portal/{destino}?estado=rechazado&monto={pago.monto}"
+        f"{PORTAL_URL()}/portal/{destino_base}?estado=rechazado&monto={pago.monto}"
     )
 
 
