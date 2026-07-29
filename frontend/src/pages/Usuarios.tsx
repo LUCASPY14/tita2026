@@ -58,7 +58,7 @@ export default function Usuarios() {
     const requestId = ++requestIdRef.current
     setLoading(true)
     try {
-      const params: Record<string, unknown> = { page: p, page_size: 15 }
+      const params: Record<string, unknown> = { page: p, page_size: 15, sin_portal: '1' }
       if (q) params.search = q
       if (rol) params.rol = rol
       const { data } = await api.get('/usuarios/usuarios/', { params })

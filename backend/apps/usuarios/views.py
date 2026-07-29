@@ -369,6 +369,12 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
     filterset_fields = ["rol", "is_active"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.query_params.get("sin_portal") == "1":
+            qs = qs.exclude(rol=Usuario.Rol.CLIENTE_WEB)
+        return qs
     search_fields = ["email", "nombre", "apellido"]
     ordering_fields = ["email", "nombre", "fecha_creacion"]
     ordering = ["-fecha_creacion"]
