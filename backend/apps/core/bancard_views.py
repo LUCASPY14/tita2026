@@ -9,7 +9,7 @@ Endpoints:
   GET  /api/v1/bancard/estado/<spid>/          → Consulta estado de un pago
 """
 
-import uuid
+import time
 import logging
 
 from django.conf import settings
@@ -97,7 +97,7 @@ def bancard_iniciar(request):
     cliente = getattr(request.user, "cliente", None)
 
     # ── Crear PagoBancard ────────────────────────────────────────────────────
-    shop_process_id = str(uuid.uuid4()).replace("-", "")[:50]
+    shop_process_id = str(int(time.time() * 1000))
 
     pago = PagoBancard.objects.create(
         tarjeta=tarjeta,
@@ -207,7 +207,7 @@ def bancard_iniciar_almuerzo(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    shop_process_id = str(uuid.uuid4()).replace("-", "")[:50]
+    shop_process_id = str(int(time.time() * 1000))
 
     pago = PagoBancard.objects.create(
         tipo=PagoBancard.Tipo.ALMUERZO,
