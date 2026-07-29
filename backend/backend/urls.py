@@ -5,6 +5,7 @@ from django.db import connection, OperationalError as DBError
 from django.http import JsonResponse
 from django.urls import include, path
 from apps.usuarios.views import CustomTokenObtainPairView
+from apps.core.bancard_views import bancard_confirmar, bancard_retorno
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
@@ -102,6 +103,10 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    # Bancard webhooks — URLs cortas para compatibilidad con el panel Bancard
+    path('api/v1/bancard/confirmar/', bancard_confirmar, name='bancard-confirmar-alias'),
+    path('api/v1/bancard/retorno/',   bancard_retorno,   name='bancard-retorno-alias'),
+
     # Apps API v1
     path('api/v1/almuerzos/', include('apps.almuerzos.urls')),
     path('api/v1/ventas/', include('apps.ventas.urls')),
