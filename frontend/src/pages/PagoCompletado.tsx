@@ -16,8 +16,8 @@ export default function PagoCompletado() {
   const cancelado = estado === 'cancelado'
 
   // Full page reload: garantiza datos frescos (saldo actualizado) y re-autenticación.
-  const volverA = tipo === 'almuerzo' ? '/portal/pagar-almuerzo' : '/portal/carga-saldo'
-  const handleVolver = () => { window.location.href = volverA }
+  const base = tipo === 'almuerzo' ? '/portal/pagar-almuerzo' : '/portal/carga-saldo'
+  const handleVolver = () => { window.location.href = `${base}?_r=${Date.now()}` }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">

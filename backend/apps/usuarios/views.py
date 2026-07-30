@@ -598,7 +598,7 @@ class PortalMiHijoView(APIView):
                 "cuenta_mensual": cuenta_data,
             })
 
-        return Response({
+        resp = Response({
             "cliente": {
                 "id": user.cliente.id,
                 "nombre": user.cliente.nombre_completo,
@@ -608,6 +608,8 @@ class PortalMiHijoView(APIView):
             "mes": {"anio": hoy.year, "mes": hoy.month},
             "hijos": hijos_data,
         })
+        resp["Cache-Control"] = "no-store, private"
+        return resp
 
 
 class PortalHistorialConsumos(APIView):
