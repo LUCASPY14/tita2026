@@ -11,7 +11,7 @@
  *   - Todo lo demás                                      → NetworkOnly (sin cache)
  */
 
-const CACHE_NAME     = 'cantina-v1'
+const CACHE_NAME     = 'cantina-v2'
 const SYNC_TAG       = 'sync-ventas'
 const IDB_DB         = 'cantina-offline'
 const IDB_STORE      = 'pending-ventas'
@@ -23,9 +23,14 @@ const CATALOG_PATTERNS = [
 ]
 const TARJETA_PATTERN = /\/api\/v1\/core\/tarjetas\//
 
-// URLs del portal de padres — StaleWhileRevalidate (consulta rápida + actualiza en background)
+// Datos financieros del portal — NetworkFirst (saldo siempre fresco)
+const PORTAL_SALDO_PATTERNS = [
+  /\/api\/v1\/usuarios\/portal\/mi-hijo\//,
+]
+
+// Resto del portal — StaleWhileRevalidate (historial, notificaciones; aceptable algo de lag)
 const PORTAL_PATTERNS = [
-  /\/api\/v1\/usuarios\/portal\//,
+  /\/api\/v1\/usuarios\/portal\/(?!mi-hijo)/,
   /\/api\/v1\/almuerzos\/suscripciones\//,
   /\/api\/v1\/notificaciones\/notificaciones\//,
 ]
@@ -69,7 +74,13 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // GET portal de padres → StaleWhileRevalidate (saldo, historial, notificaciones)
+  // GET mi-hijo (saldo) → NetworkFirst: datos financieros siempre frescos
+  if (request.method === 'GET' && PORTAL_SALDO_PATTERNS.some(p => p.test(url))) {
+    event.respondWith(networkFirst(request))
+    return
+  }
+
+  // GET portal (historial, notificaciones, etc.) → StaleWhileRevalidate
   if (request.method === 'GET' && PORTAL_PATTERNS.some(p => p.test(url))) {
     event.respondWith(staleWhileRevalidate(request))
     return
