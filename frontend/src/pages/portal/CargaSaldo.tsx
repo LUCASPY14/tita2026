@@ -93,7 +93,7 @@ function ResultadoPago({ estado, monto }: { estado: string; monto: string | null
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function CargaSaldo() {
-  const { user } = useAuthStore()
+  const { user, resetInactivityTimer } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Resultado de retorno desde Bancard
@@ -176,6 +176,15 @@ export default function CargaSaldo() {
       setIniciando(false)
     }
   }, [hijoSeleccionado, montoValido, montoEfectivo, iniciando])
+
+  // ── Mantener sesión activa mientras el iframe de Bancard está visible ────────
+  useEffect(() => {
+    if (!pagoEnProceso) return
+    // El timer de inactividad no detecta clicks dentro del iframe de Bancard.
+    // Reseteamos manualmente cada minuto para evitar un cierre de sesión silencioso.
+    const interval = setInterval(() => resetInactivityTimer(), 60_000)
+    return () => clearInterval(interval)
+  }, [pagoEnProceso, resetInactivityTimer])
 
   // ── Cargar script Bancard y renderizar formulario embebido ─────────────────
   useEffect(() => {

@@ -89,7 +89,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { isAuthenticated, user } = useAuthStore()
   const location = useLocation()
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isAuthenticated) {
+    const dest = location.pathname.startsWith('/portal') ? '/portal/login' : '/login'
+    return <Navigate to={dest} replace />
+  }
   if (roles && user && !roles.includes(user.rol)) return <Navigate to="/dashboard" replace />
   // Si es CLIENTE_WEB y debe cambiar contraseña, forzar la página de cambio
   if (

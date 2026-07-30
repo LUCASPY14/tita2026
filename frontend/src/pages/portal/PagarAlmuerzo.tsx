@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import Spinner from '../../components/ui/Spinner'
+import { useAuthStore } from '../../store/authStore'
 
 declare global {
   interface Window {
@@ -96,6 +97,7 @@ function ResultadoPago({ estado, monto }: { estado: string; monto: string | null
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function PagarAlmuerzo() {
+  const { resetInactivityTimer } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const estadoRetorno = searchParams.get('estado')
@@ -173,6 +175,12 @@ export default function PagarAlmuerzo() {
       setIniciando(false)
     }
   }, [cuentaSeleccionada, montoValido, montoEfectivo, iniciando])
+
+  useEffect(() => {
+    if (!pagoEnProceso) return
+    const interval = setInterval(() => resetInactivityTimer(), 60_000)
+    return () => clearInterval(interval)
+  }, [pagoEnProceso, resetInactivityTimer])
 
   useEffect(() => {
     if (!pagoEnProceso || !processId || !scriptUrl) return
