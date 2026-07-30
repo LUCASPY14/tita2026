@@ -37,6 +37,8 @@ const Ventas            = lazy(() => import('./pages/Ventas'))
 const Cobros            = lazy(() => import('./pages/Cobros'))
 const Auditoria         = lazy(() => import('./pages/Auditoria'))
 
+const PagoCompletado = lazy(() => import('./pages/PagoCompletado'))
+
 // ── Lazy: portal de padres ────────────────────────────────────────────────────
 const PortalDashboard        = lazy(() => import('./pages/portal/Dashboard'))
 const PortalNotificaciones   = lazy(() => import('./pages/portal/Notificaciones'))
@@ -166,6 +168,9 @@ export default function App() {
               <Route path="historial"             element={<PortalHistorial />} />
               <Route path="facturas"              element={<PortalFacturas />} />
             </Route>
+
+            {/* Resultado de pago Bancard — público, no requiere auth */}
+            <Route path="/pago-completado" element={<PagoCompletado />} />
 
             {/* Sistema de gestión */}
             <Route path="/login"              element={<Login />} />

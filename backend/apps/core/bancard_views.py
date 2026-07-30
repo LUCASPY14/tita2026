@@ -111,7 +111,10 @@ def bancard_iniciar(request):
     # ── Llamar a Bancard ─────────────────────────────────────────────────────
     base_return_url = settings.BANCARD_RETURN_URL
     return_url = f"{base_return_url}?shop_process_id={shop_process_id}"
-    cancel_url = getattr(settings, "BANCARD_CANCEL_URL", f"{PORTAL_URL()}/portal/carga-saldo?estado=cancelado")
+    cancel_url = getattr(
+        settings, "BANCARD_CANCEL_URL",
+        f"{PORTAL_URL()}/pago-completado?estado=cancelado&tipo=saldo",
+    )
 
     resultado = bancard_service.iniciar_pago(
         shop_process_id=shop_process_id,
@@ -224,8 +227,10 @@ def bancard_iniciar_almuerzo(request):
 
     base_return_url = settings.BANCARD_RETURN_URL
     return_url = f"{base_return_url}?shop_process_id={shop_process_id}"
-    cancel_url = getattr(settings, "BANCARD_CANCEL_URL_ALMUERZO",
-                         f"{PORTAL_URL()}/portal/pagar-almuerzo?estado=cancelado")
+    cancel_url = getattr(
+        settings, "BANCARD_CANCEL_URL_ALMUERZO",
+        f"{PORTAL_URL()}/pago-completado?estado=cancelado&tipo=almuerzo",
+    )
 
     resultado = bancard_service.iniciar_pago(
         shop_process_id=shop_process_id,
@@ -356,21 +361,21 @@ def bancard_retorno(request):
     except PagoBancard.DoesNotExist:
         return HttpResponseRedirect(f"{PORTAL_URL()}/portal/carga-saldo?estado=error&msg=no_encontrado")
 
-    destino_base = "pagar-almuerzo" if pago.tipo == PagoBancard.Tipo.ALMUERZO else "carga-saldo"
+    tipo_param = "almuerzo" if pago.tipo == PagoBancard.Tipo.ALMUERZO else "saldo"
+
+    def _resultado_url(estado: str, monto: int | None = None) -> str:
+        url = f"{PORTAL_URL()}/pago-completado?estado={estado}&tipo={tipo_param}"
+        if monto is not None:
+            url += f"&monto={monto}"
+        return url
 
     # Si el webhook ya procesó el pago, redirigir directamente
     if pago.estado == PagoBancard.Estado.APROBADO:
-        return HttpResponseRedirect(
-            f"{PORTAL_URL()}/portal/{destino_base}?estado=aprobado&monto={pago.monto}"
-        )
+        return HttpResponseRedirect(_resultado_url("aprobado", pago.monto))
     if pago.estado == PagoBancard.Estado.RECHAZADO:
-        return HttpResponseRedirect(
-            f"{PORTAL_URL()}/portal/{destino_base}?estado=rechazado&monto={pago.monto}"
-        )
+        return HttpResponseRedirect(_resultado_url("rechazado", pago.monto))
     if pago.estado == PagoBancard.Estado.ERROR:
-        return HttpResponseRedirect(
-            f"{PORTAL_URL()}/portal/{destino_base}?estado=error&msg=acreditacion"
-        )
+        return HttpResponseRedirect(_resultado_url("error"))
 
     # Fallback: webhook aún no llegó — consultar estado a Bancard
     resultado = bancard_service.get_confirmation(shop_process_id)
@@ -391,19 +396,13 @@ def bancard_retorno(request):
             logger.error("Retorno fallback: error acreditando shop=%s: %s", shop_process_id, exc)
             pago.estado = PagoBancard.Estado.ERROR
             pago.save(update_fields=["estado"])
-            return HttpResponseRedirect(
-                f"{PORTAL_URL()}/portal/{destino_base}?estado=error&msg=acreditacion"
-            )
-        return HttpResponseRedirect(
-            f"{PORTAL_URL()}/portal/{destino_base}?estado=aprobado&monto={pago.monto}"
-        )
+            return HttpResponseRedirect(_resultado_url("error"))
+        return HttpResponseRedirect(_resultado_url("aprobado", pago.monto))
 
     pago.estado = PagoBancard.Estado.RECHAZADO
     pago.fecha_confirmacion = timezone.now()
     pago.save(update_fields=["estado", "fecha_confirmacion"])
-    return HttpResponseRedirect(
-        f"{PORTAL_URL()}/portal/{destino_base}?estado=rechazado&monto={pago.monto}"
-    )
+    return HttpResponseRedirect(_resultado_url("rechazado", pago.monto))
 
 
 # ─── GET /api/v1/bancard/estado/<shop_process_id>/ ────────────────────────────
