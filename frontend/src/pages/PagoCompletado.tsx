@@ -1,4 +1,4 @@
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { CheckCircle2, XCircle, AlertCircle, ArrowLeft } from 'lucide-react'
 
 function formatGs(n: number) {
@@ -7,7 +7,6 @@ function formatGs(n: number) {
 
 export default function PagoCompletado() {
   const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
 
   const estado = searchParams.get('estado') ?? 'error'
   const monto  = searchParams.get('monto')
@@ -16,7 +15,9 @@ export default function PagoCompletado() {
   const aprobado  = estado === 'aprobado'
   const cancelado = estado === 'cancelado'
 
+  // Full page reload: garantiza datos frescos (saldo actualizado) y re-autenticación.
   const volverA = tipo === 'almuerzo' ? '/portal/pagar-almuerzo' : '/portal/carga-saldo'
+  const handleVolver = () => { window.location.href = volverA }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
@@ -66,7 +67,7 @@ export default function PagoCompletado() {
         {/* Botón volver */}
         <button
           type="button"
-          onClick={() => navigate(volverA)}
+          onClick={handleVolver}
           className="mt-8 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
