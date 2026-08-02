@@ -73,7 +73,7 @@ class TestBancardIniciar:
         _, tarjeta = hijo_con_tarjeta
         resp = client.post('/api/v1/core/bancard/iniciar/', {
             'nro_tarjeta': tarjeta.nro_tarjeta,
-            'monto': 5000,  # < mínimo 10.000
+            'monto': 4000,  # < mínimo 5.000
         })
         assert resp.status_code == 400
         assert 'mínimo' in resp.data.get('detail', '').lower()

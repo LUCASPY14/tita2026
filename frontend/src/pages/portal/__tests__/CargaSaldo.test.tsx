@@ -182,7 +182,7 @@ describe('CargaSaldo — formulario', () => {
     })
   })
 
-  it('monto personalizado inválido (< 10.000) mantiene el botón deshabilitado', async () => {
+  it('monto personalizado inválido (< 5.000) mantiene el botón deshabilitado', async () => {
     setupHijos(HIJO)
     render(<CargaSaldo />)
     await screen.findByText('Juan')
@@ -190,7 +190,7 @@ describe('CargaSaldo — formulario', () => {
     await userEvent.click(screen.getByRole('button', { name: /Otro monto/i }))
     const montoInput = await screen.findByPlaceholderText('150000')
     await userEvent.clear(montoInput)
-    await userEvent.type(montoInput, '5000')
+    await userEvent.type(montoInput, '4000')
 
     expect(screen.getByRole('button', { name: /Ir a pagar/i })).toBeDisabled()
   })

@@ -25,7 +25,7 @@ interface HijoConTarjeta {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const MONTOS_RAPIDOS = [50_000, 100_000, 150_000, 200_000, 300_000]
+const MONTOS_RAPIDOS = [5_000, 10_000, 20_000, 50_000, 100_000, 200_000]
 
 function formatGs(n: number) {
   return 'Gs. ' + (Number(n) || 0).toLocaleString('es-PY')
@@ -157,7 +157,7 @@ export default function CargaSaldo() {
     ? (parseInt(montoCustom.replace(/\D/g, ''), 10) || 0)
     : (montoSeleccionado ?? 0)
 
-  const montoValido = montoEfectivo >= 10_000 && montoEfectivo <= 5_000_000
+  const montoValido = montoEfectivo >= 5_000 && montoEfectivo <= 5_000_000
 
   // ── Iniciar pago ocasional (single_buy) ────────────────────────────────────
   const handlePagar = useCallback(async () => {
@@ -502,7 +502,7 @@ export default function CargaSaldo() {
           {/* Monto mínimo hint */}
           {montoEfectivo > 0 && !montoValido && (
             <p className="text-sm text-red-500">
-              El monto debe estar entre Gs. 10.000 y Gs. 5.000.000.
+              El monto debe estar entre Gs. 5.000 y Gs. 5.000.000.
             </p>
           )}
         </div>

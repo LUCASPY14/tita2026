@@ -63,9 +63,9 @@ def bancard_iniciar(request):
     except (TypeError, ValueError):
         return Response({"detail": "Monto inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-    if monto < 10_000:
+    if monto < 5_000:
         return Response(
-            {"detail": "El monto mínimo de carga es ₲10.000."},
+            {"detail": "El monto mínimo de carga es ₲5.000."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -665,9 +665,9 @@ def bancard_pagar_con_tarjeta(request):
     except (TypeError, ValueError):
         return Response({"detail": "Datos inválidos."}, status=status.HTTP_400_BAD_REQUEST)
 
-    if monto < 10_000:
+    if monto < 5_000:
         return Response(
-            {"detail": "El monto mínimo de carga es ₲10.000."},
+            {"detail": "El monto mínimo de carga es ₲5.000."},
             status=status.HTTP_400_BAD_REQUEST,
         )
     if monto > 5_000_000:
