@@ -6,30 +6,27 @@ Sistema de gestión para cantina escolar: POS de recreo (modo cajero), comedor c
 
 | Capa | Tecnología |
 |------|-----------|
-| Base de datos | PostgreSQL 16 (nativo en Windows, **no** en Docker) |
-| Backend | Python 3.11 · Django 4.2 · DRF 3.17 · Daphne ASGI |
+| Base de datos | PostgreSQL 16 (contenedor Docker, volumen `postgres_data`) |
+| Backend | Python 3.11 · Django 5.2 LTS (soporte hasta abril 2028) · DRF 3.17 · Daphne ASGI |
 | Cola de tareas | Celery 5.6 + Redis 7 (broker y cache, en WSL2) |
 | WebSockets | Django Channels 4.2 |
 | Frontend | React 19 · TypeScript 6 · Vite 8 · Tailwind CSS 4 |
 | Estado | Zustand 5 |
 | PWA | `vite-plugin-pwa` + service worker custom (`frontend/public/sw.js`) |
 | CI/CD | GitHub Actions (`.github/workflows/ci.yml`) |
-| Contenedores | Docker Compose (PostgreSQL corre **fuera** del compose) |
+| Contenedores | Docker Compose — PostgreSQL corre **dentro** del compose |
 | Monitoring | Prometheus (`:9090`) + Grafana (`:3000`) |
 | Errores | Sentry (backend + frontend) |
 
 ## Setup de desarrollo
 
-### 1. PostgreSQL (nativo Windows)
+### 1. PostgreSQL (Docker)
 
 ```powershell
-# Verificar que el servicio esté activo
-Get-Service -Name "postgresql*"
-
-# Base de datos: cantina_tita | Puerto: 5432 | Usuario: postgres
-# Primera vez:
-psql -U postgres -f scripts/setup_db_user.sql
-psql -U postgres -f scripts/setup_extensions.sql
+# PostgreSQL 16 corre en el contenedor 'postgres' del compose.
+# Datos persistidos en el volumen Docker 'postgres_data'.
+# Puerto 5432 expuesto en 127.0.0.1 (para pytest local y herramientas de DB).
+docker compose up -d postgres
 ```
 
 ### 2. Backend
@@ -80,7 +77,7 @@ npm run dev    # dev server en http://localhost:5173
 ### Backend
 
 ```bash
-# Tests con cobertura (mínimo 80%)
+# Tests con cobertura (mínimo 95%, forzado por CI)
 pytest --cov=apps --cov-report=term-missing -q
 
 # Tests de una app específica
@@ -117,16 +114,18 @@ LAN escolar (7 PCs)
 └── 5 PCs Cajeros   → http://servidor/modo-recreo (POS instalado como PWA)
 
 Servidor (1 PC dedicado)
-├── PostgreSQL 16       (nativo Windows, puerto 5432)
+├── Cloudflare Tunnel   (servicio nativo Windows, cloudflared.exe)
 ├── Docker Desktop
+│   ├── postgres        (PostgreSQL 16, volumen postgres_data)
 │   ├── frontend        (Nginx + React SPA, puerto 80)
 │   ├── backend         (Django + Daphne, puerto interno 8000)
 │   ├── redis           (broker + cache, puerto interno 6379)
 │   ├── celery          (worker)
 │   ├── celery-beat     (scheduler de tareas periódicas)
-│   ├── prometheus      (métricas, puerto 9090)
-│   └── grafana         (dashboards, puerto 3000)
-└── Backups             (C:\backups\cantina\, tarea programada 02:00)
+│   ├── waha            (WhatsApp self-hosted, 127.0.0.1:3001)
+│   ├── prometheus      (métricas, 127.0.0.1:9090)
+│   └── grafana         (dashboards, 127.0.0.1:3000)
+└── Backups             (D:\produccion_tita\backups\cantina\, tarea programada 02:00)
 ```
 
 El portal de padres (`/portal/*`) es accesible desde internet para recargas vía Bancard vPOS.
@@ -147,19 +146,17 @@ El script realiza en orden: `docker compose build` → migraciones → `docker c
 ## Backup de base de datos
 
 ```powershell
-# Registrar tarea programada Windows (02:00 diario) — solo la primera vez:
-.\scripts\setup_backup_task.ps1 -DbPassword "password_de_postgres"
+# Registrar tarea programada Windows (02:00 diario) — solo la primera vez.
+# Las credenciales DB se leen de backend\.env.production en cada backup.
+.\scripts\setup_backup_task.ps1
+# Con cifrado GPG opcional:
+.\scripts\setup_backup_task.ps1 -GpgRecipient "admin@cantinatita.com"
 
 # Backup manual:
 .\backup_cantina.ps1
 
-# Con cifrado GPG (recomendado para backups en la nube):
-.\backup_cantina.ps1 -GpgRecipient "admin@cantina.edu.py"
-# Requiere gpg instalado y la clave pública importada con: gpg --import pubkey.asc
-
 # Restaurar:
 .\restore_cantina.ps1 -BackupFile "C:\backups\cantina\cantina_20260616_0200.dump"
-# Para .dump.gpg: primero descifrar con gpg --decrypt, luego restaurar el .dump
 ```
 
 Los backups rotan automáticamente (30 días por defecto). El script también sube a la nube si `rclone` está configurado (ver `scripts/backup_nube.ps1`).
@@ -199,7 +196,12 @@ Los backups rotan automáticamente (30 días por defecto). El script también su
 
 ## Variables de entorno
 
-Ver `backend/.env.production.example` para la lista completa.
+Hay dos archivos de entorno:
+
+- `backend/.env.production` — variables del backend Django (secretos, DB, Redis, Bancard, etc.)
+- `D:\tita2026\.env` — variables para docker-compose (build args + `DB_PASSWORD`, `GRAFANA_PASSWORD`, `WAHA_API_KEY`)
+
+Ver `backend/.env.production.example` para la lista completa con descripción.
 
 Variables mínimas para desarrollo:
 
