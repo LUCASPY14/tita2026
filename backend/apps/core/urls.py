@@ -12,7 +12,19 @@ from .views import (
     RegistroAutorizacionViewSet,
     ReporteTarjetasView,
 )
-from .bancard_views import bancard_iniciar, bancard_iniciar_almuerzo, bancard_confirmar, bancard_retorno, bancard_estado
+from .bancard_views import (
+    bancard_iniciar,
+    bancard_iniciar_almuerzo,
+    bancard_confirmar,
+    bancard_retorno,
+    bancard_estado,
+    bancard_catastro_tarjeta,
+    bancard_retorno_catastro,
+    bancard_listar_tarjetas,
+    bancard_eliminar_tarjeta,
+    bancard_pagar_con_tarjeta,
+    bancard_pagar_almuerzo_con_tarjeta,
+)
 
 router = DefaultRouter()
 router.register(r"tarjetas", TarjetaViewSet, basename="tarjetas")
@@ -33,4 +45,11 @@ urlpatterns = [
     path("bancard/confirmar/",            bancard_confirmar,            name="bancard-confirmar"),
     path("bancard/retorno/",              bancard_retorno,              name="bancard-retorno"),
     path("bancard/estado/<str:shop_process_id>/", bancard_estado,       name="bancard-estado"),
+    # Bancard — tarjetas guardadas (catastro y pago con token)
+    path("bancard/tarjetas/catastro/",           bancard_catastro_tarjeta,        name="bancard-catastro-tarjeta"),
+    path("bancard/tarjetas/retorno-catastro/",   bancard_retorno_catastro,        name="bancard-retorno-catastro"),
+    path("bancard/tarjetas/",                    bancard_listar_tarjetas,         name="bancard-listar-tarjetas"),
+    path("bancard/tarjetas/<int:card_id>/",      bancard_eliminar_tarjeta,        name="bancard-eliminar-tarjeta"),
+    path("bancard/pagar-con-tarjeta/",           bancard_pagar_con_tarjeta,       name="bancard-pagar-con-tarjeta"),
+    path("bancard/pagar-almuerzo-con-tarjeta/",  bancard_pagar_almuerzo_con_tarjeta, name="bancard-pagar-almuerzo-con-tarjeta"),
 ]

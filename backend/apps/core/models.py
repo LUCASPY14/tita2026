@@ -598,6 +598,15 @@ class PagoBancard(models.Model):
     ip_origen = models.GenericIPAddressField(null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_confirmacion = models.DateTimeField(null=True, blank=True)
+    # Tarjeta guardada (pago con token) — solo informativo, no se usa para lógica
+    card_id_bancard = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Slot de tarjeta guardada en Bancard usado para este pago (si no fue pago ocasional)",
+    )
+    card_masked_number = models.CharField(
+        max_length=30, blank=True,
+        help_text="Número enmascarado de la tarjeta guardada usada (ej: 5418********0014)",
+    )
 
     class Meta:
         verbose_name = "Pago Bancard"
@@ -612,3 +621,41 @@ class PagoBancard(models.Model):
     def __str__(self):
         ref = self.tarjeta or self.cuenta_almuerzo or "—"
         return f"Bancard #{self.shop_process_id} - {ref} - ₲{self.monto:,.0f} [{self.estado}]"
+
+
+class SolicitudCatastroBancard(models.Model):
+    """
+    Referencia efímera para reconciliar el catastro de una tarjeta guardada (cards_new)
+    cuando el navegador vuelve del iframe de Bancard. Bancard es la fuente de verdad de
+    los datos de la tarjeta (consultados en vivo vía users_cards) — este modelo solo
+    guarda qué card_id se reservó para qué cliente mientras el catastro está en curso.
+    """
+
+    cliente = models.ForeignKey(
+        "clientes.Cliente",
+        models.CASCADE,
+        related_name="solicitudes_catastro_bancard",
+    )
+    referencia = models.CharField(
+        max_length=100, unique=True,
+        help_text="ID único generado por nosotros para reconciliar el retorno del iframe",
+    )
+    card_id = models.PositiveSmallIntegerField(
+        help_text="Slot de tarjeta (1-5) reservado para este cliente en Bancard",
+    )
+    process_id = models.CharField(max_length=200, blank=True)
+    resuelto = models.BooleanField(default=False)
+    ip_origen = models.GenericIPAddressField(null=True, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Solicitud de catastro Bancard"
+        verbose_name_plural = "Solicitudes de catastro Bancard"
+        ordering = ["-fecha_creacion"]
+        indexes = [
+            models.Index(fields=["referencia"], name="idx_catastro_referencia"),
+            models.Index(fields=["cliente", "resuelto"], name="idx_catastro_cliente_resuelto"),
+        ]
+
+    def __str__(self):
+        return f"Catastro #{self.referencia} - cliente {self.cliente_id} - slot {self.card_id}"

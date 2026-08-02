@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="173" height="55" viewBox="0 0 173 55" role="img" aria-label="La Cantina de Tita">
+  <rect width="173" height="55" rx="8" fill="#ffffff"/>
+  <circle cx="27" cy="27.5" r="19" fill="#16a34a"/>
+  <path d="M20 15v10.5a3.5 3.5 0 0 0 3 3.465V40a1 1 0 0 0 2 0V28.965A3.5 3.5 0 0 0 28 25.5V15a1 1 0 0 0-2 0v8h-1v-8a1 1 0 0 0-2 0v8h-1v-8a1 1 0 0 0-2 0Z" fill="#ffffff"/>
+  <path d="M35.5 15c-2.2 0-4 2.35-4 8.25 0 4.35 1.94 6.9 3 7.61V40a1 1 0 0 0 2 0V30.86c1.06-.71 3-3.26 3-7.61 0-5.9-1.8-8.25-4-8.25Z" fill="#ffffff"/>
+  <text x="54" y="24" font-family="Georgia, 'Times New Roman', serif" font-size="15" font-weight="700" fill="#166534">La Cantina</text>
+  <text x="54" y="41" font-family="Georgia, 'Times New Roman', serif" font-size="15" font-weight="700" fill="#166534">de Tita</text>
+</svg>

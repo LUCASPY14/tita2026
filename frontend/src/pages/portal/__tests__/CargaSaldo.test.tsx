@@ -52,6 +52,17 @@ function setupHijos(...hijos: typeof HIJO[]) {
   vi.mocked(api.get).mockResolvedValue({ data: { hijos } })
 }
 
+const TARJETA_GUARDADA = {
+  card_id: 1, card_masked_number: '5418********0014', card_brand: 'MasterCard', expiration_date: '08/26',
+}
+
+function setupHijosYTarjetas(hijos: typeof HIJO[], tarjetas: (typeof TARJETA_GUARDADA)[] = []) {
+  vi.mocked(api.get).mockImplementation((url: string) => {
+    if (url === '/core/bancard/tarjetas/') return Promise.resolve({ data: { tarjetas } })
+    return Promise.resolve({ data: { hijos } })
+  })
+}
+
 function setParams(params: string) {
   const mockSet = vi.fn()
   vi.mocked(useSearchParams).mockReturnValue([
@@ -219,5 +230,82 @@ describe('CargaSaldo — formulario', () => {
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith('Tarjeta no habilitada para Bancard')
     })
+  })
+})
+
+// ── Método de pago: tarjeta guardada ──────────────────────────────────────────
+
+describe('CargaSaldo — tarjeta guardada', () => {
+  it('pestaña "Tarjeta guardada" muestra las tarjetas guardadas del cliente', async () => {
+    setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+
+    await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
+
+    await screen.findByText(/5418\*+0014/)
+  })
+
+  it('sin tarjetas guardadas muestra el estado vacío y botón "Agregar tarjeta"', async () => {
+    setupHijosYTarjetas([HIJO], [])
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
+
+    await screen.findByText(/Todavía no guardaste ninguna tarjeta/i)
+    expect(screen.getByRole('button', { name: /Agregar tarjeta/i })).toBeInTheDocument()
+  })
+
+  it('seleccionar tarjeta y pagar (aprobado síncrono) redirige con estado=aprobado', async () => {
+    setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
+    vi.mocked(api.post).mockResolvedValue({ data: { estado: 'aprobado', monto: 50_000 } })
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
+    await screen.findByText(/5418\*+0014/)
+
+    await userEvent.click(screen.getByText(/5418\*+0014/))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Ir a pagar/i })).not.toBeDisabled())
+    await userEvent.click(screen.getByRole('button', { name: /Ir a pagar/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith(
+        '/core/bancard/pagar-con-tarjeta/',
+        expect.objectContaining({ nro_tarjeta: 'T-001', monto: 50_000, card_id: 1 }),
+      )
+    })
+    expect(window.location.href).toContain('estado=aprobado')
+  })
+
+  it('pago con tarjeta guardada que requiere 3DS muestra el paso de verificación', async () => {
+    setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
+    vi.mocked(api.post).mockResolvedValue({
+      data: { requires_3ds: true, process_id: 'proc-3ds-1', script_url: 'https://vpos.test/checkout.js' },
+    })
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
+    await screen.findByText(/5418\*+0014/)
+
+    await userEvent.click(screen.getByText(/5418\*+0014/))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Ir a pagar/i })).not.toBeDisabled())
+    await userEvent.click(screen.getByRole('button', { name: /Ir a pagar/i }))
+
+    await screen.findByText(/Verificación de seguridad/i)
+  })
+
+  it('botón "Ir a pagar" queda deshabilitado sin tarjeta seleccionada', async () => {
+    setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
+    await screen.findByText(/5418\*+0014/)
+
+    expect(screen.getByRole('button', { name: /Ir a pagar/i })).toBeDisabled()
   })
 })

@@ -47,6 +47,21 @@ function setupNoRetorno(cuentas: unknown[] = [CUENTA_JUAN]) {
   vi.mocked(api.get).mockResolvedValue({ data: { results: cuentas } })
 }
 
+const TARJETA_GUARDADA = {
+  card_id: 1, card_masked_number: '5418********0014', card_brand: 'MasterCard', expiration_date: '08/26',
+}
+
+function setupNoRetornoConTarjetas(cuentas: unknown[], tarjetas: (typeof TARJETA_GUARDADA)[] = []) {
+  mockGetSearchParam.mockImplementation((key: string) => {
+    const map: Record<string, null> = { estado: null, monto: null, cuenta_id: null }
+    return map[key] ?? null
+  })
+  vi.mocked(api.get).mockImplementation((url: string) => {
+    if (url === '/core/bancard/tarjetas/') return Promise.resolve({ data: { tarjetas } })
+    return Promise.resolve({ data: { results: cuentas } })
+  })
+}
+
 function setupRetorno(estado: string, monto = '150000') {
   mockGetSearchParam.mockImplementation((key: string) => {
     if (key === 'estado') return estado
@@ -216,5 +231,50 @@ describe('PagarAlmuerzo — botón "Ir a pagar"', () => {
     await waitFor(() =>
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith('Bancard error')
     )
+  })
+})
+
+// ── Método de pago: tarjeta guardada ──────────────────────────────────────────
+
+describe('PagarAlmuerzo — tarjeta guardada', () => {
+  it('pestaña "Tarjeta guardada" muestra las tarjetas guardadas del cliente', async () => {
+    setupNoRetornoConTarjetas([CUENTA_JUAN], [TARJETA_GUARDADA])
+    render(<PagarAlmuerzo />)
+    await screen.findByText('Saldo pendiente')
+
+    await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
+
+    await screen.findByText(/5418\*+0014/)
+  })
+
+  it('pagar con tarjeta guardada (aprobado síncrono) redirige con estado=aprobado', async () => {
+    setupNoRetornoConTarjetas([CUENTA_JUAN], [TARJETA_GUARDADA])
+    vi.mocked(api.post).mockResolvedValue({ data: { estado: 'aprobado', monto: 150_000 } })
+    render(<PagarAlmuerzo />)
+    await screen.findByText('Saldo pendiente')
+    await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
+    await screen.findByText(/5418\*+0014/)
+
+    await userEvent.click(screen.getByText(/5418\*+0014/))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Ir a pagar/i })).not.toBeDisabled())
+    await userEvent.click(screen.getByRole('button', { name: /Ir a pagar/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith(
+        '/core/bancard/pagar-almuerzo-con-tarjeta/',
+        expect.objectContaining({ cuenta_id: 10, monto: 150_000, card_id: 1 }),
+      )
+    })
+    expect(window.location.href).toContain('estado=aprobado')
+  })
+
+  it('botón "Ir a pagar" queda deshabilitado sin tarjeta seleccionada', async () => {
+    setupNoRetornoConTarjetas([CUENTA_JUAN], [TARJETA_GUARDADA])
+    render(<PagarAlmuerzo />)
+    await screen.findByText('Saldo pendiente')
+    await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
+    await screen.findByText(/5418\*+0014/)
+
+    expect(screen.getByRole('button', { name: /Ir a pagar/i })).toBeDisabled()
   })
 })

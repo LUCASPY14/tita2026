@@ -8,16 +8,9 @@ import {
 import api from '../../services/api'
 import Spinner from '../../components/ui/Spinner'
 import { useAuthStore } from '../../store/authStore'
+import TarjetasGuardadasBancard from './components/TarjetasGuardadasBancard'
 
-declare global {
-  interface Window {
-    Bancard?: {
-      Checkout: {
-        createForm: (containerId: string, processId: string) => void
-      }
-    }
-  }
-}
+// El tipo global window.Bancard se declara una sola vez en TarjetasGuardadasBancard.tsx
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -117,6 +110,16 @@ export default function PagarAlmuerzo() {
   const [scriptUrl, setScriptUrl]         = useState<string | null>(null)
   const scriptRef = useRef<HTMLScriptElement | null>(null)
 
+  // Método de pago: pago ocasional (single_buy) o tarjeta guardada (charge)
+  const [metodoPago, setMetodoPago]                 = useState<'ocasional' | 'guardada'>('ocasional')
+  const [cardIdSeleccionado, setCardIdSeleccionado] = useState<number | null>(null)
+
+  // Pago con tarjeta guardada que requiere 3D Secure
+  const [pago3dsEnProceso, setPago3dsEnProceso] = useState(false)
+  const [processId3ds, setProcessId3ds]         = useState<string | null>(null)
+  const [scriptUrl3ds, setScriptUrl3ds]         = useState<string | null>(null)
+  const scriptRef3ds = useRef<HTMLScriptElement | null>(null)
+
   const cargarCuentas = useCallback(async () => {
     setLoading(true)
     try {
@@ -176,11 +179,41 @@ export default function PagarAlmuerzo() {
     }
   }, [cuentaSeleccionada, montoValido, montoEfectivo, iniciando])
 
+  // ── Pagar con tarjeta guardada (charge) ────────────────────────────────────
+  const handlePagarConTarjeta = useCallback(async () => {
+    if (!cuentaSeleccionada || !montoValido || !cardIdSeleccionado || iniciando) return
+
+    setIniciando(true)
+    try {
+      const { data } = await api.post('/core/bancard/pagar-almuerzo-con-tarjeta/', {
+        cuenta_id: cuentaSeleccionada.id,
+        monto: montoEfectivo,
+        card_id: cardIdSeleccionado,
+      })
+
+      if (data.requires_3ds) {
+        setProcessId3ds(data.process_id)
+        setScriptUrl3ds(data.script_url)
+        setPago3dsEnProceso(true)
+        return
+      }
+
+      const params = new URLSearchParams({ estado: data.estado, tipo: 'almuerzo' })
+      if (data.monto) params.set('monto', String(data.monto))
+      window.location.href = `${window.location.pathname}?${params.toString()}`
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail ?? 'Error al procesar el pago'
+      toast.error(msg)
+      setIniciando(false)
+    }
+  }, [cuentaSeleccionada, montoValido, montoEfectivo, cardIdSeleccionado, iniciando])
+
   useEffect(() => {
-    if (!pagoEnProceso) return
+    if (!pagoEnProceso && !pago3dsEnProceso) return
     const interval = setInterval(() => resetInactivityTimer(), 60_000)
     return () => clearInterval(interval)
-  }, [pagoEnProceso, resetInactivityTimer])
+  }, [pagoEnProceso, pago3dsEnProceso, resetInactivityTimer])
 
   useEffect(() => {
     if (!pagoEnProceso || !processId || !scriptUrl) return
@@ -212,9 +245,42 @@ export default function PagarAlmuerzo() {
     }
   }, [pagoEnProceso, processId, scriptUrl])
 
+  // ── Cargar script Bancard y renderizar iframe de 3D Secure (tarjeta guardada) ──
+  useEffect(() => {
+    if (!pago3dsEnProceso || !processId3ds || !scriptUrl3ds) return
+
+    if (scriptRef3ds.current) {
+      scriptRef3ds.current.remove()
+      scriptRef3ds.current = null
+    }
+
+    const script = document.createElement('script')
+    script.src = scriptUrl3ds
+    script.async = true
+    script.onload = () => {
+      window.Bancard?.Charge3DS.createForm('bancard-3ds-container-almuerzo', processId3ds)
+    }
+    script.onerror = () => {
+      toast.error('Error al cargar la verificación de seguridad')
+      setPago3dsEnProceso(false)
+      setProcessId3ds(null)
+      setScriptUrl3ds(null)
+      setIniciando(false)
+    }
+    scriptRef3ds.current = script
+    document.body.appendChild(script)
+
+    return () => {
+      scriptRef3ds.current?.remove()
+      scriptRef3ds.current = null
+    }
+  }, [pago3dsEnProceso, processId3ds, scriptUrl3ds])
+
   const handleNuevoPago = () => {
     setSearchParams({})
     setMontoCustom('')
+    setMetodoPago('ocasional')
+    setCardIdSeleccionado(null)
     cargarCuentas()
   }
 
@@ -245,6 +311,24 @@ export default function PagarAlmuerzo() {
               ← Cancelar y volver
             </button>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Verificación 3D Secure para pago con tarjeta guardada
+  if (pago3dsEnProceso) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-slate-900">Pago de Almuerzo</h1>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="mb-4">
+            <p className="text-base font-semibold text-slate-800">Verificación de seguridad</p>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Tu banco requiere un paso adicional para confirmar el pago.
+            </p>
+          </div>
+          <div id="bancard-3ds-container-almuerzo" className="min-h-[380px]" />
         </div>
       </div>
     )
@@ -415,6 +499,51 @@ export default function PagarAlmuerzo() {
         </div>
       )}
 
+      {/* Método de pago */}
+      {cuentaSeleccionada && montoValido && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+              {cuentas.length > 1 ? '3' : '2'} — Método de pago
+            </p>
+          </div>
+          <div className="flex border-b border-slate-100">
+            <button
+              type="button"
+              onClick={() => setMetodoPago('ocasional')}
+              className={[
+                'flex-1 py-3 text-sm font-semibold transition-colors cursor-pointer',
+                metodoPago === 'ocasional'
+                  ? 'text-orange-700 border-b-2 border-orange-600'
+                  : 'text-slate-400 hover:text-slate-600',
+              ].join(' ')}
+            >
+              Pago único
+            </button>
+            <button
+              type="button"
+              onClick={() => setMetodoPago('guardada')}
+              className={[
+                'flex-1 py-3 text-sm font-semibold transition-colors cursor-pointer',
+                metodoPago === 'guardada'
+                  ? 'text-orange-700 border-b-2 border-orange-600'
+                  : 'text-slate-400 hover:text-slate-600',
+              ].join(' ')}
+            >
+              Tarjeta guardada
+            </button>
+          </div>
+          {metodoPago === 'guardada' && (
+            <TarjetasGuardadasBancard
+              selectedCardId={cardIdSeleccionado}
+              onSeleccionar={setCardIdSeleccionado}
+              accent="orange"
+              containerIdPrefix="pagar-almuerzo"
+            />
+          )}
+        </div>
+      )}
+
       {/* Resumen */}
       {cuentaSeleccionada && montoEfectivo > 0 && montoValido && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -454,32 +583,38 @@ export default function PagarAlmuerzo() {
         <div>
           <p className="text-sm font-medium text-slate-700">Pago seguro con Bancard</p>
           <p className="text-sm text-slate-500 mt-0.5">
-            Al presionar «Ir a pagar», serás redirigido a la plataforma segura de Bancard
-            donde ingresarás tu CI, número de tarjeta (Visa o Mastercard), vencimiento y CVV.
-            Cantina Tita no almacena datos de tarjeta.
+            {metodoPago === 'guardada'
+              ? 'Al presionar «Ir a pagar», se cobrará con la tarjeta guardada que seleccionaste.'
+              : 'Al presionar «Ir a pagar», serás redirigido a la plataforma segura de Bancard donde ingresarás tu CI, número de tarjeta (Visa o Mastercard), vencimiento y CVV.'}
+            {' '}Cantina Tita no almacena datos de tarjeta.
           </p>
         </div>
       </div>
 
       {/* Botón principal */}
-      <button
-        type="button"
-        onClick={handlePagar}
-        disabled={!cuentaSeleccionada || !montoValido || iniciando}
-        className={[
-          'w-full flex items-center justify-center gap-3 py-4 rounded-2xl',
-          'text-lg font-bold transition-all',
-          cuentaSeleccionada && montoValido && !iniciando
-            ? 'bg-orange-600 hover:bg-orange-700 text-white cursor-pointer shadow-lg shadow-orange-600/20 active:scale-[0.98]'
-            : 'bg-slate-200 text-slate-400 cursor-not-allowed',
-        ].join(' ')}
-      >
-        {iniciando ? (
-          <><Loader2 className="w-5 h-5 animate-spin" />Iniciando pago…</>
-        ) : (
-          <><Wallet className="w-5 h-5" />Ir a pagar<ChevronRight className="w-5 h-5" /></>
-        )}
-      </button>
+      {(() => {
+        const listo = cuentaSeleccionada && montoValido && (metodoPago === 'ocasional' || cardIdSeleccionado !== null)
+        return (
+          <button
+            type="button"
+            onClick={metodoPago === 'ocasional' ? handlePagar : handlePagarConTarjeta}
+            disabled={!listo || iniciando}
+            className={[
+              'w-full flex items-center justify-center gap-3 py-4 rounded-2xl',
+              'text-lg font-bold transition-all',
+              listo && !iniciando
+                ? 'bg-orange-600 hover:bg-orange-700 text-white cursor-pointer shadow-lg shadow-orange-600/20 active:scale-[0.98]'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed',
+            ].join(' ')}
+          >
+            {iniciando ? (
+              <><Loader2 className="w-5 h-5 animate-spin" />Iniciando pago…</>
+            ) : (
+              <><Wallet className="w-5 h-5" />Ir a pagar<ChevronRight className="w-5 h-5" /></>
+            )}
+          </button>
+        )
+      })()}
     </div>
   )
 }

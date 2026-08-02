@@ -10,13 +10,15 @@ export default function PagoCompletado() {
 
   const estado = searchParams.get('estado') ?? 'error'
   const monto  = searchParams.get('monto')
-  const tipo   = searchParams.get('tipo') ?? 'saldo'   // 'saldo' | 'almuerzo'
+  const tipo   = searchParams.get('tipo') ?? 'saldo'   // 'saldo' | 'almuerzo' | 'catastro'
 
-  const aprobado  = estado === 'aprobado'
-  const cancelado = estado === 'cancelado'
+  const aprobado    = estado === 'aprobado'
+  const cancelado   = estado === 'cancelado'
+  const esCatastro  = tipo === 'catastro'
 
   // Full page reload: garantiza datos frescos (saldo actualizado) y re-autenticación.
-  const base = tipo === 'almuerzo' ? '/portal/pagar-almuerzo' : '/portal/carga-saldo'
+  // El catastro de tarjeta no está atado a un flujo de pago específico — volvemos al inicio del portal.
+  const base = esCatastro ? '/portal' : tipo === 'almuerzo' ? '/portal/pagar-almuerzo' : '/portal/carga-saldo'
   const handleVolver = () => { window.location.href = `${base}?_r=${Date.now()}` }
 
   return (
@@ -34,33 +36,59 @@ export default function PagoCompletado() {
             <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
               <CheckCircle2 className="w-10 h-10 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">¡Pago aprobado!</h1>
-            {monto && (
-              <p className="text-xl font-semibold text-emerald-700">
-                {formatGs(Number(monto))} acreditados
-              </p>
+            {esCatastro ? (
+              <>
+                <h1 className="text-2xl font-bold text-slate-900">¡Tarjeta guardada!</h1>
+                <p className="text-slate-500 text-sm">
+                  Ya podés usarla para pagar con un click la próxima vez.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold text-slate-900">¡Pago aprobado!</h1>
+                {monto && (
+                  <p className="text-xl font-semibold text-emerald-700">
+                    {formatGs(Number(monto))} acreditados
+                  </p>
+                )}
+                <p className="text-slate-500 text-sm">
+                  El saldo fue acreditado en la tarjeta del alumno.
+                </p>
+              </>
             )}
-            <p className="text-slate-500 text-sm">
-              El saldo fue acreditado en la tarjeta del alumno.
-            </p>
           </div>
         ) : cancelado ? (
           <div className="flex flex-col items-center text-center space-y-3">
             <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center">
               <XCircle className="w-10 h-10 text-slate-400" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Pago cancelado</h1>
-            <p className="text-slate-500 text-sm">No se realizó ningún cargo.</p>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {esCatastro ? 'Catastro cancelado' : 'Pago cancelado'}
+            </h1>
+            <p className="text-slate-500 text-sm">
+              {esCatastro ? 'No se guardó ninguna tarjeta.' : 'No se realizó ningún cargo.'}
+            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center text-center space-y-3">
             <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
               <AlertCircle className="w-10 h-10 text-red-500" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Pago rechazado</h1>
-            <p className="text-slate-500 text-sm">
-              No se pudo procesar el pago. Verificá los datos de tu tarjeta e intentá nuevamente.
-            </p>
+            {esCatastro ? (
+              <>
+                <h1 className="text-2xl font-bold text-slate-900">No se pudo guardar la tarjeta</h1>
+                <p className="text-slate-500 text-sm">
+                  Verificá los datos e intentá nuevamente desde «Agregar tarjeta».
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold text-slate-900">Pago rechazado</h1>
+                <p className="text-slate-500 text-sm">
+                  No se pudo procesar el pago. Verificá los datos de tu tarjeta e intentá nuevamente.
+                </p>
+              </>
+            )}
           </div>
         )}
 

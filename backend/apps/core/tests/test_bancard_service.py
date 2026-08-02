@@ -48,33 +48,56 @@ class TestKeys:
         assert isinstance(_private_key(), str)
 
 
-# ─── _token ───────────────────────────────────────────────────────────────────
+# ─── Tokens por operación (single_buy, confirm, get_confirmation, rollback) ────
+# _token(shop_id, suffix) fue reemplazada por una función dedicada por operación,
+# ya que cada una concatena un orden de campos distinto (ver bancard_service.py).
 
-class TestToken:
+class TestTokensPorOperacion:
 
     @override_settings(BANCARD_PRIVATE_KEY="mysecret")
-    def test_token_es_md5_de_concatenacion(self):
-        from apps.core.bancard_service import _token
-        shop_id = "12345"
-        suffix = "request"
-        expected = hashlib.md5(f"mysecret{shop_id}{suffix}".encode(), usedforsecurity=False).hexdigest()
-        assert _token(shop_id, suffix) == expected
+    def test_token_single_buy_es_md5_de_concatenacion(self):
+        from apps.core.bancard_service import _token_single_buy
+        expected = hashlib.md5("mysecret1234510000.00PYG".encode(), usedforsecurity=False).hexdigest()
+        assert _token_single_buy("12345", 10000) == expected
 
-    @override_settings(BANCARD_PRIVATE_KEY="k")
-    def test_sufijo_request_distinto_de_confirmacion(self):
-        from apps.core.bancard_service import _token
-        assert _token("999", "request") != _token("999", "confirmacion")
+    @override_settings(BANCARD_PRIVATE_KEY="mysecret")
+    def test_token_confirm_webhook_incluye_sufijo_confirm(self):
+        from apps.core.bancard_service import _token_confirm_webhook, _token_single_buy
+        # Mismo shop_process_id y monto, pero confirm agrega el sufijo "confirm"
+        # entre el shop_process_id y el amount — el token debe diferir.
+        assert _token_confirm_webhook("12345", 10000) != _token_single_buy("12345", 10000)
+        expected = hashlib.md5("mysecret12345confirm10000.00PYG".encode(), usedforsecurity=False).hexdigest()
+        assert _token_confirm_webhook("12345", 10000) == expected
+
+    @override_settings(BANCARD_PRIVATE_KEY="mysecret")
+    def test_token_get_confirmation_no_depende_del_monto(self):
+        from apps.core.bancard_service import _token_get_confirmation
+        expected = hashlib.md5("mysecret12345get_confirmation".encode(), usedforsecurity=False).hexdigest()
+        assert _token_get_confirmation("12345") == expected
+
+    @override_settings(BANCARD_PRIVATE_KEY="mysecret")
+    def test_token_rollback_usa_monto_fijo_0_00(self):
+        from apps.core.bancard_service import _token_rollback
+        expected = hashlib.md5("mysecret12345rollback0.00".encode(), usedforsecurity=False).hexdigest()
+        assert _token_rollback("12345") == expected
 
     @override_settings(BANCARD_PRIVATE_KEY="")
-    def test_token_con_clave_vacia_no_lanza_excepcion(self):
-        from apps.core.bancard_service import _token
-        result = _token("0", "request")
-        assert len(result) == 32  # MD5 = 32 hex chars
+    def test_tokens_con_clave_vacia_no_lanzan_excepcion(self):
+        from apps.core.bancard_service import (
+            _token_single_buy, _token_confirm_webhook, _token_get_confirmation, _token_rollback,
+        )
+        for token in (
+            _token_single_buy("0", 0),
+            _token_confirm_webhook("0", 0),
+            _token_get_confirmation("0"),
+            _token_rollback("0"),
+        ):
+            assert len(token) == 32  # MD5 = 32 hex chars
 
     @override_settings(BANCARD_PRIVATE_KEY="abc")
-    def test_token_distinto_por_shop_process_id(self):
-        from apps.core.bancard_service import _token
-        assert _token("111", "request") != _token("222", "request")
+    def test_token_single_buy_distinto_por_shop_process_id(self):
+        from apps.core.bancard_service import _token_single_buy
+        assert _token_single_buy("111", 1000) != _token_single_buy("222", 1000)
 
 
 # ─── pago_url ─────────────────────────────────────────────────────────────────
@@ -205,45 +228,56 @@ class TestIniciarPago:
             cb._opened_at = original_opened
 
 
-# ─── confirmar_pago ───────────────────────────────────────────────────────────
+# ─── get_confirmation ─────────────────────────────────────────────────────────
+# (antes "confirmar_pago" — renombrada porque no confirma nada, sólo consulta si
+# Bancard ya confirmó un pago; se usa como fallback en bancard_retorno cuando el
+# webhook todavía no llegó.)
 
-class TestConfirmarPago:
+class TestGetConfirmation:
 
     @patch("apps.core.bancard_service.http_client.post")
     def test_exito_devuelve_confirmation(self, mock_post):
-        from apps.core.bancard_service import confirmar_pago
+        from apps.core.bancard_service import get_confirmation
         mock_post.return_value.json.return_value = {
             "status": "success",
             "confirmation": {"response_code": "00", "payment_id": "12345"},
         }
-        result = confirmar_pago("SP010")
+        result = get_confirmation("SP010")
         assert result["status"] == "success"
         assert result["confirmation"]["response_code"] == "00"
 
     @patch("apps.core.bancard_service.http_client.post")
-    def test_url_post_incluye_shop_process_id(self, mock_post):
-        from apps.core.bancard_service import confirmar_pago
+    def test_url_post_apunta_a_single_buy_confirmations(self, mock_post):
+        from apps.core.bancard_service import get_confirmation
         mock_post.return_value.json.return_value = {"status": "success"}
-        confirmar_pago("SP013")
+        get_confirmation("SP013")
         call_url = mock_post.call_args[0][0]
-        assert "SP013" in call_url
+        assert call_url.endswith("/vpos/api/0.3/single_buy/confirmations")
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_payload_incluye_shop_process_id(self, mock_post):
+        from apps.core.bancard_service import get_confirmation
+        mock_post.return_value.json.return_value = {"status": "success"}
+        get_confirmation("SP013")
+        payload = mock_post.call_args[1]["json"]
+        assert payload["operation"]["shop_process_id"] == "SP013"
 
     @patch("apps.core.bancard_service.http_client.post")
     def test_excepcion_de_red_devuelve_error(self, mock_post):
-        from apps.core.bancard_service import confirmar_pago
+        from apps.core.bancard_service import get_confirmation
         mock_post.side_effect = ConnectionError("timeout")
-        result = confirmar_pago("SP012")
+        result = get_confirmation("SP012")
         assert result["status"] == "error"
         assert len(result["messages"]) > 0
 
     @patch("apps.core.bancard_service.http_client.post")
     def test_error_de_bancard_se_propaga(self, mock_post):
-        from apps.core.bancard_service import confirmar_pago
+        from apps.core.bancard_service import get_confirmation
         mock_post.return_value.json.return_value = {
             "status": "error",
             "messages": [{"dsc": "Transacción no encontrada"}],
         }
-        result = confirmar_pago("SP011")
+        result = get_confirmation("SP011")
         assert result["status"] == "error"
 
     def test_circuit_breaker_open_devuelve_error_temporalmente(self):
@@ -256,13 +290,51 @@ class TestConfirmarPago:
         try:
             cb._state = _State.OPEN
             cb._opened_at = time.monotonic()
-            result = bancard_service.confirmar_pago("SP014")
+            result = bancard_service.get_confirmation("SP014")
             assert result["status"] == "error"
             assert "temporalmente" in result["messages"][0]["dsc"].lower()
         finally:
             cb._state = original_state
             cb._failure_count = original_count
             cb._opened_at = original_opened
+
+
+# ─── rollback ─────────────────────────────────────────────────────────────────
+# Sin cobertura previa — la agregamos de paso, mismo patrón que get_confirmation.
+
+class TestRollback:
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_exito_devuelve_status_success(self, mock_post):
+        from apps.core.bancard_service import rollback
+        mock_post.return_value.json.return_value = {"status": "success"}
+        result = rollback("SP020")
+        assert result["status"] == "success"
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_url_post_apunta_a_single_buy_rollback(self, mock_post):
+        from apps.core.bancard_service import rollback
+        mock_post.return_value.json.return_value = {"status": "success"}
+        rollback("SP021")
+        call_url = mock_post.call_args[0][0]
+        assert call_url.endswith("/vpos/api/0.3/single_buy/rollback")
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_transaccion_ya_confirmada_devuelve_error(self, mock_post):
+        from apps.core.bancard_service import rollback
+        mock_post.return_value.json.return_value = {
+            "status": "error",
+            "messages": [{"key": "TransactionAlreadyConfirmed", "dsc": "Transacción Cuponada"}],
+        }
+        result = rollback("SP022")
+        assert result["status"] == "error"
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_excepcion_de_red_devuelve_status_error(self, mock_post):
+        from apps.core.bancard_service import rollback
+        mock_post.side_effect = ConnectionError("timeout")
+        result = rollback("SP023")
+        assert result["status"] == "error"
 
 
 # ─── acreditar_saldo ──────────────────────────────────────────────────────────
@@ -338,3 +410,290 @@ class TestAcreditarSaldo:
         carga = CargaSaldo.objects.get(tarjeta=tarjeta)
         assert carga.metodo_pago == "TARJETA_BANCARD"
         assert carga.referencia == "SP-BS05"
+
+
+# ─── Tokens: tarjetas guardadas ────────────────────────────────────────────────
+
+class TestTokenCardsNew:
+
+    @override_settings(BANCARD_PRIVATE_KEY="mysecret")
+    def test_token_es_md5_de_concatenacion(self):
+        from apps.core.bancard_service import _token_cards_new
+        expected = hashlib.md5("mysecret2100request_new_card".encode(), usedforsecurity=False).hexdigest()
+        assert _token_cards_new(card_id=2, user_id=100) == expected
+
+    @override_settings(BANCARD_PRIVATE_KEY="k")
+    def test_token_distinto_por_card_id(self):
+        from apps.core.bancard_service import _token_cards_new
+        assert _token_cards_new(1, 100) != _token_cards_new(2, 100)
+
+
+class TestTokenUsersCards:
+
+    @override_settings(BANCARD_PRIVATE_KEY="mysecret")
+    def test_token_es_md5_de_concatenacion(self):
+        from apps.core.bancard_service import _token_users_cards
+        expected = hashlib.md5("mysecret100request_user_cards".encode(), usedforsecurity=False).hexdigest()
+        assert _token_users_cards(user_id=100) == expected
+
+
+class TestTokenCharge:
+
+    @override_settings(BANCARD_PRIVATE_KEY="mysecret")
+    def test_token_es_md5_de_concatenacion(self):
+        from apps.core.bancard_service import _token_charge
+        expected = hashlib.md5(
+            "mysecretSP001charge130.00PYGalias-abc".encode(), usedforsecurity=False
+        ).hexdigest()
+        assert _token_charge("SP001", 130, "alias-abc") == expected
+
+    @override_settings(BANCARD_PRIVATE_KEY="k")
+    def test_token_distinto_por_alias_token(self):
+        from apps.core.bancard_service import _token_charge
+        assert _token_charge("SP001", 100, "alias-1") != _token_charge("SP001", 100, "alias-2")
+
+
+class TestTokenDeleteCard:
+
+    @override_settings(BANCARD_PRIVATE_KEY="mysecret")
+    def test_token_es_md5_de_concatenacion(self):
+        from apps.core.bancard_service import _token_delete_card
+        expected = hashlib.md5(
+            "mysecretdelete_card100alias-abc".encode(), usedforsecurity=False
+        ).hexdigest()
+        assert _token_delete_card(user_id=100, card_token="alias-abc") == expected
+
+
+# ─── catastro_tarjeta ───────────────────────────────────────────────────────────
+
+class TestCatastroTarjeta:
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_exito_devuelve_process_id(self, mock_post):
+        from apps.core.bancard_service import catastro_tarjeta
+        mock_post.return_value.json.return_value = {"status": "success", "process_id": "pid-cat-1"}
+        result = catastro_tarjeta(
+            card_id=1, user_id=42, user_cell_phone="0981123456",
+            user_mail="test@test.com", return_url="https://r.com",
+        )
+        assert result["status"] == "success"
+        assert result["process_id"] == "pid-cat-1"
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_payload_contiene_card_id_y_user_id(self, mock_post):
+        from apps.core.bancard_service import catastro_tarjeta
+        mock_post.return_value.json.return_value = {"status": "success", "process_id": "p"}
+        catastro_tarjeta(
+            card_id=3, user_id=99, user_cell_phone="0981000000",
+            user_mail="a@a.com", return_url="https://r.com",
+        )
+        payload = mock_post.call_args[1]["json"]
+        assert payload["operation"]["card_id"] == 3
+        assert payload["operation"]["user_id"] == 99
+        assert payload["operation"]["return_url"] == "https://r.com"
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_excepcion_de_red_devuelve_status_error(self, mock_post):
+        from apps.core.bancard_service import catastro_tarjeta
+        mock_post.side_effect = Exception("timeout")
+        result = catastro_tarjeta(
+            card_id=1, user_id=1, user_cell_phone="", user_mail="", return_url="https://r.com",
+        )
+        assert result["status"] == "error"
+
+
+# ─── listar_tarjetas ────────────────────────────────────────────────────────────
+
+class TestListarTarjetas:
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_exito_devuelve_cards(self, mock_post):
+        from apps.core.bancard_service import listar_tarjetas
+        mock_post.return_value.json.return_value = {
+            "status": "success",
+            "cards": [{"card_id": 1, "alias_token": "alias-1", "card_masked_number": "5418********0014"}],
+        }
+        result = listar_tarjetas(user_id=42)
+        assert result["status"] == "success"
+        assert result["cards"][0]["card_id"] == 1
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_payload_incluye_extra_response_attributes(self, mock_post):
+        from apps.core.bancard_service import listar_tarjetas
+        mock_post.return_value.json.return_value = {"status": "success", "cards": []}
+        listar_tarjetas(user_id=42)
+        payload = mock_post.call_args[1]["json"]
+        assert payload["operation"]["extra_response_attributes"] == ["cards.bancard_proccesed"]
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_excepcion_de_red_devuelve_status_error(self, mock_post):
+        from apps.core.bancard_service import listar_tarjetas
+        mock_post.side_effect = Exception("timeout")
+        result = listar_tarjetas(user_id=1)
+        assert result["status"] == "error"
+
+
+# ─── pagar_con_token ────────────────────────────────────────────────────────────
+
+class TestPagarConToken:
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_exito_devuelve_operation(self, mock_post):
+        from apps.core.bancard_service import pagar_con_token
+        mock_post.return_value.json.return_value = {
+            "operation": {"response_code": "00", "process_id": None},
+        }
+        result = pagar_con_token(
+            shop_process_id="SP001", monto=100000, alias_token="alias-1",
+            descripcion="Recarga", return_url="https://r.com",
+        )
+        assert result["operation"]["response_code"] == "00"
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_payload_incluye_alias_token_y_confirmation_process_id(self, mock_post):
+        from apps.core.bancard_service import pagar_con_token
+        mock_post.return_value.json.return_value = {"operation": {}}
+        pagar_con_token(
+            shop_process_id="SP002", monto=50000, alias_token="alias-xyz",
+            descripcion="Test", return_url="https://r.com",
+        )
+        payload = mock_post.call_args[1]["json"]
+        assert payload["operation"]["alias_token"] == "alias-xyz"
+        assert payload["operation"]["number_of_payments"] == 1
+        assert payload["operation"]["extra_response_attributes"] == ["confirmation.process_id"]
+        # El manual lo marca opcional, pero Bancard rechaza el charge sin este campo
+        # ("The parameter additional_data is missing.") — confirmado contra sandbox real.
+        assert payload["operation"]["additional_data"] == ""
+
+    @patch("apps.core.bancard_service.http_client.post")
+    def test_excepcion_de_red_devuelve_status_error(self, mock_post):
+        from apps.core.bancard_service import pagar_con_token
+        mock_post.side_effect = Exception("timeout")
+        result = pagar_con_token(
+            shop_process_id="SP003", monto=1000, alias_token="a",
+            descripcion="d", return_url="https://r.com",
+        )
+        assert result["status"] == "error"
+
+
+# ─── eliminar_tarjeta ───────────────────────────────────────────────────────────
+
+class TestEliminarTarjeta:
+
+    @patch("apps.core.bancard_service.http_client.request")
+    def test_exito_devuelve_success(self, mock_request):
+        from apps.core.bancard_service import eliminar_tarjeta
+        mock_request.return_value.json.return_value = {"status": "success"}
+        result = eliminar_tarjeta(user_id=42, alias_token="alias-1")
+        assert result["status"] == "success"
+        assert mock_request.call_args[0][0] == "DELETE"
+
+    @patch("apps.core.bancard_service.http_client.request")
+    def test_excepcion_de_red_devuelve_status_error(self, mock_request):
+        from apps.core.bancard_service import eliminar_tarjeta
+        mock_request.side_effect = Exception("timeout")
+        result = eliminar_tarjeta(user_id=1, alias_token="a")
+        assert result["status"] == "error"
+
+
+# ─── procesar_resultado_pago ────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestProcesarResultadoPago:
+
+    def _setup_pago(self, suffix: str, monto: Decimal):
+        from apps.clientes.models import Cliente, Hijo, TipoCliente
+        from apps.core.models import PagoBancard, Tarjeta
+        from apps.productos.models import ListaPrecio
+
+        tipo = TipoCliente.objects.create(nombre=f"Padre {suffix}")
+        lista = ListaPrecio.objects.create(nombre=f"General {suffix}", activo=True)
+        cliente = Cliente.objects.create(
+            nombres="Test", apellidos=suffix, ruc_ci=f"CI{suffix}",
+            tipo_cliente=tipo, lista_precio=lista,
+        )
+        hijo = Hijo.objects.create(
+            nombre="Test", apellido=suffix,
+            cliente_responsable=cliente, activo=True,
+        )
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta=f"T{suffix}", hijo=hijo,
+            saldo_actual=Decimal("0"),
+            estado=Tarjeta.Estado.ACTIVA,
+        )
+        pago = PagoBancard.objects.create(
+            tarjeta=tarjeta, cliente=cliente,
+            monto=monto,
+            shop_process_id=f"SP-{suffix}",
+            estado=PagoBancard.Estado.PENDIENTE,
+        )
+        return pago, tarjeta
+
+    def test_response_code_00_acredita_y_aprueba(self):
+        from apps.core import bancard_service
+        from apps.core.models import PagoBancard
+        pago, tarjeta = self._setup_pago("PR01", Decimal("100000"))
+        bancard_service.procesar_resultado_pago(pago, "00")
+        pago.refresh_from_db()
+        tarjeta.refresh_from_db()
+        assert pago.estado == PagoBancard.Estado.APROBADO
+        assert tarjeta.saldo_actual == Decimal("100000")
+
+    def test_response_code_distinto_rechaza(self):
+        from apps.core import bancard_service
+        from apps.core.models import PagoBancard
+        pago, tarjeta = self._setup_pago("PR02", Decimal("100000"))
+        saldo_inicial = tarjeta.saldo_actual
+        bancard_service.procesar_resultado_pago(pago, "05")
+        pago.refresh_from_db()
+        tarjeta.refresh_from_db()
+        assert pago.estado == PagoBancard.Estado.RECHAZADO
+        assert pago.fecha_confirmacion is not None
+        assert tarjeta.saldo_actual == saldo_inicial
+
+    def test_excepcion_al_acreditar_marca_error(self):
+        from apps.core import bancard_service
+        from apps.core.models import PagoBancard
+        pago, _ = self._setup_pago("PR03", Decimal("100000"))
+        with patch("apps.core.bancard_service.acreditar_saldo", side_effect=Exception("boom")):
+            bancard_service.procesar_resultado_pago(pago, "00")
+        pago.refresh_from_db()
+        assert pago.estado == PagoBancard.Estado.ERROR
+
+
+# ─── proxima_tarjeta_guardada_disponible ────────────────────────────────────────
+
+class TestProximaTarjetaGuardadaDisponible:
+
+    @patch("apps.core.bancard_service.listar_tarjetas")
+    def test_sin_tarjetas_devuelve_1(self, mock_listar):
+        from apps.core.bancard_service import proxima_tarjeta_guardada_disponible
+        mock_listar.return_value = {"status": "success", "cards": []}
+        assert proxima_tarjeta_guardada_disponible(42) == 1
+
+    @patch("apps.core.bancard_service.listar_tarjetas")
+    def test_devuelve_cantidad_actual_mas_uno(self, mock_listar):
+        # Bancard no devuelve en users_cards el card_id que nosotros elegimos (usa su
+        # propio id interno), así que la disponibilidad se calcula por cantidad, no
+        # por matching de ids.
+        from apps.core.bancard_service import proxima_tarjeta_guardada_disponible
+        mock_listar.return_value = {
+            "status": "success",
+            "cards": [{"card_id": 173738}, {"card_id": 991204}],
+        }
+        assert proxima_tarjeta_guardada_disponible(42) == 3
+
+    @patch("apps.core.bancard_service.listar_tarjetas")
+    def test_cinco_tarjetas_devuelve_none(self, mock_listar):
+        from apps.core.bancard_service import proxima_tarjeta_guardada_disponible
+        mock_listar.return_value = {
+            "status": "success",
+            "cards": [{"card_id": i * 111111} for i in range(1, 6)],
+        }
+        assert proxima_tarjeta_guardada_disponible(42) is None
+
+    @patch("apps.core.bancard_service.listar_tarjetas")
+    def test_status_error_devuelve_1(self, mock_listar):
+        from apps.core.bancard_service import proxima_tarjeta_guardada_disponible
+        mock_listar.return_value = {"status": "error", "messages": []}
+        assert proxima_tarjeta_guardada_disponible(42) == 1

@@ -206,7 +206,7 @@ class TestBancardRetorno:
         assert resp.status_code == 302
         assert 'error' in resp['Location']
 
-    @patch('apps.core.bancard_service.confirmar_pago')
+    @patch('apps.core.bancard_service.get_confirmation')
     @patch('apps.core.bancard_service.iniciar_pago')
     def test_retorno_aprobado_acredita_saldo(
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
@@ -238,7 +238,7 @@ class TestBancardRetorno:
         tarjeta.refresh_from_db()
         assert tarjeta.saldo_actual == saldo_inicial + Decimal('100000')
 
-    @patch('apps.core.bancard_service.confirmar_pago')
+    @patch('apps.core.bancard_service.get_confirmation')
     @patch('apps.core.bancard_service.iniciar_pago')
     def test_retorno_rechazado_no_acredita(
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
@@ -291,7 +291,7 @@ class TestBancardRetorno:
         assert resp.status_code == 302
         assert 'aprobado' in resp['Location']
 
-    @patch('apps.core.bancard_service.confirmar_pago')
+    @patch('apps.core.bancard_service.get_confirmation')
     @patch('apps.core.bancard_service.iniciar_pago')
     def test_retorno_error_acreditacion_registra_error(
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
@@ -360,7 +360,7 @@ class TestBancardRetornoEdgeCases:
     def test_retorno_pago_en_estado_error_redirige_como_rechazado(
         self, mock_iniciar, api_cliente_web, hijo_con_tarjeta
     ):
-        """Pago en estado ERROR (acreditación falló antes) → retorno redirige a 'rechazado'."""
+        """Pago en estado ERROR (acreditación falló antes) → retorno redirige con estado=error."""
         from apps.core.models import PagoBancard
         mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-err-state'}
         client, _ = api_cliente_web
@@ -379,9 +379,10 @@ class TestBancardRetornoEdgeCases:
         anon_client = APIClient()
         resp = anon_client.get('/api/v1/core/bancard/retorno/', {'shop_process_id': shop_pid})
         assert resp.status_code == 302
-        assert 'rechazado' in resp['Location']
+        assert 'pago-completado' in resp['Location']
+        assert 'estado=error' in resp['Location']
 
-    @patch('apps.core.bancard_service.confirmar_pago')
+    @patch('apps.core.bancard_service.get_confirmation')
     @patch('apps.core.bancard_service.iniciar_pago')
     def test_retorno_confirmation_vacia_marca_rechazado(
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
@@ -407,7 +408,7 @@ class TestBancardRetornoEdgeCases:
         assert resp.status_code == 302
         assert resp['Location'] is not None
 
-    @patch('apps.core.bancard_service.confirmar_pago')
+    @patch('apps.core.bancard_service.get_confirmation')
     @patch('apps.core.bancard_service.iniciar_pago')
     def test_retorno_status_error_con_mensaje_redirige_rechazado(
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
@@ -612,12 +613,12 @@ class TestBancardIniciarAlmuerzo:
 class TestBancardRetornoAlmuerzo:
 
     @patch('apps.core.bancard_service.acreditar_pago_almuerzo')
-    @patch('apps.core.bancard_service.confirmar_pago')
+    @patch('apps.core.bancard_service.get_confirmation')
     @patch('apps.core.bancard_service.iniciar_pago')
     def test_retorno_almuerzo_aprobado_redirige_a_pagar_almuerzo(
         self, mock_iniciar, mock_confirmar, mock_acreditar, padre_con_cuenta,
     ):
-        """Pago tipo ALMUERZO aprobado → llama acreditar_pago_almuerzo, redirige /pagar-almuerzo."""
+        """Pago tipo ALMUERZO aprobado → llama acreditar_pago_almuerzo, redirige a /pago-completado con tipo=almuerzo."""
         mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-alm-ret'}
         mock_confirmar.return_value = {
             'status': 'success',
@@ -637,8 +638,9 @@ class TestBancardRetornoAlmuerzo:
         anon = APIClient()
         resp = anon.get('/api/v1/core/bancard/retorno/', {'shop_process_id': shop_pid})
         assert resp.status_code == 302
-        assert 'pagar-almuerzo' in resp['Location']
-        assert 'aprobado' in resp['Location']
+        assert 'pago-completado' in resp['Location']
+        assert 'tipo=almuerzo' in resp['Location']
+        assert 'estado=aprobado' in resp['Location']
         mock_acreditar.assert_called_once()
 
 
@@ -687,3 +689,369 @@ class TestBancardEstadoPermiso:
 
         resp = otro_client.get(f'/api/v1/core/bancard/estado/{shop_pid}/')
         assert resp.status_code == 403
+
+
+# ─── Fixtures: tarjetas guardadas ─────────────────────────────────────────────
+
+@pytest.fixture
+def api_padre(db, cliente):
+    """Usuario CLIENTE_WEB vinculado directamente al fixture `cliente`."""
+    from apps.usuarios.models import Usuario
+    padre = Usuario.objects.create_user(
+        email="padre_tarjetas@test.com",
+        password="test1234",
+        nombre="Padre",
+        apellido="Tarjetas",
+        rol=Usuario.Rol.CLIENTE_WEB,
+        cliente=cliente,
+    )
+    client = APIClient()
+    client.force_authenticate(user=padre)
+    return client, padre
+
+
+UNA_TARJETA_GUARDADA = {
+    "status": "success",
+    "cards": [{
+        "card_id": 1,
+        "alias_token": "alias-tok-1",
+        "card_masked_number": "5418********0014",
+        "card_brand": "MasterCard",
+        "card_type": "credit",
+        "expiration_date": "08/26",
+    }],
+}
+
+
+# ─── Tests catastro de tarjeta ─────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardCatastroTarjeta:
+
+    def test_sin_autenticacion_falla(self, api_client):
+        resp = api_client.post('/api/v1/core/bancard/tarjetas/catastro/')
+        assert resp.status_code in (401, 403)
+
+    def test_sin_cliente_asociado_falla(self, api_cliente_web):
+        client, _ = api_cliente_web
+        resp = client.post('/api/v1/core/bancard/tarjetas/catastro/')
+        assert resp.status_code == 400
+
+    def test_sin_claves_bancard_retorna_503(self, api_padre, settings):
+        settings.BANCARD_PUBLIC_KEY = ""
+        settings.BANCARD_PRIVATE_KEY = ""
+        client, _ = api_padre
+        resp = client.post('/api/v1/core/bancard/tarjetas/catastro/')
+        assert resp.status_code == 503
+
+    @patch('apps.core.bancard_service.proxima_tarjeta_guardada_disponible')
+    def test_maximo_de_tarjetas_retorna_400(self, mock_proxima, api_padre):
+        mock_proxima.return_value = None
+        client, _ = api_padre
+        resp = client.post('/api/v1/core/bancard/tarjetas/catastro/')
+        assert resp.status_code == 400
+        assert 'máximo' in resp.data['detail'].lower()
+
+    @patch('apps.core.bancard_service.catastro_tarjeta')
+    @patch('apps.core.bancard_service.proxima_tarjeta_guardada_disponible')
+    def test_bancard_error_retorna_502(self, mock_proxima, mock_catastro, api_padre):
+        mock_proxima.return_value = 1
+        mock_catastro.return_value = {'status': 'error', 'messages': [{'dsc': 'Error interno'}]}
+        client, _ = api_padre
+        resp = client.post('/api/v1/core/bancard/tarjetas/catastro/')
+        assert resp.status_code == 502
+
+    @patch('apps.core.bancard_service.catastro_tarjeta')
+    @patch('apps.core.bancard_service.proxima_tarjeta_guardada_disponible')
+    def test_exito_devuelve_process_id_y_crea_solicitud(self, mock_proxima, mock_catastro, api_padre):
+        from apps.core.models import SolicitudCatastroBancard
+        mock_proxima.return_value = 1
+        mock_catastro.return_value = {'status': 'success', 'process_id': 'proc-cat-1'}
+        client, _ = api_padre
+        resp = client.post('/api/v1/core/bancard/tarjetas/catastro/')
+        assert resp.status_code == 201
+        assert resp.data['process_id'] == 'proc-cat-1'
+        assert resp.data['card_id'] == 1
+        solicitud = SolicitudCatastroBancard.objects.get()
+        assert solicitud.card_id == 1
+        assert solicitud.process_id == 'proc-cat-1'
+        assert solicitud.resuelto is False
+
+
+# ─── Tests retorno de catastro ─────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardRetornoCatastro:
+
+    def test_sin_referencia_redirige_error(self, api_client):
+        resp = api_client.get('/api/v1/core/bancard/tarjetas/retorno-catastro/')
+        assert resp.status_code == 302
+        assert 'error' in resp['Location']
+
+    def test_referencia_inexistente_redirige_error(self, api_client):
+        resp = api_client.get(
+            '/api/v1/core/bancard/tarjetas/retorno-catastro/', {'referencia': 'NOEXISTE'}
+        )
+        assert resp.status_code == 302
+        assert 'error' in resp['Location']
+
+    def test_status_add_new_card_success_redirige_aprobado_y_marca_resuelto(self, cliente):
+        # Bancard agrega su propio parámetro `status` a la return_url — es la señal
+        # autoritativa (no se puede matchear por card_id, ver bancard_service).
+        from apps.core.models import SolicitudCatastroBancard
+        solicitud = SolicitudCatastroBancard.objects.create(
+            cliente=cliente, referencia="REF001", card_id=1,
+        )
+        resp = APIClient().get(
+            '/api/v1/core/bancard/tarjetas/retorno-catastro/',
+            {'referencia': 'REF001', 'status': 'add_new_card_success'},
+        )
+        assert resp.status_code == 302
+        assert 'aprobado' in resp['Location']
+        assert 'catastro' in resp['Location']
+        solicitud.refresh_from_db()
+        assert solicitud.resuelto is True
+
+    def test_status_add_new_card_fail_redirige_rechazado(self, cliente):
+        from apps.core.models import SolicitudCatastroBancard
+        SolicitudCatastroBancard.objects.create(cliente=cliente, referencia="REF002", card_id=2)
+        resp = APIClient().get(
+            '/api/v1/core/bancard/tarjetas/retorno-catastro/',
+            {'referencia': 'REF002', 'status': 'add_new_card_fail'},
+        )
+        assert resp.status_code == 302
+        assert 'rechazado' in resp['Location']
+
+    def test_sin_status_redirige_rechazado(self, cliente):
+        """Si Bancard no manda `status` (ej. usuario abandonó el iframe), se trata como rechazado."""
+        from apps.core.models import SolicitudCatastroBancard
+        SolicitudCatastroBancard.objects.create(cliente=cliente, referencia="REF003", card_id=1)
+        resp = APIClient().get(
+            '/api/v1/core/bancard/tarjetas/retorno-catastro/', {'referencia': 'REF003'}
+        )
+        assert resp.status_code == 302
+        assert 'rechazado' in resp['Location']
+
+
+# ─── Tests listar tarjetas ──────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardListarTarjetas:
+
+    def test_sin_autenticacion_falla(self, api_client):
+        resp = api_client.get('/api/v1/core/bancard/tarjetas/')
+        assert resp.status_code in (401, 403)
+
+    def test_sin_cliente_asociado_falla(self, api_cliente_web):
+        client, _ = api_cliente_web
+        resp = client.get('/api/v1/core/bancard/tarjetas/')
+        assert resp.status_code == 400
+
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_exito_devuelve_tarjetas_mapeadas(self, mock_listar, api_padre):
+        mock_listar.return_value = UNA_TARJETA_GUARDADA
+        client, _ = api_padre
+        resp = client.get('/api/v1/core/bancard/tarjetas/')
+        assert resp.status_code == 200
+        assert len(resp.data['tarjetas']) == 1
+        tarjeta = resp.data['tarjetas'][0]
+        assert tarjeta['card_id'] == 1
+        assert tarjeta['card_masked_number'] == '5418********0014'
+        assert 'alias_token' not in tarjeta  # nunca se expone al frontend
+
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_bancard_error_devuelve_lista_vacia(self, mock_listar, api_padre):
+        mock_listar.return_value = {'status': 'error', 'messages': []}
+        client, _ = api_padre
+        resp = client.get('/api/v1/core/bancard/tarjetas/')
+        assert resp.status_code == 200
+        assert resp.data['tarjetas'] == []
+
+
+# ─── Tests eliminar tarjeta ─────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardEliminarTarjeta:
+
+    def test_sin_autenticacion_falla(self, api_client):
+        resp = api_client.delete('/api/v1/core/bancard/tarjetas/1/')
+        assert resp.status_code in (401, 403)
+
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_tarjeta_no_encontrada_retorna_404(self, mock_listar, api_padre):
+        mock_listar.return_value = {"status": "success", "cards": []}
+        client, _ = api_padre
+        resp = client.delete('/api/v1/core/bancard/tarjetas/9/')
+        assert resp.status_code == 404
+
+    @patch('apps.core.bancard_service.eliminar_tarjeta')
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_exito_devuelve_success(self, mock_listar, mock_eliminar, api_padre):
+        mock_listar.return_value = UNA_TARJETA_GUARDADA
+        mock_eliminar.return_value = {'status': 'success'}
+        client, _ = api_padre
+        resp = client.delete('/api/v1/core/bancard/tarjetas/1/')
+        assert resp.status_code == 200
+        assert resp.data['status'] == 'success'
+        mock_eliminar.assert_called_once()
+
+    @patch('apps.core.bancard_service.eliminar_tarjeta')
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_bancard_error_retorna_502(self, mock_listar, mock_eliminar, api_padre):
+        mock_listar.return_value = UNA_TARJETA_GUARDADA
+        mock_eliminar.return_value = {'status': 'error', 'messages': []}
+        client, _ = api_padre
+        resp = client.delete('/api/v1/core/bancard/tarjetas/1/')
+        assert resp.status_code == 502
+
+
+# ─── Tests pagar con tarjeta guardada (recarga) ─────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardPagarConTarjeta:
+
+    def test_sin_autenticacion_falla(self, api_client):
+        resp = api_client.post('/api/v1/core/bancard/pagar-con-tarjeta/')
+        assert resp.status_code in (401, 403)
+
+    def test_sin_params_falla(self, api_padre):
+        client, _ = api_padre
+        resp = client.post('/api/v1/core/bancard/pagar-con-tarjeta/', {})
+        assert resp.status_code == 400
+
+    def test_monto_invalido_falla(self, api_padre, hijo_con_tarjeta):
+        client, _ = api_padre
+        _, tarjeta = hijo_con_tarjeta
+        resp = client.post('/api/v1/core/bancard/pagar-con-tarjeta/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta, 'monto': 1000, 'card_id': 1,
+        })
+        assert resp.status_code == 400
+
+    def test_tarjeta_prepago_inexistente_falla(self, api_padre):
+        client, _ = api_padre
+        resp = client.post('/api/v1/core/bancard/pagar-con-tarjeta/', {
+            'nro_tarjeta': 'NOEXISTE', 'monto': 100000, 'card_id': 1,
+        })
+        assert resp.status_code == 404
+
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_tarjeta_guardada_no_encontrada_retorna_404(self, mock_listar, api_padre, hijo_con_tarjeta):
+        mock_listar.return_value = {"status": "success", "cards": []}
+        client, _ = api_padre
+        _, tarjeta = hijo_con_tarjeta
+        resp = client.post('/api/v1/core/bancard/pagar-con-tarjeta/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta, 'monto': 100000, 'card_id': 1,
+        })
+        assert resp.status_code == 404
+
+    @patch('apps.core.bancard_service.pagar_con_token')
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_aprobado_sincrono_acredita_saldo(self, mock_listar, mock_charge, api_padre, hijo_con_tarjeta):
+        mock_listar.return_value = UNA_TARJETA_GUARDADA
+        mock_charge.return_value = {'confirmation': {'response_code': '00', 'process_id': None}}
+        client, _ = api_padre
+        _, tarjeta = hijo_con_tarjeta
+        saldo_inicial = tarjeta.saldo_actual
+        resp = client.post('/api/v1/core/bancard/pagar-con-tarjeta/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta, 'monto': 100000, 'card_id': 1,
+        })
+        assert resp.status_code == 200
+        assert resp.data['estado'] == 'aprobado'
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_inicial + Decimal('100000')
+
+    @patch('apps.core.bancard_service.pagar_con_token')
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_rechazado_sincrono_no_acredita(self, mock_listar, mock_charge, api_padre, hijo_con_tarjeta):
+        mock_listar.return_value = UNA_TARJETA_GUARDADA
+        mock_charge.return_value = {
+            'operation': {'response_code': '05', 'process_id': None, 'response_description': 'Rechazada'},
+        }
+        client, _ = api_padre
+        _, tarjeta = hijo_con_tarjeta
+        saldo_inicial = tarjeta.saldo_actual
+        resp = client.post('/api/v1/core/bancard/pagar-con-tarjeta/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta, 'monto': 100000, 'card_id': 1,
+        })
+        assert resp.status_code == 200
+        assert resp.data['estado'] == 'rechazado'
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_inicial
+
+    @patch('apps.core.bancard_service.pagar_con_token')
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_requiere_3ds_devuelve_process_id(self, mock_listar, mock_charge, api_padre, hijo_con_tarjeta):
+        mock_listar.return_value = UNA_TARJETA_GUARDADA
+        mock_charge.return_value = {'operation': {'process_id': '3ds-proc-1', 'response_code': None}}
+        client, _ = api_padre
+        _, tarjeta = hijo_con_tarjeta
+        resp = client.post('/api/v1/core/bancard/pagar-con-tarjeta/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta, 'monto': 100000, 'card_id': 1,
+        })
+        assert resp.status_code == 201
+        assert resp.data['requires_3ds'] is True
+        assert resp.data['process_id'] == '3ds-proc-1'
+
+    @patch('apps.core.bancard_service.pagar_con_token')
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_bancard_status_error_retorna_502(self, mock_listar, mock_charge, api_padre, hijo_con_tarjeta):
+        mock_listar.return_value = UNA_TARJETA_GUARDADA
+        mock_charge.return_value = {'status': 'error', 'messages': [{'dsc': 'Falla'}]}
+        client, _ = api_padre
+        _, tarjeta = hijo_con_tarjeta
+        resp = client.post('/api/v1/core/bancard/pagar-con-tarjeta/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta, 'monto': 100000, 'card_id': 1,
+        })
+        assert resp.status_code == 502
+
+
+# ─── Tests pagar almuerzo con tarjeta guardada ──────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardPagarAlmuerzoConTarjeta:
+
+    def test_no_cliente_web_recibe_403(self, padre_con_cuenta):
+        from apps.usuarios.models import Usuario
+        cajero = Usuario.objects.create_user(
+            email="cajero_tok@test.com", password="test",
+            nombre="Cajero", apellido="Test", rol=Usuario.Rol.CAJERO,
+        )
+        client = APIClient()
+        client.force_authenticate(user=cajero)
+        _, cuenta = padre_con_cuenta
+        resp = client.post('/api/v1/core/bancard/pagar-almuerzo-con-tarjeta/', {
+            'cuenta_id': cuenta.pk, 'monto': 100000, 'card_id': 1,
+        })
+        assert resp.status_code == 403
+
+    def test_sin_params_falla(self, padre_con_cuenta):
+        padre, _ = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-almuerzo-con-tarjeta/', {})
+        assert resp.status_code == 400
+
+    def test_cuenta_inexistente_falla(self, padre_con_cuenta):
+        padre, _ = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-almuerzo-con-tarjeta/', {
+            'cuenta_id': 99999, 'monto': 100000, 'card_id': 1,
+        })
+        assert resp.status_code == 404
+
+    @patch('apps.core.bancard_service.pagar_con_token')
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_aprobado_sincrono_registra_pago(self, mock_listar, mock_charge, padre_con_cuenta):
+        mock_listar.return_value = UNA_TARJETA_GUARDADA
+        mock_charge.return_value = {'confirmation': {'response_code': '00', 'process_id': None}}
+        padre, cuenta = padre_con_cuenta
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-almuerzo-con-tarjeta/', {
+            'cuenta_id': cuenta.pk, 'monto': 100000, 'card_id': 1,
+        })
+        assert resp.status_code == 200
+        assert resp.data['estado'] == 'aprobado'
+        cuenta.refresh_from_db()
+        assert cuenta.monto_pagado == Decimal('100000')

@@ -8,16 +8,9 @@ import {
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 import Spinner from '../../components/ui/Spinner'
+import TarjetasGuardadasBancard from './components/TarjetasGuardadasBancard'
 
-declare global {
-  interface Window {
-    Bancard?: {
-      Checkout: {
-        createForm: (containerId: string, processId: string) => void
-      }
-    }
-  }
-}
+// El tipo global window.Bancard se declara una sola vez en TarjetasGuardadasBancard.tsx
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -110,12 +103,22 @@ export default function CargaSaldo() {
   const [montoCustom, setMontoCustom]   = useState('')
   const [usandoCustom, setUsandoCustom] = useState(false)
 
+  // Método de pago: pago ocasional (single_buy) o tarjeta guardada (charge)
+  const [metodoPago, setMetodoPago]           = useState<'ocasional' | 'guardada'>('ocasional')
+  const [cardIdSeleccionado, setCardIdSeleccionado] = useState<number | null>(null)
+
   // Proceso de pago
   const [iniciando, setIniciando]         = useState(false)
   const [pagoEnProceso, setPagoEnProceso] = useState(false)
   const [processId, setProcessId]         = useState<string | null>(null)
   const [scriptUrl, setScriptUrl]         = useState<string | null>(null)
   const scriptRef = useRef<HTMLScriptElement | null>(null)
+
+  // Pago con tarjeta guardada que requiere 3D Secure
+  const [pago3dsEnProceso, setPago3dsEnProceso] = useState(false)
+  const [processId3ds, setProcessId3ds]         = useState<string | null>(null)
+  const [scriptUrl3ds, setScriptUrl3ds]         = useState<string | null>(null)
+  const scriptRef3ds = useRef<HTMLScriptElement | null>(null)
 
   // ── Cargar hijos con tarjeta ───────────────────────────────────────────────
   const cargarHijos = useCallback(async () => {
@@ -156,7 +159,7 @@ export default function CargaSaldo() {
 
   const montoValido = montoEfectivo >= 10_000 && montoEfectivo <= 5_000_000
 
-  // ── Iniciar pago ───────────────────────────────────────────────────────────
+  // ── Iniciar pago ocasional (single_buy) ────────────────────────────────────
   const handlePagar = useCallback(async () => {
     if (!hijoSeleccionado || !montoValido || iniciando) return
 
@@ -177,14 +180,77 @@ export default function CargaSaldo() {
     }
   }, [hijoSeleccionado, montoValido, montoEfectivo, iniciando])
 
+  // ── Pagar con tarjeta guardada (charge) ────────────────────────────────────
+  const handlePagarConTarjeta = useCallback(async () => {
+    if (!hijoSeleccionado || !montoValido || !cardIdSeleccionado || iniciando) return
+
+    setIniciando(true)
+    try {
+      const { data } = await api.post('/core/bancard/pagar-con-tarjeta/', {
+        nro_tarjeta: hijoSeleccionado.nro_tarjeta,
+        monto: montoEfectivo,
+        card_id: cardIdSeleccionado,
+      })
+
+      if (data.requires_3ds) {
+        setProcessId3ds(data.process_id)
+        setScriptUrl3ds(data.script_url)
+        setPago3dsEnProceso(true)
+        return
+      }
+
+      // Resuelto en el mismo request: recarga completa forzada para saldo fresco
+      // (mismo patrón que PagoCompletado.tsx tras volver de Bancard).
+      const params = new URLSearchParams({ estado: data.estado, tipo: 'saldo' })
+      if (data.monto) params.set('monto', String(data.monto))
+      window.location.href = `${window.location.pathname}?${params.toString()}`
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail ?? 'Error al procesar el pago'
+      toast.error(msg)
+      setIniciando(false)
+    }
+  }, [hijoSeleccionado, montoValido, montoEfectivo, cardIdSeleccionado, iniciando])
+
   // ── Mantener sesión activa mientras el iframe de Bancard está visible ────────
   useEffect(() => {
-    if (!pagoEnProceso) return
+    if (!pagoEnProceso && !pago3dsEnProceso) return
     // El timer de inactividad no detecta clicks dentro del iframe de Bancard.
     // Reseteamos manualmente cada minuto para evitar un cierre de sesión silencioso.
     const interval = setInterval(() => resetInactivityTimer(), 60_000)
     return () => clearInterval(interval)
-  }, [pagoEnProceso, resetInactivityTimer])
+  }, [pagoEnProceso, pago3dsEnProceso, resetInactivityTimer])
+
+  // ── Cargar script Bancard y renderizar iframe de 3D Secure (tarjeta guardada) ──
+  useEffect(() => {
+    if (!pago3dsEnProceso || !processId3ds || !scriptUrl3ds) return
+
+    if (scriptRef3ds.current) {
+      scriptRef3ds.current.remove()
+      scriptRef3ds.current = null
+    }
+
+    const script = document.createElement('script')
+    script.src = scriptUrl3ds
+    script.async = true
+    script.onload = () => {
+      window.Bancard?.Charge3DS.createForm('bancard-3ds-container', processId3ds)
+    }
+    script.onerror = () => {
+      toast.error('Error al cargar la verificación de seguridad')
+      setPago3dsEnProceso(false)
+      setProcessId3ds(null)
+      setScriptUrl3ds(null)
+      setIniciando(false)
+    }
+    scriptRef3ds.current = script
+    document.body.appendChild(script)
+
+    return () => {
+      scriptRef3ds.current?.remove()
+      scriptRef3ds.current = null
+    }
+  }, [pago3dsEnProceso, processId3ds, scriptUrl3ds])
 
   // ── Cargar script Bancard y renderizar formulario embebido ─────────────────
   useEffect(() => {
@@ -223,6 +289,8 @@ export default function CargaSaldo() {
     setMontoSeleccionado(null)
     setMontoCustom('')
     setUsandoCustom(false)
+    setMetodoPago('ocasional')
+    setCardIdSeleccionado(null)
     cargarHijos()
   }
 
@@ -255,6 +323,24 @@ export default function CargaSaldo() {
               ← Cancelar y volver
             </button>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Verificación 3D Secure para pago con tarjeta guardada
+  if (pago3dsEnProceso) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-slate-900">Carga de Saldo</h1>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="mb-4">
+            <p className="text-base font-semibold text-slate-800">Verificación de seguridad</p>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Tu banco requiere un paso adicional para confirmar el pago.
+            </p>
+          </div>
+          <div id="bancard-3ds-container" className="min-h-[380px]" />
         </div>
       </div>
     )
@@ -422,6 +508,51 @@ export default function CargaSaldo() {
         </div>
       </div>
 
+      {/* ── Paso 3: Método de pago ── */}
+      {hijoSeleccionado && montoValido && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+              {hijos.length > 1 ? '3' : '2'} — Método de pago
+            </p>
+          </div>
+          <div className="flex border-b border-slate-100">
+            <button
+              type="button"
+              onClick={() => setMetodoPago('ocasional')}
+              className={[
+                'flex-1 py-3 text-sm font-semibold transition-colors cursor-pointer',
+                metodoPago === 'ocasional'
+                  ? 'text-green-700 border-b-2 border-green-600'
+                  : 'text-slate-400 hover:text-slate-600',
+              ].join(' ')}
+            >
+              Pago único
+            </button>
+            <button
+              type="button"
+              onClick={() => setMetodoPago('guardada')}
+              className={[
+                'flex-1 py-3 text-sm font-semibold transition-colors cursor-pointer',
+                metodoPago === 'guardada'
+                  ? 'text-green-700 border-b-2 border-green-600'
+                  : 'text-slate-400 hover:text-slate-600',
+              ].join(' ')}
+            >
+              Tarjeta guardada
+            </button>
+          </div>
+          {metodoPago === 'guardada' && (
+            <TarjetasGuardadasBancard
+              selectedCardId={cardIdSeleccionado}
+              onSeleccionar={setCardIdSeleccionado}
+              accent="green"
+              containerIdPrefix="carga-saldo"
+            />
+          )}
+        </div>
+      )}
+
       {/* ── Resumen + botón ── */}
       {hijoSeleccionado && montoEfectivo > 0 && montoValido && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -453,32 +584,38 @@ export default function CargaSaldo() {
         <div>
           <p className="text-sm font-medium text-slate-700">Pago seguro con Bancard</p>
           <p className="text-sm text-slate-500 mt-0.5">
-            Al presionar «Ir a pagar», se abrirá el formulario seguro de Bancard en esta misma
-            página. Ingresá tu CI, número de tarjeta (Visa o Mastercard), vencimiento y CVV.
-            Cantina Tita no almacena datos de tarjeta.
+            {metodoPago === 'guardada'
+              ? 'Al presionar «Ir a pagar», se cobrará con la tarjeta guardada que seleccionaste.'
+              : 'Al presionar «Ir a pagar», se abrirá el formulario seguro de Bancard en esta misma página. Ingresá tu CI, número de tarjeta (Visa o Mastercard), vencimiento y CVV.'}
+            {' '}Cantina Tita no almacena datos de tarjeta.
           </p>
         </div>
       </div>
 
       {/* ── Botón principal ── */}
-      <button
-        type="button"
-        onClick={handlePagar}
-        disabled={!hijoSeleccionado || !montoValido || iniciando}
-        className={[
-          'w-full flex items-center justify-center gap-3 py-4 rounded-2xl',
-          'text-lg font-bold transition-all',
-          hijoSeleccionado && montoValido && !iniciando
-            ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer shadow-lg shadow-green-600/20 active:scale-[0.98]'
-            : 'bg-slate-200 text-slate-400 cursor-not-allowed',
-        ].join(' ')}
-      >
-        {iniciando ? (
-          <><Loader2 className="w-5 h-5 animate-spin" />Iniciando pago…</>
-        ) : (
-          <><Wallet className="w-5 h-5" />Ir a pagar<ChevronRight className="w-5 h-5" /></>
-        )}
-      </button>
+      {(() => {
+        const listo = hijoSeleccionado && montoValido && (metodoPago === 'ocasional' || cardIdSeleccionado !== null)
+        return (
+          <button
+            type="button"
+            onClick={metodoPago === 'ocasional' ? handlePagar : handlePagarConTarjeta}
+            disabled={!listo || iniciando}
+            className={[
+              'w-full flex items-center justify-center gap-3 py-4 rounded-2xl',
+              'text-lg font-bold transition-all',
+              listo && !iniciando
+                ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer shadow-lg shadow-green-600/20 active:scale-[0.98]'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed',
+            ].join(' ')}
+          >
+            {iniciando ? (
+              <><Loader2 className="w-5 h-5 animate-spin" />Iniciando pago…</>
+            ) : (
+              <><Wallet className="w-5 h-5" />Ir a pagar<ChevronRight className="w-5 h-5" /></>
+            )}
+          </button>
+        )
+      })()}
 
       <p className="text-center text-sm text-slate-400">
         Hola, {user?.nombre}. Solo se realizará un cargo si completás el pago en Bancard.

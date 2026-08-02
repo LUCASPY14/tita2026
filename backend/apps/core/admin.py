@@ -18,6 +18,7 @@ from .models import (
     LimiteTransaccion,
     RegistroAutorizacion,
     PagoBancard,
+    SolicitudCatastroBancard,
 )
 
 
@@ -545,3 +546,19 @@ class PagoBancardAdmin(admin.ModelAdmin):
             color, obj.get_estado_display(),
         )
     estado_badge.short_description = "Estado"
+
+
+@admin.register(SolicitudCatastroBancard)
+class SolicitudCatastroBancardAdmin(admin.ModelAdmin):
+    list_display = ["id", "cliente", "card_id", "referencia", "resuelto", "fecha_creacion"]
+    list_filter = ["resuelto"]
+    search_fields = ["referencia", "cliente__nombres", "cliente__apellidos"]
+    readonly_fields = [f.name for f in SolicitudCatastroBancard._meta.fields]
+    ordering = ["-fecha_creacion"]
+    date_hierarchy = "fecha_creacion"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
