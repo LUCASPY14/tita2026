@@ -114,7 +114,7 @@ class TestBancardIniciar:
         assert 'bloqueada' in resp.data.get('detail', '').lower()
 
     @patch('apps.core.bancard_service.iniciar_pago')
-    def test_iniciar_bancard_error_devuelve_502(self, mock_iniciar, api_cliente_web, hijo_con_tarjeta):
+    def test_iniciar_bancard_error_devuelve_400(self, mock_iniciar, api_cliente_web, hijo_con_tarjeta):
         mock_iniciar.return_value = {'status': 'error', 'messages': [{'dsc': 'Credenciales inválidas'}]}
         client, _ = api_cliente_web
         _, tarjeta = hijo_con_tarjeta
@@ -122,7 +122,7 @@ class TestBancardIniciar:
             'nro_tarjeta': tarjeta.nro_tarjeta,
             'monto': 100000,
         })
-        assert resp.status_code == 502
+        assert resp.status_code == 400
 
     @patch('apps.core.bancard_service.iniciar_pago')
     def test_iniciar_bancard_ok_devuelve_redirect_url(self, mock_iniciar, api_cliente_web, hijo_con_tarjeta):
@@ -555,7 +555,7 @@ class TestBancardIniciarAlmuerzo:
         assert resp.status_code == 503
 
     @patch('apps.core.bancard_service.iniciar_pago')
-    def test_bancard_error_retorna_502(self, mock_iniciar, padre_con_cuenta):
+    def test_bancard_error_retorna_400(self, mock_iniciar, padre_con_cuenta):
         mock_iniciar.return_value = {'status': 'error', 'messages': [{'dsc': 'Error Bancard'}]}
         from rest_framework.test import APIClient
         padre, cuenta = padre_con_cuenta
@@ -564,7 +564,7 @@ class TestBancardIniciarAlmuerzo:
         resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
             'cuenta_id': cuenta.pk, 'monto': 100000,
         })
-        assert resp.status_code == 502
+        assert resp.status_code == 400
 
     @patch('apps.core.bancard_service.iniciar_pago')
     def test_bancard_ok_retorna_redirect_url(self, mock_iniciar, padre_con_cuenta):
@@ -754,12 +754,12 @@ class TestBancardCatastroTarjeta:
 
     @patch('apps.core.bancard_service.catastro_tarjeta')
     @patch('apps.core.bancard_service.proxima_tarjeta_guardada_disponible')
-    def test_bancard_error_retorna_502(self, mock_proxima, mock_catastro, api_padre):
+    def test_bancard_error_retorna_400(self, mock_proxima, mock_catastro, api_padre):
         mock_proxima.return_value = 1
         mock_catastro.return_value = {'status': 'error', 'messages': [{'dsc': 'Error interno'}]}
         client, _ = api_padre
         resp = client.post('/api/v1/core/bancard/tarjetas/catastro/')
-        assert resp.status_code == 502
+        assert resp.status_code == 400
 
     @patch('apps.core.bancard_service.catastro_tarjeta')
     @patch('apps.core.bancard_service.proxima_tarjeta_guardada_disponible')
@@ -897,12 +897,12 @@ class TestBancardEliminarTarjeta:
 
     @patch('apps.core.bancard_service.eliminar_tarjeta')
     @patch('apps.core.bancard_service.listar_tarjetas')
-    def test_bancard_error_retorna_502(self, mock_listar, mock_eliminar, api_padre):
+    def test_bancard_error_retorna_400(self, mock_listar, mock_eliminar, api_padre):
         mock_listar.return_value = UNA_TARJETA_GUARDADA
         mock_eliminar.return_value = {'status': 'error', 'messages': []}
         client, _ = api_padre
         resp = client.delete('/api/v1/core/bancard/tarjetas/1/')
-        assert resp.status_code == 502
+        assert resp.status_code == 400
 
 
 # ─── Tests pagar con tarjeta guardada (recarga) ─────────────────────────────────
@@ -994,7 +994,7 @@ class TestBancardPagarConTarjeta:
 
     @patch('apps.core.bancard_service.pagar_con_token')
     @patch('apps.core.bancard_service.listar_tarjetas')
-    def test_bancard_status_error_retorna_502(self, mock_listar, mock_charge, api_padre, hijo_con_tarjeta):
+    def test_bancard_status_error_retorna_400(self, mock_listar, mock_charge, api_padre, hijo_con_tarjeta):
         mock_listar.return_value = UNA_TARJETA_GUARDADA
         mock_charge.return_value = {'status': 'error', 'messages': [{'dsc': 'Falla'}]}
         client, _ = api_padre
@@ -1002,7 +1002,7 @@ class TestBancardPagarConTarjeta:
         resp = client.post('/api/v1/core/bancard/pagar-con-tarjeta/', {
             'nro_tarjeta': tarjeta.nro_tarjeta, 'monto': 100000, 'card_id': 1,
         })
-        assert resp.status_code == 502
+        assert resp.status_code == 400
 
 
 # ─── Tests pagar almuerzo con tarjeta guardada ──────────────────────────────────

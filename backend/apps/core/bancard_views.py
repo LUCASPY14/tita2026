@@ -133,7 +133,7 @@ def bancard_iniciar(request):
         pago.save(update_fields=["estado"])
         msgs = resultado.get("messages", [])
         desc = msgs[0].get("dsc", "Error al iniciar el pago.") if msgs else "Error al iniciar el pago."
-        return Response({"detail": desc}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"detail": desc}, status=status.HTTP_400_BAD_REQUEST)
 
     process_id = resultado.get("process_id", "")
     pago.process_id = process_id
@@ -249,7 +249,7 @@ def bancard_iniciar_almuerzo(request):
         pago.save(update_fields=["estado"])
         msgs = resultado.get("messages", [])
         desc = msgs[0].get("dsc", "Error al iniciar el pago.") if msgs else "Error al iniciar el pago."
-        return Response({"detail": desc}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"detail": desc}, status=status.HTTP_400_BAD_REQUEST)
 
     process_id = resultado.get("process_id", "")
     pago.process_id = process_id
@@ -446,7 +446,7 @@ def _resolver_respuesta_charge(pago: PagoBancard, resultado: dict) -> Response:
         pago.save(update_fields=["estado"])
         msgs = resultado.get("messages", [])
         desc = msgs[0].get("dsc", "Error al procesar el pago.") if msgs else "Error al procesar el pago."
-        return Response({"detail": desc}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"detail": desc}, status=status.HTTP_400_BAD_REQUEST)
 
     detalle = resultado.get("confirmation") or resultado.get("operation") or {}
     process_id = detalle.get("process_id")
@@ -465,7 +465,7 @@ def _resolver_respuesta_charge(pago: PagoBancard, resultado: dict) -> Response:
     if not response_code:
         pago.estado = PagoBancard.Estado.ERROR
         pago.save(update_fields=["estado"])
-        return Response({"detail": "Respuesta inesperada de Bancard."}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"detail": "Respuesta inesperada de Bancard."}, status=status.HTTP_400_BAD_REQUEST)
 
     bancard_service.procesar_resultado_pago(pago, response_code)
     pago.refresh_from_db(fields=["estado"])
@@ -475,7 +475,7 @@ def _resolver_respuesta_charge(pago: PagoBancard, resultado: dict) -> Response:
     if pago.estado == PagoBancard.Estado.ERROR:
         return Response(
             {"detail": "Ocurrió un error al acreditar el pago. Contactá con la administración."},
-            status=status.HTTP_502_BAD_GATEWAY,
+            status=status.HTTP_400_BAD_REQUEST,
         )
     return Response({"estado": "rechazado", "detail": detalle.get("response_description", "Pago rechazado.")})
 
@@ -537,7 +537,7 @@ def bancard_catastro_tarjeta(request):
     if resultado.get("status") != "success":
         msgs = resultado.get("messages", [])
         desc = msgs[0].get("dsc", "Error al iniciar el catastro.") if msgs else "Error al iniciar el catastro."
-        return Response({"detail": desc}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"detail": desc}, status=status.HTTP_400_BAD_REQUEST)
 
     process_id = resultado.get("process_id", "")
     SolicitudCatastroBancard.objects.filter(referencia=referencia).update(process_id=process_id)
@@ -634,7 +634,7 @@ def bancard_eliminar_tarjeta(request, card_id: int):
 
     resultado = bancard_service.eliminar_tarjeta(user_id=cliente.id, alias_token=alias_token)
     if resultado.get("status") != "success":
-        return Response({"detail": "No se pudo eliminar la tarjeta."}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"detail": "No se pudo eliminar la tarjeta."}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response({"status": "success"})
 
