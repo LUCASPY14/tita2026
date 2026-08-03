@@ -195,9 +195,11 @@ describe('CargaSaldo — formulario', () => {
     expect(screen.getByRole('button', { name: /Ir a pagar/i })).toBeDisabled()
   })
 
-  it('click "Ir a pagar" → api.post y redirige a redirect_url', async () => {
+  it('click "Ir a pagar" → api.post y muestra el checkout embebido de Bancard', async () => {
     setupHijos(HIJO)
-    vi.mocked(api.post).mockResolvedValue({ data: { redirect_url: 'https://vpos.infonet.com.py/pay/xyz' } })
+    vi.mocked(api.post).mockResolvedValue({
+      data: { process_id: 'proc-single-buy-1', script_url: 'https://vpos.test/checkout.js' },
+    })
     render(<CargaSaldo />)
     await screen.findByText('Juan')
 
@@ -212,7 +214,8 @@ describe('CargaSaldo — formulario', () => {
         expect.objectContaining({ nro_tarjeta: 'T-001', monto: 50_000 }),
       )
     })
-    expect(window.location.href).toBe('https://vpos.infonet.com.py/pay/xyz')
+    await screen.findByText(/Ingresá los datos de tu tarjeta/i)
+    expect(document.getElementById('bancard-checkout-container')).toBeTruthy()
   })
 
   it('api.post falla → toast.error con mensaje del servidor', async () => {
