@@ -503,20 +503,14 @@ def bancard_catastro_tarjeta(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    card_id = bancard_service.proxima_tarjeta_guardada_disponible(cliente.id)
-    if card_id is None:
+    card_id_inicial = bancard_service.proxima_tarjeta_guardada_disponible(cliente.id)
+    if card_id_inicial is None:
         return Response(
             {"detail": "Ya alcanzaste el máximo de 5 tarjetas guardadas."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     referencia = str(int(time.time() * 1000))
-    SolicitudCatastroBancard.objects.create(
-        cliente=cliente,
-        referencia=referencia,
-        card_id=card_id,
-        ip_origen=request.META.get("REMOTE_ADDR"),
-    )
 
     # No derivamos del path de BANCARD_RETURN_URL (puede ser el alias corto
     # /api/v1/bancard/retorno/ o el path completo /api/v1/core/bancard/retorno/,
@@ -526,18 +520,34 @@ def bancard_catastro_tarjeta(request):
     host_base = f"{parsed.scheme}://{parsed.netloc}"
     return_url = f"{host_base}/api/v1/core/bancard/tarjetas/retorno-catastro/?referencia={referencia}"
 
-    resultado = bancard_service.catastro_tarjeta(
-        card_id=card_id,
-        user_id=cliente.id,
-        user_cell_phone=cliente.telefono or "",
-        user_mail=cliente.email or "",
-        return_url=return_url,
-    )
+    # Bancard puede rechazar un card_id como "ya registrado" aunque users_cards no lo
+    # liste (registro huérfano de un catastro previo que no se completó del todo).
+    # Reintentamos con el siguiente slot libre en vez de bloquear al usuario.
+    card_id = None
+    resultado = None
+    for candidato in range(card_id_inicial, 6):
+        resultado = bancard_service.catastro_tarjeta(
+            card_id=candidato,
+            user_id=cliente.id,
+            user_cell_phone=cliente.telefono or "",
+            user_mail=cliente.email or "",
+            return_url=return_url,
+        )
+        if resultado.get("status") == "success":
+            card_id = candidato
+            break
 
-    if resultado.get("status") != "success":
-        msgs = resultado.get("messages", [])
+    if card_id is None:
+        msgs = (resultado or {}).get("messages", [])
         desc = msgs[0].get("dsc", "Error al iniciar el catastro.") if msgs else "Error al iniciar el catastro."
         return Response({"detail": desc}, status=status.HTTP_400_BAD_REQUEST)
+
+    SolicitudCatastroBancard.objects.create(
+        cliente=cliente,
+        referencia=referencia,
+        card_id=card_id,
+        ip_origen=request.META.get("REMOTE_ADDR"),
+    )
 
     process_id = resultado.get("process_id", "")
     SolicitudCatastroBancard.objects.filter(referencia=referencia).update(process_id=process_id)

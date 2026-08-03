@@ -763,6 +763,27 @@ class TestBancardCatastroTarjeta:
 
     @patch('apps.core.bancard_service.catastro_tarjeta')
     @patch('apps.core.bancard_service.proxima_tarjeta_guardada_disponible')
+    def test_card_id_ya_registrado_reintenta_con_el_siguiente(self, mock_proxima, mock_catastro, api_padre):
+        """Bancard puede rechazar un card_id como 'ya registrado' aunque users_cards no
+        lo liste (registro huérfano). Debe reintentar con el siguiente slot libre."""
+        from apps.core.models import SolicitudCatastroBancard
+        mock_proxima.return_value = 1
+        mock_catastro.side_effect = [
+            {'status': 'error', 'messages': [{'dsc': 'The user has already registered the card'}]},
+            {'status': 'success', 'process_id': 'proc-cat-2'},
+        ]
+        client, _ = api_padre
+        resp = client.post('/api/v1/core/bancard/tarjetas/catastro/')
+        assert resp.status_code == 201
+        assert resp.data['card_id'] == 2
+        assert mock_catastro.call_count == 2
+        assert mock_catastro.call_args_list[0].kwargs['card_id'] == 1
+        assert mock_catastro.call_args_list[1].kwargs['card_id'] == 2
+        solicitud = SolicitudCatastroBancard.objects.get()
+        assert solicitud.card_id == 2
+
+    @patch('apps.core.bancard_service.catastro_tarjeta')
+    @patch('apps.core.bancard_service.proxima_tarjeta_guardada_disponible')
     def test_exito_devuelve_process_id_y_crea_solicitud(self, mock_proxima, mock_catastro, api_padre):
         from apps.core.models import SolicitudCatastroBancard
         mock_proxima.return_value = 1
