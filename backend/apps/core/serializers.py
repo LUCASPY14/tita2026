@@ -15,6 +15,7 @@ from .models import (
     MedioPago,
     LimiteTransaccion,
     RegistroAutorizacion,
+    PagoBancard,
 )
 
 logger = logging.getLogger(__name__)
@@ -199,3 +200,18 @@ class RegistroAutorizacionSerializer(serializers.ModelSerializer):
         model = RegistroAutorizacion
         fields = "__all__"
         read_only_fields = ["fecha_autorizacion"]
+
+
+class PagoBancardSerializer(serializers.ModelSerializer):
+    cliente_nombre = serializers.CharField(source="cliente.nombre_completo", read_only=True, default="")
+    tarjeta_nro = serializers.CharField(source="tarjeta.nro_tarjeta", read_only=True, default=None)
+    cuenta_almuerzo_id_display = serializers.IntegerField(source="cuenta_almuerzo_id", read_only=True)
+
+    class Meta:
+        model = PagoBancard
+        fields = [
+            "shop_process_id", "tipo", "estado", "monto", "descripcion",
+            "cliente_nombre", "tarjeta_nro", "cuenta_almuerzo_id_display",
+            "fecha_creacion", "fecha_confirmacion",
+            "card_id_bancard", "card_masked_number",
+        ]

@@ -219,6 +219,65 @@ def rollback(shop_process_id: str) -> dict:
     return data
 
 
+def revertir_pago(pago_bancard) -> dict:
+    """
+    Anula un PagoBancard aprobado: pide el rollback a Bancard y, si sale bien,
+    revierte el efecto local (saldo de tarjeta o cuenta de almuerzo) con un
+    movimiento compensatorio — no se reescribe el historial, se asienta el
+    reverso, igual que en una conciliación contable real.
+
+    Devuelve la respuesta cruda de Bancard (status/messages) para que la vista
+    decida el mensaje a mostrar.
+    """
+    from decimal import Decimal
+    from django.db import transaction
+
+    resultado = rollback(pago_bancard.shop_process_id)
+    if resultado.get("status") != "success":
+        return resultado
+
+    monto = Decimal(pago_bancard.monto)
+
+    with transaction.atomic():
+        if pago_bancard.tipo == pago_bancard.Tipo.ALMUERZO:
+            from apps.almuerzos.models import CuentaAlmuerzoMensual, PagoCuentaAlmuerzo
+
+            cuenta = (
+                CuentaAlmuerzoMensual.objects
+                .select_for_update()
+                .get(pk=pago_bancard.cuenta_almuerzo_id)
+            )
+            PagoCuentaAlmuerzo.objects.create(
+                cuenta=cuenta,
+                monto=-monto,
+                medio_pago="BANCARD",
+                referencia=pago_bancard.shop_process_id,
+                registrado_por=pago_bancard.cliente.usuario_portal,
+                observaciones="Reverso por anulación de pago Bancard",
+            )
+            cuenta.registrar_pago(-monto)
+        else:
+            from .models import MovimientoTarjeta, Tarjeta
+
+            tarjeta = Tarjeta.objects.select_for_update().get(pk=pago_bancard.tarjeta_id)
+            saldo_anterior = tarjeta.saldo_actual
+            tarjeta.saldo_actual = saldo_anterior - monto
+            tarjeta.save(update_fields=["saldo_actual"])
+            MovimientoTarjeta.objects.create(
+                tarjeta=tarjeta,
+                tipo=MovimientoTarjeta.Tipo.AJUSTE,
+                monto=-monto,
+                saldo_anterior=saldo_anterior,
+                saldo_resultante=tarjeta.saldo_actual,
+                descripcion=f"Reverso por anulación de pago Bancard #{pago_bancard.shop_process_id}",
+            )
+
+        pago_bancard.estado = pago_bancard.Estado.CANCELADO
+        pago_bancard.save(update_fields=["estado"])
+
+    return resultado
+
+
 # ─── Tarjetas guardadas (catastro y pago con token) ───────────────────────────
 
 def catastro_tarjeta(

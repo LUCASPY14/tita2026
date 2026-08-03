@@ -38,6 +38,7 @@
     "compras":      "Purchases",
     "caja":         "Cash Register",
     "facturacion":  "Billing",
+    "pagosBancard": "Bancard Payments",
     "reportes":     "Reports",
     "inventario":   "Inventory",
     "alergenos":    "Allergens",

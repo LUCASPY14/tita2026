@@ -1076,3 +1076,192 @@ class TestBancardPagarAlmuerzoConTarjeta:
         assert resp.data['estado'] == 'aprobado'
         cuenta.refresh_from_db()
         assert cuenta.monto_pagado == Decimal('100000')
+
+
+# ─── Fixtures: gestión administrativa de pagos ────────────────────────────────
+
+@pytest.fixture
+def api_admin(db):
+    from apps.usuarios.models import Usuario
+    admin = Usuario.objects.create_user(
+        email="admin_pagos@test.com",
+        password="test1234",
+        nombre="Admin",
+        apellido="Pagos",
+        rol=Usuario.Rol.ADMIN,
+        is_staff=True,
+    )
+    client = APIClient()
+    client.force_authenticate(user=admin)
+    return client, admin
+
+
+@pytest.fixture
+def pago_aprobado_hoy(db, cliente, hijo_con_tarjeta):
+    """PagoBancard tipo TARJETA, APROBADO, confirmado hoy — listo para anular."""
+    from django.utils import timezone
+    from apps.core.models import PagoBancard
+    _, tarjeta = hijo_con_tarjeta
+    return PagoBancard.objects.create(
+        tipo=PagoBancard.Tipo.TARJETA,
+        tarjeta=tarjeta,
+        cliente=cliente,
+        shop_process_id="pago-hoy-001",
+        monto=Decimal("50000"),
+        estado=PagoBancard.Estado.APROBADO,
+        fecha_confirmacion=timezone.now(),
+    )
+
+
+# ─── Tests: listado de pagos Bancard ──────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardPagosList:
+
+    def test_sin_autenticacion_falla(self, api_client):
+        resp = api_client.get('/api/v1/core/bancard/pagos/')
+        assert resp.status_code in (401, 403)
+
+    def test_cajero_sin_permiso_falla(self, db, cliente):
+        from apps.usuarios.models import Usuario
+        cajero = Usuario.objects.create_user(
+            email="cajero_pagos@test.com", password="test1234",
+            nombre="Cajero", apellido="Pagos", rol=Usuario.Rol.CAJERO,
+        )
+        client = APIClient()
+        client.force_authenticate(user=cajero)
+        resp = client.get('/api/v1/core/bancard/pagos/')
+        assert resp.status_code == 403
+
+    def test_admin_lista_pagos(self, api_admin, pago_aprobado_hoy):
+        client, _ = api_admin
+        resp = client.get('/api/v1/core/bancard/pagos/')
+        assert resp.status_code == 200
+        assert resp.data['count'] == 1
+        assert resp.data['results'][0]['shop_process_id'] == 'pago-hoy-001'
+
+    def test_filtra_por_estado(self, api_admin, pago_aprobado_hoy):
+        client, _ = api_admin
+        resp = client.get('/api/v1/core/bancard/pagos/', {'estado': 'RECHAZADO'})
+        assert resp.status_code == 200
+        assert resp.data['count'] == 0
+
+
+# ─── Tests: anular pago Bancard ────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardAnularPago:
+
+    def test_sin_autenticacion_falla(self, api_client):
+        resp = api_client.post('/api/v1/core/bancard/pagos/pago-hoy-001/anular/')
+        assert resp.status_code in (401, 403)
+
+    def test_no_admin_falla(self, api_padre, pago_aprobado_hoy):
+        client, _ = api_padre
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_aprobado_hoy.shop_process_id}/anular/')
+        assert resp.status_code == 403
+
+    def test_pago_inexistente_404(self, api_admin):
+        client, _ = api_admin
+        resp = client.post('/api/v1/core/bancard/pagos/NOEXISTE/anular/')
+        assert resp.status_code == 404
+
+    def test_pago_no_aprobado_falla(self, api_admin, db, cliente, hijo_con_tarjeta):
+        from apps.core.models import PagoBancard
+        _, tarjeta = hijo_con_tarjeta
+        pago = PagoBancard.objects.create(
+            tipo=PagoBancard.Tipo.TARJETA, tarjeta=tarjeta, cliente=cliente,
+            shop_process_id="pago-pendiente", monto=Decimal("50000"),
+            estado=PagoBancard.Estado.PENDIENTE,
+        )
+        client, _ = api_admin
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago.shop_process_id}/anular/')
+        assert resp.status_code == 400
+        assert 'aprobados' in resp.data['detail'].lower()
+
+    def test_pago_de_dia_anterior_falla(self, api_admin, db, cliente, hijo_con_tarjeta):
+        from datetime import timedelta
+        from django.utils import timezone
+        from apps.core.models import PagoBancard
+        _, tarjeta = hijo_con_tarjeta
+        pago = PagoBancard.objects.create(
+            tipo=PagoBancard.Tipo.TARJETA, tarjeta=tarjeta, cliente=cliente,
+            shop_process_id="pago-ayer", monto=Decimal("50000"),
+            estado=PagoBancard.Estado.APROBADO,
+            fecha_confirmacion=timezone.now() - timedelta(days=1),
+        )
+        client, _ = api_admin
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago.shop_process_id}/anular/')
+        assert resp.status_code == 400
+        assert 'mismo día' in resp.data['detail']
+
+    @patch('apps.core.bancard_service.rollback')
+    def test_exito_revierte_saldo_de_tarjeta(self, mock_rollback, api_admin, pago_aprobado_hoy):
+        mock_rollback.return_value = {
+            'status': 'success',
+            'messages': [{'key': 'RollbackSuccessful', 'level': 'info', 'dsc': 'Rollback correcto.'}],
+        }
+        tarjeta = pago_aprobado_hoy.tarjeta
+        saldo_previo = tarjeta.saldo_actual
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_aprobado_hoy.shop_process_id}/anular/')
+
+        assert resp.status_code == 200
+        pago_aprobado_hoy.refresh_from_db()
+        assert pago_aprobado_hoy.estado == pago_aprobado_hoy.Estado.CANCELADO
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_previo - pago_aprobado_hoy.monto
+        mock_rollback.assert_called_once_with('pago-hoy-001')
+
+    @patch('apps.core.bancard_service.rollback')
+    def test_transaction_already_confirmed_da_mensaje_especifico(
+        self, mock_rollback, api_admin, pago_aprobado_hoy,
+    ):
+        mock_rollback.return_value = {
+            'status': 'error',
+            'messages': [{'key': 'TransactionAlreadyConfirmed', 'level': 'error', 'dsc': 'Cuponada.'}],
+        }
+        client, _ = api_admin
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_aprobado_hoy.shop_process_id}/anular/')
+        assert resp.status_code == 400
+        assert 'cuponada' in resp.data['detail'].lower()
+        pago_aprobado_hoy.refresh_from_db()
+        assert pago_aprobado_hoy.estado == pago_aprobado_hoy.Estado.APROBADO
+
+    @patch('apps.core.bancard_service.rollback')
+    def test_error_generico_no_modifica_estado(self, mock_rollback, api_admin, pago_aprobado_hoy):
+        mock_rollback.return_value = {
+            'status': 'error',
+            'messages': [{'key': 'PosCommunicationError', 'level': 'error', 'dsc': 'Error de comunicación.'}],
+        }
+        client, _ = api_admin
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_aprobado_hoy.shop_process_id}/anular/')
+        assert resp.status_code == 400
+        assert resp.data['detail'] == 'Error de comunicación.'
+        pago_aprobado_hoy.refresh_from_db()
+        assert pago_aprobado_hoy.estado == pago_aprobado_hoy.Estado.APROBADO
+
+    @patch('apps.core.bancard_service.rollback')
+    def test_exito_revierte_pago_de_almuerzo(self, mock_rollback, api_admin, padre_con_cuenta):
+        from apps.core.models import PagoBancard
+        mock_rollback.return_value = {
+            'status': 'success',
+            'messages': [{'key': 'RollbackSuccessful', 'level': 'info', 'dsc': 'Rollback correcto.'}],
+        }
+        padre, cuenta = padre_con_cuenta
+        cuenta.registrar_pago(Decimal("100000"))
+        pago = PagoBancard.objects.create(
+            tipo=PagoBancard.Tipo.ALMUERZO, cuenta_almuerzo=cuenta, cliente=cuenta.hijo.cliente_responsable,
+            shop_process_id="pago-almuerzo-hoy", monto=Decimal("100000"),
+            estado=PagoBancard.Estado.APROBADO,
+        )
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago.shop_process_id}/anular/')
+
+        assert resp.status_code == 200
+        cuenta.refresh_from_db()
+        assert cuenta.monto_pagado == Decimal('0')
+        pago.refresh_from_db()
+        assert pago.estado == pago.Estado.CANCELADO

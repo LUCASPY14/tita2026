@@ -24,6 +24,8 @@ from .bancard_views import (
     bancard_eliminar_tarjeta,
     bancard_pagar_con_tarjeta,
     bancard_pagar_almuerzo_con_tarjeta,
+    BancardPagosListView,
+    bancard_anular_pago,
 )
 
 router = DefaultRouter()
@@ -52,4 +54,7 @@ urlpatterns = [
     path("bancard/tarjetas/<int:card_id>/",      bancard_eliminar_tarjeta,        name="bancard-eliminar-tarjeta"),
     path("bancard/pagar-con-tarjeta/",           bancard_pagar_con_tarjeta,       name="bancard-pagar-con-tarjeta"),
     path("bancard/pagar-almuerzo-con-tarjeta/",  bancard_pagar_almuerzo_con_tarjeta, name="bancard-pagar-almuerzo-con-tarjeta"),
+    # Bancard — gestión administrativa de pagos (ver + anular)
+    path("bancard/pagos/",                       BancardPagosListView.as_view(),  name="bancard-pagos-list"),
+    path("bancard/pagos/<str:shop_process_id>/anular/", bancard_anular_pago,      name="bancard-anular-pago"),
 ]

@@ -28,6 +28,7 @@ import {
   ShoppingCart,
   HandCoins,
   Menu,
+  Undo2,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -68,6 +69,7 @@ const navItems: NavItem[] = [
   { path: '/ventas',       labelKey: 'nav.ventas',       icon: ShoppingCart,    roles: ['ADMIN', 'SUPERVISOR', 'CAJERO'] },
   { path: '/cobros',       labelKey: 'nav.cobros',       icon: HandCoins,       roles: COBROS_ROLES },
   { path: '/facturacion',  labelKey: 'nav.facturacion',  icon: FileText,        roles: FACTURACION },
+  { path: '/pagos-bancard',labelKey: 'nav.pagosBancard', icon: Undo2,           roles: ['ADMIN', 'SUPERVISOR'] },
   { path: '/reportes',     labelKey: 'nav.reportes',     icon: BarChart2,       roles: REPORTING },
   { path: '/inventario',   labelKey: 'nav.inventario',   icon: Warehouse,       roles: ['ADMIN', 'SUPERVISOR'] },
   { path: '/usuarios',     labelKey: 'nav.usuarios',     icon: UserCog,         roles: ADMIN_ONLY },

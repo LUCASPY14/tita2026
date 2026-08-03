@@ -17,14 +17,16 @@ from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.utils import timezone
 
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from common.throttling import SensitiveEndpointThrottle
+from common.permissions import IsAdminOrSupervisor
 
 from .models import PagoBancard, SolicitudCatastroBancard, Tarjeta
+from .serializers import PagoBancardSerializer
 from . import bancard_service
 from common.throttling import BancardRetornoThrottle
 
@@ -741,6 +743,74 @@ def bancard_pagar_con_tarjeta(request):
     pago.save(update_fields=["bancard_response"])
 
     return _resolver_respuesta_charge(pago, resultado)
+
+
+# ─── GET /api/v1/bancard/pagos/ ────────────────────────────────────────────────
+
+class BancardPagosListView(generics.ListAPIView):
+    """Lista de pagos Bancard para gestión administrativa (ver + anular)."""
+    serializer_class = PagoBancardSerializer
+    permission_classes = [IsAdminOrSupervisor]
+
+    def get_queryset(self):
+        qs = PagoBancard.objects.select_related("cliente", "tarjeta").order_by("-fecha_creacion")
+        estado = self.request.query_params.get("estado")
+        if estado:
+            qs = qs.filter(estado=estado)
+        tipo = self.request.query_params.get("tipo")
+        if tipo:
+            qs = qs.filter(tipo=tipo)
+        return qs
+
+
+# ─── POST /api/v1/bancard/pagos/<shop_process_id>/anular/ ─────────────────────
+
+@api_view(["POST"])
+@permission_classes([IsAdminOrSupervisor])
+@throttle_classes([SensitiveEndpointThrottle])
+def bancard_anular_pago(request, shop_process_id: str):
+    """
+    Anula (rollback) un pago Bancard aprobado del mismo día. Revierte el
+    saldo/cuenta de almuerzo acreditado con un movimiento compensatorio.
+    """
+    try:
+        pago = PagoBancard.objects.get(shop_process_id=shop_process_id)
+    except PagoBancard.DoesNotExist:
+        return Response({"detail": "Pago no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    if pago.estado != PagoBancard.Estado.APROBADO:
+        return Response(
+            {"detail": "Solo se pueden anular pagos aprobados."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    fecha_ref = pago.fecha_confirmacion or pago.fecha_creacion
+    if timezone.localtime(fecha_ref).date() != timezone.localdate():
+        return Response(
+            {
+                "detail": (
+                    "Bancard solo permite anular el mismo día de la transacción. "
+                    "Para pagos de días anteriores, solicitá la anulación desde el "
+                    "portal de comercio de Bancard (Soporte → Anulaciones)."
+                ),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    resultado = bancard_service.revertir_pago(pago)
+    if resultado.get("status") != "success":
+        msgs = resultado.get("messages", [])
+        key = msgs[0].get("key", "") if msgs else ""
+        if key == "TransactionAlreadyConfirmed":
+            detail = (
+                "La transacción ya fue cuponada (confirmada en el extracto del cliente). "
+                "Solicitá la anulación manual desde el portal de comercio de Bancard."
+            )
+        else:
+            detail = msgs[0].get("dsc", "No se pudo anular el pago.") if msgs else "No se pudo anular el pago."
+        return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response({"detail": "Pago anulado correctamente."})
 
 
 # ─── POST /api/v1/bancard/pagar-almuerzo-con-tarjeta/ ─────────────────────────
