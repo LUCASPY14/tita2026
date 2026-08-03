@@ -48,6 +48,8 @@ export interface Tarjeta {
   estado: string
   fecha_vencimiento: string | null
   permite_saldo_negativo: boolean
+  saldo_alerta: string | number | null
+  notificar_saldo_bajo: boolean
 }
 
 export interface ClienteBasico {
@@ -105,6 +107,8 @@ export interface TarjetaEditForm {
   permite_saldo_negativo: boolean
   estado: string
   fecha_vencimiento: string
+  saldo_alerta: string
+  notificar_saldo_bajo: boolean
 }
 
 export const ESTADO_COLOR: Record<string, BadgeColor> = {
