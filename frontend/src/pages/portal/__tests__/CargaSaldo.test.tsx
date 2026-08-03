@@ -108,9 +108,9 @@ describe('CargaSaldo — carga inicial', () => {
     // With a single child, the selection section shows that child selected
     // and saldo is visible in some form (balance display or card)
     await screen.findByText('Juan')
-    // The saldo should be visible
+    // The saldo should be visible next to the "Saldo actual" label
     await waitFor(() => {
-      expect(screen.getByText(/50\.000/)).toBeInTheDocument()
+      expect(screen.getByText('Saldo actual').nextElementSibling).toHaveTextContent('50.000')
     })
   })
 
@@ -174,7 +174,7 @@ describe('CargaSaldo — formulario', () => {
     expect(pagarBtn).toBeDisabled()
 
     // click en el monto rápido 50k
-    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
 
     // Con hijo único auto-seleccionado y monto válido, el botón debería habilitarse
     await waitFor(() => {
@@ -203,7 +203,7 @@ describe('CargaSaldo — formulario', () => {
     render(<CargaSaldo />)
     await screen.findByText('Juan')
 
-    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await waitFor(() => expect(screen.getByRole('button', { name: /Ir a pagar/i })).not.toBeDisabled())
 
     await userEvent.click(screen.getByRole('button', { name: /Ir a pagar/i }))
@@ -226,7 +226,7 @@ describe('CargaSaldo — formulario', () => {
     render(<CargaSaldo />)
     await screen.findByText('Juan')
 
-    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await waitFor(() => expect(screen.getByRole('button', { name: /Ir a pagar/i })).not.toBeDisabled())
     await userEvent.click(screen.getByRole('button', { name: /Ir a pagar/i }))
 
@@ -243,7 +243,7 @@ describe('CargaSaldo — tarjeta guardada', () => {
     setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
     render(<CargaSaldo />)
     await screen.findByText('Juan')
-    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
 
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
 
@@ -254,7 +254,7 @@ describe('CargaSaldo — tarjeta guardada', () => {
     setupHijosYTarjetas([HIJO], [])
     render(<CargaSaldo />)
     await screen.findByText('Juan')
-    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
 
     await screen.findByText(/Todavía no guardaste ninguna tarjeta/i)
@@ -266,7 +266,7 @@ describe('CargaSaldo — tarjeta guardada', () => {
     vi.mocked(api.post).mockResolvedValue({ data: { estado: 'aprobado', monto: 50_000 } })
     render(<CargaSaldo />)
     await screen.findByText('Juan')
-    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
     await screen.findByText(/5418\*+0014/)
 
@@ -290,7 +290,7 @@ describe('CargaSaldo — tarjeta guardada', () => {
     })
     render(<CargaSaldo />)
     await screen.findByText('Juan')
-    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
     await screen.findByText(/5418\*+0014/)
 
@@ -305,7 +305,7 @@ describe('CargaSaldo — tarjeta guardada', () => {
     setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
     render(<CargaSaldo />)
     await screen.findByText('Juan')
-    await userEvent.click(screen.getByRole('button', { name: '50k' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
     await screen.findByText(/5418\*+0014/)
 

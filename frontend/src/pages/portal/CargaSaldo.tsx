@@ -462,13 +462,13 @@ export default function CargaSaldo() {
                 type="button"
                 onClick={() => { setMontoSeleccionado(m); setUsandoCustom(false) }}
                 className={[
-                  'py-3 rounded-xl border-2 text-base font-bold transition-all cursor-pointer',
+                  'py-3 rounded-xl border-2 text-sm font-bold transition-all cursor-pointer whitespace-nowrap',
                   !usandoCustom && montoSeleccionado === m
                     ? 'bg-green-600 border-green-600 text-white shadow-sm'
                     : 'border-slate-200 text-slate-700 hover:border-green-300 hover:bg-green-50',
                 ].join(' ')}
               >
-                {(m / 1000).toFixed(0)}k
+                {formatGs(m)}
               </button>
             ))}
           </div>
