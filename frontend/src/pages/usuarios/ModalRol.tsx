@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -20,18 +20,21 @@ export default function ModalRol({ open, rol, onClose, onSaved }: Props) {
   const [estado, setEstado] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!open) return
-    if (rol) {
-      setNombre(rol.nombre_rol)
-      setDescripcion(rol.descripcion ?? '')
-      setEstado(rol.estado)
-    } else {
-      setNombre('')
-      setDescripcion('')
-      setEstado(true)
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) {
+      if (rol) {
+        setNombre(rol.nombre_rol)
+        setDescripcion(rol.descripcion ?? '')
+        setEstado(rol.estado)
+      } else {
+        setNombre('')
+        setDescripcion('')
+        setEstado(true)
+      }
     }
-  }, [open, rol])
+  }
 
   async function handleSave() {
     if (!nombre.trim()) { toast.error('El nombre del rol es obligatorio'); return }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff } from 'lucide-react'
 import api from '../../services/api'
@@ -20,22 +20,25 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
   const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!open) return
-    if (editingUser) {
-      setForm({
-        email: editingUser.email,
-        nombre: editingUser.nombre,
-        apellido: editingUser.apellido,
-        rol: editingUser.rol,
-        password: '',
-        is_active: editingUser.is_active,
-      })
-    } else {
-      setForm(FORM_INITIAL)
+  // Reinicia el formulario cada vez que el modal se abre (patrón "adjusting
+  // state during render" de React: https://react.dev/learn/you-might-not-need-an-effect).
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) {
+      setForm(editingUser
+        ? {
+            email: editingUser.email,
+            nombre: editingUser.nombre,
+            apellido: editingUser.apellido,
+            rol: editingUser.rol,
+            password: '',
+            is_active: editingUser.is_active,
+          }
+        : FORM_INITIAL)
+      setShowPassword(false)
     }
-    setShowPassword(false)
-  }, [open, editingUser])
+  }
 
   const handleSave = async () => {
     if (!form.email || !form.nombre) { toast.error('Completá email y nombre'); return }

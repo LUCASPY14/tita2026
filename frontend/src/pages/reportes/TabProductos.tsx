@@ -5,8 +5,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
+import { formatGs, descargaBlob, fmtGsShort, today } from './reportesUtils'
 import {
-  formatGs, descargaBlob, fmtGsShort, today,
   FilterBar, EmptyState, KpiCard,
   type ProductosData, type ProductoVentaRanked,
 } from './shared'

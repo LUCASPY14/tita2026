@@ -4,9 +4,8 @@ import { DollarSign, Download } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
+import { formatGs, descargaBlob, FORMA_COBRO_LABEL } from './reportesUtils'
 import {
-  formatGs, descargaBlob,
-  FORMA_COBRO_LABEL,
   FilterBar, EmptyState, KpiCard,
   type CobranzaAlmuerzosData,
 } from './shared'

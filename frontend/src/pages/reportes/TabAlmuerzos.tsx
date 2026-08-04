@@ -7,9 +7,8 @@ import { exportarAlmuerzosPDF } from '../../utils/pdf'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
+import { formatGs, descargaBlob, ESTADO_ALM_COLOR } from './reportesUtils'
 import {
-  formatGs, descargaBlob,
-  ESTADO_ALM_COLOR,
   FilterBar, EmptyState,
   type AlmuerzosData, type AlmuerzoFila,
 } from './shared'

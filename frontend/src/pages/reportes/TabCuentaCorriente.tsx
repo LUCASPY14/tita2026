@@ -6,9 +6,8 @@ import { exportarCuentaCorrientePDF } from '../../utils/pdf'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
+import { formatGs, descargaBlob, clientSort, today, AGING_COLOR } from './reportesUtils'
 import {
-  formatGs, descargaBlob, clientSort, today,
-  AGING_COLOR,
   EmptyState, KpiCard,
   type CuentaCorrienteData, type AgingItem,
 } from './shared'
@@ -28,6 +27,8 @@ export default function TabCuentaCorriente() {
     finally { setLoadingCc(false) }
   }
 
+  // Carga de datos al montar: el setLoadingCc(true) inicial es intencional.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargarCuentaCorriente() }, [])
 
   async function exportarCuentaCorrienteCSV() {

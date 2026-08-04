@@ -80,7 +80,7 @@ test.describe('Ventas — listado', () => {
   })
 
   test('muestra los montos en guaraníes', async ({ page }) => {
-    await expect(page.getByText(/15[\.,]000|₲\s*15/i).first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/15[.,]000|₲\s*15/i).first()).toBeVisible({ timeout: 5000 })
   })
 
   test('muestra filtros de fecha', async ({ page }) => {

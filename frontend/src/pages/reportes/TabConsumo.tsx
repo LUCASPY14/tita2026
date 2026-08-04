@@ -4,8 +4,8 @@ import { ShoppingBag, Search, Download, FileText, ChevronDown, ChevronUp } from 
 import api from '../../services/api'
 import { exportarConsumoPDF } from '../../utils/pdf'
 import Button from '../../components/ui/Button'
+import { formatGs, formatFecha, descargaBlob, today } from './reportesUtils'
 import {
-  formatGs, formatFecha, descargaBlob, today,
   FilterBar, EmptyState, KpiCard,
   type VentaConsumoRep,
 } from './shared'

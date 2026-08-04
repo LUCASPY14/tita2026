@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -14,11 +14,14 @@ export default function ModalPagoCuenta({ cuenta, onClose, onSaved }: Props) {
   const [form, setForm] = useState({ monto: '', medio_pago: 'EFECTIVO', referencia: '', emitirFactura: false, nroFactura: '' })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!cuenta) return
-    const pendiente = Number(cuenta.saldo_pendiente) || (Number(cuenta.monto_total) - Number(cuenta.monto_pagado))
-    setForm({ monto: String(pendiente > 0 ? pendiente : ''), medio_pago: 'EFECTIVO', referencia: '', emitirFactura: false, nroFactura: '' })
-  }, [cuenta])
+  const [prevCuenta, setPrevCuenta] = useState(cuenta)
+  if (cuenta !== prevCuenta) {
+    setPrevCuenta(cuenta)
+    if (cuenta) {
+      const pendiente = Number(cuenta.saldo_pendiente) || (Number(cuenta.monto_total) - Number(cuenta.monto_pagado))
+      setForm({ monto: String(pendiente > 0 ? pendiente : ''), medio_pago: 'EFECTIVO', referencia: '', emitirFactura: false, nroFactura: '' })
+    }
+  }
 
   async function handlePagar() {
     if (!cuenta) return

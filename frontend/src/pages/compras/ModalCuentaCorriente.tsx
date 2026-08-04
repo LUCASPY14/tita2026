@@ -16,9 +16,14 @@ export default function ModalCuentaCorriente({ proveedor, onClose }: Props) {
   const [movimientos, setMovimientos] = useState<CuentaCorriente[]>([])
   const [loading, setLoading] = useState(false)
 
+  const [prevProveedor, setPrevProveedor] = useState(proveedor)
+  if (proveedor !== prevProveedor) {
+    setPrevProveedor(proveedor)
+    if (proveedor) setLoading(true)
+  }
+
   useEffect(() => {
     if (!proveedor) return
-    setLoading(true)
     api.get('/compras/cuentas-corrientes/', { params: { proveedor: proveedor.id, page_size: 200 } })
       .then(({ data }) => setMovimientos(data.results ?? data ?? []))
       .catch(() => toast.error('Error al cargar cuenta corriente'))

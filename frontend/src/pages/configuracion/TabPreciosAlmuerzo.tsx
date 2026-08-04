@@ -52,6 +52,8 @@ export default function TabPreciosAlmuerzo({ onDelete }: { onDelete: (t: DeleteT
     finally { setLoading(false) }
   }, [])
 
+  // Carga de datos al montar: el setLoading(true) inicial en load() es intencional.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   const open = useCallback((p?: PrecioAlmuerzo) => {

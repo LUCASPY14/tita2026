@@ -159,8 +159,10 @@ export default function Ventas() {
     }
   }, [desde, hasta, estado, tipo, search, cajeroId])
 
-  // Carga inicial y al cambiar filtros (excepto search que tiene debounce)
+  // Carga inicial y al cambiar filtros (excepto search que tiene debounce).
+  // El reset de página + fetch al cambiar filtros es intencional.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1)
     setExpandedId(null)
     fetchVentas(1)
@@ -175,6 +177,9 @@ export default function Ventas() {
       fetchVentas(1)
     }, 350)
     return () => clearTimeout(searchTimerRef.current)
+    // Solo debounce sobre `search`: `fetchVentas` cambia de identidad con cada
+    // filtro y ya se dispara sin debounce en el efecto anterior al cambiar esos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
   function changePage(p: number) {

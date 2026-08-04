@@ -4,8 +4,8 @@ import { LogIn, Download } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
+import { descargaBlob, primerDiaMes, today } from './reportesUtils'
 import {
-  descargaBlob, primerDiaMes, today,
   FilterBar, EmptyState, KpiCard,
   type IntentosLoginData,
 } from './shared'

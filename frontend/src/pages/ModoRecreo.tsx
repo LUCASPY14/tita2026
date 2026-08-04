@@ -123,8 +123,11 @@ export default function ModoRecreo() {
       .catch(() => setCierreCaja(false))
   }, [getProductos, getCategorias])
 
+  // Búsqueda de cliente con debounce: limpiar resultados sincrónicamente ante
+  // los guards (sin cliente/tarjeta activos, o búsqueda vacía) es intencional.
   useEffect(() => {
     if (tarjeta || clienteDirecto || (modoPago !== 'MEDIO' && modoPago !== 'CREDITO')) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClienteResultados([]); return
     }
     clearTimeout(clienteSearchTimer.current)
@@ -213,7 +216,7 @@ export default function ModoRecreo() {
   , [productos, salesMap])
 
   const getPrecio = useCallback((p: Producto) =>
-    preciosCliente[p.id] ?? Number(p.precio_actual) ?? 0
+    preciosCliente[p.id] ?? (Number(p.precio_actual) || 0)
   , [preciosCliente])
 
   const total = useMemo(() =>
@@ -395,7 +398,7 @@ export default function ModoRecreo() {
     } finally {
       cobrandoRef.current = false; setCobrando(false)
     }
-  }, [carrito, tarjeta, clienteDirecto, total, modoPago, medioPagoSelId, enqueue, getPrecio])
+  }, [carrito, tarjeta, clienteDirecto, total, modoPago, medioPagoSelId, referencia, nroFacturaVenta, enqueue, getPrecio])
 
   const handleCobrar = useCallback(async () => {
     if (cobrandoRef.current || carrito.length === 0) return

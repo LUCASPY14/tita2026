@@ -161,7 +161,7 @@ export default function CargaSaldo() {
     } finally {
       setCargando(false)
     }
-  }, [tarjeta, monto, metodo, tipoCobro, referencia, cargarHistorial])
+  }, [tarjeta, monto, metodo, tipoCobro, referencia, emitirFacturaCarga, nroFacturaCarga, cargarHistorial])
 
   // ── Limpiar y nueva operación ─────────────────────────────────────
   const limpiar = useCallback(() => {

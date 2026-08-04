@@ -4,9 +4,8 @@ import { FileText, Search, Download } from 'lucide-react'
 import api from '../../services/api'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
+import { formatGs, descargaBlob, today, NC_ESTADO_COLOR } from './reportesUtils'
 import {
-  formatGs, descargaBlob, today,
-  NC_ESTADO_COLOR,
   FilterBar, EmptyState, KpiCard,
   type NCVentaData, type NCCompraData,
 } from './shared'

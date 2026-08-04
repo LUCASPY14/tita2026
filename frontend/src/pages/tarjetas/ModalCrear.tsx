@@ -34,9 +34,12 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
     }
   }, [open, hijos.length])
 
+  // Búsqueda de clientes con debounce: limpiar resultados sincrónicamente
+  // cuando el modal está cerrado o la búsqueda está vacía es intencional.
   useEffect(() => {
     if (!open || form.tipoTitular !== 'funcionario') return
     clearTimeout(clientesTimer.current)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!clientesSearch.trim()) { setClientes([]); return }
     clientesTimer.current = setTimeout(() => {
       setLoadingClientes(true)

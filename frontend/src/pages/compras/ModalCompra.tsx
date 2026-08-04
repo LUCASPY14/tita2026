@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { Plus, Scan, X } from 'lucide-react'
 import api from '../../services/api'
@@ -29,35 +29,44 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
   const [listaProdProveedor, setListaProdProveedor] = useState<ProductoProveedorRecord[]>([])
   const barcodeRef = useRef<HTMLInputElement>(null)
 
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<CompraFormFields>({
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<CompraFormFields>({
     defaultValues: { proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' },
   })
-  const proveedorId = watch('proveedor_id')
+  const proveedorId = useWatch({ control, name: 'proveedor_id' })
 
-  useEffect(() => {
-    if (!open) return
-    if (editingCompra) {
-      reset({ proveedor_id: editingCompra.proveedor, tipo_pago: editingCompra.tipo_pago, nro_factura: editingCompra.nro_factura_proveedor || '' })
-      setItems(
-        editingCompra.detalles?.length
-          ? editingCompra.detalles.map(d => ({
-              producto: { id: d.producto, descripcion: d.producto_nombre, precio_actual: d.costo_unitario },
-              cantidad: d.cantidad,
-              costo_unitario: Number(d.costo_unitario) || 0,
-              subtotal: Number(d.subtotal) || 0,
-              precio_venta: 0,
-            }))
-          : [{ ...ITEM_EMPTY }]
-      )
-    } else {
-      reset({ proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' })
-      setItems([{ ...ITEM_EMPTY }])
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) {
+      if (editingCompra) {
+        reset({ proveedor_id: editingCompra.proveedor, tipo_pago: editingCompra.tipo_pago, nro_factura: editingCompra.nro_factura_proveedor || '' })
+        setItems(
+          editingCompra.detalles?.length
+            ? editingCompra.detalles.map(d => ({
+                producto: { id: d.producto, descripcion: d.producto_nombre, precio_actual: d.costo_unitario },
+                cantidad: d.cantidad,
+                costo_unitario: Number(d.costo_unitario) || 0,
+                subtotal: Number(d.subtotal) || 0,
+                precio_venta: 0,
+              }))
+            : [{ ...ITEM_EMPTY }]
+        )
+      } else {
+        reset({ proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' })
+        setItems([{ ...ITEM_EMPTY }])
+      }
+      setBarcodeInput('')
     }
-    setBarcodeInput('')
-    setTimeout(() => barcodeRef.current?.focus(), 100)
-  }, [open, editingCompra, reset])
+  }
 
   useEffect(() => {
+    if (open) setTimeout(() => barcodeRef.current?.focus(), 100)
+  }, [open])
+
+  // Carga de precios/productos del proveedor al cambiar `proveedorId`: limpiar
+  // sincrónicamente cuando no hay proveedor seleccionado es intencional.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!proveedorId) { setPreciosProveedor({}); setListaProdProveedor([]); return }
     api.get('/compras/productos-proveedor/', { params: { proveedor: proveedorId, page_size: 500 } })
       .then(({ data }) => {
@@ -116,8 +125,12 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
     }))
   }, [preciosProveedor])
 
-  const [localProductos, setLocalProductos] = useState<Producto[]>([])
-  useEffect(() => { setLocalProductos(productos) }, [productos])
+  const [localProductos, setLocalProductos] = useState<Producto[]>(productos)
+  const [prevProductos, setPrevProductos] = useState(productos)
+  if (productos !== prevProductos) {
+    setPrevProductos(productos)
+    setLocalProductos(productos)
+  }
 
   const handleBarcodeScan = useCallback(async (code: string) => {
     const trimmed = code.trim()

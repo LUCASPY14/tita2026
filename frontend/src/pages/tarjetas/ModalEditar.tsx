@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import tarjetasService from '../../services/tarjetas'
 import { useAuthStore } from '../../store/authStore'
@@ -24,17 +24,20 @@ export default function ModalEditar({ tarjeta, onClose, onSaved }: Props) {
   })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!tarjeta) return
-    setEditForm({
-      limite_credito: String(Number(tarjeta.limite_credito) || 0),
-      permite_saldo_negativo: tarjeta.permite_saldo_negativo,
-      estado: tarjeta.estado,
-      fecha_vencimiento: tarjeta.fecha_vencimiento ?? '',
-      saldo_alerta: tarjeta.saldo_alerta != null ? String(Number(tarjeta.saldo_alerta)) : '',
-      notificar_saldo_bajo: tarjeta.notificar_saldo_bajo,
-    })
-  }, [tarjeta])
+  const [prevTarjeta, setPrevTarjeta] = useState(tarjeta)
+  if (tarjeta !== prevTarjeta) {
+    setPrevTarjeta(tarjeta)
+    if (tarjeta) {
+      setEditForm({
+        limite_credito: String(Number(tarjeta.limite_credito) || 0),
+        permite_saldo_negativo: tarjeta.permite_saldo_negativo,
+        estado: tarjeta.estado,
+        fecha_vencimiento: tarjeta.fecha_vencimiento ?? '',
+        saldo_alerta: tarjeta.saldo_alerta != null ? String(Number(tarjeta.saldo_alerta)) : '',
+        notificar_saldo_bajo: tarjeta.notificar_saldo_bajo,
+      })
+    }
+  }
 
   const handleSave = async () => {
     if (!tarjeta) return

@@ -4,8 +4,8 @@ import { UtensilsCrossed, Download } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
+import { formatGs, descargaBlob, primerDiaMes, today } from './reportesUtils'
 import {
-  formatGs, descargaBlob, primerDiaMes, today,
   FilterBar, EmptyState, KpiCard,
   type ConsumoGradoData,
 } from './shared'

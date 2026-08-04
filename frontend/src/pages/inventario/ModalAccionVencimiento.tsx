@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -17,9 +17,11 @@ export default function ModalAccionVencimiento({ alerta, onClose, onSaved }: Pro
   const [accion, setAccion] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
+  const [prevAlerta, setPrevAlerta] = useState(alerta)
+  if (alerta !== prevAlerta) {
+    setPrevAlerta(alerta)
     if (alerta) setAccion(alerta.accion_tomada ?? '')
-  }, [alerta])
+  }
 
   const handleSave = async () => {
     if (!alerta || !accion) { toast.error('Seleccioná una acción'); return }

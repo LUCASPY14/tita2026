@@ -53,6 +53,14 @@ function formatGs(n: number) {
   return String(n)
 }
 
+const STATS_POR_ROL: Record<string, string[]> = {
+  ADMIN:      ['Ventas Hoy', 'Recargas Hoy', 'Almuerzos Hoy', 'Tarjetas Alerta', 'Alertas Stock', 'Cajas Abiertas'],
+  CAJERO:     ['Ventas Hoy', 'Recargas Hoy', 'Cajas Abiertas'],
+  SUPERVISOR: ['Ventas Hoy', 'Recargas Hoy', 'Almuerzos Hoy', 'Alertas Stock', 'Cajas Abiertas'],
+  COBRADOR:   ['Recargas Hoy', 'Clientes Activos', 'Cajas Abiertas'],
+  COCINA:     ['Almuerzos Hoy', 'Cajas Abiertas'],
+}
+
 const TIPO_LABEL: Record<string, string> = { CONTADO: 'Contado', CREDITO: 'Crédito', TARJETA: 'Tarjeta' }
 const PIE_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6']
 
@@ -145,14 +153,6 @@ export default function Dashboard() {
       link: '/tarjetas',
     },
   ], [r])
-
-  const STATS_POR_ROL: Record<string, string[]> = {
-    ADMIN:      ['Ventas Hoy', 'Recargas Hoy', 'Almuerzos Hoy', 'Tarjetas Alerta', 'Alertas Stock', 'Cajas Abiertas'],
-    CAJERO:     ['Ventas Hoy', 'Recargas Hoy', 'Cajas Abiertas'],
-    SUPERVISOR: ['Ventas Hoy', 'Recargas Hoy', 'Almuerzos Hoy', 'Alertas Stock', 'Cajas Abiertas'],
-    COBRADOR:   ['Recargas Hoy', 'Clientes Activos', 'Cajas Abiertas'],
-    COCINA:     ['Almuerzos Hoy', 'Cajas Abiertas'],
-  }
 
   const stats = useMemo(() => {
     const allowed = STATS_POR_ROL[user?.rol ?? '']

@@ -34,6 +34,8 @@ export default function TabWhatsApp() {
     }
   }, [])
 
+  // Carga de datos al montar: el setLoadingEstado(true) inicial es intencional.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargarEstado() }, [cargarEstado])
 
   const enviarPrueba = async () => {

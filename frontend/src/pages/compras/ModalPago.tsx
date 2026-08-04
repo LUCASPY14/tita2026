@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -18,14 +18,16 @@ export default function ModalPago({ open, compra, mediosPago, onClose, onSaved }
   const [obs, setObs] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
     if (open && compra) {
       setMonto(String(Number(compra.saldo_pendiente) || ''))
       const efectivo = mediosPago.find(m => m.descripcion.toLowerCase().includes('efectivo'))
       setMedioPago(efectivo?.id ?? mediosPago[0]?.id ?? 0)
       setObs('')
     }
-  }, [open, compra, mediosPago])
+  }
 
   async function handleSave() {
     const montoNum = Number(monto) || 0

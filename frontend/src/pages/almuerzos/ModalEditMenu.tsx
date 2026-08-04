@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -14,18 +14,21 @@ export default function ModalEditMenu({ menu, onClose, onSaved }: Props) {
   const [form, setForm] = useState({ fecha: '', plato_principal: '', guarnicion: '', postre: '', bebida: '', descripcion: '', activo: true })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!menu) return
-    setForm({
-      fecha: menu.fecha,
-      plato_principal: menu.plato_principal,
-      guarnicion: menu.guarnicion,
-      postre: menu.postre,
-      bebida: menu.bebida,
-      descripcion: menu.descripcion,
-      activo: menu.activo,
-    })
-  }, [menu])
+  const [prevMenu, setPrevMenu] = useState(menu)
+  if (menu !== prevMenu) {
+    setPrevMenu(menu)
+    if (menu) {
+      setForm({
+        fecha: menu.fecha,
+        plato_principal: menu.plato_principal,
+        guarnicion: menu.guarnicion,
+        postre: menu.postre,
+        bebida: menu.bebida,
+        descripcion: menu.descripcion,
+        activo: menu.activo,
+      })
+    }
+  }
 
   async function handleSave() {
     if (!menu || !form.plato_principal) { toast.error('Ingresá el plato principal'); return }

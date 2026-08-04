@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -17,14 +17,16 @@ export default function ModalProveedor({ open, editingProv, onClose, onSaved }: 
   const [form, setForm] = useState(BLANK)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
     if (open) {
       setForm(editingProv
         ? { ruc: editingProv.ruc, razon_social: editingProv.razon_social, telefono: editingProv.telefono ?? '', email: editingProv.email ?? '', direccion: editingProv.direccion ?? '', ciudad: editingProv.ciudad ?? '', activo: editingProv.activo }
         : BLANK
       )
     }
-  }, [open, editingProv])
+  }
 
   async function handleSave() {
     if (!form.ruc.trim()) { toast.error('El RUC es obligatorio'); return }

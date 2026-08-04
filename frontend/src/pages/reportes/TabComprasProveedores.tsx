@@ -3,8 +3,8 @@ import toast from 'react-hot-toast'
 import { ShoppingBag, Search, Download } from 'lucide-react'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
+import { formatGs, descargaBlob, today, primerDiaMes } from './reportesUtils'
 import {
-  formatGs, descargaBlob, today, primerDiaMes,
   FilterBar, EmptyState, KpiCard,
   type ComprasProveedoresData,
 } from './shared'

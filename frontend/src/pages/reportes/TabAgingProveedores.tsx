@@ -4,9 +4,8 @@ import { ShoppingCart, AlertTriangle, Search, Download } from 'lucide-react'
 import api from '../../services/api'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
+import { formatGs, descargaBlob, today, AGING_COLOR } from './reportesUtils'
 import {
-  formatGs, descargaBlob, today,
-  AGING_COLOR,
   EmptyState, KpiCard,
   type AgingProveedoresData,
 } from './shared'
@@ -25,6 +24,8 @@ export default function TabAgingProveedores() {
     finally { setLoadingAp(false) }
   }
 
+  // Carga de datos al montar: el setLoadingAp(true) inicial es intencional.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargarAgingProveedores() }, [])
 
   async function exportarApCSV() {

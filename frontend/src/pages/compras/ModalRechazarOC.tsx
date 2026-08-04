@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -14,7 +14,11 @@ export default function ModalRechazarOC({ oc, onClose, onSaved }: Props) {
   const [motivo, setMotivo] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { if (oc) setMotivo('') }, [oc])
+  const [prevOc, setPrevOc] = useState(oc)
+  if (oc !== prevOc) {
+    setPrevOc(oc)
+    if (oc) setMotivo('')
+  }
 
   async function handleRechazar() {
     const m = motivo.trim()

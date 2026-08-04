@@ -233,7 +233,7 @@ export function abrirReciboCC(cliente: Cliente, pago: PagoCC, metodo: string) {
 <div class="divider"></div>
 <div class="row"><span class="label">Saldo restante:</span><span>${(Number(pago.saldo_resultante) || 0).toLocaleString('es-PY')} Gs.</span></div>
 <div class="footer">Fecha: ${new Date().toLocaleString('es-PY')}</div>
-<script>window.onload=()=>{window.print()}<\/script>
+<script>window.onload=()=>{window.print()}</script>
 </body></html>`)
   win.document.close()
 }

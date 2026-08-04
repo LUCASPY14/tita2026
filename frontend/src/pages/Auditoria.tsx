@@ -102,6 +102,9 @@ export default function Auditoria() {
   }
 
   useEffect(() => {
+    // Carga de datos al montar / cambiar de tab: el setLoading(true) inicial
+    // dentro de cargarAuditoria/cargarIntentos es intencional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tab === 'operaciones') cargarAuditoria()
     else cargarIntentos()
     // eslint-disable-next-line react-hooks/exhaustive-deps

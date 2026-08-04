@@ -78,6 +78,8 @@ export default function Facturacion() {
   }, [])
 
   useEffect(() => {
+    // Carga de datos al cambiar de tab/filtro: los setLoading*(true) iniciales son intencionales.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tab === 'pendientes' || tab === 'mensual') loadPendientes()
     else {
       setPageFact(1)
@@ -93,7 +95,7 @@ export default function Facturacion() {
       loadFacturas(searchFact, filterEstado, 1)
     }, 350)
     return () => clearTimeout(searchTimer.current)
-  }, [searchFact, filterEstado])
+  }, [tab, searchFact, filterEstado, loadFacturas])
 
   // Split items by modalidad
   const itemsInmediata = useMemo(

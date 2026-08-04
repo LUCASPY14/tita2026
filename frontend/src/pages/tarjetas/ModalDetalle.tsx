@@ -36,11 +36,18 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
   const [confirmFactura, setConfirmFactura] = useState({ emitir: false, nro: '' })
   const [confirmando, setConfirmando] = useState(false)
 
+  const [prevNroTarjeta, setPrevNroTarjeta] = useState(tarjeta?.nro_tarjeta)
+  if (tarjeta?.nro_tarjeta !== prevNroTarjeta) {
+    setPrevNroTarjeta(tarjeta?.nro_tarjeta)
+    if (tarjeta) {
+      setDetailTab('movimientos')
+      setTipoMovFilter('')
+      setLoadingDetail(true)
+    }
+  }
+
   useEffect(() => {
     if (!tarjeta) return
-    setDetailTab('movimientos')
-    setTipoMovFilter('')
-    setLoadingDetail(true)
     Promise.all([
       tarjetasService.getMovimientos<MovimientoTarjeta>(tarjeta.nro_tarjeta, 200),
       tarjetasService.getCargas<CargaSaldo>(tarjeta.nro_tarjeta, 200),

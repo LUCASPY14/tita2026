@@ -4,8 +4,8 @@ import { AlertTriangle, Download } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
+import { formatGs, descargaBlob, fmtGsShort, primerDiaMes, today } from './reportesUtils'
 import {
-  formatGs, descargaBlob, fmtGsShort, primerDiaMes, today,
   FilterBar, EmptyState, KpiCard,
   type DiferenciasCajaData,
 } from './shared'

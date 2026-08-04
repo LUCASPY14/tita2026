@@ -10,9 +10,8 @@ import { exportarReporteVentasPDF } from '../../utils/pdf'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
+import { formatGs, formatFecha, descargaBlob, fmtGsShort, clientSort, today, TIPO_LABEL, CHART_COLORS } from './reportesUtils'
 import {
-  formatGs, formatFecha, descargaBlob, fmtGsShort, clientSort, today,
-  TIPO_LABEL, CHART_COLORS,
   FilterBar, EmptyState,
   type ReporteData, type VentaTipo, type CierreCajaReporte, type TendenciaPoint,
 } from './shared'

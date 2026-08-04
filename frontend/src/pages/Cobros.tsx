@@ -63,6 +63,9 @@ export default function Cobros() {
   }, [])
 
   useEffect(() => {
+    // Carga de datos al montar: el setLoading(true) inicial en cargarReporte
+    // es intencional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarReporte()
     cargarFactPendientes()
   }, [cargarReporte, cargarFactPendientes])

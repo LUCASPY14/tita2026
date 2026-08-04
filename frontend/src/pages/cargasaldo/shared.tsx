@@ -123,7 +123,7 @@ export function abrirRecibo(carga: UltimaCarga) {
 <div class="divider"></div>
 <div class="row"><span class="label">Nuevo saldo tarjeta:</span><span>Gs. ${Number(carga.tarjeta.saldo_disponible).toLocaleString('es-PY')}</span></div>
 <div class="footer">Gracias por su pago.<br/>Conserve este comprobante.</div>
-<script>window.onload = function(){ window.print(); }<\/script>
+<script>window.onload = function(){ window.print(); }</script>
 </body>
 </html>`)
   win.document.close()

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -15,16 +15,19 @@ export default function ModalPagoMensual({ susc, planes, onClose, onSaved }: Pro
   const [form, setForm] = useState({ monto: '', mes_pagado: '' })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!susc) return
-    const plan = planes.find(p => p.id === susc.plan)
-    const primerDiaMes = new Date()
-    primerDiaMes.setDate(1)
-    setForm({
-      monto: plan ? String(plan.precio_mensual) : '',
-      mes_pagado: primerDiaMes.toISOString().split('T')[0],
-    })
-  }, [susc, planes])
+  const [prevSusc, setPrevSusc] = useState(susc)
+  if (susc !== prevSusc) {
+    setPrevSusc(susc)
+    if (susc) {
+      const plan = planes.find(p => p.id === susc.plan)
+      const primerDiaMes = new Date()
+      primerDiaMes.setDate(1)
+      setForm({
+        monto: plan ? String(plan.precio_mensual) : '',
+        mes_pagado: primerDiaMes.toISOString().split('T')[0],
+      })
+    }
+  }
 
   async function handlePago() {
     if (!susc) return

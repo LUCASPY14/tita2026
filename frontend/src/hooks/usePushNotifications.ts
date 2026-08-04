@@ -53,5 +53,8 @@ export function usePushNotifications() {
 
     trySubscribe()
     return () => { cancelled = true }
+    // Solo re-suscribir cuando cambia el usuario logueado, no ante cualquier
+    // cambio de referencia del objeto `user` (p.ej. al refrescar su perfil).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.id])
 }

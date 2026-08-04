@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -15,10 +15,11 @@ export default function ModalEditSusc({ susc, planes, onClose, onSaved }: Props)
   const [form, setForm] = useState({ plan: '', fecha_fin: '' })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!susc) return
-    setForm({ plan: String(susc.plan), fecha_fin: susc.fecha_fin ?? '' })
-  }, [susc])
+  const [prevSusc, setPrevSusc] = useState(susc)
+  if (susc !== prevSusc) {
+    setPrevSusc(susc)
+    if (susc) setForm({ plan: String(susc.plan), fecha_fin: susc.fecha_fin ?? '' })
+  }
 
   async function handleSave() {
     if (!susc || !form.plan) { toast.error('Seleccioná un plan'); return }

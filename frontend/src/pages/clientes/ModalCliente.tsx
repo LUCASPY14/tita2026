@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Combobox from '../../components/ui/Combobox'
@@ -21,12 +21,12 @@ interface Props {
 
 export default function ModalCliente({ open, cliente, tiposCliente, listasPrecios, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false)
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<ClienteForm>({
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ClienteForm>({
     defaultValues: BLANK_CLIENTE,
   })
-  const activo = watch('activo')
-  const ciudadVal = watch('ciudad')
-  const modalidadFacturacion = watch('modalidad_facturacion')
+  const activo = useWatch({ control, name: 'activo' })
+  const ciudadVal = useWatch({ control, name: 'ciudad' })
+  const modalidadFacturacion = useWatch({ control, name: 'modalidad_facturacion' })
 
   useEffect(() => {
     if (!open) return

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -15,7 +15,11 @@ export default function LoteModal({ open, items, onClose, onSuccess }: Props) {
   const [nro, setNro] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { if (open) setNro('') }, [open])
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setNro('')
+  }
 
   const clienteNombre = items[0]?.cliente_nombre ?? ''
   const total = items.reduce((s, i) => s + i.monto, 0)

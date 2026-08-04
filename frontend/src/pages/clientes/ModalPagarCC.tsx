@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { Banknote, Printer } from 'lucide-react'
 import { METODOS_PAGO as METODOS } from '../../constants/mediosPago'
@@ -22,7 +22,9 @@ export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props)
   const [saving, setSaving] = useState(false)
   const [ultimoPago, setUltimoPago] = useState<PagoCC | null>(null)
 
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
     if (open) {
       setMonto(saldoActual > 0 ? String(saldoActual) : '')
       setMetodo('EFECTIVO')
@@ -30,7 +32,7 @@ export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props)
       setNroFactura('')
       setUltimoPago(null)
     }
-  }, [open, saldoActual])
+  }
 
   const metodoInfo = METODOS.find(m => m.value === metodo)
 

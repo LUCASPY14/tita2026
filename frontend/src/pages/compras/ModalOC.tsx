@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { Plus, X } from 'lucide-react'
 import api from '../../services/api'
@@ -27,33 +27,39 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
   const [preciosProveedor, setPreciosProveedor] = useState<Record<number, number>>({})
   const [listaProdProveedor, setListaProdProveedor] = useState<ProductoProveedorRecord[]>([])
 
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<CompraFormFields>({
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<CompraFormFields>({
     defaultValues: { proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' },
   })
-  const proveedorId = watch('proveedor_id')
+  const proveedorId = useWatch({ control, name: 'proveedor_id' })
 
-  useEffect(() => {
-    if (!open) return
-    if (editingOC) {
-      reset({ proveedor_id: editingOC.proveedor, tipo_pago: editingOC.tipo_pago, nro_factura: editingOC.nro_factura_esperada || '' })
-      setOcItems(
-        editingOC.detalles?.length
-          ? editingOC.detalles.map(d => ({
-              producto: { id: d.producto, descripcion: d.producto_nombre, precio_actual: d.costo_unitario },
-              cantidad: d.cantidad,
-              costo_unitario: Number(d.costo_unitario) || 0,
-              subtotal: Number(d.subtotal) || 0,
-              precio_venta: 0,
-            }))
-          : [{ ...ITEM_EMPTY }]
-      )
-    } else {
-      reset({ proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' })
-      setOcItems([{ ...ITEM_EMPTY }])
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) {
+      if (editingOC) {
+        reset({ proveedor_id: editingOC.proveedor, tipo_pago: editingOC.tipo_pago, nro_factura: editingOC.nro_factura_esperada || '' })
+        setOcItems(
+          editingOC.detalles?.length
+            ? editingOC.detalles.map(d => ({
+                producto: { id: d.producto, descripcion: d.producto_nombre, precio_actual: d.costo_unitario },
+                cantidad: d.cantidad,
+                costo_unitario: Number(d.costo_unitario) || 0,
+                subtotal: Number(d.subtotal) || 0,
+                precio_venta: 0,
+              }))
+            : [{ ...ITEM_EMPTY }]
+        )
+      } else {
+        reset({ proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' })
+        setOcItems([{ ...ITEM_EMPTY }])
+      }
     }
-  }, [open, editingOC, reset])
+  }
 
+  // Carga de precios/productos del proveedor al cambiar `proveedorId`: limpiar
+  // sincrónicamente cuando no hay proveedor seleccionado es intencional.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!proveedorId) { setPreciosProveedor({}); setListaProdProveedor([]); return }
     api.get('/compras/productos-proveedor/', { params: { proveedor: proveedorId, page_size: 500 } })
       .then(({ data }) => {

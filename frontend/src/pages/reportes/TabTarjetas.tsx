@@ -4,8 +4,8 @@ import { CreditCard, Search, Download, FileText } from 'lucide-react'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
+import { formatGs, descargaBlob } from './reportesUtils'
 import {
-  formatGs, descargaBlob,
   FilterBar, EmptyState, KpiCard,
   type TarjetasData, type TarjetaReporte,
 } from './shared'

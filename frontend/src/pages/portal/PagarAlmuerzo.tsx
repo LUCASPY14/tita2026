@@ -151,7 +151,10 @@ export default function PagarAlmuerzo() {
     }
   }, [cuentaIdParam, montoParam, estadoRetorno])
 
+  // Carga de datos al montar (salvo al volver de un pago): el setLoading(true)
+  // inicial en cargarCuentas es intencional.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!estadoRetorno) cargarCuentas()
   }, [estadoRetorno, cargarCuentas])
 

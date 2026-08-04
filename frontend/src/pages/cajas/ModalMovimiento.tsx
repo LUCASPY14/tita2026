@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
 import api from '../../services/api'
@@ -25,14 +25,16 @@ export default function ModalMovimiento({ tipo, miCierre, mediosPago, onClose, o
   const [movSaving, setMovSaving] = useState(false)
   const movSavingRef = useRef(false)
 
-  useEffect(() => {
+  const [prevTipo, setPrevTipo] = useState(tipo)
+  if (tipo !== prevTipo) {
+    setPrevTipo(tipo)
     if (tipo) {
       setMovTipo(tipo)
       setMovMonto('')
       setMovMedioPago(mediosPago[0] ? String(mediosPago[0].id) : '')
       setMovDesc('')
     }
-  }, [tipo, mediosPago])
+  }
 
   const handleConfirmar = async () => {
     if (movSavingRef.current || !miCierre) return

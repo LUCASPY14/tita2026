@@ -192,6 +192,8 @@ export default function Compras() {
     }
   }, [])
 
+  // Carga de datos al cambiar de tab/página: el setLoadingPagos(true) inicial es intencional.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (tab === 'pagos') loadPagos(pagePagos) }, [tab, pagePagos, loadPagos])
 
   const loadNotas = useCallback(async (p: number) => {
@@ -210,6 +212,8 @@ export default function Compras() {
     }
   }, [])
 
+  // Carga de datos al cambiar de tab/página: el setLoadingNotas(true) inicial es intencional.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (tab === 'notas') loadNotas(pageNotas) }, [tab, pageNotas, loadNotas])
 
   const loadOrdenes = useCallback(async (estado: string, p: number) => {
@@ -230,6 +234,8 @@ export default function Compras() {
     }
   }, [])
 
+  // Carga de datos al cambiar de tab/filtro/página: el setLoadingOrdenes(true) inicial es intencional.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (tab === 'ordenes') loadOrdenes(filterEstadoOC, pageOrdenes) }, [tab, filterEstadoOC, pageOrdenes, loadOrdenes])
 
   // ── Actions ──────────────────────────────────────────────────────

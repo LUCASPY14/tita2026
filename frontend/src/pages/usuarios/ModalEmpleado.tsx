@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -19,22 +19,25 @@ export default function ModalEmpleado({ open, editingEmp, roles, onClose, onSave
   const [empForm, setEmpForm] = useState<EmpleadoForm>(EMP_FORM_INITIAL)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!open) return
-    if (editingEmp) {
-      setEmpForm({
-        nombre: editingEmp.nombre,
-        apellido: editingEmp.apellido,
-        email: editingEmp.email ?? '',
-        telefono: editingEmp.telefono ?? '',
-        fecha_ingreso: editingEmp.fecha_ingreso ?? '',
-        id_rol: editingEmp.id_rol,
-        estado: editingEmp.estado,
-      })
-    } else {
-      setEmpForm({ ...EMP_FORM_INITIAL, id_rol: roles[0]?.id_rol ?? '' })
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) {
+      if (editingEmp) {
+        setEmpForm({
+          nombre: editingEmp.nombre,
+          apellido: editingEmp.apellido,
+          email: editingEmp.email ?? '',
+          telefono: editingEmp.telefono ?? '',
+          fecha_ingreso: editingEmp.fecha_ingreso ?? '',
+          id_rol: editingEmp.id_rol,
+          estado: editingEmp.estado,
+        })
+      } else {
+        setEmpForm({ ...EMP_FORM_INITIAL, id_rol: roles[0]?.id_rol ?? '' })
+      }
     }
-  }, [open, editingEmp, roles])
+  }
 
   const handleSave = async () => {
     if (!empForm.nombre || !empForm.apellido || !empForm.id_rol) {

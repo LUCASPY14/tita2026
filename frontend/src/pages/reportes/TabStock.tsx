@@ -5,8 +5,8 @@ import api from '../../services/api'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
+import { formatGs, descargaBlob } from './reportesUtils'
 import {
-  formatGs, descargaBlob,
   EmptyState, KpiCard,
   type StockData, type ProductoStock,
 } from './shared'

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
@@ -18,7 +18,11 @@ export default function ModalEmitir({ item, onClose, onSaved }: Props) {
   const [nroFactura, setNroFactura] = useState('')
   const [emitiendo, setEmitiendo] = useState(false)
 
-  useEffect(() => { if (item) setNroFactura('') }, [item])
+  const [prevItem, setPrevItem] = useState(item)
+  if (item !== prevItem) {
+    setPrevItem(item)
+    if (item) setNroFactura('')
+  }
 
   const handleEmitir = async () => {
     if (!item) return

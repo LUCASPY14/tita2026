@@ -20,11 +20,18 @@ export default function ModalCerrar({ cierre, onClose, onSaved }: Props) {
   const [cerrando, setCerrando] = useState(false)
   const cerrandoRef = useRef(false)
 
+  const [prevCierre, setPrevCierre] = useState(cierre)
+  if (cierre !== prevCierre) {
+    setPrevCierre(cierre)
+    if (cierre) {
+      setMontoContado('')
+      setArqueoModal(null)
+      setLoadingArqueo(true)
+    }
+  }
+
   useEffect(() => {
     if (!cierre) return
-    setMontoContado('')
-    setArqueoModal(null)
-    setLoadingArqueo(true)
     api.get(`/contabilidad/cierres-caja/${cierre.id}/arqueo/`, { timeout: 8000 })
       .then(({ data }) => setArqueoModal(data))
       .catch(() => { /* modal se abre igual, sin desglose */ })

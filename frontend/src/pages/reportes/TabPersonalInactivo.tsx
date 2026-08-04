@@ -3,9 +3,8 @@ import toast from 'react-hot-toast'
 import { Users, CheckCircle } from 'lucide-react'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
+import { formatFecha, ROL_LABEL } from './reportesUtils'
 import {
-  formatFecha,
-  ROL_LABEL,
   FilterBar, EmptyState, KpiCard,
   type PersonalInactivoData,
 } from './shared'
