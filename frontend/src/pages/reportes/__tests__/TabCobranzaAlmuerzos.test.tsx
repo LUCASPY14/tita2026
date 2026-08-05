@@ -30,18 +30,19 @@ import toast from 'react-hot-toast'
 
 const COBRANZA_DATA = {
   resumen: {
-    total_cobrado: 1_500_000,
-    total_pendiente: 300_000,
-    n_cobros: 45,
-    tasa_cobranza: 83,
+    monto_anual: 1_800_000,
+    cobrado_anual: 1_500_000,
+    pendiente_anual: 300_000,
+    tasa_cobro_anual: 83,
+    meses_con_datos: 2,
   },
   por_mes: [
-    { mes: 6, facturado: 900_000, cobrado: 750_000, pendiente: 150_000, tasa_cobranza: 83, n_cobros: 22 },
-    { mes: 7, facturado: 900_000, cobrado: 750_000, pendiente: 150_000, tasa_cobranza: 83, n_cobros: 23 },
+    { mes: 6, mes_nombre: 'Junio', n_alumnos: 25, pagados: 22, parciales: 0, pendientes: 3, monto_total: 900_000, monto_cobrado: 750_000, monto_pendiente: 150_000, tasa_cobro: 83 },
+    { mes: 7, mes_nombre: 'Julio', n_alumnos: 25, pagados: 23, parciales: 0, pendientes: 2, monto_total: 900_000, monto_cobrado: 750_000, monto_pendiente: 150_000, tasa_cobro: 83 },
   ],
   por_forma_cobro: [
-    { forma_cobro: 'EFECTIVO',      n_cobros: 30, monto: 900_000, porcentaje: 60 },
-    { forma_cobro: 'TRANSFERENCIA', n_cobros: 15, monto: 600_000, porcentaje: 40 },
+    { forma_cobro: 'EFECTIVO',      n_cuentas: 30, monto_total: 900_000 },
+    { forma_cobro: 'TRANSFERENCIA', n_cuentas: 15, monto_total: 600_000 },
   ],
 }
 

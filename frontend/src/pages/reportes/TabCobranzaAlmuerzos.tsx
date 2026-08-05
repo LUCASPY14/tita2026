@@ -68,12 +68,12 @@ export default function TabCobranzaAlmuerzos() {
       {cbData && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <KpiCard label="Total cobrado" value={formatGs(cbData.resumen.total_cobrado)} color="text-green-700" />
-            <KpiCard label="Pendiente" value={formatGs(cbData.resumen.total_pendiente)}
-              color={cbData.resumen.total_pendiente > 0 ? 'text-orange-600' : 'text-slate-600'} />
-            <KpiCard label="Cobros" value={cbData.resumen.n_cobros} />
-            <KpiCard label="% Cobrado" value={`${cbData.resumen.tasa_cobranza}%`}
-              color={cbData.resumen.tasa_cobranza >= 90 ? 'text-green-700' : 'text-orange-600'} />
+            <KpiCard label="Total cobrado" value={formatGs(cbData.resumen.cobrado_anual)} color="text-green-700" />
+            <KpiCard label="Pendiente" value={formatGs(cbData.resumen.pendiente_anual)}
+              color={cbData.resumen.pendiente_anual > 0 ? 'text-orange-600' : 'text-slate-600'} />
+            <KpiCard label="Cobros" value={cbData.por_mes.reduce((s, m) => s + m.pagados, 0)} />
+            <KpiCard label="% Cobrado" value={`${cbData.resumen.tasa_cobro_anual}%`}
+              color={cbData.resumen.tasa_cobro_anual >= 90 ? 'text-green-700' : 'text-orange-600'} />
           </div>
 
           {cbData.por_mes.length > 0 && (
@@ -81,7 +81,7 @@ export default function TabCobranzaAlmuerzos() {
               <p className="text-sm font-semibold text-slate-700 mb-4">Tendencia mensual de cobranza {cbAnio}</p>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart
-                  data={cbData.por_mes.map(m => ({ mes: MESES[m.mes - 1], cobrado: m.cobrado, pendiente: m.pendiente }))}
+                  data={cbData.por_mes.map(m => ({ mes: MESES[m.mes - 1], cobrado: m.monto_cobrado, pendiente: m.monto_pendiente }))}
                   margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -116,15 +116,15 @@ export default function TabCobranzaAlmuerzos() {
                     {cbData.por_mes.map(m => (
                       <tr key={m.mes} className="hover:bg-slate-50 transition-colors">
                         <td className="py-2.5 pr-4 font-medium text-slate-800">{MESES[m.mes - 1]}</td>
-                        <td className="py-2.5 pr-4 tabular-nums text-slate-700">{formatGs(m.facturado)}</td>
-                        <td className="py-2.5 pr-4 tabular-nums text-green-700 font-semibold">{formatGs(m.cobrado)}</td>
-                        <td className="py-2.5 pr-4 tabular-nums text-orange-600">{m.pendiente > 0 ? formatGs(m.pendiente) : '—'}</td>
+                        <td className="py-2.5 pr-4 tabular-nums text-slate-700">{formatGs(m.monto_total)}</td>
+                        <td className="py-2.5 pr-4 tabular-nums text-green-700 font-semibold">{formatGs(m.monto_cobrado)}</td>
+                        <td className="py-2.5 pr-4 tabular-nums text-orange-600">{m.monto_pendiente > 0 ? formatGs(m.monto_pendiente) : '—'}</td>
                         <td className="py-2.5 pr-4">
-                          <span className={`tabular-nums font-semibold text-sm ${m.tasa_cobranza >= 90 ? 'text-green-700' : m.tasa_cobranza >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
-                            {m.tasa_cobranza}%
+                          <span className={`tabular-nums font-semibold text-sm ${m.tasa_cobro >= 90 ? 'text-green-700' : m.tasa_cobro >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {m.tasa_cobro}%
                           </span>
                         </td>
-                        <td className="py-2.5 tabular-nums text-slate-500">{m.n_cobros}</td>
+                        <td className="py-2.5 tabular-nums text-slate-500">{m.pagados}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -146,16 +146,21 @@ export default function TabCobranzaAlmuerzos() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {cbData.por_forma_cobro.map(f => (
-                      <tr key={f.forma_cobro} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-2.5 pr-4 font-medium text-slate-800">
-                          {FORMA_COBRO_LABEL[f.forma_cobro as keyof typeof FORMA_COBRO_LABEL] ?? f.forma_cobro}
-                        </td>
-                        <td className="py-2.5 pr-4 tabular-nums text-slate-600">{f.n_cobros}</td>
-                        <td className="py-2.5 pr-4 tabular-nums font-bold text-slate-800">{formatGs(f.monto)}</td>
-                        <td className="py-2.5 tabular-nums text-slate-500">{f.porcentaje}%</td>
-                      </tr>
-                    ))}
+                    {cbData.por_forma_cobro.map(f => {
+                      const porcentaje = cbData.resumen.monto_anual > 0
+                        ? Math.round((f.monto_total / cbData.resumen.monto_anual) * 1000) / 10
+                        : 0
+                      return (
+                        <tr key={f.forma_cobro} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-2.5 pr-4 font-medium text-slate-800">
+                            {FORMA_COBRO_LABEL[f.forma_cobro as keyof typeof FORMA_COBRO_LABEL] ?? f.forma_cobro}
+                          </td>
+                          <td className="py-2.5 pr-4 tabular-nums text-slate-600">{f.n_cuentas}</td>
+                          <td className="py-2.5 pr-4 tabular-nums font-bold text-slate-800">{formatGs(f.monto_total)}</td>
+                          <td className="py-2.5 tabular-nums text-slate-500">{porcentaje}%</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

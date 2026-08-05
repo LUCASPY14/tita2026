@@ -131,17 +131,21 @@ export interface ConsumoGradoData {
 }
 
 export interface CobranzaMesFila {
-  mes: number
-  cobrado: number; pendiente: number; facturado: number; tasa_cobranza: number; n_cobros: number
+  mes: number; mes_nombre: string
+  n_alumnos: number; pagados: number; parciales: number; pendientes: number
+  monto_total: number; monto_cobrado: number; monto_pendiente: number; tasa_cobro: number
 }
 
 export interface CobranzaFormaFila {
-  forma_cobro: string; n_cobros: number; monto: number; porcentaje: number
+  forma_cobro: string; n_cuentas: number; monto_total: number
 }
 
 export interface CobranzaAlmuerzosData {
   anio: number
-  resumen: { total_cobrado: number; total_pendiente: number; n_cobros: number; tasa_cobranza: number }
+  resumen: {
+    monto_anual: number; cobrado_anual: number; pendiente_anual: number
+    tasa_cobro_anual: number; meses_con_datos: number
+  }
   por_mes: CobranzaMesFila[]
   por_forma_cobro: CobranzaFormaFila[]
 }
