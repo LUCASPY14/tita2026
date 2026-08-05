@@ -262,6 +262,8 @@ class MedioPagoViewSet(viewsets.ModelViewSet):
     queryset = MedioPago.objects.all()
     serializer_class = MedioPagoSerializer
     permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["activo"]
 
     def list(self, request, *args, **kwargs):
         cache_key = f"medios_pago_list_{request.query_params.urlencode()}"

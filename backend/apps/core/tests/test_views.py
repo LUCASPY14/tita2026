@@ -139,6 +139,19 @@ class TestMedioPagoCache:
         resp = api_admin.delete(f"/api/v1/core/medios-pago/{mp.pk}/")
         assert resp.status_code == 204
 
+    def test_filtro_activo_excluye_inactivos(self, api_cajero, medio_pago_efectivo):
+        """ModoRecreo.tsx pide ?activo=true — sin filterset_fields el ViewSet
+        ignoraba el parámetro y siempre devolvía todos los medios de pago,
+        incluidos los desactivados desde Configuración."""
+        from apps.core.models import MedioPago
+        inactivo = MedioPago.objects.create(descripcion="Viejo Duplicado", activo=False)
+
+        resp = api_cajero.get("/api/v1/core/medios-pago/", {"activo": "true"})
+        assert resp.status_code == 200
+        descripciones = [m["descripcion"] for m in resp.data["results"]]
+        assert medio_pago_efectivo.descripcion in descripciones
+        assert inactivo.descripcion not in descripciones
+
 
 # ── ReporteTarjetasView ───────────────────────────────────────────────────────
 
