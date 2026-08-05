@@ -1350,45 +1350,47 @@ class ReportePersonalInactivoView(APIView):
         except (TypeError, ValueError):
             dias = 30
 
-        umbral = timezone.now() - timedelta(days=dias)
+        ahora = timezone.now()
+        umbral = ahora - timedelta(days=dias)
         roles_staff = ["ADMIN", "SUPERVISOR", "CAJERO", "COBRADOR", "COCINA"]
 
-        qs = Usuario.objects.filter(rol__in=roles_staff)
-        total = qs.count()
-        activos = qs.filter(is_active=True).count()
-        inactivos = qs.filter(is_active=False).count()
-        sin_acceso = qs.filter(
-            is_active=True
+        inactivos_qs = Usuario.objects.filter(
+            rol__in=roles_staff, is_active=True
         ).filter(
             Q(ultimo_acceso__isnull=True) | Q(ultimo_acceso__lt=umbral)
-        ).count()
+        )
 
-        por_rol = []
-        for rol in roles_staff:
-            qs_rol = qs.filter(rol=rol)
-            por_rol.append({
-                "rol": rol,
-                "total": qs_rol.count(),
-                "activos": qs_rol.filter(is_active=True).count(),
-                "sin_acceso": qs_rol.filter(is_active=True).filter(
-                    Q(ultimo_acceso__isnull=True) | Q(ultimo_acceso__lt=umbral)
-                ).count(),
-            })
-
-        detalle = list(
-            qs.filter(is_active=True).filter(
-                Q(ultimo_acceso__isnull=True) | Q(ultimo_acceso__lt=umbral)
-            )
-            .order_by("ultimo_acceso")
+        detalle_rows = list(
+            inactivos_qs.order_by("ultimo_acceso")
             .values("id", "email", "nombre", "apellido", "rol", "ultimo_acceso", "fecha_creacion")
         )
 
+        detalle = []
+        dias_inactivos = []
+        for row in detalle_rows:
+            # Sin acceso nunca registrado: contamos desde la creación de la cuenta.
+            referencia = row["ultimo_acceso"] or row["fecha_creacion"]
+            d = (ahora - referencia).days
+            dias_inactivos.append(d)
+            detalle.append({
+                "usuario_id": row["id"],
+                "nombre": f'{row["nombre"]} {row["apellido"]}'.strip(),
+                "email": row["email"],
+                "rol": row["rol"],
+                "ultima_actividad": row["ultimo_acceso"],
+                "dias_inactivo": d,
+            })
+
+        por_rol = [
+            {"rol": rol, "n": sum(1 for r in detalle if r["rol"] == rol)}
+            for rol in roles_staff
+        ]
+
         return Response({
             "resumen": {
-                "total": total,
-                "activos": activos,
-                "inactivos": inactivos,
-                "sin_acceso": sin_acceso,
+                "total_inactivos": len(detalle),
+                "promedio_dias_inactivo": round(sum(dias_inactivos) / len(dias_inactivos)) if dias_inactivos else 0,
+                "max_dias_inactivo": max(dias_inactivos) if dias_inactivos else 0,
                 "n_dias": dias,
             },
             "por_rol": por_rol,

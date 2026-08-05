@@ -306,6 +306,28 @@ class TestReportePersonalInactivo:
         emails_detalle = [d["email"] for d in resp.data["detalle"]]
         assert usuario_cajero.email in emails_detalle
 
+    def test_calcula_dias_inactivo_y_resumen(self, api_admin, usuario_cajero):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        usuario_cajero.ultimo_acceso = timezone.now() - timedelta(days=45)
+        usuario_cajero.save(update_fields=["ultimo_acceso"])
+
+        resp = api_admin.get(self.URL, {"dias": "30"})
+        assert resp.status_code == 200
+
+        fila = next(d for d in resp.data["detalle"] if d["email"] == usuario_cajero.email)
+        assert fila["dias_inactivo"] == 45
+        assert fila["usuario_id"] == usuario_cajero.id
+        assert fila["nombre"] == "Cajero Test"
+
+        assert resp.data["resumen"]["total_inactivos"] >= 1
+        assert resp.data["resumen"]["max_dias_inactivo"] >= 45
+        assert resp.data["resumen"]["promedio_dias_inactivo"] >= 0
+
+        fila_rol = next(r for r in resp.data["por_rol"] if r["rol"] == "CAJERO")
+        assert fila_rol["n"] >= 1
+
     def test_no_admin_retorna_403(self, api_cajero):
         resp = api_cajero.get(self.URL)
         assert resp.status_code == 403
