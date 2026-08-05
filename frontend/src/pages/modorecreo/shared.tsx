@@ -78,7 +78,7 @@ export function detectInputType(value: string): 'card' | 'product' {
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 export interface Producto {
-  id: number; codigo_barra: string; descripcion: string
+  id: number; codigo_barra: string | null; descripcion: string
   precio_actual: string; categoria_nombre: string
   stock_actual?: number | null
 }

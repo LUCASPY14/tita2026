@@ -201,7 +201,7 @@ export default function ModoRecreo() {
     if (catFiltro) list = list.filter(p => p.categoria_nombre === catFiltro)
     if (prodSearch) list = list.filter(p =>
       p.descripcion.toLowerCase().includes(prodSearch.toLowerCase()) ||
-      p.codigo_barra.includes(prodSearch))
+      (p.codigo_barra?.includes(prodSearch) ?? false))
     const sorted = [...list].sort(
       (a, b) => ((salesMap[b.id] || 0) - (salesMap[a.id] || 0)) ||
                 a.descripcion.localeCompare(b.descripcion)

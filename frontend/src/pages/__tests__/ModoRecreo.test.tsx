@@ -154,6 +154,34 @@ describe('ModoRecreo — interfaz POS', () => {
     expect(screen.queryAllByText('Jugo de naranja').length).toBeGreaterThan(0)
   })
 
+  it('no crashea al buscar cuando un producto no tiene código de barras (null)', async () => {
+    // codigo_barra es opcional en el backend (blank=True, null=True) — muchos
+    // productos de cantina (comidas preparadas) no tienen. Regresión del bug
+    // "Cannot read properties of null (reading 'includes')" en producción.
+    localStorage.removeItem('recreo_sales_v2')
+    localStorage.removeItem('recreo_daily_stats')
+    mockGetProductos.mockResolvedValue([
+      { id: 1, codigo_barra: null, descripcion: 'Empanada de carne', precio_actual: '5000', categoria_nombre: 'comidas' },
+      { id: 2, codigo_barra: '002', descripcion: 'Sandwich de pollo', precio_actual: '8000', categoria_nombre: 'panaderia' },
+    ])
+    mockGetCategorias.mockResolvedValue([{ nombre: 'comidas' }, { nombre: 'panaderia' }])
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: { results: MEDIOS } })
+      .mockResolvedValueOnce({ data: CAJA })
+
+    render(<ModoRecreo />)
+    await screen.findAllByText('Empanada de carne')
+
+    // "pollo" no matchea la descripción de "Empanada de carne" (con codigo_barra
+    // null) — el || de la condición de filtro fuerza evaluar
+    // p.codigo_barra.includes(...) sobre ese producto. Con "emp" no se reproduce
+    // el bug porque matchea por descripción antes y hace short-circuit.
+    await userEvent.type(screen.getByPlaceholderText(/Buscar producto/i), 'pollo')
+
+    expect(screen.queryAllByText('Sandwich de pollo').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Algo salió mal')).not.toBeInTheDocument()
+  })
+
   it('muestra botones de categoría para todas las categorías', async () => {
     setupData()
     render(<ModoRecreo />)
