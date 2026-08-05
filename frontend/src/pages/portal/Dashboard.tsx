@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import {
   CreditCard, AlertTriangle, UtensilsCrossed, History,
   CalendarCheck, CheckCircle2, Clock, AlertCircle, RefreshCw, Wallet,
-  ShoppingBag, Lock, ChevronDown, ChevronUp, Eye, EyeOff,
+  ShoppingBag, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
@@ -126,137 +126,7 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   )
 }
 
-function PinChangeSection({ clienteId }: { clienteId: number }) {
-  const [open, setOpen] = useState(false)
-  const [pinActual, setPinActual] = useState('')
-  const [pinNuevo, setPinNuevo] = useState('')
-  const [pinConfirmar, setPinConfirmar] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [showActual, setShowActual] = useState(false)
-  const [showNuevo, setShowNuevo] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (pinNuevo !== pinConfirmar) {
-      toast.error('Los PINs no coinciden')
-      return
-    }
-    setSubmitting(true)
-    try {
-      await api.post(`/clientes/clientes/${clienteId}/cambiar-pin/`, {
-        pin_actual: pinActual,
-        pin_nuevo: pinNuevo,
-      })
-      toast.success('PIN actualizado correctamente')
-      setOpen(false)
-      setPinActual('')
-      setPinNuevo('')
-      setPinConfirmar('')
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      toast.error(msg || 'Error al cambiar el PIN')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3.5 cursor-pointer hover:bg-slate-50 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <Lock className="w-4 h-4 text-slate-400" />
-          <span className="text-sm font-medium text-slate-700">Cambiar PIN de autorización</span>
-        </div>
-        {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-      </button>
-      {open && (
-        <form onSubmit={handleSubmit} className="border-t border-slate-100 px-4 py-4 space-y-3">
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1">PIN actual</label>
-            <div className="relative">
-              <input
-                type={showActual ? 'text' : 'password'}
-                value={pinActual}
-                onChange={e => setPinActual(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 pr-10"
-                placeholder="••••"
-                maxLength={4}
-                inputMode="numeric"
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowActual(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer"
-                tabIndex={-1}
-              >
-                {showActual ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1">PIN nuevo</label>
-            <div className="relative">
-              <input
-                type={showNuevo ? 'text' : 'password'}
-                value={pinNuevo}
-                onChange={e => setPinNuevo(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 pr-10"
-                placeholder="••••"
-                maxLength={4}
-                inputMode="numeric"
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowNuevo(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer"
-                tabIndex={-1}
-              >
-                {showNuevo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1">Confirmar PIN nuevo</label>
-            <input
-              type="password"
-              value={pinConfirmar}
-              onChange={e => setPinConfirmar(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-              placeholder="••••"
-              maxLength={4}
-              inputMode="numeric"
-              autoComplete="new-password"
-            />
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => { setOpen(false); setPinActual(''); setPinNuevo(''); setPinConfirmar('') }}
-              className="flex-1 py-2.5 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || pinActual.length < 4 || pinNuevo.length < 4 || pinConfirmar.length < 4}
-              className="flex-1 py-2.5 text-sm text-white bg-green-600 rounded-xl hover:bg-green-700 transition-colors disabled:opacity-40 cursor-pointer font-medium"
-            >
-              {submitting ? 'Guardando…' : 'Guardar PIN'}
-            </button>
-          </div>
-        </form>
-      )}
-    </div>
-  )
-}
-
-function ResumenTab({ hijo, mes, clienteId }: { hijo: HijoData; mes: { anio: number; mes: number }; clienteId: number }) {
+function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: number } }) {
   const navigate = useNavigate()
 
   return (
@@ -392,8 +262,6 @@ function ResumenTab({ hijo, mes, clienteId }: { hijo: HijoData; mes: { anio: num
         </div>
       )}
 
-      {/* PIN change */}
-      <PinChangeSection clienteId={clienteId} />
     </div>
   )
 }
@@ -785,7 +653,7 @@ export default function PortalDashboard() {
         {/* Tab content */}
         <div className="p-5">
           {tab === 'resumen' && (
-            <ResumenTab hijo={hijo} mes={data.mes} clienteId={data.cliente.id} />
+            <ResumenTab hijo={hijo} mes={data.mes} />
           )}
           {tab === 'historial' && <HistorialTab hijo={hijo} />}
           {tab === 'cantina' && (

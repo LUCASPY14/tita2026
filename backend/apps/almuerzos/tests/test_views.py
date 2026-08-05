@@ -567,6 +567,25 @@ class TestCuentaMensual:
         resp = api_cliente_web.get("/api/v1/almuerzos/cuentas-mensuales/")
         assert resp.status_code == 200
 
+    def test_filtro_estado_acepta_varios_valores_separados_por_coma(self, api_cliente_web, cuenta_mensual):
+        """PagarAlmuerzo.tsx pide ?estado=PENDIENTE,PARCIAL — antes de este fix
+        el filtro auto-generado era un ChoiceFilter de valor único y devolvía
+        400 (portal mostraba 'Error al cargar las cuentas de almuerzo')."""
+        resp = api_cliente_web.get(
+            "/api/v1/almuerzos/cuentas-mensuales/", {"estado": "PENDIENTE,PARCIAL"}
+        )
+        assert resp.status_code == 200
+        ids = [c["id"] for c in resp.data["results"]]
+        assert cuenta_mensual.id in ids
+
+    def test_filtro_estado_un_solo_valor_sigue_funcionando(self, api_cliente_web, cuenta_mensual):
+        resp = api_cliente_web.get(
+            "/api/v1/almuerzos/cuentas-mensuales/", {"estado": "PAGADO"}
+        )
+        assert resp.status_code == 200
+        ids = [c["id"] for c in resp.data["results"]]
+        assert cuenta_mensual.id not in ids
+
     def test_solo_admin_puede_generar(self, api_cajero):
         resp = api_cajero.post(
             "/api/v1/almuerzos/cuentas-mensuales/generar/",

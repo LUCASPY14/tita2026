@@ -25,7 +25,12 @@ from rest_framework import serializers as drf_serializers
 from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
 from apps.usuarios.auditoria import registrar_auditoria
 
+import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
+
+
+class _EstadoInFilter(django_filters.BaseInFilter, django_filters.CharFilter):
+    """Permite filtrar por varios estados a la vez: ?estado=PENDIENTE,PARCIAL"""
 
 from .models import (
     Alergeno,
@@ -386,12 +391,20 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 # CUENTA ALMUERZO MENSUAL
 # ==============================================================================
 
+class CuentaAlmuerzoMensualFilter(django_filters.FilterSet):
+    estado = _EstadoInFilter(field_name="estado", lookup_expr="in")
+
+    class Meta:
+        model = CuentaAlmuerzoMensual
+        fields = ["hijo", "anio", "mes", "estado"]
+
+
 class CuentaAlmuerzoMensualViewSet(viewsets.ModelViewSet):
     queryset = CuentaAlmuerzoMensual.objects.select_related("hijo__grado", "hijo__tarjeta").all()
     serializer_class = CuentaAlmuerzoMensualSerializer
     permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ["hijo", "anio", "mes", "estado"]
+    filterset_class = CuentaAlmuerzoMensualFilter
     ordering = ["-anio", "-mes"]
 
     def get_queryset(self):
