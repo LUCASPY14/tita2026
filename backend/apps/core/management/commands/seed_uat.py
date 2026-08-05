@@ -241,7 +241,6 @@ class Command(BaseCommand):
         # -- Medios de pago --
         medios = [
             ("Efectivo",              False),
-            ("Tarjeta RFID",          False),
             ("Transferencia",         True),
             ("POS Bancario crédito",  True),
             ("POS Bancario debito",   True),
