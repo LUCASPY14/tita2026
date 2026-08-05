@@ -331,7 +331,7 @@ class ReporteTarjetasView(APIView):
 
         tarjetas_qs = (
             Tarjeta.objects
-            .select_related("hijo", "hijo__grado")
+            .select_related("hijo", "hijo__grado", "cliente_directo")
             .filter(estado=Tarjeta.Estado.ACTIVA)
             .annotate(
                 total_recargado=Coalesce(
@@ -350,10 +350,13 @@ class ReporteTarjetasView(APIView):
 
         filas = []
         for t in tarjetas_qs:
+            # Una tarjeta es de un alumno (hijo) o de un docente/funcionario
+            # (cliente_directo) — nunca ambos (constraint tarjeta_tiene_titular).
+            titular = str(t.hijo) if t.hijo_id else str(t.cliente_directo) if t.cliente_directo_id else "—"
             filas.append({
                 "nro_tarjeta": t.nro_tarjeta,
-                "alumno": str(t.hijo),
-                "grado": str(t.hijo.grado) if t.hijo.grado else "",
+                "alumno": titular,
+                "grado": str(t.hijo.grado) if t.hijo_id and t.hijo.grado else "",
                 "saldo_actual": int(t.saldo_actual),
                 "total_recargado": int(t.total_recargado or 0),
                 "total_consumido": int(t.total_consumido or 0),

@@ -182,6 +182,34 @@ class TestReporteTarjetas:
         assert resp.status_code == 200
         assert "application/pdf" in resp["Content-Type"]
 
+    def test_tarjeta_de_personal_sin_hijo_no_rompe_el_reporte(self, api_admin, tarjeta_core, tipo_cliente, lista_precio):
+        """
+        Una tarjeta puede pertenecer a un alumno (hijo) o a un docente/
+        funcionario (cliente_directo) — nunca ambos. El reporte no debe
+        romper con AttributeError cuando hay al menos una tarjeta de
+        personal (hijo=None) junto a tarjetas de alumnos.
+        """
+        from decimal import Decimal
+        from apps.clientes.models import Cliente
+        from apps.core.models import Tarjeta
+
+        docente = Cliente.objects.create(
+            nombres="María", apellidos="Docente", ruc_ci="9998887",
+            tipo_cliente=tipo_cliente, lista_precio=lista_precio,
+            limite_credito=Decimal("0"),
+        )
+        Tarjeta.objects.create(nro_tarjeta="STAFF001", cliente_directo=docente)
+
+        resp = api_admin.get("/api/v1/core/reporte-tarjetas/")
+        assert resp.status_code == 200
+
+        fila_staff = next(f for f in resp.data["tarjetas"] if f["nro_tarjeta"] == "STAFF001")
+        assert "Docente" in fila_staff["alumno"]
+        assert fila_staff["grado"] == ""
+
+        fila_alumno = next(f for f in resp.data["tarjetas"] if f["nro_tarjeta"] == tarjeta_core.nro_tarjeta)
+        assert "García" in fila_alumno["alumno"]
+
 
 # ── CargaSaldo CUENTA_CORRIENTE ───────────────────────────────────────────────
 
