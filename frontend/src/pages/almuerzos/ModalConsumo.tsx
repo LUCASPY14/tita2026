@@ -4,22 +4,20 @@ import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
-import { extractErrorMessage, formatGs, todayISO, type Hijo, type TarjetaBusqueda, type TipoAlmuerzo } from './shared'
+import { extractErrorMessage, formatGs, todayISO, type Hijo, type TarjetaBusqueda } from './shared'
 
 interface Props {
   open: boolean
   hijos: Hijo[]
-  tiposAlmuerzo: TipoAlmuerzo[]
   onClose: () => void
   onSaved: () => void
 }
 
-export default function ModalConsumo({ open, hijos, tiposAlmuerzo, onClose, onSaved }: Props) {
+export default function ModalConsumo({ open, hijos, onClose, onSaved }: Props) {
   const [tarjetaSearch, setTarjetaSearch] = useState('')
   const [tarjeta, setTarjeta] = useState<TarjetaBusqueda | null>(null)
   const [tarjetaBuscando, setTarjetaBuscando] = useState(false)
   const [hijoId, setHijoId] = useState<number | ''>('')
-  const [tipoAlmuerzoId, setTipoAlmuerzoId] = useState<number | ''>('')
   const [fechaConsumo, setFechaConsumo] = useState(todayISO())
   const [registrando, setRegistrando] = useState(false)
 
@@ -54,18 +52,15 @@ export default function ModalConsumo({ open, hijos, tiposAlmuerzo, onClose, onSa
     }
     setRegistrando(true)
     try {
-      const payload: Record<string, unknown> = {
+      await api.post('/almuerzos/registros-consumo/', {
         hijo: hijoId,
         fecha_consumo: fechaConsumo,
         nro_tarjeta: tarjeta.nro_tarjeta,
-      }
-      if (tipoAlmuerzoId) payload.tipo_almuerzo = tipoAlmuerzoId
-      await api.post('/almuerzos/registros-consumo/', payload)
+      })
       toast.success('Consumo registrado')
       setTarjeta(null)
       setTarjetaSearch('')
       setHijoId('')
-      setTipoAlmuerzoId('')
       setFechaConsumo(todayISO())
       onSaved()
       onClose()
@@ -74,7 +69,7 @@ export default function ModalConsumo({ open, hijos, tiposAlmuerzo, onClose, onSa
     } finally {
       setRegistrando(false)
     }
-  }, [hijoId, tarjeta, hijos, fechaConsumo, tipoAlmuerzoId, onSaved, onClose])
+  }, [hijoId, tarjeta, hijos, fechaConsumo, onSaved, onClose])
 
   const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
   const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
@@ -130,20 +125,6 @@ export default function ModalConsumo({ open, hijos, tiposAlmuerzo, onClose, onSa
               <option key={h.id} value={h.id}>
                 {h.nombre_completo ?? `${h.nombre} ${h.apellido}`} — {h.grado}
               </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className={labelClass}>Tipo de Almuerzo (opcional)</label>
-          <select
-            value={tipoAlmuerzoId}
-            onChange={e => setTipoAlmuerzoId(Number(e.target.value) || '')}
-            className={inputClass}
-          >
-            <option value="">Sin especificar</option>
-            {tiposAlmuerzo.filter(t => t.activo).map(t => (
-              <option key={t.id} value={t.id}>{t.nombre} — {formatGs(t.precio_unitario)}</option>
             ))}
           </select>
         </div>

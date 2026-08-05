@@ -94,7 +94,7 @@ class Command(BaseCommand):
                 "incluye_plato_principal": True,
                 "incluye_postre": False,
                 "incluye_bebida": False,
-                "activo": True,
+                "activo": False,
             },
         )
         self._log_created("TipoAlmuerzo", "Almuerzo Simple", created)
@@ -121,7 +121,7 @@ class Command(BaseCommand):
                 "precio_mensual": Decimal("240000"),
                 "cantidad_almuerzos_mes": 20,
                 "dias_semana_incluidos": "1,2,3,4,5",
-                "activo": True,
+                "activo": False,
             },
         )
         self._log_created("PlanAlmuerzo", "Plan Básico 20 días", created)

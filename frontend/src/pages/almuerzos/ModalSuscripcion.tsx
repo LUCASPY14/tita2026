@@ -2,7 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
-import { extractErrorMessage, formatGs, todayISO, type Hijo, type PlanAlmuerzo } from './shared'
+import { extractErrorMessage, todayISO, type Hijo, type PlanAlmuerzo } from './shared'
 
 interface Props {
   open: boolean
@@ -13,21 +13,23 @@ interface Props {
 }
 
 export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved }: Props) {
-  const [form, setForm] = useState({ hijo: '', plan: '', tipo_cobro: 'CUENTA', fecha_inicio: todayISO() })
+  const [form, setForm] = useState({ hijo: '', fecha_inicio: todayISO() })
   const [saving, setSaving] = useState(false)
 
+  const plan = planes.find(p => p.activo)
+
   async function handleSave() {
-    if (!form.hijo || !form.plan) { toast.error('Completá todos los campos'); return }
+    if (!form.hijo || !plan) { toast.error('Completá todos los campos'); return }
     setSaving(true)
     try {
       await api.post('/almuerzos/suscripciones/', {
         hijo: Number(form.hijo),
-        plan: Number(form.plan),
-        tipo_cobro: form.tipo_cobro,
+        plan: plan.id,
+        tipo_cobro: 'CUENTA',
         fecha_inicio: form.fecha_inicio,
       })
       toast.success('Suscripción creada')
-      setForm({ hijo: '', plan: '', tipo_cobro: 'CUENTA', fecha_inicio: todayISO() })
+      setForm({ hijo: '', fecha_inicio: todayISO() })
       onSaved()
       onClose()
     } catch (err) {
@@ -67,42 +69,14 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
             ))}
           </select>
         </div>
-        <div>
-          <label htmlFor="susc-plan" className={labelClass}>Plan *</label>
-          <select
-            id="susc-plan"
-            value={form.plan}
-            onChange={e => {
-              const planId = e.target.value
-              const plan = planes.find(p => String(p.id) === planId)
-              const tipoCobro = plan?.tipo === 'CANTIDAD' ? 'MENSUAL' : 'CUENTA'
-              setForm(f => ({ ...f, plan: planId, tipo_cobro: tipoCobro }))
-            }}
-            className={inputClass}
-          >
-            <option value="">Seleccionar...</option>
-            {planes.filter(p => p.activo).map(p => (
-              <option key={p.id} value={p.id}>{p.nombre} — {formatGs(p.precio_mensual)}/mes</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={labelClass}>Tipo de Cobro *</label>
-          <select
-            value={form.tipo_cobro}
-            onChange={e => setForm(f => ({ ...f, tipo_cobro: e.target.value }))}
-            className={inputClass}
-          >
-            <option value="CUENTA">Por consumo — padre paga al final del mes según lo que comió</option>
-            <option value="MENSUAL">Cuota mensual fija — padre paga por adelantado</option>
-          </select>
-          {form.plan && (
-            <p className="text-xs text-slate-400 mt-1">
-              {form.tipo_cobro === 'MENSUAL'
-                ? `El padre paga ${formatGs(planes.find(p => String(p.id) === form.plan)?.precio_mensual ?? 0)} al inicio de cada mes.`
-                : 'La cuenta acumula Gs. por cada almuerzo registrado y el cajero cobra al mes siguiente.'}
-            </p>
-          )}
+        <div className="bg-green-50 rounded-xl px-3 py-2.5">
+          <p className="text-sm font-medium text-green-800">
+            {plan ? plan.nombre : 'No hay un plan de almuerzo activo'}
+          </p>
+          <p className="text-xs text-green-700 mt-0.5">
+            Por consumo: la cuenta acumula el costo de cada almuerzo registrado en el comedor
+            y el cajero cobra el total al mes siguiente.
+          </p>
         </div>
         <div>
           <label className={labelClass}>Fecha de Inicio</label>
