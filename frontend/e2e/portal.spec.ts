@@ -56,6 +56,21 @@ const HISTORIAL_MOCK = {
   cobrados: 1,
 }
 
+const CANTINA_MOCK = {
+  count: 1,
+  next: false,
+  results: [
+    {
+      id: 1,
+      fecha: '2026-06-10T12:30:00Z',
+      monto_total: 12500,
+      detalles: [
+        { producto_nombre: 'Sandwich de milanesa', cantidad: 1, precio_unitario: 12500, subtotal: 12500 },
+      ],
+    },
+  ],
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function setupPortalAuth(page: import('@playwright/test').Page, user = CLIENTE_WEB) {
@@ -299,12 +314,15 @@ test.describe('Portal — Carga de Saldo', () => {
 
 // ── Portal Historial ──────────────────────────────────────────────────────────
 
-test.describe('Portal — Historial de Almuerzos', () => {
+test.describe('Portal — Historial', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsPortal(page)
 
     await page.route(/\/api\/v1\/usuarios\/portal\/historial-consumos/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(HISTORIAL_MOCK) })
+    )
+    await page.route(/\/api\/v1\/usuarios\/portal\/historial-cantina/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CANTINA_MOCK) })
     )
 
     await page.goto('/portal/historial')
@@ -315,14 +333,15 @@ test.describe('Portal — Historial de Almuerzos', () => {
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
   })
 
-  test('muestra el título y el navegador de meses', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Historial de Almuerzos' })).toBeVisible()
+  test('muestra el título, las tabs y el navegador de meses', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Historial' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /Almuerzos/ })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /Cantina/ })).toBeVisible()
     // Navegador de meses con chevrons
     await expect(page.locator('button').filter({ has: page.locator('svg') }).first()).toBeVisible()
   })
 
   test('muestra las estadísticas del mes', async ({ page }) => {
-    await expect(page.getByText('Almuerzos', { exact: true })).toBeVisible()
     await expect(page.getByText('Cobrados')).toBeVisible()
     await expect(page.getByText('Total')).toBeVisible()
   })
@@ -332,6 +351,12 @@ test.describe('Portal — Historial de Almuerzos', () => {
     await expect(page.getByText('Cobrado').first()).toBeVisible({ timeout: 5000 })
     // Badge "Pendiente" para consumo no cobrado
     await expect(page.getByText('Pendiente')).toBeVisible()
+  })
+
+  test('tab Cantina muestra las compras en cantina', async ({ page }) => {
+    await page.getByRole('tab', { name: /Cantina/ }).click()
+    await expect(page.getByText('Sin compras en cantina')).not.toBeVisible()
+    await expect(page.getByText('Gs. 12.500')).toBeVisible()
   })
 })
 

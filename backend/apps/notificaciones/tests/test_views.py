@@ -62,6 +62,49 @@ class TestNotificacionViewSet:
         ids_usuarios = [n["usuario"] for n in resp.data["results"]]
         assert all(uid == usuario_cajero.pk for uid in ids_usuarios)
 
+    def test_no_staff_puede_marcar_su_propia_notificacion_como_leida(self, api_cajero, usuario_cajero):
+        """Antes de este fix, IsStaffOrClienteWeb bloqueaba PATCH para
+        CLIENTE_WEB (solo SAFE_METHODS) y el portal mostraba 'Error al
+        actualizar' al tocar 'Marcar leída'."""
+        from apps.notificaciones.models import Notificacion
+        notif = Notificacion.objects.create(
+            usuario=usuario_cajero,
+            tipo=Notificacion.Tipo.SISTEMA,
+            destino=Notificacion.Destino.SISTEMA,
+            titulo="Test", mensaje="Msg", leida=False,
+        )
+        resp = api_cajero.patch(f"/api/v1/notificaciones/notificaciones/{notif.id}/", {"leida": True})
+        assert resp.status_code == 200
+        notif.refresh_from_db()
+        assert notif.leida is True
+
+    def test_no_staff_no_puede_marcar_leida_una_notificacion_ajena(self, api_cajero, usuario_admin):
+        from apps.notificaciones.models import Notificacion
+        notif = Notificacion.objects.create(
+            usuario=usuario_admin,
+            tipo=Notificacion.Tipo.SISTEMA,
+            destino=Notificacion.Destino.SISTEMA,
+            titulo="Ajena", mensaje="Msg", leida=False,
+        )
+        resp = api_cajero.patch(f"/api/v1/notificaciones/notificaciones/{notif.id}/", {"leida": True})
+        assert resp.status_code == 404
+
+    def test_no_staff_no_puede_modificar_otros_campos_ademas_de_leida(self, api_cajero, usuario_cajero):
+        from apps.notificaciones.models import Notificacion
+        notif = Notificacion.objects.create(
+            usuario=usuario_cajero,
+            tipo=Notificacion.Tipo.SISTEMA,
+            destino=Notificacion.Destino.SISTEMA,
+            titulo="Original", mensaje="Msg", leida=False,
+        )
+        resp = api_cajero.patch(
+            f"/api/v1/notificaciones/notificaciones/{notif.id}/",
+            {"leida": True, "titulo": "Cambiado"},
+        )
+        assert resp.status_code == 403
+        notif.refresh_from_db()
+        assert notif.titulo == "Original"
+
 
 # ── PreferenciaNotificacionViewSet ────────────────────────────────────────────
 

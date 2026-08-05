@@ -135,11 +135,20 @@ class PlanAlmuerzoViewSet(viewsets.ModelViewSet):
 # ==============================================================================
 
 class SuscripcionAlmuerzoViewSet(viewsets.ModelViewSet):
-    queryset = SuscripcionAlmuerzo.objects.select_related("hijo", "plan").all()
     serializer_class = SuscripcionAlmuerzoSerializer
+    permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["estado", "hijo", "plan"]
     ordering = ["-fecha_inicio"]
+
+    def get_queryset(self):
+        qs = SuscripcionAlmuerzo.objects.select_related("hijo", "plan").all()
+        user = self.request.user
+        if user.rol == "CLIENTE_WEB":
+            if not user.cliente:
+                return qs.none()
+            return qs.filter(hijo__cliente_responsable=user.cliente)
+        return qs
 
 
 # ==============================================================================

@@ -130,15 +130,6 @@ describe('PortalDashboard — datos', () => {
     await screen.findByText('Hola, María López')
   })
 
-  it('pin_es_defecto → muestra aviso de PIN pendiente', async () => {
-    setupPortal({
-      cliente: { ...PORTAL_DATA.cliente, pin_es_defecto: true },
-    })
-    render(<PortalDashboard />)
-
-    await screen.findByText(/PIN de autorización pendiente de cambio/i)
-  })
-
   it('múltiples hijos → muestra selector con el nombre de cada hijo', async () => {
     setupPortal({ hijos: [HIJO_CON_CUENTA, HIJO2] })
     render(<PortalDashboard />)

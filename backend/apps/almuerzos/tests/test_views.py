@@ -254,6 +254,62 @@ class TestViewSetsSimples:
         assert resp.status_code in (401, 403)
 
 
+# ── SuscripcionAlmuerzoViewSet — acceso CLIENTE_WEB ───────────────────────────
+# Antes de este fix, el ViewSet no tenía permission_classes propio y heredaba
+# el default IsStaffUser (que excluye CLIENTE_WEB) → el portal de padres
+# recibía 403 y mostraba "Sin plan de almuerzo activo" aunque sí hubiera uno.
+
+@pytest.mark.django_db
+class TestSuscripcionAlmuerzoAccesoClienteWeb:
+
+    def test_cliente_web_puede_ver_la_suscripcion_de_su_hijo(self, api_cliente_web, suscripcion_activa, hijo_almuerzo):
+        resp = api_cliente_web.get(
+            "/api/v1/almuerzos/suscripciones/", {"hijo": hijo_almuerzo.id, "estado": "ACTIVA"}
+        )
+        assert resp.status_code == 200
+        ids = [s["id"] for s in resp.data["results"]]
+        assert suscripcion_activa.id in ids
+
+    def test_cliente_web_no_ve_suscripciones_de_otra_familia(
+        self, api_cliente_web, suscripcion_activa, tipo_cliente, lista_precio
+    ):
+        from decimal import Decimal
+        from apps.clientes.models import Cliente, Hijo
+        from apps.almuerzos.models import SuscripcionAlmuerzo
+
+        otro_cliente = Cliente.objects.create(
+            nombres="Otra", apellidos="Familia", ruc_ci="9998887",
+            tipo_cliente=tipo_cliente, lista_precio=lista_precio,
+            limite_credito=Decimal("100000"),
+        )
+        otro_hijo = Hijo.objects.create(
+            nombre="Ajeno", apellido="Hijo", cliente_responsable=otro_cliente, activo=True,
+        )
+        otra_suscripcion = SuscripcionAlmuerzo.objects.create(
+            hijo=otro_hijo, plan=suscripcion_activa.plan,
+            fecha_inicio=suscripcion_activa.fecha_inicio,
+            estado=SuscripcionAlmuerzo.Estado.ACTIVA,
+        )
+
+        resp = api_cliente_web.get("/api/v1/almuerzos/suscripciones/")
+        assert resp.status_code == 200
+        ids = [s["id"] for s in resp.data["results"]]
+        assert otra_suscripcion.id not in ids
+
+    def test_cliente_web_no_puede_crear_suscripciones(self, api_cliente_web, hijo_almuerzo, plan_sin_limite):
+        resp = api_cliente_web.post("/api/v1/almuerzos/suscripciones/", {
+            "hijo": hijo_almuerzo.id, "plan": plan_sin_limite.id,
+            "tipo_cobro": "CUENTA", "fecha_inicio": str(date.today()),
+        })
+        assert resp.status_code == 403
+
+    def test_cajero_sigue_viendo_todas_las_suscripciones(self, api_cajero, suscripcion_activa):
+        resp = api_cajero.get("/api/v1/almuerzos/suscripciones/")
+        assert resp.status_code == 200
+        ids = [s["id"] for s in resp.data["results"]]
+        assert suscripcion_activa.id in ids
+
+
 # ── PrecioAlmuerzoViewSet — precio_actual ─────────────────────────────────────
 
 @pytest.mark.django_db

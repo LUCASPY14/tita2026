@@ -3,6 +3,7 @@ Views para la app notificaciones
 """
 
 from rest_framework import viewsets, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -37,6 +38,22 @@ class NotificacionViewSet(viewsets.ModelViewSet):
         if self.request.user.is_staff:
             return qs.all()
         return qs.filter(usuario=self.request.user)
+
+    def get_permissions(self):
+        # Cualquier usuario autenticado puede marcar como leídas SUS PROPIAS
+        # notificaciones (get_queryset ya las restringe a las suyas); el resto
+        # de las operaciones de escritura siguen reservadas a staff.
+        if self.action == "partial_update":
+            return [IsAuthenticated()]
+        return [IsStaffOrClienteWeb()]
+
+    def partial_update(self, request, *args, **kwargs):
+        if not request.user.is_staff and set(request.data.keys()) - {"leida"}:
+            return Response(
+                {"detail": "Solo podés modificar el campo 'leida'."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().partial_update(request, *args, **kwargs)
 
 
 class PreferenciaNotificacionViewSet(viewsets.ModelViewSet):
