@@ -35,7 +35,6 @@ const MenuDiario        = lazy(() => import('./pages/MenuDiario'))
 const Alergenos         = lazy(() => import('./pages/Alergenos'))
 const Ventas            = lazy(() => import('./pages/Ventas'))
 const Cobros            = lazy(() => import('./pages/Cobros'))
-const Auditoria         = lazy(() => import('./pages/Auditoria'))
 const PagosBancard      = lazy(() => import('./pages/PagosBancard'))
 
 const PagoCompletado = lazy(() => import('./pages/PagoCompletado'))
@@ -266,11 +265,6 @@ export default function App() {
               <Route path="/configuracion" element={
                 <PrivateRoute roles={['ADMIN']}>
                   <Configuracion />
-                </PrivateRoute>
-              } />
-              <Route path="/auditoria" element={
-                <PrivateRoute roles={['ADMIN']}>
-                  <Auditoria />
                 </PrivateRoute>
               } />
               <Route path="/pagos-bancard" element={
