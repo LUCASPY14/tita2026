@@ -42,17 +42,37 @@ class Command(BaseCommand):
             default="demo1234",
             help="Contraseña para todos los usuarios demo (default: demo1234)",
         )
+        parser.add_argument(
+            "--sin-demo",
+            action="store_true",
+            help=(
+                "No crea create_demo_users ni seed_portal_demo (cuentas @tita.local, "
+                "'Padre Demo'). Para usar en ambientes reales/staging donde ya existen "
+                "cuentas de staff reales — el resto del seed (catálogo, familias, "
+                "seed_negocio) no tiene nombres demo y se crea igual."
+            ),
+        )
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING("═══ seed_uat — UAT Cantina Tita ═══\n"))
+        sin_demo = options["sin_demo"]
 
         with transaction.atomic():
             self._seed_catalogo()
             self._seed_maestros()
 
-        # Sub-comandos con sus propias transacciones
-        call_command("create_demo_users", password=options["password"], verbosity=0)
-        self.stdout.write("  ✓ create_demo_users")
+        if sin_demo:
+            self.stdout.write("  · create_demo_users salteado (--sin-demo)")
+        else:
+            # Sub-comandos con sus propias transacciones
+            call_command("create_demo_users", password=options["password"], verbosity=0)
+            self.stdout.write("  ✓ create_demo_users")
+
+        # Las familias (con sus Hijo) deben existir ANTES de seed_negocio, que
+        # crea una SuscripcionAlmuerzo por cada Hijo activo — si se corre antes
+        # no encuentra hijos y no crea ninguna suscripción.
+        with transaction.atomic():
+            self._seed_familias()
 
         if options["reset"]:
             call_command("seed_negocio", reset=True, verbosity=0)
@@ -60,25 +80,28 @@ class Command(BaseCommand):
             call_command("seed_negocio", verbosity=0)
         self.stdout.write("  ✓ seed_negocio")
 
-        with transaction.atomic():
-            self._seed_familias()
-
-        if options["reset"]:
-            call_command("seed_portal_demo", reset=True, password=options["password"], verbosity=0)
+        if sin_demo:
+            self.stdout.write("  · seed_portal_demo salteado (--sin-demo)")
         else:
-            call_command("seed_portal_demo", password=options["password"], verbosity=0)
-        self.stdout.write("  ✓ seed_portal_demo")
+            if options["reset"]:
+                call_command("seed_portal_demo", reset=True, password=options["password"], verbosity=0)
+            else:
+                call_command("seed_portal_demo", password=options["password"], verbosity=0)
+            self.stdout.write("  ✓ seed_portal_demo")
 
-        self.stdout.write(self.style.SUCCESS(
-            "\n═══ seed_uat completado ═══\n"
-            "Usuarios demo (contraseña: demo1234):\n"
-            "  admin@tita.local      ADMIN\n"
-            "  cajero@tita.local     CAJERO\n"
-            "  supervisor@tita.local SUPERVISOR\n"
-            "  cobrador@tita.local   COBRADOR\n"
-            "  cocina@tita.local     COCINA\n"
-            "  portal@tita.local     CLIENTE_WEB\n"
-        ))
+        if sin_demo:
+            self.stdout.write(self.style.SUCCESS("\n═══ seed_uat completado (--sin-demo) ═══\n"))
+        else:
+            self.stdout.write(self.style.SUCCESS(
+                "\n═══ seed_uat completado ═══\n"
+                "Usuarios demo (contraseña: demo1234):\n"
+                "  admin@tita.local      ADMIN\n"
+                "  cajero@tita.local     CAJERO\n"
+                "  supervisor@tita.local SUPERVISOR\n"
+                "  cobrador@tita.local   COBRADOR\n"
+                "  cocina@tita.local     COCINA\n"
+                "  portal@tita.local     CLIENTE_WEB\n"
+            ))
 
     # =========================================================================
     # 1. CATÁLOGO BASE
@@ -189,14 +212,16 @@ class Command(BaseCommand):
 
         # -- Grados (1° a 9° con paralelos A y B) --
         grados_data = [
-            (f"{n}° Grado {p}", f"g{n}{p.lower()}")
-            for n in range(1, 10)
-            for p in ["A", "B"]
+            (f"{n}° Grado {p}", n, orden)
+            for orden, (n, p) in enumerate(
+                ((n, p) for n in range(1, 10) for p in ["A", "B"]), start=1
+            )
         ]
         creados_g = 0
-        for nombre, _ in grados_data:
+        for nombre, nivel, orden in grados_data:
             _, c = Grado.objects.get_or_create(
-                nombre=nombre, defaults={"activo": True}
+                nombre=nombre,
+                defaults={"nivel": nivel, "orden": orden, "es_ultimo": nivel == 9, "activo": True},
             )
             if c:
                 creados_g += 1

@@ -331,30 +331,32 @@ class Command(BaseCommand):
         self.stdout.write("\n[8/6] Roles y permisos...")
 
         # Mapping: rol_nombre -> list of permiso codes to assign
+        # Códigos según apps/usuarios/management/commands/seed_permisos.py (notación con punto).
         matriz = {
             "Administrador": [
-                "almuerzos_registrar",
-                "clientes_gestionar",
-                "compras_crear",
-                "caja_abrir",
-                "caja_cerrar",
-                "tarjetas_recargar",
-                "productos_gestionar",
-                "reportes_ver",
-                "ventas_anular",
-                "ventas_crear",
+                "ventas.ver", "ventas.crear", "ventas.anular",
+                "cobros.ver", "cobros.registrar",
+                "clientes.ver", "clientes.crear", "clientes.editar",
+                "tarjetas.ver", "tarjetas.cargar_saldo", "tarjetas.asignar",
+                "caja.ver", "caja.abrir", "caja.cerrar",
+                "facturacion.ver", "facturacion.emitir", "facturacion.anular",
+                "inventario.ver", "inventario.ajustar", "inventario.aprobar_ajuste",
+                "productos.ver", "productos.crear", "productos.editar",
+                "compras.ver", "compras.crear_oc", "compras.aprobar_oc",
+                "almuerzos.ver", "almuerzos.gestionar_menu", "almuerzos.registrar_consumo",
+                "reportes.ver", "reportes.exportar",
+                "usuarios.ver", "usuarios.crear", "usuarios.editar", "usuarios.gestionar_roles",
+                "configuracion.ver", "configuracion.editar",
             ],
             "Cajero": [
-                "ventas_crear",
-                "ventas_anular",
-                "tarjetas_recargar",
-                "caja_abrir",
-                "caja_cerrar",
-                "reportes_ver",
+                "ventas.ver", "ventas.crear", "ventas.anular",
+                "tarjetas.ver", "tarjetas.cargar_saldo",
+                "caja.ver", "caja.abrir", "caja.cerrar",
+                "reportes.ver",
             ],
             "Cocina": [
-                "almuerzos_registrar",
-                "reportes_ver",
+                "almuerzos.ver", "almuerzos.registrar_consumo",
+                "reportes.ver",
             ],
         }
 
