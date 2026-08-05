@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { UtensilsCrossed, TrendingUp, Download, FileText } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -13,6 +13,8 @@ import {
   type AlmuerzosData, type AlmuerzoFila,
 } from './shared'
 
+interface GradoOption { id: number; nombre: string; activo: boolean }
+
 export default function TabAlmuerzos() {
   const hoy = new Date()
   const [anioAlm, setAnioAlm] = useState(hoy.getFullYear())
@@ -21,6 +23,18 @@ export default function TabAlmuerzos() {
   const [tarjetaAlm, setTarjetaAlm] = useState('')
   const [almuerzosData, setAlmuerzosData] = useState<AlmuerzosData | null>(null)
   const [loadingAlm, setLoadingAlm] = useState(false)
+  const [grados, setGrados] = useState<GradoOption[]>([])
+
+  // El filtro sale de los grados reales (clientes_grado), no de texto libre —
+  // así coincide siempre con lo que el backend filtra (grado__nombre__icontains).
+  useEffect(() => {
+    api.get<{ results?: GradoOption[] } | GradoOption[]>('/clientes/grados/', { params: { page_size: 100 } })
+      .then(({ data }) => {
+        const list = Array.isArray(data) ? data : (data.results ?? [])
+        setGrados(list.filter(g => g.activo))
+      })
+      .catch(() => { /* el filtro simplemente queda vacío si falla */ })
+  }, [])
 
   const inputDateClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
   const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
@@ -135,12 +149,12 @@ export default function TabAlmuerzos() {
         </div>
         <div>
           <label className={labelClass}>Grado</label>
-          <input
-            placeholder="Filtrar por grado..."
-            value={gradoAlm}
-            onChange={e => setGradoAlm(e.target.value)}
-            className={`${inputDateClass} w-36`}
-          />
+          <select value={gradoAlm} onChange={e => setGradoAlm(e.target.value)} className={`${inputDateClass} w-40`}>
+            <option value="">Todos</option>
+            {grados.map(g => (
+              <option key={g.id} value={g.nombre}>{g.nombre}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={labelClass}>Tarjeta</label>
