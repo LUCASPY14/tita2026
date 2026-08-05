@@ -236,7 +236,7 @@ export interface AuditoriaFila {
   resultado: string; ip: string | null; descripcion: string | null; mensaje_error: string | null
 }
 export interface AuditoriaData {
-  resumen: { total_eventos: number; por_resultado: { EXITO: number; ERROR: number; DENEGADO: number } }
+  resumen: { total_eventos: number; por_resultado: { EXITO: number; FALLA: number } }
   top_operaciones: AuditoriaTop[]
   top_tablas: AuditoriaTop[]
   detalle: AuditoriaFila[]

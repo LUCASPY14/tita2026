@@ -72,8 +72,7 @@ export default function TabAuditoria() {
           <select value={audResultado} onChange={e => setAudResultado(e.target.value)} className={inputDateClass}>
             <option value="">Todos</option>
             <option value="EXITO">Éxito</option>
-            <option value="ERROR">Error</option>
-            <option value="DENEGADO">Denegado</option>
+            <option value="FALLA">Falla</option>
           </select>
         </div>
         <Button onClick={buscarAuditoria} loading={loadingAud}>Buscar</Button>
@@ -95,9 +94,9 @@ export default function TabAuditoria() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <KpiCard label="Total eventos" value={audData.resumen.total_eventos} />
             <KpiCard label="Éxito" value={audData.resumen.por_resultado.EXITO ?? 0} color="text-green-700" />
-            <KpiCard label="Errores / Denegados"
-              value={(audData.resumen.por_resultado.ERROR ?? 0) + (audData.resumen.por_resultado.DENEGADO ?? 0)}
-              color={(audData.resumen.por_resultado.ERROR ?? 0) + (audData.resumen.por_resultado.DENEGADO ?? 0) > 0 ? 'text-red-600' : 'text-slate-600'} />
+            <KpiCard label="Fallas"
+              value={audData.resumen.por_resultado.FALLA ?? 0}
+              color={(audData.resumen.por_resultado.FALLA ?? 0) > 0 ? 'text-red-600' : 'text-slate-600'} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -165,7 +164,7 @@ export default function TabAuditoria() {
                         <td className="py-2.5 pr-4 font-mono text-xs text-slate-500">{r.tabla ?? '—'}</td>
                         <td className="py-2.5 pr-4 tabular-nums text-slate-400 text-xs">{r.objeto_id ?? '—'}</td>
                         <td className="py-2.5 pr-4">
-                          <span className={`text-xs font-semibold ${r.resultado === 'EXITO' ? 'text-green-700' : r.resultado === 'ERROR' ? 'text-red-600' : 'text-orange-500'}`}>
+                          <span className={`text-xs font-semibold ${r.resultado === 'EXITO' ? 'text-green-700' : 'text-red-600'}`}>
                             {r.resultado}
                           </span>
                         </td>

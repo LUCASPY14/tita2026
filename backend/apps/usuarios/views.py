@@ -1143,24 +1143,30 @@ class ReporteAuditoriaView(APIView):
         if resultado_f:
             qs = qs.filter(resultado=resultado_f)
 
-        por_resultado = list(
+        por_resultado_raw = (
             qs.values("resultado").annotate(count=Count("id_auditoria")).order_by("-count")
         )
-        top_operaciones = list(
-            qs.values("operacion").annotate(count=Count("id_auditoria")).order_by("-count")[:10]
-        )
-        top_tablas = list(
-            qs.exclude(tabla_afectada=None).exclude(tabla_afectada="")
+        por_resultado = {"EXITO": 0, "FALLA": 0}
+        for row in por_resultado_raw:
+            if row["resultado"] in por_resultado:
+                por_resultado[row["resultado"]] = row["count"]
+
+        top_operaciones = [
+            {"operacion": row["operacion"], "n": row["count"]}
+            for row in qs.values("operacion").annotate(count=Count("id_auditoria")).order_by("-count")[:10]
+        ]
+        top_tablas = [
+            {"tabla": row["tabla_afectada"], "n": row["count"]}
+            for row in qs.exclude(tabla_afectada=None).exclude(tabla_afectada="")
             .values("tabla_afectada").annotate(count=Count("id_auditoria")).order_by("-count")[:10]
-        )
+        ]
 
         total = qs.count()
 
-        detalle = list(
+        detalle_qs = (
             qs.select_related("usuario")
             .order_by("-fecha_operacion")[:200]
             .values(
-                "id_auditoria",
                 "fecha_operacion",
                 "usuario__email",
                 "operacion",
@@ -1172,14 +1178,45 @@ class ReporteAuditoriaView(APIView):
                 "mensaje_error",
             )
         )
+        detalle = [
+            {
+                "fecha": row["fecha_operacion"],
+                "usuario": row["usuario__email"],
+                "operacion": row["operacion"],
+                "tabla": row["tabla_afectada"],
+                "objeto_id": row["id_registro"],
+                "resultado": row["resultado"],
+                "ip": row["ip_address"],
+                "descripcion": row["descripcion"],
+                "mensaje_error": row["mensaje_error"],
+            }
+            for row in detalle_qs
+        ]
+
+        formato = request.query_params.get("formato")
+        if formato == "csv":
+            import csv
+            from django.http import HttpResponse
+
+            resp = HttpResponse(content_type="text/csv")
+            resp["Content-Disposition"] = f'attachment; filename="auditoria_{desde}_{hasta}.csv"'
+            writer = csv.writer(resp)
+            writer.writerow(["Fecha", "Usuario", "Operación", "Tabla", "ID", "Resultado", "IP", "Descripción", "Error"])
+            for r in detalle:
+                writer.writerow([
+                    r["fecha"], r["usuario"] or "", r["operacion"], r["tabla"] or "",
+                    r["objeto_id"] or "", r["resultado"], r["ip"] or "",
+                    r["descripcion"] or "", r["mensaje_error"] or "",
+                ])
+            return resp
 
         return Response({
             "resumen": {
-                "total": total,
+                "total_eventos": total,
                 "por_resultado": por_resultado,
-                "top_operaciones": top_operaciones,
-                "top_tablas": top_tablas,
             },
+            "top_operaciones": top_operaciones,
+            "top_tablas": top_tablas,
             "detalle": detalle,
         })
 
