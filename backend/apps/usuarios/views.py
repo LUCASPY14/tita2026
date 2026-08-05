@@ -1221,6 +1221,34 @@ class ReporteAuditoriaView(APIView):
         })
 
 
+class AuditoriaOpcionesView(APIView):
+    """
+    GET /api/v1/usuarios/reporte-auditoria/opciones/
+    Valores distintos de `operacion` y `resultado` realmente registrados
+    en AuditoriaOperacion, para poblar los filtros del reporte de
+    auditoría sin depender de una lista hardcodeada en el frontend que
+    puede desactualizarse cada vez que se agrega un registrar_auditoria()
+    con un `operacion` nuevo en el código.
+    """
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        operaciones = (
+            AuditoriaOperacion.objects.order_by()
+            .exclude(operacion="").exclude(operacion__isnull=True)
+            .values_list("operacion", flat=True).distinct()
+        )
+        resultados = (
+            AuditoriaOperacion.objects.order_by()
+            .exclude(resultado="").exclude(resultado__isnull=True)
+            .values_list("resultado", flat=True).distinct()
+        )
+        return Response({
+            "operaciones": sorted(operaciones),
+            "resultados": sorted(resultados),
+        })
+
+
 class ReporteIntentosLoginView(APIView):
     """
     GET /api/v1/usuarios/reporte-intentos-login/

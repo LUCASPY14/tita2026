@@ -155,6 +155,46 @@ class TestReporteAuditoria:
         assert resp.status_code in (401, 403)
 
 
+# ── AuditoriaOpcionesView ─────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestAuditoriaOpciones:
+
+    URL = "/api/v1/usuarios/reporte-auditoria/opciones/"
+
+    def test_devuelve_valores_distintos_y_ordenados(self, api_admin, usuario_admin):
+        from apps.usuarios.models import AuditoriaOperacion
+
+        AuditoriaOperacion.objects.create(
+            usuario=usuario_admin, operacion="LOGIN", resultado="EXITO",
+        )
+        AuditoriaOperacion.objects.create(
+            usuario=usuario_admin, operacion="LOGIN", resultado="EXITO",
+        )
+        AuditoriaOperacion.objects.create(
+            usuario=usuario_admin, operacion="CREAR_USUARIO", resultado="FALLA",
+        )
+
+        resp = api_admin.get(self.URL)
+        assert resp.status_code == 200
+        assert resp.data["operaciones"] == ["CREAR_USUARIO", "LOGIN"]
+        assert resp.data["resultados"] == ["EXITO", "FALLA"]
+
+    def test_sin_datos_devuelve_listas_vacias(self, api_admin):
+        resp = api_admin.get(self.URL)
+        assert resp.status_code == 200
+        assert resp.data["operaciones"] == []
+        assert resp.data["resultados"] == []
+
+    def test_no_admin_retorna_403(self, api_cajero):
+        resp = api_cajero.get(self.URL)
+        assert resp.status_code == 403
+
+    def test_requiere_autenticacion(self):
+        resp = APIClient().get(self.URL)
+        assert resp.status_code in (401, 403)
+
+
 # ── ReporteIntentosLoginView ──────────────────────────────────────────────────
 
 @pytest.mark.django_db

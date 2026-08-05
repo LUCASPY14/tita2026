@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Shield, Download } from 'lucide-react'
 import api from '../../services/api'
@@ -9,6 +9,8 @@ import {
   type AuditoriaData,
 } from './shared'
 
+interface AuditoriaOpciones { operaciones: string[]; resultados: string[] }
+
 export default function TabAuditoria() {
   const [audDesde, setAudDesde] = useState(primerDiaMes())
   const [audHasta, setAudHasta] = useState(today())
@@ -17,9 +19,19 @@ export default function TabAuditoria() {
   const [audResultado, setAudResultado] = useState('')
   const [audData, setAudData] = useState<AuditoriaData | null>(null)
   const [loadingAud, setLoadingAud] = useState(false)
+  const [opciones, setOpciones] = useState<AuditoriaOpciones | null>(null)
 
   const inputDateClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
   const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
+
+  // Los valores de operación/resultado salen de lo que realmente hay en la
+  // base (AuditoriaOperacion), no de una lista fija en el frontend — así el
+  // filtro nunca queda desactualizado si se agrega una operación nueva.
+  useEffect(() => {
+    api.get<AuditoriaOpciones>('/usuarios/reporte-auditoria/opciones/')
+      .then(({ data }) => setOpciones(data))
+      .catch(() => { /* el filtro simplemente queda vacío si falla */ })
+  }, [])
 
   async function buscarAuditoria() {
     if (!audDesde || !audHasta) { toast.error('Seleccioná ambas fechas'); return }
@@ -62,7 +74,7 @@ export default function TabAuditoria() {
           <label className={labelClass}>Operación</label>
           <select value={audOperacion} onChange={e => setAudOperacion(e.target.value)} className={inputDateClass}>
             <option value="">Todas</option>
-            {['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'ACCESS'].map(o => (
+            {(opciones?.operaciones ?? []).map(o => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
@@ -71,8 +83,9 @@ export default function TabAuditoria() {
           <label className={labelClass}>Resultado</label>
           <select value={audResultado} onChange={e => setAudResultado(e.target.value)} className={inputDateClass}>
             <option value="">Todos</option>
-            <option value="EXITO">Éxito</option>
-            <option value="FALLA">Falla</option>
+            {(opciones?.resultados ?? []).map(r => (
+              <option key={r} value={r}>{r === 'EXITO' ? 'Éxito' : r === 'FALLA' ? 'Falla' : r}</option>
+            ))}
           </select>
         </div>
         <Button onClick={buscarAuditoria} loading={loadingAud}>Buscar</Button>
