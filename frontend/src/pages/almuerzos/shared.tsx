@@ -58,6 +58,7 @@ export interface TipoAlmuerzo {
   incluye_postre: boolean
   incluye_bebida: boolean
   activo: boolean
+  es_predeterminado: boolean
 }
 
 export interface PlanAlmuerzo {
@@ -68,6 +69,7 @@ export interface PlanAlmuerzo {
   cantidad_almuerzos_mes: number | null
   dias_semana_incluidos: number[]
   activo: boolean
+  es_predeterminado: boolean
 }
 
 export interface Suscripcion {

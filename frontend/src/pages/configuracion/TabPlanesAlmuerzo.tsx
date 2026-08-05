@@ -27,7 +27,7 @@ export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTa
   const [loading, setLoading] = useState(false)
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<PlanAlmuerzo | null>(null)
-  const [form, setForm] = useState({ nombre: '', tipo: 'CANTIDAD' as 'CANTIDAD' | 'SIN_LIMITE', precio_mensual: '', cantidad_almuerzos_mes: '', dias_semana_incluidos: [] as number[], activo: true })
+  const [form, setForm] = useState({ nombre: '', tipo: 'CANTIDAD' as 'CANTIDAD' | 'SIN_LIMITE', precio_mensual: '', cantidad_almuerzos_mes: '', dias_semana_incluidos: [] as number[], activo: true, es_predeterminado: false })
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -45,8 +45,8 @@ export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTa
   const open = useCallback((p?: PlanAlmuerzo) => {
     setEditing(p ?? null)
     setForm(p
-      ? { nombre: p.nombre, tipo: p.tipo, precio_mensual: String(p.precio_mensual), cantidad_almuerzos_mes: p.cantidad_almuerzos_mes != null ? String(p.cantidad_almuerzos_mes) : '', dias_semana_incluidos: parseDias(p.dias_semana_incluidos), activo: p.activo }
-      : { nombre: '', tipo: 'CANTIDAD', precio_mensual: '', cantidad_almuerzos_mes: '', dias_semana_incluidos: [], activo: true })
+      ? { nombre: p.nombre, tipo: p.tipo, precio_mensual: String(p.precio_mensual), cantidad_almuerzos_mes: p.cantidad_almuerzos_mes != null ? String(p.cantidad_almuerzos_mes) : '', dias_semana_incluidos: parseDias(p.dias_semana_incluidos), activo: p.activo, es_predeterminado: p.es_predeterminado }
+      : { nombre: '', tipo: 'CANTIDAD', precio_mensual: '', cantidad_almuerzos_mes: '', dias_semana_incluidos: [], activo: true, es_predeterminado: false })
     setModal(true)
   }, [])
 
@@ -87,6 +87,7 @@ export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTa
     { title: 'Precio mensual', key: 'precio', width: 150, render: (_, r) => <span className="tabular-nums text-sm text-slate-700">Gs. {(Number(r.precio_mensual) || 0).toLocaleString('es-PY')}</span> },
     { title: 'Cant./mes', key: 'cant', width: 100, render: (_, r) => <span className="tabular-nums text-sm text-slate-500">{r.cantidad_almuerzos_mes ?? '—'}</span> },
     { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
+    { title: 'Predeterminado', key: 'predeterminado', width: 120, render: (_, r) => r.es_predeterminado ? <Badge color="blue">Predeterminado</Badge> : null },
     {
       title: '', key: 'acc', width: 100,
       render: (_, r) => (
@@ -150,6 +151,7 @@ export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTa
             </div>
           </div>
           {toggleSwitch(form.activo, v => setForm(f => ({ ...f, activo: v })), 'Activo')}
+          {toggleSwitch(form.es_predeterminado, v => setForm(f => ({ ...f, es_predeterminado: v })), 'Predeterminado (preseleccionado al dar de alta una suscripción)')}
         </div>
       </Modal>
     </>

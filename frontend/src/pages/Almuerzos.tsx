@@ -23,7 +23,7 @@ import ModalPagoMensual from './almuerzos/ModalPagoMensual'
 import {
   extractErrorMessage, formatGs, formatFecha, todayISO, MESES,
   ESTADO_REGISTRO_COLOR, ESTADO_CUENTA_COLOR, ESTADO_SUSCRIPCION_COLOR,
-  type TabKey, type Hijo, type PlanAlmuerzo, type Suscripcion,
+  type TabKey, type Hijo, type TipoAlmuerzo, type PlanAlmuerzo, type Suscripcion,
   type MenuDiario, type RegistroConsumo, type CuentaMensual,
 } from './almuerzos/shared'
 
@@ -34,6 +34,7 @@ export default function Almuerzos() {
 
   // ── Catálogos ─────────────────────────────────────────────────────
   const [hijos, setHijos] = useState<Hijo[]>([])
+  const [tiposAlmuerzo, setTiposAlmuerzo] = useState<TipoAlmuerzo[]>([])
   const [planes, setPlanes] = useState<PlanAlmuerzo[]>([])
 
   // ── Consumos ─────────────────────────────────────────────────────
@@ -76,9 +77,11 @@ export default function Almuerzos() {
   useEffect(() => {
     Promise.all([
       api.get('/clientes/hijos/', { params: { page_size: 500 } }),
+      api.get('/almuerzos/tipos-almuerzo/', { params: { page_size: 100 } }),
       api.get('/almuerzos/planes-almuerzo/', { params: { page_size: 100 } }),
-    ]).then(([hRes, pRes]) => {
+    ]).then(([hRes, tRes, pRes]) => {
       setHijos(hRes.data.results ?? [])
+      setTiposAlmuerzo(tRes.data.results ?? [])
       setPlanes(pRes.data.results ?? [])
     }).catch(() => toast.error('Error al cargar datos iniciales'))
   }, [])
@@ -309,6 +312,11 @@ export default function Almuerzos() {
       title: 'Fecha',
       key: 'fecha',
       render: (_, r) => <span className="text-sm text-slate-600">{formatFecha(r.fecha_consumo)}</span>,
+    },
+    {
+      title: 'Tipo',
+      key: 'tipo',
+      render: (_, r) => <span className="text-sm text-slate-600">{r.tipo_almuerzo_nombre || '—'}</span>,
     },
     {
       title: 'Costo',
@@ -697,6 +705,7 @@ export default function Almuerzos() {
       <ModalConsumo
         open={consumoOpen}
         hijos={hijos}
+        tiposAlmuerzo={tiposAlmuerzo}
         onClose={() => setConsumoOpen(false)}
         onSaved={() => { setPageRegistros(1); loadRegistros('', 1) }}
       />

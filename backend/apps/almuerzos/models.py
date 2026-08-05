@@ -84,6 +84,10 @@ class TipoAlmuerzo(models.Model):
     incluye_postre = models.BooleanField(default=False)
     incluye_bebida = models.BooleanField(default=False)
     activo = models.BooleanField(default=True)
+    es_predeterminado = models.BooleanField(
+        default=False,
+        help_text="Tipo preseleccionado al registrar un consumo (solo uno puede serlo)",
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -93,6 +97,13 @@ class TipoAlmuerzo(models.Model):
 
     def __str__(self):
         return f"{self.nombre} - ₲{self.precio_unitario:,.0f}"
+
+    def save(self, *args, **kwargs):
+        if self.es_predeterminado:
+            TipoAlmuerzo.objects.filter(es_predeterminado=True).exclude(pk=self.pk).update(
+                es_predeterminado=False
+            )
+        super().save(*args, **kwargs)
 
 
 # ==============================================================================
@@ -129,6 +140,10 @@ class PlanAlmuerzo(models.Model):
         help_text="Días de la semana incluidos (ej: LUN,MAR,MIE,JUE,VIE)",
     )
     activo = models.BooleanField(default=True)
+    es_predeterminado = models.BooleanField(
+        default=False,
+        help_text="Plan preseleccionado al dar de alta una suscripción (solo uno puede serlo)",
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -138,6 +153,13 @@ class PlanAlmuerzo(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    def save(self, *args, **kwargs):
+        if self.es_predeterminado:
+            PlanAlmuerzo.objects.filter(es_predeterminado=True).exclude(pk=self.pk).update(
+                es_predeterminado=False
+            )
+        super().save(*args, **kwargs)
 
 
 # ==============================================================================

@@ -82,6 +82,7 @@ class Command(BaseCommand):
                 "incluye_postre": True,
                 "incluye_bebida": True,
                 "activo": True,
+                "es_predeterminado": True,
             },
         )
         self._log_created("TipoAlmuerzo", "Almuerzo Completo", created)
@@ -109,6 +110,7 @@ class Command(BaseCommand):
                 "precio_mensual": Decimal("270000"),
                 "dias_semana_incluidos": "1,2,3,4,5",
                 "activo": True,
+                "es_predeterminado": True,
             },
         )
         self._log_created("PlanAlmuerzo", "Plan Estándar Mensual", created)

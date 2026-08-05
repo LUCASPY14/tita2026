@@ -4,22 +4,28 @@ import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
-import { extractErrorMessage, formatGs, todayISO, type Hijo, type TarjetaBusqueda } from './shared'
+import { extractErrorMessage, formatGs, todayISO, type Hijo, type TarjetaBusqueda, type TipoAlmuerzo } from './shared'
 
 interface Props {
   open: boolean
   hijos: Hijo[]
+  tiposAlmuerzo: TipoAlmuerzo[]
   onClose: () => void
   onSaved: () => void
 }
 
-export default function ModalConsumo({ open, hijos, onClose, onSaved }: Props) {
+export default function ModalConsumo({ open, hijos, tiposAlmuerzo, onClose, onSaved }: Props) {
   const [tarjetaSearch, setTarjetaSearch] = useState('')
   const [tarjeta, setTarjeta] = useState<TarjetaBusqueda | null>(null)
   const [tarjetaBuscando, setTarjetaBuscando] = useState(false)
   const [hijoId, setHijoId] = useState<number | ''>('')
+  const [tipoAlmuerzoId, setTipoAlmuerzoId] = useState<string | null>(null)
   const [fechaConsumo, setFechaConsumo] = useState(todayISO())
   const [registrando, setRegistrando] = useState(false)
+
+  const tiposActivos = tiposAlmuerzo.filter(t => t.activo)
+  const predeterminado = tiposActivos.find(t => t.es_predeterminado)
+  const tipoSeleccionado = tipoAlmuerzoId ?? (predeterminado ? String(predeterminado.id) : '')
 
   const buscarTarjeta = useCallback(async (nro?: string) => {
     const searchValue = nro ?? tarjetaSearch.trim()
@@ -52,15 +58,18 @@ export default function ModalConsumo({ open, hijos, onClose, onSaved }: Props) {
     }
     setRegistrando(true)
     try {
-      await api.post('/almuerzos/registros-consumo/', {
+      const payload: Record<string, unknown> = {
         hijo: hijoId,
         fecha_consumo: fechaConsumo,
         nro_tarjeta: tarjeta.nro_tarjeta,
-      })
+      }
+      if (tipoSeleccionado) payload.tipo_almuerzo = Number(tipoSeleccionado)
+      await api.post('/almuerzos/registros-consumo/', payload)
       toast.success('Consumo registrado')
       setTarjeta(null)
       setTarjetaSearch('')
       setHijoId('')
+      setTipoAlmuerzoId(null)
       setFechaConsumo(todayISO())
       onSaved()
       onClose()
@@ -69,7 +78,7 @@ export default function ModalConsumo({ open, hijos, onClose, onSaved }: Props) {
     } finally {
       setRegistrando(false)
     }
-  }, [hijoId, tarjeta, hijos, fechaConsumo, onSaved, onClose])
+  }, [hijoId, tarjeta, hijos, fechaConsumo, tipoSeleccionado, onSaved, onClose])
 
   const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
   const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
@@ -113,8 +122,9 @@ export default function ModalConsumo({ open, hijos, onClose, onSaved }: Props) {
         </div>
 
         <div>
-          <label className={labelClass}>Estudiante *</label>
+          <label htmlFor="consumo-estudiante" className={labelClass}>Estudiante *</label>
           <select
+            id="consumo-estudiante"
             value={hijoId}
             onChange={e => setHijoId(Number(e.target.value) || '')}
             className={inputClass}
@@ -125,6 +135,21 @@ export default function ModalConsumo({ open, hijos, onClose, onSaved }: Props) {
               <option key={h.id} value={h.id}>
                 {h.nombre_completo ?? `${h.nombre} ${h.apellido}`} — {h.grado}
               </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="consumo-tipo-almuerzo" className={labelClass}>Tipo de Almuerzo (opcional)</label>
+          <select
+            id="consumo-tipo-almuerzo"
+            value={tipoSeleccionado}
+            onChange={e => setTipoAlmuerzoId(e.target.value)}
+            className={inputClass}
+          >
+            <option value="">Sin especificar</option>
+            {tiposActivos.map(t => (
+              <option key={t.id} value={t.id}>{t.nombre}{t.es_predeterminado ? ' (predeterminado)' : ''} — {formatGs(t.precio_unitario)}</option>
             ))}
           </select>
         </div>

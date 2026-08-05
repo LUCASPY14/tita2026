@@ -52,8 +52,9 @@ class TipoAlmuerzoAdmin(admin.ModelAdmin):
         "incluye_postre",
         "incluye_bebida",
         "activo",
+        "es_predeterminado",
     ]
-    list_filter = ["activo", "incluye_plato_principal", "incluye_postre", "incluye_bebida"]
+    list_filter = ["activo", "es_predeterminado", "incluye_plato_principal", "incluye_postre", "incluye_bebida"]
     search_fields = ["nombre"]
 
     def precio_unitario_display(self, obj):
@@ -74,8 +75,9 @@ class PlanAlmuerzoAdmin(admin.ModelAdmin):
         "cantidad_almuerzos_mes",
         "dias_semana_incluidos",
         "activo",
+        "es_predeterminado",
     ]
-    list_filter = ["activo", "tipo"]
+    list_filter = ["activo", "es_predeterminado", "tipo"]
     search_fields = ["nombre"]
 
     def tipo_badge(self, obj):

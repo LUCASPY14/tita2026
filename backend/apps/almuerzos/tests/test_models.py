@@ -186,6 +186,28 @@ class TestTipoAlmuerzo:
     def test_str(self, tipo_almuerzo):
         assert "Menú completo test" in str(tipo_almuerzo)
 
+    def test_save_es_predeterminado_desactiva_el_anterior(self, tipo_almuerzo):
+        from apps.almuerzos.models import TipoAlmuerzo
+        tipo_almuerzo.es_predeterminado = True
+        tipo_almuerzo.save()
+        nuevo = TipoAlmuerzo.objects.create(
+            nombre="Menú simple test", precio_unitario=Decimal("12000"),
+            activo=True, es_predeterminado=True,
+        )
+        tipo_almuerzo.refresh_from_db()
+        assert tipo_almuerzo.es_predeterminado is False
+        assert nuevo.es_predeterminado is True
+
+    def test_save_sin_predeterminado_no_desactiva_al_actual(self, tipo_almuerzo):
+        from apps.almuerzos.models import TipoAlmuerzo
+        tipo_almuerzo.es_predeterminado = True
+        tipo_almuerzo.save()
+        TipoAlmuerzo.objects.create(
+            nombre="Menú simple test", precio_unitario=Decimal("12000"), activo=True,
+        )
+        tipo_almuerzo.refresh_from_db()
+        assert tipo_almuerzo.es_predeterminado is True
+
 
 # ── PlanAlmuerzo ──────────────────────────────────────────────────────────────
 
@@ -194,6 +216,19 @@ class TestPlanAlmuerzo:
 
     def test_str(self, plan_almuerzo):
         assert "Plan Mensual Test" in str(plan_almuerzo)
+
+    def test_save_es_predeterminado_desactiva_el_anterior(self, plan_almuerzo):
+        from apps.almuerzos.models import PlanAlmuerzo
+        plan_almuerzo.es_predeterminado = True
+        plan_almuerzo.save()
+        nuevo = PlanAlmuerzo.objects.create(
+            nombre="Plan Cantidad Test", tipo=PlanAlmuerzo.TipoPlan.CANTIDAD,
+            precio_mensual=Decimal("150000"), cantidad_almuerzos_mes=20,
+            dias_semana_incluidos="LUN,MAR,MIE,JUE,VIE", activo=True, es_predeterminado=True,
+        )
+        plan_almuerzo.refresh_from_db()
+        assert plan_almuerzo.es_predeterminado is False
+        assert nuevo.es_predeterminado is True
 
 
 # ── SuscripcionAlmuerzo ───────────────────────────────────────────────────────

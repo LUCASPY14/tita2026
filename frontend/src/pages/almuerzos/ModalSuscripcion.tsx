@@ -2,7 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
-import { extractErrorMessage, todayISO, type Hijo, type PlanAlmuerzo } from './shared'
+import { extractErrorMessage, formatGs, todayISO, type Hijo, type PlanAlmuerzo } from './shared'
 
 interface Props {
   open: boolean
@@ -13,10 +13,14 @@ interface Props {
 }
 
 export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved }: Props) {
-  const [form, setForm] = useState({ hijo: '', fecha_inicio: todayISO() })
+  const [form, setForm] = useState({ hijo: '', planId: '', fecha_inicio: todayISO() })
   const [saving, setSaving] = useState(false)
 
-  const plan = planes.find(p => p.activo)
+  const activos = planes.filter(p => p.activo)
+  const predeterminado = activos.find(p => p.es_predeterminado) ?? activos[0]
+  const planId = form.planId || (predeterminado ? String(predeterminado.id) : '')
+  const plan = activos.find(p => String(p.id) === planId)
+  const tipoCobro = plan?.tipo === 'CANTIDAD' ? 'MENSUAL' : 'CUENTA'
 
   async function handleSave() {
     if (!form.hijo || !plan) { toast.error('Completá todos los campos'); return }
@@ -25,11 +29,11 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
       await api.post('/almuerzos/suscripciones/', {
         hijo: Number(form.hijo),
         plan: plan.id,
-        tipo_cobro: 'CUENTA',
+        tipo_cobro: tipoCobro,
         fecha_inicio: form.fecha_inicio,
       })
       toast.success('Suscripción creada')
-      setForm({ hijo: '', fecha_inicio: todayISO() })
+      setForm({ hijo: '', planId: '', fecha_inicio: todayISO() })
       onSaved()
       onClose()
     } catch (err) {
@@ -69,15 +73,29 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
             ))}
           </select>
         </div>
-        <div className="bg-green-50 rounded-xl px-3 py-2.5">
-          <p className="text-sm font-medium text-green-800">
-            {plan ? plan.nombre : 'No hay un plan de almuerzo activo'}
-          </p>
-          <p className="text-xs text-green-700 mt-0.5">
-            Por consumo: la cuenta acumula el costo de cada almuerzo registrado en el comedor
-            y el cajero cobra el total al mes siguiente.
-          </p>
+        <div>
+          <label htmlFor="susc-plan" className={labelClass}>Plan *</label>
+          <select
+            id="susc-plan"
+            value={planId}
+            onChange={e => setForm(f => ({ ...f, planId: e.target.value }))}
+            className={inputClass}
+          >
+            <option value="">Seleccionar...</option>
+            {activos.map(p => (
+              <option key={p.id} value={p.id}>{p.nombre}{p.es_predeterminado ? ' (predeterminado)' : ''}</option>
+            ))}
+          </select>
         </div>
+        {plan && (
+          <div className="bg-green-50 rounded-xl px-3 py-2.5">
+            <p className="text-xs text-green-700">
+              {tipoCobro === 'MENSUAL'
+                ? `Cuota mensual fija: el padre paga ${formatGs(plan.precio_mensual)} por adelantado cada mes.`
+                : 'Por consumo: la cuenta acumula el costo de cada almuerzo registrado en el comedor y el cajero cobra el total al mes siguiente.'}
+            </p>
+          </div>
+        )}
         <div>
           <label className={labelClass}>Fecha de Inicio</label>
           <input

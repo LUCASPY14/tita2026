@@ -13,7 +13,7 @@ export default function TabTiposAlmuerzo({ onDelete }: { onDelete: (t: DeleteTar
   const [loading, setLoading] = useState(false)
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<TipoAlmuerzo | null>(null)
-  const [form, setForm] = useState({ nombre: '', descripcion: '', precio_unitario: '', incluye_plato_principal: true, incluye_postre: false, incluye_bebida: false, activo: true })
+  const [form, setForm] = useState({ nombre: '', descripcion: '', precio_unitario: '', incluye_plato_principal: true, incluye_postre: false, incluye_bebida: false, activo: true, es_predeterminado: false })
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -31,8 +31,8 @@ export default function TabTiposAlmuerzo({ onDelete }: { onDelete: (t: DeleteTar
   const open = useCallback((t?: TipoAlmuerzo) => {
     setEditing(t ?? null)
     setForm(t
-      ? { nombre: t.nombre, descripcion: t.descripcion, precio_unitario: String(t.precio_unitario), incluye_plato_principal: t.incluye_plato_principal, incluye_postre: t.incluye_postre, incluye_bebida: t.incluye_bebida, activo: t.activo }
-      : { nombre: '', descripcion: '', precio_unitario: '', incluye_plato_principal: true, incluye_postre: false, incluye_bebida: false, activo: true })
+      ? { nombre: t.nombre, descripcion: t.descripcion, precio_unitario: String(t.precio_unitario), incluye_plato_principal: t.incluye_plato_principal, incluye_postre: t.incluye_postre, incluye_bebida: t.incluye_bebida, activo: t.activo, es_predeterminado: t.es_predeterminado }
+      : { nombre: '', descripcion: '', precio_unitario: '', incluye_plato_principal: true, incluye_postre: false, incluye_bebida: false, activo: true, es_predeterminado: false })
     setModal(true)
   }, [])
 
@@ -60,6 +60,7 @@ export default function TabTiposAlmuerzo({ onDelete }: { onDelete: (t: DeleteTar
     { title: 'Postre', key: 'pos', width: 80, render: (_, r) => <Badge color={r.incluye_postre ? 'green' : 'default'}>{r.incluye_postre ? 'Sí' : 'No'}</Badge> },
     { title: 'Bebida', key: 'beb', width: 80, render: (_, r) => <Badge color={r.incluye_bebida ? 'green' : 'default'}>{r.incluye_bebida ? 'Sí' : 'No'}</Badge> },
     { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
+    { title: 'Predeterminado', key: 'predeterminado', width: 120, render: (_, r) => r.es_predeterminado ? <Badge color="blue">Predeterminado</Badge> : null },
     {
       title: '', key: 'acc', width: 100,
       render: (_, r) => (
@@ -102,6 +103,7 @@ export default function TabTiposAlmuerzo({ onDelete }: { onDelete: (t: DeleteTar
             {toggleSwitch(form.incluye_postre, v => setForm(f => ({ ...f, incluye_postre: v })), 'Incluye postre')}
             {toggleSwitch(form.incluye_bebida, v => setForm(f => ({ ...f, incluye_bebida: v })), 'Incluye bebida')}
             {toggleSwitch(form.activo, v => setForm(f => ({ ...f, activo: v })), 'Activo')}
+            {toggleSwitch(form.es_predeterminado, v => setForm(f => ({ ...f, es_predeterminado: v })), 'Predeterminado (preseleccionado al registrar un consumo)')}
           </div>
         </div>
       </Modal>
