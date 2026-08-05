@@ -240,10 +240,11 @@ class Command(BaseCommand):
 
         # -- Medios de pago --
         medios = [
-            ("Efectivo",             False),
-            ("Tarjeta RFID",         False),
-            ("Transferencia",        True),
-            ("POS (débito/crédito)", True),
+            ("Efectivo",              False),
+            ("Tarjeta RFID",          False),
+            ("Transferencia",         True),
+            ("POS Bancario crédito",  True),
+            ("POS Bancario debito",   True),
         ]
         creados_m = 0
         for descripcion, requiere_validacion in medios:
