@@ -218,3 +218,4 @@ test_factura_out.txt
 
 # Environment files with sensitive data
 .env.production
+.env.staging
