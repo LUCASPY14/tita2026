@@ -175,7 +175,6 @@ class VentaViewSet(viewsets.ModelViewSet):
             tarjeta=data.get("tarjeta"),
             hijo=data.get("hijo"),
             items=items,
-            pin_autorizacion=data.get("pin_autorizacion", ""),
             referencia=data.get("referencia", ""),
             cierre_caja=cierre_caja,
             genera_factura_legal=bool(self.request.data.get("genera_factura_legal", False)),

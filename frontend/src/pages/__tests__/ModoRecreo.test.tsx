@@ -481,6 +481,59 @@ describe('ModoRecreo — cobro exitoso', () => {
   })
 })
 
+// ─── Tests: saldo insuficiente ────────────────────────────────────────────────
+// El flujo de PIN de autorización se eliminó: saldo insuficiente ahora siempre
+// bloquea la venta (a menos que permite_saldo_negativo=true en la tarjeta).
+
+describe('ModoRecreo — saldo insuficiente', () => {
+  it('no agrega el producto ni permite cobrar cuando supera el saldo disponible', async () => {
+    setupData()
+    mockTarjetasBuscar.mockResolvedValue({
+      data: { results: [{ ...TARJETA_ACTIVA, saldo_actual: '1000', saldo_disponible: '1000' }] },
+    })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'T-00001{Enter}')
+    await screen.findByText('Ana López')
+
+    // Sandwich de pollo (8.000) supera el saldo disponible (1.000): se bloquea
+    // al intentar agregarlo, sin ningún PIN de por medio.
+    const botonesSandwich = screen.getAllByText('Sandwich de pollo')
+    const btnAgregar = botonesSandwich.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(btnAgregar)
+
+    expect(screen.getByText('0 productos')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cobrar/i })).toBeDisabled()
+    expect(mockVentasCrear).not.toHaveBeenCalled()
+  })
+
+  it('permite el cobro si la tarjeta tiene permite_saldo_negativo', async () => {
+    setupData()
+    mockTarjetasBuscar.mockResolvedValueOnce({
+      data: { results: [{ ...TARJETA_ACTIVA, saldo_actual: '1000', saldo_disponible: '1000', permite_saldo_negativo: true }] },
+    })
+    mockVentasCrear.mockResolvedValueOnce({})
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'T-00001{Enter}')
+    await screen.findByText('Ana López')
+
+    const botonesSandwich = screen.getAllByText('Sandwich de pollo')
+    const btnAgregar = botonesSandwich.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(btnAgregar)
+
+    await userEvent.click(screen.getByRole('button', { name: /cobrar/i }))
+
+    await waitFor(() => {
+      expect(mockVentasCrear).toHaveBeenCalledOnce()
+    })
+  })
+})
+
 // ─── Tests: cancelar ─────────────────────────────────────────────────────────
 
 describe('ModoRecreo — cancelar', () => {

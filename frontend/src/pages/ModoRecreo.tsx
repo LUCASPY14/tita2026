@@ -9,7 +9,6 @@ import ventasService from '../services/ventas'
 import cajasService from '../services/cajas'
 import { useCatalogoStore } from '../store/catalogoStore'
 import { useOfflineQueue } from '../hooks/useOfflineQueue'
-import PinModal from './modorecreo/PinModal'
 import CajaBlockedScreen from './modorecreo/CajaBlockedScreen'
 import PanelAlumno from './modorecreo/PanelAlumno'
 import PanelProductos from './modorecreo/PanelProductos'
@@ -82,9 +81,6 @@ export default function ModoRecreo() {
   const [montoEfectivo, setMontoEfectivo] = useState('')
   const [referencia, setReferencia] = useState('')
   const [nroFacturaVenta, setNroFacturaVenta] = useState('')
-
-  const [showPin, setShowPin] = useState(false)
-  const [pinLoading, setPinLoading] = useState(false)
 
   const scannerRef = useRef<HTMLInputElement>(null)
   const prodSearchRef = useRef<HTMLInputElement>(null)
@@ -326,7 +322,7 @@ export default function ModoRecreo() {
     })
   }, [])
 
-  const ejecutarCobro = useCallback(async (pinAutorizacion?: string) => {
+  const ejecutarCobro = useCallback(async () => {
     if (cobrandoRef.current || carrito.length === 0) return
     if (!tarjeta && !clienteDirecto) return
     cobrandoRef.current = true
@@ -350,7 +346,6 @@ export default function ModoRecreo() {
       if (modoPago === 'PREPAGO' && tarjeta) {
         payload.tarjeta = tarjeta.nro_tarjeta
         payload.medio_pago = null
-        if (pinAutorizacion) payload.pin_autorizacion = pinAutorizacion
       } else if (modoPago === 'CREDITO') {
         payload.tarjeta = null; payload.medio_pago = null
       } else {
@@ -411,7 +406,6 @@ export default function ModoRecreo() {
     if (modoPago === 'PREPAGO' && tarjeta && !tarjeta.permite_saldo_negativo) {
       const saldoAct = Number(tarjeta.saldo_actual) || 0
       if (total > saldoAct) {
-        if (tarjeta.es_alumno) { setShowPin(true); return }
         toast.error('Saldo insuficiente en la tarjeta'); return
       }
     }
@@ -423,7 +417,7 @@ export default function ModoRecreo() {
     setFlash('none'); setCarrito([]); setTarjeta(null); setPreciosCliente({})
     clearCliente()
     setTarjetaInput(''); setProdSearch('')
-    setMontoEfectivo(''); setReferencia(''); setNroFacturaVenta(''); setShowPin(false)
+    setMontoEfectivo(''); setReferencia(''); setNroFacturaVenta('')
     ventaStartTime.current = 0
     setTimeout(() => scannerRef.current?.focus(), 60)
   }, [clearCliente])
@@ -489,22 +483,6 @@ export default function ModoRecreo() {
 
   return (
     <div className="fixed inset-0 bg-slate-100 text-slate-900 flex flex-col overflow-hidden" style={{ zIndex: 100 }} translate="no">
-
-      {showPin && tarjeta && (
-        <PinModal
-          saldoActual={Number(tarjeta.saldo_actual) || 0}
-          total={total}
-          limiteCreditoTarjeta={Number(tarjeta.limite_credito) || 0}
-          loading={pinLoading}
-          onCancel={() => { setShowPin(false); setTimeout(() => scannerRef.current?.focus(), 60) }}
-          onConfirm={async (pin) => {
-            setPinLoading(true)
-            try { await ejecutarCobro(pin); setShowPin(false) }
-            catch { /* error ya mostrado */ }
-            finally { setPinLoading(false) }
-          }}
-        />
-      )}
 
       {flash !== 'none' && (
         <div className={`absolute inset-0 flex items-center justify-center pointer-events-none ${flashCfg.overlay}`} style={{ zIndex: 200 }}>

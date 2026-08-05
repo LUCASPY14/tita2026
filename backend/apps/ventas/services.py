@@ -42,7 +42,6 @@ class VentaService:
         hijo=None,
         items: list = None,
         estado_pago: str = "PENDIENTE",
-        pin_autorizacion: str = "",
         referencia: str = "",
         cierre_caja=None,
         genera_factura_legal: bool = False,
@@ -184,25 +183,11 @@ class VentaService:
             # Validar saldo de tarjeta con objeto bloqueado
             if tipo == "CONTADO" and tarjeta_bloqueada:
                 if tarjeta_bloqueada.saldo_actual < monto_total and not tarjeta_bloqueada.permite_saldo_negativo:
-                    if pin_autorizacion and tarjeta_bloqueada.hijo_id:
-                        # PIN de padre/tutor: solo aplica para tarjetas de alumnos
-                        cliente_responsable = tarjeta_bloqueada.hijo.cliente_responsable
-                        if not cliente_responsable.check_pin(pin_autorizacion):
-                            raise ValidationError({"error": "PIN de autorización incorrecto."})
-                        deficit = monto_total - tarjeta_bloqueada.saldo_actual
-                        if deficit > tarjeta_bloqueada.limite_credito:
-                            raise ValidationError({
-                                "error": "La compra excede el límite de crédito autorizado.",
-                                "limite_credito": str(tarjeta_bloqueada.limite_credito),
-                                "deficit": str(deficit),
-                            })
-                        # PIN válido y dentro del límite — se permite saldo negativo para esta operación
-                    else:
-                        raise ValidationError({
-                            "error": "Saldo insuficiente en la tarjeta.",
-                            "saldo_actual": str(tarjeta_bloqueada.saldo_actual),
-                            "monto_venta": str(monto_total),
-                        })
+                    raise ValidationError({
+                        "error": "Saldo insuficiente en la tarjeta.",
+                        "saldo_actual": str(tarjeta_bloqueada.saldo_actual),
+                        "monto_venta": str(monto_total),
+                    })
 
             # 2. Crear Venta
             # Si no se pasó hijo explícitamente pero hay tarjeta de alumno, tomarlo de la tarjeta

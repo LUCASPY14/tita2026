@@ -142,56 +142,43 @@ class TestValidacionesVenta:
         assert stock.cantidad == Decimal("-2")
 
 
-# ── PIN de autorización ───────────────────────────────────────────────────────
+# ── Saldo insuficiente en tarjeta ──────────────────────────────────────────────
 
 @pytest.mark.django_db
-class TestPINAutorizacion:
+class TestSaldoInsuficienteTarjeta:
 
-    def _tarjeta_baja(self, hijo, nro, saldo=100, limite=50000):
+    def _tarjeta_baja(self, hijo, nro, saldo=100, permite_saldo_negativo=False):
         from apps.core.models import Tarjeta
         return Tarjeta.objects.create(
             nro_tarjeta=nro, hijo=hijo,
             saldo_actual=Decimal(str(saldo)),
-            limite_credito=Decimal(str(limite)),
+            permite_saldo_negativo=permite_saldo_negativo,
             estado=Tarjeta.Estado.ACTIVA,
         )
 
-    def test_pin_incorrecto_falla(
+    def test_saldo_insuficiente_sin_permitir_negativo_falla(
         self, cliente, usuario_cajero, producto, stock_producto, hijo_del_cliente
     ):
-        """Saldo insuficiente + PIN incorrecto → error (línea 174 services.py)."""
+        """Sin PIN de por medio: saldo insuficiente siempre rechaza la venta."""
         from apps.ventas.services import VentaService
-        tarjeta = self._tarjeta_baja(hijo_del_cliente, "PIN_BAD_01")
-        with pytest.raises(ValidationError, match="PIN de autorización incorrecto"):
+        tarjeta = self._tarjeta_baja(hijo_del_cliente, "SALDO_BAJO_01")
+        with pytest.raises(ValidationError, match="Saldo insuficiente"):
             VentaService.registrar_venta(
                 cliente=cliente, cajero=usuario_cajero,
-                tipo="CONTADO", tarjeta=tarjeta, pin_autorizacion="WRONG",
+                tipo="CONTADO", tarjeta=tarjeta,
                 items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("3000")}],
             )
 
-    def test_pin_valido_excede_limite_credito_falla(
+    def test_saldo_insuficiente_con_permite_saldo_negativo_ok(
         self, cliente, usuario_cajero, producto, stock_producto, hijo_del_cliente
     ):
-        """PIN correcto pero déficit > limite_credito → error (líneas 176-181)."""
-        from apps.ventas.services import VentaService
-        tarjeta = self._tarjeta_baja(hijo_del_cliente, "PIN_OVER_01", saldo=0, limite=100)
-        with pytest.raises(ValidationError, match="límite de crédito autorizado"):
-            VentaService.registrar_venta(
-                cliente=cliente, cajero=usuario_cajero,
-                tipo="CONTADO", tarjeta=tarjeta, pin_autorizacion="0000",
-                items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("3000")}],
-            )
-
-    def test_pin_valido_dentro_limite_ok(
-        self, cliente, usuario_cajero, producto, stock_producto, hijo_del_cliente
-    ):
-        """PIN correcto + dentro del límite → venta registrada (líneas 172-182)."""
+        """permite_saldo_negativo=True autoriza la venta sin ninguna otra intervención."""
         from apps.ventas.services import VentaService
         from apps.ventas.models import Venta
-        tarjeta = self._tarjeta_baja(hijo_del_cliente, "PIN_OK_01", saldo=0, limite=10000)
+        tarjeta = self._tarjeta_baja(hijo_del_cliente, "SALDO_NEG_OK_01", saldo=0, permite_saldo_negativo=True)
         venta = VentaService.registrar_venta(
             cliente=cliente, cajero=usuario_cajero,
-            tipo="CONTADO", tarjeta=tarjeta, pin_autorizacion="0000",
+            tipo="CONTADO", tarjeta=tarjeta,
             items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("3000")}],
         )
         assert venta.estado == Venta.Estado.ACTIVA

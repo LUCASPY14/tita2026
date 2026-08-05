@@ -31,8 +31,7 @@ class VentaSerializer(serializers.ModelSerializer):
     cajero_nombre = serializers.SerializerMethodField()
     detalles = DetalleVentaSerializer(many=True, read_only=True)
     saldo_pendiente = serializers.SerializerMethodField()
-    # Campos write-only: solo fluyen al service, no se persisten en Venta
-    pin_autorizacion = serializers.CharField(write_only=True, required=False, allow_blank=True, default='')
+    # Campo write-only: solo fluye al service, no se persiste en Venta
     referencia = serializers.CharField(write_only=True, required=False, allow_blank=True, default='')
 
     def get_hijo_nombre(self, obj):
