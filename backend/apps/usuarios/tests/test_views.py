@@ -441,6 +441,42 @@ class TestPortalMiHijoConDatos:
         assert hijos[0]["tarjeta"]["nro_tarjeta"] == "PORTAL001"
         assert hijos[0]["cuenta_mensual"]["cantidad_almuerzos"] == 3
 
+    def test_top_productos_ordenado_por_cantidad(self, api_portal, hijo_portal, cliente, usuario_admin, producto, categoria, unidad_medida, lista_precio):
+        from decimal import Decimal
+        from apps.productos.models import Producto
+        from apps.ventas.models import Venta, DetalleVenta
+
+        otro_producto = Producto.objects.create(
+            descripcion="Jugo de naranja", categoria=categoria, unidad_medida=unidad_medida, activo=True,
+        )
+
+        def crear_venta_con_detalle(prod, cantidad):
+            venta = Venta.objects.create(
+                cliente=cliente, hijo=hijo_portal, cajero=usuario_admin,
+                tipo=Venta.Tipo.CONTADO, estado=Venta.Estado.ACTIVA,
+                monto_total=Decimal("1000") * cantidad,
+            )
+            DetalleVenta.objects.create(
+                venta=venta, producto=prod, cantidad=Decimal(str(cantidad)),
+                precio_unitario=Decimal("1000"), subtotal=Decimal("1000") * cantidad,
+            )
+
+        crear_venta_con_detalle(producto, 3)
+        crear_venta_con_detalle(otro_producto, 8)
+
+        resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
+        assert resp.status_code == 200
+        top = resp.data["hijos"][0]["top_productos"]
+        assert top[0]["producto"] == "Jugo de naranja"
+        assert top[0]["cantidad"] == 8
+        assert top[1]["producto"] == producto.descripcion
+        assert top[1]["cantidad"] == 3
+
+    def test_top_productos_vacio_sin_compras(self, api_portal, hijo_portal):
+        resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
+        assert resp.status_code == 200
+        assert resp.data["hijos"][0]["top_productos"] == []
+
 
 # ── PortalHistorialConsumos ───────────────────────────────────────────────────
 

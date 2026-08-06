@@ -40,6 +40,7 @@ const HIJO_BASE = {
     id: number; cantidad_almuerzos: number; monto_total: number
     monto_pagado: number; monto_pendiente: number; estado: string
   } | null,
+  top_productos: [] as { producto: string; cantidad: number }[],
 }
 
 const HIJO_CON_CUENTA = {
@@ -128,6 +129,32 @@ describe('PortalDashboard — datos', () => {
     render(<PortalDashboard />)
 
     await screen.findByText('Hola, María López')
+  })
+
+  it('con top_productos → muestra la sección "Lo más consumido"', async () => {
+    setupPortal({
+      hijos: [{
+        ...HIJO_CON_CUENTA,
+        top_productos: [
+          { producto: 'Sandwich de milanesa', cantidad: 8 },
+          { producto: 'Coca Cola 500ml', cantidad: 6 },
+        ],
+      }],
+    })
+    render(<PortalDashboard />)
+
+    await screen.findByText(/Lo más consumido/i)
+    expect(screen.getByText('Sandwich de milanesa')).toBeInTheDocument()
+    expect(screen.getByText('8×')).toBeInTheDocument()
+    expect(screen.getByText('Coca Cola 500ml')).toBeInTheDocument()
+  })
+
+  it('sin top_productos → no muestra la sección "Lo más consumido"', async () => {
+    setupPortal()
+    render(<PortalDashboard />)
+
+    await screen.findByText('Hola, María López')
+    expect(screen.queryByText(/Lo más consumido/i)).not.toBeInTheDocument()
   })
 
   it('múltiples hijos → muestra selector con el nombre de cada hijo', async () => {

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import {
   CreditCard, AlertTriangle, UtensilsCrossed, History,
   CalendarCheck, CheckCircle2, Clock, AlertCircle, RefreshCw, Wallet,
-  ShoppingBag, ChevronDown, ChevronUp,
+  ShoppingBag, ChevronDown, ChevronUp, TrendingUp,
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
@@ -42,6 +42,11 @@ interface CuentaMensual {
   estado: string
 }
 
+interface TopProducto {
+  producto: string
+  cantidad: number
+}
+
 interface HijoData {
   id: number
   nombre: string
@@ -50,6 +55,7 @@ interface HijoData {
   restricciones: Restriccion[]
   consumos_mes: { total: number; cobrados: number; ultimos: ConsumoReciente[] }
   cuenta_mensual: CuentaMensual | null
+  top_productos?: TopProducto[]
 }
 
 interface PortalData {
@@ -259,6 +265,33 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
       ) : (
         <div className="rounded-2xl border border-slate-100 bg-white px-4 py-6 text-center text-slate-400 text-sm">
           Sin cuenta de almuerzo en {MESES[mes.mes]}
+        </div>
+      )}
+
+      {/* Lo más consumido en cantina */}
+      {(hijo.top_productos ?? []).length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-slate-500" />
+            <p className="text-base font-semibold text-slate-700">
+              Lo más consumido — {MESES[mes.mes]}
+            </p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {(hijo.top_productos ?? []).map((p, i) => (
+              <div key={p.producto} className="flex items-center justify-between px-4 py-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-5 h-5 shrink-0 rounded-full bg-slate-100 text-slate-500 text-xs font-bold flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                  <span className="text-sm text-slate-700 truncate">{p.producto}</span>
+                </div>
+                <span className="text-sm font-semibold text-slate-500 tabular-nums shrink-0 ml-2">
+                  {p.cantidad % 1 === 0 ? p.cantidad : p.cantidad.toFixed(2)}×
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

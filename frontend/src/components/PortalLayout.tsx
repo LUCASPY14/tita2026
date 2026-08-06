@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useNotificaciones } from '../hooks/useNotificaciones'
 import { Home, Bell, LogOut, History, FileText, Wallet, Download } from 'lucide-react'
+import LogoSinFondo from './LogoSinFondo'
 
 const navItems = [
   { path: '/portal',                 label: 'Inicio',    icon: Home,    exact: true  },
@@ -60,9 +61,13 @@ export default function PortalLayout() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/logo_tita.png" alt="Cantina Tita" className="h-8 w-auto" />
+            <LogoSinFondo
+              src="/logo-cantina.png"
+              alt="Cantina Tita"
+              className="h-12 w-auto mix-blend-multiply"
+            />
             <p className="text-xs text-slate-400 hidden sm:block">Portal de Padres</p>
           </div>
           <div className="flex items-center gap-2">

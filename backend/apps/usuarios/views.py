@@ -531,8 +531,10 @@ class PortalMiHijoView(APIView):
             )
 
         from datetime import date
+        from django.db.models import Sum
         from apps.clientes.models import RestriccionHijo
         from apps.almuerzos.models import RegistroConsumoAlmuerzo, CuentaAlmuerzoMensual
+        from apps.ventas.models import DetalleVenta, Venta
 
         hoy = date.today()
         hijos_data = []
@@ -584,6 +586,19 @@ class PortalMiHijoView(APIView):
                     "estado": cuenta.estado,
                 }
 
+            # Top productos de cantina consumidos este mes
+            top_productos = list(
+                DetalleVenta.objects.filter(
+                    venta__hijo=hijo,
+                    venta__estado=Venta.Estado.ACTIVA,
+                    venta__fecha__year=hoy.year,
+                    venta__fecha__month=hoy.month,
+                )
+                .values("producto__descripcion")
+                .annotate(cantidad_total=Sum("cantidad"))
+                .order_by("-cantidad_total")[:5]
+            )
+
             hijos_data.append({
                 "id": hijo.id,
                 "nombre": hijo.nombre_completo,
@@ -596,6 +611,13 @@ class PortalMiHijoView(APIView):
                     "ultimos": ultimos_consumos,
                 },
                 "cuenta_mensual": cuenta_data,
+                "top_productos": [
+                    {
+                        "producto": p["producto__descripcion"],
+                        "cantidad": float(p["cantidad_total"]),
+                    }
+                    for p in top_productos
+                ],
             })
 
         resp = Response({
