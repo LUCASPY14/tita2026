@@ -43,6 +43,18 @@ class TestProductoSerializer:
         data = ProductoSerializer(producto).data
         assert data["categoria_nombre"] == categoria.nombre
 
+    def test_unidad_medida_abreviatura(self, producto, unidad_medida):
+        from apps.productos.serializers import ProductoSerializer
+        data = ProductoSerializer(producto).data
+        assert data["unidad_medida_abreviatura"] == unidad_medida.abreviatura
+
+    def test_unidad_medida_abreviatura_vacia_si_no_tiene_unidad(self, producto):
+        from apps.productos.serializers import ProductoSerializer
+        producto.unidad_medida = None
+        producto.save()
+        data = ProductoSerializer(producto).data
+        assert data["unidad_medida_abreviatura"] == ""
+
 
 @pytest.mark.django_db
 class TestPrecioPorListaSerializer:

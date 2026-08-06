@@ -5,7 +5,10 @@ import {
   Plus, Minus, Banknote, Landmark, Smartphone,
   CreditCard, AlertTriangle,
 } from 'lucide-react'
-import { gs, type Producto, type ItemCarrito, type MedioPagoDB, type ModoPago, type DailyStats } from './shared'
+import {
+  gs, esPorPeso, parseCantidadDecimal, formatCantidad,
+  type Producto, type ItemCarrito, type MedioPagoDB, type ModoPago, type DailyStats,
+} from './shared'
 
 function iconMedio(desc: string) {
   const d = desc.toLowerCase()
@@ -40,6 +43,7 @@ interface Props {
   onSetCarrito: React.Dispatch<React.SetStateAction<ItemCarrito[]>>
   onAgregar: (p: Producto) => void
   onQuitar: (id: number) => void
+  onSetCantidad: (id: number, cantidad: number) => void
   onModoPago: (m: ModoPago) => void
   onMedioPagoId: (id: number | null) => void
   onMontoEfectivo: (v: string) => void
@@ -56,13 +60,20 @@ export default function PanelCarrito({
   medioPagoSelId, mediosPago, medioPagoSeleccionado,
   montoEfectivo, vuelto, referencia, nroFacturaVenta,
   canCobrar, cobrando, dailyStats, avgTime,
-  getPrecio, onSetCarrito, onAgregar, onQuitar,
+  getPrecio, onSetCarrito, onAgregar, onQuitar, onSetCantidad,
   onModoPago, onMedioPagoId, onMontoEfectivo, onReferencia, onNroFacturaVenta,
   onClearCliente, onCobrar, onCancelar,
 }: Props) {
   const { t } = useTranslation()
   const efectivoRef = useRef<HTMLInputElement>(null)
   const [focused, setFocused] = useState(false)
+  const [cantidadTexto, setCantidadTexto] = useState<Record<number, string>>({})
+
+  function commitCantidad(id: number, texto: string) {
+    const parsed = parseCantidadDecimal(texto)
+    if (parsed !== null) onSetCantidad(id, parsed)
+    setCantidadTexto(prev => { const next = { ...prev }; delete next[id]; return next })
+  }
 
   return (
     <aside className="w-72 lg:w-96 bg-white border-l-2 border-slate-200 flex flex-col shrink-0">
@@ -189,17 +200,32 @@ export default function PanelCarrito({
                     </button>
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => onQuitar(item.producto.id)}
-                        className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
-                        <Minus size={15} />
-                      </button>
-                      <span className="text-xl font-black text-slate-900 tabular-nums w-7 text-center">{item.cantidad}</span>
-                      <button onClick={() => onAgregar(item.producto)}
-                        className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
-                        <Plus size={15} />
-                      </button>
-                    </div>
+                    {esPorPeso(item.producto) ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          value={cantidadTexto[item.producto.id] ?? formatCantidad(item.cantidad)}
+                          onChange={e => setCantidadTexto(prev => ({ ...prev, [item.producto.id]: e.target.value.replace(/[^\d,.]/g, '') }))}
+                          onFocus={() => setCantidadTexto(prev => ({ ...prev, [item.producto.id]: formatCantidad(item.cantidad) }))}
+                          onBlur={e => commitCantidad(item.producto.id, e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                          inputMode="decimal"
+                          className="w-20 text-lg font-black text-slate-900 tabular-nums text-center bg-slate-100 rounded-lg py-1.5 outline-none focus:ring-2 focus:ring-blue-400"
+                        />
+                        <span className="text-sm font-bold text-slate-400">Kg</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => onQuitar(item.producto.id)}
+                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
+                          <Minus size={15} />
+                        </button>
+                        <span className="text-xl font-black text-slate-900 tabular-nums w-7 text-center">{item.cantidad}</span>
+                        <button onClick={() => onAgregar(item.producto)}
+                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
+                          <Plus size={15} />
+                        </button>
+                      </div>
+                    )}
                     <span className="text-base font-bold text-emerald-700 tabular-nums">{gs(precio * item.cantidad)}</span>
                   </div>
                 </li>

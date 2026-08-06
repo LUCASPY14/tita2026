@@ -81,6 +81,25 @@ export interface Producto {
   id: number; codigo_barra: string | null; descripcion: string
   precio_actual: string; categoria_nombre: string
   stock_actual?: number | null
+  unidad_medida_abreviatura?: string | null
+}
+
+/** True si el producto se vende por peso (Kg) y admite cantidad con decimales. */
+export function esPorPeso(p: Producto): boolean {
+  return (p.unidad_medida_abreviatura ?? '').trim().toLowerCase() === 'kg'
+}
+
+/** Parsea "0,250" / "0.250" → 0.25. Redondea a 3 decimales (precisión del backend). null si inválido. */
+export function parseCantidadDecimal(raw: string): number | null {
+  const cleaned = raw.trim().replace(',', '.')
+  if (!cleaned) return null
+  const n = Number(cleaned)
+  if (!Number.isFinite(n) || n <= 0) return null
+  return Math.round(n * 1000) / 1000
+}
+
+export function formatCantidad(n: number): string {
+  return n.toLocaleString('es-PY', { minimumFractionDigits: 3, maximumFractionDigits: 3 })
 }
 export interface RestriccionHijo {
   id: number; tipo: string; descripcion: string | null

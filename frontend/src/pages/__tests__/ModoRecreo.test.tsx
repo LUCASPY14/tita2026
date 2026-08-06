@@ -64,6 +64,10 @@ const PRODUCTOS = [
   { id: 1, codigo_barra: '001', descripcion: 'Jugo de naranja', precio_actual: '5000', categoria_nombre: 'bebidas' },
   { id: 2, codigo_barra: '002', descripcion: 'Sandwich de pollo', precio_actual: '8000', categoria_nombre: 'panaderia' },
 ]
+const PRODUCTO_POR_KILO = {
+  id: 3, codigo_barra: '003', descripcion: 'Comida por kilo', precio_actual: '65000',
+  categoria_nombre: 'almuerzos', unidad_medida_abreviatura: 'Kg',
+}
 const CATEGORIAS = [{ nombre: 'bebidas' }, { nombre: 'panaderia' }]
 const CAJA = { id: 1, caja_nombre: 'Caja Principal', monto_inicial: '100000', fecha_apertura: '2026-06-13T08:00:00Z' }
 const MEDIOS = [{ id: 1, descripcion: 'Efectivo', activo: true, requiere_validacion: false }]
@@ -327,6 +331,43 @@ describe('ModoRecreo — agregar productos al carrito', () => {
     await userEvent.click(boton)
     // Después de agregar: el precio aparece también en el total del carrito
     expect(screen.queryAllByText('5.000 Gs.').length).toBeGreaterThan(antesCount)
+  })
+})
+
+// ─── Tests: productos por peso (Kg) ────────────────────────────────────────────
+
+describe('ModoRecreo — productos por peso (Kg)', () => {
+  it('reemplaza el stepper +/- por un input de cantidad decimal', async () => {
+    setupData()
+    mockGetProductos.mockResolvedValue([...PRODUCTOS, PRODUCTO_POR_KILO])
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const botonesKilo = screen.getAllByText('Comida por kilo')
+    const boton = botonesKilo.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(boton)
+
+    // Cantidad inicial: 1 Kg, mostrada en el input (no en un <span> de stepper)
+    expect(screen.getByDisplayValue('1,000')).toBeInTheDocument()
+  })
+
+  it('permite escribir una cantidad decimal ("0,250") y recalcula el total', async () => {
+    setupData()
+    mockGetProductos.mockResolvedValue([...PRODUCTOS, PRODUCTO_POR_KILO])
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const botonesKilo = screen.getAllByText('Comida por kilo')
+    const boton = botonesKilo.map(el => el.closest('button')).find(b => b)!
+    await userEvent.click(boton)
+
+    const input = screen.getByDisplayValue('1,000')
+    await userEvent.clear(input)
+    await userEvent.type(input, '0,250')
+    await userEvent.tab()
+
+    // 65.000 Gs./Kg × 0,250 Kg = 16.250 Gs. (aparece en la fila del ítem y en el total)
+    expect(screen.getAllByText('16.250 Gs.').length).toBeGreaterThan(0)
   })
 })
 

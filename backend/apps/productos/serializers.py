@@ -25,6 +25,9 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 class ProductoSerializer(serializers.ModelSerializer):
     categoria_nombre = serializers.CharField(source="categoria.nombre", read_only=True)
+    unidad_medida_abreviatura = serializers.CharField(
+        source="unidad_medida.abreviatura", read_only=True, default=""
+    )
     precio_actual = serializers.SerializerMethodField()
     stock_actual = serializers.SerializerMethodField()
 

@@ -322,6 +322,16 @@ export default function ModoRecreo() {
     })
   }, [])
 
+  const handleSetCantidad = useCallback((id: number, cantidad: number) => {
+    const item = carrito.find(i => i.producto.id === id)
+    if (!item) return
+    if (modoPago === 'PREPAGO' && saldoDisponible !== null && !tarjeta?.permite_saldo_negativo) {
+      const nuevoTotal = total - getPrecio(item.producto) * item.cantidad + getPrecio(item.producto) * cantidad
+      if (nuevoTotal > saldoDisponible) { sfx.error(); toast.error('Saldo insuficiente'); return }
+    }
+    setCarrito(prev => prev.map(i => i.producto.id === id ? { ...i, cantidad } : i))
+  }, [carrito, modoPago, saldoDisponible, tarjeta, total, getPrecio])
+
   const ejecutarCobro = useCallback(async () => {
     if (cobrandoRef.current || carrito.length === 0) return
     if (!tarjeta && !clienteDirecto) return
@@ -609,6 +619,7 @@ export default function ModoRecreo() {
           onSetCarrito={setCarrito}
           onAgregar={handleAgregar}
           onQuitar={handleQuitar}
+          onSetCantidad={handleSetCantidad}
           onModoPago={setModoPago}
           onMedioPagoId={setMedioPagoSelId}
           onMontoEfectivo={setMontoEfectivo}
