@@ -173,7 +173,9 @@ export default function App() {
             <Route path="/pago-completado" element={<PagoCompletado />} />
 
             {/* Sistema de gestión */}
-            <Route path="/login"              element={<Login />} />
+            <Route path="/login"              element={<Login variant="admin" />} />
+            <Route path="/pos"                element={<Login variant="pos" />} />
+            <Route path="/cobranzas"          element={<Login variant="cobranzas" />} />
             <Route path="/recuperar-password" element={<RecuperarPassword />} />
             <Route path="/reset-password"     element={<RestablecerPassword />} />
             <Route element={

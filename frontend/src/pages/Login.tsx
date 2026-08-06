@@ -7,7 +7,20 @@ import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import AuthShell from '../components/AuthShell'
 
-export default function Login() {
+type LoginVariant = 'admin' | 'pos' | 'cobranzas'
+
+const VARIANTES: Record<LoginVariant, { text: string; className: string }> = {
+  admin:     { text: 'Administración', className: 'bg-orange-100 text-orange-700' },
+  pos:       { text: 'Caja / POS',     className: 'bg-amber-100 text-amber-700' },
+  cobranzas: { text: 'Cobranzas',      className: 'bg-blue-100 text-blue-700' },
+}
+
+interface Props {
+  variant?: LoginVariant
+}
+
+export default function Login({ variant = 'admin' }: Props) {
+  const badge = VARIANTES[variant]
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -80,7 +93,7 @@ export default function Login() {
   // ── Step 2: 2FA code entry ────────────────────────────────────────────────
   if (pending2FA) {
     return (
-      <AuthShell caption="Sistema de Gestión">
+      <AuthShell badge={badge}>
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-100 mb-3">
@@ -154,7 +167,7 @@ export default function Login() {
 
   // ── Step 1: email + password ──────────────────────────────────────────────
   return (
-    <AuthShell caption="Sistema de Gestión">
+    <AuthShell badge={badge}>
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
         <div className="space-y-4">
           <Input

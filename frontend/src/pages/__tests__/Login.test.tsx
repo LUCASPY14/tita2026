@@ -26,10 +26,10 @@ vi.mock('react-hot-toast', () => ({
 
 import Login from '../Login'
 
-function renderLogin() {
+function renderLogin(variant?: 'admin' | 'pos' | 'cobranzas') {
   return render(
     <MemoryRouter>
-      <Login />
+      <Login variant={variant} />
     </MemoryRouter>,
   )
 }
@@ -56,6 +56,26 @@ describe('Login — render', () => {
   it('muestra el link de recuperar contraseña', () => {
     renderLogin()
     expect(screen.getByRole('link', { name: /olvidaste tu contraseña/i })).toBeInTheDocument()
+  })
+})
+
+// ─── variant badge ──────────────────────────────────────────────────────────
+
+describe('Login — variant', () => {
+  it('sin variant explícito muestra el badge "Administración"', () => {
+    renderLogin()
+    expect(screen.getByText('Administración')).toBeInTheDocument()
+  })
+
+  it('variant="pos" muestra el badge "Caja / POS"', () => {
+    renderLogin('pos')
+    expect(screen.getByText('Caja / POS')).toBeInTheDocument()
+    expect(screen.queryByText('Administración')).not.toBeInTheDocument()
+  })
+
+  it('variant="cobranzas" muestra el badge "Cobranzas"', () => {
+    renderLogin('cobranzas')
+    expect(screen.getByText('Cobranzas')).toBeInTheDocument()
   })
 })
 
