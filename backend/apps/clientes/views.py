@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from common.utils.medios_pago import resolver_medio_pago
 from apps.usuarios.auditoria import registrar_auditoria
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -193,7 +194,6 @@ class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
         from decimal import Decimal, InvalidOperation
         from django.db import transaction
         from apps.contabilidad.models import CierreCaja, MovimientoCaja
-        from apps.core.models import MedioPago
 
         cliente_id = request.data.get("cliente")
         monto_raw = request.data.get("monto")
@@ -230,10 +230,7 @@ class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
                 empleado=request.user, estado=CierreCaja.Estado.ABIERTO
             ).first()
             if cierre:
-                medio_pago_obj = (
-                    MedioPago.objects.filter(descripcion__iexact=metodo_pago).first()
-                    or MedioPago.objects.filter(descripcion__icontains=metodo_pago).first()
-                ) if metodo_pago else None
+                medio_pago_obj = resolver_medio_pago(metodo_pago)
                 MovimientoCaja.objects.create(
                     cierre=cierre,
                     tipo=MovimientoCaja.Tipo.INGRESO,

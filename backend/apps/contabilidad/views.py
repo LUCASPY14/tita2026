@@ -148,10 +148,14 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
     def arqueo(self, request, pk=None):
         """
         GET /api/contabilidad/cierres-caja/{id}/arqueo/
-        Devuelve el arqueo separado en tres categorías:
+        Devuelve el arqueo separado en:
           - efectivo: billetes en cajón (medio_pago EFECTIVO)
-          - pos:      pagos con terminal POS / transferencia
-          - prepago:  ventas con tarjeta RFID (sin medio_pago físico)
+          - prepago:  ventas pagadas con el saldo de la tarjeta del alumno —
+                      esa plata ya entró cuando se cargó el saldo, no es
+                      efectivo ni movimiento bancario del día
+          - medios_pago_totales: un total por cada medio de pago real usado
+                      (POS Crédito, POS Débito, Transferencia, etc.) — dinámico,
+                      no una lista fija, para no romper si se agregan medios nuevos
         """
         from django.db.models import Sum as DSum, Q
         cierre = self.get_object()
@@ -177,50 +181,42 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
         )
         efectivo_esperado = int(cierre.monto_inicial) + efectivo_ingresos - efectivo_egresos
 
-        # ── POS / Transferencia (no cash) ─────────────────────────────────────
-        pos_total = int(
-            ing.filter(medio_pago__isnull=False)
-               .exclude(medio_pago__descripcion__iexact="efectivo")
-               .filter(
-                   Q(medio_pago__descripcion__icontains="pos")
-                   | Q(medio_pago__descripcion__icontains="tpv")
-                   | Q(medio_pago__descripcion__icontains="débito")
-                   | Q(medio_pago__descripcion__icontains="debito")
-                   | Q(medio_pago__descripcion__icontains="crédito")
-                   | Q(medio_pago__descripcion__icontains="credito")
-                   | Q(medio_pago__descripcion__icontains="transf")
-               )
-               .aggregate(t=DSum("monto"))["t"] or 0
-        )
-
-        # ── Prepago (tarjeta RFID, sin medio_pago físico) ─────────────────────
+        # ── Prepago (venta pagada con saldo de tarjeta — no es plata a rendir) ─
         prepago_total = int(
-            ing.filter(medio_pago__isnull=True).aggregate(t=DSum("monto"))["t"] or 0
+            ing.filter(venta__tarjeta__isnull=False).aggregate(t=DSum("monto"))["t"] or 0
         )
 
-        # ── Agrupado por medio para desglose visual ───────────────────────────
-        def agrupar(qs):
-            rows = (
-                qs.values("medio_pago__descripcion")
-                .annotate(total=DSum("monto"))
-                .order_by("-total")
-            )
-            return [
-                {"medio": r["medio_pago__descripcion"] or "Tarjeta prepago", "total": int(r["total"] or 0)}
-                for r in rows
-            ]
+        # ── Resto de medios de pago (POS Crédito, POS Débito, Transferencia...) ─
+        # Se agrupa dinámicamente por medio_pago real en vez de adivinar por
+        # nombre — así no se rompe si cambia el catálogo de medios de pago.
+        otros_ingresos = ing.exclude(venta__tarjeta__isnull=False).exclude(
+            medio_pago__descripcion__iexact="efectivo"
+        )
+        medios_pago_totales = [
+            {"medio": r["medio_pago__descripcion"] or "Sin clasificar", "total": int(r["total"] or 0)}
+            for r in otros_ingresos.values("medio_pago__descripcion")
+                                    .annotate(total=DSum("monto"))
+                                    .order_by("-total")
+        ]
+
+        # ── Egresos agrupados por medio (desglose visual) ─────────────────────
+        egresos_por_medio = [
+            {"medio": r["medio_pago__descripcion"] or "Efectivo", "total": int(r["total"] or 0)}
+            for r in egr.values("medio_pago__descripcion")
+                        .annotate(total=DSum("monto"))
+                        .order_by("-total")
+        ]
 
         return Response({
-            "monto_inicial":      int(cierre.monto_inicial),
-            "efectivo_esperado":  efectivo_esperado,
-            "efectivo_ingresos":  efectivo_ingresos,
-            "efectivo_egresos":   efectivo_egresos,
-            "pos_total":          pos_total,
-            "prepago_total":      prepago_total,
-            "ingresos_total":     ingresos_total,
-            "egresos_total":      egresos_total,
-            "ingresos_por_medio": agrupar(ing),
-            "egresos_por_medio":  agrupar(egr),
+            "monto_inicial":        int(cierre.monto_inicial),
+            "efectivo_esperado":    efectivo_esperado,
+            "efectivo_ingresos":    efectivo_ingresos,
+            "efectivo_egresos":     efectivo_egresos,
+            "prepago_total":        prepago_total,
+            "ingresos_total":       ingresos_total,
+            "egresos_total":        egresos_total,
+            "medios_pago_totales":  medios_pago_totales,
+            "egresos_por_medio":    egresos_por_medio,
         })
 
     @action(detail=True, methods=["post"], url_path="registrar-movimiento")

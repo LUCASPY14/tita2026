@@ -12,6 +12,7 @@ from rest_framework.response import Response
 
 from common.pagination import CursorResultsSetPagination
 from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from common.utils.medios_pago import resolver_medio_pago
 from apps.usuarios.auditoria import registrar_auditoria
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -49,17 +50,6 @@ from .serializers import (
     RegistroAutorizacionSerializer,
 )
 from .services import TarjetaService
-
-
-def _resolver_medio_pago(metodo: str) -> 'MedioPago | None':
-    """Busca MedioPago por nombre exacto (case-insensitive) con fallback
-    a búsqueda parcial para cubrir casos como TRANSFERENCIA → 'Transferencia Bancaria'."""
-    if not metodo:
-        return None
-    return (
-        MedioPago.objects.filter(descripcion__iexact=metodo).first()
-        or MedioPago.objects.filter(descripcion__icontains=metodo).first()
-    )
 
 
 class TarjetaViewSet(viewsets.ModelViewSet):
@@ -118,7 +108,7 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             cierre_caja = CierreCaja.objects.filter(
                 empleado=request.user, estado=CierreCaja.Estado.ABIERTO
             ).select_related("caja").first()
-            medio_pago_obj = _resolver_medio_pago(metodo)
+            medio_pago_obj = resolver_medio_pago(metodo)
             nro_factura = (request.data.get("nro_factura") or "").strip()
 
             with _tx.atomic():
@@ -222,7 +212,7 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
         cierre_caja = CierreCaja.objects.filter(
             empleado=request.user, estado=CierreCaja.Estado.ABIERTO
         ).select_related("caja").first()
-        medio_pago_obj = _resolver_medio_pago(carga.metodo_pago)
+        medio_pago_obj = resolver_medio_pago(carga.metodo_pago)
         nro_factura = (request.data.get("nro_factura") or "").strip()
         with transaction.atomic():
             carga_confirmada = TarjetaService.confirmar_carga(

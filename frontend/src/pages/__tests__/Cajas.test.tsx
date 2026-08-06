@@ -64,9 +64,13 @@ const CIERRE_DIFERENCIA_NEGATIVA = {
 const ARQUEO = {
   monto_inicial: 500000, efectivo_esperado: 520000,
   efectivo_ingresos: 20000, efectivo_egresos: 0,
-  pos_total: 150000, prepago_total: 80000,
+  prepago_total: 80000,
   ingresos_total: 20000, egresos_total: 0,
-  ingresos_por_medio: [], egresos_por_medio: [],
+  medios_pago_totales: [
+    { medio: 'POS Bancario crédito', total: 100000 },
+    { medio: 'POS Bancario debito', total: 50000 },
+  ],
+  egresos_por_medio: [],
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -108,6 +112,23 @@ describe('Cajas — renderizado inicial', () => {
     await screen.findByText(/Turno activo/)
     expect(screen.getByRole('button', { name: /Ingreso/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Egreso/i })).toBeInTheDocument()
+  })
+
+  it('el arqueo muestra una tarjeta por cada medio de pago real, sin "Prepago RFID" ni "POS / Transferencia"', async () => {
+    mockGet({
+      '/contabilidad/cierres-caja/': Promise.resolve({ data: { results: [CIERRE_ABIERTO], count: 1 } }),
+      '/contabilidad/cierres-caja/mi-caja/': Promise.resolve({ data: CIERRE_ABIERTO }),
+    })
+    render(<Cajas />)
+    await screen.findByText(/Turno activo/)
+
+    // Una tarjeta dinámica por cada medio de pago real devuelto por el backend
+    expect(await screen.findByText('POS Bancario crédito')).toBeInTheDocument()
+    expect(screen.getByText('POS Bancario debito')).toBeInTheDocument()
+    // La categoría "Prepago" sigue existiendo, pero sin la etiqueta "RFID"
+    expect(screen.getByText('Prepago')).toBeInTheDocument()
+    expect(screen.queryByText('Prepago RFID')).not.toBeInTheDocument()
+    expect(screen.queryByText('POS / Transferencia')).not.toBeInTheDocument()
   })
 
   it('muestra cierres recibidos de la API en la tabla', async () => {

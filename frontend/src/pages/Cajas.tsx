@@ -282,31 +282,30 @@ export default function CajaPage() {
                   </p>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <CreditCard className="w-3.5 h-3.5 text-blue-600" />
-                    <p className="text-blue-700 text-xs font-semibold uppercase tracking-wide">POS / Transferencia</p>
+                {arqueo.medios_pago_totales.map(m => (
+                  <div key={m.medio} className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                      <p className="text-blue-700 text-xs font-semibold uppercase tracking-wide">{m.medio}</p>
+                    </div>
+                    <p className="text-blue-800 font-bold text-lg tabular-nums leading-tight">
+                      {formatGs(m.total)}
+                    </p>
+                    <p className="text-blue-500 text-xs mt-0.5">ventas con este medio</p>
                   </div>
-                  <p className="text-blue-800 font-bold text-lg tabular-nums leading-tight">
-                    {formatGs(arqueo.pos_total)}
-                  </p>
-                  <p className="text-blue-500 text-xs mt-0.5">ventas con terminal</p>
-                  <p className="text-blue-700 text-xs font-medium mt-1.5 bg-blue-100 rounded px-1.5 py-0.5 inline-block">
-                    Cotejar con POS
-                  </p>
-                </div>
+                ))}
 
                 <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3">
                   <div className="flex items-center gap-1.5 mb-1">
                     <ShoppingCart className="w-3.5 h-3.5 text-purple-600" />
-                    <p className="text-purple-700 text-xs font-semibold uppercase tracking-wide">Prepago RFID</p>
+                    <p className="text-purple-700 text-xs font-semibold uppercase tracking-wide">Prepago</p>
                   </div>
                   <p className="text-purple-800 font-bold text-lg tabular-nums leading-tight">
                     {formatGs(arqueo.prepago_total)}
                   </p>
-                  <p className="text-purple-500 text-xs mt-0.5">ventas con tarjeta</p>
+                  <p className="text-purple-500 text-xs mt-0.5">ventas con saldo de tarjeta</p>
                   <p className="text-purple-700 text-xs font-medium mt-1.5 bg-purple-100 rounded px-1.5 py-0.5 inline-block">
-                    Sin efectivo físico
+                    Ya cobrado al cargar saldo
                   </p>
                 </div>
 

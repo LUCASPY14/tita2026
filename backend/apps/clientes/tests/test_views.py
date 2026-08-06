@@ -470,6 +470,31 @@ class TestCuentaCorrienteCreate:
         assert resp.data["tipo"] == "CREDITO"
         assert Decimal(resp.data["monto"]) == Decimal("20000")
 
+    def test_medio_pago_pos_debito_se_resuelve_correctamente(self, api_cajero, usuario_cajero, cliente):
+        """Regresión: 'POS DEBITO' (código fijo del frontend) no matcheaba
+        contra 'POS Bancario debito' (nombre real del catálogo) y el
+        MovimientoCaja quedaba sin medio_pago — se contaba como Prepago en
+        el arqueo de caja aunque fuera un cobro de cuenta corriente."""
+        from apps.contabilidad.models import Caja, CierreCaja, MovimientoCaja
+        from apps.core.models import MedioPago
+
+        pos_debito = MedioPago.objects.create(descripcion="POS Bancario debito", activo=True)
+        caja = Caja.objects.create(nombre="Caja CC Test", activo=True)
+        cierre = CierreCaja.objects.create(
+            caja=caja, empleado=usuario_cajero, monto_inicial=Decimal("0"),
+            estado=CierreCaja.Estado.ABIERTO,
+        )
+
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"cliente": cliente.pk, "monto": "262500", "medio_pago": "POS DEBITO"},
+            format="json",
+        )
+        assert resp.status_code == 201
+
+        mov = MovimientoCaja.objects.get(cierre=cierre, tipo=MovimientoCaja.Tipo.INGRESO)
+        assert mov.medio_pago_id == pos_debito.id
+
 
 # ── ClienteViewSet.perform_create → _crear_usuario_portal ────────────────────
 

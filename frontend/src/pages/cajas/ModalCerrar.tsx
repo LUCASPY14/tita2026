@@ -48,6 +48,15 @@ export default function ModalCerrar({ cierre, onClose, onSaved }: Props) {
     return Number(montoContadoDebounced) - arqueoModal.efectivo_esperado
   }, [arqueoModal, montoContadoDebounced])
 
+  // Desglose completo de ingresos: Efectivo + Prepago + resto de medios de pago
+  const ingresosDesglose = useMemo(() => {
+    if (!arqueoModal) return []
+    const filas: { medio: string; total: number }[] = []
+    if (arqueoModal.efectivo_ingresos > 0) filas.push({ medio: 'Efectivo', total: arqueoModal.efectivo_ingresos })
+    if (arqueoModal.prepago_total > 0) filas.push({ medio: 'Prepago', total: arqueoModal.prepago_total })
+    return [...filas, ...arqueoModal.medios_pago_totales]
+  }, [arqueoModal])
+
   const handleCerrar = async () => {
     if (cerrandoRef.current || !cierre) return
     cerrandoRef.current = true
@@ -101,7 +110,7 @@ export default function ModalCerrar({ cierre, onClose, onSaved }: Props) {
               Desglose de movimientos
             </div>
             <div className="divide-y divide-slate-100">
-              {arqueoModal.ingresos_por_medio.map(m => (
+              {ingresosDesglose.map(m => (
                 <div key={m.medio} className="flex justify-between px-4 py-2">
                   <span className="text-slate-600 flex items-center gap-1.5">
                     <ArrowUpCircle className="w-3.5 h-3.5 text-green-500" />

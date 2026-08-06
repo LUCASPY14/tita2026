@@ -69,11 +69,10 @@ export interface ArqueoData {
   efectivo_esperado: number
   efectivo_ingresos: number
   efectivo_egresos: number
-  pos_total: number
   prepago_total: number
   ingresos_total: number
   egresos_total: number
-  ingresos_por_medio: { medio: string; total: number }[]
+  medios_pago_totales: { medio: string; total: number }[]
   egresos_por_medio: { medio: string; total: number }[]
 }
 

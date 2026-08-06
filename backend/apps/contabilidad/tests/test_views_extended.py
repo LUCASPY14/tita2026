@@ -127,8 +127,8 @@ class TestArqueo:
             f"/api/v1/contabilidad/cierres-caja/{cierre_abierto.pk}/arqueo/"
         )
         assert resp.status_code == 200
-        campos = ["monto_inicial", "efectivo_esperado", "pos_total", "prepago_total",
-                  "ingresos_total", "egresos_total", "ingresos_por_medio", "egresos_por_medio"]
+        campos = ["monto_inicial", "efectivo_esperado", "prepago_total",
+                  "ingresos_total", "egresos_total", "medios_pago_totales", "egresos_por_medio"]
         for campo in campos:
             assert campo in resp.data
 
@@ -146,6 +146,44 @@ class TestArqueo:
         assert resp.status_code == 200
         assert resp.data["ingresos_total"] == 30000
         assert resp.data["efectivo_ingresos"] == 30000
+
+    def test_prepago_solo_cuenta_ventas_con_tarjeta(
+        self, api_cajero, cierre_abierto, cliente
+    ):
+        """prepago_total se basa en venta.tarjeta, no en 'sin medio_pago'
+        (antes cualquier ingreso sin medio de pago se contaba como prepago,
+        aunque no tuviera nada que ver con una tarjeta de alumno)."""
+        from apps.contabilidad.models import MovimientoCaja
+        from apps.core.models import Tarjeta
+        from apps.ventas.models import Venta
+
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta="ARQ-PREPAGO-01", cliente_directo=cliente, saldo_actual=Decimal("50000"),
+            estado=Tarjeta.Estado.ACTIVA,
+        )
+        venta = Venta.objects.create(
+            cliente=cliente, cajero=cierre_abierto.empleado, tipo=Venta.Tipo.CONTADO,
+            tarjeta=tarjeta, monto_total=Decimal("15000"),
+        )
+        MovimientoCaja.objects.create(
+            cierre=cierre_abierto, tipo=MovimientoCaja.Tipo.INGRESO,
+            monto=Decimal("15000"), venta=venta,
+        )
+        # Ingreso sin medio de pago y sin venta con tarjeta (ej: un cobro de
+        # cuenta corriente cuyo medio de pago no se pudo resolver) NO debe
+        # contarse como prepago.
+        MovimientoCaja.objects.create(
+            cierre=cierre_abierto, tipo=MovimientoCaja.Tipo.INGRESO,
+            monto=Decimal("262500"), descripcion="Cobro CC — Sin medio resuelto",
+        )
+
+        resp = api_cajero.get(
+            f"/api/v1/contabilidad/cierres-caja/{cierre_abierto.pk}/arqueo/"
+        )
+        assert resp.status_code == 200
+        assert resp.data["prepago_total"] == 15000
+        medios = {m["medio"]: m["total"] for m in resp.data["medios_pago_totales"]}
+        assert medios.get("Sin clasificar") == 262500
 
 
 # ── ReportePeriodoView ────────────────────────────────────────────────────────
