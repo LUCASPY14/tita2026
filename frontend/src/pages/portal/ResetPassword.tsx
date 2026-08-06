@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+import AuthShell from '../../components/AuthShell'
 
 export default function PortalResetPassword() {
   const [searchParams] = useSearchParams()
@@ -49,7 +50,7 @@ export default function PortalResetPassword() {
 
   if (!uid || !token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
+      <AuthShell>
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center">
           <p className="text-4xl mb-4">⚠️</p>
           <p className="text-gray-700 font-semibold">Enlace inválido</p>
@@ -64,13 +65,13 @@ export default function PortalResetPassword() {
             Volver al login
           </button>
         </div>
-      </div>
+      </AuthShell>
     )
   }
 
   if (exito) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
+      <AuthShell>
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center">
           <p className="text-5xl mb-4">✅</p>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Contraseña restablecida</h2>
@@ -79,15 +80,14 @@ export default function PortalResetPassword() {
             Ir al login
           </Button>
         </div>
-      </div>
+      </AuthShell>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
+    <AuthShell>
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <img src="/logo_tita.png" alt="Cantina Tita" className="h-28 w-auto mx-auto mb-3 drop-shadow-sm" />
           <h1 className="text-2xl font-bold text-green-800">Nueva contraseña</h1>
           <p className="text-gray-500 mt-2 text-sm">Ingresá tu nueva contraseña</p>
         </div>
@@ -132,6 +132,6 @@ export default function PortalResetPassword() {
           </button>
         </p>
       </div>
-    </div>
+    </AuthShell>
   )
 }

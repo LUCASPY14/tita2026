@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+import AuthShell from '../../components/AuthShell'
 
 export default function PortalLogin() {
   const [email, setEmail] = useState('')
@@ -58,10 +59,9 @@ export default function PortalLogin() {
 
   if (olvideModo) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
+      <AuthShell>
         <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md">
           <div className="text-center mb-8">
-            <img src="/logo_tita.png" alt="Cantina Tita" className="h-28 w-auto mx-auto mb-3 drop-shadow-sm" />
             <h1 className="text-2xl font-bold text-green-800">Recuperar contraseña</h1>
             <p className="text-gray-500 mt-2 text-sm">Te enviaremos un enlace a tu email</p>
           </div>
@@ -106,17 +106,13 @@ export default function PortalLogin() {
             </form>
           )}
         </div>
-      </div>
+      </AuthShell>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
+    <AuthShell caption="Portal de Padres">
       <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <img src="/logo_tita.png" alt="La Cantina de Tita" className="h-28 w-auto mx-auto mb-3 drop-shadow-sm" />
-          <p className="text-gray-500">Portal de Padres</p>
-        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             label="CI/RUC"
@@ -154,6 +150,6 @@ export default function PortalLogin() {
           </p>
         </div>
       </div>
-    </div>
+    </AuthShell>
   )
 }

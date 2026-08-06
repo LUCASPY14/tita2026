@@ -5,6 +5,7 @@ import { Eye, EyeOff, CheckCircle } from 'lucide-react'
 import api from '../services/api'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
+import AuthShell from '../components/AuthShell'
 
 export default function RestablecerPassword() {
   const [searchParams] = useSearchParams()
@@ -61,7 +62,7 @@ export default function RestablecerPassword() {
 
   if (!uid || !token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
+      <AuthShell>
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm text-center">
           <p className="text-4xl mb-4">⚠️</p>
           <h2 className="text-lg font-bold text-slate-800 mb-2">Enlace inválido</h2>
@@ -72,13 +73,13 @@ export default function RestablecerPassword() {
             Solicitar nuevo enlace
           </Link>
         </div>
-      </div>
+      </AuthShell>
     )
   }
 
   if (completado) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
+      <AuthShell>
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm text-center">
           <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-7 h-7 text-green-600" />
@@ -89,15 +90,14 @@ export default function RestablecerPassword() {
             Ir al inicio de sesión
           </Link>
         </div>
-      </div>
+      </AuthShell>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
+    <AuthShell>
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="/logo_tita.png" alt="La Cantina de Tita" className="h-24 w-auto mx-auto mb-3 drop-shadow-sm" />
           <h1 className="text-xl font-bold text-slate-800">Nueva Contraseña</h1>
           <p className="text-sm text-slate-500 mt-1">Ingresá tu nueva contraseña</p>
         </div>
@@ -147,6 +147,6 @@ export default function RestablecerPassword() {
           </Button>
         </div>
       </div>
-    </div>
+    </AuthShell>
   )
 }

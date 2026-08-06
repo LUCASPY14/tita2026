@@ -5,6 +5,7 @@ import { Eye, EyeOff, ShieldCheck, ArrowLeft } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
+import AuthShell from '../components/AuthShell'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -79,7 +80,7 @@ export default function Login() {
   // ── Step 2: 2FA code entry ────────────────────────────────────────────────
   if (pending2FA) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
+      <AuthShell caption="Sistema de Gestión">
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-100 mb-3">
@@ -147,19 +148,14 @@ export default function Login() {
             </button>
           </div>
         </div>
-      </div>
+      </AuthShell>
     )
   }
 
   // ── Step 1: email + password ──────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
+    <AuthShell caption="Sistema de Gestión">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
-        <div className="text-center mb-8">
-          <img src="/logo_tita.png" alt="La Cantina de Tita" className="h-28 w-auto mx-auto mb-3 drop-shadow-sm" />
-          <p className="text-sm text-slate-500">Sistema de Gestión</p>
-        </div>
-
         <div className="space-y-4">
           <Input
             type="email"
@@ -217,6 +213,6 @@ export default function Login() {
           </Link>
         </div>
       </div>
-    </div>
+    </AuthShell>
   )
 }
