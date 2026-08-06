@@ -115,7 +115,17 @@ class AlmuerzoService:
             else:
                 costo = Decimal("0")
 
-            # Crear registro
+            # Asegurar que exista la cuenta mensual ANTES de crear el registro:
+            # el trigger trg_sync_cuenta_almuerzo (migración 0014) recalcula
+            # cantidad_almuerzos/monto_total desde los registros reales en cada
+            # INSERT sobre RegistroConsumoAlmuerzo, pero solo si la fila de la
+            # cuenta ya existe. Si la creamos después, el INSERT no tiene qué
+            # actualizar y hay que sumar el costo también acá — no lo hacemos:
+            # el trigger es la única fuente de verdad para esos dos campos.
+            if es_primer_registro:
+                AlmuerzoService._asegurar_cuenta_mensual(hijo, fecha_consumo)
+
+            # Crear registro (dispara el trigger, que sincroniza la cuenta)
             registro = RegistroConsumoAlmuerzo.objects.create(
                 hijo=hijo,
                 fecha_consumo=fecha_consumo,
@@ -128,19 +138,22 @@ class AlmuerzoService:
                 estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
             )
 
-            # Agregar a cuenta mensual si es primer registro
             if es_primer_registro:
-                AlmuerzoService._agregar_a_cuenta_mensual(registro)
+                # Si no se marca, cerrar_cuentas_mes_anterior lo vuelve a sumar
+                # al cerrar el mes (el trigger ya lo contó al crearlo).
+                registro.marcado_en_cuenta = True
+                registro.save(update_fields=["marcado_en_cuenta"])
 
             return registro
 
     @staticmethod
-    def _agregar_a_cuenta_mensual(registro):
-        """Agrega el consumo a la cuenta mensual del alumno."""
-        fecha = registro.fecha_consumo
-        hijo = registro.hijo
+    def _asegurar_cuenta_mensual(hijo, fecha):
+        """Crea la cuenta mensual del alumno si todavía no existe.
 
-        cuenta, _ = CuentaAlmuerzoMensual.objects.get_or_create(
+        No suma cantidad_almuerzos/monto_total acá: eso lo hace el trigger
+        trg_sync_cuenta_almuerzo al insertar el RegistroConsumoAlmuerzo.
+        """
+        CuentaAlmuerzoMensual.objects.get_or_create(
             hijo=hijo,
             anio=fecha.year,
             mes=fecha.month,
@@ -152,9 +165,3 @@ class AlmuerzoService:
                 "estado": CuentaAlmuerzoMensual.Estado.PENDIENTE,
             },
         )
-
-        # Lock pesimista para evitar race conditions en consumos simultáneos
-        cuenta = CuentaAlmuerzoMensual.objects.select_for_update().get(pk=cuenta.pk)
-        cuenta.cantidad_almuerzos += 1
-        cuenta.monto_total += registro.costo_almuerzo
-        cuenta.save(update_fields=["cantidad_almuerzos", "monto_total"])

@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 from decimal import Decimal
 
 from django.db import models, transaction
-from django.db.models import F
 
 import csv
 
@@ -199,19 +198,18 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         with transaction.atomic():
-            # Revertir el costo de la cuenta mensual si el registro fue cobrado
-            if registro.ya_cobrado and registro.costo_almuerzo:
-                cuenta = CuentaAlmuerzoMensual.objects.select_for_update().filter(
-                    hijo=registro.hijo,
-                    anio=registro.fecha_consumo.year,
-                    mes=registro.fecha_consumo.month,
-                ).first()
-                if cuenta:
-                    cuenta.cantidad_almuerzos = max(0, cuenta.cantidad_almuerzos - 1)
-                    cuenta.monto_total = max(0, cuenta.monto_total - registro.costo_almuerzo)
-                    cuenta._calcular_estado()
-                    cuenta.save(update_fields=["cantidad_almuerzos", "monto_total", "estado", "fecha_pago"])
+            # El DELETE dispara el trigger trg_sync_cuenta_almuerzo, que
+            # recalcula cantidad_almuerzos/monto_total desde los registros
+            # reales restantes — no hay que restar nada acá.
+            cuenta = CuentaAlmuerzoMensual.objects.select_for_update().filter(
+                hijo=registro.hijo,
+                anio=registro.fecha_consumo.year,
+                mes=registro.fecha_consumo.month,
+            ).first()
             registro.delete()
+            if cuenta and registro.ya_cobrado and registro.costo_almuerzo:
+                cuenta.refresh_from_db(fields=["monto_total", "monto_pagado", "estado", "fecha_pago"])
+                cuenta.actualizar_estado()
         registrar_auditoria(
             request=request,
             operacion="ELIMINAR_REGISTRO_ALMUERZO",
@@ -232,6 +230,9 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             and registro.ya_cobrado
             and registro.costo_almuerzo
         ):
+            # El UPDATE de arriba ya disparó el trigger trg_sync_cuenta_almuerzo,
+            # que recalculó cantidad_almuerzos/monto_total sin este registro
+            # (su estado ya es ANULADO) — acá solo recalculamos el estado.
             with transaction.atomic():
                 cuenta = CuentaAlmuerzoMensual.objects.select_for_update().filter(
                     hijo=registro.hijo,
@@ -239,10 +240,8 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                     mes=registro.fecha_consumo.month,
                 ).first()
                 if cuenta:
-                    cuenta.cantidad_almuerzos = max(0, cuenta.cantidad_almuerzos - 1)
-                    cuenta.monto_total = max(0, cuenta.monto_total - registro.costo_almuerzo)
-                    cuenta._calcular_estado()
-                    cuenta.save(update_fields=["cantidad_almuerzos", "monto_total", "estado", "fecha_pago"])
+                    cuenta.refresh_from_db(fields=["monto_total", "monto_pagado", "estado", "fecha_pago"])
+                    cuenta.actualizar_estado()
             registrar_auditoria(
                 request=self.request,
                 operacion="ANULAR_REGISTRO_ALMUERZO",
@@ -335,14 +334,22 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             costo_calculado = Decimal("0")
 
         with transaction.atomic():
+            if es_primer_registro:
+                # Asegurar la cuenta ANTES de crear el registro: el trigger
+                # trg_sync_cuenta_almuerzo (migración 0014) sincroniza
+                # cantidad_almuerzos/monto_total al insertar, pero solo si la
+                # fila de la cuenta ya existe.
+                self._asegurar_cuenta_mensual(hijo, fecha_consumo, suscripcion)
+
             registro = serializer.save(
                 costo_almuerzo=costo_calculado,
                 ya_cobrado=es_primer_registro,
                 estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
                 registrado_por=self.request.user,
             )
+
             if es_primer_registro:
-                self._agregar_a_cuenta_mensual(registro)
+                self._marcar_acreditado(registro)
 
         if es_primer_registro:
             try:
@@ -359,13 +366,15 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 
         return advertencias
 
-    def _agregar_a_cuenta_mensual(self, registro):
-        """Agrega el consumo a la cuenta mensual de almuerzo del hijo."""
-        fecha = registro.fecha_consumo
-        forma_cobro = registro.suscripcion.plan.tipo if registro.suscripcion else "SIN_LIMITE"
+    def _asegurar_cuenta_mensual(self, hijo, fecha, suscripcion):
+        """Crea la cuenta mensual del alumno si todavía no existe.
 
-        cuenta, _ = CuentaAlmuerzoMensual.objects.get_or_create(
-            hijo=registro.hijo,
+        No suma cantidad_almuerzos/monto_total acá: eso lo hace el trigger
+        trg_sync_cuenta_almuerzo al insertar el RegistroConsumoAlmuerzo.
+        """
+        forma_cobro = suscripcion.plan.tipo if suscripcion else "SIN_LIMITE"
+        CuentaAlmuerzoMensual.objects.get_or_create(
+            hijo=hijo,
             anio=fecha.year,
             mes=fecha.month,
             defaults={
@@ -377,14 +386,21 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             },
         )
 
-        # Lock para evitar race conditions en actualizaciones concurrentes
-        cuenta = CuentaAlmuerzoMensual.objects.select_for_update().get(pk=cuenta.pk)
-        cuenta.cantidad_almuerzos = F("cantidad_almuerzos") + 1
-        cuenta.monto_total = F("monto_total") + registro.costo_almuerzo
-        cuenta.save(update_fields=["cantidad_almuerzos", "monto_total"])
+    def _marcar_acreditado(self, registro):
+        """Marca el registro como incorporado y recalcula el estado de la
+        cuenta (el trigger ya sincronizó cantidad_almuerzos/monto_total)."""
+        fecha = registro.fecha_consumo
+        cuenta = CuentaAlmuerzoMensual.objects.select_for_update().get(
+            hijo=registro.hijo, anio=fecha.year, mes=fecha.month,
+        )
         # Recalcular estado: monto_total cambió, puede haber salido de PAGADO
         cuenta.refresh_from_db(fields=["monto_total", "monto_pagado", "estado", "fecha_pago"])
         cuenta.actualizar_estado()
+
+        # Si no se marca, cerrar_cuentas_mes_anterior lo vuelve a sumar al
+        # cerrar el mes (el trigger ya lo contó al crearlo).
+        registro.marcado_en_cuenta = True
+        registro.save(update_fields=["marcado_en_cuenta"])
 
 
 # ==============================================================================

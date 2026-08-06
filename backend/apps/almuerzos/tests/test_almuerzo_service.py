@@ -146,6 +146,31 @@ class TestRegistrarConsumo:
         )
         assert cuenta.cantidad_almuerzos == 1
         assert cuenta.monto_total == Decimal("15000")
+        # Si no se marca, cerrar_cuentas_mes_anterior lo vuelve a sumar al cerrar el mes.
+        assert registro.marcado_en_cuenta is True
+
+    def test_segundo_registro_no_se_marca_en_cuenta(
+        self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, suscripcion_activa
+    ):
+        from apps.almuerzos.services import AlmuerzoService
+
+        AlmuerzoService.registrar_consumo(
+            hijo=hijo_almuerzo,
+            fecha_consumo=HOY,
+            nro_tarjeta=tarjeta_almuerzo,
+            registrado_por=usuario_cajero,
+            suscripcion=suscripcion_activa,
+        )
+        segundo = AlmuerzoService.registrar_consumo(
+            hijo=hijo_almuerzo,
+            fecha_consumo=HOY,
+            nro_tarjeta=tarjeta_almuerzo,
+            registrado_por=usuario_cajero,
+            suscripcion=suscripcion_activa,
+        )
+
+        # No genera costo, así que nunca se acredita a la cuenta ni se marca.
+        assert segundo.marcado_en_cuenta is False
 
     def test_segundo_registro_sin_costo(
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, suscripcion_activa
