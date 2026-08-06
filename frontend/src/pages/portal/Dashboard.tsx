@@ -113,6 +113,11 @@ function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
+function formatVeces(n: number) {
+  const cantidad = n % 1 === 0 ? n : Number(n.toFixed(2))
+  return cantidad === 1 ? '1 vez' : `${cantidad} veces`
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -287,7 +292,7 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
                   <span className="text-sm text-slate-700 truncate">{p.producto}</span>
                 </div>
                 <span className="text-sm font-semibold text-slate-500 tabular-nums shrink-0 ml-2">
-                  {p.cantidad % 1 === 0 ? p.cantidad : p.cantidad.toFixed(2)}×
+                  {formatVeces(p.cantidad)}
                 </span>
               </div>
             ))}

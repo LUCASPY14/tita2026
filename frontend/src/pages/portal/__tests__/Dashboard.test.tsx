@@ -145,8 +145,21 @@ describe('PortalDashboard — datos', () => {
 
     await screen.findByText(/Lo más consumido/i)
     expect(screen.getByText('Sandwich de milanesa')).toBeInTheDocument()
-    expect(screen.getByText('8×')).toBeInTheDocument()
+    expect(screen.getByText('8 veces')).toBeInTheDocument()
     expect(screen.getByText('Coca Cola 500ml')).toBeInTheDocument()
+  })
+
+  it('cantidad=1 → usa singular "1 vez" en vez de "1 veces"', async () => {
+    setupPortal({
+      hijos: [{
+        ...HIJO_CON_CUENTA,
+        top_productos: [{ producto: 'Sandwich de milanesa', cantidad: 1 }],
+      }],
+    })
+    render(<PortalDashboard />)
+
+    await screen.findByText('1 vez')
+    expect(screen.queryByText('1 veces')).not.toBeInTheDocument()
   })
 
   it('sin top_productos → no muestra la sección "Lo más consumido"', async () => {
