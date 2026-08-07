@@ -27,38 +27,21 @@ import PagarAlmuerzo from '../PagarAlmuerzo'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const CUENTA_JUAN: Record<string, unknown> = {
-  id: 10, hijo_nombre: 'Juan García', mes: 7, anio: 2026,
-  cantidad_almuerzos: 20, monto_total: 200_000,
-  monto_pagado: 50_000, saldo_pendiente: 150_000, estado: 'PARCIAL',
-}
-
-const CUENTA_LUCIA: Record<string, unknown> = {
-  id: 11, hijo_nombre: 'Lucía García', mes: 7, anio: 2026,
-  cantidad_almuerzos: 18, monto_total: 180_000,
-  monto_pagado: 0, saldo_pendiente: 180_000, estado: 'PENDIENTE',
-}
-
-function setupNoRetorno(cuentas: unknown[] = [CUENTA_JUAN]) {
-  mockGetSearchParam.mockImplementation((key: string) => {
-    const map: Record<string, null> = { estado: null, monto: null, cuenta_id: null }
-    return map[key] ?? null
-  })
-  vi.mocked(api.get).mockResolvedValue({ data: { results: cuentas } })
-}
+const HIJO_JUAN: Record<string, unknown> = { id: 1, nombre: 'Juan García', saldo_almuerzo: -150_000 }
+const HIJO_LUCIA: Record<string, unknown> = { id: 2, nombre: 'Lucía García', saldo_almuerzo: 20_000 }
 
 const TARJETA_GUARDADA = {
   card_id: 1, card_masked_number: '5418********0014', card_brand: 'MasterCard', expiration_date: '08/26',
 }
 
-function setupNoRetornoConTarjetas(cuentas: unknown[], tarjetas: (typeof TARJETA_GUARDADA)[] = []) {
+function setupNoRetorno(hijos: unknown[] = [HIJO_JUAN], tarjetas: (typeof TARJETA_GUARDADA)[] = []) {
   mockGetSearchParam.mockImplementation((key: string) => {
-    const map: Record<string, null> = { estado: null, monto: null, cuenta_id: null }
+    const map: Record<string, null> = { estado: null, monto: null, hijo_id: null }
     return map[key] ?? null
   })
   vi.mocked(api.get).mockImplementation((url: string) => {
     if (url === '/core/bancard/tarjetas/') return Promise.resolve({ data: { tarjetas } })
-    return Promise.resolve({ data: { results: cuentas } })
+    return Promise.resolve({ data: { hijos } })
   })
 }
 
@@ -77,34 +60,34 @@ beforeEach(() => {
 // ── Estado de retorno Bancard ─────────────────────────────────────────────────
 
 describe('PagarAlmuerzo — resultado Bancard', () => {
-  it('estado=aprobado → muestra "¡Pago aprobado!" y no llama la API', () => {
+  it('estado=aprobado → muestra "¡Recarga aprobada!" y no llama la API', () => {
     setupRetorno('aprobado')
     render(<PagarAlmuerzo />)
 
-    expect(screen.getByText('¡Pago aprobado!')).toBeInTheDocument()
+    expect(screen.getByText('¡Recarga aprobada!')).toBeInTheDocument()
     expect(vi.mocked(api.get)).not.toHaveBeenCalled()
   })
 
-  it('estado=cancelado → muestra "Pago cancelado"', () => {
+  it('estado=cancelado → muestra "Recarga cancelada"', () => {
     setupRetorno('cancelado')
     render(<PagarAlmuerzo />)
 
-    expect(screen.getByText('Pago cancelado')).toBeInTheDocument()
+    expect(screen.getByText('Recarga cancelada')).toBeInTheDocument()
   })
 
-  it('estado=rechazado → muestra "Pago rechazado"', () => {
+  it('estado=rechazado → muestra "Recarga rechazada"', () => {
     setupRetorno('rechazado')
     render(<PagarAlmuerzo />)
 
-    expect(screen.getByText('Pago rechazado')).toBeInTheDocument()
+    expect(screen.getByText('Recarga rechazada')).toBeInTheDocument()
   })
 
-  it('"Ver cuentas pendientes" llama setSearchParams({})', async () => {
+  it('"Ver saldo" llama setSearchParams({})', async () => {
     setupRetorno('aprobado')
-    vi.mocked(api.get).mockResolvedValue({ data: { results: [CUENTA_JUAN] } })
+    vi.mocked(api.get).mockResolvedValue({ data: { hijos: [HIJO_JUAN] } })
     render(<PagarAlmuerzo />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Ver cuentas pendientes/i }))
+    await userEvent.click(screen.getByRole('button', { name: /Ver saldo/i }))
 
     expect(mockSetSearchParams).toHaveBeenCalledWith({})
   })
@@ -121,23 +104,12 @@ describe('PagarAlmuerzo — carga', () => {
     expect(screen.getByRole('status')).toBeInTheDocument()
   })
 
-  it('sin cuentas pendientes → mensaje "Sin cuentas pendientes"', async () => {
+  it('sin hijos → mensaje "Sin hijos asociados"', async () => {
     setupNoRetorno([])
     render(<PagarAlmuerzo />)
 
-    await screen.findByText('Sin cuentas pendientes')
-    expect(vi.mocked(api.get)).toHaveBeenCalledWith(
-      '/almuerzos/cuentas-mensuales/',
-      expect.objectContaining({ params: expect.objectContaining({ estado: 'PENDIENTE,PARCIAL' }) }),
-    )
-  })
-
-  it('cuenta con saldo_pendiente=0 queda excluida', async () => {
-    const sinDeuda = { ...CUENTA_JUAN, saldo_pendiente: 0 }
-    setupNoRetorno([sinDeuda])
-    render(<PagarAlmuerzo />)
-
-    await screen.findByText('Sin cuentas pendientes')
+    await screen.findByText('Sin hijos asociados')
+    expect(vi.mocked(api.get)).toHaveBeenCalledWith('/usuarios/portal/mi-hijo/')
   })
 
   it('API falla → toast.error', async () => {
@@ -146,7 +118,7 @@ describe('PagarAlmuerzo — carga', () => {
     render(<PagarAlmuerzo />)
 
     await waitFor(() =>
-      expect(vi.mocked(toast.error)).toHaveBeenCalledWith('Error al cargar las cuentas de almuerzo')
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith('Error al cargar el saldo de almuerzo')
     )
   })
 })
@@ -154,78 +126,87 @@ describe('PagarAlmuerzo — carga', () => {
 // ── Auto-selección ────────────────────────────────────────────────────────────
 
 describe('PagarAlmuerzo — auto-selección', () => {
-  it('una sola cuenta → se auto-selecciona y muestra "Saldo pendiente"', async () => {
-    setupNoRetorno([CUENTA_JUAN])
+  it('un solo hijo → se auto-selecciona y muestra su saldo', async () => {
+    setupNoRetorno([HIJO_JUAN])
     render(<PagarAlmuerzo />)
 
-    // El texto "Saldo pendiente" solo aparece en la tarjeta de cuenta única auto-seleccionada
-    await screen.findByText('Saldo pendiente')
+    await screen.findByText('Juan García')
+    expect(screen.getByText('Gs. -150.000')).toBeInTheDocument()
   })
 
-  it('múltiples cuentas → muestra selector con ambos hijos', async () => {
-    setupNoRetorno([CUENTA_JUAN, CUENTA_LUCIA])
+  it('múltiples hijos → muestra selector con ambos', async () => {
+    setupNoRetorno([HIJO_JUAN, HIJO_LUCIA])
     render(<PagarAlmuerzo />)
 
     await screen.findByText('Juan García')
     expect(screen.getByText('Lucía García')).toBeInTheDocument()
   })
 
-  it('seleccionar cuenta de Lucía activa el resumen de pago', async () => {
-    setupNoRetorno([CUENTA_JUAN, CUENTA_LUCIA])
+  it('seleccionar a Lucía y un monto activa el resumen', async () => {
+    setupNoRetorno([HIJO_JUAN, HIJO_LUCIA])
     render(<PagarAlmuerzo />)
     await screen.findByText('Juan García')
 
     await userEvent.click(screen.getByRole('button', { name: /Lucía García/i }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 25.000' }))
 
-    // La sección "Resumen" solo aparece cuando hay cuenta seleccionada + monto válido
     await screen.findByText('Resumen')
+  })
+
+  it('?hijo_id= preselecciona al hijo indicado', async () => {
+    mockGetSearchParam.mockImplementation((key: string) => {
+      if (key === 'hijo_id') return '2'
+      return null
+    })
+    vi.mocked(api.get).mockResolvedValue({ data: { hijos: [HIJO_JUAN, HIJO_LUCIA] } })
+    render(<PagarAlmuerzo />)
+
+    await screen.findByText('Juan García')
+    // Lucía queda resaltada como seleccionada — el botón de monto rápido ya está disponible
+    expect(screen.getByRole('button', { name: 'Gs. 25.000' })).toBeInTheDocument()
   })
 })
 
 // ── Botón "Ir a pagar" ────────────────────────────────────────────────────────
 
 describe('PagarAlmuerzo — botón "Ir a pagar"', () => {
-  it('botón deshabilitado si el monto es 0', async () => {
-    setupNoRetorno([CUENTA_JUAN])
+  it('botón deshabilitado sin monto seleccionado', async () => {
+    setupNoRetorno([HIJO_JUAN])
     render(<PagarAlmuerzo />)
-    // "Saldo pendiente" es único a la tarjeta de cuenta única auto-seleccionada
-    await screen.findByText('Saldo pendiente')
-
-    // Vaciar el monto (input type="text" con placeholder="0")
-    const input = screen.getByPlaceholderText('0')
-    await userEvent.clear(input)
+    await screen.findByText('Juan García')
 
     expect(screen.getByRole('button', { name: /Ir a pagar/i })).toBeDisabled()
   })
 
-  it('botón habilitado con monto válido y llama api.post al hacer clic', async () => {
-    setupNoRetorno([CUENTA_JUAN])
+  it('botón habilitado con monto rápido y llama api.post con hijo_id al hacer clic', async () => {
+    setupNoRetorno([HIJO_JUAN])
     vi.mocked(api.post).mockResolvedValue({ data: { redirect_url: 'https://bancard.com/pay' } })
     delete (window as { location?: unknown }).location
     ;(window as { location: { href: string } }).location = { href: '' }
 
     render(<PagarAlmuerzo />)
-    await screen.findByText('Saldo pendiente')
+    await screen.findByText('Juan García')
 
-    // La cuenta se auto-seleccionó y el monto fue prellenado con saldo_pendiente
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Ir a pagar/i }))
 
     await waitFor(() => {
       expect(vi.mocked(api.post)).toHaveBeenCalledWith(
         '/core/bancard/iniciar-almuerzo/',
-        expect.objectContaining({ cuenta_id: 10, monto: 150_000 }),
+        expect.objectContaining({ hijo_id: 1, monto: 50_000 }),
       )
     })
   })
 
   it('API post falla → toast.error', async () => {
-    setupNoRetorno([CUENTA_JUAN])
+    setupNoRetorno([HIJO_JUAN])
     vi.mocked(api.post).mockRejectedValue({
       response: { data: { detail: 'Bancard error' } },
     })
     render(<PagarAlmuerzo />)
-    await screen.findByText('Saldo pendiente')
+    await screen.findByText('Juan García')
 
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Ir a pagar/i }))
 
     await waitFor(() =>
@@ -238,9 +219,10 @@ describe('PagarAlmuerzo — botón "Ir a pagar"', () => {
 
 describe('PagarAlmuerzo — tarjeta guardada', () => {
   it('pestaña "Tarjeta guardada" muestra las tarjetas guardadas del cliente', async () => {
-    setupNoRetornoConTarjetas([CUENTA_JUAN], [TARJETA_GUARDADA])
+    setupNoRetorno([HIJO_JUAN], [TARJETA_GUARDADA])
     render(<PagarAlmuerzo />)
-    await screen.findByText('Saldo pendiente')
+    await screen.findByText('Juan García')
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
 
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
 
@@ -248,10 +230,11 @@ describe('PagarAlmuerzo — tarjeta guardada', () => {
   })
 
   it('pagar con tarjeta guardada (aprobado síncrono) redirige con estado=aprobado', async () => {
-    setupNoRetornoConTarjetas([CUENTA_JUAN], [TARJETA_GUARDADA])
-    vi.mocked(api.post).mockResolvedValue({ data: { estado: 'aprobado', monto: 150_000 } })
+    setupNoRetorno([HIJO_JUAN], [TARJETA_GUARDADA])
+    vi.mocked(api.post).mockResolvedValue({ data: { estado: 'aprobado', monto: 50_000 } })
     render(<PagarAlmuerzo />)
-    await screen.findByText('Saldo pendiente')
+    await screen.findByText('Juan García')
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
     await screen.findByText(/5418\*+0014/)
 
@@ -262,16 +245,17 @@ describe('PagarAlmuerzo — tarjeta guardada', () => {
     await waitFor(() => {
       expect(vi.mocked(api.post)).toHaveBeenCalledWith(
         '/core/bancard/pagar-almuerzo-con-tarjeta/',
-        expect.objectContaining({ cuenta_id: 10, monto: 150_000, card_id: 1 }),
+        expect.objectContaining({ hijo_id: 1, monto: 50_000, card_id: 1 }),
       )
     })
     expect(window.location.href).toContain('estado=aprobado')
   })
 
   it('botón "Ir a pagar" queda deshabilitado sin tarjeta seleccionada', async () => {
-    setupNoRetornoConTarjetas([CUENTA_JUAN], [TARJETA_GUARDADA])
+    setupNoRetorno([HIJO_JUAN], [TARJETA_GUARDADA])
     render(<PagarAlmuerzo />)
-    await screen.findByText('Saldo pendiente')
+    await screen.findByText('Juan García')
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
     await screen.findByText(/5418\*+0014/)
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   CreditCard, AlertTriangle, UtensilsCrossed, History,
-  CalendarCheck, CheckCircle2, Clock, AlertCircle, RefreshCw, Wallet,
+  CalendarCheck, AlertCircle, RefreshCw, Wallet,
   ShoppingBag, ChevronDown, ChevronUp, TrendingUp,
 } from 'lucide-react'
 import api from '../../services/api'
@@ -55,6 +55,7 @@ interface HijoData {
   restricciones: Restriccion[]
   consumos_mes: { total: number; cobrados: number; ultimos: ConsumoReciente[] }
   cuenta_mensual: CuentaMensual | null
+  saldo_almuerzo: number
   top_productos?: TopProducto[]
 }
 
@@ -97,10 +98,6 @@ const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
 
 const SEVERIDAD_COLOR: Record<string, BadgeColor> = {
   CRITICA: 'red', ALTA: 'orange', MEDIA: 'yellow', BAJA: 'default',
-}
-
-const CUENTA_COLOR: Record<string, BadgeColor> = {
-  PAGADO: 'green', PARCIAL: 'blue', PENDIENTE: 'orange',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -193,6 +190,40 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
         </div>
       )}
 
+      {/* Saldo de almuerzo — cuenta corriente, separada de la tarjeta */}
+      <div className={[
+        'rounded-2xl border p-4',
+        hijo.saldo_almuerzo < 0 ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200',
+      ].join(' ')}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <UtensilsCrossed className={`w-4 h-4 ${hijo.saldo_almuerzo < 0 ? 'text-red-500' : 'text-orange-600'}`} />
+              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Saldo de almuerzo</p>
+            </div>
+            <p className={`text-4xl font-bold tabular-nums ${hijo.saldo_almuerzo < 0 ? 'text-red-700' : 'text-orange-700'}`}>
+              {formatGs(hijo.saldo_almuerzo)}
+            </p>
+            <p className="text-sm text-slate-400 mt-1">
+              {hijo.saldo_almuerzo < 0 ? 'Debe — se descuenta de cada ingreso al comedor' : 'A favor del comedor, no de la cantina'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate(`/portal/pagar-almuerzo?hijo_id=${hijo.id}`)}
+          className={[
+            'mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border font-semibold text-base transition-colors cursor-pointer',
+            hijo.saldo_almuerzo < 0
+              ? 'border-red-300 text-red-700 hover:bg-red-50'
+              : 'border-orange-300 text-orange-700 hover:bg-orange-50',
+          ].join(' ')}
+        >
+          <Wallet className="w-4 h-4" />
+          Recargar saldo de almuerzo
+        </button>
+      </div>
+
       {/* Restricciones */}
       {hijo.restricciones.length > 0 && (
         <div className="space-y-2">
@@ -215,19 +246,14 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
         </div>
       )}
 
-      {/* Cuenta mensual */}
+      {/* Consumo del mes — informativo, el saldo de almuerzo de arriba es lo que se cobra */}
       {hijo.cuenta_mensual ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <UtensilsCrossed className="w-4 h-4 text-slate-500" />
-              <p className="text-base font-semibold text-slate-700">
-                Almuerzo — {MESES[mes.mes]} {mes.anio}
-              </p>
-            </div>
-            <Badge color={CUENTA_COLOR[hijo.cuenta_mensual.estado] ?? 'default'}>
-              {hijo.cuenta_mensual.estado}
-            </Badge>
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+            <UtensilsCrossed className="w-4 h-4 text-slate-500" />
+            <p className="text-base font-semibold text-slate-700">
+              Consumo — {MESES[mes.mes]} {mes.anio}
+            </p>
           </div>
           <div className="grid grid-cols-2 divide-x divide-slate-100">
             <div className="p-4 text-center">
@@ -239,37 +265,10 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
               <p className="text-2xl font-bold text-emerald-700 tabular-nums">{formatGs(hijo.cuenta_mensual.monto_total)}</p>
             </div>
           </div>
-          {hijo.cuenta_mensual.monto_pendiente > 0 && (
-            <div className="px-4 py-3 bg-red-50 border-t border-red-100 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <Clock className="w-4 h-4 text-red-500 shrink-0" />
-                <p className="text-sm font-medium text-red-700 truncate">Pendiente de pago</p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <p className="text-sm font-bold text-red-700 tabular-nums">
-                  {formatGs(hijo.cuenta_mensual.monto_pendiente)}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/portal/pagar-almuerzo?cuenta_id=${hijo.cuenta_mensual!.id}&monto=${hijo.cuenta_mensual!.monto_pendiente}`)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-                >
-                  <Wallet className="w-3.5 h-3.5" />
-                  Pagar
-                </button>
-              </div>
-            </div>
-          )}
-          {hijo.cuenta_mensual.monto_pendiente === 0 && (
-            <div className="px-4 py-3 bg-green-50 border-t border-green-100 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
-              <p className="text-sm font-medium text-green-700">Cuenta al día</p>
-            </div>
-          )}
         </div>
       ) : (
         <div className="rounded-2xl border border-slate-100 bg-white px-4 py-6 text-center text-slate-400 text-sm">
-          Sin cuenta de almuerzo en {MESES[mes.mes]}
+          Sin consumo de almuerzo en {MESES[mes.mes]}
         </div>
       )}
 

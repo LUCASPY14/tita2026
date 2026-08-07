@@ -14,22 +14,15 @@ import TarjetasGuardadasBancard from './components/TarjetasGuardadasBancard'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
-interface CuentaAlmuerzo {
+interface HijoSaldo {
   id: number
-  hijo_nombre: string
-  mes: number
-  anio: number
-  cantidad_almuerzos: number
-  monto_total: number
-  monto_pagado: number
-  saldo_pendiente: number
-  estado: string
+  nombre: string
+  saldo_almuerzo: number
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-               'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+const MONTOS_RAPIDOS = [25000, 50000, 100000, 150000]
 
 function formatGs(n: number) {
   return 'Gs. ' + (Number(n) || 0).toLocaleString('es-PY')
@@ -49,14 +42,14 @@ function ResultadoPago({ estado, monto }: { estado: string; monto: string | null
             <CheckCircle2 className="w-10 h-10 text-green-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">¡Pago aprobado!</h2>
+            <h2 className="text-2xl font-bold text-slate-900">¡Recarga aprobada!</h2>
             {monto && (
               <p className="text-emerald-700 text-xl font-semibold mt-1">
-                {formatGs(Number(monto))} abonados
+                {formatGs(Number(monto))} acreditados
               </p>
             )}
             <p className="text-slate-500 text-base mt-2">
-              El pago fue registrado en la cuenta de almuerzo.
+              El saldo de almuerzo ya está disponible.
             </p>
           </div>
         </>
@@ -66,7 +59,7 @@ function ResultadoPago({ estado, monto }: { estado: string; monto: string | null
             <XCircle className="w-10 h-10 text-slate-400" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Pago cancelado</h2>
+            <h2 className="text-2xl font-bold text-slate-900">Recarga cancelada</h2>
             <p className="text-slate-500 text-base mt-2">No se realizó ningún cargo.</p>
           </div>
         </>
@@ -76,7 +69,7 @@ function ResultadoPago({ estado, monto }: { estado: string; monto: string | null
             <AlertCircle className="w-10 h-10 text-red-500" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Pago rechazado</h2>
+            <h2 className="text-2xl font-bold text-slate-900">Recarga rechazada</h2>
             <p className="text-slate-500 text-base mt-2">
               No se pudo procesar el pago. Verificá los datos de tu tarjeta e intentá nuevamente.
             </p>
@@ -96,13 +89,12 @@ export default function PagarAlmuerzo() {
   const estadoRetorno = searchParams.get('estado')
   const montoRetorno  = searchParams.get('monto')
 
-  // Pre-cargado desde Dashboard vía query params
-  const cuentaIdParam = searchParams.get('cuenta_id')
-  const montoParam    = searchParams.get('monto')
+  // Pre-cargado desde Dashboard vía query param
+  const hijoIdParam = searchParams.get('hijo_id')
 
-  const [cuentas, setCuentas]       = useState<CuentaAlmuerzo[]>([])
+  const [hijos, setHijos]           = useState<HijoSaldo[]>([])
   const [loading, setLoading]       = useState(true)
-  const [cuentaSeleccionada, setCuentaSeleccionada] = useState<CuentaAlmuerzo | null>(null)
+  const [hijoSeleccionado, setHijoSeleccionado] = useState<HijoSaldo | null>(null)
   const [montoCustom, setMontoCustom] = useState('')
   const [iniciando, setIniciando]         = useState(false)
   const [pagoEnProceso, setPagoEnProceso] = useState(false)
@@ -120,55 +112,43 @@ export default function PagarAlmuerzo() {
   const [scriptUrl3ds, setScriptUrl3ds]         = useState<string | null>(null)
   const scriptRef3ds = useRef<HTMLScriptElement | null>(null)
 
-  const cargarCuentas = useCallback(async () => {
+  const cargarHijos = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await api.get('/almuerzos/cuentas-mensuales/', {
-        params: { estado: 'PENDIENTE,PARCIAL', ordering: '-anio,-mes' },
-      })
-      const lista: CuentaAlmuerzo[] = (data.results ?? data).filter(
-        (c: CuentaAlmuerzo) => Number(c.saldo_pendiente) > 0
-      )
-      setCuentas(lista)
+      const { data } = await api.get('/usuarios/portal/mi-hijo/')
+      const lista: HijoSaldo[] = (data.hijos ?? []).map((h: { id: number; nombre: string; saldo_almuerzo: number }) => ({
+        id: h.id, nombre: h.nombre, saldo_almuerzo: h.saldo_almuerzo,
+      }))
+      setHijos(lista)
 
-      // Pre-seleccionar si vino desde Dashboard
-      if (cuentaIdParam) {
-        const preseleccionada = lista.find(c => String(c.id) === cuentaIdParam)
-        if (preseleccionada) {
-          setCuentaSeleccionada(preseleccionada)
-          if (montoParam && !estadoRetorno) {
-            setMontoCustom(montoParam)
-          }
-        }
-      } else if (lista.length === 1) {
-        setCuentaSeleccionada(lista[0])
-        setMontoCustom(String(lista[0].saldo_pendiente))
-      }
+      const preseleccionado = hijoIdParam
+        ? lista.find(h => String(h.id) === hijoIdParam)
+        : (lista.length === 1 ? lista[0] : undefined)
+      if (preseleccionado) setHijoSeleccionado(preseleccionado)
     } catch {
-      toast.error('Error al cargar las cuentas de almuerzo')
+      toast.error('Error al cargar el saldo de almuerzo')
     } finally {
       setLoading(false)
     }
-  }, [cuentaIdParam, montoParam, estadoRetorno])
+  }, [hijoIdParam])
 
   // Carga de datos al montar (salvo al volver de un pago): el setLoading(true)
-  // inicial en cargarCuentas es intencional.
+  // inicial en cargarHijos es intencional.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!estadoRetorno) cargarCuentas()
-  }, [estadoRetorno, cargarCuentas])
+    if (!estadoRetorno) cargarHijos()
+  }, [estadoRetorno, cargarHijos])
 
   const montoEfectivo = parseInt(montoCustom.replace(/\D/g, ''), 10) || 0
-  const pendiente = cuentaSeleccionada ? Number(cuentaSeleccionada.saldo_pendiente) : 0
-  const montoValido = montoEfectivo > 0 && montoEfectivo <= pendiente
+  const montoValido = montoEfectivo > 0
 
   const handlePagar = useCallback(async () => {
-    if (!cuentaSeleccionada || !montoValido || iniciando) return
+    if (!hijoSeleccionado || !montoValido || iniciando) return
 
     setIniciando(true)
     try {
       const { data } = await api.post('/core/bancard/iniciar-almuerzo/', {
-        cuenta_id: cuentaSeleccionada.id,
+        hijo_id: hijoSeleccionado.id,
         monto: montoEfectivo,
       })
       setProcessId(data.process_id)
@@ -176,20 +156,20 @@ export default function PagarAlmuerzo() {
       setPagoEnProceso(true)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })
-        ?.response?.data?.detail ?? 'Error al iniciar el pago'
+        ?.response?.data?.detail ?? 'Error al iniciar la recarga'
       toast.error(msg)
       setIniciando(false)
     }
-  }, [cuentaSeleccionada, montoValido, montoEfectivo, iniciando])
+  }, [hijoSeleccionado, montoValido, montoEfectivo, iniciando])
 
   // ── Pagar con tarjeta guardada (charge) ────────────────────────────────────
   const handlePagarConTarjeta = useCallback(async () => {
-    if (!cuentaSeleccionada || !montoValido || !cardIdSeleccionado || iniciando) return
+    if (!hijoSeleccionado || !montoValido || !cardIdSeleccionado || iniciando) return
 
     setIniciando(true)
     try {
       const { data } = await api.post('/core/bancard/pagar-almuerzo-con-tarjeta/', {
-        cuenta_id: cuentaSeleccionada.id,
+        hijo_id: hijoSeleccionado.id,
         monto: montoEfectivo,
         card_id: cardIdSeleccionado,
       })
@@ -206,11 +186,11 @@ export default function PagarAlmuerzo() {
       window.location.href = `${window.location.pathname}?${params.toString()}`
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })
-        ?.response?.data?.detail ?? 'Error al procesar el pago'
+        ?.response?.data?.detail ?? 'Error al procesar la recarga'
       toast.error(msg)
       setIniciando(false)
     }
-  }, [cuentaSeleccionada, montoValido, montoEfectivo, cardIdSeleccionado, iniciando])
+  }, [hijoSeleccionado, montoValido, montoEfectivo, cardIdSeleccionado, iniciando])
 
   useEffect(() => {
     if (!pagoEnProceso && !pago3dsEnProceso) return
@@ -284,14 +264,14 @@ export default function PagarAlmuerzo() {
     setMontoCustom('')
     setMetodoPago('ocasional')
     setCardIdSeleccionado(null)
-    cargarCuentas()
+    cargarHijos()
   }
 
   // ── Formulario embebido Bancard ────────────────────────────────────────────
   if (pagoEnProceso) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900">Pago de Almuerzo</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Recargar Saldo de Almuerzo</h1>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
           <div className="mb-4">
             <p className="text-base font-semibold text-slate-800">Ingresá los datos de tu tarjeta</p>
@@ -323,7 +303,7 @@ export default function PagarAlmuerzo() {
   if (pago3dsEnProceso) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900">Pago de Almuerzo</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Recargar Saldo de Almuerzo</h1>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
           <div className="mb-4">
             <p className="text-base font-semibold text-slate-800">Verificación de seguridad</p>
@@ -341,7 +321,7 @@ export default function PagarAlmuerzo() {
   if (estadoRetorno) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900">Pago de Almuerzo</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Recargar Saldo de Almuerzo</h1>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
           <ResultadoPago estado={estadoRetorno} monto={montoRetorno} />
           <div className="mt-6 flex justify-center">
@@ -351,7 +331,7 @@ export default function PagarAlmuerzo() {
               className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors cursor-pointer text-base"
             >
               <RefreshCw className="w-4 h-4" />
-              Ver cuentas pendientes
+              Ver saldo
             </button>
           </div>
         </div>
@@ -361,12 +341,11 @@ export default function PagarAlmuerzo() {
 
   if (loading) return <Spinner className="mt-16" />
 
-  if (cuentas.length === 0) {
+  if (hijos.length === 0) {
     return (
       <div className="py-16 text-center text-slate-400">
         <UtensilsCrossed className="w-12 h-12 mx-auto mb-4 opacity-30" />
-        <p className="text-base font-medium text-slate-600">Sin cuentas pendientes</p>
-        <p className="text-sm mt-1">No hay deudas de almuerzo para tus hijos.</p>
+        <p className="text-base font-medium text-slate-600">Sin hijos asociados</p>
       </div>
     )
   }
@@ -374,46 +353,38 @@ export default function PagarAlmuerzo() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Pago de Almuerzo</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Recargar Saldo de Almuerzo</h1>
         <p className="text-base text-slate-500 mt-0.5">
-          Abonás la cuenta con Visa o Mastercard vía Bancard
+          Cargás saldo con Visa o Mastercard vía Bancard — se descuenta en cada ingreso al comedor
         </p>
       </div>
 
-      {/* Selección de cuenta (si hay más de una) */}
-      {cuentas.length > 1 && (
+      {/* Selección de hijo (si hay más de uno) */}
+      {hijos.length > 1 && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
-              1 — Seleccioná la cuenta
+              1 — Seleccioná el hijo
             </p>
           </div>
           <div className="divide-y divide-slate-100">
-            {cuentas.map(c => (
+            {hijos.map(h => (
               <button
-                key={c.id}
+                key={h.id}
                 type="button"
-                onClick={() => {
-                  setCuentaSeleccionada(c)
-                  setMontoCustom(String(c.saldo_pendiente))
-                }}
+                onClick={() => setHijoSeleccionado(h)}
                 className={[
                   'w-full flex items-center justify-between px-5 py-4 text-left transition-colors cursor-pointer',
-                  cuentaSeleccionada?.id === c.id
+                  hijoSeleccionado?.id === h.id
                     ? 'bg-orange-50 border-l-4 border-orange-500'
                     : 'hover:bg-slate-50 border-l-4 border-transparent',
                 ].join(' ')}
               >
-                <div>
-                  <p className="text-base font-semibold text-slate-800">{c.hijo_nombre}</p>
-                  <p className="text-sm text-slate-400 mt-0.5">
-                    {MESES[c.mes]} {c.anio} · {c.cantidad_almuerzos} almuerzos
-                  </p>
-                </div>
+                <p className="text-base font-semibold text-slate-800">{h.nombre}</p>
                 <div className="text-right shrink-0 ml-4">
-                  <p className="text-sm text-slate-400">Pendiente</p>
-                  <p className="text-base font-bold text-red-600 tabular-nums">
-                    {formatGs(c.saldo_pendiente)}
+                  <p className="text-sm text-slate-400">Saldo actual</p>
+                  <p className={`text-base font-bold tabular-nums ${h.saldo_almuerzo < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                    {formatGs(h.saldo_almuerzo)}
                   </p>
                 </div>
               </button>
@@ -422,63 +393,55 @@ export default function PagarAlmuerzo() {
         </div>
       )}
 
-      {/* Tarjeta única seleccionada */}
-      {cuentaSeleccionada && cuentas.length === 1 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-2xl px-5 py-4">
+      {/* Hijo único seleccionado */}
+      {hijoSeleccionado && hijos.length === 1 && (
+        <div className={[
+          'rounded-2xl px-5 py-4 border',
+          hijoSeleccionado.saldo_almuerzo < 0 ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200',
+        ].join(' ')}>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-base font-bold text-slate-800">{cuentaSeleccionada.hijo_nombre}</p>
-              <p className="text-sm text-slate-500 mt-0.5">
-                {MESES[cuentaSeleccionada.mes]} {cuentaSeleccionada.anio} · {cuentaSeleccionada.cantidad_almuerzos} almuerzos
-              </p>
-            </div>
+            <p className="text-base font-bold text-slate-800">{hijoSeleccionado.nombre}</p>
             <div className="text-right shrink-0 ml-4">
-              <p className="text-sm text-slate-500">Saldo pendiente</p>
-              <p className="text-2xl font-bold text-red-600 tabular-nums">
-                {formatGs(cuentaSeleccionada.saldo_pendiente)}
+              <p className="text-sm text-slate-500">Saldo actual</p>
+              <p className={`text-2xl font-bold tabular-nums ${hijoSeleccionado.saldo_almuerzo < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                {formatGs(hijoSeleccionado.saldo_almuerzo)}
               </p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-orange-200">
-            <div>
-              <p className="text-xs text-slate-400">Total del mes</p>
-              <p className="text-sm font-semibold text-slate-700 tabular-nums">{formatGs(cuentaSeleccionada.monto_total)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">Ya pagado</p>
-              <p className="text-sm font-semibold text-emerald-700 tabular-nums">{formatGs(cuentaSeleccionada.monto_pagado)}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Monto a pagar */}
-      {cuentaSeleccionada && (
+      {/* Monto a recargar */}
+      {hijoSeleccionado && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
-              {cuentas.length > 1 ? '2' : '1'} — Monto a abonar
+              {hijos.length > 1 ? '2' : '1'} — Monto a recargar
             </p>
           </div>
           <div className="p-5 space-y-4">
-            {/* Botón rápido: total pendiente */}
-            <button
-              type="button"
-              onClick={() => setMontoCustom(String(cuentaSeleccionada.saldo_pendiente))}
-              className={[
-                'w-full py-3 px-4 rounded-xl border-2 text-base font-bold transition-all cursor-pointer flex items-center justify-between',
-                montoEfectivo === pendiente
-                  ? 'bg-orange-600 border-orange-600 text-white shadow-sm'
-                  : 'border-slate-200 text-slate-700 hover:border-orange-300 hover:bg-orange-50',
-              ].join(' ')}
-            >
-              <span>Pagar total pendiente</span>
-              <span className="tabular-nums">{formatGs(cuentaSeleccionada.saldo_pendiente)}</span>
-            </button>
+            {/* Montos rápidos */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {MONTOS_RAPIDOS.map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMontoCustom(String(m))}
+                  className={[
+                    'py-3 px-4 rounded-xl border-2 text-base font-bold transition-all cursor-pointer',
+                    montoEfectivo === m
+                      ? 'bg-orange-600 border-orange-600 text-white shadow-sm'
+                      : 'border-slate-200 text-slate-700 hover:border-orange-300 hover:bg-orange-50',
+                  ].join(' ')}
+                >
+                  {formatGs(m)}
+                </button>
+              ))}
+            </div>
 
             {/* Monto personalizado */}
             <div>
-              <p className="text-sm text-slate-500 mb-2">O ingresá un monto parcial:</p>
+              <p className="text-sm text-slate-500 mb-2">O ingresá otro monto:</p>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base font-medium pointer-events-none">
                   Gs.
@@ -492,22 +455,17 @@ export default function PagarAlmuerzo() {
                   className="w-full border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
                 />
               </div>
-              {montoEfectivo > pendiente && (
-                <p className="text-sm text-red-500 mt-1">
-                  El monto no puede superar el saldo pendiente ({formatGs(pendiente)}).
-                </p>
-              )}
             </div>
           </div>
         </div>
       )}
 
       {/* Método de pago */}
-      {cuentaSeleccionada && montoValido && (
+      {hijoSeleccionado && montoValido && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
-              {cuentas.length > 1 ? '3' : '2'} — Método de pago
+              {hijos.length > 1 ? '3' : '2'} — Método de pago
             </p>
           </div>
           <div className="flex border-b border-slate-100">
@@ -548,7 +506,7 @@ export default function PagarAlmuerzo() {
       )}
 
       {/* Resumen */}
-      {cuentaSeleccionada && montoEfectivo > 0 && montoValido && (
+      {hijoSeleccionado && montoEfectivo > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Resumen</p>
@@ -556,26 +514,24 @@ export default function PagarAlmuerzo() {
           <div className="px-5 py-4 space-y-2">
             <div className="flex justify-between text-base">
               <span className="text-slate-500">Alumno</span>
-              <span className="font-semibold text-slate-800">{cuentaSeleccionada.hijo_nombre}</span>
+              <span className="font-semibold text-slate-800">{hijoSeleccionado.nombre}</span>
             </div>
             <div className="flex justify-between text-base">
-              <span className="text-slate-500">Período</span>
-              <span className="font-semibold text-slate-800">
-                {MESES[cuentaSeleccionada.mes]} {cuentaSeleccionada.anio}
+              <span className="text-slate-500">Saldo actual</span>
+              <span className={`font-semibold tabular-nums ${hijoSeleccionado.saldo_almuerzo < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                {formatGs(hijoSeleccionado.saldo_almuerzo)}
               </span>
             </div>
             <div className="flex justify-between text-base border-t border-slate-100 pt-2 mt-2">
-              <span className="text-slate-500">Monto a pagar</span>
+              <span className="text-slate-500">Monto a recargar</span>
               <span className="text-xl font-bold text-orange-700 tabular-nums">
                 {formatGs(montoEfectivo)}
               </span>
             </div>
-            {montoEfectivo < pendiente && (
-              <div className="flex justify-between text-sm text-slate-400">
-                <span>Quedará pendiente</span>
-                <span className="tabular-nums">{formatGs(pendiente - montoEfectivo)}</span>
-              </div>
-            )}
+            <div className="flex justify-between text-sm text-slate-400">
+              <span>Saldo luego de la recarga</span>
+              <span className="tabular-nums">{formatGs(hijoSeleccionado.saldo_almuerzo + montoEfectivo)}</span>
+            </div>
           </div>
         </div>
       )}
@@ -596,7 +552,7 @@ export default function PagarAlmuerzo() {
 
       {/* Botón principal */}
       {(() => {
-        const listo = cuentaSeleccionada && montoValido && (metodoPago === 'ocasional' || cardIdSeleccionado !== null)
+        const listo = hijoSeleccionado && montoValido && (metodoPago === 'ocasional' || cardIdSeleccionado !== null)
         return (
           <button
             type="button"

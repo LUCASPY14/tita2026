@@ -25,11 +25,21 @@ const TARJETA = {
   estado: 'ACTIVA',
 }
 
+const TARJETA_CON_HIJO = { ...TARJETA, hijo: 7 }
+
 function mockBuscarSuccess() {
   vi.mocked(api.get)
     .mockResolvedValueOnce({ data: { results: [TARJETA] } })
     .mockResolvedValueOnce({ data: { results: [] } })
     .mockResolvedValueOnce({ data: { results: [] } })
+}
+
+function mockBuscarSuccessConHijo(saldoAlmuerzo = -15000) {
+  vi.mocked(api.get)
+    .mockResolvedValueOnce({ data: { results: [TARJETA_CON_HIJO] } })
+    .mockResolvedValueOnce({ data: { results: [] } })
+    .mockResolvedValueOnce({ data: { results: [] } })
+    .mockResolvedValueOnce({ data: { results: [{ saldo_actual: saldoAlmuerzo }] } })
 }
 
 beforeEach(() => {
@@ -159,5 +169,68 @@ describe('CargaSaldo — formulario de carga', () => {
       )
     })
     await screen.findByText('Carga realizada')
+  })
+})
+
+// ─── Saldo de almuerzo ──────────────────────────────────────────────────────────
+
+describe('CargaSaldo — saldo de almuerzo', () => {
+  async function renderConTarjetaConHijo(saldoAlmuerzo = -15000) {
+    const user = userEvent.setup()
+    mockBuscarSuccessConHijo(saldoAlmuerzo)
+    render(<CargaSaldo />)
+    await user.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
+    await user.click(screen.getByRole('button'))
+    await screen.findByText('Juan Pérez')
+    return user
+  }
+
+  it('tarjeta sin hijo asociado → no muestra el toggle "Saldo a cargar"', async () => {
+    await (async () => {
+      const user = userEvent.setup()
+      mockBuscarSuccess()
+      render(<CargaSaldo />)
+      await user.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
+      await user.click(screen.getByRole('button'))
+      await screen.findByText('Juan Pérez')
+    })()
+    expect(screen.queryByText('Saldo a cargar')).not.toBeInTheDocument()
+  })
+
+  it('tarjeta con hijo → muestra el saldo de almuerzo y el toggle', async () => {
+    await renderConTarjetaConHijo(-15000)
+    expect(screen.getByText('Saldo a cargar')).toBeInTheDocument()
+    expect(screen.getByText('Saldo almuerzo')).toBeInTheDocument()
+    expect(screen.getByText('Gs. -15.000')).toBeInTheDocument()
+    expect(screen.getByText('debe')).toBeInTheDocument()
+  })
+
+  it('seleccionar "Almuerzo" oculta el toggle Contado/Crédito', async () => {
+    const user = await renderConTarjetaConHijo()
+    expect(screen.getByText('Tipo de cobro')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Almuerzo/i }))
+
+    expect(screen.queryByText('Tipo de cobro')).not.toBeInTheDocument()
+  })
+
+  it('recargar saldo de almuerzo llama a /almuerzos/recargas-saldo/ con hijo_id', async () => {
+    const user = await renderConTarjetaConHijo(-15000)
+    await user.click(screen.getByRole('button', { name: /Almuerzo/i }))
+
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { id: 1, estado: 'CONFIRMADA' } })
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { results: [{ saldo_actual: 10000 }] } })
+
+    await user.click(screen.getByRole('button', { name: '20.000' }))
+    await user.click(screen.getByRole('button', { name: /Cargar saldo de almuerzo/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith(
+        '/almuerzos/recargas-saldo/',
+        expect.objectContaining({ hijo: 7, monto_cargado: 20000, metodo_pago: 'EFECTIVO' }),
+      )
+    })
+    await screen.findByText('Recarga de almuerzo realizada')
+    expect(screen.getByText('Gs. 10.000')).toBeInTheDocument()
   })
 })

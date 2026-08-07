@@ -1004,10 +1004,11 @@ class ReporteCobranzaAlmuerzosView(APIView):
                 .annotate(total=Sum("monto_cargado"))
             )
         }
-        cobrado_por_metodo = {
-            r["metodo_pago"]: int(r["total"] or 0)
-            for r in recargas_qs.values("metodo_pago").annotate(total=Sum("monto_cargado"))
-        }
+        por_metodo_qs = recargas_qs.values("metodo_pago").annotate(
+            total=Sum("monto_cargado"), n=Count("id"),
+        )
+        cobrado_por_metodo = {r["metodo_pago"]: int(r["total"] or 0) for r in por_metodo_qs}
+        n_recargas_por_metodo = {r["metodo_pago"]: r["n"] for r in por_metodo_qs}
 
         MESES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -1030,7 +1031,11 @@ class ReporteCobranzaAlmuerzosView(APIView):
 
         # Por método de pago de las recargas (reemplaza "por forma de cobro")
         por_forma = [
-            {"forma_cobro": metodo, "monto_cobrado": monto}
+            {
+                "forma_cobro": metodo,
+                "n_recargas": n_recargas_por_metodo.get(metodo, 0),
+                "monto_cobrado": monto,
+            }
             for metodo, monto in sorted(cobrado_por_metodo.items(), key=lambda x: -x[1])
         ]
 

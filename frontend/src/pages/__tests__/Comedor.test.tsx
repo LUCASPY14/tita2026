@@ -31,18 +31,23 @@ const TARJETA_ACTIVA = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function setupMounts(tarjeta = TARJETA_ACTIVA) {
+function setupMounts(tarjeta = TARJETA_ACTIVA, saldoAlmuerzo: number | null = null) {
   vi.mocked(api.get).mockImplementation((url: string) => {
     if (url === '/clientes/hijos/') return Promise.resolve({ data: { results: [HIJO] } })
     if (url === '/almuerzos/registros-consumo/') return Promise.resolve({ data: { results: [] } })
     if (url === '/core/tarjetas/') return Promise.resolve({ data: { results: [tarjeta] } })
+    if (url === '/almuerzos/saldos/') {
+      return Promise.resolve({
+        data: { results: saldoAlmuerzo === null ? [] : [{ saldo_actual: saldoAlmuerzo }] },
+      })
+    }
     return Promise.resolve({ data: { results: [] } })
   })
   vi.mocked(api.post).mockResolvedValue({ data: { id: 99 } })
 }
 
-async function renderReady(tarjeta = TARJETA_ACTIVA) {
-  setupMounts(tarjeta)
+async function renderReady(tarjeta = TARJETA_ACTIVA, saldoAlmuerzo: number | null = null) {
+  setupMounts(tarjeta, saldoAlmuerzo)
   render(<Comedor />)
   // Wait for both initial API calls (hijos + registros-consumo) to complete
   await waitFor(() => expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThanOrEqual(2))
@@ -131,6 +136,30 @@ describe('Comedor — flujo de escaneo', () => {
     await waitFor(() => expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThanOrEqual(2))
     await scan('T-001')
     await screen.findByText(/ya registró almuerzo hoy/i)
+  })
+
+  it('saldo de almuerzo negativo → se muestra en rojo con aviso "Debe"', async () => {
+    await renderReady(TARJETA_ACTIVA, -15000)
+    await scan('T-001')
+    await screen.findByText('Ingreso registrado')
+    expect(screen.getByText('Saldo de almuerzo')).toBeInTheDocument()
+    expect(screen.getByText('-15.000 Gs.')).toBeInTheDocument()
+    expect(screen.getByText(/Debe/i)).toBeInTheDocument()
+  })
+
+  it('saldo de almuerzo positivo → se muestra sin aviso de deuda', async () => {
+    await renderReady(TARJETA_ACTIVA, 20000)
+    await scan('T-001')
+    await screen.findByText('Ingreso registrado')
+    expect(screen.getByText('20.000 Gs.')).toBeInTheDocument()
+    expect(screen.queryByText(/Debe/i)).not.toBeInTheDocument()
+  })
+
+  it('sin saldo de almuerzo registrado → no muestra la caja de saldo', async () => {
+    await renderReady(TARJETA_ACTIVA, null)
+    await scan('T-001')
+    await screen.findByText('Ingreso registrado')
+    expect(screen.queryByText('Saldo de almuerzo')).not.toBeInTheDocument()
   })
 
   it('registro exitoso → el contador de Recientes sube a 1', async () => {

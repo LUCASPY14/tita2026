@@ -32,6 +32,7 @@ export function formatFecha(iso: string | null | undefined): string {
 export interface Tarjeta {
   nro_tarjeta: string
   codigo_barras: string | null
+  hijo: number | null
   hijo_nombre: string
   hijo_grado: string
   cliente_nombre: string

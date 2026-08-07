@@ -71,7 +71,8 @@ export default function TabCobranzaAlmuerzos() {
             <KpiCard label="Total cobrado" value={formatGs(cbData.resumen.cobrado_anual)} color="text-green-700" />
             <KpiCard label="Pendiente" value={formatGs(cbData.resumen.pendiente_anual)}
               color={cbData.resumen.pendiente_anual > 0 ? 'text-orange-600' : 'text-slate-600'} />
-            <KpiCard label="Cobros" value={cbData.por_mes.reduce((s, m) => s + m.pagados, 0)} />
+            <KpiCard label="Familias con deuda" value={cbData.saldos_pendientes.length}
+              color={cbData.saldos_pendientes.length > 0 ? 'text-red-600' : 'text-slate-600'} />
             <KpiCard label="% Cobrado" value={`${cbData.resumen.tasa_cobro_anual}%`}
               color={cbData.resumen.tasa_cobro_anual >= 90 ? 'text-green-700' : 'text-orange-600'} />
           </div>
@@ -107,7 +108,7 @@ export default function TabCobranzaAlmuerzos() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 text-left">
-                      {['Mes', 'Facturado', 'Cobrado', 'Pendiente', '% Cobrado', 'N° Cobros'].map(h => (
+                      {['Mes', 'Consumido', 'Cobrado', 'Diferencia', '% Cobrado'].map(h => (
                         <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -124,7 +125,6 @@ export default function TabCobranzaAlmuerzos() {
                             {m.tasa_cobro}%
                           </span>
                         </td>
-                        <td className="py-2.5 tabular-nums text-slate-500">{m.pagados}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -135,32 +135,60 @@ export default function TabCobranzaAlmuerzos() {
 
           {cbData.por_forma_cobro.length > 0 && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-              <p className="text-sm font-semibold text-slate-700 mb-3">Cobranza por forma de cobro</p>
+              <p className="text-sm font-semibold text-slate-700 mb-3">Recargas por método de pago</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 text-left">
-                      {['Forma de Cobro', 'N° Cobros', 'Monto Total', '% del Total'].map(h => (
+                      {['Método de Pago', 'N° Recargas', 'Monto Cobrado', '% del Total'].map(h => (
                         <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {cbData.por_forma_cobro.map(f => {
-                      const porcentaje = cbData.resumen.monto_anual > 0
-                        ? Math.round((f.monto_total / cbData.resumen.monto_anual) * 1000) / 10
+                      const porcentaje = cbData.resumen.cobrado_anual > 0
+                        ? Math.round((f.monto_cobrado / cbData.resumen.cobrado_anual) * 1000) / 10
                         : 0
                       return (
                         <tr key={f.forma_cobro} className="hover:bg-slate-50 transition-colors">
                           <td className="py-2.5 pr-4 font-medium text-slate-800">
                             {FORMA_COBRO_LABEL[f.forma_cobro as keyof typeof FORMA_COBRO_LABEL] ?? f.forma_cobro}
                           </td>
-                          <td className="py-2.5 pr-4 tabular-nums text-slate-600">{f.n_cuentas}</td>
-                          <td className="py-2.5 pr-4 tabular-nums font-bold text-slate-800">{formatGs(f.monto_total)}</td>
+                          <td className="py-2.5 pr-4 tabular-nums text-slate-600">{f.n_recargas}</td>
+                          <td className="py-2.5 pr-4 tabular-nums font-bold text-slate-800">{formatGs(f.monto_cobrado)}</td>
                           <td className="py-2.5 tabular-nums text-slate-500">{porcentaje}%</td>
                         </tr>
                       )
                     })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {cbData.saldos_pendientes.length > 0 && (
+            <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-4">
+              <p className="text-sm font-semibold text-slate-700 mb-3">
+                Saldos negativos actuales <span className="text-slate-400 font-normal">— cuenta corriente, no por mes</span>
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-left">
+                      {['Alumno', 'Grado', 'Saldo'].map(h => (
+                        <th key={h} className="pb-2 pr-4 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {cbData.saldos_pendientes.map(s => (
+                      <tr key={s.hijo_id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-2.5 pr-4 font-medium text-slate-800">{s.hijo}</td>
+                        <td className="py-2.5 pr-4 text-slate-500">{s.grado ?? '—'}</td>
+                        <td className="py-2.5 tabular-nums font-bold text-red-600">{formatGs(s.saldo_actual)}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

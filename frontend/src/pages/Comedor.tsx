@@ -67,6 +67,7 @@ type ResultState = {
   grado: string
   tarjeta: string
   saldo: string | number
+  saldoAlmuerzo: number | null
 } | {
   tipo: 'error'
   message: string
@@ -289,6 +290,17 @@ export default function Comedor() {
       // Actualizar set local inmediatamente sin esperar refresh de API
       setConsumidosHoy(prev => new Set([...prev, hijoId as number]))
 
+      // Saldo de almuerzo (cuenta corriente, separada de la tarjeta) — solo
+      // informativo, si falla no bloquea el registro ya confirmado.
+      let saldoAlmuerzo: number | null = null
+      try {
+        const { data: saldoRes } = await api.get('/almuerzos/saldos/', { params: { hijo: hijoId } })
+        const item = (saldoRes.results ?? saldoRes)[0]
+        if (item) saldoAlmuerzo = Number(item.saldo_actual)
+      } catch {
+        // silencioso
+      }
+
       const hora = nowTime()
       const entry: RegistroReciente = {
         id: `${nro}-${Date.now()}`,
@@ -298,7 +310,10 @@ export default function Comedor() {
         tarjeta: nro,
         saldo: tarjeta.saldo_actual,
       }
-      setResult({ tipo: 'ok', nombre: tarjeta.hijo_nombre, grado: hijoGrado, tarjeta: nro, saldo: tarjeta.saldo_actual })
+      setResult({
+        tipo: 'ok', nombre: tarjeta.hijo_nombre, grado: hijoGrado, tarjeta: nro,
+        saldo: tarjeta.saldo_actual, saldoAlmuerzo,
+      })
       setRecientes(prev => [entry, ...prev].slice(0, 30))
       startCountdown(4)
       window.dispatchEvent(new CustomEvent('comedor:registro'))
@@ -409,9 +424,28 @@ export default function Comedor() {
                 <p className="text-green-600 text-base font-bold uppercase tracking-widest mb-2">Ingreso registrado</p>
                 <p className="text-slate-900 text-5xl font-black leading-tight mt-2">{result.nombre}</p>
                 {result.grado && <p className="text-slate-600 text-2xl mt-2 font-medium">{result.grado}</p>}
-                <div className="mt-6 bg-white border border-green-200 rounded-2xl px-6 py-3 inline-block shadow-sm">
-                  <p className="text-slate-500 text-sm">Saldo en tarjeta</p>
-                  <p className="text-emerald-600 text-3xl font-black tabular-nums">{formatGs(result.saldo)}</p>
+                <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
+                  <div className="bg-white border border-green-200 rounded-2xl px-6 py-3 inline-block shadow-sm">
+                    <p className="text-slate-500 text-sm">Saldo en tarjeta</p>
+                    <p className="text-emerald-600 text-3xl font-black tabular-nums">{formatGs(result.saldo)}</p>
+                  </div>
+                  {result.saldoAlmuerzo !== null && (
+                    <div className={[
+                      'rounded-2xl px-6 py-3 inline-block shadow-sm border',
+                      result.saldoAlmuerzo < 0 ? 'bg-red-50 border-red-200' : 'bg-white border-orange-200',
+                    ].join(' ')}>
+                      <p className="text-slate-500 text-sm">Saldo de almuerzo</p>
+                      <p className={[
+                        'text-3xl font-black tabular-nums',
+                        result.saldoAlmuerzo < 0 ? 'text-red-600' : 'text-orange-600',
+                      ].join(' ')}>
+                        {formatGs(result.saldoAlmuerzo)}
+                      </p>
+                      {result.saldoAlmuerzo < 0 && (
+                        <p className="text-red-500 text-xs font-semibold mt-0.5">Debe — no bloquea el ingreso</p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {countdown !== null && (
                   <p className="text-slate-400 text-base mt-6 tabular-nums font-medium">

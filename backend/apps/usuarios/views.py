@@ -533,7 +533,7 @@ class PortalMiHijoView(APIView):
         from datetime import date
         from django.db.models import Sum
         from apps.clientes.models import RestriccionHijo
-        from apps.almuerzos.models import RegistroConsumoAlmuerzo, CuentaAlmuerzoMensual
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo, CuentaAlmuerzoMensual, SaldoAlmuerzo
         from apps.ventas.models import DetalleVenta, Venta
 
         hoy = date.today()
@@ -570,6 +570,9 @@ class PortalMiHijoView(APIView):
             ultimos_consumos = list(
                 consumos_qs.values("fecha_consumo", "costo_almuerzo", "ya_cobrado")[:10]
             )
+
+            # Saldo corriente de almuerzo (cuenta corriente, separado de la tarjeta)
+            saldo_almuerzo = SaldoAlmuerzo.objects.filter(hijo=hijo).first()
 
             # Cuenta mensual
             cuenta = CuentaAlmuerzoMensual.objects.filter(
@@ -611,6 +614,7 @@ class PortalMiHijoView(APIView):
                     "ultimos": ultimos_consumos,
                 },
                 "cuenta_mensual": cuenta_data,
+                "saldo_almuerzo": int(saldo_almuerzo.saldo_actual) if saldo_almuerzo else 0,
                 "top_productos": [
                     {
                         "producto": p["producto__descripcion"],

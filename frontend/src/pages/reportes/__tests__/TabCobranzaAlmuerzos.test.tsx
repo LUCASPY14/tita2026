@@ -37,12 +37,15 @@ const COBRANZA_DATA = {
     meses_con_datos: 2,
   },
   por_mes: [
-    { mes: 6, mes_nombre: 'Junio', n_alumnos: 25, pagados: 22, parciales: 0, pendientes: 3, monto_total: 900_000, monto_cobrado: 750_000, monto_pendiente: 150_000, tasa_cobro: 83 },
-    { mes: 7, mes_nombre: 'Julio', n_alumnos: 25, pagados: 23, parciales: 0, pendientes: 2, monto_total: 900_000, monto_cobrado: 750_000, monto_pendiente: 150_000, tasa_cobro: 83 },
+    { mes: 6, mes_nombre: 'Junio', n_alumnos: 25, monto_total: 900_000, monto_cobrado: 750_000, monto_pendiente: 150_000, tasa_cobro: 83 },
+    { mes: 7, mes_nombre: 'Julio', n_alumnos: 25, monto_total: 900_000, monto_cobrado: 750_000, monto_pendiente: 150_000, tasa_cobro: 83 },
   ],
   por_forma_cobro: [
-    { forma_cobro: 'EFECTIVO',      n_cuentas: 30, monto_total: 900_000 },
-    { forma_cobro: 'TRANSFERENCIA', n_cuentas: 15, monto_total: 600_000 },
+    { forma_cobro: 'EFECTIVO',      n_recargas: 30, monto_cobrado: 900_000 },
+    { forma_cobro: 'TRANSFERENCIA', n_recargas: 15, monto_cobrado: 600_000 },
+  ],
+  saldos_pendientes: [
+    { hijo_id: 1, hijo: 'Juan Pérez', grado: '3° A', saldo_actual: -25_000 },
   ],
 }
 
@@ -92,14 +95,24 @@ describe('TabCobranzaAlmuerzos — buscarCobranza', () => {
     })
   })
 
-  it('muestra KPIs "Total cobrado" y "Cobros" tras la búsqueda', async () => {
+  it('muestra KPIs "Total cobrado" y "Familias con deuda" tras la búsqueda', async () => {
     setupOK()
     render(<TabCobranzaAlmuerzos />)
     await userEvent.click(screen.getByRole('button', { name: /Buscar/i }))
 
     await screen.findByText('Total cobrado')
-    // "Cobros" aparece solo en la KPI card (tabla tiene "N° Cobros")
-    expect(screen.getByText('Cobros')).toBeInTheDocument()
+    expect(screen.getByText('Familias con deuda')).toBeInTheDocument()
+  })
+
+  it('muestra la sección de saldos negativos actuales', async () => {
+    setupOK()
+    render(<TabCobranzaAlmuerzos />)
+    await userEvent.click(screen.getByRole('button', { name: /Buscar/i }))
+
+    await screen.findByText('Total cobrado')
+    expect(screen.getByText(/Saldos negativos actuales/i)).toBeInTheDocument()
+    expect(screen.getByText('Juan Pérez')).toBeInTheDocument()
+    expect(screen.getByText('-25.000 Gs.')).toBeInTheDocument()
   })
 
   it('tabla por mes muestra abreviaciones (Jun, Jul)', async () => {

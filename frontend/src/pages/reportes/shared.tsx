@@ -132,12 +132,16 @@ export interface ConsumoGradoData {
 
 export interface CobranzaMesFila {
   mes: number; mes_nombre: string
-  n_alumnos: number; pagados: number; parciales: number; pendientes: number
+  n_alumnos: number
   monto_total: number; monto_cobrado: number; monto_pendiente: number; tasa_cobro: number
 }
 
 export interface CobranzaFormaFila {
-  forma_cobro: string; n_cuentas: number; monto_total: number
+  forma_cobro: string; n_recargas: number; monto_cobrado: number
+}
+
+export interface SaldoPendienteFila {
+  hijo_id: number; hijo: string; grado: string | null; saldo_actual: number
 }
 
 export interface CobranzaAlmuerzosData {
@@ -148,6 +152,7 @@ export interface CobranzaAlmuerzosData {
   }
   por_mes: CobranzaMesFila[]
   por_forma_cobro: CobranzaFormaFila[]
+  saldos_pendientes: SaldoPendienteFila[]
 }
 
 export interface CompraProveedorFila {

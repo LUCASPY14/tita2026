@@ -3,9 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import PortalDashboard from '../Dashboard'
 
+const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
-  return { ...actual, useNavigate: vi.fn(() => vi.fn()) }
+  return { ...actual, useNavigate: () => mockNavigate }
 })
 
 vi.mock('../../../store/authStore', () => {
@@ -40,6 +41,7 @@ const HIJO_BASE = {
     id: number; cantidad_almuerzos: number; monto_total: number
     monto_pagado: number; monto_pendiente: number; estado: string
   } | null,
+  saldo_almuerzo: 0,
   top_productos: [] as { producto: string; cantidad: number }[],
 }
 
@@ -188,6 +190,36 @@ describe('PortalDashboard — datos', () => {
 
     // El grado de Lucía aparece en el header del card activo
     await screen.findByText('5° B')
+  })
+})
+
+// ── Saldo de almuerzo ─────────────────────────────────────────────────────────
+
+describe('PortalDashboard — saldo de almuerzo', () => {
+  it('saldo positivo → se muestra en verde/naranja con mensaje "A favor"', async () => {
+    setupPortal({ hijos: [{ ...HIJO_CON_CUENTA, saldo_almuerzo: 30_000 }] })
+    render(<PortalDashboard />)
+
+    await screen.findByText('Gs. 30.000')
+    expect(screen.getByText(/A favor del comedor/i)).toBeInTheDocument()
+  })
+
+  it('saldo negativo → se muestra en rojo con mensaje "Debe"', async () => {
+    setupPortal({ hijos: [{ ...HIJO_CON_CUENTA, saldo_almuerzo: -20_000 }] })
+    render(<PortalDashboard />)
+
+    await screen.findByText('Gs. -20.000')
+    expect(screen.getByText(/Debe/i)).toBeInTheDocument()
+  })
+
+  it('botón "Recargar saldo de almuerzo" navega con el hijo_id correcto', async () => {
+    setupPortal({ hijos: [{ ...HIJO_CON_CUENTA, saldo_almuerzo: -20_000 }] })
+    render(<PortalDashboard />)
+    await screen.findByText('Gs. -20.000')
+
+    await userEvent.click(screen.getByRole('button', { name: /Recargar saldo de almuerzo/i }))
+
+    expect(mockNavigate).toHaveBeenCalledWith('/portal/pagar-almuerzo?hijo_id=1')
   })
 })
 

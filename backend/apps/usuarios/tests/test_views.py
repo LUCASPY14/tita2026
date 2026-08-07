@@ -441,6 +441,20 @@ class TestPortalMiHijoConDatos:
         assert hijos[0]["tarjeta"]["nro_tarjeta"] == "PORTAL001"
         assert hijos[0]["cuenta_mensual"]["cantidad_almuerzos"] == 3
 
+    def test_saldo_almuerzo_negativo_se_expone(self, api_portal, hijo_portal):
+        from decimal import Decimal
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_portal, saldo_actual=Decimal("-15000"))
+
+        resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
+        assert resp.status_code == 200
+        assert resp.data["hijos"][0]["saldo_almuerzo"] == -15000
+
+    def test_saldo_almuerzo_sin_registro_es_cero(self, api_portal, hijo_portal):
+        resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
+        assert resp.status_code == 200
+        assert resp.data["hijos"][0]["saldo_almuerzo"] == 0
+
     def test_top_productos_ordenado_por_cantidad(self, api_portal, hijo_portal, cliente, usuario_admin, producto, categoria, unidad_medida, lista_precio):
         from decimal import Decimal
         from apps.productos.models import Producto
