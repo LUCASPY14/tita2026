@@ -16,6 +16,7 @@ TIPO_CARGA_SALDO = "CARGA_SALDO"
 TIPO_PAGO_ALMUERZO = "PAGO_ALMUERZO"
 TIPO_VENTA = "VENTA"
 TIPO_PAGO_CREDITO = "PAGO_CREDITO"
+TIPO_RECARGA_ALMUERZO = "RECARGA_ALMUERZO"
 
 
 class CajaService:
@@ -183,10 +184,24 @@ class FacturacionService:
         tipo: CARGA_SALDO | PAGO_ALMUERZO
         """
         from apps.core.models import CargaSaldo
-        from apps.almuerzos.models import PagoCuentaAlmuerzo
+        from apps.almuerzos.models import PagoCuentaAlmuerzo, RecargaSaldoAlmuerzo
 
         with transaction.atomic():
-            if tipo == TIPO_CARGA_SALDO:
+            if tipo == TIPO_RECARGA_ALMUERZO:
+                origen = RecargaSaldoAlmuerzo.objects.select_related(
+                    "hijo__cliente_responsable"
+                ).select_for_update().get(pk=origen_id)
+
+                if origen.estado != RecargaSaldoAlmuerzo.Estado.CONFIRMADA:
+                    raise ValidationError({"error": "Solo se pueden facturar recargas confirmadas."})
+                if origen.factura_id:
+                    raise ValidationError({"error": "Esta recarga ya tiene factura emitida."})
+
+                cliente = origen.hijo.cliente_responsable
+                monto = origen.monto_cargado
+                iva = cls._calcular_iva_10(monto)
+
+            elif tipo == TIPO_CARGA_SALDO:
                 origen = (
                     CargaSaldo.objects
                     .select_related("tarjeta__hijo__cliente_responsable", "cliente_origen")
@@ -280,9 +295,9 @@ class FacturacionService:
 
     @staticmethod
     def get_pendientes() -> dict:
-        """Retorna cargas de saldo, pagos de almuerzo, ventas y pagos de crédito sin factura."""
+        """Retorna cargas de saldo, pagos/recargas de almuerzo, ventas y pagos de crédito sin factura."""
         from apps.core.models import CargaSaldo
-        from apps.almuerzos.models import PagoCuentaAlmuerzo
+        from apps.almuerzos.models import PagoCuentaAlmuerzo, RecargaSaldoAlmuerzo
         from apps.ventas.models import Venta as VentaModel
         from apps.clientes.models import CuentaCorrienteCliente
 
@@ -295,6 +310,11 @@ class FacturacionService:
             factura__isnull=True,
         ).select_related("cuenta__hijo__cliente_responsable").order_by("-fecha_pago")
 
+        recargas_almuerzo = RecargaSaldoAlmuerzo.objects.filter(
+            estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+            factura__isnull=True,
+        ).select_related("hijo__cliente_responsable").order_by("-fecha_carga")
+
         ventas = VentaModel.objects.filter(
             genera_factura_legal=True,
             factura__isnull=True,
@@ -306,7 +326,13 @@ class FacturacionService:
             factura__isnull=True,
         ).select_related("cliente").order_by("-fecha")
 
-        return {"cargas": cargas, "pagos": pagos, "ventas": ventas, "pagos_credito": pagos_credito}
+        return {
+            "cargas": cargas,
+            "pagos": pagos,
+            "recargas_almuerzo": recargas_almuerzo,
+            "ventas": ventas,
+            "pagos_credito": pagos_credito,
+        }
 
     @classmethod
     def emitir_lote(cls, *, tipo: str, ids: list[int], nro_factura: str) -> Factura:

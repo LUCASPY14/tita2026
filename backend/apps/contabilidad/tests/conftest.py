@@ -57,3 +57,15 @@ def pago_almuerzo(db, cuenta_mensual, usuario_cajero):
         medio_pago="EFECTIVO",
         registrado_por=usuario_cajero,
     )
+
+
+@pytest.fixture
+def recarga_almuerzo(db, hijo, usuario_cajero):
+    from apps.almuerzos.models import RecargaSaldoAlmuerzo
+    return RecargaSaldoAlmuerzo.objects.create(
+        hijo=hijo,
+        monto_cargado=Decimal("60000"),
+        metodo_pago="EFECTIVO",
+        estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+        registrado_por=usuario_cajero,
+    )

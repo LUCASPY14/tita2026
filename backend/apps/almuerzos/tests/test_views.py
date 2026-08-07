@@ -488,22 +488,17 @@ class TestRegistroConsumoCreate:
         )
         assert resp.status_code == 400
 
-    def test_limite_credito_alcanzado_falla(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
-                                             precio_almuerzo, plan_con_limite):
-        from apps.almuerzos.models import SuscripcionAlmuerzo, CuentaAlmuerzoMensual
+    def test_limite_credito_ya_no_bloquea_saldo_queda_negativo(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, plan_con_limite
+    ):
+        """Almuerzo es cuenta corriente: el límite de crédito del plan ya no
+        bloquea el registro — el saldo simplemente queda negativo."""
+        from apps.almuerzos.models import SuscripcionAlmuerzo, SaldoAlmuerzo
         hoy = date.today()
         suscripcion = SuscripcionAlmuerzo.objects.create(
             hijo=hijo_almuerzo, plan=plan_con_limite,
             fecha_inicio=hoy, estado=SuscripcionAlmuerzo.Estado.ACTIVA,
         )
-        # Crear cuenta con monto_total = limite (10000), pagado = 0 → saldo_pendiente = 10000
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_almuerzo, anio=hoy.year, mes=hoy.month,
-            cantidad_almuerzos=0, monto_total=Decimal("10000"), monto_pagado=Decimal("0"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
-        )
-        # precio=15000 + saldo_pendiente=10000 > limite=10000 → error
         resp = api_cajero.post(
             "/api/v1/almuerzos/registros-consumo/",
             {
@@ -514,7 +509,9 @@ class TestRegistroConsumoCreate:
             },
             format="json",
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 201
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("-15000")
 
     def test_con_suscripcion_activa_ok(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
                                         precio_almuerzo, suscripcion_activa):
@@ -985,14 +982,25 @@ class TestReporteCobranzaAlmuerzos:
     def test_con_cuentas_calcula_totales(
         self, api_admin, hijo_almuerzo, grado
     ):
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        """monto_anual sale de CuentaAlmuerzoMensual (consumo real), cobrado_anual
+        de RecargaSaldoAlmuerzo (recargas del saldo corriente) — no del mismo modelo."""
+        from datetime import datetime
+        from django.utils import timezone
+        from apps.almuerzos.models import CuentaAlmuerzoMensual, RecargaSaldoAlmuerzo
         CuentaAlmuerzoMensual.objects.create(
             hijo=hijo_almuerzo,
             anio=2026, mes=6,
             cantidad_almuerzos=10,
             monto_total=Decimal("150000"),
-            monto_pagado=Decimal("100000"),
+            monto_pagado=Decimal("0"),
             forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+        )
+        RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo,
+            monto_cargado=Decimal("100000"),
+            fecha_carga=timezone.make_aware(datetime(2026, 6, 15)),
+            estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+            metodo_pago="EFECTIVO",
         )
         resp = api_admin.get("/api/v1/almuerzos/reporte-cobranza/", {"anio": "2026"})
         assert resp.status_code == 200
@@ -1063,3 +1071,37 @@ class TestReporteCobranzaAlmuerzos:
         wb = load_workbook(io.BytesIO(resp.content))
         ws = wb.active
         assert ws.max_row >= 2  # encabezado + al menos 1 fila
+
+    def test_con_saldo_negativo_incluye_saldos_pendientes(self, api_admin, hijo_almuerzo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("-20000"))
+
+        resp = api_admin.get("/api/v1/almuerzos/reporte-cobranza/", {"anio": "2026"})
+        assert resp.status_code == 200
+        assert len(resp.data["saldos_pendientes"]) == 1
+        assert resp.data["saldos_pendientes"][0]["saldo_actual"] == -20000
+
+    def test_csv_con_saldo_negativo_incluye_seccion(self, api_admin, hijo_almuerzo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("-20000"))
+
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-cobranza/", {"anio": "2026", "formato": "csv"},
+        )
+        content = resp.content.decode("utf-8-sig")
+        assert "SALDOS NEGATIVOS ACTUALES" in content
+        assert hijo_almuerzo.nombre in content
+
+    def test_excel_con_saldo_negativo_incluye_seccion(self, api_admin, hijo_almuerzo):
+        import io
+        from openpyxl import load_workbook
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("-20000"))
+
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reporte-cobranza/", {"anio": "2026", "formato": "excel"},
+        )
+        wb = load_workbook(io.BytesIO(resp.content))
+        ws = wb.active
+        valores = [cell.value for row in ws.iter_rows() for cell in row]
+        assert "SALDOS NEGATIVOS ACTUALES (cuenta corriente, no por mes)" in valores

@@ -158,24 +158,24 @@ def bancard_iniciar(request):
 @throttle_classes([SensitiveEndpointThrottle])
 def bancard_iniciar_almuerzo(request):
     """
-    Inicia el pago de una CuentaAlmuerzoMensual vía Bancard.
+    Inicia una recarga del saldo corriente de almuerzo de un hijo vía Bancard.
     Solo disponible para CLIENTE_WEB (padres).
 
-    Body: { "cuenta_id": 42, "monto": 150000 }
+    Body: { "hijo_id": 7, "monto": 150000 }
 
     Respuesta: { "shop_process_id": "...", "redirect_url": "https://vpos.infonet.com.py/..." }
     """
     if request.user.rol != "CLIENTE_WEB":
         return Response(
-            {"detail": "Solo los padres pueden pagar almuerzos desde el portal."},
+            {"detail": "Solo los padres pueden recargar el saldo de almuerzo desde el portal."},
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    cuenta_id = request.data.get("cuenta_id")
+    hijo_id = request.data.get("hijo_id")
     monto_raw = request.data.get("monto")
 
-    if not cuenta_id or not monto_raw:
-        return Response({"detail": "Se requieren cuenta_id y monto."}, status=status.HTTP_400_BAD_REQUEST)
+    if not hijo_id or not monto_raw:
+        return Response({"detail": "Se requieren hijo_id y monto."}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         monto = int(monto_raw)
@@ -185,8 +185,8 @@ def bancard_iniciar_almuerzo(request):
     if monto <= 0:
         return Response({"detail": "El monto debe ser mayor a cero."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Verificar que la cuenta pertenece al hijo del cliente autenticado
-    from apps.almuerzos.models import CuentaAlmuerzoMensual
+    # Verificar que el hijo pertenece al cliente autenticado
+    from apps.clientes.models import Hijo
 
     cliente = getattr(request.user, "cliente", None)
     if cliente is None:
@@ -196,19 +196,9 @@ def bancard_iniciar_almuerzo(request):
         )
 
     try:
-        cuenta = CuentaAlmuerzoMensual.objects.get(pk=cuenta_id, hijo__cliente_responsable=cliente)
-    except CuentaAlmuerzoMensual.DoesNotExist:
-        return Response({"detail": "Cuenta de almuerzo no encontrada."}, status=status.HTTP_404_NOT_FOUND)
-
-    saldo_pendiente = cuenta.saldo_pendiente
-    if saldo_pendiente <= 0:
-        return Response({"detail": "Esta cuenta ya está al día."}, status=status.HTTP_400_BAD_REQUEST)
-
-    if monto > int(saldo_pendiente):
-        return Response(
-            {"detail": f"El monto no puede superar el saldo pendiente de ₲{saldo_pendiente:,.0f}."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        hijo = Hijo.objects.get(pk=hijo_id, cliente_responsable=cliente)
+    except Hijo.DoesNotExist:
+        return Response({"detail": "Estudiante no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
     if not bancard_service._public_key() or not bancard_service._private_key():
         return Response(
@@ -220,11 +210,11 @@ def bancard_iniciar_almuerzo(request):
 
     pago = PagoBancard.objects.create(
         tipo=PagoBancard.Tipo.ALMUERZO,
-        cuenta_almuerzo=cuenta,
+        hijo=hijo,
         cliente=cliente,
         shop_process_id=shop_process_id,
         monto=monto,
-        descripcion=f"Almuerzo {cuenta.hijo} {cuenta.mes}/{cuenta.anio}"[:20],
+        descripcion=f"Recarga almuerzo {hijo}"[:20],
         ip_origen=request.META.get("REMOTE_ADDR"),
     )
 
@@ -820,22 +810,22 @@ def bancard_anular_pago(request, shop_process_id: str):
 @throttle_classes([SensitiveEndpointThrottle])
 def bancard_pagar_almuerzo_con_tarjeta(request):
     """
-    Pago de cuenta de almuerzo con una tarjeta guardada (charge).
-    Body: { "cuenta_id": 42, "monto": 150000, "card_id": 1 }
+    Recarga el saldo corriente de almuerzo con una tarjeta guardada (charge).
+    Body: { "hijo_id": 7, "monto": 150000, "card_id": 1 }
     """
     if request.user.rol != "CLIENTE_WEB":
         return Response(
-            {"detail": "Solo los padres pueden pagar almuerzos desde el portal."},
+            {"detail": "Solo los padres pueden recargar el saldo de almuerzo desde el portal."},
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    cuenta_id = request.data.get("cuenta_id")
+    hijo_id = request.data.get("hijo_id")
     monto_raw = request.data.get("monto")
     card_id_raw = request.data.get("card_id")
 
-    if not cuenta_id or not monto_raw or not card_id_raw:
+    if not hijo_id or not monto_raw or not card_id_raw:
         return Response(
-            {"detail": "Se requieren cuenta_id, monto y card_id."},
+            {"detail": "Se requieren hijo_id, monto y card_id."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -848,7 +838,7 @@ def bancard_pagar_almuerzo_con_tarjeta(request):
     if monto <= 0:
         return Response({"detail": "El monto debe ser mayor a cero."}, status=status.HTTP_400_BAD_REQUEST)
 
-    from apps.almuerzos.models import CuentaAlmuerzoMensual
+    from apps.clientes.models import Hijo
 
     cliente = getattr(request.user, "cliente", None)
     if cliente is None:
@@ -858,19 +848,9 @@ def bancard_pagar_almuerzo_con_tarjeta(request):
         )
 
     try:
-        cuenta = CuentaAlmuerzoMensual.objects.get(pk=cuenta_id, hijo__cliente_responsable=cliente)
-    except CuentaAlmuerzoMensual.DoesNotExist:
-        return Response({"detail": "Cuenta de almuerzo no encontrada."}, status=status.HTTP_404_NOT_FOUND)
-
-    saldo_pendiente = cuenta.saldo_pendiente
-    if saldo_pendiente <= 0:
-        return Response({"detail": "Esta cuenta ya está al día."}, status=status.HTTP_400_BAD_REQUEST)
-
-    if monto > int(saldo_pendiente):
-        return Response(
-            {"detail": f"El monto no puede superar el saldo pendiente de ₲{saldo_pendiente:,.0f}."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        hijo = Hijo.objects.get(pk=hijo_id, cliente_responsable=cliente)
+    except Hijo.DoesNotExist:
+        return Response({"detail": "Estudiante no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
     if not bancard_service._public_key() or not bancard_service._private_key():
         return Response(
@@ -888,11 +868,11 @@ def bancard_pagar_almuerzo_con_tarjeta(request):
     shop_process_id = str(int(time.time() * 1000))
     pago = PagoBancard.objects.create(
         tipo=PagoBancard.Tipo.ALMUERZO,
-        cuenta_almuerzo=cuenta,
+        hijo=hijo,
         cliente=cliente,
         shop_process_id=shop_process_id,
         monto=monto,
-        descripcion=f"Almuerzo {cuenta.hijo} {cuenta.mes}/{cuenta.anio}"[:20],
+        descripcion=f"Recarga almuerzo {hijo}"[:20],
         card_id_bancard=card_id,
         card_masked_number=card_masked,
         ip_origen=request.META.get("REMOTE_ADDR"),

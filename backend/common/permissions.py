@@ -35,6 +35,16 @@ class IsCajeroOrAdmin(permissions.BasePermission):
         )
 
 
+class IsCajeroCobradorOrAdmin(permissions.BasePermission):
+    """Cajeros, cobradores y administradores — operaciones de cobranza presencial."""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.rol in {"ADMIN", "CAJERO", "COBRADOR"}
+        )
+
+
 class IsStaffUser(permissions.BasePermission):
     """Cualquier usuario interno (excluye CLIENTE_WEB)."""
     def has_permission(self, request, view):

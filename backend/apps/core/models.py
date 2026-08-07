@@ -556,7 +556,15 @@ class PagoBancard(models.Model):
         null=True,
         blank=True,
         related_name="pagos_bancard",
-        help_text="Cuenta mensual de almuerzo a abonar (solo tipo ALMUERZO)",
+        help_text="Histórico: cuenta mensual de almuerzo abonada (modelo anterior a la cuenta corriente)",
+    )
+    hijo = models.ForeignKey(
+        "clientes.Hijo",
+        models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="pagos_bancard_almuerzo",
+        help_text="Hijo cuyo saldo corriente de almuerzo se recarga (solo tipo ALMUERZO)",
     )
     cliente = models.ForeignKey(
         "clientes.Cliente",
@@ -589,6 +597,14 @@ class PagoBancard(models.Model):
     # Carga de saldo creada cuando el pago es aprobado
     carga_saldo = models.OneToOneField(
         CargaSaldo,
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pago_bancard",
+    )
+    # Recarga de saldo de almuerzo creada cuando el pago (tipo ALMUERZO) es aprobado
+    recarga_almuerzo = models.OneToOneField(
+        "almuerzos.RecargaSaldoAlmuerzo",
         models.SET_NULL,
         null=True,
         blank=True,

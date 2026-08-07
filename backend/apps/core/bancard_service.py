@@ -240,22 +240,20 @@ def revertir_pago(pago_bancard) -> dict:
 
     with transaction.atomic():
         if pago_bancard.tipo == pago_bancard.Tipo.ALMUERZO:
-            from apps.almuerzos.models import CuentaAlmuerzoMensual, PagoCuentaAlmuerzo
+            from apps.almuerzos.models import SaldoAlmuerzo, MovimientoSaldoAlmuerzo
 
-            cuenta = (
-                CuentaAlmuerzoMensual.objects
-                .select_for_update()
-                .get(pk=pago_bancard.cuenta_almuerzo_id)
-            )
-            PagoCuentaAlmuerzo.objects.create(
-                cuenta=cuenta,
+            SaldoAlmuerzo.objects.get_or_create(hijo_id=pago_bancard.hijo_id)
+            saldo = SaldoAlmuerzo.objects.select_for_update().get(hijo_id=pago_bancard.hijo_id)
+            saldo.saldo_actual -= monto
+            saldo.save(update_fields=["saldo_actual"])
+            MovimientoSaldoAlmuerzo.objects.create(
+                saldo=saldo,
+                tipo=MovimientoSaldoAlmuerzo.Tipo.AJUSTE,
                 monto=-monto,
-                medio_pago="BANCARD",
-                referencia=pago_bancard.shop_process_id,
-                registrado_por=pago_bancard.cliente.usuario_portal,
+                saldo_resultante=saldo.saldo_actual,
+                recarga=pago_bancard.recarga_almuerzo,
                 observaciones="Reverso por anulación de pago Bancard",
             )
-            cuenta.registrar_pago(-monto)
         else:
             from .models import MovimientoTarjeta, Tarjeta
 
@@ -475,34 +473,28 @@ def acreditar_saldo(pago_bancard) -> None:
 
 def acreditar_pago_almuerzo(pago_bancard) -> None:
     """
-    Registra un PagoCuentaAlmuerzo y actualiza la CuentaAlmuerzoMensual.
-    Solo se llama cuando Bancard confirma el pago de tipo ALMUERZO como aprobado.
-    El registrado_por es el usuario CLIENTE_WEB del padre.
+    Recarga el saldo corriente de almuerzo del hijo (cuenta corriente, no una
+    CuentaAlmuerzoMensual puntual). Solo se llama cuando Bancard confirma el
+    pago de tipo ALMUERZO como aprobado. El registrado_por es el usuario
+    CLIENTE_WEB del padre.
     """
     from decimal import Decimal
-    from django.db import transaction
-    from apps.almuerzos.models import CuentaAlmuerzoMensual, PagoCuentaAlmuerzo
+    from apps.almuerzos.services import AlmuerzoService
 
     usuario = pago_bancard.cliente.usuario_portal
     monto = Decimal(pago_bancard.monto)
 
-    with transaction.atomic():
-        cuenta = (
-            CuentaAlmuerzoMensual.objects
-            .select_for_update()
-            .get(pk=pago_bancard.cuenta_almuerzo_id)
-        )
-        PagoCuentaAlmuerzo.objects.create(
-            cuenta=cuenta,
-            monto=monto,
-            medio_pago="BANCARD",
-            referencia=pago_bancard.shop_process_id,
-            registrado_por=usuario,
-        )
-        cuenta.registrar_pago(monto)
-        pago_bancard.estado = pago_bancard.Estado.APROBADO
-        pago_bancard.fecha_confirmacion = timezone.now()
-        pago_bancard.save(update_fields=["estado", "fecha_confirmacion"])
+    recarga = AlmuerzoService.recargar_saldo(
+        hijo=pago_bancard.hijo,
+        monto=monto,
+        registrado_por=usuario,
+        metodo_pago="BANCARD",
+        referencia=pago_bancard.shop_process_id,
+    )
+    pago_bancard.recarga_almuerzo = recarga
+    pago_bancard.estado = pago_bancard.Estado.APROBADO
+    pago_bancard.fecha_confirmacion = timezone.now()
+    pago_bancard.save(update_fields=["recarga_almuerzo", "estado", "fecha_confirmacion"])
 
 
 def procesar_resultado_pago(pago_bancard, response_code: str) -> None:

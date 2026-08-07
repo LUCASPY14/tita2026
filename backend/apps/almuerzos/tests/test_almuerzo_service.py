@@ -270,13 +270,15 @@ class TestRegistrarConsumo:
                 registrado_por=usuario_cajero,
             )
 
-    def test_limite_credito_mensual_bloqueado(
+    def test_limite_credito_mensual_ya_no_bloquea(
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, db
     ):
-        from apps.almuerzos.models import PlanAlmuerzo, SuscripcionAlmuerzo
+        """Almuerzo es cuenta corriente: el límite de crédito del plan ya no
+        bloquea el registro — el saldo simplemente queda negativo."""
+        from apps.almuerzos.models import PlanAlmuerzo, SuscripcionAlmuerzo, SaldoAlmuerzo
         from apps.almuerzos.services import AlmuerzoService
 
-        # Precio = 15000, límite = 10000 → debe bloquear en primer intento
+        # Precio = 15000, límite = 10000 → antes hubiera bloqueado en el primer intento
         plan = PlanAlmuerzo.objects.create(
             nombre="Plan Ajustado",
             activo=True,
@@ -290,14 +292,17 @@ class TestRegistrarConsumo:
             estado=SuscripcionAlmuerzo.Estado.ACTIVA,
         )
 
-        with pytest.raises(ValidationError, match="[Ll]imite"):
-            AlmuerzoService.registrar_consumo(
-                hijo=hijo_almuerzo,
-                fecha_consumo=HOY,
-                nro_tarjeta=tarjeta_almuerzo,
-                registrado_por=usuario_cajero,
-                suscripcion=suscripcion,
-            )
+        registro = AlmuerzoService.registrar_consumo(
+            hijo=hijo_almuerzo,
+            fecha_consumo=HOY,
+            nro_tarjeta=tarjeta_almuerzo,
+            registrado_por=usuario_cajero,
+            suscripcion=suscripcion,
+        )
+
+        assert registro.ya_cobrado is True
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("-15000")
 
     def test_suscripcion_inactiva_falla(
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, db
@@ -374,3 +379,127 @@ class TestRegistrarConsumo:
             tipo_almuerzo=tipo,
         )
         assert registro.costo_almuerzo == Decimal("12000")
+
+
+# ── AlmuerzoService.recargar_saldo / confirmar_recarga ────────────────────────
+
+@pytest.fixture
+def cierre_caja_abierto(db, usuario_cajero):
+    from apps.contabilidad.models import Caja, CierreCaja
+    caja = Caja.objects.create(nombre="Caja Test Almuerzo")
+    return CierreCaja.objects.create(
+        caja=caja, empleado=usuario_cajero, estado=CierreCaja.Estado.ABIERTO,
+    )
+
+
+@pytest.mark.django_db
+class TestRecargarSaldo:
+
+    def test_recarga_acredita_saldo_y_crea_movimiento(self, hijo_almuerzo, usuario_cajero):
+        from apps.almuerzos.services import AlmuerzoService
+        from apps.almuerzos.models import SaldoAlmuerzo, MovimientoSaldoAlmuerzo
+
+        recarga = AlmuerzoService.recargar_saldo(
+            hijo=hijo_almuerzo, monto=Decimal("50000"),
+            registrado_por=usuario_cajero, metodo_pago="EFECTIVO",
+        )
+
+        assert recarga.estado == recarga.Estado.CONFIRMADA
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("50000")
+        mov = MovimientoSaldoAlmuerzo.objects.get(recarga=recarga)
+        assert mov.tipo == MovimientoSaldoAlmuerzo.Tipo.RECARGA
+        assert mov.monto == Decimal("50000")
+        assert mov.saldo_resultante == Decimal("50000")
+
+    def test_recarga_sobre_saldo_existente_lo_acumula(self, hijo_almuerzo):
+        from apps.almuerzos.services import AlmuerzoService
+        from apps.almuerzos.models import SaldoAlmuerzo
+
+        AlmuerzoService.recargar_saldo(hijo=hijo_almuerzo, monto=Decimal("30000"))
+        AlmuerzoService.recargar_saldo(hijo=hijo_almuerzo, monto=Decimal("20000"))
+
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("50000")
+
+    def test_monto_cero_o_negativo_falla(self, hijo_almuerzo):
+        from apps.almuerzos.services import AlmuerzoService
+        with pytest.raises(ValidationError, match="mayor a 0"):
+            AlmuerzoService.recargar_saldo(hijo=hijo_almuerzo, monto=Decimal("0"))
+
+    def test_con_cierre_caja_crea_movimiento_caja(self, hijo_almuerzo, cierre_caja_abierto):
+        from apps.almuerzos.services import AlmuerzoService
+        from apps.contabilidad.models import MovimientoCaja
+
+        AlmuerzoService.recargar_saldo(
+            hijo=hijo_almuerzo, monto=Decimal("25000"),
+            metodo_pago="EFECTIVO", cierre_caja=cierre_caja_abierto,
+        )
+        assert MovimientoCaja.objects.filter(
+            cierre=cierre_caja_abierto, tipo=MovimientoCaja.Tipo.INGRESO, monto=Decimal("25000"),
+        ).exists()
+
+
+@pytest.mark.django_db
+class TestConfirmarRecarga:
+
+    def test_confirma_recarga_pendiente(self, hijo_almuerzo):
+        from apps.almuerzos.services import AlmuerzoService
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo, SaldoAlmuerzo
+
+        recarga = RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, monto_cargado=Decimal("40000"),
+            metodo_pago="TRANSFERENCIA", estado=RecargaSaldoAlmuerzo.Estado.PENDIENTE,
+        )
+        confirmada = AlmuerzoService.confirmar_recarga(recarga=recarga)
+
+        assert confirmada.estado == RecargaSaldoAlmuerzo.Estado.CONFIRMADA
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("40000")
+
+    def test_confirmar_recarga_no_pendiente_falla(self, hijo_almuerzo):
+        from apps.almuerzos.services import AlmuerzoService
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+
+        recarga = RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, monto_cargado=Decimal("40000"),
+            metodo_pago="TRANSFERENCIA", estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+        )
+        with pytest.raises(ValidationError, match="PENDIENTE"):
+            AlmuerzoService.confirmar_recarga(recarga=recarga)
+
+    def test_con_cierre_caja_crea_movimiento_caja(self, hijo_almuerzo, cierre_caja_abierto):
+        from apps.almuerzos.services import AlmuerzoService
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+        from apps.contabilidad.models import MovimientoCaja
+
+        recarga = RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, monto_cargado=Decimal("15000"),
+            metodo_pago="TRANSFERENCIA", estado=RecargaSaldoAlmuerzo.Estado.PENDIENTE,
+        )
+        AlmuerzoService.confirmar_recarga(recarga=recarga, cierre_caja=cierre_caja_abierto)
+        assert MovimientoCaja.objects.filter(
+            cierre=cierre_caja_abierto, tipo=MovimientoCaja.Tipo.INGRESO, monto=Decimal("15000"),
+        ).exists()
+
+
+@pytest.mark.django_db
+class TestRevertirSaldoAlmuerzo:
+
+    def test_anular_registro_revierte_saldo(
+        self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, suscripcion_activa,
+    ):
+        from apps.almuerzos.services import AlmuerzoService
+        from apps.almuerzos.models import SaldoAlmuerzo
+
+        registro = AlmuerzoService.registrar_consumo(
+            hijo=hijo_almuerzo, fecha_consumo=HOY, nro_tarjeta=tarjeta_almuerzo,
+            registrado_por=usuario_cajero, suscripcion=suscripcion_activa,
+        )
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("-15000")
+
+        AlmuerzoService._revertir_saldo_almuerzo(registro)
+
+        saldo.refresh_from_db()
+        assert saldo.saldo_actual == Decimal("0")

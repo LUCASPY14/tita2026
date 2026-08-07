@@ -1,5 +1,5 @@
 """
-Tests para almuerzos — generar_cuentas_mensuales y alertar_cuentas_vencidas.
+Tests para almuerzos — generar_cuentas_mensuales y avisar_deuda_almuerzo.
 """
 import pytest
 from decimal import Decimal

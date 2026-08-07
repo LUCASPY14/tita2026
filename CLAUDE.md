@@ -203,7 +203,7 @@ El límite de sesiones concurrentes se aplica automáticamente al hacer login
 | `generar_resumen_diario_ventas` | Diario 23:50 | No |
 | `cerrar_cuentas_mes_anterior` | Día 1 de mes 05:00 | **Sí** |
 | `generar_cuentas_mensuales` | Día 1 de mes 06:00 | **Sí** |
-| `alertar_cuentas_vencidas` | Día 10 de mes 08:00 | No |
+| `avisar_deuda_almuerzo` | Viernes 08:00 | No |
 | `limpiar_audit_logs` | Día 1 de mes 01:00 | No |
 | `refrescar_mv_balance_cliente` | Cada 15 min | No |
 | `alertar_ordenes_compra_pendientes` | Diario 09:30 | No |

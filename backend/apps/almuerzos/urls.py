@@ -11,10 +11,12 @@ from .views import (
     PlanAlmuerzoViewSet,
     PrecioAlmuerzoViewSet,
     ProductoAlergenoViewSet,
+    RecargaSaldoAlmuerzoViewSet,
     RegistroConsumoAlmuerzoViewSet,
     ReporteAlmuerzosView,
     ReporteConsumoGradoView,
     ReporteCobranzaAlmuerzosView,
+    SaldoAlmuerzoViewSet,
     SuscripcionAlmuerzoViewSet,
     TipoAlmuerzoViewSet,
 )
@@ -28,6 +30,8 @@ router.register(r"registros-consumo", RegistroConsumoAlmuerzoViewSet, basename="
 router.register(r"cuentas-mensuales", CuentaAlmuerzoMensualViewSet, basename="cuentas-mensuales")
 router.register(r"pagos-cuentas", PagoCuentaAlmuerzoViewSet, basename="pagos-cuentas")
 router.register(r"pagos-mensuales", PagoAlmuerzoMensualViewSet, basename="pagos-mensuales")
+router.register(r"saldos", SaldoAlmuerzoViewSet, basename="saldos-almuerzo")
+router.register(r"recargas-saldo", RecargaSaldoAlmuerzoViewSet, basename="recargas-saldo-almuerzo")
 router.register(r"alergenos", AlergenoViewSet, basename="alergenos")
 router.register(r"productos-alergenos", ProductoAlergenoViewSet, basename="productos-alergenos")
 router.register(r"menu", MenuDiarioViewSet, basename="menu")

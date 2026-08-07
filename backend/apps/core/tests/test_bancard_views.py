@@ -489,7 +489,7 @@ class TestBancardIniciarAlmuerzo:
         client.force_authenticate(user=cajero)
         _, cuenta = padre_con_cuenta
         resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-            'cuenta_id': cuenta.pk, 'monto': 100000,
+            'hijo_id': cuenta.hijo_id, 'monto': 100000,
         })
         assert resp.status_code == 403
 
@@ -507,7 +507,7 @@ class TestBancardIniciarAlmuerzo:
         client = APIClient()
         client.force_authenticate(user=padre)
         resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-            'cuenta_id': cuenta.pk, 'monto': 'no_numero',
+            'hijo_id': cuenta.hijo_id, 'monto': 'no_numero',
         })
         assert resp.status_code == 400
 
@@ -517,30 +517,19 @@ class TestBancardIniciarAlmuerzo:
         client = APIClient()
         client.force_authenticate(user=padre)
         resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-            'cuenta_id': cuenta.pk, 'monto': 0,
+            'hijo_id': cuenta.hijo_id, 'monto': 0,
         })
         assert resp.status_code == 400
 
-    def test_cuenta_inexistente_retorna_404(self, padre_con_cuenta):
+    def test_hijo_inexistente_retorna_404(self, padre_con_cuenta):
         from rest_framework.test import APIClient
         padre, _ = padre_con_cuenta
         client = APIClient()
         client.force_authenticate(user=padre)
         resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-            'cuenta_id': 99999, 'monto': 100000,
+            'hijo_id': 99999, 'monto': 100000,
         })
         assert resp.status_code == 404
-
-    def test_monto_supera_saldo_retorna_400(self, padre_con_cuenta):
-        from rest_framework.test import APIClient
-        padre, cuenta = padre_con_cuenta
-        client = APIClient()
-        client.force_authenticate(user=padre)
-        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-            'cuenta_id': cuenta.pk, 'monto': int(cuenta.monto_total) + 1,
-        })
-        assert resp.status_code == 400
-        assert 'saldo' in resp.data['detail'].lower()
 
     def test_sin_claves_bancard_retorna_503(self, padre_con_cuenta):
         from django.test import override_settings
@@ -550,7 +539,7 @@ class TestBancardIniciarAlmuerzo:
         client.force_authenticate(user=padre)
         with override_settings(BANCARD_PUBLIC_KEY='', BANCARD_PRIVATE_KEY=''):
             resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-                'cuenta_id': cuenta.pk, 'monto': 100000,
+                'hijo_id': cuenta.hijo_id, 'monto': 100000,
             })
         assert resp.status_code == 503
 
@@ -562,7 +551,7 @@ class TestBancardIniciarAlmuerzo:
         client = APIClient()
         client.force_authenticate(user=padre)
         resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-            'cuenta_id': cuenta.pk, 'monto': 100000,
+            'hijo_id': cuenta.hijo_id, 'monto': 100000,
         })
         assert resp.status_code == 400
 
@@ -574,7 +563,7 @@ class TestBancardIniciarAlmuerzo:
         client = APIClient()
         client.force_authenticate(user=padre)
         resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-            'cuenta_id': cuenta.pk, 'monto': 100000,
+            'hijo_id': cuenta.hijo_id, 'monto': 100000,
         })
         assert resp.status_code == 201
         assert 'redirect_url' in resp.data
@@ -586,25 +575,10 @@ class TestBancardIniciarAlmuerzo:
         client, _ = api_cliente_web
         _, cuenta = padre_con_cuenta
         resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-            'cuenta_id': cuenta.pk, 'monto': 100000,
+            'hijo_id': cuenta.hijo_id, 'monto': 100000,
         })
         assert resp.status_code == 400
         assert 'cliente' in resp.data['detail'].lower()
-
-    def test_cuenta_al_dia_retorna_400(self, padre_con_cuenta, db):
-        """saldo_pendiente <= 0 → 400 (línea 188)."""
-        from rest_framework.test import APIClient
-        padre, cuenta = padre_con_cuenta
-        # Pagar toda la cuenta
-        cuenta.monto_pagado = cuenta.monto_total
-        cuenta.save(update_fields=["monto_pagado"])
-        client = APIClient()
-        client.force_authenticate(user=padre)
-        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-            'cuenta_id': cuenta.pk, 'monto': 100000,
-        })
-        assert resp.status_code == 400
-        assert 'día' in resp.data['detail']
 
 
 # ─── Tests retorno almuerzo ───────────────────────────────────────────────────
@@ -630,7 +604,7 @@ class TestBancardRetornoAlmuerzo:
         client.force_authenticate(user=padre)
 
         init_resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
-            'cuenta_id': cuenta.pk, 'monto': 100000,
+            'hijo_id': cuenta.hijo_id, 'monto': 100000,
         })
         assert init_resp.status_code == 201
         shop_pid = init_resp.data['shop_process_id']
@@ -1041,7 +1015,7 @@ class TestBancardPagarAlmuerzoConTarjeta:
         client.force_authenticate(user=cajero)
         _, cuenta = padre_con_cuenta
         resp = client.post('/api/v1/core/bancard/pagar-almuerzo-con-tarjeta/', {
-            'cuenta_id': cuenta.pk, 'monto': 100000, 'card_id': 1,
+            'hijo_id': cuenta.hijo_id, 'monto': 100000, 'card_id': 1,
         })
         assert resp.status_code == 403
 
@@ -1052,30 +1026,31 @@ class TestBancardPagarAlmuerzoConTarjeta:
         resp = client.post('/api/v1/core/bancard/pagar-almuerzo-con-tarjeta/', {})
         assert resp.status_code == 400
 
-    def test_cuenta_inexistente_falla(self, padre_con_cuenta):
+    def test_hijo_inexistente_falla(self, padre_con_cuenta):
         padre, _ = padre_con_cuenta
         client = APIClient()
         client.force_authenticate(user=padre)
         resp = client.post('/api/v1/core/bancard/pagar-almuerzo-con-tarjeta/', {
-            'cuenta_id': 99999, 'monto': 100000, 'card_id': 1,
+            'hijo_id': 99999, 'monto': 100000, 'card_id': 1,
         })
         assert resp.status_code == 404
 
     @patch('apps.core.bancard_service.pagar_con_token')
     @patch('apps.core.bancard_service.listar_tarjetas')
     def test_aprobado_sincrono_registra_pago(self, mock_listar, mock_charge, padre_con_cuenta):
+        from apps.almuerzos.models import SaldoAlmuerzo
         mock_listar.return_value = UNA_TARJETA_GUARDADA
         mock_charge.return_value = {'confirmation': {'response_code': '00', 'process_id': None}}
         padre, cuenta = padre_con_cuenta
         client = APIClient()
         client.force_authenticate(user=padre)
         resp = client.post('/api/v1/core/bancard/pagar-almuerzo-con-tarjeta/', {
-            'cuenta_id': cuenta.pk, 'monto': 100000, 'card_id': 1,
+            'hijo_id': cuenta.hijo_id, 'monto': 100000, 'card_id': 1,
         })
         assert resp.status_code == 200
         assert resp.data['estado'] == 'aprobado'
-        cuenta.refresh_from_db()
-        assert cuenta.monto_pagado == Decimal('100000')
+        saldo = SaldoAlmuerzo.objects.get(hijo_id=cuenta.hijo_id)
+        assert saldo.saldo_actual == Decimal('100000')
 
 
 # ─── Fixtures: gestión administrativa de pagos ────────────────────────────────
@@ -1245,14 +1220,17 @@ class TestBancardAnularPago:
     @patch('apps.core.bancard_service.rollback')
     def test_exito_revierte_pago_de_almuerzo(self, mock_rollback, api_admin, padre_con_cuenta):
         from apps.core.models import PagoBancard
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.services import AlmuerzoService
         mock_rollback.return_value = {
             'status': 'success',
             'messages': [{'key': 'RollbackSuccessful', 'level': 'info', 'dsc': 'Rollback correcto.'}],
         }
         padre, cuenta = padre_con_cuenta
-        cuenta.registrar_pago(Decimal("100000"))
+        recarga = AlmuerzoService.recargar_saldo(hijo=cuenta.hijo, monto=Decimal("100000"))
         pago = PagoBancard.objects.create(
-            tipo=PagoBancard.Tipo.ALMUERZO, cuenta_almuerzo=cuenta, cliente=cuenta.hijo.cliente_responsable,
+            tipo=PagoBancard.Tipo.ALMUERZO, hijo=cuenta.hijo, recarga_almuerzo=recarga,
+            cliente=cuenta.hijo.cliente_responsable,
             shop_process_id="pago-almuerzo-hoy", monto=Decimal("100000"),
             estado=PagoBancard.Estado.APROBADO,
         )
@@ -1261,7 +1239,7 @@ class TestBancardAnularPago:
         resp = client.post(f'/api/v1/core/bancard/pagos/{pago.shop_process_id}/anular/')
 
         assert resp.status_code == 200
-        cuenta.refresh_from_db()
-        assert cuenta.monto_pagado == Decimal('0')
+        saldo = SaldoAlmuerzo.objects.get(hijo=cuenta.hijo)
+        assert saldo.saldo_actual == Decimal('0')
         pago.refresh_from_db()
         assert pago.estado == pago.Estado.CANCELADO

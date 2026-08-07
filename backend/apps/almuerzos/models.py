@@ -685,3 +685,118 @@ class DetalleMenuDiario(models.Model):
 
     def __str__(self):
         return f"{self.menu.fecha} | {self.get_curso_display()} | {self.producto}"
+
+
+# ==============================================================================
+# SALDO DE ALMUERZO (CUENTA CORRIENTE)
+# ==============================================================================
+
+class SaldoAlmuerzo(models.Model):
+    """
+    Saldo corriente de almuerzo de un hijo. Independiente del saldo de la
+    tarjeta de cantina (Tarjeta.saldo_actual) — puede quedar negativo, nunca
+    bloquea el ingreso al comedor.
+    """
+
+    hijo = models.OneToOneField(
+        "clientes.Hijo", models.PROTECT, related_name="saldo_almuerzo"
+    )
+    saldo_actual = models.DecimalField(max_digits=12, decimal_places=0, default=0)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Saldo de Almuerzo"
+        verbose_name_plural = "Saldos de Almuerzo"
+
+    def __str__(self):
+        return f"{self.hijo} - ₲{self.saldo_actual:,.0f}"
+
+
+class RecargaSaldoAlmuerzo(models.Model):
+    """Recarga del saldo corriente de almuerzo de un hijo."""
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        CONFIRMADA = "CONFIRMADA", "Confirmada"
+        RECHAZADA = "RECHAZADA", "Rechazada"
+
+    hijo = models.ForeignKey(
+        "clientes.Hijo", models.PROTECT, related_name="recargas_almuerzo"
+    )
+    monto_cargado = models.DecimalField(
+        max_digits=12, decimal_places=0, help_text="Monto en Guaraníes"
+    )
+    fecha_carga = models.DateTimeField(default=timezone.now)
+    estado = models.CharField(
+        max_length=15, choices=Estado.choices, default=Estado.PENDIENTE
+    )
+    metodo_pago = models.CharField(max_length=50, blank=True, null=True)
+    referencia = models.CharField(max_length=100, blank=True, null=True)
+    registrado_por = models.ForeignKey(
+        "usuarios.Usuario",
+        models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="recargas_almuerzo_registradas",
+        help_text="Vacío si la recarga vino del portal de padres (Bancard)",
+    )
+    factura = models.ForeignKey(
+        "contabilidad.Factura",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="recargas_almuerzo",
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Recarga de Saldo de Almuerzo"
+        verbose_name_plural = "Recargas de Saldo de Almuerzo"
+        ordering = ["-fecha_carga"]
+
+    def __str__(self):
+        return f"Recarga #{self.pk} - {self.hijo} - ₲{self.monto_cargado:,.0f}"
+
+
+class MovimientoSaldoAlmuerzo(models.Model):
+    """Ledger de auditoría de movimientos del saldo de almuerzo."""
+
+    class Tipo(models.TextChoices):
+        RECARGA = "RECARGA", "Recarga"
+        CONSUMO = "CONSUMO", "Consumo"
+        AJUSTE = "AJUSTE", "Ajuste"
+
+    saldo = models.ForeignKey(
+        SaldoAlmuerzo, models.CASCADE, related_name="movimientos"
+    )
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    monto = models.DecimalField(
+        max_digits=12, decimal_places=0,
+        help_text="Positivo = crédito (recarga/reversión), negativo = débito (consumo)",
+    )
+    saldo_resultante = models.DecimalField(max_digits=12, decimal_places=0)
+    registro_consumo = models.ForeignKey(
+        "RegistroConsumoAlmuerzo",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos_saldo",
+    )
+    recarga = models.ForeignKey(
+        RecargaSaldoAlmuerzo,
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos_saldo",
+    )
+    fecha = models.DateTimeField(default=timezone.now)
+    observaciones = models.CharField(max_length=200, blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Movimiento de Saldo de Almuerzo"
+        verbose_name_plural = "Movimientos de Saldo de Almuerzo"
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} ₲{self.monto:,.0f} - {self.saldo.hijo}"

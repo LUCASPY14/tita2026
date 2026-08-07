@@ -159,6 +159,55 @@ class TestEmitirParaOrigen:
                 nro_factura="001-001-0002003",
             )
 
+    def test_emitir_para_recarga_almuerzo(self, recarga_almuerzo):
+        from apps.contabilidad.services import FacturacionService
+        from apps.contabilidad.models import Factura
+
+        factura = FacturacionService.emitir_para_origen(
+            tipo="RECARGA_ALMUERZO",
+            origen_id=recarga_almuerzo.pk,
+            nro_factura="001-001-0003001",
+        )
+
+        assert factura.estado == Factura.Estado.EMITIDA
+        assert factura.monto_total == recarga_almuerzo.monto_cargado
+
+        recarga_almuerzo.refresh_from_db()
+        assert recarga_almuerzo.factura_id == factura.pk
+
+    def test_recarga_no_confirmada_falla(self, hijo, usuario_cajero):
+        from apps.contabilidad.services import FacturacionService
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+
+        recarga = RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo, monto_cargado=Decimal("10000"),
+            metodo_pago="TRANSFERENCIA", estado=RecargaSaldoAlmuerzo.Estado.PENDIENTE,
+            registrado_por=usuario_cajero,
+        )
+
+        with pytest.raises(ValidationError, match="Solo se pueden facturar recargas confirmadas"):
+            FacturacionService.emitir_para_origen(
+                tipo="RECARGA_ALMUERZO",
+                origen_id=recarga.pk,
+                nro_factura="001-001-0003002",
+            )
+
+    def test_recarga_ya_facturada_falla(self, recarga_almuerzo):
+        from apps.contabilidad.services import FacturacionService
+
+        FacturacionService.emitir_para_origen(
+            tipo="RECARGA_ALMUERZO",
+            origen_id=recarga_almuerzo.pk,
+            nro_factura="001-001-0003003",
+        )
+
+        with pytest.raises(ValidationError, match="ya tiene factura emitida"):
+            FacturacionService.emitir_para_origen(
+                tipo="RECARGA_ALMUERZO",
+                origen_id=recarga_almuerzo.pk,
+                nro_factura="001-001-0003004",
+            )
+
     def test_tipo_desconocido_falla(self, cliente):
         from apps.contabilidad.services import FacturacionService
 
@@ -188,6 +237,14 @@ class TestGetPendientes:
 
         ids_pagos = list(resultado["pagos"].values_list("pk", flat=True))
         assert pago_almuerzo.pk in ids_pagos
+
+    def test_retorna_recarga_almuerzo_sin_factura(self, recarga_almuerzo):
+        from apps.contabilidad.services import FacturacionService
+
+        resultado = FacturacionService.get_pendientes()
+
+        ids_recargas = list(resultado["recargas_almuerzo"].values_list("pk", flat=True))
+        assert recarga_almuerzo.pk in ids_recargas
 
     def test_excluye_carga_ya_facturada(self, carga_saldo):
         from apps.contabilidad.services import FacturacionService

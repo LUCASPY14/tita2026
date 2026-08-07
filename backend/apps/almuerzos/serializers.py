@@ -9,12 +9,15 @@ from .models import (
     CuentaAlmuerzoMensual,
     DetalleMenuDiario,
     MenuDiario,
+    MovimientoSaldoAlmuerzo,
     PagoCuentaAlmuerzo,
     PagoAlmuerzoMensual,
     PlanAlmuerzo,
     PrecioAlmuerzo,
     ProductoAlergeno,
+    RecargaSaldoAlmuerzo,
     RegistroConsumoAlmuerzo,
+    SaldoAlmuerzo,
     SuscripcionAlmuerzo,
     TipoAlmuerzo,
 )
@@ -158,6 +161,45 @@ class PagoCuentaAlmuerzoSerializer(serializers.ModelSerializer):
                     {"monto": f"El monto (₲{monto:,.0f}) supera el saldo pendiente (₲{saldo:,.0f})."}
                 )
         return data
+
+
+# ==============================================================================
+# SALDO DE ALMUERZO (CUENTA CORRIENTE)
+# ==============================================================================
+
+class SaldoAlmuerzoSerializer(serializers.ModelSerializer):
+    hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
+    hijo_grado = serializers.CharField(source="hijo.grado.nombre", read_only=True, default=None)
+
+    class Meta:
+        model = SaldoAlmuerzo
+        fields = "__all__"
+        read_only_fields = ["saldo_actual", "fecha_actualizacion", "fecha_creacion"]
+
+
+class MovimientoSaldoAlmuerzoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MovimientoSaldoAlmuerzo
+        fields = "__all__"
+
+
+class RecargaSaldoAlmuerzoSerializer(serializers.ModelSerializer):
+    hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
+    registrado_por_nombre = serializers.CharField(
+        source="registrado_por.nombre_completo", read_only=True, default=None
+    )
+
+    class Meta:
+        model = RecargaSaldoAlmuerzo
+        fields = "__all__"
+        read_only_fields = [
+            "estado", "fecha_carga", "fecha_creacion", "registrado_por", "factura",
+        ]
+
+    def validate_monto_cargado(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("El monto debe ser mayor a cero.")
+        return value
 
 
 # ==============================================================================

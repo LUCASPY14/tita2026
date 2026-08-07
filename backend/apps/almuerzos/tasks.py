@@ -210,49 +210,39 @@ def generar_cuentas_mensuales():
 
 
 @shared_task(
-    name="apps.almuerzos.tasks.alertar_cuentas_vencidas",
+    name="apps.almuerzos.tasks.avisar_deuda_almuerzo",
     autoretry_for=(Exception,),
     max_retries=3,
     retry_backoff=True,
     retry_backoff_max=300,
     retry_jitter=True,
 )
-def alertar_cuentas_vencidas():
+def avisar_deuda_almuerzo():
     """
-    Genera notificaciones para cuentas de almuerzo de meses anteriores
-    que aún no estén pagadas.
-    Se ejecuta el día 10 de cada mes a las 08:00.
+    Avisa a los padres cuyo saldo corriente de almuerzo está en negativo.
+    Se ejecuta todos los viernes a las 08:00 — sin días de gracia, se avisa
+    apenas hay deuda, sin importar hace cuánto quedó negativo.
     """
-    from apps.almuerzos.models import CuentaAlmuerzoMensual
+    from apps.almuerzos.models import SaldoAlmuerzo
     from apps.notificaciones.models import Notificacion
 
-    hoy = timezone.now().date()
-    anio_actual, mes_actual = hoy.year, hoy.month
-
-    cuentas_pendientes = CuentaAlmuerzoMensual.objects.filter(
-        estado__in=[
-            CuentaAlmuerzoMensual.Estado.PENDIENTE,
-            CuentaAlmuerzoMensual.Estado.PARCIAL,
-        ],
-    ).exclude(
-        anio=anio_actual, mes=mes_actual,
-    ).select_related(
-        "hijo__cliente_responsable__usuario_portal"
-    )
+    saldos_deudores = SaldoAlmuerzo.objects.filter(
+        saldo_actual__lt=0,
+    ).select_related("hijo__cliente_responsable__usuario_portal")
 
     from apps.notificaciones.services import whatsapp_cliente
     creadas = 0
-    for cuenta in cuentas_pendientes:
-        saldo_pendiente = cuenta.monto_total - cuenta.monto_pagado
+    for saldo in saldos_deudores:
+        hijo = saldo.hijo
+        deuda = -saldo.saldo_actual
         msg = (
-            f"Cuenta de almuerzos de {cuenta.hijo.nombre_completo} "
-            f"({cuenta.mes:02d}/{cuenta.anio}): "
-            f"Gs. {saldo_pendiente:,.0f} pendiente de pago. "
-            f"Por favor acercate a la cantina para regularizar."
+            f"Saldo de almuerzo de {hijo.nombre_completo}: "
+            f"Gs. {deuda:,.0f} en negativo. "
+            f"Podés recargar desde el portal de padres o acercarte a la cantina."
         )
 
         try:
-            usuario = cuenta.hijo.cliente_responsable.usuario_portal
+            usuario = hijo.cliente_responsable.usuario_portal
         except AttributeError:
             usuario = None
 
@@ -260,13 +250,13 @@ def alertar_cuentas_vencidas():
             Notificacion.objects.create(
                 usuario=usuario,
                 tipo=Notificacion.Tipo.ALMUERZO,
-                titulo="Cuenta de almuerzo pendiente de pago",
+                titulo="Saldo de almuerzo en negativo",
                 mensaje=msg,
                 destino=Notificacion.Destino.SISTEMA,
             )
             creadas += 1
 
-        whatsapp_cliente(cuenta.hijo.cliente_responsable, msg)
+        whatsapp_cliente(hijo.cliente_responsable, msg)
 
-    logger.info("alertar_cuentas_vencidas: %d notificaciones creadas", creadas)
+    logger.info("avisar_deuda_almuerzo: %d notificaciones creadas", creadas)
     return {"notificaciones_creadas": creadas}

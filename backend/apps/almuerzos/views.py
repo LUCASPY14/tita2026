@@ -21,7 +21,11 @@ from rest_framework.views import APIView
 
 from rest_framework import serializers as drf_serializers
 
-from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from common.permissions import (
+    IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsCajeroCobradorOrAdmin,
+    IsStaffOrClienteWeb, IsStaffUser,
+)
+from common.utils.medios_pago import resolver_medio_pago
 from apps.usuarios.auditoria import registrar_auditoria
 
 import django_filters
@@ -36,12 +40,15 @@ from .models import (
     CuentaAlmuerzoMensual,
     DetalleMenuDiario,
     MenuDiario,
+    MovimientoSaldoAlmuerzo,
     PagoCuentaAlmuerzo,
     PagoAlmuerzoMensual,
     PlanAlmuerzo,
     PrecioAlmuerzo,
     ProductoAlergeno,
+    RecargaSaldoAlmuerzo,
     RegistroConsumoAlmuerzo,
+    SaldoAlmuerzo,
     SuscripcionAlmuerzo,
     TipoAlmuerzo,
 )
@@ -50,16 +57,20 @@ from .serializers import (
     CuentaAlmuerzoMensualSerializer,
     DetalleMenuDiarioSerializer,
     MenuDiarioSerializer,
+    MovimientoSaldoAlmuerzoSerializer,
     PagoCuentaAlmuerzoSerializer,
     PagoAlmuerzoMensualSerializer,
     PlanAlmuerzoSerializer,
     PrecioAlmuerzoSerializer,
     ProductoAlergenoSerializer,
+    RecargaSaldoAlmuerzoSerializer,
     RegistroConsumoAlmuerzoSerializer,
+    SaldoAlmuerzoSerializer,
     SuscripcionAlmuerzoSerializer,
     TipoAlmuerzoSerializer,
 )
 from .filters import RegistroConsumoFilter
+from .services import AlmuerzoService
 from .validators import validar_limite_registros_diarios, validar_restricciones_alergenicas
 
 
@@ -242,6 +253,7 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 if cuenta:
                     cuenta.refresh_from_db(fields=["monto_total", "monto_pagado", "estado", "fecha_pago"])
                     cuenta.actualizar_estado()
+                AlmuerzoService._revertir_saldo_almuerzo(registro)
             registrar_auditoria(
                 request=self.request,
                 operacion="ANULAR_REGISTRO_ALMUERZO",
@@ -301,7 +313,8 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 "estado_suscripcion": suscripcion.estado,
             })
 
-        # Determinar costo
+        # Determinar costo. El almuerzo es una cuenta corriente: nunca se
+        # bloquea el registro por saldo — puede quedar negativo.
         if es_primer_registro:
             precio_obj = get_precio_almuerzo_activo(fecha_consumo)
             if precio_obj:
@@ -312,24 +325,6 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 raise ValidationError({
                     "error": "No hay precio de almuerzo configurado. Configure un precio vigente primero."
                 })
-
-            # Verificar limite de credito mensual
-            if suscripcion and suscripcion.plan.limite_credito_mensual:
-                cuenta_mes = CuentaAlmuerzoMensual.objects.filter(
-                    hijo=hijo,
-                    anio=fecha_consumo.year,
-                    mes=fecha_consumo.month,
-                ).first()
-                saldo_pendiente = (
-                    (cuenta_mes.monto_total - cuenta_mes.monto_pagado)
-                    if cuenta_mes else Decimal("0")
-                )
-                if saldo_pendiente + costo_calculado > suscripcion.plan.limite_credito_mensual:
-                    raise ValidationError({
-                        "error": "Limite de credito mensual alcanzado.",
-                        "saldo_pendiente": str(saldo_pendiente),
-                        "limite_credito": str(suscripcion.plan.limite_credito_mensual),
-                    })
         else:
             costo_calculado = Decimal("0")
 
@@ -350,19 +345,10 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 
             if es_primer_registro:
                 self._marcar_acreditado(registro)
+                AlmuerzoService._debitar_saldo_almuerzo(registro)
 
         if es_primer_registro:
-            try:
-                from apps.notificaciones.services import whatsapp_cliente
-                cliente_resp = registro.hijo.cliente_responsable
-                whatsapp_cliente(
-                    cliente_resp,
-                    f"{registro.hijo.nombre_completo} almuerzo hoy "
-                    f"{registro.fecha_consumo.strftime('%d/%m/%Y')}. "
-                    f"Costo: Gs. {int(registro.costo_almuerzo):,}."
-                )
-            except Exception:
-                logger.warning("WhatsApp: fallo al notificar almuerzo de %s", registro.hijo.pk, exc_info=True)
+            AlmuerzoService._notificar_ingreso_comedor(registro)
 
         return advertencias
 
@@ -510,6 +496,152 @@ class PagoCuentaAlmuerzoViewSet(viewsets.ModelViewSet):
             id_registro=pago.id,
             descripcion=f"Pago {pago.monto} Gs. en cuenta almuerzo #{pago.cuenta_id}",
         )
+
+
+# ==============================================================================
+# SALDO DE ALMUERZO (CUENTA CORRIENTE)
+# ==============================================================================
+
+METODOS_CONFIRMACION_INMEDIATA = ("EFECTIVO", "POS DEBITO", "POS CREDITO")
+
+
+class SaldoAlmuerzoViewSet(viewsets.ReadOnlyModelViewSet):
+    """Saldo corriente de almuerzo por hijo. Solo lectura — se modifica vía
+    RecargaSaldoAlmuerzoViewSet y RegistroConsumoAlmuerzoViewSet."""
+
+    queryset = SaldoAlmuerzo.objects.select_related("hijo__grado", "hijo__cliente_responsable").all()
+    serializer_class = SaldoAlmuerzoSerializer
+    permission_classes = [IsStaffOrClienteWeb]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ["hijo"]
+    ordering_fields = ["saldo_actual", "fecha_actualizacion"]
+    ordering = ["-fecha_actualizacion"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.rol == "CLIENTE_WEB":
+            if not user.cliente:
+                return qs.none()
+            return qs.filter(hijo__cliente_responsable=user.cliente)
+        return qs
+
+    @action(detail=True, methods=["get"], url_path="movimientos")
+    def movimientos(self, request, pk=None):
+        """GET /api/v1/almuerzos/saldos/<id>/movimientos/ — historial del saldo."""
+        saldo = self.get_object()
+        movimientos = saldo.movimientos.order_by("-fecha")[:100]
+        return Response(MovimientoSaldoAlmuerzoSerializer(movimientos, many=True).data)
+
+
+class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
+    """Recarga del saldo corriente de almuerzo — cajero, cobrador, admin o portal."""
+
+    queryset = RecargaSaldoAlmuerzo.objects.select_related("hijo", "registrado_por").all()
+    serializer_class = RecargaSaldoAlmuerzoSerializer
+    permission_classes = [IsCajeroCobradorOrAdmin]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ["hijo", "estado"]
+    ordering = ["-fecha_carga"]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        metodo = data.get("metodo_pago", "")
+
+        if metodo in METODOS_CONFIRMACION_INMEDIATA:
+            from apps.contabilidad.models import CierreCaja
+            cierre_caja = CierreCaja.objects.filter(
+                empleado=request.user, estado=CierreCaja.Estado.ABIERTO
+            ).select_related("caja").first()
+            medio_pago_obj = resolver_medio_pago(metodo)
+            nro_factura = (request.data.get("nro_factura") or "").strip()
+
+            with transaction.atomic():
+                recarga = AlmuerzoService.recargar_saldo(
+                    hijo=data["hijo"],
+                    monto=data["monto_cargado"],
+                    registrado_por=request.user,
+                    metodo_pago=metodo,
+                    referencia=data.get("referencia") or "",
+                    cierre_caja=cierre_caja,
+                    medio_pago_obj=medio_pago_obj,
+                )
+                if nro_factura:
+                    from apps.contabilidad.services import FacturacionService
+                    FacturacionService.emitir_para_origen(
+                        tipo="RECARGA_ALMUERZO",
+                        origen_id=recarga.id,
+                        nro_factura=nro_factura,
+                    )
+            registrar_auditoria(
+                request=request,
+                operacion="RECARGA_SALDO_ALMUERZO",
+                tabla="almuerzos_recargasaldoalmuerzo",
+                id_registro=recarga.id,
+                descripcion=(
+                    f"Recarga {data['monto_cargado']} Gs. en saldo de almuerzo"
+                    f" de {data['hijo']} vía {metodo}"
+                ),
+            )
+            out = self.get_serializer(recarga)
+            return Response(out.data, status=status.HTTP_201_CREATED)
+
+        # Transferencia u otros métodos: queda PENDIENTE para confirmación manual
+        recarga = serializer.save(registrado_por=request.user)
+        registrar_auditoria(
+            request=request,
+            operacion="RECARGA_SALDO_ALMUERZO_PENDIENTE",
+            tabla="almuerzos_recargasaldoalmuerzo",
+            id_registro=recarga.id,
+            descripcion=(
+                f"Recarga {recarga.monto_cargado} Gs. en saldo de almuerzo"
+                f" de hijo={recarga.hijo_id} vía {metodo} — PENDIENTE confirmación"
+            ),
+        )
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    @action(detail=True, methods=["post"], url_path="confirmar")
+    def confirmar(self, request, pk=None):
+        """POST /api/v1/almuerzos/recargas-saldo/<id>/confirmar/ — confirma una recarga PENDIENTE."""
+        recarga = self.get_object()
+        if recarga.estado != RecargaSaldoAlmuerzo.Estado.PENDIENTE:
+            return Response(
+                {"error": f"Solo se pueden confirmar recargas PENDIENTE. Estado actual: {recarga.estado}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from apps.contabilidad.models import CierreCaja
+        cierre_caja = CierreCaja.objects.filter(
+            empleado=request.user, estado=CierreCaja.Estado.ABIERTO
+        ).select_related("caja").first()
+        medio_pago_obj = resolver_medio_pago(recarga.metodo_pago)
+        nro_factura = (request.data.get("nro_factura") or "").strip()
+        with transaction.atomic():
+            recarga_confirmada = AlmuerzoService.confirmar_recarga(
+                recarga=recarga,
+                cierre_caja=cierre_caja,
+                medio_pago_obj=medio_pago_obj,
+            )
+            if nro_factura:
+                from apps.contabilidad.services import FacturacionService
+                FacturacionService.emitir_para_origen(
+                    tipo="RECARGA_ALMUERZO",
+                    origen_id=recarga_confirmada.id,
+                    nro_factura=nro_factura,
+                )
+        registrar_auditoria(
+            request=request,
+            operacion="CONFIRMAR_RECARGA_ALMUERZO",
+            tabla="almuerzos_recargasaldoalmuerzo",
+            id_registro=recarga_confirmada.id,
+            descripcion=(
+                f"Confirmación recarga {recarga_confirmada.monto_cargado} Gs."
+                f" en saldo de almuerzo de hijo={recarga_confirmada.hijo_id}"
+            ),
+        )
+        return Response(self.get_serializer(recarga_confirmada).data)
 
 
 # ==============================================================================
@@ -829,7 +961,7 @@ class ReporteCobranzaAlmuerzosView(APIView):
 
     def get(self, request):
         from django.http import HttpResponse
-        from django.db.models import Count, Sum, Q
+        from django.db.models import Count, Sum
 
         anio_raw = request.query_params.get("anio")
         if not anio_raw:
@@ -844,64 +976,85 @@ class ReporteCobranzaAlmuerzosView(APIView):
 
         qs = CuentaAlmuerzoMensual.objects.filter(anio=anio).exclude(estado="ANULADO")
 
-        # Por mes
-        por_mes_qs = (
-            qs.values("mes")
-            .annotate(
-                n_alumnos=Count("id"),
-                pagados=Count("id", filter=Q(estado="PAGADO")),
-                parciales=Count("id", filter=Q(estado="PARCIAL")),
-                pendientes=Count("id", filter=Q(estado__in=["PENDIENTE", "VALIDACION"])),
-                monto_total=Sum("monto_total"),
-                monto_cobrado=Sum("monto_pagado"),
+        # "Consumido" por mes: sigue viniendo de CuentaAlmuerzoMensual (el
+        # trigger trg_sync_cuenta_almuerzo la mantiene sincronizada con los
+        # registros reales de comedor).
+        consumido_por_mes = {
+            r["mes"]: {"n_alumnos": r["n_alumnos"], "monto_total": int(r["monto_total"] or 0)}
+            for r in qs.values("mes").annotate(
+                n_alumnos=Count("id"), monto_total=Sum("monto_total"),
             )
-            .order_by("mes")
+        }
+
+        # "Cobrado" ya no sale de CuentaAlmuerzoMensual.monto_pagado — desde la
+        # cuenta corriente de almuerzo, lo que entra son recargas de saldo, no
+        # pagos contra un mes puntual.
+        from django.db.models.functions import ExtractMonth
+        from .models import RecargaSaldoAlmuerzo
+        recargas_qs = RecargaSaldoAlmuerzo.objects.filter(
+            estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+            fecha_carga__year=anio,
         )
+        cobrado_por_mes = {
+            r["mes"]: int(r["total"] or 0)
+            for r in (
+                recargas_qs
+                .annotate(mes=ExtractMonth("fecha_carga"))
+                .values("mes")
+                .annotate(total=Sum("monto_cargado"))
+            )
+        }
+        cobrado_por_metodo = {
+            r["metodo_pago"]: int(r["total"] or 0)
+            for r in recargas_qs.values("metodo_pago").annotate(total=Sum("monto_cargado"))
+        }
 
         MESES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
+        meses_con_datos = sorted(set(consumido_por_mes) | set(cobrado_por_mes))
         por_mes = []
-        for r in por_mes_qs:
-            mt = int(r["monto_total"] or 0)
-            mc = int(r["monto_cobrado"] or 0)
+        for mes in meses_con_datos:
+            mt = consumido_por_mes.get(mes, {}).get("monto_total", 0)
+            mc = cobrado_por_mes.get(mes, 0)
             tasa = round(mc / mt * 100, 1) if mt > 0 else 0.0
             por_mes.append({
-                "mes": r["mes"],
-                "mes_nombre": MESES[r["mes"]],
-                "n_alumnos": r["n_alumnos"],
-                "pagados": r["pagados"],
-                "parciales": r["parciales"],
-                "pendientes": r["pendientes"],
+                "mes": mes,
+                "mes_nombre": MESES[mes],
+                "n_alumnos": consumido_por_mes.get(mes, {}).get("n_alumnos", 0),
                 "monto_total": mt,
                 "monto_cobrado": mc,
                 "monto_pendiente": mt - mc,
                 "tasa_cobro": tasa,
             })
 
-        # Por forma de cobro
-        forma_qs = (
-            qs.values("forma_cobro")
-            .annotate(
-                n_cuentas=Count("id"),
-                monto_total=Sum("monto_total"),
-                monto_cobrado=Sum("monto_pagado"),
-            )
-            .order_by("-monto_total")
-        )
+        # Por método de pago de las recargas (reemplaza "por forma de cobro")
         por_forma = [
-            {
-                "forma_cobro": r["forma_cobro"],
-                "n_cuentas": r["n_cuentas"],
-                "monto_total": int(r["monto_total"] or 0),
-                "monto_cobrado": int(r["monto_cobrado"] or 0),
-            }
-            for r in forma_qs
+            {"forma_cobro": metodo, "monto_cobrado": monto}
+            for metodo, monto in sorted(cobrado_por_metodo.items(), key=lambda x: -x[1])
         ]
 
         monto_anual = sum(m["monto_total"] for m in por_mes)
         cobrado_anual = sum(m["monto_cobrado"] for m in por_mes)
         tasa_anual = round(cobrado_anual / monto_anual * 100, 1) if monto_anual > 0 else 0.0
+
+        # Control de saldo pendiente: familias con saldo de almuerzo negativo,
+        # sin importar el mes — es una cuenta corriente, no algo mensual.
+        from .models import SaldoAlmuerzo
+        saldos_negativos = (
+            SaldoAlmuerzo.objects.filter(saldo_actual__lt=0)
+            .select_related("hijo__grado", "hijo__cliente_responsable")
+            .order_by("saldo_actual")
+        )
+        saldos_pendientes = [
+            {
+                "hijo_id": s.hijo_id,
+                "hijo": str(s.hijo),
+                "grado": s.hijo.grado.nombre if s.hijo.grado else None,
+                "saldo_actual": int(s.saldo_actual),
+            }
+            for s in saldos_negativos
+        ]
 
         formato = request.query_params.get("formato")
 
@@ -913,15 +1066,20 @@ class ReporteCobranzaAlmuerzosView(APIView):
             writer = csv.writer(resp)
             writer.writerow(["COBRANZA ALMUERZOS", str(anio)])
             writer.writerow([])
-            writer.writerow(["Mes", "Alumnos", "Pagados", "Parciales", "Pendientes",
-                              "Monto Total (Gs)", "Cobrado (Gs)", "Pendiente (Gs)", "% Cobro"])
+            writer.writerow(["Mes", "Alumnos", "Monto Total (Gs)", "Cobrado (Gs)",
+                              "Pendiente (Gs)", "% Cobro"])
             for m in por_mes:
-                writer.writerow([m["mes_nombre"], m["n_alumnos"], m["pagados"],
-                                  m["parciales"], m["pendientes"], m["monto_total"],
+                writer.writerow([m["mes_nombre"], m["n_alumnos"], m["monto_total"],
                                   m["monto_cobrado"], m["monto_pendiente"], m["tasa_cobro"]])
             writer.writerow([])
-            writer.writerow(["TOTAL ANUAL", "", "", "", "",
-                              monto_anual, cobrado_anual, monto_anual - cobrado_anual, tasa_anual])
+            writer.writerow(["TOTAL ANUAL", "", monto_anual, cobrado_anual,
+                              monto_anual - cobrado_anual, tasa_anual])
+            if saldos_pendientes:
+                writer.writerow([])
+                writer.writerow(["SALDOS NEGATIVOS ACTUALES (cuenta corriente, no por mes)"])
+                writer.writerow(["Alumno", "Grado", "Saldo (Gs)"])
+                for s in saldos_pendientes:
+                    writer.writerow([s["hijo"], s["grado"], s["saldo_actual"]])
             return resp
 
         if formato == "excel":
@@ -942,8 +1100,8 @@ class ReporteCobranzaAlmuerzosView(APIView):
             ws["A1"].font = Font(bold=True, size=13)
             ws.append([])
 
-            headers = ["Mes", "Alumnos", "Pagados", "Parciales", "Pendientes",
-                       "Monto Total (Gs)", "Cobrado (Gs)", "Pendiente (Gs)", "% Cobro"]
+            headers = ["Mes", "Alumnos", "Monto Total (Gs)", "Cobrado (Gs)",
+                       "Pendiente (Gs)", "% Cobro"]
             ws.append(headers)
             for cell in ws[ws.max_row]:
                 cell.font = header_font
@@ -951,21 +1109,31 @@ class ReporteCobranzaAlmuerzosView(APIView):
                 cell.alignment = Alignment(horizontal="center")
 
             for m in por_mes:
-                ws.append([m["mes_nombre"], m["n_alumnos"], m["pagados"],
-                            m["parciales"], m["pendientes"], m["monto_total"],
+                ws.append([m["mes_nombre"], m["n_alumnos"], m["monto_total"],
                             m["monto_cobrado"], m["monto_pendiente"], m["tasa_cobro"]])
 
             ws.append([])
-            total_row = ["TOTAL ANUAL", "", "", "", "",
-                         monto_anual, cobrado_anual, monto_anual - cobrado_anual, tasa_anual]
+            total_row = ["TOTAL ANUAL", "", monto_anual, cobrado_anual,
+                         monto_anual - cobrado_anual, tasa_anual]
             ws.append(total_row)
             for cell in ws[ws.max_row]:
                 cell.font = total_font
                 cell.fill = totals_fill
 
-            col_widths = [14, 10, 10, 10, 12, 18, 16, 18, 10]
+            col_widths = [14, 10, 18, 16, 18, 10]
             for i, w in enumerate(col_widths, 1):
                 ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+
+            if saldos_pendientes:
+                ws.append([])
+                ws.append(["SALDOS NEGATIVOS ACTUALES (cuenta corriente, no por mes)"])
+                ws["A" + str(ws.max_row)].font = Font(bold=True)
+                ws.append(["Alumno", "Grado", "Saldo (Gs)"])
+                for cell in ws[ws.max_row]:
+                    cell.font = header_font
+                    cell.fill = header_fill
+                for s in saldos_pendientes:
+                    ws.append([s["hijo"], s["grado"], s["saldo_actual"]])
 
             buf = io.BytesIO()
             wb.save(buf)
@@ -988,4 +1156,5 @@ class ReporteCobranzaAlmuerzosView(APIView):
             },
             "por_mes": por_mes,
             "por_forma_cobro": por_forma,
+            "saldos_pendientes": saldos_pendientes,
         })

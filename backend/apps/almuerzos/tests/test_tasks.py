@@ -1,4 +1,4 @@
-"""Tests para apps.almuerzos.tasks — cerrar_cuentas_mes_anterior, generar_cuentas_mensuales, alertar_cuentas_vencidas."""
+"""Tests para apps.almuerzos.tasks — cerrar_cuentas_mes_anterior, generar_cuentas_mensuales, avisar_deuda_almuerzo."""
 import pytest
 from decimal import Decimal
 from datetime import date, timedelta
@@ -62,24 +62,6 @@ def usuario_portal_t(db, cliente):
     return user
 
 
-@pytest.fixture
-def cuenta_mes_anterior(db, hijo_t):
-    from apps.almuerzos.models import CuentaAlmuerzoMensual
-    hoy = date.today()
-    mes_ant = hoy.month - 1 if hoy.month > 1 else 12
-    anio_ant = hoy.year if hoy.month > 1 else hoy.year - 1
-    return CuentaAlmuerzoMensual.objects.create(
-        hijo=hijo_t,
-        anio=anio_ant,
-        mes=mes_ant,
-        cantidad_almuerzos=3,
-        monto_total=Decimal("45000"),
-        monto_pagado=Decimal("0"),
-        forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-        estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
-    )
-
-
 # ── generar_cuentas_mensuales ──────────────────────────────────────────────────
 
 @freeze_time("2026-07-15")
@@ -127,42 +109,40 @@ class TestGenerarCuentasMensuales:
         assert result["anio"] == hoy.year
 
 
-# ── alertar_cuentas_vencidas ───────────────────────────────────────────────────
+# ── avisar_deuda_almuerzo ───────────────────────────────────────────────────
 
 @pytest.mark.django_db
-class TestAlertarCuentasVencidas:
+class TestAvisarDeudaAlmuerzo:
 
-    def test_sin_cuentas_pendientes_retorna_cero(self, db):
-        from apps.almuerzos.tasks import alertar_cuentas_vencidas
-        result = alertar_cuentas_vencidas()
+    def test_sin_deudores_retorna_cero(self, db):
+        from apps.almuerzos.tasks import avisar_deuda_almuerzo
+        result = avisar_deuda_almuerzo()
         assert result == {"notificaciones_creadas": 0}
 
-    def test_cuenta_mes_anterior_sin_usuario_portal_no_crea_notif(self, cuenta_mes_anterior):
+    def test_saldo_negativo_sin_usuario_portal_no_crea_notif(self, hijo_t):
         # cliente sin usuario_portal → AttributeError → continue
-        from apps.almuerzos.tasks import alertar_cuentas_vencidas
-        result = alertar_cuentas_vencidas()
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import avisar_deuda_almuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("-15000"))
+        result = avisar_deuda_almuerzo()
         assert result["notificaciones_creadas"] == 0
 
-    def test_cuenta_mes_anterior_con_usuario_portal_crea_notif(
-        self, cuenta_mes_anterior, usuario_portal_t
+    def test_saldo_negativo_con_usuario_portal_crea_notif(
+        self, hijo_t, usuario_portal_t
     ):
         from apps.notificaciones.models import Notificacion
-        from apps.almuerzos.tasks import alertar_cuentas_vencidas
-        result = alertar_cuentas_vencidas()
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import avisar_deuda_almuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("-15000"))
+        result = avisar_deuda_almuerzo()
         assert result["notificaciones_creadas"] >= 1
         assert Notificacion.objects.filter(tipo=Notificacion.Tipo.ALMUERZO).exists()
 
-    def test_cuenta_del_mes_actual_no_genera_alerta(self, hijo_t):
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
-        from apps.almuerzos.tasks import alertar_cuentas_vencidas
-        hoy = date.today()
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_t, anio=hoy.year, mes=hoy.month,
-            cantidad_almuerzos=2, monto_total=Decimal("30000"), monto_pagado=Decimal("0"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
-        )
-        result = alertar_cuentas_vencidas()
+    def test_saldo_positivo_no_genera_alerta(self, hijo_t):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import avisar_deuda_almuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("30000"))
+        result = avisar_deuda_almuerzo()
         assert result["notificaciones_creadas"] == 0
 
 

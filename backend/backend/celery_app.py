@@ -111,9 +111,9 @@ app.conf.beat_schedule = {
         "task": "apps.almuerzos.tasks.generar_cuentas_mensuales",
         "schedule": crontab(hour=6, minute=0, day_of_month=1),  # Día 1 de cada mes 06:00
     },
-    "alertar-cuentas-almuerzos-vencidas": {
-        "task": "apps.almuerzos.tasks.alertar_cuentas_vencidas",
-        "schedule": crontab(hour=8, minute=0, day_of_month=10),  # Día 10 de cada mes 08:00
+    "avisar-deuda-almuerzo": {
+        "task": "apps.almuerzos.tasks.avisar_deuda_almuerzo",
+        "schedule": crontab(hour=8, minute=0, day_of_week=5),  # Todos los viernes 08:00
     },
     # ── Usuarios / Auditoría ──────────────────────────────────────────
     "limpiar-audit-logs": {

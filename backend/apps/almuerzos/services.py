@@ -2,6 +2,7 @@
 Servicios de negocio para almuerzos
 """
 
+import logging
 from datetime import date
 from decimal import Decimal
 
@@ -14,8 +15,13 @@ from .models import (
     SuscripcionAlmuerzo,
     RegistroConsumoAlmuerzo,
     CuentaAlmuerzoMensual,
+    SaldoAlmuerzo,
+    MovimientoSaldoAlmuerzo,
+    RecargaSaldoAlmuerzo,
 )
 from .validators import validar_limite_registros_diarios
+
+logger = logging.getLogger(__name__)
 
 
 class AlmuerzoService:
@@ -83,7 +89,8 @@ class AlmuerzoService:
             # Bloquear registros del alumno en el dia
             es_primer_registro = validar_limite_registros_diarios(hijo, fecha_consumo)
 
-            # Determinar costo
+            # Determinar costo. El almuerzo es una cuenta corriente: nunca se
+            # bloquea el registro por saldo — puede quedar negativo.
             if es_primer_registro:
                 precio_obj = AlmuerzoService.get_precio_activo(fecha_consumo)
                 if precio_obj:
@@ -94,24 +101,6 @@ class AlmuerzoService:
                     raise ValidationError({
                         "error": "No hay precio de almuerzo configurado."
                     })
-
-                # Verificar limite de credito mensual
-                if suscripcion and suscripcion.plan.limite_credito_mensual:
-                    cuenta_mes = CuentaAlmuerzoMensual.objects.filter(
-                        hijo=hijo,
-                        anio=fecha_consumo.year,
-                        mes=fecha_consumo.month,
-                    ).first()
-                    saldo = (
-                        (cuenta_mes.monto_total - cuenta_mes.monto_pagado)
-                        if cuenta_mes else Decimal("0")
-                    )
-                    if saldo + costo > suscripcion.plan.limite_credito_mensual:
-                        raise ValidationError({
-                            "error": "Limite de credito mensual alcanzado.",
-                            "saldo_pendiente": str(saldo),
-                            "limite": str(suscripcion.plan.limite_credito_mensual),
-                        })
             else:
                 costo = Decimal("0")
 
@@ -144,7 +133,12 @@ class AlmuerzoService:
                 registro.marcado_en_cuenta = True
                 registro.save(update_fields=["marcado_en_cuenta"])
 
-            return registro
+                AlmuerzoService._debitar_saldo_almuerzo(registro)
+
+        if es_primer_registro:
+            AlmuerzoService._notificar_ingreso_comedor(registro)
+
+        return registro
 
     @staticmethod
     def _asegurar_cuenta_mensual(hijo, fecha):
@@ -165,3 +159,175 @@ class AlmuerzoService:
                 "estado": CuentaAlmuerzoMensual.Estado.PENDIENTE,
             },
         )
+
+    @staticmethod
+    def _debitar_saldo_almuerzo(registro):
+        """Descuenta el costo del almuerzo del saldo corriente del hijo.
+
+        Es una cuenta corriente, no un prepago estricto: puede quedar
+        negativo, nunca bloquea el registro del consumo.
+        """
+        saldo, _ = SaldoAlmuerzo.objects.get_or_create(hijo=registro.hijo)
+        saldo = SaldoAlmuerzo.objects.select_for_update().get(pk=saldo.pk)
+        saldo.saldo_actual -= registro.costo_almuerzo
+        saldo.save(update_fields=["saldo_actual"])
+        MovimientoSaldoAlmuerzo.objects.create(
+            saldo=saldo,
+            tipo=MovimientoSaldoAlmuerzo.Tipo.CONSUMO,
+            monto=-registro.costo_almuerzo,
+            saldo_resultante=saldo.saldo_actual,
+            registro_consumo=registro,
+        )
+
+    @staticmethod
+    def _revertir_saldo_almuerzo(registro):
+        """Devuelve al saldo corriente el costo de un almuerzo anulado."""
+        saldo, _ = SaldoAlmuerzo.objects.get_or_create(hijo=registro.hijo)
+        saldo = SaldoAlmuerzo.objects.select_for_update().get(pk=saldo.pk)
+        saldo.saldo_actual += registro.costo_almuerzo
+        saldo.save(update_fields=["saldo_actual"])
+        MovimientoSaldoAlmuerzo.objects.create(
+            saldo=saldo,
+            tipo=MovimientoSaldoAlmuerzo.Tipo.AJUSTE,
+            monto=registro.costo_almuerzo,
+            saldo_resultante=saldo.saldo_actual,
+            registro_consumo=registro,
+            observaciones="Reversión por anulación de registro de consumo",
+        )
+
+    @staticmethod
+    def _notificar_ingreso_comedor(registro):
+        """Avisa por WhatsApp al responsable que el hijo almorzó hoy."""
+        from apps.notificaciones.services import whatsapp_cliente
+        try:
+            whatsapp_cliente(
+                registro.hijo.cliente_responsable,
+                f"{registro.hijo.nombre_completo} almorzó hoy "
+                f"{registro.fecha_consumo.strftime('%d/%m/%Y')}. "
+                f"Costo: Gs. {int(registro.costo_almuerzo):,}."
+            )
+        except Exception:
+            logger.warning(
+                "WhatsApp: fallo al notificar almuerzo de %s", registro.hijo_id, exc_info=True
+            )
+
+    @staticmethod
+    def recargar_saldo(
+        *,
+        hijo,
+        monto: Decimal,
+        registrado_por=None,
+        metodo_pago: str = "EFECTIVO",
+        referencia: str = "",
+        cierre_caja=None,
+        medio_pago_obj=None,
+    ) -> RecargaSaldoAlmuerzo:
+        """
+        Carga saldo de almuerzo de un hijo (cuenta corriente, no descuenta
+        nada de la tarjeta de cantina).
+
+        Flujo:
+        1. Crear RecargaSaldoAlmuerzo CONFIRMADA
+        2. Actualizar SaldoAlmuerzo.saldo_actual
+        3. Crear MovimientoSaldoAlmuerzo (RECARGA)
+        4. Crear MovimientoCaja INGRESO si hay cierre abierto
+        """
+        if monto <= 0:
+            raise ValidationError({"error": "El monto debe ser mayor a 0."})
+
+        with transaction.atomic():
+            recarga = RecargaSaldoAlmuerzo.objects.create(
+                hijo=hijo,
+                monto_cargado=monto,
+                metodo_pago=metodo_pago,
+                referencia=referencia,
+                registrado_por=registrado_por,
+                estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+            )
+
+            saldo, _ = SaldoAlmuerzo.objects.get_or_create(hijo=hijo)
+            saldo = SaldoAlmuerzo.objects.select_for_update().get(pk=saldo.pk)
+            saldo.saldo_actual += monto
+            saldo.save(update_fields=["saldo_actual"])
+
+            MovimientoSaldoAlmuerzo.objects.create(
+                saldo=saldo,
+                tipo=MovimientoSaldoAlmuerzo.Tipo.RECARGA,
+                monto=monto,
+                saldo_resultante=saldo.saldo_actual,
+                recarga=recarga,
+            )
+
+            if cierre_caja:
+                from apps.contabilidad.models import MovimientoCaja
+                MovimientoCaja.objects.create(
+                    cierre=cierre_caja,
+                    tipo=MovimientoCaja.Tipo.INGRESO,
+                    monto=monto,
+                    descripcion=f"Recarga almuerzo #{recarga.pk} - {hijo}",
+                    medio_pago=medio_pago_obj,
+                )
+
+            try:
+                from apps.notificaciones.services import whatsapp_cliente
+                whatsapp_cliente(
+                    hijo.cliente_responsable,
+                    f"Recarga exitosa: se acreditaron Gs. {int(monto):,} al saldo de almuerzo de "
+                    f"{hijo.nombre_completo}. Nuevo saldo: Gs. {int(saldo.saldo_actual):,}.",
+                )
+            except Exception:
+                logger.warning(
+                    "WhatsApp de recarga de almuerzo no enviado para hijo %s", hijo.pk, exc_info=True
+                )
+
+            return recarga
+
+    @staticmethod
+    def confirmar_recarga(*, recarga, cierre_caja=None, medio_pago_obj=None) -> RecargaSaldoAlmuerzo:
+        """Confirma una RecargaSaldoAlmuerzo PENDIENTE (ej: transferencia)."""
+        if recarga.estado != RecargaSaldoAlmuerzo.Estado.PENDIENTE:
+            raise ValidationError({"error": "La recarga no está en estado PENDIENTE."})
+
+        with transaction.atomic():
+            recarga = RecargaSaldoAlmuerzo.objects.select_for_update().get(pk=recarga.pk)
+            recarga.estado = RecargaSaldoAlmuerzo.Estado.CONFIRMADA
+            recarga.save(update_fields=["estado"])
+
+            saldo, _ = SaldoAlmuerzo.objects.get_or_create(hijo=recarga.hijo)
+            saldo = SaldoAlmuerzo.objects.select_for_update().get(pk=saldo.pk)
+            saldo.saldo_actual += recarga.monto_cargado
+            saldo.save(update_fields=["saldo_actual"])
+
+            MovimientoSaldoAlmuerzo.objects.create(
+                saldo=saldo,
+                tipo=MovimientoSaldoAlmuerzo.Tipo.RECARGA,
+                monto=recarga.monto_cargado,
+                saldo_resultante=saldo.saldo_actual,
+                recarga=recarga,
+                observaciones="Confirmación de recarga pendiente",
+            )
+
+            if cierre_caja:
+                from apps.contabilidad.models import MovimientoCaja
+                MovimientoCaja.objects.create(
+                    cierre=cierre_caja,
+                    tipo=MovimientoCaja.Tipo.INGRESO,
+                    monto=recarga.monto_cargado,
+                    descripcion=f"Recarga almuerzo confirmada #{recarga.pk} - {recarga.hijo}",
+                    medio_pago=medio_pago_obj,
+                )
+
+            try:
+                from apps.notificaciones.services import whatsapp_cliente
+                whatsapp_cliente(
+                    recarga.hijo.cliente_responsable,
+                    f"Recarga exitosa: se acreditaron Gs. {int(recarga.monto_cargado):,} al saldo de "
+                    f"almuerzo de {recarga.hijo.nombre_completo}. Nuevo saldo: Gs. {int(saldo.saldo_actual):,}.",
+                )
+            except Exception:
+                logger.warning(
+                    "WhatsApp de confirmación de recarga de almuerzo no enviado para hijo %s",
+                    recarga.hijo_id, exc_info=True,
+                )
+
+            return recarga
