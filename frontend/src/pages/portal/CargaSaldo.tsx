@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   CreditCard, CheckCircle2, XCircle, AlertCircle,
-  ChevronRight, Loader2, Wallet, RefreshCw,
+  ChevronRight, Loader2, Wallet, RefreshCw, UtensilsCrossed,
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
@@ -14,6 +14,8 @@ import TarjetasGuardadasBancard from './components/TarjetasGuardadasBancard'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
+type TipoSaldo = 'CANTINA' | 'ALMUERZO'
+
 interface HijoConTarjeta {
   id: number
   nombre: string
@@ -21,6 +23,7 @@ interface HijoConTarjeta {
   nro_tarjeta: string
   saldo_actual: number
   estado_tarjeta: string
+  saldo_almuerzo: number
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -33,7 +36,7 @@ function formatGs(n: number) {
 
 // ─── Resultado del pago ───────────────────────────────────────────────────────
 
-function ResultadoPago({ estado, monto }: { estado: string; monto: string | null }) {
+function ResultadoPago({ estado, monto, tipo }: { estado: string; monto: string | null; tipo: TipoSaldo }) {
   const aprobado = estado === 'aprobado'
   const cancelado = estado === 'cancelado'
 
@@ -52,7 +55,9 @@ function ResultadoPago({ estado, monto }: { estado: string; monto: string | null
               </p>
             )}
             <p className="text-slate-500 text-base mt-2">
-              El saldo fue acreditado en la tarjeta del alumno.
+              {tipo === 'ALMUERZO'
+                ? 'El saldo fue acreditado en la cuenta corriente de almuerzo del alumno.'
+                : 'El saldo fue acreditado en la tarjeta del alumno.'}
             </p>
           </div>
         </>
@@ -93,6 +98,13 @@ export default function CargaSaldo() {
   const estadoRetorno = searchParams.get('estado')
   const montoRetorno  = searchParams.get('monto')
 
+  // Tipo de saldo — desde retorno de Bancard o pre-cargado desde Dashboard
+  const tipoParam: TipoSaldo = searchParams.get('tipo')?.toUpperCase() === 'ALMUERZO' ? 'ALMUERZO' : 'CANTINA'
+  const hijoIdParam = searchParams.get('hijo_id')
+
+  // Tipo de saldo a cargar: cantina (tarjeta) o almuerzo (cuenta corriente)
+  const [tipoSaldo, setTipoSaldo] = useState<TipoSaldo>(tipoParam)
+
   // Hijos disponibles
   const [hijos, setHijos]         = useState<HijoConTarjeta[]>([])
   const [loadingHijos, setLoadingHijos] = useState(true)
@@ -130,6 +142,7 @@ export default function CargaSaldo() {
         .map((h: {
           id: number; nombre: string; grado: string | null
           tarjeta: { nro_tarjeta: string; saldo_actual: number; estado: string }
+          saldo_almuerzo: number
         }) => ({
           id: h.id,
           nombre: h.nombre,
@@ -137,15 +150,20 @@ export default function CargaSaldo() {
           nro_tarjeta: h.tarjeta.nro_tarjeta,
           saldo_actual: h.tarjeta.saldo_actual,
           estado_tarjeta: h.tarjeta.estado,
+          saldo_almuerzo: h.saldo_almuerzo,
         }))
       setHijos(lista)
-      if (lista.length === 1) setHijoSeleccionado(lista[0])
+
+      const preseleccionado = hijoIdParam
+        ? lista.find(h => String(h.id) === hijoIdParam)
+        : (lista.length === 1 ? lista[0] : undefined)
+      if (preseleccionado) setHijoSeleccionado(preseleccionado)
     } catch {
       toast.error('Error al cargar los datos')
     } finally {
       setLoadingHijos(false)
     }
-  }, [])
+  }, [hijoIdParam])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -157,7 +175,9 @@ export default function CargaSaldo() {
     ? (parseInt(montoCustom.replace(/\D/g, ''), 10) || 0)
     : (montoSeleccionado ?? 0)
 
-  const montoValido = montoEfectivo >= 5_000 && montoEfectivo <= 5_000_000
+  const montoValido = tipoSaldo === 'ALMUERZO'
+    ? montoEfectivo > 0
+    : montoEfectivo >= 5_000 && montoEfectivo <= 5_000_000
 
   // ── Iniciar pago ocasional (single_buy) ────────────────────────────────────
   const handlePagar = useCallback(async () => {
@@ -165,10 +185,12 @@ export default function CargaSaldo() {
 
     setIniciando(true)
     try {
-      const { data } = await api.post('/core/bancard/iniciar/', {
-        nro_tarjeta: hijoSeleccionado.nro_tarjeta,
-        monto: montoEfectivo,
-      })
+      const { data } = await api.post(
+        tipoSaldo === 'ALMUERZO' ? '/core/bancard/iniciar-almuerzo/' : '/core/bancard/iniciar/',
+        tipoSaldo === 'ALMUERZO'
+          ? { hijo_id: hijoSeleccionado.id, monto: montoEfectivo }
+          : { nro_tarjeta: hijoSeleccionado.nro_tarjeta, monto: montoEfectivo },
+      )
       setProcessId(data.process_id)
       setScriptUrl(data.script_url)
       setPagoEnProceso(true)
@@ -178,7 +200,7 @@ export default function CargaSaldo() {
       toast.error(msg)
       setIniciando(false)
     }
-  }, [hijoSeleccionado, montoValido, montoEfectivo, iniciando])
+  }, [hijoSeleccionado, montoValido, montoEfectivo, iniciando, tipoSaldo])
 
   // ── Pagar con tarjeta guardada (charge) ────────────────────────────────────
   const handlePagarConTarjeta = useCallback(async () => {
@@ -186,11 +208,12 @@ export default function CargaSaldo() {
 
     setIniciando(true)
     try {
-      const { data } = await api.post('/core/bancard/pagar-con-tarjeta/', {
-        nro_tarjeta: hijoSeleccionado.nro_tarjeta,
-        monto: montoEfectivo,
-        card_id: cardIdSeleccionado,
-      })
+      const { data } = await api.post(
+        tipoSaldo === 'ALMUERZO' ? '/core/bancard/pagar-almuerzo-con-tarjeta/' : '/core/bancard/pagar-con-tarjeta/',
+        tipoSaldo === 'ALMUERZO'
+          ? { hijo_id: hijoSeleccionado.id, monto: montoEfectivo, card_id: cardIdSeleccionado }
+          : { nro_tarjeta: hijoSeleccionado.nro_tarjeta, monto: montoEfectivo, card_id: cardIdSeleccionado },
+      )
 
       if (data.requires_3ds) {
         setProcessId3ds(data.process_id)
@@ -201,7 +224,7 @@ export default function CargaSaldo() {
 
       // Resuelto en el mismo request: recarga completa forzada para saldo fresco
       // (mismo patrón que PagoCompletado.tsx tras volver de Bancard).
-      const params = new URLSearchParams({ estado: data.estado, tipo: 'saldo' })
+      const params = new URLSearchParams({ estado: data.estado, tipo: tipoSaldo })
       if (data.monto) params.set('monto', String(data.monto))
       window.location.href = `${window.location.pathname}?${params.toString()}`
     } catch (err: unknown) {
@@ -210,7 +233,7 @@ export default function CargaSaldo() {
       toast.error(msg)
       setIniciando(false)
     }
-  }, [hijoSeleccionado, montoValido, montoEfectivo, cardIdSeleccionado, iniciando])
+  }, [hijoSeleccionado, montoValido, montoEfectivo, cardIdSeleccionado, iniciando, tipoSaldo])
 
   // ── Mantener sesión activa mientras el iframe de Bancard está visible ────────
   useEffect(() => {
@@ -352,7 +375,7 @@ export default function CargaSaldo() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-slate-900">Carga de Saldo</h1>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-          <ResultadoPago estado={estadoRetorno} monto={montoRetorno} />
+          <ResultadoPago estado={estadoRetorno} monto={montoRetorno} tipo={tipoParam} />
           <div className="mt-6 flex justify-center">
             <button
               type="button"
@@ -380,12 +403,19 @@ export default function CargaSaldo() {
     )
   }
 
+  const stepHijo = hijos.length > 1 ? 1 : 0
+  const stepTipo = stepHijo + 1
+  const stepMonto = stepTipo + 1
+  const stepMetodo = stepMonto + 1
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Carga de Saldo</h1>
         <p className="text-base text-slate-500 mt-0.5">
-          Recargá la tarjeta con Visa o Mastercard
+          {tipoSaldo === 'ALMUERZO'
+            ? 'Recargá el saldo de almuerzo con Visa o Mastercard'
+            : 'Recargá la tarjeta con Visa o Mastercard'}
         </p>
       </div>
 
@@ -417,9 +447,11 @@ export default function CargaSaldo() {
                   </p>
                 </div>
                 <div className="text-right shrink-0 ml-4">
-                  <p className="text-sm text-slate-400">Saldo actual</p>
-                  <p className="text-base font-bold text-emerald-700 tabular-nums">
-                    {formatGs(h.saldo_actual)}
+                  <p className="text-sm text-slate-400">{tipoSaldo === 'ALMUERZO' ? 'Saldo almuerzo' : 'Saldo actual'}</p>
+                  <p className={`text-base font-bold tabular-nums ${
+                    tipoSaldo === 'ALMUERZO' && h.saldo_almuerzo < 0 ? 'text-red-600' : 'text-emerald-700'
+                  }`}>
+                    {formatGs(tipoSaldo === 'ALMUERZO' ? h.saldo_almuerzo : h.saldo_actual)}
                   </p>
                 </div>
               </button>
@@ -428,29 +460,76 @@ export default function CargaSaldo() {
         </div>
       )}
 
-      {/* Tarjeta única — mostrar saldo directamente */}
+      {/* Alumno único — mostrar saldo directamente */}
       {hijos.length === 1 && hijoSeleccionado && (
-        <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4 flex items-center justify-between">
-          <div>
-            <p className="text-base font-bold text-slate-800">{hijoSeleccionado.nombre}</p>
-            <p className="text-sm text-slate-500 mt-0.5">
-              {hijoSeleccionado.grado ?? 'Sin grado'} · Tarjeta {hijoSeleccionado.nro_tarjeta}
-            </p>
+        <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-base font-bold text-slate-800">{hijoSeleccionado.nombre}</p>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {hijoSeleccionado.grado ?? 'Sin grado'} · Tarjeta {hijoSeleccionado.nro_tarjeta}
+              </p>
+            </div>
+            <div className="text-right shrink-0 ml-4">
+              <p className="text-sm text-slate-500">Saldo actual</p>
+              <p className="text-2xl font-bold text-emerald-700 tabular-nums">
+                {formatGs(hijoSeleccionado.saldo_actual)}
+              </p>
+            </div>
           </div>
-          <div className="text-right shrink-0 ml-4">
-            <p className="text-sm text-slate-500">Saldo actual</p>
-            <p className="text-2xl font-bold text-emerald-700 tabular-nums">
-              {formatGs(hijoSeleccionado.saldo_actual)}
+          <div className="mt-3 pt-3 border-t border-green-200 flex items-center justify-between">
+            <p className="text-sm text-slate-500">Saldo de almuerzo</p>
+            <p className={`text-lg font-bold tabular-nums ${hijoSeleccionado.saldo_almuerzo < 0 ? 'text-red-600' : 'text-orange-700'}`}>
+              {formatGs(hijoSeleccionado.saldo_almuerzo)}
             </p>
           </div>
         </div>
       )}
 
-      {/* ── Paso 2: Seleccionar monto ── */}
+      {/* ── Paso: Tipo de saldo a cargar ── */}
+      {hijoSeleccionado && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+              {stepTipo} — ¿Qué saldo querés cargar?
+            </p>
+          </div>
+          <div className="p-5 grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setTipoSaldo('CANTINA')}
+              className={[
+                'flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-colors cursor-pointer border-2',
+                tipoSaldo === 'CANTINA'
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-green-400',
+              ].join(' ')}
+            >
+              <CreditCard className="w-4 h-4" />
+              Cantina
+            </button>
+            <button
+              type="button"
+              onClick={() => setTipoSaldo('ALMUERZO')}
+              className={[
+                'flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-colors cursor-pointer border-2',
+                tipoSaldo === 'ALMUERZO'
+                  ? 'bg-orange-600 text-white border-orange-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-orange-400',
+              ].join(' ')}
+            >
+              <UtensilsCrossed className="w-4 h-4" />
+              Almuerzo
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Paso: Seleccionar monto ── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
           <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
-            {hijos.length > 1 ? '2' : '1'} — Elegí el monto a cargar
+            {stepMonto} — Elegí el monto a cargar
           </p>
         </div>
         <div className="p-5 space-y-4">
@@ -502,18 +581,20 @@ export default function CargaSaldo() {
           {/* Monto mínimo hint */}
           {montoEfectivo > 0 && !montoValido && (
             <p className="text-sm text-red-500">
-              El monto debe estar entre Gs. 5.000 y Gs. 5.000.000.
+              {tipoSaldo === 'ALMUERZO'
+                ? 'Ingresá un monto mayor a cero.'
+                : 'El monto debe estar entre Gs. 5.000 y Gs. 5.000.000.'}
             </p>
           )}
         </div>
       </div>
 
-      {/* ── Paso 3: Método de pago ── */}
+      {/* ── Paso: Método de pago ── */}
       {hijoSeleccionado && montoValido && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
-              {hijos.length > 1 ? '3' : '2'} — Método de pago
+              {stepMetodo} — Método de pago
             </p>
           </div>
           <div className="flex border-b border-slate-100">
@@ -565,12 +646,14 @@ export default function CargaSaldo() {
               <span className="font-semibold text-slate-800">{hijoSeleccionado.nombre}</span>
             </div>
             <div className="flex justify-between text-base">
-              <span className="text-slate-500">Tarjeta</span>
-              <span className="font-semibold text-slate-800">{hijoSeleccionado.nro_tarjeta}</span>
+              <span className="text-slate-500">{tipoSaldo === 'ALMUERZO' ? 'Saldo a cargar' : 'Tarjeta'}</span>
+              <span className="font-semibold text-slate-800">
+                {tipoSaldo === 'ALMUERZO' ? 'Almuerzo' : hijoSeleccionado.nro_tarjeta}
+              </span>
             </div>
             <div className="flex justify-between text-base border-t border-slate-100 pt-2 mt-2">
               <span className="text-slate-500">Monto a cargar</span>
-              <span className="text-xl font-bold text-emerald-700 tabular-nums">
+              <span className={`text-xl font-bold tabular-nums ${tipoSaldo === 'ALMUERZO' ? 'text-orange-700' : 'text-emerald-700'}`}>
                 {formatGs(montoEfectivo)}
               </span>
             </div>
@@ -604,7 +687,9 @@ export default function CargaSaldo() {
               'w-full flex items-center justify-center gap-3 py-4 rounded-2xl',
               'text-lg font-bold transition-all',
               listo && !iniciando
-                ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer shadow-lg shadow-green-600/20 active:scale-[0.98]'
+                ? tipoSaldo === 'ALMUERZO'
+                  ? 'bg-orange-600 hover:bg-orange-700 text-white cursor-pointer shadow-lg shadow-orange-600/20 active:scale-[0.98]'
+                  : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer shadow-lg shadow-green-600/20 active:scale-[0.98]'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed',
             ].join(' ')}
           >

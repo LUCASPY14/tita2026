@@ -72,11 +72,16 @@ const PORTAL_DATA = {
   hijos: [HIJO_CON_CUENTA],
 }
 
-function setupPortal(override: Record<string, unknown> = {}) {
+function setupPortal(override: Record<string, unknown> = {}, historial: Record<string, unknown> = {}) {
   vi.mocked(api.get).mockImplementation((url: string) => {
     if (url === '/usuarios/portal/mi-hijo/') return Promise.resolve({ data: { ...PORTAL_DATA, ...override } })
     if (url === '/almuerzos/suscripciones/') return Promise.resolve({ data: { results: [] } })
     if (url === '/usuarios/portal/historial-cantina/') return Promise.resolve({ data: { results: [], next: null } })
+    if (url === '/usuarios/portal/historial-consumos/') {
+      return Promise.resolve({
+        data: { anio: 2026, mes: 7, consumos: [], total: 0, monto_total: 0, cobrados: 0, ...historial },
+      })
+    }
     return Promise.resolve({ data: {} })
   })
 }
@@ -196,12 +201,12 @@ describe('PortalDashboard — datos', () => {
 // ── Saldo de almuerzo ─────────────────────────────────────────────────────────
 
 describe('PortalDashboard — saldo de almuerzo', () => {
-  it('saldo positivo → se muestra en verde/naranja con mensaje "A favor"', async () => {
+  it('saldo positivo → se muestra sin aviso de deuda', async () => {
     setupPortal({ hijos: [{ ...HIJO_CON_CUENTA, saldo_almuerzo: 30_000 }] })
     render(<PortalDashboard />)
 
     await screen.findByText('Gs. 30.000')
-    expect(screen.getByText(/A favor del comedor/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Debe/i)).not.toBeInTheDocument()
   })
 
   it('saldo negativo → se muestra en rojo con mensaje "Debe"', async () => {
@@ -219,7 +224,7 @@ describe('PortalDashboard — saldo de almuerzo', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Recargar saldo de almuerzo/i }))
 
-    expect(mockNavigate).toHaveBeenCalledWith('/portal/pagar-almuerzo?hijo_id=1')
+    expect(mockNavigate).toHaveBeenCalledWith('/portal/carga-saldo?tipo=ALMUERZO&hijo_id=1')
   })
 })
 
@@ -242,6 +247,54 @@ describe('PortalDashboard — tabs', () => {
     await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
 
     await screen.findByText(/Sin consumos registrados este mes/i)
+  })
+
+  it('tab Historial → llama historial-consumos con el mes actual y muestra los consumos', async () => {
+    setupPortal({}, {
+      total: 2, cobrados: 1, monto_total: 25000,
+      consumos: [{ id: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000', ya_cobrado: true }],
+    })
+    render(<PortalDashboard />)
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.get)).toHaveBeenCalledWith(
+        '/usuarios/portal/historial-consumos/',
+        expect.objectContaining({ params: expect.objectContaining({ hijo_id: 1, anio: 2026, mes: 7 }) }),
+      )
+    })
+    await screen.findByLabelText('Mes anterior')
+    expect(screen.getAllByText('Gs. 25.000').length).toBeGreaterThan(0)
+  })
+
+  it('tab Historial → "Mes siguiente" queda deshabilitado en el mes actual', async () => {
+    setupPortal()
+    render(<PortalDashboard />)
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
+    await screen.findByLabelText('Mes siguiente')
+
+    expect(screen.getByLabelText('Mes siguiente')).toBeDisabled()
+  })
+
+  it('tab Historial → "Mes anterior" navega y vuelve a consultar la API', async () => {
+    setupPortal()
+    render(<PortalDashboard />)
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
+    await screen.findByLabelText('Mes anterior')
+
+    await userEvent.click(screen.getByLabelText('Mes anterior'))
+
+    await screen.findByText('Junio 2026')
+    expect(vi.mocked(api.get)).toHaveBeenCalledWith(
+      '/usuarios/portal/historial-consumos/',
+      expect.objectContaining({ params: expect.objectContaining({ hijo_id: 1, anio: 2026, mes: 6 }) }),
+    )
   })
 
   it('tab Almuerzos → llama /almuerzos/suscripciones/ con el hijo correcto', async () => {

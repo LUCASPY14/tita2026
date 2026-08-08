@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useNotificaciones } from '../hooks/useNotificaciones'
-import { Home, Bell, LogOut, History, FileText, Wallet, Download } from 'lucide-react'
+import { Home, Bell, LogOut, FileText, Wallet, Download } from 'lucide-react'
 import LogoSinFondo from './LogoSinFondo'
 
 const navItems = [
   { path: '/portal',                 label: 'Inicio',    icon: Home,    exact: true  },
   { path: '/portal/carga-saldo',    label: 'Recargar',  icon: Wallet,  exact: false },
-  { path: '/portal/historial',      label: 'Historial', icon: History, exact: false },
   { path: '/portal/facturas',       label: 'Facturas',  icon: FileText,exact: false },
   { path: '/portal/notificaciones', label: 'Alertas',   icon: Bell,    exact: false },
 ]

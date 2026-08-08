@@ -34,11 +34,13 @@ import toast from 'react-hot-toast'
 const HIJO = {
   id: 1, nombre: 'Juan', grado: '3° A',
   tarjeta: { nro_tarjeta: 'T-001', saldo_actual: 50_000, estado: 'ACTIVA' },
+  saldo_almuerzo: -15_000,
 }
 
 const HIJO2 = {
   id: 2, nombre: 'Lucía', grado: '5° B',
   tarjeta: { nro_tarjeta: 'T-002', saldo_actual: 20_000, estado: 'ACTIVA' },
+  saldo_almuerzo: 5_000,
 }
 
 const HIJO_SIN_TARJETA = {
@@ -310,5 +312,102 @@ describe('CargaSaldo — tarjeta guardada', () => {
     await screen.findByText(/5418\*+0014/)
 
     expect(screen.getByRole('button', { name: /Ir a pagar/i })).toBeDisabled()
+  })
+})
+
+// ── Toggle Cantina / Almuerzo ─────────────────────────────────────────────────
+
+describe('CargaSaldo — toggle cantina/almuerzo', () => {
+  it('muestra el saldo de almuerzo del hijo único', async () => {
+    setupHijos(HIJO)
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+    expect(screen.getByText('Saldo de almuerzo')).toBeInTheDocument()
+    expect(screen.getByText('Gs. -15.000')).toBeInTheDocument()
+  })
+
+  it('?tipo=ALMUERZO preselecciona la pestaña de almuerzo', async () => {
+    setParams('tipo=ALMUERZO')
+    setupHijos(HIJO)
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+
+    expect(screen.getByRole('button', { name: /Almuerzo/i })).toHaveClass('bg-orange-600')
+  })
+
+  it('?hijo_id= preselecciona al hijo indicado entre varios', async () => {
+    setParams('hijo_id=2')
+    setupHijos(HIJO, HIJO2)
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+
+    // Lucía queda resaltada como seleccionada — su fila usa el estilo activo
+    const filaLucia = screen.getByText('Lucía').closest('button')
+    expect(filaLucia).toHaveClass('bg-green-50')
+  })
+
+  it('seleccionar "Almuerzo" y un monto llama a /core/bancard/iniciar-almuerzo/ con hijo_id', async () => {
+    setupHijos(HIJO)
+    vi.mocked(api.post).mockResolvedValue({
+      data: { process_id: 'proc-almuerzo-1', script_url: 'https://vpos.test/checkout.js' },
+    })
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+
+    await userEvent.click(screen.getByRole('button', { name: /Almuerzo/i }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Ir a pagar/i })).not.toBeDisabled())
+    await userEvent.click(screen.getByRole('button', { name: /Ir a pagar/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith(
+        '/core/bancard/iniciar-almuerzo/',
+        expect.objectContaining({ hijo_id: 1, monto: 50_000 }),
+      )
+    })
+  })
+
+  it('recargar almuerzo con tarjeta guardada llama a /core/bancard/pagar-almuerzo-con-tarjeta/', async () => {
+    setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
+    vi.mocked(api.post).mockResolvedValue({ data: { estado: 'aprobado', monto: 50_000 } })
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+
+    await userEvent.click(screen.getByRole('button', { name: /Almuerzo/i }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
+    await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
+    await screen.findByText(/5418\*+0014/)
+    await userEvent.click(screen.getByText(/5418\*+0014/))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Ir a pagar/i })).not.toBeDisabled())
+
+    await userEvent.click(screen.getByRole('button', { name: /Ir a pagar/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith(
+        '/core/bancard/pagar-almuerzo-con-tarjeta/',
+        expect.objectContaining({ hijo_id: 1, monto: 50_000, card_id: 1 }),
+      )
+    })
+    expect(window.location.href).toContain('tipo=ALMUERZO')
+  })
+
+  it('en modo almuerzo, un monto pequeño (< 5.000) es válido', async () => {
+    setupHijos(HIJO)
+    render(<CargaSaldo />)
+    await screen.findByText('Juan')
+    await userEvent.click(screen.getByRole('button', { name: /Almuerzo/i }))
+
+    await userEvent.click(screen.getByRole('button', { name: /Otro monto/i }))
+    const montoInput = await screen.findByPlaceholderText('150000')
+    await userEvent.type(montoInput, '2000')
+
+    expect(screen.getByRole('button', { name: /Ir a pagar/i })).not.toBeDisabled()
+  })
+
+  it('estado=aprobado con tipo=ALMUERZO muestra el mensaje de cuenta corriente de almuerzo', async () => {
+    setParams('estado=aprobado&monto=50000&tipo=ALMUERZO')
+    vi.mocked(api.get).mockResolvedValue({ data: { hijos: [] } })
+    render(<CargaSaldo />)
+    await screen.findByText(/cuenta corriente de almuerzo/i)
   })
 })

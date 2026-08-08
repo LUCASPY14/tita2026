@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   CreditCard, AlertTriangle, UtensilsCrossed, History,
   CalendarCheck, AlertCircle, RefreshCw, Wallet,
-  ShoppingBag, ChevronDown, ChevronUp, TrendingUp,
+  ShoppingBag, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, TrendingUp,
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
@@ -27,10 +27,20 @@ interface Restriccion {
   requiere_autorizacion: boolean
 }
 
-interface ConsumoReciente {
+interface ConsumoHistorial {
+  id: number
   fecha_consumo: string
-  costo_almuerzo: string
+  costo_almuerzo: string | number
   ya_cobrado: boolean
+}
+
+interface HistorialData {
+  anio: number
+  mes: number
+  consumos: ConsumoHistorial[]
+  total: number
+  monto_total: number
+  cobrados: number
 }
 
 interface CuentaMensual {
@@ -53,7 +63,6 @@ interface HijoData {
   grado: string | null
   tarjeta: Tarjeta | null
   restricciones: Restriccion[]
-  consumos_mes: { total: number; cobrados: number; ultimos: ConsumoReciente[] }
   cuenta_mensual: CuentaMensual | null
   saldo_almuerzo: number
   top_productos?: TopProducto[]
@@ -204,14 +213,16 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
             <p className={`text-4xl font-bold tabular-nums ${hijo.saldo_almuerzo < 0 ? 'text-red-700' : 'text-orange-700'}`}>
               {formatGs(hijo.saldo_almuerzo)}
             </p>
-            <p className="text-sm text-slate-400 mt-1">
-              {hijo.saldo_almuerzo < 0 ? 'Debe — se descuenta de cada ingreso al comedor' : 'A favor del comedor, no de la cantina'}
-            </p>
+            {hijo.saldo_almuerzo < 0 && (
+              <p className="text-sm text-slate-400 mt-1">
+                Debe — se descuenta de cada ingreso al comedor
+              </p>
+            )}
           </div>
         </div>
         <button
           type="button"
-          onClick={() => navigate(`/portal/pagar-almuerzo?hijo_id=${hijo.id}`)}
+          onClick={() => navigate(`/portal/carga-saldo?tipo=ALMUERZO&hijo_id=${hijo.id}`)}
           className={[
             'mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border font-semibold text-base transition-colors cursor-pointer',
             hijo.saldo_almuerzo < 0
@@ -303,60 +314,104 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
   )
 }
 
-function HistorialTab({ hijo }: { hijo: HijoData }) {
-  if (hijo.consumos_mes.total === 0) {
-    return (
-      <div className="py-12 text-center text-slate-400">
-        <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 opacity-30" />
-        <p className="text-base">Sin consumos registrados este mes</p>
-      </div>
-    )
-  }
-
+function HistorialTab({
+  data,
+  loading,
+  anio,
+  mes,
+  isCurrentMonth,
+  onPrevMes,
+  onNextMes,
+}: {
+  data: HistorialData | null
+  loading: boolean
+  anio: number
+  mes: number
+  isCurrentMonth: boolean
+  onPrevMes: () => void
+  onNextMes: () => void
+}) {
   return (
     <div className="space-y-3">
-      <div className="flex gap-3">
-        <div className="flex-1 bg-white rounded-xl border border-slate-100 px-4 py-3 text-center">
-          <p className="text-sm text-slate-500">Total almuerzos</p>
-          <p className="text-2xl font-bold text-slate-800 tabular-nums">{hijo.consumos_mes.total}</p>
-        </div>
-        <div className="flex-1 bg-white rounded-xl border border-slate-100 px-4 py-3 text-center">
-          <p className="text-sm text-slate-500">Cobrados</p>
-          <p className="text-2xl font-bold text-emerald-700 tabular-nums">{hijo.consumos_mes.cobrados}</p>
-        </div>
+      {/* Navegador de mes */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onPrevMes}
+          className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 cursor-pointer transition-colors"
+          aria-label="Mes anterior"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <p className="text-base font-semibold text-slate-800">{MESES[mes]} {anio}</p>
+        <button
+          type="button"
+          onClick={onNextMes}
+          disabled={isCurrentMonth}
+          className={[
+            'p-2 rounded-xl transition-colors',
+            isCurrentMonth ? 'text-slate-300 cursor-not-allowed' : 'hover:bg-slate-100 text-slate-600 cursor-pointer',
+          ].join(' ')}
+          aria-label="Mes siguiente"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Últimos consumos</p>
+      {loading ? (
+        <Spinner className="mt-8" />
+      ) : !data || data.total === 0 ? (
+        <div className="py-12 text-center text-slate-400">
+          <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <p className="text-base">Sin consumos registrados este mes</p>
         </div>
-        <div className="divide-y divide-slate-100">
-          {hijo.consumos_mes.ultimos.length === 0 && (
-            <p className="px-4 py-4 text-sm text-slate-400 text-center">Sin registros disponibles</p>
-          )}
-          {hijo.consumos_mes.ultimos.map((c, i) => (
-            <div key={i} className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-                  <UtensilsCrossed className="w-4 h-4 text-slate-500" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-800">Almuerzo</p>
-                  <p className="text-sm text-slate-400">{formatFecha(c.fecha_consumo)}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold text-slate-800 tabular-nums">
-                  {c.ya_cobrado ? formatGs(Number(c.costo_almuerzo)) : '—'}
-                </p>
-                <Badge color={c.ya_cobrado ? 'orange' : 'green'}>
-                  {c.ya_cobrado ? 'Cobrado' : 'Sin cargo'}
-                </Badge>
-              </div>
+      ) : (
+        <>
+          <div className="flex gap-3">
+            <div className="flex-1 bg-white rounded-xl border border-slate-100 px-4 py-3 text-center">
+              <p className="text-sm text-slate-500">Total almuerzos</p>
+              <p className="text-2xl font-bold text-slate-800 tabular-nums">{data.total}</p>
             </div>
-          ))}
-        </div>
-      </div>
+            <div className="flex-1 bg-white rounded-xl border border-slate-100 px-4 py-3 text-center">
+              <p className="text-sm text-slate-500">Cobrados</p>
+              <p className="text-2xl font-bold text-emerald-700 tabular-nums">{data.cobrados}</p>
+            </div>
+            <div className="flex-1 bg-white rounded-xl border border-slate-100 px-4 py-3 text-center">
+              <p className="text-sm text-slate-500">Total</p>
+              <p className="text-2xl font-bold text-orange-700 tabular-nums">{formatGs(data.monto_total)}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Consumos</p>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {data.consumos.map(c => (
+                <div key={c.id} className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                      <UtensilsCrossed className="w-4 h-4 text-slate-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">Almuerzo</p>
+                      <p className="text-sm text-slate-400">{formatFecha(c.fecha_consumo)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-slate-800 tabular-nums">
+                      {c.ya_cobrado ? formatGs(Number(c.costo_almuerzo)) : '—'}
+                    </p>
+                    <Badge color={c.ya_cobrado ? 'orange' : 'green'}>
+                      {c.ya_cobrado ? 'Cobrado' : 'Sin cargo'}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -496,6 +551,12 @@ export default function PortalDashboard() {
   const [loadingPlan, setLoadingPlan] = useState<Record<number, boolean>>({})
   const planRequestedRef = useRef<Set<number>>(new Set())
 
+  // Historial tab state
+  const today = useMemo(() => new Date(), [])
+  const [historial, setHistorial] = useState<Record<number, HistorialData | null>>({})
+  const [loadingHistorial, setLoadingHistorial] = useState<Record<number, boolean>>({})
+  const [historialMes, setHistorialMes] = useState<Record<number, { anio: number; mes: number }>>({})
+
   // Cantina tab state
   const [cantina, setCantina] = useState<Record<number, VentaCantina[]>>({})
   const [loadingCantina, setLoadingCantina] = useState<Record<number, boolean>>({})
@@ -573,11 +634,48 @@ export default function PortalDashboard() {
     }))
   }, [])
 
+  const loadHistorial = useCallback(async (hijoId: number, anio: number, mes: number) => {
+    setLoadingHistorial(prev => ({ ...prev, [hijoId]: true }))
+    try {
+      const { data: res } = await api.get('/usuarios/portal/historial-consumos/', {
+        params: { hijo_id: hijoId, anio, mes },
+      })
+      setHistorial(prev => ({ ...prev, [hijoId]: res }))
+    } catch {
+      setHistorial(prev => ({ ...prev, [hijoId]: null }))
+    } finally {
+      setLoadingHistorial(prev => ({ ...prev, [hijoId]: false }))
+    }
+  }, [])
+
+  // Mes "actual" según el servidor (el mismo que ya se muestra en el saludo),
+  // no el reloj del navegador — evita desincronías de huso horario.
+  const dataAnio = data?.mes.anio
+  const dataMes = data?.mes.mes
+  const mesServidor = useMemo(
+    () => (dataAnio && dataMes) ? { anio: dataAnio, mes: dataMes } : { anio: today.getFullYear(), mes: today.getMonth() + 1 },
+    [dataAnio, dataMes, today],
+  )
+
+  const cambiarMesHistorial = useCallback((hijoId: number, delta: number) => {
+    const actual = historialMes[hijoId] ?? mesServidor
+    let { anio, mes } = actual
+    mes += delta
+    if (mes < 1) { mes = 12; anio -= 1 }
+    if (mes > 12) { mes = 1; anio += 1 }
+    setHistorialMes(prev => ({ ...prev, [hijoId]: { anio, mes } }))
+    loadHistorial(hijoId, anio, mes)
+  }, [historialMes, loadHistorial, mesServidor])
+
   const setTab = useCallback((hijoId: number, tab: HijoTab) => {
     setTabs(prev => ({ ...prev, [hijoId]: tab }))
     if (tab === 'plan') loadPlan(hijoId)
     if (tab === 'cantina') loadCantina(hijoId)
-  }, [loadPlan, loadCantina])
+    if (tab === 'historial') {
+      const actual = historialMes[hijoId] ?? mesServidor
+      loadHistorial(hijoId, actual.anio, actual.mes)
+    }
+  }, [loadPlan, loadCantina, loadHistorial, historialMes, mesServidor])
 
   if (loading) return <Spinner className="mt-12" />
 
@@ -692,7 +790,21 @@ export default function PortalDashboard() {
           {tab === 'resumen' && (
             <ResumenTab hijo={hijo} mes={data.mes} />
           )}
-          {tab === 'historial' && <HistorialTab hijo={hijo} />}
+          {tab === 'historial' && (() => {
+            const mesActual = historialMes[hijo.id] ?? mesServidor
+            const esMesActual = mesActual.anio === mesServidor.anio && mesActual.mes === mesServidor.mes
+            return (
+              <HistorialTab
+                data={historial[hijo.id] ?? null}
+                loading={loadingHistorial[hijo.id] ?? false}
+                anio={mesActual.anio}
+                mes={mesActual.mes}
+                isCurrentMonth={esMesActual}
+                onPrevMes={() => cambiarMesHistorial(hijo.id, -1)}
+                onNextMes={() => cambiarMesHistorial(hijo.id, 1)}
+              />
+            )
+          })()}
           {tab === 'cantina' && (
             <CantinaTab
               ventas={cantina[hijo.id]}

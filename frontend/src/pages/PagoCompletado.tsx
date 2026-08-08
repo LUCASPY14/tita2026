@@ -18,8 +18,12 @@ export default function PagoCompletado() {
 
   // Full page reload: garantiza datos frescos (saldo actualizado) y re-autenticación.
   // El catastro de tarjeta no está atado a un flujo de pago específico — volvemos al inicio del portal.
-  const base = esCatastro ? '/portal' : tipo === 'almuerzo' ? '/portal/pagar-almuerzo' : '/portal/carga-saldo'
-  const handleVolver = () => { window.location.href = `${base}?_r=${Date.now()}` }
+  // Carga de saldo (cantina) y de almuerzo viven en la misma pantalla, con un toggle.
+  const base = esCatastro ? '/portal' : '/portal/carga-saldo'
+  const handleVolver = () => {
+    const tipoParam = !esCatastro && tipo === 'almuerzo' ? '&tipo=ALMUERZO' : ''
+    window.location.href = `${base}?_r=${Date.now()}${tipoParam}`
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
@@ -52,7 +56,9 @@ export default function PagoCompletado() {
                   </p>
                 )}
                 <p className="text-slate-500 text-sm">
-                  El saldo fue acreditado en la tarjeta del alumno.
+                  {tipo === 'almuerzo'
+                    ? 'El saldo fue acreditado en la cuenta corriente de almuerzo del alumno.'
+                    : 'El saldo fue acreditado en la tarjeta del alumno.'}
                 </p>
               </>
             )}

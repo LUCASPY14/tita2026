@@ -211,8 +211,8 @@ class TestPortalMiHijo:
         hijo_data = resp.data["hijos"][0]
         assert hijo_data["id"] == hijo_portal.pk
         assert "tarjeta" in hijo_data
-        assert "consumos_mes" in hijo_data
         assert "cuenta_mensual" in hijo_data
+        assert "saldo_almuerzo" in hijo_data
 
 
 # ── PortalHistorialCantina ────────────────────────────────────────────────────
