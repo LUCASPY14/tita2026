@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { User, CreditCard, AlertTriangle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { User, CreditCard, AlertTriangle, Wallet, UtensilsCrossed } from 'lucide-react'
 import { gs, type Tarjeta, type ClienteBasico, type ModoPago } from './shared'
 
 interface Props {
@@ -31,6 +32,7 @@ export default function PanelAlumno({
   onChangeClienteSearch, onSelectCliente, onClearCliente, onVentaStartTime,
 }: Props) {
   const [focused, setFocused] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <aside className="w-64 lg:w-80 bg-white border-r-2 border-slate-200 flex flex-col shrink-0">
@@ -118,6 +120,25 @@ export default function PanelAlumno({
                 <p className="text-xs text-slate-400 mt-1.5">
                   Crédito disponible: <span className="font-bold">{gs(tarjeta.limite_credito)}</span>
                 </p>
+              )}
+            </div>
+
+            <div className={`grid gap-2 ${tarjeta.es_alumno ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <button
+                onClick={() => navigate(`/carga-saldo?tarjeta=${encodeURIComponent(tarjeta.nro_tarjeta)}&tipo=CANTINA`)}
+                className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-bold transition-colors cursor-pointer"
+              >
+                <Wallet size={18} />
+                Cargar saldo cantina
+              </button>
+              {tarjeta.es_alumno && (
+                <button
+                  onClick={() => navigate(`/carga-saldo?tarjeta=${encodeURIComponent(tarjeta.nro_tarjeta)}&tipo=ALMUERZO`)}
+                  className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <UtensilsCrossed size={18} />
+                  Cargar saldo almuerzo
+                </button>
               )}
             </div>
 

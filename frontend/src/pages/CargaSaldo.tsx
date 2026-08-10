@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   CreditCard, Search, CheckCircle, RefreshCw, History,
@@ -21,15 +22,18 @@ import ModalConfirmarCarga from './cargasaldo/ModalConfirmarCarga'
 
 export default function CargaSaldo() {
   const { t } = useTranslation()
+  const [searchParams] = useSearchParams()
   // ── Búsqueda de tarjeta ──────────────────────────────────────────
-  const [busqueda, setBusqueda] = useState('')
+  const [busqueda, setBusqueda] = useState(() => searchParams.get('tarjeta') ?? '')
   const [tarjeta, setTarjeta] = useState<Tarjeta | null>(null)
   const [buscando, setBuscando] = useState(false)
   const inputBusquedaRef = useRef<HTMLInputElement>(null)
   const limpiarTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // ── Tipo de saldo a cargar: cantina (tarjeta) o almuerzo (cuenta corriente) ──
-  const [tipoSaldo, setTipoSaldo] = useState<'CANTINA' | 'ALMUERZO'>('CANTINA')
+  const [tipoSaldo, setTipoSaldo] = useState<'CANTINA' | 'ALMUERZO'>(
+    () => (searchParams.get('tipo') === 'ALMUERZO' ? 'ALMUERZO' : 'CANTINA')
+  )
   const [saldoAlmuerzo, setSaldoAlmuerzo] = useState<number | null>(null)
   const [ultimaCargaAlmuerzo, setUltimaCargaAlmuerzo] = useState<{
     monto: number; metodo: string; estado: string; hijoNombre: string
@@ -56,12 +60,6 @@ export default function CargaSaldo() {
   // ── Confirmar carga pendiente ─────────────────────────────────────
   const [confirmCargaId, setConfirmCargaId] = useState<number | null>(null)
 
-  // ── Auto-focus al inicio ──────────────────────────────────────────
-  useEffect(() => {
-    inputBusquedaRef.current?.focus()
-    return () => clearTimeout(limpiarTimerRef.current)
-  }, [])
-
   // ── Cargar historial ─────────────────────────────────────────────
   const cargarHistorial = useCallback(async (nro: string) => {
     setLoadingHistorial(true)
@@ -80,8 +78,8 @@ export default function CargaSaldo() {
   }, [])
 
   // ── Buscar tarjeta ────────────────────────────────────────────────
-  const buscarTarjeta = useCallback(async () => {
-    const q = busqueda.trim()
+  const buscarTarjeta = useCallback(async (overrideQuery?: string) => {
+    const q = (overrideQuery ?? busqueda).trim()
     if (!q) { toast.error('Ingresá el número de tarjeta'); return }
     setBuscando(true)
     setTarjeta(null)
@@ -118,6 +116,20 @@ export default function CargaSaldo() {
       setBuscando(false)
     }
   }, [busqueda, cargarHistorial])
+
+  // Auto-focus al inicio, o búsqueda automática si vino con ?tarjeta= (desde
+  // ModoRecreo): disparar la búsqueda sincrónicamente al montar es intencional.
+  useEffect(() => {
+    const nroPreseleccionado = searchParams.get('tarjeta')
+    if (nroPreseleccionado) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      buscarTarjeta(nroPreseleccionado)
+    } else {
+      inputBusquedaRef.current?.focus()
+    }
+    return () => clearTimeout(limpiarTimerRef.current)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Realizar carga de saldo de almuerzo (cuenta corriente del hijo) ─────────
   const handleCargarAlmuerzo = useCallback(async () => {
@@ -394,7 +406,7 @@ export default function CargaSaldo() {
                 className="flex-1 text-center text-3xl font-black tracking-widest py-5 px-6 border-2 rounded-2xl outline-none transition-all duration-150 placeholder:text-slate-300 bg-white border-slate-300 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 text-slate-900 shadow-sm"
               />
               <button
-                onClick={buscarTarjeta}
+                onClick={() => buscarTarjeta()}
                 disabled={buscando}
                 className="px-6 bg-green-600 hover:bg-green-500 text-white rounded-2xl flex items-center gap-2 text-lg font-bold transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
               >

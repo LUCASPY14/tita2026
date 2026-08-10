@@ -1,7 +1,16 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import CargaSaldo from '../CargaSaldo'
+
+function renderCargaSaldo() {
+  return render(
+    <MemoryRouter>
+      <CargaSaldo />
+    </MemoryRouter>,
+  )
+}
 
 vi.mock('../../services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -50,21 +59,21 @@ beforeEach(() => {
 
 describe('CargaSaldo — búsqueda', () => {
   it('muestra el formulario de búsqueda inicialmente', () => {
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     expect(screen.getByText('Carga de Saldo')).toBeInTheDocument()
     expect(screen.getByText('Pasá la tarjeta')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Nro. de tarjeta...')).toBeInTheDocument()
   })
 
   it('muestra toast.error si busqueda está vacía', async () => {
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await userEvent.click(screen.getByRole('button'))
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith('Ingresá el número de tarjeta')
   })
 
   it('busca al presionar Enter en el input', async () => {
     mockBuscarSuccess()
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     const input = screen.getByPlaceholderText('Nro. de tarjeta...')
     await userEvent.type(input, 'T-00001')
     await userEvent.keyboard('{Enter}')
@@ -73,7 +82,7 @@ describe('CargaSaldo — búsqueda', () => {
 
   it('muestra toast.error si la tarjeta no se encuentra', async () => {
     vi.mocked(api.get).mockResolvedValueOnce({ data: { results: [] } })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await userEvent.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-99999')
     await userEvent.click(screen.getByRole('button'))
     await waitFor(() => {
@@ -85,7 +94,7 @@ describe('CargaSaldo — búsqueda', () => {
     vi.mocked(api.get).mockResolvedValueOnce({
       data: { results: [{ ...TARJETA, estado: 'BLOQUEADA' }] },
     })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await userEvent.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
     await userEvent.click(screen.getByRole('button'))
     await waitFor(() => {
@@ -97,7 +106,7 @@ describe('CargaSaldo — búsqueda', () => {
 
   it('muestra los datos de la tarjeta al encontrarla', async () => {
     mockBuscarSuccess()
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await userEvent.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
     await userEvent.click(screen.getByRole('button'))
     expect(await screen.findByText('Juan Pérez')).toBeInTheDocument()
@@ -112,7 +121,7 @@ describe('CargaSaldo — formulario de carga', () => {
   async function renderConTarjeta() {
     const user = userEvent.setup()
     mockBuscarSuccess()
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await user.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
     // único botón visible antes de encontrar tarjeta
     await user.click(screen.getByRole('button'))
@@ -178,7 +187,7 @@ describe('CargaSaldo — saldo de almuerzo', () => {
   async function renderConTarjetaConHijo(saldoAlmuerzo = -15000) {
     const user = userEvent.setup()
     mockBuscarSuccessConHijo(saldoAlmuerzo)
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await user.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
     await user.click(screen.getByRole('button'))
     await screen.findByText('Juan Pérez')
@@ -189,7 +198,7 @@ describe('CargaSaldo — saldo de almuerzo', () => {
     await (async () => {
       const user = userEvent.setup()
       mockBuscarSuccess()
-      render(<CargaSaldo />)
+      renderCargaSaldo()
       await user.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
       await user.click(screen.getByRole('button'))
       await screen.findByText('Juan Pérez')
