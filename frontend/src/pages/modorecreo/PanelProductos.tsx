@@ -171,16 +171,16 @@ export default function PanelProductos({
 
       {/* Ítems del carrito — altura fija, no se achica cuando está vacío */}
       <div className="shrink-0 border-t-2 border-slate-200 bg-white flex flex-col h-[260px]">
-        <div className="px-4 py-1.5 border-b border-slate-100 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-1.5">
-            <ShoppingCart size={16} className="text-slate-600" />
-            <span className="text-sm font-black text-slate-800">
+        <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <ShoppingCart size={18} className="text-slate-600" />
+            <span className="text-base font-black text-slate-800">
               {carrito.reduce((s, i) => s + i.cantidad, 0)} productos
             </span>
           </div>
           {carrito.length > 0 && (
             <button onClick={() => onSetCarrito([])} className="text-slate-400 hover:text-red-500 transition-colors p-1">
-              <X size={16} />
+              <X size={18} />
             </button>
           )}
         </div>
@@ -203,8 +203,8 @@ export default function PanelProductos({
               {carrito.map(item => {
                 const precio = getPrecio(item.producto)
                 return (
-                  <li key={item.producto.id} className="px-4 py-1.5 flex items-center gap-3">
-                    <p className="text-xs text-slate-800 font-semibold flex-1 leading-tight truncate">{item.producto.descripcion}</p>
+                  <li key={item.producto.id} className="px-4 py-2 flex items-center gap-3">
+                    <p className="text-sm text-slate-800 font-semibold flex-1 leading-tight truncate">{item.producto.descripcion}</p>
 
                     {esPorPeso(item.producto) ? (
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -215,29 +215,29 @@ export default function PanelProductos({
                           onBlur={e => commitCantidad(item.producto.id, e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
                           inputMode="decimal"
-                          className="w-14 text-sm font-black text-slate-900 tabular-nums text-center bg-slate-100 rounded-lg py-0.5 outline-none focus:ring-2 focus:ring-blue-400"
+                          className="w-16 text-base font-black text-slate-900 tabular-nums text-center bg-slate-100 rounded-lg py-1 outline-none focus:ring-2 focus:ring-blue-400"
                         />
-                        <span className="text-[11px] font-bold text-slate-400">Kg</span>
+                        <span className="text-xs font-bold text-slate-400">Kg</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button onClick={() => onQuitar(item.producto.id)}
-                          className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
-                          <Minus size={12} />
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
+                          <Minus size={14} />
                         </button>
-                        <span className="text-sm font-black text-slate-900 tabular-nums w-5 text-center">{item.cantidad}</span>
+                        <span className="text-base font-black text-slate-900 tabular-nums w-6 text-center">{item.cantidad}</span>
                         <button onClick={() => onAgregar(item.producto)}
-                          className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
-                          <Plus size={12} />
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
+                          <Plus size={14} />
                         </button>
                       </div>
                     )}
 
-                    <span className="text-xs font-bold text-emerald-700 tabular-nums shrink-0 w-20 text-right">{gs(precio * item.cantidad)}</span>
+                    <span className="text-sm font-bold text-emerald-700 tabular-nums shrink-0 w-24 text-right">{gs(precio * item.cantidad)}</span>
 
                     <button onClick={() => onSetCarrito(p => p.filter(i => i.producto.id !== item.producto.id))}
                       className="text-slate-300 hover:text-red-500 transition-colors shrink-0 p-0.5">
-                      <X size={13} />
+                      <X size={15} />
                     </button>
                   </li>
                 )
