@@ -19,56 +19,69 @@
   ║  prueba, superponer al talonario físico y correguir las         ║
   ║  variables --* hasta que los datos caigan exactamente sobre     ║
   ║  los campos impresos.                                           ║
+  ║                                                                  ║
+  ║  MODO CALIBRACIÓN (actual): la prueba se imprime en hoja A4      ║
+  ║  vertical completa — el bloque de la factura (204×159mm) queda  ║
+  ║  anclado en la esquina superior izquierda de esa hoja. Imprimir, ║
+  ║  y superponer la A4 contra el talonario real alineando esa      ║
+  ║  esquina (ideal a trasluz) para medir el corrimiento de cada     ║
+  ║  campo. Una vez calibrado, volver @page a size: 204mm 159mm.    ║
   ╚══════════════════════════════════════════════════════════════════╝
 */
 :root {
   /* ── Número de factura (esquina superior derecha) ── */
-  --nro-top:    22.6mm;
-  --nro-left:  124.3mm;
+  --nro-top:    42.6mm;
+  --nro-left:  134.3mm;
 
   /* ── Fecha (junto al número) ── */
-  --fecha-top:  22.6mm;
-  --fecha-left: 163.2mm;
+  --fecha-top:  48.6mm;
+  --fecha-left:  43.2mm;
 
-  /* ── Condición de venta (CONTADO / CRÉDITO) ── */
-  --cond-top:   32.2mm;
-  --cond-left: 143.8mm;
+  /* ── Condición de venta: X dentro del casillero ☐ que corresponda ──
+     Misma línea que la fecha (línea 2), a la derecha.
+     CRÉDITO confirmado a 20mm a la derecha de CONTADO. */
+  --cond-contado-top:   48.6mm;
+  --cond-contado-left: 165.8mm;
+  --cond-credito-top:   48.6mm;
+  --cond-credito-left: 185.8mm;
 
-  /* ── Datos del cliente ── */
-  --rucci-top:      38.7mm;
+  /* ── Datos del cliente ──
+     Línea 3: RUC/CI (izq.) · Línea 4: Nombre o Razón Social (izq.) ·
+     Línea 5: Dirección (izq.) / Teléfono (der.) */
+  --rucci-top:      54.6mm;
   --rucci-left:     38.9mm;
-  --cliente-top:    46.2mm;
-  --cliente-left:   38.9mm;
-  --direccion-top:  53.7mm;
+  --cliente-top:    59.6mm;
+  --cliente-left:   57.9mm;
+  --direccion-top:  62.6mm;
   --direccion-left: 11.7mm;
-  --telefono-top:   53.7mm;
+  --telefono-top:   62.6mm;
   --telefono-left: 143.8mm;
 
   /* ── Tabla de líneas (Cant. / Descripción / Precio Unit. / Valor de venta) ── */
-  --tabla-top:    68.8mm;   /* top de la primera fila */
+  --tabla-top:    78.8mm;   /* top de la primera fila */
   --tabla-row-h:   6.4mm;   /* alto de cada fila siguiente */
   --col-cant-left:        11.7mm;
   --col-desc-left:        23.3mm;
   --col-preciounit-left:  95.2mm;
   --col-exenta-left:     118.5mm;
-  --col-iva5-left:       143.8mm;
+  --col-iva5-left:       138.8mm;
   --col-iva10-left:      169.0mm;
 
   /* ── Valor parcial (misma fila de columnas, debajo de la tabla) ── */
-  --valorparcial-top: 111.7mm;
+  --valorparcial-top: 121.7mm;
 
   /* ── Total a pagar en letras ── */
-  --letras-top:   119.2mm;
+  --letras-top:   139.2mm;
   --letras-left:   11.7mm;
-  --totalpagar-top:  119.2mm;
+  --totalpagar-top:  139.2mm;
   --totalpagar-left: 169.0mm;
 
   /* ── Liquidación del IVA (fila inferior) ── */
-  --liq5-top:      128.9mm;
+  --liq5-top:      143.9mm;
   --liq5-left:      34.0mm;
-  --liq10-top:     128.9mm;
+  --liq10-top:     143.9mm;
   --liq10-left:     92.3mm;
-  --liqtotal-top:  128.9mm;
+  --liqtotal-top:  143.9mm;
   --liqtotal-left: 150.6mm;
 }
 
@@ -149,7 +162,10 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
    del formulario físico. No se imprimen bordes ni encabezados.
    ══════════════════════════════════════════════════════════════════ */
 @media print {
-  @page { size: 204mm 159mm; margin: 0; }
+  /* MODO CALIBRACIÓN: A4 vertical completa, el bloque de la factura
+     (204×159mm, ver .print-layout) queda anclado arriba a la izquierda.
+     Terminada la calibración, volver a: size: 204mm 159mm; */
+  @page { size: A4 portrait; margin: 0; }
   body { background: transparent; padding: 0; margin: 0; }
 
   /* Ocultar el preview de pantalla */
@@ -178,7 +194,8 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
     font-family: 'Courier New', monospace;
   }
   .pf-fecha      { top: var(--fecha-top);     left: var(--fecha-left);    }
-  .pf-cond       { top: var(--cond-top);      left: var(--cond-left);     font-weight: bold; }
+  .pf-cond-contado { top: var(--cond-contado-top); left: var(--cond-contado-left); font-weight: bold; }
+  .pf-cond-credito { top: var(--cond-credito-top); left: var(--cond-credito-left); font-weight: bold; }
   .pf-rucci      { top: var(--rucci-top);     left: var(--rucci-left);    }
   .pf-cliente    { top: var(--cliente-top);   left: var(--cliente-left);  max-width: 90mm; white-space: normal; line-height: 1.25; }
   .pf-direccion  { top: var(--direccion-top); left: var(--direccion-left); max-width: 100mm; white-space: normal; }
@@ -342,7 +359,11 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
 
   <div class="pf pf-nro">{{ factura.nro_factura }}</div>
   <div class="pf pf-fecha">{{ factura.fecha_emision|date:"d/m/Y" }}</div>
-  <div class="pf pf-cond">{{ condicion_venta }}</div>
+  {% if condicion_venta == 'CONTADO' %}
+  <div class="pf pf-cond-contado">X</div>
+  {% else %}
+  <div class="pf pf-cond-credito">X</div>
+  {% endif %}
 
   {% if factura.cliente.ruc_ci %}
   <div class="pf pf-rucci">{{ factura.cliente.ruc_ci }}</div>
