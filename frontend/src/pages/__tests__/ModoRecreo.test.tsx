@@ -439,12 +439,12 @@ describe('ModoRecreo — quitar del carrito', () => {
     await userEvent.click(btnAgregar)
     expect(screen.getByText('2 productos')).toBeInTheDocument()
 
-    // El <li> del carrito contiene: [X, Minus, Plus]
+    // El <li> del carrito contiene: [Minus, Plus, X(remove all)]
     const cartJugo = screen.getAllByText('Jugo de naranja').find(el => el.closest('li'))!
     const li = cartJugo.closest('li')!
     const btnsEnLi = within(li).getAllByRole('button')
-    // btnsEnLi[0]=X(remove all), btnsEnLi[1]=Minus, btnsEnLi[2]=Plus
-    await userEvent.click(btnsEnLi[1])
+    // btnsEnLi[0]=Minus, btnsEnLi[1]=Plus, btnsEnLi[2]=X(remove all)
+    await userEvent.click(btnsEnLi[0])
     expect(screen.getByText('1 productos')).toBeInTheDocument()
   })
 
@@ -461,7 +461,7 @@ describe('ModoRecreo — quitar del carrito', () => {
     const cartJugo = screen.getAllByText('Jugo de naranja').find(el => el.closest('li'))!
     const li = cartJugo.closest('li')!
     const btnsEnLi = within(li).getAllByRole('button')
-    await userEvent.click(btnsEnLi[1]) // Minus: 1 → 0 → item desaparece
+    await userEvent.click(btnsEnLi[0]) // Minus: 1 → 0 → item desaparece
     expect(screen.getByText('0 productos')).toBeInTheDocument()
   })
 })

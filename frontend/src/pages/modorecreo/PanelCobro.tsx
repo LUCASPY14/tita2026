@@ -1,14 +1,10 @@
 import { useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import {
-  ShoppingCart, X, XCircle, CheckCircle, Loader2,
-  Plus, Minus, Banknote, Landmark, Smartphone,
+  XCircle, CheckCircle, Loader2,
+  Banknote, Landmark, Smartphone,
   CreditCard, AlertTriangle,
 } from 'lucide-react'
-import {
-  gs, esPorPeso, parseCantidadDecimal, formatCantidad,
-  type Producto, type ItemCarrito, type MedioPagoDB, type ModoPago, type DailyStats,
-} from './shared'
+import { gs, type MedioPagoDB, type ModoPago } from './shared'
 
 function iconMedio(desc: string) {
   const d = desc.toLowerCase()
@@ -20,7 +16,6 @@ function iconMedio(desc: string) {
 }
 
 interface Props {
-  carrito: ItemCarrito[]
   total: number
   saldoDisponible: number | null
   saldoTrasCompra: number | null
@@ -37,13 +32,6 @@ interface Props {
   nroFacturaVenta: string
   canCobrar: boolean
   cobrando: boolean
-  dailyStats: DailyStats
-  avgTime: string
-  getPrecio: (p: Producto) => number
-  onSetCarrito: React.Dispatch<React.SetStateAction<ItemCarrito[]>>
-  onAgregar: (p: Producto) => void
-  onQuitar: (id: number) => void
-  onSetCantidad: (id: number, cantidad: number) => void
   onModoPago: (m: ModoPago) => void
   onMedioPagoId: (id: number | null) => void
   onMontoEfectivo: (v: string) => void
@@ -54,72 +42,48 @@ interface Props {
   onCancelar: () => void
 }
 
-export default function PanelCarrito({
-  carrito, total, saldoDisponible, saldoTrasCompra, tarjeta,
+export default function PanelCobro({
+  total, saldoDisponible, saldoTrasCompra, tarjeta,
   clienteModalidad, modoPago, tipoVenta,
   medioPagoSelId, mediosPago, medioPagoSeleccionado,
   montoEfectivo, vuelto, referencia, nroFacturaVenta,
-  canCobrar, cobrando, dailyStats, avgTime,
-  getPrecio, onSetCarrito, onAgregar, onQuitar, onSetCantidad,
+  canCobrar, cobrando,
   onModoPago, onMedioPagoId, onMontoEfectivo, onReferencia, onNroFacturaVenta,
   onClearCliente, onCobrar, onCancelar,
 }: Props) {
-  const { t } = useTranslation()
   const efectivoRef = useRef<HTMLInputElement>(null)
   const [focused, setFocused] = useState(false)
-  const [cantidadTexto, setCantidadTexto] = useState<Record<number, string>>({})
-
-  function commitCantidad(id: number, texto: string) {
-    const parsed = parseCantidadDecimal(texto)
-    if (parsed !== null) onSetCantidad(id, parsed)
-    setCantidadTexto(prev => { const next = { ...prev }; delete next[id]; return next })
-  }
 
   return (
-    <aside className="w-72 lg:w-96 bg-white border-l-2 border-slate-200 flex flex-col shrink-0">
-
-      {/* Header carrito */}
-      <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ShoppingCart size={22} className="text-slate-600" />
-          <span className="text-lg font-black text-slate-800">
-            {carrito.reduce((s, i) => s + i.cantidad, 0)} productos
-          </span>
-        </div>
-        {carrito.length > 0 && (
-          <button onClick={() => onSetCarrito([])} className="text-slate-400 hover:text-red-500 transition-colors p-1">
-            <X size={20} />
-          </button>
-        )}
-      </div>
+    <aside className="w-[380px] xl:w-[440px] shrink-0 bg-white border-l-2 border-slate-200 flex flex-col">
 
       {/* Selector de pago: dos niveles */}
-      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 space-y-3">
+      <div className="px-5 py-5 border-b border-slate-100 bg-slate-50 space-y-4">
         <div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Forma de pago</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Forma de pago</p>
           <div className="flex gap-2">
             <button
               onClick={() => { if (modoPago === 'CREDITO') { onModoPago('PREPAGO'); onClearCliente() } }}
               className={[
-                'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold border-2 transition-all cursor-pointer',
+                'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-base font-bold border-2 transition-all cursor-pointer',
                 tipoVenta === 'CONTADO'
                   ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
                   : 'bg-white border-slate-300 text-slate-600 hover:border-slate-400',
               ].join(' ')}
             >
-              <Banknote size={15} />
+              <Banknote size={18} />
               Contado
             </button>
             <button
               onClick={() => { onModoPago('CREDITO'); onMedioPagoId(null) }}
               className={[
-                'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold border-2 transition-all cursor-pointer',
+                'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-base font-bold border-2 transition-all cursor-pointer',
                 tipoVenta === 'CREDITO'
                   ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
                   : 'bg-white border-slate-300 text-slate-600 hover:border-orange-300',
               ].join(' ')}
             >
-              <Landmark size={15} />
+              <Landmark size={18} />
               Crédito
             </button>
           </div>
@@ -127,25 +91,25 @@ export default function PanelCarrito({
 
         {tipoVenta === 'CONTADO' && (
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Medio de pago</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Medio de pago</p>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => { onModoPago('PREPAGO'); onMedioPagoId(null); onClearCliente() }}
                 className={[
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
+                  'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
                   modoPago === 'PREPAGO'
                     ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
                     : 'bg-white border-slate-300 text-slate-600 hover:border-blue-300',
                 ].join(' ')}
               >
-                <CreditCard size={14} />
+                <CreditCard size={16} />
                 Prepago
               </button>
               {mediosPago.map(mp => (
                 <button key={mp.id}
                   onClick={() => { onModoPago('MEDIO'); onMedioPagoId(mp.id) }}
                   className={[
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
+                    'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
                     modoPago === 'MEDIO' && medioPagoSelId === mp.id
                       ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
                       : 'bg-white border-slate-300 text-slate-600 hover:border-emerald-300',
@@ -160,83 +124,17 @@ export default function PanelCarrito({
         )}
 
         {tipoVenta === 'CREDITO' && (
-          <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 leading-snug">
+          <p className="text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 leading-snug">
             La deuda queda registrada en la cuenta corriente del cliente.
           </p>
         )}
       </div>
 
-      {/* Lista del carrito */}
-      <div className="flex-1 overflow-y-auto">
-        {carrito.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4 py-6">
-            <ShoppingCart size={48} className="text-slate-200 mb-3" />
-            <p className="text-slate-500 text-base font-semibold mb-1">Sin productos</p>
-            <p className="text-slate-400 text-sm">Escanear tarjeta y seleccionar productos</p>
-            {dailyStats.count > 0 && (
-              <div className="mt-6 w-full border-t border-slate-100 pt-4 space-y-2">
-                <div className="flex justify-between text-sm px-4">
-                  <span className="text-slate-400">{t('pos.todaySales')}</span>
-                  <span className="font-bold text-slate-700">{dailyStats.count}</span>
-                </div>
-                <div className="flex justify-between text-sm px-4">
-                  <span className="text-slate-400">Tiempo promedio</span>
-                  <span className="font-bold text-slate-700">{avgTime}s</span>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {carrito.map(item => {
-              const precio = getPrecio(item.producto)
-              return (
-                <li key={item.producto.id} className="px-4 py-3">
-                  <div className="flex items-start gap-2">
-                    <p className="text-base text-slate-800 font-semibold flex-1 leading-tight">{item.producto.descripcion}</p>
-                    <button onClick={() => onSetCarrito(p => p.filter(i => i.producto.id !== item.producto.id))}
-                      className="text-slate-300 hover:text-red-500 transition-colors shrink-0 p-0.5">
-                      <X size={16} />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between mt-2">
-                    {esPorPeso(item.producto) ? (
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          value={cantidadTexto[item.producto.id] ?? formatCantidad(item.cantidad)}
-                          onChange={e => setCantidadTexto(prev => ({ ...prev, [item.producto.id]: e.target.value.replace(/[^\d,.]/g, '') }))}
-                          onFocus={() => setCantidadTexto(prev => ({ ...prev, [item.producto.id]: formatCantidad(item.cantidad) }))}
-                          onBlur={e => commitCantidad(item.producto.id, e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                          inputMode="decimal"
-                          className="w-20 text-lg font-black text-slate-900 tabular-nums text-center bg-slate-100 rounded-lg py-1.5 outline-none focus:ring-2 focus:ring-blue-400"
-                        />
-                        <span className="text-sm font-bold text-slate-400">Kg</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => onQuitar(item.producto.id)}
-                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
-                          <Minus size={15} />
-                        </button>
-                        <span className="text-xl font-black text-slate-900 tabular-nums w-7 text-center">{item.cantidad}</span>
-                        <button onClick={() => onAgregar(item.producto)}
-                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
-                          <Plus size={15} />
-                        </button>
-                      </div>
-                    )}
-                    <span className="text-base font-bold text-emerald-700 tabular-nums">{gs(precio * item.cantidad)}</span>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
+      {/* Espacio flexible: empuja el footer de cobro hacia abajo */}
+      <div className="flex-1" />
 
       {/* Footer: total + pago + botones */}
-      <div className="border-t-2 border-slate-200 p-4 space-y-3 bg-white">
+      <div className="border-t-2 border-slate-200 p-5 space-y-3 bg-white">
 
         <div className="flex items-baseline justify-between">
           <span className="text-slate-500 text-sm font-black uppercase tracking-widest">Total</span>

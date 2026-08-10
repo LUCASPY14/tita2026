@@ -12,7 +12,7 @@ import { useOfflineQueue } from '../hooks/useOfflineQueue'
 import CajaBlockedScreen from './modorecreo/CajaBlockedScreen'
 import PanelAlumno from './modorecreo/PanelAlumno'
 import PanelProductos from './modorecreo/PanelProductos'
-import PanelCarrito from './modorecreo/PanelCarrito'
+import PanelCobro from './modorecreo/PanelCobro'
 import {
   sfx, gs, extractError, detectInputType,
   getSalesMap, addSales, getDailyStats, updateDailyStats,
@@ -541,19 +541,19 @@ export default function ModoRecreo() {
               {pendingCount} venta{pendingCount !== 1 ? 's' : ''} offline
             </button>
           )}
-          <div className="hidden xl:flex items-center gap-3 text-xs text-slate-500">
+          <div className="hidden lg:flex items-center gap-4 text-sm text-slate-600">
             {[['F2','Buscar'],['F3','Escanear'],['F9','Cobrar'],['Esc','Cancelar'],['±','Cant']].map(([k, l]) => (
               <span key={k}>
-                <kbd className={`rounded px-1.5 py-0.5 font-mono mr-1 text-[11px] ${k === 'F9' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>{k}</kbd>
+                <kbd className={`rounded px-2 py-1 font-mono mr-1.5 text-sm font-bold ${k === 'F9' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>{k}</kbd>
                 {l}
               </span>
             ))}
           </div>
           <button
             onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-lg text-sm font-medium transition-colors cursor-pointer border border-slate-200"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-lg text-base font-bold transition-colors cursor-pointer border border-slate-200"
           >
-            <X size={14} />Salir
+            <X size={18} />Salir
           </button>
         </div>
       </header>
@@ -594,9 +594,14 @@ export default function ModoRecreo() {
           onProdSearch={setProdSearch}
           onAgregar={handleAgregar}
           onScannerFocus={() => scannerRef.current?.focus()}
-        />
-        <PanelCarrito
           carrito={carrito}
+          dailyStats={dailyStats}
+          avgTime={avgTime}
+          onSetCarrito={setCarrito}
+          onQuitar={handleQuitar}
+          onSetCantidad={handleSetCantidad}
+        />
+        <PanelCobro
           total={total}
           saldoDisponible={saldoDisponible}
           saldoTrasCompra={saldoTrasCompra}
@@ -613,13 +618,6 @@ export default function ModoRecreo() {
           nroFacturaVenta={nroFacturaVenta}
           canCobrar={canCobrar}
           cobrando={cobrando}
-          dailyStats={dailyStats}
-          avgTime={avgTime}
-          getPrecio={getPrecio}
-          onSetCarrito={setCarrito}
-          onAgregar={handleAgregar}
-          onQuitar={handleQuitar}
-          onSetCantidad={handleSetCantidad}
           onModoPago={setModoPago}
           onMedioPagoId={setMedioPagoSelId}
           onMontoEfectivo={setMontoEfectivo}
@@ -630,6 +628,10 @@ export default function ModoRecreo() {
           onCancelar={handleCancelar}
         />
       </div>
+
+      <footer className="shrink-0 h-6 flex items-center justify-center bg-slate-800 text-slate-400 text-[11px] tracking-wide">
+        © {new Date().getFullYear()} Cantina Tita — Todos los derechos reservados
+      </footer>
     </div>
   )
 }
