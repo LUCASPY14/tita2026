@@ -7,49 +7,69 @@
 /*
   ╔══════════════════════════════════════════════════════════════════╗
   ║  TALONARIO PREIMPRESO — Cantina Tita                            ║
-  ║  Formato: A5 horizontal (210 × 148 mm)                         ║
+  ║  Formato: 204 × 159 mm (medido del papel real, no es A5 std)    ║
   ║                                                                  ║
   ║  El encabezado (razón social, RUC, dirección, timbrado) ya está ║
   ║  impreso en el talonario físico. Este documento solo imprime    ║
   ║  los datos variables sobre los campos del formulario.           ║
   ║                                                                  ║
-  ║  CALIBRACIÓN: imprimir una prueba en papel A4, superponer al    ║
-  ║  talonario físico y ajustar las variables --pos-* hasta que los ║
-  ║  datos coincidan con los campos impresos.                       ║
+  ║  CALIBRACIÓN: las posiciones de abajo están estimadas a partir  ║
+  ║  de una foto del talonario, ya escaladas al tamaño real de      ║
+  ║  papel (204×159mm). Igual falta el ajuste fino: imprimir una    ║
+  ║  prueba, superponer al talonario físico y correguir las         ║
+  ║  variables --* hasta que los datos caigan exactamente sobre     ║
+  ║  los campos impresos.                                           ║
   ╚══════════════════════════════════════════════════════════════════╝
 */
 :root {
   /* ── Número de factura (esquina superior derecha) ── */
-  --nro-top:    21mm;
-  --nro-left:   128mm;
+  --nro-top:    22.6mm;
+  --nro-left:  124.3mm;
 
   /* ── Fecha (junto al número) ── */
-  --fecha-top:  21mm;
-  --fecha-left: 168mm;
-
-  /* ── Datos del cliente ── */
-  --cliente-top:  38mm;
-  --cliente-left: 46mm;
-
-  --rucci-top:    45mm;
-  --rucci-left:   46mm;
+  --fecha-top:  22.6mm;
+  --fecha-left: 163.2mm;
 
   /* ── Condición de venta (CONTADO / CRÉDITO) ── */
-  --cond-top:   45mm;
-  --cond-left:  148mm;
+  --cond-top:   32.2mm;
+  --cond-left: 143.8mm;
 
-  /* ── Línea de detalle (descripción + importe) ── */
-  --detalle-top:   62mm;
-  --detalle-left:  10mm;
-  --importe-top:   62mm;
-  --importe-right: 10mm;
+  /* ── Datos del cliente ── */
+  --rucci-top:      38.7mm;
+  --rucci-left:     38.9mm;
+  --cliente-top:    46.2mm;
+  --cliente-left:   38.9mm;
+  --direccion-top:  53.7mm;
+  --direccion-left: 11.7mm;
+  --telefono-top:   53.7mm;
+  --telefono-left: 143.8mm;
 
-  /* ── Totales fiscales (columna derecha) ── */
-  --exenta-top:  100mm;
-  --iva5-top:    108mm;
-  --iva10-top:   116mm;
-  --total-top:   125mm;
-  --totales-right: 10mm;
+  /* ── Tabla de líneas (Cant. / Descripción / Precio Unit. / Valor de venta) ── */
+  --tabla-top:    68.8mm;   /* top de la primera fila */
+  --tabla-row-h:   6.4mm;   /* alto de cada fila siguiente */
+  --col-cant-left:        11.7mm;
+  --col-desc-left:        23.3mm;
+  --col-preciounit-left:  95.2mm;
+  --col-exenta-left:     118.5mm;
+  --col-iva5-left:       143.8mm;
+  --col-iva10-left:      169.0mm;
+
+  /* ── Valor parcial (misma fila de columnas, debajo de la tabla) ── */
+  --valorparcial-top: 111.7mm;
+
+  /* ── Total a pagar en letras ── */
+  --letras-top:   119.2mm;
+  --letras-left:   11.7mm;
+  --totalpagar-top:  119.2mm;
+  --totalpagar-left: 169.0mm;
+
+  /* ── Liquidación del IVA (fila inferior) ── */
+  --liq5-top:      128.9mm;
+  --liq5-left:      34.0mm;
+  --liq10-top:     128.9mm;
+  --liq10-left:     92.3mm;
+  --liqtotal-top:  128.9mm;
+  --liqtotal-left: 150.6mm;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -98,11 +118,20 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
   .row-label { font-size: 12px; color: #6b7280; }
   .row-value { font-size: 13px; color: #111; font-weight: 500; text-align: right; max-width: 300px; }
 
+  table.preview-tabla { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 12px; }
+  table.preview-tabla th {
+    text-align: left; font-size: 10px; text-transform: uppercase; color: #9ca3af;
+    font-weight: 700; padding: 4px 6px; border-bottom: 1px solid #e5e7eb;
+  }
+  table.preview-tabla th.num, table.preview-tabla td.num { text-align: right; }
+  table.preview-tabla td { padding: 5px 6px; border-bottom: 1px solid #f8fafc; color: #111; }
+
   .totals-box {
     background: #f8fafc; border-radius: 8px; padding: 12px 16px; margin-top: 12px;
   }
   .row-total-label { font-size: 14px; font-weight: 700; color: #111; }
   .row-total-value { font-size: 16px; font-weight: 800; color: #1d4ed8; }
+  .row-letras { font-size: 12px; color: #374151; font-style: italic; margin-top: 6px; }
 
   .nota {
     background: #fefce8; border: 1px solid #fde68a; border-radius: 8px;
@@ -120,7 +149,7 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
    del formulario físico. No se imprimen bordes ni encabezados.
    ══════════════════════════════════════════════════════════════════ */
 @media print {
-  @page { size: A5 landscape; margin: 0; }
+  @page { size: 204mm 159mm; margin: 0; }
   body { background: transparent; padding: 0; margin: 0; }
 
   /* Ocultar el preview de pantalla */
@@ -128,8 +157,8 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
 
   .print-layout {
     position: relative;
-    width: 210mm;
-    height: 148mm;
+    width: 204mm;
+    height: 159mm;
     overflow: hidden;
     background: transparent;
   }
@@ -137,7 +166,7 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
   .pf {
     position: absolute;
     font-family: Arial, sans-serif;
-    font-size: 10pt;
+    font-size: 9pt;
     color: #000;
     line-height: 1;
     background: transparent;
@@ -148,20 +177,39 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
     font-size: 12pt; font-weight: bold; letter-spacing: 1.5px;
     font-family: 'Courier New', monospace;
   }
-  .pf-fecha     { top: var(--fecha-top);   left: var(--fecha-left);    }
-  .pf-cliente   { top: var(--cliente-top); left: var(--cliente-left);  max-width: 90mm; white-space: normal; line-height: 1.25; }
-  .pf-rucci     { top: var(--rucci-top);   left: var(--rucci-left);    }
-  .pf-cond      { top: var(--cond-top);    left: var(--cond-left);     }
-  .pf-detalle   { top: var(--detalle-top); left: var(--detalle-left);  max-width: 110mm; white-space: normal; line-height: 1.3; }
-  .pf-importe   { top: var(--importe-top); right: var(--importe-right); text-align: right; min-width: 36mm; }
-  .pf-exenta    { top: var(--exenta-top);  right: var(--totales-right); text-align: right; min-width: 36mm; }
-  .pf-iva5      { top: var(--iva5-top);    right: var(--totales-right); text-align: right; min-width: 36mm; }
-  .pf-iva10     { top: var(--iva10-top);   right: var(--totales-right); text-align: right; min-width: 36mm; }
-  .pf-total     {
-    top: var(--total-top); right: var(--totales-right);
-    text-align: right; min-width: 36mm;
-    font-size: 11pt; font-weight: bold;
+  .pf-fecha      { top: var(--fecha-top);     left: var(--fecha-left);    }
+  .pf-cond       { top: var(--cond-top);      left: var(--cond-left);     font-weight: bold; }
+  .pf-rucci      { top: var(--rucci-top);     left: var(--rucci-left);    }
+  .pf-cliente    { top: var(--cliente-top);   left: var(--cliente-left);  max-width: 90mm; white-space: normal; line-height: 1.25; }
+  .pf-direccion  { top: var(--direccion-top); left: var(--direccion-left); max-width: 100mm; white-space: normal; }
+  .pf-telefono   { top: var(--telefono-top);  left: var(--telefono-left); }
+
+  /* Tabla de líneas: una fila por producto, top calculado con la fila (0-index) */
+  .pf-tabla-cant     { left: var(--col-cant-left); }
+  .pf-tabla-desc     { left: var(--col-desc-left); max-width: 70mm; white-space: normal; line-height: 1.15; font-size: 8pt; }
+  .pf-tabla-preciou  { left: var(--col-preciounit-left); text-align: right; min-width: 22mm; }
+  .pf-tabla-valor    { text-align: right; min-width: 22mm; }
+  .pf-col-exenta     { left: var(--col-exenta-left); }
+  .pf-col-5          { left: var(--col-iva5-left); }
+  .pf-col-10         { left: var(--col-iva10-left); }
+
+  /* Valor parcial: mismas columnas de importe, una sola fila */
+  .pf-vp-exenta { top: var(--valorparcial-top); left: var(--col-exenta-left);  text-align: right; min-width: 22mm; }
+  .pf-vp-5      { top: var(--valorparcial-top); left: var(--col-iva5-left);   text-align: right; min-width: 22mm; }
+  .pf-vp-10     { top: var(--valorparcial-top); left: var(--col-iva10-left);  text-align: right; min-width: 22mm; }
+
+  .pf-letras {
+    top: var(--letras-top); left: var(--letras-left);
+    max-width: 150mm; white-space: normal; font-size: 8.5pt;
   }
+  .pf-totalpagar {
+    top: var(--totalpagar-top); left: var(--totalpagar-left);
+    font-weight: bold; font-size: 10pt;
+  }
+
+  .pf-liq5      { top: var(--liq5-top);     left: var(--liq5-left);     }
+  .pf-liq10     { top: var(--liq10-top);    left: var(--liq10-left);    }
+  .pf-liqtotal  { top: var(--liqtotal-top); left: var(--liqtotal-left); font-weight: bold; }
 
   .pf-anulada {
     position: absolute;
@@ -205,41 +253,81 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
       <span class="row-value">{{ factura.cliente.ruc_ci }}</span>
     </div>
     {% endif %}
+    {% if factura.cliente.direccion %}
+    <div class="row">
+      <span class="row-label">Dirección</span>
+      <span class="row-value">{{ factura.cliente.direccion }}</span>
+    </div>
+    {% endif %}
+    {% if factura.cliente.telefono %}
+    <div class="row">
+      <span class="row-label">Teléfono</span>
+      <span class="row-value">{{ factura.cliente.telefono }}</span>
+    </div>
+    {% endif %}
     <div class="row">
       <span class="row-label">Condición</span>
-      <span class="row-value">CONTADO</span>
+      <span class="row-value">{{ condicion_venta }}</span>
     </div>
 
-    <div class="section-title">Concepto</div>
-    <div class="row">
-      <span class="row-label">Descripción</span>
-      <span class="row-value">{{ concepto }}</span>
-    </div>
+    <div class="section-title">Detalle</div>
+    <table class="preview-tabla">
+      <thead>
+        <tr>
+          <th>Cant.</th><th>Descripción</th>
+          <th class="num">P. Unit.</th><th class="num">Valor venta</th><th>IVA</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linea in lineas %}
+        <tr>
+          <td>{{ linea.cantidad|floatformat:"-3" }}</td>
+          <td>{{ linea.descripcion }}</td>
+          <td class="num">Gs. {{ linea.precio_unitario|floatformat:0 }}</td>
+          <td class="num">Gs. {{ linea.valor_venta|floatformat:0 }}</td>
+          <td>{% if linea.columna == '10' %}10%{% elif linea.columna == '5' %}5%{% else %}Exenta{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
     <div class="section-title">Importes</div>
     <div class="totals-box">
       <div class="row">
-        <span class="row-label">Exenta</span>
-        <span class="row-value">Gs. {{ factura.monto_exenta|floatformat:0 }}</span>
+        <span class="row-label">Valor parcial — Exenta</span>
+        <span class="row-value">Gs. {{ totales_columna.exenta|floatformat:0 }}</span>
       </div>
       <div class="row">
-        <span class="row-label">IVA 5%</span>
+        <span class="row-label">Valor parcial — 5%</span>
+        <span class="row-value">Gs. {{ totales_columna.5|floatformat:0 }}</span>
+      </div>
+      <div class="row">
+        <span class="row-label">Valor parcial — 10%</span>
+        <span class="row-value">Gs. {{ totales_columna.10|floatformat:0 }}</span>
+      </div>
+      <div class="row">
+        <span class="row-label">Liquidación IVA 5%</span>
         <span class="row-value">Gs. {{ factura.iva_5|floatformat:0 }}</span>
       </div>
       <div class="row">
-        <span class="row-label">IVA 10%</span>
+        <span class="row-label">Liquidación IVA 10%</span>
         <span class="row-value">Gs. {{ factura.iva_10|floatformat:0 }}</span>
       </div>
+      <div class="row">
+        <span class="row-label">Total IVA</span>
+        <span class="row-value">Gs. {{ total_iva|floatformat:0 }}</span>
+      </div>
       <div class="row" style="margin-top:8px">
-        <span class="row-total-label">TOTAL</span>
+        <span class="row-total-label">TOTAL A PAGAR</span>
         <span class="row-total-value">Gs. {{ factura.monto_total|floatformat:0 }}</span>
       </div>
+      <div class="row-letras">{{ monto_en_letras }}</div>
     </div>
 
     <div class="nota">
       &#9432; Al imprimir se envía solo el texto al talonario preimpreso (A5 horizontal, sin bordes ni encabezado).<br>
-      Si los datos no quedan alineados con el formulario físico, ajustar las variables
-      <code>--pos-*</code> en <code>factura_print.html</code>.
+      Posiciones sin calibrar todavía contra el papel físico real — ajustar las variables
+      <code>--*</code> en <code>factura_print.html</code> con las medidas exactas del talonario.
     </div>
 
   </div>
@@ -254,17 +342,36 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
 
   <div class="pf pf-nro">{{ factura.nro_factura }}</div>
   <div class="pf pf-fecha">{{ factura.fecha_emision|date:"d/m/Y" }}</div>
-  <div class="pf pf-cliente">{{ factura.cliente.nombre_completo|default:'' }}</div>
+  <div class="pf pf-cond">{{ condicion_venta }}</div>
+
   {% if factura.cliente.ruc_ci %}
   <div class="pf pf-rucci">{{ factura.cliente.ruc_ci }}</div>
   {% endif %}
-  <div class="pf pf-cond">CONTADO</div>
-  <div class="pf pf-detalle">{{ concepto }}</div>
-  <div class="pf pf-importe">{{ factura.monto_total|floatformat:0 }}</div>
-  <div class="pf pf-exenta">{{ factura.monto_exenta|floatformat:0 }}</div>
-  <div class="pf pf-iva5">{{ factura.iva_5|floatformat:0 }}</div>
-  <div class="pf pf-iva10">{{ factura.iva_10|floatformat:0 }}</div>
-  <div class="pf pf-total">{{ factura.monto_total|floatformat:0 }}</div>
+  <div class="pf pf-cliente">{{ factura.cliente.nombre_completo|default:'' }}</div>
+  {% if factura.cliente.direccion %}
+  <div class="pf pf-direccion">{{ factura.cliente.direccion }}</div>
+  {% endif %}
+  {% if factura.cliente.telefono %}
+  <div class="pf pf-telefono">{{ factura.cliente.telefono }}</div>
+  {% endif %}
+
+  {% for linea in lineas %}
+  <div class="pf pf-tabla-cant"    style="top: calc(var(--tabla-top) + {{ forloop.counter0 }} * var(--tabla-row-h));">{{ linea.cantidad|floatformat:"-3" }}</div>
+  <div class="pf pf-tabla-desc"    style="top: calc(var(--tabla-top) + {{ forloop.counter0 }} * var(--tabla-row-h));">{{ linea.descripcion }}</div>
+  <div class="pf pf-tabla-preciou" style="top: calc(var(--tabla-top) + {{ forloop.counter0 }} * var(--tabla-row-h));">{{ linea.precio_unitario|floatformat:0 }}</div>
+  <div class="pf pf-tabla-valor pf-col-{{ linea.columna }}" style="top: calc(var(--tabla-top) + {{ forloop.counter0 }} * var(--tabla-row-h));">{{ linea.valor_venta|floatformat:0 }}</div>
+  {% endfor %}
+
+  <div class="pf pf-vp-exenta">{{ totales_columna.exenta|floatformat:0 }}</div>
+  <div class="pf pf-vp-5">{{ totales_columna.5|floatformat:0 }}</div>
+  <div class="pf pf-vp-10">{{ totales_columna.10|floatformat:0 }}</div>
+
+  <div class="pf pf-letras">{{ monto_en_letras }}</div>
+  <div class="pf pf-totalpagar">{{ factura.monto_total|floatformat:0 }}</div>
+
+  <div class="pf pf-liq5">{{ factura.iva_5|floatformat:0 }}</div>
+  <div class="pf pf-liq10">{{ factura.iva_10|floatformat:0 }}</div>
+  <div class="pf pf-liqtotal">{{ total_iva|floatformat:0 }}</div>
 
 </div>
 

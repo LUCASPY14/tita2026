@@ -5,9 +5,12 @@ Views para la app contabilidad
 import csv
 import logging
 from datetime import timedelta
+from decimal import Decimal
 
 from django.http import HttpResponse
 from django.template.loader import render_to_string
+
+from .numero_a_letras import monto_a_letras
 
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -467,10 +470,62 @@ class FacturaViewSet(viewsets.ModelViewSet):
         except Exception:
             logger.warning("DatosEmpresa no disponible (factura print)", exc_info=True)
 
+        # Condición de venta real (el papel exige marcar CONTADO o CRÉDITO)
+        if factura.venta_id:
+            condicion_venta = factura.venta.get_tipo_display().upper()
+        elif cargas and cargas[0].metodo_pago == "CUENTA_CORRIENTE":
+            condicion_venta = "CRÉDITO"
+        else:
+            condicion_venta = "CONTADO"
+
+        # Líneas de detalle: si la factura viene de una venta del POS, se
+        # imprime cada producto en su fila (como pide el papel); si viene de
+        # una carga de saldo o pago de almuerzo (sin líneas de producto), se
+        # imprime una sola fila con el concepto.
+        lineas = []
+        if factura.venta_id:
+            for detalle in factura.venta.detalles.select_related("producto").all():
+                if detalle.monto_gravada_10 or detalle.iva_10:
+                    columna = "10"
+                elif detalle.monto_gravada_5 or detalle.iva_5:
+                    columna = "5"
+                else:
+                    columna = "exenta"
+                lineas.append({
+                    "cantidad": detalle.cantidad,
+                    "descripcion": detalle.producto.descripcion,
+                    "precio_unitario": detalle.precio_unitario,
+                    "columna": columna,
+                    "valor_venta": detalle.subtotal,
+                })
+        else:
+            if factura.iva_10:
+                columna = "10"
+            elif factura.iva_5:
+                columna = "5"
+            else:
+                columna = "exenta"
+            lineas.append({
+                "cantidad": 1,
+                "descripcion": concepto,
+                "precio_unitario": factura.monto_total,
+                "columna": columna,
+                "valor_venta": factura.monto_total,
+            })
+
+        totales_columna = {"exenta": Decimal(0), "5": Decimal(0), "10": Decimal(0)}
+        for linea in lineas:
+            totales_columna[linea["columna"]] += linea["valor_venta"]
+
         html = render_to_string("contabilidad/factura_print.html", {
             "factura": factura,
             "concepto": concepto,
             "empresa": empresa,
+            "condicion_venta": condicion_venta,
+            "lineas": lineas,
+            "totales_columna": totales_columna,
+            "total_iva": (factura.iva_5 or 0) + (factura.iva_10 or 0),
+            "monto_en_letras": monto_a_letras(factura.monto_total),
         })
         return HttpResponse(html, content_type="text/html; charset=utf-8")
 
