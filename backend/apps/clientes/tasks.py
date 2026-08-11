@@ -185,3 +185,88 @@ def resumen_mensual_deuda_clientes():
         total, monto_total, enviados,
     )
     return {"clientes_con_deuda": total, "monto_total": monto_total, "emails_enviados": enviados}
+
+
+_DIAS_GRACIA_PURGA = 365
+
+
+@shared_task(
+    name="apps.clientes.tasks.dar_baja_alumnos_ultimo_curso",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
+def dar_baja_alumnos_ultimo_curso():
+    """
+    Da de baja automáticamente a los alumnos del último grado/curso al
+    finalizar el año lectivo. Corre el 20 de diciembre a las 05:00.
+    """
+    from apps.clientes.models import Hijo
+
+    ahora = timezone.now()
+    total = Hijo.objects.filter(activo=True, grado__es_ultimo=True).update(
+        activo=False, fecha_baja=ahora,
+    )
+    logger.info("dar_baja_alumnos_ultimo_curso: %d alumnos dados de baja", total)
+    return {"dados_de_baja": total}
+
+
+@shared_task(
+    name="apps.clientes.tasks.marcar_alumnos_pendientes_purga",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
+def marcar_alumnos_pendientes_purga():
+    """
+    Detecta alumnos dados de baja hace más de un año y los marca como
+    pendientes de purga de datos sensibles, notificando a los ADMIN.
+    La purga en sí requiere aprobación manual (HijoViewSet.aprobar_purga)
+    — esta tarea nunca borra ni anonimiza datos por su cuenta.
+
+    Corre el día 1 de cada mes a las 07:00.
+    """
+    from apps.clientes.models import Hijo
+    from apps.notificaciones.models import Notificacion
+    from apps.usuarios.models import Usuario
+
+    corte = timezone.now() - timedelta(days=_DIAS_GRACIA_PURGA)
+    candidatos = Hijo.objects.filter(
+        activo=False,
+        fecha_baja__lte=corte,
+        datos_purgados=False,
+        purga_solicitada_en__isnull=True,
+    )
+
+    if not candidatos.exists():
+        logger.info("marcar_alumnos_pendientes_purga: sin alumnos elegibles")
+        return {"marcados": 0}
+
+    admins = list(Usuario.objects.filter(rol=Usuario.Rol.ADMIN, is_active=True))
+    if not admins:
+        logger.warning("marcar_alumnos_pendientes_purga: no hay usuarios ADMIN activos")
+
+    marcados = 0
+    for hijo in candidatos:
+        hijo.purga_solicitada_en = timezone.now()
+        hijo.save(update_fields=["purga_solicitada_en"])
+        for admin in admins:
+            Notificacion.objects.create(
+                usuario=admin,
+                tipo=Notificacion.Tipo.SISTEMA,
+                titulo="Alumno pendiente de purga de datos",
+                mensaje=(
+                    f"{hijo.nombre_completo} fue dado de baja el "
+                    f"{hijo.fecha_baja.strftime('%d/%m/%Y')} (hace más de un año). "
+                    f"Revisar y aprobar la purga de sus datos sensibles."
+                ),
+                destino=Notificacion.Destino.SISTEMA,
+            )
+        marcados += 1
+
+    logger.info("marcar_alumnos_pendientes_purga: %d alumnos marcados", marcados)
+    return {"marcados": marcados}

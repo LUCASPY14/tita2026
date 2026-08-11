@@ -4,6 +4,7 @@ import { Camera, Upload, X } from 'lucide-react'
 import api from '../../services/api'
 import Input from '../../components/ui/Input'
 import Modal from '../../components/ui/Modal'
+import { useAuthenticatedImage } from '../../hooks/useAuthenticatedImage'
 import { extractErrorMessage, BLANK_HIJO, type GradoOption, type Hijo, type HijoForm } from './shared'
 
 interface Props {
@@ -19,6 +20,7 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
   const [saving, setSaving] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoRemoved, setPhotoRemoved] = useState(false)
   const [webcamActive, setWebcamActive] = useState(false)
   const [webcamError, setWebcamError] = useState<string | null>(null)
   const [grados, setGrados] = useState<GradoOption[]>([])
@@ -53,10 +55,19 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
       : BLANK_HIJO
     )
     setPhotoFile(null)
-    setPhotoPreview(hijo?.foto_perfil ?? null)
+    setPhotoPreview(null)
+    setPhotoRemoved(false)
     setWebcamActive(false)
     setWebcamError(null)
   }, [open, hijo])
+
+  // Foto existente (si la hay): se trae aparte porque es un endpoint
+  // protegido, no una URL directa. Se apaga si el usuario ya eligió una
+  // nueva foto o la quitó explícitamente.
+  const existingFotoBlobUrl = useAuthenticatedImage(
+    !photoFile && !photoRemoved ? (hijo?.foto_url ?? null) : null
+  )
+  const displaySrc = photoPreview ?? existingFotoBlobUrl
 
   useEffect(() => {
     if (webcamActive && videoRef.current && streamRef.current) {
@@ -180,8 +191,8 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
       <div className="space-y-4">
         <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
           <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center border-2 border-white shadow shrink-0">
-            {photoPreview
-              ? <img src={photoPreview} alt="Foto" className="w-full h-full object-cover" />
+            {displaySrc
+              ? <img src={displaySrc} alt="Foto" className="w-full h-full object-cover" />
               : <span className="text-blue-700 font-bold text-xl">{initials || '?'}</span>
             }
           </div>
@@ -196,8 +207,8 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-slate-700">
                 <Camera className="w-3.5 h-3.5" />Webcam
               </button>
-              {photoPreview && (
-                <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null) }}
+              {displaySrc && (
+                <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); setPhotoRemoved(true) }}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 border border-red-100 rounded-lg transition-colors">
                   <X className="w-3.5 h-3.5" />Quitar
                 </button>

@@ -4,8 +4,9 @@ Operaciones que involucran múltiples modelos o reglas de negocio complejas.
 """
 
 from django.db import transaction
+from django.utils import timezone
 
-from .models import AlumnoResponsable, Hijo
+from .models import AlumnoResponsable, Hijo, RestriccionHijo
 
 
 def cambiar_titular(hijo: Hijo, nuevo_cliente_id: int, changed_by=None) -> AlumnoResponsable:
@@ -76,3 +77,33 @@ def agregar_responsable(
         responsable.activo = True
         responsable.save(update_fields=["activo"])
     return responsable
+
+
+def purgar_alumno(hijo: Hijo, aprobado_por) -> Hijo:
+    """
+    Anonimiza los datos sensibles de un alumno dado de baja hace más de un
+    año: restricciones médicas, foto, fecha de nacimiento, grado y nombre.
+
+    La fila de Hijo NO se borra — todo el historial financiero (ventas,
+    facturas, cuenta corriente) sigue colgando de ella. Requiere aprobación
+    explícita de un ADMIN (ver HijoViewSet.aprobar_purga); esta función no
+    valida el estado por su cuenta, eso lo hace quien la llama.
+    """
+    with transaction.atomic():
+        hijo = Hijo.objects.select_for_update().get(pk=hijo.pk)
+
+        RestriccionHijo.objects.filter(hijo=hijo).delete()
+
+        if hijo.foto_perfil:
+            hijo.foto_perfil.delete(save=False)
+
+        fecha_str = timezone.now().strftime("%Y-%m-%d")
+        hijo.nombre = "Alumno purgado"
+        hijo.apellido = f"— {fecha_str} #{hijo.pk}"
+        hijo.fecha_nacimiento = None
+        hijo.grado = None
+        hijo.fecha_foto = None
+        hijo.datos_purgados = True
+        hijo.save()
+
+        return hijo

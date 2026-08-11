@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, CreditCard, AlertTriangle, Wallet, UtensilsCrossed } from 'lucide-react'
+import { useAuthenticatedImage } from '../../hooks/useAuthenticatedImage'
 import { gs, type Tarjeta, type ClienteBasico, type ModoPago } from './shared'
 
 interface Props {
@@ -33,6 +34,7 @@ export default function PanelAlumno({
 }: Props) {
   const [focused, setFocused] = useState(false)
   const navigate = useNavigate()
+  const fotoBlobUrl = useAuthenticatedImage(tarjeta?.hijo_foto)
 
   return (
     <aside className="w-64 lg:w-80 bg-white border-r-2 border-slate-200 flex flex-col shrink-0">
@@ -58,8 +60,8 @@ export default function PanelAlumno({
         {tarjeta ? (
           <>
             <div className="text-center">
-              {tarjeta.hijo_foto ? (
-                <img src={tarjeta.hijo_foto} alt={tarjeta.hijo_nombre ?? undefined}
+              {fotoBlobUrl ? (
+                <img src={fotoBlobUrl} alt={tarjeta.hijo_nombre ?? undefined}
                   className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 mx-auto mb-3 shadow-md" />
               ) : (
                 <div className="w-32 h-32 rounded-full bg-slate-100 border-4 border-blue-300 flex items-center justify-center mx-auto mb-3">

@@ -148,6 +148,14 @@ app.conf.beat_schedule = {
         "task": "apps.clientes.tasks.resumen_mensual_deuda_clientes",
         "schedule": crontab(hour=8, minute=30, day_of_month=5),  # Día 5 de cada mes 08:30
     },
+    "dar-baja-alumnos-ultimo-curso": {
+        "task": "apps.clientes.tasks.dar_baja_alumnos_ultimo_curso",
+        "schedule": crontab(hour=5, minute=0, day_of_month=20, month_of_year=12),  # 20 dic 05:00
+    },
+    "marcar-alumnos-pendientes-purga": {
+        "task": "apps.clientes.tasks.marcar_alumnos_pendientes_purga",
+        "schedule": crontab(hour=7, minute=0, day_of_month=1),  # Día 1 de cada mes 07:00
+    },
 
 }
 

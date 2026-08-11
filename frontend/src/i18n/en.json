@@ -106,7 +106,8 @@
     "units":       "Units of Measure",
     "allergens":   "Allergens",
     "taxes":       "Taxes",
-    "whatsapp":    "WhatsApp"
+    "whatsapp":    "WhatsApp",
+    "purgaAlumnos":"Student Data Purge"
   },
 
   "errors": {

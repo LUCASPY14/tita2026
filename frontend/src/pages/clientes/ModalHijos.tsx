@@ -12,6 +12,7 @@ import Spinner from '../../components/ui/Spinner'
 import ModalHijo from './ModalHijo'
 import ModalResponsables from './ModalResponsables'
 import ModalConsumo from './ModalConsumo'
+import { useAuthenticatedImage } from '../../hooks/useAuthenticatedImage'
 import {
   extractErrorMessage, SEV_COLOR, SEV_LABEL,
   type Cliente, type Hijo, type RestriccionHijo,
@@ -21,6 +22,15 @@ interface Props {
   open: boolean
   cliente: Cliente | null
   onClose: () => void
+}
+
+// Componente propio (no inline en el .map) porque useAuthenticatedImage es
+// un hook — no se puede llamar dentro de un callback de lista.
+function HijoAvatar({ hijo }: { hijo: Hijo }) {
+  const fotoBlobUrl = useAuthenticatedImage(hijo.foto_url)
+  return fotoBlobUrl
+    ? <img src={fotoBlobUrl} alt="" className="w-9 h-9 rounded-full object-cover" />
+    : <span className="text-blue-700 font-bold text-sm">{hijo.nombre[0]}{hijo.apellido[0]}</span>
 }
 
 export default function ModalHijos({ open, cliente, onClose }: Props) {
@@ -123,10 +133,7 @@ export default function ModalHijos({ open, cliente, onClose }: Props) {
                   <li key={hijo.id} className="py-3.5">
                     <div className="flex items-start gap-3">
                       <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                        {hijo.foto_perfil
-                          ? <img src={hijo.foto_perfil} alt="" className="w-9 h-9 rounded-full object-cover" />
-                          : <span className="text-blue-700 font-bold text-sm">{hijo.nombre[0]}{hijo.apellido[0]}</span>
-                        }
+                        <HijoAvatar hijo={hijo} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">

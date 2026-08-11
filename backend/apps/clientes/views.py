@@ -8,7 +8,8 @@ from decimal import Decimal
 
 from django.db.models import DecimalField, Q, Sum, Value
 from django.db.models.functions import Coalesce
-from django.http import HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
+from django.utils import timezone
 
 from rest_framework import viewsets, status
 from rest_framework.filters import SearchFilter
@@ -16,7 +17,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.permissions import IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
 from common.utils.medios_pago import resolver_medio_pago
 from apps.usuarios.auditoria import registrar_auditoria
 
@@ -50,7 +51,7 @@ from .serializers import (
     RestriccionHijoSerializer,
     TipoClienteSerializer,
 )
-from .services import cambiar_titular
+from .services import cambiar_titular, purgar_alumno
 
 
 def _crear_usuario_portal(cliente):
@@ -269,6 +270,13 @@ class HijoViewSet(viewsets.ModelViewSet):
     filterset_fields = ["activo", "cliente_responsable"]
     search_fields = ["nombre", "apellido"]
 
+    def get_permissions(self):
+        if self.action == "foto":
+            return [IsCajeroOrAdmin()]
+        if self.action in ("pendientes_purga", "aprobar_purga"):
+            return [IsAdmin()]
+        return super().get_permissions()
+
     def get_queryset(self):
         from django.db.models import Prefetch
         qs = Hijo.objects.select_related("cliente_responsable", "grado").prefetch_related(
@@ -296,6 +304,16 @@ class HijoViewSet(viewsets.ModelViewSet):
             descripcion=f"Alumno creado: {hijo.nombre_completo} (cliente={hijo.cliente_responsable_id})",
         )
 
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        era_activo = instance.activo
+        hijo = serializer.save()
+        # Baja manual: si se acaba de desactivar y no tenía fecha_baja, se
+        # completa sola — de acá arranca el reloj de 1 año hasta la purga.
+        if era_activo and not hijo.activo and not hijo.fecha_baja:
+            hijo.fecha_baja = timezone.now()
+            hijo.save(update_fields=["fecha_baja"])
+
     def perform_destroy(self, instance):
         registrar_auditoria(
             request=self.request,
@@ -305,6 +323,47 @@ class HijoViewSet(viewsets.ModelViewSet):
             descripcion=f"Alumno eliminado: {instance.nombre_completo} (cliente={instance.cliente_responsable_id})",
         )
         instance.delete()
+
+    @action(detail=True, methods=["get"], url_path="foto")
+    def foto(self, request, pk=None):
+        """Sirve la foto del alumno — solo ADMIN/CAJERO (ver get_permissions)."""
+        hijo = self.get_object()
+        if not hijo.foto_perfil:
+            raise Http404("Este alumno no tiene foto cargada.")
+        return FileResponse(hijo.foto_perfil.open("rb"), content_type="image/jpeg")
+
+    @action(detail=False, methods=["get"], url_path="pendientes-purga")
+    def pendientes_purga(self, request):
+        """Alumnos dados de baja hace más de 1 año, pendientes de aprobación de purga."""
+        qs = Hijo.objects.filter(
+            purga_solicitada_en__isnull=False,
+            datos_purgados=False,
+        ).select_related("cliente_responsable", "grado").order_by("purga_solicitada_en")
+        return Response(HijoSerializer(qs, many=True, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"], url_path="aprobar-purga")
+    def aprobar_purga(self, request, pk=None):
+        """Ejecuta la anonimización de datos sensibles — requiere aprobación explícita de un ADMIN."""
+        hijo = self.get_object()
+        if not hijo.purga_solicitada_en:
+            return Response(
+                {"error": "Este alumno no está marcado como pendiente de purga."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if hijo.datos_purgados:
+            return Response(
+                {"error": "Este alumno ya fue purgado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        hijo = purgar_alumno(hijo, aprobado_por=request.user)
+        registrar_auditoria(
+            request=self.request,
+            operacion="PURGAR_DATOS_ALUMNO",
+            tabla="clientes_hijo",
+            id_registro=hijo.id,
+            descripcion=f"Datos sensibles anonimizados: {hijo.nombre_completo}",
+        )
+        return Response(HijoSerializer(hijo, context={"request": request}).data)
 
 
 class GradoViewSet(viewsets.ModelViewSet):

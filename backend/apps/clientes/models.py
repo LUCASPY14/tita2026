@@ -278,6 +278,18 @@ class Hijo(models.Model):
     )
     fecha_foto = models.DateTimeField(blank=True, null=True)
     activo = models.BooleanField(default=True)
+    fecha_baja = models.DateTimeField(
+        blank=True, null=True,
+        help_text="Fecha en que el alumno fue dado de baja (manual o automática al terminar el último curso)",
+    )
+    purga_solicitada_en = models.DateTimeField(
+        blank=True, null=True,
+        help_text="Fecha en que se marcó como pendiente de purga de datos sensibles (esperando aprobación de un ADMIN)",
+    )
+    datos_purgados = models.BooleanField(
+        default=False,
+        help_text="True si ya se ejecutó la anonimización de datos sensibles (restricciones, foto, nombre)",
+    )
     cliente_responsable = models.ForeignKey(
         Cliente,
         models.PROTECT,

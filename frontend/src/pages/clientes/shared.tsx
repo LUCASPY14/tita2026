@@ -53,8 +53,11 @@ export interface Hijo {
   fecha_nacimiento: string | null
   grado: number | null
   grado_nombre: string | null
-  foto_perfil: string | null
+  // La foto no viaja como URL cruda — foto_url apunta al endpoint protegido
+  // (solo ADMIN/CAJERO); hay que pedirla con useAuthenticatedImage.
+  foto_url: string | null
   activo: boolean
+  fecha_baja: string | null
   cliente_responsable: number
   cliente_nombre: string
 }

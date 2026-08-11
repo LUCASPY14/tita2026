@@ -64,11 +64,10 @@ class TarjetaSerializer(serializers.ModelSerializer):
         return None
 
     def get_hijo_foto(self, obj):
+        # No es la URL cruda de /media/ — es el endpoint de clientes que
+        # chequea permiso (ADMIN/CAJERO) antes de servir el archivo.
         if obj.hijo_id and obj.hijo.foto_perfil:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.hijo.foto_perfil.url)
-            return obj.hijo.foto_perfil.url
+            return f"/clientes/hijos/{obj.hijo_id}/foto/"
         return None
 
     def get_hijo_grado(self, obj):

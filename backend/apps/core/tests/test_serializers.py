@@ -208,7 +208,9 @@ class TestTarjetaSerializerSinTitular:
 # ── TarjetaSerializer: hijo con foto_perfil ───────────────────────────────────
 
 class TestTarjetaSerializerHijoFoto:
-    """Líneas 63-66: get_hijo_foto cuando hay foto — con y sin request en contexto."""
+    """get_hijo_foto cuando hay foto: devuelve el endpoint protegido de
+    clientes (ADMIN/CAJERO), nunca la URL cruda de /media/ — con o sin
+    request en el contexto, la ruta es la misma."""
 
     def _mock_tarjeta_con_foto(self):
         from unittest.mock import MagicMock
@@ -221,17 +223,16 @@ class TestTarjetaSerializerHijoFoto:
         tarjeta.hijo = hijo
         return tarjeta
 
-    def test_hijo_foto_con_request_retorna_uri_absoluta(self):
+    def test_hijo_foto_retorna_endpoint_protegido_con_request(self):
         from unittest.mock import MagicMock
         from apps.core.serializers import TarjetaSerializer
         req = MagicMock()
-        req.build_absolute_uri.return_value = "http://localhost/media/test.jpg"
         s = TarjetaSerializer(context={"request": req})
         result = s.get_hijo_foto(self._mock_tarjeta_con_foto())
-        assert result == "http://localhost/media/test.jpg"
+        assert result == "/clientes/hijos/1/foto/"
 
-    def test_hijo_foto_sin_request_retorna_url_relativa(self):
+    def test_hijo_foto_retorna_endpoint_protegido_sin_request(self):
         from apps.core.serializers import TarjetaSerializer
         s = TarjetaSerializer()
         result = s.get_hijo_foto(self._mock_tarjeta_con_foto())
-        assert result == "/media/test.jpg"
+        assert result == "/clientes/hijos/1/foto/"

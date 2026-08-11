@@ -112,14 +112,24 @@ class HijoSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.CharField(source="cliente_responsable.nombre_completo", read_only=True)
     grado_nombre = serializers.CharField(source="grado.nombre", read_only=True, allow_null=True)
     responsables = serializers.SerializerMethodField()
+    # La foto nunca se expone como URL cruda de /media/ — se sirve por un
+    # endpoint propio que chequea permisos (solo ADMIN/CAJERO). foto_perfil
+    # queda write_only para no romper la carga por FormData desde ModalHijo.
+    foto_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Hijo
         fields = "__all__"
+        extra_kwargs = {"foto_perfil": {"write_only": True}}
 
     def get_responsables(self, obj):
         qs = obj.responsables.filter(activo=True).select_related("cliente").order_by("orden_cobro")
         return AlumnoResponsableResumenSerializer(qs, many=True).data
+
+    def get_foto_url(self, obj):
+        if obj.foto_perfil:
+            return f"/clientes/hijos/{obj.pk}/foto/"
+        return None
 
 
 class GradoSerializer(serializers.ModelSerializer):
