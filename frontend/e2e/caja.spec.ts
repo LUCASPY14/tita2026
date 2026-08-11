@@ -67,11 +67,10 @@ const ARQUEO_MOCK = {
   efectivo_esperado: 150000,
   efectivo_ingresos: 100000,
   efectivo_egresos: 0,
-  pos_total: 30000,
   prepago_total: 20000,
   ingresos_total: 100000,
   egresos_total: 0,
-  ingresos_por_medio: [{ medio: 'Efectivo', total: 100000 }],
+  medios_pago_totales: [{ medio: 'Transferencia', total: 30000 }],
   egresos_por_medio: [],
 }
 
@@ -165,9 +164,11 @@ test.describe('Caja — con turno activo', () => {
   })
 
   test('muestra el arqueo en vivo con los cuatro paneles', async ({ page }) => {
+    // El panel de medios de pago es dinámico (uno por medio real usado, ver
+    // apps/contabilidad/views.py CierreCajaViewSet.arqueo) — acá el mock trae Transferencia.
     await expect(page.getByText('Efectivo Caja')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText('POS / Transferencia')).toBeVisible()
-    await expect(page.getByText('Prepago RFID')).toBeVisible()
+    await expect(page.getByText('Transferencia')).toBeVisible()
+    await expect(page.getByText('Prepago')).toBeVisible()
     await expect(page.getByText('Egresos').first()).toBeVisible()
   })
 

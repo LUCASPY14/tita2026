@@ -21,61 +21,55 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN
   await page.waitForURL('/dashboard')
 }
 
-// La página espera { resumen: AuditoriaResumen, detalle: AuditoriaEntry[] }
+// Auditoría se consolidó como tab dentro de /reportes (TabAuditoria.tsx) — ya no
+// es una ruta propia. La forma de la respuesta coincide con AuditoriaData
+// (frontend/src/pages/reportes/shared.tsx).
 const AUDITORIA_MOCK = {
-  resumen: {
-    total: 3,
-    por_resultado: [
-      { resultado: 'EXITO', count: 2 },
-      { resultado: 'ERROR', count: 1 },
-    ],
-    top_operaciones: [
-      { operacion: 'CREATE', count: 2 },
-      { operacion: 'UPDATE', count: 1 },
-    ],
-    top_tablas: [
-      { tabla_afectada: 'ventas_venta', count: 2 },
-      { tabla_afectada: 'usuarios_usuario', count: 1 },
-    ],
-  },
+  resumen: { total_eventos: 3, por_resultado: { EXITO: 2, FALLA: 1 } },
+  top_operaciones: [
+    { operacion: 'CREATE', n: 2 },
+    { operacion: 'UPDATE', n: 1 },
+  ],
+  top_tablas: [
+    { tabla: 'ventas_venta', n: 2 },
+    { tabla: 'usuarios_usuario', n: 1 },
+  ],
   detalle: [
     {
-      id_auditoria: 1,
-      fecha_operacion: '2026-06-15T10:30:00Z',
-      usuario__email: 'cajero@cantina.com',
-      operacion: 'CREATE',
-      tabla_afectada: 'ventas_venta',
-      id_registro: 42,
-      resultado: 'EXITO',
-      ip_address: '192.168.1.100',
-      descripcion: 'Venta creada por ₲15,000',
-      mensaje_error: null,
+      fecha: '2026-06-15T10:30:00Z', usuario: 'cajero@cantina.com',
+      operacion: 'CREATE', tabla: 'ventas_venta', objeto_id: 42,
+      resultado: 'EXITO', ip: '192.168.1.100',
+      descripcion: 'Venta creada por ₲15,000', mensaje_error: null,
     },
     {
-      id_auditoria: 2,
-      fecha_operacion: '2026-06-15T11:00:00Z',
-      usuario__email: 'admin@cantina.com',
-      operacion: 'UPDATE',
-      tabla_afectada: 'usuarios_usuario',
-      id_registro: 3,
-      resultado: 'EXITO',
-      ip_address: '192.168.1.1',
-      descripcion: 'Medio de pago actualizado',
-      mensaje_error: null,
+      fecha: '2026-06-15T11:00:00Z', usuario: 'admin@cantina.com',
+      operacion: 'UPDATE', tabla: 'usuarios_usuario', objeto_id: 3,
+      resultado: 'EXITO', ip: '192.168.1.1',
+      descripcion: 'Medio de pago actualizado', mensaje_error: null,
     },
     {
-      id_auditoria: 3,
-      fecha_operacion: '2026-06-15T11:15:00Z',
-      usuario__email: 'cajero@cantina.com',
-      operacion: 'LOGIN',
-      tabla_afectada: 'usuarios_usuario',
-      id_registro: 2,
-      resultado: 'ERROR',
-      ip_address: '192.168.1.100',
-      descripcion: null,
-      mensaje_error: 'Credenciales inválidas',
+      fecha: '2026-06-15T11:15:00Z', usuario: 'cajero@cantina.com',
+      operacion: 'LOGIN', tabla: 'usuarios_usuario', objeto_id: 2,
+      resultado: 'FALLA', ip: '192.168.1.100',
+      descripcion: null, mensaje_error: 'Credenciales inválidas',
     },
   ],
+}
+
+const OPCIONES_MOCK = {
+  operaciones: ['CREATE', 'UPDATE', 'LOGIN'],
+  resultados: ['EXITO', 'FALLA'],
+}
+
+async function abrirTabAuditoria(page: import('@playwright/test').Page) {
+  await page.route(/\/api\/v1\/usuarios\/reporte-auditoria\/opciones/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OPCIONES_MOCK) })
+  )
+  await page.route(/\/api\/v1\/usuarios\/reporte-auditoria\/(?!opciones)/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AUDITORIA_MOCK) })
+  )
+  await page.goto('/reportes')
+  await page.getByRole('button', { name: 'Auditoría' }).click()
 }
 
 // ── Listado ───────────────────────────────────────────────────────────────────
@@ -83,27 +77,28 @@ const AUDITORIA_MOCK = {
 test.describe('Auditoría — listado', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/usuarios\/reporte-auditoria/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AUDITORIA_MOCK) })
-    )
-    await page.goto('/auditoria')
+    await abrirTabAuditoria(page)
     await page.waitForLoadState('networkidle')
   })
 
   test('carga la página sin errores', async ({ page }) => {
     await expect(page.getByText('Algo salió mal')).not.toBeVisible()
-    await expect(page.getByText('Auditoría del sistema')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('button', { name: 'Buscar' })).toBeVisible({ timeout: 5000 })
   })
 
   test('muestra los registros de auditoría', async ({ page }) => {
+    await page.getByRole('button', { name: 'Buscar' }).click()
     await expect(page.getByText('cajero@cantina.com').first()).toBeVisible({ timeout: 5000 })
     await expect(page.getByText('admin@cantina.com').first()).toBeVisible({ timeout: 5000 })
   })
 
   test('muestra las operaciones (CREATE, UPDATE)', async ({ page }) => {
-    await expect(
-      page.getByText('CREATE').first()
-    ).toBeVisible({ timeout: 5000 })
+    await page.getByRole('button', { name: 'Buscar' }).click()
+    // Acotado a la tarjeta "Top operaciones" — 'CREATE'/'UPDATE' también existen
+    // como <option> (ocultos) dentro del <select> del filtro de Operación.
+    const topOperaciones = page.locator('div.bg-white').filter({ hasText: 'Top operaciones' })
+    await expect(topOperaciones.getByText('CREATE')).toBeVisible({ timeout: 5000 })
+    await expect(topOperaciones.getByText('UPDATE')).toBeVisible()
   })
 
   test('tiene filtros de fecha', async ({ page }) => {
@@ -113,19 +108,19 @@ test.describe('Auditoría — listado', () => {
   })
 })
 
-// ── Control de acceso (solo ADMIN/SUPERVISOR) ─────────────────────────────────
+// ── Control de acceso (solo ADMIN/SUPERVISOR/COBRADOR, ver App.tsx roles de /reportes) ──
 
 test.describe('Auditoría — control de acceso', () => {
   test('sin sesión redirige a /login', async ({ page }) => {
-    await page.goto('/auditoria')
+    await page.goto('/reportes')
     await expect(page).toHaveURL('/login')
   })
 
-  test('CAJERO no puede acceder a /auditoria', async ({ page }) => {
+  test('CAJERO no puede acceder a /reportes', async ({ page }) => {
     await loginAs(page, CAJERO)
-    await page.goto('/auditoria')
-    // PrivateRoute roles={['ADMIN']} redirige a /dashboard cuando el rol no está autorizado
-    await expect(page).not.toHaveURL(/\/auditoria$/, { timeout: 5000 })
+    await page.goto('/reportes')
+    // PrivateRoute roles={['ADMIN','SUPERVISOR','COBRADOR']} redirige a /dashboard
+    await expect(page).toHaveURL('/dashboard', { timeout: 5000 })
   })
 })
 
@@ -134,12 +129,9 @@ test.describe('Auditoría — control de acceso', () => {
 test.describe('Auditoría — filtros', () => {
   test('campo de filtro por operación está presente', async ({ page }) => {
     await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/usuarios\/reporte-auditoria/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AUDITORIA_MOCK) })
-    )
-    await page.goto('/auditoria')
-    await expect(
-      page.locator('input[placeholder="Filtrar..."]').first()
-    ).toBeVisible({ timeout: 5000 })
+    await abrirTabAuditoria(page)
+    // El filtro de operación es un <select> (no un input de texto libre)
+    await expect(page.getByText('Operación', { exact: true })).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('select').first()).toBeVisible()
   })
 })
