@@ -35,6 +35,7 @@ export interface UsuarioPortal {
   cliente_id: number | null
   cliente_ruc_ci: string | null
   ultimo_acceso: string | null
+  tiene_2fa_activo: boolean
 }
 
 export interface UsuarioForm {

@@ -30,7 +30,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from common.permissions import IsAdmin
-from common.throttling import LoginRateThrottle, PortalRateThrottle
+from common.throttling import LoginRateThrottle, PortalRateThrottle, SensitiveEndpointThrottle
 from .auditoria import registrar_auditoria
 
 logger = logging.getLogger(__name__)
@@ -99,6 +99,13 @@ from .serializers import (
 )
 
 
+def _tiene_2fa_activo(user):
+    try:
+        return bool(user.auth_2fa.habilitado)
+    except Exception:
+        return False
+
+
 def _user_data(user):
     return {
         "id": user.id,
@@ -108,6 +115,7 @@ def _user_data(user):
         "rol": user.rol,
         "cliente_id": user.cliente_id if user.cliente else None,
         "debe_cambiar_contrasena": user.debe_cambiar_contrasena,
+        "tiene_2fa_activo": _tiene_2fa_activo(user),
     }
 
 
@@ -366,7 +374,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.all()
+    queryset = Usuario.objects.select_related("auth_2fa")
     filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
     filterset_fields = ["rol", "is_active"]
 
@@ -433,6 +441,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             'apellido': user.apellido,
             'rol': user.rol,
             'cliente_id': user.cliente_id if user.cliente else None,
+            'debe_cambiar_contrasena': user.debe_cambiar_contrasena,
+            'tiene_2fa_activo': _tiene_2fa_activo(user),
         })
 
     @action(detail=True, methods=["post"], url_path="resetear-password")
@@ -870,6 +880,9 @@ class TwoFAConfigurarView(APIView):
     Devuelve la URI para el QR y los backup codes en texto plano (solo esta vez).
     """
     permission_classes = [IsAuthenticated]
+    # LoginRateThrottle (AnonRateThrottle) no aplica a requests autenticados
+    # (get_cache_key devuelve None) — acá se necesita un throttle por usuario.
+    throttle_classes = [SensitiveEndpointThrottle]
 
     def post(self, request):
         from .models import Autenticacion2FA
@@ -903,6 +916,7 @@ class TwoFAActivarView(APIView):
     Valida el TOTP y activa 2FA para el usuario.
     """
     permission_classes = [IsAuthenticated]
+    throttle_classes = [SensitiveEndpointThrottle]
 
     def post(self, request):
         from .models import Intento2FA

@@ -45,6 +45,7 @@ const PortalNotificaciones   = lazy(() => import('./pages/portal/Notificaciones'
 const PortalFacturas         = lazy(() => import('./pages/portal/Facturas'))
 const PortalCargaSaldo       = lazy(() => import('./pages/portal/CargaSaldo'))
 const PortalCambiarContrasena = lazy(() => import('./pages/portal/CambiarContrasena'))
+const PortalConfigurar2FA    = lazy(() => import('./pages/portal/Configurar2FA'))
 const PortalPagarAlmuerzo    = lazy(() => import('./pages/portal/PagarAlmuerzo'))
 
 // ── Fallback de carga ─────────────────────────────────────────────────────────
@@ -103,6 +104,15 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
   ) {
     return <Navigate to="/portal/cambiar-contrasena" replace />
   }
+  // 2FA obligatorio en el portal: sin él, no se accede a ninguna otra pantalla
+  if (
+    user?.rol === 'CLIENTE_WEB' &&
+    !user?.debe_cambiar_contrasena &&
+    !user?.tiene_2fa_activo &&
+    location.pathname !== '/portal/configurar-2fa'
+  ) {
+    return <Navigate to="/portal/configurar-2fa" replace />
+  }
   return <>{children}</>
 }
 
@@ -152,6 +162,13 @@ export default function App() {
               <PrivateRoute roles={['CLIENTE_WEB']}>
                 <Suspense fallback={<PageLoader />}>
                   <PortalCambiarContrasena />
+                </Suspense>
+              </PrivateRoute>
+            } />
+            <Route path="/portal/configurar-2fa"      element={
+              <PrivateRoute roles={['CLIENTE_WEB']}>
+                <Suspense fallback={<PageLoader />}>
+                  <PortalConfigurar2FA />
                 </Suspense>
               </PrivateRoute>
             } />

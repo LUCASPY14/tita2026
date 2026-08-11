@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { UserPlus, Search, Edit2, Shield, Users, HardHat, Plus, Pencil, Trash2, Globe, RefreshCw, KeyRound } from 'lucide-react'
+import { UserPlus, Search, Edit2, Shield, ShieldOff, Users, HardHat, Plus, Pencil, Trash2, Globe, RefreshCw, KeyRound } from 'lucide-react'
 import api from '../services/api'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -204,6 +204,22 @@ export default function Usuarios() {
     }
   }, [loadPadres, searchPadres, pagePadres])
 
+  const [desactivando2FAId, setDesactivando2FAId] = useState<number | null>(null)
+
+  const desactivar2FA = useCallback(async (padre: UsuarioPortal) => {
+    if (!window.confirm(`¿Desactivar la verificación en dos pasos de ${padre.nombre_completo}? Va a tener que configurarla de nuevo en su próximo ingreso.`)) return
+    setDesactivando2FAId(padre.id)
+    try {
+      await api.post('/usuarios/2fa/desactivar/', { usuario_id: padre.id })
+      toast.success('Verificación en dos pasos desactivada')
+      loadPadres(searchPadres, pagePadres)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setDesactivando2FAId(null)
+    }
+  }, [loadPadres, searchPadres, pagePadres])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (selectedRolId) loadRolPermisos(selectedRolId)
@@ -392,9 +408,14 @@ export default function Usuarios() {
       render: (_, r) => <Badge color={r.is_active ? 'green' : 'default'}>{r.is_active ? 'Activo' : 'Inactivo'}</Badge>,
     },
     {
+      title: '2FA',
+      key: '2fa',
+      render: (_, r) => <Badge color={r.tiene_2fa_activo ? 'green' : 'yellow'}>{r.tiene_2fa_activo ? 'Activo' : 'Pendiente'}</Badge>,
+    },
+    {
       title: '',
       key: 'acciones',
-      width: 200,
+      width: 280,
       render: (_, r) => (
         <div className="flex gap-1.5 justify-end">
           <Button
@@ -409,6 +430,20 @@ export default function Usuarios() {
               : <KeyRound className="w-3.5 h-3.5" />}
             Resetear
           </Button>
+          {r.tiene_2fa_activo && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => desactivar2FA(r)}
+              disabled={desactivando2FAId === r.id}
+              title="Desactivar verificación en dos pasos (si perdió el celular)"
+            >
+              {desactivando2FAId === r.id
+                ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                : <ShieldOff className="w-3.5 h-3.5" />}
+              2FA
+            </Button>
+          )}
           <Button
             size="sm"
             variant={r.is_active ? 'danger' : 'primary'}

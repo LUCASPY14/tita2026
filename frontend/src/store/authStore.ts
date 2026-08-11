@@ -12,6 +12,7 @@ interface User {
   rol: string
   cliente_id?: number
   debe_cambiar_contrasena: boolean
+  tiene_2fa_activo?: boolean
 }
 
 interface AuthState {

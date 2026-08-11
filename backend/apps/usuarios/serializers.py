@@ -18,10 +18,17 @@ from .models import (
 
 class UsuarioSerializer(serializers.ModelSerializer):
     cliente_ruc_ci = serializers.SerializerMethodField()
+    tiene_2fa_activo = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=False, min_length=6)
 
     def get_cliente_ruc_ci(self, obj):
         return obj.cliente.ruc_ci if obj.cliente_id else None
+
+    def get_tiene_2fa_activo(self, obj):
+        try:
+            return bool(obj.auth_2fa.habilitado)
+        except Exception:
+            return False
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
@@ -45,8 +52,9 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "is_active",
             "ultimo_acceso",
             "password",
+            "tiene_2fa_activo",
         ]
-        read_only_fields = ["fecha_creacion", "ultimo_acceso", "cliente_ruc_ci"]
+        read_only_fields = ["fecha_creacion", "ultimo_acceso", "cliente_ruc_ci", "tiene_2fa_activo"]
 
 
 class UsuarioCreateSerializer(serializers.ModelSerializer):

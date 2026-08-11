@@ -4,6 +4,7 @@ import { test, expect } from '@playwright/test'
 
 const CLIENTE_WEB = {
   id: 10, email: 'papa@example.com', nombre: 'Carlos', apellido: 'García', rol: 'CLIENTE_WEB',
+  debe_cambiar_contrasena: false, tiene_2fa_activo: true,
 }
 const ADMIN = {
   id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN',
@@ -154,6 +155,92 @@ test.describe('Portal — Login', () => {
     await expect(page.getByText('Recuperar contraseña')).toBeVisible()
     await expect(page.getByPlaceholder('tucorreo@email.com')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Enviar enlace' })).toBeVisible()
+  })
+})
+
+// ── Portal — 2FA obligatorio ────────────────────────────────────────────────
+
+test.describe('Portal — 2FA obligatorio', () => {
+  test('sin 2FA activo, el login redirige a configurar-2fa en vez del dashboard', async ({ page }) => {
+    const userSin2FA = { ...CLIENTE_WEB, tiene_2fa_activo: false }
+    await setupPortalAuth(page, userSin2FA)
+    await page.route(/\/api\/v1\/usuarios\/2fa\/configurar/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ otp_uri: 'otpauth://totp/x', secret: 'JBSWY3DPEHPK3PXP', backup_codes: ['AAA111'] }),
+      })
+    )
+
+    await page.goto('/portal/login')
+    await page.getByPlaceholder('Ej: 3331234-2').fill(userSin2FA.email)
+    await page.getByPlaceholder('••••••••').fill('password123')
+    await page.getByRole('button', { name: 'Ingresar' }).click()
+
+    await expect(page).toHaveURL('/portal/configurar-2fa')
+    await expect(page.getByText('Activá la verificación en dos pasos')).toBeVisible()
+  })
+
+  test('completar la activación navega a /portal', async ({ page }) => {
+    const userSin2FA = { ...CLIENTE_WEB, tiene_2fa_activo: false }
+    await setupPortalAuth(page, userSin2FA)
+    await page.route(/\/api\/v1\/usuarios\/portal\/mi-hijo/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MI_HIJO_MOCK) })
+    )
+    await page.route(/\/api\/v1\/usuarios\/2fa\/configurar/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ otp_uri: 'otpauth://totp/x', secret: 'JBSWY3DPEHPK3PXP', backup_codes: [] }),
+      })
+    )
+    await page.route(/\/api\/v1\/usuarios\/2fa\/activar/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ detail: 'ok' }) })
+    )
+
+    await page.goto('/portal/login')
+    await page.getByPlaceholder('Ej: 3331234-2').fill(userSin2FA.email)
+    await page.getByPlaceholder('••••••••').fill('password123')
+    await page.getByRole('button', { name: 'Ingresar' }).click()
+    await expect(page).toHaveURL('/portal/configurar-2fa')
+
+    await page.getByLabel(/código de 6 dígitos/i).fill('123456')
+    await page.getByRole('button', { name: /activar y continuar/i }).click()
+    await expect(page).toHaveURL('/portal')
+  })
+
+  test('cuenta con 2FA habilitado pide el código en el login', async ({ page }) => {
+    await page.route(/\/api\/v1\//, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+    )
+    await page.route(/\/api\/token/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ requires_2fa: true, pre_auth_token: 'fake-pre-auth' }),
+      })
+    )
+    await page.route(/\/api\/v1\/usuarios\/2fa\/login/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ access: 'tok', refresh: 'ref', user: CLIENTE_WEB, session_key: 'sk' }),
+      })
+    )
+    await page.route(/\/api\/v1\/usuarios\/portal\/mi-hijo/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MI_HIJO_MOCK) })
+    )
+
+    await page.goto('/portal/login')
+    await page.getByPlaceholder('Ej: 3331234-2').fill(CLIENTE_WEB.email)
+    await page.getByPlaceholder('••••••••').fill('password123')
+    await page.getByRole('button', { name: 'Ingresar' }).click()
+
+    await expect(page.getByText('Verificación en dos pasos')).toBeVisible()
+    await page.getByLabel(/código totp/i).fill('123456')
+    await page.getByRole('button', { name: 'Verificar' }).click()
+
+    await expect(page).toHaveURL('/portal')
   })
 })
 

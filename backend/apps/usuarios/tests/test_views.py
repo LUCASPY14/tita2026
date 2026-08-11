@@ -77,6 +77,7 @@ class TestLogin:
         assert "refresh" in resp.data
         assert "user" in resp.data
         assert resp.data["user"]["email"] == "admin@test.com"
+        assert resp.data["user"]["tiene_2fa_activo"] is False
 
     def test_login_credenciales_incorrectas_401(self, api_client, usuario_admin):
         resp = api_client.post(
@@ -140,6 +141,25 @@ class TestMe:
         resp = api_portal.get("/api/v1/usuarios/usuarios/me/")
         assert resp.status_code == 200
         assert resp.data["cliente_id"] == cliente.pk
+
+    def test_me_incluye_tiene_2fa_activo_false_por_defecto(self, api_admin):
+        resp = api_admin.get("/api/v1/usuarios/usuarios/me/")
+        assert resp.status_code == 200
+        assert resp.data["tiene_2fa_activo"] is False
+
+    def test_me_incluye_debe_cambiar_contrasena(self, api_admin, usuario_admin):
+        resp = api_admin.get("/api/v1/usuarios/usuarios/me/")
+        assert resp.status_code == 200
+        assert resp.data["debe_cambiar_contrasena"] == usuario_admin.debe_cambiar_contrasena
+
+    def test_me_incluye_tiene_2fa_activo_true_cuando_habilitado(self, api_admin, usuario_admin):
+        from apps.usuarios.models import Autenticacion2FA
+        Autenticacion2FA.objects.create(
+            usuario=usuario_admin, secret_key="JBSWY3DPEHPK3PXP", habilitado=True,
+        )
+        resp = api_admin.get("/api/v1/usuarios/usuarios/me/")
+        assert resp.status_code == 200
+        assert resp.data["tiene_2fa_activo"] is True
 
 
 # ── UsuarioViewSet.cambiar_password ───────────────────────────────────────────
@@ -323,6 +343,15 @@ class TestTwoFAConfigurar:
         resp = api_client.post("/api/v1/usuarios/2fa/configurar/")
         assert resp.status_code in (401, 403)
 
+    def test_throttle_por_usuario_configurado(self):
+        """
+        LoginRateThrottle (AnonRateThrottle) no aplica a requests autenticados
+        — este endpoint necesita un throttle que sí limite por usuario.
+        """
+        from apps.usuarios.views import TwoFAConfigurarView
+        from common.throttling import SensitiveEndpointThrottle
+        assert SensitiveEndpointThrottle in TwoFAConfigurarView.throttle_classes
+
 
 # ── TOTP helpers (unit tests) ─────────────────────────────────────────────────
 
@@ -383,6 +412,18 @@ class TestUsuarioViewSetCRUD:
     def test_requiere_admin(self, api_cajero):
         resp = api_cajero.get("/api/v1/usuarios/usuarios/")
         assert resp.status_code in (401, 403)
+
+    def test_list_incluye_tiene_2fa_activo(self, api_admin, usuario_portal):
+        """UsuarioSerializer expone tiene_2fa_activo — usado por la ficha 'Portal Padres'."""
+        from apps.usuarios.models import Autenticacion2FA
+        Autenticacion2FA.objects.create(
+            usuario=usuario_portal, secret_key="JBSWY3DPEHPK3PXP", habilitado=True,
+        )
+        resp = api_admin.get("/api/v1/usuarios/usuarios/", {"rol": "CLIENTE_WEB"})
+        assert resp.status_code == 200
+        data = resp.data["results"] if isinstance(resp.data, dict) else resp.data
+        portal_row = next(r for r in data if r["id"] == usuario_portal.pk)
+        assert portal_row["tiene_2fa_activo"] is True
 
 
 # ── ViewSets simples ──────────────────────────────────────────────────────────
@@ -648,6 +689,11 @@ class TestTwoFAActivar:
             format="json",
         )
         assert resp.status_code == 400
+
+    def test_throttle_por_usuario_configurado(self):
+        from apps.usuarios.views import TwoFAActivarView
+        from common.throttling import SensitiveEndpointThrottle
+        assert SensitiveEndpointThrottle in TwoFAActivarView.throttle_classes
 
 
 # ── TwoFAVerificarView ────────────────────────────────────────────────────────

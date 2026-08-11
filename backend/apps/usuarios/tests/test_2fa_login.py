@@ -108,6 +108,7 @@ def test_login_sin_2fa_retorna_jwt(client, user_sin_2fa):
     assert "access" in resp.data
     assert "refresh" in resp.data
     assert "requires_2fa" not in resp.data
+    assert resp.data["user"]["tiene_2fa_activo"] is False
 
 
 @pytest.mark.django_db
@@ -140,6 +141,7 @@ def test_2fa_login_con_codigo_valido_retorna_jwt(client, user_con_2fa):
     assert resp.status_code == 200, resp.data
     assert "access" in resp.data
     assert "refresh" in resp.data
+    assert resp.data["user"]["tiene_2fa_activo"] is True
 
 
 @pytest.mark.django_db
