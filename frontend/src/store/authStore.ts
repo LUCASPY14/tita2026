@@ -29,6 +29,10 @@ interface AuthState {
 }
 
 let inactivityTimer: ReturnType<typeof setTimeout> | undefined
+// Reentrancy guard: dispatchEvent('auth:logout') es síncrono y AuthMonitor
+// reacciona llamando a logout() de nuevo — sin esto, cada logout() vuelve a
+// dispatchear y dispara una recursión infinita síncrona.
+let loggingOut = false
 
 function clearInactivityTimer() {
   if (inactivityTimer !== undefined) {
@@ -81,19 +85,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
-    clearInactivityTimer()
-    // Fire-and-forget: mark session inactive on the server
-    const sessionKey = localStorage.getItem('session_key')
-    const refreshToken = localStorage.getItem('refresh_token')
-    if (sessionKey) {
-      api.post('/usuarios/logout/', {
-        session_key: sessionKey,
-        refresh_token: refreshToken,
-      }).catch(() => {})
+    if (loggingOut) return
+    loggingOut = true
+    try {
+      clearInactivityTimer()
+      // Fire-and-forget: mark session inactive on the server
+      const sessionKey = localStorage.getItem('session_key')
+      const refreshToken = localStorage.getItem('refresh_token')
+      if (sessionKey) {
+        api.post('/usuarios/logout/', {
+          session_key: sessionKey,
+          refresh_token: refreshToken,
+        }).catch(() => {})
+      }
+      clearTokens()
+      set({ user: null, isAuthenticated: false, pending2FA: null })
+      window.dispatchEvent(new Event('auth:logout'))
+    } finally {
+      loggingOut = false
     }
-    clearTokens()
-    set({ user: null, isAuthenticated: false, pending2FA: null })
-    window.dispatchEvent(new Event('auth:logout'))
   },
 
   loadUser: async () => {

@@ -62,8 +62,13 @@ export function useNotificaciones() {
       } catch { /* ignore malformed frames */ }
     }
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       setWsOnline(false)
+      // No reintentar: sesión rechazada (4001), socket reemplazado, o ya no
+      // hay token — evita loop infinito de reconexión con token vacío/inválido.
+      if (event.code === 4001) return
+      if (wsRef.current !== ws) return
+      if (!localStorage.getItem('access_token')) return
       reconnectTimer.current = setTimeout(() => connectWsRef.current?.(), RECONNECT_MS)
     }
 

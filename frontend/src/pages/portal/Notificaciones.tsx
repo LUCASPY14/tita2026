@@ -132,8 +132,13 @@ export default function PortalNotificaciones() {
       } catch { /* ignore malformed frames */ }
     }
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       setWsOnline(false)
+      // No reintentar: sesión rechazada (4001), socket reemplazado, o ya no
+      // hay token — evita loop infinito de reconexión con token vacío/inválido.
+      if (event.code === 4001) return
+      if (wsRef.current !== ws) return
+      if (!localStorage.getItem('access_token')) return
       // reconnect after a short delay (use ref to avoid TDZ access)
       reconnectTimer.current = setTimeout(() => connectWsRef.current(), WS_RECONNECT_MS)
     }

@@ -86,10 +86,16 @@ export function useDashboardKPI() {
       } catch { /* ignore malformed frames */ }
     }
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       setConnected(false)
       // Fallback REST mientras el WS no esté disponible
       startPoll()
+      // No reintentar: sesión rechazada (4001), socket reemplazado por uno más
+      // nuevo, o ya no hay token (sesión cerrada) — evita loop infinito de
+      // reconexión con token vacío/inválido.
+      if (event.code === 4001) return
+      if (wsRef.current !== ws) return
+      if (!localStorage.getItem('access_token')) return
       reconnectTimer.current = setTimeout(() => connectRef.current?.(), RECONNECT_MS)
     }
 
