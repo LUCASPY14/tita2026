@@ -310,10 +310,16 @@ else:
 # ==============================================================================
 
 if os.environ.get("USE_REDIS_CHANNELS", "False") == "True":
+    # socket_timeout debe ser mayor que el brpop_timeout interno de
+    # channels_redis (5s, channels_redis/core.py) — si no, el cliente redis-py
+    # corta la conexión con TimeoutError justo cuando el BZPOPMIN del servidor
+    # está por responder "nada nuevo", y cada WebSocket se rechaza (WSREJECT).
+    # redis-py >=8 trae socket_timeout=5 por defecto, que empataba exacto con
+    # ese valor — de ahí el bug.
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {"hosts": [REDIS_URL]},
+            "CONFIG": {"hosts": [{"address": REDIS_URL, "socket_timeout": 15}]},
         }
     }
 else:
