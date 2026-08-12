@@ -74,6 +74,11 @@ reportlab==4.3.1
 # ── Push notifications ─────────────────────────────────────────────────────────
 pywebpush==1.14.1
 
+# ── WebAuthn (huella / Face ID — portal de padres) ──────────────────────────────
+webauthn==3.0.0
+pyasn1==0.6.4
+pyasn1_modules==0.4.2
+
 # ── Monitoreo ─────────────────────────────────────────────────────────────────
 django-prometheus==2.3.1
 prometheus-client==0.22.0
