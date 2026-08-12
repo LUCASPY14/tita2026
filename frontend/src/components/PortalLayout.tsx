@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useNotificaciones } from '../hooks/useNotificaciones'
-import { Home, Bell, LogOut, FileText, Wallet, Download } from 'lucide-react'
+import { Home, Bell, LogOut, FileText, Wallet, Download, Mail, Phone } from 'lucide-react'
 import LogoSinFondo from './LogoSinFondo'
+
+const CONTACTO_EMAIL = 'admin@cantinatita.com'
+const CONTACTO_TELEFONO = '+595 981 410 938'
 
 const navItems = [
   { path: '/portal',                 label: 'Inicio',    icon: Home,    exact: true  },
@@ -97,6 +100,21 @@ export default function PortalLayout() {
       {/* Content */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-24">
         <Outlet />
+
+        {/* Footer — Términos y contacto, visible en todas las páginas del portal */}
+        <footer className="mt-10 pt-4 border-t border-slate-200 flex flex-col items-center gap-2 text-xs text-slate-400">
+          <Link to="/portal/terminos" className="hover:text-slate-600 hover:underline">
+            Términos y Condiciones
+          </Link>
+          <div className="flex items-center gap-4">
+            <a href={`mailto:${CONTACTO_EMAIL}`} className="flex items-center gap-1 hover:text-slate-600">
+              <Mail className="w-3 h-3" /> {CONTACTO_EMAIL}
+            </a>
+            <a href={`tel:${CONTACTO_TELEFONO.replace(/\s/g, '')}`} className="flex items-center gap-1 hover:text-slate-600">
+              <Phone className="w-3 h-3" /> {CONTACTO_TELEFONO}
+            </a>
+          </div>
+        </footer>
       </main>
 
       {/* Bottom nav */}
