@@ -1,16 +1,22 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ShieldCheck, Eye, EyeOff, Copy, CheckCircle2 } from 'lucide-react'
+import { ShieldCheck, Eye, EyeOff, Copy, CheckCircle2, Fingerprint } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
+import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startRegistration } from '@simplewebauthn/browser'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 
+type Metodo = 'cargando' | 'huella' | 'totp'
+
 export default function PortalConfigurar2FA() {
   const navigate = useNavigate()
   const { user, logout, loadUser } = useAuthStore()
+  const [metodo, setMetodo] = useState<Metodo>('cargando')
+  const [registrandoHuella, setRegistrandoHuella] = useState(false)
+
   const [loading, setLoading] = useState(false)
   const [otpUri, setOtpUri] = useState('')
   const [otpSecret, setOtpSecret] = useState('')
@@ -19,7 +25,8 @@ export default function PortalConfigurar2FA() {
   const [showSecret, setShowSecret] = useState(false)
   const [error, setError] = useState('')
 
-  const iniciarSetup = useCallback(async () => {
+  const iniciarSetupTotp = useCallback(async () => {
+    setMetodo('totp')
     setLoading(true)
     try {
       const { data } = await api.post('/usuarios/2fa/configurar/')
@@ -33,8 +40,40 @@ export default function PortalConfigurar2FA() {
     }
   }, [])
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { iniciarSetup() }, [iniciarSetup])
+  useEffect(() => {
+    let cancelado = false
+    async function decidirMetodo() {
+      // El chequeo de plataforma cubre TODOS los casos por igual (celular sin
+      // huella habilitada, navegador viejo, navegador interno de WhatsApp con
+      // soporte parcial) sin necesidad de detectar cada caso por separado.
+      const disponible = browserSupportsWebAuthn() && await platformAuthenticatorIsAvailable()
+      if (cancelado) return
+      if (disponible) setMetodo('huella')
+      else iniciarSetupTotp()
+    }
+    decidirMetodo()
+    return () => { cancelado = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const registrarHuella = async () => {
+    setRegistrandoHuella(true)
+    try {
+      const { data: optionsJSON } = await api.post('/usuarios/webauthn/registrar-opciones/')
+      const credential = await startRegistration({ optionsJSON })
+      await api.post('/usuarios/webauthn/registrar-verificar/', { credential })
+      await loadUser()
+      toast.success('Huella activada')
+      navigate('/portal', { replace: true })
+    } catch (err) {
+      // El usuario canceló el prompt nativo (Face ID/huella) — no es un error real
+      if ((err as { name?: string })?.name !== 'NotAllowedError') {
+        toast.error('No se pudo activar la huella')
+      }
+    } finally {
+      setRegistrandoHuella(false)
+    }
+  }
 
   const activar = async (e: { preventDefault(): void }) => {
     e.preventDefault()
@@ -62,7 +101,9 @@ export default function PortalConfigurar2FA() {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-            <ShieldCheck className="w-8 h-8 text-green-600" />
+            {metodo === 'huella'
+              ? <Fingerprint className="w-8 h-8 text-green-600" />
+              : <ShieldCheck className="w-8 h-8 text-green-600" />}
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Activá la verificación en dos pasos</h1>
           <p className="text-gray-500 mt-2 text-sm">
@@ -71,7 +112,30 @@ export default function PortalConfigurar2FA() {
           </p>
         </div>
 
-        {otpUri ? (
+        {metodo === 'cargando' && (
+          <div className="text-center py-8 text-slate-400 text-sm">Preparando…</div>
+        )}
+
+        {metodo === 'huella' && (
+          <div className="space-y-4 text-center">
+            <p className="text-sm text-slate-600">
+              Usá la huella o Face ID de este dispositivo — es más rápido y no necesitás ninguna
+              app extra.
+            </p>
+            <Button variant="primary" block size="lg" loading={registrandoHuella} onClick={registrarHuella}>
+              <Fingerprint className="w-5 h-5" /> Activar con tu huella
+            </Button>
+            <button
+              type="button"
+              onClick={iniciarSetupTotp}
+              className="text-sm text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            >
+              Prefiero usar una app de autenticación
+            </button>
+          </div>
+        )}
+
+        {metodo === 'totp' && (otpUri ? (
           <form onSubmit={activar} className="space-y-4">
             <p className="text-sm text-slate-600">
               1. Escaneá este código con una app de autenticación (Google Authenticator, Authy, etc.)
@@ -136,7 +200,7 @@ export default function PortalConfigurar2FA() {
           </form>
         ) : (
           <div className="text-center py-8 text-slate-400 text-sm">Generando código de configuración…</div>
-        )}
+        ))}
 
         <div className="mt-4 text-center">
           <button

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { UserPlus, Search, Edit2, Shield, ShieldOff, Users, HardHat, Plus, Pencil, Trash2, Globe, RefreshCw, KeyRound } from 'lucide-react'
+import { UserPlus, Search, Edit2, Shield, ShieldOff, Fingerprint, Users, HardHat, Plus, Pencil, Trash2, Globe, RefreshCw, KeyRound } from 'lucide-react'
 import api from '../services/api'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -220,6 +220,22 @@ export default function Usuarios() {
     }
   }, [loadPadres, searchPadres, pagePadres])
 
+  const [desactivandoHuellaId, setDesactivandoHuellaId] = useState<number | null>(null)
+
+  const desactivarHuella = useCallback(async (padre: UsuarioPortal) => {
+    if (!window.confirm(`¿Desactivar la huella/Face ID de ${padre.nombre_completo}? Va a tener que registrarla de nuevo en su próximo ingreso.`)) return
+    setDesactivandoHuellaId(padre.id)
+    try {
+      await api.post('/usuarios/webauthn/desactivar/', { usuario_id: padre.id })
+      toast.success('Huella desactivada')
+      loadPadres(searchPadres, pagePadres)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setDesactivandoHuellaId(null)
+    }
+  }, [loadPadres, searchPadres, pagePadres])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (selectedRolId) loadRolPermisos(selectedRolId)
@@ -410,12 +426,17 @@ export default function Usuarios() {
     {
       title: '2FA',
       key: '2fa',
-      render: (_, r) => <Badge color={r.tiene_2fa_activo ? 'green' : 'yellow'}>{r.tiene_2fa_activo ? 'Activo' : 'Pendiente'}</Badge>,
+      render: (_, r) => (
+        <div className="flex gap-1">
+          <Badge color={r.tiene_2fa_activo ? 'green' : 'yellow'}>{r.tiene_2fa_activo ? 'App' : 'Pendiente'}</Badge>
+          {r.tiene_webauthn && <Badge color="blue">Huella</Badge>}
+        </div>
+      ),
     },
     {
       title: '',
       key: 'acciones',
-      width: 280,
+      width: 340,
       render: (_, r) => (
         <div className="flex gap-1.5 justify-end">
           <Button
@@ -436,12 +457,26 @@ export default function Usuarios() {
               variant="secondary"
               onClick={() => desactivar2FA(r)}
               disabled={desactivando2FAId === r.id}
-              title="Desactivar verificación en dos pasos (si perdió el celular)"
+              title="Desactivar verificación en dos pasos por app (si perdió el celular)"
             >
               {desactivando2FAId === r.id
                 ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 : <ShieldOff className="w-3.5 h-3.5" />}
               2FA
+            </Button>
+          )}
+          {r.tiene_webauthn && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => desactivarHuella(r)}
+              disabled={desactivandoHuellaId === r.id}
+              title="Desactivar huella/Face ID (si perdió el celular)"
+            >
+              {desactivandoHuellaId === r.id
+                ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                : <Fingerprint className="w-3.5 h-3.5" />}
+              Huella
             </Button>
           )}
           <Button

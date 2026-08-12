@@ -104,11 +104,13 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
   ) {
     return <Navigate to="/portal/cambiar-contrasena" replace />
   }
-  // 2FA obligatorio en el portal: sin él, no se accede a ninguna otra pantalla
+  // 2FA obligatorio en el portal (TOTP o huella/Face ID) — sin ninguno de los
+  // dos, no se accede a ninguna otra pantalla
   if (
     user?.rol === 'CLIENTE_WEB' &&
     !user?.debe_cambiar_contrasena &&
     !user?.tiene_2fa_activo &&
+    !user?.tiene_webauthn &&
     location.pathname !== '/portal/configurar-2fa'
   ) {
     return <Navigate to="/portal/configurar-2fa" replace />

@@ -17,6 +17,7 @@ from .models import (
     PerfilUsuario,
     Autenticacion2FA,
     Intento2FA,
+    CredencialWebAuthn,
     IntentoLogin,
     SesionActiva,
     RenovacionSesion,
@@ -170,6 +171,24 @@ class Autenticacion2FAAdmin(admin.ModelAdmin):
     list_filter = ["habilitado"]
     search_fields = ["usuario__email"]
     readonly_fields = ["fecha_creacion", "secret_key", "backup_codes"]
+    list_select_related = ["usuario"]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
+    def usuario_link(self, obj):
+        url = reverse("admin:usuarios_usuario_change", args=[obj.usuario.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.usuario.email)
+    usuario_link.short_description = "Usuario"
+
+
+@admin.register(CredencialWebAuthn)
+class CredencialWebAuthnAdmin(admin.ModelAdmin):
+    list_display = ["usuario_link", "nombre_dispositivo", "fecha_registro", "ultimo_uso"]
+    search_fields = ["usuario__email", "nombre_dispositivo"]
+    readonly_fields = ["fecha_registro", "credential_id", "public_key", "sign_count"]
     list_select_related = ["usuario"]
 
     def get_readonly_fields(self, request, obj=None):

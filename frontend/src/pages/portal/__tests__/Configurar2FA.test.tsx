@@ -6,6 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockNavigate = vi.fn()
 const mockLogout = vi.fn()
 const mockLoadUser = vi.fn()
+const mockPlatformAvailable = vi.fn()
+const mockStartRegistration = vi.fn()
 
 vi.mock('../../../store/authStore', () => ({
   useAuthStore: () => ({
@@ -13,6 +15,12 @@ vi.mock('../../../store/authStore', () => ({
     logout: mockLogout,
     loadUser: mockLoadUser,
   }),
+}))
+
+vi.mock('@simplewebauthn/browser', () => ({
+  browserSupportsWebAuthn: () => true,
+  platformAuthenticatorIsAvailable: () => mockPlatformAvailable(),
+  startRegistration: (...args: unknown[]) => mockStartRegistration(...args),
 }))
 
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -41,6 +49,7 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockPlatformAvailable.mockResolvedValue(false)
 })
 
 describe('Portal Configurar2FA', () => {
@@ -97,5 +106,59 @@ describe('Portal Configurar2FA', () => {
     await userEvent.click(screen.getByText(/cerrar sesión y continuar después/i))
     expect(mockLogout).toHaveBeenCalled()
     expect(mockNavigate).toHaveBeenCalledWith('/portal/login', { replace: true })
+  })
+})
+
+describe('Portal Configurar2FA — huella disponible', () => {
+  it('con plataforma compatible, ofrece activar con huella en vez del QR', async () => {
+    mockPlatformAvailable.mockResolvedValueOnce(true)
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: /activar con tu huella/i })).toBeInTheDocument()
+    expect(api.post).not.toHaveBeenCalledWith('/usuarios/2fa/configurar/')
+  })
+
+  it('activar con huella registra el dispositivo y navega a /portal', async () => {
+    mockPlatformAvailable.mockResolvedValueOnce(true)
+    vi.mocked(api.post)
+      .mockResolvedValueOnce({ data: { challenge: 'c', rp: { id: 'x' } } })
+      .mockResolvedValueOnce({ data: { detail: 'ok' } })
+    mockStartRegistration.mockResolvedValueOnce({ id: 'cred-1' })
+
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /activar con tu huella/i }))
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/usuarios/webauthn/registrar-opciones/')
+      expect(api.post).toHaveBeenCalledWith('/usuarios/webauthn/registrar-verificar/', { credential: { id: 'cred-1' } })
+      expect(mockLoadUser).toHaveBeenCalled()
+      expect(mockNavigate).toHaveBeenCalledWith('/portal', { replace: true })
+    })
+  })
+
+  it('"Prefiero usar una app de autenticación" cae al flujo de QR existente', async () => {
+    mockPlatformAvailable.mockResolvedValueOnce(true)
+    vi.mocked(api.post).mockResolvedValueOnce({
+      data: { otp_uri: 'otpauth://totp/x', secret: 'SECRET', backup_codes: [] },
+    })
+
+    renderPage()
+    await userEvent.click(await screen.findByText(/prefiero usar una app de autenticación/i))
+
+    expect(await screen.findByLabelText(/código de 6 dígitos/i)).toBeInTheDocument()
+    expect(api.post).toHaveBeenCalledWith('/usuarios/2fa/configurar/')
+  })
+
+  it('si el usuario cancela el prompt nativo, no muestra error', async () => {
+    mockPlatformAvailable.mockResolvedValueOnce(true)
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { challenge: 'c', rp: { id: 'x' } } })
+    mockStartRegistration.mockRejectedValueOnce({ name: 'NotAllowedError' })
+
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /activar con tu huella/i }))
+
+    await waitFor(() => expect(mockStartRegistration).toHaveBeenCalled())
+    expect(vi.mocked(await import('react-hot-toast')).default.error).not.toHaveBeenCalled()
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 })

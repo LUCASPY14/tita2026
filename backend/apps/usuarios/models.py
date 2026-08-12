@@ -341,6 +341,30 @@ class Intento2FA(models.Model):
         return f"Intento {resultado} - {self.usuario.email}"
 
 
+class CredencialWebAuthn(models.Model):
+    """
+    Credencial de huella/Face ID (WebAuthn) — un usuario puede tener varias
+    (celular, tablet), a diferencia de Autenticacion2FA que es una por usuario.
+    """
+
+    id_credencial = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="credenciales_webauthn")
+    credential_id = models.CharField(max_length=255, unique=True)
+    public_key = models.TextField()
+    sign_count = models.PositiveIntegerField(default=0)
+    nombre_dispositivo = models.CharField(max_length=100, blank=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    ultimo_uso = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "credenciales_webauthn"
+        verbose_name = "Credencial WebAuthn"
+        verbose_name_plural = "Credenciales WebAuthn"
+
+    def __str__(self):
+        return f"WebAuthn de {self.usuario.email} ({self.nombre_dispositivo or self.credential_id[:8]})"
+
+
 # ==============================================================================
 # AUDITORÍA Y SEGURIDAD
 # ==============================================================================

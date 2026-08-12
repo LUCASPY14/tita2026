@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ShieldCheck, ArrowLeft } from 'lucide-react'
+import { ShieldCheck, ArrowLeft, Fingerprint } from 'lucide-react'
+import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startAuthentication } from '@simplewebauthn/browser'
 import { useAuthStore } from '../../store/authStore'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
@@ -15,8 +16,12 @@ export default function PortalLogin() {
   const [codigo, setCodigo] = useState('')
   const [codigoError, setCodigoError] = useState('')
   const codigoRef = useRef<HTMLInputElement>(null)
-  const { login, verify2FA, cancelPending2FA, pending2FA } = useAuthStore()
+  const { login, verify2FA, verifyWebAuthn, cancelPending2FA, pending2FA, pendingTieneWebauthn } = useAuthStore()
   const navigate = useNavigate()
+
+  const [huellaDisponible, setHuellaDisponible] = useState<boolean | null>(null)
+  const [mostrarCodigo, setMostrarCodigo] = useState(false)
+  const [verificandoHuella, setVerificandoHuella] = useState(false)
 
   const [olvideModo, setOlvideModo] = useState(false)
   const [emailRecuperar, setEmailRecuperar] = useState('')
@@ -27,7 +32,7 @@ export default function PortalLogin() {
     const { user } = useAuthStore.getState()
     if (user?.debe_cambiar_contrasena) {
       navigate('/portal/cambiar-contrasena', { replace: true })
-    } else if (!user?.tiene_2fa_activo) {
+    } else if (!user?.tiene_2fa_activo && !user?.tiene_webauthn) {
       navigate('/portal/configurar-2fa', { replace: true })
     } else {
       toast.success('Bienvenido al portal')
@@ -58,6 +63,33 @@ export default function PortalLogin() {
     }
   }
 
+  useEffect(() => {
+    if (!pending2FA || !pendingTieneWebauthn) return
+    let cancelado = false
+    ;(async () => {
+      const disponible = browserSupportsWebAuthn() && await platformAuthenticatorIsAvailable()
+      if (!cancelado) setHuellaDisponible(disponible)
+    })()
+    return () => { cancelado = true }
+  }, [pending2FA, pendingTieneWebauthn])
+
+  const handleWebAuthn = async () => {
+    setVerificandoHuella(true)
+    try {
+      const { data: optionsJSON } = await api.post('/usuarios/webauthn/login-opciones/', {
+        pre_auth_token: pending2FA,
+      })
+      const credential = await startAuthentication({ optionsJSON })
+      await verifyWebAuthn(credential)
+      irLuegoDeLogin()
+    } catch (err) {
+      if ((err as { name?: string })?.name !== 'NotAllowedError') {
+        toast.error('No se pudo verificar la huella')
+      }
+      setVerificandoHuella(false)
+    }
+  }
+
   const handle2FASubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
     const trimmed = codigo.replace(/\s/g, '')
@@ -81,6 +113,8 @@ export default function PortalLogin() {
     cancelPending2FA()
     setCodigo('')
     setCodigoError('')
+    setMostrarCodigo(false)
+    setHuellaDisponible(null)
   }
 
   const handleRecuperar = async (e: { preventDefault(): void }) => {
@@ -98,42 +132,66 @@ export default function PortalLogin() {
   }
 
   if (pending2FA) {
+    const puedeHuella = pendingTieneWebauthn && huellaDisponible === true && !mostrarCodigo
+    const verificandoDisponibilidad = pendingTieneWebauthn && huellaDisponible === null && !mostrarCodigo
+
     return (
       <AuthShell caption="Portal de Padres">
         <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-100 mb-3">
-              <ShieldCheck className="w-7 h-7 text-green-600" />
+              {puedeHuella
+                ? <Fingerprint className="w-7 h-7 text-green-600" />
+                : <ShieldCheck className="w-7 h-7 text-green-600" />}
             </div>
             <h2 className="text-lg font-semibold text-slate-800">Verificación en dos pasos</h2>
             <p className="text-sm text-slate-500 mt-1">
-              Ingresá el código de 6 dígitos de tu aplicación autenticadora
+              {puedeHuella
+                ? 'Confirmá con tu huella o Face ID'
+                : 'Ingresá el código de 6 dígitos de tu aplicación autenticadora'}
             </p>
           </div>
 
-          <form onSubmit={handle2FASubmit} className="space-y-4">
-            <Input
-              ref={codigoRef}
-              label="Código TOTP"
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9 ]*"
-              maxLength={7}
-              placeholder="000000"
-              value={codigo}
-              onChange={e => {
-                setCodigo(e.target.value.replace(/[^0-9 ]/g, ''))
-                if (codigoError) setCodigoError('')
-              }}
-              error={codigoError}
-              autoFocus
-              autoComplete="one-time-code"
-              className="text-center text-2xl font-mono tracking-widest"
-            />
-            <Button variant="primary" block size="lg" loading={loading} type="submit">
-              Verificar
-            </Button>
-          </form>
+          {verificandoDisponibilidad ? (
+            <div className="text-center py-4 text-slate-400 text-sm">Un momento…</div>
+          ) : puedeHuella ? (
+            <div className="space-y-4">
+              <Button variant="primary" block size="lg" loading={verificandoHuella} onClick={handleWebAuthn}>
+                <Fingerprint className="w-5 h-5" /> Continuar con tu huella
+              </Button>
+              <button
+                type="button"
+                onClick={() => setMostrarCodigo(true)}
+                className="w-full text-sm text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                Usar el código de mi app en su lugar
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handle2FASubmit} className="space-y-4">
+              <Input
+                ref={codigoRef}
+                label="Código TOTP"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9 ]*"
+                maxLength={7}
+                placeholder="000000"
+                value={codigo}
+                onChange={e => {
+                  setCodigo(e.target.value.replace(/[^0-9 ]/g, ''))
+                  if (codigoError) setCodigoError('')
+                }}
+                error={codigoError}
+                autoFocus
+                autoComplete="one-time-code"
+                className="text-center text-2xl font-mono tracking-widest"
+              />
+              <Button variant="primary" block size="lg" loading={loading} type="submit">
+                Verificar
+              </Button>
+            </form>
+          )}
 
           <div className="mt-5 text-center">
             <button

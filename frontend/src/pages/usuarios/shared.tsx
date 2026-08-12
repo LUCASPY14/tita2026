@@ -36,6 +36,7 @@ export interface UsuarioPortal {
   cliente_ruc_ci: string | null
   ultimo_acceso: string | null
   tiene_2fa_activo: boolean
+  tiene_webauthn: boolean
 }
 
 export interface UsuarioForm {

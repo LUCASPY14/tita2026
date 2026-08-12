@@ -490,6 +490,22 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 PORTAL_FRONTEND_URL = os.environ.get("PORTAL_FRONTEND_URL", "http://localhost:5173")
 
 # ==============================================================================
+# WEBAUTHN (huella / Face ID — portal de padres)
+# ==============================================================================
+# RP ID = dominio "efectivo" sin protocolo/puerto — tiene que coincidir con el
+# host que sirve el portal. Origin acepta ambas variantes (con y sin "www").
+from urllib.parse import urlparse as _urlparse  # noqa: E402
+
+WEBAUTHN_RP_ID = os.environ.get("WEBAUTHN_RP_ID") or _urlparse(PORTAL_FRONTEND_URL).hostname
+WEBAUTHN_RP_NAME = "Cantina Tita — Portal de Padres"
+WEBAUTHN_ORIGINS = [
+    o.strip() for o in os.environ.get(
+        "WEBAUTHN_ORIGINS",
+        f"{PORTAL_FRONTEND_URL},https://www.{WEBAUTHN_RP_ID}" if WEBAUTHN_RP_ID else PORTAL_FRONTEND_URL,
+    ).split(",") if o.strip()
+]
+
+# ==============================================================================
 # NOTIFICACIONES
 # ==============================================================================
 

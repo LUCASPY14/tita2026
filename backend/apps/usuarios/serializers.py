@@ -19,6 +19,7 @@ from .models import (
 class UsuarioSerializer(serializers.ModelSerializer):
     cliente_ruc_ci = serializers.SerializerMethodField()
     tiene_2fa_activo = serializers.SerializerMethodField()
+    tiene_webauthn = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=False, min_length=6)
 
     def get_cliente_ruc_ci(self, obj):
@@ -29,6 +30,9 @@ class UsuarioSerializer(serializers.ModelSerializer):
             return bool(obj.auth_2fa.habilitado)
         except Exception:
             return False
+
+    def get_tiene_webauthn(self, obj):
+        return obj.credenciales_webauthn.exists()
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
@@ -53,8 +57,9 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "ultimo_acceso",
             "password",
             "tiene_2fa_activo",
+            "tiene_webauthn",
         ]
-        read_only_fields = ["fecha_creacion", "ultimo_acceso", "cliente_ruc_ci", "tiene_2fa_activo"]
+        read_only_fields = ["fecha_creacion", "ultimo_acceso", "cliente_ruc_ci", "tiene_2fa_activo", "tiene_webauthn"]
 
 
 class UsuarioCreateSerializer(serializers.ModelSerializer):

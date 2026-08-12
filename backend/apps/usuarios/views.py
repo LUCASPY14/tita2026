@@ -5,6 +5,7 @@ Views para la app usuarios
 import base64
 import hashlib
 import hmac as hmac_mod
+import json
 import logging
 import secrets
 import struct
@@ -12,9 +13,11 @@ import time
 import uuid
 from datetime import timedelta
 
+import webauthn
+from webauthn.helpers.structs import PublicKeyCredentialDescriptor
+
 from django.contrib.auth.tokens import default_token_generator
 from django.core import signing
-from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -84,6 +87,7 @@ from .models import (
     AuditoriaOperacion,
     IntentoLogin,
     BloqueoCuenta,
+    CredencialWebAuthn,
 )
 from .serializers import (
     UsuarioSerializer,
@@ -106,6 +110,10 @@ def _tiene_2fa_activo(user):
         return False
 
 
+def _tiene_webauthn(user):
+    return CredencialWebAuthn.objects.filter(usuario=user).exists()
+
+
 def _user_data(user):
     return {
         "id": user.id,
@@ -116,6 +124,7 @@ def _user_data(user):
         "cliente_id": user.cliente_id if user.cliente else None,
         "debe_cambiar_contrasena": user.debe_cambiar_contrasena,
         "tiene_2fa_activo": _tiene_2fa_activo(user),
+        "tiene_webauthn": _tiene_webauthn(user),
     }
 
 
@@ -340,19 +349,17 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         user = serializer.user
         _limpiar_contadores_login(email, ip)
 
-        try:
-            if user.auth_2fa.habilitado:
-                pre_auth = signing.dumps({"user_id": user.id}, salt="2fa-pre-auth")
-                registrar_auditoria(
-                    usuario=user, request=request,
-                    operacion="LOGIN_2FA_INICIO",
-                    tabla="usuarios_usuario",
-                    id_registro=user.id,
-                    descripcion=f"Login paso 1 OK — esperando 2FA ({user.email})",
-                )
-                return Response({"requires_2fa": True, "pre_auth_token": pre_auth})
-        except ObjectDoesNotExist:
-            pass
+        tiene_wa = _tiene_webauthn(user)
+        if _tiene_2fa_activo(user) or tiene_wa:
+            pre_auth = signing.dumps({"user_id": user.id}, salt="2fa-pre-auth")
+            registrar_auditoria(
+                usuario=user, request=request,
+                operacion="LOGIN_2FA_INICIO",
+                tabla="usuarios_usuario",
+                id_registro=user.id,
+                descripcion=f"Login paso 1 OK — esperando 2FA ({user.email})",
+            )
+            return Response({"requires_2fa": True, "pre_auth_token": pre_auth, "tiene_webauthn": tiene_wa})
 
         session_key = _registrar_sesion(user, request)
         try:
@@ -374,7 +381,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.select_related("auth_2fa")
+    queryset = Usuario.objects.select_related("auth_2fa").prefetch_related("credenciales_webauthn")
     filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
     filterset_fields = ["rol", "is_active"]
 
@@ -443,6 +450,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             'cliente_id': user.cliente_id if user.cliente else None,
             'debe_cambiar_contrasena': user.debe_cambiar_contrasena,
             'tiene_2fa_activo': _tiene_2fa_activo(user),
+            'tiene_webauthn': _tiene_webauthn(user),
         })
 
     @action(detail=True, methods=["post"], url_path="resetear-password")
@@ -1103,6 +1111,254 @@ class TwoFALoginVerificarView(APIView):
             "user": _user_data(user),
             "session_key": session_key,
         })
+
+
+# ==============================================================================
+# WebAuthn — huella / Face ID (portal de padres)
+# ==============================================================================
+
+_WEBAUTHN_CHALLENGE_TTL = 300  # 5 min, igual que el pre_auth_token de 2FA
+
+
+def _webauthn_challenge_cache_key(kind: str, user_id: int) -> str:
+    return f"webauthn_challenge:{kind}:{user_id}"
+
+
+class WebAuthnRegistrarOpcionesView(APIView):
+    """
+    POST /api/v1/usuarios/webauthn/registrar-opciones/
+    Genera el desafío para registrar un nuevo dispositivo (huella/Face ID)
+    del usuario autenticado.
+    """
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [SensitiveEndpointThrottle]
+
+    def post(self, request):
+        user = request.user
+        existentes = [
+            PublicKeyCredentialDescriptor(id=webauthn.helpers.base64url_to_bytes(c.credential_id))
+            for c in user.credenciales_webauthn.all()
+        ]
+        options = webauthn.generate_registration_options(
+            rp_id=django_settings.WEBAUTHN_RP_ID,
+            rp_name=django_settings.WEBAUTHN_RP_NAME,
+            user_name=user.email,
+            user_id=str(user.id).encode(),
+            user_display_name=f"{user.nombre} {user.apellido}".strip() or user.email,
+            exclude_credentials=existentes,
+        )
+        cache.set(
+            _webauthn_challenge_cache_key("reg", user.id),
+            webauthn.helpers.bytes_to_base64url(options.challenge),
+            timeout=_WEBAUTHN_CHALLENGE_TTL,
+        )
+        return Response(json.loads(webauthn.options_to_json(options)))
+
+
+class WebAuthnRegistrarVerificarView(APIView):
+    """
+    POST /api/v1/usuarios/webauthn/registrar-verificar/
+    Body: {"credential": {...}, "nombre_dispositivo": "iPhone de Carlos"}
+    Verifica la respuesta de atestación y guarda la credencial.
+    """
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [SensitiveEndpointThrottle]
+
+    def post(self, request):
+        user = request.user
+        challenge_b64 = cache.get(_webauthn_challenge_cache_key("reg", user.id))
+        if not challenge_b64:
+            return Response(
+                {"error": "El desafío expiró. Volvé a intentar."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            verified = webauthn.verify_registration_response(
+                credential=request.data.get("credential"),
+                expected_challenge=webauthn.helpers.base64url_to_bytes(challenge_b64),
+                expected_rp_id=django_settings.WEBAUTHN_RP_ID,
+                expected_origin=django_settings.WEBAUTHN_ORIGINS,
+            )
+        except Exception:
+            return Response(
+                {"error": "No se pudo verificar el dispositivo."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cache.delete(_webauthn_challenge_cache_key("reg", user.id))
+
+        CredencialWebAuthn.objects.create(
+            usuario=user,
+            credential_id=webauthn.helpers.bytes_to_base64url(verified.credential_id),
+            public_key=webauthn.helpers.bytes_to_base64url(verified.credential_public_key),
+            sign_count=verified.sign_count,
+            nombre_dispositivo=(request.data.get("nombre_dispositivo") or "")[:100],
+        )
+        registrar_auditoria(
+            usuario=user, request=request,
+            operacion="WEBAUTHN_REGISTRAR",
+            tabla="credenciales_webauthn",
+            descripcion=f"Dispositivo con huella registrado ({user.email})",
+        )
+        return Response({"detail": "Dispositivo registrado correctamente."})
+
+
+class WebAuthnLoginOpcionesView(APIView):
+    """
+    POST /api/v1/usuarios/webauthn/login-opciones/
+    Segundo paso del login (huella) — análogo a TwoFALoginVerificarView pero
+    genera el desafío en vez de validar un código.
+    Body: {"pre_auth_token": "..."}
+    """
+    permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
+
+    def post(self, request):
+        pre_auth = request.data.get("pre_auth_token", "")
+        try:
+            data = signing.loads(pre_auth, salt="2fa-pre-auth", max_age=300)
+            user = Usuario.objects.get(pk=data["user_id"], is_active=True)
+        except (signing.BadSignature, Usuario.DoesNotExist):
+            return Response(
+                {"error": "Token inválido o expirado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        credenciales = list(user.credenciales_webauthn.all())
+        if not credenciales:
+            return Response(
+                {"error": "Este usuario no tiene huella configurada."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        options = webauthn.generate_authentication_options(
+            rp_id=django_settings.WEBAUTHN_RP_ID,
+            allow_credentials=[
+                PublicKeyCredentialDescriptor(id=webauthn.helpers.base64url_to_bytes(c.credential_id))
+                for c in credenciales
+            ],
+        )
+        cache.set(
+            _webauthn_challenge_cache_key("auth", user.id),
+            webauthn.helpers.bytes_to_base64url(options.challenge),
+            timeout=_WEBAUTHN_CHALLENGE_TTL,
+        )
+        return Response(json.loads(webauthn.options_to_json(options)))
+
+
+class WebAuthnLoginVerificarView(APIView):
+    """
+    POST /api/v1/usuarios/webauthn/login-verificar/
+    Body: {"pre_auth_token": "...", "credential": {...}}
+    Emite el JWT real si la firma de la huella es válida — mismo resultado
+    final que TwoFALoginVerificarView.
+    """
+    permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
+
+    def post(self, request):
+        pre_auth = request.data.get("pre_auth_token", "")
+        credential = request.data.get("credential")
+
+        try:
+            data = signing.loads(pre_auth, salt="2fa-pre-auth", max_age=300)
+            user = Usuario.objects.get(pk=data["user_id"], is_active=True)
+        except (signing.BadSignature, Usuario.DoesNotExist):
+            return Response(
+                {"error": "Token inválido o expirado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        challenge_b64 = cache.get(_webauthn_challenge_cache_key("auth", user.id))
+        if not challenge_b64 or not credential:
+            return Response(
+                {"error": "El desafío expiró. Volvé a intentar."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        credential_id_raw = (credential.get("id") if isinstance(credential, dict) else None) or ""
+        try:
+            cred = CredencialWebAuthn.objects.get(usuario=user, credential_id=credential_id_raw)
+        except CredencialWebAuthn.DoesNotExist:
+            return Response({"error": "Credencial no reconocida."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            verified = webauthn.verify_authentication_response(
+                credential=credential,
+                expected_challenge=webauthn.helpers.base64url_to_bytes(challenge_b64),
+                expected_rp_id=django_settings.WEBAUTHN_RP_ID,
+                expected_origin=django_settings.WEBAUTHN_ORIGINS,
+                credential_public_key=webauthn.helpers.base64url_to_bytes(cred.public_key),
+                credential_current_sign_count=cred.sign_count,
+            )
+        except Exception:
+            registrar_auditoria(
+                usuario=user, request=request,
+                operacion="LOGIN_WEBAUTHN",
+                tabla="usuarios_usuario",
+                id_registro=user.id,
+                descripcion=f"Huella inválida ({user.email})",
+                resultado="FALLA",
+                mensaje_error="Verificación WebAuthn fallida",
+            )
+            return Response({"error": "No se pudo verificar la huella."}, status=status.HTTP_400_BAD_REQUEST)
+
+        cache.delete(_webauthn_challenge_cache_key("auth", user.id))
+        cred.sign_count = verified.new_sign_count
+        cred.ultimo_uso = timezone.now()
+        cred.save(update_fields=["sign_count", "ultimo_uso"])
+
+        session_key = _registrar_sesion(user, request)
+        registrar_auditoria(
+            usuario=user, request=request,
+            operacion="LOGIN_WEBAUTHN",
+            tabla="usuarios_usuario",
+            id_registro=user.id,
+            descripcion=f"Login con huella exitoso ({user.email})",
+        )
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "user": _user_data(user),
+            "session_key": session_key,
+        })
+
+
+class WebAuthnDesactivarView(APIView):
+    """
+    POST /api/v1/usuarios/webauthn/desactivar/
+    Borra TODAS las credenciales de huella del usuario. Admins pueden hacerlo
+    para cualquier usuario (body: {"usuario_id": X}) — recuperación cuando un
+    padre pierde el dispositivo.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        usuario_id = request.data.get("usuario_id")
+
+        if usuario_id and request.user.rol == Usuario.Rol.ADMIN:
+            try:
+                target = Usuario.objects.get(pk=usuario_id)
+            except Usuario.DoesNotExist:
+                return Response({"error": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            target = request.user
+
+        borradas, _ = CredencialWebAuthn.objects.filter(usuario=target).delete()
+        if not borradas:
+            return Response(
+                {"error": "Este usuario no tiene huella configurada."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        registrar_auditoria(
+            usuario=request.user, request=request,
+            operacion="WEBAUTHN_DESACTIVAR",
+            tabla="credenciales_webauthn",
+            descripcion=f"Huella desactivada para {target.email}",
+        )
+        return Response({"detail": f"Huella desactivada para {target.email}."})
 
 
 class LogoutView(APIView):

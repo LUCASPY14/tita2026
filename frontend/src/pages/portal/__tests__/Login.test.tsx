@@ -5,22 +5,34 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockLogin = vi.fn()
 const mockVerify2FA = vi.fn()
+const mockVerifyWebAuthn = vi.fn()
 const mockCancelPending2FA = vi.fn()
 const mockNavigate = vi.fn()
+const mockPlatformAvailable = vi.fn()
+const mockStartAuthentication = vi.fn()
 
 let mockUser: Record<string, unknown> | null = null
 let mockPending2FA: string | null = null
+let mockPendingTieneWebauthn = false
 
 vi.mock('../../../store/authStore', () => {
   const useAuthStore = () => ({
     login: mockLogin,
     verify2FA: mockVerify2FA,
+    verifyWebAuthn: mockVerifyWebAuthn,
     cancelPending2FA: mockCancelPending2FA,
     pending2FA: mockPending2FA,
+    pendingTieneWebauthn: mockPendingTieneWebauthn,
   })
   useAuthStore.getState = () => ({ user: mockUser })
   return { useAuthStore }
 })
+
+vi.mock('@simplewebauthn/browser', () => ({
+  browserSupportsWebAuthn: () => true,
+  platformAuthenticatorIsAvailable: () => mockPlatformAvailable(),
+  startAuthentication: (...args: unknown[]) => mockStartAuthentication(...args),
+}))
 
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>()
@@ -35,6 +47,7 @@ vi.mock('../../../services/api', () => ({
   default: { post: vi.fn() },
 }))
 
+import api from '../../../services/api'
 import PortalLogin from '../Login'
 
 function renderPortalLogin() {
@@ -55,6 +68,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockUser = null
   mockPending2FA = null
+  mockPendingTieneWebauthn = false
+  mockPlatformAvailable.mockResolvedValue(false)
 })
 
 describe('Portal Login — render', () => {
@@ -153,5 +168,55 @@ describe('Portal Login — segundo paso 2FA', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Ingresar' })).toBeInTheDocument()
     })
+  })
+})
+
+describe('Portal Login — segundo paso con huella', () => {
+  it('cuenta con huella y plataforma compatible ofrece continuar con huella', async () => {
+    mockPending2FA = 'preauth-token'
+    mockPendingTieneWebauthn = true
+    mockPlatformAvailable.mockResolvedValueOnce(true)
+    renderPortalLogin()
+
+    expect(await screen.findByRole('button', { name: /continuar con tu huella/i })).toBeInTheDocument()
+  })
+
+  it('continuar con huella exitoso llama a login-opciones/verificar y redirige', async () => {
+    mockPending2FA = 'preauth-token'
+    mockPendingTieneWebauthn = true
+    mockUser = { debe_cambiar_contrasena: false, tiene_2fa_activo: false, tiene_webauthn: true }
+    mockPlatformAvailable.mockResolvedValueOnce(true)
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { challenge: 'c' } })
+    mockStartAuthentication.mockResolvedValueOnce({ id: 'cred-1' })
+    mockVerifyWebAuthn.mockResolvedValueOnce(undefined)
+
+    renderPortalLogin()
+    await userEvent.click(await screen.findByRole('button', { name: /continuar con tu huella/i }))
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/usuarios/webauthn/login-opciones/', { pre_auth_token: 'preauth-token' })
+      expect(mockVerifyWebAuthn).toHaveBeenCalledWith({ id: 'cred-1' })
+      expect(mockNavigate).toHaveBeenCalledWith('/portal')
+    })
+  })
+
+  it('"usar el código de mi app en su lugar" muestra el formulario de código', async () => {
+    mockPending2FA = 'preauth-token'
+    mockPendingTieneWebauthn = true
+    mockPlatformAvailable.mockResolvedValueOnce(true)
+    renderPortalLogin()
+
+    await userEvent.click(await screen.findByText(/usar el código de mi app en su lugar/i))
+    expect(screen.getByLabelText(/código totp/i)).toBeInTheDocument()
+  })
+
+  it('sin plataforma compatible, muestra directo el formulario de código', async () => {
+    mockPending2FA = 'preauth-token'
+    mockPendingTieneWebauthn = true
+    mockPlatformAvailable.mockResolvedValueOnce(false)
+    renderPortalLogin()
+
+    expect(await screen.findByLabelText(/código totp/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /continuar con tu huella/i })).not.toBeInTheDocument()
   })
 })
