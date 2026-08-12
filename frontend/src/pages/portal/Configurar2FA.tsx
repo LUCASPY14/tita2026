@@ -13,7 +13,7 @@ type Metodo = 'cargando' | 'huella' | 'totp'
 
 export default function PortalConfigurar2FA() {
   const navigate = useNavigate()
-  const { user, logout, loadUser } = useAuthStore()
+  const { user, loadUser } = useAuthStore()
   const [metodo, setMetodo] = useState<Metodo>('cargando')
   const [registrandoHuella, setRegistrandoHuella] = useState(false)
 
@@ -107,8 +107,8 @@ export default function PortalConfigurar2FA() {
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Activá la verificación en dos pasos</h1>
           <p className="text-gray-500 mt-2 text-sm">
-            Hola, <span className="font-medium">{user?.nombre}</span>. Para proteger el acceso a los
-            datos y el saldo de tu hijo/a, el portal requiere verificación en dos pasos.
+            Hola, <span className="font-medium">{user?.nombre}</span>. Es opcional, pero te ayuda a
+            proteger el acceso a los datos y el saldo de tu hijo/a.
           </p>
         </div>
 
@@ -205,10 +205,10 @@ export default function PortalConfigurar2FA() {
         <div className="mt-4 text-center">
           <button
             type="button"
-            onClick={() => { logout(); navigate('/portal/login', { replace: true }) }}
+            onClick={() => navigate('/portal')}
             className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
           >
-            Cerrar sesión y continuar después
+            Ahora no
           </button>
         </div>
       </div>

@@ -91,8 +91,8 @@ async function setupPortalAuth(page: import('@playwright/test').Page, user = CLI
   )
 }
 
-async function loginAsPortal(page: import('@playwright/test').Page) {
-  await setupPortalAuth(page)
+async function loginAsPortal(page: import('@playwright/test').Page, user = CLIENTE_WEB) {
+  await setupPortalAuth(page, user)
 
   // mi-hijo/ necesita responder para que el dashboard no muestre error
   await page.route(/\/api\/v1\/usuarios\/portal\/mi-hijo/, (route) =>
@@ -100,7 +100,7 @@ async function loginAsPortal(page: import('@playwright/test').Page) {
   )
 
   await page.goto('/portal/login')
-  await page.getByPlaceholder('Ej: 3331234-2').fill(CLIENTE_WEB.email)
+  await page.getByPlaceholder('Ej: 3331234-2').fill(user.email)
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Ingresar' }).click()
   await page.waitForURL('/portal')
@@ -158,35 +158,32 @@ test.describe('Portal — Login', () => {
   })
 })
 
-// ── Portal — 2FA obligatorio ────────────────────────────────────────────────
+// ── Portal — 2FA (opcional) ─────────────────────────────────────────────────
 
-test.describe('Portal — 2FA obligatorio', () => {
-  test('sin 2FA activo, el login redirige a configurar-2fa en vez del dashboard', async ({ page }) => {
+test.describe('Portal — 2FA opcional', () => {
+  test('sin 2FA activo, el login va directo a /portal — no bloquea el acceso', async ({ page }) => {
     const userSin2FA = { ...CLIENTE_WEB, tiene_2fa_activo: false }
-    await setupPortalAuth(page, userSin2FA)
-    await page.route(/\/api\/v1\/usuarios\/2fa\/configurar/, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ otp_uri: 'otpauth://totp/x', secret: 'JBSWY3DPEHPK3PXP', backup_codes: ['AAA111'] }),
-      })
-    )
-
-    await page.goto('/portal/login')
-    await page.getByPlaceholder('Ej: 3331234-2').fill(userSin2FA.email)
-    await page.getByPlaceholder('••••••••').fill('password123')
-    await page.getByRole('button', { name: 'Ingresar' }).click()
-
-    await expect(page).toHaveURL('/portal/configurar-2fa')
-    await expect(page.getByText('Activá la verificación en dos pasos')).toBeVisible()
+    await loginAsPortal(page, userSin2FA)
+    await expect(page).toHaveURL('/portal')
   })
 
-  test('completar la activación navega a /portal', async ({ page }) => {
+  test('el dashboard sugiere activar 2FA con un banner, no forzado', async ({ page }) => {
     const userSin2FA = { ...CLIENTE_WEB, tiene_2fa_activo: false }
-    await setupPortalAuth(page, userSin2FA)
-    await page.route(/\/api\/v1\/usuarios\/portal\/mi-hijo/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MI_HIJO_MOCK) })
-    )
+    await loginAsPortal(page, userSin2FA)
+    await expect(page).toHaveURL('/portal')
+
+    await expect(page.getByText('Activá el acceso con huella')).toBeVisible()
+
+    // Cerrar el aviso no bloquea nada — sigue en /portal
+    await page.getByLabel('Cerrar aviso').click()
+    await expect(page.getByText('Activá el acceso con huella')).not.toBeVisible()
+  })
+
+  test('activar 2FA desde el banner completa la configuración y vuelve a /portal', async ({ page }) => {
+    const userSin2FA = { ...CLIENTE_WEB, tiene_2fa_activo: false }
+    await loginAsPortal(page, userSin2FA)
+    await expect(page).toHaveURL('/portal')
+
     await page.route(/\/api\/v1\/usuarios\/2fa\/configurar/, (route) =>
       route.fulfill({
         status: 200,
@@ -198,15 +195,23 @@ test.describe('Portal — 2FA obligatorio', () => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ detail: 'ok' }) })
     )
 
-    await page.goto('/portal/login')
-    await page.getByPlaceholder('Ej: 3331234-2').fill(userSin2FA.email)
-    await page.getByPlaceholder('••••••••').fill('password123')
-    await page.getByRole('button', { name: 'Ingresar' }).click()
+    await page.getByRole('link', { name: 'Activar' }).click()
     await expect(page).toHaveURL('/portal/configurar-2fa')
 
     await page.getByLabel(/código de 6 dígitos/i).fill('123456')
     await page.getByRole('button', { name: /activar y continuar/i }).click()
     await expect(page).toHaveURL('/portal')
+  })
+
+  test('"Ahora no" en configurar-2fa vuelve al portal sin cerrar sesión', async ({ page }) => {
+    const userSin2FA = { ...CLIENTE_WEB, tiene_2fa_activo: false }
+    await loginAsPortal(page, userSin2FA)
+    await page.goto('/portal/configurar-2fa')
+
+    await page.getByText('Ahora no').click()
+    await expect(page).toHaveURL('/portal')
+    // Sigue autenticado — no lo mandó a /portal/login
+    await expect(page.getByText('Hola,')).toBeVisible()
   })
 
   test('cuenta con 2FA habilitado pide el código en el login', async ({ page }) => {

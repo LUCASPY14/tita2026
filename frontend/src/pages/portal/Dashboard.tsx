@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   CreditCard, AlertTriangle, UtensilsCrossed, History,
   CalendarCheck, AlertCircle, RefreshCw, Wallet,
   ShoppingBag, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, TrendingUp,
+  Fingerprint, X,
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
@@ -540,6 +541,9 @@ function PlanTab({ suscripciones, loading }: { suscripciones: Suscripcion[] | un
 
 export default function PortalDashboard() {
   const { user } = useAuthStore()
+  const [bannerCerrado, setBannerCerrado] = useState(
+    () => localStorage.getItem('portal_2fa_banner_cerrado') === '1'
+  )
   const [data, setData] = useState<PortalData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -729,6 +733,31 @@ export default function PortalDashboard() {
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
+
+      {/* Sugerencia de 2FA — opcional, no bloquea nada */}
+      {!bannerCerrado && !user?.tiene_2fa_activo && !user?.tiene_webauthn && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+          <Fingerprint className="w-5 h-5 text-green-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-green-800">Activá el acceso con huella</p>
+            <p className="text-sm text-green-600">Es más rápido y protege el saldo de tu hijo/a.</p>
+          </div>
+          <Link
+            to="/portal/configurar-2fa"
+            className="shrink-0 text-sm font-semibold text-green-700 hover:underline whitespace-nowrap"
+          >
+            Activar
+          </Link>
+          <button
+            type="button"
+            onClick={() => { setBannerCerrado(true); localStorage.setItem('portal_2fa_banner_cerrado', '1') }}
+            className="shrink-0 text-green-400 hover:text-green-600 cursor-pointer"
+            aria-label="Cerrar aviso"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Hijo selector */}
       {data.hijos.length > 1 && (

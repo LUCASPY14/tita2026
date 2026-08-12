@@ -96,16 +96,16 @@ describe('Portal Configurar2FA', () => {
     expect(mockNavigate).not.toHaveBeenCalled()
   })
 
-  it('botón cerrar sesión llama a logout y navega al login del portal', async () => {
+  it('botón "Ahora no" vuelve al portal sin cerrar sesión', async () => {
     vi.mocked(api.post).mockResolvedValueOnce({
       data: { otp_uri: 'otpauth://totp/x', secret: 'SECRET', backup_codes: [] },
     })
     renderPage()
     await screen.findByLabelText(/código de 6 dígitos/i)
 
-    await userEvent.click(screen.getByText(/cerrar sesión y continuar después/i))
-    expect(mockLogout).toHaveBeenCalled()
-    expect(mockNavigate).toHaveBeenCalledWith('/portal/login', { replace: true })
+    await userEvent.click(screen.getByText('Ahora no'))
+    expect(mockLogout).not.toHaveBeenCalled()
+    expect(mockNavigate).toHaveBeenCalledWith('/portal')
   })
 })
 

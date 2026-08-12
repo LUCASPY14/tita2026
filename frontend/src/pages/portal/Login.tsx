@@ -32,8 +32,6 @@ export default function PortalLogin() {
     const { user } = useAuthStore.getState()
     if (user?.debe_cambiar_contrasena) {
       navigate('/portal/cambiar-contrasena', { replace: true })
-    } else if (!user?.tiene_2fa_activo && !user?.tiene_webauthn) {
-      navigate('/portal/configurar-2fa', { replace: true })
     } else {
       toast.success('Bienvenido al portal')
       navigate('/portal')

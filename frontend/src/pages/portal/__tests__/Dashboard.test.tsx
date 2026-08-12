@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import PortalDashboard from '../Dashboard'
 
@@ -9,10 +10,15 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mockNavigate }
 })
 
-vi.mock('../../../store/authStore', () => {
-  const stableUser = { nombre: 'María López' }
-  return { useAuthStore: () => ({ user: stableUser }) }
-})
+let mockUser: Record<string, unknown> = { nombre: 'María López' }
+vi.mock('../../../store/authStore', () => ({
+  useAuthStore: () => ({ user: mockUser }),
+}))
+
+// PortalDashboard ahora usa <Link> (banner de 2FA) — necesita un Router real
+function renderDashboard() {
+  return render(<PortalDashboard />, { wrapper: MemoryRouter })
+}
 
 vi.mock('../../../services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -88,6 +94,9 @@ function setupPortal(override: Record<string, unknown> = {}, historial: Record<s
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Con 2FA activo por defecto para no mostrar el banner en los tests que no lo prueban
+  mockUser = { nombre: 'María López', tiene_2fa_activo: true }
+  localStorage.clear()
 })
 
 // ── Loading y error ───────────────────────────────────────────────────────────
@@ -95,13 +104,13 @@ beforeEach(() => {
 describe('PortalDashboard — loading y error', () => {
   it('muestra Spinner mientras la API no responde', () => {
     vi.mocked(api.get).mockReturnValue(new Promise(() => {}))
-    render(<PortalDashboard />)
+    renderDashboard()
     expect(screen.getByRole('status')).toBeInTheDocument()
   })
 
   it('error de red → muestra "No se pudieron cargar los datos"', async () => {
     vi.mocked(api.get).mockRejectedValue(new Error('network'))
-    render(<PortalDashboard />)
+    renderDashboard()
 
     await screen.findByText(/No se pudieron cargar los datos/i)
     expect(vi.mocked(toast.error)).toHaveBeenCalled()
@@ -112,7 +121,7 @@ describe('PortalDashboard — loading y error', () => {
       .mockRejectedValueOnce(new Error('fail'))
       .mockResolvedValue({ data: PORTAL_DATA })
 
-    render(<PortalDashboard />)
+    renderDashboard()
     await screen.findByText(/No se pudieron cargar/i)
 
     await userEvent.click(screen.getByRole('button', { name: /Reintentar/i }))
@@ -126,14 +135,14 @@ describe('PortalDashboard — loading y error', () => {
 describe('PortalDashboard — datos', () => {
   it('sin hijos → "Sin hijos asociados"', async () => {
     setupPortal({ hijos: [] })
-    render(<PortalDashboard />)
+    renderDashboard()
 
     await screen.findByText(/Sin hijos asociados/i)
   })
 
   it('muestra saludo con nombre del usuario', async () => {
     setupPortal()
-    render(<PortalDashboard />)
+    renderDashboard()
 
     await screen.findByText('Hola, María López')
   })
@@ -148,7 +157,7 @@ describe('PortalDashboard — datos', () => {
         ],
       }],
     })
-    render(<PortalDashboard />)
+    renderDashboard()
 
     await screen.findByText(/Lo más consumido/i)
     expect(screen.getByText('Sandwich de milanesa')).toBeInTheDocument()
@@ -163,7 +172,7 @@ describe('PortalDashboard — datos', () => {
         top_productos: [{ producto: 'Sandwich de milanesa', cantidad: 1 }],
       }],
     })
-    render(<PortalDashboard />)
+    renderDashboard()
 
     await screen.findByText('1 vez')
     expect(screen.queryByText('1 veces')).not.toBeInTheDocument()
@@ -171,7 +180,7 @@ describe('PortalDashboard — datos', () => {
 
   it('sin top_productos → no muestra la sección "Lo más consumido"', async () => {
     setupPortal()
-    render(<PortalDashboard />)
+    renderDashboard()
 
     await screen.findByText('Hola, María López')
     expect(screen.queryByText(/Lo más consumido/i)).not.toBeInTheDocument()
@@ -179,7 +188,7 @@ describe('PortalDashboard — datos', () => {
 
   it('múltiples hijos → muestra selector con el nombre de cada hijo', async () => {
     setupPortal({ hijos: [HIJO_CON_CUENTA, HIJO2] })
-    render(<PortalDashboard />)
+    renderDashboard()
 
     // Esperar al botón del selector (no al texto del card header, que también dice "Juan García")
     await screen.findByRole('button', { name: 'Juan García' })
@@ -188,7 +197,7 @@ describe('PortalDashboard — datos', () => {
 
   it('click en hijo secundario lo selecciona como activo', async () => {
     setupPortal({ hijos: [HIJO_CON_CUENTA, HIJO2] })
-    render(<PortalDashboard />)
+    renderDashboard()
     await screen.findByRole('button', { name: 'Juan García' })
 
     await userEvent.click(screen.getByRole('button', { name: 'Lucía García' }))
@@ -203,7 +212,7 @@ describe('PortalDashboard — datos', () => {
 describe('PortalDashboard — saldo de almuerzo', () => {
   it('saldo positivo → se muestra sin aviso de deuda', async () => {
     setupPortal({ hijos: [{ ...HIJO_CON_CUENTA, saldo_almuerzo: 30_000 }] })
-    render(<PortalDashboard />)
+    renderDashboard()
 
     await screen.findByText('Gs. 30.000')
     expect(screen.queryByText(/Debe/i)).not.toBeInTheDocument()
@@ -211,7 +220,7 @@ describe('PortalDashboard — saldo de almuerzo', () => {
 
   it('saldo negativo → se muestra en rojo con mensaje "Debe"', async () => {
     setupPortal({ hijos: [{ ...HIJO_CON_CUENTA, saldo_almuerzo: -20_000 }] })
-    render(<PortalDashboard />)
+    renderDashboard()
 
     await screen.findByText('Gs. -20.000')
     expect(screen.getByText(/Debe/i)).toBeInTheDocument()
@@ -219,7 +228,7 @@ describe('PortalDashboard — saldo de almuerzo', () => {
 
   it('botón "Recargar saldo de almuerzo" navega con el hijo_id correcto', async () => {
     setupPortal({ hijos: [{ ...HIJO_CON_CUENTA, saldo_almuerzo: -20_000 }] })
-    render(<PortalDashboard />)
+    renderDashboard()
     await screen.findByText('Gs. -20.000')
 
     await userEvent.click(screen.getByRole('button', { name: /Recargar saldo de almuerzo/i }))
@@ -233,7 +242,7 @@ describe('PortalDashboard — saldo de almuerzo', () => {
 describe('PortalDashboard — tabs', () => {
   it('tab Resumen (por defecto) muestra nro de tarjeta del hijo', async () => {
     setupPortal()
-    render(<PortalDashboard />)
+    renderDashboard()
 
     await screen.findByText('T-001')
     expect(screen.getByText('Tarjeta escolar')).toBeInTheDocument()
@@ -241,7 +250,7 @@ describe('PortalDashboard — tabs', () => {
 
   it('tab Historial → muestra "Sin consumos" cuando total es 0', async () => {
     setupPortal({ hijos: [HIJO_BASE] })
-    render(<PortalDashboard />)
+    renderDashboard()
     await screen.findByText('Juan García')
 
     await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
@@ -254,7 +263,7 @@ describe('PortalDashboard — tabs', () => {
       total: 2, cobrados: 1, monto_total: 25000,
       consumos: [{ id: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000', ya_cobrado: true }],
     })
-    render(<PortalDashboard />)
+    renderDashboard()
     await screen.findByText('Juan García')
 
     await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
@@ -271,7 +280,7 @@ describe('PortalDashboard — tabs', () => {
 
   it('tab Historial → "Mes siguiente" queda deshabilitado en el mes actual', async () => {
     setupPortal()
-    render(<PortalDashboard />)
+    renderDashboard()
     await screen.findByText('Juan García')
 
     await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
@@ -282,7 +291,7 @@ describe('PortalDashboard — tabs', () => {
 
   it('tab Historial → "Mes anterior" navega y vuelve a consultar la API', async () => {
     setupPortal()
-    render(<PortalDashboard />)
+    renderDashboard()
     await screen.findByText('Juan García')
 
     await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
@@ -299,7 +308,7 @@ describe('PortalDashboard — tabs', () => {
 
   it('tab Almuerzos → llama /almuerzos/suscripciones/ con el hijo correcto', async () => {
     setupPortal()
-    render(<PortalDashboard />)
+    renderDashboard()
     await screen.findByText('Juan García')
 
     await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
@@ -311,5 +320,52 @@ describe('PortalDashboard — tabs', () => {
       )
     })
     await screen.findByText(/Sin plan de almuerzo activo/i)
+  })
+})
+
+// ── Banner de 2FA (opcional) ────────────────────────────────────────────────
+
+describe('PortalDashboard — banner de 2FA', () => {
+  it('sin 2FA ni huella activos, muestra el banner sugiriendo activarla', async () => {
+    mockUser = { nombre: 'María López' }
+    setupPortal()
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    expect(screen.getByText('Activá el acceso con huella')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Activar' })).toHaveAttribute('href', '/portal/configurar-2fa')
+  })
+
+  it('con 2FA por app activo, no muestra el banner', async () => {
+    mockUser = { nombre: 'María López', tiene_2fa_activo: true }
+    setupPortal()
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    expect(screen.queryByText('Activá el acceso con huella')).not.toBeInTheDocument()
+  })
+
+  it('con huella activa, no muestra el banner', async () => {
+    mockUser = { nombre: 'María López', tiene_webauthn: true }
+    setupPortal()
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    expect(screen.queryByText('Activá el acceso con huella')).not.toBeInTheDocument()
+  })
+
+  it('al cerrar el banner, desaparece y no vuelve a aparecer en un remount', async () => {
+    mockUser = { nombre: 'María López' }
+    setupPortal()
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByLabelText('Cerrar aviso'))
+    expect(screen.queryByText('Activá el acceso con huella')).not.toBeInTheDocument()
+
+    renderDashboard()
+    await waitFor(() => {
+      expect(screen.queryByText('Activá el acceso con huella')).not.toBeInTheDocument()
+    })
   })
 })

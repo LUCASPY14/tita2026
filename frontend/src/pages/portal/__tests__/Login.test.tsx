@@ -92,14 +92,12 @@ describe('Portal Login — redirect tras login exitoso', () => {
     )
   })
 
-  it('sin 2FA activo navega a configurar-2fa', async () => {
+  it('sin 2FA activo igual navega a /portal — el 2FA es opcional', async () => {
     mockUser = { debe_cambiar_contrasena: false, tiene_2fa_activo: false }
     mockLogin.mockResolvedValueOnce(true)
     renderPortalLogin()
     await submitLogin()
-    await waitFor(() =>
-      expect(mockNavigate).toHaveBeenCalledWith('/portal/configurar-2fa', { replace: true })
-    )
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/portal'))
   })
 
   it('con contraseña ok y 2FA activo navega a /portal', async () => {
