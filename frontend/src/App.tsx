@@ -47,6 +47,7 @@ const PortalCargaSaldo       = lazy(() => import('./pages/portal/CargaSaldo'))
 const PortalCambiarContrasena = lazy(() => import('./pages/portal/CambiarContrasena'))
 const PortalConfigurar2FA    = lazy(() => import('./pages/portal/Configurar2FA'))
 const PortalPagarAlmuerzo    = lazy(() => import('./pages/portal/PagarAlmuerzo'))
+const PortalTerminos         = lazy(() => import('./pages/portal/Terminos'))
 
 // ── Fallback de carga ─────────────────────────────────────────────────────────
 function PageLoader() {
@@ -160,6 +161,11 @@ export default function App() {
             {/* Portal padres */}
             <Route path="/portal/login"               element={<PortalLogin />} />
             <Route path="/portal/reset-password"      element={<PortalResetPassword />} />
+            <Route path="/portal/terminos"            element={
+              <Suspense fallback={<PageLoader />}>
+                <PortalTerminos />
+              </Suspense>
+            } />
             <Route path="/portal/cambiar-contrasena"  element={
               <PrivateRoute roles={['CLIENTE_WEB']}>
                 <Suspense fallback={<PageLoader />}>

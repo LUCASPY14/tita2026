@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   CreditCard, CheckCircle2, XCircle, AlertCircle,
@@ -704,6 +704,12 @@ export default function CargaSaldo() {
 
       <p className="text-center text-sm text-slate-400">
         Hola, {user?.nombre}. Solo se realizará un cargo si completás el pago en Bancard.
+      </p>
+      <p className="text-center text-xs text-slate-400">
+        Al continuar, aceptás los{' '}
+        <Link to="/portal/terminos" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">
+          Términos y Condiciones
+        </Link>
       </p>
     </div>
   )

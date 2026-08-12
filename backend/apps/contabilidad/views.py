@@ -14,6 +14,7 @@ from .numero_a_letras import monto_a_letras
 
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.usuarios.auditoria import registrar_auditoria
@@ -534,6 +535,23 @@ class DatosEmpresaViewSet(viewsets.ModelViewSet):
     queryset = DatosEmpresa.objects.all()
     serializer_class = DatosEmpresaSerializer
     permission_classes = [IsAdmin]
+
+    def get_permissions(self):
+        if self.action == "publico":
+            return [AllowAny()]
+        return super().get_permissions()
+
+    @action(detail=False, methods=["get"], url_path="publico")
+    def publico(self, request):
+        """
+        GET /api/v1/contabilidad/datos-empresa/publico/
+        Razón social y RUC — datos públicos (van en toda factura), usados en la
+        página de Términos y Condiciones del portal sin requerir sesión.
+        """
+        empresa = DatosEmpresa.objects.filter(activo=True).first()
+        if not empresa:
+            return Response({"razon_social": "", "ruc": ""})
+        return Response({"razon_social": empresa.razon_social, "ruc": empresa.ruc})
 
 
 class ReportePeriodoView(APIView):

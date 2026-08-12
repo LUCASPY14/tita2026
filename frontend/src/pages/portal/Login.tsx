@@ -302,6 +302,9 @@ export default function PortalLogin() {
             ¿Trabajás en la cantina?{' '}
             <Link to="/login" className="text-green-600 hover:underline">Acceso empleados</Link>
           </p>
+          <p className="text-xs text-gray-300">
+            <Link to="/portal/terminos" className="hover:underline">Términos y Condiciones</Link>
+          </p>
         </div>
       </div>
     </AuthShell>

@@ -167,6 +167,35 @@ class TestCierrePDFEmpresaError:
         assert "text/html" in resp["Content-Type"]
 
 
+@pytest.mark.django_db
+class TestDatosEmpresaPublico:
+
+    def test_sin_autenticacion_devuelve_razon_social_y_ruc(self, api_client):
+        from apps.contabilidad.models import DatosEmpresa
+        DatosEmpresa.objects.create(ruc="80012345-6", razon_social="Cantina Tita S.A.", activo=True)
+
+        resp = api_client.get("/api/v1/contabilidad/datos-empresa/publico/")
+        assert resp.status_code == 200
+        assert resp.data == {"razon_social": "Cantina Tita S.A.", "ruc": "80012345-6"}
+
+    def test_sin_datos_empresa_devuelve_vacio(self, api_client):
+        resp = api_client.get("/api/v1/contabilidad/datos-empresa/publico/")
+        assert resp.status_code == 200
+        assert resp.data == {"razon_social": "", "ruc": ""}
+
+    def test_ignora_empresa_inactiva(self, api_client):
+        from apps.contabilidad.models import DatosEmpresa
+        DatosEmpresa.objects.create(ruc="1-1", razon_social="Vieja S.A.", activo=False)
+
+        resp = api_client.get("/api/v1/contabilidad/datos-empresa/publico/")
+        assert resp.status_code == 200
+        assert resp.data == {"razon_social": "", "ruc": ""}
+
+    def test_endpoint_admin_normal_sigue_protegido(self, api_client):
+        resp = api_client.get("/api/v1/contabilidad/datos-empresa/")
+        assert resp.status_code in (401, 403)
+
+
 @pytest.fixture
 def factura(db, cliente):
     from apps.contabilidad.models import Factura

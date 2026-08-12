@@ -1,7 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import CargaSaldo from '../CargaSaldo'
+
+// CargaSaldo ahora usa <Link> (Términos y Condiciones) — necesita un Router real
+function renderCargaSaldo() {
+  return render(<CargaSaldo />, { wrapper: MemoryRouter })
+}
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -87,26 +93,26 @@ beforeEach(() => {
 describe('CargaSaldo — carga inicial', () => {
   it('muestra Spinner mientras la API no responde', () => {
     vi.mocked(api.get).mockReturnValue(new Promise(() => {})) // never resolves
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     expect(screen.getByRole('status')).toBeInTheDocument()
   })
 
   it('muestra nombre, grado y saldo de hijos con tarjeta', async () => {
     setupHijos(HIJO, HIJO2)
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
     expect(screen.getByText('Lucía')).toBeInTheDocument()
   })
 
   it('hijos sin tarjeta son filtrados → muestra empty state', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { hijos: [HIJO_SIN_TARJETA] } })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText(/Sin tarjetas asignadas/i)
   })
 
   it('hijo único se auto-selecciona y muestra su saldo', async () => {
     setupHijos(HIJO)
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     // With a single child, the selection section shows that child selected
     // and saldo is visible in some form (balance display or card)
     await screen.findByText('Juan')
@@ -118,7 +124,7 @@ describe('CargaSaldo — carga inicial', () => {
 
   it('muestra saludo con el nombre del usuario en el pie', async () => {
     setupHijos(HIJO)
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText(/Hola.*María López/i)
   })
 })
@@ -129,28 +135,28 @@ describe('CargaSaldo — resultado de pago', () => {
   it('estado=aprobado → "¡Pago aprobado!"', async () => {
     setParams('estado=aprobado&monto=100000')
     vi.mocked(api.get).mockResolvedValue({ data: { hijos: [] } })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText(/Pago aprobado/i)
   })
 
   it('estado=cancelado → "Pago cancelado"', async () => {
     setParams('estado=cancelado')
     vi.mocked(api.get).mockResolvedValue({ data: { hijos: [] } })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText(/Pago cancelado/i)
   })
 
   it('estado=rechazado → mensaje de rechazo', async () => {
     setParams('estado=rechazado')
     vi.mocked(api.get).mockResolvedValue({ data: { hijos: [] } })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText(/rechazado/i)
   })
 
   it('click "Realizar otra carga" llama setSearchParams({}) y recarga hijos', async () => {
     const mockSet = setParams('estado=aprobado&monto=50000')
     vi.mocked(api.get).mockResolvedValue({ data: { hijos: [HIJO] } })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText(/Pago aprobado/i)
 
     await userEvent.click(screen.getByRole('button', { name: /Realizar otra carga/i }))
@@ -168,7 +174,7 @@ describe('CargaSaldo — resultado de pago', () => {
 describe('CargaSaldo — formulario', () => {
   it('seleccionar monto rápido habilita el botón "Ir a pagar"', async () => {
     setupHijos(HIJO)
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
 
     // botón deshabilitado al inicio
@@ -186,7 +192,7 @@ describe('CargaSaldo — formulario', () => {
 
   it('monto personalizado inválido (< 5.000) mantiene el botón deshabilitado', async () => {
     setupHijos(HIJO)
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
 
     await userEvent.click(screen.getByRole('button', { name: /Otro monto/i }))
@@ -202,7 +208,7 @@ describe('CargaSaldo — formulario', () => {
     vi.mocked(api.post).mockResolvedValue({
       data: { process_id: 'proc-single-buy-1', script_url: 'https://vpos.test/checkout.js' },
     })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
 
     await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
@@ -225,7 +231,7 @@ describe('CargaSaldo — formulario', () => {
     vi.mocked(api.post).mockRejectedValue({
       response: { data: { detail: 'Tarjeta no habilitada para Bancard' } },
     })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
 
     await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
@@ -243,7 +249,7 @@ describe('CargaSaldo — formulario', () => {
 describe('CargaSaldo — tarjeta guardada', () => {
   it('pestaña "Tarjeta guardada" muestra las tarjetas guardadas del cliente', async () => {
     setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
     await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
 
@@ -254,7 +260,7 @@ describe('CargaSaldo — tarjeta guardada', () => {
 
   it('sin tarjetas guardadas muestra el estado vacío y botón "Agregar tarjeta"', async () => {
     setupHijosYTarjetas([HIJO], [])
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
     await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
@@ -266,7 +272,7 @@ describe('CargaSaldo — tarjeta guardada', () => {
   it('seleccionar tarjeta y pagar (aprobado síncrono) redirige con estado=aprobado', async () => {
     setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
     vi.mocked(api.post).mockResolvedValue({ data: { estado: 'aprobado', monto: 50_000 } })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
     await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
@@ -290,7 +296,7 @@ describe('CargaSaldo — tarjeta guardada', () => {
     vi.mocked(api.post).mockResolvedValue({
       data: { requires_3ds: true, process_id: 'proc-3ds-1', script_url: 'https://vpos.test/checkout.js' },
     })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
     await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
@@ -305,7 +311,7 @@ describe('CargaSaldo — tarjeta guardada', () => {
 
   it('botón "Ir a pagar" queda deshabilitado sin tarjeta seleccionada', async () => {
     setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
     await userEvent.click(screen.getByRole('button', { name: 'Gs. 50.000' }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
@@ -320,7 +326,7 @@ describe('CargaSaldo — tarjeta guardada', () => {
 describe('CargaSaldo — toggle cantina/almuerzo', () => {
   it('muestra el saldo de almuerzo del hijo único', async () => {
     setupHijos(HIJO)
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
     expect(screen.getByText('Saldo de almuerzo')).toBeInTheDocument()
     expect(screen.getByText('Gs. -15.000')).toBeInTheDocument()
@@ -329,7 +335,7 @@ describe('CargaSaldo — toggle cantina/almuerzo', () => {
   it('?tipo=ALMUERZO preselecciona la pestaña de almuerzo', async () => {
     setParams('tipo=ALMUERZO')
     setupHijos(HIJO)
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
 
     expect(screen.getByRole('button', { name: /Almuerzo/i })).toHaveClass('bg-orange-600')
@@ -338,7 +344,7 @@ describe('CargaSaldo — toggle cantina/almuerzo', () => {
   it('?hijo_id= preselecciona al hijo indicado entre varios', async () => {
     setParams('hijo_id=2')
     setupHijos(HIJO, HIJO2)
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
 
     // Lucía queda resaltada como seleccionada — su fila usa el estilo activo
@@ -351,7 +357,7 @@ describe('CargaSaldo — toggle cantina/almuerzo', () => {
     vi.mocked(api.post).mockResolvedValue({
       data: { process_id: 'proc-almuerzo-1', script_url: 'https://vpos.test/checkout.js' },
     })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
 
     await userEvent.click(screen.getByRole('button', { name: /Almuerzo/i }))
@@ -370,7 +376,7 @@ describe('CargaSaldo — toggle cantina/almuerzo', () => {
   it('recargar almuerzo con tarjeta guardada llama a /core/bancard/pagar-almuerzo-con-tarjeta/', async () => {
     setupHijosYTarjetas([HIJO], [TARJETA_GUARDADA])
     vi.mocked(api.post).mockResolvedValue({ data: { estado: 'aprobado', monto: 50_000 } })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
 
     await userEvent.click(screen.getByRole('button', { name: /Almuerzo/i }))
@@ -393,7 +399,7 @@ describe('CargaSaldo — toggle cantina/almuerzo', () => {
 
   it('en modo almuerzo, un monto pequeño (< 5.000) es válido', async () => {
     setupHijos(HIJO)
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText('Juan')
     await userEvent.click(screen.getByRole('button', { name: /Almuerzo/i }))
 
@@ -407,7 +413,7 @@ describe('CargaSaldo — toggle cantina/almuerzo', () => {
   it('estado=aprobado con tipo=ALMUERZO muestra el mensaje de cuenta corriente de almuerzo', async () => {
     setParams('estado=aprobado&monto=50000&tipo=ALMUERZO')
     vi.mocked(api.get).mockResolvedValue({ data: { hijos: [] } })
-    render(<CargaSaldo />)
+    renderCargaSaldo()
     await screen.findByText(/cuenta corriente de almuerzo/i)
   })
 })
