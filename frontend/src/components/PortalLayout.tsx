@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useNotificaciones } from '../hooks/useNotificaciones'
+import { useDatosEmpresaPublico } from '../hooks/useDatosEmpresaPublico'
+import { formatTelefonoPy } from '../utils/formatTelefonoPy'
 import { Home, Bell, LogOut, FileText, Wallet, Download, Mail, Phone } from 'lucide-react'
 import LogoSinFondo from './LogoSinFondo'
-
-const CONTACTO_EMAIL = 'admin@cantinatita.com'
-const CONTACTO_TELEFONO = '+595 981 410 938'
 
 const navItems = [
   { path: '/portal',                 label: 'Inicio',    icon: Home,    exact: true  },
@@ -20,6 +19,7 @@ export default function PortalLayout() {
   const location = useLocation()
   const { user, logout } = useAuthStore()
   const { unreadCount, clearUnread } = useNotificaciones()
+  const empresa = useDatosEmpresaPublico()
   const [installPrompt, setInstallPrompt] = useState<Event | null>(
     () => (window as unknown as Record<string, unknown>).__pwaPrompt as Event ?? null
   )
@@ -106,14 +106,20 @@ export default function PortalLayout() {
           <Link to="/portal/terminos" className="hover:text-slate-600 hover:underline">
             Términos y Condiciones
           </Link>
-          <div className="flex items-center gap-4">
-            <a href={`mailto:${CONTACTO_EMAIL}`} className="flex items-center gap-1 hover:text-slate-600">
-              <Mail className="w-3 h-3" /> {CONTACTO_EMAIL}
-            </a>
-            <a href={`tel:${CONTACTO_TELEFONO.replace(/\s/g, '')}`} className="flex items-center gap-1 hover:text-slate-600">
-              <Phone className="w-3 h-3" /> {CONTACTO_TELEFONO}
-            </a>
-          </div>
+          {(empresa?.email || empresa?.telefono) && (
+            <div className="flex items-center gap-4">
+              {empresa.email && (
+                <a href={`mailto:${empresa.email}`} className="flex items-center gap-1 hover:text-slate-600">
+                  <Mail className="w-3 h-3" /> {empresa.email}
+                </a>
+              )}
+              {empresa.telefono && (
+                <a href={`tel:${empresa.telefono}`} className="flex items-center gap-1 hover:text-slate-600">
+                  <Phone className="w-3 h-3" /> {formatTelefonoPy(empresa.telefono)}
+                </a>
+              )}
+            </div>
+          )}
         </footer>
       </main>
 

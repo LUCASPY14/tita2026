@@ -1,16 +1,8 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ShieldCheck, Mail, Phone, ArrowLeft } from 'lucide-react'
-import api from '../../services/api'
 import LogoSinFondo from '../../components/LogoSinFondo'
-
-const CONTACTO_EMAIL = 'admin@cantinatita.com'
-const CONTACTO_TELEFONO = '+595 981 410 938'
-
-interface DatosEmpresaPublico {
-  razon_social: string
-  ruc: string
-}
+import { useDatosEmpresaPublico } from '../../hooks/useDatosEmpresaPublico'
+import { formatTelefonoPy } from '../../utils/formatTelefonoPy'
 
 function Seccion({ numero, titulo, children }: { numero: number; titulo: string; children: React.ReactNode }) {
   return (
@@ -22,13 +14,7 @@ function Seccion({ numero, titulo, children }: { numero: number; titulo: string;
 }
 
 export default function PortalTerminos() {
-  const [empresa, setEmpresa] = useState<DatosEmpresaPublico | null>(null)
-
-  useEffect(() => {
-    api.get<DatosEmpresaPublico>('/contabilidad/datos-empresa/publico/')
-      .then(({ data }) => setEmpresa(data))
-      .catch(() => setEmpresa(null))
-  }, [])
+  const empresa = useDatosEmpresaPublico()
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -140,14 +126,22 @@ export default function PortalTerminos() {
 
           <Seccion numero={8} titulo="Atención al Usuario">
             <p>Para consultas, reclamos o inconvenientes relacionados con la Plataforma, el Usuario puede contactar a Cantina Tita a través de:</p>
-            <div className="flex flex-col gap-2 pt-1">
-              <a href={`mailto:${CONTACTO_EMAIL}`} className="flex items-center gap-2 text-green-700 hover:underline w-fit">
-                <Mail className="w-4 h-4" /> {CONTACTO_EMAIL}
-              </a>
-              <a href={`tel:${CONTACTO_TELEFONO.replace(/\s/g, '')}`} className="flex items-center gap-2 text-green-700 hover:underline w-fit">
-                <Phone className="w-4 h-4" /> {CONTACTO_TELEFONO}
-              </a>
-            </div>
+            {empresa?.email || empresa?.telefono ? (
+              <div className="flex flex-col gap-2 pt-1">
+                {empresa.email && (
+                  <a href={`mailto:${empresa.email}`} className="flex items-center gap-2 text-green-700 hover:underline w-fit">
+                    <Mail className="w-4 h-4" /> {empresa.email}
+                  </a>
+                )}
+                {empresa.telefono && (
+                  <a href={`tel:${empresa.telefono}`} className="flex items-center gap-2 text-green-700 hover:underline w-fit">
+                    <Phone className="w-4 h-4" /> {formatTelefonoPy(empresa.telefono)}
+                  </a>
+                )}
+              </div>
+            ) : (
+              <p className="text-slate-400 italic">Cargando datos de contacto…</p>
+            )}
           </Seccion>
 
           <Seccion numero={9} titulo="Seguridad">

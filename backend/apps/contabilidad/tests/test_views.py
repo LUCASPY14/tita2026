@@ -170,18 +170,36 @@ class TestCierrePDFEmpresaError:
 @pytest.mark.django_db
 class TestDatosEmpresaPublico:
 
-    def test_sin_autenticacion_devuelve_razon_social_y_ruc(self, api_client):
+    def test_sin_autenticacion_devuelve_datos_publicos(self, api_client):
+        from apps.contabilidad.models import DatosEmpresa
+        DatosEmpresa.objects.create(
+            ruc="80012345-6", razon_social="Cantina Tita S.A.",
+            email="administracion@cantinatita.com", telefono="+595981410938",
+            activo=True,
+        )
+
+        resp = api_client.get("/api/v1/contabilidad/datos-empresa/publico/")
+        assert resp.status_code == 200
+        assert resp.data == {
+            "razon_social": "Cantina Tita S.A.",
+            "ruc": "80012345-6",
+            "email": "administracion@cantinatita.com",
+            "telefono": "+595981410938",
+        }
+
+    def test_email_y_telefono_vacios_si_no_estan_cargados(self, api_client):
         from apps.contabilidad.models import DatosEmpresa
         DatosEmpresa.objects.create(ruc="80012345-6", razon_social="Cantina Tita S.A.", activo=True)
 
         resp = api_client.get("/api/v1/contabilidad/datos-empresa/publico/")
         assert resp.status_code == 200
-        assert resp.data == {"razon_social": "Cantina Tita S.A.", "ruc": "80012345-6"}
+        assert resp.data["email"] == ""
+        assert resp.data["telefono"] == ""
 
     def test_sin_datos_empresa_devuelve_vacio(self, api_client):
         resp = api_client.get("/api/v1/contabilidad/datos-empresa/publico/")
         assert resp.status_code == 200
-        assert resp.data == {"razon_social": "", "ruc": ""}
+        assert resp.data == {"razon_social": "", "ruc": "", "email": "", "telefono": ""}
 
     def test_ignora_empresa_inactiva(self, api_client):
         from apps.contabilidad.models import DatosEmpresa
@@ -189,7 +207,7 @@ class TestDatosEmpresaPublico:
 
         resp = api_client.get("/api/v1/contabilidad/datos-empresa/publico/")
         assert resp.status_code == 200
-        assert resp.data == {"razon_social": "", "ruc": ""}
+        assert resp.data == {"razon_social": "", "ruc": "", "email": "", "telefono": ""}
 
     def test_endpoint_admin_normal_sigue_protegido(self, api_client):
         resp = api_client.get("/api/v1/contabilidad/datos-empresa/")

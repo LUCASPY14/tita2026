@@ -545,13 +545,19 @@ class DatosEmpresaViewSet(viewsets.ModelViewSet):
     def publico(self, request):
         """
         GET /api/v1/contabilidad/datos-empresa/publico/
-        Razón social y RUC — datos públicos (van en toda factura), usados en la
-        página de Términos y Condiciones del portal sin requerir sesión.
+        Razón social, RUC, email y teléfono — datos públicos (van en toda
+        factura), usados en la página de Términos y Condiciones y en el
+        footer del portal, sin requerir sesión.
         """
         empresa = DatosEmpresa.objects.filter(activo=True).first()
         if not empresa:
-            return Response({"razon_social": "", "ruc": ""})
-        return Response({"razon_social": empresa.razon_social, "ruc": empresa.ruc})
+            return Response({"razon_social": "", "ruc": "", "email": "", "telefono": ""})
+        return Response({
+            "razon_social": empresa.razon_social,
+            "ruc": empresa.ruc,
+            "email": empresa.email or "",
+            "telefono": empresa.telefono or "",
+        })
 
 
 class ReportePeriodoView(APIView):
