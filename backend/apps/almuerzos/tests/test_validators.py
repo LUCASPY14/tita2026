@@ -193,3 +193,64 @@ class TestValidarLimiteRegistrosDiarios:
         )
         resultado = validar_limite_registros_diarios(hijo, hoy, registro_actual=reg)
         assert resultado is True
+
+    def _crear_hijo(self, cliente, nombre, nivel):
+        from apps.clientes.models import Hijo, Grado
+        grado, _ = Grado.objects.get_or_create(
+            nombre=f"grado-val-{nivel}", defaults={"nivel": nivel, "orden": nivel, "activo": True}
+        )
+        return Hijo.objects.create(
+            nombre=nombre, apellido="Test",
+            cliente_responsable=cliente, grado=grado, activo=True,
+        )
+
+    def test_segundo_registro_antes_del_umbral_lanza_error(self, db, cliente, usuario_cajero):
+        from rest_framework.exceptions import ValidationError
+        from django.utils import timezone
+        from datetime import timedelta
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        from apps.almuerzos.validators import validar_limite_registros_diarios
+
+        hijo = self._crear_hijo(cliente, "MuyPronto", 8)
+        ahora = timezone.localtime()
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo, fecha_consumo=ahora.date(), hora_registro=(ahora - timedelta(seconds=30)).time(),
+            costo_almuerzo=Decimal("10000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        with pytest.raises(ValidationError, match="Todavia es muy pronto"):
+            validar_limite_registros_diarios(hijo, ahora.date())
+
+    def test_segundo_registro_despues_del_umbral_no_cobra(self, db, cliente, usuario_cajero):
+        from django.utils import timezone
+        from datetime import timedelta
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        from apps.almuerzos.validators import validar_limite_registros_diarios
+
+        hijo = self._crear_hijo(cliente, "VolvioAComer", 9)
+        ahora = timezone.localtime()
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo, fecha_consumo=ahora.date(), hora_registro=(ahora - timedelta(seconds=241)).time(),
+            costo_almuerzo=Decimal("10000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        resultado = validar_limite_registros_diarios(hijo, ahora.date())
+        assert resultado is False
+
+    def test_tercer_intento_lanza_limite_alcanzado(self, db, cliente, usuario_cajero):
+        from rest_framework.exceptions import ValidationError
+        from django.utils import timezone
+        from datetime import timedelta
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        from apps.almuerzos.validators import validar_limite_registros_diarios
+
+        hijo = self._crear_hijo(cliente, "TercerIntento", 10)
+        ahora = timezone.localtime()
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo, fecha_consumo=ahora.date(), hora_registro=(ahora - timedelta(seconds=600)).time(),
+            costo_almuerzo=Decimal("10000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo, fecha_consumo=ahora.date(), hora_registro=(ahora - timedelta(seconds=300)).time(),
+            costo_almuerzo=Decimal("0"), ya_cobrado=False, registrado_por=usuario_cajero,
+        )
+        with pytest.raises(ValidationError, match="Limite alcanzado"):
+            validar_limite_registros_diarios(hijo, ahora.date())

@@ -416,11 +416,20 @@ class TestRegistroConsumoCreate:
 
     def test_segundo_registro_costo_cero(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
                                           precio_almuerzo, usuario_cajero):
+        from django.utils import timezone
+        from datetime import timedelta
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
-        # Primer registro directo en BD
+        # fecha/hora derivadas de timezone.localtime() de punta a punta — usar
+        # date.today() (reloj del SO) junto con hora_registro (reloj de Django)
+        # puede desalinearse si difieren de TIME_ZONE, sobre todo cerca de
+        # medianoche.
+        hoy = timezone.localtime().date()
+        # Primer registro directo en BD, hace mas de 240s (umbral minimo entre
+        # 1er y 2do registro) para que el segundo no sea tratado como reintento.
         RegistroConsumoAlmuerzo.objects.create(
             hijo=hijo_almuerzo,
-            fecha_consumo=date.today(),
+            fecha_consumo=hoy,
+            hora_registro=(timezone.localtime() - timedelta(seconds=300)).time(),
             costo_almuerzo=Decimal("15000"),
             ya_cobrado=True,
             nro_tarjeta=tarjeta_almuerzo,
@@ -432,7 +441,7 @@ class TestRegistroConsumoCreate:
             "/api/v1/almuerzos/registros-consumo/",
             {
                 "hijo": hijo_almuerzo.pk,
-                "fecha_consumo": str(date.today()),
+                "fecha_consumo": str(hoy),
                 "nro_tarjeta": tarjeta_almuerzo.pk,
             },
             format="json",
@@ -440,6 +449,62 @@ class TestRegistroConsumoCreate:
         assert resp.status_code == 201
         assert resp.data["ya_cobrado"] is False
         assert resp.data["costo_almuerzo"] == "0"
+
+    def test_segundo_registro_muy_pronto_bloquea(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
+                                                   precio_almuerzo, usuario_cajero):
+        from django.utils import timezone
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        hoy = timezone.localtime().date()
+        # Primer registro recien hecho (hora_registro = ahora por default)
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo,
+            fecha_consumo=hoy,
+            costo_almuerzo=Decimal("15000"),
+            ya_cobrado=True,
+            nro_tarjeta=tarjeta_almuerzo,
+            registrado_por=usuario_cajero,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+        )
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {
+                "hijo": hijo_almuerzo.pk,
+                "fecha_consumo": str(hoy),
+                "nro_tarjeta": tarjeta_almuerzo.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "muy pronto" in resp.data["detail"]
+
+    def test_tercer_registro_retorna_400_con_mensaje_limite(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
+                                                              precio_almuerzo, usuario_cajero):
+        from django.utils import timezone
+        from datetime import timedelta
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        hoy = timezone.localtime().date()
+        for segundos_atras in (600, 300):
+            RegistroConsumoAlmuerzo.objects.create(
+                hijo=hijo_almuerzo,
+                fecha_consumo=hoy,
+                hora_registro=(timezone.localtime() - timedelta(seconds=segundos_atras)).time(),
+                costo_almuerzo=Decimal("15000") if segundos_atras == 600 else Decimal("0"),
+                ya_cobrado=segundos_atras == 600,
+                nro_tarjeta=tarjeta_almuerzo,
+                registrado_por=usuario_cajero,
+                estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            )
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {
+                "hijo": hijo_almuerzo.pk,
+                "fecha_consumo": str(hoy),
+                "nro_tarjeta": tarjeta_almuerzo.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "Limite alcanzado" in resp.data["detail"]
 
     def test_tarjeta_bloqueada_falla(self, api_cajero, hijo_almuerzo, tarjeta_bloqueada, precio_almuerzo):
         resp = api_cajero.post(

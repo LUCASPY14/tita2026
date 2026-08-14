@@ -59,6 +59,12 @@ async function scan(nro: string) {
   await userEvent.keyboard('{Enter}')
 }
 
+// Devuelve un string "HH:MM:SS" que representa "hace `segundos` segundos",
+// igual al formato que el backend serializa para hora_registro (TimeField).
+function horaHace(segundos: number): string {
+  return new Date(Date.now() - segundos * 1000).toTimeString().split(' ')[0]
+}
+
 // ── Fullscreen stubs ──────────────────────────────────────────────────────────
 
 beforeAll(() => {
@@ -122,12 +128,11 @@ describe('Comedor — flujo de escaneo', () => {
     await screen.findByText(/bloqueada/i)
   })
 
-  it('alumno ya almorzó hoy → mensaje anti-doble-scan', async () => {
-    // Seed consumidosHoy con el hijo ya registrado
+  it('reintento a los pocos segundos → mensaje de escaneo duplicado (no llega al backend)', async () => {
     vi.mocked(api.get).mockImplementation((url: string) => {
       if (url === '/clientes/hijos/') return Promise.resolve({ data: { results: [HIJO] } })
       if (url === '/almuerzos/registros-consumo/')
-        return Promise.resolve({ data: { results: [{ hijo: 1, fecha_consumo: '2026-07-24' }] } })
+        return Promise.resolve({ data: { results: [{ hijo: 1, hora_registro: horaHace(3) }] } })
       if (url === '/core/tarjetas/') return Promise.resolve({ data: { results: [TARJETA_ACTIVA] } })
       return Promise.resolve({ data: { results: [] } })
     })
@@ -135,7 +140,66 @@ describe('Comedor — flujo de escaneo', () => {
     render(<Comedor />)
     await waitFor(() => expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThanOrEqual(2))
     await scan('T-001')
-    await screen.findByText(/ya registró almuerzo hoy/i)
+    await screen.findByText(/Escaneo duplicado/i)
+    expect(api.post).not.toHaveBeenCalled()
+  })
+
+  it('2do intento entre 10s y 240s → mensaje "todavía muy pronto" (no llega al backend)', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/clientes/hijos/') return Promise.resolve({ data: { results: [HIJO] } })
+      if (url === '/almuerzos/registros-consumo/')
+        return Promise.resolve({ data: { results: [{ hijo: 1, hora_registro: horaHace(60) }] } })
+      if (url === '/core/tarjetas/') return Promise.resolve({ data: { results: [TARJETA_ACTIVA] } })
+      return Promise.resolve({ data: { results: [] } })
+    })
+    vi.mocked(api.post).mockResolvedValue({ data: { id: 1 } })
+    render(<Comedor />)
+    await waitFor(() => expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThanOrEqual(2))
+    await scan('T-001')
+    await screen.findByText(/muy pronto/i)
+    expect(api.post).not.toHaveBeenCalled()
+  })
+
+  it('2do intento después de 240s → se registra como "2do ingreso", sin cargo adicional', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/clientes/hijos/') return Promise.resolve({ data: { results: [HIJO] } })
+      if (url === '/almuerzos/registros-consumo/')
+        return Promise.resolve({ data: { results: [{ hijo: 1, hora_registro: horaHace(300) }] } })
+      if (url === '/core/tarjetas/') return Promise.resolve({ data: { results: [TARJETA_ACTIVA] } })
+      return Promise.resolve({ data: { results: [] } })
+    })
+    vi.mocked(api.post).mockResolvedValue({ data: { id: 1 } })
+    render(<Comedor />)
+    await waitFor(() => expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThanOrEqual(2))
+    await scan('T-001')
+    await screen.findByText('2do ingreso registrado')
+    expect(screen.getByText('Sin cargo adicional')).toBeInTheDocument()
+    expect(api.post).toHaveBeenCalled()
+  })
+
+  it('3er intento (2 registros previos) pasa al backend y muestra su mensaje real', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/clientes/hijos/') return Promise.resolve({ data: { results: [HIJO] } })
+      if (url === '/almuerzos/registros-consumo/')
+        return Promise.resolve({
+          data: {
+            results: [
+              { hijo: 1, hora_registro: horaHace(600) },
+              { hijo: 1, hora_registro: horaHace(300) },
+            ],
+          },
+        })
+      if (url === '/core/tarjetas/') return Promise.resolve({ data: { results: [TARJETA_ACTIVA] } })
+      return Promise.resolve({ data: { results: [] } })
+    })
+    vi.mocked(api.post).mockRejectedValue({
+      response: { data: { detail: 'Limite alcanzado: Ya existen 2 registros de almuerzo para este alumno.' } },
+    })
+    render(<Comedor />)
+    await waitFor(() => expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThanOrEqual(2))
+    await scan('T-001')
+    await screen.findByText(/Limite alcanzado/i)
+    expect(api.post).toHaveBeenCalled()
   })
 
   it('saldo de almuerzo negativo → se muestra en rojo con aviso "Debe"', async () => {

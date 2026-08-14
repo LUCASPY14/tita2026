@@ -3,7 +3,7 @@ Validadores para el modulo de Almuerzos
 Solo reglas de negocio que Django no cubre automaticamente
 """
 
-from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError
 
 
 def validar_restricciones_alergenicas(hijo, forzar: bool = False) -> list[dict]:
@@ -17,7 +17,6 @@ def validar_restricciones_alergenicas(hijo, forzar: bool = False) -> list[dict]:
     Raises:
         ValidationError si hay restricciones CRITICA bloqueantes y forzar=False.
     """
-    from rest_framework.exceptions import ValidationError
     from apps.clientes.models import RestriccionHijo
 
     restricciones = RestriccionHijo.objects.filter(hijo=hijo)
@@ -91,19 +90,31 @@ def verificar_alergenos_venta(hijo, productos: list) -> list[dict]:
     return advertencias
 
 
+SEGUNDOS_MINIMOS_SEGUNDO_REGISTRO = 240
+
+
 def validar_limite_registros_diarios(hijo, fecha_consumo, registro_actual=None):
     """
-    Valida que un hijo no tenga mas de 2 registros de almuerzo en el mismo dia.
+    Valida que un hijo no tenga mas de 2 registros de almuerzo en el mismo dia,
+    y que el segundo se registre al menos SEGUNDOS_MINIMOS_SEGUNDO_REGISTRO
+    despues del primero — un alumno no puede volver a servirse en cuestion de
+    segundos, así que cualquier reintento antes de ese margen se trata como un
+    doble-escaneo accidental, no como un segundo ingreso real.
 
     REGLA DE NEGOCIO:
     - Maximo 2 registros por alumno por dia
     - Primer registro: genera cobro (ya_cobrado=True)
-    - Segundo registro: NO genera cobro (ya_cobrado=False)
+    - Segundo registro: NO genera cobro (ya_cobrado=False), requiere que hayan
+      pasado al menos SEGUNDOS_MINIMOS_SEGUNDO_REGISTRO desde el primero
     - Tercer intento: BLOQUEADO
 
     Returns:
         bool: True si es el primer registro (cobra), False si es el segundo (no cobra)
     """
+    from datetime import datetime
+
+    from django.utils import timezone
+
     from .models import RegistroConsumoAlmuerzo
 
     if hijo is None or fecha_consumo is None:
@@ -118,12 +129,28 @@ def validar_limite_registros_diarios(hijo, fecha_consumo, registro_actual=None):
     if registro_actual:
         query = query.exclude(pk=registro_actual.pk)
 
-    registros_existentes = query.count()
+    registros_existentes = list(query.order_by("-hora_registro"))
+    cantidad = len(registros_existentes)
 
-    if registros_existentes >= 2:
-        raise ValidationError(
-            f"Limite alcanzado: Ya existen {registros_existentes} registros de almuerzo "
-            f"para este alumno el {fecha_consumo}. Maximo permitido: 2 registros por dia."
-        )
+    if cantidad >= 2:
+        raise ValidationError({
+            "error": (
+                f"Limite alcanzado: Ya existen {cantidad} registros de almuerzo "
+                f"para este alumno el {fecha_consumo}. Maximo permitido: 2 registros por dia."
+            )
+        })
 
-    return registros_existentes == 0
+    if cantidad == 1:
+        ultimo = registros_existentes[0]
+        inicio = timezone.make_aware(datetime.combine(fecha_consumo, ultimo.hora_registro))
+        transcurridos = (timezone.localtime() - inicio).total_seconds()
+        if transcurridos < SEGUNDOS_MINIMOS_SEGUNDO_REGISTRO:
+            faltan = int(SEGUNDOS_MINIMOS_SEGUNDO_REGISTRO - transcurridos)
+            raise ValidationError({
+                "error": (
+                    "Todavia es muy pronto para un segundo ingreso de almuerzo. "
+                    f"Esperar {faltan} segundos mas."
+                )
+            })
+
+    return cantidad == 0

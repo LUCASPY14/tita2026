@@ -27,6 +27,33 @@ function nowDisplay() {
   })
 }
 
+// Umbrales de negocio para el 2do registro de almuerzo del mismo alumno:
+// < 10s → reintento accidental (doble escaneo); 10-240s → todavía muy pronto
+// para un ingreso real; >= 240s → 2do ingreso legítimo (repite, no cobra).
+const SEGUNDOS_DOBLE_ESCANEO = 10
+const SEGUNDOS_MINIMOS_SEGUNDO_REGISTRO = 240
+
+function horaRegistroToDate(horaStr: string): Date {
+  const [h, m, s] = horaStr.split(':').map(Number)
+  const d = new Date()
+  d.setHours(h, m, s || 0, 0)
+  return d
+}
+
+function buildRegistrosMap(results: { hijo: number; hora_registro?: string }[]): Map<number, RegistroInfo> {
+  const map = new Map<number, RegistroInfo>()
+  for (const r of results) {
+    if (!r.hora_registro) continue
+    const hora = horaRegistroToDate(r.hora_registro)
+    const prev = map.get(r.hijo)
+    map.set(r.hijo, {
+      count: (prev?.count ?? 0) + 1,
+      ultimoRegistro: prev && prev.ultimoRegistro > hora ? prev.ultimoRegistro : hora,
+    })
+  }
+  return map
+}
+
 function extractErrorMessage(err: unknown): string {
   const e = err as { response?: { data?: unknown } }
   const data = e?.response?.data
@@ -68,9 +95,15 @@ type ResultState = {
   tarjeta: string
   saldo: string | number
   saldoAlmuerzo: number | null
+  esSegundo: boolean
 } | {
   tipo: 'error'
   message: string
+}
+
+interface RegistroInfo {
+  count: number
+  ultimoRegistro: Date
 }
 
 interface RegistroReciente {
@@ -102,7 +135,7 @@ export default function Comedor() {
   const [fullscreen, setFullscreen] = useState(false)
   const [panelMode, setPanelMode] = useState<'recientes' | 'lista'>('recientes')
   const [suscriptosHoy, setSuscriptosHoy] = useState<{ hijoId: number; nombre: string; grado: string }[]>([])
-  const [consumidosHoy, setConsumidosHoy] = useState<Set<number>>(new Set())
+  const [registrosHoy, setRegistrosHoy] = useState<Map<number, RegistroInfo>>(new Map())
   const [loadingLista, setLoadingLista] = useState(false)
 
   // reloj
@@ -142,11 +175,8 @@ export default function Comedor() {
           grado: s.hijo_grado ?? '',
         })
       )
-      const consumidos = new Set<number>(
-        (consumRes.data.results ?? []).map((r: { hijo: number }) => r.hijo)
-      )
       setSuscriptosHoy(hijosSusc)
-      setConsumidosHoy(consumidos)
+      setRegistrosHoy(buildRegistrosMap(consumRes.data.results ?? []))
     } catch {
       // silencioso
     } finally {
@@ -173,13 +203,10 @@ export default function Comedor() {
     return () => clearInterval(t)
   }, [panelMode, cargarListaHoy])
 
-  // Carga inicial del set consumidosHoy para el anti-doble-scan (siempre, no solo con panel lista)
+  // Carga inicial de registrosHoy para el anti-doble-scan (siempre, no solo con panel lista)
   useEffect(() => {
     api.get('/almuerzos/registros-consumo/', { params: { fecha_consumo: todayISO(), page_size: 500 } })
-      .then(r => {
-        const ids = new Set<number>((r.data.results ?? []).map((x: { hijo: number }) => x.hijo))
-        setConsumidosHoy(ids)
-      })
+      .then(r => setRegistrosHoy(buildRegistrosMap(r.data.results ?? [])))
       .catch(() => toast.error('Error al cargar registros del día'))
   }, [])
 
@@ -274,12 +301,28 @@ export default function Comedor() {
         return
       }
 
-      // ── Anti-doble-scan: verificar si ya almorzó hoy ──────────────────────
-      if (consumidosHoy.has(hijoId)) {
-        setResult({ tipo: 'error', message: `${tarjeta.hijo_nombre} ya registró almuerzo hoy` })
-        startCountdown(4)
-        return
+      // ── Anti-doble-scan: solo pre-bloquea el 2do intento cuando todavía no
+      // pasó el umbral de tiempo. Un 3er intento (count >= 2) pasa directo al
+      // backend, que es quien tiene la última palabra ("Límite alcanzado").
+      const registroPrevio = registrosHoy.get(hijoId)
+      if (registroPrevio && registroPrevio.count === 1) {
+        const transcurridos = (Date.now() - registroPrevio.ultimoRegistro.getTime()) / 1000
+        if (transcurridos < SEGUNDOS_DOBLE_ESCANEO) {
+          setResult({ tipo: 'error', message: 'Escaneo duplicado — esperá unos segundos' })
+          startCountdown(2)
+          return
+        }
+        if (transcurridos < SEGUNDOS_MINIMOS_SEGUNDO_REGISTRO) {
+          const faltan = Math.ceil(SEGUNDOS_MINIMOS_SEGUNDO_REGISTRO - transcurridos)
+          setResult({
+            tipo: 'error',
+            message: `Todavía es muy pronto para un segundo ingreso de almuerzo. Esperá ${faltan} segundos más.`,
+          })
+          startCountdown(3)
+          return
+        }
       }
+      const esSegundo = registroPrevio?.count === 1
 
       await api.post('/almuerzos/registros-consumo/', {
         hijo: hijoId,
@@ -287,8 +330,13 @@ export default function Comedor() {
         nro_tarjeta: tarjeta.nro_tarjeta,
       })
 
-      // Actualizar set local inmediatamente sin esperar refresh de API
-      setConsumidosHoy(prev => new Set([...prev, hijoId as number]))
+      // Actualizar mapa local inmediatamente sin esperar refresh de API
+      setRegistrosHoy(prev => {
+        const next = new Map(prev)
+        const info = next.get(hijoId as number)
+        next.set(hijoId as number, { count: (info?.count ?? 0) + 1, ultimoRegistro: new Date() })
+        return next
+      })
 
       // Saldo de almuerzo (cuenta corriente, separada de la tarjeta) — solo
       // informativo, si falla no bloquea el registro ya confirmado.
@@ -312,7 +360,7 @@ export default function Comedor() {
       }
       setResult({
         tipo: 'ok', nombre: tarjeta.hijo_nombre, grado: hijoGrado, tarjeta: nro,
-        saldo: tarjeta.saldo_actual, saldoAlmuerzo,
+        saldo: tarjeta.saldo_actual, saldoAlmuerzo, esSegundo,
       })
       setRecientes(prev => [entry, ...prev].slice(0, 30))
       startCountdown(4)
@@ -325,7 +373,7 @@ export default function Comedor() {
       scanningRef.current = false
       setScanning(false)
     }
-  }, [hijos, hijosLoading, startCountdown, consumidosHoy])
+  }, [hijos, hijosLoading, startCountdown, registrosHoy])
 
   // refoco al hacer click en cualquier parte
   const handlePageClick = useCallback(() => {
@@ -400,18 +448,18 @@ export default function Comedor() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-slate-500 text-sm font-bold uppercase tracking-wider">Almuerzos hoy</span>
                 <span className="tabular-nums font-black text-2xl text-slate-800">
-                  {consumidosHoy.size}
+                  {registrosHoy.size}
                   <span className="text-slate-400 font-normal text-lg"> / {suscriptosHoy.length}</span>
                 </span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="h-3 bg-green-500 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.round((consumidosHoy.size / suscriptosHoy.length) * 100)}%` }}
+                  style={{ width: `${Math.round((registrosHoy.size / suscriptosHoy.length) * 100)}%` }}
                 />
               </div>
               <p className="text-slate-400 text-sm mt-1.5 text-right font-medium">
-                {Math.round((consumidosHoy.size / suscriptosHoy.length) * 100)}% completado
+                {Math.round((registrosHoy.size / suscriptosHoy.length) * 100)}% completado
               </p>
             </div>
           )}
@@ -421,9 +469,14 @@ export default function Comedor() {
             result.tipo === 'ok' ? (
               <div className="w-full max-w-lg bg-green-50 border-2 border-green-400 rounded-3xl p-10 text-center animate-in fade-in zoom-in-95 duration-200 shadow-lg">
                 <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-5" />
-                <p className="text-green-600 text-base font-bold uppercase tracking-widest mb-2">Ingreso registrado</p>
+                <p className="text-green-600 text-base font-bold uppercase tracking-widest mb-2">
+                  {result.esSegundo ? '2do ingreso registrado' : 'Ingreso registrado'}
+                </p>
                 <p className="text-slate-900 text-5xl font-black leading-tight mt-2">{result.nombre}</p>
                 {result.grado && <p className="text-slate-600 text-2xl mt-2 font-medium">{result.grado}</p>}
+                {result.esSegundo && (
+                  <p className="text-emerald-600 text-lg font-semibold mt-2">Sin cargo adicional</p>
+                )}
                 <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
                   <div className="bg-white border border-green-200 rounded-2xl px-6 py-3 inline-block shadow-sm">
                     <p className="text-slate-500 text-sm">Saldo en tarjeta</p>
@@ -561,7 +614,7 @@ export default function Comedor() {
             <>
               <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                 <p className="text-base font-medium text-slate-600">
-                  <span className="text-green-600 font-black text-xl">{consumidosHoy.size}</span>
+                  <span className="text-green-600 font-black text-xl">{registrosHoy.size}</span>
                   <span className="text-slate-400"> / {suscriptosHoy.length}</span>
                   <span className="text-slate-500"> almorzaron</span>
                 </p>
@@ -586,24 +639,30 @@ export default function Comedor() {
                 ) : (
                   <ul className="divide-y divide-slate-100">
                     {[...suscriptosHoy].sort((a, b) => {
-                      const aOk = consumidosHoy.has(a.hijoId)
-                      const bOk = consumidosHoy.has(b.hijoId)
-                      if (aOk !== bOk) return aOk ? 1 : -1
+                      const aCount = registrosHoy.get(a.hijoId)?.count ?? 0
+                      const bCount = registrosHoy.get(b.hijoId)?.count ?? 0
+                      if (aCount !== bCount) return aCount - bCount
                       return a.nombre.localeCompare(b.nombre)
                     }).map(s => {
-                      const comio = consumidosHoy.has(s.hijoId)
+                      const count = registrosHoy.get(s.hijoId)?.count ?? 0
+                      const completo = count >= 2
                       return (
-                        <li key={s.hijoId} className={`px-4 py-3 flex items-center gap-3 ${comio ? 'opacity-40' : ''}`}>
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${comio ? 'bg-green-100' : 'bg-slate-100'}`}>
-                            {comio
+                        <li key={s.hijoId} className={`px-4 py-3 flex items-center gap-3 ${completo ? 'opacity-40' : ''}`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${count > 0 ? 'bg-green-100' : 'bg-slate-100'}`}>
+                            {count > 0
                               ? <CheckCircle className="w-4 h-4 text-green-600" />
                               : <XCircle className="w-4 h-4 text-slate-400" />
                             }
                           </div>
-                          <div className="min-w-0">
-                            <p className={`text-sm font-semibold truncate ${comio ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{s.nombre}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-sm font-semibold truncate ${completo ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{s.nombre}</p>
                             {s.grado && <p className="text-sm text-slate-400 truncate">{s.grado}</p>}
                           </div>
+                          {count > 0 && (
+                            <span className={`text-xs font-bold tabular-nums px-2 py-0.5 rounded-full shrink-0 ${completo ? 'bg-slate-100 text-slate-400' : 'bg-green-100 text-green-700'}`}>
+                              {count}/2
+                            </span>
+                          )}
                         </li>
                       )
                     })}

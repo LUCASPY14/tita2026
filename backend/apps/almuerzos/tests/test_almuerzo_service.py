@@ -152,22 +152,28 @@ class TestRegistrarConsumo:
     def test_segundo_registro_no_se_marca_en_cuenta(
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, suscripcion_activa
     ):
+        from datetime import timedelta
         from apps.almuerzos.services import AlmuerzoService
 
-        AlmuerzoService.registrar_consumo(
-            hijo=hijo_almuerzo,
-            fecha_consumo=HOY,
-            nro_tarjeta=tarjeta_almuerzo,
-            registrado_por=usuario_cajero,
-            suscripcion=suscripcion_activa,
-        )
-        segundo = AlmuerzoService.registrar_consumo(
-            hijo=hijo_almuerzo,
-            fecha_consumo=HOY,
-            nro_tarjeta=tarjeta_almuerzo,
-            registrado_por=usuario_cajero,
-            suscripcion=suscripcion_activa,
-        )
+        # La clase congela el reloj en un instante fijo (medianoche) — hay que
+        # avanzarlo explícitamente para simular que pasaron 300s entre el 1er
+        # y el 2do registro, sin restar del "ahora" (cruzaría medianoche).
+        with freeze_time("2026-07-15 08:00:00") as frozen:
+            AlmuerzoService.registrar_consumo(
+                hijo=hijo_almuerzo,
+                fecha_consumo=HOY,
+                nro_tarjeta=tarjeta_almuerzo,
+                registrado_por=usuario_cajero,
+                suscripcion=suscripcion_activa,
+            )
+            frozen.tick(delta=timedelta(seconds=300))
+            segundo = AlmuerzoService.registrar_consumo(
+                hijo=hijo_almuerzo,
+                fecha_consumo=HOY,
+                nro_tarjeta=tarjeta_almuerzo,
+                registrado_por=usuario_cajero,
+                suscripcion=suscripcion_activa,
+            )
 
         # No genera costo, así que nunca se acredita a la cuenta ni se marca.
         assert segundo.marcado_en_cuenta is False
@@ -175,22 +181,25 @@ class TestRegistrarConsumo:
     def test_segundo_registro_sin_costo(
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, suscripcion_activa
     ):
+        from datetime import timedelta
         from apps.almuerzos.services import AlmuerzoService
 
-        AlmuerzoService.registrar_consumo(
-            hijo=hijo_almuerzo,
-            fecha_consumo=HOY,
-            nro_tarjeta=tarjeta_almuerzo,
-            registrado_por=usuario_cajero,
-            suscripcion=suscripcion_activa,
-        )
-        segundo = AlmuerzoService.registrar_consumo(
-            hijo=hijo_almuerzo,
-            fecha_consumo=HOY,
-            nro_tarjeta=tarjeta_almuerzo,
-            registrado_por=usuario_cajero,
-            suscripcion=suscripcion_activa,
-        )
+        with freeze_time("2026-07-15 08:00:00") as frozen:
+            AlmuerzoService.registrar_consumo(
+                hijo=hijo_almuerzo,
+                fecha_consumo=HOY,
+                nro_tarjeta=tarjeta_almuerzo,
+                registrado_por=usuario_cajero,
+                suscripcion=suscripcion_activa,
+            )
+            frozen.tick(delta=timedelta(seconds=300))
+            segundo = AlmuerzoService.registrar_consumo(
+                hijo=hijo_almuerzo,
+                fecha_consumo=HOY,
+                nro_tarjeta=tarjeta_almuerzo,
+                registrado_por=usuario_cajero,
+                suscripcion=suscripcion_activa,
+            )
 
         assert segundo.ya_cobrado is False
         assert segundo.costo_almuerzo == Decimal("0")
@@ -198,26 +207,28 @@ class TestRegistrarConsumo:
     def test_tercer_registro_bloqueado(
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, suscripcion_activa
     ):
+        from datetime import timedelta
         from apps.almuerzos.services import AlmuerzoService
-        from django.core.exceptions import ValidationError as DjangoValidationError
 
-        for _ in range(2):
-            AlmuerzoService.registrar_consumo(
-                hijo=hijo_almuerzo,
-                fecha_consumo=HOY,
-                nro_tarjeta=tarjeta_almuerzo,
-                registrado_por=usuario_cajero,
-                suscripcion=suscripcion_activa,
-            )
+        with freeze_time("2026-07-15 08:00:00") as frozen:
+            for _ in range(2):
+                AlmuerzoService.registrar_consumo(
+                    hijo=hijo_almuerzo,
+                    fecha_consumo=HOY,
+                    nro_tarjeta=tarjeta_almuerzo,
+                    registrado_por=usuario_cajero,
+                    suscripcion=suscripcion_activa,
+                )
+                frozen.tick(delta=timedelta(seconds=300))
 
-        with pytest.raises(DjangoValidationError):
-            AlmuerzoService.registrar_consumo(
-                hijo=hijo_almuerzo,
-                fecha_consumo=HOY,
-                nro_tarjeta=tarjeta_almuerzo,
-                registrado_por=usuario_cajero,
-                suscripcion=suscripcion_activa,
-            )
+            with pytest.raises(ValidationError):
+                AlmuerzoService.registrar_consumo(
+                    hijo=hijo_almuerzo,
+                    fecha_consumo=HOY,
+                    nro_tarjeta=tarjeta_almuerzo,
+                    registrado_por=usuario_cajero,
+                    suscripcion=suscripcion_activa,
+                )
 
     def test_tarjeta_bloqueada_falla(
         self, hijo_almuerzo, tarjeta_bloqueada_almuerzo, usuario_cajero
