@@ -26,7 +26,7 @@ from common.throttling import SensitiveEndpointThrottle
 from common.permissions import IsAdminOrSupervisor
 
 from .models import PagoBancard, SolicitudCatastroBancard, Tarjeta
-from .serializers import PagoBancardSerializer
+from .serializers import PagoBancardSerializer, PagoBancardDetailSerializer
 from . import bancard_service
 from common.throttling import BancardRetornoThrottle
 
@@ -752,6 +752,38 @@ class BancardPagosListView(generics.ListAPIView):
             qs = qs.filter(tipo=tipo)
         return qs
 
+    def list(self, request, *args, **kwargs):
+        if request.query_params.get("formato") == "csv":
+            return self._exportar_csv()
+        return super().list(request, *args, **kwargs)
+
+    def _exportar_csv(self):
+        import csv as csv_mod
+        from django.http import HttpResponse as HR
+
+        response = HR(content_type="text/csv; charset=utf-8-sig")
+        response["Content-Disposition"] = 'attachment; filename="pagos_bancard.csv"'
+        writer = csv_mod.writer(response)
+        writer.writerow(["PAGOS BANCARD"])
+        writer.writerow([])
+        writer.writerow(["Fecha", "Tipo", "Estado", "Cliente", "Referencia", "Monto (Gs)", "Shop Process ID"])
+        for pago in self.get_queryset():
+            fecha = pago.fecha_confirmacion or pago.fecha_creacion
+            referencia = (
+                pago.tarjeta.nro_tarjeta if pago.tarjeta_id
+                else (f"Cuenta #{pago.cuenta_almuerzo_id}" if pago.cuenta_almuerzo_id else "—")
+            )
+            writer.writerow([
+                timezone.localtime(fecha).strftime("%Y-%m-%d %H:%M"),
+                pago.get_tipo_display(),
+                pago.get_estado_display(),
+                pago.cliente.nombre_completo if pago.cliente_id else "",
+                referencia,
+                int(pago.monto),
+                pago.shop_process_id,
+            ])
+        return response
+
 
 # ─── POST /api/v1/bancard/pagos/<shop_process_id>/anular/ ─────────────────────
 
@@ -801,6 +833,176 @@ def bancard_anular_pago(request, shop_process_id: str):
         return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response({"detail": "Pago anulado correctamente."})
+
+
+# ─── GET /api/v1/bancard/pagos/<shop_process_id>/ ──────────────────────────────
+
+@api_view(["GET"])
+@permission_classes([IsAdminOrSupervisor])
+def bancard_pagos_detalle(request, shop_process_id: str):
+    """Detalle administrativo de un pago, incluida la respuesta cruda de Bancard
+    (bancard_response) — para investigar por qué un pago quedó RECHAZADO/ERROR."""
+    try:
+        pago = PagoBancard.objects.select_related("cliente", "tarjeta").get(
+            shop_process_id=shop_process_id
+        )
+    except PagoBancard.DoesNotExist:
+        return Response({"detail": "Pago no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response(PagoBancardDetailSerializer(pago).data)
+
+
+# ─── POST /api/v1/bancard/pagos/<shop_process_id>/reintentar/ ─────────────────
+
+@api_view(["POST"])
+@permission_classes([IsAdminOrSupervisor])
+@throttle_classes([SensitiveEndpointThrottle])
+def bancard_pagos_reintentar(request, shop_process_id: str):
+    """
+    Resuelve un pago en estado ERROR (Bancard cobró pero no se pudo acreditar
+    el saldo). Ver bancard_service.reintentar_acreditacion() para el detalle de
+    por qué esto no es un simple "volver a llamar acreditar_saldo".
+    """
+    try:
+        pago = PagoBancard.objects.get(shop_process_id=shop_process_id)
+    except PagoBancard.DoesNotExist:
+        return Response({"detail": "Pago no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    if pago.estado != PagoBancard.Estado.ERROR:
+        return Response(
+            {"detail": "Solo se pueden reintentar pagos en estado Error."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        resultado = bancard_service.reintentar_acreditacion(pago)
+    except Exception as exc:
+        logger.error("Bancard reintentar: volvió a fallar shop=%s: %s", shop_process_id, exc)
+        return Response(
+            {"detail": f"Volvió a fallar al acreditar: {exc}. El pago permanece en estado Error."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    pago.refresh_from_db()
+    if resultado["accion"] == "vinculado":
+        detail = (
+            "Ya existía un crédito para este pago (se había acreditado antes de que "
+            "fallara el guardado del registro) — se vinculó sin generar un nuevo crédito."
+        )
+    else:
+        detail = "Se acreditó el saldo correctamente."
+    return Response({
+        "detail": detail, "accion": resultado["accion"],
+        "pago": PagoBancardSerializer(pago).data,
+    })
+
+
+def _reconsultar_y_resolver(pago: PagoBancard) -> bool:
+    """
+    Reconsulta a Bancard el resultado real de un pago PENDIENTE y, si Bancard ya
+    tiene un resultado, lo aplica (aprueba/rechaza) igual que haría el webhook.
+    Devuelve True si el pago quedó resuelto (dejó de estar PENDIENTE).
+    """
+    resultado = bancard_service.get_confirmation(pago.shop_process_id)
+    pago.bancard_response = resultado
+    pago.save(update_fields=["bancard_response"])
+
+    confirmacion = resultado.get("confirmation", {})
+    response_code = confirmacion.get("response_code", "")
+    if resultado.get("status") == "success" and response_code:
+        bancard_service.procesar_resultado_pago(pago, response_code)
+        pago.refresh_from_db()
+        return pago.estado != PagoBancard.Estado.PENDIENTE
+    return False
+
+
+# ─── POST /api/v1/bancard/pagos/<shop_process_id>/reconsultar/ ────────────────
+
+@api_view(["POST"])
+@permission_classes([IsAdminOrSupervisor])
+@throttle_classes([SensitiveEndpointThrottle])
+def bancard_pagos_reconsultar(request, shop_process_id: str):
+    """Reconsulta a Bancard el estado real de un pago que quedó PENDIENTE
+    (el webhook no llegó). No cierra nada por las suyas — solo aplica lo que
+    Bancard responda."""
+    try:
+        pago = PagoBancard.objects.get(shop_process_id=shop_process_id)
+    except PagoBancard.DoesNotExist:
+        return Response({"detail": "Pago no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    if pago.estado != PagoBancard.Estado.PENDIENTE:
+        return Response(
+            {"detail": "Solo se pueden reconsultar pagos pendientes."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    resuelto = _reconsultar_y_resolver(pago)
+    if resuelto:
+        detail = f"Bancard confirmó el resultado: {pago.get_estado_display()}."
+    else:
+        detail = "Bancard todavía no tiene un resultado para este pago."
+    return Response({"detail": detail, "resuelto": resuelto, "pago": PagoBancardSerializer(pago).data})
+
+
+# ─── POST /api/v1/bancard/pagos/<shop_process_id>/cerrar-manual/ ──────────────
+
+MINUTOS_MINIMOS_CIERRE_MANUAL = 60
+
+
+@api_view(["POST"])
+@permission_classes([IsAdminOrSupervisor])
+@throttle_classes([SensitiveEndpointThrottle])
+def bancard_pagos_cerrar_manual(request, shop_process_id: str):
+    """
+    Cierra manualmente un pago PENDIENTE abandonado (el padre nunca completó el
+    checkout y Bancard no tiene registro de la transacción). Antes de cerrar,
+    vuelve a reconsultar a Bancard como última verificación defensiva — si
+    Bancard sí tiene un resultado, se aplica ese en vez de cerrar a ciegas.
+    """
+    try:
+        pago = PagoBancard.objects.get(shop_process_id=shop_process_id)
+    except PagoBancard.DoesNotExist:
+        return Response({"detail": "Pago no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    if pago.estado != PagoBancard.Estado.PENDIENTE:
+        return Response(
+            {"detail": "Solo se pueden cerrar pagos pendientes."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    minutos = (timezone.now() - pago.fecha_creacion).total_seconds() / 60
+    if minutos < MINUTOS_MINIMOS_CIERRE_MANUAL:
+        return Response(
+            {
+                "detail": (
+                    f"Este pago tiene menos de {MINUTOS_MINIMOS_CIERRE_MANUAL} minutos — "
+                    "todavía puede estar en curso. Esperá antes de cerrarlo manualmente."
+                ),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if _reconsultar_y_resolver(pago):
+        return Response({
+            "detail": f"Bancard sí tenía un resultado: {pago.get_estado_display()}. No se cerró manualmente.",
+            "pago": PagoBancardSerializer(pago).data,
+        })
+
+    pago.estado = PagoBancard.Estado.RECHAZADO
+    pago.fecha_confirmacion = timezone.now()
+    pago.bancard_response = {
+        **(pago.bancard_response or {}),
+        "cierre_manual": {
+            "admin": request.user.email,
+            "fecha": timezone.now().isoformat(),
+            "motivo": "Cerrado manualmente por abandono de checkout — Bancard no reportaba resultado.",
+        },
+    }
+    pago.save(update_fields=["estado", "fecha_confirmacion", "bancard_response"])
+    return Response({
+        "detail": "Pago cerrado manualmente como no completado.",
+        "pago": PagoBancardSerializer(pago).data,
+    })
 
 
 # ─── POST /api/v1/bancard/pagar-almuerzo-con-tarjeta/ ─────────────────────────

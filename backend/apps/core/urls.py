@@ -26,6 +26,10 @@ from .bancard_views import (
     bancard_pagar_almuerzo_con_tarjeta,
     BancardPagosListView,
     bancard_anular_pago,
+    bancard_pagos_detalle,
+    bancard_pagos_reintentar,
+    bancard_pagos_reconsultar,
+    bancard_pagos_cerrar_manual,
 )
 
 router = DefaultRouter()
@@ -54,7 +58,11 @@ urlpatterns = [
     path("bancard/tarjetas/<int:card_id>/",      bancard_eliminar_tarjeta,        name="bancard-eliminar-tarjeta"),
     path("bancard/pagar-con-tarjeta/",           bancard_pagar_con_tarjeta,       name="bancard-pagar-con-tarjeta"),
     path("bancard/pagar-almuerzo-con-tarjeta/",  bancard_pagar_almuerzo_con_tarjeta, name="bancard-pagar-almuerzo-con-tarjeta"),
-    # Bancard — gestión administrativa de pagos (ver + anular)
+    # Bancard — gestión administrativa de pagos (ver + anular + resolver)
     path("bancard/pagos/",                       BancardPagosListView.as_view(),  name="bancard-pagos-list"),
-    path("bancard/pagos/<str:shop_process_id>/anular/", bancard_anular_pago,      name="bancard-anular-pago"),
+    path("bancard/pagos/<str:shop_process_id>/anular/",         bancard_anular_pago,         name="bancard-anular-pago"),
+    path("bancard/pagos/<str:shop_process_id>/",                 bancard_pagos_detalle,       name="bancard-pagos-detalle"),
+    path("bancard/pagos/<str:shop_process_id>/reintentar/",      bancard_pagos_reintentar,    name="bancard-pagos-reintentar"),
+    path("bancard/pagos/<str:shop_process_id>/reconsultar/",     bancard_pagos_reconsultar,   name="bancard-pagos-reconsultar"),
+    path("bancard/pagos/<str:shop_process_id>/cerrar-manual/",   bancard_pagos_cerrar_manual, name="bancard-pagos-cerrar-manual"),
 ]

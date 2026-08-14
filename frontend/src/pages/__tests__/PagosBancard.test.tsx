@@ -46,14 +46,36 @@ const PAGO_PENDIENTE: PagoBancard = {
   ...PAGO_HOY,
   shop_process_id: 'pago-pendiente-1',
   estado: 'PENDIENTE',
+  fecha_creacion: HOY,
+}
+
+const PAGO_PENDIENTE_VIEJO: PagoBancard = {
+  ...PAGO_HOY,
+  shop_process_id: 'pago-pendiente-viejo-1',
+  estado: 'PENDIENTE',
+  fecha_creacion: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+}
+
+const PAGO_ERROR: PagoBancard = {
+  ...PAGO_HOY,
+  shop_process_id: 'pago-error-1',
+  estado: 'ERROR',
 }
 
 function setupPagos(...pagos: PagoBancard[]) {
-  vi.mocked(api.get).mockResolvedValue({ data: { count: pagos.length, results: pagos, next: null, previous: null } })
+  vi.mocked(api.get).mockImplementation((url: string) => {
+    if (url === '/core/bancard/pagos/') {
+      return Promise.resolve({ data: { count: pagos.length, results: pagos, next: null, previous: null } })
+    }
+    return Promise.resolve({ data: {} })
+  })
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  window.URL.createObjectURL = vi.fn(() => 'blob:fake')
+  window.URL.revokeObjectURL = vi.fn()
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
 })
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -135,5 +157,163 @@ describe('PagosBancard', () => {
     setupPagos()
     render(<PagosBancard />)
     await screen.findByText(/Sin datos/i)
+  })
+})
+
+describe('PagosBancard — ver detalle', () => {
+  it('click en el ícono de detalle pide el detalle y muestra la respuesta de Bancard', async () => {
+    setupPagos(PAGO_HOY)
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/core/bancard/pagos/') {
+        return Promise.resolve({ data: { count: 1, results: [PAGO_HOY], next: null, previous: null } })
+      }
+      if (url === `/core/bancard/pagos/${PAGO_HOY.shop_process_id}/`) {
+        return Promise.resolve({
+          data: {
+            ...PAGO_HOY,
+            process_id: 'proc-123',
+            ip_origen: '190.0.0.1',
+            bancard_response: { confirmation: { response_code: '00' } },
+          },
+        })
+      }
+      return Promise.resolve({ data: {} })
+    })
+    render(<PagosBancard />)
+    await screen.findByText('Luis Palau')
+
+    await userEvent.click(screen.getByTitle('Ver detalle'))
+
+    await screen.findByText('proc-123')
+    expect(screen.getByText('190.0.0.1')).toBeInTheDocument()
+    expect(screen.getByText(/response_code/)).toBeInTheDocument()
+  })
+})
+
+describe('PagosBancard — reintentar (estado Error)', () => {
+  it('el botón Reintentar solo aparece para pagos en Error', async () => {
+    setupPagos(PAGO_HOY, PAGO_ERROR)
+    render(<PagosBancard />)
+    await screen.findAllByText('Luis Palau')
+    expect(screen.getAllByRole('button', { name: /Reintentar/i })).toHaveLength(1)
+  })
+
+  it('confirmar reintentar llama a la API y muestra el resultado', async () => {
+    setupPagos(PAGO_ERROR)
+    vi.mocked(api.post).mockResolvedValue({
+      data: { detail: 'Se acreditó el saldo correctamente.', accion: 'acreditado' },
+    })
+    render(<PagosBancard />)
+    await screen.findByText('Luis Palau')
+
+    await userEvent.click(screen.getByRole('button', { name: /Reintentar/i }))
+    await screen.findByText(/no se pudo acreditar/i)
+    await userEvent.click(screen.getByRole('button', { name: /Sí, reintentar/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith(`/core/bancard/pagos/${PAGO_ERROR.shop_process_id}/reintentar/`)
+    })
+    expect(toast.success).toHaveBeenCalledWith('Se acreditó el saldo correctamente.')
+  })
+
+  it('si vuelve a fallar muestra el mensaje de error del backend', async () => {
+    setupPagos(PAGO_ERROR)
+    vi.mocked(api.post).mockRejectedValue({ response: { data: { detail: 'Volvió a fallar.' } } })
+    render(<PagosBancard />)
+    await screen.findByText('Luis Palau')
+
+    await userEvent.click(screen.getByRole('button', { name: /Reintentar/i }))
+    await screen.findByText(/no se pudo acreditar/i)
+    await userEvent.click(screen.getByRole('button', { name: /Sí, reintentar/i }))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Volvió a fallar.'))
+  })
+})
+
+describe('PagosBancard — reconsultar (estado Pendiente)', () => {
+  it('el botón Reconsultar solo aparece para pagos pendientes', async () => {
+    setupPagos(PAGO_HOY, PAGO_PENDIENTE)
+    render(<PagosBancard />)
+    await screen.findAllByText('Luis Palau')
+    expect(screen.getAllByRole('button', { name: /Reconsultar/i })).toHaveLength(1)
+  })
+
+  it('click en Reconsultar llama a la API directamente (sin modal) y muestra el resultado', async () => {
+    setupPagos(PAGO_PENDIENTE)
+    vi.mocked(api.post).mockResolvedValue({
+      data: { detail: 'Bancard confirmó el resultado: Aprobado.', resuelto: true },
+    })
+    render(<PagosBancard />)
+    await screen.findByText('Luis Palau')
+
+    await userEvent.click(screen.getByRole('button', { name: /Reconsultar/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith(
+        `/core/bancard/pagos/${PAGO_PENDIENTE.shop_process_id}/reconsultar/`,
+      )
+    })
+    expect(toast.success).toHaveBeenCalledWith('Bancard confirmó el resultado: Aprobado.')
+  })
+})
+
+describe('PagosBancard — cerrar manualmente (estado Pendiente)', () => {
+  it('el botón Cerrar está deshabilitado si el pago es muy reciente', async () => {
+    setupPagos(PAGO_PENDIENTE)
+    render(<PagosBancard />)
+    await screen.findByText('Luis Palau')
+
+    const boton = screen.getByRole('button', { name: /Cerrar/i })
+    expect(boton).toBeDisabled()
+  })
+
+  it('habilitado para un pendiente viejo — confirmar llama a la API', async () => {
+    setupPagos(PAGO_PENDIENTE_VIEJO)
+    vi.mocked(api.post).mockResolvedValue({
+      data: { detail: 'Pago cerrado manualmente como no completado.' },
+    })
+    render(<PagosBancard />)
+    await screen.findByText('Luis Palau')
+
+    const boton = screen.getByRole('button', { name: /Cerrar/i })
+    expect(boton).not.toBeDisabled()
+    await userEvent.click(boton)
+    await screen.findByText(/vuelve a consultar el resultado real/i)
+    await userEvent.click(screen.getByRole('button', { name: /Sí, cerrar/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith(
+        `/core/bancard/pagos/${PAGO_PENDIENTE_VIEJO.shop_process_id}/cerrar-manual/`,
+      )
+    })
+    expect(toast.success).toHaveBeenCalledWith('Pago cerrado manualmente como no completado.')
+  })
+})
+
+describe('PagosBancard — exportar CSV', () => {
+  it('click en Exportar CSV pide el CSV con los filtros actuales y descarga el blob', async () => {
+    setupPagos(PAGO_HOY)
+    vi.mocked(api.get).mockImplementation((url: string, config?: { params?: Record<string, unknown> }) => {
+      if (url === '/core/bancard/pagos/' && config?.params?.formato === 'csv') {
+        return Promise.resolve({ data: new Blob(['csv']) })
+      }
+      if (url === '/core/bancard/pagos/') {
+        return Promise.resolve({ data: { count: 1, results: [PAGO_HOY], next: null, previous: null } })
+      }
+      return Promise.resolve({ data: {} })
+    })
+    render(<PagosBancard />)
+    await screen.findByText('Luis Palau')
+
+    await userEvent.click(screen.getByRole('button', { name: /Exportar CSV/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.get)).toHaveBeenCalledWith(
+        '/core/bancard/pagos/',
+        expect.objectContaining({ params: expect.objectContaining({ formato: 'csv' }), responseType: 'blob' }),
+      )
+    })
+    expect(window.URL.createObjectURL).toHaveBeenCalled()
+    expect(toast.success).toHaveBeenCalledWith('CSV descargado')
   })
 })

@@ -1243,3 +1243,342 @@ class TestBancardAnularPago:
         assert saldo.saldo_actual == Decimal('0')
         pago.refresh_from_db()
         assert pago.estado == pago.Estado.CANCELADO
+
+
+# ─── Fixtures: ERROR / PENDIENTE ───────────────────────────────────────────────
+
+@pytest.fixture
+def pago_error_tarjeta(db, cliente, hijo_con_tarjeta):
+    from apps.core.models import PagoBancard
+    _, tarjeta = hijo_con_tarjeta
+    return PagoBancard.objects.create(
+        tipo=PagoBancard.Tipo.TARJETA, tarjeta=tarjeta, cliente=cliente,
+        shop_process_id="pago-error-001", monto=Decimal("30000"),
+        estado=PagoBancard.Estado.ERROR,
+    )
+
+
+@pytest.fixture
+def pago_pendiente_tarjeta(db, cliente, hijo_con_tarjeta):
+    from apps.core.models import PagoBancard
+    _, tarjeta = hijo_con_tarjeta
+    return PagoBancard.objects.create(
+        tipo=PagoBancard.Tipo.TARJETA, tarjeta=tarjeta, cliente=cliente,
+        shop_process_id="pago-pendiente-001", monto=Decimal("30000"),
+        estado=PagoBancard.Estado.PENDIENTE,
+    )
+
+
+# ─── Tests: detalle de pago ────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardPagosDetalle:
+
+    def test_sin_autenticacion_falla(self, api_client, pago_aprobado_hoy):
+        resp = api_client.get(f'/api/v1/core/bancard/pagos/{pago_aprobado_hoy.shop_process_id}/')
+        assert resp.status_code in (401, 403)
+
+    def test_no_admin_falla(self, api_padre, pago_aprobado_hoy):
+        client, _ = api_padre
+        resp = client.get(f'/api/v1/core/bancard/pagos/{pago_aprobado_hoy.shop_process_id}/')
+        assert resp.status_code == 403
+
+    def test_pago_inexistente_404(self, api_admin):
+        client, _ = api_admin
+        resp = client.get('/api/v1/core/bancard/pagos/NOEXISTE/')
+        assert resp.status_code == 404
+
+    def test_incluye_bancard_response(self, api_admin, pago_aprobado_hoy):
+        pago_aprobado_hoy.bancard_response = {"confirmation": {"response_code": "00"}}
+        pago_aprobado_hoy.save(update_fields=["bancard_response"])
+        client, _ = api_admin
+        resp = client.get(f'/api/v1/core/bancard/pagos/{pago_aprobado_hoy.shop_process_id}/')
+        assert resp.status_code == 200
+        assert resp.data['bancard_response'] == {"confirmation": {"response_code": "00"}}
+        assert 'process_id' in resp.data
+        assert 'ip_origen' in resp.data
+
+    def test_listado_no_incluye_bancard_response(self, api_admin, pago_aprobado_hoy):
+        client, _ = api_admin
+        resp = client.get('/api/v1/core/bancard/pagos/')
+        assert 'bancard_response' not in resp.data['results'][0]
+
+
+# ─── Tests: reintentar (resolver ERROR) ────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardPagosReintentar:
+
+    def test_sin_autenticacion_falla(self, api_client, pago_error_tarjeta):
+        resp = api_client.post(f'/api/v1/core/bancard/pagos/{pago_error_tarjeta.shop_process_id}/reintentar/')
+        assert resp.status_code in (401, 403)
+
+    def test_no_admin_falla(self, api_padre, pago_error_tarjeta):
+        client, _ = api_padre
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_error_tarjeta.shop_process_id}/reintentar/')
+        assert resp.status_code == 403
+
+    def test_pago_inexistente_404(self, api_admin):
+        client, _ = api_admin
+        resp = client.post('/api/v1/core/bancard/pagos/NOEXISTE/reintentar/')
+        assert resp.status_code == 404
+
+    def test_pago_no_en_error_falla(self, api_admin, pago_aprobado_hoy):
+        client, _ = api_admin
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_aprobado_hoy.shop_process_id}/reintentar/')
+        assert resp.status_code == 400
+        assert 'error' in resp.data['detail'].lower()
+
+    def test_sin_credito_previo_acredita(self, api_admin, pago_error_tarjeta):
+        tarjeta = pago_error_tarjeta.tarjeta
+        saldo_previo = tarjeta.saldo_actual
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_error_tarjeta.shop_process_id}/reintentar/')
+
+        assert resp.status_code == 200
+        assert resp.data['accion'] == 'acreditado'
+        pago_error_tarjeta.refresh_from_db()
+        assert pago_error_tarjeta.estado == pago_error_tarjeta.Estado.APROBADO
+        assert pago_error_tarjeta.carga_saldo is not None
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_previo + pago_error_tarjeta.monto
+
+    def test_con_credito_previo_solo_vincula_sin_duplicar(self, api_admin, pago_error_tarjeta):
+        from apps.core.models import CargaSaldo
+        tarjeta = pago_error_tarjeta.tarjeta
+        credito_existente = CargaSaldo.objects.create(
+            tarjeta=tarjeta, cliente_origen=pago_error_tarjeta.cliente,
+            monto_cargado=pago_error_tarjeta.monto,
+            metodo_pago="TARJETA_BANCARD", referencia=pago_error_tarjeta.shop_process_id,
+            estado=CargaSaldo.Estado.CONFIRMADA,
+        )
+        # El saldo ya fue acreditado por ese CargaSaldo previo (simula el fallo
+        # DESPUÉS de acreditar, antes de guardar el estado del PagoBancard).
+        tarjeta.saldo_actual += pago_error_tarjeta.monto
+        tarjeta.save(update_fields=["saldo_actual"])
+        saldo_previo = tarjeta.saldo_actual
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_error_tarjeta.shop_process_id}/reintentar/')
+
+        assert resp.status_code == 200
+        assert resp.data['accion'] == 'vinculado'
+        pago_error_tarjeta.refresh_from_db()
+        assert pago_error_tarjeta.estado == pago_error_tarjeta.Estado.APROBADO
+        assert pago_error_tarjeta.carga_saldo_id == credito_existente.id
+        tarjeta.refresh_from_db()
+        # No se creó un segundo crédito — el saldo no cambió respecto al previo.
+        assert tarjeta.saldo_actual == saldo_previo
+        assert CargaSaldo.objects.filter(referencia=pago_error_tarjeta.shop_process_id).count() == 1
+
+    def test_almuerzo_con_credito_previo_solo_vincula(self, api_admin, padre_con_cuenta):
+        from apps.core.models import PagoBancard
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo, SaldoAlmuerzo
+        padre, cuenta = padre_con_cuenta
+        pago = PagoBancard.objects.create(
+            tipo=PagoBancard.Tipo.ALMUERZO, hijo=cuenta.hijo,
+            cliente=cuenta.hijo.cliente_responsable,
+            shop_process_id="pago-almuerzo-error", monto=Decimal("50000"),
+            estado=PagoBancard.Estado.ERROR,
+        )
+        recarga = RecargaSaldoAlmuerzo.objects.create(
+            hijo=cuenta.hijo, monto_cargado=Decimal("50000"),
+            referencia=pago.shop_process_id,
+            estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+        )
+        SaldoAlmuerzo.objects.create(hijo=cuenta.hijo, saldo_actual=Decimal("50000"))
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago.shop_process_id}/reintentar/')
+
+        assert resp.status_code == 200
+        assert resp.data['accion'] == 'vinculado'
+        pago.refresh_from_db()
+        assert pago.estado == pago.Estado.APROBADO
+        assert pago.recarga_almuerzo_id == recarga.id
+        assert RecargaSaldoAlmuerzo.objects.filter(referencia=pago.shop_process_id).count() == 1
+
+    @patch('apps.core.bancard_service.acreditar_saldo')
+    def test_falla_de_nuevo_permanece_en_error(self, mock_acreditar, api_admin, pago_error_tarjeta):
+        mock_acreditar.side_effect = Exception("DB caída de nuevo")
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_error_tarjeta.shop_process_id}/reintentar/')
+
+        assert resp.status_code == 400
+        assert 'Error' in resp.data['detail']
+        pago_error_tarjeta.refresh_from_db()
+        assert pago_error_tarjeta.estado == pago_error_tarjeta.Estado.ERROR
+
+
+# ─── Tests: reconsultar (resolver PENDIENTE) ───────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardPagosReconsultar:
+
+    def test_sin_autenticacion_falla(self, api_client, pago_pendiente_tarjeta):
+        resp = api_client.post(f'/api/v1/core/bancard/pagos/{pago_pendiente_tarjeta.shop_process_id}/reconsultar/')
+        assert resp.status_code in (401, 403)
+
+    def test_no_admin_falla(self, api_padre, pago_pendiente_tarjeta):
+        client, _ = api_padre
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_pendiente_tarjeta.shop_process_id}/reconsultar/')
+        assert resp.status_code == 403
+
+    def test_pago_inexistente_404(self, api_admin):
+        client, _ = api_admin
+        resp = client.post('/api/v1/core/bancard/pagos/NOEXISTE/reconsultar/')
+        assert resp.status_code == 404
+
+    def test_pago_no_pendiente_falla(self, api_admin, pago_aprobado_hoy):
+        client, _ = api_admin
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_aprobado_hoy.shop_process_id}/reconsultar/')
+        assert resp.status_code == 400
+        assert 'pendientes' in resp.data['detail'].lower()
+
+    @patch('apps.core.bancard_service.get_confirmation')
+    def test_bancard_confirma_aprobado(self, mock_confirmation, api_admin, pago_pendiente_tarjeta):
+        mock_confirmation.return_value = {
+            'status': 'success', 'confirmation': {'response_code': '00'},
+        }
+        tarjeta = pago_pendiente_tarjeta.tarjeta
+        saldo_previo = tarjeta.saldo_actual
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_pendiente_tarjeta.shop_process_id}/reconsultar/')
+
+        assert resp.status_code == 200
+        assert resp.data['resuelto'] is True
+        pago_pendiente_tarjeta.refresh_from_db()
+        assert pago_pendiente_tarjeta.estado == pago_pendiente_tarjeta.Estado.APROBADO
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_previo + pago_pendiente_tarjeta.monto
+
+    @patch('apps.core.bancard_service.get_confirmation')
+    def test_bancard_confirma_rechazado(self, mock_confirmation, api_admin, pago_pendiente_tarjeta):
+        mock_confirmation.return_value = {
+            'status': 'success', 'confirmation': {'response_code': '05'},
+        }
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_pendiente_tarjeta.shop_process_id}/reconsultar/')
+
+        assert resp.status_code == 200
+        assert resp.data['resuelto'] is True
+        pago_pendiente_tarjeta.refresh_from_db()
+        assert pago_pendiente_tarjeta.estado == pago_pendiente_tarjeta.Estado.RECHAZADO
+
+    @patch('apps.core.bancard_service.get_confirmation')
+    def test_bancard_sin_resultado_sigue_pendiente(self, mock_confirmation, api_admin, pago_pendiente_tarjeta):
+        mock_confirmation.return_value = {'status': 'error', 'messages': [{'dsc': 'No existe la transacción.'}]}
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_pendiente_tarjeta.shop_process_id}/reconsultar/')
+
+        assert resp.status_code == 200
+        assert resp.data['resuelto'] is False
+        pago_pendiente_tarjeta.refresh_from_db()
+        assert pago_pendiente_tarjeta.estado == pago_pendiente_tarjeta.Estado.PENDIENTE
+        assert pago_pendiente_tarjeta.bancard_response == mock_confirmation.return_value
+
+
+# ─── Tests: cerrar manualmente un PENDIENTE abandonado ─────────────────────────
+
+@pytest.mark.django_db
+class TestBancardPagosCerrarManual:
+
+    def test_sin_autenticacion_falla(self, api_client, pago_pendiente_tarjeta):
+        resp = api_client.post(f'/api/v1/core/bancard/pagos/{pago_pendiente_tarjeta.shop_process_id}/cerrar-manual/')
+        assert resp.status_code in (401, 403)
+
+    def test_no_admin_falla(self, api_padre, pago_pendiente_tarjeta):
+        client, _ = api_padre
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_pendiente_tarjeta.shop_process_id}/cerrar-manual/')
+        assert resp.status_code == 403
+
+    def test_pago_inexistente_404(self, api_admin):
+        client, _ = api_admin
+        resp = client.post('/api/v1/core/bancard/pagos/NOEXISTE/cerrar-manual/')
+        assert resp.status_code == 404
+
+    def test_pago_no_pendiente_falla(self, api_admin, pago_aprobado_hoy):
+        client, _ = api_admin
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_aprobado_hoy.shop_process_id}/cerrar-manual/')
+        assert resp.status_code == 400
+        assert 'pendientes' in resp.data['detail'].lower()
+
+    def test_muy_reciente_no_se_puede_cerrar(self, api_admin, pago_pendiente_tarjeta):
+        client, _ = api_admin
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_pendiente_tarjeta.shop_process_id}/cerrar-manual/')
+        assert resp.status_code == 400
+        assert 'minutos' in resp.data['detail'].lower()
+        pago_pendiente_tarjeta.refresh_from_db()
+        assert pago_pendiente_tarjeta.estado == pago_pendiente_tarjeta.Estado.PENDIENTE
+
+    @patch('apps.core.bancard_service.get_confirmation')
+    def test_bancard_tenia_resultado_no_cierra_a_ciegas(
+        self, mock_confirmation, api_admin, pago_pendiente_tarjeta,
+    ):
+        from datetime import timedelta
+        from django.utils import timezone
+        pago_pendiente_tarjeta.fecha_creacion = timezone.now() - timedelta(minutes=90)
+        pago_pendiente_tarjeta.save(update_fields=["fecha_creacion"])
+        mock_confirmation.return_value = {
+            'status': 'success', 'confirmation': {'response_code': '00'},
+        }
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_pendiente_tarjeta.shop_process_id}/cerrar-manual/')
+
+        assert resp.status_code == 200
+        assert 'no se cerró' in resp.data['detail'].lower()
+        pago_pendiente_tarjeta.refresh_from_db()
+        assert pago_pendiente_tarjeta.estado == pago_pendiente_tarjeta.Estado.APROBADO
+
+    @patch('apps.core.bancard_service.get_confirmation')
+    def test_sin_resultado_en_bancard_cierra_como_rechazado(
+        self, mock_confirmation, api_admin, pago_pendiente_tarjeta,
+    ):
+        from datetime import timedelta
+        from django.utils import timezone
+        pago_pendiente_tarjeta.fecha_creacion = timezone.now() - timedelta(minutes=90)
+        pago_pendiente_tarjeta.save(update_fields=["fecha_creacion"])
+        mock_confirmation.return_value = {'status': 'error', 'messages': [{'dsc': 'No existe.'}]}
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago_pendiente_tarjeta.shop_process_id}/cerrar-manual/')
+
+        assert resp.status_code == 200
+        pago_pendiente_tarjeta.refresh_from_db()
+        assert pago_pendiente_tarjeta.estado == pago_pendiente_tarjeta.Estado.RECHAZADO
+        assert pago_pendiente_tarjeta.bancard_response['cierre_manual']['admin'] == 'admin_pagos@test.com'
+
+
+# ─── Tests: exportar CSV ───────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardPagosExportarCSV:
+
+    def test_no_admin_falla(self, api_padre, pago_aprobado_hoy):
+        client, _ = api_padre
+        resp = client.get('/api/v1/core/bancard/pagos/', {'formato': 'csv'})
+        assert resp.status_code == 403
+
+    def test_devuelve_csv(self, api_admin, pago_aprobado_hoy):
+        client, _ = api_admin
+        resp = client.get('/api/v1/core/bancard/pagos/', {'formato': 'csv'})
+        assert resp.status_code == 200
+        assert 'text/csv' in resp['Content-Type']
+        assert 'attachment' in resp['Content-Disposition']
+        content = resp.content.decode('utf-8-sig')
+        assert 'PAGOS BANCARD' in content
+        assert 'pago-hoy-001' in content
+        assert '50000' in content
+
+    def test_respeta_filtro_estado(self, api_admin, pago_aprobado_hoy, pago_pendiente_tarjeta):
+        client, _ = api_admin
+        resp = client.get('/api/v1/core/bancard/pagos/', {'formato': 'csv', 'estado': 'PENDIENTE'})
+        content = resp.content.decode('utf-8-sig')
+        assert 'pago-pendiente-001' in content
+        assert 'pago-hoy-001' not in content

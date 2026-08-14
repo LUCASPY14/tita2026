@@ -215,3 +215,13 @@ class PagoBancardSerializer(serializers.ModelSerializer):
             "fecha_creacion", "fecha_confirmacion",
             "card_id_bancard", "card_masked_number",
         ]
+
+
+class PagoBancardDetailSerializer(PagoBancardSerializer):
+    """Variante con la respuesta cruda de Bancard — solo para la vista de detalle
+    administrativa, no se incluye en el listado para no inflar ese payload."""
+
+    class Meta(PagoBancardSerializer.Meta):
+        fields = PagoBancardSerializer.Meta.fields + [
+            "process_id", "ip_origen", "bancard_response",
+        ]

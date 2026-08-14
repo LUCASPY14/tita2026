@@ -530,6 +530,54 @@ def procesar_resultado_pago(pago_bancard, response_code: str) -> None:
         logger.info("Bancard: pago rechazado shop=%s code=%s", pago_bancard.shop_process_id, response_code)
 
 
+def reintentar_acreditacion(pago_bancard) -> dict:
+    """
+    Resuelve un PagoBancard en estado ERROR: Bancard ya cobró (response_code
+    "00"), pero acreditar_saldo/acreditar_pago_almuerzo falló después de crear
+    el registro de crédito, o antes de crearlo — no sabemos cuál sin verificar.
+
+    cargar_saldo()/recargar_saldo() NO son idempotentes (no hay unique en
+    referencia), así que reintentar a ciegas podría duplicar el crédito si el
+    fallo ocurrió DESPUÉS de que el CargaSaldo/RecargaSaldoAlmuerzo ya se creó
+    (el save() de PagoBancard fue lo que falló, no el crédito en sí). Por eso
+    primero se busca si el crédito ya existe por su referencia:
+      - si existe  → se vincula y se marca APROBADO (reconciliar, no duplicar).
+      - si no existe → recién ahí se acredita.
+
+    Returns:
+        dict con "accion" ("vinculado" | "acreditado") para que la vista/UI
+        le muestre al admin qué pasó exactamente, sin comportamiento silencioso.
+    """
+    es_almuerzo = pago_bancard.tipo == pago_bancard.Tipo.ALMUERZO
+
+    if es_almuerzo:
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+
+        existente = RecargaSaldoAlmuerzo.objects.filter(
+            referencia=pago_bancard.shop_process_id
+        ).first()
+        if existente:
+            pago_bancard.recarga_almuerzo = existente
+            pago_bancard.estado = pago_bancard.Estado.APROBADO
+            pago_bancard.fecha_confirmacion = pago_bancard.fecha_confirmacion or timezone.now()
+            pago_bancard.save(update_fields=["recarga_almuerzo", "estado", "fecha_confirmacion"])
+            return {"accion": "vinculado"}
+        acreditar_pago_almuerzo(pago_bancard)
+        return {"accion": "acreditado"}
+
+    from .models import CargaSaldo
+
+    existente = CargaSaldo.objects.filter(referencia=pago_bancard.shop_process_id).first()
+    if existente:
+        pago_bancard.carga_saldo = existente
+        pago_bancard.estado = pago_bancard.Estado.APROBADO
+        pago_bancard.fecha_confirmacion = pago_bancard.fecha_confirmacion or timezone.now()
+        pago_bancard.save(update_fields=["carga_saldo", "estado", "fecha_confirmacion"])
+        return {"accion": "vinculado"}
+    acreditar_saldo(pago_bancard)
+    return {"accion": "acreditado"}
+
+
 def proxima_tarjeta_guardada_disponible(user_id: int) -> int | None:
     """
     Consulta cuántas tarjetas tiene catastradas el usuario y devuelve el próximo
