@@ -877,6 +877,109 @@ class TestRegistroConsumoDestroyAdmin:
         assert "ANULADO" in resp.data["error"]
 
 
+# ── RegistroConsumo anular ─────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestRegistroConsumoAnular:
+    """POST .../registros-consumo/<id>/anular/ — reemplaza el PATCH estado=ANULADO
+    que nunca funcionó porque `estado` es read_only en el serializer."""
+
+    def _registro(self, hijo, tarjeta, cajero, ya_cobrado=True, costo="15000", estado="REGISTRADO"):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        return RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo,
+            fecha_consumo=date.today(),
+            costo_almuerzo=Decimal(costo),
+            ya_cobrado=ya_cobrado,
+            nro_tarjeta=tarjeta,
+            registrado_por=cajero,
+            estado=estado,
+        )
+
+    def test_sin_autenticacion_falla(self, api_client, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero):
+        registro = self._registro(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero)
+        resp = api_client.post(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/anular/")
+        assert resp.status_code in (401, 403)
+
+    def test_cliente_web_no_puede_anular(
+        self, api_cliente_web, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero
+    ):
+        registro = self._registro(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero)
+        resp = api_cliente_web.post(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/anular/")
+        assert resp.status_code == 403
+        registro.refresh_from_db()
+        assert registro.estado == "REGISTRADO"
+
+    def test_no_registrado_falla(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero):
+        registro = self._registro(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, estado="ANULADO")
+        resp = api_cajero.post(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/anular/")
+        assert resp.status_code == 400
+        assert "REGISTRADO" in resp.data["detail"]
+
+    def test_anula_y_revierte_saldo_cuando_estaba_cobrado(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero
+    ):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("-15000"))
+        registro = self._registro(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, ya_cobrado=True, costo="15000")
+
+        resp = api_cajero.post(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/anular/")
+
+        assert resp.status_code == 200
+        assert resp.data["estado"] == "ANULADO"
+        registro.refresh_from_db()
+        assert registro.estado == "ANULADO"
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("0")
+
+    def test_anula_segundo_registro_sin_cobro_no_mueve_saldo(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero
+    ):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("5000"))
+        registro = self._registro(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, ya_cobrado=False, costo="0")
+
+        resp = api_cajero.post(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/anular/")
+
+        assert resp.status_code == 200
+        registro.refresh_from_db()
+        assert registro.estado == "ANULADO"
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("5000")
+
+    def test_resincroniza_cuenta_mensual(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero
+    ):
+        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        hoy = date.today()
+        cuenta = CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_almuerzo, anio=hoy.year, mes=hoy.month,
+            cantidad_almuerzos=1, monto_total=Decimal("15000"), monto_pagado=Decimal("0"),
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+        )
+        registro = self._registro(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, ya_cobrado=True, costo="15000")
+
+        resp = api_cajero.post(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/anular/")
+
+        assert resp.status_code == 200
+        cuenta.refresh_from_db()
+        # El trigger trg_sync_cuenta_almuerzo recalcula desde los registros
+        # REGISTRADO restantes — sin ninguno, la cuenta queda en 0.
+        assert cuenta.monto_total == Decimal("0")
+        assert cuenta.cantidad_almuerzos == 0
+
+    def test_queda_auditado(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero):
+        from apps.usuarios.models import AuditoriaOperacion
+        registro = self._registro(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero)
+
+        resp = api_cajero.post(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/anular/")
+
+        assert resp.status_code == 200
+        auditoria = AuditoriaOperacion.objects.filter(operacion="ANULAR_REGISTRO_ALMUERZO").first()
+        assert auditoria is not None
+        assert str(registro.hijo_id) in auditoria.descripcion
+
+
 # ── RegistroConsumo: WhatsApp except silente ──────────────────────────────────
 
 @pytest.mark.django_db

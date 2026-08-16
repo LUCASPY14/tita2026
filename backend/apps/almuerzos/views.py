@@ -26,6 +26,7 @@ from common.permissions import (
     IsStaffOrClienteWeb, IsStaffUser,
 )
 from common.utils.medios_pago import resolver_medio_pago
+from common.throttling import SensitiveEndpointThrottle
 from apps.usuarios.auditoria import registrar_auditoria
 
 import django_filters
@@ -192,7 +193,7 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
 
     def get_permissions(self):
-        if self.action in ("create", "update", "partial_update", "destroy"):
+        if self.action in ("create", "update", "partial_update", "destroy", "anular"):
             return [IsCajeroOrAdmin()]
         return [IsStaffOrClienteWeb()]
 
@@ -229,22 +230,33 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def perform_update(self, serializer):
-        registro_anterior = self.get_object()
-        estado_anterior = registro_anterior.estado
-        registro = serializer.save()
+    @action(
+        detail=True, methods=["post"], url_path="anular",
+        throttle_classes=[SensitiveEndpointThrottle],
+    )
+    def anular(self, request, pk=None):
+        """
+        Anula un registro de consumo en estado REGISTRADO: revierte el saldo
+        de almuerzo debitado (si estaba cobrado) y resincroniza la cuenta
+        mensual del alumno. `estado` es read-only en el serializer a propósito
+        (un PATCH/PUT genérico no debe poder mover el estado) — esta es la
+        única vía habilitada para anular.
+        """
+        registro = self.get_object()
+        if registro.estado != RegistroConsumoAlmuerzo.Estado.REGISTRADO:
+            # ValidationError (no un Response directo) para que
+            # common.exceptions.custom_exception_handler la normalice a
+            # {"detail": ...} — es lo que el frontend sabe leer.
+            raise ValidationError({"error": "Solo se pueden anular registros en estado REGISTRADO."})
 
-        # Si se anuló un registro que estaba cobrado → descontar de la cuenta mensual
-        if (
-            estado_anterior == RegistroConsumoAlmuerzo.Estado.REGISTRADO
-            and registro.estado == RegistroConsumoAlmuerzo.Estado.ANULADO
-            and registro.ya_cobrado
-            and registro.costo_almuerzo
-        ):
-            # El UPDATE de arriba ya disparó el trigger trg_sync_cuenta_almuerzo,
-            # que recalculó cantidad_almuerzos/monto_total sin este registro
-            # (su estado ya es ANULADO) — acá solo recalculamos el estado.
-            with transaction.atomic():
+        with transaction.atomic():
+            registro.estado = RegistroConsumoAlmuerzo.Estado.ANULADO
+            registro.save(update_fields=["estado"])
+            # El UPDATE de arriba dispara el trigger trg_sync_cuenta_almuerzo,
+            # que recalcula cantidad_almuerzos/monto_total sin este registro
+            # (su estado ya es ANULADO) — acá solo recalculamos el estado
+            # derivado y revertimos el saldo corriente si estaba cobrado.
+            if registro.ya_cobrado and registro.costo_almuerzo:
                 cuenta = CuentaAlmuerzoMensual.objects.select_for_update().filter(
                     hijo=registro.hijo,
                     anio=registro.fecha_consumo.year,
@@ -254,16 +266,18 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                     cuenta.refresh_from_db(fields=["monto_total", "monto_pagado", "estado", "fecha_pago"])
                     cuenta.actualizar_estado()
                 AlmuerzoService._revertir_saldo_almuerzo(registro)
-            registrar_auditoria(
-                request=self.request,
-                operacion="ANULAR_REGISTRO_ALMUERZO",
-                tabla="almuerzos_registroconsumoalmuerzo",
-                id_registro=registro.id,
-                descripcion=(
-                    f"Consumo anulado — hijo={registro.hijo_id} "
-                    f"fecha={registro.fecha_consumo} costo={registro.costo_almuerzo} Gs."
-                ),
-            )
+
+        registrar_auditoria(
+            request=request,
+            operacion="ANULAR_REGISTRO_ALMUERZO",
+            tabla="almuerzos_registroconsumoalmuerzo",
+            id_registro=registro.id,
+            descripcion=(
+                f"Consumo anulado — hijo={registro.hijo_id} "
+                f"fecha={registro.fecha_consumo} costo={registro.costo_almuerzo} Gs."
+            ),
+        )
+        return Response(self.get_serializer(registro).data)
 
     filterset_class = RegistroConsumoFilter
     search_fields = ["hijo__nombre", "hijo__apellido"]

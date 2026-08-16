@@ -19,6 +19,7 @@ import ModalEditSusc from './almuerzos/ModalEditSusc'
 import ModalMenu from './almuerzos/ModalMenu'
 import ModalEditMenu from './almuerzos/ModalEditMenu'
 import ModalConfirmarEliminar from './almuerzos/ModalConfirmarEliminar'
+import ModalConfirmarAnular from './almuerzos/ModalConfirmarAnular'
 import ModalPagoMensual from './almuerzos/ModalPagoMensual'
 import {
   extractErrorMessage, formatGs, formatFecha, todayISO, MESES,
@@ -53,6 +54,7 @@ export default function Almuerzos() {
   const [editingSusc, setEditingSusc] = useState<Suscripcion | null>(null)
   const [editingMenu, setEditingMenu] = useState<MenuDiario | null>(null)
   const [deleteConsumoId, setDeleteConsumoId] = useState<number | null>(null)
+  const [anularConsumoId, setAnularConsumoId] = useState<number | null>(null)
   const [pagoMensualSusc, setPagoMensualSusc] = useState<Suscripcion | null>(null)
 
   // ── Cuentas ───────────────────────────────────────────────────────
@@ -183,16 +185,6 @@ export default function Almuerzos() {
     return () => window.removeEventListener('comedor:registro', handler)
   }, [tab, searchRegistros, pageRegistros, loadRegistros, loadCuentas])
 
-  // ── Acciones inline de tablas ─────────────────────────────────────
-  const anularConsumo = useCallback(async (id: number) => {
-    try {
-      await api.patch(`/almuerzos/registros-consumo/${id}/`, { estado: 'ANULADO' })
-      toast.success('Consumo anulado')
-      loadRegistros(searchRegistros, pageRegistros)
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    }
-  }, [loadRegistros, searchRegistros, pageRegistros])
 
   const cancelarSusc = useCallback(async (id: number) => {
     try {
@@ -342,7 +334,7 @@ export default function Almuerzos() {
       render: (_, r) => (
         <div className="flex gap-1.5">
           {r.estado === 'REGISTRADO' && (
-            <Button size="sm" variant="danger" onClick={() => anularConsumo(r.id)}>
+            <Button size="sm" variant="danger" onClick={() => setAnularConsumoId(r.id)}>
               <X className="w-3.5 h-3.5" />
               Anular
             </Button>
@@ -740,6 +732,11 @@ export default function Almuerzos() {
       <ModalConfirmarEliminar
         consumoId={deleteConsumoId}
         onClose={() => setDeleteConsumoId(null)}
+        onSaved={() => loadRegistros(searchRegistros, pageRegistros)}
+      />
+      <ModalConfirmarAnular
+        consumoId={anularConsumoId}
+        onClose={() => setAnularConsumoId(null)}
         onSaved={() => loadRegistros(searchRegistros, pageRegistros)}
       />
       <ModalPagoMensual
