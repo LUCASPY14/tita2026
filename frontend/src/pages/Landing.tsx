@@ -346,7 +346,7 @@ export default function Landing() {
         {/* ── Footer ───────────────────────────────────────────────────────── */}
         <footer className="foot">
           <span className="foot-text">
-            © {new Date().getFullYear()} La Cantina de Tita — cantinatita.com
+            © {new Date().getFullYear()} La Cantina de Tita — cantinatita.com · Desarrollado por LGservices
           </span>
           <div className="foot-contacts">
             <a href="mailto:admin@cantinatita.com" className="foot-link">

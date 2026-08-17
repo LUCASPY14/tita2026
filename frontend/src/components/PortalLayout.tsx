@@ -120,6 +120,7 @@ export default function PortalLayout() {
               )}
             </div>
           )}
+          <p className="text-slate-300">Desarrollado por LGservices</p>
         </footer>
       </main>
 
