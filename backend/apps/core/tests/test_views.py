@@ -264,3 +264,98 @@ class TestMedioPagoCacheHit:
             resp = api_cajero.get("/api/v1/core/medios-pago/")
         assert resp.status_code == 200
         assert any(mp["descripcion"] == "CacheadoTest" for mp in resp.data)
+
+
+# ── ConsumoTarjetaViewSet.permission_classes ────────────────────────────────────
+
+@pytest.mark.django_db
+class TestConsumoTarjetaPermisos:
+    """permission_classes ahora explícito (antes caía al default global IsStaffUser
+    de forma implícita) — sin cambio de comportamiento, solo de claridad."""
+
+    def test_sin_autenticacion_falla(self, api_client):
+        resp = api_client.get("/api/v1/core/consumos/")
+        assert resp.status_code in (401, 403)
+
+    def test_staff_puede_listar(self, api_cajero):
+        resp = api_cajero.get("/api/v1/core/consumos/")
+        assert resp.status_code == 200
+
+    def test_cliente_web_no_puede_listar(self, api_client, db, cliente):
+        from apps.usuarios.models import Usuario
+        padre = Usuario.objects.create_user(
+            email="padre_consumo@test.com", password="test1234",
+            nombre="Padre", apellido="Test", rol="CLIENTE_WEB", cliente=cliente,
+        )
+        api_client.force_authenticate(user=padre)
+        resp = api_client.get("/api/v1/core/consumos/")
+        assert resp.status_code == 403
+
+
+# ── TarjetaViewSet.bloquear / activar ───────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestTarjetaBloquearActivar:
+
+    def test_sin_autenticacion_falla(self, api_client, tarjeta_core):
+        resp = api_client.post(f"/api/v1/core/tarjetas/{tarjeta_core.nro_tarjeta}/bloquear/")
+        assert resp.status_code in (401, 403)
+
+    def test_bloquear_tarjeta_activa_ok(self, api_cajero, tarjeta_core):
+        resp = api_cajero.post(f"/api/v1/core/tarjetas/{tarjeta_core.nro_tarjeta}/bloquear/")
+        assert resp.status_code == 200
+        assert resp.data["estado"] == "BLOQUEADA"
+        tarjeta_core.refresh_from_db()
+        assert tarjeta_core.estado == "BLOQUEADA"
+
+    def test_bloquear_tarjeta_ya_bloqueada_falla(self, api_cajero, tarjeta_core):
+        from apps.core.models import Tarjeta
+        tarjeta_core.estado = Tarjeta.Estado.BLOQUEADA
+        tarjeta_core.save(update_fields=["estado"])
+        resp = api_cajero.post(f"/api/v1/core/tarjetas/{tarjeta_core.nro_tarjeta}/bloquear/")
+        assert resp.status_code == 400
+        assert "ACTIVA" in resp.data["error"]
+
+    def test_bloquear_tarjeta_vencida_falla(self, api_cajero, tarjeta_core):
+        from apps.core.models import Tarjeta
+        tarjeta_core.estado = Tarjeta.Estado.VENCIDA
+        tarjeta_core.save(update_fields=["estado"])
+        resp = api_cajero.post(f"/api/v1/core/tarjetas/{tarjeta_core.nro_tarjeta}/bloquear/")
+        assert resp.status_code == 400
+        tarjeta_core.refresh_from_db()
+        assert tarjeta_core.estado == "VENCIDA"
+
+    def test_activar_tarjeta_bloqueada_ok(self, api_cajero, tarjeta_core):
+        from apps.core.models import Tarjeta
+        tarjeta_core.estado = Tarjeta.Estado.BLOQUEADA
+        tarjeta_core.save(update_fields=["estado"])
+        resp = api_cajero.post(f"/api/v1/core/tarjetas/{tarjeta_core.nro_tarjeta}/activar/")
+        assert resp.status_code == 200
+        assert resp.data["estado"] == "ACTIVA"
+
+    def test_activar_tarjeta_cancelada_falla(self, api_cajero, tarjeta_core):
+        from apps.core.models import Tarjeta
+        tarjeta_core.estado = Tarjeta.Estado.CANCELADA
+        tarjeta_core.save(update_fields=["estado"])
+        resp = api_cajero.post(f"/api/v1/core/tarjetas/{tarjeta_core.nro_tarjeta}/activar/")
+        assert resp.status_code == 400
+        tarjeta_core.refresh_from_db()
+        assert tarjeta_core.estado == "CANCELADA"
+
+    def test_patch_estado_generico_no_hace_nada(self, api_cajero, tarjeta_core):
+        """estado es read-only en el serializer — la única vía es bloquear/activar."""
+        resp = api_cajero.patch(
+            f"/api/v1/core/tarjetas/{tarjeta_core.nro_tarjeta}/",
+            {"estado": "BLOQUEADA"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        tarjeta_core.refresh_from_db()
+        assert tarjeta_core.estado == "ACTIVA"
+
+    def test_queda_auditado(self, api_cajero, tarjeta_core):
+        from apps.usuarios.models import AuditoriaOperacion
+        api_cajero.post(f"/api/v1/core/tarjetas/{tarjeta_core.nro_tarjeta}/bloquear/")
+        auditoria = AuditoriaOperacion.objects.filter(operacion="BLOQUEAR_TARJETA").first()
+        assert auditoria is not None
+        assert tarjeta_core.nro_tarjeta in auditoria.descripcion

@@ -13,6 +13,8 @@ from rest_framework.views import APIView
 
 from common.permissions import IsCajeroOrAdmin, IsAdminOrSupervisor, IsStaffUser
 from common.mixins import ExportCSVMixin
+from common.throttling import SensitiveEndpointThrottle
+from apps.usuarios.auditoria import registrar_auditoria
 from .filters import CompraFilter
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -186,6 +188,38 @@ class CompraViewSet(ExportCSVMixin, viewsets.ModelViewSet):
         except ValidationError as exc:
             return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
         return Response(CompraSerializer(compra).data)
+
+    @action(
+        detail=True, methods=["post"], url_path="anular",
+        permission_classes=[IsAdminOrSupervisor], throttle_classes=[SensitiveEndpointThrottle],
+    )
+    def anular(self, request, pk=None):
+        """Anula una compra revirtiendo el stock que ingresó y la cuenta
+        corriente del proveedor si era a crédito. Bloqueada si ya tiene pagos
+        aplicados (hay que revertirlos primero)."""
+        compra = self.get_object()
+        try:
+            compra = CompraService.anular_compra(compra=compra, anulado_por=request.user)
+        except ValidationError as exc:
+            registrar_auditoria(
+                request=request,
+                operacion="ANULAR_COMPRA",
+                tabla="compras_compra",
+                id_registro=compra.id,
+                descripcion=f"Intento fallido de anular compra #{compra.id}",
+                resultado="FALLA",
+                mensaje_error=str(exc),
+            )
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        registrar_auditoria(
+            request=request,
+            operacion="ANULAR_COMPRA",
+            tabla="compras_compra",
+            id_registro=compra.id,
+            descripcion=f"Compra #{compra.id} anulada ({compra.monto_total} Gs.)",
+        )
+        compra_data = self.get_queryset().get(pk=compra.pk)
+        return Response(CompraSerializer(compra_data).data)
 
 
 class DetalleCompraViewSet(viewsets.ModelViewSet):

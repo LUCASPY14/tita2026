@@ -226,3 +226,81 @@ class CompraService:
             compra.save()
 
             return compra
+
+    @staticmethod
+    def _revertir_stock_y_costos(compra, autorizado_por):
+        """Revierte el stock que ingresó una compra (egreso compensatorio por cada
+        movimiento de ingreso que generó). No toca CostoHistorico ni el precio de
+        referencia en ProductoProveedor — son registros históricos, no saldos."""
+        movimientos_ingreso = MovimientoStock.objects.select_for_update().filter(
+            compra=compra, tipo=MovimientoStock.Tipo.INGRESO
+        ).select_related("producto")
+        for mov in movimientos_ingreso:
+            producto = mov.producto
+            stock, _ = Stock.objects.get_or_create(
+                producto=producto, defaults={"cantidad": Decimal("0")},
+            )
+            stock = Stock.objects.select_for_update().get(pk=stock.pk)
+            stock.cantidad -= mov.cantidad
+            stock.save()
+            MovimientoStock.objects.create(
+                producto=producto,
+                tipo=MovimientoStock.Tipo.EGRESO,
+                motivo=MovimientoStock.Motivo.CORRECCION,
+                cantidad=mov.cantidad,
+                stock_resultante=stock.cantidad,
+                compra=compra,
+                autorizado_por=autorizado_por,
+                observaciones=f"Reversión por anulación de compra #{compra.pk}",
+            )
+
+    @staticmethod
+    def anular_compra(compra, anulado_por) -> Compra:
+        """
+        Anula una compra: revierte el stock que ingresó (si ya se aplicó, sea
+        CONTADO o CREDITO ya recibida) y la cuenta corriente del proveedor (si
+        era a crédito). No se permite si ya tiene pagos aplicados — hay que
+        revertir esos pagos primero.
+        """
+        with transaction.atomic():
+            compra = Compra.objects.select_for_update().get(pk=compra.pk)
+
+            if compra.estado_pago == Compra.EstadoPago.ANULADA:
+                raise ValidationError({"error": "Esta compra ya está anulada."})
+            if compra.aplicaciones_pago.exists():
+                raise ValidationError({
+                    "error": "No se puede anular: ya tiene pagos aplicados. Revertí los pagos primero."
+                })
+
+            stock_aplicado = (
+                compra.tipo_pago == Compra.TipoPago.CONTADO
+                or compra.estado_entrega == Compra.EstadoEntrega.RECIBIDA
+            )
+            if stock_aplicado:
+                CompraService._revertir_stock_y_costos(compra, anulado_por)
+
+            if compra.tipo_pago == Compra.TipoPago.CREDITO:
+                Proveedor.objects.select_for_update().get(pk=compra.proveedor_id)
+                ultimo_cc = (
+                    CuentaCorrienteProveedor.objects
+                    .filter(proveedor=compra.proveedor)
+                    .select_for_update()
+                    .order_by("-id")
+                    .first()
+                )
+                saldo_anterior = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
+                CuentaCorrienteProveedor.objects.create(
+                    proveedor=compra.proveedor,
+                    tipo=CuentaCorrienteProveedor.Tipo.CREDITO,
+                    monto=compra.monto_total,
+                    saldo_anterior=saldo_anterior,
+                    saldo_resultante=saldo_anterior - compra.monto_total,
+                    compra=compra,
+                    descripcion=f"Reversión por anulación de compra #{compra.pk}",
+                    creado_por=anulado_por,
+                )
+
+            compra.estado_pago = Compra.EstadoPago.ANULADA
+            compra.save(update_fields=["estado_pago"])
+
+            return compra

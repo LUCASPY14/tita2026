@@ -429,14 +429,29 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
+        from django.db.models import ProtectedError
+        from rest_framework.exceptions import ValidationError
+
+        if instance.is_active:
+            raise ValidationError(
+                "Solo se pueden eliminar usuarios inactivos. Desactivalo primero."
+            )
+        usuario_id = instance.id
+        descripcion = f"Usuario eliminado: {instance.email} rol={instance.rol}"
+        try:
+            instance.delete()
+        except ProtectedError:
+            raise ValidationError(
+                "No se puede eliminar: tiene ventas, cierres de caja u otros registros asociados. "
+                "El historial no se puede borrar — dejalo desactivado."
+            )
         registrar_auditoria(
             request=self.request,
             operacion="ELIMINAR_USUARIO",
             tabla="usuarios_usuario",
-            id_registro=instance.id,
-            descripcion=f"Usuario eliminado: {instance.email} rol={instance.rol}",
+            id_registro=usuario_id,
+            descripcion=descripcion,
         )
-        instance.delete()
 
     @action(detail=False, methods=['get'])
     def me(self, request):

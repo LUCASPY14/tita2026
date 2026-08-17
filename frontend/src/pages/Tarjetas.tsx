@@ -63,7 +63,7 @@ export default function Tarjetas() {
     const nuevoEstado = t.estado === 'ACTIVA' ? 'BLOQUEADA' : 'ACTIVA'
     setToggling(t.nro_tarjeta)
     try {
-      await tarjetasService.actualizar(t.nro_tarjeta, { estado: nuevoEstado })
+      await (t.estado === 'ACTIVA' ? tarjetasService.bloquear(t.nro_tarjeta) : tarjetasService.activar(t.nro_tarjeta))
       toast.success(nuevoEstado === 'BLOQUEADA' ? 'Tarjeta bloqueada' : 'Tarjeta activada')
       setDetailTarjeta(prev => prev?.nro_tarjeta === t.nro_tarjeta ? { ...prev, estado: nuevoEstado } : prev)
       loadTarjetas(search, estadoFilter, page)

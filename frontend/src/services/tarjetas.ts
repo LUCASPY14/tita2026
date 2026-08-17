@@ -58,6 +58,12 @@ const tarjetasService = {
   actualizar: (nro: string, data: Record<string, unknown>) =>
     api.patch<TarjetaBase>(`/core/tarjetas/${nro}/`, data),
 
+  bloquear: <T = TarjetaBase>(nro: string) =>
+    api.post<T>(`/core/tarjetas/${nro}/bloquear/`),
+
+  activar: <T = TarjetaBase>(nro: string) =>
+    api.post<T>(`/core/tarjetas/${nro}/activar/`),
+
   getMovimientos: <T = MovimientoTarjeta>(nro_tarjeta: string, page_size = 20) =>
     api.get<Paginated<T>>('/core/movimientos-tarjeta/', {
       params: { tarjeta: nro_tarjeta, page_size },

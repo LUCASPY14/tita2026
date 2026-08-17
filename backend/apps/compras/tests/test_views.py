@@ -884,3 +884,118 @@ class TestNotaCreditoAnular:
         resp = api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
         assert resp.status_code == 400
         assert "anulada" in resp.data["error"].lower()
+
+
+# ── CompraViewSet.anular ────────────────────────────────────────────────────────
+
+@pytest.fixture
+def usuario_supervisor(db):
+    from apps.usuarios.models import Usuario
+    return Usuario.objects.create_user(
+        email="supervisor_compras@test.com", password="test1234",
+        nombre="Sup", apellido="Compras", rol="SUPERVISOR",
+    )
+
+
+@pytest.fixture
+def api_supervisor(usuario_supervisor):
+    client = APIClient()
+    client.force_authenticate(user=usuario_supervisor)
+    return client
+
+
+@pytest.mark.django_db
+class TestCompraAnular:
+    """Cubre la action anular de CompraViewSet."""
+
+    def test_sin_autenticacion_falla(self, compra_contado):
+        client = APIClient()
+        resp = client.post(f"/api/v1/compras/compras/{compra_contado.pk}/anular/")
+        assert resp.status_code in (401, 403)
+
+    def test_cajero_no_puede_anular(self, api, compra_contado):
+        resp = api.post(f"/api/v1/compras/compras/{compra_contado.pk}/anular/")
+        assert resp.status_code == 403
+
+    def test_supervisor_puede_anular(self, api_supervisor, compra_contado):
+        resp = api_supervisor.post(f"/api/v1/compras/compras/{compra_contado.pk}/anular/")
+        assert resp.status_code == 200
+        assert resp.data["estado_pago"] == "ANULADA"
+
+    def test_anula_contado_revierte_stock(self, api_admin, compra_contado, producto):
+        from apps.inventario.models import Stock
+        stock_previo = Stock.objects.get(producto=producto).cantidad
+
+        resp = api_admin.post(f"/api/v1/compras/compras/{compra_contado.pk}/anular/")
+
+        assert resp.status_code == 200
+        stock = Stock.objects.get(producto=producto)
+        assert stock.cantidad == stock_previo - Decimal("2")
+
+    def test_anula_contado_crea_movimiento_egreso_correccion(self, api_admin, compra_contado):
+        from apps.inventario.models import MovimientoStock
+        api_admin.post(f"/api/v1/compras/compras/{compra_contado.pk}/anular/")
+        assert MovimientoStock.objects.filter(
+            compra=compra_contado,
+            tipo=MovimientoStock.Tipo.EGRESO,
+            motivo=MovimientoStock.Motivo.CORRECCION,
+        ).exists()
+
+    def test_anula_credito_no_recibida_no_revierte_stock_pero_si_cc(
+        self, api_admin, compra_credito, producto
+    ):
+        from apps.inventario.models import Stock, MovimientoStock
+        from apps.compras.models import CuentaCorrienteProveedor
+        # CREDITO recién registrada: aún no se confirmó entrega, no tocó stock.
+        assert not Stock.objects.filter(producto=producto).exists()
+
+        resp = api_admin.post(f"/api/v1/compras/compras/{compra_credito.pk}/anular/")
+
+        assert resp.status_code == 200
+        assert not MovimientoStock.objects.filter(compra=compra_credito).exists()
+        assert CuentaCorrienteProveedor.objects.filter(
+            compra=compra_credito,
+            tipo=CuentaCorrienteProveedor.Tipo.CREDITO,
+        ).exists()
+
+    def test_anula_credito_recibida_revierte_stock_y_cc(
+        self, api_admin, compra_credito, producto
+    ):
+        from apps.inventario.models import Stock
+        from apps.compras.models import CuentaCorrienteProveedor
+        api_admin.post(f"/api/v1/compras/compras/{compra_credito.pk}/confirmar-entrega/")
+        stock_previo = Stock.objects.get(producto=producto).cantidad
+
+        resp = api_admin.post(f"/api/v1/compras/compras/{compra_credito.pk}/anular/")
+
+        assert resp.status_code == 200
+        stock = Stock.objects.get(producto=producto)
+        assert stock.cantidad == stock_previo - Decimal("3")
+        assert CuentaCorrienteProveedor.objects.filter(
+            compra=compra_credito,
+            tipo=CuentaCorrienteProveedor.Tipo.CREDITO,
+        ).exists()
+
+    def test_anular_dos_veces_retorna_400(self, api_admin, compra_contado):
+        api_admin.post(f"/api/v1/compras/compras/{compra_contado.pk}/anular/")
+        resp = api_admin.post(f"/api/v1/compras/compras/{compra_contado.pk}/anular/")
+        assert resp.status_code == 400
+        assert "anulada" in resp.data["error"].lower()
+
+    def test_con_pago_aplicado_no_se_puede_anular(
+        self, api_admin, compra_credito, medio_pago_efectivo
+    ):
+        api_admin.post(
+            "/api/v1/compras/pagos/",
+            {
+                "compra": compra_credito.pk,
+                "monto": str(compra_credito.monto_total),
+                "medio_pago": medio_pago_efectivo.pk,
+            },
+            format="json",
+        )
+        resp = api_admin.post(f"/api/v1/compras/compras/{compra_credito.pk}/anular/")
+        assert resp.status_code == 400
+        assert "pagos" in resp.data["error"].lower()
+        compra_credito.refresh_from_db()
+        assert compra_credito.estado_pago == "PAGADO"

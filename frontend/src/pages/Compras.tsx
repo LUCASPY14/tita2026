@@ -2,15 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
-  ArrowRightCircle, Building2, CheckCircle, ClipboardList,
+  AlertTriangle, ArrowRightCircle, Building2, CheckCircle, ClipboardList,
   CreditCard, DollarSign, Eye, FileText, PackageCheck,
-  Plus, Search, Send, Truck, XCircle,
+  Plus, Search, Send, Truck, Undo2, XCircle,
 } from 'lucide-react'
 import api from '../services/api'
 import { useCatalogoStore } from '../store/catalogoStore'
 import { useAuthStore } from '../store/authStore'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
+import Modal from '../components/ui/Modal'
 import Table, { type Column } from '../components/ui/Table'
 import ModalProveedor from './compras/ModalProveedor'
 import ModalCuentaCorriente from './compras/ModalCuentaCorriente'
@@ -97,6 +98,8 @@ export default function Compras() {
   const reqOCRef = useRef(0)
   const [accionOCLoading, setAccionOCLoading] = useState<number | null>(null)
   const [confirmandoEntrega, setConfirmandoEntrega] = useState<number | null>(null)
+  const [confirmAnularCompra, setConfirmAnularCompra] = useState<Compra | null>(null)
+  const [anulandoCompra, setAnulandoCompra] = useState(false)
 
   // ── Modal state ─────────────────────────────────────────────────
   const [provModal, setProvModal] = useState<{ open: boolean; prov: Proveedor | null }>({ open: false, prov: null })
@@ -268,6 +271,21 @@ export default function Compras() {
     }
   }, [searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, pageCompras, loadCompras])
 
+  async function handleAnularCompra() {
+    if (!confirmAnularCompra) return
+    setAnulandoCompra(true)
+    try {
+      await api.post(`/compras/compras/${confirmAnularCompra.id}/anular/`)
+      toast.success(`Compra #${confirmAnularCompra.id} anulada`)
+      setConfirmAnularCompra(null)
+      loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, pageCompras)
+    } catch (err) {
+      toast.error(extractErrorMessage(err))
+    } finally {
+      setAnulandoCompra(false)
+    }
+  }
+
   // ── Columns ─────────────────────────────────────────────────────
   const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
   const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
@@ -308,6 +326,11 @@ export default function Compras() {
           {r.tipo_pago === 'CREDITO' && r.estado_entrega === 'PENDIENTE' && (
             <Button size="sm" variant="secondary" onClick={() => handleConfirmarEntrega(r)} disabled={confirmandoEntrega === r.id}>
               <PackageCheck className="w-3.5 h-3.5" />{confirmandoEntrega === r.id ? '...' : 'Recibir'}
+            </Button>
+          )}
+          {canApprove && r.estado_pago !== 'ANULADA' && (
+            <Button size="sm" variant="danger" onClick={() => setConfirmAnularCompra(r)}>
+              <Undo2 className="w-3.5 h-3.5" />Anular
             </Button>
           )}
         </div>
@@ -629,6 +652,38 @@ export default function Compras() {
         onPago={(c) => { setDetailCompra(null); setPagoModal({ open: true, compra: c }) }}
         onConfirmarEntrega={(c) => { setDetailCompra(null); handleConfirmarEntrega(c) }}
       />
+      {confirmAnularCompra && (
+        <Modal
+          open
+          title="Anular compra"
+          onCancel={() => !anulandoCompra && setConfirmAnularCompra(null)}
+          footer={null}
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <div className="text-sm text-red-800 space-y-1">
+                <p className="font-semibold">Esta acción es irreversible</p>
+                <p>Se revertirá el stock que haya ingresado y la cuenta corriente del proveedor. No se puede anular si ya tiene pagos aplicados.</p>
+              </div>
+            </div>
+            <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1 text-sm">
+              <p className="text-slate-500">Compra <span className="font-semibold text-slate-800">#{confirmAnularCompra.id}</span></p>
+              <p className="text-slate-500">Proveedor: <span className="font-semibold text-slate-800">{confirmAnularCompra.proveedor_nombre}</span></p>
+              <p className="text-slate-500">Monto: <span className="font-semibold text-slate-800">{formatGs(confirmAnularCompra.monto_total)}</span></p>
+              <p className="text-slate-500">Fecha: <span className="font-semibold text-slate-800">{formatFecha(confirmAnularCompra.fecha)}</span></p>
+            </div>
+            <div className="flex gap-3 justify-end pt-1">
+              <Button variant="secondary" onClick={() => setConfirmAnularCompra(null)} disabled={anulandoCompra}>
+                Cancelar
+              </Button>
+              <Button variant="danger" loading={anulandoCompra} onClick={handleAnularCompra}>
+                Confirmar anulación
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
       <ModalPago
         open={pagoModal.open}
         compra={pagoModal.compra}

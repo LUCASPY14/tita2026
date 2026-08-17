@@ -915,3 +915,37 @@ class TestPortalHistorialCantinaConVentas:
         )
         assert resp.status_code == 200
         assert resp.data["count"] >= 1
+
+
+# ── UsuarioViewSet — guarda de hard-delete ──────────────────────────────────────
+
+@pytest.mark.django_db
+class TestUsuarioDestroyGuard:
+
+    def _otro_usuario(self, is_active=True):
+        from apps.usuarios.models import Usuario
+        return Usuario.objects.create_user(
+            email="borrar_test@test.com", password="test1234",
+            nombre="Borrar", apellido="Test", rol="CAJERO", is_active=is_active,
+        )
+
+    def test_no_se_puede_eliminar_usuario_activo(self, api_admin):
+        usuario = self._otro_usuario(is_active=True)
+        resp = api_admin.delete(f"/api/v1/usuarios/usuarios/{usuario.pk}/")
+        assert resp.status_code == 400
+        assert "inactivo" in str(resp.data).lower()
+
+    def test_elimina_usuario_inactivo_sin_historial(self, api_admin):
+        from apps.usuarios.models import Usuario
+        usuario = self._otro_usuario(is_active=False)
+        resp = api_admin.delete(f"/api/v1/usuarios/usuarios/{usuario.pk}/")
+        assert resp.status_code == 204
+        assert not Usuario.objects.filter(pk=usuario.pk).exists()
+
+    def test_no_se_puede_eliminar_usuario_con_ventas(self, api_admin, cliente):
+        from apps.ventas.models import Venta
+        usuario = self._otro_usuario(is_active=False)
+        Venta.objects.create(cliente=cliente, cajero=usuario, monto_total="10000")
+        resp = api_admin.delete(f"/api/v1/usuarios/usuarios/{usuario.pk}/")
+        assert resp.status_code == 400
+        assert "asociados" in str(resp.data).lower()

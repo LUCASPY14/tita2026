@@ -133,14 +133,30 @@ class ClienteViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
+        from django.db.models import ProtectedError
+        from rest_framework.exceptions import ValidationError
+
+        if instance.activo:
+            raise ValidationError(
+                "Solo se pueden eliminar clientes inactivos. Desactivalo primero."
+            )
+        # instance.delete() vacía instance.pk/id — capturar antes para la auditoría.
+        cliente_id = instance.id
+        descripcion = f"Cliente eliminado: {instance.nombres} {instance.apellidos} RUC/CI={instance.ruc_ci}"
+        try:
+            instance.delete()
+        except ProtectedError:
+            raise ValidationError(
+                "No se puede eliminar: tiene ventas, tarjetas u otros registros asociados. "
+                "El historial no se puede borrar — dejalo desactivado."
+            )
         registrar_auditoria(
             request=self.request,
             operacion="ELIMINAR_CLIENTE",
             tabla="clientes_cliente",
-            id_registro=instance.id,
-            descripcion=f"Cliente eliminado: {instance.nombres} {instance.apellidos} RUC/CI={instance.ruc_ci}",
+            id_registro=cliente_id,
+            descripcion=descripcion,
         )
-        instance.delete()
 
     @action(detail=True, methods=["post"], url_path="reset-pin",
             permission_classes=[IsAdminOrReadOnly])
@@ -315,14 +331,29 @@ class HijoViewSet(viewsets.ModelViewSet):
             hijo.save(update_fields=["fecha_baja"])
 
     def perform_destroy(self, instance):
+        from django.db.models import ProtectedError
+        from rest_framework.exceptions import ValidationError
+
+        if instance.activo:
+            raise ValidationError(
+                "Solo se pueden eliminar alumnos inactivos. Desactivalo primero."
+            )
+        hijo_id = instance.id
+        descripcion = f"Alumno eliminado: {instance.nombre_completo} (cliente={instance.cliente_responsable_id})"
+        try:
+            instance.delete()
+        except ProtectedError:
+            raise ValidationError(
+                "No se puede eliminar: tiene consumos, tarjeta u otros registros asociados. "
+                "El historial no se puede borrar — dejalo desactivado (o usá la purga de datos tras 1 año de baja)."
+            )
         registrar_auditoria(
             request=self.request,
             operacion="ELIMINAR_HIJO",
             tabla="clientes_hijo",
-            id_registro=instance.id,
-            descripcion=f"Alumno eliminado: {instance.nombre_completo} (cliente={instance.cliente_responsable_id})",
+            id_registro=hijo_id,
+            descripcion=descripcion,
         )
-        instance.delete()
 
     @action(detail=True, methods=["get"], url_path="foto")
     def foto(self, request, pk=None):

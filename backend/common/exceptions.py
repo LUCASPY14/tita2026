@@ -2,6 +2,7 @@
 Excepciones personalizadas
 """
 import logging
+from django.db.models import ProtectedError
 from rest_framework.exceptions import APIException, ValidationError, AuthenticationFailed, NotAuthenticated, PermissionDenied, NotFound, MethodNotAllowed, Throttled
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
@@ -12,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 def custom_exception_handler(exc, context):
     """Normaliza todas las respuestas de error a {"detail": ..., "code": ..., "field_errors": {...}}"""
+    if isinstance(exc, ProtectedError):
+        exc = ValidationError({"error": "No se puede eliminar: el registro está en uso por otros datos del sistema."})
+
     response = exception_handler(exc, context)
 
     if response is None:

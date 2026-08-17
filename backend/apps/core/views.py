@@ -12,6 +12,7 @@ from rest_framework.response import Response
 
 from common.pagination import CursorResultsSetPagination
 from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from common.throttling import SensitiveEndpointThrottle
 from common.utils.medios_pago import resolver_medio_pago
 from apps.usuarios.auditoria import registrar_auditoria
 
@@ -68,6 +69,34 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         "cliente_directo__nombres", "cliente_directo__apellidos", "cliente_directo__razon_social",
     ]
     ordering = ["nro_tarjeta"]
+
+    def _cambiar_estado(self, request, pk, desde, hacia, operacion):
+        tarjeta = self.get_object()
+        if tarjeta.estado != desde:
+            return Response(
+                {"error": f"Solo se puede pasar de {desde} a {hacia}. Estado actual: {tarjeta.estado}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        tarjeta.estado = hacia
+        tarjeta.save(update_fields=["estado"])
+        registrar_auditoria(
+            request=request,
+            operacion=operacion,
+            tabla="core_tarjeta",
+            id_registro=None,
+            descripcion=f"Tarjeta {tarjeta.nro_tarjeta}: {desde} → {hacia}",
+        )
+        return Response(self.get_serializer(tarjeta).data)
+
+    @action(detail=True, methods=["post"], url_path="bloquear", throttle_classes=[SensitiveEndpointThrottle])
+    def bloquear(self, request, pk=None):
+        """Solo se puede bloquear una tarjeta ACTIVA — VENCIDA/CANCELADA no vuelven atrás por acá."""
+        return self._cambiar_estado(request, pk, Tarjeta.Estado.ACTIVA, Tarjeta.Estado.BLOQUEADA, "BLOQUEAR_TARJETA")
+
+    @action(detail=True, methods=["post"], url_path="activar", throttle_classes=[SensitiveEndpointThrottle])
+    def activar(self, request, pk=None):
+        """Solo se puede reactivar una tarjeta BLOQUEADA."""
+        return self._cambiar_estado(request, pk, Tarjeta.Estado.BLOQUEADA, Tarjeta.Estado.ACTIVA, "ACTIVAR_TARJETA")
 
 
 class MovimientoTarjetaViewSet(viewsets.ModelViewSet):
@@ -244,6 +273,10 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
 class ConsumoTarjetaViewSet(viewsets.ModelViewSet):
     queryset = ConsumoTarjeta.objects.select_related("tarjeta").all()
     serializer_class = ConsumoTarjetaSerializer
+    # Explícito a propósito: coincide con el default global de DRF
+    # (IsStaffUser) — antes dependía implícitamente de él, ver hallazgo #3
+    # de la auditoría CRUD. Sin cambio de comportamiento, solo de claridad.
+    permission_classes = [IsStaffUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["tarjeta"]
 

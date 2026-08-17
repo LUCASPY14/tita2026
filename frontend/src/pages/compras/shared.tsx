@@ -10,6 +10,7 @@ export function extractErrorMessage(err: unknown): string {
   if (typeof data === 'object') {
     const d = data as Record<string, unknown>
     if (d.detail) return String(d.detail)
+    if (d.error) return String(d.error)
     const first = Object.values(d)[0]
     if (Array.isArray(first)) return String(first[0])
     return JSON.stringify(data)
@@ -169,6 +170,7 @@ export const ESTADO_PAGO_COLOR: Record<string, BadgeColor> = {
   PAGADO: 'green',
   PENDIENTE: 'orange',
   PARCIAL: 'blue',
+  ANULADA: 'red',
 }
 
 export const TIPO_PAGO_COLOR: Record<string, BadgeColor> = {

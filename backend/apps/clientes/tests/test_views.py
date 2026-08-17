@@ -604,3 +604,54 @@ class TestSetTitularError:
         )
         assert resp.status_code == 400
         assert "inactivo" in str(resp.data).lower()
+
+
+# ── ClienteViewSet / HijoViewSet — guarda de hard-delete ───────────────────────
+
+@pytest.mark.django_db
+class TestClienteDestroyGuard:
+
+    def test_no_se_puede_eliminar_cliente_activo(self, api_admin, cliente):
+        from apps.clientes.models import Cliente
+        assert cliente.activo is True
+        resp = api_admin.delete(f"/api/v1/clientes/clientes/{cliente.pk}/")
+        assert resp.status_code == 400
+        assert "inactivo" in str(resp.data).lower()
+        assert Cliente.objects.filter(pk=cliente.pk).exists()
+
+    def test_elimina_cliente_inactivo_sin_historial(self, api_admin, cliente):
+        from apps.clientes.models import Cliente
+        cliente.activo = False
+        cliente.save(update_fields=["activo"])
+        resp = api_admin.delete(f"/api/v1/clientes/clientes/{cliente.pk}/")
+        assert resp.status_code == 204
+        assert not Cliente.objects.filter(pk=cliente.pk).exists()
+
+    def test_no_se_puede_eliminar_cliente_con_ventas(self, api_admin, cliente, usuario_admin):
+        from apps.clientes.models import Cliente
+        from apps.ventas.models import Venta
+        cliente.activo = False
+        cliente.save(update_fields=["activo"])
+        Venta.objects.create(cliente=cliente, cajero=usuario_admin, monto_total="10000")
+        resp = api_admin.delete(f"/api/v1/clientes/clientes/{cliente.pk}/")
+        assert resp.status_code == 400
+        assert "asociados" in str(resp.data).lower()
+        assert Cliente.objects.filter(pk=cliente.pk).exists()
+
+
+@pytest.mark.django_db
+class TestHijoDestroyGuard:
+
+    def test_no_se_puede_eliminar_hijo_activo(self, api_admin, hijo_fixture):
+        assert hijo_fixture.activo is True
+        resp = api_admin.delete(f"/api/v1/clientes/hijos/{hijo_fixture.pk}/")
+        assert resp.status_code == 400
+        assert "inactivo" in str(resp.data).lower()
+
+    def test_elimina_hijo_inactivo_sin_historial(self, api_admin, hijo_fixture):
+        from apps.clientes.models import Hijo
+        hijo_fixture.activo = False
+        hijo_fixture.save(update_fields=["activo"])
+        resp = api_admin.delete(f"/api/v1/clientes/hijos/{hijo_fixture.pk}/")
+        assert resp.status_code == 204
+        assert not Hijo.objects.filter(pk=hijo_fixture.pk).exists()

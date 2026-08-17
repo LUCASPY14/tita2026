@@ -165,6 +165,7 @@ class Compra(models.Model):
         PENDIENTE = "PENDIENTE", "Pendiente"
         PARCIAL = "PARCIAL", "Parcial"
         PAGADO = "PAGADO", "Pagado"
+        ANULADA = "ANULADA", "Anulada"
 
     class EstadoEntrega(models.TextChoices):
         PENDIENTE = "PENDIENTE", "Pendiente"

@@ -44,7 +44,7 @@ class TarjetaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tarjeta
         fields = "__all__"
-        read_only_fields = ["fecha_creacion", "ultima_notificacion_saldo"]
+        read_only_fields = ["fecha_creacion", "ultima_notificacion_saldo", "estado"]
 
     def _get_cliente(self, obj):
         """Devuelve el cliente responsable del alumno o el cliente directo (docente)."""
