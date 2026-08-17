@@ -120,7 +120,12 @@ export default function PortalLayout() {
               )}
             </div>
           )}
-          <p className="text-slate-300">Desarrollado por LGservices</p>
+          <p className="text-slate-300">
+            Desarrollado por{' '}
+            <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.05rem', color: '#a8461e' }}>
+              LGservices
+            </span>
+          </p>
         </footer>
       </main>
 

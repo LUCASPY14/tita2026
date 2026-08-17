@@ -83,6 +83,7 @@ export default function Landing() {
           --card-sh2: 0 10px 28px rgba(0,0,0,.11);
           --foot-bg:  #ffffff;
           --foot-bd:  #f0ebe0;
+          --lg-ink:   #a8461e;
         }
         @media (prefers-color-scheme: dark) {
           :root {
@@ -106,6 +107,7 @@ export default function Landing() {
             --card-sh2: 0 10px 32px rgba(0,0,0,.4);
             --foot-bg:  #1f1a11;
             --foot-bd:  #2e2419;
+            --lg-ink:   #e08256;
           }
         }
         :root[data-theme="light"] {
@@ -117,6 +119,7 @@ export default function Landing() {
           --card-bg:#ffffff;--card-bd:#f0ebe0;
           --card-sh:0 2px 8px rgba(0,0,0,.06);--card-sh2:0 10px 28px rgba(0,0,0,.11);
           --foot-bg:#ffffff;--foot-bd:#f0ebe0;
+          --lg-ink:#a8461e;
         }
         :root[data-theme="dark"] {
           --bg:#18140e;--bg2:#1f1a11;--surface:#23190e;--border:#2e2419;
@@ -127,6 +130,7 @@ export default function Landing() {
           --card-bg:#23190e;--card-bd:#2e2419;
           --card-sh:0 2px 10px rgba(0,0,0,.3);--card-sh2:0 10px 32px rgba(0,0,0,.4);
           --foot-bg:#1f1a11;--foot-bd:#2e2419;
+          --lg-ink:#e08256;
         }
 
         /* ---------- layout ---------- */
@@ -241,6 +245,10 @@ export default function Landing() {
           flex-wrap: wrap; gap: .5rem;
         }
         .foot-text { font-size: .75rem; font-weight: 700; color: var(--faint); }
+        .lg-signature {
+          font-family: 'Caveat', cursive; font-weight: 700; font-size: 1.05rem;
+          color: var(--lg-ink); margin-left: .1rem;
+        }
         .foot-contacts { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
         .foot-link {
           display: inline-flex; align-items: center; gap: .35rem;
@@ -346,7 +354,8 @@ export default function Landing() {
         {/* ── Footer ───────────────────────────────────────────────────────── */}
         <footer className="foot">
           <span className="foot-text">
-            © {new Date().getFullYear()} La Cantina de Tita — cantinatita.com · Desarrollado por LGservices
+            © {new Date().getFullYear()} La Cantina de Tita — cantinatita.com · Desarrollado por{' '}
+            <span className="lg-signature">LGservices</span>
           </span>
           <div className="foot-contacts">
             <a href="mailto:admin@cantinatita.com" className="foot-link">
