@@ -122,6 +122,30 @@ class TestLoginCiRuc:
         assert resp.status_code == 200
         assert "access" in resp.data
 
+    def test_login_por_ci_ruc_del_personal_interno(self, usuario_cajero):
+        usuario_cajero.ci_ruc = "1111111"
+        usuario_cajero.save(update_fields=["ci_ruc"])
+        resp = APIClient().post(
+            "/api/token/",
+            {"email": "1111111", "password": "test1234"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert "access" in resp.data
+
+    def test_login_por_ci_ruc_de_personal_prioriza_sobre_portal(self, usuario_cajero, cliente):
+        """Si un CI/RUC coincide tanto en Usuario.ci_ruc como en Cliente.ruc_ci
+        (no debería pasar por la unicidad, pero por las dudas), el personal interno
+        se resuelve primero — es la búsqueda más barata y específica."""
+        usuario_cajero.ci_ruc = "5550001"
+        usuario_cajero.save(update_fields=["ci_ruc"])
+        resp = APIClient().post(
+            "/api/token/",
+            {"email": "5550001", "password": "test1234"},
+            format="json",
+        )
+        assert resp.status_code == 200
+
 
 # ── ReporteAuditoriaView ──────────────────────────────────────────────────────
 
@@ -365,6 +389,30 @@ class TestBloqueoCuentaManual:
         resp = APIClient().post(
             _LOGIN_URL,
             {"email": usuario_cajero.email, "password": "test1234"},
+            format="json",
+        )
+        assert resp.status_code == 403
+        assert "bloqueada" in resp.data["detail"].lower()
+
+    def test_login_rechazado_con_bloqueo_activo_via_ci_ruc(self, usuario_cajero):
+        """El chequeo de BloqueoCuenta debe resolver el CI/RUC al email real
+        antes de buscar el usuario — si no, el bloqueo se salteaba silenciosamente
+        para logins por CI/RUC (bug encontrado al extender el login por CI/RUC
+        al personal interno)."""
+        from apps.usuarios.models import BloqueoCuenta
+        from django.utils import timezone
+        from datetime import timedelta
+        usuario_cajero.ci_ruc = "1111111"
+        usuario_cajero.save(update_fields=["ci_ruc"])
+        BloqueoCuenta.objects.create(
+            usuario=usuario_cajero,
+            motivo="Bloqueo manual de test",
+            fecha_desbloqueo=timezone.now() + timedelta(hours=1),
+            estado=True,
+        )
+        resp = APIClient().post(
+            _LOGIN_URL,
+            {"email": "1111111", "password": "test1234"},
             format="json",
         )
         assert resp.status_code == 403

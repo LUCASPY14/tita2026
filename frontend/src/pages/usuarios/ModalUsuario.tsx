@@ -29,6 +29,7 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
       setForm(editingUser
         ? {
             email: editingUser.email,
+            ci_ruc: editingUser.ci_ruc ?? '',
             nombre: editingUser.nombre,
             apellido: editingUser.apellido,
             rol: editingUser.rol,
@@ -42,12 +43,17 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
 
   const handleSave = async () => {
     if (!form.email || !form.nombre) { toast.error('Completá email y nombre'); return }
+    if (form.rol !== 'CLIENTE_WEB' && !form.ci_ruc.trim()) {
+      toast.error('El CI/RUC es obligatorio: es lo que se usa para iniciar sesión en Administración, POS y Cobranzas')
+      return
+    }
     if (!editingUser && form.password.length < 6) { toast.error('La contraseña debe tener mínimo 6 caracteres'); return }
     if (editingUser && form.password && form.password.length < 6) { toast.error('La nueva contraseña debe tener mínimo 6 caracteres'); return }
     setSaving(true)
     try {
       const payload: Record<string, unknown> = {
         email: form.email,
+        ci_ruc: form.ci_ruc.trim() || null,
         nombre: form.nombre,
         apellido: form.apellido,
         rol: form.rol,
@@ -103,15 +109,28 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
           </div>
         </div>
 
-        <div>
-          <label className={labelClass}>Email *</label>
-          <input
-            type="email"
-            value={form.email}
-            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-            placeholder="usuario@cantina.com"
-            className={inputClass}
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Email *</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              placeholder="usuario@cantina.com"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>
+              CI/RUC {form.rol !== 'CLIENTE_WEB' && '*'}
+            </label>
+            <input
+              value={form.ci_ruc}
+              onChange={e => setForm(f => ({ ...f, ci_ruc: e.target.value }))}
+              placeholder="Ej: 2447330"
+              className={inputClass}
+            />
+          </div>
         </div>
 
         <div>

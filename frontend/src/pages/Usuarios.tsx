@@ -297,6 +297,9 @@ export default function Usuarios() {
         <div>
           <p className="text-base font-semibold text-slate-800">{r.nombre_completo || `${r.nombre} ${r.apellido}`}</p>
           <p className="text-sm text-slate-400">{r.email}</p>
+          {r.rol !== 'CLIENTE_WEB' && (
+            <p className="text-xs text-slate-400">CI/RUC: {r.ci_ruc || <span className="text-red-500">sin cargar</span>}</p>
+          )}
         </div>
       ),
     },

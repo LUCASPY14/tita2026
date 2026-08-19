@@ -41,9 +41,9 @@ beforeEach(() => {
 // ─── render ───────────────────────────────────────────────────────────────────
 
 describe('Login — render', () => {
-  it('muestra campo de email, contraseña y botón de submit', () => {
+  it('muestra campo de CI/RUC, contraseña y botón de submit', () => {
     renderLogin()
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/ci\/ruc/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/contraseña/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeInTheDocument()
   })
@@ -82,55 +82,55 @@ describe('Login — variant', () => {
 // ─── validación ───────────────────────────────────────────────────────────────
 
 describe('Login — validación', () => {
-  it('muestra error cuando el email está vacío', async () => {
+  it('muestra error cuando el CI/RUC está vacío', async () => {
     renderLogin()
     await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
-    expect(screen.getByText('El email es obligatorio')).toBeInTheDocument()
+    expect(screen.getByText('El CI/RUC es obligatorio')).toBeInTheDocument()
   })
 
-  it('muestra error cuando el email tiene formato inválido', async () => {
+  it('muestra error cuando se ingresa un email en vez de CI/RUC', async () => {
     renderLogin()
-    await userEvent.type(screen.getByLabelText(/email/i), 'noesemail')
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), 'user@test.com')
     await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
-    expect(screen.getByText('Ingresá un email válido')).toBeInTheDocument()
+    expect(screen.getByText('Ingresá tu CI o RUC, no un email')).toBeInTheDocument()
   })
 
   it('muestra error cuando la contraseña está vacía', async () => {
     renderLogin()
-    await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com')
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), '1234567')
     await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
     expect(screen.getByText('La contraseña es obligatoria')).toBeInTheDocument()
   })
 
-  it('limpia el error de email al escribir en el campo', async () => {
+  it('limpia el error de CI/RUC al escribir en el campo', async () => {
     renderLogin()
     await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
-    expect(screen.getByText('El email es obligatorio')).toBeInTheDocument()
+    expect(screen.getByText('El CI/RUC es obligatorio')).toBeInTheDocument()
 
-    await userEvent.type(screen.getByLabelText(/email/i), 'a')
-    expect(screen.queryByText('El email es obligatorio')).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), '1')
+    expect(screen.queryByText('El CI/RUC es obligatorio')).not.toBeInTheDocument()
   })
 })
 
 // ─── submit exitoso ───────────────────────────────────────────────────────────
 
 describe('Login — submit exitoso', () => {
-  it('llama a login() con email y contraseña correctos', async () => {
+  it('llama a login() con CI/RUC y contraseña correctos', async () => {
     mockLogin.mockResolvedValueOnce(true)
     renderLogin()
-    await userEvent.type(screen.getByLabelText(/email/i), 'admin@tita.com')
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), '2447330')
     await userEvent.type(screen.getByLabelText(/contraseña/i), 'secreto123')
     await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
 
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith('admin@tita.com', 'secreto123')
+      expect(mockLogin).toHaveBeenCalledWith('2447330', 'secreto123')
     })
   })
 
   it('navega a /dashboard tras login exitoso', async () => {
     mockLogin.mockResolvedValueOnce(true)
     renderLogin()
-    await userEvent.type(screen.getByLabelText(/email/i), 'admin@tita.com')
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), '2447330')
     await userEvent.type(screen.getByLabelText(/contraseña/i), 'secreto123')
     await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
 
@@ -143,7 +143,7 @@ describe('Login — submit exitoso', () => {
     let resolve: (v: boolean) => void
     mockLogin.mockReturnValueOnce(new Promise<boolean>((r) => { resolve = r }))
     renderLogin()
-    await userEvent.type(screen.getByLabelText(/email/i), 'admin@tita.com')
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), '2447330')
     await userEvent.type(screen.getByLabelText(/contraseña/i), 'secreto123')
     await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
 
@@ -155,22 +155,22 @@ describe('Login — submit exitoso', () => {
 // ─── submit con error ─────────────────────────────────────────────────────────
 
 describe('Login — submit con error', () => {
-  it('muestra "Email o contraseña incorrectos" cuando login falla', async () => {
+  it('muestra "CI/RUC o contraseña incorrectos" cuando login falla', async () => {
     mockLogin.mockRejectedValueOnce(new Error('Invalid credentials'))
     renderLogin()
-    await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com')
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), '1234567')
     await userEvent.type(screen.getByLabelText(/contraseña/i), 'wrong')
     await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
 
     await waitFor(() => {
-      expect(screen.getByText('Email o contraseña incorrectos')).toBeInTheDocument()
+      expect(screen.getByText('CI/RUC o contraseña incorrectos')).toBeInTheDocument()
     })
   })
 
   it('rehabilita el botón de submit tras el error', async () => {
     mockLogin.mockRejectedValueOnce(new Error('Fail'))
     renderLogin()
-    await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com')
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), '1234567')
     await userEvent.type(screen.getByLabelText(/contraseña/i), 'wrong')
     await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
 
@@ -200,18 +200,18 @@ describe('Login — UX', () => {
   it('presionar Enter en el campo de contraseña ejecuta el submit', async () => {
     mockLogin.mockResolvedValueOnce(true)
     renderLogin()
-    await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com')
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), '1234567')
     await userEvent.type(screen.getByLabelText(/contraseña/i), 'pass{Enter}')
 
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith('user@test.com', 'pass')
+      expect(mockLogin).toHaveBeenCalledWith('1234567', 'pass')
     })
   })
 
-  it('presionar Enter en el campo de email ejecuta el submit', async () => {
+  it('presionar Enter en el campo de CI/RUC ejecuta el submit', async () => {
     mockLogin.mockResolvedValueOnce(true)
     renderLogin()
-    await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com{Enter}')
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), '1234567{Enter}')
 
     // Validación: password vacío muestra error (submit ejecutado)
     await waitFor(() => {

@@ -47,6 +47,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "email",
+            "ci_ruc",
             "nombre",
             "apellido",
             "rol",
@@ -72,7 +73,7 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ["email", "nombre", "apellido", "rol", "password", "cliente", "is_active"]
+        fields = ["email", "ci_ruc", "nombre", "apellido", "rol", "password", "cliente", "is_active"]
 
     def validate(self, data):
         rol = data.get("rol")
@@ -84,6 +85,10 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
         if rol != Usuario.Rol.CLIENTE_WEB and cliente:
             raise serializers.ValidationError(
                 {"cliente": "Solo usuarios CLIENTE_WEB pueden tener un cliente asociado."}
+            )
+        if rol != Usuario.Rol.CLIENTE_WEB and not data.get("ci_ruc"):
+            raise serializers.ValidationError(
+                {"ci_ruc": "El CI/RUC es obligatorio para roles internos: es lo que se usa para iniciar sesión."}
             )
         return data
 

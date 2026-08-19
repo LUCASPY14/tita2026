@@ -18,6 +18,7 @@ export function extractErrorMessage(err: unknown): string {
 export interface Usuario {
   id: number
   email: string
+  ci_ruc: string | null
   nombre: string
   apellido: string
   rol: string
@@ -41,6 +42,7 @@ export interface UsuarioPortal {
 
 export interface UsuarioForm {
   email: string
+  ci_ruc: string
   nombre: string
   apellido: string
   rol: string
@@ -119,7 +121,7 @@ export const ROLES_SISTEMA = [
 ]
 
 export const FORM_INITIAL: UsuarioForm = {
-  email: '', nombre: '', apellido: '', rol: 'CAJERO', password: '', is_active: true,
+  email: '', ci_ruc: '', nombre: '', apellido: '', rol: 'CAJERO', password: '', is_active: true,
 }
 
 export const EMP_FORM_INITIAL: EmpleadoForm = {

@@ -400,10 +400,42 @@ class TestUsuarioViewSetCRUD:
             "/api/v1/usuarios/usuarios/",
             {
                 "email": "nuevo@test.com",
+                "ci_ruc": "9990001",
                 "password": "nuevo_pass_123",
                 "nombre": "Nuevo",
                 "apellido": "Usuario",
                 "rol": "CAJERO",
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["ci_ruc"] == "9990001"
+
+    def test_create_usuario_interno_sin_ci_ruc_falla(self, api_admin):
+        resp = api_admin.post(
+            "/api/v1/usuarios/usuarios/",
+            {
+                "email": "sinci@test.com",
+                "password": "nuevo_pass_123",
+                "nombre": "Sin",
+                "apellido": "CI",
+                "rol": "CAJERO",
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "ci_ruc" in resp.data["field_errors"]
+
+    def test_create_usuario_cliente_web_no_requiere_ci_ruc(self, api_admin, cliente):
+        resp = api_admin.post(
+            "/api/v1/usuarios/usuarios/",
+            {
+                "email": "portalnuevo@test.com",
+                "password": "nuevo_pass_123",
+                "nombre": "Portal",
+                "apellido": "Nuevo",
+                "rol": "CLIENTE_WEB",
+                "cliente": cliente.pk,
             },
             format="json",
         )

@@ -35,10 +35,11 @@ export default function Login({ variant = 'admin' }: Props) {
 
   const validate = (): boolean => {
     const newErrors: { email?: string; password?: string } = {}
-    if (!email.trim()) {
-      newErrors.email = 'El email es obligatorio'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = 'Ingresá un email válido'
+    const identificador = email.trim()
+    if (!identificador) {
+      newErrors.email = 'El CI/RUC es obligatorio'
+    } else if (identificador.includes('@')) {
+      newErrors.email = 'Ingresá tu CI o RUC, no un email'
     }
     if (!password) newErrors.password = 'La contraseña es obligatoria'
     setErrors(newErrors)
@@ -60,7 +61,7 @@ export default function Login({ variant = 'admin' }: Props) {
         queueMicrotask(() => codigoRef.current?.focus())
       }
     } catch {
-      setErrors({ password: 'Email o contraseña incorrectos' })
+      setErrors({ password: 'CI/RUC o contraseña incorrectos' })
       setLoading(false)
     }
   }
@@ -171,9 +172,9 @@ export default function Login({ variant = 'admin' }: Props) {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
         <div className="space-y-4">
           <Input
-            type="email"
-            label="Email"
-            placeholder="tu@email.com"
+            type="text"
+            label="CI/RUC"
+            placeholder="Tu CI o RUC"
             value={email}
             onChange={e => {
               setEmail(e.target.value)
@@ -182,7 +183,7 @@ export default function Login({ variant = 'admin' }: Props) {
             error={errors.email}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
             autoFocus
-            autoComplete="email"
+            autoComplete="username"
           />
 
           <div className="relative">

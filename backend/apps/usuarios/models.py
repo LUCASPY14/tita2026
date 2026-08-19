@@ -55,6 +55,13 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     )
     nombre = models.CharField(max_length=200, help_text="Nombre(s)")
     apellido = models.CharField(max_length=200, help_text="Apellido(s)")
+    ci_ruc = models.CharField(
+        max_length=20,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="CI o RUC — usado para el login del personal interno (roles no CLIENTE_WEB)",
+    )
     rol = models.CharField(
         max_length=20,
         choices=Rol.choices,

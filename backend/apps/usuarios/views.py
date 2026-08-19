@@ -246,25 +246,40 @@ def _limpiar_contadores_login(email: str, ip: str) -> None:
 
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _resolver_identificador_login(identifier: str) -> str:
+    """
+    Si el identificador no es un email, intenta resolverlo a uno:
+    1. CI/RUC del personal interno (Usuario.ci_ruc) — /login, /pos, /cobranzas.
+    2. CI/RUC del portal de padres (Cliente.ruc_ci → usuario_portal.email).
+    Si no se puede resolver, devuelve el identificador original sin cambios
+    (el login falla más adelante con "credenciales incorrectas").
+    """
+    identifier = (identifier or "").strip()
+    if not identifier or "@" in identifier:
+        return identifier
+    try:
+        return Usuario.objects.only("email").get(ci_ruc=identifier).email
+    except Usuario.DoesNotExist:
+        pass
+    try:
+        from apps.clientes.models import Cliente
+        cliente = Cliente.objects.select_related("usuario_portal").get(ruc_ci=identifier)
+        if cliente.usuario_portal:
+            return cliente.usuario_portal.email
+    except Exception:
+        pass
+    return identifier
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
-    Login estándar por email, con soporte adicional de CI/RUC para el portal de padres.
-    Si el identificador no contiene '@', se interpreta como CI/RUC y se resuelve al
-    email del usuario portal vinculado al cliente con ese ruc_ci.
+    Login estándar por email, con soporte adicional de CI/RUC:
+    - Personal interno (ADMIN/CAJERO/SUPERVISOR/COBRADOR/COCINA) vía Usuario.ci_ruc.
+    - Portal de padres (CLIENTE_WEB) vía Cliente.ruc_ci.
     """
 
     def validate(self, attrs):
-        identifier = attrs.get(self.username_field, "")
-        if "@" not in identifier:
-            # Buscar por CI/RUC → resolver al email del usuario portal
-            try:
-                from apps.clientes.models import Cliente
-                cliente = Cliente.objects.select_related("usuario_portal").get(
-                    ruc_ci=identifier.strip()
-                )
-                attrs[self.username_field] = cliente.usuario_portal.email
-            except Exception:
-                pass  # Dejamos que falle con "credenciales incorrectas"
+        attrs[self.username_field] = _resolver_identificador_login(attrs.get(self.username_field, ""))
         return super().validate(attrs)
 
 
@@ -279,7 +294,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     throttle_classes = [LoginRateThrottle]
 
     def post(self, request, *_args, **_kwargs):
-        email = (request.data.get("email") or request.data.get("username") or "").strip().lower()[:254]
+        raw_identifier = (request.data.get("email") or request.data.get("username") or "").strip()
+        email = _resolver_identificador_login(raw_identifier).strip().lower()[:254]
         ip    = request.META.get("REMOTE_ADDR") or "0.0.0.0"  # nosec B104
 
         # ── 1. Check cache (O(1) — cubre bloqueos automáticos recientes) ──────
