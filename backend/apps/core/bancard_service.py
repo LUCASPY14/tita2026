@@ -497,6 +497,31 @@ def acreditar_pago_almuerzo(pago_bancard) -> None:
     pago_bancard.save(update_fields=["recarga_almuerzo", "estado", "fecha_confirmacion"])
 
 
+def acreditar_pago_cc(pago_bancard) -> None:
+    """
+    Acredita un pago de cuenta corriente del cliente (reduce su deuda) vía Bancard.
+    Solo se llama cuando Bancard confirma el pago de tipo CC como aprobado.
+    El creado_por es el usuario CLIENTE_WEB del padre.
+    """
+    from decimal import Decimal
+    from apps.clientes.models import CuentaCorrienteCliente
+
+    usuario = pago_bancard.cliente.usuario_portal
+    monto = Decimal(pago_bancard.monto)
+
+    movimiento = CuentaCorrienteCliente.objects.create(
+        cliente=pago_bancard.cliente,
+        tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+        monto=monto,
+        descripcion=f"Pago cuenta corriente vía Bancard — ref {pago_bancard.shop_process_id}",
+        creado_por=usuario,
+    )
+    pago_bancard.movimiento_cc = movimiento
+    pago_bancard.estado = pago_bancard.Estado.APROBADO
+    pago_bancard.fecha_confirmacion = timezone.now()
+    pago_bancard.save(update_fields=["movimiento_cc", "estado", "fecha_confirmacion"])
+
+
 def procesar_resultado_pago(pago_bancard, response_code: str) -> None:
     """
     Acredita o rechaza un PagoBancard según el response_code de Bancard.
@@ -505,10 +530,11 @@ def procesar_resultado_pago(pago_bancard, response_code: str) -> None:
     Idempotente a nivel de llamador: no reprocesar si pago_bancard.estado != PENDIENTE.
     """
     if response_code == "00":
-        es_almuerzo = pago_bancard.tipo == pago_bancard.Tipo.ALMUERZO
         try:
-            if es_almuerzo:
+            if pago_bancard.tipo == pago_bancard.Tipo.ALMUERZO:
                 acreditar_pago_almuerzo(pago_bancard)
+            elif pago_bancard.tipo == pago_bancard.Tipo.CC:
+                acreditar_pago_cc(pago_bancard)
             else:
                 acreditar_saldo(pago_bancard)
                 try:
@@ -548,9 +574,7 @@ def reintentar_acreditacion(pago_bancard) -> dict:
         dict con "accion" ("vinculado" | "acreditado") para que la vista/UI
         le muestre al admin qué pasó exactamente, sin comportamiento silencioso.
     """
-    es_almuerzo = pago_bancard.tipo == pago_bancard.Tipo.ALMUERZO
-
-    if es_almuerzo:
+    if pago_bancard.tipo == pago_bancard.Tipo.ALMUERZO:
         from apps.almuerzos.models import RecargaSaldoAlmuerzo
 
         existente = RecargaSaldoAlmuerzo.objects.filter(
@@ -563,6 +587,22 @@ def reintentar_acreditacion(pago_bancard) -> dict:
             pago_bancard.save(update_fields=["recarga_almuerzo", "estado", "fecha_confirmacion"])
             return {"accion": "vinculado"}
         acreditar_pago_almuerzo(pago_bancard)
+        return {"accion": "acreditado"}
+
+    if pago_bancard.tipo == pago_bancard.Tipo.CC:
+        from apps.clientes.models import CuentaCorrienteCliente
+
+        existente = CuentaCorrienteCliente.objects.filter(
+            cliente=pago_bancard.cliente,
+            descripcion__contains=pago_bancard.shop_process_id,
+        ).first()
+        if existente:
+            pago_bancard.movimiento_cc = existente
+            pago_bancard.estado = pago_bancard.Estado.APROBADO
+            pago_bancard.fecha_confirmacion = pago_bancard.fecha_confirmacion or timezone.now()
+            pago_bancard.save(update_fields=["movimiento_cc", "estado", "fecha_confirmacion"])
+            return {"accion": "vinculado"}
+        acreditar_pago_cc(pago_bancard)
         return {"accion": "acreditado"}
 
     from .models import CargaSaldo

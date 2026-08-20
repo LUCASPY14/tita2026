@@ -538,6 +538,7 @@ class PagoBancard(models.Model):
     class Tipo(models.TextChoices):
         TARJETA  = "TARJETA",  "Recarga de tarjeta"
         ALMUERZO = "ALMUERZO", "Pago de cuenta almuerzo"
+        CC       = "CC",       "Pago de cuenta corriente"
 
     tipo = models.CharField(
         max_length=10, choices=Tipo.choices, default=Tipo.TARJETA,
@@ -605,6 +606,14 @@ class PagoBancard(models.Model):
     # Recarga de saldo de almuerzo creada cuando el pago (tipo ALMUERZO) es aprobado
     recarga_almuerzo = models.OneToOneField(
         "almuerzos.RecargaSaldoAlmuerzo",
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pago_bancard",
+    )
+    # Movimiento de cuenta corriente creado cuando el pago (tipo CC) es aprobado
+    movimiento_cc = models.OneToOneField(
+        "clientes.CuentaCorrienteCliente",
         models.SET_NULL,
         null=True,
         blank=True,

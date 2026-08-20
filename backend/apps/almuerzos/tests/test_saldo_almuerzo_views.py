@@ -194,6 +194,52 @@ class TestRecargaSaldoAlmuerzoCreate:
         assert recarga.factura is not None
         assert recarga.factura.nro_factura == "001-001-0000001"
 
+    def test_cuenta_corriente_confirma_de_inmediato_y_genera_deuda(self, api_cajero, hijo_almuerzo, cliente):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.clientes.models import CuentaCorrienteCliente
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/recargas-saldo/",
+            {"hijo": hijo_almuerzo.pk, "monto_cargado": "30000", "metodo_pago": "CUENTA_CORRIENTE"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["estado"] == "CONFIRMADA"
+
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("30000")
+
+        mov = CuentaCorrienteCliente.objects.get(cliente=cliente)
+        assert mov.tipo == CuentaCorrienteCliente.Tipo.DEBITO
+        assert mov.monto == Decimal("30000")
+        assert cliente.saldo_cuenta_corriente == Decimal("30000")
+
+    def test_cuenta_corriente_no_genera_ingreso_de_caja(self, api_cajero, hijo_almuerzo):
+        """A diferencia de EFECTIVO/POS, un pago a crédito no debe registrar
+        ingreso de caja — no entró plata física."""
+        from apps.contabilidad.models import MovimientoCaja
+        antes = MovimientoCaja.objects.count()
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/recargas-saldo/",
+            {"hijo": hijo_almuerzo.pk, "monto_cargado": "30000", "metodo_pago": "CUENTA_CORRIENTE"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert MovimientoCaja.objects.count() == antes
+
+    def test_cuenta_corriente_acumula_con_deuda_previa(self, api_cajero, usuario_cajero, hijo_almuerzo, cliente):
+        from apps.clientes.models import CuentaCorrienteCliente
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("10000"), descripcion="Deuda previa", creado_por=usuario_cajero,
+        )
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/recargas-saldo/",
+            {"hijo": hijo_almuerzo.pk, "monto_cargado": "5000", "metodo_pago": "CUENTA_CORRIENTE"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert cliente.saldo_cuenta_corriente == Decimal("15000")
+
 
 @pytest.mark.django_db
 class TestRecargaSaldoAlmuerzoConfirmar:

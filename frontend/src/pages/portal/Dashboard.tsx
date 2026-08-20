@@ -5,7 +5,7 @@ import {
   CreditCard, AlertTriangle, UtensilsCrossed, History,
   CalendarCheck, AlertCircle, RefreshCw, Wallet,
   ShoppingBag, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, TrendingUp,
-  Fingerprint, X,
+  Fingerprint, X, BookOpen,
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
@@ -70,7 +70,10 @@ interface HijoData {
 }
 
 interface PortalData {
-  cliente: { id: number; nombre: string; email: string; pin_es_defecto: boolean }
+  cliente: {
+    id: number; nombre: string; email: string; pin_es_defecto: boolean
+    saldo_cuenta_corriente: number; limite_credito: number
+  }
   mes: { anio: number; mes: number }
   hijos: HijoData[]
 }
@@ -733,6 +736,31 @@ export default function PortalDashboard() {
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
+
+      {/* Deuda de cuenta corriente — a nivel familia, no por hijo */}
+      {data.cliente.saldo_cuenta_corriente > 0 && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <BookOpen className="w-4 h-4 text-red-500" />
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Cuenta corriente</p>
+              </div>
+              <p className="text-4xl font-bold tabular-nums text-red-700">
+                {formatGs(data.cliente.saldo_cuenta_corriente)}
+              </p>
+              <p className="text-sm text-slate-400 mt-1">Deuda pendiente de pago</p>
+            </div>
+          </div>
+          <Link
+            to="/portal/pagar-cc"
+            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border border-red-300 text-red-700 font-semibold text-base hover:bg-red-50 transition-colors"
+          >
+            <Wallet className="w-4 h-4" />
+            Pagar ahora
+          </Link>
+        </div>
+      )}
 
       {/* Sugerencia de 2FA — opcional, no bloquea nada */}
       {!bannerCerrado && !user?.tiene_2fa_activo && !user?.tiene_webauthn && (

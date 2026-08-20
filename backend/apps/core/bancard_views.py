@@ -255,6 +255,108 @@ def bancard_iniciar_almuerzo(request):
     }, status=status.HTTP_201_CREATED)
 
 
+# ─── POST /api/v1/bancard/iniciar-cc/ ─────────────────────────────────────────
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([SensitiveEndpointThrottle])
+def bancard_iniciar_cc(request):
+    """
+    Inicia el pago de la deuda de cuenta corriente del cliente vía Bancard.
+    Solo disponible para CLIENTE_WEB (padres).
+
+    Body: { "monto": 50000 }
+
+    Respuesta: { "shop_process_id": "...", "redirect_url": "https://vpos.infonet.com.py/..." }
+    """
+    if request.user.rol != "CLIENTE_WEB":
+        return Response(
+            {"detail": "Solo los padres pueden pagar la cuenta corriente desde el portal."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    monto_raw = request.data.get("monto")
+    if not monto_raw:
+        return Response({"detail": "Se requiere monto."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        monto = int(monto_raw)
+    except (TypeError, ValueError):
+        return Response({"detail": "Monto inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if monto <= 0:
+        return Response({"detail": "El monto debe ser mayor a cero."}, status=status.HTTP_400_BAD_REQUEST)
+
+    cliente = getattr(request.user, "cliente", None)
+    if cliente is None:
+        return Response(
+            {"detail": "Tu usuario no tiene un perfil de cliente asociado."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    deuda = int(cliente.saldo_cuenta_corriente)
+    if deuda <= 0:
+        return Response({"detail": "No tenés deuda pendiente en cuenta corriente."}, status=status.HTTP_400_BAD_REQUEST)
+    if monto > deuda:
+        return Response(
+            {"detail": f"El monto no puede superar tu deuda actual (₲{deuda:,})."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not bancard_service._public_key() or not bancard_service._private_key():
+        return Response(
+            {"detail": "La integración de pagos no está configurada. Contactá con la administración."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    shop_process_id = str(int(time.time() * 1000))
+
+    pago = PagoBancard.objects.create(
+        tipo=PagoBancard.Tipo.CC,
+        cliente=cliente,
+        shop_process_id=shop_process_id,
+        monto=monto,
+        descripcion="Pago cuenta corriente",
+        ip_origen=request.META.get("REMOTE_ADDR"),
+    )
+
+    base_return_url = settings.BANCARD_RETURN_URL
+    return_url = f"{base_return_url}?shop_process_id={shop_process_id}"
+    cancel_url = getattr(
+        settings, "BANCARD_CANCEL_URL_CC",
+        f"{PORTAL_URL()}/pago-completado?estado=cancelado&tipo=cc",
+    )
+
+    resultado = bancard_service.iniciar_pago(
+        shop_process_id=shop_process_id,
+        monto=monto,
+        descripcion=pago.descripcion,
+        return_url=return_url,
+        cancel_url=cancel_url,
+    )
+
+    pago.bancard_response = resultado
+    pago.save(update_fields=["bancard_response"])
+
+    if resultado.get("status") != "success":
+        pago.estado = PagoBancard.Estado.ERROR
+        pago.save(update_fields=["estado"])
+        msgs = resultado.get("messages", [])
+        desc = msgs[0].get("dsc", "Error al iniciar el pago.") if msgs else "Error al iniciar el pago."
+        return Response({"detail": desc}, status=status.HTTP_400_BAD_REQUEST)
+
+    process_id = resultado.get("process_id", "")
+    pago.process_id = process_id
+    pago.save(update_fields=["process_id"])
+
+    return Response({
+        "shop_process_id": shop_process_id,
+        "process_id": process_id,
+        "redirect_url": bancard_service.pago_url(process_id),
+        "script_url": bancard_service.checkout_script_url(),
+    }, status=status.HTTP_201_CREATED)
+
+
 # ─── POST /api/v1/bancard/confirmar/ ─────────────────────────────────────────
 # Webhook que Bancard llama al completarse un pago (sin autenticación JWT).
 # Debe responder 200 con {"status": "success"} en < 30 segundos.
@@ -331,7 +433,12 @@ def bancard_retorno(request):
     except PagoBancard.DoesNotExist:
         return HttpResponseRedirect(f"{PORTAL_URL()}/portal/carga-saldo?estado=error&msg=no_encontrado")
 
-    tipo_param = "almuerzo" if pago.tipo == PagoBancard.Tipo.ALMUERZO else "saldo"
+    if pago.tipo == PagoBancard.Tipo.ALMUERZO:
+        tipo_param = "almuerzo"
+    elif pago.tipo == PagoBancard.Tipo.CC:
+        tipo_param = "cc"
+    else:
+        tipo_param = "saldo"
 
     def _resultado_url(estado: str, monto: int | None = None) -> str:
         url = f"{PORTAL_URL()}/pago-completado?estado={estado}&tipo={tipo_param}"
@@ -356,10 +463,11 @@ def bancard_retorno(request):
     response_code = confirmacion.get("response_code", "")
 
     if resultado.get("status") == "success" and response_code == "00":
-        es_almuerzo = pago.tipo == PagoBancard.Tipo.ALMUERZO
         try:
-            if es_almuerzo:
+            if pago.tipo == PagoBancard.Tipo.ALMUERZO:
                 bancard_service.acreditar_pago_almuerzo(pago)
+            elif pago.tipo == PagoBancard.Tipo.CC:
+                bancard_service.acreditar_pago_cc(pago)
             else:
                 bancard_service.acreditar_saldo(pago)
         except Exception as exc:
@@ -1075,6 +1183,92 @@ def bancard_pagar_almuerzo_con_tarjeta(request):
         shop_process_id=shop_process_id,
         monto=monto,
         descripcion=f"Recarga almuerzo {hijo}"[:20],
+        card_id_bancard=card_id,
+        card_masked_number=card_masked,
+        ip_origen=request.META.get("REMOTE_ADDR"),
+    )
+
+    return_url = f"{settings.BANCARD_RETURN_URL}?shop_process_id={shop_process_id}"
+    resultado = bancard_service.pagar_con_token(
+        shop_process_id=shop_process_id,
+        monto=monto,
+        alias_token=alias_token,
+        descripcion=pago.descripcion,
+        return_url=return_url,
+    )
+    pago.bancard_response = resultado
+    pago.save(update_fields=["bancard_response"])
+
+    return _resolver_respuesta_charge(pago, resultado)
+
+
+# ─── POST /api/v1/bancard/pagar-cc-con-tarjeta/ ───────────────────────────────
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([SensitiveEndpointThrottle])
+def bancard_pagar_cc_con_tarjeta(request):
+    """
+    Paga la deuda de cuenta corriente del cliente con una tarjeta guardada (charge).
+    Body: { "monto": 50000, "card_id": 1 }
+    """
+    if request.user.rol != "CLIENTE_WEB":
+        return Response(
+            {"detail": "Solo los padres pueden pagar la cuenta corriente desde el portal."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    monto_raw = request.data.get("monto")
+    card_id_raw = request.data.get("card_id")
+
+    if not monto_raw or not card_id_raw:
+        return Response({"detail": "Se requieren monto y card_id."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        monto = int(monto_raw)
+        card_id = int(card_id_raw)
+    except (TypeError, ValueError):
+        return Response({"detail": "Datos inválidos."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if monto <= 0:
+        return Response({"detail": "El monto debe ser mayor a cero."}, status=status.HTTP_400_BAD_REQUEST)
+
+    cliente = getattr(request.user, "cliente", None)
+    if cliente is None:
+        return Response(
+            {"detail": "Tu usuario no tiene un perfil de cliente asociado."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    deuda = int(cliente.saldo_cuenta_corriente)
+    if deuda <= 0:
+        return Response({"detail": "No tenés deuda pendiente en cuenta corriente."}, status=status.HTTP_400_BAD_REQUEST)
+    if monto > deuda:
+        return Response(
+            {"detail": f"El monto no puede superar tu deuda actual (₲{deuda:,})."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not bancard_service._public_key() or not bancard_service._private_key():
+        return Response(
+            {"detail": "La integración de pagos no está configurada. Contactá con la administración."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    alias_token, card_masked = _obtener_alias_token(cliente.id, card_id)
+    if alias_token is None:
+        return Response(
+            {"detail": "Tarjeta guardada no encontrada. Puede haber vencido — intentá agregarla de nuevo."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    shop_process_id = str(int(time.time() * 1000))
+    pago = PagoBancard.objects.create(
+        tipo=PagoBancard.Tipo.CC,
+        cliente=cliente,
+        shop_process_id=shop_process_id,
+        monto=monto,
+        descripcion="Pago cuenta corriente",
         card_id_bancard=card_id,
         card_masked_number=card_masked,
         ip_origen=request.META.get("REMOTE_ADDR"),

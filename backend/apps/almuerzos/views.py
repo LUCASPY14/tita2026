@@ -602,6 +602,40 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
             out = self.get_serializer(recarga)
             return Response(out.data, status=status.HTTP_201_CREATED)
 
+        if metodo == "CUENTA_CORRIENTE":
+            from apps.clientes.models import CuentaCorrienteCliente
+
+            hijo = data["hijo"]
+            cliente = hijo.cliente_responsable
+
+            with transaction.atomic():
+                recarga = AlmuerzoService.recargar_saldo(
+                    hijo=hijo,
+                    monto=data["monto_cargado"],
+                    registrado_por=request.user,
+                    metodo_pago=metodo,
+                    referencia=data.get("referencia") or "",
+                )
+                CuentaCorrienteCliente.objects.create(
+                    cliente=cliente,
+                    tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+                    monto=data["monto_cargado"],
+                    descripcion=f"Recarga almuerzo {hijo.nombre_completo}",
+                    creado_por=request.user,
+                )
+            registrar_auditoria(
+                request=request,
+                operacion="RECARGA_SALDO_ALMUERZO",
+                tabla="almuerzos_recargasaldoalmuerzo",
+                id_registro=recarga.id,
+                descripcion=(
+                    f"Recarga {data['monto_cargado']} Gs. en saldo de almuerzo"
+                    f" de {hijo} vía cuenta corriente"
+                ),
+            )
+            out = self.get_serializer(recarga)
+            return Response(out.data, status=status.HTTP_201_CREATED)
+
         # Transferencia u otros métodos: queda PENDIENTE para confirmación manual
         recarga = serializer.save(registrado_por=request.user)
         registrar_auditoria(

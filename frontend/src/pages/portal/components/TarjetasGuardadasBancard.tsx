@@ -29,13 +29,14 @@ interface TarjetaGuardada {
 interface Props {
   selectedCardId: number | null
   onSeleccionar: (cardId: number | null) => void
-  accent?: 'green' | 'orange'
+  accent?: 'green' | 'orange' | 'red'
   containerIdPrefix: string
 }
 
 const ACCENTOS = {
   green:  { border: 'border-green-500', bg: 'bg-green-50', text: 'text-green-700', btn: 'bg-green-600 hover:bg-green-700' },
   orange: { border: 'border-orange-500', bg: 'bg-orange-50', text: 'text-orange-700', btn: 'bg-orange-600 hover:bg-orange-700' },
+  red:    { border: 'border-red-500', bg: 'bg-red-50', text: 'text-red-700', btn: 'bg-red-600 hover:bg-red-700' },
 }
 
 export default function TarjetasGuardadasBancard({ selectedCardId, onSeleccionar, accent = 'green', containerIdPrefix }: Props) {

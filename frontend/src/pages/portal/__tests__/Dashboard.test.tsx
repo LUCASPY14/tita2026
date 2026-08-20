@@ -73,7 +73,10 @@ const HIJO2 = {
 }
 
 const PORTAL_DATA = {
-  cliente: { id: 99, nombre: 'María López', email: 'maria@test.com', pin_es_defecto: false },
+  cliente: {
+    id: 99, nombre: 'María López', email: 'maria@test.com', pin_es_defecto: false,
+    saldo_cuenta_corriente: 0, limite_credito: 0,
+  },
   mes: { anio: 2026, mes: 7 },
   hijos: [HIJO_CON_CUENTA],
 }
@@ -234,6 +237,25 @@ describe('PortalDashboard — saldo de almuerzo', () => {
     await userEvent.click(screen.getByRole('button', { name: /Recargar saldo de almuerzo/i }))
 
     expect(mockNavigate).toHaveBeenCalledWith('/portal/carga-saldo?tipo=ALMUERZO&hijo_id=1')
+  })
+})
+
+describe('PortalDashboard — cuenta corriente', () => {
+  it('sin deuda → no muestra la tarjeta de cuenta corriente', async () => {
+    setupPortal()
+    renderDashboard()
+    await screen.findByText('Hola, María López')
+
+    expect(screen.queryByText('Cuenta corriente')).not.toBeInTheDocument()
+  })
+
+  it('con deuda → muestra el monto y el botón "Pagar ahora"', async () => {
+    setupPortal({ cliente: { ...PORTAL_DATA.cliente, saldo_cuenta_corriente: 45_000 } })
+    renderDashboard()
+
+    await screen.findByText('Cuenta corriente')
+    expect(screen.getByText('Gs. 45.000')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Pagar ahora/i })).toHaveAttribute('href', '/portal/pagar-cc')
   })
 })
 

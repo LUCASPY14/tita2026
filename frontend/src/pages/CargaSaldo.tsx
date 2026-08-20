@@ -138,12 +138,14 @@ export default function CargaSaldo() {
     if (!tarjeta.hijo) { toast.error('Esta tarjeta no tiene un alumno asociado'); return }
     if (!montoNum || montoNum <= 0) { toast.error('Ingresá un monto válido'); return }
 
-    const metodoInfo = METODOS.find(m => m.value === metodo)
-    if (metodoInfo?.requiere_referencia && !referencia.trim()) {
+    const metodoEfectivo = tipoCobro === 'CREDITO' ? 'CUENTA_CORRIENTE' : metodo
+    const metodoInfo = METODOS.find(m => m.value === metodoEfectivo)
+
+    if (tipoCobro === 'CONTADO' && metodoInfo?.requiere_referencia && !referencia.trim()) {
       toast.error('Ingresá el código de transacción')
       return
     }
-    if (metodoInfo?.autoconfirma && emitirFacturaCarga && !nroFacturaCarga.trim()) {
+    if (tipoCobro === 'CONTADO' && metodoInfo?.autoconfirma && emitirFacturaCarga && !nroFacturaCarga.trim()) {
       toast.error('Ingresá el número de factura')
       return
     }
@@ -153,9 +155,9 @@ export default function CargaSaldo() {
       const payload: { hijo: number; monto_cargado: number; metodo_pago: string; referencia?: string; nro_factura?: string } = {
         hijo:          tarjeta.hijo,
         monto_cargado: montoNum,
-        metodo_pago:   metodo,
+        metodo_pago:   metodoEfectivo,
         ...(referencia.trim() ? { referencia: referencia.trim() } : {}),
-        ...(metodoInfo?.autoconfirma && emitirFacturaCarga && nroFacturaCarga.trim()
+        ...(tipoCobro === 'CONTADO' && metodoInfo?.autoconfirma && emitirFacturaCarga && nroFacturaCarga.trim()
           ? { nro_factura: nroFacturaCarga.trim() }
           : {}),
       }
@@ -168,12 +170,14 @@ export default function CargaSaldo() {
 
       setUltimaCargaAlmuerzo({
         monto: montoNum,
-        metodo,
+        metodo: metodoEfectivo,
         estado: data.estado ?? 'CONFIRMADA',
         hijoNombre: tarjeta.hijo_nombre,
       })
 
-      if (metodoInfo?.autoconfirma) {
+      if (tipoCobro === 'CREDITO') {
+        toast.success(`Recarga de ${formatGs(montoNum)} acreditada a cuenta corriente`)
+      } else if (metodoInfo?.autoconfirma) {
         toast.success(`Recarga de ${formatGs(montoNum)} confirmada`)
       } else {
         toast.success(`Recarga de ${formatGs(montoNum)} registrada — pendiente de confirmación`)
@@ -188,7 +192,7 @@ export default function CargaSaldo() {
     } finally {
       setCargando(false)
     }
-  }, [tarjeta, monto, metodo, referencia, emitirFacturaCarga, nroFacturaCarga])
+  }, [tarjeta, monto, metodo, tipoCobro, referencia, emitirFacturaCarga, nroFacturaCarga])
 
   // ── Realizar carga de saldo de cantina (tarjeta) ────────────────────────────
   const handleCargar = useCallback(async () => {
@@ -278,7 +282,7 @@ export default function CargaSaldo() {
   const metodoSeleccionado = METODOS.find(m => m.value === metodo)
   const saldoCC = Number(tarjeta?.cliente_saldo_cc ?? 0)
   const limiteCC = Number(tarjeta?.cliente_limite_credito ?? 0)
-  const mostrarMetodoPago = tipoSaldo === 'ALMUERZO' || tipoCobro === 'CONTADO'
+  const mostrarMetodoPago = tipoCobro === 'CONTADO'
 
   // ── Columnas historial ────────────────────────────────────────────
   const colsMovimientos: Column<Movimiento>[] = [
@@ -517,53 +521,53 @@ export default function CargaSaldo() {
                 </div>
               )}
 
-              {/* Toggle contado / crédito — solo aplica a saldo de cantina */}
-              {tipoSaldo === 'CANTINA' && (
-                <div>
-                  <p className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-2.5">Tipo de cobro</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => { setTipoCobro('CONTADO'); setMetodo('EFECTIVO') }}
-                      className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-colors cursor-pointer border-2 ${
-                        tipoCobro === 'CONTADO'
-                          ? 'bg-green-600 text-white border-green-600'
-                          : 'bg-white text-slate-700 border-slate-200 hover:border-green-400'
-                      }`}
-                    >
-                      <Banknote className="w-4 h-4" />
-                      Contado
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTipoCobro('CREDITO')}
-                      className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-colors cursor-pointer border-2 ${
-                        tipoCobro === 'CREDITO'
-                          ? 'bg-orange-500 text-white border-orange-500'
-                          : 'bg-white text-slate-700 border-slate-200 hover:border-orange-400'
-                      }`}
-                    >
-                      <BookOpen className="w-4 h-4" />
-                      Crédito CC
-                    </button>
-                  </div>
-                  {tipoCobro === 'CREDITO' && (
-                    <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 space-y-0.5">
-                      <p className="text-xs text-orange-700 font-semibold">
-                        La recarga se acredita a cuenta corriente del responsable.
-                      </p>
-                      {limiteCC > 0 && (
-                        <p className="text-xs text-orange-600">
-                          Límite de crédito habilitado: {formatGs(limiteCC)}
-                        </p>
-                      )}
-                      <p className="text-xs text-orange-600">
-                        Deuda CC actual: {formatGs(saldoCC)}
-                      </p>
-                    </div>
-                  )}
+              {/* Toggle contado / crédito */}
+              <div>
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-2.5">Tipo de cobro</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setTipoCobro('CONTADO'); setMetodo('EFECTIVO') }}
+                    className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-colors cursor-pointer border-2 ${
+                      tipoCobro === 'CONTADO'
+                        ? 'bg-green-600 text-white border-green-600'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-green-400'
+                    }`}
+                  >
+                    <Banknote className="w-4 h-4" />
+                    Contado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipoCobro('CREDITO')}
+                    className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-colors cursor-pointer border-2 ${
+                      tipoCobro === 'CREDITO'
+                        ? 'bg-orange-500 text-white border-orange-500'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-orange-400'
+                    }`}
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Crédito CC
+                  </button>
                 </div>
-              )}
+                {tipoCobro === 'CREDITO' && (
+                  <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 space-y-0.5">
+                    <p className="text-xs text-orange-700 font-semibold">
+                      {tipoSaldo === 'ALMUERZO'
+                        ? 'La recarga de almuerzo se acredita a cuenta corriente del responsable.'
+                        : 'La recarga se acredita a cuenta corriente del responsable.'}
+                    </p>
+                    {limiteCC > 0 && (
+                      <p className="text-xs text-orange-600">
+                        Límite de crédito habilitado: {formatGs(limiteCC)}
+                      </p>
+                    )}
+                    <p className="text-xs text-orange-600">
+                      Deuda CC actual: {formatGs(saldoCC)}
+                    </p>
+                  </div>
+                )}
+              </div>
 
               {/* Montos rápidos */}
               <div>
@@ -682,10 +686,10 @@ export default function CargaSaldo() {
               >
                 {cargando
                   ? <><RefreshCw className="w-5 h-5 animate-spin" /> Cargando...</>
-                  : tipoSaldo === 'ALMUERZO'
-                    ? <><UtensilsCrossed className="w-5 h-5" />{metodoSeleccionado?.autoconfirma ? 'Cargar saldo de almuerzo' : 'Registrar recarga pendiente'}</>
-                    : tipoCobro === 'CREDITO'
-                      ? <><BookOpen className="w-5 h-5" /> Cargar a cuenta corriente</>
+                  : tipoCobro === 'CREDITO'
+                    ? <><BookOpen className="w-5 h-5" /> Cargar a cuenta corriente</>
+                    : tipoSaldo === 'ALMUERZO'
+                      ? <><UtensilsCrossed className="w-5 h-5" />{metodoSeleccionado?.autoconfirma ? 'Cargar saldo de almuerzo' : 'Registrar recarga pendiente'}</>
                       : <><RefreshCw className="w-5 h-5" />{metodoSeleccionado?.autoconfirma ? 'Cargar saldo' : 'Registrar carga pendiente'}</>
                 }
               </button>
@@ -706,7 +710,11 @@ export default function CargaSaldo() {
                 </div>
                 <p className="text-3xl font-black tabular-nums text-slate-800">{formatGs(ultimaCargaAlmuerzo.monto)}</p>
                 <p className="text-base text-slate-500 mt-0.5">
-                  {ultimaCargaAlmuerzo.hijoNombre} · {METODOS.find(m => m.value === ultimaCargaAlmuerzo.metodo)?.label}
+                  {ultimaCargaAlmuerzo.hijoNombre} · {
+                    ultimaCargaAlmuerzo.metodo === 'CUENTA_CORRIENTE'
+                      ? 'Cuenta Corriente (Crédito)'
+                      : METODOS.find(m => m.value === ultimaCargaAlmuerzo.metodo)?.label
+                  }
                 </p>
               </div>
             )}

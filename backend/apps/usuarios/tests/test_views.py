@@ -234,6 +234,21 @@ class TestPortalMiHijo:
         assert "cuenta_mensual" in hijo_data
         assert "saldo_almuerzo" in hijo_data
 
+    def test_sin_deuda_saldo_cuenta_corriente_es_cero(self, api_portal, cliente):
+        resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
+        assert resp.status_code == 200
+        assert resp.data["cliente"]["saldo_cuenta_corriente"] == 0
+
+    def test_con_deuda_expone_saldo_cuenta_corriente(self, api_portal, usuario_portal, cliente):
+        from apps.clientes.models import CuentaCorrienteCliente
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=25000, descripcion="Deuda de prueba", creado_por=usuario_portal,
+        )
+        resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
+        assert resp.status_code == 200
+        assert resp.data["cliente"]["saldo_cuenta_corriente"] == 25000
+
 
 # ── PortalHistorialCantina ────────────────────────────────────────────────────
 

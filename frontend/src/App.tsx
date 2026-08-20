@@ -44,6 +44,7 @@ const PortalDashboard        = lazy(() => import('./pages/portal/Dashboard'))
 const PortalNotificaciones   = lazy(() => import('./pages/portal/Notificaciones'))
 const PortalFacturas         = lazy(() => import('./pages/portal/Facturas'))
 const PortalCargaSaldo       = lazy(() => import('./pages/portal/CargaSaldo'))
+const PortalPagarCC          = lazy(() => import('./pages/portal/PagarCC'))
 const PortalCambiarContrasena = lazy(() => import('./pages/portal/CambiarContrasena'))
 const PortalConfigurar2FA    = lazy(() => import('./pages/portal/Configurar2FA'))
 const PortalPagarAlmuerzo    = lazy(() => import('./pages/portal/PagarAlmuerzo'))
@@ -178,6 +179,7 @@ export default function App() {
             }>
               <Route index                        element={<PortalDashboard />} />
               <Route path="carga-saldo"           element={<PortalCargaSaldo />} />
+              <Route path="pagar-cc"              element={<PortalPagarCC />} />
               <Route path="pagar-almuerzo"        element={<PortalPagarAlmuerzo />} />
               <Route path="notificaciones"        element={<PortalNotificaciones />} />
               <Route path="facturas"              element={<PortalFacturas />} />

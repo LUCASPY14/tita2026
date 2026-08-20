@@ -15,6 +15,7 @@ from .views import (
 from .bancard_views import (
     bancard_iniciar,
     bancard_iniciar_almuerzo,
+    bancard_iniciar_cc,
     bancard_confirmar,
     bancard_retorno,
     bancard_estado,
@@ -24,6 +25,7 @@ from .bancard_views import (
     bancard_eliminar_tarjeta,
     bancard_pagar_con_tarjeta,
     bancard_pagar_almuerzo_con_tarjeta,
+    bancard_pagar_cc_con_tarjeta,
     BancardPagosListView,
     bancard_anular_pago,
     bancard_pagos_detalle,
@@ -48,6 +50,7 @@ urlpatterns = [
     # Bancard vPOS
     path("bancard/iniciar/",              bancard_iniciar,              name="bancard-iniciar"),
     path("bancard/iniciar-almuerzo/",     bancard_iniciar_almuerzo,     name="bancard-iniciar-almuerzo"),
+    path("bancard/iniciar-cc/",           bancard_iniciar_cc,           name="bancard-iniciar-cc"),
     path("bancard/confirmar/",            bancard_confirmar,            name="bancard-confirmar"),
     path("bancard/retorno/",              bancard_retorno,              name="bancard-retorno"),
     path("bancard/estado/<str:shop_process_id>/", bancard_estado,       name="bancard-estado"),
@@ -58,6 +61,7 @@ urlpatterns = [
     path("bancard/tarjetas/<int:card_id>/",      bancard_eliminar_tarjeta,        name="bancard-eliminar-tarjeta"),
     path("bancard/pagar-con-tarjeta/",           bancard_pagar_con_tarjeta,       name="bancard-pagar-con-tarjeta"),
     path("bancard/pagar-almuerzo-con-tarjeta/",  bancard_pagar_almuerzo_con_tarjeta, name="bancard-pagar-almuerzo-con-tarjeta"),
+    path("bancard/pagar-cc-con-tarjeta/",        bancard_pagar_cc_con_tarjeta,       name="bancard-pagar-cc-con-tarjeta"),
     # Bancard — gestión administrativa de pagos (ver + anular + resolver)
     path("bancard/pagos/",                       BancardPagosListView.as_view(),  name="bancard-pagos-list"),
     path("bancard/pagos/<str:shop_process_id>/anular/",         bancard_anular_pago,         name="bancard-anular-pago"),

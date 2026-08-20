@@ -618,6 +618,278 @@ class TestBancardRetornoAlmuerzo:
         mock_acreditar.assert_called_once()
 
 
+# ─── Fixtures para cuenta corriente ────────────────────────────────────────────
+
+@pytest.fixture
+def padre_con_deuda_cc(db, cliente):
+    """Padre (CLIENTE_WEB) vinculado al cliente fixture, con deuda en cuenta corriente."""
+    from apps.usuarios.models import Usuario
+    from apps.clientes.models import CuentaCorrienteCliente
+    padre = Usuario.objects.create_user(
+        email="padre_cc@test.com",
+        password="test1234",
+        nombre="Padre",
+        apellido="CC",
+        rol=Usuario.Rol.CLIENTE_WEB,
+        cliente=cliente,
+    )
+    CuentaCorrienteCliente.objects.create(
+        cliente=cliente,
+        tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+        monto=Decimal("80000"),
+        descripcion="Deuda de prueba",
+        creado_por=padre,
+    )
+    return padre, cliente
+
+
+# ─── Tests iniciar pago cuenta corriente ──────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardIniciarCC:
+
+    def test_no_cliente_web_recibe_403(self, padre_con_deuda_cc):
+        from apps.usuarios.models import Usuario
+        cajero = Usuario.objects.create_user(
+            email="cajero_cc@test.com", password="test",
+            nombre="Cajero", apellido="Test", rol=Usuario.Rol.CAJERO,
+        )
+        client = APIClient()
+        client.force_authenticate(user=cajero)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 50000})
+        assert resp.status_code == 403
+
+    def test_sin_monto_retorna_400(self, padre_con_deuda_cc):
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {})
+        assert resp.status_code == 400
+
+    def test_monto_cero_retorna_400(self, padre_con_deuda_cc):
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 0})
+        assert resp.status_code == 400
+
+    def test_monto_invalido_retorna_400(self, padre_con_deuda_cc):
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 'no_numero'})
+        assert resp.status_code == 400
+
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_bancard_error_retorna_400(self, mock_iniciar, padre_con_deuda_cc):
+        mock_iniciar.return_value = {'status': 'error', 'messages': [{'dsc': 'Error Bancard'}]}
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 50000})
+        assert resp.status_code == 400
+
+    def test_sin_deuda_retorna_400(self, db, cliente):
+        from apps.usuarios.models import Usuario
+        from apps.clientes.models import Cliente
+        cliente_sin_deuda = Cliente.objects.create(
+            nombres="Sin", apellidos="Deuda", ruc_ci="9990001",
+            tipo_cliente=cliente.tipo_cliente, lista_precio=cliente.lista_precio,
+        )
+        padre = Usuario.objects.create_user(
+            email="padre_sin_deuda@test.com", password="test1234",
+            nombre="Padre", apellido="SinDeuda",
+            rol=Usuario.Rol.CLIENTE_WEB, cliente=cliente_sin_deuda,
+        )
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 50000})
+        assert resp.status_code == 400
+        assert 'deuda' in resp.data['detail'].lower()
+
+    def test_monto_mayor_a_deuda_retorna_400(self, padre_con_deuda_cc):
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 999999})
+        assert resp.status_code == 400
+
+    def test_cliente_web_sin_cliente_asociado_retorna_400(self, api_cliente_web):
+        client, _ = api_cliente_web
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 50000})
+        assert resp.status_code == 400
+
+    def test_sin_claves_bancard_retorna_503(self, padre_con_deuda_cc):
+        from django.test import override_settings
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        with override_settings(BANCARD_PUBLIC_KEY='', BANCARD_PRIVATE_KEY=''):
+            resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 50000})
+        assert resp.status_code == 503
+
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_bancard_ok_retorna_redirect_url(self, mock_iniciar, padre_con_deuda_cc):
+        mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-cc-ok'}
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 50000})
+        assert resp.status_code == 201
+        assert 'redirect_url' in resp.data
+        assert 'shop_process_id' in resp.data
+
+
+@pytest.mark.django_db
+class TestBancardRetornoCC:
+
+    @patch('apps.core.bancard_service.acreditar_pago_cc')
+    @patch('apps.core.bancard_service.get_confirmation')
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_retorno_cc_aprobado_redirige_con_tipo_cc(
+        self, mock_iniciar, mock_confirmar, mock_acreditar, padre_con_deuda_cc,
+    ):
+        mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-cc-ret'}
+        mock_confirmar.return_value = {
+            'status': 'success',
+            'confirmation': {'response_code': '00'},
+        }
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+
+        init_resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 50000})
+        assert init_resp.status_code == 201
+        shop_pid = init_resp.data['shop_process_id']
+
+        anon = APIClient()
+        resp = anon.get('/api/v1/core/bancard/retorno/', {'shop_process_id': shop_pid})
+        assert resp.status_code == 302
+        assert 'pago-completado' in resp['Location']
+        assert 'tipo=cc' in resp['Location']
+        assert 'estado=aprobado' in resp['Location']
+        mock_acreditar.assert_called_once()
+
+
+@pytest.mark.django_db
+class TestBancardPagarCCConTarjeta:
+
+    def test_no_cliente_web_recibe_403(self, padre_con_deuda_cc):
+        from apps.usuarios.models import Usuario
+        cajero = Usuario.objects.create_user(
+            email="cajero_cc_tok@test.com", password="test",
+            nombre="Cajero", apellido="Test", rol=Usuario.Rol.CAJERO,
+        )
+        client = APIClient()
+        client.force_authenticate(user=cajero)
+        resp = client.post('/api/v1/core/bancard/pagar-cc-con-tarjeta/', {
+            'monto': 50000, 'card_id': 1,
+        })
+        assert resp.status_code == 403
+
+    def test_sin_params_falla(self, padre_con_deuda_cc):
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-cc-con-tarjeta/', {})
+        assert resp.status_code == 400
+
+    def test_monto_invalido_falla(self, padre_con_deuda_cc):
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-cc-con-tarjeta/', {
+            'monto': 'no_numero', 'card_id': 1,
+        })
+        assert resp.status_code == 400
+
+    def test_monto_cero_falla(self, padre_con_deuda_cc):
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-cc-con-tarjeta/', {
+            'monto': 0, 'card_id': 1,
+        })
+        assert resp.status_code == 400
+
+    def test_cliente_web_sin_cliente_asociado_falla(self, api_cliente_web):
+        client, _ = api_cliente_web
+        resp = client.post('/api/v1/core/bancard/pagar-cc-con-tarjeta/', {
+            'monto': 50000, 'card_id': 1,
+        })
+        assert resp.status_code == 400
+
+    def test_sin_deuda_falla(self, db, cliente):
+        from apps.usuarios.models import Usuario
+        from apps.clientes.models import Cliente
+        cliente_sin_deuda = Cliente.objects.create(
+            nombres="Sin", apellidos="Deuda2", ruc_ci="9990002",
+            tipo_cliente=cliente.tipo_cliente, lista_precio=cliente.lista_precio,
+        )
+        padre = Usuario.objects.create_user(
+            email="padre_sin_deuda2@test.com", password="test1234",
+            nombre="Padre", apellido="SinDeuda2",
+            rol=Usuario.Rol.CLIENTE_WEB, cliente=cliente_sin_deuda,
+        )
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-cc-con-tarjeta/', {
+            'monto': 50000, 'card_id': 1,
+        })
+        assert resp.status_code == 400
+
+    def test_monto_mayor_a_deuda_falla(self, padre_con_deuda_cc):
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-cc-con-tarjeta/', {
+            'monto': 999999, 'card_id': 1,
+        })
+        assert resp.status_code == 400
+
+    def test_sin_claves_bancard_falla(self, padre_con_deuda_cc):
+        from django.test import override_settings
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        with override_settings(BANCARD_PUBLIC_KEY='', BANCARD_PRIVATE_KEY=''):
+            resp = client.post('/api/v1/core/bancard/pagar-cc-con-tarjeta/', {
+                'monto': 50000, 'card_id': 1,
+            })
+        assert resp.status_code == 503
+
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_tarjeta_guardada_no_encontrada_falla(self, mock_listar, padre_con_deuda_cc):
+        mock_listar.return_value = {'status': 'success', 'cards': []}
+        padre, _ = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-cc-con-tarjeta/', {
+            'monto': 50000, 'card_id': 99,
+        })
+        assert resp.status_code == 404
+
+    @patch('apps.core.bancard_service.pagar_con_token')
+    @patch('apps.core.bancard_service.listar_tarjetas')
+    def test_aprobado_sincrono_reduce_deuda(self, mock_listar, mock_charge, padre_con_deuda_cc):
+        from apps.clientes.models import CuentaCorrienteCliente
+        mock_listar.return_value = UNA_TARJETA_GUARDADA
+        mock_charge.return_value = {'confirmation': {'response_code': '00', 'process_id': None}}
+        padre, cliente_deuda = padre_con_deuda_cc
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-cc-con-tarjeta/', {
+            'monto': 30000, 'card_id': 1,
+        })
+        assert resp.status_code == 200
+        assert resp.data['estado'] == 'aprobado'
+        assert cliente_deuda.saldo_cuenta_corriente == Decimal('50000')
+        mov = CuentaCorrienteCliente.objects.filter(
+            cliente=cliente_deuda, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+        ).latest('id')
+        assert mov.monto == Decimal('30000')
+
+
 # ─── Tests permisos de estado ─────────────────────────────────────────────────
 
 @pytest.mark.django_db
@@ -1398,6 +1670,53 @@ class TestBancardPagosReintentar:
         assert pago.estado == pago.Estado.APROBADO
         assert pago.recarga_almuerzo_id == recarga.id
         assert RecargaSaldoAlmuerzo.objects.filter(referencia=pago.shop_process_id).count() == 1
+
+    def test_cc_sin_credito_previo_acredita(self, api_admin, padre_con_deuda_cc):
+        from apps.core.models import PagoBancard
+        from apps.clientes.models import CuentaCorrienteCliente
+        padre, cliente_deuda = padre_con_deuda_cc
+        pago = PagoBancard.objects.create(
+            tipo=PagoBancard.Tipo.CC, cliente=cliente_deuda,
+            shop_process_id="pago-cc-error", monto=Decimal("30000"),
+            estado=PagoBancard.Estado.ERROR,
+        )
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago.shop_process_id}/reintentar/')
+
+        assert resp.status_code == 200
+        assert resp.data['accion'] == 'acreditado'
+        pago.refresh_from_db()
+        assert pago.estado == pago.Estado.APROBADO
+        assert pago.movimiento_cc is not None
+        assert cliente_deuda.saldo_cuenta_corriente == Decimal('50000')
+
+    def test_cc_con_credito_previo_solo_vincula(self, api_admin, padre_con_deuda_cc):
+        from apps.core.models import PagoBancard
+        from apps.clientes.models import CuentaCorrienteCliente
+        padre, cliente_deuda = padre_con_deuda_cc
+        pago = PagoBancard.objects.create(
+            tipo=PagoBancard.Tipo.CC, cliente=cliente_deuda,
+            shop_process_id="pago-cc-error-2", monto=Decimal("30000"),
+            estado=PagoBancard.Estado.ERROR,
+        )
+        mov = CuentaCorrienteCliente.objects.create(
+            cliente=cliente_deuda, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+            monto=Decimal("30000"),
+            descripcion=f"Pago cuenta corriente vía Bancard — ref {pago.shop_process_id}",
+            creado_por=padre,
+        )
+        client, _ = api_admin
+
+        resp = client.post(f'/api/v1/core/bancard/pagos/{pago.shop_process_id}/reintentar/')
+
+        assert resp.status_code == 200
+        assert resp.data['accion'] == 'vinculado'
+        pago.refresh_from_db()
+        assert pago.estado == pago.Estado.APROBADO
+        assert pago.movimiento_cc_id == mov.id
+        # No se creó un segundo crédito.
+        assert cliente_deuda.saldo_cuenta_corriente == Decimal('50000')
 
     @patch('apps.core.bancard_service.acreditar_saldo')
     def test_falla_de_nuevo_permanece_en_error(self, mock_acreditar, api_admin, pago_error_tarjeta):

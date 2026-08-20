@@ -10,18 +10,20 @@ export default function PagoCompletado() {
 
   const estado = searchParams.get('estado') ?? 'error'
   const monto  = searchParams.get('monto')
-  const tipo   = searchParams.get('tipo') ?? 'saldo'   // 'saldo' | 'almuerzo' | 'catastro'
+  const tipo   = searchParams.get('tipo') ?? 'saldo'   // 'saldo' | 'almuerzo' | 'cc' | 'catastro'
 
   const aprobado    = estado === 'aprobado'
   const cancelado   = estado === 'cancelado'
   const esCatastro  = tipo === 'catastro'
+  const esCC        = tipo === 'cc'
 
   // Full page reload: garantiza datos frescos (saldo actualizado) y re-autenticación.
   // El catastro de tarjeta no está atado a un flujo de pago específico — volvemos al inicio del portal.
   // Carga de saldo (cantina) y de almuerzo viven en la misma pantalla, con un toggle.
-  const base = esCatastro ? '/portal' : '/portal/carga-saldo'
+  // El pago de cuenta corriente tiene su propia pantalla dedicada.
+  const base = esCatastro ? '/portal' : esCC ? '/portal/pagar-cc' : '/portal/carga-saldo'
   const handleVolver = () => {
-    const tipoParam = !esCatastro && tipo === 'almuerzo' ? '&tipo=ALMUERZO' : ''
+    const tipoParam = !esCatastro && !esCC && tipo === 'almuerzo' ? '&tipo=ALMUERZO' : ''
     window.location.href = `${base}?_r=${Date.now()}${tipoParam}`
   }
 
@@ -52,13 +54,15 @@ export default function PagoCompletado() {
                 <h1 className="text-2xl font-bold text-slate-900">¡Pago aprobado!</h1>
                 {monto && (
                   <p className="text-xl font-semibold text-emerald-700">
-                    {formatGs(Number(monto))} acreditados
+                    {formatGs(Number(monto))} {esCC ? 'pagados' : 'acreditados'}
                   </p>
                 )}
                 <p className="text-slate-500 text-sm">
-                  {tipo === 'almuerzo'
-                    ? 'El saldo fue acreditado en la cuenta corriente de almuerzo del alumno.'
-                    : 'El saldo fue acreditado en la tarjeta del alumno.'}
+                  {esCC
+                    ? 'Tu deuda de cuenta corriente fue reducida.'
+                    : tipo === 'almuerzo'
+                      ? 'El saldo fue acreditado en la cuenta corriente de almuerzo del alumno.'
+                      : 'El saldo fue acreditado en la tarjeta del alumno.'}
                 </p>
               </>
             )}
