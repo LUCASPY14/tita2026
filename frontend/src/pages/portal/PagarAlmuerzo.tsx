@@ -460,8 +460,10 @@ export default function PagarAlmuerzo() {
         </div>
       )}
 
-      {/* Método de pago */}
-      {hijoSeleccionado && montoValido && (
+      {/* Método de pago — no depende de montoValido: el catastro de tarjeta
+          no requiere un monto y esconderlo hasta tenerlo lo hacía indetectable
+          para quien solo quiere gestionar tarjetas. */}
+      {hijoSeleccionado && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">

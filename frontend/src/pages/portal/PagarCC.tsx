@@ -416,49 +416,49 @@ export default function PagarCC() {
       </div>
 
       {/* ── Paso: Método de pago ── */}
-      {montoValido && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
-            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
-              2 — Método de pago
-            </p>
-          </div>
-          <div className="flex border-b border-slate-100">
-            <button
-              type="button"
-              onClick={() => setMetodoPago('ocasional')}
-              className={[
-                'flex-1 py-3 text-sm font-semibold transition-colors cursor-pointer',
-                metodoPago === 'ocasional'
-                  ? 'text-red-700 border-b-2 border-red-600'
-                  : 'text-slate-400 hover:text-slate-600',
-              ].join(' ')}
-            >
-              Pago único
-            </button>
-            <button
-              type="button"
-              onClick={() => setMetodoPago('guardada')}
-              className={[
-                'flex-1 py-3 text-sm font-semibold transition-colors cursor-pointer',
-                metodoPago === 'guardada'
-                  ? 'text-red-700 border-b-2 border-red-600'
-                  : 'text-slate-400 hover:text-slate-600',
-              ].join(' ')}
-            >
-              Tarjeta guardada
-            </button>
-          </div>
-          {metodoPago === 'guardada' && (
-            <TarjetasGuardadasBancard
-              selectedCardId={cardIdSeleccionado}
-              onSeleccionar={setCardIdSeleccionado}
-              accent="red"
-              containerIdPrefix="pagar-cc"
-            />
-          )}
+      {/* No depende de montoValido: llegar acá ya implica deuda > 0, y el
+          catastro de tarjeta ("Tarjeta guardada") no requiere un monto elegido. */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+            2 — Método de pago
+          </p>
         </div>
-      )}
+        <div className="flex border-b border-slate-100">
+          <button
+            type="button"
+            onClick={() => setMetodoPago('ocasional')}
+            className={[
+              'flex-1 py-3 text-sm font-semibold transition-colors cursor-pointer',
+              metodoPago === 'ocasional'
+                ? 'text-red-700 border-b-2 border-red-600'
+                : 'text-slate-400 hover:text-slate-600',
+            ].join(' ')}
+          >
+            Pago único
+          </button>
+          <button
+            type="button"
+            onClick={() => setMetodoPago('guardada')}
+            className={[
+              'flex-1 py-3 text-sm font-semibold transition-colors cursor-pointer',
+              metodoPago === 'guardada'
+                ? 'text-red-700 border-b-2 border-red-600'
+                : 'text-slate-400 hover:text-slate-600',
+            ].join(' ')}
+          >
+            Tarjeta guardada
+          </button>
+        </div>
+        {metodoPago === 'guardada' && (
+          <TarjetasGuardadasBancard
+            selectedCardId={cardIdSeleccionado}
+            onSeleccionar={setCardIdSeleccionado}
+            accent="red"
+            containerIdPrefix="pagar-cc"
+          />
+        )}
+      </div>
 
       {/* ── Resumen + botón ── */}
       {montoEfectivo > 0 && montoValido && (
