@@ -104,7 +104,6 @@ Primera versión estable del sistema de gestión de Cantina Tita.
 - Tests de `almuerzos/tasks.py` (cobertura actual 55% → objetivo 80%)
 - Tests de `compras/views.py` (cobertura actual 66% → objetivo 80%)
 - Tests de `notificaciones/consumers.py` (cobertura actual 67% → objetivo 80%)
-- Tests de `core/bancard_service.py` (cobertura actual 51% → objetivo 80%) — *bloqueado: esperando credenciales de sandbox de Bancard*
 
 ### Planeado
 - UI de configuración de WhatsApp en Configuración (tab TabWhatsApp)

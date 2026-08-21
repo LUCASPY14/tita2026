@@ -1,5 +1,17 @@
 # Módulo de Recarga de Saldo Prepago - CANTINA_TITA
 
+> ⚠️ **Documento desactualizado — no refleja la implementación actual.** Este
+> README describe un diseño temprano (modelo `CargasSaldo`, `RecargaService`,
+> endpoints `/api/v1/cargas-saldo/caja/`, `/transferencia/referencia/`,
+> `/transferencia/validar/`, `/{id}/aprobar/`, webhook con firma HMAC-SHA256)
+> que no es lo que terminó implementado. La integración Bancard real vive en
+> [`bancard_service.py`](bancard_service.py) y [`bancard_views.py`](bancard_views.py)
+> (webhook en `/api/v1/core/bancard/confirmar/`, token MD5 propio de Bancard —
+> no HMAC), y las cargas manuales de caja/transferencia usan el modelo
+> `CargaSaldo` (singular) vía `CargaSaldoViewSet` en [`views.py`](views.py),
+> registrado en `/api/v1/core/cargas-saldo/`. Para el comportamiento real,
+> leer el código directamente en vez de este documento.
+
 ## 📋 Índice
 - [Descripción General](#descripción-general)
 - [Actores y Canales](#actores-y-canales)

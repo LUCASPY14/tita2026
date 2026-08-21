@@ -323,6 +323,129 @@ class TestBancardRetorno:
         assert pago.estado == PagoBancard.Estado.ERROR
 
 
+# ─── Tests confirmar (webhook) ────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBancardConfirmar:
+    """
+    POST /api/v1/core/bancard/confirmar/ — webhook sin autenticación JWT que
+    Bancard invoca al resolver una transacción. Cubre lo que solo estaba
+    verificado indirectamente vía bancard_retorno/test_bancard_service: la
+    validación del token propio de Bancard y el guard de idempotencia sobre
+    la vista real, no solo sobre las funciones que envuelve.
+    """
+
+    def _payload(self, shop_process_id, monto, response_code="00", token=None):
+        from apps.core import bancard_service
+        if token is None:
+            token = bancard_service._token_confirm_webhook(shop_process_id, monto)
+        return {
+            "operation": {
+                "shop_process_id": shop_process_id,
+                "response_code": response_code,
+                "amount": f"{monto}.00",
+                "currency": "PYG",
+                "token": token,
+            }
+        }
+
+    def test_get_devuelve_ok_sin_autenticacion(self, api_client):
+        """Bancard usa GET para validar que la URL del webhook existe."""
+        resp = api_client.get('/api/v1/core/bancard/confirmar/')
+        assert resp.status_code == 200
+        assert resp.data['status'] == 'ok'
+
+    def test_sin_shop_process_id_falla(self, api_client):
+        resp = api_client.post('/api/v1/core/bancard/confirmar/', {'operation': {}}, format='json')
+        assert resp.status_code == 400
+
+    def test_token_invalido_falla_y_no_acredita(self, api_client, hijo_con_tarjeta, cliente):
+        from apps.core.models import PagoBancard
+        _, tarjeta = hijo_con_tarjeta
+        saldo_inicial = tarjeta.saldo_actual
+        pago = PagoBancard.objects.create(
+            tipo=PagoBancard.Tipo.TARJETA, tarjeta=tarjeta, cliente=cliente,
+            shop_process_id="confirmar-token-malo", monto=Decimal("50000"),
+            estado=PagoBancard.Estado.PENDIENTE,
+        )
+        payload = self._payload(pago.shop_process_id, 50000, token="token-inventado")
+        resp = api_client.post('/api/v1/core/bancard/confirmar/', payload, format='json')
+
+        assert resp.status_code == 400
+        pago.refresh_from_db()
+        assert pago.estado == PagoBancard.Estado.PENDIENTE
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_inicial
+
+    def test_pago_inexistente_devuelve_success_para_no_reintentos(self, api_client):
+        """Aunque no exista el PagoBancard, responde 200 — si no, Bancard reintenta indefinidamente."""
+        payload = self._payload("shop-process-fantasma", 50000)
+        resp = api_client.post('/api/v1/core/bancard/confirmar/', payload, format='json')
+        assert resp.status_code == 200
+        assert resp.data['status'] == 'success'
+
+    def test_aprobado_acredita_saldo(self, api_client, hijo_con_tarjeta, cliente):
+        from apps.core.models import PagoBancard
+        _, tarjeta = hijo_con_tarjeta
+        saldo_inicial = tarjeta.saldo_actual
+        pago = PagoBancard.objects.create(
+            tipo=PagoBancard.Tipo.TARJETA, tarjeta=tarjeta, cliente=cliente,
+            shop_process_id="confirmar-ok", monto=Decimal("50000"),
+            estado=PagoBancard.Estado.PENDIENTE,
+        )
+        payload = self._payload(pago.shop_process_id, 50000, response_code="00")
+        resp = api_client.post('/api/v1/core/bancard/confirmar/', payload, format='json')
+
+        assert resp.status_code == 200
+        assert resp.data['status'] == 'success'
+        pago.refresh_from_db()
+        assert pago.estado == PagoBancard.Estado.APROBADO
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_inicial + Decimal('50000')
+
+    def test_rechazado_no_acredita(self, api_client, hijo_con_tarjeta, cliente):
+        from apps.core.models import PagoBancard
+        _, tarjeta = hijo_con_tarjeta
+        saldo_inicial = tarjeta.saldo_actual
+        pago = PagoBancard.objects.create(
+            tipo=PagoBancard.Tipo.TARJETA, tarjeta=tarjeta, cliente=cliente,
+            shop_process_id="confirmar-rechazado", monto=Decimal("50000"),
+            estado=PagoBancard.Estado.PENDIENTE,
+        )
+        payload = self._payload(pago.shop_process_id, 50000, response_code="05")
+        resp = api_client.post('/api/v1/core/bancard/confirmar/', payload, format='json')
+
+        assert resp.status_code == 200
+        pago.refresh_from_db()
+        assert pago.estado == PagoBancard.Estado.RECHAZADO
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_inicial
+
+    def test_pago_ya_aprobado_no_reacredita(self, api_client, hijo_con_tarjeta, cliente):
+        """Guard de idempotencia: un segundo webhook para el mismo pago no debe duplicar el crédito."""
+        from apps.core.models import PagoBancard
+        _, tarjeta = hijo_con_tarjeta
+        saldo_inicial = tarjeta.saldo_actual
+        pago = PagoBancard.objects.create(
+            tipo=PagoBancard.Tipo.TARJETA, tarjeta=tarjeta, cliente=cliente,
+            shop_process_id="confirmar-doble", monto=Decimal("50000"),
+            estado=PagoBancard.Estado.PENDIENTE,
+        )
+        payload = self._payload(pago.shop_process_id, 50000, response_code="00")
+
+        primer_resp = api_client.post('/api/v1/core/bancard/confirmar/', payload, format='json')
+        assert primer_resp.status_code == 200
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_inicial + Decimal('50000')
+
+        segundo_resp = api_client.post('/api/v1/core/bancard/confirmar/', payload, format='json')
+        assert segundo_resp.status_code == 200
+        assert segundo_resp.data['status'] == 'success'
+
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_inicial + Decimal('50000')  # sin duplicar
+
+
 @pytest.mark.django_db
 class TestBancardIniciarEdgeCases:
 

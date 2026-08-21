@@ -12,8 +12,11 @@
 # Requisitos previos:
 #   1. Docker Desktop corriendo
 #   2. backend\.env.production completado (copiar de backend\.env.production.example)
-#   3. PostgreSQL nativo en Windows, cantina_tita accesible
-#   4. Git configurado con acceso al repo
+#   3. Git configurado con acceso al repo
+#
+# PostgreSQL corre dentro del propio docker-compose (servicio 'postgres') — no
+# requiere una instancia nativa de Windows; este script la levanta como parte
+# del paso 6.
 
 param(
     [string]$Branch          = "main",
