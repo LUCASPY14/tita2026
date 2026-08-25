@@ -17,6 +17,11 @@ vi.mock('../../utils/pdf', () => ({
   exportarIngresosComedorPDF: vi.fn(),
 }))
 
+const mockUseOfflineQueue = vi.fn()
+vi.mock('../../hooks/useOfflineQueue', () => ({
+  useOfflineQueue: () => mockUseOfflineQueue(),
+}))
+
 import api from '../../services/api'
 import { exportarIngresosComedorPDF } from '../../utils/pdf'
 
@@ -86,6 +91,10 @@ beforeEach(() => {
   vi.clearAllMocks()
   // Reset fullscreen state between tests
   Object.defineProperty(document, 'fullscreenElement', { writable: true, configurable: true, value: null })
+  // Estado por defecto de la cola offline — online, sin pendientes
+  mockUseOfflineQueue.mockReturnValue({
+    isOnline: true, pendingCount: 0, syncing: false, syncNow: vi.fn(), enqueue: vi.fn(),
+  })
 })
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -277,6 +286,70 @@ describe('Comedor — PDF', () => {
 
     await userEvent.click(screen.getByText(/PDF \(1\)/i))
     expect(vi.mocked(exportarIngresosComedorPDF)).toHaveBeenCalled()
+  })
+})
+
+describe('Comedor — manifest PWA', () => {
+  it('al montar, apunta el link de manifest a /comedor-manifest.webmanifest y lo revierte al desmontar', async () => {
+    const link = document.createElement('link')
+    link.setAttribute('rel', 'manifest')
+    link.setAttribute('href', '/manifest.webmanifest')
+    document.head.appendChild(link)
+
+    try {
+      setupMounts()
+      const { unmount } = render(<Comedor />)
+      await waitFor(() => expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThanOrEqual(2))
+
+      expect(link.getAttribute('href')).toBe('/comedor-manifest.webmanifest')
+
+      unmount()
+      expect(link.getAttribute('href')).toBe('/manifest.webmanifest')
+    } finally {
+      link.remove()
+    }
+  })
+})
+
+describe('Comedor — cola offline', () => {
+  it('sin conexión → muestra el banner "SIN CONEXIÓN"', async () => {
+    mockUseOfflineQueue.mockReturnValue({
+      isOnline: false, pendingCount: 0, syncing: false, syncNow: vi.fn(), enqueue: vi.fn(),
+    })
+    await renderReady()
+    expect(screen.getByText(/SIN CONEXIÓN/i)).toBeInTheDocument()
+  })
+
+  it('con conexión → no muestra el banner de offline', async () => {
+    await renderReady()
+    expect(screen.queryByText(/SIN CONEXIÓN/i)).not.toBeInTheDocument()
+  })
+
+  it('sin registros pendientes → no muestra el botón de sincronización', async () => {
+    await renderReady()
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument()
+  })
+
+  it('con registros pendientes → muestra el contador y permite forzar la sincronización', async () => {
+    const syncNow = vi.fn()
+    mockUseOfflineQueue.mockReturnValue({
+      isOnline: true, pendingCount: 3, syncing: false, syncNow, enqueue: vi.fn(),
+    })
+    await renderReady()
+
+    const boton = screen.getByText('3 offline')
+    expect(boton).toBeInTheDocument()
+
+    await userEvent.click(boton)
+    expect(syncNow).toHaveBeenCalled()
+  })
+
+  it('sincronizando → el botón queda deshabilitado', async () => {
+    mockUseOfflineQueue.mockReturnValue({
+      isOnline: true, pendingCount: 2, syncing: true, syncNow: vi.fn(), enqueue: vi.fn(),
+    })
+    await renderReady()
+    expect(screen.getByText('2 offline').closest('button')).toBeDisabled()
   })
 })
 

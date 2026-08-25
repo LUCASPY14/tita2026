@@ -1,20 +1,23 @@
 /**
- * Service Worker — Estrategia offline para ModoRecreo (POS)
+ * Service Worker — Estrategia offline para ModoRecreo (POS) y Comedor
  *
  * Cache strategy:
  *   - GET /api/v1/productos/, /api/v1/core/medios-pago/  → StaleWhileRevalidate
  *     (catálogo actualizado en background; siempre responde rápido)
  *   - GET /api/v1/core/tarjetas/                         → NetworkFirst con fallback a cache
- *     (saldo real si hay red; cache si offline)
+ *     (saldo real si hay red; cache si offline — usado por ModoRecreo y Comedor)
  *   - POST /api/v1/ventas/ventas/                        → NetworkOnly con BackgroundSync
- *     (la venta se encola en IndexedDB si falla; se reintenta al reconectar)
+ *   - POST /api/v1/almuerzos/registros-consumo/          → NetworkOnly con BackgroundSync
+ *     (se encolan en IndexedDB si falla la red; se reintentan solos al reconectar —
+ *     misma cola genérica para ambos POST, la respuesta 202 optimista ya se trata
+ *     como éxito del lado del frontend en los dos flujos)
  *   - Todo lo demás                                      → NetworkOnly (sin cache)
  */
 
 const CACHE_NAME     = 'cantina-v2'
 const SYNC_TAG       = 'sync-ventas'
 const IDB_DB         = 'cantina-offline'
-const IDB_STORE      = 'pending-ventas'
+const IDB_STORE      = 'pending-ventas'  // cola genérica de POST pendientes (ventas + registros de consumo)
 
 // URLs que cacheamos para catálogo (ModoRecreo)
 const CATALOG_PATTERNS = [
@@ -51,13 +54,19 @@ self.addEventListener('activate', event => {
   )
 })
 
+// URLs de POST que se encolan en IndexedDB si falla la red (ventas y consumo de comedor)
+const OFFLINE_QUEUE_POST_PATTERNS = [
+  /\/api\/v1\/ventas\/ventas\//,
+  /\/api\/v1\/almuerzos\/registros-consumo\//,
+]
+
 // ─── Fetch handler ────────────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   const { request } = event
   const url = request.url
 
-  // POST /api/v1/ventas/ventas/ → queue si offline
-  if (request.method === 'POST' && /\/api\/v1\/ventas\/ventas\//.test(url)) {
+  // POST venta o registro de consumo → queue si offline
+  if (request.method === 'POST' && OFFLINE_QUEUE_POST_PATTERNS.some(p => p.test(url))) {
     event.respondWith(networkWithOfflineQueue(request))
     return
   }
@@ -125,10 +134,10 @@ self.addEventListener('notificationclick', event => {
   )
 })
 
-// ─── BackgroundSync: reintentar ventas pendientes ─────────────────────────────
+// ─── BackgroundSync: reintentar ventas y registros de consumo pendientes ──────
 self.addEventListener('sync', event => {
   if (event.tag === SYNC_TAG) {
-    event.waitUntil(flushPendingVentas())
+    event.waitUntil(flushPendingRequests())
   }
 })
 
@@ -180,13 +189,13 @@ async function networkWithOfflineQueue(request) {
     }
 
     return new Response(
-      JSON.stringify({ _queued: true, message: 'Venta guardada offline. Se sincronizará al reconectar.' }),
+      JSON.stringify({ _queued: true, message: 'Guardado offline. Se sincronizará al reconectar.' }),
       { status: 202, headers: { 'Content-Type': 'application/json' } }
     )
   }
 }
 
-async function flushPendingVentas() {
+async function flushPendingRequests() {
   const pending = await idbGetAll(IDB_STORE)
   for (const item of pending) {
     try {

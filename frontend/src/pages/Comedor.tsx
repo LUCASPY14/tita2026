@@ -4,9 +4,11 @@ import toast from 'react-hot-toast'
 import {
   CheckCircle, XCircle, UtensilsCrossed, Clock,
   Download, Maximize2, Minimize2, List, RefreshCw,
+  AlertTriangle, Loader2,
 } from 'lucide-react'
 import api from '../services/api'
 import { exportarIngresosComedorPDF } from '../utils/pdf'
+import { useOfflineQueue } from '../hooks/useOfflineQueue'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -119,6 +121,7 @@ interface RegistroReciente {
 
 export default function Comedor() {
   const { t } = useTranslation()
+  const { isOnline, pendingCount, syncing, syncNow } = useOfflineQueue()
   const inputRef = useRef<HTMLInputElement>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval>>(undefined)
   const focusTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -137,6 +140,16 @@ export default function Comedor() {
   const [suscriptosHoy, setSuscriptosHoy] = useState<{ hijoId: number; nombre: string; grado: string }[]>([])
   const [registrosHoy, setRegistrosHoy] = useState<Map<number, RegistroInfo>>(new Map())
   const [loadingLista, setLoadingLista] = useState(false)
+
+  // Apuntar al manifest del comedor mientras el usuario está en /comedor
+  // (mismo patrón que PortalLayout para /portal) — permite instalar esta
+  // pantalla como PWA propia, con su ícono y start_url en vez del de ModoRecreo.
+  useEffect(() => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')
+    const prev = link?.getAttribute('href') ?? '/manifest.webmanifest'
+    link?.setAttribute('href', '/comedor-manifest.webmanifest')
+    return () => { link?.setAttribute('href', prev) }
+  }, [])
 
   // reloj
   useEffect(() => {
@@ -401,6 +414,13 @@ export default function Comedor() {
       className="min-h-screen bg-slate-50 text-slate-900 flex flex-col select-none"
       onClick={handlePageClick}
     >
+      {!isOnline && (
+        <div className="flex items-center justify-center gap-2 bg-amber-500 text-white text-sm font-bold py-1.5 px-4 shrink-0">
+          <AlertTriangle size={16} />
+          SIN CONEXIÓN — los registros se guardan localmente y se sincronizan solos al reconectar
+        </div>
+      )}
+
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-slate-200 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
@@ -417,6 +437,17 @@ export default function Comedor() {
             <Clock className="w-4 h-4" />
             <span className="text-base tabular-nums font-medium">{clock}</span>
           </div>
+          {pendingCount > 0 && (
+            <button
+              onClick={e => { e.stopPropagation(); syncNow() }}
+              disabled={syncing || !isOnline}
+              title={isOnline ? 'Sincronizar registros offline' : 'Sin conexión — se sincronizarán al reconectar'}
+              className="flex items-center gap-1.5 px-3 py-2 bg-amber-100 border border-amber-300 text-amber-800 rounded-xl text-sm font-bold transition-colors cursor-pointer hover:bg-amber-200 disabled:opacity-60"
+            >
+              {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
+              {pendingCount} offline
+            </button>
+          )}
           {recientes.length > 0 && (
             <button
               onClick={e => { e.stopPropagation(); exportarPDF() }}
