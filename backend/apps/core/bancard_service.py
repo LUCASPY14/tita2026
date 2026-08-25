@@ -378,7 +378,6 @@ def pagar_con_token(
             "additional_data": "",
             "alias_token": alias_token,
             "return_url": return_url,
-            "extra_response_attributes": ["confirmation.process_id"],
         },
     }
 

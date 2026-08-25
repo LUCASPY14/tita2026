@@ -379,8 +379,15 @@ def bancard_confirmar(request):
     response_code   = operation.get("response_code", "")
     monto_raw       = operation.get("amount", "0")
 
+    # Bancard exige HTTP 200 siempre en este webhook, con {"status": "success"}
+    # como única respuesta documentada (manual eCommerce vPOS 1.23.1, pág. 48,
+    # "Ejemplo respuesta esperada por el comercio") — no documentan una variante
+    # de error. Un status HTTP distinto de 200 hace que su sistema lo trate como
+    # entrega fallida (confirmado por Bancard en certificación, ago-2026).
+    # El "status" del body es un ack de entrega, no un reflejo de si validamos
+    # el token — eso lo resolvemos en silencio del lado nuestro (log + no acreditar).
     if not shop_process_id:
-        return Response({"status": "error"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "success"})
 
     try:
         monto = int(float(monto_raw))
@@ -391,7 +398,7 @@ def bancard_confirmar(request):
     token_esperado = bancard_service._token_confirm_webhook(shop_process_id, monto)
     if token_recibido != token_esperado:
         logger.warning("Bancard confirmar: token inválido shop=%s", shop_process_id)
-        return Response({"status": "error"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "success"})
 
     try:
         pago = PagoBancard.objects.get(shop_process_id=shop_process_id)

@@ -356,8 +356,12 @@ class TestBancardConfirmar:
         assert resp.data['status'] == 'ok'
 
     def test_sin_shop_process_id_falla(self, api_client):
+        """Bancard exige HTTP 200 + {"status": "success"} siempre (manual pág. 48) — no hay
+        variante de error documentada; la validación fallida se maneja en silencio del lado
+        nuestro (log, sin acreditar), sin reflejarse en la respuesta al webhook."""
         resp = api_client.post('/api/v1/core/bancard/confirmar/', {'operation': {}}, format='json')
-        assert resp.status_code == 400
+        assert resp.status_code == 200
+        assert resp.data['status'] == 'success'
 
     def test_token_invalido_falla_y_no_acredita(self, api_client, hijo_con_tarjeta, cliente):
         from apps.core.models import PagoBancard
@@ -371,7 +375,8 @@ class TestBancardConfirmar:
         payload = self._payload(pago.shop_process_id, 50000, token="token-inventado")
         resp = api_client.post('/api/v1/core/bancard/confirmar/', payload, format='json')
 
-        assert resp.status_code == 400
+        assert resp.status_code == 200
+        assert resp.data['status'] == 'success'  # ack de entrega — no significa que se haya acreditado
         pago.refresh_from_db()
         assert pago.estado == PagoBancard.Estado.PENDIENTE
         tarjeta.refresh_from_db()

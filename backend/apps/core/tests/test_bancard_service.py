@@ -550,7 +550,7 @@ class TestPagarConToken:
         assert result["operation"]["response_code"] == "00"
 
     @patch("apps.core.bancard_service.http_client.post")
-    def test_payload_incluye_alias_token_y_confirmation_process_id(self, mock_post):
+    def test_payload_incluye_alias_token_y_sin_extra_response_attributes(self, mock_post):
         from apps.core.bancard_service import pagar_con_token
         mock_post.return_value.json.return_value = {"operation": {}}
         pagar_con_token(
@@ -560,7 +560,9 @@ class TestPagarConToken:
         payload = mock_post.call_args[1]["json"]
         assert payload["operation"]["alias_token"] == "alias-xyz"
         assert payload["operation"]["number_of_payments"] == 1
-        assert payload["operation"]["extra_response_attributes"] == ["confirmation.process_id"]
+        # Bancard confirmó (ago-2026) que extra_response_attributes no está habilitado
+        # para este comercio en /charge — no enviarlo (sí sigue permitido en /cards).
+        assert "extra_response_attributes" not in payload["operation"]
         # El manual lo marca opcional, pero Bancard rechaza el charge sin este campo
         # ("The parameter additional_data is missing.") — confirmado contra sandbox real.
         assert payload["operation"]["additional_data"] == ""
