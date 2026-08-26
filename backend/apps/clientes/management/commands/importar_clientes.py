@@ -1,30 +1,42 @@
 """
-Importa clientes (padres/tutores) e hijos desde un CSV — una fila por hijo,
-con los datos del cliente responsable repetidos en cada fila (así es como
-sale un Google Form cuando cada padre completa el formulario una vez por
-hijo). Mismo layout de columnas que `exportar_clientes`.
+Importa clientes (padres/tutores, o el familiar allegado que se hace cargo
+económico cuando el padre no está) e hijos desde un CSV — una fila por
+familia, con los hijos en grupos de columnas repetidos (hijo1_*, hijo2_*,
+hijo3_*, ...). Así es como sale un Google Form donde cada familia completa
+el formulario una sola vez y carga tantos hijos como tenga, sin secciones
+repetibles (Google Forms no las soporta de forma nativa).
+
+La cantidad de "hijoN" se detecta automáticamente a partir de las columnas
+del CSV — no hay un máximo fijo. Un hijoN vacío (sin nombre ni apellido) se
+omite en silencio; solo hijo1 es obligatorio.
 
 No toca restricciones alimentarias/alergias (RestriccionHijo) — eso se carga
 aparte, no viene de este import.
 
-Columnas requeridas: ruc_ci, cliente_nombres, cliente_apellidos, hijo_nombre,
-hijo_apellido
+Si el alumno ya tiene una tarjeta física de la cantina (columna hijoN_tarjeta),
+se crea el registro Tarjeta vinculado a ese hijo con estado ACTIVA y saldo 0
+— el número lo escribe la familia en el formulario, no lo genera el sistema.
+Si el número ya está registrado a nombre de otro titular, o el hijo ya tenía
+una tarjeta distinta, no se toca nada y se avisa para resolverlo a mano.
+
+Columnas obligatorias: ruc_ci, cliente_nombres, cliente_apellidos,
+hijo1_nombre, hijo1_apellido
 Columnas opcionales: cliente_email, cliente_telefono, cliente_direccion,
-cliente_ciudad, cliente_tipo, cliente_lista_precio, hijo_fecha_nacimiento
-(YYYY-MM-DD), hijo_grado
+cliente_ciudad, cliente_tipo, cliente_lista_precio, hijoN_fecha_nacimiento
+(YYYY-MM-DD), hijoN_grado, hijoN_tarjeta, para cada N detectado (hijo2_nombre,
+hijo2_apellido, hijo3_nombre, ...)
 
 Si el CSV no trae "cliente_tipo"/"cliente_lista_precio" (o vienen vacíos en
 una fila), se usan los valores de --tipo-cliente/--lista-precio. Si tampoco
 se pasan por CLI, --lista-precio cae al ListaPrecio con es_por_defecto=True
 si existe una; --tipo-cliente es obligatorio de alguna de las dos formas.
 
-Un cliente existente (mismo ruc_ci) se reutiliza para asociar el hijo, sin
+Un cliente existente (mismo ruc_ci) se reutiliza para asociar los hijos, sin
 tocar sus datos de contacto salvo que se pase --actualizar-clientes. Un hijo
 ya existente para ese cliente (mismo nombre+apellido) se omite, no duplica.
 
 Uso:
     python manage.py importar_clientes entrada.csv --tipo-cliente Familia
-    python manage.py importar_clientes entrada.csv --tipo-cliente Familia --lista-precio General
     python manage.py importar_clientes entrada.csv --tipo-cliente Familia --dry-run
     python manage.py importar_clientes entrada.csv --tipo-cliente Familia --actualizar-clientes
 """
@@ -36,21 +48,23 @@ from datetime import date
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from apps.clientes.models import Cliente, Grado, Hijo, TipoCliente
+from apps.clientes.models import Ciudad, Cliente, Grado, Hijo, TipoCliente
+from apps.core.models import Tarjeta
 from apps.productos.models import ListaPrecio
 
 RUC_CI_REGEX = re.compile(r"^(\d{6,8}(-\d{1,2})?|\d{1,8}-\d{1}|\d{6,8})$")
+HIJO_COL_REGEX = re.compile(r"^hijo(\d+)_nombre$")
 
-REQUERIDAS = ["ruc_ci", "cliente_nombres", "cliente_apellidos", "hijo_nombre", "hijo_apellido"]
+REQUERIDAS = ["ruc_ci", "cliente_nombres", "cliente_apellidos", "hijo1_nombre", "hijo1_apellido"]
 
 
 class Command(BaseCommand):
-    help = "Importa clientes e hijos desde un CSV (una fila por hijo)."
+    help = "Importa clientes e hijos desde un CSV (una fila por familia, hijos en columnas hijoN_*)."
 
     def add_arguments(self, parser):
         parser.add_argument("csv_path", help="Ruta del archivo CSV de entrada")
         parser.add_argument("--tipo-cliente", help="Nombre del TipoCliente a usar por defecto (ej: Familia)")
-        parser.add_argument("--lista-precio", help="Nombre de la ListaPrecio a usar por defecto (ej: General)")
+        parser.add_argument("--lista-precio", help="Nombre de la ListaPrecio a usar por defecto (ej: Lista General)")
         parser.add_argument("--dry-run", action="store_true", help="Solo mostrar qué haría, no escribir en la BD")
         parser.add_argument(
             "--actualizar-clientes", action="store_true",
@@ -64,13 +78,18 @@ class Command(BaseCommand):
         with open(options["csv_path"], newline="", encoding="utf-8-sig") as f:
             filas = list(csv.DictReader(f))
 
-        faltantes = [c for c in REQUERIDAS if c not in (filas[0].keys() if filas else [])]
+        columnas = filas[0].keys() if filas else []
+        faltantes = [c for c in REQUERIDAS if c not in columnas]
         if faltantes:
             raise CommandError(f"Faltan columnas obligatorias en el CSV: {', '.join(faltantes)}")
 
+        nros_hijo = sorted(
+            int(m.group(1)) for c in columnas if (m := HIJO_COL_REGEX.match(c))
+        )
+
         stats = {
             "clientes_creados": 0, "clientes_reutilizados": 0, "clientes_actualizados": 0,
-            "hijos_creados": 0, "hijos_omitidos": 0,
+            "hijos_creados": 0, "hijos_omitidos": 0, "tarjetas_creadas": 0,
         }
         errores: list[str] = []
         warnings: list[str] = []
@@ -79,7 +98,7 @@ class Command(BaseCommand):
             for i, fila in enumerate(filas, start=2):  # fila 1 es el header
                 try:
                     self._procesar_fila(
-                        fila, tipo_default, lista_default,
+                        fila, nros_hijo, tipo_default, lista_default,
                         options["actualizar_clientes"], stats, warnings,
                     )
                 except _FilaInvalida as e:
@@ -106,19 +125,22 @@ class Command(BaseCommand):
             return lista
         return ListaPrecio.objects.filter(es_por_defecto=True).first()
 
-    # ── Procesamiento por fila ──────────────────────────────────────────────
+    # ── Procesamiento por fila (una familia, N hijos) ───────────────────────
 
-    def _procesar_fila(self, fila, tipo_default, lista_default, actualizar_clientes, stats, warnings):
+    def _procesar_fila(self, fila, nros_hijo, tipo_default, lista_default, actualizar_clientes, stats, warnings):
         ruc_ci = (fila.get("ruc_ci") or "").strip()
         nombres = (fila.get("cliente_nombres") or "").strip()
         apellidos = (fila.get("cliente_apellidos") or "").strip()
-        hijo_nombre = (fila.get("hijo_nombre") or "").strip()
-        hijo_apellido = (fila.get("hijo_apellido") or "").strip()
 
-        if not ruc_ci or not nombres or not apellidos or not hijo_nombre or not hijo_apellido:
-            raise _FilaInvalida("faltan datos obligatorios (ruc_ci/nombres/apellidos/hijo_nombre/hijo_apellido)")
+        if not ruc_ci or not nombres or not apellidos:
+            raise _FilaInvalida("faltan datos obligatorios del cliente (ruc_ci/cliente_nombres/cliente_apellidos)")
         if not RUC_CI_REGEX.match(ruc_ci):
             raise _FilaInvalida(f'CI/RUC "{ruc_ci}" no tiene un formato reconocible')
+
+        hijo1_nombre = (fila.get("hijo1_nombre") or "").strip()
+        hijo1_apellido = (fila.get("hijo1_apellido") or "").strip()
+        if not hijo1_nombre or not hijo1_apellido:
+            raise _FilaInvalida("falta hijo1_nombre/hijo1_apellido — toda familia debe tener al menos un hijo")
 
         tipo_fila = (fila.get("cliente_tipo") or "").strip()
         tipo = self._resolver_tipo_cliente(tipo_fila) if tipo_fila else tipo_default
@@ -130,6 +152,10 @@ class Command(BaseCommand):
         if lista is None:
             raise _FilaInvalida("sin cliente_lista_precio en el CSV, sin --lista-precio, y no hay ListaPrecio por defecto")
 
+        ciudad = (fila.get("cliente_ciudad") or "").strip()
+        if ciudad and not Ciudad.objects.filter(nombre__iexact=ciudad).exists():
+            warnings.append(f'Ciudad "{ciudad}" no está en el catálogo (Ciudad) — se guarda igual como texto libre')
+
         cliente, creado = Cliente.objects.get_or_create(
             ruc_ci=ruc_ci,
             defaults={
@@ -138,7 +164,7 @@ class Command(BaseCommand):
                 "email": (fila.get("cliente_email") or "").strip() or None,
                 "telefono": (fila.get("cliente_telefono") or "").strip() or None,
                 "direccion": (fila.get("cliente_direccion") or "").strip() or None,
-                "ciudad": (fila.get("cliente_ciudad") or "").strip() or None,
+                "ciudad": ciudad or None,
                 "tipo_cliente": tipo,
                 "lista_precio": lista,
             },
@@ -153,35 +179,77 @@ class Command(BaseCommand):
                 cliente.email = (fila.get("cliente_email") or "").strip() or cliente.email
                 cliente.telefono = (fila.get("cliente_telefono") or "").strip() or cliente.telefono
                 cliente.direccion = (fila.get("cliente_direccion") or "").strip() or cliente.direccion
-                cliente.ciudad = (fila.get("cliente_ciudad") or "").strip() or cliente.ciudad
+                cliente.ciudad = ciudad or cliente.ciudad
                 cliente.save()
                 stats["clientes_actualizados"] += 1
 
+        for n in nros_hijo:
+            self._procesar_hijo(fila, n, cliente, stats, warnings)
+
+    def _procesar_hijo(self, fila, n, cliente, stats, warnings):
+        nombre = (fila.get(f"hijo{n}_nombre") or "").strip()
+        apellido = (fila.get(f"hijo{n}_apellido") or "").strip()
+
+        if not nombre and not apellido:
+            return  # slot vacío — familia con menos hijos que el máximo del CSV
+        if not nombre or not apellido:
+            warnings.append(
+                f'hijo{n} de "{cliente.nombres} {cliente.apellidos}" tiene nombre o apellido vacío — se omite ese hijo'
+            )
+            return
+
         grado = None
-        grado_fila = (fila.get("hijo_grado") or "").strip()
+        grado_fila = (fila.get(f"hijo{n}_grado") or "").strip()
         if grado_fila:
             grado = Grado.objects.filter(nombre__iexact=grado_fila).first()
             if grado is None:
-                warnings.append(f'"{grado_fila}" no coincide con ningún Grado existente — {hijo_nombre} {hijo_apellido} queda sin grado asignado')
+                warnings.append(f'"{grado_fila}" no coincide con ningún Grado existente — {nombre} {apellido} queda sin grado asignado')
 
         fecha_nacimiento = None
-        fecha_fila = (fila.get("hijo_fecha_nacimiento") or "").strip()
+        fecha_fila = (fila.get(f"hijo{n}_fecha_nacimiento") or "").strip()
         if fecha_fila:
             try:
                 fecha_nacimiento = date.fromisoformat(fecha_fila)
             except ValueError:
-                warnings.append(f'Fecha de nacimiento inválida "{fecha_fila}" para {hijo_nombre} {hijo_apellido} — se deja vacía')
+                warnings.append(f'Fecha de nacimiento inválida "{fecha_fila}" para {nombre} {apellido} — se deja vacía')
 
-        _, hijo_creado = Hijo.objects.get_or_create(
+        hijo, hijo_creado = Hijo.objects.get_or_create(
             cliente_responsable=cliente,
-            nombre=hijo_nombre,
-            apellido=hijo_apellido,
+            nombre=nombre,
+            apellido=apellido,
             defaults={"fecha_nacimiento": fecha_nacimiento, "grado": grado},
         )
         if hijo_creado:
             stats["hijos_creados"] += 1
         else:
             stats["hijos_omitidos"] += 1
+
+        nro_tarjeta = (fila.get(f"hijo{n}_tarjeta") or "").strip()
+        if nro_tarjeta:
+            self._procesar_tarjeta(nro_tarjeta, hijo, stats, warnings)
+
+    def _procesar_tarjeta(self, nro_tarjeta, hijo, stats, warnings):
+        existente = Tarjeta.objects.filter(pk=nro_tarjeta).first()
+        if existente:
+            if existente.hijo_id == hijo.id:
+                return  # ya estaba correctamente vinculada, nada que hacer
+            titular = existente.hijo or existente.cliente_directo
+            warnings.append(
+                f'Tarjeta "{nro_tarjeta}" ya está registrada a nombre de {titular} — '
+                f'no se reasigna a {hijo.nombre} {hijo.apellido}, revisar a mano'
+            )
+            return
+
+        tarjeta_previa = Tarjeta.objects.filter(hijo=hijo).first()
+        if tarjeta_previa:
+            warnings.append(
+                f'{hijo.nombre} {hijo.apellido} ya tiene la tarjeta "{tarjeta_previa.pk}" asociada — '
+                f'no se crea "{nro_tarjeta}" adicional'
+            )
+            return
+
+        Tarjeta.objects.create(nro_tarjeta=nro_tarjeta, hijo=hijo)
+        stats["tarjetas_creadas"] += 1
 
     # ── Reporte final ────────────────────────────────────────────────────────
 
@@ -198,6 +266,7 @@ class Command(BaseCommand):
             f"Hijos creados: {stats['hijos_creados']} | "
             f"omitidos (ya existían): {stats['hijos_omitidos']}"
         )
+        self.stdout.write(f"Tarjetas vinculadas: {stats['tarjetas_creadas']}")
 
         if warnings:
             self.stdout.write(self.style.WARNING(f"\nAvisos ({len(warnings)}):"))
