@@ -80,6 +80,7 @@ interface Hijo {
   apellido: string
   grado: string
   nombre_completo?: string
+  fecha_nacimiento?: string | null
 }
 
 interface TarjetaResult {
@@ -98,9 +99,19 @@ type ResultState = {
   saldo: string | number
   saldoAlmuerzo: number | null
   esSegundo: boolean
+  esCumple: boolean
 } | {
   tipo: 'error'
   message: string
+}
+
+// Compara mes/día de una fecha "YYYY-MM-DD" contra hoy, sin líos de timezone
+// (parsear como Date con hora local evita el corrimiento de "new Date('YYYY-MM-DD')" en UTC).
+function esCumpleanioHoy(fechaNacimiento: string | null | undefined): boolean {
+  if (!fechaNacimiento) return false
+  const [, mes, dia] = fechaNacimiento.split('-').map(Number)
+  const hoy = new Date()
+  return mes === hoy.getMonth() + 1 && dia === hoy.getDate()
 }
 
 interface RegistroInfo {
@@ -297,6 +308,7 @@ export default function Comedor() {
       // Resolver hijo
       let hijoId: number | undefined = tarjeta.hijo
       let hijoGrado = ''
+      let hijoFechaNacimiento: string | null | undefined
       if (!hijoId) {
         const match = hijos.find(
           h => h.nombre_completo === tarjeta.hijo_nombre ||
@@ -304,9 +316,11 @@ export default function Comedor() {
         )
         hijoId = match?.id
         hijoGrado = match?.grado ?? ''
+        hijoFechaNacimiento = match?.fecha_nacimiento
       } else {
         const match = hijos.find(h => h.id === hijoId)
         hijoGrado = match?.grado ?? ''
+        hijoFechaNacimiento = match?.fecha_nacimiento
       }
       if (!hijoId) {
         setResult({ tipo: 'error', message: 'Estudiante no encontrado en sistema' })
@@ -374,6 +388,7 @@ export default function Comedor() {
       setResult({
         tipo: 'ok', nombre: tarjeta.hijo_nombre, grado: hijoGrado, tarjeta: nro,
         saldo: tarjeta.saldo_actual, saldoAlmuerzo, esSegundo,
+        esCumple: esCumpleanioHoy(hijoFechaNacimiento),
       })
       setRecientes(prev => [entry, ...prev].slice(0, 30))
       startCountdown(4)
@@ -507,6 +522,9 @@ export default function Comedor() {
                 {result.grado && <p className="text-slate-600 text-2xl mt-2 font-medium">{result.grado}</p>}
                 {result.esSegundo && (
                   <p className="text-emerald-600 text-lg font-semibold mt-2">Sin cargo adicional</p>
+                )}
+                {result.esCumple && (
+                  <p className="text-pink-600 text-2xl font-black mt-3">🎂 ¡Hoy cumple años!</p>
                 )}
                 <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
                   <div className="bg-white border border-green-200 rounded-2xl px-6 py-3 inline-block shadow-sm">

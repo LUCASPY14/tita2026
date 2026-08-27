@@ -108,6 +108,7 @@ export default function Dashboard() {
       ventasHoy: 0, montoHoy: 0, clientes: 0, productos: 0,
       stockBajo: 0, cajasAbiertas: 0,
       recargasHoy: 0, montoRecargasHoy: 0, almuerzoHoy: 0, tarjetasEnAlerta: 0,
+      cumpleanosHoy: 0, cumpleaneros: [],
     },
     [resumen]
   )
@@ -472,6 +473,27 @@ export default function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cumpleaños de hoy */}
+      {r.cumpleanosHoy > 0 && ['ADMIN', 'SUPERVISOR'].includes(rol) && (
+        <div className="flex items-start gap-3 bg-pink-50 border border-pink-200 rounded-2xl px-5 py-4">
+          <div className="w-11 h-11 bg-pink-100 rounded-xl flex items-center justify-center shrink-0 text-2xl">
+            🎂
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-semibold text-pink-800">
+              {r.cumpleanosHoy} alumno{r.cumpleanosHoy !== 1 ? 's' : ''} cumple{r.cumpleanosHoy !== 1 ? 'n' : ''} años hoy
+            </p>
+            <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+              {r.cumpleaneros.map(c => (
+                <li key={c.id} className="text-sm text-pink-700">
+                  {c.nombre}{c.grado ? <span className="text-pink-400"> — {c.grado}</span> : null}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}

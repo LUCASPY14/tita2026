@@ -92,7 +92,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
         from django.db.models import Count, Sum, F
         from django.utils.timezone import localdate
         from apps.ventas.models import Venta
-        from apps.clientes.models import Cliente
+        from apps.clientes.models import Cliente, Hijo
         from apps.productos.models import Producto
         from apps.inventario.models import AlertaStock
         from apps.contabilidad.models import CierreCaja
@@ -116,6 +116,14 @@ class DashboardConsumer(AsyncWebsocketConsumer):
             saldo_actual__lte=F("saldo_alerta"),
         ).count()
 
+        cumpleaneros_hoy = list(
+            Hijo.objects.filter(
+                fecha_nacimiento__month=hoy.month,
+                fecha_nacimiento__day=hoy.day,
+                activo=True,
+            ).select_related("grado").values("id", "nombre", "apellido", "grado__nombre")
+        )
+
         return {
             "ventasHoy":       ventas_hoy["cantidad"] or 0,
             "montoHoy":        int(ventas_hoy["monto"] or 0),
@@ -127,4 +135,9 @@ class DashboardConsumer(AsyncWebsocketConsumer):
             "montoRecargasHoy": int(recargas_hoy["monto"] or 0),
             "almuerzoHoy":     almuerzos_hoy,
             "tarjetasEnAlerta": tarjetas_alerta,
+            "cumpleanosHoy":   len(cumpleaneros_hoy),
+            "cumpleaneros": [
+                {"id": h["id"], "nombre": f'{h["nombre"]} {h["apellido"]}', "grado": h["grado__nombre"]}
+                for h in cumpleaneros_hoy
+            ],
         }

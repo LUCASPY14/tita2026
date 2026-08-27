@@ -221,6 +221,7 @@ class TestDashboardResumen:
         for campo in [
             "ventasHoy", "montoHoy", "clientes", "productos", "stockBajo", "cajasAbiertas",
             "recargasHoy", "montoRecargasHoy", "almuerzoHoy", "tarjetasEnAlerta",
+            "cumpleanosHoy", "cumpleaneros",
         ]:
             assert campo in resp.data
 
@@ -235,6 +236,45 @@ class TestDashboardResumen:
     def test_cajas_abiertas_refleja_estado(self, api_admin, cierre_abierto):
         resp = api_admin.get("/api/v1/contabilidad/dashboard/")
         assert resp.data["cajasAbiertas"] >= 1
+
+    def test_sin_cumpleaneros_hoy(self, api_admin):
+        resp = api_admin.get("/api/v1/contabilidad/dashboard/")
+        assert resp.data["cumpleanosHoy"] == 0
+        assert resp.data["cumpleaneros"] == []
+
+    def test_cumpleanero_hoy_aparece_con_nombre_y_grado(self, api_admin, cliente):
+        from freezegun import freeze_time
+        from apps.clientes.models import Grado, Hijo
+
+        grado = Grado.objects.create(nombre="3er Grado", nivel=3, orden=3)
+        with freeze_time("2026-05-15"):
+            hijo_cumple = Hijo.objects.create(
+                cliente_responsable=cliente, nombre="Sofía", apellido="García",
+                fecha_nacimiento="2015-05-15", grado=grado,
+            )
+            Hijo.objects.create(
+                cliente_responsable=cliente, nombre="Pedro", apellido="García",
+                fecha_nacimiento="2016-08-20",  # otro día — no debe aparecer
+            )
+            resp = api_admin.get("/api/v1/contabilidad/dashboard/")
+
+        assert resp.data["cumpleanosHoy"] == 1
+        assert resp.data["cumpleaneros"] == [
+            {"id": hijo_cumple.id, "nombre": "Sofía García", "grado": "3er Grado"}
+        ]
+
+    def test_alumno_inactivo_no_cuenta_como_cumpleanero(self, api_admin, cliente):
+        from freezegun import freeze_time
+        from apps.clientes.models import Hijo
+
+        with freeze_time("2026-05-15"):
+            Hijo.objects.create(
+                cliente_responsable=cliente, nombre="Baja", apellido="García",
+                fecha_nacimiento="2015-05-15", activo=False,
+            )
+            resp = api_admin.get("/api/v1/contabilidad/dashboard/")
+
+        assert resp.data["cumpleanosHoy"] == 0
 
 
 # ── DashboardTendenciaView ────────────────────────────────────────────────────

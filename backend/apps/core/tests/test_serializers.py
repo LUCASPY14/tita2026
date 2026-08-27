@@ -91,6 +91,28 @@ class TestTarjetaSerializerAlumno:
         data = _serialize(tarjeta_alumno)
         assert data["hijo_restricciones"] == []
 
+    def test_hijo_cumple_hoy_false_sin_fecha_nacimiento(self, tarjeta_alumno):
+        data = _serialize(tarjeta_alumno)
+        assert data["hijo_cumple_hoy"] is False
+
+    def test_hijo_cumple_hoy_true_si_coincide_mes_y_dia(self, tarjeta_alumno, hijo):
+        from datetime import date
+        from freezegun import freeze_time
+        hijo.fecha_nacimiento = date(2015, 5, 15)
+        hijo.save(update_fields=["fecha_nacimiento"])
+        with freeze_time("2026-05-15"):
+            data = _serialize(tarjeta_alumno)
+        assert data["hijo_cumple_hoy"] is True
+
+    def test_hijo_cumple_hoy_false_otro_dia(self, tarjeta_alumno, hijo):
+        from datetime import date
+        from freezegun import freeze_time
+        hijo.fecha_nacimiento = date(2015, 5, 15)
+        hijo.save(update_fields=["fecha_nacimiento"])
+        with freeze_time("2026-05-16"):
+            data = _serialize(tarjeta_alumno)
+        assert data["hijo_cumple_hoy"] is False
+
     def test_hijo_restricciones_con_datos(self, tarjeta_alumno, hijo):
         from apps.clientes.models import RestriccionHijo
         RestriccionHijo.objects.create(
@@ -156,6 +178,10 @@ class TestTarjetaSerializerDocente:
     def test_hijo_grado_none(self, tarjeta_docente):
         data = _serialize(tarjeta_docente)
         assert data["hijo_grado"] is None
+
+    def test_hijo_cumple_hoy_false(self, tarjeta_docente):
+        data = _serialize(tarjeta_docente)
+        assert data["hijo_cumple_hoy"] is False
 
     def test_hijo_restricciones_vacio(self, tarjeta_docente):
         data = _serialize(tarjeta_docente)

@@ -113,6 +113,7 @@ export interface Tarjeta {
   cliente_id: number; cliente_nombre: string; cliente_ruc: string
   lista_precio_id: number | null; lista_es_default: boolean
   es_alumno: boolean
+  hijo_cumple_hoy: boolean
   cliente_modalidad_facturacion: 'INMEDIATA' | 'MENSUAL'
 }
 export interface ClienteBasico {

@@ -289,6 +289,41 @@ describe('Comedor — PDF', () => {
   })
 })
 
+describe('Comedor — aviso de cumpleaños', () => {
+  // Se usa la fecha real de "hoy" (no freeze) para no depender de mockear Date
+  // en un componente que además usa setInterval/Date.now() para el reloj y el
+  // anti-doble-scan — construir el string a partir de "hoy" evita esos choques.
+  function fechaNacimientoHoy(): string {
+    const hoy = new Date()
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0')
+    const dd = String(hoy.getDate()).padStart(2, '0')
+    return `2015-${mm}-${dd}`
+  }
+
+  it('muestra "Hoy cumple años" cuando la fecha de nacimiento coincide con hoy', async () => {
+    const hijoCumple = { ...HIJO, fecha_nacimiento: fechaNacimientoHoy() }
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/clientes/hijos/') return Promise.resolve({ data: { results: [hijoCumple] } })
+      if (url === '/almuerzos/registros-consumo/') return Promise.resolve({ data: { results: [] } })
+      if (url === '/core/tarjetas/') return Promise.resolve({ data: { results: [TARJETA_ACTIVA] } })
+      return Promise.resolve({ data: { results: [] } })
+    })
+    vi.mocked(api.post).mockResolvedValue({ data: { id: 1 } })
+    render(<Comedor />)
+    await waitFor(() => expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThanOrEqual(2))
+
+    await scan('T-001')
+    await screen.findByText(/Hoy cumple años/i)
+  })
+
+  it('no muestra el aviso cuando la fecha de nacimiento no es hoy', async () => {
+    await renderReady()
+    await scan('T-001')
+    await screen.findByText('Ingreso registrado')
+    expect(screen.queryByText(/Hoy cumple años/i)).not.toBeInTheDocument()
+  })
+})
+
 describe('Comedor — manifest PWA', () => {
   it('al montar, apunta el link de manifest a /comedor-manifest.webmanifest y lo revierte al desmontar', async () => {
     const link = document.createElement('link')

@@ -6,6 +6,12 @@ const RECONNECT_MS = 5_000
 // Intervalo de polling REST cuando el WebSocket no está disponible
 const POLL_MS = 30_000
 
+export interface CumpleaneroHoy {
+  id: number
+  nombre: string
+  grado: string | null
+}
+
 export interface DashboardKPI {
   ventasHoy: number
   montoHoy: number
@@ -17,6 +23,8 @@ export interface DashboardKPI {
   montoRecargasHoy: number
   almuerzoHoy: number
   tarjetasEnAlerta: number
+  cumpleanosHoy: number
+  cumpleaneros: CumpleaneroHoy[]
 }
 
 function buildWsUrl(): string {
@@ -81,6 +89,8 @@ export function useDashboardKPI() {
             montoRecargasHoy: msg.montoRecargasHoy ?? 0,
             almuerzoHoy:      msg.almuerzoHoy      ?? 0,
             tarjetasEnAlerta: msg.tarjetasEnAlerta ?? 0,
+            cumpleanosHoy:    msg.cumpleanosHoy    ?? 0,
+            cumpleaneros:     msg.cumpleaneros     ?? [],
           })
         }
       } catch { /* ignore malformed frames */ }

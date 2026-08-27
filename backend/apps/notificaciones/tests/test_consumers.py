@@ -190,7 +190,38 @@ class TestDashboardConsumer:
         result = asyncio.run(consumer._get_kpis())
         for campo in [
             "ventasHoy", "montoHoy", "clientes", "productos", "stockBajo", "cajasAbiertas",
-            "recargasHoy", "montoRecargasHoy", "almuerzoHoy", "tarjetasEnAlerta",
+            "recargasHoy", "montoRecargasHoy", "almuerzoHoy", "tarjetasEnAlerta", "cumpleanosHoy",
         ]:
             assert campo in result, f"Campo '{campo}' ausente en _get_kpis()"
             assert isinstance(result[campo], int), f"Campo '{campo}' debería ser int"
+        assert isinstance(result["cumpleaneros"], list)
+
+    @pytest.mark.django_db(transaction=True)
+    def test_get_kpis_incluye_cumpleanero_del_dia(self):
+        # transaction=True: database_sync_to_async corre _get_kpis en otro hilo
+        # con su propia conexión — sin esto, no vería el Hijo creado en la
+        # transacción (no comiteada) del hilo principal del test.
+        # freeze_time tampoco cruza ese límite de forma confiable, así que en vez
+        # de congelar "hoy" se usa el "hoy" real (localdate) para la fecha de
+        # nacimiento.
+        from datetime import date
+        from django.utils.timezone import localdate
+        from apps.clientes.models import Cliente, Hijo, TipoCliente
+        from apps.productos.models import ListaPrecio
+
+        tipo = TipoCliente.objects.create(nombre="Familia WS")
+        lista = ListaPrecio.objects.create(nombre="General WS", activo=True)
+        cliente = Cliente.objects.create(
+            nombres="Ana", apellidos="Gómez", ruc_ci="9998887",
+            tipo_cliente=tipo, lista_precio=lista,
+        )
+        hoy = localdate()
+        Hijo.objects.create(
+            cliente_responsable=cliente, nombre="Sofía", apellido="Gómez",
+            fecha_nacimiento=date(hoy.year - 10, hoy.month, hoy.day),
+        )
+        consumer = _make_dashboard_consumer()
+        result = asyncio.run(consumer._get_kpis())
+
+        assert result["cumpleanosHoy"] == 1
+        assert result["cumpleaneros"][0]["nombre"] == "Sofía Gómez"

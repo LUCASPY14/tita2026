@@ -28,6 +28,7 @@ class TarjetaSerializer(serializers.ModelSerializer):
     hijo_foto = serializers.SerializerMethodField()
     hijo_grado = serializers.SerializerMethodField()
     hijo_restricciones = serializers.SerializerMethodField()
+    hijo_cumple_hoy = serializers.SerializerMethodField()
     saldo_disponible = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
 
     # ── Datos del cliente responsable o del cliente directo ───────────────────
@@ -74,6 +75,13 @@ class TarjetaSerializer(serializers.ModelSerializer):
         if obj.hijo_id:
             return obj.hijo.grado_nombre
         return None
+
+    def get_hijo_cumple_hoy(self, obj):
+        if not obj.hijo_id or not obj.hijo.fecha_nacimiento:
+            return False
+        from django.utils.timezone import localdate
+        hoy = localdate()
+        return (obj.hijo.fecha_nacimiento.month, obj.hijo.fecha_nacimiento.day) == (hoy.month, hoy.day)
 
     def get_hijo_restricciones(self, obj):
         if not obj.hijo_id:

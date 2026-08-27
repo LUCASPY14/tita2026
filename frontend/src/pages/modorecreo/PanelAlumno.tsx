@@ -76,6 +76,12 @@ export default function PanelAlumno({
               <p className="text-slate-300 text-xs mt-1 font-mono tracking-wider">{tarjeta.nro_tarjeta}</p>
             </div>
 
+            {tarjeta.es_alumno && tarjeta.hijo_cumple_hoy && (
+              <div className="bg-pink-50 border-2 border-pink-300 rounded-xl p-3 text-center">
+                <span className="text-pink-700 text-sm font-black">🎂 ¡Hoy cumple años!</span>
+              </div>
+            )}
+
             {tarjeta.es_alumno && tarjeta.hijo_restricciones?.length > 0 && (
               <div className="bg-red-50 border-2 border-red-300 rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-1.5">

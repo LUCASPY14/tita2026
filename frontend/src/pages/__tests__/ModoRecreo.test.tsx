@@ -423,6 +423,30 @@ describe('ModoRecreo — búsqueda de tarjeta', () => {
     await userEvent.type(scannerInput, 'T-00001{Enter}')
     expect(await screen.findByText('Ana López')).toBeInTheDocument()
   })
+
+  it('muestra aviso de cumpleaños cuando hijo_cumple_hoy es true', async () => {
+    setupData()
+    mockTarjetasBuscar.mockResolvedValueOnce({
+      data: { results: [{ ...TARJETA_ACTIVA, hijo_cumple_hoy: true }] },
+    })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'T-00001{Enter}')
+    expect(await screen.findByText(/Hoy cumple años/i)).toBeInTheDocument()
+  })
+
+  it('no muestra aviso de cumpleaños cuando hijo_cumple_hoy es false', async () => {
+    setupDataConTarjeta()
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'T-00001{Enter}')
+    await screen.findByText('Ana López')
+    expect(screen.queryByText(/Hoy cumple años/i)).not.toBeInTheDocument()
+  })
 })
 
 // ─── Tests: quitar del carrito ────────────────────────────────────────────────
