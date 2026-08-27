@@ -23,8 +23,8 @@ Columnas obligatorias: ruc_ci, cliente_nombres, cliente_apellidos,
 hijo1_nombre, hijo1_apellido
 Columnas opcionales: cliente_email, cliente_telefono, cliente_direccion,
 cliente_ciudad, cliente_tipo, cliente_lista_precio, hijoN_fecha_nacimiento
-(YYYY-MM-DD), hijoN_grado, hijoN_tarjeta, para cada N detectado (hijo2_nombre,
-hijo2_apellido, hijo3_nombre, ...)
+(acepta AAAA-MM-DD, DD/MM/AAAA o DD-MM-AAAA), hijoN_grado, hijoN_tarjeta,
+para cada N detectado (hijo2_nombre, hijo2_apellido, hijo3_nombre, ...)
 
 Si el CSV no trae "cliente_tipo"/"cliente_lista_precio" (o vienen vacíos en
 una fila), se usan los valores de --tipo-cliente/--lista-precio. Si tampoco
@@ -43,7 +43,7 @@ Uso:
 
 import csv
 import re
-from datetime import date
+from datetime import date, datetime
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -54,6 +54,19 @@ from apps.productos.models import ListaPrecio
 
 RUC_CI_REGEX = re.compile(r"^(\d{6,8}(-\d{1,2})?|\d{1,8}-\d{1}|\d{6,8})$")
 HIJO_COL_REGEX = re.compile(r"^hijo(\d+)_nombre$")
+
+# Orden de prueba: ISO primero, después DD/MM/AAAA (formato paraguayo, y el
+# que exporta Sheets al bajar un formulario de Google Forms a CSV).
+FORMATOS_FECHA = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"]
+
+
+def _parsear_fecha(fecha_str: str) -> date | None:
+    for fmt in FORMATOS_FECHA:
+        try:
+            return datetime.strptime(fecha_str, fmt).date()
+        except ValueError:
+            continue
+    return None
 
 REQUERIDAS = ["ruc_ci", "cliente_nombres", "cliente_apellidos", "hijo1_nombre", "hijo1_apellido"]
 
@@ -208,9 +221,8 @@ class Command(BaseCommand):
         fecha_nacimiento = None
         fecha_fila = (fila.get(f"hijo{n}_fecha_nacimiento") or "").strip()
         if fecha_fila:
-            try:
-                fecha_nacimiento = date.fromisoformat(fecha_fila)
-            except ValueError:
+            fecha_nacimiento = _parsear_fecha(fecha_fila)
+            if fecha_nacimiento is None:
                 warnings.append(f'Fecha de nacimiento inválida "{fecha_fila}" para {nombre} {apellido} — se deja vacía')
 
         hijo, hijo_creado = Hijo.objects.get_or_create(

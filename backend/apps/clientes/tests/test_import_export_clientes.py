@@ -171,6 +171,28 @@ class TestImportarClientesUnHijo:
         assert hijo.fecha_nacimiento is None
         assert "Fecha de nacimiento inválida" in salida
 
+    def test_fecha_nacimiento_acepta_formato_iso(self, tmp_path, tipo_cliente, lista_precio):
+        csv_path = escribir_csv(tmp_path / "in.csv", [fila_base(hijo1_fecha_nacimiento="2015-03-10")])
+        run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
+
+        hijo = Hijo.objects.get(nombre="Sofía")
+        assert hijo.fecha_nacimiento.isoformat() == "2015-03-10"
+
+    def test_fecha_nacimiento_acepta_formato_dd_mm_aaaa(self, tmp_path, tipo_cliente, lista_precio):
+        csv_path = escribir_csv(tmp_path / "in.csv", [fila_base(hijo1_fecha_nacimiento="10/03/2015")])
+        salida = run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
+
+        hijo = Hijo.objects.get(nombre="Sofía")
+        assert hijo.fecha_nacimiento.isoformat() == "2015-03-10"
+        assert "Fecha de nacimiento inválida" not in salida
+
+    def test_fecha_nacimiento_acepta_formato_dd_mm_aaaa_con_guiones(self, tmp_path, tipo_cliente, lista_precio):
+        csv_path = escribir_csv(tmp_path / "in.csv", [fila_base(hijo1_fecha_nacimiento="10-03-2015")])
+        run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
+
+        hijo = Hijo.objects.get(nombre="Sofía")
+        assert hijo.fecha_nacimiento.isoformat() == "2015-03-10"
+
     def test_ciudad_fuera_de_catalogo_genera_aviso_pero_se_guarda(self, tmp_path, tipo_cliente, lista_precio):
         csv_path = escribir_csv(tmp_path / "in.csv", [fila_base(cliente_ciudad="Ciudad Inventada")])
         salida = run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
