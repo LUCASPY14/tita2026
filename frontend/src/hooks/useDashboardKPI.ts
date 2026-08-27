@@ -12,6 +12,12 @@ export interface CumpleaneroHoy {
   grado: string | null
 }
 
+export interface CumpleaneroPersonalHoy {
+  id: number
+  nombre: string
+  rol: string
+}
+
 export interface DashboardKPI {
   ventasHoy: number
   montoHoy: number
@@ -25,6 +31,8 @@ export interface DashboardKPI {
   tarjetasEnAlerta: number
   cumpleanosHoy: number
   cumpleaneros: CumpleaneroHoy[]
+  cumpleanosPersonalHoy: number
+  cumpleanerosPersonal: CumpleaneroPersonalHoy[]
 }
 
 function buildWsUrl(): string {
@@ -91,6 +99,8 @@ export function useDashboardKPI() {
             tarjetasEnAlerta: msg.tarjetasEnAlerta ?? 0,
             cumpleanosHoy:    msg.cumpleanosHoy    ?? 0,
             cumpleaneros:     msg.cumpleaneros     ?? [],
+            cumpleanosPersonalHoy: msg.cumpleanosPersonalHoy ?? 0,
+            cumpleanerosPersonal:  msg.cumpleanerosPersonal  ?? [],
           })
         }
       } catch { /* ignore malformed frames */ }

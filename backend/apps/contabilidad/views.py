@@ -677,6 +677,7 @@ class DashboardResumenView(APIView):
         from apps.inventario.models import AlertaStock
         from apps.core.models import CargaSaldo, Tarjeta
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        from apps.usuarios.models import Usuario
 
         from django.utils.timezone import localdate
         hoy = localdate()
@@ -707,6 +708,14 @@ class DashboardResumenView(APIView):
             ).select_related("grado").values("id", "nombre", "apellido", "grado__nombre")
         )
 
+        cumpleaneros_personal_hoy = list(
+            Usuario.objects.filter(
+                fecha_nacimiento__month=hoy.month,
+                fecha_nacimiento__day=hoy.day,
+                is_active=True,
+            ).exclude(rol=Usuario.Rol.CLIENTE_WEB).values("id", "nombre", "apellido", "rol")
+        )
+
         return Response({
             "ventasHoy":        ventas_hoy["cantidad"] or 0,
             "montoHoy":         int(ventas_hoy["monto"] or 0),
@@ -722,6 +731,11 @@ class DashboardResumenView(APIView):
             "cumpleaneros": [
                 {"id": h["id"], "nombre": f'{h["nombre"]} {h["apellido"]}', "grado": h["grado__nombre"]}
                 for h in cumpleaneros_hoy
+            ],
+            "cumpleanosPersonalHoy": len(cumpleaneros_personal_hoy),
+            "cumpleanerosPersonal": [
+                {"id": u["id"], "nombre": f'{u["nombre"]} {u["apellido"]}', "rol": u["rol"]}
+                for u in cumpleaneros_personal_hoy
             ],
         })
 

@@ -16,6 +16,7 @@ import { useAuthStore } from '../store/authStore'
 import { useDashboardKPI } from '../hooks/useDashboardKPI'
 import Badge from '../components/ui/Badge'
 import Spinner from '../components/ui/Spinner'
+import { ROL_LABEL } from './usuarios/shared'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -109,6 +110,7 @@ export default function Dashboard() {
       stockBajo: 0, cajasAbiertas: 0,
       recargasHoy: 0, montoRecargasHoy: 0, almuerzoHoy: 0, tarjetasEnAlerta: 0,
       cumpleanosHoy: 0, cumpleaneros: [],
+      cumpleanosPersonalHoy: 0, cumpleanerosPersonal: [],
     },
     [resumen]
   )
@@ -477,7 +479,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Cumpleaños de hoy */}
+      {/* Cumpleaños de hoy — alumnos */}
       {r.cumpleanosHoy > 0 && ['ADMIN', 'SUPERVISOR'].includes(rol) && (
         <div className="flex items-start gap-3 bg-pink-50 border border-pink-200 rounded-2xl px-5 py-4">
           <div className="w-11 h-11 bg-pink-100 rounded-xl flex items-center justify-center shrink-0 text-2xl">
@@ -491,6 +493,27 @@ export default function Dashboard() {
               {r.cumpleaneros.map(c => (
                 <li key={c.id} className="text-sm text-pink-700">
                   {c.nombre}{c.grado ? <span className="text-pink-400"> — {c.grado}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Cumpleaños de hoy — personal */}
+      {r.cumpleanosPersonalHoy > 0 && ['ADMIN', 'SUPERVISOR'].includes(rol) && (
+        <div className="flex items-start gap-3 bg-violet-50 border border-violet-200 rounded-2xl px-5 py-4">
+          <div className="w-11 h-11 bg-violet-100 rounded-xl flex items-center justify-center shrink-0 text-2xl">
+            🎉
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-semibold text-violet-800">
+              {r.cumpleanosPersonalHoy} persona{r.cumpleanosPersonalHoy !== 1 ? 's' : ''} del personal cumple{r.cumpleanosPersonalHoy !== 1 ? 'n' : ''} años hoy
+            </p>
+            <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+              {r.cumpleanerosPersonal.map(c => (
+                <li key={c.id} className="text-sm text-violet-700">
+                  {c.nombre}<span className="text-violet-400"> — {ROL_LABEL[c.rol] ?? c.rol}</span>
                 </li>
               ))}
             </ul>

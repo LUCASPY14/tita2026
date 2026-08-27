@@ -191,10 +191,12 @@ class TestDashboardConsumer:
         for campo in [
             "ventasHoy", "montoHoy", "clientes", "productos", "stockBajo", "cajasAbiertas",
             "recargasHoy", "montoRecargasHoy", "almuerzoHoy", "tarjetasEnAlerta", "cumpleanosHoy",
+            "cumpleanosPersonalHoy",
         ]:
             assert campo in result, f"Campo '{campo}' ausente en _get_kpis()"
             assert isinstance(result[campo], int), f"Campo '{campo}' debería ser int"
         assert isinstance(result["cumpleaneros"], list)
+        assert isinstance(result["cumpleanerosPersonal"], list)
 
     @pytest.mark.django_db(transaction=True)
     def test_get_kpis_incluye_cumpleanero_del_dia(self):
@@ -225,3 +227,22 @@ class TestDashboardConsumer:
 
         assert result["cumpleanosHoy"] == 1
         assert result["cumpleaneros"][0]["nombre"] == "Sofía Gómez"
+
+    @pytest.mark.django_db(transaction=True)
+    def test_get_kpis_incluye_cumpleanero_personal_del_dia(self):
+        from datetime import date
+        from django.utils.timezone import localdate
+        from apps.usuarios.models import Usuario
+
+        hoy = localdate()
+        Usuario.objects.create_user(
+            email="ws_cumple_personal@test.com", password="test1234",
+            nombre="Marta", apellido="Ruiz", rol=Usuario.Rol.CAJERO,
+            fecha_nacimiento=date(hoy.year - 30, hoy.month, hoy.day),
+        )
+        consumer = _make_dashboard_consumer()
+        result = asyncio.run(consumer._get_kpis())
+
+        assert result["cumpleanosPersonalHoy"] == 1
+        assert result["cumpleanerosPersonal"][0]["nombre"] == "Marta Ruiz"
+        assert result["cumpleanerosPersonal"][0]["rol"] == "CAJERO"

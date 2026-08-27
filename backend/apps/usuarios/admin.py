@@ -50,7 +50,7 @@ class UsuarioAdmin(BaseUserAdmin):
             "fields": ("email", "password")
         }),
         ("Datos Personales", {
-            "fields": ("nombre", "apellido", "rol")
+            "fields": ("nombre", "apellido", "ci_ruc", "fecha_nacimiento", "rol")
         }),
         ("Relaciones", {
             "fields": ("cliente", "empleado_legacy")

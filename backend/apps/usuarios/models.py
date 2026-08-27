@@ -62,6 +62,11 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         blank=True,
         help_text="CI o RUC — usado para el login del personal interno (roles no CLIENTE_WEB)",
     )
+    fecha_nacimiento = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Fecha de nacimiento (opcional) — se usa para la alerta de cumpleaños del personal",
+    )
     rol = models.CharField(
         max_length=20,
         choices=Rol.choices,

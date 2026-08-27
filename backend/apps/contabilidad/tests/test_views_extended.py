@@ -221,7 +221,7 @@ class TestDashboardResumen:
         for campo in [
             "ventasHoy", "montoHoy", "clientes", "productos", "stockBajo", "cajasAbiertas",
             "recargasHoy", "montoRecargasHoy", "almuerzoHoy", "tarjetasEnAlerta",
-            "cumpleanosHoy", "cumpleaneros",
+            "cumpleanosHoy", "cumpleaneros", "cumpleanosPersonalHoy", "cumpleanerosPersonal",
         ]:
             assert campo in resp.data
 
@@ -275,6 +275,61 @@ class TestDashboardResumen:
             resp = api_admin.get("/api/v1/contabilidad/dashboard/")
 
         assert resp.data["cumpleanosHoy"] == 0
+
+    def test_sin_cumpleaneros_personal_hoy(self, api_admin):
+        resp = api_admin.get("/api/v1/contabilidad/dashboard/")
+        assert resp.data["cumpleanosPersonalHoy"] == 0
+        assert resp.data["cumpleanerosPersonal"] == []
+
+    def test_cumpleanero_personal_hoy_aparece_con_nombre_y_rol(self, api_admin):
+        from freezegun import freeze_time
+        from apps.usuarios.models import Usuario
+
+        with freeze_time("2026-05-15"):
+            cajero = Usuario.objects.create_user(
+                email="cumple_cajero@test.com", password="test1234",
+                nombre="Marta", apellido="Ruiz", rol=Usuario.Rol.CAJERO,
+                fecha_nacimiento="1990-05-15",
+            )
+            Usuario.objects.create_user(
+                email="otro_dia@test.com", password="test1234",
+                nombre="Carlos", apellido="Vega", rol=Usuario.Rol.COCINA,
+                fecha_nacimiento="1985-08-20",  # otro día — no debe aparecer
+            )
+            resp = api_admin.get("/api/v1/contabilidad/dashboard/")
+
+        assert resp.data["cumpleanosPersonalHoy"] == 1
+        assert resp.data["cumpleanerosPersonal"] == [
+            {"id": cajero.id, "nombre": "Marta Ruiz", "rol": "CAJERO"}
+        ]
+
+    def test_cliente_web_no_cuenta_como_cumpleanero_personal(self, api_admin):
+        from freezegun import freeze_time
+        from apps.usuarios.models import Usuario
+
+        with freeze_time("2026-05-15"):
+            Usuario.objects.create_user(
+                email="padre_cumple@test.com", password="test1234",
+                nombre="Padre", apellido="Portal", rol=Usuario.Rol.CLIENTE_WEB,
+                fecha_nacimiento="1980-05-15",
+            )
+            resp = api_admin.get("/api/v1/contabilidad/dashboard/")
+
+        assert resp.data["cumpleanosPersonalHoy"] == 0
+
+    def test_usuario_inactivo_no_cuenta_como_cumpleanero_personal(self, api_admin):
+        from freezegun import freeze_time
+        from apps.usuarios.models import Usuario
+
+        with freeze_time("2026-05-15"):
+            Usuario.objects.create_user(
+                email="baja_personal@test.com", password="test1234",
+                nombre="Baja", apellido="Personal", rol=Usuario.Rol.CAJERO,
+                fecha_nacimiento="1990-05-15", is_active=False,
+            )
+            resp = api_admin.get("/api/v1/contabilidad/dashboard/")
+
+        assert resp.data["cumpleanosPersonalHoy"] == 0
 
 
 # ── DashboardTendenciaView ────────────────────────────────────────────────────
