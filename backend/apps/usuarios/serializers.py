@@ -50,6 +50,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "ci_ruc",
             "nombre",
             "apellido",
+            "fecha_nacimiento",
             "rol",
             "nombre_completo",
             "cliente_id",
@@ -73,7 +74,7 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ["email", "ci_ruc", "nombre", "apellido", "rol", "password", "cliente", "is_active"]
+        fields = ["email", "ci_ruc", "nombre", "apellido", "fecha_nacimiento", "rol", "password", "cliente", "is_active"]
 
     def validate(self, data):
         rol = data.get("rol")

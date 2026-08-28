@@ -32,6 +32,7 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
             ci_ruc: editingUser.ci_ruc ?? '',
             nombre: editingUser.nombre,
             apellido: editingUser.apellido,
+            fecha_nacimiento: editingUser.fecha_nacimiento ?? '',
             rol: editingUser.rol,
             password: '',
             is_active: editingUser.is_active,
@@ -56,6 +57,7 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
         ci_ruc: form.ci_ruc.trim() || null,
         nombre: form.nombre,
         apellido: form.apellido,
+        fecha_nacimiento: form.fecha_nacimiento || null,
         rol: form.rol,
         is_active: form.is_active,
       }
@@ -131,6 +133,16 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
               className={inputClass}
             />
           </div>
+        </div>
+
+        <div>
+          <label className={labelClass}>Fecha de nacimiento</label>
+          <input
+            type="date"
+            value={form.fecha_nacimiento}
+            onChange={e => setForm(f => ({ ...f, fecha_nacimiento: e.target.value }))}
+            className={inputClass}
+          />
         </div>
 
         <div>

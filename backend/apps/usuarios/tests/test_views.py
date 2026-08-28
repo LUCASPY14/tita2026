@@ -456,6 +456,34 @@ class TestUsuarioViewSetCRUD:
         )
         assert resp.status_code == 201
 
+    def test_create_usuario_con_fecha_nacimiento(self, api_admin):
+        resp = api_admin.post(
+            "/api/v1/usuarios/usuarios/",
+            {
+                "email": "cumple@test.com",
+                "ci_ruc": "9990002",
+                "password": "nuevo_pass_123",
+                "nombre": "Con",
+                "apellido": "Fecha",
+                "rol": "CAJERO",
+                "fecha_nacimiento": "1990-05-15",
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["fecha_nacimiento"] == "1990-05-15"
+
+    def test_patch_usuario_actualiza_fecha_nacimiento(self, api_admin, usuario_cajero):
+        assert usuario_cajero.fecha_nacimiento is None
+        resp = api_admin.patch(
+            f"/api/v1/usuarios/usuarios/{usuario_cajero.pk}/",
+            {"fecha_nacimiento": "1985-11-20"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        usuario_cajero.refresh_from_db()
+        assert usuario_cajero.fecha_nacimiento.isoformat() == "1985-11-20"
+
     def test_requiere_admin(self, api_cajero):
         resp = api_cajero.get("/api/v1/usuarios/usuarios/")
         assert resp.status_code in (401, 403)

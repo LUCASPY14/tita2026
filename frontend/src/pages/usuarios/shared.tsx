@@ -21,6 +21,7 @@ export interface Usuario {
   ci_ruc: string | null
   nombre: string
   apellido: string
+  fecha_nacimiento: string | null
   rol: string
   nombre_completo: string
   is_active: boolean
@@ -45,6 +46,7 @@ export interface UsuarioForm {
   ci_ruc: string
   nombre: string
   apellido: string
+  fecha_nacimiento: string
   rol: string
   password: string
   is_active: boolean
@@ -121,7 +123,7 @@ export const ROLES_SISTEMA = [
 ]
 
 export const FORM_INITIAL: UsuarioForm = {
-  email: '', ci_ruc: '', nombre: '', apellido: '', rol: 'CAJERO', password: '', is_active: true,
+  email: '', ci_ruc: '', nombre: '', apellido: '', fecha_nacimiento: '', rol: 'CAJERO', password: '', is_active: true,
 }
 
 export const EMP_FORM_INITIAL: EmpleadoForm = {
