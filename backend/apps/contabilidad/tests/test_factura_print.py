@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 from apps.contabilidad.models import Factura
 from apps.core.models import CargaSaldo
 from apps.almuerzos.models import RecargaSaldoAlmuerzo
+from apps.clientes.models import CuentaCorrienteCliente
 from apps.ventas.models import DetalleVenta, Venta
 
 
@@ -125,6 +126,34 @@ class TestFacturaPrintLineasYCondicion:
         content = resp.content.decode("utf-8")
         assert "Servicio de almuerzos" in content
         assert "Servicios" not in content  # ya no debe caer al genérico
+
+    def test_factura_de_pago_credito_usa_descripcion_del_movimiento(
+        self, api_admin, cliente, factura, usuario_cajero
+    ):
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+            monto=Decimal("30000"), saldo_anterior=Decimal("30000"),
+            saldo_resultante=Decimal("0"),
+            descripcion="Pago cuenta corriente vía Bancard — ref abc123",
+            factura=factura, creado_por=usuario_cajero,
+        )
+        resp = api_admin.get(f"/api/v1/contabilidad/facturas/{factura.pk}/pdf/")
+        assert resp.status_code == 200
+        content = resp.content.decode("utf-8")
+        assert "Pago cuenta corriente vía Bancard — ref abc123" in content
+
+    def test_factura_de_pago_credito_sin_descripcion_usa_texto_generico(
+        self, api_admin, cliente, factura, usuario_cajero
+    ):
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+            monto=Decimal("30000"), saldo_anterior=Decimal("30000"),
+            saldo_resultante=Decimal("0"),
+            descripcion="", factura=factura, creado_por=usuario_cajero,
+        )
+        resp = api_admin.get(f"/api/v1/contabilidad/facturas/{factura.pk}/pdf/")
+        assert resp.status_code == 200
+        assert "Pago de cuenta corriente" in resp.content.decode("utf-8")
 
 
 @pytest.fixture

@@ -453,6 +453,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         cargas = list(factura.cargas_saldo.all()[:5])
         recargas_almuerzo = list(factura.recargas_almuerzo.all()[:1])
         pagos_almuerzo = list(factura.pagos_cuenta_almuerzo.all()[:1])
+        movimientos_cc = list(factura.movimientos_cuenta.all()[:1])
         if cargas:
             if len(cargas) == 1:
                 concepto = f"Carga de saldo tarjeta {cargas[0].tarjeta_id}"
@@ -467,6 +468,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 f"Pago almuerzo — {cuenta.hijo.nombre_completo} "
                 f"({cuenta.mes}/{cuenta.anio})"
             )
+        elif movimientos_cc:
+            concepto = movimientos_cc[0].descripcion or "Pago de cuenta corriente"
 
         empresa = None
         try:
