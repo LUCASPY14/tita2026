@@ -451,12 +451,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
         # Determinar el concepto según el origen de la factura
         concepto = "Servicios"
         cargas = list(factura.cargas_saldo.all()[:5])
+        recargas_almuerzo = list(factura.recargas_almuerzo.all()[:1])
         pagos_almuerzo = list(factura.pagos_cuenta_almuerzo.all()[:1])
         if cargas:
             if len(cargas) == 1:
                 concepto = f"Carga de saldo tarjeta {cargas[0].tarjeta_id}"
             else:
                 concepto = f"Cargas de saldo — {len(cargas)} recargas"
+        elif recargas_almuerzo:
+            concepto = "Servicio de almuerzos"
         elif pagos_almuerzo:
             pago = pagos_almuerzo[0]
             cuenta = pago.cuenta

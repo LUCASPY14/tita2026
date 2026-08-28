@@ -8,6 +8,7 @@ from rest_framework.test import APIClient
 
 from apps.contabilidad.models import Factura
 from apps.core.models import CargaSaldo
+from apps.almuerzos.models import RecargaSaldoAlmuerzo
 from apps.ventas.models import DetalleVenta, Venta
 
 
@@ -110,6 +111,20 @@ class TestFacturaPrintLineasYCondicion:
         resp = api_admin.get(f"/api/v1/contabilidad/facturas/{factura.pk}/pdf/")
         assert resp.status_code == 200
         assert 'pf-col-5' in resp.content.decode("utf-8")
+
+    def test_factura_de_recarga_almuerzo_muestra_servicio_de_almuerzos(self, api_admin, cliente, factura):
+        from apps.clientes.models import Hijo
+        hijo = Hijo.objects.create(nombre="Sofía", apellido="García", cliente_responsable=cliente)
+        RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo, monto_cargado=Decimal("50000"),
+            estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+            factura=factura,
+        )
+        resp = api_admin.get(f"/api/v1/contabilidad/facturas/{factura.pk}/pdf/")
+        assert resp.status_code == 200
+        content = resp.content.decode("utf-8")
+        assert "Servicio de almuerzos" in content
+        assert "Servicios" not in content  # ya no debe caer al genérico
 
 
 @pytest.fixture
