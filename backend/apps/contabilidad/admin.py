@@ -275,6 +275,16 @@ class FacturaAdmin(admin.ModelAdmin):
             return [f.name for f in self.model._meta.fields]
         return self.readonly_fields
 
+    def has_add_permission(self, request):
+        """
+        No se crean facturas a mano desde el admin: el IVA queda en 0 por
+        defecto y no hay forma de vincularlas a un origen (carga, recarga,
+        pago de almuerzo, venta o cobro de CC). Usar POST /facturas/emitir/,
+        que calcula el IVA y deja el vínculo con el origen — igual que ya
+        exige FacturaViewSet.create() en la API.
+        """
+        return False
+
     def cliente_link(self, obj):
         url = reverse("admin:clientes_cliente_change", args=[obj.cliente.pk])
         return format_html('<a href="{}">{}</a>', url, obj.cliente.nombre_completo)

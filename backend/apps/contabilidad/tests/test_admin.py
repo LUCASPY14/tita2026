@@ -28,3 +28,10 @@ def sa_client(db):
 def test_admin_changelist_returns_200(sa_client, url):
     resp = sa_client.get(url)
     assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+def test_factura_admin_no_permite_agregar(sa_client):
+    """No se crean facturas a mano: deben salir de /facturas/emitir/ con IVA calculado."""
+    resp = sa_client.get("/admin/contabilidad/factura/add/")
+    assert resp.status_code == 403
