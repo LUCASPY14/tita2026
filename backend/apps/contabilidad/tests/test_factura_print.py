@@ -155,6 +155,15 @@ class TestFacturaPrintLineasYCondicion:
         assert resp.status_code == 200
         assert "Pago de cuenta corriente" in resp.content.decode("utf-8")
 
+    def test_factura_sin_origen_usa_observaciones_como_concepto(self, api_admin, cliente, factura):
+        factura.observaciones = "Pago de matrícula"
+        factura.save(update_fields=["observaciones"])
+        resp = api_admin.get(f"/api/v1/contabilidad/facturas/{factura.pk}/pdf/")
+        assert resp.status_code == 200
+        content = resp.content.decode("utf-8")
+        assert "Pago de matrícula" in content
+        assert "Servicios" not in content
+
 
 @pytest.fixture
 def factura(db, cliente):

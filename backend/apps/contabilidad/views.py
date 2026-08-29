@@ -470,6 +470,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
             )
         elif movimientos_cc:
             concepto = movimientos_cc[0].descripcion or "Pago de cuenta corriente"
+        elif factura.observaciones:
+            concepto = factura.observaciones
 
         empresa = None
         try:
