@@ -2,7 +2,7 @@ import axios from 'axios'
 import { create } from 'zustand'
 import api from '../services/api'
 
-const INACTIVITY_MS = 15 * 60 * 1000 // 15 minutes
+const INACTIVITY_MS = 60 * 60 * 1000 // 60 minutes
 
 interface User {
   id: number

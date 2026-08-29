@@ -173,15 +173,15 @@ describe('authStore', () => {
   it('resetInactivityTimer is a no-op when not authenticated', () => {
     useAuthStore.setState({ isAuthenticated: false })
     useAuthStore.getState().resetInactivityTimer()
-    vi.advanceTimersByTime(16 * 60 * 1000)
+    vi.advanceTimersByTime(61 * 60 * 1000)
     expect(useAuthStore.getState().isAuthenticated).toBe(false)
   })
 
-  it('resetInactivityTimer schedules auto-logout after 15 minutes', () => {
+  it('resetInactivityTimer schedules auto-logout after 60 minutes', () => {
     useAuthStore.setState({ isAuthenticated: true })
     useAuthStore.getState().resetInactivityTimer()
 
-    vi.advanceTimersByTime(14 * 60 * 1000 + 59_000)
+    vi.advanceTimersByTime(59 * 60 * 1000 + 59_000)
     expect(useAuthStore.getState().isAuthenticated).toBe(true)
 
     vi.advanceTimersByTime(1001)
@@ -192,15 +192,15 @@ describe('authStore', () => {
     useAuthStore.setState({ isAuthenticated: true })
     useAuthStore.getState().resetInactivityTimer()
 
-    // Advance 14 minutes without triggering logout yet
-    vi.advanceTimersByTime(14 * 60 * 1000)
+    // Advance 59 minutes without triggering logout yet
+    vi.advanceTimersByTime(59 * 60 * 1000)
     expect(useAuthStore.getState().isAuthenticated).toBe(true)
 
-    // User activity resets the 15-minute window
+    // User activity resets the 60-minute window
     window.dispatchEvent(new MouseEvent('mousemove'))
 
-    // Another 14 minutes — still authenticated because timer was reset
-    vi.advanceTimersByTime(14 * 60 * 1000)
+    // Another 59 minutes — still authenticated because timer was reset
+    vi.advanceTimersByTime(59 * 60 * 1000)
     expect(useAuthStore.getState().isAuthenticated).toBe(true)
   })
 })
@@ -226,8 +226,8 @@ describe('authStore — inicialización del módulo con sesión previa', () => {
     expect(freshStore.getState().isAuthenticated).toBe(true)
 
     // Si resetInactivityTimer fue invocado durante la inicialización,
-    // avanzar 15 min + 1 s debe disparar el auto-logout
-    vi.advanceTimersByTime(15 * 60 * 1000 + 1_000)
+    // avanzar 60 min + 1 s debe disparar el auto-logout
+    vi.advanceTimersByTime(60 * 60 * 1000 + 1_000)
     expect(freshStore.getState().isAuthenticated).toBe(false)
   })
 })
