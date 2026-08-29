@@ -3,7 +3,7 @@ Servicios de negocio para ventas
 """
 
 import logging
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
 
@@ -15,6 +15,30 @@ from apps.clientes.models import CuentaCorrienteCliente
 from apps.inventario.models import Stock, MovimientoStock
 from apps.core.models import Tarjeta, MovimientoTarjeta
 from .models import Venta, DetalleVenta, PagoVenta, AplicacionPago
+
+
+def _calcular_iva_producto(producto, subtotal: Decimal) -> dict:
+    """
+    IVA incluido en el precio, según el impuesto asignado al producto
+    (apps.productos.models.ProductoImpuesto) — nunca se confía en un IVA
+    que mande el cliente del POS, porque no hay forma de validarlo ahí.
+    Sin impuesto asignado (o porcentaje 0) se trata como exenta.
+    """
+    from apps.productos.models import ProductoImpuesto
+
+    pi = (
+        ProductoImpuesto.objects
+        .filter(producto=producto, impuesto__activo=True)
+        .select_related("impuesto")
+        .first()
+    )
+    if not pi or pi.impuesto.porcentaje == 0:
+        return {"monto_exenta": subtotal}
+    tasa = pi.impuesto.porcentaje / Decimal("100")
+    iva = (subtotal - (subtotal / (1 + tasa))).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    if pi.impuesto.nombre == "IVA 5%":
+        return {"iva_5": iva}
+    return {"iva_10": iva}
 
 
 class VentaService:
@@ -132,9 +156,10 @@ class VentaService:
                 cantidad = item["cantidad"]
                 precio = precio_overrides.get(producto.pk, item.get("precio_unitario", Decimal("0")))
                 subtotal = cantidad * precio
-                item_iva_10 = item.get("iva_10", Decimal("0"))
-                item_iva_5 = item.get("iva_5", Decimal("0"))
-                item_exenta = item.get("monto_exenta", Decimal("0"))
+                iva_calculado = _calcular_iva_producto(producto, subtotal)
+                item_iva_10 = iva_calculado.get("iva_10", Decimal("0"))
+                item_iva_5 = iva_calculado.get("iva_5", Decimal("0"))
+                item_exenta = iva_calculado.get("monto_exenta", Decimal("0"))
                 item_gravada_10 = subtotal - item_iva_10 if item_iva_10 else Decimal("0")
                 item_gravada_5 = subtotal - item_iva_5 if item_iva_5 else Decimal("0")
 

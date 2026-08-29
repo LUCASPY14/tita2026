@@ -279,6 +279,7 @@ class FacturacionService:
 
             factura = FacturacionService.emitir_factura(
                 cliente=cliente,
+                venta=origen if tipo == TIPO_VENTA else None,
                 nro_factura=nro_factura,
                 monto_total=monto,
                 **iva,

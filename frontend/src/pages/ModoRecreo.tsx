@@ -350,7 +350,6 @@ export default function ModoRecreo() {
           producto: i.producto.id,
           cantidad: i.cantidad,
           precio_unitario: getPrecio(i.producto),
-          iva_10: 0, iva_5: 0, monto_exenta: 0,
         })),
       }
       if (modoPago === 'PREPAGO' && tarjeta) {

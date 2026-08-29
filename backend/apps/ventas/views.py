@@ -162,9 +162,6 @@ class VentaViewSet(viewsets.ModelViewSet):
                 "producto": producto,
                 "cantidad": Decimal(str(raw.get("cantidad", 1))),
                 "precio_unitario": Decimal(str(raw.get("precio_unitario", 0))),
-                "iva_10": Decimal(str(raw.get("iva_10", 0))),
-                "iva_5": Decimal(str(raw.get("iva_5", 0))),
-                "monto_exenta": Decimal(str(raw.get("monto_exenta", 0))),
             })
 
         return VentaService.registrar_venta(

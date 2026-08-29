@@ -218,6 +218,9 @@ class TestEmitirParaOrigenVenta:
         venta.refresh_from_db()
         assert venta.factura_id == factura.pk
         assert venta.nro_factura == "001-001-7001001"
+        # Factura.venta debe quedar vinculada: si no, el PDF nunca muestra
+        # las líneas reales de la venta (cae al concepto genérico).
+        assert factura.venta_id == venta.pk
 
     def test_venta_anulada_falla(
         self, cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto, usuario_admin

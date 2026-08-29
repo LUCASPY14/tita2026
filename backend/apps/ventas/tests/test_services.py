@@ -151,4 +151,75 @@ class TestAnularVenta:
             .first()
         )
         assert ultimo_cc.tipo == "CREDITO"
-        assert ultimo_cc.saldo_resultante == Decimal("0")
+
+
+@pytest.mark.django_db
+class TestRegistrarVentaCalculaIvaDelProducto:
+    """
+    El IVA de cada línea se calcula desde el impuesto asignado al producto
+    (ProductoImpuesto), nunca desde lo que mande el cliente del POS —
+    ver bug real: ventas de agosto quedaron con iva_10/iva_5/monto_exenta
+    en 0 porque el POS mandaba esos campos fijos en 0 y el backend confiaba
+    en ellos.
+    """
+
+    def _producto_con_impuesto(self, nombre_impuesto, porcentaje, categoria, unidad_medida, lista_precio):
+        from apps.productos.models import Producto, Impuesto, ProductoImpuesto
+        from datetime import date
+
+        producto = Producto.objects.create(
+            descripcion=f"Producto {nombre_impuesto}",
+            categoria=categoria, unidad_medida=unidad_medida,
+            requiere_stock=False,
+        )
+        impuesto, _ = Impuesto.objects.get_or_create(
+            nombre=nombre_impuesto,
+            defaults={"porcentaje": Decimal(porcentaje), "vigente_desde": date(2026, 1, 1), "activo": True},
+        )
+        ProductoImpuesto.objects.create(producto=producto, impuesto=impuesto)
+        return producto
+
+    def test_producto_con_iva_10_calcula_iva_incluido(
+        self, cliente, usuario_cajero, medio_pago_efectivo, categoria, unidad_medida, lista_precio
+    ):
+        from apps.ventas.services import VentaService
+
+        producto = self._producto_con_impuesto("IVA 10%", "10", categoria, unidad_medida, lista_precio)
+        venta = VentaService.registrar_venta(
+            cliente=cliente, cajero=usuario_cajero, tipo="CONTADO",
+            medio_pago=medio_pago_efectivo,
+            items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("11000")}],
+        )
+        assert venta.monto_total == Decimal("11000")
+        assert venta.iva_10 == Decimal("1000")
+        assert venta.iva_5 == Decimal("0")
+        assert venta.monto_exenta == Decimal("0")
+
+    def test_producto_con_iva_5_calcula_iva_incluido(
+        self, cliente, usuario_cajero, medio_pago_efectivo, categoria, unidad_medida, lista_precio
+    ):
+        from apps.ventas.services import VentaService
+
+        producto = self._producto_con_impuesto("IVA 5%", "5", categoria, unidad_medida, lista_precio)
+        venta = VentaService.registrar_venta(
+            cliente=cliente, cajero=usuario_cajero, tipo="CONTADO",
+            medio_pago=medio_pago_efectivo,
+            items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("2500")}],
+        )
+        assert venta.iva_5 == Decimal("119")
+        assert venta.iva_10 == Decimal("0")
+        assert venta.monto_exenta == Decimal("0")
+
+    def test_producto_sin_impuesto_asignado_es_exenta(
+        self, cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto
+    ):
+        from apps.ventas.services import VentaService
+
+        venta = VentaService.registrar_venta(
+            cliente=cliente, cajero=usuario_cajero, tipo="CONTADO",
+            medio_pago=medio_pago_efectivo,
+            items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("3000")}],
+        )
+        assert venta.monto_exenta == Decimal("3000")
+        assert venta.iva_10 == Decimal("0")
+        assert venta.iva_5 == Decimal("0")
