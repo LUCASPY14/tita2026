@@ -74,7 +74,7 @@ const HIJO2 = {
 
 const PORTAL_DATA = {
   cliente: {
-    id: 99, nombre: 'María López', email: 'maria@test.com', pin_es_defecto: false,
+    id: 99, nombre: 'María López', email: 'maria@test.com',
     saldo_cuenta_corriente: 0, limite_credito: 0,
   },
   mes: { anio: 2026, mes: 7 },

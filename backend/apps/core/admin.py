@@ -1,6 +1,6 @@
 ﻿"""
 Admin para la app core
-Gestión de tarjetas, movimientos, medios de pago, límites de transacción y autorizaciones
+Gestión de tarjetas, movimientos y medios de pago
 """
 
 from django.contrib import admin
@@ -11,12 +11,9 @@ from django.utils.html import format_html
 from .models import (
     Tarjeta,
     MovimientoTarjeta,
-    TarjetaAutorizacion,
     CargaSaldo,
     ConsumoTarjeta,
     MedioPago,
-    LimiteTransaccion,
-    RegistroAutorizacion,
     PagoBancard,
     SolicitudCatastroBancard,
 )
@@ -144,66 +141,6 @@ class MovimientoTarjetaAdmin(admin.ModelAdmin):
         color = "#dc3545" if obj.saldo_resultante < 0 else "#28a745"
         return format_html('<strong style="color:{};">₲{:,}</strong>', color, obj.saldo_resultante)
     saldo_resultante_display.short_description = "Saldo Resultante"
-
-
-# ==============================================================================
-# TARJETA DE AUTORIZACIÓN
-# ==============================================================================
-
-@admin.register(TarjetaAutorizacion)
-class TarjetaAutorizacionAdmin(admin.ModelAdmin):
-    list_display = [
-        "codigo_barra",
-        "tipo_autorizacion",
-        "empleado_link",
-        "permisos_display",
-        "activo",
-        "fecha_vencimiento",
-    ]
-    list_filter = ["tipo_autorizacion", "activo"]
-    search_fields = ["codigo_barra", "empleado__nombre", "empleado__apellido"]
-    readonly_fields = ["fecha_creacion"]
-    list_select_related = ["empleado"]
-    fieldsets = (
-        ("Datos de la Tarjeta", {
-            "fields": ("codigo_barra", "tipo_autorizacion", "empleado", "activo")
-        }),
-        ("Permisos", {
-            "fields": (
-                "puede_anular_almuerzos",
-                "puede_anular_ventas",
-                "puede_anular_recargas",
-                "puede_modificar_precios",
-            )
-        }),
-        ("Vigencia", {
-            "fields": ("fecha_vencimiento", "fecha_creacion"),
-        }),
-        ("Observaciones", {
-            "fields": ("observaciones",),
-            "classes": ("collapse",),
-        }),
-    )
-
-    def empleado_link(self, obj):
-        if obj.empleado:
-            url = reverse("admin:usuarios_usuario_change", args=[obj.empleado.pk])
-            return format_html('<a href="{}">{}</a>', url, obj.empleado.nombre_completo)
-        return "-"
-    empleado_link.short_description = "Empleado"
-
-    def permisos_display(self, obj):
-        permisos = []
-        if obj.puede_anular_almuerzos:
-            permisos.append("Almuerzos")
-        if obj.puede_anular_ventas:
-            permisos.append("Ventas")
-        if obj.puede_anular_recargas:
-            permisos.append("Recargas")
-        if obj.puede_modificar_precios:
-            permisos.append("Precios")
-        return ", ".join(permisos) if permisos else "-"
-    permisos_display.short_description = "Permisos"
 
 
 # ==============================================================================
@@ -372,132 +309,6 @@ class MedioPagoAdmin(admin.ModelAdmin):
             return mark_safe('<span style="color:#0d6efd;">✓</span>')  # nosec B308
         return "-"
     requiere_validacion_badge.short_description = "Validación"
-
-
-# ==============================================================================
-# LÍMITE DE TRANSACCIÓN
-# ==============================================================================
-
-@admin.register(LimiteTransaccion)
-class LimiteTransaccionAdmin(admin.ModelAdmin):
-    list_display = [
-        "rol_link",
-        "tipo_operacion_badge",
-        "monto_maximo_display",
-        "doble_autorizacion_badge",
-        "activo",
-    ]
-    list_filter = ["rol", "tipo_operacion", "requiere_autorizacion_doble", "activo"]
-    search_fields = ["rol__nombre_rol"]
-    readonly_fields = ["fecha_creacion", "fecha_modificacion"]
-    list_select_related = ["rol"]
-    filter_horizontal = ["roles_autorizadores"]
-    fieldsets = (
-        ("Configuración", {
-            "fields": ("rol", "tipo_operacion", "monto_maximo")
-        }),
-        ("Autorización", {
-            "fields": ("requiere_autorizacion_doble", "roles_autorizadores")
-        }),
-        ("Estado", {
-            "fields": ("activo", "observaciones")
-        }),
-        ("Auditoría", {
-            "fields": ("configurado_por", "fecha_creacion", "fecha_modificacion"),
-            "classes": ("collapse",),
-        }),
-    )
-
-    def rol_link(self, obj):
-        url = reverse("admin:usuarios_rol_change", args=[obj.rol.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.rol.nombre_rol)
-    rol_link.short_description = "Rol"
-
-    def tipo_operacion_badge(self, obj):
-        return format_html(
-            '<span style="background:#17a2b8;color:white;padding:2px 8px;border-radius:3px;font-size:10px;">{}</span>',
-            obj.get_tipo_operacion_display(),
-        )
-    tipo_operacion_badge.short_description = "Operación"
-
-    def monto_maximo_display(self, obj):
-        return f"₲{obj.monto_maximo:,.0f}"
-    monto_maximo_display.short_description = "Monto Máximo"
-
-    def doble_autorizacion_badge(self, obj):
-        if obj.requiere_autorizacion_doble:
-            return format_html('<span style="color:#dc3545;">⚠️ Doble</span>')
-        return "Simple"
-    doble_autorizacion_badge.short_description = "Autorización"
-
-
-# ==============================================================================
-# REGISTRO DE AUTORIZACIÓN
-# ==============================================================================
-
-@admin.register(RegistroAutorizacion)
-class RegistroAutorizacionAdmin(admin.ModelAdmin):
-    list_display = [
-        "id",
-        "tipo_operacion_badge",
-        "monto_display",
-        "solicitante_link",
-        "autorizador_link",
-        "fecha_autorizacion",
-    ]
-    list_filter = ["tipo_operacion", "fecha_autorizacion"]
-    search_fields = [
-        "solicitante__nombre", "solicitante__apellido",
-        "autorizador__nombre", "autorizador__apellido",
-        "motivo",
-    ]
-    readonly_fields = ["fecha_autorizacion", "ip_address"]
-    list_select_related = ["solicitante", "autorizador"]
-    date_hierarchy = "fecha_autorizacion"
-    ordering = ["-fecha_autorizacion"]
-    fieldsets = (
-        ("Operación", {
-            "fields": ("tipo_operacion", "monto", "motivo")
-        }),
-        ("Participantes", {
-            "fields": ("solicitante", "autorizador", "autorizador_2")
-        }),
-        ("Referencias", {
-            "fields": ("venta", "compra", "ajuste"),
-            "classes": ("collapse",),
-        }),
-        ("Auditoría", {
-            "fields": ("fecha_autorizacion", "ip_address"),
-            "classes": ("collapse",),
-        }),
-    )
-
-    def get_readonly_fields(self, request, obj=None):
-        """Registro de autorización inmutable una vez creado."""
-        if obj:
-            return [f.name for f in self.model._meta.fields]
-        return self.readonly_fields
-
-    def tipo_operacion_badge(self, obj):
-        return format_html(
-            '<span style="background:#17a2b8;color:white;padding:2px 8px;border-radius:3px;font-size:10px;">{}</span>',
-            obj.tipo_operacion,
-        )
-    tipo_operacion_badge.short_description = "Operación"
-
-    def monto_display(self, obj):
-        return f"₲{obj.monto:,.0f}"
-    monto_display.short_description = "Monto"
-
-    def solicitante_link(self, obj):
-        url = reverse("admin:usuarios_usuario_change", args=[obj.solicitante.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.solicitante.nombre_completo)
-    solicitante_link.short_description = "Solicitante"
-
-    def autorizador_link(self, obj):
-        url = reverse("admin:usuarios_usuario_change", args=[obj.autorizador.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.autorizador.nombre_completo)
-    autorizador_link.short_description = "Autorizador"
 
 
 # ==============================================================================

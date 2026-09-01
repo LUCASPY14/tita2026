@@ -3,7 +3,6 @@ Cobertura de ramas no alcanzadas en core/models.py:
   - Tarjeta.clean() — 4 branches de validación
   - MovimientoTarjeta.__str__() — tipo REVERSO (signo +)
   - MovimientoTarjeta.save() — saldo_anterior=None sin movimientos previos
-  - TarjetaAutorizacion.__str__()
 """
 import pytest
 from decimal import Decimal
@@ -183,20 +182,3 @@ class TestMovimientoTarjetaSave:
         mov.refresh_from_db()
         assert mov.saldo_anterior == Decimal("0")
         assert mov.saldo_resultante == Decimal("15000")
-
-
-# ==============================================================================
-# TarjetaAutorizacion.__str__()
-# ==============================================================================
-
-@pytest.mark.django_db
-class TestTarjetaAutorizacionStr:
-
-    def test_str_formato(self, db):
-        from apps.core.models import TarjetaAutorizacion
-        t = TarjetaAutorizacion.objects.create(
-            codigo_barra="AUTH-001",
-            tipo_autorizacion="ANULAR_VENTA",
-            activo=True,
-        )
-        assert str(t) == "Tarjeta Auth AUTH-001 - ANULAR_VENTA"

@@ -11,7 +11,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 
 from common.pagination import CursorResultsSetPagination
-from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from common.permissions import IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
 from common.throttling import SensitiveEndpointThrottle
 from common.utils.medios_pago import resolver_medio_pago
 from apps.usuarios.auditoria import registrar_auditoria
@@ -33,22 +33,16 @@ def _invalidar_cache_core(*prefixes):
 from .models import (
     Tarjeta,
     MovimientoTarjeta,
-    TarjetaAutorizacion,
     CargaSaldo,
     ConsumoTarjeta,
     MedioPago,
-    LimiteTransaccion,
-    RegistroAutorizacion,
 )
 from .serializers import (
     TarjetaSerializer,
     MovimientoTarjetaSerializer,
-    TarjetaAutorizacionSerializer,
     CargaSaldoSerializer,
     ConsumoTarjetaSerializer,
     MedioPagoSerializer,
-    LimiteTransaccionSerializer,
-    RegistroAutorizacionSerializer,
 )
 from .services import TarjetaService
 
@@ -107,12 +101,6 @@ class MovimientoTarjetaViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["tarjeta", "tipo"]
     ordering = ["-fecha"]
-
-
-class TarjetaAutorizacionViewSet(viewsets.ModelViewSet):
-    queryset = TarjetaAutorizacion.objects.select_related("empleado").all()
-    serializer_class = TarjetaAutorizacionSerializer
-    permission_classes = [IsCajeroOrAdmin]
 
 
 METODOS_CONFIRMACION_INMEDIATA = ("EFECTIVO", "POS DEBITO", "POS CREDITO")
@@ -308,22 +296,6 @@ class MedioPagoViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         super().perform_destroy(instance)
         _invalidar_cache_core("medios_pago_list_")
-
-
-class LimiteTransaccionViewSet(viewsets.ModelViewSet):
-    queryset = LimiteTransaccion.objects.select_related("rol").all()
-    serializer_class = LimiteTransaccionSerializer
-    permission_classes = [IsAdmin]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["rol", "tipo_operacion", "activo"]
-
-
-class RegistroAutorizacionViewSet(viewsets.ModelViewSet):
-    queryset = RegistroAutorizacion.objects.select_related("solicitante", "autorizador").all()
-    serializer_class = RegistroAutorizacionSerializer
-    permission_classes = [IsCajeroOrAdmin]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["tipo_operacion"]
 
 
 class ReporteTarjetasView(APIView):

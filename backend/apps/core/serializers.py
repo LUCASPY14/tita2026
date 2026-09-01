@@ -9,12 +9,9 @@ from rest_framework import serializers
 from .models import (
     Tarjeta,
     MovimientoTarjeta,
-    TarjetaAutorizacion,
     CargaSaldo,
     ConsumoTarjeta,
     MedioPago,
-    LimiteTransaccion,
-    RegistroAutorizacion,
     PagoBancard,
 )
 
@@ -159,13 +156,6 @@ class MovimientoTarjetaSerializer(serializers.ModelSerializer):
         read_only_fields = ["fecha_creacion", "saldo_anterior", "saldo_resultante"]
 
 
-class TarjetaAutorizacionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TarjetaAutorizacion
-        fields = "__all__"
-        read_only_fields = ["fecha_creacion"]
-
-
 class CargaSaldoSerializer(serializers.ModelSerializer):
     usuario_nombre = serializers.CharField(source="responsable.nombre_completo", read_only=True, default=None)
 
@@ -188,25 +178,6 @@ class MedioPagoSerializer(serializers.ModelSerializer):
     class Meta:
         model = MedioPago
         fields = "__all__"
-
-
-class LimiteTransaccionSerializer(serializers.ModelSerializer):
-    rol_nombre = serializers.CharField(source="rol.nombre_rol", read_only=True)
-
-    class Meta:
-        model = LimiteTransaccion
-        fields = "__all__"
-        read_only_fields = ["fecha_creacion", "fecha_modificacion"]
-
-
-class RegistroAutorizacionSerializer(serializers.ModelSerializer):
-    solicitante_nombre = serializers.CharField(source="solicitante.nombre_completo", read_only=True)
-    autorizador_nombre = serializers.CharField(source="autorizador.nombre_completo", read_only=True)
-
-    class Meta:
-        model = RegistroAutorizacion
-        fields = "__all__"
-        read_only_fields = ["fecha_autorizacion"]
 
 
 class PagoBancardSerializer(serializers.ModelSerializer):

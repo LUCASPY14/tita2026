@@ -661,7 +661,6 @@ class PortalMiHijoView(APIView):
                 "id": user.cliente.id,
                 "nombre": user.cliente.nombre_completo,
                 "email": user.cliente.email,
-                "pin_es_defecto": user.cliente.check_pin("0000"),
                 "saldo_cuenta_corriente": int(user.cliente.saldo_cuenta_corriente),
                 "limite_credito": int(user.cliente.limite_credito),
             },

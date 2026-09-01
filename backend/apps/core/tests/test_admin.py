@@ -56,12 +56,9 @@ def medio_pago(db):
 @pytest.mark.parametrize("url", [
     "/admin/core/tarjeta/",
     "/admin/core/movimientotarjeta/",
-    "/admin/core/tarjetaautorizacion/",
     "/admin/core/cargasaldo/",
     "/admin/core/consumotarjeta/",
     "/admin/core/mediopago/",
-    "/admin/core/limitetransaccion/",
-    "/admin/core/registroautorizacion/",
 ])
 def test_admin_changelist_returns_200(sa_client, url):
     resp = sa_client.get(url)

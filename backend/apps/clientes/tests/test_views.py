@@ -1,6 +1,6 @@
 """
 Tests de vistas de clientes.
-Cubre: ClienteViewSet (reset_pin, cambiar_pin), HijoViewSet (CLIENTE_WEB filter),
+Cubre: HijoViewSet (CLIENTE_WEB filter),
 RestriccionHijoViewSet, AlumnoResponsableViewSet (perform_create, destroy, set_titular),
 ReporteCuentaCorrienteView, y ViewSets simples.
 """
@@ -134,78 +134,6 @@ class TestViewSetsSimples:
     def test_requiere_autenticacion(self, api_client):
         resp = api_client.get("/api/v1/clientes/clientes/")
         assert resp.status_code in (401, 403)
-
-
-# ── ClienteViewSet — reset_pin ────────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestResetPin:
-
-    def test_admin_puede_resetear(self, api_admin, cliente):
-        resp = api_admin.post(f"/api/v1/clientes/clientes/{cliente.pk}/reset-pin/")
-        assert resp.status_code == 200
-        assert resp.data["ok"] is True
-
-    def test_cajero_no_puede_resetear(self, api_cajero, cliente):
-        resp = api_cajero.post(f"/api/v1/clientes/clientes/{cliente.pk}/reset-pin/")
-        assert resp.status_code == 403
-
-
-# ── ClienteViewSet — cambiar_pin ──────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestCambiarPin:
-
-    def test_admin_cambia_sin_pin_actual(self, api_admin, cliente):
-        resp = api_admin.post(
-            f"/api/v1/clientes/clientes/{cliente.pk}/cambiar-pin/",
-            {"pin_nuevo": "9876"},
-            format="json",
-        )
-        assert resp.status_code == 200
-        assert resp.data["ok"] is True
-
-    def test_pin_nuevo_invalido_falla(self, api_admin, cliente):
-        resp = api_admin.post(
-            f"/api/v1/clientes/clientes/{cliente.pk}/cambiar-pin/",
-            {"pin_nuevo": "abc"},
-            format="json",
-        )
-        assert resp.status_code == 400
-
-    def test_pin_nuevo_corto_falla(self, api_admin, cliente):
-        resp = api_admin.post(
-            f"/api/v1/clientes/clientes/{cliente.pk}/cambiar-pin/",
-            {"pin_nuevo": "12"},
-            format="json",
-        )
-        assert resp.status_code == 400
-
-    def test_no_admin_no_puede_cambiar_pin(self, api_cajero, cliente):
-        # cambiar_pin usa IsAuthenticated; cajero puede llamarlo pero
-        # sin pin_actual recibe 400 (PIN actual incorrecto)
-        resp = api_cajero.post(
-            f"/api/v1/clientes/clientes/{cliente.pk}/cambiar-pin/",
-            {"pin_nuevo": "5678"},
-            format="json",
-        )
-        assert resp.status_code in (400, 403)
-
-    def test_cliente_web_no_puede_cambiar_pin_ajeno(self, api_cliente_web, tipo_cliente, lista_precio):
-        from apps.clientes.models import Cliente
-        otro = Cliente.objects.create(
-            nombres="Otro",
-            apellidos="Cliente",
-            ruc_ci="9999999",
-            tipo_cliente=tipo_cliente,
-            lista_precio=lista_precio,
-        )
-        resp = api_cliente_web.post(
-            f"/api/v1/clientes/clientes/{otro.pk}/cambiar-pin/",
-            {"pin_nuevo": "1111"},
-            format="json",
-        )
-        assert resp.status_code == 403
 
 
 # ── HijoViewSet — CLIENTE_WEB filter ─────────────────────────────────────────

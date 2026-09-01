@@ -49,10 +49,7 @@ class Cliente(models.Model):
     )
     activo = models.BooleanField(default=True, help_text="False si el cliente está inactivo")
     fecha_registro = models.DateTimeField(auto_now_add=True)
-    pin_autorizacion = models.CharField(
-        max_length=128, blank=True, default='',
-        help_text="PIN hasheado para autorizar ventas con saldo insuficiente",
-    )
+
     class ModalidadFacturacion(models.TextChoices):
         INMEDIATA = "INMEDIATA", "Factura por transacción"
         MENSUAL   = "MENSUAL",   "Factura mensual agrupada"
@@ -92,27 +89,6 @@ class Cliente(models.Model):
     @property
     def nombre_completo(self):
         return f"{self.nombres} {self.apellidos}"
-
-    def save(self, *args, **kwargs):
-        if not self.pk and not self.pin_autorizacion:
-            from django.contrib.auth.hashers import make_password
-            self.pin_autorizacion = make_password('0000')
-        super().save(*args, **kwargs)
-
-    def set_pin(self, pin_raw: str) -> None:
-        from django.contrib.auth.hashers import make_password
-        self.pin_autorizacion = make_password(pin_raw)
-        self.save(update_fields=['pin_autorizacion'])
-
-    def check_pin(self, pin_raw: str) -> bool:
-        from django.contrib.auth.hashers import check_password
-        if not self.pin_autorizacion:
-            return False
-        return check_password(pin_raw, self.pin_autorizacion)
-
-    @property
-    def tiene_pin(self) -> bool:
-        return bool(self.pin_autorizacion)
 
     @property
     def saldo_cuenta_corriente(self):

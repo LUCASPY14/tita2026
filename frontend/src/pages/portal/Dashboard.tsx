@@ -71,7 +71,7 @@ interface HijoData {
 
 interface PortalData {
   cliente: {
-    id: number; nombre: string; email: string; pin_es_defecto: boolean
+    id: number; nombre: string; email: string
     saldo_cuenta_corriente: number; limite_credito: number
   }
   mes: { anio: number; mes: number }

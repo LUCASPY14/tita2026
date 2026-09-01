@@ -82,34 +82,6 @@ class TestClienteModel:
     def test_nombre_completo(self, cliente):
         assert cliente.nombre_completo == "Juan Pérez"
 
-    def test_save_inicializa_pin_autorizacion(self, cliente):
-        """save() hashea '0000' como PIN por defecto al crear (líneas 87-90)."""
-        assert cliente.pin_autorizacion != ""
-
-    def test_check_pin_por_defecto_es_0000(self, cliente):
-        assert cliente.check_pin("0000") is True
-
-    def test_check_pin_incorrecto_retorna_false(self, cliente):
-        assert cliente.check_pin("9999") is False
-
-    def test_check_pin_vacio_retorna_false(self, tipo_cliente, lista_precio):
-        from apps.clientes.models import Cliente
-        c = Cliente(pin_autorizacion="")
-        assert c.check_pin("0000") is False
-
-    def test_set_pin_cambia_el_pin(self, cliente):
-        cliente.set_pin("5678")
-        assert cliente.check_pin("5678") is True
-        assert cliente.check_pin("0000") is False
-
-    def test_tiene_pin_true(self, cliente):
-        assert cliente.tiene_pin is True
-
-    def test_tiene_pin_false_cuando_vacio(self, tipo_cliente, lista_precio):
-        from apps.clientes.models import Cliente
-        c = Cliente(pin_autorizacion="")
-        assert c.tiene_pin is False
-
     def test_saldo_cuenta_corriente_sin_movimientos(self, cliente):
         """Sin movimientos → saldo=0 (línea 111)."""
         assert cliente.saldo_cuenta_corriente == Decimal("0")
