@@ -9,7 +9,7 @@ import Table, { type Column } from '../components/ui/Table'
 import ModalCliente from './clientes/ModalCliente'
 import ModalHijos from './clientes/ModalHijos'
 import ModalPagarCC from './clientes/ModalPagarCC'
-import { formatGs, type Cliente, type TipoCliente, type ListaPrecio } from './clientes/shared'
+import { formatGs, type Cliente, type TipoCliente, type ListaPrecio, type Ciudad } from './clientes/shared'
 
 const PAGE_SIZE = 20
 
@@ -18,6 +18,7 @@ export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [tiposCliente, setTiposCliente] = useState<TipoCliente[]>([])
   const [listasPrecios, setListasPrecios] = useState<ListaPrecio[]>([])
+  const [ciudades, setCiudades] = useState<Ciudad[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -37,6 +38,7 @@ export default function Clientes() {
   useEffect(() => {
     api.get('/clientes/tipos-cliente/').then(({ data }) => setTiposCliente(data.results ?? data)).catch(() => toast.error('Error al cargar tipos de cliente'))
     api.get('/productos/listas-precio/').then(({ data }) => setListasPrecios(data.results ?? data)).catch(() => toast.error('Error al cargar listas de precio'))
+    api.get('/clientes/ciudades/', { params: { page_size: 200 } }).then(({ data }) => setCiudades(data.results ?? data)).catch(() => toast.error('Error al cargar ciudades'))
   }, [])
 
   const loadClientes = useCallback(async () => {
@@ -221,6 +223,7 @@ export default function Clientes() {
         cliente={clienteModal.cliente}
         tiposCliente={tiposCliente}
         listasPrecios={listasPrecios}
+        ciudades={ciudades}
         onClose={() => setClienteModal({ open: false, cliente: null })}
         onSaved={loadClientes}
       />

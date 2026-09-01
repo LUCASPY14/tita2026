@@ -6,8 +6,8 @@ import Combobox from '../../components/ui/Combobox'
 import Input from '../../components/ui/Input'
 import Modal from '../../components/ui/Modal'
 import {
-  extractErrorMessage, BLANK_CLIENTE, CIUDADES_PY, RUC_CI_REGEX,
-  type Cliente, type ClienteForm, type TipoCliente, type ListaPrecio,
+  extractErrorMessage, BLANK_CLIENTE, RUC_CI_REGEX,
+  type Cliente, type ClienteForm, type TipoCliente, type ListaPrecio, type Ciudad,
 } from './shared'
 
 interface Props {
@@ -15,11 +15,12 @@ interface Props {
   cliente: Cliente | null
   tiposCliente: TipoCliente[]
   listasPrecios: ListaPrecio[]
+  ciudades: Ciudad[]
   onClose: () => void
   onSaved: () => void
 }
 
-export default function ModalCliente({ open, cliente, tiposCliente, listasPrecios, onClose, onSaved }: Props) {
+export default function ModalCliente({ open, cliente, tiposCliente, listasPrecios, ciudades, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false)
   const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ClienteForm>({
     defaultValues: BLANK_CLIENTE,
@@ -132,7 +133,7 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
           <div>
             <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Ciudad</label>
             <Combobox
-              options={CIUDADES_PY.map(c => ({ value: c, label: c }))}
+              options={ciudades.map(c => ({ value: c.nombre, label: c.nombre }))}
               value={ciudadVal || undefined}
               onChange={(v) => setValue('ciudad', String(v))}
               filterLocal

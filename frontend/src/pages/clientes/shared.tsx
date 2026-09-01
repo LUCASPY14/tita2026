@@ -6,6 +6,7 @@ import type { BadgeColor } from '../../components/ui/Badge'
 
 export interface TipoCliente { id: number; nombre: string; activo: boolean }
 export interface ListaPrecio { id: number; nombre: string }
+export interface Ciudad { id: number; nombre: string }
 
 export interface Cliente {
   id: number
@@ -129,16 +130,6 @@ export interface PagoCC {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-export const CIUDADES_PY = [
-  'Asunción', 'San Lorenzo', 'Luque', 'Capiatá', 'Lambaré',
-  'Fernando de la Mora', 'Limpio', 'Ñemby', 'Mariano Roque Alonso',
-  'Encarnación', 'Ciudad del Este', 'Pedro Juan Caballero',
-  'Concepción', 'Coronel Oviedo', 'Caaguazú', 'Villarrica',
-  'Pilar', 'Caazapá', 'San Juan Bautista', 'Villa Hayes',
-  'Pozo Colorado', 'Fuerte Olimpo', 'Filadelfia', 'Loma Plata',
-  'Minga Guazú', 'Hernandarias', 'Presidente Franco',
-]
 
 export const RUC_CI_REGEX = /^(\d{6,8}(-\d{1,2})?|\d{1,8}-\d{1}|\d{6,8})$/
 
