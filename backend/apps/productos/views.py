@@ -195,6 +195,32 @@ class ProductoViewSet(viewsets.ModelViewSet):
         _invalidar_cache("productos_list_")
         return Response({"precio": str(precio)}, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=["post"], url_path="set-impuesto", permission_classes=[IsAdminOrReadOnly])
+    def set_impuesto(self, request, pk=None):
+        """
+        POST /api/productos/productos/{id}/set-impuesto/ — {"impuesto": <id> | null}
+        Reemplaza el impuesto asignado al producto (un producto tiene a lo
+        sumo uno en la práctica, aunque el modelo permita varios). Con
+        impuesto=null, lo deja sin asignar (se factura como exenta).
+        """
+        producto = self.get_object()
+        impuesto_id = request.data.get("impuesto")
+        impuesto = None
+        if impuesto_id:
+            try:
+                impuesto = Impuesto.objects.get(pk=impuesto_id)
+            except Impuesto.DoesNotExist:
+                return Response({"error": "Impuesto no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            ProductoImpuesto.objects.filter(producto=producto).delete()
+            if impuesto:
+                ProductoImpuesto.objects.create(producto=producto, impuesto=impuesto)
+        _invalidar_cache("productos_list_")
+        return Response(
+            {"impuesto": {"id": impuesto.pk, "nombre": impuesto.nombre} if impuesto else None},
+            status=status.HTTP_200_OK,
+        )
+
 
 class UnidadMedidaViewSet(viewsets.ModelViewSet):
     queryset = UnidadMedida.objects.all()

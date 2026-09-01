@@ -30,10 +30,15 @@ class ProductoSerializer(serializers.ModelSerializer):
     )
     precio_actual = serializers.SerializerMethodField()
     stock_actual = serializers.SerializerMethodField()
+    impuesto_actual = serializers.SerializerMethodField()
 
     def get_precio_actual(self, obj):
         annotated = getattr(obj, "_precio_actual", None)
         return annotated if annotated is not None else obj.precio_actual
+
+    def get_impuesto_actual(self, obj):
+        pi = obj.impuestos.select_related("impuesto").first()
+        return {"id": pi.impuesto_id, "nombre": pi.impuesto.nombre} if pi else None
 
     def get_stock_actual(self, obj):
         annotated = getattr(obj, "_stock_actual", None)

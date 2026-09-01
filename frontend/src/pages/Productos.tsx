@@ -16,6 +16,7 @@ import Table, { type Column } from '../components/ui/Table'
 
 interface Categoria { id: number; nombre: string; activo: boolean }
 interface UnidadMedida { id: number; nombre: string; abreviatura: string; activo: boolean }
+interface ImpuestoOption { id: number; nombre: string; porcentaje: string; activo: boolean }
 
 interface Producto {
   id: number
@@ -32,6 +33,7 @@ interface Producto {
   activo: boolean
   precio_actual: string
   stock_actual: string | null
+  impuesto_actual: { id: number; nombre: string } | null
 }
 
 interface ProductoForm {
@@ -41,6 +43,7 @@ interface ProductoForm {
   categoria: string
   unidad_medida: string
   precio: string
+  impuesto: string
   stock_minimo: string
   permite_stock_negativo: boolean
   es_servicio: boolean
@@ -109,6 +112,7 @@ const BLANK_FORM: ProductoForm = {
   descripcion: '', codigo_barra: '', codigo: '',
   categoria: '', unidad_medida: '',
   precio: '0',
+  impuesto: '',
   stock_minimo: '0',
   permite_stock_negativo: false,
   es_servicio: false,
@@ -121,11 +125,12 @@ interface ProductoModalProps {
   producto: Producto | null
   categorias: Categoria[]
   unidades: UnidadMedida[]
+  impuestos: ImpuestoOption[]
   onClose: () => void
   onSaved: () => void
 }
 
-function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved }: ProductoModalProps) {
+function ProductoModal({ open, producto, categorias, unidades, impuestos, onClose, onSaved }: ProductoModalProps) {
   const [form, setForm] = useState<ProductoForm>(BLANK_FORM)
   const [saving, setSaving] = useState(false)
 
@@ -140,6 +145,7 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
           categoria: String(producto.categoria),
           unidad_medida: producto.unidad_medida ? String(producto.unidad_medida) : '',
           precio: String(Number(producto.precio_actual) || 0),
+          impuesto: producto.impuesto_actual ? String(producto.impuesto_actual.id) : '',
           stock_minimo: producto.stock_minimo,
           permite_stock_negativo: producto.permite_stock_negativo,
           es_servicio: producto.es_servicio,
@@ -172,7 +178,7 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
       return
     }
     setSaving(true)
-    const { precio, ...rest } = form
+    const { precio, impuesto, ...rest } = form
     const payload = {
       ...rest,
       codigo_barra: form.codigo_barra || null,
@@ -193,6 +199,7 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
         toast.success('Producto creado')
       }
       await api.post(`/productos/productos/${productoId}/set-precio/`, { precio: Number(precio) || 0 })
+      await api.post(`/productos/productos/${productoId}/set-impuesto/`, { impuesto: impuesto ? Number(impuesto) : null })
       onSaved()
       onClose()
     } catch (err) {
@@ -249,22 +256,34 @@ function ProductoModal({ open, producto, categorias, unidades, onClose, onSaved 
           </div>
         </div>
 
-        {/* Precio */}
-        <div className="border-t border-slate-100 pt-4">
-          <label className={labelClass}>Precio de Venta (Gs.) *</label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">₲</span>
-            <input
-              type="number"
-              min="0"
-              step="500"
-              value={form.precio}
-              onChange={e => setForm(prev => ({ ...prev, precio: e.target.value }))}
-              placeholder="0"
-              className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150"
-            />
+        {/* Precio e Impuesto */}
+        <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Precio de Venta (Gs.) *</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">₲</span>
+              <input
+                type="number"
+                min="0"
+                step="500"
+                value={form.precio}
+                onChange={e => setForm(prev => ({ ...prev, precio: e.target.value }))}
+                placeholder="0"
+                className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150"
+              />
+            </div>
+            <p className="text-xs text-slate-400 mt-1">Se aplica a la lista de precios por defecto</p>
           </div>
-          <p className="text-xs text-slate-400 mt-1">Se aplica a la lista de precios por defecto</p>
+          <div>
+            <label className={labelClass}>Impuesto</label>
+            <select value={form.impuesto} onChange={setText('impuesto')} className={selectClass}>
+              <option value="">Exenta (sin impuesto)</option>
+              {impuestos.map(i => (
+                <option key={i.id} value={i.id}>{i.nombre}</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">Con qué IVA se factura este producto</p>
+          </div>
         </div>
 
         {/* Stock */}
@@ -312,6 +331,7 @@ export default function Produtos() {
   const [productos, setProductos] = useState<Producto[]>([])
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [unidades, setUnidades] = useState<UnidadMedida[]>([])
+  const [impuestos, setImpuestos] = useState<ImpuestoOption[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -337,6 +357,9 @@ export default function Produtos() {
       .then(({ data }) => setCategorias(data.results ?? data)).catch(() => toast.error('Error al cargar categorías'))
     api.get('/productos/unidades-medida/')
       .then(({ data }) => setUnidades(data.results ?? data)).catch(() => toast.error('Error al cargar unidades de medida'))
+    api.get('/productos/impuestos/')
+      .then(({ data }) => setImpuestos((data.results ?? data).filter((i: ImpuestoOption) => i.activo)))
+      .catch(() => toast.error('Error al cargar impuestos'))
     // Load stock crítico count
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingCritico(true)
@@ -424,6 +447,9 @@ export default function Produtos() {
             {r.es_servicio && (
               <Badge color="purple">Servicio</Badge>
             )}
+            <Badge color={r.impuesto_actual ? 'default' : 'yellow'}>
+              {r.impuesto_actual ? r.impuesto_actual.nombre : 'Sin impuesto'}
+            </Badge>
           </div>
         </div>
       ),
@@ -599,6 +625,7 @@ export default function Produtos() {
         producto={modal.producto}
         categorias={categorias}
         unidades={unidades}
+        impuestos={impuestos}
         onClose={() => setModal({ open: false, producto: null })}
         onSaved={handleSaved}
       />

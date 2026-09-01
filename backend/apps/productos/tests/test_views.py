@@ -329,3 +329,74 @@ class TestSetPrecio:
             format="json",
         )
         assert resp.status_code in (401, 403)
+
+
+# ── ProductoViewSet.set_impuesto ────────────────────────────────────────────────
+
+@pytest.fixture
+def impuesto_10(db):
+    from apps.productos.models import Impuesto
+    from decimal import Decimal
+    return Impuesto.objects.create(
+        nombre="IVA 10%", porcentaje=Decimal("10"), vigente_desde="2026-01-01", activo=True,
+    )
+
+
+@pytest.mark.django_db
+class TestSetImpuesto:
+
+    def test_asigna_impuesto_a_producto_sin_impuesto(self, api_admin, producto, impuesto_10):
+        from apps.productos.models import ProductoImpuesto
+        resp = api_admin.post(
+            f"/api/v1/productos/productos/{producto.pk}/set-impuesto/",
+            {"impuesto": impuesto_10.pk},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data["impuesto"] == {"id": impuesto_10.pk, "nombre": "IVA 10%"}
+        assert ProductoImpuesto.objects.filter(producto=producto, impuesto=impuesto_10).exists()
+
+    def test_reemplaza_impuesto_existente(self, api_admin, producto, impuesto_10):
+        from decimal import Decimal
+        from apps.productos.models import Impuesto, ProductoImpuesto
+        impuesto_5 = Impuesto.objects.create(
+            nombre="IVA 5%", porcentaje=Decimal("5"), vigente_desde="2026-01-01", activo=True,
+        )
+        ProductoImpuesto.objects.create(producto=producto, impuesto=impuesto_5)
+        resp = api_admin.post(
+            f"/api/v1/productos/productos/{producto.pk}/set-impuesto/",
+            {"impuesto": impuesto_10.pk},
+            format="json",
+        )
+        assert resp.status_code == 200
+        asignados = ProductoImpuesto.objects.filter(producto=producto)
+        assert asignados.count() == 1
+        assert asignados.first().impuesto_id == impuesto_10.pk
+
+    def test_impuesto_null_deja_producto_exento(self, api_admin, producto, impuesto_10):
+        from apps.productos.models import ProductoImpuesto
+        ProductoImpuesto.objects.create(producto=producto, impuesto=impuesto_10)
+        resp = api_admin.post(
+            f"/api/v1/productos/productos/{producto.pk}/set-impuesto/",
+            {"impuesto": None},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data["impuesto"] is None
+        assert not ProductoImpuesto.objects.filter(producto=producto).exists()
+
+    def test_impuesto_inexistente_retorna_404(self, api_admin, producto):
+        resp = api_admin.post(
+            f"/api/v1/productos/productos/{producto.pk}/set-impuesto/",
+            {"impuesto": 99999},
+            format="json",
+        )
+        assert resp.status_code == 404
+
+    def test_cajero_no_puede_usar_set_impuesto(self, api_cajero, producto, impuesto_10):
+        resp = api_cajero.post(
+            f"/api/v1/productos/productos/{producto.pk}/set-impuesto/",
+            {"impuesto": impuesto_10.pk},
+            format="json",
+        )
+        assert resp.status_code in (401, 403)
