@@ -54,6 +54,33 @@ class TarjetaAdmin(admin.ModelAdmin):
         }),
     )
 
+    def save_model(self, request, obj, form, change):
+        """
+        Si se edita saldo_actual a mano desde el admin, generar el
+        MovimientoTarjeta correspondiente (tipo AJUSTE) — mismo patrón que
+        usa bancard_service.py para reversos: monto negativo = aumenta el
+        saldo (ver MovimientoTarjeta.save()). Sin esto, un cambio manual de
+        saldo no queda en el historial que ve cajero/portal, solo en el
+        historial interno de Django admin.
+        """
+        if change and "saldo_actual" in form.changed_data:
+            anterior = Tarjeta.objects.get(pk=obj.pk).saldo_actual
+            nuevo = obj.saldo_actual
+            diferencia = nuevo - anterior
+            super().save_model(request, obj, form, change)
+            if diferencia != 0:
+                MovimientoTarjeta.objects.create(
+                    tarjeta=obj,
+                    tipo=MovimientoTarjeta.Tipo.AJUSTE,
+                    monto=-diferencia,
+                    saldo_anterior=anterior,
+                    saldo_resultante=nuevo,
+                    descripcion=f"Ajuste manual desde el admin ({request.user.email})",
+                    creado_por=request.user,
+                )
+        else:
+            super().save_model(request, obj, form, change)
+
     def hijo_link(self, obj):
         url = reverse("admin:clientes_hijo_change", args=[obj.hijo.pk])
         return format_html('<a href="{}">{}</a>', url, obj.hijo.nombre_completo)

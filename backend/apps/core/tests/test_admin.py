@@ -123,6 +123,90 @@ class TestTarjetaAdminDisplay:
         assert 'Pablo' in result
 
 
+# ── TarjetaAdmin.save_model — genera MovimientoTarjeta al ajustar saldo ───────
+
+class _FakeForm:
+    def __init__(self, changed_data):
+        self.changed_data = changed_data
+
+
+@pytest.mark.django_db
+class TestTarjetaAdminSaveModel:
+
+    def test_editar_saldo_genera_movimiento_ajuste(self, tarjeta_con_hijo, usuario_admin):
+        from apps.core.admin import TarjetaAdmin
+        from apps.core.models import Tarjeta, MovimientoTarjeta
+        from django.contrib import admin as dj_admin
+        from django.test import RequestFactory
+
+        a = TarjetaAdmin(Tarjeta, dj_admin.site)
+        request = RequestFactory().post('/admin/core/tarjeta/1/change/')
+        request.user = usuario_admin
+
+        tarjeta_con_hijo.saldo_actual = Decimal('90000')  # antes: 50000
+        a.save_model(request, tarjeta_con_hijo, _FakeForm(['saldo_actual']), change=True)
+
+        mov = MovimientoTarjeta.objects.filter(tarjeta=tarjeta_con_hijo).order_by('-id').first()
+        assert mov is not None
+        assert mov.tipo == MovimientoTarjeta.Tipo.AJUSTE
+        assert mov.saldo_anterior == Decimal('50000')
+        assert mov.saldo_resultante == Decimal('90000')
+        assert mov.creado_por == usuario_admin
+        assert 'admin' in mov.descripcion.lower()
+
+    def test_editar_saldo_hacia_abajo_tambien_genera_movimiento(self, tarjeta_con_hijo, usuario_admin):
+        from apps.core.admin import TarjetaAdmin
+        from apps.core.models import Tarjeta, MovimientoTarjeta
+        from django.contrib import admin as dj_admin
+        from django.test import RequestFactory
+
+        a = TarjetaAdmin(Tarjeta, dj_admin.site)
+        request = RequestFactory().post('/admin/core/tarjeta/1/change/')
+        request.user = usuario_admin
+
+        tarjeta_con_hijo.saldo_actual = Decimal('10000')  # antes: 50000
+        a.save_model(request, tarjeta_con_hijo, _FakeForm(['saldo_actual']), change=True)
+
+        mov = MovimientoTarjeta.objects.filter(tarjeta=tarjeta_con_hijo).order_by('-id').first()
+        assert mov.saldo_anterior == Decimal('50000')
+        assert mov.saldo_resultante == Decimal('10000')
+
+    def test_editar_otro_campo_no_genera_movimiento(self, tarjeta_con_hijo, usuario_admin):
+        from apps.core.admin import TarjetaAdmin
+        from apps.core.models import Tarjeta, MovimientoTarjeta
+        from django.contrib import admin as dj_admin
+        from django.test import RequestFactory
+
+        a = TarjetaAdmin(Tarjeta, dj_admin.site)
+        request = RequestFactory().post('/admin/core/tarjeta/1/change/')
+        request.user = usuario_admin
+
+        tarjeta_con_hijo.estado = Tarjeta.Estado.BLOQUEADA
+        a.save_model(request, tarjeta_con_hijo, _FakeForm(['estado']), change=True)
+
+        assert not MovimientoTarjeta.objects.filter(tarjeta=tarjeta_con_hijo).exists()
+
+    def test_crear_tarjeta_nueva_no_genera_movimiento(self, cliente, usuario_admin):
+        from apps.clientes.models import Hijo
+        from apps.core.admin import TarjetaAdmin
+        from apps.core.models import Tarjeta, MovimientoTarjeta
+        from django.contrib import admin as dj_admin
+        from django.test import RequestFactory
+
+        hijo = Hijo.objects.create(nombre='Nueva', apellido='Tarjeta', cliente_responsable=cliente, activo=True)
+        nueva = Tarjeta(
+            nro_tarjeta='ADMIN-NEW', hijo=hijo, saldo_actual=Decimal('0'),
+            estado=Tarjeta.Estado.ACTIVA, permite_saldo_negativo=False, limite_credito=Decimal('0'),
+        )
+        a = TarjetaAdmin(Tarjeta, dj_admin.site)
+        request = RequestFactory().post('/admin/core/tarjeta/add/')
+        request.user = usuario_admin
+
+        a.save_model(request, nueva, _FakeForm(['saldo_actual']), change=False)
+
+        assert not MovimientoTarjeta.objects.filter(tarjeta=nueva).exists()
+
+
 # ── MovimientoTarjetaAdmin: métodos display ───────────────────────────────────
 
 @pytest.mark.django_db
