@@ -83,6 +83,42 @@ class TestCargaSaldoCreate:
         resp = api_client.get("/api/v1/core/cargas-saldo/")
         assert resp.status_code in (401, 403)
 
+    def test_efectivo_bajo_el_minimo_falla(self, api_cajero, tarjeta_core):
+        resp = api_cajero.post(
+            "/api/v1/core/cargas-saldo/",
+            {"tarjeta": tarjeta_core.pk, "monto_cargado": 4999, "metodo_pago": "EFECTIVO"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "mínimo" in resp.data["error"]
+
+    def test_efectivo_supera_el_maximo_falla(self, api_cajero, tarjeta_core):
+        resp = api_cajero.post(
+            "/api/v1/core/cargas-saldo/",
+            {"tarjeta": tarjeta_core.pk, "monto_cargado": 5_000_001, "metodo_pago": "EFECTIVO"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "máximo" in resp.data["error"]
+
+    def test_efectivo_en_los_bordes_del_limite_ok(self, api_cajero, tarjeta_core):
+        resp = api_cajero.post(
+            "/api/v1/core/cargas-saldo/",
+            {"tarjeta": tarjeta_core.pk, "monto_cargado": 5_000, "metodo_pago": "EFECTIVO"},
+            format="json",
+        )
+        assert resp.status_code == 201
+
+    def test_transferencia_sin_limite_de_monto(self, api_cajero, tarjeta_core):
+        """El tope solo aplica a confirmación inmediata (caja); transferencia queda PENDIENTE
+        para revisión manual, sin este límite."""
+        resp = api_cajero.post(
+            "/api/v1/core/cargas-saldo/",
+            {"tarjeta": tarjeta_core.pk, "monto_cargado": 10_000_000, "metodo_pago": "TRANSFERENCIA"},
+            format="json",
+        )
+        assert resp.status_code == 201
+
 
 @pytest.mark.django_db
 class TestCargaSaldoConfirmar:

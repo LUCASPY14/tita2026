@@ -103,6 +103,10 @@ class MovimientoTarjetaViewSet(viewsets.ModelViewSet):
 
 METODOS_CONFIRMACION_INMEDIATA = ("EFECTIVO", "POS DEBITO", "POS CREDITO")
 
+# Mismo tope que Bancard (bancard_views.py) — evitar cargas por caja sin límite.
+MONTO_MIN_CARGA_CAJA = 5_000
+MONTO_MAX_CARGA_CAJA = 5_000_000
+
 
 class CargaSaldoViewSet(viewsets.ModelViewSet):
     queryset = CargaSaldo.objects.select_related("tarjeta", "cliente_origen", "responsable").all()
@@ -118,6 +122,17 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
         metodo = data.get("metodo_pago", "")
 
         if metodo in METODOS_CONFIRMACION_INMEDIATA:
+            monto_cargado = data["monto_cargado"]
+            if monto_cargado < MONTO_MIN_CARGA_CAJA:
+                return Response(
+                    {"error": f"El monto mínimo de carga es ₲{MONTO_MIN_CARGA_CAJA:,.0f}."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if monto_cargado > MONTO_MAX_CARGA_CAJA:
+                return Response(
+                    {"error": f"El monto máximo de carga es ₲{MONTO_MAX_CARGA_CAJA:,.0f}."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             from django.db import transaction as _tx
             from apps.contabilidad.models import CierreCaja
             cierre_caja = CierreCaja.objects.filter(

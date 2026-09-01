@@ -168,6 +168,34 @@ class TestRecargaSaldoAlmuerzoCreate:
         )
         assert resp.status_code == 403
 
+    def test_efectivo_bajo_el_minimo_falla(self, api_cajero, hijo_almuerzo):
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/recargas-saldo/",
+            {"hijo": hijo_almuerzo.pk, "monto_cargado": "4999", "metodo_pago": "EFECTIVO"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "mínimo" in resp.data["error"]
+
+    def test_efectivo_supera_el_maximo_falla(self, api_cajero, hijo_almuerzo):
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/recargas-saldo/",
+            {"hijo": hijo_almuerzo.pk, "monto_cargado": "5000001", "metodo_pago": "EFECTIVO"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "máximo" in resp.data["error"]
+
+    def test_transferencia_sin_limite_de_monto(self, api_cajero, hijo_almuerzo):
+        """El tope solo aplica a confirmación inmediata (caja); transferencia queda
+        PENDIENTE para revisión manual, sin este límite."""
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/recargas-saldo/",
+            {"hijo": hijo_almuerzo.pk, "monto_cargado": "10000000", "metodo_pago": "TRANSFERENCIA"},
+            format="json",
+        )
+        assert resp.status_code == 201
+
     def test_transferencia_queda_pendiente(self, api_cajero, hijo_almuerzo):
         from apps.almuerzos.models import SaldoAlmuerzo
         resp = api_cajero.post(
