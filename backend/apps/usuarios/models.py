@@ -275,34 +275,6 @@ class RolPermiso(models.Model):
 # PERFIL DE USUARIO
 # ==============================================================================
 
-class PerfilUsuario(models.Model):
-    """Configuración y preferencias de cada usuario."""
-
-    id_perfil = models.AutoField(primary_key=True)
-    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name="perfil")
-    tema = models.CharField(max_length=20, default="claro")
-    idioma = models.CharField(max_length=10, default="es")
-    timezone = models.CharField(max_length=50, default="America/Asuncion")
-    formato_fecha = models.CharField(max_length=20, default="d/m/Y")
-    moneda = models.CharField(max_length=10, default="PYG")
-    notif_email = models.BooleanField(default=True)
-    notif_push = models.BooleanField(default=True)
-    notif_desktop = models.BooleanField(default=False)
-    dashboard_config = models.JSONField(default=dict, blank=True)
-    menu_colapsado = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "perfiles_usuario"
-        verbose_name = "Perfil de Usuario"
-        verbose_name_plural = "Perfiles de Usuarios"
-        ordering = ["id_perfil"]
-
-    def __str__(self):
-        return f"Perfil de {self.usuario.nombre_completo}"
-
-
 # ==============================================================================
 # AUTENTICACIÓN 2FA
 # ==============================================================================
@@ -550,31 +522,6 @@ class TokenVerificacion(models.Model):
 # AUDITORÍA DE CAMBIOS
 # ==============================================================================
 
-class AuditoriaEmpleado(models.Model):
-    """Registro de cambios en datos de empleados."""
-
-    id_auditoria = models.BigAutoField(primary_key=True)
-    empleado = models.ForeignKey(
-        Empleado, models.SET_NULL, null=True, blank=True, related_name="auditorias"
-    )
-    fecha_cambio = models.DateTimeField(auto_now_add=True)
-    campo_modificado = models.CharField(max_length=50)
-    valor_anterior = models.TextField(blank=True, null=True)
-    valor_nuevo = models.TextField(blank=True, null=True)
-    ip_origen = models.GenericIPAddressField(blank=True, null=True)
-    modificado_por = models.ForeignKey(
-        Usuario, models.SET_NULL, null=True, blank=True, related_name="auditorias_realizadas"
-    )
-
-    class Meta:
-        db_table = "auditoria_empleados"
-        verbose_name = "Auditoría de Empleado"
-        verbose_name_plural = "Auditorías de Empleados"
-
-    def __str__(self):
-        return f"Cambio en {self.empleado} - {self.campo_modificado}"
-
-
 class AuditoriaOperacion(models.Model):
     """Registro de operaciones importantes en el sistema."""
 
@@ -600,27 +547,3 @@ class AuditoriaOperacion(models.Model):
         return f"{self.operacion} por {self.usuario} - {self.resultado}"
 
 
-class AuditoriaUsuarioWeb(models.Model):
-    """Auditoría de cambios en usuarios del portal web."""
-
-    id_auditoria = models.BigAutoField(primary_key=True)
-    cliente = models.ForeignKey(
-        "clientes.Cliente",
-        models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="auditorias_web",
-    )
-    fecha_cambio = models.DateTimeField(auto_now_add=True)
-    campo_modificado = models.CharField(max_length=50)
-    valor_anterior = models.TextField(blank=True, null=True)
-    valor_nuevo = models.TextField(blank=True, null=True)
-    ip_origen = models.GenericIPAddressField(blank=True, null=True)
-
-    class Meta:
-        db_table = "auditoria_usuarios_web"
-        verbose_name = "Auditoría de Usuario Web"
-        verbose_name_plural = "Auditorías de Usuarios Web"
-
-    def __str__(self):
-        return f"Cambio web en {self.cliente} - {self.campo_modificado}"

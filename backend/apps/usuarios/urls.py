@@ -7,7 +7,6 @@ from .views import (
     RolViewSet,
     PermisoViewSet,
     RolPermisoViewSet,
-    PerfilUsuarioViewSet,
     PortalMiHijoView,
     PortalHistorialConsumos,
     PortalHistorialCantina,
@@ -38,7 +37,6 @@ router.register(r"empleados", EmpleadoViewSet, basename="empleados")
 router.register(r"roles", RolViewSet, basename="roles")
 router.register(r"permisos", PermisoViewSet, basename="permisos")
 router.register(r"roles-permisos", RolPermisoViewSet, basename="roles-permisos")
-router.register(r"perfiles", PerfilUsuarioViewSet, basename="perfiles")
 
 urlpatterns = [
     path("", include(router.urls)),

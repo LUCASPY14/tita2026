@@ -12,7 +12,6 @@ from .models import (
     Tarjeta,
     MovimientoTarjeta,
     CargaSaldo,
-    ConsumoTarjeta,
     MedioPago,
     PagoBancard,
     SolicitudCatastroBancard,
@@ -264,61 +263,6 @@ class CargaSaldoAdmin(admin.ModelAdmin):
             obj.get_estado_display(),
         )
     estado_badge.short_description = "Estado"
-
-
-# ==============================================================================
-# CONSUMO DE TARJETA
-# ==============================================================================
-
-@admin.register(ConsumoTarjeta)
-class ConsumoTarjetaAdmin(admin.ModelAdmin):
-    list_display = [
-        "id",
-        "tarjeta_link",
-        "monto_consumido_display",
-        "saldo_anterior_display",
-        "saldo_posterior_display",
-        "registrado_por_link",
-        "detalle",
-        "fecha_consumo",
-    ]
-    list_filter = ["fecha_consumo"]
-    search_fields = ["tarjeta__nro_tarjeta", "detalle"]
-    readonly_fields = ["fecha_consumo", "saldo_anterior", "saldo_posterior", "fecha_creacion"]
-    list_select_related = ["tarjeta", "registrado_por"]
-    date_hierarchy = "fecha_consumo"
-    ordering = ["-fecha_consumo"]
-
-    def get_readonly_fields(self, request, obj=None):
-        """Registro inmutable una vez creado."""
-        if obj:
-            return [f.name for f in self.model._meta.fields]
-        return self.readonly_fields
-
-    def tarjeta_link(self, obj):
-        url = reverse("admin:core_tarjeta_change", args=[obj.tarjeta.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.tarjeta.nro_tarjeta)
-    tarjeta_link.short_description = "Tarjeta"
-
-    def monto_consumido_display(self, obj):
-        return f"-₲{obj.monto_consumido:,.0f}"
-    monto_consumido_display.short_description = "Monto"
-
-    def saldo_anterior_display(self, obj):
-        return f"₲{obj.saldo_anterior:,.0f}"
-    saldo_anterior_display.short_description = "Saldo Anterior"
-
-    def saldo_posterior_display(self, obj):
-        color = "#dc3545" if obj.saldo_posterior < 0 else "#28a745"
-        return format_html('<strong style="color:{};">₲{:,}</strong>', color, obj.saldo_posterior)
-    saldo_posterior_display.short_description = "Saldo Posterior"
-
-    def registrado_por_link(self, obj):
-        if obj.registrado_por:
-            url = reverse("admin:usuarios_usuario_change", args=[obj.registrado_por.pk])
-            return format_html('<a href="{}">{}</a>', url, obj.registrado_por.nombre_completo)
-        return "-"
-    registrado_por_link.short_description = "Registrado por"
 
 
 # ==============================================================================

@@ -82,7 +82,6 @@ from .models import (
     Rol,
     Permiso,
     RolPermiso,
-    PerfilUsuario,
     SesionActiva,
     AuditoriaOperacion,
     IntentoLogin,
@@ -99,7 +98,6 @@ from .serializers import (
     RolSerializer,
     PermisoSerializer,
     RolPermisoSerializer,
-    PerfilUsuarioSerializer,
 )
 
 
@@ -555,12 +553,6 @@ class RolPermisoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["id_rol", "id_permiso"]
-
-
-class PerfilUsuarioViewSet(viewsets.ModelViewSet):
-    queryset = PerfilUsuario.objects.select_related("usuario").all()
-    serializer_class = PerfilUsuarioSerializer
-    permission_classes = [IsAdmin]
 
 
 class PortalMiHijoView(APIView):

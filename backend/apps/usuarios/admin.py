@@ -14,7 +14,6 @@ from .models import (
     Rol,
     Permiso,
     RolPermiso,
-    PerfilUsuario,
     Autenticacion2FA,
     Intento2FA,
     CredencialWebAuthn,
@@ -25,9 +24,7 @@ from .models import (
     BloqueoCuenta,
     TokenRecuperacion,
     TokenVerificacion,
-    AuditoriaEmpleado,
     AuditoriaOperacion,
-    AuditoriaUsuarioWeb,
 )
 
 
@@ -149,20 +146,6 @@ class RolPermisoAdmin(admin.ModelAdmin):
         url = reverse("admin:usuarios_permiso_change", args=[obj.id_permiso.pk])
         return format_html('<a href="{}">{}</a>', url, obj.id_permiso.codigo_permiso)
     permiso_link.short_description = "Permiso"
-
-
-@admin.register(PerfilUsuario)
-class PerfilUsuarioAdmin(admin.ModelAdmin):
-    list_display = ["usuario_link", "tema", "idioma", "moneda"]
-    list_filter = ["tema", "idioma"]
-    search_fields = ["usuario__email"]
-    list_select_related = ["usuario"]
-    readonly_fields = ["created_at", "updated_at"]
-
-    def usuario_link(self, obj):
-        url = reverse("admin:usuarios_usuario_change", args=[obj.usuario.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.usuario.email)
-    usuario_link.short_description = "Usuario"
 
 
 @admin.register(Autenticacion2FA)
@@ -332,27 +315,6 @@ class TokenVerificacionAdmin(admin.ModelAdmin):
     usuario_link.short_description = "Usuario"
 
 
-@admin.register(AuditoriaEmpleado)
-class AuditoriaEmpleadoAdmin(admin.ModelAdmin):
-    list_display = ["empleado_link", "campo_modificado", "fecha_cambio"]
-    list_filter = ["fecha_cambio"]
-    search_fields = ["empleado__nombre", "empleado__apellido", "campo_modificado"]
-    readonly_fields = ["fecha_cambio"]
-    list_select_related = ["empleado"]
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return [f.name for f in self.model._meta.fields]
-        return self.readonly_fields
-
-    def empleado_link(self, obj):
-        if obj.empleado:
-            url = reverse("admin:usuarios_empleado_change", args=[obj.empleado.pk])
-            return format_html('<a href="{}">{}</a>', url, obj.empleado)
-        return "-"
-    empleado_link.short_description = "Empleado"
-
-
 @admin.register(AuditoriaOperacion)
 class AuditoriaOperacionAdmin(admin.ModelAdmin):
     list_display = [
@@ -381,24 +343,3 @@ class AuditoriaOperacionAdmin(admin.ModelAdmin):
             return format_html('<a href="{}">{}</a>', url, obj.usuario.email)
         return "-"
     usuario_link.short_description = "Usuario"
-
-
-@admin.register(AuditoriaUsuarioWeb)
-class AuditoriaUsuarioWebAdmin(admin.ModelAdmin):
-    list_display = ["cliente_link", "campo_modificado", "fecha_cambio"]
-    list_filter = ["fecha_cambio"]
-    search_fields = ["cliente__ruc_ci", "cliente__nombres", "campo_modificado"]
-    readonly_fields = ["fecha_cambio"]
-    list_select_related = ["cliente"]
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return [f.name for f in self.model._meta.fields]
-        return self.readonly_fields
-
-    def cliente_link(self, obj):
-        if obj.cliente:
-            url = reverse("admin:clientes_cliente_change", args=[obj.cliente.pk])
-            return format_html('<a href="{}">{}</a>', url, obj.cliente.nombre_completo)
-        return "-"
-    cliente_link.short_description = "Cliente"

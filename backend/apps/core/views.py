@@ -34,14 +34,12 @@ from .models import (
     Tarjeta,
     MovimientoTarjeta,
     CargaSaldo,
-    ConsumoTarjeta,
     MedioPago,
 )
 from .serializers import (
     TarjetaSerializer,
     MovimientoTarjetaSerializer,
     CargaSaldoSerializer,
-    ConsumoTarjetaSerializer,
     MedioPagoSerializer,
 )
 from .services import TarjetaService
@@ -256,17 +254,6 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             ),
         )
         return Response(self.get_serializer(carga_confirmada).data)
-
-
-class ConsumoTarjetaViewSet(viewsets.ModelViewSet):
-    queryset = ConsumoTarjeta.objects.select_related("tarjeta").all()
-    serializer_class = ConsumoTarjetaSerializer
-    # Explícito a propósito: coincide con el default global de DRF
-    # (IsStaffUser) — antes dependía implícitamente de él, ver hallazgo #3
-    # de la auditoría CRUD. Sin cambio de comportamiento, solo de claridad.
-    permission_classes = [IsStaffUser]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["tarjeta"]
 
 
 class MedioPagoViewSet(viewsets.ModelViewSet):

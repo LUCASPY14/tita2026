@@ -10,7 +10,6 @@ from .models import (
     Tarjeta,
     MovimientoTarjeta,
     CargaSaldo,
-    ConsumoTarjeta,
     MedioPago,
     PagoBancard,
 )
@@ -163,15 +162,6 @@ class CargaSaldoSerializer(serializers.ModelSerializer):
         model = CargaSaldo
         fields = "__all__"
         read_only_fields = ["fecha_carga", "fecha_confirmacion", "fecha_aprobacion", "fecha_creacion"]
-
-
-class ConsumoTarjetaSerializer(serializers.ModelSerializer):
-    tarjeta_nro = serializers.CharField(source="tarjeta.nro_tarjeta", read_only=True)
-
-    class Meta:
-        model = ConsumoTarjeta
-        fields = "__all__"
-        read_only_fields = ["fecha_consumo", "saldo_anterior", "saldo_posterior", "fecha_creacion"]
 
 
 class MedioPagoSerializer(serializers.ModelSerializer):

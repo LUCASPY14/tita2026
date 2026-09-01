@@ -12,7 +12,6 @@ from .models import (
     Rol,
     Permiso,
     RolPermiso,
-    PerfilUsuario,
 )
 
 
@@ -158,10 +157,3 @@ class RolPermisoSerializer(serializers.ModelSerializer):
         model = RolPermiso
         fields = "__all__"
         read_only_fields = ["fecha_asignacion"]
-
-
-class PerfilUsuarioSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PerfilUsuario
-        fields = "__all__"
-        read_only_fields = ["created_at", "updated_at"]

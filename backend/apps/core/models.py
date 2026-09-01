@@ -160,14 +160,6 @@ class MovimientoTarjeta(models.Model):
         blank=True,
         related_name="movimientos_tarjeta",
     )
-    consumo = models.ForeignKey(
-        "ConsumoTarjeta",
-        models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="movimientos_tarjeta",
-    )
-
     # Auditoría
     creado_por = models.ForeignKey(
         "usuarios.Usuario",
@@ -316,44 +308,6 @@ class CargaSaldo(models.Model):
 
     def __str__(self):
         return f"Carga #{self.pk} - {self.tarjeta} - ₲{self.monto_cargado:,.0f}"
-
-
-# ==============================================================================
-# CONSUMO DE TARJETA
-# ==============================================================================
-
-class ConsumoTarjeta(models.Model):
-    """Registro de consumo realizado con una tarjeta."""
-
-    tarjeta = models.ForeignKey(
-        Tarjeta, models.PROTECT, related_name="consumos"
-    )
-    fecha_consumo = models.DateTimeField(default=timezone.now)
-    monto_consumido = models.DecimalField(
-        max_digits=12, decimal_places=0, help_text="Monto en Guaraníes"
-    )
-    saldo_anterior = models.DecimalField(max_digits=12, decimal_places=0)
-    saldo_posterior = models.DecimalField(max_digits=12, decimal_places=0)
-    detalle = models.CharField(max_length=200, blank=True, null=True)
-    registrado_por = models.ForeignKey(
-        "usuarios.Usuario",
-        models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="consumos_tarjeta_registrados",
-    )
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Consumo de Tarjeta"
-        verbose_name_plural = "Consumos de Tarjetas"
-        ordering = ["-fecha_consumo"]
-        indexes = [
-            models.Index(fields=["tarjeta", "fecha_consumo"], name="idx_consumo_tarj_fecha"),
-        ]
-
-    def __str__(self):
-        return f"Consumo {self.tarjeta} - ₲{self.monto_consumido:,.0f}"
 
 
 # ==============================================================================

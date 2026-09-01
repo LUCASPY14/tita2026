@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 from rest_framework.exceptions import ValidationError
 
-from .models import Tarjeta, MovimientoTarjeta, CargaSaldo, ConsumoTarjeta
+from .models import Tarjeta, MovimientoTarjeta, CargaSaldo
 
 
 class TarjetaService:
@@ -174,61 +174,3 @@ class TarjetaService:
                 )
 
             return carga
-
-    @staticmethod
-    def consumir_saldo(
-        *,
-        tarjeta,
-        monto: Decimal,
-        registrado_por,
-        detalle: str = "",
-    ) -> ConsumoTarjeta:
-        """
-        Registra un consumo de saldo de tarjeta.
-
-        Flujo:
-        1. Validar tarjeta activa
-        2. Validar saldo disponible (incluye limite_credito)
-        3. Actualizar Tarjeta.saldo_actual
-        4. Crear ConsumoTarjeta
-        5. Crear MovimientoTarjeta (CONSUMO)
-        """
-        if monto <= 0:
-            raise ValidationError({"error": "El monto debe ser mayor a 0."})
-
-        with transaction.atomic():
-            tarjeta = Tarjeta.objects.select_for_update().get(pk=tarjeta.pk)
-            TarjetaService._validar_activa(tarjeta)
-
-            if tarjeta.saldo_disponible < monto:
-                raise ValidationError({
-                    "error": "Saldo insuficiente.",
-                    "saldo_disponible": str(tarjeta.saldo_disponible),
-                    "monto": str(monto),
-                })
-
-            saldo_anterior = tarjeta.saldo_actual
-            tarjeta.saldo_actual -= monto
-            tarjeta.save()
-
-            consumo = ConsumoTarjeta.objects.create(
-                tarjeta=tarjeta,
-                monto_consumido=monto,
-                saldo_anterior=saldo_anterior,
-                saldo_posterior=tarjeta.saldo_actual,
-                detalle=detalle,
-                registrado_por=registrado_por,
-            )
-
-            MovimientoTarjeta.objects.create(
-                tarjeta=tarjeta,
-                tipo=MovimientoTarjeta.Tipo.CONSUMO,
-                monto=monto,
-                saldo_anterior=saldo_anterior,
-                saldo_resultante=tarjeta.saldo_actual,
-                consumo=consumo,
-                descripcion=detalle or f"Consumo #{consumo.pk}",
-                creado_por=registrado_por,
-            )
-
-            return consumo

@@ -57,7 +57,6 @@ def medio_pago(db):
     "/admin/core/tarjeta/",
     "/admin/core/movimientotarjeta/",
     "/admin/core/cargasaldo/",
-    "/admin/core/consumotarjeta/",
     "/admin/core/mediopago/",
 ])
 def test_admin_changelist_returns_200(sa_client, url):

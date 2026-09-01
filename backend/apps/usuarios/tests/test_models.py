@@ -108,11 +108,6 @@ class TestModelosStr:
         rp = RolPermiso.objects.create(id_rol=rol, id_permiso=permiso)
         assert "Cajero Test" in str(rp)
 
-    def test_perfil_usuario_str(self, db, usuario_admin):
-        from apps.usuarios.models import PerfilUsuario
-        p = PerfilUsuario.objects.create(usuario=usuario_admin)
-        assert "Admin" in str(p)
-
     def test_autenticacion_2fa_str(self, db, usuario_admin):
         from apps.usuarios.models import Autenticacion2FA
         a = Autenticacion2FA.objects.create(
@@ -211,14 +206,6 @@ class TestModelosStr:
         )
         assert t.es_valido is True
 
-    def test_auditoria_empleado_str(self, db, empleado):
-        from apps.usuarios.models import AuditoriaEmpleado
-        a = AuditoriaEmpleado.objects.create(
-            empleado=empleado,
-            campo_modificado="telefono",
-        )
-        assert "telefono" in str(a)
-
     def test_auditoria_operacion_str(self, db, usuario_admin):
         from apps.usuarios.models import AuditoriaOperacion
         a = AuditoriaOperacion.objects.create(
@@ -227,11 +214,3 @@ class TestModelosStr:
             resultado="EXITO",
         )
         assert "CREAR_VENTA" in str(a)
-
-    def test_auditoria_usuario_web_str(self, db, cliente):
-        from apps.usuarios.models import AuditoriaUsuarioWeb
-        a = AuditoriaUsuarioWeb.objects.create(
-            cliente=cliente,
-            campo_modificado="email",
-        )
-        assert "email" in str(a)

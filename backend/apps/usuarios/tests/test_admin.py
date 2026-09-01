@@ -22,7 +22,6 @@ def sa_client(db):
     "/admin/usuarios/rol/",
     "/admin/usuarios/permiso/",
     "/admin/usuarios/rolpermiso/",
-    "/admin/usuarios/perfilusuario/",
     "/admin/usuarios/autenticacion2fa/",
     "/admin/usuarios/intento2fa/",
     "/admin/usuarios/intentologin/",
@@ -32,9 +31,7 @@ def sa_client(db):
     "/admin/usuarios/bloqueo cuenta/",
     "/admin/usuarios/tokenrecuperacion/",
     "/admin/usuarios/tokenverificacion/",
-    "/admin/usuarios/auditoriaempleado/",
     "/admin/usuarios/auditoriaoperacion/",
-    "/admin/usuarios/auditoriausuariweb/",
 ])
 def test_admin_changelist_returns_200_or_not_found(sa_client, url):
     # Algunos model_names pueden diferir por capitalización; 404 es aceptable
@@ -50,7 +47,6 @@ def test_admin_changelist_returns_200_or_not_found(sa_client, url):
     "/admin/usuarios/intentologin/",
     "/admin/usuarios/sesionactiva/",
     "/admin/usuarios/tokenrecuperacion/",
-    "/admin/usuarios/auditoriaempleado/",
     "/admin/usuarios/auditoriaoperacion/",
 ])
 def test_admin_changelist_returns_200(sa_client, url):

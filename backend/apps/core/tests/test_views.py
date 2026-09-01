@@ -266,32 +266,6 @@ class TestMedioPagoCacheHit:
         assert any(mp["descripcion"] == "CacheadoTest" for mp in resp.data)
 
 
-# ── ConsumoTarjetaViewSet.permission_classes ────────────────────────────────────
-
-@pytest.mark.django_db
-class TestConsumoTarjetaPermisos:
-    """permission_classes ahora explícito (antes caía al default global IsStaffUser
-    de forma implícita) — sin cambio de comportamiento, solo de claridad."""
-
-    def test_sin_autenticacion_falla(self, api_client):
-        resp = api_client.get("/api/v1/core/consumos/")
-        assert resp.status_code in (401, 403)
-
-    def test_staff_puede_listar(self, api_cajero):
-        resp = api_cajero.get("/api/v1/core/consumos/")
-        assert resp.status_code == 200
-
-    def test_cliente_web_no_puede_listar(self, api_client, db, cliente):
-        from apps.usuarios.models import Usuario
-        padre = Usuario.objects.create_user(
-            email="padre_consumo@test.com", password="test1234",
-            nombre="Padre", apellido="Test", rol="CLIENTE_WEB", cliente=cliente,
-        )
-        api_client.force_authenticate(user=padre)
-        resp = api_client.get("/api/v1/core/consumos/")
-        assert resp.status_code == 403
-
-
 # ── TarjetaViewSet.bloquear / activar ───────────────────────────────────────────
 
 @pytest.mark.django_db

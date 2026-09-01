@@ -5,7 +5,6 @@ from .views import (
     TarjetaViewSet,
     MovimientoTarjetaViewSet,
     CargaSaldoViewSet,
-    ConsumoTarjetaViewSet,
     MedioPagoViewSet,
     ReporteTarjetasView,
 )
@@ -35,7 +34,6 @@ router = DefaultRouter()
 router.register(r"tarjetas", TarjetaViewSet, basename="tarjetas")
 router.register(r"movimientos-tarjeta", MovimientoTarjetaViewSet, basename="movimientos-tarjeta")
 router.register(r"cargas-saldo", CargaSaldoViewSet, basename="cargas-saldo")
-router.register(r"consumos", ConsumoTarjetaViewSet, basename="consumos")
 router.register(r"medios-pago", MedioPagoViewSet, basename="medios-pago")
 
 urlpatterns = [

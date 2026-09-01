@@ -1,5 +1,5 @@
 ﻿"""
-Tests para core — TarjetaService (cargar_saldo, consumir_saldo).
+Tests para core — TarjetaService (cargar_saldo).
 """
 import pytest
 from decimal import Decimal
@@ -142,64 +142,3 @@ class TestCargarSaldo:
         assert carga.estado == "CONFIRMADA"
         tarjeta_activa.refresh_from_db()
         assert tarjeta_activa.saldo_actual == Decimal("12000")
-
-
-@pytest.mark.django_db
-class TestConsumirSaldo:
-
-    def test_consumo_ok(self, tarjeta_activa, usuario_cajero):
-        from apps.core.services import TarjetaService
-        from apps.core.models import MovimientoTarjeta
-
-        TarjetaService.consumir_saldo(
-            tarjeta=tarjeta_activa,
-            monto=Decimal("3000"),
-            registrado_por=usuario_cajero,
-            detalle="Almuerzo",
-        )
-
-        tarjeta_activa.refresh_from_db()
-        assert tarjeta_activa.saldo_actual == Decimal("7000")
-        assert MovimientoTarjeta.objects.filter(
-            tarjeta=tarjeta_activa, tipo=MovimientoTarjeta.Tipo.CONSUMO
-        ).exists()
-
-    def test_consumo_saldo_insuficiente_falla(self, tarjeta_activa, usuario_cajero):
-        from apps.core.services import TarjetaService
-
-        with pytest.raises(ValidationError, match="Saldo insuficiente"):
-            TarjetaService.consumir_saldo(
-                tarjeta=tarjeta_activa,
-                monto=Decimal("20000"),
-                registrado_por=usuario_cajero,
-            )
-
-    def test_consumo_tarjeta_bloqueada_falla(self, tarjeta_bloqueada, usuario_cajero):
-        from apps.core.services import TarjetaService
-
-        with pytest.raises(ValidationError, match="no esta activa"):
-            TarjetaService.consumir_saldo(
-                tarjeta=tarjeta_bloqueada,
-                monto=Decimal("1000"),
-                registrado_por=usuario_cajero,
-            )
-
-    def test_consumo_monto_cero_falla(self, tarjeta_activa, usuario_cajero):
-        from apps.core.services import TarjetaService
-
-        with pytest.raises(ValidationError, match="mayor a 0"):
-            TarjetaService.consumir_saldo(
-                tarjeta=tarjeta_activa,
-                monto=Decimal("0"),
-                registrado_por=usuario_cajero,
-            )
-
-    def test_consumo_monto_negativo_falla(self, tarjeta_activa, usuario_cajero):
-        from apps.core.services import TarjetaService
-
-        with pytest.raises(ValidationError, match="mayor a 0"):
-            TarjetaService.consumir_saldo(
-                tarjeta=tarjeta_activa,
-                monto=Decimal("-500"),
-                registrado_por=usuario_cajero,
-            )
