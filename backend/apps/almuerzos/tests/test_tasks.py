@@ -5,6 +5,10 @@ from datetime import date, timedelta
 from unittest.mock import patch
 from freezegun import freeze_time
 
+# Fecha congelada para TestGenerarCuentasMensuales — la fixture
+# suscripcion_activa_t (nivel de módulo) también la usa, ver ahí por qué.
+_HOY_CONGELADO = date(2026, 7, 15)
+
 
 @pytest.fixture
 def grado_t(db):
@@ -39,10 +43,15 @@ def plan_t(db):
 @pytest.fixture
 def suscripcion_activa_t(db, hijo_t, plan_t):
     from apps.almuerzos.models import SuscripcionAlmuerzo
+    # fecha_inicio relativa a _HOY_CONGELADO (no a date.today() real): esta
+    # fixture es de nivel de módulo, no hereda el @freeze_time de la clase
+    # que la consume — si usara date.today() real, con el paso de los meses
+    # "hoy - 30 días" termina cayendo después de _HOY_CONGELADO y la
+    # suscripción queda excluida (fecha_inicio__lte=ultimo_dia falla).
     return SuscripcionAlmuerzo.objects.create(
         hijo=hijo_t,
         plan=plan_t,
-        fecha_inicio=date.today() - timedelta(days=30),
+        fecha_inicio=_HOY_CONGELADO - timedelta(days=30),
         estado=SuscripcionAlmuerzo.Estado.ACTIVA,
     )
 
@@ -64,7 +73,7 @@ def usuario_portal_t(db, cliente):
 
 # ── generar_cuentas_mensuales ──────────────────────────────────────────────────
 
-@freeze_time("2026-07-15")
+@freeze_time(_HOY_CONGELADO.isoformat())
 @pytest.mark.django_db
 class TestGenerarCuentasMensuales:
 
