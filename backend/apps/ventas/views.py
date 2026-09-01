@@ -219,21 +219,123 @@ class AplicacionPagoViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class NotaCreditoViewSet(viewsets.ModelViewSet):
-    queryset = NotaCredito.objects.select_related("cliente", "empleado_autoriza").prefetch_related("detalles").all()
+    queryset = NotaCredito.objects.select_related("cliente", "empleado_autoriza", "venta_origen").prefetch_related("detalles").all()
     serializer_class = NotaCreditoSerializer
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["estado", "cliente"]
 
-    def perform_create(self, serializer):
-        nc = serializer.save()
+    def create(self, request, *args, **kwargs):
+        from decimal import Decimal, InvalidOperation
+        from apps.clientes.models import Cliente
+        from apps.productos.models import Producto
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+
+        cliente_id = request.data.get("cliente")
+        venta_origen_id = request.data.get("venta_origen")
+        nro_nota_credito = str(request.data.get("nro_nota_credito") or "").strip()
+        motivo = str(request.data.get("motivo") or "").strip()
+        monto_raw = request.data.get("monto_total")
+        detalles_raw = request.data.get("detalles") or []
+
+        if not cliente_id:
+            return Response({"error": "El campo 'cliente' es obligatorio."}, status=status.HTTP_400_BAD_REQUEST)
+        if not nro_nota_credito:
+            return Response({"error": "El campo 'nro_nota_credito' es obligatorio."}, status=status.HTTP_400_BAD_REQUEST)
+        if not motivo:
+            return Response({"error": "El campo 'motivo' es obligatorio."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cliente = Cliente.objects.get(pk=cliente_id)
+        except Cliente.DoesNotExist:
+            return Response({"error": "Cliente no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        venta_origen = None
+        if venta_origen_id:
+            try:
+                venta_origen = Venta.objects.get(pk=venta_origen_id, cliente=cliente)
+            except Venta.DoesNotExist:
+                return Response(
+                    {"error": "Venta de origen no encontrada para este cliente."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+        items = []
+        for i, det in enumerate(detalles_raw):
+            try:
+                producto = Producto.objects.get(pk=det["producto"])
+            except (Producto.DoesNotExist, KeyError):
+                return Response({"error": f"Detalle {i+1}: producto no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                cantidad = Decimal(str(det["cantidad"]))
+                if cantidad <= 0:
+                    raise ValueError
+            except (InvalidOperation, ValueError, KeyError):
+                return Response({"error": f"Detalle {i+1}: cantidad inválida."}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                precio_unitario = Decimal(str(det.get("precio_unitario", 0)))
+            except (InvalidOperation, TypeError):
+                precio_unitario = Decimal("0")
+            items.append({"producto": producto, "cantidad": cantidad, "precio_unitario": precio_unitario})
+
+        monto_total = None
+        if not items:
+            try:
+                monto_total = Decimal(str(monto_raw))
+            except (InvalidOperation, TypeError):
+                return Response({"error": "Indicá ítems o un monto_total mayor a 0."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            nc = VentaService.emitir_nota_credito(
+                cliente=cliente,
+                empleado=request.user,
+                nro_nota_credito=nro_nota_credito,
+                motivo=motivo,
+                venta_origen=venta_origen,
+                items=items,
+                monto_total=monto_total,
+            )
+        except DRFValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+
         registrar_auditoria(
-            request=self.request,
+            request=request,
             operacion="EMITIR_NOTA_CREDITO",
             tabla="ventas_notacredito",
             id_registro=nc.id,
-            descripcion=f"Nota de crédito #{nc.id} por {nc.monto_total} Gs. cliente={nc.cliente_id}",
+            descripcion=f"Nota de crédito #{nc.nro_nota_credito} por {nc.monto_total} Gs. cliente={nc.cliente_id}",
         )
+        return Response(self.get_serializer(nc).data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True, methods=["post"], url_path="anular",
+        permission_classes=[IsAdmin], throttle_classes=[SensitiveEndpointThrottle],
+    )
+    def anular(self, request, pk=None):
+        nc = self.get_object()
+        try:
+            nc = VentaService.anular_nota_credito(nc, anulado_por=request.user)
+        except Exception as e:
+            registrar_auditoria(
+                request=request,
+                operacion="ANULAR_NOTA_CREDITO",
+                tabla="ventas_notacredito",
+                id_registro=nc.id,
+                descripcion=f"Intento fallido de anular NC #{nc.nro_nota_credito}",
+                resultado="FALLA",
+                mensaje_error=str(e),
+            )
+            if hasattr(e, "detail"):
+                return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        registrar_auditoria(
+            request=request,
+            operacion="ANULAR_NOTA_CREDITO",
+            tabla="ventas_notacredito",
+            id_registro=nc.id,
+            descripcion=f"NC #{nc.nro_nota_credito} anulada ({nc.monto_total} Gs.)",
+        )
+        return Response(self.get_serializer(nc).data)
 
 
 class DetalleNotaCreditoViewSet(viewsets.ModelViewSet):

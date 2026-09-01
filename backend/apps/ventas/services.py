@@ -14,7 +14,7 @@ from rest_framework.exceptions import ValidationError
 from apps.clientes.models import CuentaCorrienteCliente
 from apps.inventario.models import Stock, MovimientoStock
 from apps.core.models import Tarjeta, MovimientoTarjeta
-from .models import Venta, DetalleVenta, PagoVenta, AplicacionPago
+from .models import Venta, DetalleVenta, PagoVenta, AplicacionPago, NotaCredito, DetalleNotaCredito
 
 
 def _calcular_iva_producto(producto, subtotal: Decimal) -> dict:
@@ -479,6 +479,161 @@ class VentaService:
             venta.save(update_fields=["estado"])
 
         return venta
+
+    @staticmethod
+    def emitir_nota_credito(
+        *,
+        cliente,
+        empleado,
+        nro_nota_credito: str,
+        motivo: str,
+        venta_origen=None,
+        items: list = None,
+        monto_total: Decimal = None,
+    ) -> NotaCredito:
+        """
+        Emite una nota de crédito a un cliente (devolución de mercadería o
+        descuento). Con items: revierte stock (INGRESO, DEVOLUCION_CLIENTE) y
+        el monto_total se calcula de la suma de líneas. Sin items: es un
+        descuento/ajuste puro y monto_total debe venir explícito.
+
+        Siempre reduce la deuda del cliente en cuenta corriente (CREDITO),
+        sin importar si tenía deuda o no.
+        """
+        items = items or []
+
+        if items:
+            monto_total = sum(
+                (i["cantidad"] * i["precio_unitario"]) for i in items
+            ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        elif not monto_total or monto_total <= 0:
+            raise ValidationError({"error": "Debe indicar ítems o un monto_total mayor a 0."})
+
+        with transaction.atomic():
+            if NotaCredito.objects.filter(nro_nota_credito=nro_nota_credito).exists():
+                raise ValidationError({"error": f"La nota de crédito {nro_nota_credito} ya fue registrada."})
+
+            nc = NotaCredito.objects.create(
+                cliente=cliente,
+                venta_origen=venta_origen,
+                nro_nota_credito=nro_nota_credito,
+                monto_total=monto_total,
+                motivo=motivo,
+                estado=NotaCredito.Estado.EMITIDA,
+                empleado_autoriza=empleado,
+            )
+
+            for item in items:
+                producto = item["producto"]
+                cantidad = item["cantidad"]
+                precio_unitario = item["precio_unitario"]
+                subtotal = (cantidad * precio_unitario).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+
+                DetalleNotaCredito.objects.create(
+                    nota_credito=nc,
+                    producto=producto,
+                    cantidad=cantidad,
+                    precio_unitario=precio_unitario,
+                    subtotal=subtotal,
+                )
+
+                if producto.requiere_stock:
+                    stock, _ = Stock.objects.get_or_create(
+                        producto=producto, defaults={"cantidad": Decimal("0")},
+                    )
+                    stock = Stock.objects.select_for_update().get(pk=stock.pk)
+                    stock.cantidad += cantidad
+                    stock.save()
+                    MovimientoStock.objects.create(
+                        producto=producto,
+                        tipo=MovimientoStock.Tipo.INGRESO,
+                        motivo=MovimientoStock.Motivo.DEVOLUCION_CLIENTE,
+                        cantidad=cantidad,
+                        stock_resultante=stock.cantidad,
+                        venta=venta_origen,
+                        autorizado_por=empleado,
+                        observaciones=f"Devolución NC #{nro_nota_credito}",
+                    )
+
+            ultimo_cc = (
+                CuentaCorrienteCliente.objects
+                .filter(cliente=cliente)
+                .select_for_update()
+                .order_by("-id")
+                .first()
+            )
+            saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
+            CuentaCorrienteCliente.objects.create(
+                cliente=cliente,
+                tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+                monto=monto_total,
+                saldo_anterior=saldo_anterior_cc,
+                saldo_resultante=saldo_anterior_cc - monto_total,
+                nota_credito=nc,
+                descripcion=f"Nota de crédito #{nro_nota_credito}",
+                creado_por=empleado,
+            )
+
+        return nc
+
+    @staticmethod
+    def anular_nota_credito(nc: "NotaCredito", anulado_por) -> "NotaCredito":
+        """
+        Anula una NC EMITIDA revirtiendo:
+        - Cuenta corriente (DEBITO que restaura la deuda reducida)
+        - Stock (EGRESO por cada ítem devuelto, si tenía)
+        """
+        if nc.estado == NotaCredito.Estado.ANULADA:
+            raise ValidationError({"error": "La nota de crédito ya está anulada."})
+
+        with transaction.atomic():
+            nc = NotaCredito.objects.select_for_update().get(pk=nc.pk)
+            if nc.estado == NotaCredito.Estado.ANULADA:
+                raise ValidationError({"error": "La nota de crédito ya está anulada."})
+
+            ultimo_cc = (
+                CuentaCorrienteCliente.objects
+                .filter(cliente=nc.cliente)
+                .select_for_update()
+                .order_by("-id")
+                .first()
+            )
+            saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
+            CuentaCorrienteCliente.objects.create(
+                cliente=nc.cliente,
+                tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+                monto=nc.monto_total,
+                saldo_anterior=saldo_anterior_cc,
+                saldo_resultante=saldo_anterior_cc + nc.monto_total,
+                nota_credito=nc,
+                descripcion=f"Reversión por anulación NC #{nc.nro_nota_credito}",
+                creado_por=anulado_por,
+            )
+
+            for detalle in nc.detalles.select_related("producto").all():
+                producto = detalle.producto
+                if producto.requiere_stock:
+                    stock, _ = Stock.objects.get_or_create(
+                        producto=producto, defaults={"cantidad": Decimal("0")},
+                    )
+                    stock = Stock.objects.select_for_update().get(pk=stock.pk)
+                    stock.cantidad -= detalle.cantidad
+                    stock.save()
+                    MovimientoStock.objects.create(
+                        producto=producto,
+                        tipo=MovimientoStock.Tipo.EGRESO,
+                        motivo=MovimientoStock.Motivo.CORRECCION,
+                        cantidad=detalle.cantidad,
+                        stock_resultante=stock.cantidad,
+                        venta=nc.venta_origen,
+                        autorizado_por=anulado_por,
+                        observaciones=f"Reversión por anulación NC #{nc.nro_nota_credito}",
+                    )
+
+            nc.estado = NotaCredito.Estado.ANULADA
+            nc.save(update_fields=["estado"])
+
+        return nc
 
 
 class PagoService:

@@ -2,17 +2,26 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   Search, ShoppingCart, ChevronDown, ChevronUp, XCircle, AlertTriangle,
+  Receipt, Plus, Eye, RotateCcw,
 } from 'lucide-react'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
+import Table, { type Column } from '../components/ui/Table'
+import ModalNC from './ventas/ModalNC'
+import ModalNCDetail from './ventas/ModalNCDetail'
+import {
+  NC_ESTADO_COLOR,
+  type ClienteOption, type ProductoOption, type VentaOrigen, type NotaCredito,
+} from './ventas/shared'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface DetalleVenta {
   id: number
+  producto: number
   producto_nombre: string
   cantidad: string
   precio_unitario: string
@@ -22,6 +31,7 @@ interface DetalleVenta {
 interface Venta {
   id: number
   fecha: string
+  cliente: number | null
   cliente_nombre: string | null
   hijo_nombre: string | null
   hijo_grado: string | null
@@ -89,6 +99,8 @@ export default function Ventas() {
   const isCajero = user?.rol === 'CAJERO'
   const canFilter = !isCajero  // CAJERO solo ve sus ventas — backend ya filtra
 
+  const [tab, setTab] = useState<'ventas' | 'notas'>('ventas')
+
   // ── Filtros ──────────────────────────────────────────────────────────────────
   const [desde, setDesde] = useState(today)
   const [hasta, setHasta] = useState(today)
@@ -109,8 +121,65 @@ export default function Ventas() {
   const [confirmAnular, setConfirmAnular] = useState<Venta | null>(null)
   const [anulando, setAnulando] = useState(false)
 
+  // ── Notas de crédito ─────────────────────────────────────────────────────────
+  const [clientesOpt, setClientesOpt] = useState<ClienteOption[]>([])
+  const [productosOpt, setProductosOpt] = useState<ProductoOption[]>([])
+  const [notas, setNotas] = useState<NotaCredito[]>([])
+  const [totalNotas, setTotalNotas] = useState(0)
+  const [pageNotas, setPageNotas] = useState(1)
+  const [loadingNotas, setLoadingNotas] = useState(false)
+  const [ncModalOpen, setNcModalOpen] = useState(false)
+  const [ncInitialVenta, setNcInitialVenta] = useState<VentaOrigen | null>(null)
+  const [detailNC, setDetailNC] = useState<NotaCredito | null>(null)
+
   const requestIdRef = useRef(0)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const reqNotasRef = useRef(0)
+
+  // ── Cargar clientes + productos (para el formulario de Nota de Crédito) ─────
+  useEffect(() => {
+    api.get('/clientes/clientes/', { params: { page_size: 500, activo: true } })
+      .then(({ data }) => setClientesOpt((data.results ?? []).map((c: { id: number; nombre_completo: string }) => ({ id: c.id, nombre_completo: c.nombre_completo }))))
+      .catch(() => {})
+    api.get('/productos/productos/', { params: { page_size: 500, activo: true } })
+      .then(({ data }) => setProductosOpt((data.results ?? []).map((p: { id: number; descripcion: string }) => ({ id: p.id, descripcion: p.descripcion }))))
+      .catch(() => {})
+  }, [])
+
+  // ── Cargar notas de crédito ──────────────────────────────────────────────────
+  const loadNotas = useCallback(async (p: number) => {
+    const reqId = ++reqNotasRef.current
+    setLoadingNotas(true)
+    try {
+      const { data } = await api.get('/ventas/notas-credito/', { params: { page: p, page_size: PAGE_SIZE, ordering: '-fecha_emision' } })
+      if (reqId !== reqNotasRef.current) return
+      setNotas(data.results ?? [])
+      setTotalNotas(data.count ?? 0)
+    } catch {
+      if (reqId !== reqNotasRef.current) return
+      toast.error('Error al cargar notas de crédito')
+    } finally {
+      if (reqId === reqNotasRef.current) setLoadingNotas(false)
+    }
+  }, [])
+
+  // Carga de datos al cambiar de tab/página: el setLoadingNotas(true) inicial es intencional.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (tab === 'notas') loadNotas(pageNotas) }, [tab, pageNotas, loadNotas])
+
+  function emitirNCDesdeVenta(v: Venta) {
+    setNcInitialVenta({
+      id: v.id,
+      fecha: v.fecha,
+      monto_total: v.monto_total,
+      cliente: v.cliente ?? 0,
+      detalles: v.detalles.map(d => ({
+        producto: d.producto, producto_nombre: d.producto_nombre,
+        cantidad: d.cantidad, precio_unitario: d.precio_unitario,
+      })),
+    })
+    setNcModalOpen(true)
+  }
 
   // ── Cargar cajeros + admins (solo visible para ADMIN) ───────────────────────
   useEffect(() => {
@@ -212,15 +281,66 @@ export default function Ventas() {
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
+  const colsNotas: Column<NotaCredito>[] = [
+    { title: 'NC #', key: 'nro', render: (_, r) => <span className="text-sm font-semibold text-slate-500">{r.nro_nota_credito}</span> },
+    { title: 'Cliente', key: 'cliente', render: (_, r) => <span className="text-base font-medium text-slate-800">{r.cliente_nombre}</span> },
+    { title: 'Monto', key: 'monto_total', render: (_, r) => <span className="text-base font-bold tabular-nums text-emerald-700">{formatGs(r.monto_total)}</span> },
+    {
+      title: 'Venta orig.', key: 'venta_origen',
+      render: (_, r) => r.venta_origen
+        ? <span className="text-sm text-blue-600 font-medium">#{r.venta_origen}</span>
+        : <span className="text-sm text-slate-400">—</span>,
+    },
+    { title: 'Estado', key: 'estado', render: (_, r) => <Badge color={NC_ESTADO_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge> },
+    { title: 'Fecha', key: 'fecha_emision', render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha_emision)}</span> },
+    {
+      title: '', key: 'acciones',
+      render: (_, r) => (
+        <div className="flex items-center gap-2 justify-end">
+          <Button size="sm" variant="secondary" onClick={() => setDetailNC(r)}><Eye className="w-3.5 h-3.5" />Ver</Button>
+        </div>
+      ),
+    },
+  ]
+
   // ─── JSX ─────────────────────────────────────────────────────────────────────
   return (
     <div className="p-4 md:p-6 space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Ventas</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Historial y gestión de ventas</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Ventas</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Historial y gestión de ventas</p>
+        </div>
+        {tab === 'notas' && (
+          <Button variant="primary" onClick={() => { setNcInitialVenta(null); setNcModalOpen(true) }}>
+            <Plus className="w-4 h-4" />Nueva Nota de Crédito
+          </Button>
+        )}
       </div>
 
+      {/* Tabs */}
+      <div className="border-b border-slate-200">
+        <div className="flex gap-0">
+          {([
+            { key: 'ventas' as const, label: 'Ventas', icon: ShoppingCart },
+            { key: 'notas' as const, label: 'Notas de Crédito', icon: Receipt },
+          ]).map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                tab === key ? 'border-green-600 text-green-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Icon className="w-4 h-4" />{label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === 'ventas' && (
+      <>
       {/* Filtros */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
         <div className="flex flex-wrap items-end gap-4">
@@ -402,6 +522,16 @@ export default function Ventas() {
                           ))}
                         </ul>
                       )}
+                      {v.estado === 'ACTIVA' && v.cliente && (
+                        <button
+                          type="button"
+                          onClick={e => { e.stopPropagation(); emitirNCDesdeVenta(v) }}
+                          className="mt-3 text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1.5"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Emitir Nota de Crédito
+                        </button>
+                      )}
                     </div>
                   )}
                 </li>
@@ -438,6 +568,20 @@ export default function Ventas() {
           </div>
         )}
       </div>
+      </>
+      )}
+
+      {tab === 'notas' && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h2 className="text-base font-semibold text-slate-800">Notas de Crédito</h2>
+          </div>
+          <div className="p-1">
+            <Table columns={colsNotas} dataSource={notas} rowKey="id" loading={loadingNotas}
+              pageSize={PAGE_SIZE} page={pageNotas} onPageChange={setPageNotas} total={totalNotas} />
+          </div>
+        </div>
+      )}
 
       {/* Modal de confirmación anulación */}
       {confirmAnular && (
@@ -472,6 +616,21 @@ export default function Ventas() {
           </div>
         </Modal>
       )}
+
+      <ModalNC
+        open={ncModalOpen}
+        clientes={clientesOpt}
+        productos={productosOpt}
+        initialVenta={ncInitialVenta}
+        onClose={() => { setNcModalOpen(false); setNcInitialVenta(null) }}
+        onSaved={() => { setPageNotas(1); loadNotas(1) }}
+      />
+      <ModalNCDetail
+        nc={detailNC}
+        canAnular={isAdmin}
+        onClose={() => setDetailNC(null)}
+        onAnulada={() => loadNotas(pageNotas)}
+      />
     </div>
   )
 }
