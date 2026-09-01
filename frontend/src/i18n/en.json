@@ -107,7 +107,8 @@
     "allergens":   "Allergens",
     "taxes":       "Taxes",
     "whatsapp":    "WhatsApp",
-    "purgaAlumnos":"Student Data Purge"
+    "purgaAlumnos":"Student Data Purge",
+    "notifications":"Notifications"
   },
 
   "errors": {

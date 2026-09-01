@@ -110,7 +110,8 @@
     "allergens":   "Alérgenos",
     "taxes":       "Impuestos",
     "whatsapp":    "WhatsApp",
-    "purgaAlumnos":"Purga de Alumnos"
+    "purgaAlumnos":"Purga de Alumnos",
+    "notifications":"Notificaciones"
   },
 
   "errors": {

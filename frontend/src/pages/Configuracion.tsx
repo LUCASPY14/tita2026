@@ -5,7 +5,7 @@ import {
   Settings, Tag, ListOrdered, CreditCard, Users,
   GraduationCap, Building2, History, Shield,
   UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent, Trash2, DollarSign,
-  MessageCircle, UserX,
+  MessageCircle, UserX, Bell,
 } from 'lucide-react'
 import api from '../services/api'
 import Modal from '../components/ui/Modal'
@@ -26,12 +26,13 @@ import TabAlergenos from './configuracion/TabAlergenos'
 import TabImpuestos from './configuracion/TabImpuestos'
 import TabWhatsApp from './configuracion/TabWhatsApp'
 import TabPurgaAlumnos from './configuracion/TabPurgaAlumnos'
+import TabNotificaciones from './configuracion/TabNotificaciones'
 
 type TabKey =
   | 'categorias' | 'tipos_cliente' | 'listas_precio' | 'medios_pago'
   | 'grados' | 'datos_empresa' | 'historial_precios' | 'seguridad'
   | 'tipos_almuerzo' | 'planes_almuerzo' | 'precios_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
-  | 'whatsapp' | 'purga_alumnos'
+  | 'whatsapp' | 'purga_alumnos' | 'notificaciones'
 
 const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'categorias',        labelKey: 'settings.categories',  icon: Tag },
@@ -50,6 +51,7 @@ const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'impuestos',         labelKey: 'settings.taxes',       icon: Percent },
   { key: 'whatsapp',          labelKey: 'settings.whatsapp',    icon: MessageCircle },
   { key: 'purga_alumnos',     labelKey: 'settings.purgaAlumnos',icon: UserX },
+  { key: 'notificaciones',    labelKey: 'settings.notifications',icon: Bell },
 ]
 
 export default function Configuracion() {
@@ -118,6 +120,7 @@ export default function Configuracion() {
         {tab === 'seguridad'         && <TabSeguridad />}
         {tab === 'whatsapp'          && <TabWhatsApp />}
         {tab === 'purga_alumnos'     && <TabPurgaAlumnos />}
+        {tab === 'notificaciones'    && <TabNotificaciones />}
       </div>
 
       <Modal
