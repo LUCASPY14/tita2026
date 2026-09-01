@@ -16,7 +16,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroCobradorSupervisorOrAdmin, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
 from common.utils.medios_pago import resolver_medio_pago
 from apps.usuarios.auditoria import registrar_auditoria
 
@@ -161,7 +161,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
 class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
     queryset = CuentaCorrienteCliente.objects.select_related("cliente").all()
     serializer_class = CuentaCorrienteClienteSerializer
-    permission_classes = [IsStaffUser]
+    permission_classes = [IsCajeroCobradorSupervisorOrAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["cliente", "tipo"]
     http_method_names = ["get", "post", "head", "options"]

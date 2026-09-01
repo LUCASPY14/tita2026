@@ -127,6 +127,32 @@ class TestViewSetsSimples:
         resp = api_cajero.get("/api/v1/clientes/cuentas-corrientes/")
         assert resp.status_code == 200
 
+    def test_cuentas_corrientes_rol_sin_permiso_de_cobranza_falla(self, api_client, db):
+        from apps.usuarios.models import Usuario
+        usuario_cocina = Usuario.objects.create_user(
+            email="cocina@test.com",
+            password="test1234",
+            nombre="Cocina",
+            apellido="Test",
+            rol=Usuario.Rol.COCINA,
+        )
+        api_client.force_authenticate(user=usuario_cocina)
+        resp = api_client.get("/api/v1/clientes/cuentas-corrientes/")
+        assert resp.status_code == 403
+
+    def test_cuentas_corrientes_supervisor_puede_cobrar(self, api_client, db):
+        from apps.usuarios.models import Usuario
+        usuario_supervisor = Usuario.objects.create_user(
+            email="supervisor@test.com",
+            password="test1234",
+            nombre="Supervisor",
+            apellido="Test",
+            rol=Usuario.Rol.SUPERVISOR,
+        )
+        api_client.force_authenticate(user=usuario_supervisor)
+        resp = api_client.get("/api/v1/clientes/cuentas-corrientes/")
+        assert resp.status_code == 200
+
     def test_responsables_list(self, api_admin):
         resp = api_admin.get("/api/v1/clientes/responsables/")
         assert resp.status_code == 200
