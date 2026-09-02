@@ -256,35 +256,6 @@ class TestCostoHistoricoModel:
         assert ch.costo_total == Decimal("15000")
 
 
-# ── AlertaStock ───────────────────────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestAlertaStockModel:
-
-    def test_str_activa(self, producto, stock_producto):
-        """activa=True → 'Activa' en __str__ (líneas 375-376)."""
-        from apps.inventario.models import AlertaStock
-        alerta = AlertaStock.objects.create(
-            producto=producto,
-            tipo=AlertaStock.TipoAlerta.STOCK_MINIMO,
-            stock_actual=Decimal("5"),
-            stock_minimo=Decimal("10"),
-            activa=True,
-        )
-        assert "Activa" in str(alerta)
-
-    def test_str_resuelta(self, producto, stock_producto):
-        """activa=False → 'Resuelta' en __str__ (línea 375)."""
-        from apps.inventario.models import AlertaStock
-        alerta = AlertaStock.objects.create(
-            producto=producto,
-            tipo=AlertaStock.TipoAlerta.STOCK_CERO,
-            stock_actual=Decimal("0"),
-            stock_minimo=Decimal("10"),
-            activa=False,
-        )
-        assert "Resuelta" in str(alerta)
-
 
 # ── LoteProducto ──────────────────────────────────────────────────────────────
 

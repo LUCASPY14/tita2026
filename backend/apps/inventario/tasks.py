@@ -1,5 +1,4 @@
 import logging
-from decimal import Decimal
 from celery import shared_task
 from django.utils import timezone
 from datetime import timedelta
@@ -16,55 +15,45 @@ logger = logging.getLogger(__name__)
     retry_jitter=True,
 )
 def alertar_stock_minimo():
-    """Crea AlertaStock para productos cuyo stock está en o por debajo del mínimo."""
-    from apps.inventario.models import Stock, AlertaStock
+    """
+    Detecta productos con stock en o por debajo del mínimo (mismo cálculo
+    en vivo que usa la pantalla de Inventario) y crea notificaciones
+    internas para los usuarios ADMIN.
+    """
+    from apps.inventario.services import StockService
+    from apps.notificaciones.models import Notificacion
+    from apps.usuarios.models import Usuario
 
-    stocks = Stock.objects.select_related("producto").filter(
-        producto__activo=True,
-        producto__stock_minimo__gt=0,
+    productos_bajo = StockService.calcular_alertas_stock()
+    if not productos_bajo:
+        logger.info("alertar_stock_minimo: sin productos bajo el mínimo")
+        return {"alertas_creadas": 0}
+
+    admins = list(Usuario.objects.filter(rol=Usuario.Rol.ADMIN, is_active=True))
+    if not admins:
+        logger.warning("alertar_stock_minimo: no hay usuarios ADMIN activos")
+        return {"alertas_creadas": 0}
+
+    detalle = "\n".join(
+        f"- {a['producto_nombre']}: {a['stock_actual']} (mínimo {a['stock_minimo']})"
+        for a in productos_bajo
     )
-
-    creadas = 0
-    for stock in stocks:
-        if not stock.requiere_reposicion:
-            # Si tenía alerta activa, resolverla
-            AlertaStock.objects.filter(
-                producto=stock.producto, activa=True
-            ).update(activa=False, fecha_resuelta=timezone.now())
-            continue
-
-        # Determinar tipo de alerta
-        if stock.cantidad <= 0:
-            tipo = AlertaStock.TipoAlerta.STOCK_CERO
-        elif stock.cantidad <= stock.producto.stock_minimo * Decimal("0.5"):
-            tipo = AlertaStock.TipoAlerta.STOCK_CRITICO
-        else:
-            tipo = AlertaStock.TipoAlerta.STOCK_MINIMO
-
-        # No duplicar alertas activas del mismo tipo
-        existe = AlertaStock.objects.filter(
-            producto=stock.producto,
-            tipo=tipo,
-            activa=True,
-        ).exists()
-        if existe:
-            continue
-
-        # Resolver alertas anteriores de tipo diferente
-        AlertaStock.objects.filter(
-            producto=stock.producto, activa=True
-        ).update(activa=False, fecha_resuelta=timezone.now())
-
-        AlertaStock.objects.create(
-            producto=stock.producto,
-            tipo=tipo,
-            stock_actual=stock.cantidad,
-            stock_minimo=stock.producto.stock_minimo,
+    alertas = 0
+    for admin in admins:
+        Notificacion.objects.create(
+            usuario=admin,
+            tipo=Notificacion.Tipo.SISTEMA,
+            titulo=f"{len(productos_bajo)} producto(s) bajo el stock mínimo",
+            mensaje=f"Los siguientes productos requieren reposición:\n{detalle}",
+            destino=Notificacion.Destino.SISTEMA,
         )
-        creadas += 1
+        alertas += 1
 
-    logger.info("alertar_stock_minimo: %d alertas creadas", creadas)
-    return {"alertas_creadas": creadas}
+    logger.info(
+        "alertar_stock_minimo: %d alertas creadas para %d productos bajo mínimo",
+        alertas, len(productos_bajo),
+    )
+    return {"alertas_creadas": alertas}
 
 
 @shared_task(
@@ -134,11 +123,12 @@ def verificar_vencimientos():
 )
 def generar_resumen_diario_stock():
     """Registra en log un resumen del estado del stock al cierre del día."""
-    from apps.inventario.models import Stock, AlertaStock
+    from apps.inventario.models import Stock
+    from apps.inventario.services import StockService
 
     total_productos = Stock.objects.count()
     sin_stock = Stock.objects.filter(cantidad__lte=0).count()
-    alertas_activas = AlertaStock.objects.filter(activa=True).count()
+    alertas_activas = len(StockService.calcular_alertas_stock())
 
     resumen = {
         "fecha": timezone.now().date().isoformat(),

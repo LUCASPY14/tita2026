@@ -237,6 +237,30 @@ class TestDashboardResumen:
         resp = api_admin.get("/api/v1/contabilidad/dashboard/")
         assert resp.data["cajasAbiertas"] >= 1
 
+    def test_stock_bajo_refleja_estado_en_vivo(self, api_admin, categoria, unidad_medida):
+        """stockBajo se calcula en vivo (StockService.calcular_alertas_stock),
+        no depende de que la tarea Celery diaria haya corrido."""
+        from decimal import Decimal
+        from apps.productos.models import Producto
+        from apps.inventario.models import Stock
+
+        resp = api_admin.get("/api/v1/contabilidad/dashboard/")
+        assert resp.data["stockBajo"] == 0
+
+        producto_bajo = Producto.objects.create(
+            descripcion="Producto bajo mínimo",
+            categoria=categoria,
+            unidad_medida=unidad_medida,
+            requiere_stock=True,
+            permite_stock_negativo=False,
+            activo=True,
+            stock_minimo=Decimal("10"),
+        )
+        Stock.objects.create(producto=producto_bajo, cantidad=Decimal("3"))
+
+        resp = api_admin.get("/api/v1/contabilidad/dashboard/")
+        assert resp.data["stockBajo"] == 1
+
     def test_sin_cumpleaneros_hoy(self, api_admin):
         resp = api_admin.get("/api/v1/contabilidad/dashboard/")
         assert resp.data["cumpleanosHoy"] == 0

@@ -94,7 +94,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
         from apps.ventas.models import Venta
         from apps.clientes.models import Cliente, Hijo
         from apps.productos.models import Producto
-        from apps.inventario.models import AlertaStock
+        from apps.inventario.services import StockService
         from apps.contabilidad.models import CierreCaja
         from apps.core.models import CargaSaldo, Tarjeta
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
@@ -138,7 +138,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
             "montoHoy":        int(ventas_hoy["monto"] or 0),
             "clientes":        Cliente.objects.filter(activo=True).count(),
             "productos":       Producto.objects.filter(activo=True).count(),
-            "stockBajo":       AlertaStock.objects.filter(activa=True).count(),
+            "stockBajo":       len(StockService.calcular_alertas_stock()),
             "cajasAbiertas":   CierreCaja.objects.filter(estado=CierreCaja.Estado.ABIERTO).count(),
             "recargasHoy":     recargas_hoy["cantidad"] or 0,
             "montoRecargasHoy": int(recargas_hoy["monto"] or 0),

@@ -23,7 +23,6 @@ def sa_client(db):
     "/admin/inventario/ajusteinventario/",
     "/admin/inventario/detalleajuste/",
     "/admin/inventario/costohistorico/",
-    "/admin/inventario/alertastock/",
     "/admin/inventario/loteproducto/",
     "/admin/inventario/alertavencimiento/",
 ])

@@ -14,7 +14,6 @@ from .models import (
     AjusteInventario,
     DetalleAjuste,
     CostoHistorico,
-    AlertaStock,
     LoteProducto,
     AlertaVencimiento,
 )
@@ -269,55 +268,6 @@ class CostoHistoricoAdmin(admin.ModelAdmin):
     def costo_total_display(self, obj):
         return f"₲{obj.costo_total:,.0f}"
     costo_total_display.short_description = "Costo Total"
-
-
-# ==============================================================================
-# ALERTA DE STOCK
-# ==============================================================================
-
-@admin.register(AlertaStock)
-class AlertaStockAdmin(admin.ModelAdmin):
-    list_display = [
-        "id",
-        "producto_link",
-        "tipo_badge",
-        "stock_actual_display",
-        "stock_minimo_display",
-        "activa",
-        "fecha_generada",
-    ]
-    list_filter = ["tipo", "activa", "fecha_generada"]
-    search_fields = ["producto__descripcion"]
-    readonly_fields = ["fecha_generada"]
-    list_select_related = ["producto"]
-    ordering = ["-fecha_generada"]
-
-    def producto_link(self, obj):
-        url = reverse("admin:productos_producto_change", args=[obj.producto.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.producto.descripcion)
-    producto_link.short_description = "Producto"
-
-    def tipo_badge(self, obj):
-        colors = {
-            "STOCK_MINIMO": "#ffc107",
-            "STOCK_CERO": "#dc3545",
-            "STOCK_CRITICO": "#dc3545",
-        }
-        color = colors.get(obj.tipo, "#6c757d")
-        return format_html(
-            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            color,
-            obj.get_tipo_display(),
-        )
-    tipo_badge.short_description = "Tipo"
-
-    def stock_actual_display(self, obj):
-        return str(obj.stock_actual)
-    stock_actual_display.short_description = "Stock Actual"
-
-    def stock_minimo_display(self, obj):
-        return str(obj.stock_minimo)
-    stock_minimo_display.short_description = "Stock Mínimo"
 
 
 # ==============================================================================

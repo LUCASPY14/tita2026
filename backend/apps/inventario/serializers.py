@@ -10,7 +10,6 @@ from .models import (
     AjusteInventario,
     DetalleAjuste,
     CostoHistorico,
-    AlertaStock,
     LoteProducto,
     AlertaVencimiento,
 )
@@ -62,15 +61,6 @@ class CostoHistoricoSerializer(serializers.ModelSerializer):
     class Meta:
         model = CostoHistorico
         fields = "__all__"
-
-
-class AlertaStockSerializer(serializers.ModelSerializer):
-    producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
-
-    class Meta:
-        model = AlertaStock
-        fields = "__all__"
-        read_only_fields = ["fecha_generada"]
 
 
 class AlertaVencimientoSerializer(serializers.ModelSerializer):

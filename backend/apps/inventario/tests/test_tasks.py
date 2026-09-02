@@ -27,23 +27,22 @@ def stock_bajo(db, producto_con_minimo):
 
 
 @pytest.fixture
-def stock_cero(db, producto_con_minimo):
-    from apps.inventario.models import Stock
-    return Stock.objects.create(producto=producto_con_minimo, cantidad=Decimal("0"))
-
-
-@pytest.fixture
-def stock_critico(db, producto_con_minimo):
-    """Stock = 3 (< 50% de stock_minimo=10 = 5) → STOCK_CRITICO."""
-    from apps.inventario.models import Stock
-    return Stock.objects.create(producto=producto_con_minimo, cantidad=Decimal("3"))
-
-
-@pytest.fixture
 def stock_normal(db, producto_con_minimo):
     """Stock > stock_minimo → no requiere reposición."""
     from apps.inventario.models import Stock
     return Stock.objects.create(producto=producto_con_minimo, cantidad=Decimal("20"))
+
+
+@pytest.fixture
+def usuario_admin2(db):
+    from apps.usuarios.models import Usuario
+    return Usuario.objects.create_user(
+        email="admin2@test.com",
+        password="test1234",
+        nombre="Admin2",
+        apellido="Test",
+        rol=Usuario.Rol.ADMIN,
+    )
 
 
 @pytest.fixture
@@ -92,67 +91,35 @@ class TestAlertarStockMinimo:
         result = alertar_stock_minimo()
         assert result == {"alertas_creadas": 0}
 
-    def test_stock_bajo_crea_alerta_stock_minimo(self, stock_bajo):
-        from apps.inventario.models import AlertaStock
+    def test_stock_bajo_notifica_a_admins_activos(self, stock_bajo, usuario_admin):
+        from apps.notificaciones.models import Notificacion
         from apps.inventario.tasks import alertar_stock_minimo
         result = alertar_stock_minimo()
-        assert result["alertas_creadas"] >= 1
-        assert AlertaStock.objects.filter(
-            producto=stock_bajo.producto,
-            tipo=AlertaStock.TipoAlerta.STOCK_MINIMO,
-            activa=True,
-        ).exists()
+        assert result["alertas_creadas"] == 1
+        notif = Notificacion.objects.get(usuario=usuario_admin)
+        assert stock_bajo.producto.descripcion in notif.mensaje
 
-    def test_stock_cero_crea_alerta_stock_cero(self, stock_cero):
-        from apps.inventario.models import AlertaStock
+    def test_notifica_a_cada_admin_activo(self, stock_bajo, usuario_admin, usuario_admin2):
+        from apps.notificaciones.models import Notificacion
         from apps.inventario.tasks import alertar_stock_minimo
         result = alertar_stock_minimo()
-        assert result["alertas_creadas"] >= 1
-        assert AlertaStock.objects.filter(
-            producto=stock_cero.producto,
-            tipo=AlertaStock.TipoAlerta.STOCK_CERO,
-            activa=True,
-        ).exists()
+        assert result["alertas_creadas"] == 2
+        assert Notificacion.objects.filter(usuario=usuario_admin).exists()
+        assert Notificacion.objects.filter(usuario=usuario_admin2).exists()
 
-    def test_stock_critico_crea_alerta_critica(self, stock_critico):
-        from apps.inventario.models import AlertaStock
+    def test_sin_admins_activos_no_notifica(self, stock_bajo):
+        from apps.notificaciones.models import Notificacion
         from apps.inventario.tasks import alertar_stock_minimo
         result = alertar_stock_minimo()
-        assert result["alertas_creadas"] >= 1
-        assert AlertaStock.objects.filter(
-            producto=stock_critico.producto,
-            tipo=AlertaStock.TipoAlerta.STOCK_CRITICO,
-            activa=True,
-        ).exists()
+        assert result == {"alertas_creadas": 0}
+        assert not Notificacion.objects.exists()
 
-    def test_stock_normal_resuelve_alerta_previa(self, stock_normal):
-        from apps.inventario.models import AlertaStock
-        # Crear alerta previa activa
-        AlertaStock.objects.create(
-            producto=stock_normal.producto,
-            tipo=AlertaStock.TipoAlerta.STOCK_MINIMO,
-            stock_actual=Decimal("5"),
-            stock_minimo=Decimal("10"),
-            activa=True,
-        )
+    def test_stock_normal_no_notifica(self, stock_normal, usuario_admin):
+        from apps.notificaciones.models import Notificacion
         from apps.inventario.tasks import alertar_stock_minimo
         result = alertar_stock_minimo()
-        assert result["alertas_creadas"] == 0
-        assert not AlertaStock.objects.filter(
-            producto=stock_normal.producto, activa=True
-        ).exists()
-
-    def test_no_duplica_alerta_del_mismo_tipo(self, stock_bajo):
-        from apps.inventario.models import AlertaStock
-        from apps.inventario.tasks import alertar_stock_minimo
-        # Primera ejecución
-        alertar_stock_minimo()
-        count1 = AlertaStock.objects.filter(producto=stock_bajo.producto, activa=True).count()
-        # Segunda ejecución — no debe duplicar
-        result = alertar_stock_minimo()
-        count2 = AlertaStock.objects.filter(producto=stock_bajo.producto, activa=True).count()
-        assert result["alertas_creadas"] == 0
-        assert count2 == count1
+        assert result == {"alertas_creadas": 0}
+        assert not Notificacion.objects.exists()
 
 
 # ── verificar_vencimientos ─────────────────────────────────────────────────────

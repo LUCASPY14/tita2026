@@ -4,7 +4,7 @@ Filtros para la app inventario
 
 import django_filters
 
-from .models import MovimientoStock, AlertaStock, LoteProducto, AlertaVencimiento
+from .models import MovimientoStock, LoteProducto, AlertaVencimiento
 
 
 class MovimientoStockFilter(django_filters.FilterSet):
@@ -16,12 +16,6 @@ class MovimientoStockFilter(django_filters.FilterSet):
     class Meta:
         model = MovimientoStock
         fields = ["producto", "tipo", "motivo", "fecha_desde", "fecha_hasta"]
-
-
-class AlertaStockFilter(django_filters.FilterSet):
-    class Meta:
-        model = AlertaStock
-        fields = ["producto", "tipo", "activa"]
 
 
 class LoteProductoFilter(django_filters.FilterSet):

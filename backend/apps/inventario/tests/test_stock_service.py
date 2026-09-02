@@ -284,6 +284,56 @@ class TestAjustarStock:
             )
 
 
+# ── StockService.calcular_alertas_stock ─────────────────────────────────────────
+# Única fuente de verdad de "stock bajo", usada por Inventario.tsx, el Dashboard,
+# el WebSocket de KPIs y la notificación diaria a ADMIN (ver apps.inventario.tasks).
+
+@pytest.mark.django_db
+class TestCalcularAlertasStock:
+
+    def test_sin_stock_bajo_retorna_vacio(self, stock_normal, producto_sin_stock):
+        from apps.inventario.services import StockService
+        assert StockService.calcular_alertas_stock() == []
+
+    def test_stock_en_el_minimo_clasifica_stock_minimo(self, db, producto_sin_stock):
+        from apps.inventario.models import Stock
+        from apps.inventario.services import StockService, TipoAlertaStock
+
+        Stock.objects.create(producto=producto_sin_stock, cantidad=Decimal("5"))
+        alertas = StockService.calcular_alertas_stock()
+
+        assert len(alertas) == 1
+        assert alertas[0]["tipo"] == TipoAlertaStock.STOCK_MINIMO
+        assert alertas[0]["producto"] == producto_sin_stock.pk
+
+    def test_stock_bajo_la_mitad_del_minimo_clasifica_critico(self, db, producto_sin_stock):
+        from apps.inventario.models import Stock
+        from apps.inventario.services import StockService, TipoAlertaStock
+
+        Stock.objects.create(producto=producto_sin_stock, cantidad=Decimal("2"))
+        alertas = StockService.calcular_alertas_stock()
+
+        assert alertas[0]["tipo"] == TipoAlertaStock.STOCK_CRITICO
+
+    def test_stock_cero_clasifica_stock_cero(self, db, producto_sin_stock):
+        from apps.inventario.models import Stock
+        from apps.inventario.services import StockService, TipoAlertaStock
+
+        Stock.objects.create(producto=producto_sin_stock, cantidad=Decimal("0"))
+        alertas = StockService.calcular_alertas_stock()
+
+        assert alertas[0]["tipo"] == TipoAlertaStock.STOCK_CERO
+
+    def test_filtro_search_por_descripcion(self, db, producto_sin_stock):
+        from apps.inventario.models import Stock
+        from apps.inventario.services import StockService
+
+        Stock.objects.create(producto=producto_sin_stock, cantidad=Decimal("0"))
+
+        assert len(StockService.calcular_alertas_stock(search="Sin stock")) == 1
+        assert StockService.calcular_alertas_stock(search="Inexistente") == []
+
+
 # ── Edge cases para cobertura 100% ────────────────────────────────────────────
 
 @pytest.mark.django_db

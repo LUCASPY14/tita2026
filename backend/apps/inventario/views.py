@@ -26,7 +26,6 @@ from .models import (
     AjusteInventario,
     DetalleAjuste,
     CostoHistorico,
-    AlertaStock,
     LoteProducto,
     AlertaVencimiento,
 )
@@ -37,7 +36,6 @@ from .serializers import (
     AjusteInventarioSerializer,
     DetalleAjusteSerializer,
     CostoHistoricoSerializer,
-    AlertaStockSerializer,
     LoteProductoSerializer,
     AlertaVencimientoSerializer,
 )
@@ -189,66 +187,33 @@ class CostoHistoricoViewSet(viewsets.ModelViewSet):
     filterset_fields = ["producto"]
 
 
-class AlertaStockViewSet(viewsets.ReadOnlyModelViewSet):
+class AlertaStockViewSet(viewsets.ViewSet):
     """
-    Calcula alertas de stock en tiempo real desde la tabla Stock,
-    sin depender de que la tarea Celery haya corrido.
+    Calcula alertas de stock en tiempo real vía StockService.calcular_alertas_stock
+    (única fuente de verdad, también usada por el Dashboard, el WebSocket de KPIs
+    y la notificación diaria a ADMIN — evita que queden desincronizados entre sí).
     """
-    serializer_class = AlertaStockSerializer
     permission_classes = [IsStaffUser]
 
-    def get_queryset(self):
-        stocks = (
-            Stock.objects
-            .select_related("producto")
-            .filter(
-                producto__stock_minimo__gt=0,
-                producto__requiere_stock=True,
-                cantidad__lte=models.F("producto__stock_minimo"),
-            )
-        )
-        search = self.request.query_params.get("search")
-        if search:
-            stocks = stocks.filter(producto__descripcion__icontains=search)
-
-        # Construimos AlertaStock virtuales (sin guardar en BD)
-        alertas = []
-        for s in stocks:
-            minimo = s.producto.stock_minimo
-            if s.cantidad <= 0:
-                tipo = AlertaStock.TipoAlerta.STOCK_CERO
-            elif minimo and s.cantidad <= minimo * Decimal("0.5"):
-                tipo = AlertaStock.TipoAlerta.STOCK_CRITICO
-            else:
-                tipo = AlertaStock.TipoAlerta.STOCK_MINIMO
-
-            alerta = AlertaStock(
-                producto=s.producto,
-                tipo=tipo,
-                stock_actual=s.cantidad,
-                stock_minimo=minimo,
-                activa=True,
-                fecha_generada=timezone.now(),
-            )
-            alertas.append(alerta)
-        return alertas
-
     def list(self, request, *args, **kwargs):
-        alertas = self.get_queryset()
+        alertas = StockService.calcular_alertas_stock(
+            search=request.query_params.get("search"),
+        )
+        ahora = timezone.now().isoformat()
         data = [
             {
-                "id": i + 1,
-                "producto": a.producto_id,
-                "producto_nombre": a.producto.descripcion,
-                "tipo": a.tipo,
-                "stock_actual": str(a.stock_actual),
-                "stock_minimo": str(a.stock_minimo),
+                "id": a["id"],
+                "producto": a["producto"],
+                "producto_nombre": a["producto_nombre"],
+                "tipo": a["tipo"],
+                "stock_actual": str(a["stock_actual"]),
+                "stock_minimo": str(a["stock_minimo"]),
                 "activa": True,
                 "notificacion_enviada": False,
-                "fecha_generada": a.fecha_generada.isoformat(),
+                "fecha_generada": ahora,
                 "fecha_resuelta": None,
             }
-            for i, a in enumerate(alertas)
+            for a in alertas
         ]
         return Response({"count": len(data), "results": data})
 

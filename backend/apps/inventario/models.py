@@ -346,45 +346,6 @@ class CostoHistorico(models.Model):
 
 
 # ==============================================================================
-# ALERTA DE STOCK
-# ==============================================================================
-
-class AlertaStock(models.Model):
-    """Alerta cuando el stock está por debajo del mínimo."""
-
-    class TipoAlerta(models.TextChoices):
-        STOCK_MINIMO = "STOCK_MINIMO", "Stock bajo el mínimo"
-        STOCK_CERO = "STOCK_CERO", "Stock agotado"
-        STOCK_CRITICO = "STOCK_CRITICO", "Stock crítico (50% del mínimo)"
-
-    producto = models.ForeignKey(
-        "productos.Producto",
-        models.PROTECT,
-        related_name="alertas_stock",
-    )
-    tipo = models.CharField(max_length=15, choices=TipoAlerta.choices)
-    stock_actual = models.DecimalField(max_digits=10, decimal_places=3)
-    stock_minimo = models.DecimalField(max_digits=10, decimal_places=3)
-    activa = models.BooleanField(default=True)
-    notificacion_enviada = models.BooleanField(default=False)
-    fecha_generada = models.DateTimeField(auto_now_add=True)
-    fecha_resuelta = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        verbose_name = "Alerta de Stock"
-        verbose_name_plural = "Alertas de Stock"
-        ordering = ["-fecha_generada"]
-        indexes = [
-            models.Index(fields=["producto", "activa"]),
-            models.Index(fields=["-fecha_generada"]),
-        ]
-
-    def __str__(self):
-        estado = "Activa" if self.activa else "Resuelta"
-        return f"{self.producto}: {self.get_tipo_display()} - {estado}"
-
-
-# ==============================================================================
 # LOTE DE PRODUCTO
 # ==============================================================================
 

@@ -7,11 +7,17 @@ from decimal import Decimal
 from typing import Dict, List
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import models, transaction
 
 from apps.productos.models import Producto
 
 from .models import MovimientoStock, Stock
+
+
+class TipoAlertaStock(models.TextChoices):
+    STOCK_MINIMO = "STOCK_MINIMO", "Stock bajo el mínimo"
+    STOCK_CERO = "STOCK_CERO", "Stock agotado"
+    STOCK_CRITICO = "STOCK_CRITICO", "Stock crítico (50% del mínimo)"
 
 
 class StockService:
@@ -322,3 +328,44 @@ class StockService:
             autorizado_por=autorizado_por,
             observaciones=observaciones,
         )
+
+    @staticmethod
+    def calcular_alertas_stock(search: str = None) -> List[Dict]:
+        """
+        Única fuente de verdad para "qué productos están bajo el stock
+        mínimo ahora mismo", calculada en vivo contra Stock. La usan la
+        pantalla de Inventario, el Dashboard, el WebSocket de KPIs y la
+        notificación diaria a ADMIN — evita que cada consumidor tenga su
+        propio criterio y terminen mostrando números distintos entre sí.
+        """
+        stocks = (
+            Stock.objects
+            .select_related("producto")
+            .filter(
+                producto__stock_minimo__gt=0,
+                producto__requiere_stock=True,
+                cantidad__lte=models.F("producto__stock_minimo"),
+            )
+        )
+        if search:
+            stocks = stocks.filter(producto__descripcion__icontains=search)
+
+        alertas = []
+        for i, s in enumerate(stocks):
+            minimo = s.producto.stock_minimo
+            if s.cantidad <= 0:
+                tipo = TipoAlertaStock.STOCK_CERO
+            elif minimo and s.cantidad <= minimo * Decimal("0.5"):
+                tipo = TipoAlertaStock.STOCK_CRITICO
+            else:
+                tipo = TipoAlertaStock.STOCK_MINIMO
+
+            alertas.append({
+                "id": i + 1,
+                "producto": s.producto_id,
+                "producto_nombre": s.producto.descripcion,
+                "tipo": tipo,
+                "stock_actual": s.cantidad,
+                "stock_minimo": minimo,
+            })
+        return alertas

@@ -13,7 +13,7 @@ def broadcast_kpi_update(sender, instance, **kwargs):
     from django.utils.timezone import localdate
     from apps.clientes.models import Cliente
     from apps.productos.models import Producto
-    from apps.inventario.models import AlertaStock
+    from apps.inventario.services import StockService
     from apps.contabilidad.models import CierreCaja
 
     hoy = localdate()
@@ -27,7 +27,7 @@ def broadcast_kpi_update(sender, instance, **kwargs):
         "montoHoy":      int(ventas_hoy["monto"] or 0),
         "clientes":      Cliente.objects.filter(activo=True).count(),
         "productos":     Producto.objects.filter(activo=True).count(),
-        "stockBajo":     AlertaStock.objects.filter(activa=True).count(),
+        "stockBajo":     len(StockService.calcular_alertas_stock()),
         "cajasAbiertas": CierreCaja.objects.filter(estado=CierreCaja.Estado.ABIERTO).count(),
     }
 
