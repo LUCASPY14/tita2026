@@ -193,17 +193,23 @@ class VentaService:
                     "iva_5": item_iva_5,
                 })
 
-            # Validar límite de crédito
-            # limite_credito=0 → sin crédito permitido; None → sin límite; >0 → límite máximo.
-            if tipo == "CREDITO" and limite_credito is not None:
-                limite_decimal = Decimal(str(limite_credito))
-                if saldo_anterior_cc + monto_total > limite_decimal:
+            # Validar cuenta corriente habilitada y límite de crédito
+            # permite_cuenta_corriente=False → sin crédito permitido;
+            # limite_credito=0 → sin límite; >0 → límite máximo.
+            if tipo == "CREDITO":
+                if not getattr(cliente, "permite_cuenta_corriente", False):
                     raise ValidationError({
-                        "error": "La venta excede el límite de crédito autorizado del cliente.",
-                        "limite_credito": str(limite_decimal),
-                        "saldo_deudor": str(saldo_anterior_cc),
-                        "monto_venta": str(monto_total),
+                        "error": "El cliente no tiene habilitada la cuenta corriente.",
                     })
+                if limite_credito:
+                    limite_decimal = Decimal(str(limite_credito))
+                    if saldo_anterior_cc + monto_total > limite_decimal:
+                        raise ValidationError({
+                            "error": "La venta excede el límite de crédito autorizado del cliente.",
+                            "limite_credito": str(limite_decimal),
+                            "saldo_deudor": str(saldo_anterior_cc),
+                            "monto_venta": str(monto_total),
+                        })
 
             # Validar saldo de tarjeta con objeto bloqueado
             if tipo == "CONTADO" and tarjeta_bloqueada:

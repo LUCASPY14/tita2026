@@ -51,6 +51,7 @@ def cliente(db, tipo_cliente, lista_precio):
         tipo_cliente=tipo_cliente,
         lista_precio=lista_precio,
         limite_credito=Decimal("999999"),
+        permite_cuenta_corriente=True,
     )
 
 

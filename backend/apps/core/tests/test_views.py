@@ -280,6 +280,48 @@ class TestCargaSaldoCuentaCorriente:
         assert mov.tipo == CuentaCorrienteCliente.Tipo.DEBITO
         assert mov.monto == Decimal("20000")
 
+    def test_cliente_sin_cuenta_corriente_habilitada_falla(self, api_cajero, tarjeta_core, cliente):
+        cliente.permite_cuenta_corriente = False
+        cliente.save(update_fields=["permite_cuenta_corriente"])
+        resp = api_cajero.post(
+            "/api/v1/core/cargas-saldo/",
+            {"tarjeta": tarjeta_core.pk, "monto_cargado": 20000, "metodo_pago": "CUENTA_CORRIENTE"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "no tiene habilitada" in resp.data["error"]
+
+    def test_limite_credito_cero_es_sin_limite(self, api_cajero, tarjeta_core, cliente):
+        cliente.limite_credito = Decimal("0")
+        cliente.save(update_fields=["limite_credito"])
+        resp = api_cajero.post(
+            "/api/v1/core/cargas-saldo/",
+            {"tarjeta": tarjeta_core.pk, "monto_cargado": 50_000_000, "metodo_pago": "CUENTA_CORRIENTE"},
+            format="json",
+        )
+        assert resp.status_code == 201
+
+    def test_limite_credito_positivo_bloquea_al_superarlo(self, api_cajero, tarjeta_core, cliente):
+        cliente.limite_credito = Decimal("100000")
+        cliente.save(update_fields=["limite_credito"])
+        resp = api_cajero.post(
+            "/api/v1/core/cargas-saldo/",
+            {"tarjeta": tarjeta_core.pk, "monto_cargado": 100_001, "metodo_pago": "CUENTA_CORRIENTE"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "excede el límite" in resp.data["error"]
+
+    def test_limite_credito_positivo_permite_hasta_el_tope(self, api_cajero, tarjeta_core, cliente):
+        cliente.limite_credito = Decimal("100000")
+        cliente.save(update_fields=["limite_credito"])
+        resp = api_cajero.post(
+            "/api/v1/core/cargas-saldo/",
+            {"tarjeta": tarjeta_core.pk, "monto_cargado": 100_000, "metodo_pago": "CUENTA_CORRIENTE"},
+            format="json",
+        )
+        assert resp.status_code == 201
+
 
 # ── MedioPago — cache hit real ────────────────────────────────────────────────
 

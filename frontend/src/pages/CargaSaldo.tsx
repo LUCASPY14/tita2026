@@ -97,6 +97,7 @@ export default function CargaSaldo() {
         return
       }
       setTarjeta(found)
+      if (!found.cliente_permite_cuenta_corriente) setTipoCobro('CONTADO')
       cargarHistorial(found.nro_tarjeta)
 
       if (found.hijo) {
@@ -282,6 +283,7 @@ export default function CargaSaldo() {
   const metodoSeleccionado = METODOS.find(m => m.value === metodo)
   const saldoCC = Number(tarjeta?.cliente_saldo_cc ?? 0)
   const limiteCC = Number(tarjeta?.cliente_limite_credito ?? 0)
+  const permiteCC = tarjeta?.cliente_permite_cuenta_corriente ?? false
   const mostrarMetodoPago = tipoCobro === 'CONTADO'
 
   // ── Columnas historial ────────────────────────────────────────────
@@ -539,18 +541,28 @@ export default function CargaSaldo() {
                   </button>
                   <button
                     type="button"
+                    disabled={!permiteCC}
                     onClick={() => setTipoCobro('CREDITO')}
-                    className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-colors cursor-pointer border-2 ${
-                      tipoCobro === 'CREDITO'
-                        ? 'bg-orange-500 text-white border-orange-500'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-orange-400'
+                    className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-colors border-2 ${
+                      !permiteCC
+                        ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
+                        : tipoCobro === 'CREDITO'
+                        ? 'bg-orange-500 text-white border-orange-500 cursor-pointer'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-orange-400 cursor-pointer'
                     }`}
                   >
                     <BookOpen className="w-4 h-4" />
                     Crédito CC
                   </button>
                 </div>
-                {tipoCobro === 'CREDITO' && (
+                {!permiteCC && (
+                  <div className="mt-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <p className="text-xs text-slate-500">
+                      Este cliente no tiene habilitada la cuenta corriente. Se puede activar desde la ficha del cliente.
+                    </p>
+                  </div>
+                )}
+                {permiteCC && tipoCobro === 'CREDITO' && (
                   <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 space-y-0.5">
                     <p className="text-xs text-orange-700 font-semibold">
                       {tipoSaldo === 'ALMUERZO'

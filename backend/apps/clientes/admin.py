@@ -33,11 +33,12 @@ class ClienteAdmin(admin.ModelAdmin):
         "telefono",
         "email",
         "limite_credito_display",
+        "permite_cuenta_corriente",
         "saldo_display",
         "tipo_cliente_link",
         "activo",
     ]
-    list_filter = ["activo", "tipo_cliente"]
+    list_filter = ["activo", "permite_cuenta_corriente", "tipo_cliente"]
     search_fields = ["ruc_ci", "nombres", "apellidos", "email"]
     ordering = ["apellidos", "nombres"]
     readonly_fields = ["fecha_registro"]
@@ -50,7 +51,7 @@ class ClienteAdmin(admin.ModelAdmin):
             "fields": ("telefono", "email", "direccion", "ciudad", "ciudad_catalogo")
         }),
         ("Configuración", {
-            "fields": ("tipo_cliente", "lista_precio", "limite_credito", "activo")
+            "fields": ("tipo_cliente", "lista_precio", "permite_cuenta_corriente", "limite_credito", "activo")
         }),
         ("Auditoría", {
             "fields": ("fecha_registro",),

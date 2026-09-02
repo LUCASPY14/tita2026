@@ -173,6 +173,8 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             return Response(out.data, status=status.HTTP_201_CREATED)
 
         if metodo == "CUENTA_CORRIENTE":
+            from decimal import Decimal
+            from django.db import transaction as _tx
             from apps.clientes.models import CuentaCorrienteCliente
             tarjeta_obj = data["tarjeta"]
             tarjeta_obj = Tarjeta.objects.select_related(
@@ -180,25 +182,52 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             ).get(pk=tarjeta_obj.pk)
             cliente = tarjeta_obj.hijo.cliente_responsable
 
-            carga = TarjetaService.cargar_saldo(
-                tarjeta=tarjeta_obj,
-                monto=data["monto_cargado"],
-                cliente_origen=cliente,
-                responsable=request.user,
-                metodo_pago=metodo,
-                referencia=data.get("referencia") or "",
-            )
+            if not cliente.permite_cuenta_corriente:
+                return Response(
+                    {"error": "El cliente no tiene habilitada la cuenta corriente."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-            CuentaCorrienteCliente.objects.create(
-                cliente=cliente,
-                tipo=CuentaCorrienteCliente.Tipo.DEBITO,
-                monto=data["monto_cargado"],
-                descripcion=(
-                    f"Recarga tarjeta {tarjeta_obj.nro_tarjeta}"
-                    f" - {tarjeta_obj.hijo.nombre_completo}"
-                ),
-                creado_por=request.user,
-            )
+            with _tx.atomic():
+                # limite_credito=0 → sin límite; >0 → tope máximo de deuda acumulada.
+                if cliente.limite_credito:
+                    ultimo_cc = (
+                        CuentaCorrienteCliente.objects
+                        .filter(cliente=cliente)
+                        .select_for_update()
+                        .order_by("-id")
+                        .first()
+                    )
+                    saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
+                    if saldo_anterior_cc + data["monto_cargado"] > cliente.limite_credito:
+                        return Response(
+                            {
+                                "error": f"La recarga excede el límite de crédito autorizado (₲{cliente.limite_credito:,.0f}).",
+                                "limite_credito": str(cliente.limite_credito),
+                                "saldo_deudor": str(saldo_anterior_cc),
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
+                carga = TarjetaService.cargar_saldo(
+                    tarjeta=tarjeta_obj,
+                    monto=data["monto_cargado"],
+                    cliente_origen=cliente,
+                    responsable=request.user,
+                    metodo_pago=metodo,
+                    referencia=data.get("referencia") or "",
+                )
+
+                CuentaCorrienteCliente.objects.create(
+                    cliente=cliente,
+                    tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+                    monto=data["monto_cargado"],
+                    descripcion=(
+                        f"Recarga tarjeta {tarjeta_obj.nro_tarjeta}"
+                        f" - {tarjeta_obj.hijo.nombre_completo}"
+                    ),
+                    creado_por=request.user,
+                )
 
             registrar_auditoria(
                 request=request,

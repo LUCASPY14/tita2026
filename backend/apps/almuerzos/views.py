@@ -623,7 +623,33 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
             hijo = data["hijo"]
             cliente = hijo.cliente_responsable
 
+            if not cliente.permite_cuenta_corriente:
+                return Response(
+                    {"error": "El cliente no tiene habilitada la cuenta corriente."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             with transaction.atomic():
+                # limite_credito=0 → sin límite; >0 → tope máximo de deuda acumulada.
+                if cliente.limite_credito:
+                    ultimo_cc = (
+                        CuentaCorrienteCliente.objects
+                        .filter(cliente=cliente)
+                        .select_for_update()
+                        .order_by("-id")
+                        .first()
+                    )
+                    saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
+                    if saldo_anterior_cc + data["monto_cargado"] > cliente.limite_credito:
+                        return Response(
+                            {
+                                "error": f"La recarga excede el límite de crédito autorizado (₲{cliente.limite_credito:,.0f}).",
+                                "limite_credito": str(cliente.limite_credito),
+                                "saldo_deudor": str(saldo_anterior_cc),
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
                 recarga = AlmuerzoService.recargar_saldo(
                     hijo=hijo,
                     monto=data["monto_cargado"],

@@ -28,6 +28,7 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
   const activo = useWatch({ control, name: 'activo' })
   const ciudadVal = useWatch({ control, name: 'ciudad' })
   const modalidadFacturacion = useWatch({ control, name: 'modalidad_facturacion' })
+  const permiteCC = useWatch({ control, name: 'permite_cuenta_corriente' })
 
   useEffect(() => {
     if (!open) return
@@ -42,6 +43,7 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
           telefono: cliente.telefono ?? '',
           email: cliente.email ?? '',
           limite_credito: cliente.limite_credito,
+          permite_cuenta_corriente: cliente.permite_cuenta_corriente,
           activo: cliente.activo,
           lista_precio: String(cliente.lista_precio),
           tipo_cliente: String(cliente.tipo_cliente),
@@ -165,24 +167,32 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
             min="0"
             step="1000"
             placeholder="0"
+            disabled={!permiteCC}
             {...register('limite_credito', { min: { value: 0, message: 'Debe ser ≥ 0' } })}
           />
         </div>
+        {permiteCC && (
+          <p className="text-xs text-slate-400 -mt-3">
+            0 = sin límite de deuda. Mayor a 0 = tope máximo de deuda acumulada.
+          </p>
+        )}
 
         <div className="border-t border-slate-100 pt-4 space-y-3">
           {([
             { key: 'activo' as const, label: `Cliente ${activo ? 'activo' : 'inactivo'}`, value: activo, color: 'green' as const },
             { key: 'modalidad_facturacion' as const, label: 'Factura mensual', value: modalidadFacturacion === 'MENSUAL', color: 'blue' as const },
+            { key: 'permite_cuenta_corriente' as const, label: 'Permite cuenta corriente (fiado)', value: permiteCC, color: 'blue' as const },
           ]).map(({ key, label, value, color }) => (
             <div key={key} className="flex items-center gap-3">
               <button
                 type="button"
                 role="switch"
                 aria-checked={value}
-                onClick={() => key === 'activo'
-                  ? setValue('activo', !activo)
-                  : setValue('modalidad_facturacion', modalidadFacturacion === 'MENSUAL' ? 'INMEDIATA' : 'MENSUAL')
-                }
+                onClick={() => {
+                  if (key === 'activo') setValue('activo', !activo)
+                  else if (key === 'modalidad_facturacion') setValue('modalidad_facturacion', modalidadFacturacion === 'MENSUAL' ? 'INMEDIATA' : 'MENSUAL')
+                  else setValue('permite_cuenta_corriente', !permiteCC)
+                }}
                 className={[
                   'relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2',
                   `focus:ring-${color}-500/30`,
@@ -201,6 +211,13 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
                     {modalidadFacturacion === 'MENSUAL'
                       ? 'Acumula transacciones del mes para emitir una sola factura'
                       : 'Una factura por transacción (por defecto)'}
+                  </p>
+                )}
+                {key === 'permite_cuenta_corriente' && (
+                  <p className="text-xs text-slate-400">
+                    {permiteCC
+                      ? 'Puede comprar al fiado y recargar saldo con cargo a su cuenta corriente'
+                      : 'No puede acumular deuda (desactivado por defecto)'}
                   </p>
                 )}
               </div>

@@ -21,6 +21,7 @@ def hijo_del_cliente(db, cliente):
 
 @pytest.fixture
 def cliente_sin_credito(db, tipo_cliente, lista_precio):
+    """permite_cuenta_corriente=False (default) → sin crédito permitido, sin importar limite_credito."""
     from apps.clientes.models import Cliente
     return Cliente.objects.create(
         nombres="Bloqueado",
@@ -29,6 +30,20 @@ def cliente_sin_credito(db, tipo_cliente, lista_precio):
         tipo_cliente=tipo_cliente,
         lista_precio=lista_precio,
         limite_credito=Decimal("0"),
+    )
+
+
+@pytest.fixture
+def cliente_con_limite(db, tipo_cliente, lista_precio):
+    from apps.clientes.models import Cliente
+    return Cliente.objects.create(
+        nombres="ConLimite",
+        apellidos="Test",
+        ruc_ci="CONLIM001",
+        tipo_cliente=tipo_cliente,
+        lista_precio=lista_precio,
+        limite_credito=Decimal("2000"),
+        permite_cuenta_corriente=True,
     )
 
 
@@ -109,17 +124,43 @@ class TestValidacionesVenta:
                 items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("3000")}],
             )
 
-    def test_credito_excede_limite_falla(
+    def test_credito_sin_cuenta_corriente_habilitada_falla(
         self, cliente_sin_credito, usuario_cajero, producto, stock_producto
     ):
-        """Venta a crédito supera límite_credito=0 → ValidationError (línea 160)."""
+        """permite_cuenta_corriente=False (default) → ValidationError, sin importar limite_credito."""
         from apps.ventas.services import VentaService
-        with pytest.raises(ValidationError, match="límite de crédito"):
+        with pytest.raises(ValidationError, match="no tiene habilitada"):
             VentaService.registrar_venta(
                 cliente=cliente_sin_credito, cajero=usuario_cajero,
                 tipo="CREDITO",
                 items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("3000")}],
             )
+
+    def test_credito_excede_limite_falla(
+        self, cliente_con_limite, usuario_cajero, producto, stock_producto
+    ):
+        """Venta a crédito supera limite_credito configurado → ValidationError (línea 160)."""
+        from apps.ventas.services import VentaService
+        with pytest.raises(ValidationError, match="límite de crédito"):
+            VentaService.registrar_venta(
+                cliente=cliente_con_limite, cajero=usuario_cajero,
+                tipo="CREDITO",
+                items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("3000")}],
+            )
+
+    def test_credito_limite_cero_con_cuenta_habilitada_es_sin_limite(
+        self, cliente_sin_credito, usuario_cajero, producto, stock_producto
+    ):
+        """permite_cuenta_corriente=True + limite_credito=0 → sin límite de deuda."""
+        cliente_sin_credito.permite_cuenta_corriente = True
+        cliente_sin_credito.save(update_fields=["permite_cuenta_corriente"])
+        from apps.ventas.services import VentaService
+        venta = VentaService.registrar_venta(
+            cliente=cliente_sin_credito, cajero=usuario_cajero,
+            tipo="CREDITO",
+            items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("3000")}],
+        )
+        assert venta.pk is not None
 
     def test_stock_no_preexistente_se_crea_via_get_or_create(
         self, cliente, usuario_cajero, medio_pago_efectivo, producto_negativo

@@ -33,6 +33,7 @@ class TarjetaSerializer(serializers.ModelSerializer):
     cliente_ruc = serializers.SerializerMethodField()
     cliente_saldo_cc = serializers.SerializerMethodField()
     cliente_limite_credito = serializers.SerializerMethodField()
+    cliente_permite_cuenta_corriente = serializers.SerializerMethodField()
 
     # Lista de precios asignada al cliente (para que el POS aplique precios correctos)
     lista_precio_id = serializers.SerializerMethodField()
@@ -123,6 +124,12 @@ class TarjetaSerializer(serializers.ModelSerializer):
             return int(self._get_cliente(obj).limite_credito)
         except AttributeError:
             return 0
+
+    def get_cliente_permite_cuenta_corriente(self, obj):
+        try:
+            return bool(self._get_cliente(obj).permite_cuenta_corriente)
+        except AttributeError:
+            return False
 
     def get_lista_precio_id(self, obj):
         try:

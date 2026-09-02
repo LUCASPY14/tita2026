@@ -39,6 +39,7 @@ export interface Tarjeta {
   cliente_id: number
   cliente_saldo_cc: string | number
   cliente_limite_credito: string | number
+  cliente_permite_cuenta_corriente: boolean
   cliente_modalidad_facturacion: 'INMEDIATA' | 'MENSUAL'
   saldo_actual: string | number
   saldo_disponible: string | number

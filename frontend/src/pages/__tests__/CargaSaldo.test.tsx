@@ -32,6 +32,7 @@ const TARJETA = {
   saldo_actual: '50000',
   saldo_disponible: '50000',
   estado: 'ACTIVA',
+  cliente_permite_cuenta_corriente: true,
 }
 
 const TARJETA_CON_HIJO = { ...TARJETA, hijo: 7 }
@@ -212,6 +213,22 @@ describe('CargaSaldo — saldo de almuerzo', () => {
     expect(screen.getByText('Saldo almuerzo')).toBeInTheDocument()
     expect(screen.getByText('Gs. -15.000')).toBeInTheDocument()
     expect(screen.getByText('debe')).toBeInTheDocument()
+  })
+
+  it('cliente sin cuenta corriente habilitada → botón "Crédito CC" deshabilitado', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: { results: [{ ...TARJETA_CON_HIJO, cliente_permite_cuenta_corriente: false }] } })
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({ data: { results: [{ saldo_actual: -15000 }] } })
+    renderCargaSaldo()
+    await user.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
+    await user.click(screen.getByRole('button'))
+    await screen.findByText('Juan Pérez')
+
+    expect(screen.getByRole('button', { name: /Crédito CC/i })).toBeDisabled()
+    expect(screen.getByText(/no tiene habilitada la cuenta corriente/i)).toBeInTheDocument()
   })
 
   it('seleccionar "Almuerzo" mantiene visible el toggle Contado/Crédito', async () => {

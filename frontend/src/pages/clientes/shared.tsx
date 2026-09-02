@@ -19,6 +19,7 @@ export interface Cliente {
   telefono: string | null
   email: string | null
   limite_credito: string
+  permite_cuenta_corriente: boolean
   activo: boolean
   fecha_registro: string
   lista_precio: number
@@ -39,6 +40,7 @@ export interface ClienteForm {
   telefono: string
   email: string
   limite_credito: string
+  permite_cuenta_corriente: boolean
   activo: boolean
   lista_precio: string
   tipo_cliente: string
@@ -136,7 +138,7 @@ export const RUC_CI_REGEX = /^(\d{6,8}(-\d{1,2})?|\d{1,8}-\d{1}|\d{6,8})$/
 export const BLANK_CLIENTE: ClienteForm = {
   nombres: '', apellidos: '', razon_social: '', ruc_ci: '',
   direccion: '', ciudad: '', telefono: '', email: '',
-  limite_credito: '0', activo: true, lista_precio: '', tipo_cliente: '',
+  limite_credito: '0', permite_cuenta_corriente: false, activo: true, lista_precio: '', tipo_cliente: '',
   modalidad_facturacion: 'INMEDIATA',
 }
 

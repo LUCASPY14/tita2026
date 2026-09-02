@@ -45,7 +45,12 @@ class Cliente(models.Model):
         max_digits=12,
         decimal_places=0,
         default=0,
-        help_text="Límite de crédito en Guaraníes (sin decimales)",
+        help_text="Límite de crédito en Guaraníes. 0 = sin límite (solo aplica si permite_cuenta_corriente está activo).",
+    )
+    permite_cuenta_corriente = models.BooleanField(
+        default=False,
+        help_text="Si está desactivado, el cliente no puede acumular deuda "
+                   "(ventas al fiado ni recargas por cuenta corriente), sin importar limite_credito.",
     )
     activo = models.BooleanField(default=True, help_text="False si el cliente está inactivo")
     fecha_registro = models.DateTimeField(auto_now_add=True)
