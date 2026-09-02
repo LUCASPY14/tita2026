@@ -41,6 +41,49 @@ class TestRegistrarVentaContado:
         stock = Stock.objects.get(producto=producto)
         assert stock.cantidad == Decimal("47")
 
+    def test_precio_de_la_lista_del_cliente_gana_al_del_payload(
+        self, cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto,
+    ):
+        """cliente.lista_precio (fixture 'lista_precio', no default) tiene un
+        PrecioPorLista de 3000 para 'producto' — precio_overrides debe usar
+        ese valor aunque el item mande otro precio distinto."""
+        from apps.ventas.services import VentaService
+
+        venta = VentaService.registrar_venta(
+            cliente=cliente,
+            cajero=usuario_cajero,
+            tipo="CONTADO",
+            medio_pago=medio_pago_efectivo,
+            items=[{"producto": producto, "cantidad": Decimal("1"), "precio_unitario": Decimal("9999")}],
+        )
+
+        assert venta.monto_total == Decimal("3000")
+        detalle = venta.detalles.get(producto=producto)
+        assert detalle.precio_unitario == Decimal("3000")
+
+    def test_sin_precio_en_la_lista_del_cliente_usa_el_del_payload(
+        self, cliente, usuario_cajero, medio_pago_efectivo, categoria,
+    ):
+        """Producto sin ningún PrecioPorLista cargado — precio_overrides
+        queda vacío para él y registrar_venta cae al precio del payload."""
+        from apps.productos.models import Producto
+        from apps.ventas.services import VentaService
+
+        producto_sin_lista = Producto.objects.create(
+            descripcion="Sin precio en lista", categoria=categoria,
+            requiere_stock=False, permite_stock_negativo=True, activo=True,
+        )
+
+        venta = VentaService.registrar_venta(
+            cliente=cliente,
+            cajero=usuario_cajero,
+            tipo="CONTADO",
+            medio_pago=medio_pago_efectivo,
+            items=[{"producto": producto_sin_lista, "cantidad": Decimal("1"), "precio_unitario": Decimal("7500")}],
+        )
+
+        assert venta.monto_total == Decimal("7500")
+
     def test_venta_sin_items_falla(self, cliente, usuario_cajero, medio_pago_efectivo):
         from apps.ventas.services import VentaService
 

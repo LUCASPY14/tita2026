@@ -17,6 +17,8 @@ import Table, { type Column } from '../components/ui/Table'
 interface Categoria { id: number; nombre: string; activo: boolean }
 interface UnidadMedida { id: number; nombre: string; abreviatura: string; activo: boolean }
 interface ImpuestoOption { id: number; nombre: string; porcentaje: string; activo: boolean }
+interface ListaPrecioOption { id: number; nombre: string; es_por_defecto: boolean }
+interface PrecioPorListaEntry { id: number; producto: number; lista: number; precio_unitario: string }
 
 interface Producto {
   id: number
@@ -126,13 +128,19 @@ interface ProductoModalProps {
   categorias: Categoria[]
   unidades: UnidadMedida[]
   impuestos: ImpuestoOption[]
+  listasPrecio: ListaPrecioOption[]
   onClose: () => void
   onSaved: () => void
 }
 
-function ProductoModal({ open, producto, categorias, unidades, impuestos, onClose, onSaved }: ProductoModalProps) {
+function ProductoModal({ open, producto, categorias, unidades, impuestos, listasPrecio, onClose, onSaved }: ProductoModalProps) {
   const [form, setForm] = useState<ProductoForm>(BLANK_FORM)
   const [saving, setSaving] = useState(false)
+
+  // Precios en listas que no son la de por defecto (esa se maneja con form.precio + set-precio).
+  const [otrosPrecios, setOtrosPrecios] = useState<Record<number, string>>({})
+  const [otrosPreciosIds, setOtrosPreciosIds] = useState<Record<number, number>>({})
+  const listasNoDefault = useMemo(() => listasPrecio.filter(l => !l.es_por_defecto), [listasPrecio])
 
   useEffect(() => {
     if (!open) return
@@ -154,6 +162,23 @@ function ProductoModal({ open, producto, categorias, unidades, impuestos, onClos
         }
       : BLANK_FORM
     )
+    setOtrosPrecios({})
+    setOtrosPreciosIds({})
+    if (producto) {
+      api.get<{ results?: PrecioPorListaEntry[] } | PrecioPorListaEntry[]>('/productos/precios-por-lista/', {
+        params: { producto: producto.id },
+      }).then(({ data }) => {
+        const entries = Array.isArray(data) ? data : (data.results ?? [])
+        const precios: Record<number, string> = {}
+        const ids: Record<number, number> = {}
+        for (const e of entries) {
+          precios[e.lista] = e.precio_unitario
+          ids[e.lista] = e.id
+        }
+        setOtrosPrecios(precios)
+        setOtrosPreciosIds(ids)
+      }).catch(() => toast.error('Error al cargar precios por lista'))
+    }
   }, [open, producto])
 
   useEffect(() => {
@@ -200,6 +225,19 @@ function ProductoModal({ open, producto, categorias, unidades, impuestos, onClos
       }
       await api.post(`/productos/productos/${productoId}/set-precio/`, { precio: Number(precio) || 0 })
       await api.post(`/productos/productos/${productoId}/set-impuesto/`, { impuesto: impuesto ? Number(impuesto) : null })
+
+      for (const lista of listasNoDefault) {
+        const valorStr = otrosPrecios[lista.id]
+        if (valorStr === undefined || valorStr === '') continue
+        const valor = Number(valorStr)
+        const precioExistenteId = otrosPreciosIds[lista.id]
+        if (precioExistenteId) {
+          await api.patch(`/productos/precios-por-lista/${precioExistenteId}/`, { precio_unitario: valor })
+        } else {
+          await api.post('/productos/precios-por-lista/', { producto: productoId, lista: lista.id, precio_unitario: valor })
+        }
+      }
+
       onSaved()
       onClose()
     } catch (err) {
@@ -286,6 +324,33 @@ function ProductoModal({ open, producto, categorias, unidades, impuestos, onClos
           </div>
         </div>
 
+        {/* Precios en otras listas */}
+        {listasNoDefault.length > 0 && (
+          <div className="border-t border-slate-100 pt-4">
+            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Precio en otras listas</p>
+            <div className="grid grid-cols-2 gap-4">
+              {listasNoDefault.map(lista => (
+                <div key={lista.id}>
+                  <label className={labelClass}>{lista.nombre} (Gs.)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">₲</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="500"
+                      value={otrosPrecios[lista.id] ?? ''}
+                      onChange={e => setOtrosPrecios(prev => ({ ...prev, [lista.id]: e.target.value }))}
+                      placeholder="Sin cargar"
+                      className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400 mt-2">Vacío = sin cambios en esa lista. Para copiar precios entre listas de una, usá Configuración → Listas de Precio.</p>
+          </div>
+        )}
+
         {/* Stock */}
         <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
           <div>
@@ -332,6 +397,7 @@ export default function Produtos() {
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [unidades, setUnidades] = useState<UnidadMedida[]>([])
   const [impuestos, setImpuestos] = useState<ImpuestoOption[]>([])
+  const [listasPrecio, setListasPrecio] = useState<ListaPrecioOption[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -360,6 +426,9 @@ export default function Produtos() {
     api.get('/productos/impuestos/')
       .then(({ data }) => setImpuestos((data.results ?? data).filter((i: ImpuestoOption) => i.activo)))
       .catch(() => toast.error('Error al cargar impuestos'))
+    api.get('/productos/listas-precio/', { params: { activo: true, page_size: 100 } })
+      .then(({ data }) => setListasPrecio(data.results ?? data))
+      .catch(() => toast.error('Error al cargar listas de precio'))
     // Load stock crítico count
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingCritico(true)
@@ -626,6 +695,7 @@ export default function Produtos() {
         categorias={categorias}
         unidades={unidades}
         impuestos={impuestos}
+        listasPrecio={listasPrecio}
         onClose={() => setModal({ open: false, producto: null })}
         onSaved={handleSaved}
       />

@@ -84,8 +84,10 @@ export interface TipoCliente {
 export interface ListaPrecio {
   id: number
   nombre: string
-  descripcion: string
-  es_precio_base: boolean
+  fecha_vigencia: string | null
+  moneda: string
+  activo: boolean
+  es_por_defecto: boolean
 }
 
 export interface MedioPago {

@@ -331,6 +331,108 @@ class TestSetPrecio:
         assert resp.status_code in (401, 403)
 
 
+# ── ListaPrecioViewSet.copiar_precios ───────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestCopiarPrecios:
+
+    def test_sin_desde_lista_retorna_400(self, api_admin, lista_defecto):
+        resp = api_admin.post(
+            f"/api/v1/productos/listas-precio/{lista_defecto.pk}/copiar-precios/",
+            {},
+            format="json",
+        )
+        assert resp.status_code == 400
+
+    def test_misma_lista_como_origen_y_destino_retorna_400(self, api_admin, lista_precio):
+        resp = api_admin.post(
+            f"/api/v1/productos/listas-precio/{lista_precio.pk}/copiar-precios/",
+            {"desde_lista": lista_precio.pk},
+            format="json",
+        )
+        assert resp.status_code == 400
+
+    def test_lista_origen_inexistente_retorna_404(self, api_admin, lista_defecto):
+        resp = api_admin.post(
+            f"/api/v1/productos/listas-precio/{lista_defecto.pk}/copiar-precios/",
+            {"desde_lista": 999_999},
+            format="json",
+        )
+        assert resp.status_code == 404
+
+    def test_ajuste_invalido_retorna_400(self, api_admin, lista_defecto, lista_precio):
+        resp = api_admin.post(
+            f"/api/v1/productos/listas-precio/{lista_defecto.pk}/copiar-precios/",
+            {"desde_lista": lista_precio.pk, "ajuste_porcentual": "no_numero"},
+            format="json",
+        )
+        assert resp.status_code == 400
+
+    def test_copia_precio_nuevo_sin_ajuste(self, api_admin, producto, lista_precio, lista_defecto):
+        from apps.productos.models import PrecioPorLista
+        resp = api_admin.post(
+            f"/api/v1/productos/listas-precio/{lista_defecto.pk}/copiar-precios/",
+            {"desde_lista": lista_precio.pk},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data == {"creados": 1, "actualizados": 0}
+        assert PrecioPorLista.objects.get(
+            producto=producto, lista=lista_defecto
+        ).precio_unitario == 3000
+
+    def test_copia_precio_con_ajuste_porcentual_negativo(self, api_admin, producto, lista_precio, lista_defecto):
+        from apps.productos.models import PrecioPorLista
+        resp = api_admin.post(
+            f"/api/v1/productos/listas-precio/{lista_defecto.pk}/copiar-precios/",
+            {"desde_lista": lista_precio.pk, "ajuste_porcentual": "-10"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        # 3000 * 0.9 = 2700
+        assert PrecioPorLista.objects.get(
+            producto=producto, lista=lista_defecto
+        ).precio_unitario == 2700
+
+    def test_actualiza_precio_existente_y_crea_historico(self, api_admin, producto, lista_precio, lista_defecto):
+        from decimal import Decimal
+        from apps.productos.models import PrecioPorLista, HistoricoPrecio
+        PrecioPorLista.objects.create(producto=producto, lista=lista_defecto, precio_unitario=Decimal("1000"))
+        resp = api_admin.post(
+            f"/api/v1/productos/listas-precio/{lista_defecto.pk}/copiar-precios/",
+            {"desde_lista": lista_precio.pk},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data == {"creados": 0, "actualizados": 1}
+        assert PrecioPorLista.objects.get(producto=producto, lista=lista_defecto).precio_unitario == 3000
+        assert HistoricoPrecio.objects.filter(
+            producto=producto, precio_anterior=1000, precio_nuevo=3000
+        ).exists()
+
+    def test_precio_igual_no_actualiza_ni_crea_historico(self, api_admin, producto, lista_precio, lista_defecto):
+        from decimal import Decimal
+        from apps.productos.models import PrecioPorLista, HistoricoPrecio
+        PrecioPorLista.objects.create(producto=producto, lista=lista_defecto, precio_unitario=Decimal("3000"))
+        antes = HistoricoPrecio.objects.count()
+        resp = api_admin.post(
+            f"/api/v1/productos/listas-precio/{lista_defecto.pk}/copiar-precios/",
+            {"desde_lista": lista_precio.pk},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data == {"creados": 0, "actualizados": 0}
+        assert HistoricoPrecio.objects.count() == antes
+
+    def test_cajero_no_puede_copiar_precios(self, api_cajero, lista_defecto, lista_precio):
+        resp = api_cajero.post(
+            f"/api/v1/productos/listas-precio/{lista_defecto.pk}/copiar-precios/",
+            {"desde_lista": lista_precio.pk},
+            format="json",
+        )
+        assert resp.status_code in (401, 403)
+
+
 # ── ProductoViewSet.set_impuesto ────────────────────────────────────────────────
 
 @pytest.fixture

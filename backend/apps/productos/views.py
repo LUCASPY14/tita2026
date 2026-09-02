@@ -232,6 +232,73 @@ class ListaPrecioViewSet(viewsets.ModelViewSet):
     queryset = ListaPrecio.objects.all()
     serializer_class = ListaPrecioSerializer
     permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["activo"]
+
+    @action(detail=True, methods=["post"], url_path="copiar-precios")
+    def copiar_precios(self, request, pk=None):
+        """
+        POST /api/productos/listas-precio/{id}/copiar-precios/
+        Body: {"desde_lista": <id>, "ajuste_porcentual": <opcional, ej. -10>}
+
+        Copia el precio de cada producto de la lista origen a esta lista,
+        aplicando el ajuste porcentual si se indica (redondeado a Guaraníes
+        enteros). Crea el PrecioPorLista si no existía, lo actualiza si ya
+        existía (generando HistoricoPrecio solo si el precio cambió).
+        Bootstrap pensado para poblar una lista vacía desde otra ya cargada.
+        """
+        from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
+        lista_destino = self.get_object()
+        desde_lista_id = request.data.get("desde_lista")
+        if not desde_lista_id:
+            return Response({"error": "Indicá 'desde_lista'."}, status=status.HTTP_400_BAD_REQUEST)
+        if str(desde_lista_id) == str(lista_destino.pk):
+            return Response(
+                {"error": "La lista origen no puede ser la misma que el destino."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            lista_origen = ListaPrecio.objects.get(pk=desde_lista_id)
+        except ListaPrecio.DoesNotExist:
+            return Response({"error": "Lista origen no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            ajuste = Decimal(str(request.data.get("ajuste_porcentual", 0) or 0))
+        except InvalidOperation:
+            return Response({"error": "Ajuste porcentual inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        factor = Decimal("1") + (ajuste / Decimal("100"))
+        creados = actualizados = 0
+        with transaction.atomic():
+            for precio_origen in PrecioPorLista.objects.filter(lista=lista_origen).select_related("producto"):
+                nuevo_precio = max(
+                    Decimal("0"),
+                    (precio_origen.precio_unitario * factor).quantize(Decimal("1"), rounding=ROUND_HALF_UP),
+                )
+                existing = PrecioPorLista.objects.filter(
+                    producto=precio_origen.producto, lista=lista_destino
+                ).first()
+                if existing:
+                    old_price = existing.precio_unitario
+                    if nuevo_precio != old_price:
+                        existing.precio_unitario = nuevo_precio
+                        existing.save()
+                        HistoricoPrecio.objects.create(
+                            producto=precio_origen.producto,
+                            precio_anterior=old_price,
+                            precio_nuevo=nuevo_precio,
+                            modificado_por=request.user,
+                        )
+                        actualizados += 1
+                else:
+                    PrecioPorLista.objects.create(
+                        producto=precio_origen.producto, lista=lista_destino, precio_unitario=nuevo_precio,
+                    )
+                    creados += 1
+
+        _invalidar_cache("productos_list_")
+        return Response({"creados": creados, "actualizados": actualizados}, status=status.HTTP_200_OK)
 
 
 class PrecioPorListaViewSet(viewsets.ModelViewSet):
