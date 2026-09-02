@@ -10,8 +10,6 @@ from .models import (
     Usuario,
     Empleado,
     Rol,
-    Permiso,
-    RolPermiso,
 )
 
 
@@ -140,20 +138,3 @@ class RolSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rol
         fields = "__all__"
-
-
-class PermisoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Permiso
-        fields = "__all__"
-        read_only_fields = ["fecha_creacion"]
-
-
-class RolPermisoSerializer(serializers.ModelSerializer):
-    rol_nombre = serializers.CharField(source="id_rol.nombre_rol", read_only=True)
-    permiso_codigo = serializers.CharField(source="id_permiso.codigo_permiso", read_only=True)
-
-    class Meta:
-        model = RolPermiso
-        fields = "__all__"
-        read_only_fields = ["fecha_asignacion"]

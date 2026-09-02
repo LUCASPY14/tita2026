@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { UserPlus, Search, Edit2, Shield, ShieldOff, Fingerprint, Users, HardHat, Plus, Pencil, Trash2, Globe, RefreshCw, KeyRound } from 'lucide-react'
+import { UserPlus, Search, Edit2, Briefcase, ShieldOff, Fingerprint, Users, HardHat, Plus, Pencil, Trash2, Globe, RefreshCw, KeyRound } from 'lucide-react'
 import api from '../services/api'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
 import {
   extractErrorMessage,
-  type Usuario, type UsuarioPortal, type Rol, type Permiso, type RolPermiso, type Empleado, type TabKey,
+  type Usuario, type UsuarioPortal, type Rol, type Empleado, type TabKey,
   ROL_COLOR, ROL_LABEL, ROLES_SISTEMA,
 } from './usuarios/shared'
 import ModalUsuario from './usuarios/ModalUsuario'
@@ -32,13 +32,8 @@ export default function Usuarios() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<Usuario | null>(null)
 
-  // ── Permisos ──────────────────────────────────────────────────────
+  // ── Roles (puestos de trabajo) ──────────────────────────────────────
   const [roles, setRoles] = useState<Rol[]>([])
-  const [permisos, setPermisos] = useState<Permiso[]>([])
-  const [selectedRolId, setSelectedRolId] = useState<number | null>(null)
-  const [rolPermisos, setRolPermisos] = useState<RolPermiso[]>([])
-  const [loadingRolPermisos, setLoadingRolPermisos] = useState(false)
-  const [togglingPermiso, setTogglingPermiso] = useState<number | null>(null)
 
   // ── Portal Padres ─────────────────────────────────────────────────
   const [padres, setPadres] = useState<UsuarioPortal[]>([])
@@ -82,7 +77,7 @@ export default function Usuarios() {
     return () => clearTimeout(searchTimer.current)
   }, [search, filterRol, loadUsuarios])
 
-  // ── Load roles / permisos ─────────────────────────────────────────
+  // ── Load roles (puestos de trabajo) ────────────────────────────────
   const loadRoles = useCallback(async () => {
     try {
       const { data } = await api.get('/usuarios/roles/', { params: { page_size: 100 } })
@@ -90,32 +85,12 @@ export default function Usuarios() {
     } catch { /* silent */ }
   }, [])
 
-  const loadPermisosAll = useCallback(async () => {
-    try {
-      const { data } = await api.get('/usuarios/permisos/', { params: { page_size: 500 } })
-      setPermisos(data.results ?? data)
-    } catch { /* silent */ }
-  }, [])
-
-  const loadRolPermisos = useCallback(async (rolId: number) => {
-    setLoadingRolPermisos(true)
-    try {
-      const { data } = await api.get('/usuarios/roles-permisos/', { params: { id_rol: rolId, page_size: 500 } })
-      setRolPermisos(data.results ?? data)
-    } catch {
-      toast.error('Error al cargar permisos del rol')
-    } finally {
-      setLoadingRolPermisos(false)
-    }
-  }, [])
-
   useEffect(() => {
-    if (tab === 'permisos') {
+    if (tab === 'roles') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       loadRoles()
-      loadPermisosAll()
     }
-  }, [tab, loadRoles, loadPermisosAll])
+  }, [tab, loadRoles])
 
   // ── Empleados ──────────────────────────────────────────────────────
   const [empleados, setEmpleados] = useState<Empleado[]>([])
@@ -236,31 +211,6 @@ export default function Usuarios() {
     }
   }, [loadPadres, searchPadres, pagePadres])
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (selectedRolId) loadRolPermisos(selectedRolId)
-    else setRolPermisos([])
-  }, [selectedRolId, loadRolPermisos])
-
-  // ── Toggle permiso ────────────────────────────────────────────────
-  const togglePermiso = useCallback(async (permisoId: number, currentlyAssigned: boolean) => {
-    if (!selectedRolId) return
-    setTogglingPermiso(permisoId)
-    try {
-      if (currentlyAssigned) {
-        const rp = rolPermisos.find(r => r.id_permiso === permisoId)
-        if (rp) await api.delete(`/usuarios/roles-permisos/${rp.id}/`)
-      } else {
-        await api.post('/usuarios/roles-permisos/', { id_rol: selectedRolId, id_permiso: permisoId })
-      }
-      await loadRolPermisos(selectedRolId)
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setTogglingPermiso(null)
-    }
-  }, [selectedRolId, rolPermisos, loadRolPermisos])
-
   // ── Eliminar rol ──────────────────────────────────────────────────
   const deleteRol = useCallback(async (rolId: number) => {
     if (!window.confirm('¿Eliminar este rol? Los empleados asignados quedarán sin rol.')) return
@@ -268,7 +218,6 @@ export default function Usuarios() {
     try {
       await api.delete(`/usuarios/roles/${rolId}/`)
       toast.success('Rol eliminado')
-      setSelectedRolId(prev => (prev === rolId ? null : prev))
       loadRoles()
     } catch (err) {
       toast.error(extractErrorMessage(err))
@@ -339,12 +288,47 @@ export default function Usuarios() {
   const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
   const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
-  // ── Permisos agrupados por módulo ─────────────────────────────────
-  const permisosPorModulo = permisos.reduce<Record<string, Permiso[]>>((acc, p) => {
-    if (!acc[p.modulo]) acc[p.modulo] = []
-    acc[p.modulo].push(p)
-    return acc
-  }, {})
+  const colsRoles: Column<Rol>[] = [
+    {
+      title: 'Rol',
+      key: 'nombre_rol',
+      render: (_, r) => <span className="text-base font-medium text-slate-800">{r.nombre_rol}</span>,
+    },
+    {
+      title: 'Descripción',
+      key: 'descripcion',
+      render: (_, r) => <span className="text-sm text-slate-500">{r.descripcion || '—'}</span>,
+    },
+    {
+      title: 'Estado',
+      key: 'estado',
+      render: (_, r) => <Badge color={r.estado ? 'green' : 'default'}>{r.estado ? 'Activo' : 'Inactivo'}</Badge>,
+    },
+    {
+      title: '',
+      key: 'acciones',
+      width: 100,
+      render: (_, r) => (
+        <div className="flex gap-1.5 justify-end">
+          <button
+            onClick={() => setRolModal({ open: true, rol: r })}
+            title="Editar rol"
+            className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors cursor-pointer"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => deleteRol(r.id_rol)}
+            disabled={deletingRolId === r.id_rol}
+            title="Eliminar rol"
+            className="p-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      ),
+    },
+  ]
 
   const colsEmpleados: Column<Empleado>[] = [
     {
@@ -378,10 +362,10 @@ export default function Usuarios() {
   ]
 
   const TABS = [
-    { key: 'usuarios'  as TabKey, label: 'Usuarios',        icon: Users    },
-    { key: 'empleados' as TabKey, label: 'Empleados',        icon: HardHat  },
-    { key: 'permisos'  as TabKey, label: 'Roles y Permisos', icon: Shield   },
-    { key: 'portal'    as TabKey, label: 'Portal Padres',    icon: Globe    },
+    { key: 'usuarios'  as TabKey, label: 'Usuarios',     icon: Users     },
+    { key: 'empleados' as TabKey, label: 'Empleados',    icon: HardHat   },
+    { key: 'roles'     as TabKey, label: 'Roles',        icon: Briefcase },
+    { key: 'portal'    as TabKey, label: 'Portal Padres', icon: Globe    },
   ]
 
   const colsPadres: Column<UsuarioPortal>[] = [
@@ -515,7 +499,7 @@ export default function Usuarios() {
             Nuevo Empleado
           </Button>
         )}
-        {tab === 'permisos' && (
+        {tab === 'roles' && (
           <Button variant="primary" onClick={() => setRolModal({ open: true, rol: null })}>
             <Plus className="w-4 h-4" />
             Nuevo Rol
@@ -587,99 +571,16 @@ export default function Usuarios() {
         </>
       )}
 
-      {/* ── Permisos tab ──────────────────────────────────────────── */}
-      {tab === 'permisos' && (
-        <div className="space-y-5">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
-            <label className={labelClass}>Rol</label>
-            <div className="flex items-center gap-2 flex-wrap">
-              <select
-                value={selectedRolId ?? ''}
-                onChange={e => setSelectedRolId(Number(e.target.value) || null)}
-                className={`${inputClass} max-w-xs`}
-              >
-                <option value="">— Elegí un rol —</option>
-                {roles.map(r => (
-                  <option key={r.id_rol} value={r.id_rol}>{r.nombre_rol}{!r.estado ? ' (inactivo)' : ''}</option>
-                ))}
-              </select>
-              {selectedRolId && (() => {
-                const rol = roles.find(r => r.id_rol === selectedRolId) ?? null
-                return (
-                  <>
-                    <button
-                      onClick={() => setRolModal({ open: true, rol })}
-                      title="Editar nombre / descripción"
-                      className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors cursor-pointer"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => deleteRol(selectedRolId)}
-                      disabled={deletingRolId === selectedRolId}
-                      title="Eliminar rol"
-                      className="p-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </>
-                )
-              })()}
-            </div>
+      {/* ── Roles tab ────────────────────────────────────────────── */}
+      {tab === 'roles' && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-1">
+            <Table
+              columns={colsRoles}
+              dataSource={roles}
+              rowKey="id_rol"
+            />
           </div>
-
-          {selectedRolId && (
-            loadingRolPermisos ? (
-              <div className="py-12 text-center text-slate-400 text-sm">Cargando permisos...</div>
-            ) : (
-              <div className="space-y-3">
-                {Object.entries(permisosPorModulo).sort(([a], [b]) => a.localeCompare(b)).map(([modulo, permsInMod]) => (
-                  <div key={modulo} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/80">
-                      <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">{modulo}</h3>
-                    </div>
-                    <div className="divide-y divide-slate-50">
-                      {permsInMod.map(p => {
-                        const assigned = rolPermisos.some(rp => rp.id_permiso === p.id)
-                        const toggling = togglingPermiso === p.id
-                        return (
-                          <label
-                            key={p.id}
-                            className="flex items-center justify-between px-5 py-3 hover:bg-slate-50/60 cursor-pointer transition-colors group"
-                          >
-                            <div className="flex-1 min-w-0 mr-4">
-                              <p className="text-base font-medium text-slate-800 group-hover:text-slate-900">{p.nombre}</p>
-                              <p className="text-sm text-slate-400 font-mono mt-0.5">{p.codigo_permiso}</p>
-                            </div>
-                            <div className={`relative shrink-0 ${toggling ? 'opacity-50 pointer-events-none' : ''}`}>
-                              <input
-                                type="checkbox"
-                                className="sr-only peer"
-                                checked={assigned}
-                                onChange={() => togglePermiso(p.id, assigned)}
-                              />
-                              <div className="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-green-500 transition-colors" />
-                              <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
-                            </div>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-                {permisos.length === 0 && (
-                  <div className="text-center py-10 text-slate-400 text-sm">No hay permisos configurados en el sistema.</div>
-                )}
-              </div>
-            )
-          )}
-
-          {!selectedRolId && (
-            <div className="text-center py-20 text-slate-400">
-              <Shield className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p className="text-sm font-medium">Elegí un rol para ver y editar sus permisos</p>
-            </div>
-          )}
         </div>
       )}
 
@@ -752,7 +653,7 @@ export default function Usuarios() {
         open={rolModal.open}
         rol={rolModal.rol}
         onClose={() => setRolModal({ open: false, rol: null })}
-        onSaved={() => { loadRoles(); if (!rolModal.rol) setSelectedRolId(null) }}
+        onSaved={loadRoles}
       />
     </div>
   )

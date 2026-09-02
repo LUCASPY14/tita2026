@@ -113,8 +113,7 @@ GET/PATCH  /api/v1/usuarios/usuarios/{id}/       → Detalle / editar
 POST       /api/v1/usuarios/usuarios/{id}/desactivar/   → Baja lógica (is_active=False)
 
 GET/POST   /api/v1/usuarios/empleados/           → Datos de personal
-GET/POST   /api/v1/usuarios/roles/               → Roles del sistema (legacy)
-GET/POST   /api/v1/usuarios/permisos/            → Permisos individuales
+GET/POST   /api/v1/usuarios/roles/               → Puestos de trabajo (catálogo de Empleado.id_rol)
 
 GET/POST   /api/v1/usuarios/perfiles/            → Preferencias de usuario
 ```

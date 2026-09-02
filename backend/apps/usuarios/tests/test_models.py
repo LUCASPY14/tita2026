@@ -15,16 +15,6 @@ def rol(db):
 
 
 @pytest.fixture
-def permiso(db):
-    from apps.usuarios.models import Permiso
-    return Permiso.objects.create(
-        codigo_permiso="VER_VENTAS",
-        nombre="Ver Ventas",
-        modulo="ventas",
-    )
-
-
-@pytest.fixture
 def empleado(db, rol):
     from apps.usuarios.models import Empleado
     return Empleado.objects.create(
@@ -99,14 +89,6 @@ class TestModelosStr:
 
     def test_rol_str(self, rol):
         assert "Cajero Test" in str(rol)
-
-    def test_permiso_str(self, permiso):
-        assert "VER_VENTAS" in str(permiso)
-
-    def test_rol_permiso_str(self, db, rol, permiso):
-        from apps.usuarios.models import RolPermiso
-        rp = RolPermiso.objects.create(id_rol=rol, id_permiso=permiso)
-        assert "Cajero Test" in str(rp)
 
     def test_autenticacion_2fa_str(self, db, usuario_admin):
         from apps.usuarios.models import Autenticacion2FA

@@ -19,28 +19,12 @@ from datetime import date
 # ==============================================================================
 # USUARIOS
 # ==============================================================================
-from apps.usuarios.models import Usuario, Rol, Permiso, Empleado
+from apps.usuarios.models import Usuario, Rol, Empleado
 
 print("Creando roles...")
 admin_rol, _ = Rol.objects.get_or_create(nombre_rol="Administrador", defaults={"descripcion": "Acceso total"})
 cajero_rol, _ = Rol.objects.get_or_create(nombre_rol="Cajero", defaults={"descripcion": "Punto de venta"})
 cocina_rol, _ = Rol.objects.get_or_create(nombre_rol="Cocina", defaults={"descripcion": "Preparacion de almuerzos"})
-
-print("Creando permisos...")
-permisos_data = [
-    ("ventas_crear", "Crear ventas", "ventas"),
-    ("ventas_anular", "Anular ventas", "ventas"),
-    ("compras_crear", "Crear compras", "compras"),
-    ("productos_gestionar", "Gestionar productos", "productos"),
-    ("clientes_gestionar", "Gestionar clientes", "clientes"),
-    ("reportes_ver", "Ver reportes", "reportes"),
-    ("caja_abrir", "Abrir caja", "contabilidad"),
-    ("caja_cerrar", "Cerrar caja", "contabilidad"),
-    ("almuerzos_registrar", "Registrar almuerzos", "almuerzos"),
-    ("tarjetas_recargar", "Recargar tarjetas", "core"),
-]
-for codigo, nombre, modulo in permisos_data:
-    Permiso.objects.get_or_create(codigo_permiso=codigo, defaults={"nombre": nombre, "modulo": modulo})
 
 print("Creando empleados...")
 empleados_data = [
@@ -415,7 +399,6 @@ print("DATOS DE PRUEBA CARGADOS EXITOSAMENTE")
 print("="*50)
 print(f"  Usuarios/Empleados: {Empleado.objects.count()}")
 print(f"  Roles: {Rol.objects.count()}")
-print(f"  Permisos: {Permiso.objects.count()}")
 print(f"  Medios de pago: {MedioPago.objects.count()}")
 print(f"  Categorias: {Categoria.objects.count()}")
 print(f"  Unidades de medida: {UnidadMedida.objects.count()}")

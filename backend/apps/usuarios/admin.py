@@ -12,8 +12,6 @@ from .models import (
     Usuario,
     Empleado,
     Rol,
-    Permiso,
-    RolPermiso,
     Autenticacion2FA,
     Intento2FA,
     CredencialWebAuthn,
@@ -118,34 +116,6 @@ class RolAdmin(admin.ModelAdmin):
     list_display = ["nombre_rol", "descripcion", "estado"]
     list_filter = ["estado"]
     search_fields = ["nombre_rol"]
-
-
-@admin.register(Permiso)
-class PermisoAdmin(admin.ModelAdmin):
-    list_display = ["codigo_permiso", "nombre", "modulo", "estado"]
-    list_filter = ["estado", "modulo"]
-    search_fields = ["codigo_permiso", "nombre"]
-    readonly_fields = ["fecha_creacion"]
-    ordering = ["modulo", "codigo_permiso"]
-
-
-@admin.register(RolPermiso)
-class RolPermisoAdmin(admin.ModelAdmin):
-    list_display = ["pk", "rol_link", "permiso_link", "fecha_asignacion"]
-    list_filter = ["id_rol"]
-    search_fields = ["id_rol__nombre_rol", "id_permiso__codigo_permiso"]
-    readonly_fields = ["fecha_asignacion"]
-    list_select_related = ["id_rol", "id_permiso"]
-
-    def rol_link(self, obj):
-        url = reverse("admin:usuarios_rol_change", args=[obj.id_rol.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.id_rol.nombre_rol)
-    rol_link.short_description = "Rol"
-
-    def permiso_link(self, obj):
-        url = reverse("admin:usuarios_permiso_change", args=[obj.id_permiso.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.id_permiso.codigo_permiso)
-    permiso_link.short_description = "Permiso"
 
 
 @admin.register(Autenticacion2FA)

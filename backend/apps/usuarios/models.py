@@ -199,11 +199,11 @@ class Empleado(models.Model):
 
 
 # ==============================================================================
-# ROL Y PERMISOS
+# ROL
 # ==============================================================================
 
 class Rol(models.Model):
-    """Roles del sistema que agrupan permisos."""
+    """Puesto de trabajo del empleado (ej: Cocinero, Cajero, Administrativo)."""
 
     id_rol = models.AutoField(primary_key=True)
     nombre_rol = models.CharField(unique=True, max_length=50)
@@ -220,60 +220,6 @@ class Rol(models.Model):
     def __str__(self):
         return self.nombre_rol
 
-
-
-class Permiso(models.Model):
-    """Permisos individuales del sistema."""
-
-    id = models.AutoField(primary_key=True)
-    codigo_permiso = models.CharField(max_length=100, unique=True)
-    nombre = models.CharField(max_length=100)
-    modulo = models.CharField(max_length=50)
-    descripcion = models.TextField(blank=True, null=True)
-    estado = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        managed = True
-        db_table = "permisos"
-        verbose_name = "Permiso"
-        verbose_name_plural = "Permisos"
-        ordering = ["modulo", "codigo_permiso"]
-
-    def __str__(self):
-        return f"{self.codigo_permiso} - {self.nombre}"
-
-
-class RolPermiso(models.Model):
-    """Relación muchos a muchos entre Roles y Permisos."""
-
-    id = models.AutoField(primary_key=True)
-    id_rol = models.ForeignKey(Rol, on_delete=models.CASCADE, db_column="id_rol")
-    id_permiso = models.ForeignKey(Permiso, on_delete=models.CASCADE, db_column="id_permiso")
-    fecha_asignacion = models.DateTimeField(auto_now_add=True)
-    asignado_por = models.ForeignKey(
-        Usuario,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        db_column="asignado_por",
-    )
-
-    class Meta:
-        managed = True
-        db_table = "roles_permisos"
-        verbose_name = "Rol-Permiso"
-        verbose_name_plural = "Roles-Permisos"
-        ordering = ["id_rol", "id_permiso"]
-        unique_together = [["id_rol", "id_permiso"]]
-
-    def __str__(self):
-        return f"{self.id_rol.nombre_rol} - {self.id_permiso.codigo_permiso}"
-
-
-# ==============================================================================
-# PERFIL DE USUARIO
-# ==============================================================================
 
 # ==============================================================================
 # AUTENTICACIÓN 2FA

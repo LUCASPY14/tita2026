@@ -7,8 +7,7 @@ impuestos, empresa, ventas diarias con cierres de caja, movimientos de tarjeta
 (recargas + consumos), compras a proveedores, consumo de almuerzo, alérgenos,
 cuenta corriente con deuda de un par de familias, y vencimientos de stock.
 
-Requiere haber corrido antes (en este orden):
-    python manage.py seed_permisos
+Requiere haber corrido antes:
     python manage.py seed_uat
 
 Idempotencia: NO es totalmente idempotente (genera historial aleatorio con
@@ -104,7 +103,7 @@ class Command(BaseCommand):
         if not (self.cajero and self.admin):
             raise RuntimeError(
                 "Faltan usuarios base (cajero/admin). Ejecutá primero: "
-                "python manage.py seed_permisos && python manage.py seed_uat"
+                "python manage.py seed_uat"
             )
 
         self.tarjetas = list(

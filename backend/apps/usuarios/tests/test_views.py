@@ -514,14 +514,6 @@ class TestViewSetsSimples:
         resp = api_admin.get("/api/v1/usuarios/roles/")
         assert resp.status_code == 200
 
-    def test_permisos_list(self, api_admin):
-        resp = api_admin.get("/api/v1/usuarios/permisos/")
-        assert resp.status_code == 200
-
-    def test_roles_permisos_list(self, api_admin):
-        resp = api_admin.get("/api/v1/usuarios/roles-permisos/")
-        assert resp.status_code == 200
-
 
 # ── PortalMiHijoView — con hijo+tarjeta+cuenta ───────────────────────────────
 

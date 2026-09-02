@@ -59,22 +59,6 @@ export interface Rol {
   estado: boolean
 }
 
-export interface Permiso {
-  id: number
-  codigo_permiso: string
-  nombre: string
-  modulo: string
-  descripcion: string | null
-}
-
-export interface RolPermiso {
-  id: number
-  id_rol: number
-  id_permiso: number
-  rol_nombre: string
-  permiso_codigo: string
-}
-
 export interface Empleado {
   id_empleado: number
   nombre: string
@@ -130,4 +114,4 @@ export const EMP_FORM_INITIAL: EmpleadoForm = {
   nombre: '', apellido: '', email: '', telefono: '', fecha_ingreso: '', id_rol: '', estado: true,
 }
 
-export type TabKey = 'usuarios' | 'empleados' | 'permisos' | 'portal'
+export type TabKey = 'usuarios' | 'empleados' | 'roles' | 'portal'

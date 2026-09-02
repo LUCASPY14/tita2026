@@ -9,7 +9,6 @@ Módulos cubiertos:
   - Menú diario de la semana actual + siguiente
   - Proveedores de compras
   - Stock inicial de productos
-  - Roles-Permisos por rol
 """
 
 from datetime import date, timedelta
@@ -41,7 +40,6 @@ class Command(BaseCommand):
             self._seed_suscripciones()
             self._seed_proveedores()
             self._seed_stock()
-            self._seed_roles_permisos()
 
         self.stdout.write(self.style.SUCCESS("\nSeed completado exitosamente."))
 
@@ -322,70 +320,6 @@ class Command(BaseCommand):
         self.stdout.write(f"    Stock: {creados} registros creados")
         if sin_match:
             self.stdout.write(f"    Stock asignado por defecto (20 unidades): {', '.join(sin_match)}")
-
-    # =========================================================================
-    # ROLES - PERMISOS
-    # =========================================================================
-
-    def _seed_roles_permisos(self):
-        from apps.usuarios.models import Rol, Permiso, RolPermiso
-
-        self.stdout.write("\n[8/6] Roles y permisos...")
-
-        # Mapping: rol_nombre -> list of permiso codes to assign
-        # Códigos según apps/usuarios/management/commands/seed_permisos.py (notación con punto).
-        matriz = {
-            "Administrador": [
-                "ventas.ver", "ventas.crear", "ventas.anular",
-                "cobros.ver", "cobros.registrar",
-                "clientes.ver", "clientes.crear", "clientes.editar",
-                "tarjetas.ver", "tarjetas.cargar_saldo", "tarjetas.asignar",
-                "caja.ver", "caja.abrir", "caja.cerrar",
-                "facturacion.ver", "facturacion.emitir", "facturacion.anular",
-                "inventario.ver", "inventario.ajustar", "inventario.aprobar_ajuste",
-                "productos.ver", "productos.crear", "productos.editar",
-                "compras.ver", "compras.crear_oc", "compras.aprobar_oc",
-                "almuerzos.ver", "almuerzos.gestionar_menu", "almuerzos.registrar_consumo",
-                "reportes.ver", "reportes.exportar",
-                "usuarios.ver", "usuarios.crear", "usuarios.editar", "usuarios.gestionar_roles",
-                "configuracion.ver", "configuracion.editar",
-            ],
-            "Cajero": [
-                "ventas.ver", "ventas.crear", "ventas.anular",
-                "tarjetas.ver", "tarjetas.cargar_saldo",
-                "caja.ver", "caja.abrir", "caja.cerrar",
-                "reportes.ver",
-            ],
-            "Cocina": [
-                "almuerzos.ver", "almuerzos.registrar_consumo",
-                "reportes.ver",
-            ],
-        }
-
-        permisos_map = {p.codigo_permiso: p for p in Permiso.objects.filter(estado=True)}
-        total_creados = 0
-
-        for rol_nombre, codigos in matriz.items():
-            try:
-                rol = Rol.objects.get(nombre_rol=rol_nombre)
-            except Rol.DoesNotExist:
-                self.stdout.write(self.style.WARNING(f"    Rol '{rol_nombre}' no encontrado, saltando."))
-                continue
-
-            for codigo in codigos:
-                permiso = permisos_map.get(codigo)
-                if not permiso:
-                    self.stdout.write(self.style.WARNING(f"    Permiso '{codigo}' no encontrado, saltando."))
-                    continue
-
-                _, created = RolPermiso.objects.get_or_create(
-                    id_rol=rol,
-                    id_permiso=permiso,
-                )
-                if created:
-                    total_creados += 1
-
-        self.stdout.write(f"    RolPermiso: {total_creados} asignaciones creadas")
 
     # =========================================================================
     # HELPERS

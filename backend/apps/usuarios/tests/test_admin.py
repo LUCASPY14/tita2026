@@ -20,8 +20,6 @@ def sa_client(db):
 @pytest.mark.parametrize("url", [
     "/admin/usuarios/usuario/",
     "/admin/usuarios/rol/",
-    "/admin/usuarios/permiso/",
-    "/admin/usuarios/rolpermiso/",
     "/admin/usuarios/autenticacion2fa/",
     "/admin/usuarios/intento2fa/",
     "/admin/usuarios/intentologin/",
@@ -43,7 +41,6 @@ def test_admin_changelist_returns_200_or_not_found(sa_client, url):
 @pytest.mark.parametrize("url", [
     "/admin/usuarios/usuario/",
     "/admin/usuarios/rol/",
-    "/admin/usuarios/permiso/",
     "/admin/usuarios/intentologin/",
     "/admin/usuarios/sesionactiva/",
     "/admin/usuarios/tokenrecuperacion/",
