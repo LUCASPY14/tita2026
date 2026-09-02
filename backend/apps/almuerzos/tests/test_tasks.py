@@ -155,6 +155,49 @@ class TestAvisarDeudaAlmuerzo:
         assert result["notificaciones_creadas"] == 0
 
 
+# ── alertar_saldo_almuerzo_negativo ─────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestAlertarSaldoAlmuerzoNegativo:
+
+    def test_sin_deudores_retorna_cero(self, db):
+        from apps.almuerzos.tasks import alertar_saldo_almuerzo_negativo
+        result = alertar_saldo_almuerzo_negativo()
+        assert result == {"alertados": 0}
+
+    def test_deuda_bajo_el_umbral_no_alerta(self, hijo_t):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import alertar_saldo_almuerzo_negativo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("-50000"))
+        result = alertar_saldo_almuerzo_negativo()
+        assert result["alertados"] == 0
+
+    def test_deuda_supera_el_umbral_alerta_a_admins(self, hijo_t, usuario_admin):
+        from apps.notificaciones.models import Notificacion
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import alertar_saldo_almuerzo_negativo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("-150000"))
+        result = alertar_saldo_almuerzo_negativo()
+        assert result["alertados"] == 1
+        notif = Notificacion.objects.get(usuario=usuario_admin)
+        assert "Task Alm" in notif.titulo
+        assert "150,000" in notif.mensaje
+
+    def test_deuda_justo_en_el_umbral_alerta(self, hijo_t, usuario_admin):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import alertar_saldo_almuerzo_negativo, _MONTO_ALERTA_SALDO_ALMUERZO
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal(-_MONTO_ALERTA_SALDO_ALMUERZO))
+        result = alertar_saldo_almuerzo_negativo()
+        assert result["alertados"] == 1
+
+    def test_no_notifica_si_no_hay_admins_activos(self, hijo_t):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import alertar_saldo_almuerzo_negativo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("-150000"))
+        result = alertar_saldo_almuerzo_negativo()
+        assert result["alertados"] == 1  # el alumno cuenta igual, aunque no haya a quién notificar
+
+
 # ── cerrar_cuentas_mes_anterior ───────────────────────────────────────────────
 
 def _mes_anterior():

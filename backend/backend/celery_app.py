@@ -115,6 +115,10 @@ app.conf.beat_schedule = {
         "task": "apps.almuerzos.tasks.avisar_deuda_almuerzo",
         "schedule": crontab(hour=8, minute=0, day_of_week=5),  # Todos los viernes 08:00
     },
+    "alertar-saldo-almuerzo-negativo": {
+        "task": "apps.almuerzos.tasks.alertar_saldo_almuerzo_negativo",
+        "schedule": crontab(hour=9, minute=45),   # Todos los días 09:45
+    },
     # ── Usuarios / Auditoría ──────────────────────────────────────────
     "limpiar-audit-logs": {
         "task": "apps.usuarios.tasks.limpiar_audit_logs",

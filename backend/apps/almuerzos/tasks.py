@@ -8,6 +8,8 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+_MONTO_ALERTA_SALDO_ALMUERZO = 100_000
+
 
 @shared_task(
     name="apps.almuerzos.tasks.cerrar_cuentas_mes_anterior",
@@ -260,3 +262,61 @@ def avisar_deuda_almuerzo():
 
     logger.info("avisar_deuda_almuerzo: %d notificaciones creadas", creadas)
     return {"notificaciones_creadas": creadas}
+
+
+@shared_task(
+    name="apps.almuerzos.tasks.alertar_saldo_almuerzo_negativo",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
+def alertar_saldo_almuerzo_negativo():
+    """
+    Avisa a ADMIN cuando la deuda de saldo de almuerzo de un alumno supera
+    _MONTO_ALERTA_SALDO_ALMUERZO. No deduplica entre corridas — mientras
+    la deuda siga superando el umbral, vuelve a notificar cada día
+    (mismo criterio que apps.clientes.tasks.alertar_saldo_negativo_prolongado).
+
+    No reemplaza a avisar_deuda_almuerzo (aviso semanal a los padres por
+    cualquier saldo negativo) — esta tarea es la visibilidad para admin.
+    """
+    from apps.almuerzos.models import SaldoAlmuerzo
+    from apps.notificaciones.models import Notificacion
+    from apps.usuarios.models import Usuario
+
+    saldos_en_alerta = SaldoAlmuerzo.objects.filter(
+        saldo_actual__lte=-_MONTO_ALERTA_SALDO_ALMUERZO,
+    ).select_related("hijo__cliente_responsable")
+
+    admins = list(Usuario.objects.filter(rol=Usuario.Rol.ADMIN, is_active=True))
+    alertados = 0
+    for saldo in saldos_en_alerta:
+        hijo = saldo.hijo
+        deuda = -saldo.saldo_actual
+        msg = (
+            f"Deuda de almuerzo de {hijo.nombre_completo}: "
+            f"Gs. {deuda:,.0f} — supera el umbral de alerta "
+            f"(Gs. {_MONTO_ALERTA_SALDO_ALMUERZO:,.0f})."
+        )
+
+        try:
+            for admin in admins:
+                Notificacion.objects.create(
+                    usuario=admin,
+                    tipo=Notificacion.Tipo.SISTEMA,
+                    titulo=f"Deuda de almuerzo alta: {hijo.nombre_completo}",
+                    mensaje=msg,
+                    destino=Notificacion.Destino.SISTEMA,
+                )
+        except Exception as exc:
+            logger.warning("No se pudo notificar admin para %s: %s", hijo, exc)
+
+        alertados += 1
+
+    logger.info(
+        "alertar_saldo_almuerzo_negativo: %d alumnos con deuda >Gs.%d",
+        alertados, _MONTO_ALERTA_SALDO_ALMUERZO,
+    )
+    return {"alertados": alertados}
