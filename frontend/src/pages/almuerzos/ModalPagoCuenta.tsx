@@ -2,6 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
+import { METODOS_PAGO } from '../../constants/mediosPago'
 import { extractErrorMessage, formatGs, MESES, type CuentaMensual } from './shared'
 
 interface Props {
@@ -23,20 +24,29 @@ export default function ModalPagoCuenta({ cuenta, onClose, onSaved }: Props) {
     }
   }
 
+  const metodoInfo = METODOS_PAGO.find(m => m.value === form.medio_pago)
+
   async function handlePagar() {
     if (!cuenta) return
     if (!form.monto || Number(form.monto) <= 0) { toast.error('Ingresá el monto'); return }
+    if (metodoInfo?.requiere_referencia && !form.referencia.trim()) { toast.error('Ingresá el código de transacción'); return }
     if (form.emitirFactura && !form.nroFactura.trim()) { toast.error('Ingresá el número de factura'); return }
     setSaving(true)
     try {
-      await api.post('/almuerzos/pagos-cuentas/', {
-        cuenta: cuenta.id,
-        monto: Number(form.monto),
-        medio_pago: form.medio_pago,
-        referencia: form.referencia || undefined,
-        ...(form.emitirFactura && form.nroFactura.trim() ? { nro_factura: form.nroFactura.trim() } : {}),
+      await api.post('/almuerzos/recargas-saldo/', {
+        hijo: cuenta.hijo,
+        monto_cargado: Number(form.monto),
+        metodo_pago: form.medio_pago,
+        ...(form.referencia.trim() ? { referencia: form.referencia.trim() } : {}),
+        ...(metodoInfo?.autoconfirma && form.emitirFactura && form.nroFactura.trim()
+          ? { nro_factura: form.nroFactura.trim() }
+          : {}),
       })
-      toast.success('Pago registrado')
+      toast.success(
+        metodoInfo?.autoconfirma
+          ? `Saldo de almuerzo cargado (${formatGs(form.monto)})`
+          : `Carga de ${formatGs(form.monto)} registrada — pendiente de confirmación`
+      )
       onSaved()
       onClose()
     } catch (err) {
@@ -52,10 +62,10 @@ export default function ModalPagoCuenta({ cuenta, onClose, onSaved }: Props) {
   return (
     <Modal
       open={!!cuenta}
-      title="Registrar Pago de Cuenta"
+      title="Cargar Saldo de Almuerzo"
       onOk={handlePagar}
       onCancel={onClose}
-      okText="Registrar Pago"
+      okText="Cargar Saldo"
       confirmLoading={saving}
       width={440}
     >
@@ -63,21 +73,13 @@ export default function ModalPagoCuenta({ cuenta, onClose, onSaved }: Props) {
         <div className="space-y-4">
           <div className="bg-slate-50 rounded-xl p-4">
             <p className="text-sm font-semibold text-slate-800">{cuenta.hijo_nombre}</p>
-            <p className="text-xs text-slate-500 mt-1">{MESES[cuenta.mes]} {cuenta.anio} — {cuenta.cantidad_almuerzos} almuerzos</p>
-            <div className="flex gap-6 mt-3">
-              <div>
-                <p className="text-sm text-slate-400">Total</p>
-                <p className="text-sm font-bold text-slate-800">{formatGs(cuenta.monto_total)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-400">Pagado</p>
-                <p className="text-sm font-bold text-emerald-700">{formatGs(cuenta.monto_pagado)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-400">Saldo</p>
-                <p className="text-sm font-bold text-red-600">{formatGs(cuenta.saldo_pendiente)}</p>
-              </div>
-            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              {MESES[cuenta.mes]} {cuenta.anio} — {cuenta.cantidad_almuerzos} almuerzos, total {formatGs(cuenta.monto_total)}
+            </p>
+            <p className="text-xs text-slate-400 mt-2">
+              Esto carga saldo de almuerzo del alumno (mismo saldo que se descuenta en el comedor) —
+              no es un pago específico de este mes.
+            </p>
           </div>
           <div>
             <label className={labelClass}>Monto (Gs.) *</label>
@@ -91,23 +93,21 @@ export default function ModalPagoCuenta({ cuenta, onClose, onSaved }: Props) {
           <div>
             <label className={labelClass}>Medio de Pago</label>
             <select value={form.medio_pago} onChange={e => setForm(f => ({ ...f, medio_pago: e.target.value }))} className={inputClass}>
-              <option value="EFECTIVO">Efectivo</option>
-              <option value="TRANSFERENCIA">Transferencia</option>
-              <option value="TARJETA">Tarjeta</option>
-              <option value="CHEQUE">Cheque</option>
+              {METODOS_PAGO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </div>
-          {form.medio_pago !== 'EFECTIVO' && (
+          {metodoInfo?.requiere_referencia && (
             <div>
-              <label className={labelClass}>Referencia</label>
+              <label className={labelClass}>Referencia *</label>
               <input
                 value={form.referencia}
                 onChange={e => setForm(f => ({ ...f, referencia: e.target.value }))}
-                placeholder="Nro. de transferencia, cheque, etc."
+                placeholder="Nro. de transacción"
                 className={inputClass}
               />
             </div>
           )}
+          {metodoInfo?.autoconfirma && (
           <div className="pt-1">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
@@ -131,6 +131,7 @@ export default function ModalPagoCuenta({ cuenta, onClose, onSaved }: Props) {
               </div>
             )}
           </div>
+          )}
         </div>
       )}
     </Modal>

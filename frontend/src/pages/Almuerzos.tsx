@@ -404,13 +404,13 @@ export default function Almuerzos() {
     {
       title: '',
       key: 'acc',
-      width: 80,
-      render: (_, r) => (r.estado !== 'PAGADO' && r.estado !== 'ANULADO') ? (
+      width: 130,
+      render: (_, r) => (
         <Button size="sm" variant="primary" onClick={() => setPagoCuenta(r)}>
           <Banknote className="w-3.5 h-3.5" />
-          Pagar
+          Cargar saldo
         </Button>
-      ) : null,
+      ),
     },
   ]
 
@@ -628,7 +628,12 @@ export default function Almuerzos() {
       {tab === 'cuentas' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-slate-800">Cuentas Mensuales de Almuerzos</h2>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800">Cuentas Mensuales de Almuerzos</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Reporte de consumo — la deuda real y su cobro viven en el saldo de almuerzo del alumno.
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={filtroCuentaMes}

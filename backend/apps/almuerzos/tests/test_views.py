@@ -662,7 +662,10 @@ class TestCuentaMensual:
 @pytest.mark.django_db
 class TestPagoCuenta:
 
-    def test_create_actualiza_cuenta(self, api_cajero, cuenta_mensual, usuario_cajero):
+    def test_create_ya_no_esta_permitido(self, api_cajero, cuenta_mensual, usuario_cajero):
+        """PagoCuentaAlmuerzo es solo lectura: el pago de almuerzo pasa
+        exclusivamente por RecargaSaldoAlmuerzo, para no cobrar el mismo
+        almuerzo en dos sistemas distintos sin sincronía entre sí."""
         resp = api_cajero.post(
             "/api/v1/almuerzos/pagos-cuentas/",
             {
@@ -673,9 +676,7 @@ class TestPagoCuenta:
             },
             format="json",
         )
-        assert resp.status_code == 201
-        cuenta_mensual.refresh_from_db()
-        assert cuenta_mensual.monto_pagado == Decimal("50000")
+        assert resp.status_code == 405
 
     def test_list_ok(self, api_cajero):
         resp = api_cajero.get("/api/v1/almuerzos/pagos-cuentas/")

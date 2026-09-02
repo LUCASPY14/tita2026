@@ -356,6 +356,37 @@ class TestCerrarCuentasMesAnterior:
         registro_nuevo.refresh_from_db()
         assert registro_nuevo.marcado_en_cuenta is True
 
+    @patch("apps.notificaciones.services.whatsapp_cliente")
+    def test_whatsapp_resumen_es_informativo_y_se_envia_aunque_este_pagada(self, mock_wa, hijo_t, usuario_admin):
+        """El resumen de cierre ya no pide pagar un saldo aparte (eso lo cubre
+        SaldoAlmuerzo) — se envía por tener consumo en el mes, esté o no
+        marcada como pagada la cuenta."""
+        from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        anio_ant, mes_ant = _mes_anterior()
+        fecha_consumo = date(anio_ant, mes_ant, 1)
+        CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
+            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("15000"),
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
+            estado=CuentaAlmuerzoMensual.Estado.PAGADO,
+        )
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_t,
+            fecha_consumo=fecha_consumo,
+            costo_almuerzo=Decimal("15000"),
+            ya_cobrado=True,
+            marcado_en_cuenta=False,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            registrado_por=usuario_admin,
+        )
+        cerrar_cuentas_mes_anterior()
+        mock_wa.assert_called_once()
+        mensaje = mock_wa.call_args[0][1]
+        assert "Pendiente" not in mensaje
+        assert "pagar" not in mensaje.lower()
+        assert "Resumen de almuerzos" in mensaje
+
     @patch("apps.notificaciones.services.EmailService.enviar_simple")
     def test_envia_email_al_admin_tras_cierre(self, mock_email, hijo_t):
         from apps.almuerzos.models import CuentaAlmuerzoMensual

@@ -479,37 +479,20 @@ class CuentaAlmuerzoMensualViewSet(viewsets.ModelViewSet):
 # ==============================================================================
 
 class PagoCuentaAlmuerzoViewSet(viewsets.ModelViewSet):
+    """
+    Solo lectura: CuentaAlmuerzoMensual dejó de ser una cuenta cobrable en
+    paralelo a SaldoAlmuerzo (dos sistemas cobrando el mismo almuerzo por
+    separado). El pago de almuerzo pasa exclusivamente por
+    RecargaSaldoAlmuerzo (/almuerzos/recargas-saldo/); los 41 registros
+    históricos de PagoCuentaAlmuerzo se conservan solo para reporte.
+    """
+    http_method_names = ["get", "head", "options"]
     queryset = PagoCuentaAlmuerzo.objects.select_related("cuenta").all()
     serializer_class = PagoCuentaAlmuerzoSerializer
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["cuenta"]
     ordering = ["-fecha_pago"]
-
-    def perform_create(self, serializer):
-        nro_factura = (self.request.data.get("nro_factura") or "").strip()
-        with transaction.atomic():
-            pago = serializer.save(registrado_por=self.request.user)
-            cuenta = (
-                CuentaAlmuerzoMensual.objects
-                .select_for_update()
-                .get(pk=pago.cuenta_id)
-            )
-            cuenta.registrar_pago(pago.monto)
-            if nro_factura:
-                from apps.contabilidad.services import FacturacionService
-                FacturacionService.emitir_para_origen(
-                    tipo="PAGO_ALMUERZO",
-                    origen_id=pago.id,
-                    nro_factura=nro_factura,
-                )
-        registrar_auditoria(
-            request=self.request,
-            operacion="PAGO_CUENTA_ALMUERZO",
-            tabla="almuerzos_pagocuentaalmuerzo",
-            id_registro=pago.id,
-            descripcion=f"Pago {pago.monto} Gs. en cuenta almuerzo #{pago.cuenta_id}",
-        )
 
 
 # ==============================================================================

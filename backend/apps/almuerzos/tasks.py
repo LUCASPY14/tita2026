@@ -94,28 +94,28 @@ def cerrar_cuentas_mes_anterior():
             registros_qs.update(marcado_en_cuenta=True)
             actualizadas += 1
 
-            # Recopilar notificación — se envía tras confirmar la transacción
-            saldo_final = cuenta.monto_total - cuenta.monto_pagado
-            if saldo_final > 0:
+            # Recopilar notificación — se envía tras confirmar la transacción.
+            # Puramente informativa: el saldo pendiente ya no se cobra desde
+            # acá (CuentaAlmuerzoMensual es reporte, no cuenta cobrable) —
+            # la deuda real se avisa por SaldoAlmuerzo (avisar_deuda_almuerzo
+            # semanal y alertar_saldo_almuerzo_negativo a admin).
+            if cuenta.cantidad_almuerzos > 0:
                 notif_pendientes.append((
                     cuenta.hijo.cliente_responsable,
                     cuenta.hijo.nombre_completo,
                     cuenta.cantidad_almuerzos,
                     cuenta.monto_total,
-                    saldo_final,
                 ))
 
     from apps.notificaciones.services import whatsapp_cliente
-    for responsable, nombre_hijo, cantidad_alm, monto_total, saldo_final in notif_pendientes:
+    for responsable, nombre_hijo, cantidad_alm, monto_total in notif_pendientes:
         try:
             whatsapp_cliente(
                 responsable,
                 f"Resumen de almuerzos {mes_ant:02d}/{anio_ant} de "
                 f"{nombre_hijo}: "
                 f"{cantidad_alm} almuerzo(s), "
-                f"total Gs. {int(monto_total):,}. "
-                f"Pendiente: Gs. {int(saldo_final):,}. "
-                f"Podes pagar en la cantina."
+                f"total Gs. {int(monto_total):,}."
             )
         except Exception:
             logger.warning(
