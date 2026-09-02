@@ -239,6 +239,7 @@ class TestRecargaSaldoAlmuerzoCreate:
         mov = CuentaCorrienteCliente.objects.get(cliente=cliente)
         assert mov.tipo == CuentaCorrienteCliente.Tipo.DEBITO
         assert mov.monto == Decimal("30000")
+        assert mov.origen == CuentaCorrienteCliente.Origen.ALMUERZO
         assert cliente.saldo_cuenta_corriente == Decimal("30000")
 
     def test_cuenta_corriente_no_genera_ingreso_de_caja(self, api_cajero, hijo_almuerzo):

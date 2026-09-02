@@ -80,7 +80,12 @@ export default function PagarCC() {
 
   // Deuda actual
   const [deuda, setDeuda] = useState<number | null>(null)
+  const [deudaCantina, setDeudaCantina] = useState(0)
+  const [deudaAlmuerzo, setDeudaAlmuerzo] = useState(0)
   const [loadingDeuda, setLoadingDeuda] = useState(true)
+
+  // Categoría de la deuda (solo si debe en ambas — si no, se infiere sola)
+  const [origen, setOrigen] = useState<'CANTINA' | 'ALMUERZO' | ''>('')
 
   // Selección de monto
   const [montoSeleccionado, setMontoSeleccionado] = useState<number | null>(null)
@@ -110,6 +115,8 @@ export default function PagarCC() {
     try {
       const { data } = await api.get('/usuarios/portal/mi-hijo/')
       setDeuda(Number(data?.cliente?.saldo_cuenta_corriente ?? 0))
+      setDeudaCantina(Number(data?.cliente?.saldo_cc_cantina ?? 0))
+      setDeudaAlmuerzo(Number(data?.cliente?.saldo_cc_almuerzo ?? 0))
     } catch {
       toast.error('Error al cargar los datos')
     } finally {
@@ -122,12 +129,16 @@ export default function PagarCC() {
     if (!estadoRetorno) cargarDeuda()
   }, [estadoRetorno, cargarDeuda])
 
+  const requiereElegirOrigen = deudaCantina > 0 && deudaAlmuerzo > 0
+  const deudaOrigenSeleccionado = origen === 'CANTINA' ? deudaCantina : origen === 'ALMUERZO' ? deudaAlmuerzo : (deuda ?? 0)
+
   // ── Monto efectivo ─────────────────────────────────────────────────────────
   const montoEfectivo = usandoCustom
     ? (parseInt(montoCustom.replace(/\D/g, ''), 10) || 0)
     : (montoSeleccionado ?? 0)
 
-  const montoValido = montoEfectivo > 0 && deuda !== null && montoEfectivo <= deuda
+  const montoValido = montoEfectivo > 0 && deuda !== null && montoEfectivo <= deudaOrigenSeleccionado
+    && (!requiereElegirOrigen || origen !== '')
 
   // ── Iniciar pago ocasional (single_buy) ────────────────────────────────────
   const handlePagar = useCallback(async () => {
@@ -135,7 +146,10 @@ export default function PagarCC() {
 
     setIniciando(true)
     try {
-      const { data } = await api.post('/core/bancard/iniciar-cc/', { monto: montoEfectivo })
+      const { data } = await api.post('/core/bancard/iniciar-cc/', {
+        monto: montoEfectivo,
+        ...(origen ? { origen } : {}),
+      })
       setProcessId(data.process_id)
       setScriptUrl(data.script_url)
       setPagoEnProceso(true)
@@ -145,7 +159,7 @@ export default function PagarCC() {
       toast.error(msg)
       setIniciando(false)
     }
-  }, [montoValido, montoEfectivo, iniciando])
+  }, [montoValido, montoEfectivo, origen, iniciando])
 
   // ── Pagar con tarjeta guardada (charge) ────────────────────────────────────
   const handlePagarConTarjeta = useCallback(async () => {
@@ -155,6 +169,7 @@ export default function PagarCC() {
     try {
       const { data } = await api.post('/core/bancard/pagar-cc-con-tarjeta/', {
         monto: montoEfectivo, card_id: cardIdSeleccionado,
+        ...(origen ? { origen } : {}),
       })
 
       if (data.requires_3ds) {
@@ -173,7 +188,7 @@ export default function PagarCC() {
       toast.error(msg)
       setIniciando(false)
     }
-  }, [montoValido, montoEfectivo, cardIdSeleccionado, iniciando])
+  }, [montoValido, montoEfectivo, cardIdSeleccionado, origen, iniciando])
 
   // ── Mantener sesión activa mientras el iframe de Bancard está visible ────────
   useEffect(() => {
@@ -250,6 +265,7 @@ export default function PagarCC() {
     setMontoSeleccionado(null)
     setMontoCustom('')
     setUsandoCustom(false)
+    setOrigen('')
     setMetodoPago('ocasional')
     setCardIdSeleccionado(null)
     cargarDeuda()
@@ -341,7 +357,10 @@ export default function PagarCC() {
     )
   }
 
-  const montosRapidos = [Math.round(deuda / 2), deuda].filter((m, i, arr) => m > 0 && arr.indexOf(m) === i)
+  const montosRapidos = [Math.round(deudaOrigenSeleccionado / 2), deudaOrigenSeleccionado]
+    .filter((m, i, arr) => m > 0 && arr.indexOf(m) === i)
+  const pasoMonto = requiereElegirOrigen ? 2 : 1
+  const pasoMetodo = requiereElegirOrigen ? 3 : 2
 
   return (
     <div className="space-y-6">
@@ -354,13 +373,46 @@ export default function PagarCC() {
       <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
         <p className="text-sm text-slate-500">Deuda actual</p>
         <p className="text-3xl font-bold text-red-700 tabular-nums">{formatGs(deuda)}</p>
+        {requiereElegirOrigen && (
+          <p className="text-sm text-red-600 mt-1">
+            Cantina: {formatGs(deudaCantina)} · Almuerzo: {formatGs(deudaAlmuerzo)}
+          </p>
+        )}
       </div>
+
+      {/* ── Paso: Elegí a qué corresponde (solo si debe en ambas) ── */}
+      {requiereElegirOrigen && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+              1 — ¿A qué deuda corresponde el pago?
+            </p>
+          </div>
+          <div className="p-5 grid grid-cols-2 gap-2.5">
+            {(['CANTINA', 'ALMUERZO'] as const).map(op => (
+              <button
+                key={op}
+                type="button"
+                onClick={() => { setOrigen(op); setMontoSeleccionado(null); setUsandoCustom(false) }}
+                className={[
+                  'py-3 rounded-xl border-2 text-sm font-bold transition-all cursor-pointer',
+                  origen === op
+                    ? 'bg-red-600 border-red-600 text-white shadow-sm'
+                    : 'border-slate-200 text-slate-700 hover:border-red-300 hover:bg-red-50',
+                ].join(' ')}
+              >
+                {op === 'CANTINA' ? 'Cantina' : 'Almuerzo'} ({formatGs(op === 'CANTINA' ? deudaCantina : deudaAlmuerzo)})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Paso: Elegí el monto ── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
           <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
-            1 — Elegí cuánto pagar
+            {pasoMonto} — Elegí cuánto pagar
           </p>
         </div>
         <div className="p-5 space-y-4">
@@ -377,7 +429,7 @@ export default function PagarCC() {
                     : 'border-slate-200 text-slate-700 hover:border-red-300 hover:bg-red-50',
                 ].join(' ')}
               >
-                {m === deuda ? `Pagar el total (${formatGs(m)})` : formatGs(m)}
+                {m === deudaOrigenSeleccionado ? `Pagar el total (${formatGs(m)})` : formatGs(m)}
               </button>
             ))}
           </div>
@@ -407,7 +459,15 @@ export default function PagarCC() {
             )}
           </div>
 
-          {montoEfectivo > 0 && !montoValido && (
+          {requiereElegirOrigen && !origen && (
+            <p className="text-sm text-red-500">Elegí primero a qué deuda corresponde el pago.</p>
+          )}
+          {montoEfectivo > 0 && origen !== '' && !montoValido && (
+            <p className="text-sm text-red-500">
+              El monto no puede superar la deuda de {origen === 'CANTINA' ? 'cantina' : 'almuerzo'} ({formatGs(deudaOrigenSeleccionado)}).
+            </p>
+          )}
+          {montoEfectivo > 0 && !requiereElegirOrigen && !montoValido && (
             <p className="text-sm text-red-500">
               El monto no puede superar tu deuda actual ({formatGs(deuda)}).
             </p>
@@ -421,7 +481,7 @@ export default function PagarCC() {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
           <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
-            2 — Método de pago
+            {pasoMetodo} — Método de pago
           </p>
         </div>
         <div className="flex border-b border-slate-100">

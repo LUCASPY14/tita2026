@@ -643,6 +643,7 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
                     monto=data["monto_cargado"],
                     descripcion=f"Recarga almuerzo {hijo.nombre_completo}",
                     creado_por=request.user,
+                    origen=CuentaCorrienteCliente.Origen.ALMUERZO,
                 )
             registrar_auditoria(
                 request=request,

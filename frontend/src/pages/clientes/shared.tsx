@@ -26,6 +26,8 @@ export interface Cliente {
   tipo_cliente: number
   tipo_cliente_nombre: string
   saldo_cuenta_corriente: string
+  saldo_cc_cantina: string
+  saldo_cc_almuerzo: string
   saldo_negativo_tarjetas: string
   modalidad_facturacion: 'INMEDIATA' | 'MENSUAL'
 }
@@ -129,6 +131,7 @@ export interface PagoCC {
   saldo_resultante: string | number
   monto: string | number
   descripcion: string
+  origen: 'CANTINA' | 'ALMUERZO' | 'GENERAL'
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────

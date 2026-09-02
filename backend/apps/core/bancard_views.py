@@ -303,6 +303,10 @@ def bancard_iniciar_cc(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    from decimal import Decimal
+    from apps.clientes.services import resolver_origen_pago_cc
+    origen = resolver_origen_pago_cc(cliente, request.data.get("origen"), Decimal(monto))
+
     if not bancard_service._public_key() or not bancard_service._private_key():
         return Response(
             {"detail": "La integración de pagos no está configurada. Contactá con la administración."},
@@ -313,6 +317,7 @@ def bancard_iniciar_cc(request):
 
     pago = PagoBancard.objects.create(
         tipo=PagoBancard.Tipo.CC,
+        origen_cc=origen if origen in ("CANTINA", "ALMUERZO") else None,
         cliente=cliente,
         shop_process_id=shop_process_id,
         monto=monto,
@@ -1256,6 +1261,10 @@ def bancard_pagar_cc_con_tarjeta(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    from decimal import Decimal
+    from apps.clientes.services import resolver_origen_pago_cc
+    origen = resolver_origen_pago_cc(cliente, request.data.get("origen"), Decimal(monto))
+
     if not bancard_service._public_key() or not bancard_service._private_key():
         return Response(
             {"detail": "La integración de pagos no está configurada. Contactá con la administración."},
@@ -1272,6 +1281,7 @@ def bancard_pagar_cc_con_tarjeta(request):
     shop_process_id = str(int(time.time() * 1000))
     pago = PagoBancard.objects.create(
         tipo=PagoBancard.Tipo.CC,
+        origen_cc=origen if origen in ("CANTINA", "ALMUERZO") else None,
         cliente=cliente,
         shop_process_id=shop_process_id,
         monto=monto,

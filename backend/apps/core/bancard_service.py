@@ -514,6 +514,7 @@ def acreditar_pago_cc(pago_bancard) -> None:
         monto=monto,
         descripcion=f"Pago cuenta corriente vía Bancard — ref {pago_bancard.shop_process_id}",
         creado_por=usuario,
+        origen=pago_bancard.origen_cc or CuentaCorrienteCliente.Origen.GENERAL,
     )
     pago_bancard.movimiento_cc = movimiento
     pago_bancard.estado = pago_bancard.Estado.APROBADO

@@ -101,6 +101,25 @@ class Cliente(models.Model):
         ultimo = self.movimientos_cuenta.order_by("-id").first()
         return ultimo.saldo_resultante if ultimo else Decimal("0")
 
+    def _saldo_cc_por_origen(self, origen):
+        """Deuda de una categoría (CANTINA/ALMUERZO): suma directa, no una
+        segunda cadena de saldo_resultante — el saldo_resultante corrido
+        sigue siendo solo el total combinado (limite_credito no cambia)."""
+        from django.db.models import Sum, Q
+        agg = self.movimientos_cuenta.filter(origen=origen).aggregate(
+            debitos=Sum("monto", filter=Q(tipo=CuentaCorrienteCliente.Tipo.DEBITO)),
+            creditos=Sum("monto", filter=~Q(tipo=CuentaCorrienteCliente.Tipo.DEBITO)),
+        )
+        return (agg["debitos"] or Decimal("0")) - (agg["creditos"] or Decimal("0"))
+
+    @property
+    def saldo_cc_cantina(self):
+        return self._saldo_cc_por_origen(CuentaCorrienteCliente.Origen.CANTINA)
+
+    @property
+    def saldo_cc_almuerzo(self):
+        return self._saldo_cc_por_origen(CuentaCorrienteCliente.Origen.ALMUERZO)
+
 
 # ==============================================================================
 # CUENTA CORRIENTE DE CLIENTES
@@ -117,6 +136,11 @@ class CuentaCorrienteCliente(models.Model):
         DEBITO = "DEBITO", "Débito"
         CREDITO = "CREDITO", "Crédito"
         AJUSTE = "AJUSTE", "Ajuste"
+
+    class Origen(models.TextChoices):
+        CANTINA = "CANTINA", "Cantina"
+        ALMUERZO = "ALMUERZO", "Almuerzo"
+        GENERAL = "GENERAL", "General"
 
     cliente = models.ForeignKey(
         Cliente,
@@ -137,6 +161,10 @@ class CuentaCorrienteCliente(models.Model):
     )
     descripcion = models.CharField(
         max_length=255, blank=True, null=True, help_text="Detalle del movimiento"
+    )
+    origen = models.CharField(
+        max_length=10, choices=Origen.choices, default=Origen.GENERAL,
+        help_text="Categoría de deuda que generó el movimiento — no afecta saldo_resultante ni limite_credito, solo reporte.",
     )
 
     # Referencias a documentos origen
@@ -189,6 +217,7 @@ class CuentaCorrienteCliente(models.Model):
             models.Index(fields=["cliente", "fecha"], name="idx_cc_cli_fecha"),
             models.Index(fields=["cliente", "tipo"], name="idx_cc_cli_tipo"),
             models.Index(fields=["venta"], name="idx_cc_cli_venta"),
+            models.Index(fields=["cliente", "origen"], name="idx_cc_cli_origen"),
         ]
 
     def __str__(self):

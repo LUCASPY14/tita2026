@@ -279,6 +279,7 @@ class TestCargaSaldoCuentaCorriente:
         mov = CuentaCorrienteCliente.objects.latest("pk")
         assert mov.tipo == CuentaCorrienteCliente.Tipo.DEBITO
         assert mov.monto == Decimal("20000")
+        assert mov.origen == CuentaCorrienteCliente.Origen.CANTINA
 
     def test_cliente_sin_cuenta_corriente_habilitada_falla(self, api_cajero, tarjeta_core, cliente):
         cliente.permite_cuenta_corriente = False

@@ -356,6 +356,13 @@ class PagoBancard(models.Model):
     tipo = models.CharField(
         max_length=10, choices=Tipo.choices, default=Tipo.TARJETA,
     )
+    origen_cc = models.CharField(
+        max_length=10,
+        choices=[("CANTINA", "Cantina"), ("ALMUERZO", "Almuerzo")],
+        null=True, blank=True,
+        help_text="Categoría de deuda que cubre este pago (solo aplica a tipo=CC) — "
+                   "se guarda al iniciar el pago para que sobreviva la confirmación asíncrona de Bancard.",
+    )
     tarjeta = models.ForeignKey(
         Tarjeta,
         models.PROTECT,

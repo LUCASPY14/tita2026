@@ -84,6 +84,8 @@ class AlumnoResponsableResumenSerializer(serializers.ModelSerializer):
 class ClienteSerializer(serializers.ModelSerializer):
     nombre_completo = serializers.ReadOnlyField()
     saldo_cuenta_corriente = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+    saldo_cc_cantina = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+    saldo_cc_almuerzo = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
     saldo_negativo_tarjetas = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True, default=0)
     tipo_cliente_nombre = serializers.CharField(source="tipo_cliente.nombre", read_only=True)
 

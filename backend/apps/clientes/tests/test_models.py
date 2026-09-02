@@ -98,6 +98,40 @@ class TestClienteModel:
         )
         assert cliente.saldo_cuenta_corriente == Decimal("30000")
 
+    def test_saldo_cc_por_categoria_sin_movimientos(self, cliente):
+        assert cliente.saldo_cc_cantina == Decimal("0")
+        assert cliente.saldo_cc_almuerzo == Decimal("0")
+
+    def test_saldo_cc_por_categoria_separa_cantina_y_almuerzo(self, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("100000"), saldo_anterior=Decimal("0"), saldo_resultante=Decimal("100000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.CANTINA,
+        )
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("30000"), saldo_anterior=Decimal("100000"), saldo_resultante=Decimal("130000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.ALMUERZO,
+        )
+        assert cliente.saldo_cc_cantina == Decimal("100000")
+        assert cliente.saldo_cc_almuerzo == Decimal("30000")
+        assert cliente.saldo_cuenta_corriente == Decimal("130000")
+
+    def test_saldo_cc_por_categoria_descuenta_pago_de_esa_categoria(self, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("100000"), saldo_anterior=Decimal("0"), saldo_resultante=Decimal("100000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.CANTINA,
+        )
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+            monto=Decimal("40000"), saldo_anterior=Decimal("100000"), saldo_resultante=Decimal("60000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.CANTINA,
+        )
+        assert cliente.saldo_cc_cantina == Decimal("60000")
+
 
 # ── CuentaCorrienteCliente ────────────────────────────────────────────────────
 

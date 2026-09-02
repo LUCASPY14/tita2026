@@ -15,7 +15,12 @@ interface Props {
 
 export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props) {
   const saldoActual = Number(cliente?.saldo_cuenta_corriente ?? 0)
+  const deudaCantina = Number(cliente?.saldo_cc_cantina ?? 0)
+  const deudaAlmuerzo = Number(cliente?.saldo_cc_almuerzo ?? 0)
+  const requiereElegirOrigen = deudaCantina > 0 && deudaAlmuerzo > 0
+
   const [monto, setMonto] = useState('')
+  const [origen, setOrigen] = useState<'CANTINA' | 'ALMUERZO' | ''>('')
   const [metodo, setMetodo] = useState('EFECTIVO')
   const [referencia, setReferencia] = useState('')
   const [nroFactura, setNroFactura] = useState('')
@@ -27,6 +32,7 @@ export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props)
     setWasOpen(open)
     if (open) {
       setMonto(saldoActual > 0 ? String(saldoActual) : '')
+      setOrigen(deudaCantina > 0 && deudaAlmuerzo <= 0 ? 'CANTINA' : deudaAlmuerzo > 0 && deudaCantina <= 0 ? 'ALMUERZO' : '')
       setMetodo('EFECTIVO')
       setReferencia('')
       setNroFactura('')
@@ -35,10 +41,12 @@ export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props)
   }
 
   const metodoInfo = METODOS.find(m => m.value === metodo)
+  const deudaOrigenSeleccionado = origen === 'CANTINA' ? deudaCantina : origen === 'ALMUERZO' ? deudaAlmuerzo : saldoActual
 
   async function handlePagar() {
     const montoNum = Number(monto)
     if (!montoNum || montoNum <= 0) { toast.error('Ingresá un monto válido'); return }
+    if (requiereElegirOrigen && !origen) { toast.error('Elegí a qué deuda corresponde el pago'); return }
     if (metodoInfo?.requiere_referencia && !referencia.trim()) {
       toast.error('Ingresá el código de transacción'); return
     }
@@ -51,6 +59,7 @@ export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props)
         descripcion: desc,
         medio_pago: metodo,
         genera_factura_legal: true,
+        ...(origen ? { origen } : {}),
         ...(nroFactura.trim() ? { nro_factura: nroFactura.trim() } : {}),
       })
       setUltimoPago(data)
@@ -80,10 +89,29 @@ export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props)
             {formatGs(saldoActual)}
           </p>
           {saldoActual === 0 && <p className="text-xs text-emerald-600 mt-0.5">Sin deuda pendiente</p>}
+          {requiereElegirOrigen && (
+            <p className="text-xs text-orange-600 mt-1">
+              Cantina: {formatGs(deudaCantina)} · Almuerzo: {formatGs(deudaAlmuerzo)}
+            </p>
+          )}
         </div>
 
         {!ultimoPago ? (
           <>
+            {requiereElegirOrigen && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">¿A qué deuda corresponde? *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['CANTINA', 'ALMUERZO'] as const).map(op => (
+                    <button key={op} type="button" onClick={() => setOrigen(op)}
+                      className={`px-3 py-2.5 rounded-xl text-sm font-bold transition-colors cursor-pointer border-2 ${origen === op ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-700 border-slate-200 hover:border-orange-400'}`}>
+                      {op === 'CANTINA' ? 'Cantina' : 'Almuerzo'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Monto a cobrar (Gs.) *</label>
               <input
@@ -91,7 +119,7 @@ export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props)
                 onChange={e => setMonto(e.target.value)} placeholder="0"
                 className="w-full text-center text-3xl font-black tracking-wider py-4 border-2 rounded-2xl outline-none bg-white border-slate-200 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 text-slate-900 placeholder:text-slate-300 transition-all"
               />
-              {saldoActual > 0 && Number(monto) < saldoActual && (
+              {deudaOrigenSeleccionado > 0 && Number(monto) < deudaOrigenSeleccionado && (
                 <p className="text-xs text-slate-400 mt-1 text-center">Pago parcial — quedará saldo pendiente</p>
               )}
             </div>
@@ -143,7 +171,10 @@ export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props)
             <div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-5 text-center">
               <p className="text-emerald-700 font-bold text-lg mb-1">Pago registrado</p>
               <p className="text-4xl font-black tabular-nums text-slate-800">{formatGs(ultimoPago.monto)}</p>
-              <p className="text-sm text-slate-500 mt-1">{METODOS.find(m => m.value === metodo)?.label}</p>
+              <p className="text-sm text-slate-500 mt-1">
+                {METODOS.find(m => m.value === metodo)?.label}
+                {ultimoPago.origen !== 'GENERAL' && ` — ${ultimoPago.origen === 'CANTINA' ? 'Cantina' : 'Almuerzo'}`}
+              </p>
               <div className="mt-3 pt-3 border-t border-emerald-200 text-sm text-slate-600">
                 <div className="flex justify-between">
                   <span>Saldo anterior:</span>

@@ -1,9 +1,10 @@
 """
 Tests para clientes/services.py.
-Cubre: cambiar_titular, agregar_responsable.
+Cubre: cambiar_titular, agregar_responsable, resolver_origen_pago_cc.
 """
 import pytest
 from decimal import Decimal
+from rest_framework.exceptions import ValidationError
 
 
 @pytest.fixture
@@ -154,3 +155,70 @@ class TestAgregarResponsable:
         )
 
         assert resp.activo is True
+
+
+# ── resolver_origen_pago_cc ────────────────────────────────────────────────────
+
+def _crear_deuda(cliente, usuario, monto, origen):
+    from apps.clientes.models import CuentaCorrienteCliente
+    saldo_anterior = cliente.saldo_cuenta_corriente
+    CuentaCorrienteCliente.objects.create(
+        cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+        monto=Decimal(monto), saldo_anterior=saldo_anterior, saldo_resultante=saldo_anterior + monto,
+        creado_por=usuario, origen=origen,
+    )
+
+
+@pytest.mark.django_db
+class TestResolverOrigenPagoCC:
+
+    def test_sin_deuda_categorizada_retorna_general(self, cliente):
+        from apps.clientes.services import resolver_origen_pago_cc
+        origen = resolver_origen_pago_cc(cliente, None, Decimal("10000"))
+        assert origen == "GENERAL"
+
+    def test_solo_cantina_infiere_sin_pedir_origen(self, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        from apps.clientes.services import resolver_origen_pago_cc
+        _crear_deuda(cliente, usuario_cajero, 100000, CuentaCorrienteCliente.Origen.CANTINA)
+        origen = resolver_origen_pago_cc(cliente, None, Decimal("50000"))
+        assert origen == "CANTINA"
+
+    def test_solo_almuerzo_infiere_sin_pedir_origen(self, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        from apps.clientes.services import resolver_origen_pago_cc
+        _crear_deuda(cliente, usuario_cajero, 100000, CuentaCorrienteCliente.Origen.ALMUERZO)
+        origen = resolver_origen_pago_cc(cliente, None, Decimal("50000"))
+        assert origen == "ALMUERZO"
+
+    def test_ambas_categorias_sin_origen_falla(self, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        from apps.clientes.services import resolver_origen_pago_cc
+        _crear_deuda(cliente, usuario_cajero, 100000, CuentaCorrienteCliente.Origen.CANTINA)
+        _crear_deuda(cliente, usuario_cajero, 50000, CuentaCorrienteCliente.Origen.ALMUERZO)
+        with pytest.raises(ValidationError, match="origen"):
+            resolver_origen_pago_cc(cliente, None, Decimal("30000"))
+
+    def test_ambas_categorias_con_origen_valido_ok(self, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        from apps.clientes.services import resolver_origen_pago_cc
+        _crear_deuda(cliente, usuario_cajero, 100000, CuentaCorrienteCliente.Origen.CANTINA)
+        _crear_deuda(cliente, usuario_cajero, 50000, CuentaCorrienteCliente.Origen.ALMUERZO)
+        origen = resolver_origen_pago_cc(cliente, "almuerzo", Decimal("30000"))
+        assert origen == "ALMUERZO"
+
+    def test_monto_supera_deuda_de_la_categoria_falla(self, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        from apps.clientes.services import resolver_origen_pago_cc
+        _crear_deuda(cliente, usuario_cajero, 100000, CuentaCorrienteCliente.Origen.CANTINA)
+        _crear_deuda(cliente, usuario_cajero, 50000, CuentaCorrienteCliente.Origen.ALMUERZO)
+        with pytest.raises(ValidationError, match="monto"):
+            resolver_origen_pago_cc(cliente, "ALMUERZO", Decimal("60000"))
+
+    def test_monto_igual_a_la_deuda_de_la_categoria_ok(self, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        from apps.clientes.services import resolver_origen_pago_cc
+        _crear_deuda(cliente, usuario_cajero, 100000, CuentaCorrienteCliente.Origen.CANTINA)
+        _crear_deuda(cliente, usuario_cajero, 50000, CuentaCorrienteCliente.Origen.ALMUERZO)
+        origen = resolver_origen_pago_cc(cliente, "ALMUERZO", Decimal("50000"))
+        assert origen == "ALMUERZO"

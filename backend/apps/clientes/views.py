@@ -193,6 +193,9 @@ class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
         genera_factura_legal = bool(request.data.get("genera_factura_legal", False))
         nro_factura = str(request.data.get("nro_factura", "") or "").strip()
 
+        from .services import resolver_origen_pago_cc
+        origen = resolver_origen_pago_cc(cliente, request.data.get("origen"), monto)
+
         with transaction.atomic():
             mov = CuentaCorrienteCliente.objects.create(
                 cliente=cliente,
@@ -200,6 +203,7 @@ class CuentaCorrienteClienteViewSet(viewsets.ModelViewSet):
                 monto=monto,
                 descripcion=descripcion,
                 creado_por=request.user,
+                origen=origen,
             )
             # Registrar ingreso en caja si el usuario tiene un turno abierto
             cierre = CierreCaja.objects.filter(
@@ -490,6 +494,8 @@ class ReporteCuentaCorrienteView(APIView):
                 "telefono": cliente.telefono or "",
                 "email": cliente.email or "",
                 "saldo_deuda": int(saldo),
+                "saldo_cantina": int(cliente.saldo_cc_cantina),
+                "saldo_almuerzo": int(cliente.saldo_cc_almuerzo),
                 "dias_atraso": dias_atraso,
                 "aging": bucket,
             })
@@ -511,10 +517,12 @@ class ReporteCuentaCorrienteView(APIView):
             writer = csv.writer(resp)
             writer.writerow(["REPORTE CUENTA CORRIENTE", str(hoy)])
             writer.writerow([])
-            writer.writerow(["Cliente", "RUC/CI", "Teléfono", "Email", "Saldo (Gs)", "Días atraso", "Aging"])
+            writer.writerow(["Cliente", "RUC/CI", "Teléfono", "Email", "Saldo (Gs)",
+                              "Cantina (Gs)", "Almuerzo (Gs)", "Días atraso", "Aging"])
             for f in filas:
                 writer.writerow([f["cliente"], f["ruc_ci"], f["telefono"],
-                                  f["email"], f["saldo_deuda"], f["dias_atraso"], f["aging"]])
+                                  f["email"], f["saldo_deuda"], f["saldo_cantina"],
+                                  f["saldo_almuerzo"], f["dias_atraso"], f["aging"]])
             writer.writerow([])
             writer.writerow(["TOTALES POR AGING"])
             for bucket, total in aging_totales.items():
@@ -539,7 +547,8 @@ class ReporteCuentaCorrienteView(APIView):
             ws["A1"].font = Font(bold=True, size=13)
             ws.append([])
 
-            headers = ["Cliente", "RUC/CI", "Teléfono", "Email", "Saldo (Gs)", "Días atraso", "Aging"]
+            headers = ["Cliente", "RUC/CI", "Teléfono", "Email", "Saldo (Gs)",
+                       "Cantina (Gs)", "Almuerzo (Gs)", "Días atraso", "Aging"]
             ws.append(headers)
             for cell in ws[ws.max_row]:
                 cell.font = header_font
@@ -548,24 +557,25 @@ class ReporteCuentaCorrienteView(APIView):
 
             for f in filas:
                 ws.append([f["cliente"], f["ruc_ci"], f["telefono"],
-                            f["email"], f["saldo_deuda"], f["dias_atraso"], f["aging"]])
+                            f["email"], f["saldo_deuda"], f["saldo_cantina"],
+                            f["saldo_almuerzo"], f["dias_atraso"], f["aging"]])
 
             ws.append([])
-            ws.append(["TOTALES POR AGING", "", "", "", "", "", ""])
+            ws.append(["TOTALES POR AGING", "", "", "", "", "", "", "", ""])
             for cell in ws[ws.max_row]:
                 cell.font = total_font
             for bucket, total in aging_totales.items():
-                row = [bucket, "", "", "", total, "", ""]
+                row = [bucket, "", "", "", total, "", "", "", ""]
                 ws.append(row)
                 for cell in ws[ws.max_row]:
                     cell.fill = totals_fill
 
             ws.append([])
-            ws.append(["TOTAL DEUDA", "", "", "", total_deuda, "", ""])
+            ws.append(["TOTAL DEUDA", "", "", "", total_deuda, "", "", "", ""])
             for cell in ws[ws.max_row]:
                 cell.font = total_font
 
-            col_widths = [35, 14, 14, 28, 14, 14, 10]
+            col_widths = [35, 14, 14, 28, 14, 14, 14, 14, 10]
             for i, w in enumerate(col_widths, 1):
                 ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
 

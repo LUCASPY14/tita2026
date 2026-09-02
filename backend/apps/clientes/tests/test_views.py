@@ -449,6 +449,80 @@ class TestCuentaCorrienteCreate:
         mov = MovimientoCaja.objects.get(cierre=cierre, tipo=MovimientoCaja.Tipo.INGRESO)
         assert mov.medio_pago_id == pos_debito.id
 
+    def test_ambas_categorias_sin_origen_retorna_400(self, api_cajero, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("100000"), saldo_anterior=Decimal("0"), saldo_resultante=Decimal("100000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.CANTINA,
+        )
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("50000"), saldo_anterior=Decimal("100000"), saldo_resultante=Decimal("150000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.ALMUERZO,
+        )
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"cliente": cliente.pk, "monto": "30000"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "origen" in str(resp.data).lower()
+
+    def test_ambas_categorias_con_origen_crea_movimiento_tageado(self, api_cajero, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("100000"), saldo_anterior=Decimal("0"), saldo_resultante=Decimal("100000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.CANTINA,
+        )
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("50000"), saldo_anterior=Decimal("100000"), saldo_resultante=Decimal("150000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.ALMUERZO,
+        )
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"cliente": cliente.pk, "monto": "30000", "origen": "ALMUERZO"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["origen"] == "ALMUERZO"
+
+    def test_monto_supera_deuda_de_la_categoria_retorna_400(self, api_cajero, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("100000"), saldo_anterior=Decimal("0"), saldo_resultante=Decimal("100000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.CANTINA,
+        )
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("50000"), saldo_anterior=Decimal("100000"), saldo_resultante=Decimal("150000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.ALMUERZO,
+        )
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"cliente": cliente.pk, "monto": "60000", "origen": "ALMUERZO"},
+            format="json",
+        )
+        assert resp.status_code == 400
+
+    def test_solo_una_categoria_con_deuda_no_requiere_origen(self, api_cajero, cliente, usuario_cajero):
+        from apps.clientes.models import CuentaCorrienteCliente
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=Decimal("100000"), saldo_anterior=Decimal("0"), saldo_resultante=Decimal("100000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.CANTINA,
+        )
+        resp = api_cajero.post(
+            "/api/v1/clientes/cuentas-corrientes/",
+            {"cliente": cliente.pk, "monto": "30000"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["origen"] == "CANTINA"
+
 
 # ── ClienteViewSet.perform_create → _crear_usuario_portal ────────────────────
 

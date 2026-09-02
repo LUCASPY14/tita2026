@@ -41,10 +41,10 @@ const TARJETA_GUARDADA = {
   card_id: 1, card_masked_number: '5418********0014', card_brand: 'MasterCard', expiration_date: '08/26',
 }
 
-function setupDeuda(saldo_cuenta_corriente: number) {
+function setupDeuda(saldo_cuenta_corriente: number, saldo_cc_cantina = 0, saldo_cc_almuerzo = 0) {
   vi.mocked(api.get).mockImplementation((url: string) => {
     if (url === '/core/bancard/tarjetas/') return Promise.resolve({ data: { tarjetas: [] } })
-    return Promise.resolve({ data: { cliente: { saldo_cuenta_corriente } } })
+    return Promise.resolve({ data: { cliente: { saldo_cuenta_corriente, saldo_cc_cantina, saldo_cc_almuerzo } } })
   })
 }
 
@@ -264,6 +264,76 @@ describe('PagarCC — tarjeta guardada', () => {
     await userEvent.click(screen.getByRole('button', { name: /Pagar el total/i }))
     await userEvent.click(screen.getByRole('button', { name: /Tarjeta guardada/i }))
     await screen.findByText(/5418\*+0014/)
+
+    expect(screen.getByRole('button', { name: /Ir a pagar/i })).toBeDisabled()
+  })
+})
+
+// ── Deuda en ambas categorías ──────────────────────────────────────────────────
+
+describe('PagarCC — deuda en cantina y almuerzo', () => {
+  it('deuda en una sola categoría no muestra el selector', async () => {
+    setupDeuda(80_000, 80_000, 0)
+    renderPagarCC()
+    await screen.findByText('Deuda actual')
+
+    expect(screen.queryByText(/A qué deuda corresponde/i)).not.toBeInTheDocument()
+  })
+
+  it('deuda en ambas categorías muestra el selector y desglose', async () => {
+    setupDeuda(150_000, 100_000, 50_000)
+    renderPagarCC()
+    await screen.findByText('Deuda actual')
+
+    expect(screen.getByText(/¿A qué deuda corresponde el pago\?/i)).toBeInTheDocument()
+    expect(screen.getByText(/Cantina: Gs\. 100\.000/)).toBeInTheDocument()
+    expect(screen.getByText(/Almuerzo: Gs\. 50\.000/)).toBeInTheDocument()
+  })
+
+  it('sin elegir categoría, el botón Ir a pagar queda deshabilitado', async () => {
+    setupDeuda(150_000, 100_000, 50_000)
+    renderPagarCC()
+    await screen.findByText('Deuda actual')
+
+    await userEvent.click(screen.getByRole('button', { name: /Pagar el total/i }))
+
+    expect(screen.getByRole('button', { name: /Ir a pagar/i })).toBeDisabled()
+    expect(screen.getByText(/Elegí primero a qué deuda corresponde/i)).toBeInTheDocument()
+  })
+
+  it('elegir categoría envía origen a iniciar-cc y topea el monto a esa deuda', async () => {
+    setupDeuda(150_000, 100_000, 50_000)
+    vi.mocked(api.post).mockResolvedValue({
+      data: { process_id: 'proc-cc-origen', script_url: 'https://vpos.test/checkout.js' },
+    })
+    renderPagarCC()
+    await screen.findByText('Deuda actual')
+
+    await userEvent.click(screen.getByRole('button', { name: /^Almuerzo/i }))
+    expect(screen.getByRole('button', { name: /Pagar el total \(Gs\. 50\.000\)/i })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Pagar el total/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Ir a pagar/i })).not.toBeDisabled())
+    await userEvent.click(screen.getByRole('button', { name: /Ir a pagar/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith(
+        '/core/bancard/iniciar-cc/',
+        expect.objectContaining({ monto: 50_000, origen: 'ALMUERZO' }),
+      )
+    })
+  })
+
+  it('cambiar de categoría resetea el monto elegido', async () => {
+    setupDeuda(150_000, 100_000, 50_000)
+    renderPagarCC()
+    await screen.findByText('Deuda actual')
+
+    await userEvent.click(screen.getByRole('button', { name: /^Cantina/i }))
+    await userEvent.click(screen.getByRole('button', { name: /Pagar el total \(Gs\. 100\.000\)/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Ir a pagar/i })).not.toBeDisabled())
+
+    await userEvent.click(screen.getByRole('button', { name: /^Almuerzo/i }))
 
     expect(screen.getByRole('button', { name: /Ir a pagar/i })).toBeDisabled()
   })

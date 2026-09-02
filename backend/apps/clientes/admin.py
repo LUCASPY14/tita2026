@@ -95,11 +95,12 @@ class CuentaCorrienteClienteAdmin(admin.ModelAdmin):
         "cliente_link",
         "fecha",
         "tipo_badge",
+        "origen",
         "monto_display",
         "saldo_resultante_display",
         "descripcion",
     ]
-    list_filter = ["tipo", "fecha"]
+    list_filter = ["tipo", "origen", "fecha"]
     search_fields = [
         "cliente__ruc_ci", "cliente__nombres", "cliente__apellidos", "descripcion"
     ]

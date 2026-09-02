@@ -288,7 +288,7 @@ class MedioPagoAdmin(admin.ModelAdmin):
 
 @admin.register(PagoBancard)
 class PagoBancardAdmin(admin.ModelAdmin):
-    list_display = ["id", "tipo_badge", "monto_display", "estado_badge", "shop_process_id", "fecha_creacion"]
+    list_display = ["id", "tipo_badge", "origen_cc", "monto_display", "estado_badge", "shop_process_id", "fecha_creacion"]
     list_filter = ["estado", "tipo"]
     search_fields = ["shop_process_id", "descripcion"]
     readonly_fields = [f.name for f in PagoBancard._meta.fields]

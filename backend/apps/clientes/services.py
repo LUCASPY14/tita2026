@@ -5,8 +5,49 @@ Operaciones que involucran múltiples modelos o reglas de negocio complejas.
 
 from django.db import transaction
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from .models import AlumnoResponsable, Hijo, RestriccionHijo
+
+_ORIGENES_CC_VALIDOS = {"CANTINA", "ALMUERZO"}
+
+
+def resolver_origen_pago_cc(cliente, origen_solicitado, monto) -> str:
+    """
+    Resuelve a qué categoría (CANTINA/ALMUERZO) corresponde un pago de
+    cuenta corriente, usado tanto por el pago directo del cajero
+    (CuentaCorrienteClienteViewSet) como por el pago del portal vía Bancard.
+
+    - Si el cliente debe en ambas categorías, origen_solicitado es obligatorio.
+    - Si debe en una sola, se infiere aunque no se mande (así el frontend
+      puede ocultar el selector cuando no hace falta elegir).
+    - El monto no puede superar la deuda de la categoría resuelta.
+    """
+    deuda_cantina = cliente.saldo_cc_cantina
+    deuda_almuerzo = cliente.saldo_cc_almuerzo
+    origen = (origen_solicitado or "").strip().upper()
+
+    if deuda_cantina > 0 and deuda_almuerzo > 0:
+        if origen not in _ORIGENES_CC_VALIDOS:
+            raise ValidationError({
+                "origen": "El cliente tiene deuda en cantina y almuerzo — indicá 'origen': 'CANTINA' o 'ALMUERZO'.",
+            })
+    elif deuda_cantina > 0:
+        origen = "CANTINA"
+    elif deuda_almuerzo > 0:
+        origen = "ALMUERZO"
+    else:
+        # Sin deuda categorizada — puede quedar deuda GENERAL histórica sin
+        # clasificar; no hay categoría contra la cual validar el monto.
+        return origen if origen in _ORIGENES_CC_VALIDOS else "GENERAL"
+
+    deuda_categoria = deuda_cantina if origen == "CANTINA" else deuda_almuerzo
+    if monto > deuda_categoria:
+        raise ValidationError({
+            "monto": f"El pago (₲{monto:,.0f}) supera la deuda de {origen.lower()} (₲{deuda_categoria:,.0f}).",
+        })
+
+    return origen
 
 
 def cambiar_titular(hijo: Hijo, nuevo_cliente_id: int, changed_by=None) -> AlumnoResponsable:

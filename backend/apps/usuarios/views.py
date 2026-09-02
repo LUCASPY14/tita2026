@@ -654,6 +654,8 @@ class PortalMiHijoView(APIView):
                 "nombre": user.cliente.nombre_completo,
                 "email": user.cliente.email,
                 "saldo_cuenta_corriente": int(user.cliente.saldo_cuenta_corriente),
+                "saldo_cc_cantina": int(user.cliente.saldo_cc_cantina),
+                "saldo_cc_almuerzo": int(user.cliente.saldo_cc_almuerzo),
                 "limite_credito": int(user.cliente.limite_credito),
             },
             "mes": {"anio": hoy.year, "mes": hoy.month},

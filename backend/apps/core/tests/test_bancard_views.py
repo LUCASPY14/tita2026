@@ -771,6 +771,32 @@ def padre_con_deuda_cc(db, cliente):
     return padre, cliente
 
 
+@pytest.fixture
+def padre_con_deuda_cc_ambas_categorias(db, cliente):
+    """Padre (CLIENTE_WEB) con deuda en cantina Y almuerzo — origen se vuelve obligatorio."""
+    from apps.usuarios.models import Usuario
+    from apps.clientes.models import CuentaCorrienteCliente
+    padre = Usuario.objects.create_user(
+        email="padre_cc_ambas@test.com",
+        password="test1234",
+        nombre="Padre",
+        apellido="CCAmbas",
+        rol=Usuario.Rol.CLIENTE_WEB,
+        cliente=cliente,
+    )
+    CuentaCorrienteCliente.objects.create(
+        cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+        monto=Decimal("60000"), descripcion="Deuda cantina", creado_por=padre,
+        origen=CuentaCorrienteCliente.Origen.CANTINA,
+    )
+    CuentaCorrienteCliente.objects.create(
+        cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+        monto=Decimal("40000"), descripcion="Deuda almuerzo", creado_por=padre,
+        origen=CuentaCorrienteCliente.Origen.ALMUERZO,
+    )
+    return padre, cliente
+
+
 # ─── Tests iniciar pago cuenta corriente ──────────────────────────────────────
 
 @pytest.mark.django_db
@@ -867,6 +893,32 @@ class TestBancardIniciarCC:
         assert 'redirect_url' in resp.data
         assert 'shop_process_id' in resp.data
 
+    def test_ambas_categorias_sin_origen_retorna_400(self, padre_con_deuda_cc_ambas_categorias):
+        padre, _ = padre_con_deuda_cc_ambas_categorias
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 30000})
+        assert resp.status_code == 400
+
+    def test_monto_supera_deuda_de_la_categoria_retorna_400(self, padre_con_deuda_cc_ambas_categorias):
+        padre, _ = padre_con_deuda_cc_ambas_categorias
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 50000, 'origen': 'ALMUERZO'})
+        assert resp.status_code == 400
+
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_ambas_categorias_con_origen_guarda_origen_cc(self, mock_iniciar, padre_con_deuda_cc_ambas_categorias):
+        from apps.core.models import PagoBancard
+        mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-cc-origen'}
+        padre, _ = padre_con_deuda_cc_ambas_categorias
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 30000, 'origen': 'ALMUERZO'})
+        assert resp.status_code == 201
+        pago = PagoBancard.objects.get(shop_process_id=resp.data['shop_process_id'])
+        assert pago.origen_cc == 'ALMUERZO'
+
 
 @pytest.mark.django_db
 class TestBancardRetornoCC:
@@ -897,6 +949,38 @@ class TestBancardRetornoCC:
         assert 'tipo=cc' in resp['Location']
         assert 'estado=aprobado' in resp['Location']
         mock_acreditar.assert_called_once()
+
+    @patch('apps.core.bancard_service.get_confirmation')
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_retorno_cc_confirmado_aplica_origen_al_movimiento(
+        self, mock_iniciar, mock_confirmar, padre_con_deuda_cc_ambas_categorias,
+    ):
+        """acreditar_pago_cc real (sin mockear) usa el origen_cc guardado al
+        iniciar el pago — no puede resolverse recién acá porque para cuando
+        Bancard confirma (webhook async) ya no hay request del usuario."""
+        from apps.clientes.models import CuentaCorrienteCliente
+        mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-cc-origen-ret'}
+        mock_confirmar.return_value = {
+            'status': 'success',
+            'confirmation': {'response_code': '00'},
+        }
+        padre, cliente_deuda = padre_con_deuda_cc_ambas_categorias
+        client = APIClient()
+        client.force_authenticate(user=padre)
+
+        init_resp = client.post('/api/v1/core/bancard/iniciar-cc/', {'monto': 30000, 'origen': 'ALMUERZO'})
+        assert init_resp.status_code == 201
+        shop_pid = init_resp.data['shop_process_id']
+
+        anon = APIClient()
+        resp = anon.get('/api/v1/core/bancard/retorno/', {'shop_process_id': shop_pid})
+        assert resp.status_code == 302
+
+        mov = CuentaCorrienteCliente.objects.filter(
+            cliente=cliente_deuda, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+        ).latest('id')
+        assert mov.monto == Decimal('30000')
+        assert mov.origen == CuentaCorrienteCliente.Origen.ALMUERZO
 
 
 @pytest.mark.django_db
@@ -1016,6 +1100,7 @@ class TestBancardPagarCCConTarjeta:
             cliente=cliente_deuda, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
         ).latest('id')
         assert mov.monto == Decimal('30000')
+        assert mov.origen == CuentaCorrienteCliente.Origen.GENERAL
 
 
 # ─── Tests permisos de estado ─────────────────────────────────────────────────

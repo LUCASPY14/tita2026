@@ -227,6 +227,7 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
                         f" - {tarjeta_obj.hijo.nombre_completo}"
                     ),
                     creado_por=request.user,
+                    origen=CuentaCorrienteCliente.Origen.CANTINA,
                 )
 
             registrar_auditoria(

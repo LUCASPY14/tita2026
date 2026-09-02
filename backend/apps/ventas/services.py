@@ -278,6 +278,7 @@ class VentaService:
                     venta=venta,
                     descripcion=f"Venta #{venta.pk}",
                     creado_por=cajero,
+                    origen=CuentaCorrienteCliente.Origen.CANTINA,
                 )
 
             # 5. Si es contado con medio_pago explícito, crear pago automático.
@@ -479,6 +480,7 @@ class VentaService:
                     venta=venta,
                     descripcion=f"Anulación Venta #{venta.pk}",
                     creado_por=anulado_por,
+                    origen=CuentaCorrienteCliente.Origen.CANTINA,
                 )
 
             venta.estado = Venta.Estado.ANULADA
@@ -578,6 +580,7 @@ class VentaService:
                 nota_credito=nc,
                 descripcion=f"Nota de crédito #{nro_nota_credito}",
                 creado_por=empleado,
+                origen=CuentaCorrienteCliente.Origen.CANTINA,
             )
 
         return nc
@@ -614,6 +617,7 @@ class VentaService:
                 nota_credito=nc,
                 descripcion=f"Reversión por anulación NC #{nc.nro_nota_credito}",
                 creado_por=anulado_por,
+                origen=CuentaCorrienteCliente.Origen.CANTINA,
             )
 
             for detalle in nc.detalles.select_related("producto").all():
@@ -717,6 +721,7 @@ class PagoService:
                 pago=pago,
                 descripcion=f"Pago #{pago.pk}",
                 creado_por=cajero,
+                origen=CuentaCorrienteCliente.Origen.CANTINA,
             )
 
             return pago

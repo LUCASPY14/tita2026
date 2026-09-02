@@ -96,6 +96,7 @@ class TestRegistrarVentaCredito:
         assert cc is not None
         assert cc.monto == Decimal("3000")
         assert cc.saldo_resultante == Decimal("3000")
+        assert cc.origen == CuentaCorrienteCliente.Origen.CANTINA
 
 
 @pytest.mark.django_db
@@ -151,6 +152,7 @@ class TestAnularVenta:
             .first()
         )
         assert ultimo_cc.tipo == "CREDITO"
+        assert ultimo_cc.origen == CuentaCorrienteCliente.Origen.CANTINA
 
 
 @pytest.mark.django_db

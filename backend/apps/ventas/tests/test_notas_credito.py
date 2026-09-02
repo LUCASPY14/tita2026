@@ -74,6 +74,7 @@ class TestEmitirNotaCreditoService:
         ultimo = CuentaCorrienteCliente.objects.filter(cliente=cliente).order_by("-id").first()
         assert ultimo.tipo == CuentaCorrienteCliente.Tipo.CREDITO
         assert ultimo.saldo_resultante == Decimal("15000")
+        assert ultimo.origen == CuentaCorrienteCliente.Origen.CANTINA
 
     def test_nro_nota_credito_duplicado_falla(self, cliente, usuario_cajero):
         VentaService.emitir_nota_credito(
@@ -108,6 +109,7 @@ class TestAnularNotaCreditoService:
         ultimo_cc = CuentaCorrienteCliente.objects.filter(cliente=cliente).order_by("-id").first()
         assert ultimo_cc.tipo == CuentaCorrienteCliente.Tipo.DEBITO
         assert ultimo_cc.saldo_resultante == Decimal("0")
+        assert ultimo_cc.origen == CuentaCorrienteCliente.Origen.CANTINA
 
     def test_anular_dos_veces_falla(self, cliente, usuario_cajero, usuario_admin):
         nc = VentaService.emitir_nota_credito(
