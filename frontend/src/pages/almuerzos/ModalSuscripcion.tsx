@@ -2,7 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
-import { extractErrorMessage, formatGs, todayISO, type Hijo, type PlanAlmuerzo } from './shared'
+import { extractErrorMessage, todayISO, type Hijo, type PlanAlmuerzo } from './shared'
 
 interface Props {
   open: boolean
@@ -20,7 +20,6 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
   const predeterminado = activos.find(p => p.es_predeterminado) ?? activos[0]
   const planId = form.planId || (predeterminado ? String(predeterminado.id) : '')
   const plan = activos.find(p => String(p.id) === planId)
-  const tipoCobro = plan?.tipo === 'CANTIDAD' ? 'MENSUAL' : 'CUENTA'
 
   async function handleSave() {
     if (!form.hijo || !plan) { toast.error('Completá todos los campos'); return }
@@ -29,7 +28,6 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
       await api.post('/almuerzos/suscripciones/', {
         hijo: Number(form.hijo),
         plan: plan.id,
-        tipo_cobro: tipoCobro,
         fecha_inicio: form.fecha_inicio,
       })
       toast.success('Suscripción creada')
@@ -90,9 +88,7 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
         {plan && (
           <div className="bg-green-50 rounded-xl px-3 py-2.5">
             <p className="text-xs text-green-700">
-              {tipoCobro === 'MENSUAL'
-                ? `Cuota mensual fija: el padre paga ${formatGs(plan.precio_mensual)} por adelantado cada mes.`
-                : 'Por consumo: la cuenta acumula el costo de cada almuerzo registrado en el comedor y el cajero cobra el total al mes siguiente.'}
+              Cada almuerzo registrado en el comedor descuenta el costo del saldo de almuerzo del alumno.
             </p>
           </div>
         )}

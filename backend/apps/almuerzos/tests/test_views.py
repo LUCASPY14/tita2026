@@ -3,7 +3,7 @@ Tests de vistas de almuerzos.
 Cubre: PrecioAlmuerzoViewSet, TipoAlmuerzoViewSet, PlanAlmuerzoViewSet,
 SuscripcionAlmuerzoViewSet, RegistroConsumoAlmuerzoViewSet (create + validaciones),
 CuentaAlmuerzoMensualViewSet (generar, CLIENTE_WEB filter), PagoCuentaAlmuerzoViewSet,
-PagoAlmuerzoMensualViewSet, AlergenoViewSet, ProductoAlergenoViewSet,
+AlergenoViewSet, ProductoAlergenoViewSet,
 MenuDiarioViewSet (hoy), DetalleMenuDiarioViewSet, ReporteAlmuerzosView.
 """
 import pytest
@@ -233,10 +233,6 @@ class TestViewSetsSimples:
         resp = api_cajero.get("/api/v1/almuerzos/pagos-cuentas/")
         assert resp.status_code == 200
 
-    def test_pagos_mensuales_list(self, api_cajero):
-        resp = api_cajero.get("/api/v1/almuerzos/pagos-mensuales/")
-        assert resp.status_code == 200
-
     def test_menu_list(self, api_cajero):
         resp = api_cajero.get("/api/v1/almuerzos/menu/")
         assert resp.status_code == 200
@@ -299,7 +295,7 @@ class TestSuscripcionAlmuerzoAccesoClienteWeb:
     def test_cliente_web_no_puede_crear_suscripciones(self, api_cliente_web, hijo_almuerzo, plan_sin_limite):
         resp = api_cliente_web.post("/api/v1/almuerzos/suscripciones/", {
             "hijo": hijo_almuerzo.id, "plan": plan_sin_limite.id,
-            "tipo_cobro": "CUENTA", "fecha_inicio": str(date.today()),
+            "fecha_inicio": str(date.today()),
         })
         assert resp.status_code == 403
 
@@ -1001,44 +997,6 @@ class TestRegistroConsumoWhatsappFallback:
                     "hijo": hijo_almuerzo.pk,
                     "fecha_consumo": str(date.today()),
                     "nro_tarjeta": tarjeta_almuerzo.pk,
-                },
-                format="json",
-            )
-        assert resp.status_code == 201
-
-
-# ── PagoAlmuerzoMensual create ────────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestPagoAlmuerzoMensualCreate:
-    """Líneas 414-427: perform_create del ViewSet de pagos de almuerzo mensual."""
-
-    def test_create_pago_mensual_201(self, api_admin, suscripcion_activa):
-        resp = api_admin.post(
-            "/api/v1/almuerzos/pagos-mensuales/",
-            {
-                "suscripcion": suscripcion_activa.pk,
-                "monto_pagado": "200000",
-                "mes_pagado": str(date.today().replace(day=1)),
-            },
-            format="json",
-        )
-        assert resp.status_code == 201
-
-    def test_create_pago_mensual_whatsapp_falla_igual_201(
-        self, api_admin, suscripcion_activa
-    ):
-        from unittest.mock import patch
-        with patch(
-            "apps.notificaciones.services.whatsapp_cliente",
-            side_effect=Exception("WhatsApp caído"),
-        ):
-            resp = api_admin.post(
-                "/api/v1/almuerzos/pagos-mensuales/",
-                {
-                    "suscripcion": suscripcion_activa.pk,
-                    "monto_pagado": "100000",
-                    "mes_pagado": str(date.today().replace(day=1)),
                 },
                 format="json",
             )

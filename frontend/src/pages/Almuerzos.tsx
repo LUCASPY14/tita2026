@@ -20,7 +20,6 @@ import ModalMenu from './almuerzos/ModalMenu'
 import ModalEditMenu from './almuerzos/ModalEditMenu'
 import ModalConfirmarEliminar from './almuerzos/ModalConfirmarEliminar'
 import ModalConfirmarAnular from './almuerzos/ModalConfirmarAnular'
-import ModalPagoMensual from './almuerzos/ModalPagoMensual'
 import {
   extractErrorMessage, formatGs, formatFecha, todayISO, MESES,
   ESTADO_REGISTRO_COLOR, ESTADO_CUENTA_COLOR, ESTADO_SUSCRIPCION_COLOR,
@@ -55,7 +54,6 @@ export default function Almuerzos() {
   const [editingMenu, setEditingMenu] = useState<MenuDiario | null>(null)
   const [deleteConsumoId, setDeleteConsumoId] = useState<number | null>(null)
   const [anularConsumoId, setAnularConsumoId] = useState<number | null>(null)
-  const [pagoMensualSusc, setPagoMensualSusc] = useState<Suscripcion | null>(null)
 
   // ── Cuentas ───────────────────────────────────────────────────────
   const [cuentas, setCuentas] = useState<CuentaMensual[]>([])
@@ -426,15 +424,6 @@ export default function Almuerzos() {
       render: (_, r) => <span className="text-sm text-slate-700">{r.plan_nombre}</span>,
     },
     {
-      title: 'Tipo de cobro',
-      key: 'tipo_cobro',
-      render: (_, r) => (
-        <Badge color={r.tipo_cobro === 'MENSUAL' ? 'blue' : 'orange'}>
-          {r.tipo_cobro === 'MENSUAL' ? 'Cuota fija' : 'Por consumo'}
-        </Badge>
-      ),
-    },
-    {
       title: 'Inicio',
       key: 'inicio',
       render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha_inicio)}</span>,
@@ -455,12 +444,6 @@ export default function Almuerzos() {
       width: 200,
       render: (_, r) => r.estado === 'ACTIVA' ? (
         <div className="flex gap-1.5">
-          {r.tipo_cobro === 'MENSUAL' && (
-            <Button size="sm" variant="primary" onClick={() => setPagoMensualSusc(r)}>
-              <Banknote className="w-3.5 h-3.5" />
-              Cuota
-            </Button>
-          )}
           <Button size="sm" variant="secondary" onClick={() => setEditingSusc(r)}>
             <Edit2 className="w-3.5 h-3.5" />
           </Button>
@@ -743,12 +726,6 @@ export default function Almuerzos() {
         consumoId={anularConsumoId}
         onClose={() => setAnularConsumoId(null)}
         onSaved={() => loadRegistros(searchRegistros, pageRegistros)}
-      />
-      <ModalPagoMensual
-        susc={pagoMensualSusc}
-        planes={planes}
-        onClose={() => setPagoMensualSusc(null)}
-        onSaved={loadSuscripciones}
       />
     </div>
   )

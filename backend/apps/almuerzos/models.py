@@ -174,21 +174,11 @@ class SuscripcionAlmuerzo(models.Model):
         SUSPENDIDA = "SUSPENDIDA", "Suspendida"
         CANCELADA = "CANCELADA", "Cancelada"
 
-    class TipoCobro(models.TextChoices):
-        CUENTA = "CUENTA", "Por consumo (cuenta corriente)"
-        MENSUAL = "MENSUAL", "Cuota mensual fija"
-
     hijo = models.ForeignKey(
         "clientes.Hijo", models.PROTECT, related_name="suscripciones_almuerzo"
     )
     plan = models.ForeignKey(
         PlanAlmuerzo, models.PROTECT, related_name="suscripciones"
-    )
-    tipo_cobro = models.CharField(
-        max_length=10,
-        choices=TipoCobro.choices,
-        default=TipoCobro.CUENTA,
-        help_text="CUENTA = padre paga al final del mes según consumo real. MENSUAL = cuota fija por adelantado.",
     )
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField(blank=True, null=True)
@@ -408,9 +398,9 @@ class CuentaAlmuerzoMensual(models.Model):
 
 class PagoCuentaAlmuerzo(models.Model):
     """
-    Pago de la cuenta mensual de consumo (pay-as-you-eat).
-    Liquida una CuentaAlmuerzoMensual generada por consumos reales del mes.
-    No confundir con PagoAlmuerzoMensual, que es la cuota fija de un plan.
+    Pago histórico de una cuenta mensual de consumo (pay-as-you-eat).
+    Ya no se crean filas nuevas — PagoCuentaAlmuerzoViewSet es de solo
+    lectura desde que el cobro de almuerzo se consolidó en SaldoAlmuerzo.
     """
 
     cuenta = models.ForeignKey(
@@ -457,55 +447,6 @@ class PagoCuentaAlmuerzo(models.Model):
 # ==============================================================================
 # PAGO MENSUAL DE SUSCRIPCIÓN
 # ==============================================================================
-
-class PagoAlmuerzoMensual(models.Model):
-    """
-    Cuota mensual de un plan de almuerzo (suscripción fija).
-    Liquida la SuscripcionAlmuerzo del mes, independientemente del consumo real.
-    No confundir con PagoCuentaAlmuerzo, que liquida consumos por cuenta corriente.
-    """
-
-    class Estado(models.TextChoices):
-        PENDIENTE = "PENDIENTE", "Pendiente"
-        CONFIRMADO = "CONFIRMADO", "Confirmado"
-        RECHAZADO = "RECHAZADO", "Rechazado"
-
-    suscripcion = models.ForeignKey(
-        SuscripcionAlmuerzo, models.PROTECT, related_name="pagos_mensuales"
-    )
-    venta = models.OneToOneField(
-        "ventas.Venta",
-        models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="pago_almuerzo",
-    )
-    monto_pagado = models.DecimalField(max_digits=12, decimal_places=0)
-    mes_pagado = models.DateField(help_text="Mes al que corresponde el pago")
-    fecha_pago = models.DateTimeField(default=timezone.now)
-    estado = models.CharField(
-        max_length=15, choices=Estado.choices, default=Estado.PENDIENTE
-    )
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Pago Mensual de Almuerzo"
-        verbose_name_plural = "Pagos Mensuales de Almuerzo"
-        constraints = [
-            UniqueConstraint(fields=["suscripcion", "mes_pagado"], name="unique_pago_mensual_suscripcion")
-        ]
-        ordering = ["-fecha_pago"]
-
-    def clean(self):
-        if self.mes_pagado:
-            if self.mes_pagado.day != 1:
-                raise ValidationError({"mes_pagado": "Debe ser el primer día del mes (ej: 2026-05-01)."})
-            if self.mes_pagado > date.today().replace(day=1):
-                raise ValidationError({"mes_pagado": "No se puede registrar un pago de un mes futuro."})
-
-    def __str__(self):
-        return f"Pago {self.suscripcion} - {self.mes_pagado}"
-
 
 # ==============================================================================
 # ALÉRGENOS

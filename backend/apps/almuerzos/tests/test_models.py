@@ -110,17 +110,6 @@ def pago_cuenta(db, cuenta_mensual, usuario_cajero):
 
 
 @pytest.fixture
-def pago_mensual(db, suscripcion):
-    from apps.almuerzos.models import PagoAlmuerzoMensual
-    return PagoAlmuerzoMensual.objects.create(
-        suscripcion=suscripcion,
-        monto_pagado=Decimal("200000"),
-        mes_pagado=date(2026, 1, 1),
-        estado=PagoAlmuerzoMensual.Estado.CONFIRMADO,
-    )
-
-
-@pytest.fixture
 def menu_diario(db, producto, usuario_cajero):
     from apps.almuerzos.models import MenuDiario
     return MenuDiario.objects.create(
@@ -334,30 +323,6 @@ class TestPagoCuentaAlmuerzo:
         pago_cuenta.monto = Decimal("100000")
         pago_cuenta.clean()  # no debe lanzar
 
-
-# ── PagoAlmuerzoMensual ───────────────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestPagoAlmuerzoMensual:
-
-    def test_str(self, pago_mensual):
-        s = str(pago_mensual)
-        assert "2026" in s or "Plan" in s
-
-    def test_clean_dia_no_uno_falla(self, pago_mensual):
-        pago_mensual.mes_pagado = date(2026, 1, 15)
-        with pytest.raises(ValidationError, match="[Pp]rimer"):
-            pago_mensual.clean()
-
-    def test_clean_mes_futuro_falla(self, pago_mensual):
-        pago_mensual.mes_pagado = date.today().replace(day=1) + timedelta(days=32)
-        pago_mensual.mes_pagado = pago_mensual.mes_pagado.replace(day=1)
-        with pytest.raises(ValidationError, match="futuro"):
-            pago_mensual.clean()
-
-    def test_clean_mes_valido_ok(self, pago_mensual):
-        pago_mensual.mes_pagado = date(2026, 1, 1)
-        pago_mensual.clean()  # no debe lanzar
 
 
 # ── Alergeno y ProductoAlergeno ───────────────────────────────────────────────

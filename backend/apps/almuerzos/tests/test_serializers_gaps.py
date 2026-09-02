@@ -2,7 +2,6 @@
 Cobertura de ramas no alcanzadas en almuerzos/serializers.py:
   - RegistroConsumoAlmuerzoSerializer.validate(): 3 errores de suscripción
   - PagoCuentaAlmuerzoSerializer.validate(): monto ≤ 0, monto > saldo
-  - PagoAlmuerzoMensualSerializer.validate(): mes anterior/posterior a suscripción
   - DetalleMenuDiarioSerializer.validate_cantidad(): valor ≤ 0
 """
 import pytest
@@ -178,46 +177,6 @@ class TestPagoCuentaAlmuerzoSerializerValidate:
             "monto": "20000",
             "medio_pago": "EFECTIVO",
             "registrado_por": usuario_cajero.pk,
-        })
-        assert ser.is_valid(), ser.errors
-
-
-# ==============================================================================
-# PagoAlmuerzoMensualSerializer.validate()
-# ==============================================================================
-
-@pytest.mark.django_db
-class TestPagoAlmuerzoMensualSerializerValidate:
-
-    def test_mes_anterior_a_inicio_suscripcion_falla(self, suscripcion):
-        from apps.almuerzos.serializers import PagoAlmuerzoMensualSerializer
-        mes_anterior = (suscripcion.fecha_inicio - timedelta(days=32)).replace(day=1)
-        ser = PagoAlmuerzoMensualSerializer(data={
-            "suscripcion": suscripcion.pk,
-            "mes_pagado": str(mes_anterior),
-            "monto_pagado": "12000",
-        })
-        assert not ser.is_valid()
-        assert "mes_pagado" in ser.errors
-
-    def test_mes_posterior_a_fin_suscripcion_falla(self, suscripcion):
-        from apps.almuerzos.serializers import PagoAlmuerzoMensualSerializer
-        mes_posterior = (suscripcion.fecha_fin + timedelta(days=32)).replace(day=1)
-        ser = PagoAlmuerzoMensualSerializer(data={
-            "suscripcion": suscripcion.pk,
-            "mes_pagado": str(mes_posterior),
-            "monto_pagado": "12000",
-        })
-        assert not ser.is_valid()
-        assert "mes_pagado" in ser.errors
-
-    def test_mes_dentro_de_vigencia_ok(self, suscripcion):
-        from apps.almuerzos.serializers import PagoAlmuerzoMensualSerializer
-        mes_valido = suscripcion.fecha_inicio.replace(day=1)
-        ser = PagoAlmuerzoMensualSerializer(data={
-            "suscripcion": suscripcion.pk,
-            "mes_pagado": str(mes_valido),
-            "monto_pagado": "12000",
         })
         assert ser.is_valid(), ser.errors
 

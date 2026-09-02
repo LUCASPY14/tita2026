@@ -15,7 +15,6 @@ from .models import (
     RegistroConsumoAlmuerzo,
     CuentaAlmuerzoMensual,
     PagoCuentaAlmuerzo,
-    PagoAlmuerzoMensual,
     Alergeno,
     ProductoAlergeno,
     MenuDiario,
@@ -354,70 +353,6 @@ class PagoCuentaAlmuerzoAdmin(admin.ModelAdmin):
 # ==============================================================================
 # PAGO MENSUAL DE SUSCRIPCIÓN
 # ==============================================================================
-
-@admin.register(PagoAlmuerzoMensual)
-class PagoAlmuerzoMensualAdmin(admin.ModelAdmin):
-    list_display = [
-        "id",
-        "suscripcion_link",
-        "monto_pagado_display",
-        "mes_pagado",
-        "estado_badge",
-        "fecha_pago",
-    ]
-    list_filter = ["estado", "fecha_pago"]
-    search_fields = ["suscripcion__hijo__nombre", "suscripcion__hijo__apellido"]
-    readonly_fields = ["fecha_creacion"]
-    list_select_related = ["suscripcion", "suscripcion__hijo", "suscripcion__plan"]
-    date_hierarchy = "fecha_pago"
-    ordering = ["-fecha_pago"]
-    fieldsets = (
-        ("Datos del Pago", {
-            "fields": ("suscripcion", "monto_pagado", "mes_pagado", "estado")
-        }),
-        ("Venta", {
-            "fields": ("venta",)
-        }),
-        ("Auditoría", {
-            "fields": ("fecha_creacion",),
-            "classes": ("collapse",),
-        }),
-    )
-
-    def get_readonly_fields(self, request, obj=None):
-        """La suscripción no puede cambiar una vez creado el pago; todo es readonly si está confirmado/rechazado."""
-        readonly = list(self.readonly_fields)
-        if obj:
-            readonly.append("suscripcion")
-            if obj.estado in ("CONFIRMADO", "RECHAZADO"):
-                return [f.name for f in self.model._meta.fields]
-        return readonly
-
-    def has_delete_permission(self, request, obj=None):
-        """No permite eliminar pagos confirmados o rechazados."""
-        if obj and obj.estado in ("CONFIRMADO", "RECHAZADO"):
-            return False
-        return super().has_delete_permission(request, obj)
-
-    def suscripcion_link(self, obj):
-        url = reverse("admin:almuerzos_suscripcionalmuerzo_change", args=[obj.suscripcion.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.suscripcion)
-    suscripcion_link.short_description = "Suscripción"
-
-    def monto_pagado_display(self, obj):
-        return f"₲{obj.monto_pagado:,.0f}"
-    monto_pagado_display.short_description = "Monto"
-
-    def estado_badge(self, obj):
-        colors = {"PENDIENTE": "#ffc107", "CONFIRMADO": "#28a745", "RECHAZADO": "#dc3545"}
-        color = colors.get(obj.estado, "#6c757d")
-        return format_html(
-            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            color,
-            obj.get_estado_display(),
-        )
-    estado_badge.short_description = "Estado"
-
 
 # ==============================================================================
 # ALÉRGENO

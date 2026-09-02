@@ -31,7 +31,7 @@ describe('ModalSuscripcion — selector de plan con predeterminado preselecciona
     expect(screen.queryByText('Plan Básico 20 días')).not.toBeInTheDocument()
   })
 
-  it('al suscribir sin tocar el selector, envía el plan predeterminado y tipo_cobro derivado (SIN_LIMITE → CUENTA)', async () => {
+  it('al suscribir sin tocar el selector, envía el plan predeterminado', async () => {
     vi.mocked(api.post).mockResolvedValue({ data: { id: 1 } })
     render(<ModalSuscripcion open hijos={[HIJO]} planes={PLANES} onClose={vi.fn()} onSaved={vi.fn()} />)
 
@@ -41,11 +41,10 @@ describe('ModalSuscripcion — selector de plan con predeterminado preselecciona
     expect(api.post).toHaveBeenCalledWith('/almuerzos/suscripciones/', expect.objectContaining({
       hijo: 1,
       plan: 1,
-      tipo_cobro: 'CUENTA',
     }))
   })
 
-  it('permite elegir otro plan activo y deriva tipo_cobro MENSUAL para planes tipo CANTIDAD', async () => {
+  it('permite elegir otro plan activo', async () => {
     const planes: PlanAlmuerzo[] = [
       ...PLANES,
       { id: 4, nombre: 'Plan Nuevo por Cantidad', tipo: 'CANTIDAD', precio_mensual: 200000, cantidad_almuerzos_mes: 15, dias_semana_incluidos: [1, 2, 3, 4, 5], activo: true, es_predeterminado: false },
@@ -59,7 +58,6 @@ describe('ModalSuscripcion — selector de plan con predeterminado preselecciona
 
     expect(api.post).toHaveBeenCalledWith('/almuerzos/suscripciones/', expect.objectContaining({
       plan: 4,
-      tipo_cobro: 'MENSUAL',
     }))
   })
 })

@@ -43,7 +43,6 @@ from .models import (
     MenuDiario,
     MovimientoSaldoAlmuerzo,
     PagoCuentaAlmuerzo,
-    PagoAlmuerzoMensual,
     PlanAlmuerzo,
     PrecioAlmuerzo,
     ProductoAlergeno,
@@ -60,7 +59,6 @@ from .serializers import (
     MenuDiarioSerializer,
     MovimientoSaldoAlmuerzoSerializer,
     PagoCuentaAlmuerzoSerializer,
-    PagoAlmuerzoMensualSerializer,
     PlanAlmuerzoSerializer,
     PrecioAlmuerzoSerializer,
     ProductoAlergenoSerializer,
@@ -348,7 +346,7 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 # trg_sync_cuenta_almuerzo (migración 0014) sincroniza
                 # cantidad_almuerzos/monto_total al insertar, pero solo si la
                 # fila de la cuenta ya existe.
-                self._asegurar_cuenta_mensual(hijo, fecha_consumo, suscripcion)
+                self._asegurar_cuenta_mensual(hijo, fecha_consumo)
 
             registro = serializer.save(
                 costo_almuerzo=costo_calculado,
@@ -366,13 +364,12 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 
         return advertencias
 
-    def _asegurar_cuenta_mensual(self, hijo, fecha, suscripcion):
+    def _asegurar_cuenta_mensual(self, hijo, fecha):
         """Crea la cuenta mensual del alumno si todavía no existe.
 
         No suma cantidad_almuerzos/monto_total acá: eso lo hace el trigger
         trg_sync_cuenta_almuerzo al insertar el RegistroConsumoAlmuerzo.
         """
-        forma_cobro = suscripcion.plan.tipo if suscripcion else "SIN_LIMITE"
         CuentaAlmuerzoMensual.objects.get_or_create(
             hijo=hijo,
             anio=fecha.year,
@@ -381,7 +378,7 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 "cantidad_almuerzos": 0,
                 "monto_total": 0,
                 "monto_pagado": 0,
-                "forma_cobro": forma_cobro,
+                "forma_cobro": CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
                 "estado": CuentaAlmuerzoMensual.Estado.PENDIENTE,
             },
         )
@@ -714,35 +711,6 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
             ),
         )
         return Response(self.get_serializer(recarga_confirmada).data)
-
-
-# ==============================================================================
-# PAGO ALMUERZO MENSUAL
-# ==============================================================================
-
-class PagoAlmuerzoMensualViewSet(viewsets.ModelViewSet):
-    queryset = PagoAlmuerzoMensual.objects.select_related("suscripcion").all()
-    serializer_class = PagoAlmuerzoMensualSerializer
-    permission_classes = [IsCajeroOrAdmin]
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ["suscripcion", "estado"]
-    ordering = ["-fecha_pago"]
-
-    def perform_create(self, serializer):
-        pago = serializer.save(estado=PagoAlmuerzoMensual.Estado.CONFIRMADO)
-        try:
-            from apps.notificaciones.services import whatsapp_cliente
-            hijo = pago.suscripcion.hijo
-            cliente_resp = hijo.cliente_responsable
-            mes = pago.mes_pagado
-            whatsapp_cliente(
-                cliente_resp,
-                f"Pago de almuerzo confirmado para {hijo.nombre_completo}: "
-                f"Gs. {int(pago.monto_pagado):,} correspondiente a "
-                f"{mes.strftime('%m/%Y')}. Gracias."
-            )
-        except Exception:
-            logger.warning("WhatsApp: fallo al notificar pago de almuerzo pk=%s", pago.pk, exc_info=True)
 
 
 # ==============================================================================

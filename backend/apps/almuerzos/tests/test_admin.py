@@ -25,7 +25,6 @@ def sa_client(db):
     "/admin/almuerzos/registroconsumoalmuerzo/",
     "/admin/almuerzos/cuentaalmuerzomensual/",
     "/admin/almuerzos/pagocuentaalmuerzo/",
-    "/admin/almuerzos/pagoalmuerzomensual/",
     "/admin/almuerzos/alergeno/",
     "/admin/almuerzos/productoalergeno/",
 ])

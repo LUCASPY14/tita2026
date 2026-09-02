@@ -11,7 +11,6 @@ from .models import (
     MenuDiario,
     MovimientoSaldoAlmuerzo,
     PagoCuentaAlmuerzo,
-    PagoAlmuerzoMensual,
     PlanAlmuerzo,
     PrecioAlmuerzo,
     ProductoAlergeno,
@@ -200,32 +199,6 @@ class RecargaSaldoAlmuerzoSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError("El monto debe ser mayor a cero.")
         return value
-
-
-# ==============================================================================
-# PAGO ALMUERZO MENSUAL
-# ==============================================================================
-
-class PagoAlmuerzoMensualSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PagoAlmuerzoMensual
-        fields = "__all__"
-        read_only_fields = ["fecha_creacion"]
-
-    def validate(self, data):
-        suscripcion = data.get("suscripcion")
-        mes_pagado = data.get("mes_pagado")
-
-        if suscripcion and mes_pagado:
-            if mes_pagado < suscripcion.fecha_inicio.replace(day=1):
-                raise serializers.ValidationError(
-                    {"mes_pagado": "El mes pagado es anterior al inicio de la suscripción."}
-                )
-            if suscripcion.fecha_fin and mes_pagado > suscripcion.fecha_fin.replace(day=1):
-                raise serializers.ValidationError(
-                    {"mes_pagado": "El mes pagado es posterior al vencimiento de la suscripción."}
-                )
-        return data
 
 
 # ==============================================================================

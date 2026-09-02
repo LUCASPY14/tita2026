@@ -78,7 +78,6 @@ export interface Suscripcion {
   hijo_nombre: string
   plan: number
   plan_nombre: string
-  tipo_cobro: 'CUENTA' | 'MENSUAL'
   estado: string
   fecha_inicio: string
   fecha_fin: string | null
