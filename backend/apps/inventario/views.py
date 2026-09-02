@@ -4,6 +4,7 @@ Views para la app inventario
 
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -29,6 +30,7 @@ from .models import (
     LoteProducto,
     AlertaVencimiento,
 )
+from .services import StockService
 from .serializers import (
     StockSerializer,
     MovimientoStockSerializer,
@@ -122,63 +124,36 @@ class AjusteInventarioViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        with transaction.atomic():
-            ajuste = AjusteInventario.objects.select_for_update().get(pk=ajuste.pk)
-            if ajuste.estado != AjusteInventario.Estado.PENDIENTE:
-                return Response({"error": "El ajuste ya fue procesado."}, status=status.HTTP_400_BAD_REQUEST)
+        es_ingreso = ajuste.tipo == AjusteInventario.TipoAjuste.AUMENTO
+        tipo_mov = MovimientoStock.Tipo.INGRESO if es_ingreso else MovimientoStock.Tipo.EGRESO
+        motivo_mov = MovimientoStock.Motivo.AJUSTE_AUMENTO if es_ingreso else MovimientoStock.Motivo.AJUSTE_MERMA
 
-            es_ingreso = ajuste.tipo == AjusteInventario.TipoAjuste.AUMENTO
-            tipo_mov = MovimientoStock.Tipo.INGRESO if es_ingreso else MovimientoStock.Tipo.EGRESO
-            motivo_mov = MovimientoStock.Motivo.AJUSTE_AUMENTO if es_ingreso else MovimientoStock.Motivo.AJUSTE_MERMA
+        try:
+            with transaction.atomic():
+                ajuste = AjusteInventario.objects.select_for_update().get(pk=ajuste.pk)
+                if ajuste.estado != AjusteInventario.Estado.PENDIENTE:
+                    return Response({"error": "El ajuste ya fue procesado."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Paso 1: bloquear todos los stocks y validar disponibilidad para MERMA.
-            # Se hace antes de modificar cualquier fila para un rechazo limpio.
-            detalles_con_stock = []
-            for detalle in ajuste.detalles.select_related("producto").all():
-                stock, _ = Stock.objects.get_or_create(
-                    producto=detalle.producto,
-                    defaults={"cantidad": Decimal("0")},
-                )
-                stock = Stock.objects.select_for_update().get(pk=stock.pk)
+                for detalle in ajuste.detalles.select_related("producto").all():
+                    movimiento = StockService.ajustar_stock(
+                        producto=detalle.producto,
+                        cantidad=detalle.cantidad,
+                        tipo=tipo_mov,
+                        motivo=motivo_mov,
+                        autorizado_por=request.user,
+                        ajuste=ajuste,
+                        observaciones=f"Ajuste #{ajuste.pk} — {ajuste.motivo}",
+                    )
+                    detalle.movimiento_stock = movimiento
+                    detalle.save(update_fields=["movimiento_stock"])
 
-                if not es_ingreso and not detalle.producto.permite_stock_negativo:
-                    if stock.cantidad < detalle.cantidad:
-                        return Response(
-                            {
-                                "error": f"Stock insuficiente para {detalle.producto.descripcion}.",
-                                "disponible": str(stock.cantidad),
-                                "requerido": str(detalle.cantidad),
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-
-                detalles_con_stock.append((detalle, stock))
-
-            # Paso 2: aplicar todos los cambios (validaciones ya superadas).
-            for detalle, stock in detalles_con_stock:
-                if es_ingreso:
-                    stock.cantidad += detalle.cantidad
-                else:
-                    stock.cantidad -= detalle.cantidad
-                stock.save()
-
-                movimiento = MovimientoStock.objects.create(
-                    producto=detalle.producto,
-                    tipo=tipo_mov,
-                    motivo=motivo_mov,
-                    cantidad=detalle.cantidad,
-                    stock_resultante=stock.cantidad,
-                    ajuste=ajuste,
-                    autorizado_por=request.user,
-                    observaciones=f"Ajuste #{ajuste.pk} — {ajuste.motivo}",
-                )
-                detalle.movimiento_stock = movimiento
-                detalle.save(update_fields=["movimiento_stock"])
-
-            ajuste.estado = AjusteInventario.Estado.APROBADO
-            ajuste.aprobado_por = request.user
-            ajuste.fecha_aprobacion = timezone.now()
-            ajuste.save(update_fields=["estado", "aprobado_por", "fecha_aprobacion"])
+                ajuste.estado = AjusteInventario.Estado.APROBADO
+                ajuste.aprobado_por = request.user
+                ajuste.fecha_aprobacion = timezone.now()
+                ajuste.save(update_fields=["estado", "aprobado_por", "fecha_aprobacion"])
+        except ValidationError as e:
+            detail = e.message_dict if hasattr(e, "message_dict") else {"error": str(e)}
+            return Response(detail, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(AjusteInventarioSerializer(ajuste).data)
 
@@ -198,7 +173,9 @@ class AjusteInventarioViewSet(viewsets.ModelViewSet):
         return Response(AjusteInventarioSerializer(ajuste).data)
 
 
-class DetalleAjusteViewSet(viewsets.ModelViewSet):
+class DetalleAjusteViewSet(viewsets.ReadOnlyModelViewSet):
+    """Solo lectura: los detalles se crean/mutan únicamente vía el flujo de
+    AjusteInventario (create/aprobar), nunca por escritura directa."""
     queryset = DetalleAjuste.objects.select_related("ajuste", "producto").all()
     serializer_class = DetalleAjusteSerializer
     permission_classes = [IsStaffUser]

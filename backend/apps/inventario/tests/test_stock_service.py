@@ -1,7 +1,7 @@
 """
-Tests para StockService y AjusteInventarioService.
+Tests para StockService.
 Cubre: validar_disponibilidad, reservar_stock, obtener_productos_bajo_stock,
-calcular_valor_inventario, obtener_rotacion_inventario, crear_ajuste.
+calcular_valor_inventario, obtener_rotacion_inventario, ajustar_stock.
 """
 import pytest
 from decimal import Decimal
@@ -233,41 +233,55 @@ class TestRotacionInventario:
         assert resultado == []
 
 
-# ── AjusteInventarioService ───────────────────────────────────────────────────
+# ── StockService.ajustar_stock ────────────────────────────────────────────────
 
 @pytest.mark.django_db
-class TestAjusteInventarioService:
+class TestAjustarStock:
 
-    def test_crear_ajuste_pendiente(self, producto_sin_stock, usuario_cajero):
-        from apps.inventario.services import AjusteInventarioService
-        from apps.inventario.models import AjusteInventario, DetalleAjuste
+    def test_ingreso_aumenta_stock_y_crea_movimiento(self, producto_sin_stock, usuario_admin):
+        from apps.inventario.services import StockService
+        from apps.inventario.models import MovimientoStock, Stock
 
-        ajuste = AjusteInventarioService.crear_ajuste(
-            tipo_ajuste=AjusteInventario.TipoAjuste.AUMENTO,
-            motivo="Recepción de mercadería",
-            detalles=[{"producto_id": producto_sin_stock.pk, "cantidad": Decimal("10")}],
-            empleado_solicita=usuario_cajero,
+        movimiento = StockService.ajustar_stock(
+            producto=producto_sin_stock,
+            cantidad=Decimal("10"),
+            tipo=MovimientoStock.Tipo.INGRESO,
+            motivo=MovimientoStock.Motivo.AJUSTE_AUMENTO,
+            autorizado_por=usuario_admin,
         )
 
-        assert ajuste.estado == AjusteInventario.Estado.PENDIENTE
-        assert ajuste.tipo == AjusteInventario.TipoAjuste.AUMENTO
-        assert DetalleAjuste.objects.filter(ajuste=ajuste).count() == 1
+        stock = Stock.objects.get(producto=producto_sin_stock)
+        assert stock.cantidad == Decimal("10")
+        assert movimiento.stock_resultante == Decimal("10")
+        assert movimiento.tipo == MovimientoStock.Tipo.INGRESO
 
-    def test_crear_ajuste_multiples_productos(self, producto_sin_stock, producto, usuario_admin):
-        from apps.inventario.services import AjusteInventarioService
-        from apps.inventario.models import AjusteInventario, DetalleAjuste
+    def test_egreso_descuenta_stock(self, stock_normal, producto_sin_stock, usuario_admin):
+        from apps.inventario.services import StockService
+        from apps.inventario.models import MovimientoStock, Stock
 
-        ajuste = AjusteInventarioService.crear_ajuste(
-            tipo_ajuste=AjusteInventario.TipoAjuste.MERMA,
-            motivo="Vencimiento",
-            detalles=[
-                {"producto_id": producto_sin_stock.pk, "cantidad": Decimal("2")},
-                {"producto_id": producto.pk, "cantidad": Decimal("3")},
-            ],
-            empleado_solicita=usuario_admin,
+        StockService.ajustar_stock(
+            producto=producto_sin_stock,
+            cantidad=Decimal("4"),
+            tipo=MovimientoStock.Tipo.EGRESO,
+            motivo=MovimientoStock.Motivo.AJUSTE_MERMA,
+            autorizado_por=usuario_admin,
         )
 
-        assert DetalleAjuste.objects.filter(ajuste=ajuste).count() == 2
+        stock = Stock.objects.get(producto=producto_sin_stock)
+        assert stock.cantidad == Decimal("16")
+
+    def test_egreso_sin_stock_suficiente_falla(self, producto_sin_stock, usuario_admin):
+        from apps.inventario.services import StockService
+        from apps.inventario.models import MovimientoStock
+
+        with pytest.raises(ValidationError, match="insuficiente"):
+            StockService.ajustar_stock(
+                producto=producto_sin_stock,
+                cantidad=Decimal("5"),
+                tipo=MovimientoStock.Tipo.EGRESO,
+                motivo=MovimientoStock.Motivo.AJUSTE_MERMA,
+                autorizado_por=usuario_admin,
+            )
 
 
 # ── Edge cases para cobertura 100% ────────────────────────────────────────────

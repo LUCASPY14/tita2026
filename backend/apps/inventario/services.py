@@ -11,7 +11,7 @@ from django.db import transaction
 
 from apps.productos.models import Producto
 
-from .models import AjusteInventario, DetalleAjuste, MovimientoStock, Stock
+from .models import MovimientoStock, Stock
 
 
 class StockService:
@@ -275,36 +275,50 @@ class StockService:
 
         return sorted(resultado, key=lambda x: x["rotacion"], reverse=True)
 
-
-class AjusteInventarioService:
-    """Servicio para gestionar ajustes de inventario."""
-
     @staticmethod
-    @transaction.atomic
-    def crear_ajuste(tipo_ajuste, motivo, detalles, empleado_solicita):
+    def ajustar_stock(
+        producto: Producto,
+        cantidad: Decimal,
+        tipo: str,
+        motivo: str,
+        autorizado_por,
+        ajuste=None,
+        observaciones: str = "",
+    ) -> MovimientoStock:
         """
-        Crea un ajuste de inventario pendiente de aprobación.
+        Aplica un ingreso o egreso de stock con bloqueo pesimista y registra
+        el MovimientoStock correspondiente. Debe llamarse dentro de una
+        transacción atómica del caller (ej. el flujo de aprobación de un
+        AjusteInventario).
 
-        Args:
-            tipo_ajuste: AjusteInventario.TipoAjuste.AUMENTO o .MERMA
-            motivo: str — razón del ajuste
-            detalles: Lista de {'producto_id': int, 'cantidad': Decimal}
-            empleado_solicita: Usuario que solicita
-        Returns:
-            AjusteInventario en estado PENDIENTE
+        Raises:
+            ValidationError: Si es egreso, el producto no permite stock
+                negativo y no hay suficiente cantidad disponible.
         """
-        ajuste = AjusteInventario.objects.create(
-            tipo=tipo_ajuste,
-            motivo=motivo,
-            estado=AjusteInventario.Estado.PENDIENTE,
-            solicitado_por=empleado_solicita,
+        stock, _ = Stock.objects.get_or_create(
+            producto=producto,
+            defaults={"cantidad": Decimal("0.000")},
         )
+        stock = Stock.objects.select_for_update().get(pk=stock.pk)
 
-        for detalle in detalles:
-            DetalleAjuste.objects.create(
-                ajuste=ajuste,
-                producto_id=detalle["producto_id"],
-                cantidad=detalle["cantidad"],
-            )
+        es_ingreso = tipo == MovimientoStock.Tipo.INGRESO
+        if not es_ingreso and not producto.permite_stock_negativo and stock.cantidad < cantidad:
+            raise ValidationError({
+                "error": f"Stock insuficiente para {producto.descripcion}.",
+                "disponible": str(stock.cantidad),
+                "requerido": str(cantidad),
+            })
 
-        return ajuste
+        stock.cantidad += cantidad if es_ingreso else -cantidad
+        stock.save()
+
+        return MovimientoStock.objects.create(
+            producto=producto,
+            tipo=tipo,
+            motivo=motivo,
+            cantidad=cantidad,
+            stock_resultante=stock.cantidad,
+            ajuste=ajuste,
+            autorizado_por=autorizado_por,
+            observaciones=observaciones,
+        )
