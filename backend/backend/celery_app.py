@@ -129,6 +129,10 @@ app.conf.beat_schedule = {
         "task": "apps.contabilidad.tasks.refrescar_mv_balance_cliente",
         "schedule": crontab(minute="*/15"),  # Cada 15 minutos
     },
+    "recordar-facturacion-mensual-pendiente": {
+        "task": "apps.contabilidad.tasks.recordar_facturacion_mensual_pendiente",
+        "schedule": crontab(hour=8, minute=45, day_of_month=5),  # Día 5 de cada mes 08:45
+    },
     # ── Compras ───────────────────────────────────────────────────────
     "alertar-ordenes-compra-pendientes": {
         "task": "apps.compras.tasks.alertar_ordenes_compra_pendientes",
