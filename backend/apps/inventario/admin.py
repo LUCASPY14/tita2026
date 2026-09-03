@@ -1,6 +1,6 @@
 ﻿"""
 Admin para la app inventario
-Gestión de stock, movimientos, ajustes, lotes, costos y alertas
+Gestión de stock, movimientos, ajustes y costos
 """
 
 from django.contrib import admin
@@ -14,8 +14,6 @@ from .models import (
     AjusteInventario,
     DetalleAjuste,
     CostoHistorico,
-    LoteProducto,
-    AlertaVencimiento,
 )
 
 
@@ -268,122 +266,3 @@ class CostoHistoricoAdmin(admin.ModelAdmin):
     def costo_total_display(self, obj):
         return f"₲{obj.costo_total:,.0f}"
     costo_total_display.short_description = "Costo Total"
-
-
-# ==============================================================================
-# LOTE DE PRODUCTO
-# ==============================================================================
-
-@admin.register(LoteProducto)
-class LoteProductoAdmin(admin.ModelAdmin):
-    list_display = [
-        "id",
-        "producto_link",
-        "numero_lote",
-        "cantidad_disponible",
-        "fecha_vencimiento",
-        "dias_vencimiento_badge",
-        "bloqueado",
-    ]
-    list_filter = ["bloqueado", "fecha_vencimiento"]
-    search_fields = ["producto__descripcion", "numero_lote"]
-    readonly_fields = ["fecha_creacion"]
-    list_select_related = ["producto"]
-    ordering = ["fecha_vencimiento"]
-    fieldsets = (
-        ("Datos del Lote", {
-            "fields": ("producto", "compra", "numero_lote")
-        }),
-        ("Cantidades", {
-            "fields": ("cantidad_inicial", "cantidad_disponible")
-        }),
-        ("Vencimiento", {
-            "fields": ("fecha_fabricacion", "fecha_vencimiento")
-        }),
-        ("Bloqueo", {
-            "fields": ("bloqueado", "motivo_bloqueo", "fecha_bloqueo")
-        }),
-        ("Auditoría", {
-            "fields": ("observaciones", "fecha_creacion"),
-            "classes": ("collapse",),
-        }),
-    )
-
-    def producto_link(self, obj):
-        url = reverse("admin:productos_producto_change", args=[obj.producto.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.producto.descripcion)
-    producto_link.short_description = "Producto"
-
-    def dias_vencimiento_badge(self, obj):
-        dias = obj.dias_hasta_vencimiento
-        if dias is None:
-            return "-"
-        if dias < 0:
-            return format_html('<span style="color:#dc3545;">VENCIDO ({} días)</span>', abs(dias))
-        if dias <= 7:
-            color = "#dc3545"
-        elif dias <= 30:
-            color = "#ffc107"
-        else:
-            color = "#28a745"
-        return format_html('<strong style="color:{};">{} días</strong>', color, dias)
-    dias_vencimiento_badge.short_description = "Vencimiento"
-
-
-# ==============================================================================
-# ALERTA DE VENCIMIENTO
-# ==============================================================================
-
-@admin.register(AlertaVencimiento)
-class AlertaVencimientoAdmin(admin.ModelAdmin):
-    list_display = [
-        "id",
-        "lote_link",
-        "tipo_badge",
-        "dias_restantes",
-        "accion_tomada_badge",
-        "fecha_generada",
-    ]
-    list_filter = ["tipo", "accion_tomada", "fecha_generada"]
-    search_fields = ["lote__producto__descripcion", "lote__numero_lote"]
-    readonly_fields = ["fecha_generada"]
-    list_select_related = ["lote"]
-    ordering = ["-fecha_generada"]
-
-    def lote_link(self, obj):
-        url = reverse("admin:inventario_loteproducto_change", args=[obj.lote.pk])
-        return format_html('<a href="{}">Lote {}</a>', url, obj.lote.numero_lote)
-    lote_link.short_description = "Lote"
-
-    def tipo_badge(self, obj):
-        colors = {
-            "30_DIAS": "#ffc107",
-            "15_DIAS": "#fd7e14",
-            "7_DIAS": "#dc3545",
-            "3_DIAS": "#dc3545",
-            "VENCIDO": "#dc3545",
-        }
-        color = colors.get(obj.tipo, "#6c757d")
-        return format_html(
-            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            color,
-            obj.get_tipo_display(),
-        )
-    tipo_badge.short_description = "Tipo"
-
-    def accion_tomada_badge(self, obj):
-        colors = {
-            "PENDIENTE": "#ffc107",
-            "DESCUENTO": "#0d6efd",
-            "DEVUELTO": "#17a2b8",
-            "DONADO": "#28a745",
-            "DESCARTADO": "#6c757d",
-            "VENDIDO": "#28a745",
-        }
-        color = colors.get(obj.accion_tomada, "#6c757d")
-        return format_html(
-            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            color,
-            obj.get_accion_tomada_display() if obj.accion_tomada else "-",
-        )
-    accion_tomada_badge.short_description = "Acción"

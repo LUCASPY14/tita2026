@@ -18,7 +18,7 @@ from common.permissions import IsAdmin, IsStaffUser
 from common.mixins import ExportCSVMixin
 
 from django_filters.rest_framework import DjangoFilterBackend
-from .filters import MovimientoStockFilter, LoteProductoFilter, AlertaVencimientoFilter
+from .filters import MovimientoStockFilter
 
 from .models import (
     Stock,
@@ -26,8 +26,6 @@ from .models import (
     AjusteInventario,
     DetalleAjuste,
     CostoHistorico,
-    LoteProducto,
-    AlertaVencimiento,
 )
 from .services import StockService
 from .serializers import (
@@ -36,8 +34,6 @@ from .serializers import (
     AjusteInventarioSerializer,
     DetalleAjusteSerializer,
     CostoHistoricoSerializer,
-    LoteProductoSerializer,
-    AlertaVencimientoSerializer,
 )
 
 
@@ -216,45 +212,6 @@ class AlertaStockViewSet(viewsets.ViewSet):
             for a in alertas
         ]
         return Response({"count": len(data), "results": data})
-
-
-class LoteProductoViewSet(viewsets.ModelViewSet):
-    queryset = LoteProducto.objects.select_related("producto").all()
-    serializer_class = LoteProductoSerializer
-    permission_classes = [IsStaffUser]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_class = LoteProductoFilter
-    search_fields = ["producto__descripcion", "numero_lote"]
-    ordering_fields = ["fecha_vencimiento", "fecha_creacion"]
-    ordering = ["fecha_vencimiento"]
-
-
-class AlertaVencimientoViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = AlertaVencimiento.objects.select_related("lote__producto").all()
-    serializer_class = AlertaVencimientoSerializer
-    permission_classes = [IsStaffUser]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_class = AlertaVencimientoFilter
-    search_fields = ["lote__numero_lote", "lote__producto__descripcion"]
-    ordering_fields = ["id"]
-    ordering = ["-id"]
-
-    @action(detail=True, methods=["post"], url_path="registrar-accion")
-    def registrar_accion(self, request, pk=None):
-        """Registra la acción tomada sobre un lote próximo a vencer o vencido."""
-        alerta = self.get_object()
-        accion = request.data.get("accion_tomada")
-        opciones_validas = AlertaVencimiento.Accion.values
-        if accion not in opciones_validas:
-            return Response(
-                {"detail": f"Acción inválida. Opciones: {opciones_validas}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        alerta.accion_tomada = accion
-        alerta.fecha_accion = timezone.now()
-        alerta.responsable = request.user
-        alerta.save(update_fields=["accion_tomada", "fecha_accion", "responsable"])
-        return Response(AlertaVencimientoSerializer(alerta).data)
 
 
 class ReporteStockView(APIView):

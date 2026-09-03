@@ -23,8 +23,6 @@ def sa_client(db):
     "/admin/inventario/ajusteinventario/",
     "/admin/inventario/detalleajuste/",
     "/admin/inventario/costohistorico/",
-    "/admin/inventario/loteproducto/",
-    "/admin/inventario/alertavencimiento/",
 ])
 def test_admin_changelist_returns_200(sa_client, url):
     resp = sa_client.get(url)

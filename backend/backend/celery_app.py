@@ -83,10 +83,6 @@ app.conf.beat_schedule = {
         "task": "apps.inventario.tasks.alertar_stock_minimo",
         "schedule": crontab(hour=7, minute=0),  # Todos los días 07:00
     },
-    "verificar-vencimientos-productos": {
-        "task": "apps.inventario.tasks.verificar_vencimientos",
-        "schedule": crontab(hour=9, minute=0),  # Todos los días 09:00
-    },
     "resumen-diario-stock": {
         "task": "apps.inventario.tasks.generar_resumen_diario_stock",
         "schedule": crontab(hour=23, minute=55),  # Todos los días 23:55

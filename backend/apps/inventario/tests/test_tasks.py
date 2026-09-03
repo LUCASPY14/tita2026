@@ -1,7 +1,6 @@
-"""Tests para apps.inventario.tasks — alertar_stock_minimo, verificar_vencimientos, generar_resumen_diario_stock."""
+"""Tests para apps.inventario.tasks — alertar_stock_minimo, generar_resumen_diario_stock."""
 import pytest
 from decimal import Decimal
-from datetime import date, timedelta
 
 
 @pytest.fixture
@@ -45,42 +44,6 @@ def usuario_admin2(db):
     )
 
 
-@pytest.fixture
-def lote_vencido(db, producto):
-    from apps.inventario.models import LoteProducto
-    return LoteProducto.objects.create(
-        producto=producto,
-        numero_lote="LOTE-VENC-01",
-        fecha_vencimiento=date.today() - timedelta(days=5),
-        cantidad_inicial=Decimal("10"),
-        cantidad_disponible=Decimal("10"),
-    )
-
-
-@pytest.fixture
-def lote_por_vencer_7d(db, producto):
-    from apps.inventario.models import LoteProducto
-    return LoteProducto.objects.create(
-        producto=producto,
-        numero_lote="LOTE-7D-01",
-        fecha_vencimiento=date.today() + timedelta(days=5),
-        cantidad_inicial=Decimal("10"),
-        cantidad_disponible=Decimal("10"),
-    )
-
-
-@pytest.fixture
-def lote_por_vencer_30d(db, producto):
-    from apps.inventario.models import LoteProducto
-    return LoteProducto.objects.create(
-        producto=producto,
-        numero_lote="LOTE-30D-01",
-        fecha_vencimiento=date.today() + timedelta(days=25),
-        cantidad_inicial=Decimal("10"),
-        cantidad_disponible=Decimal("10"),
-    )
-
-
 # ── alertar_stock_minimo ────────────────────────────────────────────────────────
 
 @pytest.mark.django_db
@@ -120,51 +83,6 @@ class TestAlertarStockMinimo:
         result = alertar_stock_minimo()
         assert result == {"alertas_creadas": 0}
         assert not Notificacion.objects.exists()
-
-
-# ── verificar_vencimientos ─────────────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestVerificarVencimientos:
-
-    def test_sin_lotes_retorna_cero(self, db):
-        from apps.inventario.tasks import verificar_vencimientos
-        result = verificar_vencimientos()
-        assert result == {"alertas_creadas": 0}
-
-    def test_lote_vencido_crea_alerta_vencido(self, lote_vencido):
-        from apps.inventario.models import AlertaVencimiento
-        from apps.inventario.tasks import verificar_vencimientos
-        result = verificar_vencimientos()
-        assert result["alertas_creadas"] >= 1
-        assert AlertaVencimiento.objects.filter(
-            lote=lote_vencido, tipo=AlertaVencimiento.TipoAlerta.VENCIDO
-        ).exists()
-
-    def test_lote_a_7_dias_crea_alerta_dias7(self, lote_por_vencer_7d):
-        from apps.inventario.models import AlertaVencimiento
-        from apps.inventario.tasks import verificar_vencimientos
-        result = verificar_vencimientos()
-        assert result["alertas_creadas"] >= 1
-        assert AlertaVencimiento.objects.filter(lote=lote_por_vencer_7d).exists()
-
-    def test_lote_a_30_dias_crea_alerta_dias30(self, lote_por_vencer_30d):
-        from apps.inventario.models import AlertaVencimiento
-        from apps.inventario.tasks import verificar_vencimientos
-        result = verificar_vencimientos()
-        assert result["alertas_creadas"] >= 1
-        assert AlertaVencimiento.objects.filter(lote=lote_por_vencer_30d).exists()
-
-    def test_no_duplica_alerta_existente(self, lote_vencido):
-        from apps.inventario.models import AlertaVencimiento
-        from apps.inventario.tasks import verificar_vencimientos
-        verificar_vencimientos()
-        result = verificar_vencimientos()
-        count = AlertaVencimiento.objects.filter(
-            lote=lote_vencido, tipo=AlertaVencimiento.TipoAlerta.VENCIDO
-        ).count()
-        assert count == 1
-        assert result["alertas_creadas"] == 0
 
 
 # ── generar_resumen_diario_stock ───────────────────────────────────────────────

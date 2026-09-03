@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   Package, Plus, CheckCircle, XCircle,
-  TrendingUp, TrendingDown, AlertTriangle, Bell, Clock,
+  TrendingUp, TrendingDown, Bell,
 } from 'lucide-react'
 import api from '../services/api'
 import Badge from '../components/ui/Badge'
@@ -11,15 +11,13 @@ import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
 import {
   formatFecha,
-  type Producto, type AjusteInventario, type MovimientoStock, type Lote,
-  type AlertaStock, type AlertaVencimiento, type TabKey,
-  ESTADO_COLOR, TIPO_AJUSTE_COLOR, TIPO_MOV_COLOR,
-  ALERTA_COLOR, VENC_COLOR, VENC_LABEL, ACCION_COLOR,
+  type Producto, type AjusteInventario, type MovimientoStock,
+  type AlertaStock, type TabKey,
+  ESTADO_COLOR, TIPO_AJUSTE_COLOR, TIPO_MOV_COLOR, ALERTA_COLOR,
 } from './inventario/shared'
 import ModalAjuste from './inventario/ModalAjuste'
 import ModalAprobar from './inventario/ModalAprobar'
 import ModalRechazar from './inventario/ModalRechazar'
-import ModalAccionVencimiento from './inventario/ModalAccionVencimiento'
 
 export default function Inventario() {
   const { t } = useTranslation()
@@ -51,17 +49,6 @@ export default function Inventario() {
   const searchTimerMov = useRef<ReturnType<typeof setTimeout>>(undefined)
   const requestIdAjustesRef = useRef(0)
   const requestIdMovRef = useRef(0)
-  const requestIdLotesRef = useRef(0)
-
-  // ── Lotes ─────────────────────────────────────────────────────────
-  const [lotes, setLotes] = useState<Lote[]>([])
-  const [loadingLotes, setLoadingLotes] = useState(false)
-  const [filterVencido, setFilterVencido] = useState('')
-  const [filterProductoLote, setFilterProductoLote] = useState('')
-  const [pageLotes, setPageLotes] = useState(1)
-  const [totalLotes, setTotalLotes] = useState(0)
-  const [sortLotesKey, setSortLotesKey] = useState('fecha_vencimiento')
-  const [sortLotesDir, setSortLotesDir] = useState<'asc' | 'desc'>('asc')
 
   // ── Load catalogs ─────────────────────────────────────────────────
   useEffect(() => {
@@ -129,35 +116,6 @@ export default function Inventario() {
     return () => clearTimeout(searchTimerMov.current)
   }, [tab, filterProductoMov, filterTipoMov, loadMovimientos])
 
-  // ── Load lotes ────────────────────────────────────────────────────
-  const loadLotes = useCallback(async (prod: string, vencido: string, p: number) => {
-    const requestId = ++requestIdLotesRef.current
-    setLoadingLotes(true)
-    try {
-      const ordering = sortLotesDir === 'asc' ? sortLotesKey : `-${sortLotesKey}`
-      const params: Record<string, unknown> = { page: p, page_size: 15, ordering }
-      if (prod) params.producto = prod
-      if (vencido !== '') params.bloqueado = vencido
-      const { data } = await api.get('/inventario/lotes/', { params })
-      if (requestId !== requestIdLotesRef.current) return
-      setLotes(data.results ?? [])
-      setTotalLotes(data.count ?? 0)
-    } catch {
-      if (requestId !== requestIdLotesRef.current) return
-      toast.error('Error al cargar lotes')
-    } finally {
-      if (requestId === requestIdLotesRef.current) setLoadingLotes(false)
-    }
-  }, [sortLotesKey, sortLotesDir])
-
-  useEffect(() => {
-    if (tab === 'lotes') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPageLotes(1)
-      loadLotes(filterProductoLote, filterVencido, 1)
-    }
-  }, [tab, filterProductoLote, filterVencido, loadLotes])
-
   // ── Alertas de stock ──────────────────────────────────────────────
   const [alertas, setAlertas] = useState<AlertaStock[]>([])
   const [loadingAlertas, setLoadingAlertas] = useState(false)
@@ -186,36 +144,6 @@ export default function Inventario() {
       loadAlertas(1)
     }
   }, [tab, loadAlertas])
-
-  // ── Alertas de vencimiento ────────────────────────────────────────
-  const [alertasVenc, setAlertasVenc] = useState<AlertaVencimiento[]>([])
-  const [loadingAlertasVenc, setLoadingAlertasVenc] = useState(false)
-  const [totalAlertasVenc, setTotalAlertasVenc] = useState(0)
-  const [pageAlertasVenc, setPageAlertasVenc] = useState(1)
-  const [accionModal, setAccionModal] = useState<AlertaVencimiento | null>(null)
-
-  const loadAlertasVenc = useCallback(async (p: number) => {
-    setLoadingAlertasVenc(true)
-    try {
-      const { data } = await api.get('/inventario/alertas-vencimiento/', {
-        params: { page: p, page_size: 15 },
-      })
-      setAlertasVenc(data.results ?? [])
-      setTotalAlertasVenc(data.count ?? 0)
-    } catch {
-      toast.error('Error al cargar alertas de vencimiento')
-    } finally {
-      setLoadingAlertasVenc(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (tab === 'alertas') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPageAlertasVenc(1)
-      loadAlertasVenc(1)
-    }
-  }, [tab, loadAlertasVenc])
 
   // ── Columns ──────────────────────────────────────────────────────
 
@@ -293,101 +221,6 @@ export default function Inventario() {
     },
   ]
 
-  const colsLotes: Column<Lote>[] = [
-    {
-      title: 'Producto', key: 'prod',
-      render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.producto_nombre}</span>,
-    },
-    {
-      title: 'Nro. Lote', key: 'lote',
-      render: (_, r) => <span className="font-mono text-sm text-slate-700">{r.numero_lote}</span>,
-    },
-    {
-      title: 'Vencimiento', key: 'fecha_vencimiento', sortable: true,
-      render: (_, r) => (
-        <span className={`text-sm font-medium ${r.esta_vencido ? 'text-red-600' : r.dias_hasta_vencimiento <= 30 ? 'text-orange-600' : 'text-slate-700'}`}>
-          {formatFecha(r.fecha_vencimiento)}
-        </span>
-      ),
-    },
-    {
-      title: 'Días', key: 'dias',
-      render: (_, r) => (
-        <span className={`tabular-nums font-semibold text-sm ${r.esta_vencido ? 'text-red-600' : r.dias_hasta_vencimiento <= 30 ? 'text-orange-600' : 'text-emerald-700'}`}>
-          {r.esta_vencido ? 'VENCIDO' : `${r.dias_hasta_vencimiento}d`}
-        </span>
-      ),
-    },
-    {
-      title: 'Cantidad', key: 'cantidad', sortable: true,
-      render: (_, r) => <span className="tabular-nums text-sm text-slate-700">{r.cantidad}</span>,
-    },
-    {
-      title: 'Estado', key: 'estado',
-      render: (_, r) => (
-        <div className="flex gap-1">
-          {r.esta_vencido && <Badge color="red">Vencido</Badge>}
-          {r.bloqueado && <Badge color="orange">Bloqueado</Badge>}
-          {!r.esta_vencido && !r.bloqueado && <Badge color="green">OK</Badge>}
-        </div>
-      ),
-    },
-  ]
-
-  const lotesConAlerta = useMemo(
-    () => lotes.filter(l => l.esta_vencido || l.dias_hasta_vencimiento <= 30).length,
-    [lotes],
-  )
-
-  const colsAlertasVenc: Column<AlertaVencimiento>[] = [
-    {
-      title: 'Producto', key: 'producto',
-      render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.producto_nombre}</span>,
-    },
-    {
-      title: 'Lote', key: 'lote',
-      render: (_, r) => <span className="font-mono text-sm text-slate-500">{r.lote_numero}</span>,
-    },
-    {
-      title: 'Urgencia', key: 'tipo',
-      render: (_, r) => (
-        <Badge color={VENC_COLOR[r.tipo] ?? 'default'}>{VENC_LABEL[r.tipo] ?? r.tipo}</Badge>
-      ),
-    },
-    {
-      title: 'Días', key: 'dias',
-      render: (_, r) => (
-        <span className={`tabular-nums font-bold text-sm ${r.dias_restantes < 0 ? 'text-red-600' : r.dias_restantes <= 7 ? 'text-orange-600' : 'text-slate-700'}`}>
-          {r.dias_restantes < 0 ? `${Math.abs(r.dias_restantes)}d vencido` : `${r.dias_restantes}d`}
-        </span>
-      ),
-    },
-    {
-      title: 'Vence', key: 'fecha_vencimiento',
-      render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha_vencimiento)}</span>,
-    },
-    {
-      title: 'Cant. lote', key: 'cantidad',
-      render: (_, r) => <span className="tabular-nums text-sm text-slate-700">{Number(r.cantidad_lote)}</span>,
-    },
-    {
-      title: 'Acción', key: 'accion',
-      render: (_, r) => (
-        <Badge color={ACCION_COLOR[r.accion_tomada ?? 'PENDIENTE'] ?? 'default'}>
-          {r.accion_tomada ?? 'PENDIENTE'}
-        </Badge>
-      ),
-    },
-    {
-      title: '', key: 'btn', width: 130,
-      render: (_, r) => (
-        <Button size="sm" variant="ghost" onClick={() => setAccionModal(r)}>
-          Registrar acción
-        </Button>
-      ),
-    },
-  ]
-
   const colsAlertas: Column<AlertaStock>[] = [
     {
       title: 'Producto', key: 'producto',
@@ -420,7 +253,6 @@ export default function Inventario() {
   const TABS: { key: TabKey; label: string; icon: typeof Package }[] = [
     { key: 'ajustes', label: 'Ajustes', icon: Package },
     { key: 'movimientos', label: 'Movimientos', icon: TrendingUp },
-    { key: 'lotes', label: 'Lotes y Vencimientos', icon: AlertTriangle },
     { key: 'alertas', label: 'Alertas de Stock', icon: Bell },
   ]
 
@@ -455,14 +287,9 @@ export default function Inventario() {
             >
               <Icon className="w-4 h-4" />
               {label}
-              {key === 'lotes' && lotesConAlerta > 0 && (
-                <span className="bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">
-                  {lotesConAlerta}
-                </span>
-              )}
-              {key === 'alertas' && (totalAlertas + totalAlertasVenc) > 0 && (
+              {key === 'alertas' && totalAlertas > 0 && (
                 <span className="bg-red-100 text-red-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">
-                  {totalAlertas + totalAlertasVenc}
+                  {totalAlertas}
                 </span>
               )}
             </button>
@@ -534,57 +361,9 @@ export default function Inventario() {
         </>
       )}
 
-      {/* ── Lotes tab ────────────────────────────────────────────── */}
-      {tab === 'lotes' && (
-        <>
-          {lotesConAlerta > 0 && (
-            <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-5 py-3">
-              <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0" />
-              <p className="text-sm text-orange-700 font-medium">
-                {lotesConAlerta} lote(s) vencidos o próximos a vencer.
-              </p>
-            </div>
-          )}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-wrap items-end gap-4">
-            <div className="w-64">
-              <label className={labelClass}>Producto</label>
-              <select value={filterProductoLote} onChange={e => setFilterProductoLote(e.target.value)} className={inputClass}>
-                <option value="">Todos</option>
-                {productos.map(p => <option key={p.id} value={p.id}>{p.descripcion}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>Estado</label>
-              <select value={filterVencido} onChange={e => setFilterVencido(e.target.value)} className={`${inputClass} w-auto`}>
-                <option value="">Todos</option>
-                <option value="false">Disponibles</option>
-                <option value="true">Bloqueados</option>
-              </select>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-1">
-              <Table
-                columns={colsLotes} dataSource={lotes} rowKey="id" loading={loadingLotes}
-                pageSize={15} page={pageLotes} onPageChange={p => { setPageLotes(p); loadLotes(filterProductoLote, filterVencido, p) }} total={totalLotes}
-                sortKey={sortLotesKey} sortDir={sortLotesDir}
-                onSort={(key, dir) => { setSortLotesKey(key); setSortLotesDir(dir) }}
-              />
-            </div>
-          </div>
-        </>
-      )}
-
       {/* ── Alertas tab ──────────────────────────────────────────── */}
       {tab === 'alertas' && (
         <>
-          <div className="flex items-center gap-2 mb-1">
-            <Bell className="w-4 h-4 text-red-500" />
-            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Alertas de Stock</h2>
-            {totalAlertas > 0 && (
-              <span className="bg-red-100 text-red-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">{totalAlertas}</span>
-            )}
-          </div>
           {totalAlertas > 0 && (
             <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-3">
               <Bell className="w-4 h-4 text-red-500 shrink-0" />
@@ -598,29 +377,6 @@ export default function Inventario() {
               <Table columns={colsAlertas} dataSource={alertas} rowKey="id" loading={loadingAlertas}
                 pageSize={15} page={pageAlertas} total={totalAlertas}
                 onPageChange={p => { setPageAlertas(p); loadAlertas(p) }} />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 mt-4 mb-1">
-            <Clock className="w-4 h-4 text-orange-500" />
-            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Alertas de Vencimiento</h2>
-            {totalAlertasVenc > 0 && (
-              <span className="bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded-full font-semibold">{totalAlertasVenc}</span>
-            )}
-          </div>
-          {totalAlertasVenc > 0 && (
-            <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-5 py-3">
-              <Clock className="w-4 h-4 text-orange-500 shrink-0" />
-              <p className="text-sm text-orange-700 font-medium">
-                {totalAlertasVenc} lote(s) vencidos o próximos a vencer. Registrá la acción tomada para cada uno.
-              </p>
-            </div>
-          )}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-1">
-              <Table columns={colsAlertasVenc} dataSource={alertasVenc} rowKey="id" loading={loadingAlertasVenc}
-                pageSize={15} page={pageAlertasVenc} total={totalAlertasVenc}
-                onPageChange={p => { setPageAlertasVenc(p); loadAlertasVenc(p) }} />
             </div>
           </div>
         </>
@@ -641,11 +397,6 @@ export default function Inventario() {
         ajusteId={rechazar}
         onClose={() => setRechazar(null)}
         onSaved={() => loadAjustes(filterEstado, filterTipoAjuste, pageAjustes)}
-      />
-      <ModalAccionVencimiento
-        alerta={accionModal}
-        onClose={() => setAccionModal(null)}
-        onSaved={() => { setAccionModal(null); loadAlertasVenc(pageAlertasVenc) }}
       />
     </div>
   )

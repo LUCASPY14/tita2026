@@ -1,7 +1,6 @@
 import logging
 from celery import shared_task
 from django.utils import timezone
-from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -54,63 +53,6 @@ def alertar_stock_minimo():
         alertas, len(productos_bajo),
     )
     return {"alertas_creadas": alertas}
-
-
-@shared_task(
-    name="apps.inventario.tasks.verificar_vencimientos",
-    autoretry_for=(Exception,),
-    max_retries=3,
-    retry_backoff=True,
-    retry_backoff_max=300,
-    retry_jitter=True,
-)
-def verificar_vencimientos():
-    """Crea AlertaVencimiento para lotes próximos a vencer o ya vencidos."""
-    from apps.inventario.models import LoteProducto, AlertaVencimiento
-
-    hoy = timezone.now().date()
-    umbrales = [
-        (30, AlertaVencimiento.TipoAlerta.DIAS_30),
-        (15, AlertaVencimiento.TipoAlerta.DIAS_15),
-        (7,  AlertaVencimiento.TipoAlerta.DIAS_7),
-        (3,  AlertaVencimiento.TipoAlerta.DIAS_3),
-    ]
-
-    lotes = LoteProducto.objects.filter(
-        bloqueado=False,
-        cantidad_disponible__gt=0,
-        fecha_vencimiento__lte=hoy + timedelta(days=30),
-    ).select_related("producto")
-
-    creadas = 0
-    for lote in lotes:
-        dias = (lote.fecha_vencimiento - hoy).days
-
-        if dias < 0:
-            tipo = AlertaVencimiento.TipoAlerta.VENCIDO
-        else:
-            tipo = next((t for d, t in umbrales if dias <= d), None)
-            if not tipo:
-                continue
-
-        existe = AlertaVencimiento.objects.filter(
-            lote=lote,
-            tipo=tipo,
-        ).exists()
-        if existe:
-            continue
-
-        AlertaVencimiento.objects.create(
-            lote=lote,
-            tipo=tipo,
-            dias_restantes=dias,
-            fecha_vencimiento=lote.fecha_vencimiento,
-            cantidad_lote=lote.cantidad_disponible,
-        )
-        creadas += 1
-
-    logger.info("verificar_vencimientos: %d alertas de vencimiento creadas", creadas)
-    return {"alertas_creadas": creadas}
 
 
 @shared_task(

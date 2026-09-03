@@ -5,7 +5,7 @@ Genera un historial realista de ~10-12 semanas de operación de la cantina sobre
 los datos base que ya crea `seed_uat` (familias, tarjetas, catálogo, usuarios):
 impuestos, empresa, ventas diarias con cierres de caja, movimientos de tarjeta
 (recargas + consumos), compras a proveedores, consumo de almuerzo, alérgenos,
-cuenta corriente con deuda de un par de familias, y vencimientos de stock.
+y cuenta corriente con deuda de un par de familias.
 
 Requiere haber corrido antes:
     python manage.py seed_uat
@@ -80,7 +80,6 @@ class Command(BaseCommand):
         self._simular_operacion_diaria()
         self._seed_compras_historicas()
         self._seed_notas_credito()
-        self._seed_vencimientos()
 
         self.stdout.write(self.style.SUCCESS("\nseed_operacion completado exitosamente."))
 
@@ -144,7 +143,6 @@ class Command(BaseCommand):
         from apps.almuerzos.models import (
             RegistroConsumoAlmuerzo, CuentaAlmuerzoMensual, PagoCuentaAlmuerzo, Alergeno,
         )
-        from apps.inventario.models import LoteProducto
         from apps.productos.models import Impuesto, ProductoImpuesto
         from apps.core.models import MovimientoTarjeta, Tarjeta
         from apps.clientes.models import CuentaCorrienteCliente, RestriccionHijo
@@ -168,8 +166,6 @@ class Command(BaseCommand):
         RegistroConsumoAlmuerzo.objects.all().delete()
         Alergeno.objects.all().delete()  # cascadea ProductoAlergeno
         RestriccionHijo.objects.all().delete()
-
-        LoteProducto.objects.all().delete()  # cascadea AlertaVencimiento
 
         ProductoImpuesto.objects.all().delete()
         Impuesto.objects.all().delete()
@@ -696,49 +692,6 @@ class Command(BaseCommand):
             )
             creadas += 1
         self.stdout.write(f"    NotaCredito: {creadas} creadas")
-
-    # =========================================================================
-    # VENCIMIENTOS
-    # =========================================================================
-
-    def _seed_vencimientos(self):
-        from apps.inventario.models import LoteProducto, AlertaVencimiento
-
-        self.stdout.write("\n[+] Lotes y alertas de vencimiento...")
-        hoy = date.today()
-        productos_perecederos = [
-            p for p in self.productos
-            if p.categoria_id and p.categoria.nombre in ("Lácteos y Frutas", "Comidas")
-        ]
-        creados = 0
-        alertas = 0
-        for i, producto in enumerate(productos_perecederos):
-            dias_venc = random.choice([-3, 2, 5, 15, 45])  # algunos ya vencidos, otros próximos
-            fecha_venc = hoy + timedelta(days=dias_venc)
-            lote = LoteProducto.objects.create(
-                producto=producto, numero_lote=f"L{hoy.strftime('%Y%m')}-{i+1:03d}",
-                fecha_fabricacion=fecha_venc - timedelta(days=60),
-                fecha_vencimiento=fecha_venc,
-                cantidad_inicial=Decimal("50"), cantidad_disponible=Decimal("30"),
-                bloqueado=dias_venc < 0,
-                motivo_bloqueo=LoteProducto.MotivoBloqueo.VENCIDO if dias_venc < 0 else None,
-            )
-            creados += 1
-            if dias_venc <= 30:
-                tipo = AlertaVencimiento.TipoAlerta.VENCIDO if dias_venc < 0 else (
-                    AlertaVencimiento.TipoAlerta.DIAS_3 if dias_venc <= 3 else (
-                        AlertaVencimiento.TipoAlerta.DIAS_7 if dias_venc <= 7 else (
-                            AlertaVencimiento.TipoAlerta.DIAS_15 if dias_venc <= 15 else
-                            AlertaVencimiento.TipoAlerta.DIAS_30
-                        )
-                    )
-                )
-                AlertaVencimiento.objects.create(
-                    lote=lote, tipo=tipo, dias_restantes=dias_venc,
-                    fecha_vencimiento=fecha_venc, cantidad_lote=lote.cantidad_disponible,
-                )
-                alertas += 1
-        self.stdout.write(f"    LoteProducto: {creados} creados, {alertas} con alerta activa")
 
     # =========================================================================
     # HELPERS

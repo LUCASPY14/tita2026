@@ -4,7 +4,6 @@ Cubre __str__, @property y clean() de todos los modelos.
 """
 import pytest
 from decimal import Decimal
-from datetime import date, timedelta
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
@@ -15,18 +14,6 @@ from django.core.exceptions import ValidationError
 def stock(db, producto, stock_producto):
     """Reutiliza stock_producto de conftest (cantidad=50)."""
     return stock_producto
-
-
-@pytest.fixture
-def lote(db, producto):
-    from apps.inventario.models import LoteProducto
-    return LoteProducto.objects.create(
-        producto=producto,
-        numero_lote="L001",
-        fecha_vencimiento=date.today() + timedelta(days=60),
-        cantidad_inicial=Decimal("100"),
-        cantidad_disponible=Decimal("100"),
-    )
 
 
 # ── Stock ─────────────────────────────────────────────────────────────────────
@@ -254,132 +241,3 @@ class TestCostoHistoricoModel:
             fecha_compra=timezone.now(),
         )
         assert ch.costo_total == Decimal("15000")
-
-
-
-# ── LoteProducto ──────────────────────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestLoteProductoModel:
-
-    def test_str_disponible(self, lote):
-        """bloqueado=False → 'Disponible' (líneas 426-427)."""
-        assert "Disponible" in str(lote)
-        assert "L001" in str(lote)
-
-    def test_str_bloqueado(self, lote):
-        """bloqueado=True → 'Bloqueado' (línea 426)."""
-        lote.bloqueado = True
-        lote.motivo_bloqueo = lote.MotivoBloqueo.VENCIDO
-        lote.save()
-        assert "Bloqueado" in str(lote)
-
-    def test_dias_hasta_vencimiento_futuro(self, lote):
-        """fecha_vencimiento en el futuro → días positivos (líneas 431-433)."""
-        dias = lote.dias_hasta_vencimiento
-        assert dias is not None
-        assert dias > 0
-
-    def test_dias_hasta_vencimiento_sin_fecha(self, producto):
-        """fecha_vencimiento=None → None (línea 432) — instancia sin guardar."""
-        from apps.inventario.models import LoteProducto
-        lote_sin_fecha = LoteProducto(
-            producto=producto,
-            numero_lote="L_NOFEC",
-            fecha_vencimiento=None,
-            cantidad_inicial=Decimal("10"),
-            cantidad_disponible=Decimal("10"),
-        )
-        assert lote_sin_fecha.dias_hasta_vencimiento is None
-
-    def test_esta_vencido_false(self, lote):
-        """fecha_vencimiento futura → esta_vencido=False (línea 437)."""
-        assert lote.esta_vencido is False
-
-    def test_esta_vencido_true(self, producto):
-        """fecha_vencimiento pasada → esta_vencido=True (línea 437)."""
-        from apps.inventario.models import LoteProducto
-        lote_viejo = LoteProducto(
-            producto=producto,
-            numero_lote="L_OLD",
-            fecha_vencimiento=date.today() - timedelta(days=1),
-            cantidad_inicial=Decimal("10"),
-            cantidad_disponible=Decimal("10"),
-        )
-        assert lote_viejo.esta_vencido is True
-
-    def test_proximo_a_vencer_true(self, producto):
-        """0 <= dias <= 30 → proximo_a_vencer=True (líneas 441-442)."""
-        from apps.inventario.models import LoteProducto
-        lote_pronto = LoteProducto(
-            producto=producto,
-            numero_lote="L_SOON",
-            fecha_vencimiento=date.today() + timedelta(days=15),
-            cantidad_inicial=Decimal("10"),
-            cantidad_disponible=Decimal("10"),
-        )
-        assert lote_pronto.proximo_a_vencer is True
-
-    def test_proximo_a_vencer_false(self, lote):
-        """días > 30 → proximo_a_vencer=False (líneas 441-442)."""
-        assert lote.proximo_a_vencer is False
-
-    def test_clean_fecha_vencimiento_antes_fabricacion(self, producto):
-        """fecha_vencimiento <= fecha_fabricacion → ValidationError (líneas 445-449)."""
-        from apps.inventario.models import LoteProducto
-        lote = LoteProducto(
-            producto=producto,
-            numero_lote="L_BAD",
-            fecha_fabricacion=date.today(),
-            fecha_vencimiento=date.today() - timedelta(days=1),
-            cantidad_inicial=Decimal("10"),
-            cantidad_disponible=Decimal("10"),
-        )
-        with pytest.raises(ValidationError, match="posterior a la fecha de fabricación"):
-            lote.clean()
-
-    def test_clean_cantidad_disponible_mayor_inicial(self, producto):
-        """cantidad_disponible > cantidad_inicial → ValidationError (líneas 450-453)."""
-        from apps.inventario.models import LoteProducto
-        lote = LoteProducto(
-            producto=producto,
-            numero_lote="L_QTY",
-            fecha_vencimiento=date.today() + timedelta(days=30),
-            cantidad_inicial=Decimal("10"),
-            cantidad_disponible=Decimal("15"),
-        )
-        with pytest.raises(ValidationError, match="mayor a la cantidad inicial"):
-            lote.clean()
-
-    def test_clean_bloqueado_sin_motivo(self, producto):
-        """bloqueado=True sin motivo → ValidationError (líneas 454-455)."""
-        from apps.inventario.models import LoteProducto
-        lote = LoteProducto(
-            producto=producto,
-            numero_lote="L_BLK",
-            fecha_vencimiento=date.today() + timedelta(days=30),
-            cantidad_inicial=Decimal("10"),
-            cantidad_disponible=Decimal("10"),
-            bloqueado=True,
-            motivo_bloqueo=None,
-        )
-        with pytest.raises(ValidationError, match="motivo"):
-            lote.clean()
-
-
-# ── AlertaVencimiento ─────────────────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestAlertaVencimientoModel:
-
-    def test_str(self, lote):
-        """__str__ = 'Lote - tipo_display' (línea 513)."""
-        from apps.inventario.models import AlertaVencimiento
-        av = AlertaVencimiento.objects.create(
-            lote=lote,
-            tipo=AlertaVencimiento.TipoAlerta.DIAS_30,
-            dias_restantes=30,
-            fecha_vencimiento=lote.fecha_vencimiento,
-            cantidad_lote=Decimal("100"),
-        )
-        assert "30 días" in str(av)

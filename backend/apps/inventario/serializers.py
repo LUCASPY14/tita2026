@@ -10,8 +10,6 @@ from .models import (
     AjusteInventario,
     DetalleAjuste,
     CostoHistorico,
-    LoteProducto,
-    AlertaVencimiento,
 )
 
 
@@ -63,22 +61,3 @@ class CostoHistoricoSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class AlertaVencimientoSerializer(serializers.ModelSerializer):
-    lote_numero = serializers.CharField(source="lote.numero_lote", read_only=True)
-    producto_nombre = serializers.CharField(source="lote.producto.descripcion", read_only=True)
-
-    class Meta:
-        model = AlertaVencimiento
-        fields = "__all__"
-        read_only_fields = ["fecha_generada"]
-
-
-class LoteProductoSerializer(serializers.ModelSerializer):
-    producto_nombre = serializers.CharField(source="producto.descripcion", read_only=True)
-    dias_hasta_vencimiento = serializers.IntegerField(read_only=True)
-    esta_vencido = serializers.BooleanField(read_only=True)
-
-    class Meta:
-        model = LoteProducto
-        fields = "__all__"
-        read_only_fields = ["fecha_creacion"]
