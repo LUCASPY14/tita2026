@@ -24,6 +24,7 @@ from rest_framework.response import Response
 
 from common.throttling import SensitiveEndpointThrottle
 from common.permissions import IsAdminOrSupervisor
+from common.utils.request_ip import get_client_ip
 
 from .models import PagoBancard, SolicitudCatastroBancard, Tarjeta
 from .serializers import PagoBancardSerializer, PagoBancardDetailSerializer
@@ -108,7 +109,7 @@ def bancard_iniciar(request):
         shop_process_id=shop_process_id,
         monto=monto,
         descripcion=f"Recarga tarjeta {nro_tarjeta}",
-        ip_origen=request.META.get("REMOTE_ADDR"),
+        ip_origen=get_client_ip(request),
     )
 
     # ── Llamar a Bancard ─────────────────────────────────────────────────────
@@ -215,7 +216,7 @@ def bancard_iniciar_almuerzo(request):
         shop_process_id=shop_process_id,
         monto=monto,
         descripcion=f"Recarga almuerzo {hijo}"[:20],
-        ip_origen=request.META.get("REMOTE_ADDR"),
+        ip_origen=get_client_ip(request),
     )
 
     base_return_url = settings.BANCARD_RETURN_URL
@@ -322,7 +323,7 @@ def bancard_iniciar_cc(request):
         shop_process_id=shop_process_id,
         monto=monto,
         descripcion="Pago cuenta corriente",
-        ip_origen=request.META.get("REMOTE_ADDR"),
+        ip_origen=get_client_ip(request),
     )
 
     base_return_url = settings.BANCARD_RETURN_URL
@@ -658,7 +659,7 @@ def bancard_catastro_tarjeta(request):
         cliente=cliente,
         referencia=referencia,
         card_id=card_id,
-        ip_origen=request.META.get("REMOTE_ADDR"),
+        ip_origen=get_client_ip(request),
     )
 
     process_id = resultado.get("process_id", "")
@@ -838,7 +839,7 @@ def bancard_pagar_con_tarjeta(request):
         descripcion=f"Recarga tarjeta {nro_tarjeta}",
         card_id_bancard=card_id,
         card_masked_number=card_masked,
-        ip_origen=request.META.get("REMOTE_ADDR"),
+        ip_origen=get_client_ip(request),
     )
 
     return_url = f"{settings.BANCARD_RETURN_URL}?shop_process_id={shop_process_id}"
@@ -1197,7 +1198,7 @@ def bancard_pagar_almuerzo_con_tarjeta(request):
         descripcion=f"Recarga almuerzo {hijo}"[:20],
         card_id_bancard=card_id,
         card_masked_number=card_masked,
-        ip_origen=request.META.get("REMOTE_ADDR"),
+        ip_origen=get_client_ip(request),
     )
 
     return_url = f"{settings.BANCARD_RETURN_URL}?shop_process_id={shop_process_id}"
@@ -1288,7 +1289,7 @@ def bancard_pagar_cc_con_tarjeta(request):
         descripcion="Pago cuenta corriente",
         card_id_bancard=card_id,
         card_masked_number=card_masked,
-        ip_origen=request.META.get("REMOTE_ADDR"),
+        ip_origen=get_client_ip(request),
     )
 
     return_url = f"{settings.BANCARD_RETURN_URL}?shop_process_id={shop_process_id}"

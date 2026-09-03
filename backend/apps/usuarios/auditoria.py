@@ -28,7 +28,8 @@ def registrar_auditoria(
                 u = getattr(request, "user", None)
                 usuario = u if (u and getattr(u, "is_authenticated", False)) else None
             if ip is None:
-                ip = request.META.get("REMOTE_ADDR")
+                from common.utils.request_ip import get_client_ip
+                ip = get_client_ip(request)
 
         AuditoriaOperacion.objects.create(
             usuario=usuario,

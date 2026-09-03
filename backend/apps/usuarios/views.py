@@ -34,6 +34,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from common.permissions import IsAdmin
 from common.throttling import LoginRateThrottle, PortalRateThrottle, SensitiveEndpointThrottle
+from common.utils.request_ip import get_client_ip
 from .auditoria import registrar_auditoria
 
 logger = logging.getLogger(__name__)
@@ -141,7 +142,7 @@ def _registrar_sesion(user, request) -> str:
     - Cierra las sesiones activas más antiguas si se supera el límite por rol.
     - Devuelve el session_key UUID del nuevo registro.
     """
-    ip = request.META.get("REMOTE_ADDR")
+    ip = get_client_ip(request)
     ua = (request.META.get("HTTP_USER_AGENT") or "")[:500]
 
     SesionActiva.objects.filter(
@@ -290,7 +291,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *_args, **_kwargs):
         raw_identifier = (request.data.get("email") or request.data.get("username") or "").strip()
         email = _resolver_identificador_login(raw_identifier).strip().lower()[:254]
-        ip    = request.META.get("REMOTE_ADDR") or "0.0.0.0"  # nosec B104
+        ip    = get_client_ip(request) or "0.0.0.0"  # nosec B104
 
         # ── 1. Check cache (O(1) — cubre bloqueos automáticos recientes) ──────
         if _esta_bloqueado_cache(email, ip):
@@ -937,7 +938,7 @@ class TwoFAActivarView(APIView):
     def post(self, request):
         from .models import Intento2FA
         codigo = request.data.get("codigo", "")
-        ip = request.META.get("REMOTE_ADDR")
+        ip = get_client_ip(request)
 
         try:
             auth = request.user.auth_2fa
@@ -976,7 +977,7 @@ class TwoFAVerificarView(APIView):
     def post(self, request):
         from .models import Intento2FA
         codigo = (request.data.get("codigo") or "").strip().upper()
-        ip = request.META.get("REMOTE_ADDR")
+        ip = get_client_ip(request)
 
         try:
             auth = request.user.auth_2fa
@@ -1055,7 +1056,7 @@ class TwoFALoginVerificarView(APIView):
 
         pre_auth = request.data.get("pre_auth_token", "")
         codigo = (request.data.get("codigo") or "").strip()
-        ip = request.META.get("REMOTE_ADDR")
+        ip = get_client_ip(request)
 
         if not pre_auth or not codigo:
             return Response(
