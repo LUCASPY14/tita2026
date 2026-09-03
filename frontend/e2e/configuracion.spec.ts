@@ -41,7 +41,6 @@ test.describe('Configuración', () => {
   test('muestra los tabs principales', async ({ page }) => {
     await expect(page.getByRole('button', { name: /Categorías/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Empresa/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Seguridad/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Impuestos/ })).toBeVisible()
   })
 

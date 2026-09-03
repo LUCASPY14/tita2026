@@ -22,6 +22,7 @@ import {
   PanelLeftOpen,
   ChevronDown,
   LogOut,
+  Shield,
   Wallet,
   ChefHat,
   Leaf,
@@ -295,8 +296,17 @@ export default function AppLayout() {
                   <button
                     type="button"
                     role="menuitem"
+                    onClick={() => { setUserMenuOpen(false); navigate('/mi-seguridad') }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-base text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    {t('layout.security')}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-base text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-base text-red-600 hover:bg-red-50 transition-colors cursor-pointer border-t border-slate-100"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     {t('layout.logout')}

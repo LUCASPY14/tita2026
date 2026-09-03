@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   Settings, Tag, ListOrdered, CreditCard, Users,
-  GraduationCap, Building2, History, Shield,
+  GraduationCap, Building2, History,
   UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent, Trash2, DollarSign,
   MessageCircle, UserX, Bell,
 } from 'lucide-react'
@@ -17,7 +17,6 @@ import TabMediosPago from './configuracion/TabMediosPago'
 import TabGrados from './configuracion/TabGrados'
 import TabDatosEmpresa from './configuracion/TabDatosEmpresa'
 import TabHistorialPrecios from './configuracion/TabHistorialPrecios'
-import TabSeguridad from './configuracion/TabSeguridad'
 import TabTiposAlmuerzo from './configuracion/TabTiposAlmuerzo'
 import TabPlanesAlmuerzo from './configuracion/TabPlanesAlmuerzo'
 import TabPreciosAlmuerzo from './configuracion/TabPreciosAlmuerzo'
@@ -30,7 +29,7 @@ import TabNotificaciones from './configuracion/TabNotificaciones'
 
 type TabKey =
   | 'categorias' | 'tipos_cliente' | 'listas_precio' | 'medios_pago'
-  | 'grados' | 'datos_empresa' | 'historial_precios' | 'seguridad'
+  | 'grados' | 'datos_empresa' | 'historial_precios'
   | 'tipos_almuerzo' | 'planes_almuerzo' | 'precios_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
   | 'whatsapp' | 'purga_alumnos' | 'notificaciones'
 
@@ -42,7 +41,6 @@ const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'grados',            labelKey: 'settings.grades',      icon: GraduationCap },
   { key: 'datos_empresa',     labelKey: 'settings.company',     icon: Building2 },
   { key: 'historial_precios', labelKey: 'settings.priceHistory',icon: History },
-  { key: 'seguridad',         labelKey: 'settings.security',    icon: Shield },
   { key: 'tipos_almuerzo',    labelKey: 'settings.lunchTypes',  icon: UtensilsCrossed },
   { key: 'planes_almuerzo',   labelKey: 'settings.lunchPlans',  icon: Calendar },
   { key: 'precios_almuerzo',  labelKey: 'settings.lunchPrices', icon: DollarSign },
@@ -117,7 +115,6 @@ export default function Configuracion() {
         {tab === 'impuestos'         && <TabImpuestos       onDelete={confirmDelete} />}
         {tab === 'datos_empresa'     && <TabDatosEmpresa />}
         {tab === 'historial_precios' && <TabHistorialPrecios />}
-        {tab === 'seguridad'         && <TabSeguridad />}
         {tab === 'whatsapp'          && <TabWhatsApp />}
         {tab === 'purga_alumnos'     && <TabPurgaAlumnos />}
         {tab === 'notificaciones'    && <TabNotificaciones />}

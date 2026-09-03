@@ -55,6 +55,7 @@
     "collapse":     "Collapse",
     "userMenu":     "User menu",
     "defaultUser":  "User",
+    "security":     "My security",
     "logout":       "Sign out"
   },
 
@@ -100,7 +101,6 @@
     "grades":      "Grades",
     "company":     "Company",
     "priceHistory":"Price History",
-    "security":    "Security",
     "lunchTypes":  "Lunch Types",
     "lunchPlans":  "Lunch Plans",
     "units":       "Units of Measure",

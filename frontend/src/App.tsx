@@ -36,6 +36,7 @@ const Alergenos         = lazy(() => import('./pages/Alergenos'))
 const Ventas            = lazy(() => import('./pages/Ventas'))
 const Cobros            = lazy(() => import('./pages/Cobros'))
 const PagosBancard      = lazy(() => import('./pages/PagosBancard'))
+const MiSeguridad       = lazy(() => import('./pages/MiSeguridad'))
 
 const PagoCompletado = lazy(() => import('./pages/PagoCompletado'))
 
@@ -200,6 +201,7 @@ export default function App() {
               </PrivateRoute>
             }>
               <Route path="/dashboard"     element={<Dashboard />} />
+              <Route path="/mi-seguridad"  element={<MiSeguridad />} />
               <Route path="/ventas"        element={
                 <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'CAJERO']}>
                   <Ventas />
