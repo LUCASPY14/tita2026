@@ -114,11 +114,13 @@ Test-Endpoint "Ventas"                      "$ApiUrl/api/v1/ventas/ventas/"     
 Test-Endpoint "Facturas"                    "$ApiUrl/api/v1/contabilidad/facturas/"         @(401, 403)
 Test-Endpoint "Notificaciones"              "$ApiUrl/api/v1/notificaciones/notificaciones/" @(401, 403)
 
-# ── 3. Inventario — alertas (endpoint nuevo) ─────────────────────
+# ── 3. Inventario — alertas ───────────────────────────────────────
+# "Alertas de vencimiento" se eliminó (LoteProducto/AlertaVencimiento,
+# feature a medio construir sin flujo real que lo usara) — ver checklist
+# de auditoría de BD, ítem #5.
 Write-Host ""
 Write-Host "  Inventario — alertas" -ForegroundColor Yellow
 Test-Endpoint "Alertas de stock"            "$ApiUrl/api/v1/inventario/alertas-stock/"       @(401, 403)
-Test-Endpoint "Alertas de vencimiento"      "$ApiUrl/api/v1/inventario/alertas-vencimiento/" @(401, 403)
 
 # ── 4. Bancard — requieren auth (401 sin token) ───────────────────
 Write-Host ""
