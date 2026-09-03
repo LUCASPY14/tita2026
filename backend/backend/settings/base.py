@@ -100,7 +100,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
-    "apps.usuarios.middleware.AuditContextMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",   # debe ser el último
 ]
 
