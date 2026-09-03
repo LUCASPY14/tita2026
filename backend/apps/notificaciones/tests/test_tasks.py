@@ -1,5 +1,6 @@
 """Tests para apps.notificaciones.tasks — generar_alertas_saldo_bajo,
-limpiar_notificaciones_antiguas, enviar_emails_pendientes."""
+limpiar_notificaciones_antiguas, enviar_emails_pendientes,
+procesar_solicitudes_pendientes."""
 import pytest
 from decimal import Decimal
 from datetime import timedelta
@@ -320,3 +321,33 @@ class TestGenerarAlertasSaldoBajoRamas:
         ):
             result = generar_alertas_saldo_bajo()
         assert result["notificaciones_creadas"] == 0
+
+
+# ── procesar_solicitudes_pendientes ─────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestProcesarSolicitudesPendientes:
+
+    def test_sin_solicitudes_retorna_cero(self, db):
+        from apps.notificaciones.tasks import procesar_solicitudes_pendientes
+        result = procesar_solicitudes_pendientes()
+        assert result["enviadas"] == 0
+        assert result["fallidas"] == 0
+
+    def test_solicitud_pendiente_se_procesa_y_marca_enviada(self, cliente_portal):
+        from apps.notificaciones.models import Notificacion, SolicitudNotificacion
+        from apps.notificaciones.tasks import procesar_solicitudes_pendientes
+
+        solicitud = SolicitudNotificacion.objects.create(
+            cliente=cliente_portal,
+            tipo=Notificacion.Tipo.SALDO_BAJO,
+            mensaje="Saldo bajo en tarjeta.",
+            destino=Notificacion.Destino.SISTEMA,
+        )
+
+        result = procesar_solicitudes_pendientes()
+
+        assert result["enviadas"] == 1
+        solicitud.refresh_from_db()
+        assert solicitud.estado == SolicitudNotificacion.Estado.ENVIADA
+        assert Notificacion.objects.filter(usuario=cliente_portal.usuario_portal).exists()

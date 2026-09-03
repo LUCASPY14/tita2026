@@ -78,6 +78,10 @@ app.conf.beat_schedule = {
         "task": "apps.notificaciones.tasks.enviar_emails_pendientes",
         "schedule": crontab(minute="*/15"),  # Cada 15 minutos
     },
+    "procesar-solicitudes-notificacion": {
+        "task": "apps.notificaciones.tasks.procesar_solicitudes_pendientes",
+        "schedule": crontab(minute="*/15"),  # Cada 15 minutos
+    },
     # ── Inventario ────────────────────────────────────────────────────
     "alertar-stock-minimo": {
         "task": "apps.inventario.tasks.alertar_stock_minimo",

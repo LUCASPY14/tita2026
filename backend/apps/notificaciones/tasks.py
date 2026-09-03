@@ -172,3 +172,23 @@ def enviar_emails_pendientes():
         enviados, errores, descartados,
     )
     return {"enviados": enviados, "errores": errores, "descartados": descartados}
+
+
+@shared_task(
+    name="apps.notificaciones.tasks.procesar_solicitudes_pendientes",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
+def procesar_solicitudes_pendientes():
+    """Procesa SolicitudNotificacion en estado PENDIENTE (sistema/email/WhatsApp)."""
+    from apps.notificaciones.services import NotificacionService
+
+    resultado = NotificacionService.procesar_pendientes()
+    logger.info(
+        "procesar_solicitudes_pendientes: %d enviadas, %d fallidas",
+        resultado["enviadas"], resultado["fallidas"],
+    )
+    return resultado
