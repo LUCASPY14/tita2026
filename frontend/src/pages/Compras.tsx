@@ -373,7 +373,7 @@ export default function Compras() {
     { title: 'Proveedor', key: 'prov', render: (_, r) => <span className="text-base text-slate-800">{r.proveedor_nombre}</span> },
     { title: 'Monto', key: 'monto', render: (_, r) => <span className="tabular-nums font-semibold text-emerald-700">{formatGs(r.monto_total)}</span> },
     { title: 'Medio', key: 'medio', render: (_, r) => <Badge color="default">{r.medio_pago_nombre}</Badge> },
-    { title: 'Estado', key: 'estado', render: (_, r) => <Badge color={r.estado === 'CONCILIADO' ? 'green' : r.estado === 'RECHAZADO' ? 'red' : 'orange'}>{r.estado}</Badge> },
+    { title: 'Estado', key: 'estado', render: (_, r) => <Badge color="green">{r.estado}</Badge> },
     { title: 'Fecha', key: 'fecha', render: (_, r) => <span className="text-base text-slate-500">{formatFecha(r.fecha)}</span> },
   ]
 

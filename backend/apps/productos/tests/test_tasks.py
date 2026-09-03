@@ -110,16 +110,6 @@ class TestSincronizarCostosDesdeCompras:
         assert result2 == {"compras_procesadas": 0, "costos_registrados": 0}
         assert CostoHistorico.objects.count() == 1
 
-    def test_compra_parcialmente_recibida_no_se_procesa(
-        self, proveedor, usuario_admin, producto,
-    ):
-        from apps.inventario.models import CostoHistorico
-        from apps.productos.tasks import sincronizar_costos_desde_compras
-        _compra(proveedor, usuario_admin, [(producto, 10, 2000)], estado_entrega="PARCIAL")
-        result = sincronizar_costos_desde_compras()
-        assert result["costos_registrados"] == 0
-        assert not CostoHistorico.objects.exists()
-
     def test_multiples_compras_solo_recibidas_procesadas(
         self, proveedor, usuario_admin, producto, producto2,
     ):

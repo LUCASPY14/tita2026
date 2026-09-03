@@ -158,7 +158,7 @@ export interface CobranzaAlmuerzosData {
 export interface CompraProveedorFila {
   proveedor_id: number; proveedor: string; ruc: string
   n_compras: number; monto_total: number
-  entregadas: number; entrega_parcial: number; entrega_pendiente: number; tasa_entrega: number
+  entregadas: number; entrega_pendiente: number; tasa_entrega: number
   pagadas: number; pago_parcial: number; pago_pendiente: number
 }
 

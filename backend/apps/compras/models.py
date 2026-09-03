@@ -169,7 +169,6 @@ class Compra(models.Model):
 
     class EstadoEntrega(models.TextChoices):
         PENDIENTE = "PENDIENTE", "Pendiente"
-        PARCIAL   = "PARCIAL",   "Recepción parcial"
         RECIBIDA  = "RECIBIDA",  "Recibida"
 
     proveedor = models.ForeignKey(
@@ -286,9 +285,7 @@ class PagoProveedor(models.Model):
     """Pago realizado a un proveedor."""
 
     class Estado(models.TextChoices):
-        PENDIENTE = "PENDIENTE", "Pendiente"
         CONCILIADO = "CONCILIADO", "Conciliado"
-        RECHAZADO = "RECHAZADO", "Rechazado"
 
     proveedor = models.ForeignKey(
         Proveedor, models.PROTECT, related_name="pagos"
@@ -302,7 +299,7 @@ class PagoProveedor(models.Model):
     )
     observaciones = models.TextField(blank=True, null=True)
     estado = models.CharField(
-        max_length=15, choices=Estado.choices, default=Estado.PENDIENTE
+        max_length=15, choices=Estado.choices, default=Estado.CONCILIADO
     )
     medio_pago = models.ForeignKey(
         "core.MedioPago",
