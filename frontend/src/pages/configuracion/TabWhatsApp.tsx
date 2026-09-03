@@ -229,8 +229,9 @@ export default function TabWhatsApp() {
           Tipos de notificación por WhatsApp
         </h3>
         <p className="text-sm text-slate-500 mb-4">
-          Los padres reciben WhatsApp según sus preferencias individuales. Estas se configuran
-          en el perfil de cada cliente desde el módulo de <strong>Clientes</strong>.
+          Se envían automáticamente a todo padre con teléfono cargado en su ficha, mientras
+          las notificaciones estén activas a nivel sistema. Todavía no hay una opción para que
+          un padre individual se dé de baja.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {[
