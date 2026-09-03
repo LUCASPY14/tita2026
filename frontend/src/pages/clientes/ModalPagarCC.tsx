@@ -41,7 +41,13 @@ export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props)
   }
 
   const metodoInfo = METODOS.find(m => m.value === metodo)
-  const deudaOrigenSeleccionado = origen === 'CANTINA' ? deudaCantina : origen === 'ALMUERZO' ? deudaAlmuerzo : saldoActual
+  // La deuda por categoría puede estar inflada por créditos históricos sin
+  // clasificar (origen GENERAL) que no se restan de ninguna categoría — nunca
+  // puede ser menor a la deuda total real, así que la limitamos acá.
+  const deudaOrigenSeleccionado = Math.min(
+    origen === 'CANTINA' ? deudaCantina : origen === 'ALMUERZO' ? deudaAlmuerzo : saldoActual,
+    saldoActual,
+  )
 
   async function handlePagar() {
     const montoNum = Number(monto)

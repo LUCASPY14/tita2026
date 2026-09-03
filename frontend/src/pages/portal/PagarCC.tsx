@@ -130,7 +130,13 @@ export default function PagarCC() {
   }, [estadoRetorno, cargarDeuda])
 
   const requiereElegirOrigen = deudaCantina > 0 && deudaAlmuerzo > 0
-  const deudaOrigenSeleccionado = origen === 'CANTINA' ? deudaCantina : origen === 'ALMUERZO' ? deudaAlmuerzo : (deuda ?? 0)
+  // La deuda por categoría puede estar inflada por créditos históricos sin
+  // clasificar (origen GENERAL) que no se restan de ninguna categoría — nunca
+  // puede ser menor a la deuda total real, así que la limitamos acá.
+  const deudaOrigenSeleccionado = Math.min(
+    origen === 'CANTINA' ? deudaCantina : origen === 'ALMUERZO' ? deudaAlmuerzo : (deuda ?? 0),
+    deuda ?? 0,
+  )
 
   // ── Monto efectivo ─────────────────────────────────────────────────────────
   const montoEfectivo = usandoCustom

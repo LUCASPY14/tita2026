@@ -42,6 +42,12 @@ def resolver_origen_pago_cc(cliente, origen_solicitado, monto) -> str:
         return origen if origen in _ORIGENES_CC_VALIDOS else "GENERAL"
 
     deuda_categoria = deuda_cantina if origen == "CANTINA" else deuda_almuerzo
+    # La deuda por categoría se recalcula sumando débitos/créditos etiquetados
+    # con ese origen. Créditos históricos o no clasificados (origen GENERAL)
+    # no se restan de ninguna categoría, así que la suma de ambas puede
+    # superar la deuda total real — nunca puede ser menor. Limitamos acá para
+    # no ofrecer/aceptar un pago mayor a lo que el cliente realmente debe.
+    deuda_categoria = min(deuda_categoria, cliente.saldo_cuenta_corriente)
     if monto > deuda_categoria:
         raise ValidationError({
             "monto": f"El pago (₲{monto:,.0f}) supera la deuda de {origen.lower()} (₲{deuda_categoria:,.0f}).",

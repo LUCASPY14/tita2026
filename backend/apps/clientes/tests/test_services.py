@@ -222,3 +222,30 @@ class TestResolverOrigenPagoCC:
         _crear_deuda(cliente, usuario_cajero, 50000, CuentaCorrienteCliente.Origen.ALMUERZO)
         origen = resolver_origen_pago_cc(cliente, "ALMUERZO", Decimal("50000"))
         assert origen == "ALMUERZO"
+
+    def test_deuda_categoria_inflada_por_credito_general_se_limita_al_total(
+        self, cliente, usuario_cajero,
+    ):
+        """Un pago histórico sin clasificar (origen GENERAL) reduce la deuda
+        total pero no se resta de ninguna categoría — la deuda por categoría
+        queda inflada y nunca debe permitir pagar más que la deuda real."""
+        from apps.clientes.models import CuentaCorrienteCliente
+        from apps.clientes.services import resolver_origen_pago_cc
+        _crear_deuda(cliente, usuario_cajero, 100000, CuentaCorrienteCliente.Origen.CANTINA)
+        _crear_deuda(cliente, usuario_cajero, 50000, CuentaCorrienteCliente.Origen.ALMUERZO)
+        # Pago sin clasificar que reduce la deuda total (150000 -> 70000)
+        # pero no la de ninguna categoría (siguen en 100000 y 50000).
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+            monto=Decimal("80000"), saldo_anterior=Decimal("150000"),
+            saldo_resultante=Decimal("70000"),
+            creado_por=usuario_cajero, origen=CuentaCorrienteCliente.Origen.GENERAL,
+        )
+        assert cliente.saldo_cuenta_corriente == Decimal("70000")
+        assert cliente.saldo_cc_cantina == Decimal("100000")
+
+        with pytest.raises(ValidationError, match="monto"):
+            resolver_origen_pago_cc(cliente, "CANTINA", Decimal("80000"))
+
+        origen = resolver_origen_pago_cc(cliente, "CANTINA", Decimal("70000"))
+        assert origen == "CANTINA"
