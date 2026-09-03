@@ -14,14 +14,12 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     Notificacion,
     PreferenciaNotificacion,
-    PlantillaEmail,
     EmailEnviado,
     SolicitudNotificacion,
 )
 from .serializers import (
     NotificacionSerializer,
     PreferenciaNotificacionSerializer,
-    PlantillaEmailSerializer,
     EmailEnviadoSerializer,
     SolicitudNotificacionSerializer,
 )
@@ -67,12 +65,6 @@ class PreferenciaNotificacionViewSet(viewsets.ModelViewSet):
         if self.request.user.is_staff:
             return qs.all()
         return qs.filter(usuario=self.request.user)
-
-
-class PlantillaEmailViewSet(viewsets.ModelViewSet):
-    queryset = PlantillaEmail.objects.all()
-    serializer_class = PlantillaEmailSerializer
-    permission_classes = [IsAdmin]
 
 
 class EmailEnviadoViewSet(viewsets.ModelViewSet):

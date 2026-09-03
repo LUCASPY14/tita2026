@@ -121,11 +121,6 @@ class TestModelosStr:
         )
         assert "admin@test.com" in str(s)
 
-    def test_renovacion_sesion_str(self, db, usuario_admin):
-        from apps.usuarios.models import RenovacionSesion
-        r = RenovacionSesion.objects.create(usuario=usuario_admin)
-        assert "admin@test.com" in str(r)
-
     def test_patron_acceso_str(self, db, usuario_admin):
         from apps.usuarios.models import PatronAcceso
         p = PatronAcceso.objects.create(
@@ -139,54 +134,6 @@ class TestModelosStr:
             usuario=usuario_admin, motivo="Test bloqueo"
         )
         assert "admin@test.com" in str(b)
-
-    def test_token_recuperacion_str(self, db, usuario_admin):
-        from apps.usuarios.models import TokenRecuperacion
-        t = TokenRecuperacion.objects.create(
-            usuario=usuario_admin,
-            token="abc123xyz",
-            fecha_expiracion=timezone.now() + timezone.timedelta(hours=24),
-        )
-        assert "admin@test.com" in str(t)
-
-    def test_token_recuperacion_es_valido(self, db, usuario_admin):
-        from apps.usuarios.models import TokenRecuperacion
-        t = TokenRecuperacion.objects.create(
-            usuario=usuario_admin,
-            token="valido123",
-            fecha_expiracion=timezone.now() + timezone.timedelta(hours=24),
-            usado=False,
-        )
-        assert t.es_valido is True
-
-    def test_token_recuperacion_expirado(self, db, usuario_admin):
-        from apps.usuarios.models import TokenRecuperacion
-        t = TokenRecuperacion.objects.create(
-            usuario=usuario_admin,
-            token="expirado123",
-            fecha_expiracion=timezone.now() - timezone.timedelta(hours=1),
-            usado=False,
-        )
-        assert t.es_valido is False
-
-    def test_token_verificacion_str(self, db, usuario_admin):
-        from apps.usuarios.models import TokenVerificacion
-        t = TokenVerificacion.objects.create(
-            usuario=usuario_admin,
-            token="verif_abc",
-            expira_en=timezone.now() + timezone.timedelta(hours=24),
-        )
-        assert "admin@test.com" in str(t)
-
-    def test_token_verificacion_es_valido(self, db, usuario_admin):
-        from apps.usuarios.models import TokenVerificacion
-        t = TokenVerificacion.objects.create(
-            usuario=usuario_admin,
-            token="verif_valid",
-            expira_en=timezone.now() + timezone.timedelta(hours=24),
-            usado=False,
-        )
-        assert t.es_valido is True
 
     def test_auditoria_operacion_str(self, db, usuario_admin):
         from apps.usuarios.models import AuditoriaOperacion

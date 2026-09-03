@@ -5,7 +5,6 @@ Política de retención por defecto:
   - auditoria_operaciones   → 365 días
   - intentos_login          → 90 días
   - intentos_2fa            → 90 días
-  - renovaciones_sesion     → 90 días
   - historical_* (simple_history) → 365 días
 
 Uso recomendado (cron mensual, ej 02:00 primer día del mes):
@@ -23,7 +22,6 @@ from apps.usuarios.models import (
     AuditoriaOperacion,
     IntentoLogin,
     Intento2FA,
-    RenovacionSesion,
 )
 
 
@@ -44,12 +42,6 @@ class Command(BaseCommand):
             help="Días de retención para intentos_login e intentos_2fa (default: 90).",
         )
         parser.add_argument(
-            "--dias-sesiones",
-            type=int,
-            default=90,
-            help="Días de retención para renovaciones_sesion (default: 90).",
-        )
-        parser.add_argument(
             "--dry-run",
             action="store_true",
             help="Solo muestra cuántos registros se eliminarían, sin borrar nada.",
@@ -63,14 +55,12 @@ class Command(BaseCommand):
             "auditoria_operaciones": ahora - timedelta(days=options["dias_operaciones"]),
             "intentos_login": ahora - timedelta(days=options["dias_login"]),
             "intentos_2fa": ahora - timedelta(days=options["dias_login"]),
-            "renovaciones_sesion": ahora - timedelta(days=options["dias_sesiones"]),
         }
 
         targets = [
             ("auditoria_operaciones", AuditoriaOperacion, "fecha_operacion", cortes["auditoria_operaciones"]),
             ("intentos_login",        IntentoLogin,        "fecha_intento",   cortes["intentos_login"]),
             ("intentos_2fa",          Intento2FA,          "fecha_intento",   cortes["intentos_2fa"]),
-            ("renovaciones_sesion",   RenovacionSesion,    "fecha_renovacion", cortes["renovaciones_sesion"]),
         ]
 
         total_general = 0

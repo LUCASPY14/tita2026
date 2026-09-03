@@ -92,7 +92,6 @@ pytest apps/ventas/tests/ -v
 
 # Admin
 python manage.py create_demo_users   # usuarios de demo
-python manage.py limpiar_tokens      # tokens expirados
 python manage.py limpiar_audit_logs  # audit logs viejos
 
 # Particiones anuales de DB

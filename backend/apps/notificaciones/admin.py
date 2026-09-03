@@ -1,6 +1,6 @@
 ﻿"""
 Admin para la app notificaciones
-Gestión de notificaciones, plantillas, preferencias y emails
+Gestión de notificaciones, preferencias y emails
 """
 
 from django.contrib import admin
@@ -10,7 +10,6 @@ from django.utils.html import format_html
 from .models import (
     Notificacion,
     PreferenciaNotificacion,
-    PlantillaEmail,
     EmailEnviado,
     SolicitudNotificacion,
 )
@@ -102,35 +101,6 @@ class PreferenciaNotificacionAdmin(admin.ModelAdmin):
 
 
 # ==============================================================================
-# PLANTILLA DE EMAIL
-# ==============================================================================
-
-@admin.register(PlantillaEmail)
-class PlantillaEmailAdmin(admin.ModelAdmin):
-    list_display = ["codigo", "nombre", "categoria", "asunto", "activo"]
-    list_filter = ["activo", "categoria"]
-    search_fields = ["codigo", "nombre", "asunto"]
-    readonly_fields = ["fecha_creacion", "fecha_actualizacion"]
-
-    fieldsets = (
-        ("Identificación", {
-            "fields": ("codigo", "nombre", "categoria", "activo")
-        }),
-        ("Contenido", {
-            "fields": ("asunto", "cuerpo_html", "cuerpo_texto")
-        }),
-        ("Variables", {
-            "fields": ("variables", "descripcion"),
-            "classes": ("collapse",),
-        }),
-        ("Auditoría", {
-            "fields": ("creado_por", "fecha_creacion", "fecha_actualizacion"),
-            "classes": ("collapse",),
-        }),
-    )
-
-
-# ==============================================================================
 # EMAIL ENVIADO
 # ==============================================================================
 
@@ -162,7 +132,7 @@ class EmailEnviadoAdmin(admin.ModelAdmin):
             "fields": ("fecha_envio", "fecha_entrega", "fecha_apertura")
         }),
         ("Referencias", {
-            "fields": ("plantilla", "cliente", "enviado_por"),
+            "fields": ("cliente", "enviado_por"),
             "classes": ("collapse",),
         }),
         ("Auditoría", {

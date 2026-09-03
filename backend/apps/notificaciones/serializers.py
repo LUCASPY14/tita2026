@@ -7,7 +7,6 @@ from rest_framework import serializers
 from .models import (
     Notificacion,
     PreferenciaNotificacion,
-    PlantillaEmail,
     EmailEnviado,
     SolicitudNotificacion,
 )
@@ -25,13 +24,6 @@ class NotificacionSerializer(serializers.ModelSerializer):
 class PreferenciaNotificacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PreferenciaNotificacion
-        fields = "__all__"
-        read_only_fields = ["fecha_creacion", "fecha_actualizacion"]
-
-
-class PlantillaEmailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PlantillaEmail
         fields = "__all__"
         read_only_fields = ["fecha_creacion", "fecha_actualizacion"]
 

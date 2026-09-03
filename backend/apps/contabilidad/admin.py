@@ -11,7 +11,6 @@ from .models import (
     Caja,
     CierreCaja,
     MovimientoCaja,
-    ConciliacionPago,
     Factura,
     DatosEmpresa,
 )
@@ -172,67 +171,6 @@ class MovimientoCajaAdmin(admin.ModelAdmin):
             return format_html('<a href="{}">Venta #{}</a>', url, obj.venta.pk)
         return "-"
     venta_link.short_description = "Venta"
-
-
-# ==============================================================================
-# CONCILIACIÓN DE PAGOS
-# ==============================================================================
-
-@admin.register(ConciliacionPago)
-class ConciliacionPagoAdmin(admin.ModelAdmin):
-    list_display = [
-        "id",
-        "pago_venta_link",
-        "monto_acreditado_display",
-        "estado_badge",
-        "fecha_conciliacion",
-    ]
-    list_filter = ["estado", "fecha_conciliacion"]
-    search_fields = ["pago_venta__referencia"]
-    readonly_fields = ["fecha_creacion", "fecha_actualizacion"]
-    list_select_related = ["pago_venta"]
-    date_hierarchy = "fecha_conciliacion"
-    ordering = ["-fecha_conciliacion"]
-    fieldsets = (
-        ("Datos de la Conciliación", {
-            "fields": ("pago_venta", "monto_acreditado", "estado")
-        }),
-        ("Fechas", {
-            "fields": ("fecha_acreditacion", "fecha_conciliacion")
-        }),
-        ("Auditoría", {
-            "fields": ("observaciones", "fecha_creacion", "fecha_actualizacion"),
-            "classes": ("collapse",),
-        }),
-    )
-
-    def get_readonly_fields(self, request, obj=None):
-        """Conciliación inmutable una vez conciliada."""
-        if obj and obj.estado == "CONCILIADO":
-            return [f.name for f in self.model._meta.fields]
-        return self.readonly_fields
-
-    def pago_venta_link(self, obj):
-        url = reverse("admin:ventas_pagoventa_change", args=[obj.pago_venta.pk])
-        return format_html('<a href="{}">Pago #{}</a>', url, obj.pago_venta.pk)
-    pago_venta_link.short_description = "Pago"
-
-    def monto_acreditado_display(self, obj):
-        if obj.monto_acreditado is not None:
-            return f"₲{obj.monto_acreditado:,.0f}"
-        return "-"
-    monto_acreditado_display.short_description = "Monto Acreditado"
-
-    def estado_badge(self, obj):
-        colors = {"PENDIENTE": "#ffc107", "CONCILIADO": "#28a745", "DISCREPANCIA": "#dc3545"}
-        color = colors.get(obj.estado, "#6c757d")
-        return format_html(
-            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            color,
-            obj.get_estado_display(),
-        )
-    estado_badge.short_description = "Estado"
-
 
 
 # ==============================================================================

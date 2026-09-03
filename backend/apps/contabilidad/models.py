@@ -133,46 +133,6 @@ class MovimientoCaja(models.Model):
 
 
 # ==============================================================================
-# CONCILIACIÓN DE PAGOS
-# ==============================================================================
-
-class ConciliacionPago(models.Model):
-    """Conciliación entre un pago registrado y el extracto bancario."""
-
-    class Estado(models.TextChoices):
-        PENDIENTE = "PENDIENTE", "Pendiente"
-        CONCILIADO = "CONCILIADO", "Conciliado"
-        DISCREPANCIA = "DISCREPANCIA", "Discrepancia"
-
-    pago_venta = models.OneToOneField(
-        "ventas.PagoVenta",
-        models.PROTECT,
-        related_name="conciliacion",
-    )
-    fecha_acreditacion = models.DateTimeField(blank=True, null=True)
-    fecha_conciliacion = models.DateTimeField(default=timezone.now)
-    monto_acreditado = models.DecimalField(
-        max_digits=12, decimal_places=0, blank=True, null=True,
-        help_text="Monto en extracto bancario",
-    )
-    estado = models.CharField(
-        max_length=15, choices=Estado.choices, default=Estado.PENDIENTE
-    )
-    observaciones = models.TextField(blank=True, null=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Conciliación de Pago"
-        verbose_name_plural = "Conciliaciones de Pagos"
-        ordering = ["-fecha_conciliacion"]
-
-    def __str__(self):
-        return f"Conciliación #{self.pk} - Pago #{self.pago_venta_id}"
-
-
-
-# ==============================================================================
 # FACTURA (PAPEL PREIMPRESO)
 # ==============================================================================
 

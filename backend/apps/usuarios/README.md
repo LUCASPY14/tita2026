@@ -33,8 +33,6 @@ El módulo **Usuarios** es el sistema de autenticación y autorización central 
 | `AuditoriaEmpleado` | `auditoria_empleados` | Cambios campo a campo en datos de personal |
 | `AuditoriaOperacion` | `auditoria_operaciones` | Operaciones del sistema con datos antes/después |
 | `AuditoriaUsuarioWeb` | `auditoria_usuarios_web` | Cambios en usuarios del portal |
-| `TokenRecuperacion` | `tokens_recuperacion` | Tokens de recuperación de contraseña (TTL configurable) |
-| `TokenVerificacion` | `tokens_verificacion` | Tokens de verificación de email |
 
 ---
 
@@ -101,7 +99,7 @@ POST /api/v1/usuarios/recuperar-password/          → Envía email con token (T
 POST /api/v1/usuarios/recuperar-password/confirmar/ → { token, nueva_password }
 ```
 
-Los tokens se almacenan hasheados en `TokenRecuperacion`. Solo son válidos una vez (`usado=True` tras el primer uso).
+El token usa el `default_token_generator` de Django (hash derivado del estado del usuario, no se persiste en DB). Es válido una sola vez: cambia en cuanto el usuario actualiza su contraseña.
 
 ---
 

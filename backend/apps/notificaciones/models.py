@@ -1,6 +1,6 @@
 """
 Modelos de la app notificaciones
-Notificaciones a clientes, plantillas y preferencias
+Notificaciones a clientes y preferencias
 """
 
 from django.db import models
@@ -117,43 +117,6 @@ class PreferenciaNotificacion(models.Model):
 
 
 # ==============================================================================
-# PLANTILLA DE EMAIL
-# ==============================================================================
-
-class PlantillaEmail(models.Model):
-    """Plantilla reutilizable para envío de emails."""
-
-    codigo = models.CharField(max_length=50, unique=True)
-    nombre = models.CharField(max_length=100)
-    descripcion = models.TextField(blank=True, null=True)
-    asunto = models.CharField(max_length=200)
-    cuerpo_html = models.TextField()
-    cuerpo_texto = models.TextField(blank=True, null=True)
-    variables = models.JSONField(
-        default=list, help_text="Variables disponibles en la plantilla"
-    )
-    categoria = models.CharField(max_length=30)
-    activo = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
-    creado_por = models.ForeignKey(
-        "usuarios.Usuario",
-        models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="plantillas_email",
-    )
-
-    class Meta:
-        verbose_name = "Plantilla de Email"
-        verbose_name_plural = "Plantillas de Emails"
-        ordering = ["categoria", "nombre"]
-
-    def __str__(self):
-        return f"{self.codigo} - {self.nombre}"
-
-
-# ==============================================================================
 # EMAIL ENVIADO
 # ==============================================================================
 
@@ -179,13 +142,6 @@ class EmailEnviado(models.Model):
     fecha_apertura = models.DateTimeField(blank=True, null=True)
     mensaje_error = models.TextField(blank=True, null=True)
     intentos = models.IntegerField(default=1)
-    plantilla = models.ForeignKey(
-        PlantillaEmail,
-        models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="envios",
-    )
     cliente = models.ForeignKey(
         "clientes.Cliente",
         models.SET_NULL,

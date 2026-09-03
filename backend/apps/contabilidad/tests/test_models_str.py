@@ -1,6 +1,6 @@
 """
 Cobertura de __str__ en contabilidad/models.py:
-  Caja, CierreCaja, MovimientoCaja, ConciliacionPago, Factura, DatosEmpresa
+  Caja, CierreCaja, MovimientoCaja, Factura, DatosEmpresa
 """
 import pytest
 from decimal import Decimal
@@ -56,33 +56,6 @@ class TestContabilidadModelsStr:
         assert str(m).startswith("-₲20,000")
         # Cuando no hay descripción usa get_tipo_display
         assert "Egreso" in str(m)
-
-    def test_conciliacion_pago_str(self, db, cliente, usuario_cajero):
-        """ConciliacionPago.__str__ muestra el pk y el id del pago."""
-        from apps.ventas.models import Venta, PagoVenta
-        from apps.core.models import MedioPago
-        from apps.contabilidad.models import ConciliacionPago
-        mp = MedioPago.objects.create(descripcion="Transferencia", activo=True)
-        v = Venta.objects.create(
-            cliente=cliente,
-            cajero=usuario_cajero,
-            tipo=Venta.Tipo.CONTADO,
-            monto_total=Decimal("10000"),
-        )
-        pago = PagoVenta.objects.create(
-            venta=v,
-            medio_pago=mp,
-            monto=Decimal("10000"),
-            cajero=usuario_cajero,
-            cliente=cliente,
-        )
-        conc = ConciliacionPago.objects.create(
-            pago_venta=pago,
-            estado=ConciliacionPago.Estado.PENDIENTE,
-        )
-        s = str(conc)
-        assert "Conciliación #" in s
-        assert f"Pago #{pago.pk}" in s
 
     def test_factura_str(self, db, cliente):
         from apps.contabilidad.models import Factura

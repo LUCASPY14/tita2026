@@ -20,7 +20,6 @@ def sa_client(db):
 @pytest.mark.parametrize("url", [
     "/admin/notificaciones/notificacion/",
     "/admin/notificaciones/preferencianotificacion/",
-    "/admin/notificaciones/plantillaemail/",
     "/admin/notificaciones/emailenviado/",
     "/admin/notificaciones/solicitudnotificacion/",
 ])

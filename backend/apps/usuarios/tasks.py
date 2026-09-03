@@ -21,14 +21,12 @@ def limpiar_audit_logs():
       - auditoria_operaciones → 365 días
       - intentos_login        →  90 días
       - intentos_2fa          →  90 días
-      - renovaciones_sesion   →  90 días
     """
     from django.utils import timezone
     from apps.usuarios.models import (
         AuditoriaOperacion,
         IntentoLogin,
         Intento2FA,
-        RenovacionSesion,
     )
 
     ahora = timezone.now()
@@ -37,7 +35,6 @@ def limpiar_audit_logs():
         ("auditoria_operaciones", AuditoriaOperacion, "fecha_operacion", ahora - timedelta(days=365)),
         ("intentos_login",        IntentoLogin,        "fecha_intento",   ahora - timedelta(days=90)),
         ("intentos_2fa",          Intento2FA,          "fecha_intento",   ahora - timedelta(days=90)),
-        ("renovaciones_sesion",   RenovacionSesion,    "fecha_renovacion", ahora - timedelta(days=90)),
     ]
 
     resultado = {}

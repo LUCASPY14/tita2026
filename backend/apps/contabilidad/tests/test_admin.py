@@ -21,7 +21,6 @@ def sa_client(db):
     "/admin/contabilidad/caja/",
     "/admin/contabilidad/cierrecaja/",
     "/admin/contabilidad/movimientocaja/",
-    "/admin/contabilidad/conciliacionpago/",
     "/admin/contabilidad/factura/",
     "/admin/contabilidad/datosempresa/",
 ])

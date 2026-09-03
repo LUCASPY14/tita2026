@@ -8,7 +8,6 @@ from .models import (
     Caja,
     CierreCaja,
     MovimientoCaja,
-    ConciliacionPago,
     Factura,
     DatosEmpresa,
 )
@@ -48,13 +47,6 @@ class MovimientoCajaSerializer(serializers.ModelSerializer):
     class Meta:
         model = MovimientoCaja
         fields = "__all__"
-
-
-class ConciliacionPagoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ConciliacionPago
-        fields = "__all__"
-        read_only_fields = ["fecha_creacion", "fecha_actualizacion"]
 
 
 class FacturaSerializer(serializers.ModelSerializer):

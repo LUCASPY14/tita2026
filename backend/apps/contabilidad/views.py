@@ -28,7 +28,6 @@ from .models import (
     Caja,
     CierreCaja,
     MovimientoCaja,
-    ConciliacionPago,
     Factura,
     DatosEmpresa,
 )
@@ -37,7 +36,6 @@ from .serializers import (
     CierreCajaSerializer,
     CerrarCajaSerializer,
     MovimientoCajaSerializer,
-    ConciliacionPagoSerializer,
     FacturaSerializer,
     DatosEmpresaSerializer,
     EmitirFacturaSerializer,
@@ -307,14 +305,6 @@ class MovimientoCajaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["cierre", "tipo", "medio_pago"]
-
-
-class ConciliacionPagoViewSet(viewsets.ModelViewSet):
-    queryset = ConciliacionPago.objects.select_related("pago_venta").all()
-    serializer_class = ConciliacionPagoSerializer
-    permission_classes = [IsCajeroOrAdmin]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["estado"]
 
 
 class FacturaViewSet(viewsets.ModelViewSet):

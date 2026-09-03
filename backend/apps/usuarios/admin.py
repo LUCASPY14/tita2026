@@ -17,11 +17,8 @@ from .models import (
     CredencialWebAuthn,
     IntentoLogin,
     SesionActiva,
-    RenovacionSesion,
     PatronAcceso,
     BloqueoCuenta,
-    TokenRecuperacion,
-    TokenVerificacion,
     AuditoriaOperacion,
 )
 
@@ -201,24 +198,6 @@ class SesionActivaAdmin(admin.ModelAdmin):
     usuario_link.short_description = "Usuario"
 
 
-@admin.register(RenovacionSesion)
-class RenovacionSesionAdmin(admin.ModelAdmin):
-    list_display = ["usuario_link", "ip_address", "fecha_renovacion"]
-    search_fields = ["usuario__email", "ip_address"]
-    readonly_fields = ["fecha_renovacion"]
-    list_select_related = ["usuario"]
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return [f.name for f in self.model._meta.fields]
-        return self.readonly_fields
-
-    def usuario_link(self, obj):
-        url = reverse("admin:usuarios_usuario_change", args=[obj.usuario.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.usuario.email)
-    usuario_link.short_description = "Usuario"
-
-
 @admin.register(PatronAcceso)
 class PatronAccesoAdmin(admin.ModelAdmin):
     list_display = ["usuario_link", "ip_address", "es_habitual", "frecuencia_accesos"]
@@ -247,41 +226,6 @@ class BloqueoCuentaAdmin(admin.ModelAdmin):
     usuario_link.short_description = "Usuario"
 
 
-@admin.register(TokenRecuperacion)
-class TokenRecuperacionAdmin(admin.ModelAdmin):
-    list_display = ["usuario_link", "usado", "fecha_creacion", "fecha_expiracion"]
-    list_filter = ["usado"]
-    search_fields = ["usuario__email"]
-    readonly_fields = ["fecha_creacion", "token"]
-    list_select_related = ["usuario"]
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return [f.name for f in self.model._meta.fields]
-        return self.readonly_fields
-
-    def usuario_link(self, obj):
-        url = reverse("admin:usuarios_usuario_change", args=[obj.usuario.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.usuario.email)
-    usuario_link.short_description = "Usuario"
-
-
-@admin.register(TokenVerificacion)
-class TokenVerificacionAdmin(admin.ModelAdmin):
-    list_display = ["usuario_link", "tipo", "usado", "fecha_creacion"]
-    list_filter = ["tipo", "usado"]
-    search_fields = ["usuario__email"]
-    readonly_fields = ["fecha_creacion", "token"]
-    list_select_related = ["usuario"]
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return [f.name for f in self.model._meta.fields]
-        return self.readonly_fields
-
-    def usuario_link(self, obj):
-        url = reverse("admin:usuarios_usuario_change", args=[obj.usuario.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.usuario.email)
     usuario_link.short_description = "Usuario"
 
 

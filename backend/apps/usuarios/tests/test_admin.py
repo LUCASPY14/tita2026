@@ -24,11 +24,8 @@ def sa_client(db):
     "/admin/usuarios/intento2fa/",
     "/admin/usuarios/intentologin/",
     "/admin/usuarios/sesionactiva/",
-    "/admin/usuarios/renovacionsesion/",
     "/admin/usuarios/patronacceso/",
     "/admin/usuarios/bloqueo cuenta/",
-    "/admin/usuarios/tokenrecuperacion/",
-    "/admin/usuarios/tokenverificacion/",
     "/admin/usuarios/auditoriaoperacion/",
 ])
 def test_admin_changelist_returns_200_or_not_found(sa_client, url):
@@ -43,7 +40,6 @@ def test_admin_changelist_returns_200_or_not_found(sa_client, url):
     "/admin/usuarios/rol/",
     "/admin/usuarios/intentologin/",
     "/admin/usuarios/sesionactiva/",
-    "/admin/usuarios/tokenrecuperacion/",
     "/admin/usuarios/auditoriaoperacion/",
 ])
 def test_admin_changelist_returns_200(sa_client, url):

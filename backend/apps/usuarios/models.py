@@ -340,26 +340,6 @@ class SesionActiva(models.Model):
         return f"Sesión {self.usuario.email} - {'Activa' if self.activa else 'Cerrada'}"
 
 
-class RenovacionSesion(models.Model):
-    """Registro de renovaciones de sesión."""
-
-    id_renovacion = models.AutoField(primary_key=True)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="renovaciones")
-    session_key_anterior = models.CharField(max_length=255, blank=True, null=True)
-    session_key_nuevo = models.CharField(max_length=255, blank=True, null=True)
-    ip_address = models.GenericIPAddressField(blank=True, null=True)
-    user_agent = models.TextField(blank=True, null=True)
-    fecha_renovacion = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "renovaciones_sesion"
-        verbose_name = "Renovación de Sesión"
-        verbose_name_plural = "Renovaciones de Sesión"
-
-    def __str__(self):
-        return f"Renovación: {self.usuario.email}"
-
-
 class PatronAcceso(models.Model):
     """Patrones de acceso de usuarios para detección de anomalías."""
 
@@ -408,60 +388,6 @@ class BloqueoCuenta(models.Model):
 
     def __str__(self):
         return f"Bloqueo: {self.usuario.email} - {self.motivo}"
-
-
-# ==============================================================================
-# TOKENS
-# ==============================================================================
-
-class TokenRecuperacion(models.Model):
-    """Tokens para recuperación de contraseña."""
-
-    id_token = models.AutoField(primary_key=True)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="tokens_recuperacion")
-    token = models.CharField(unique=True, max_length=64)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_expiracion = models.DateTimeField()
-    usado = models.BooleanField(default=False)
-    fecha_uso = models.DateTimeField(null=True, blank=True)
-    ip_solicitud = models.GenericIPAddressField(blank=True, null=True)
-
-    class Meta:
-        db_table = "tokens_recuperacion"
-        verbose_name = "Token de Recuperación"
-        verbose_name_plural = "Tokens de Recuperación"
-
-    def __str__(self):
-        return f"Token: {self.usuario.email} - {'Usado' if self.usado else 'Válido'}"
-
-    @property
-    def es_valido(self):
-        return not self.usado and self.fecha_expiracion > timezone.now()
-
-
-class TokenVerificacion(models.Model):
-    """Tokens para verificación de email."""
-
-    id_token = models.AutoField(primary_key=True)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="tokens_verificacion")
-    token = models.CharField(unique=True, max_length=100)
-    tipo = models.CharField(max_length=50, default="email_verification")
-    expira_en = models.DateTimeField()
-    usado = models.BooleanField(default=False)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_uso = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        db_table = "tokens_verificacion"
-        verbose_name = "Token de Verificación"
-        verbose_name_plural = "Tokens de Verificación"
-
-    def __str__(self):
-        return f"Verificación: {self.usuario.email} - {self.tipo}"
-
-    @property
-    def es_valido(self):
-        return not self.usado and self.expira_en > timezone.now()
 
 
 # ==============================================================================

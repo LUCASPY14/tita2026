@@ -16,7 +16,6 @@ class TestLimpiarAuditLogs:
             "auditoria_operaciones": 0,
             "intentos_login": 0,
             "intentos_2fa": 0,
-            "renovaciones_sesion": 0,
         }
 
     def test_auditoria_vieja_se_elimina(self, db, usuario_admin):
