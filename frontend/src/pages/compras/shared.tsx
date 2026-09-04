@@ -36,7 +36,8 @@ export interface Proveedor {
   telefono: string | null
   email: string | null
   direccion: string | null
-  ciudad: string | null
+  ciudad: number | null
+  ciudad_nombre: string | null
   activo: boolean
   saldo_cuenta_corriente: number | string
 }

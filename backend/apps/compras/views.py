@@ -49,7 +49,7 @@ from .serializers import (
 
 
 class ProveedorViewSet(ExportCSVMixin, viewsets.ModelViewSet):
-    queryset = Proveedor.objects.all()
+    queryset = Proveedor.objects.select_related("ciudad", "ciudad__departamento", "ciudad__departamento__pais").all()
     serializer_class = ProveedorSerializer
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

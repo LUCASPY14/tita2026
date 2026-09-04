@@ -21,6 +21,7 @@ from .models import (
 
 class ProveedorSerializer(serializers.ModelSerializer):
     saldo_cuenta_corriente = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+    ciudad_nombre = serializers.CharField(source="ciudad.nombre", read_only=True, allow_null=True)
 
     class Meta:
         model = Proveedor

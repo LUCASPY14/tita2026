@@ -26,7 +26,13 @@ class Proveedor(models.Model):
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(max_length=254, blank=True, null=True)
     direccion = models.CharField(max_length=255, blank=True, null=True)
-    ciudad = models.CharField(max_length=100, blank=True, null=True)
+    ciudad = models.ForeignKey(
+        "clientes.Ciudad",
+        models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="proveedores",
+    )
     activo = models.BooleanField(default=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
 

@@ -2,29 +2,40 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
+import SelectorUbicacion from '../clientes/SelectorUbicacion'
+import type { Pais, Departamento, Ciudad } from '../clientes/shared'
 import { extractErrorMessage, type Proveedor } from './shared'
 
 interface Props {
   open: boolean
   editingProv: Proveedor | null
+  paises: Pais[]
+  departamentos: Departamento[]
+  ciudades: Ciudad[]
   onClose: () => void
   onSaved: () => void
 }
 
-const BLANK = { ruc: '', razon_social: '', telefono: '', email: '', direccion: '', ciudad: '', activo: true }
+const BLANK = { ruc: '', razon_social: '', telefono: '', email: '', direccion: '', ciudad: null as number | null, activo: true }
 
-export default function ModalProveedor({ open, editingProv, onClose, onSaved }: Props) {
+export default function ModalProveedor({ open, editingProv, paises, departamentos, ciudades, onClose, onSaved }: Props) {
   const [form, setForm] = useState(BLANK)
   const [saving, setSaving] = useState(false)
+  const [paisId, setPaisId] = useState<number | null>(null)
+  const [departamentoId, setDepartamentoId] = useState<number | null>(null)
 
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
     if (open) {
       setForm(editingProv
-        ? { ruc: editingProv.ruc, razon_social: editingProv.razon_social, telefono: editingProv.telefono ?? '', email: editingProv.email ?? '', direccion: editingProv.direccion ?? '', ciudad: editingProv.ciudad ?? '', activo: editingProv.activo }
+        ? { ruc: editingProv.ruc, razon_social: editingProv.razon_social, telefono: editingProv.telefono ?? '', email: editingProv.email ?? '', direccion: editingProv.direccion ?? '', ciudad: editingProv.ciudad, activo: editingProv.activo }
         : BLANK
       )
+      const ciudadActual = editingProv?.ciudad ? ciudades.find(c => c.id_ciudad === editingProv.ciudad) : undefined
+      const departamentoActual = ciudadActual ? departamentos.find(d => d.id_departamento === ciudadActual.departamento) : undefined
+      setDepartamentoId(ciudadActual?.departamento ?? null)
+      setPaisId(departamentoActual?.pais ?? null)
     }
   }
 
@@ -39,7 +50,7 @@ export default function ModalProveedor({ open, editingProv, onClose, onSaved }: 
         telefono: form.telefono.trim() || null,
         email: form.email.trim() || null,
         direccion: form.direccion.trim() || null,
-        ciudad: form.ciudad.trim() || null,
+        ciudad: form.ciudad,
         activo: form.activo,
       }
       if (editingProv) {
@@ -70,7 +81,7 @@ export default function ModalProveedor({ open, editingProv, onClose, onSaved }: 
       onCancel={onClose}
       okText={editingProv ? 'Guardar Cambios' : 'Registrar'}
       confirmLoading={saving}
-      width={560}
+      width={640}
     >
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -90,15 +101,22 @@ export default function ModalProveedor({ open, editingProv, onClose, onSaved }: 
             <label className={labelClass}>Email</label>
             <input type="email" className={inputClass} placeholder="contacto@empresa.com" value={form.email} onChange={f('email')} />
           </div>
-          <div>
+          <div className="col-span-2">
             <label className={labelClass}>Dirección</label>
             <input className={inputClass} placeholder="Av. Principal 123" value={form.direccion} onChange={f('direccion')} />
           </div>
-          <div>
-            <label className={labelClass}>Ciudad</label>
-            <input className={inputClass} placeholder="Asunción" value={form.ciudad} onChange={f('ciudad')} />
-          </div>
         </div>
+        <SelectorUbicacion
+          paises={paises}
+          departamentos={departamentos}
+          ciudades={ciudades}
+          paisId={paisId}
+          departamentoId={departamentoId}
+          ciudadId={form.ciudad}
+          onChangePais={setPaisId}
+          onChangeDepartamento={setDepartamentoId}
+          onChangeCiudad={(id) => setForm(p => ({ ...p, ciudad: id }))}
+        />
         <label className="flex items-center gap-2 cursor-pointer">
           <button
             type="button"

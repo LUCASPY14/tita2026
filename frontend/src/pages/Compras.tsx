@@ -28,6 +28,7 @@ import {
   ESTADO_PAGO_COLOR, TIPO_PAGO_COLOR, ESTADO_ENTREGA_COLOR, NC_ESTADO_COLOR, OC_ESTADO_COLOR, OC_ESTADO_LABEL,
   type Compra, type NotaCredito, type OrdenCompra, type PagoProveedor, type Producto, type Proveedor,
 } from './compras/shared'
+import type { Pais, Departamento, Ciudad } from './clientes/shared'
 
 type TabKey = 'compras' | 'proveedores' | 'pagos' | 'ordenes' | 'notas'
 
@@ -53,6 +54,9 @@ export default function Compras() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [productos, setProductos] = useState<Producto[]>([])
   const [mediosPago, setMediosPago] = useState<{ id_medio_pago: number; descripcion: string }[]>([])
+  const [paises, setPaises] = useState<Pais[]>([])
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([])
+  const [ciudades, setCiudades] = useState<Ciudad[]>([])
 
   // ── Compras list ────────────────────────────────────────────────
   const [compras, setCompras] = useState<Compra[]>([])
@@ -120,6 +124,9 @@ export default function Compras() {
       .catch(() => toast.error('Error al cargar proveedores'))
     getProductos().then(prods => setProductos(prods as Producto[])).catch(() => toast.error('Error al cargar productos'))
     getMediosPago().then(mp => setMediosPago(mp as { id_medio_pago: number; descripcion: string }[])).catch(() => toast.error('Error al cargar medios de pago'))
+    api.get('/clientes/paises/', { params: { page_size: 200 } }).then(({ data }) => setPaises(data.results ?? data)).catch(() => toast.error('Error al cargar países'))
+    api.get('/clientes/departamentos/', { params: { page_size: 200 } }).then(({ data }) => setDepartamentos(data.results ?? data)).catch(() => toast.error('Error al cargar departamentos'))
+    api.get('/clientes/ciudades/', { params: { page_size: 200 } }).then(({ data }) => setCiudades(data.results ?? data)).catch(() => toast.error('Error al cargar ciudades'))
   }, [getProductos, getMediosPago])
 
   // ── Load functions ───────────────────────────────────────────────
@@ -624,6 +631,9 @@ export default function Compras() {
       <ModalProveedor
         open={provModal.open}
         editingProv={provModal.prov}
+        paises={paises}
+        departamentos={departamentos}
+        ciudades={ciudades}
         onClose={() => setProvModal({ open: false, prov: null })}
         onSaved={() => {
           loadProveedores(searchProv, pageProveedores)
