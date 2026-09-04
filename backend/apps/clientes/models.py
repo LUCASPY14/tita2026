@@ -30,8 +30,7 @@ class Cliente(models.Model):
         unique=True, max_length=20, help_text="RUC o Cédula de Identidad"
     )
     direccion = models.CharField(max_length=255, blank=True, null=True)
-    ciudad = models.CharField(max_length=100, blank=True, null=True)
-    ciudad_catalogo = models.ForeignKey(
+    ciudad = models.ForeignKey(
         "Ciudad",
         models.SET_NULL,
         blank=True,
@@ -496,11 +495,34 @@ class Pais(models.Model):
         return self.nombre
 
 
-class Ciudad(models.Model):
-    id_ciudad = models.BigAutoField(primary_key=True)
+class Departamento(models.Model):
+    id_departamento = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
     pais = models.ForeignKey(
         Pais,
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="departamentos",
+    )
+
+    class Meta:
+        verbose_name = "Departamento"
+        verbose_name_plural = "Departamentos"
+        ordering = ["nombre"]
+        constraints = [
+            models.UniqueConstraint(fields=["nombre", "pais"], name="uq_departamento_nombre_pais"),
+        ]
+
+    def __str__(self):
+        return self.nombre
+
+
+class Ciudad(models.Model):
+    id_ciudad = models.BigAutoField(primary_key=True)
+    nombre = models.CharField(max_length=100)
+    departamento = models.ForeignKey(
+        Departamento,
         models.SET_NULL,
         null=True,
         blank=True,
@@ -511,6 +533,9 @@ class Ciudad(models.Model):
         verbose_name = "Ciudad"
         verbose_name_plural = "Ciudades"
         ordering = ["nombre"]
+        constraints = [
+            models.UniqueConstraint(fields=["nombre", "departamento"], name="uq_ciudad_nombre_departamento"),
+        ]
 
     def __str__(self):
         return self.nombre

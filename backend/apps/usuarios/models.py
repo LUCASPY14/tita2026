@@ -63,11 +63,6 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         blank=True,
         help_text="CI o RUC — usado para el login del personal interno (roles no CLIENTE_WEB)",
     )
-    fecha_nacimiento = models.DateField(
-        null=True,
-        blank=True,
-        help_text="Fecha de nacimiento (opcional) — se usa para la alerta de cumpleaños del personal",
-    )
     rol = models.CharField(
         max_length=20,
         choices=Rol.choices,
@@ -85,14 +80,16 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         help_text="Cliente asociado (solo para usuarios del portal web)",
     )
 
-    # Relación opcional con Empleado (para mantener datos de personal)
-    empleado_legacy = models.OneToOneField(
+    # Relación opcional con Empleado — el Empleado es el registro base del
+    # personal; no todos los empleados necesitan acceso al sistema (ej.
+    # cocineros), por eso el Usuario (login) cuelga del Empleado y no al revés.
+    empleado = models.OneToOneField(
         "Empleado",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="usuario_django",
-        help_text="Registro de empleado asociado (datos de personal)",
+        related_name="usuario",
+        help_text="Empleado al que pertenece este acceso al sistema (roles de personal interno)",
     )
 
     # Campos de estado
@@ -168,9 +165,19 @@ class Empleado(models.Model):
     nombre = models.CharField(max_length=100, help_text="Nombre(s)")
     apellido = models.CharField(max_length=100, help_text="Apellido(s)")
     fecha_ingreso = models.DateTimeField(default=timezone.now, help_text="Fecha de ingreso")
+    fecha_nacimiento = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Fecha de nacimiento (opcional) — se usa para la alerta de cumpleaños del personal",
+    )
     direccion = models.CharField(max_length=255, blank=True, null=True)
-    ciudad = models.CharField(max_length=100, blank=True, null=True)
-    pais = models.CharField(max_length=100, blank=True, null=True, default="Paraguay")
+    ciudad = models.ForeignKey(
+        "clientes.Ciudad",
+        models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="empleados",
+    )
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(max_length=255, blank=True, null=True)
     fecha_baja = models.DateTimeField(blank=True, null=True)

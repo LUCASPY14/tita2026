@@ -10,6 +10,7 @@ from .models import (
     Ciudad,
     Cliente,
     CuentaCorrienteCliente,
+    Departamento,
     Grado,
     HistorialGrado,
     Hijo,
@@ -174,8 +175,17 @@ class PaisSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class CiudadSerializer(serializers.ModelSerializer):
+class DepartamentoSerializer(serializers.ModelSerializer):
     pais_nombre = serializers.CharField(source="pais.nombre", read_only=True, allow_null=True)
+
+    class Meta:
+        model = Departamento
+        fields = "__all__"
+
+
+class CiudadSerializer(serializers.ModelSerializer):
+    departamento_nombre = serializers.CharField(source="departamento.nombre", read_only=True, allow_null=True)
+    pais_nombre = serializers.CharField(source="departamento.pais.nombre", read_only=True, allow_null=True)
 
     class Meta:
         model = Ciudad

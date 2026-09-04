@@ -2,12 +2,17 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
+import SelectorUbicacion from '../clientes/SelectorUbicacion'
+import type { Pais, Departamento, Ciudad } from '../clientes/shared'
 import { extractErrorMessage, type Empleado, type EmpleadoForm, type Rol, EMP_FORM_INITIAL } from './shared'
 
 interface Props {
   open: boolean
   editingEmp: Empleado | null
   roles: Rol[]
+  paises: Pais[]
+  departamentos: Departamento[]
+  ciudades: Ciudad[]
   onClose: () => void
   onSaved: () => void
 }
@@ -15,9 +20,11 @@ interface Props {
 const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
 const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
-export default function ModalEmpleado({ open, editingEmp, roles, onClose, onSaved }: Props) {
+export default function ModalEmpleado({ open, editingEmp, roles, paises, departamentos, ciudades, onClose, onSaved }: Props) {
   const [empForm, setEmpForm] = useState<EmpleadoForm>(EMP_FORM_INITIAL)
   const [saving, setSaving] = useState(false)
+  const [paisId, setPaisId] = useState<number | null>(null)
+  const [departamentoId, setDepartamentoId] = useState<number | null>(null)
 
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
@@ -30,12 +37,19 @@ export default function ModalEmpleado({ open, editingEmp, roles, onClose, onSave
           email: editingEmp.email ?? '',
           telefono: editingEmp.telefono ?? '',
           fecha_ingreso: editingEmp.fecha_ingreso ?? '',
+          fecha_nacimiento: editingEmp.fecha_nacimiento ?? '',
+          direccion: editingEmp.direccion ?? '',
+          ciudad: editingEmp.ciudad,
           id_rol: editingEmp.id_rol,
           estado: editingEmp.estado,
         })
       } else {
         setEmpForm({ ...EMP_FORM_INITIAL, id_rol: roles[0]?.id_rol ?? '' })
       }
+      const ciudadActual = editingEmp?.ciudad ? ciudades.find(c => c.id_ciudad === editingEmp.ciudad) : undefined
+      const departamentoActual = ciudadActual ? departamentos.find(d => d.id_departamento === ciudadActual.departamento) : undefined
+      setDepartamentoId(ciudadActual?.departamento ?? null)
+      setPaisId(departamentoActual?.pais ?? null)
     }
   }
 
@@ -71,7 +85,7 @@ export default function ModalEmpleado({ open, editingEmp, roles, onClose, onSave
       onCancel={onClose}
       okText={editingEmp ? 'Guardar' : 'Crear'}
       confirmLoading={saving}
-      width={480}
+      width={620}
     >
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -92,10 +106,31 @@ export default function ModalEmpleado({ open, editingEmp, roles, onClose, onSave
           <label className={labelClass}>Teléfono</label>
           <input value={empForm.telefono} onChange={e => setEmpForm(f => ({ ...f, telefono: e.target.value }))} placeholder="0981 xxxxxx" className={inputClass} />
         </div>
-        <div>
-          <label className={labelClass}>Fecha de ingreso</label>
-          <input type="date" value={empForm.fecha_ingreso} onChange={e => setEmpForm(f => ({ ...f, fecha_ingreso: e.target.value }))} className={inputClass} />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Fecha de ingreso</label>
+            <input type="date" value={empForm.fecha_ingreso} onChange={e => setEmpForm(f => ({ ...f, fecha_ingreso: e.target.value }))} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Fecha de nacimiento</label>
+            <input type="date" value={empForm.fecha_nacimiento} onChange={e => setEmpForm(f => ({ ...f, fecha_nacimiento: e.target.value }))} className={inputClass} />
+          </div>
         </div>
+        <div>
+          <label className={labelClass}>Dirección</label>
+          <input value={empForm.direccion} onChange={e => setEmpForm(f => ({ ...f, direccion: e.target.value }))} placeholder="Calle y número" className={inputClass} />
+        </div>
+        <SelectorUbicacion
+          paises={paises}
+          departamentos={departamentos}
+          ciudades={ciudades}
+          paisId={paisId}
+          departamentoId={departamentoId}
+          ciudadId={empForm.ciudad}
+          onChangePais={setPaisId}
+          onChangeDepartamento={setDepartamentoId}
+          onChangeCiudad={(id) => setEmpForm(f => ({ ...f, ciudad: id }))}
+        />
         <div>
           <label className={labelClass}>Rol *</label>
           <select value={empForm.id_rol} onChange={e => setEmpForm(f => ({ ...f, id_rol: Number(e.target.value) }))} className={inputClass}>

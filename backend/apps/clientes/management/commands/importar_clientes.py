@@ -165,9 +165,14 @@ class Command(BaseCommand):
         if lista is None:
             raise _FilaInvalida("sin cliente_lista_precio en el CSV, sin --lista-precio, y no hay ListaPrecio por defecto")
 
-        ciudad = (fila.get("cliente_ciudad") or "").strip()
-        if ciudad and not Ciudad.objects.filter(nombre__iexact=ciudad).exists():
-            warnings.append(f'Ciudad "{ciudad}" no está en el catálogo (Ciudad) — se guarda igual como texto libre')
+        ciudad_nombre = (fila.get("cliente_ciudad") or "").strip()
+        ciudad = None
+        if ciudad_nombre:
+            ciudad = Ciudad.objects.filter(nombre__iexact=ciudad_nombre).first()
+            if ciudad is None:
+                warnings.append(
+                    f'Ciudad "{ciudad_nombre}" no está en el catálogo — {nombres} {apellidos} queda sin ciudad asignada'
+                )
 
         cliente, creado = Cliente.objects.get_or_create(
             ruc_ci=ruc_ci,
@@ -177,7 +182,7 @@ class Command(BaseCommand):
                 "email": (fila.get("cliente_email") or "").strip() or None,
                 "telefono": (fila.get("cliente_telefono") or "").strip() or None,
                 "direccion": (fila.get("cliente_direccion") or "").strip() or None,
-                "ciudad": ciudad or None,
+                "ciudad": ciudad,
                 "tipo_cliente": tipo,
                 "lista_precio": lista,
             },

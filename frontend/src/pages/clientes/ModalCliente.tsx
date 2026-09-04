@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
-import Combobox from '../../components/ui/Combobox'
 import Input from '../../components/ui/Input'
 import Modal from '../../components/ui/Modal'
+import SelectorUbicacion from './SelectorUbicacion'
 import {
   extractErrorMessage, BLANK_CLIENTE, RUC_CI_REGEX,
-  type Cliente, type ClienteForm, type TipoCliente, type ListaPrecio, type Ciudad,
+  type Cliente, type ClienteForm, type TipoCliente, type ListaPrecio, type Pais, type Departamento, type Ciudad,
 } from './shared'
 
 interface Props {
@@ -15,13 +15,17 @@ interface Props {
   cliente: Cliente | null
   tiposCliente: TipoCliente[]
   listasPrecios: ListaPrecio[]
+  paises: Pais[]
+  departamentos: Departamento[]
   ciudades: Ciudad[]
   onClose: () => void
   onSaved: () => void
 }
 
-export default function ModalCliente({ open, cliente, tiposCliente, listasPrecios, ciudades, onClose, onSaved }: Props) {
+export default function ModalCliente({ open, cliente, tiposCliente, listasPrecios, paises, departamentos, ciudades, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false)
+  const [paisId, setPaisId] = useState<number | null>(null)
+  const [departamentoId, setDepartamentoId] = useState<number | null>(null)
   const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ClienteForm>({
     defaultValues: BLANK_CLIENTE,
   })
@@ -39,7 +43,7 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
           razon_social: cliente.razon_social ?? '',
           ruc_ci: cliente.ruc_ci,
           direccion: cliente.direccion ?? '',
-          ciudad: cliente.ciudad ?? '',
+          ciudad: cliente.ciudad,
           telefono: cliente.telefono ?? '',
           email: cliente.email ?? '',
           limite_credito: cliente.limite_credito,
@@ -51,7 +55,12 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
         }
       : BLANK_CLIENTE
     )
-  }, [open, cliente, reset])
+    const ciudadActual = cliente?.ciudad ? ciudades.find(c => c.id_ciudad === cliente.ciudad) : undefined
+    const departamentoActual = ciudadActual ? departamentos.find(d => d.id_departamento === ciudadActual.departamento) : undefined
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDepartamentoId(ciudadActual?.departamento ?? null)
+    setPaisId(departamentoActual?.pais ?? null)
+  }, [open, cliente, reset, ciudades, departamentos])
 
   const onSubmit = handleSubmit(async (form) => {
     setSaving(true)
@@ -132,16 +141,20 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
             })}
           />
           <Input label="Dirección" placeholder="Calle y número" {...register('direccion')} />
-          <div>
-            <label className="block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Ciudad</label>
-            <Combobox
-              options={ciudades.map(c => ({ value: c.nombre, label: c.nombre }))}
-              value={ciudadVal || undefined}
-              onChange={(v) => setValue('ciudad', String(v))}
-              filterLocal
-              placeholder="Buscar ciudad..."
-            />
-          </div>
+        </div>
+
+        <div>
+          <SelectorUbicacion
+            paises={paises}
+            departamentos={departamentos}
+            ciudades={ciudades}
+            paisId={paisId}
+            departamentoId={departamentoId}
+            ciudadId={ciudadVal}
+            onChangePais={setPaisId}
+            onChangeDepartamento={setDepartamentoId}
+            onChangeCiudad={(id) => setValue('ciudad', id)}
+          />
         </div>
 
         <div className="border-t border-slate-100 pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">

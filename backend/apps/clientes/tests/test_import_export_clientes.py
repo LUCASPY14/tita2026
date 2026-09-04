@@ -1,6 +1,6 @@
 """
 Tests para los comandos de management `importar_clientes`, `exportar_clientes`
-y `seed_ciudades`.
+y `seed_geografia`.
 """
 import csv
 import io
@@ -8,7 +8,7 @@ import io
 import pytest
 from django.core.management import CommandError, call_command
 
-from apps.clientes.models import Ciudad, Cliente, Grado, Hijo, Pais, TipoCliente
+from apps.clientes.models import Ciudad, Cliente, Departamento, Grado, Hijo, Pais, TipoCliente
 from apps.core.models import Tarjeta
 from apps.productos.models import ListaPrecio
 
@@ -193,20 +193,23 @@ class TestImportarClientesUnHijo:
         hijo = Hijo.objects.get(nombre="Sofía")
         assert hijo.fecha_nacimiento.isoformat() == "2015-03-10"
 
-    def test_ciudad_fuera_de_catalogo_genera_aviso_pero_se_guarda(self, tmp_path, tipo_cliente, lista_precio):
+    def test_ciudad_fuera_de_catalogo_genera_aviso_y_queda_sin_asignar(self, tmp_path, tipo_cliente, lista_precio):
         csv_path = escribir_csv(tmp_path / "in.csv", [fila_base(cliente_ciudad="Ciudad Inventada")])
         salida = run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
 
         cliente = Cliente.objects.get(ruc_ci="4123456")
-        assert cliente.ciudad == "Ciudad Inventada"
+        assert cliente.ciudad is None
         assert 'Ciudad "Ciudad Inventada" no está en el catálogo' in salida
 
     def test_ciudad_en_catalogo_no_genera_aviso(self, tmp_path, tipo_cliente, lista_precio):
         paraguay = Pais.objects.create(nombre="Paraguay")
-        Ciudad.objects.create(nombre="Asunción", pais=paraguay)
+        central = Departamento.objects.create(nombre="Central", pais=paraguay)
+        Ciudad.objects.create(nombre="Asunción", departamento=central)
         csv_path = escribir_csv(tmp_path / "in.csv", [fila_base(cliente_ciudad="Asunción")])
         salida = run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
 
+        cliente = Cliente.objects.get(ruc_ci="4123456")
+        assert cliente.ciudad.nombre == "Asunción"
         assert "no está en el catálogo" not in salida
 
     def test_dry_run_no_escribe_en_la_base(self, tmp_path, tipo_cliente, lista_precio):
@@ -463,21 +466,30 @@ class TestExportarClientes:
 
 
 @pytest.mark.django_db
-class TestSeedCiudades:
+class TestSeedGeografia:
 
-    def test_crea_paraguay_y_las_27_ciudades(self):
+    def test_crea_paraguay_departamentos_y_ciudades(self):
         out = io.StringIO()
-        call_command("seed_ciudades", stdout=out)
+        call_command("seed_geografia", stdout=out)
 
         assert Pais.objects.filter(nombre="Paraguay").exists()
-        assert Ciudad.objects.count() == 27
-        assert Ciudad.objects.filter(nombre="Asunción", pais__nombre="Paraguay").exists()
-        assert "27 creadas" in out.getvalue()
+        assert Departamento.objects.count() == 18
+        assert Ciudad.objects.count() == 31
+        assert Ciudad.objects.filter(
+            nombre="Asunción", departamento__nombre="Asunción (Distrito Capital)",
+        ).exists()
+        assert Ciudad.objects.filter(
+            nombre="San Lorenzo", departamento__nombre="Central", departamento__pais__nombre="Paraguay",
+        ).exists()
+        assert "18 creados" in out.getvalue()
+        assert "31 creadas" in out.getvalue()
 
     def test_correrlo_dos_veces_no_duplica(self):
-        call_command("seed_ciudades")
+        call_command("seed_geografia")
         out = io.StringIO()
-        call_command("seed_ciudades", stdout=out)
+        call_command("seed_geografia", stdout=out)
 
-        assert Ciudad.objects.count() == 27
+        assert Departamento.objects.count() == 18
+        assert Ciudad.objects.count() == 31
+        assert "0 creados" in out.getvalue()
         assert "0 creadas" in out.getvalue()

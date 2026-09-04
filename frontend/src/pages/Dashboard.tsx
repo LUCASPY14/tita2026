@@ -16,7 +16,6 @@ import { useAuthStore } from '../store/authStore'
 import { useDashboardKPI } from '../hooks/useDashboardKPI'
 import Badge from '../components/ui/Badge'
 import Spinner from '../components/ui/Spinner'
-import { ROL_LABEL } from './usuarios/shared'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -512,8 +511,8 @@ export default function Dashboard() {
             </p>
             <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
               {r.cumpleanerosPersonal.map(c => (
-                <li key={c.id_usuario} className="text-sm text-violet-700">
-                  {c.nombre}<span className="text-violet-400"> — {ROL_LABEL[c.rol] ?? c.rol}</span>
+                <li key={c.id_empleado} className="text-sm text-violet-700">
+                  {c.nombre}<span className="text-violet-400"> — {c.rol}</span>
                 </li>
               ))}
             </ul>

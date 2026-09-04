@@ -14,6 +14,18 @@ def api_client():
 
 
 @pytest.fixture
+def rol(db):
+    from apps.usuarios.models import Rol
+    return Rol.objects.create(nombre_rol="Cajero Test", descripcion="Rol de prueba")
+
+
+@pytest.fixture
+def empleado(db, rol):
+    from apps.usuarios.models import Empleado
+    return Empleado.objects.create(nombre="Carlos", apellido="Test", id_rol=rol)
+
+
+@pytest.fixture
 def api_admin(api_client, usuario_admin):
     api_client.force_authenticate(user=usuario_admin)
     return api_client
@@ -456,33 +468,47 @@ class TestUsuarioViewSetCRUD:
         )
         assert resp.status_code == 201
 
-    def test_create_usuario_con_fecha_nacimiento(self, api_admin):
+    def test_otorgar_acceso_toma_nombre_y_apellido_del_empleado(self, api_admin, empleado):
+        """'Otorgar acceso al sistema': el Usuario se crea vinculado a un
+        Empleado y copia nombre/apellido de ahí, sin pedirlos de nuevo."""
         resp = api_admin.post(
             "/api/v1/usuarios/usuarios/",
             {
                 "email": "cumple@test.com",
                 "ci_ruc": "9990002",
                 "password": "nuevo_pass_123",
-                "nombre": "Con",
-                "apellido": "Fecha",
                 "rol": "CAJERO",
-                "fecha_nacimiento": "1990-05-15",
+                "empleado": empleado.pk,
             },
             format="json",
         )
         assert resp.status_code == 201
-        assert resp.data["fecha_nacimiento"] == "1990-05-15"
+        assert resp.data["nombre"] == empleado.nombre
+        assert resp.data["apellido"] == empleado.apellido
+        assert resp.data["empleado"] == empleado.pk
 
-    def test_patch_usuario_actualiza_fecha_nacimiento(self, api_admin, usuario_cajero):
-        assert usuario_cajero.fecha_nacimiento is None
-        resp = api_admin.patch(
-            f"/api/v1/usuarios/usuarios/{usuario_cajero.pk}/",
-            {"fecha_nacimiento": "1985-11-20"},
+        from apps.usuarios.models import Usuario
+        creado = Usuario.objects.get(email="cumple@test.com")
+        detalle = api_admin.get(f"/api/v1/usuarios/usuarios/{creado.pk}/").data
+        assert detalle["empleado_id"] == empleado.pk
+        assert detalle["empleado_nombre"] == f"{empleado.nombre} {empleado.apellido}"
+
+    def test_create_usuario_cliente_web_no_puede_tener_empleado(self, api_admin, cliente, empleado):
+        resp = api_admin.post(
+            "/api/v1/usuarios/usuarios/",
+            {
+                "email": "portalempleado@test.com",
+                "password": "nuevo_pass_123",
+                "nombre": "Portal",
+                "apellido": "Nuevo",
+                "rol": "CLIENTE_WEB",
+                "cliente": cliente.pk,
+                "empleado": empleado.pk,
+            },
             format="json",
         )
-        assert resp.status_code == 200
-        usuario_cajero.refresh_from_db()
-        assert usuario_cajero.fecha_nacimiento.isoformat() == "1985-11-20"
+        assert resp.status_code == 400
+        assert "empleado" in resp.data["field_errors"]
 
     def test_requiere_admin(self, api_cajero):
         resp = api_cajero.get("/api/v1/usuarios/usuarios/")

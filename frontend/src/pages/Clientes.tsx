@@ -9,7 +9,7 @@ import Table, { type Column } from '../components/ui/Table'
 import ModalCliente from './clientes/ModalCliente'
 import ModalHijos from './clientes/ModalHijos'
 import ModalPagarCC from './clientes/ModalPagarCC'
-import { formatGs, type Cliente, type TipoCliente, type ListaPrecio, type Ciudad } from './clientes/shared'
+import { formatGs, type Cliente, type TipoCliente, type ListaPrecio, type Pais, type Departamento, type Ciudad } from './clientes/shared'
 
 const PAGE_SIZE = 20
 
@@ -18,6 +18,8 @@ export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [tiposCliente, setTiposCliente] = useState<TipoCliente[]>([])
   const [listasPrecios, setListasPrecios] = useState<ListaPrecio[]>([])
+  const [paises, setPaises] = useState<Pais[]>([])
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([])
   const [ciudades, setCiudades] = useState<Ciudad[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
@@ -38,6 +40,8 @@ export default function Clientes() {
   useEffect(() => {
     api.get('/clientes/tipos-cliente/').then(({ data }) => setTiposCliente(data.results ?? data)).catch(() => toast.error('Error al cargar tipos de cliente'))
     api.get('/productos/listas-precio/').then(({ data }) => setListasPrecios(data.results ?? data)).catch(() => toast.error('Error al cargar listas de precio'))
+    api.get('/clientes/paises/', { params: { page_size: 200 } }).then(({ data }) => setPaises(data.results ?? data)).catch(() => toast.error('Error al cargar países'))
+    api.get('/clientes/departamentos/', { params: { page_size: 200 } }).then(({ data }) => setDepartamentos(data.results ?? data)).catch(() => toast.error('Error al cargar departamentos'))
     api.get('/clientes/ciudades/', { params: { page_size: 200 } }).then(({ data }) => setCiudades(data.results ?? data)).catch(() => toast.error('Error al cargar ciudades'))
   }, [])
 
@@ -223,6 +227,8 @@ export default function Clientes() {
         cliente={clienteModal.cliente}
         tiposCliente={tiposCliente}
         listasPrecios={listasPrecios}
+        paises={paises}
+        departamentos={departamentos}
         ciudades={ciudades}
         onClose={() => setClienteModal({ open: false, cliente: null })}
         onSaved={loadClientes}

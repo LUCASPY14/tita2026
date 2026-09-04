@@ -42,10 +42,10 @@ class UsuarioAdmin(BaseUserAdmin):
             "fields": ("email", "password")
         }),
         ("Datos Personales", {
-            "fields": ("nombre", "apellido", "ci_ruc", "fecha_nacimiento", "rol")
+            "fields": ("nombre", "apellido", "ci_ruc", "rol")
         }),
         ("Relaciones", {
-            "fields": ("cliente", "empleado_legacy")
+            "fields": ("cliente", "empleado")
         }),
         ("Permisos", {
             "fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")
@@ -92,6 +92,7 @@ class EmpleadoAdmin(admin.ModelAdmin):
         "rol_link",
         "estado",
         "fecha_ingreso",
+        "fecha_nacimiento",
     ]
     list_filter = ["estado", "id_rol"]
     search_fields = ["nombre", "apellido", "email"]

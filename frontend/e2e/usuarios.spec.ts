@@ -67,10 +67,10 @@ test.describe('Usuarios — listado', () => {
     await expect(page.getByRole('cell').filter({ hasText: 'Cajero' }).first()).toBeVisible({ timeout: 5000 })
   })
 
-  test('muestra botón Nuevo Usuario', async ({ page }) => {
+  test('no muestra botón Nuevo Usuario — el alta de personal se hace desde Empleados', async ({ page }) => {
     await expect(
       page.getByRole('button', { name: /nuevo usuario|crear usuario/i })
-    ).toBeVisible({ timeout: 5000 })
+    ).not.toBeVisible()
   })
 })
 
@@ -92,18 +92,42 @@ test.describe('Usuarios — control de acceso', () => {
 
 // ── Formulario de creación ────────────────────────────────────────────────────
 
+const EMPLEADOS_MOCK = {
+  results: [
+    {
+      id_empleado: 1, nombre: 'Sofía', apellido: 'Bogado', email: null, telefono: null,
+      fecha_ingreso: '2026-01-10', fecha_nacimiento: null, direccion: null, ciudad: null,
+      ciudad_nombre: null, estado: true, id_rol: 1, rol_nombre: 'Cocina', usuario_id: null,
+    },
+  ],
+  count: 1, next: null, previous: null,
+}
+
 test.describe('Usuarios — crear', () => {
-  test('abre el modal/formulario al hacer click en Nuevo Usuario', async ({ page }) => {
+  test('Nuevo Empleado abre su formulario', async ({ page }) => {
     await loginAs(page, ADMIN)
-    await page.route(/\/api\/v1\/usuarios\/usuarios\/(?!me)/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(USUARIOS_MOCK) })
+    await page.route(/\/api\/v1\/usuarios\/empleados\//, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPLEADOS_MOCK) })
     )
     await page.goto('/usuarios')
-    const btn = page.getByRole('button', { name: /nuevo usuario|crear usuario/i })
-    await btn.waitFor({ state: 'visible', timeout: 5000 })
-    await btn.click()
+    await page.getByRole('button', { name: 'Empleados' }).click()
+    await page.getByRole('button', { name: 'Nuevo Empleado' }).click()
     await expect(
-      page.getByRole('dialog', { name: /nuevo usuario/i })
+      page.getByRole('dialog', { name: /nuevo empleado/i })
+    ).toBeVisible({ timeout: 5000 })
+  })
+
+  test('Otorgar acceso abre el formulario de acceso ligado al empleado', async ({ page }) => {
+    await loginAs(page, ADMIN)
+    await page.route(/\/api\/v1\/usuarios\/empleados\//, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPLEADOS_MOCK) })
+    )
+    await page.goto('/usuarios')
+    await page.getByRole('button', { name: 'Empleados' }).click()
+    await expect(page.getByText('Sofía Bogado')).toBeVisible({ timeout: 5000 })
+    await page.getByRole('button', { name: 'Otorgar acceso' }).click()
+    await expect(
+      page.getByRole('dialog', { name: /otorgar acceso/i })
     ).toBeVisible({ timeout: 5000 })
   })
 })

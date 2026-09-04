@@ -13,7 +13,7 @@ export interface CumpleaneroHoy {
 }
 
 export interface CumpleaneroPersonalHoy {
-  id_usuario: number
+  id_empleado: number
   nombre: string
   rol: string
 }

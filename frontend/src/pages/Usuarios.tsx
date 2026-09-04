@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { UserPlus, Search, Edit2, Briefcase, ShieldOff, Fingerprint, Users, HardHat, Plus, Pencil, Trash2, Globe, RefreshCw, KeyRound } from 'lucide-react'
+import { Search, Edit2, Briefcase, ShieldOff, Fingerprint, Users, HardHat, Plus, Pencil, Trash2, Globe, RefreshCw, KeyRound } from 'lucide-react'
 import api from '../services/api'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -11,8 +11,10 @@ import {
   type Usuario, type UsuarioPortal, type Rol, type Empleado, type TabKey,
   ROL_COLOR, ROL_LABEL, ROLES_SISTEMA,
 } from './usuarios/shared'
+import type { Pais, Departamento, Ciudad } from './clientes/shared'
 import ModalUsuario from './usuarios/ModalUsuario'
 import ModalEmpleado from './usuarios/ModalEmpleado'
+import ModalOtorgarAcceso from './usuarios/ModalOtorgarAcceso'
 import ModalRol from './usuarios/ModalRol'
 
 export default function Usuarios() {
@@ -99,6 +101,10 @@ export default function Usuarios() {
   const [pageEmp, setPageEmp] = useState(1)
   const [empModalOpen, setEmpModalOpen] = useState(false)
   const [editingEmp, setEditingEmp] = useState<Empleado | null>(null)
+  const [accesoModal, setAccesoModal] = useState<{ open: boolean; empleado: Empleado | null }>({ open: false, empleado: null })
+  const [paises, setPaises] = useState<Pais[]>([])
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([])
+  const [ciudades, setCiudades] = useState<Ciudad[]>([])
 
   const loadEmpleados = useCallback(async (p: number) => {
     setLoadingEmp(true)
@@ -115,13 +121,27 @@ export default function Usuarios() {
     }
   }, [])
 
+  const loadUbicaciones = useCallback(async () => {
+    try {
+      const [paisesRes, deptosRes, ciudadesRes] = await Promise.all([
+        api.get('/clientes/paises/', { params: { page_size: 200 } }),
+        api.get('/clientes/departamentos/', { params: { page_size: 200 } }),
+        api.get('/clientes/ciudades/', { params: { page_size: 200 } }),
+      ])
+      setPaises(paisesRes.data.results ?? paisesRes.data)
+      setDepartamentos(deptosRes.data.results ?? deptosRes.data)
+      setCiudades(ciudadesRes.data.results ?? ciudadesRes.data)
+    } catch { /* silent */ }
+  }, [])
+
   useEffect(() => {
     if (tab === 'empleados') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       loadEmpleados(1)
       loadRoles()
+      loadUbicaciones()
     }
-  }, [tab, loadEmpleados, loadRoles])
+  }, [tab, loadEmpleados, loadRoles, loadUbicaciones])
 
   const loadPadres = useCallback(async (q: string, p: number) => {
     setLoadingPadres(true)
@@ -351,12 +371,25 @@ export default function Usuarios() {
     {
       title: '',
       key: 'acciones',
-      width: 80,
+      width: 220,
       render: (_, r) => (
-        <Button size="sm" variant="secondary" onClick={() => { setEditingEmp(r); setEmpModalOpen(true) }}>
-          <Edit2 className="w-3.5 h-3.5" />
-          Editar
-        </Button>
+        <div className="flex gap-1.5">
+          <Button size="sm" variant="secondary" onClick={() => { setEditingEmp(r); setEmpModalOpen(true) }}>
+            <Edit2 className="w-3.5 h-3.5" />
+            Editar
+          </Button>
+          {r.usuario_id ? (
+            <Button size="sm" variant="secondary" onClick={() => { setTab('usuarios'); setSearch(r.email ?? `${r.nombre} ${r.apellido}`) }}>
+              <KeyRound className="w-3.5 h-3.5" />
+              Ver acceso
+            </Button>
+          ) : (
+            <Button size="sm" variant="primary" onClick={() => setAccesoModal({ open: true, empleado: r })}>
+              <KeyRound className="w-3.5 h-3.5" />
+              Otorgar acceso
+            </Button>
+          )}
+        </div>
       ),
     },
   ]
@@ -487,12 +520,6 @@ export default function Usuarios() {
           <h1 className="text-2xl font-bold text-slate-900">{t('usuarios.title')}</h1>
           <p className="text-base text-slate-500 mt-0.5">{t('usuarios.subtitle')}</p>
         </div>
-        {tab === 'usuarios' && (
-          <Button variant="primary" onClick={() => { setEditingUser(null); setModalOpen(true) }}>
-            <UserPlus className="w-4 h-4" />
-            {t('usuarios.newUsuario')}
-          </Button>
-        )}
         {tab === 'empleados' && (
           <Button variant="primary" onClick={() => { setEditingEmp(null); setEmpModalOpen(true) }}>
             <Plus className="w-4 h-4" />
@@ -645,7 +672,17 @@ export default function Usuarios() {
         open={empModalOpen}
         editingEmp={editingEmp}
         roles={roles}
+        paises={paises}
+        departamentos={departamentos}
+        ciudades={ciudades}
         onClose={() => setEmpModalOpen(false)}
+        onSaved={() => loadEmpleados(pageEmp)}
+      />
+
+      <ModalOtorgarAcceso
+        open={accesoModal.open}
+        empleado={accesoModal.empleado}
+        onClose={() => setAccesoModal({ open: false, empleado: null })}
         onSaved={() => loadEmpleados(pageEmp)}
       />
 

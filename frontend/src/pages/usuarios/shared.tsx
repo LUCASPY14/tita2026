@@ -21,10 +21,11 @@ export interface Usuario {
   ci_ruc: string | null
   nombre: string
   apellido: string
-  fecha_nacimiento: string | null
   rol: string
   nombre_completo: string
   is_active: boolean
+  empleado_id: number | null
+  empleado_nombre: string | null
 }
 
 export interface UsuarioPortal {
@@ -46,7 +47,14 @@ export interface UsuarioForm {
   ci_ruc: string
   nombre: string
   apellido: string
-  fecha_nacimiento: string
+  rol: string
+  password: string
+  is_active: boolean
+}
+
+export interface OtorgarAccesoForm {
+  email: string
+  ci_ruc: string
   rol: string
   password: string
   is_active: boolean
@@ -66,9 +74,14 @@ export interface Empleado {
   email: string | null
   telefono: string | null
   fecha_ingreso: string
+  fecha_nacimiento: string | null
+  direccion: string | null
+  ciudad: number | null
+  ciudad_nombre: string | null
   estado: boolean
   id_rol: number
   rol_nombre: string
+  usuario_id: number | null
 }
 
 export interface EmpleadoForm {
@@ -77,6 +90,9 @@ export interface EmpleadoForm {
   email: string
   telefono: string
   fecha_ingreso: string
+  fecha_nacimiento: string
+  direccion: string
+  ciudad: number | null
   id_rol: number | ''
   estado: boolean
 }
@@ -106,12 +122,21 @@ export const ROLES_SISTEMA = [
   { value: 'CLIENTE_WEB', label: 'Portal Padres' },
 ]
 
+// Roles de permisos para "Otorgar acceso al sistema" desde un Empleado — no
+// incluye CLIENTE_WEB, que se vincula a un Cliente, no a un Empleado.
+export const ROLES_PERSONAL = ROLES_SISTEMA.filter(r => r.value !== 'CLIENTE_WEB')
+
 export const FORM_INITIAL: UsuarioForm = {
-  email: '', ci_ruc: '', nombre: '', apellido: '', fecha_nacimiento: '', rol: 'CAJERO', password: '', is_active: true,
+  email: '', ci_ruc: '', nombre: '', apellido: '', rol: 'CLIENTE_WEB', password: '', is_active: true,
+}
+
+export const OTORGAR_ACCESO_INITIAL: OtorgarAccesoForm = {
+  email: '', ci_ruc: '', rol: 'CAJERO', password: '', is_active: true,
 }
 
 export const EMP_FORM_INITIAL: EmpleadoForm = {
-  nombre: '', apellido: '', email: '', telefono: '', fecha_ingreso: '', id_rol: '', estado: true,
+  nombre: '', apellido: '', email: '', telefono: '', fecha_ingreso: '', fecha_nacimiento: '',
+  direccion: '', ciudad: null, id_rol: '', estado: true,
 }
 
 export type TabKey = 'usuarios' | 'empleados' | 'roles' | 'portal'

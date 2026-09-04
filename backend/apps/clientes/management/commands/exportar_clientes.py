@@ -39,6 +39,7 @@ class Command(BaseCommand):
         qs = Hijo.objects.select_related(
             "cliente_responsable", "grado", "tarjeta",
             "cliente_responsable__tipo_cliente", "cliente_responsable__lista_precio",
+            "cliente_responsable__ciudad",
         )
         if not options["todos"]:
             qs = qs.filter(activo=True)
@@ -67,7 +68,7 @@ class Command(BaseCommand):
                     "cliente_email": cliente.email or "",
                     "cliente_telefono": cliente.telefono or "",
                     "cliente_direccion": cliente.direccion or "",
-                    "cliente_ciudad": cliente.ciudad or "",
+                    "cliente_ciudad": cliente.ciudad.nombre if cliente.ciudad else "",
                     "cliente_tipo": cliente.tipo_cliente.nombre,
                     "cliente_lista_precio": cliente.lista_precio.nombre,
                     "cliente_activo": cliente.activo,

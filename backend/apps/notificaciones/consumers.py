@@ -98,7 +98,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
         from apps.contabilidad.models import CierreCaja
         from apps.core.models import CargaSaldo, Tarjeta
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
-        from apps.usuarios.models import Usuario
+        from apps.usuarios.models import Empleado
 
         hoy = localdate()
         ventas_hoy = Venta.objects.filter(
@@ -126,11 +126,11 @@ class DashboardConsumer(AsyncWebsocketConsumer):
         )
 
         cumpleaneros_personal_hoy = list(
-            Usuario.objects.filter(
+            Empleado.objects.filter(
                 fecha_nacimiento__month=hoy.month,
                 fecha_nacimiento__day=hoy.day,
-                is_active=True,
-            ).exclude(rol=Usuario.Rol.CLIENTE_WEB).values("id_usuario", "nombre", "apellido", "rol")
+                estado=True,
+            ).select_related("id_rol").values("id_empleado", "nombre", "apellido", "id_rol__nombre_rol")
         )
 
         return {
@@ -151,7 +151,11 @@ class DashboardConsumer(AsyncWebsocketConsumer):
             ],
             "cumpleanosPersonalHoy": len(cumpleaneros_personal_hoy),
             "cumpleanerosPersonal": [
-                {"id_usuario": u["id_usuario"], "nombre": f'{u["nombre"]} {u["apellido"]}', "rol": u["rol"]}
-                for u in cumpleaneros_personal_hoy
+                {
+                    "id_empleado": e["id_empleado"],
+                    "nombre": f'{e["nombre"]} {e["apellido"]}',
+                    "rol": e["id_rol__nombre_rol"],
+                }
+                for e in cumpleaneros_personal_hoy
             ],
         }

@@ -6,7 +6,9 @@ import type { BadgeColor } from '../../components/ui/Badge'
 
 export interface TipoCliente { id_tipo_cliente: number; nombre: string; activo: boolean }
 export interface ListaPrecio { id_lista_precio: number; nombre: string }
-export interface Ciudad { id_ciudad: number; nombre: string }
+export interface Pais { id_pais: number; nombre: string }
+export interface Departamento { id_departamento: number; nombre: string; pais: number | null; pais_nombre: string | null }
+export interface Ciudad { id_ciudad: number; nombre: string; departamento: number | null; departamento_nombre: string | null; pais_nombre: string | null }
 
 export interface Cliente {
   id_cliente: number
@@ -15,7 +17,7 @@ export interface Cliente {
   razon_social: string | null
   ruc_ci: string
   direccion: string | null
-  ciudad: string | null
+  ciudad: number | null
   telefono: string | null
   email: string | null
   limite_credito: string
@@ -38,7 +40,7 @@ export interface ClienteForm {
   razon_social: string
   ruc_ci: string
   direccion: string
-  ciudad: string
+  ciudad: number | null
   telefono: string
   email: string
   limite_credito: string
@@ -140,7 +142,7 @@ export const RUC_CI_REGEX = /^(\d{6,8}(-\d{1,2})?|\d{1,8}-\d{1}|\d{6,8})$/
 
 export const BLANK_CLIENTE: ClienteForm = {
   nombres: '', apellidos: '', razon_social: '', ruc_ci: '',
-  direccion: '', ciudad: '', telefono: '', email: '',
+  direccion: '', ciudad: null, telefono: '', email: '',
   limite_credito: '0', permite_cuenta_corriente: false, activo: true, lista_precio: '', tipo_cliente: '',
   modalidad_facturacion: 'INMEDIATA',
 }

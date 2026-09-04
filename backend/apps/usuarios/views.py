@@ -392,7 +392,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.select_related("auth_2fa").prefetch_related("credenciales_webauthn")
+    queryset = Usuario.objects.select_related("auth_2fa", "empleado").prefetch_related("credenciales_webauthn")
     filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
     filterset_fields = ["rol", "is_active"]
 
@@ -525,7 +525,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
 
 class EmpleadoViewSet(viewsets.ModelViewSet):
-    queryset = Empleado.objects.select_related("id_rol").all()
+    queryset = Empleado.objects.select_related("id_rol", "ciudad", "ciudad__departamento", "ciudad__departamento__pais", "usuario").all()
     serializer_class = EmpleadoSerializer
     permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend]

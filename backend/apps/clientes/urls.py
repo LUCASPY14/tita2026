@@ -7,6 +7,7 @@ from .views import (
     CiudadViewSet,
     ClienteViewSet,
     CuentaCorrienteClienteViewSet,
+    DepartamentoViewSet,
     GradoViewSet,
     HistorialGradoViewSet,
     HijoViewSet,
@@ -26,6 +27,7 @@ router.register(r"historial-grados", HistorialGradoViewSet, basename="historial-
 router.register(r"restricciones", RestriccionHijoViewSet, basename="restricciones")
 router.register(r"autorizaciones-saldo", AutorizacionSaldoNegativoViewSet, basename="autorizaciones-saldo")
 router.register(r"paises", PaisViewSet, basename="paises")
+router.register(r"departamentos", DepartamentoViewSet, basename="departamentos")
 router.register(r"ciudades", CiudadViewSet, basename="ciudades")
 router.register(r"responsables", AlumnoResponsableViewSet, basename="responsables")
 

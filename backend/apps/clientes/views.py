@@ -30,6 +30,7 @@ from .models import (
     Ciudad,
     Cliente,
     CuentaCorrienteCliente,
+    Departamento,
     Grado,
     HistorialGrado,
     Hijo,
@@ -43,6 +44,7 @@ from .serializers import (
     CiudadSerializer,
     ClienteSerializer,
     CuentaCorrienteClienteSerializer,
+    DepartamentoSerializer,
     GradoSerializer,
     HistorialGradoSerializer,
     HijoSerializer,
@@ -404,8 +406,14 @@ class PaisViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
 
+class DepartamentoViewSet(viewsets.ModelViewSet):
+    queryset = Departamento.objects.select_related("pais").all()
+    serializer_class = DepartamentoSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+
 class CiudadViewSet(viewsets.ModelViewSet):
-    queryset = Ciudad.objects.select_related("pais").all()
+    queryset = Ciudad.objects.select_related("departamento", "departamento__pais").all()
     serializer_class = CiudadSerializer
     permission_classes = [IsAdminOrReadOnly]
 

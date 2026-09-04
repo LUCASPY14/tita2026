@@ -232,12 +232,12 @@ class TestDashboardConsumer:
     def test_get_kpis_incluye_cumpleanero_personal_del_dia(self):
         from datetime import date
         from django.utils.timezone import localdate
-        from apps.usuarios.models import Usuario
+        from apps.usuarios.models import Empleado, Rol
 
         hoy = localdate()
-        Usuario.objects.create_user(
-            email="ws_cumple_personal@test.com", password="test1234",
-            nombre="Marta", apellido="Ruiz", rol=Usuario.Rol.CAJERO,
+        rol = Rol.objects.create(nombre_rol="Cajero WS")
+        Empleado.objects.create(
+            nombre="Marta", apellido="Ruiz", id_rol=rol,
             fecha_nacimiento=date(hoy.year - 30, hoy.month, hoy.day),
         )
         consumer = _make_dashboard_consumer()
@@ -245,4 +245,4 @@ class TestDashboardConsumer:
 
         assert result["cumpleanosPersonalHoy"] == 1
         assert result["cumpleanerosPersonal"][0]["nombre"] == "Marta Ruiz"
-        assert result["cumpleanerosPersonal"][0]["rol"] == "CAJERO"
+        assert result["cumpleanerosPersonal"][0]["rol"] == "Cajero WS"

@@ -306,50 +306,54 @@ class TestDashboardResumen:
         assert resp.data["cumpleanerosPersonal"] == []
 
     def test_cumpleanero_personal_hoy_aparece_con_nombre_y_rol(self, api_admin):
+        """El aviso de cumpleaños se arma desde Empleado — cubre a todo el
+        personal, tenga o no acceso al sistema (Usuario)."""
         from freezegun import freeze_time
-        from apps.usuarios.models import Usuario
+        from apps.usuarios.models import Empleado, Rol
 
+        rol_cajero = Rol.objects.create(nombre_rol="Cajero")
+        rol_cocina = Rol.objects.create(nombre_rol="Cocina")
         with freeze_time("2026-05-15"):
-            cajero = Usuario.objects.create_user(
-                email="cumple_cajero@test.com", password="test1234",
-                nombre="Marta", apellido="Ruiz", rol=Usuario.Rol.CAJERO,
+            empleado_cumple = Empleado.objects.create(
+                nombre="Marta", apellido="Ruiz", id_rol=rol_cajero,
                 fecha_nacimiento="1990-05-15",
             )
-            Usuario.objects.create_user(
-                email="otro_dia@test.com", password="test1234",
-                nombre="Carlos", apellido="Vega", rol=Usuario.Rol.COCINA,
+            Empleado.objects.create(
+                nombre="Carlos", apellido="Vega", id_rol=rol_cocina,
                 fecha_nacimiento="1985-08-20",  # otro día — no debe aparecer
             )
             resp = api_admin.get("/api/v1/contabilidad/dashboard/")
 
         assert resp.data["cumpleanosPersonalHoy"] == 1
         assert resp.data["cumpleanerosPersonal"] == [
-            {"id_usuario": cajero.id_usuario, "nombre": "Marta Ruiz", "rol": "CAJERO"}
+            {"id_empleado": empleado_cumple.id_empleado, "nombre": "Marta Ruiz", "rol": "Cajero"}
         ]
 
-    def test_cliente_web_no_cuenta_como_cumpleanero_personal(self, api_admin):
+    def test_empleado_sin_usuario_cuenta_como_cumpleanero_personal(self, api_admin):
+        """Un empleado sin acceso al sistema (sin Usuario vinculado) igual
+        debe aparecer en el aviso de cumpleaños."""
         from freezegun import freeze_time
-        from apps.usuarios.models import Usuario
+        from apps.usuarios.models import Empleado, Rol
 
+        rol = Rol.objects.create(nombre_rol="Cocina")
         with freeze_time("2026-05-15"):
-            Usuario.objects.create_user(
-                email="padre_cumple@test.com", password="test1234",
-                nombre="Padre", apellido="Portal", rol=Usuario.Rol.CLIENTE_WEB,
-                fecha_nacimiento="1980-05-15",
+            Empleado.objects.create(
+                nombre="Sin", apellido="Acceso", id_rol=rol,
+                fecha_nacimiento="1990-05-15",
             )
             resp = api_admin.get("/api/v1/contabilidad/dashboard/")
 
-        assert resp.data["cumpleanosPersonalHoy"] == 0
+        assert resp.data["cumpleanosPersonalHoy"] == 1
 
-    def test_usuario_inactivo_no_cuenta_como_cumpleanero_personal(self, api_admin):
+    def test_empleado_inactivo_no_cuenta_como_cumpleanero_personal(self, api_admin):
         from freezegun import freeze_time
-        from apps.usuarios.models import Usuario
+        from apps.usuarios.models import Empleado, Rol
 
+        rol = Rol.objects.create(nombre_rol="Cajero")
         with freeze_time("2026-05-15"):
-            Usuario.objects.create_user(
-                email="baja_personal@test.com", password="test1234",
-                nombre="Baja", apellido="Personal", rol=Usuario.Rol.CAJERO,
-                fecha_nacimiento="1990-05-15", is_active=False,
+            Empleado.objects.create(
+                nombre="Baja", apellido="Personal", id_rol=rol,
+                fecha_nacimiento="1990-05-15", estado=False,
             )
             resp = api_admin.get("/api/v1/contabilidad/dashboard/")
 

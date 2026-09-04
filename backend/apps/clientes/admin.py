@@ -20,6 +20,7 @@ from .models import (
     RestriccionHijo,
     AutorizacionSaldoNegativo,
     Pais,
+    Departamento,
     Ciudad,
     AlumnoResponsable,
 )
@@ -48,7 +49,7 @@ class ClienteAdmin(admin.ModelAdmin):
             "fields": ("nombres", "apellidos", "razon_social", "ruc_ci")
         }),
         ("Contacto", {
-            "fields": ("telefono", "email", "direccion", "ciudad", "ciudad_catalogo")
+            "fields": ("telefono", "email", "direccion", "ciudad")
         }),
         ("Configuración", {
             "fields": ("tipo_cliente", "lista_precio", "permite_cuenta_corriente", "limite_credito", "activo")
@@ -281,11 +282,23 @@ class PaisAdmin(admin.ModelAdmin):
     search_fields = ["nombre"]
 
 
-@admin.register(Ciudad)
-class CiudadAdmin(admin.ModelAdmin):
+@admin.register(Departamento)
+class DepartamentoAdmin(admin.ModelAdmin):
     list_display = ["nombre", "pais"]
     list_filter = ["pais"]
     search_fields = ["nombre"]
+
+
+@admin.register(Ciudad)
+class CiudadAdmin(admin.ModelAdmin):
+    list_display = ["nombre", "departamento", "pais_nombre"]
+    list_filter = ["departamento", "departamento__pais"]
+    search_fields = ["nombre"]
+    list_select_related = ["departamento", "departamento__pais"]
+
+    def pais_nombre(self, obj):
+        return obj.departamento.pais.nombre if obj.departamento and obj.departamento.pais else "—"
+    pais_nombre.short_description = "País"
 
 
 @admin.register(AlumnoResponsable)
