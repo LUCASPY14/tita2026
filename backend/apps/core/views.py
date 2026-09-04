@@ -156,14 +156,14 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
                     from apps.contabilidad.services import FacturacionService
                     FacturacionService.emitir_para_origen(
                         tipo="CARGA_SALDO",
-                        origen_id=carga.id,
+                        origen_id=carga.id_carga,
                         nro_factura=nro_factura,
                     )
             registrar_auditoria(
                 request=request,
                 operacion="RECARGA_SALDO",
                 tabla="core_cargasaldo",
-                id_registro=carga.id,
+                id_registro=carga.id_carga,
                 descripcion=(
                     f"Recarga {data['monto_cargado']} Gs. en tarjeta"
                     f" {data['tarjeta'].nro_tarjeta} vía {metodo}"
@@ -195,7 +195,7 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
                         CuentaCorrienteCliente.objects
                         .filter(cliente=cliente)
                         .select_for_update()
-                        .order_by("-id")
+                        .order_by("-id_movimiento_cc")
                         .first()
                     )
                     saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
@@ -234,7 +234,7 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
                 request=request,
                 operacion="RECARGA_SALDO",
                 tabla="core_cargasaldo",
-                id_registro=carga.id,
+                id_registro=carga.id_carga,
                 descripcion=(
                     f"Recarga {data['monto_cargado']} Gs. en tarjeta"
                     f" {tarjeta_obj.nro_tarjeta} vía CUENTA_CORRIENTE"
@@ -249,7 +249,7 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             request=request,
             operacion="RECARGA_SALDO_PENDIENTE",
             tabla="core_cargasaldo",
-            id_registro=carga.id,
+            id_registro=carga.id_carga,
             descripcion=(
                 f"Recarga {carga.monto_cargado} Gs. en tarjeta"
                 f" {carga.tarjeta_id} vía {metodo} — PENDIENTE confirmación"
@@ -285,14 +285,14 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
                 from apps.contabilidad.services import FacturacionService
                 FacturacionService.emitir_para_origen(
                     tipo="CARGA_SALDO",
-                    origen_id=carga_confirmada.id,
+                    origen_id=carga_confirmada.id_carga,
                     nro_factura=nro_factura,
                 )
         registrar_auditoria(
             request=request,
             operacion="CONFIRMAR_CARGA",
             tabla="core_cargasaldo",
-            id_registro=carga_confirmada.id,
+            id_registro=carga_confirmada.id_carga,
             descripcion=(
                 f"Confirmación carga {carga_confirmada.monto_cargado} Gs."
                 f" en tarjeta {carga_confirmada.tarjeta_id}"
@@ -371,8 +371,8 @@ class ReporteTarjetasView(APIView):
                     Sum("movimientos__monto", filter=consumo_filter),
                     Value(0), output_field=DecimalField(max_digits=12, decimal_places=0)
                 ),
-                num_recargas=Count("movimientos__id", filter=recarga_filter),
-                num_consumos=Count("movimientos__id", filter=consumo_filter),
+                num_recargas=Count("movimientos__id_movimiento_tarjeta", filter=recarga_filter),
+                num_consumos=Count("movimientos__id_movimiento_tarjeta", filter=consumo_filter),
             )
             .order_by("hijo__apellido", "hijo__nombre")
         )

@@ -14,7 +14,7 @@ const POLL_INTERVAL_MS = 30_000
 const WS_RECONNECT_MS  = 5_000
 
 interface Notificacion {
-  id: number
+  id_notificacion: number
   tipo: string
   titulo: string
   mensaje: string
@@ -80,7 +80,7 @@ export default function PortalNotificaciones() {
     else setRefreshing(true)
     try {
       const { data } = await api.get('/notificaciones/notificaciones/', {
-        params: { usuario: user.id, ordering: '-fecha_envio', page_size: 50 },
+        params: { usuario: user.id_usuario, ordering: '-fecha_envio', page_size: 50 },
       })
       setNotifs(prev => {
         const next: Notificacion[] = data.results || []
@@ -124,7 +124,7 @@ export default function PortalNotificaciones() {
       try {
         const notif: Notificacion = JSON.parse(event.data)
         setNotifs(prev => {
-          if (prev.find(n => n.id === notif.id)) return prev
+          if (prev.find(n => n.id_notificacion === notif.id_notificacion)) return prev
           toast('Nueva notificación', { icon: '🔔' })
           return [notif, ...prev]
         })
@@ -173,7 +173,7 @@ export default function PortalNotificaciones() {
     setMarcando(id)
     try {
       await api.patch(`/notificaciones/notificaciones/${id}/`, { leida: true })
-      setNotifs(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n))
+      setNotifs(prev => prev.map(n => n.id_notificacion === id ? { ...n, leida: true } : n))
     } catch {
       toast.error('Error al actualizar')
     } finally {
@@ -187,7 +187,7 @@ export default function PortalNotificaciones() {
     setMarcandoTodas(true)
     try {
       await Promise.all(
-        pendientes.map(n => api.patch(`/notificaciones/notificaciones/${n.id}/`, { leida: true }))
+        pendientes.map(n => api.patch(`/notificaciones/notificaciones/${n.id_notificacion}/`, { leida: true }))
       )
       setNotifs(prev => prev.map(n => ({ ...n, leida: true })))
       toast.success('Todas marcadas como leídas')
@@ -259,7 +259,7 @@ export default function PortalNotificaciones() {
             const iconColor = TIPO_COLOR[n.tipo] ?? 'text-slate-400'
             return (
               <div
-                key={n.id}
+                key={n.id_notificacion}
                 className={[
                   'bg-white rounded-xl border p-4 transition-colors',
                   n.leida ? 'border-slate-100' : 'border-amber-200 bg-amber-50',
@@ -281,8 +281,8 @@ export default function PortalNotificaciones() {
                         <Button
                           size="sm"
                           variant="secondary"
-                          loading={marcando === n.id}
-                          onClick={() => marcarLeida(n.id)}
+                          loading={marcando === n.id_notificacion}
+                          onClick={() => marcarLeida(n.id_notificacion)}
                         >
                           Marcar leída
                         </Button>

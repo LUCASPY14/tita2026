@@ -14,14 +14,14 @@ import Table, { type Column } from '../components/ui/Table'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
-interface Categoria { id: number; nombre: string; activo: boolean }
-interface UnidadMedida { id: number; nombre: string; abreviatura: string; activo: boolean }
-interface ImpuestoOption { id: number; nombre: string; porcentaje: string; activo: boolean }
-interface ListaPrecioOption { id: number; nombre: string; es_por_defecto: boolean }
-interface PrecioPorListaEntry { id: number; producto: number; lista: number; precio_unitario: string }
+interface Categoria { id_categoria: number; nombre: string; activo: boolean }
+interface UnidadMedida { id_unidad_medida: number; nombre: string; abreviatura: string; activo: boolean }
+interface ImpuestoOption { id_impuesto: number; nombre: string; porcentaje: string; activo: boolean }
+interface ListaPrecioOption { id_lista_precio: number; nombre: string; es_por_defecto: boolean }
+interface PrecioPorListaEntry { id_precio_lista: number; producto: number; lista: number; precio_unitario: string }
 
 interface Producto {
-  id: number
+  id_producto: number
   codigo_barra: string | null
   codigo: string | null
   descripcion: string
@@ -166,14 +166,14 @@ function ProductoModal({ open, producto, categorias, unidades, impuestos, listas
     setOtrosPreciosIds({})
     if (producto) {
       api.get<{ results?: PrecioPorListaEntry[] } | PrecioPorListaEntry[]>('/productos/precios-por-lista/', {
-        params: { producto: producto.id },
+        params: { producto: producto.id_producto },
       }).then(({ data }) => {
         const entries = Array.isArray(data) ? data : (data.results ?? [])
         const precios: Record<number, string> = {}
         const ids: Record<number, number> = {}
         for (const e of entries) {
           precios[e.lista] = e.precio_unitario
-          ids[e.lista] = e.id
+          ids[e.lista] = e.id_precio_lista
         }
         setOtrosPrecios(precios)
         setOtrosPreciosIds(ids)
@@ -215,26 +215,26 @@ function ProductoModal({ open, producto, categorias, unidades, impuestos, listas
     try {
       let productoId: number
       if (producto) {
-        await api.patch(`/productos/productos/${producto.id}/`, payload)
-        productoId = producto.id
+        await api.patch(`/productos/productos/${producto.id_producto}/`, payload)
+        productoId = producto.id_producto
         toast.success('Producto actualizado')
       } else {
         const { data } = await api.post('/productos/productos/', payload)
-        productoId = data.id
+        productoId = data.id_producto
         toast.success('Producto creado')
       }
       await api.post(`/productos/productos/${productoId}/set-precio/`, { precio: Number(precio) || 0 })
       await api.post(`/productos/productos/${productoId}/set-impuesto/`, { impuesto: impuesto ? Number(impuesto) : null })
 
       for (const lista of listasNoDefault) {
-        const valorStr = otrosPrecios[lista.id]
+        const valorStr = otrosPrecios[lista.id_lista_precio]
         if (valorStr === undefined || valorStr === '') continue
         const valor = Number(valorStr)
-        const precioExistenteId = otrosPreciosIds[lista.id]
+        const precioExistenteId = otrosPreciosIds[lista.id_lista_precio]
         if (precioExistenteId) {
           await api.patch(`/productos/precios-por-lista/${precioExistenteId}/`, { precio_unitario: valor })
         } else {
-          await api.post('/productos/precios-por-lista/', { producto: productoId, lista: lista.id, precio_unitario: valor })
+          await api.post('/productos/precios-por-lista/', { producto: productoId, lista: lista.id_lista_precio, precio_unitario: valor })
         }
       }
 
@@ -288,7 +288,7 @@ function ProductoModal({ open, producto, categorias, unidades, impuestos, listas
             <select value={form.categoria} onChange={setText('categoria')} className={selectClass}>
               <option value="">Seleccionar...</option>
               {categorias.map(c => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
+                <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>
               ))}
             </select>
           </div>
@@ -317,7 +317,7 @@ function ProductoModal({ open, producto, categorias, unidades, impuestos, listas
             <select value={form.impuesto} onChange={setText('impuesto')} className={selectClass}>
               <option value="">Exenta (sin impuesto)</option>
               {impuestos.map(i => (
-                <option key={i.id} value={i.id}>{i.nombre}</option>
+                <option key={i.id_impuesto} value={i.id_impuesto}>{i.nombre}</option>
               ))}
             </select>
             <p className="text-xs text-slate-400 mt-1">Con qué IVA se factura este producto</p>
@@ -330,7 +330,7 @@ function ProductoModal({ open, producto, categorias, unidades, impuestos, listas
             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Precio en otras listas</p>
             <div className="grid grid-cols-2 gap-4">
               {listasNoDefault.map(lista => (
-                <div key={lista.id}>
+                <div key={lista.id_lista_precio}>
                   <label className={labelClass}>{lista.nombre} (Gs.)</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">₲</span>
@@ -338,8 +338,8 @@ function ProductoModal({ open, producto, categorias, unidades, impuestos, listas
                       type="number"
                       min="0"
                       step="500"
-                      value={otrosPrecios[lista.id] ?? ''}
-                      onChange={e => setOtrosPrecios(prev => ({ ...prev, [lista.id]: e.target.value }))}
+                      value={otrosPrecios[lista.id_lista_precio] ?? ''}
+                      onChange={e => setOtrosPrecios(prev => ({ ...prev, [lista.id_lista_precio]: e.target.value }))}
                       placeholder="Sin cargar"
                       className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150"
                     />
@@ -358,7 +358,7 @@ function ProductoModal({ open, producto, categorias, unidades, impuestos, listas
             <select value={form.unidad_medida} onChange={setText('unidad_medida')} className={selectClass}>
               <option value="">Sin especificar</option>
               {unidades.map(u => (
-                <option key={u.id} value={u.id}>{u.nombre} ({u.abreviatura})</option>
+                <option key={u.id_unidad_medida} value={u.id_unidad_medida}>{u.nombre} ({u.abreviatura})</option>
               ))}
             </select>
           </div>
@@ -649,7 +649,7 @@ export default function Produtos() {
         <select value={filterCategoria} onChange={handleFilter(setFilterCategoria)} className={selectClass}>
           <option value="">Todas las categorías</option>
           {categorias.map(c => (
-            <option key={c.id} value={c.id}>{c.nombre}</option>
+            <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>
           ))}
         </select>
         <select value={filterActivo} onChange={handleFilter(setFilterActivo)} className={selectClass}>
@@ -669,7 +669,7 @@ export default function Produtos() {
         <Table
           columns={columns}
           dataSource={productos}
-          rowKey="id"
+          rowKey="id_producto"
           loading={loading}
           pageSize={PAGE_SIZE}
           page={page}

@@ -2,8 +2,8 @@ import { test, expect, type Page } from '@playwright/test'
 
 // ─── Usuarios ─────────────────────────────────────────────────────────────────
 
-const COCINA = { id: 3, email: 'cocina@cantina.com', nombre: 'Chef', apellido: 'Tita', rol: 'COCINA' }
-const ADMIN  = { id: 1, email: 'admin@cantina.com',  nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
+const COCINA = { id_usuario: 3, email: 'cocina@cantina.com', nombre: 'Chef', apellido: 'Tita', rol: 'COCINA' }
+const ADMIN  = { id_usuario: 1, email: 'admin@cantina.com',  nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
 
 // ─── Mocks de datos ───────────────────────────────────────────────────────────
 
@@ -24,8 +24,8 @@ const TARJETA_BLOQUEADA = {
 }
 
 const HIJOS_MOCK = [
-  { id: 5, nombre: 'Lucía', apellido: 'Martínez', grado: '2° A', nombre_completo: 'Lucía Martínez' },
-  { id: 6, nombre: 'Pedro', apellido: 'López',    grado: '3° B', nombre_completo: 'Pedro López'    },
+  { id_hijo: 5, nombre: 'Lucía', apellido: 'Martínez', grado: '2° A', nombre_completo: 'Lucía Martínez' },
+  { id_hijo: 6, nombre: 'Pedro', apellido: 'López',    grado: '3° B', nombre_completo: 'Pedro López'    },
 ]
 
 const SUSCRIPCIONES_MOCK = [
@@ -51,7 +51,7 @@ async function loginAs(page: Page, user: typeof ADMIN | typeof COCINA) {
     })
   )
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(user.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')
@@ -211,8 +211,24 @@ test.describe('Comedor — casos de error', () => {
 test.describe('Comedor — anti-doble-scan', () => {
   test('alumno que ya almorzó hoy muestra error al intentar registrar de nuevo', async ({ page }) => {
     await loginAs(page, COCINA)
-    // hijo 5 ya está en consumidosHoy desde el inicio
-    await setupComedor(page, { consumidosHoyIds: [5] })
+    await setupComedor(page)
+    // El 3er intento del día pasa directo al backend, que tiene la última
+    // palabra sobre el límite diario (ver comentario en Comedor.tsx:
+    // "el 3er intento pasa directo al backend, que es quien tiene la
+    // última palabra"). Se simula ese rechazo acá en vez de depender del
+    // umbral de tiempo cliente (10s/240s), que es frágil en CI.
+    await page.route(/\/api\/v1\/almuerzos\/registros-consumo/, (route) => {
+      if (route.request().method() === 'POST') {
+        return route.fulfill({
+          status: 400, contentType: 'application/json',
+          body: JSON.stringify({ non_field_errors: ['El alumno ya registró almuerzo hoy.'] }),
+        })
+      }
+      return route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ results: [], count: 0 }),
+      })
+    })
     // LIFO: tarjeta OK
     await page.route(/\/api\/v1\/core\/tarjetas/, (route) =>
       route.fulfill({
@@ -259,7 +275,7 @@ test.describe('Comedor — panel Lista de hoy', () => {
 
 test.describe('Comedor — acceso por rol', () => {
   test('CAJERO sin acceso a /comedor es redirigido', async ({ page }) => {
-    const CAJERO = { id: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
+    const CAJERO = { id_usuario: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
     await loginAs(page, CAJERO as typeof ADMIN)
     await page.goto('/comedor')
     // CAJERO no tiene permiso para comedor — redirige a /login o /dashboard

@@ -50,7 +50,7 @@ export default function ModalNC({ open, proveedores, productos, onClose, onSaved
 
   const prefillDetallesFromCompra = useCallback((compraId: number | '') => {
     if (!compraId) { setNcDetalles([]); return }
-    const compra = ncComprasDisponibles.find(c => c.id === compraId)
+    const compra = ncComprasDisponibles.find(c => c.id_compra === compraId)
     if (!compra?.detalles?.length) return
     const items: NCDetalle[] = compra.detalles.map(d => ({
       producto: d.producto,
@@ -142,7 +142,7 @@ export default function ModalNC({ open, proveedores, productos, onClose, onSaved
         <div>
           <label className={labelClass}>Proveedor *</label>
           <Combobox
-            options={proveedores.map(p => ({ value: p.id, label: p.razon_social }))}
+            options={proveedores.map(p => ({ value: p.id_proveedor, label: p.razon_social }))}
             value={ncProveedorId || undefined}
             onChange={v => handleProveedorChange(v as number)}
             filterLocal
@@ -164,8 +164,8 @@ export default function ModalNC({ open, proveedores, productos, onClose, onSaved
           >
             <option value="">Sin compra asociada</option>
             {ncComprasDisponibles.map(c => (
-              <option key={c.id} value={c.id}>
-                #{c.id} — {formatGs(c.monto_total)} — {formatFecha(c.fecha)}
+              <option key={c.id_compra} value={c.id_compra}>
+                #{c.id_compra} — {formatGs(c.monto_total)} — {formatFecha(c.fecha)}
               </option>
             ))}
           </select>
@@ -195,13 +195,13 @@ export default function ModalNC({ open, proveedores, productos, onClose, onSaved
                       className={`${inputClass} text-xs py-1`}
                       value={det.producto}
                       onChange={e => {
-                        const prod = productos.find(p => p.id === Number(e.target.value))
+                        const prod = productos.find(p => p.id_producto === Number(e.target.value))
                         updateDetalle(idx, 'producto', Number(e.target.value))
                         if (prod) updateDetalle(idx, 'producto_nombre', prod.descripcion)
                       }}
                     >
                       <option value={0}>Producto...</option>
-                      {productos.map(p => <option key={p.id} value={p.id}>{p.descripcion}</option>)}
+                      {productos.map(p => <option key={p.id_producto} value={p.id_producto}>{p.descripcion}</option>)}
                     </select>
                     <input
                       type="number" min={0.001} step="0.001"

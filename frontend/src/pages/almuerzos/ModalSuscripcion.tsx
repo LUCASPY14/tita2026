@@ -18,8 +18,8 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
 
   const activos = planes.filter(p => p.activo)
   const predeterminado = activos.find(p => p.es_predeterminado) ?? activos[0]
-  const planId = form.planId || (predeterminado ? String(predeterminado.id) : '')
-  const plan = activos.find(p => String(p.id) === planId)
+  const planId = form.planId || (predeterminado ? String(predeterminado.id_plan_almuerzo) : '')
+  const plan = activos.find(p => String(p.id_plan_almuerzo) === planId)
 
   async function handleSave() {
     if (!form.hijo || !plan) { toast.error('Completá todos los campos'); return }
@@ -27,7 +27,7 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
     try {
       await api.post('/almuerzos/suscripciones/', {
         hijo: Number(form.hijo),
-        plan: plan.id,
+        plan: plan.id_plan_almuerzo,
         fecha_inicio: form.fecha_inicio,
       })
       toast.success('Suscripción creada')
@@ -65,7 +65,7 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
           >
             <option value="">Seleccionar...</option>
             {hijos.map(h => (
-              <option key={h.id} value={h.id}>
+              <option key={h.id_hijo} value={h.id_hijo}>
                 {h.nombre_completo ?? `${h.nombre} ${h.apellido}`} — {h.grado}
               </option>
             ))}
@@ -81,7 +81,7 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
           >
             <option value="">Seleccionar...</option>
             {activos.map(p => (
-              <option key={p.id} value={p.id}>{p.nombre}{p.es_predeterminado ? ' (predeterminado)' : ''}</option>
+              <option key={p.id_plan_almuerzo} value={p.id_plan_almuerzo}>{p.nombre}{p.es_predeterminado ? ' (predeterminado)' : ''}</option>
             ))}
           </select>
         </div>

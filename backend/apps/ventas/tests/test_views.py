@@ -130,7 +130,7 @@ class TestVentaViewSet:
     def test_detail_retorna_venta(self, api_cajero, venta_activa):
         resp = api_cajero.get(f"/api/v1/ventas/ventas/{venta_activa.pk}/")
         assert resp.status_code == 200
-        assert resp.data["id"] == venta_activa.pk
+        assert resp.data["id_venta"] == venta_activa.pk
 
 
 # ── PagoVentaViewSet ──────────────────────────────────────────────────────────

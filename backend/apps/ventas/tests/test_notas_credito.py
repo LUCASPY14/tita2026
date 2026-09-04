@@ -71,7 +71,7 @@ class TestEmitirNotaCreditoService:
             nro_nota_credito="NC-004", motivo="Descuento",
             monto_total=Decimal("5000"),
         )
-        ultimo = CuentaCorrienteCliente.objects.filter(cliente=cliente).order_by("-id").first()
+        ultimo = CuentaCorrienteCliente.objects.filter(cliente=cliente).order_by("-id_movimiento_cc").first()
         assert ultimo.tipo == CuentaCorrienteCliente.Tipo.CREDITO
         assert ultimo.saldo_resultante == Decimal("15000")
         assert ultimo.origen == CuentaCorrienteCliente.Origen.CANTINA
@@ -106,7 +106,7 @@ class TestAnularNotaCreditoService:
         assert nc.estado == NotaCredito.Estado.ANULADA
         assert Stock.objects.get(producto=producto).cantidad == Decimal("50")
 
-        ultimo_cc = CuentaCorrienteCliente.objects.filter(cliente=cliente).order_by("-id").first()
+        ultimo_cc = CuentaCorrienteCliente.objects.filter(cliente=cliente).order_by("-id_movimiento_cc").first()
         assert ultimo_cc.tipo == CuentaCorrienteCliente.Tipo.DEBITO
         assert ultimo_cc.saldo_resultante == Decimal("0")
         assert ultimo_cc.origen == CuentaCorrienteCliente.Origen.CANTINA
@@ -155,7 +155,7 @@ class TestNotaCreditoViewSet:
             "cliente": cliente.pk, "nro_nota_credito": "NC-API-4",
             "motivo": "Descuento", "monto_total": 1000,
         }, format="json")
-        nc_id = create_resp.data["id"]
+        nc_id = create_resp.data["id_nota_credito"]
         resp = api_cajero.post(f"/api/v1/ventas/notas-credito/{nc_id}/anular/")
         assert resp.status_code == 403
 
@@ -164,7 +164,7 @@ class TestNotaCreditoViewSet:
             "cliente": cliente.pk, "nro_nota_credito": "NC-API-5",
             "motivo": "Descuento", "monto_total": 1000,
         }, format="json")
-        nc_id = create_resp.data["id"]
+        nc_id = create_resp.data["id_nota_credito"]
         resp = api_admin.post(f"/api/v1/ventas/notas-credito/{nc_id}/anular/")
         assert resp.status_code == 200
         assert resp.data["estado"] == "ANULADA"

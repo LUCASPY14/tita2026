@@ -25,7 +25,7 @@ export default function ModalNCDetail({ nc, canAnular, onClose, onAnulada }: Pro
     if (!confirm(`¿Anular NC #${nc.nro_nota_credito} de ${nc.cliente_nombre} por ${formatGs(nc.monto_total)}?\nEsto restaurará la deuda en la cuenta corriente.${extraMsg}`)) return
     setAnulando(true)
     try {
-      await api.post(`/ventas/notas-credito/${nc.id}/anular/`)
+      await api.post(`/ventas/notas-credito/${nc.id_nota_credito}/anular/`)
       toast.success('Nota de crédito anulada')
       onAnulada()
       onClose()
@@ -79,7 +79,7 @@ export default function ModalNCDetail({ nc, canAnular, onClose, onAnulada }: Pro
                 </thead>
                 <tbody>
                   {nc.detalles.map(d => (
-                    <tr key={d.id} className="border-b border-slate-100">
+                    <tr key={d.id_detalle_nc} className="border-b border-slate-100">
                       <td className="py-1">{d.producto_nombre}</td>
                       <td className="py-1 text-right tabular-nums">{d.cantidad}</td>
                       <td className="py-1 text-right tabular-nums">{formatGs(d.precio_unitario)}</td>

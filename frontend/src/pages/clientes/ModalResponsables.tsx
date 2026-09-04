@@ -24,7 +24,7 @@ export default function ModalResponsables({ open, hijo, onClose }: Props) {
     if (!hijo) return
     setLoading(true)
     try {
-      const { data } = await api.get('/clientes/responsables/', { params: { hijo: hijo.id, page_size: 50 } })
+      const { data } = await api.get('/clientes/responsables/', { params: { hijo: hijo.id_hijo, page_size: 50 } })
       setResponsables((data.results ?? data).sort(
         (a: AlumnoResponsable, b: AlumnoResponsable) => a.orden_cobro - b.orden_cobro
       ))
@@ -42,7 +42,7 @@ export default function ModalResponsables({ open, hijo, onClose }: Props) {
 
   async function handleSetTitular(r: AlumnoResponsable) {
     try {
-      await api.post(`/clientes/responsables/${r.id}/set_titular/`)
+      await api.post(`/clientes/responsables/${r.id_responsable}/set_titular/`)
       toast.success(`${r.cliente_nombre} ahora es el titular`)
       loadResponsables()
     } catch (err) {
@@ -52,7 +52,7 @@ export default function ModalResponsables({ open, hijo, onClose }: Props) {
 
   async function handleToggle(r: AlumnoResponsable, field: 'recibe_notificaciones' | 'puede_ver_saldo' | 'activo') {
     try {
-      await api.patch(`/clientes/responsables/${r.id}/`, { [field]: !r[field] })
+      await api.patch(`/clientes/responsables/${r.id_responsable}/`, { [field]: !r[field] })
       loadResponsables()
     } catch (err) {
       toast.error(extractErrorMessage(err))
@@ -62,7 +62,7 @@ export default function ModalResponsables({ open, hijo, onClose }: Props) {
   async function handleDelete(r: AlumnoResponsable) {
     if (!window.confirm(`¿Eliminar a ${r.cliente_nombre} como responsable?`)) return
     try {
-      await api.delete(`/clientes/responsables/${r.id}/`)
+      await api.delete(`/clientes/responsables/${r.id_responsable}/`)
       toast.success('Responsable eliminado')
       loadResponsables()
     } catch (err) {
@@ -99,7 +99,7 @@ export default function ModalResponsables({ open, hijo, onClose }: Props) {
           ) : (
             <ul className="space-y-2">
               {responsables.map((r) => (
-                <li key={r.id} className={['rounded-xl border px-4 py-3', r.es_titular ? 'border-amber-200 bg-amber-50/60' : 'border-slate-100 bg-white', !r.activo ? 'opacity-50' : ''].join(' ')}>
+                <li key={r.id_responsable} className={['rounded-xl border px-4 py-3', r.es_titular ? 'border-amber-200 bg-amber-50/60' : 'border-slate-100 bg-white', !r.activo ? 'opacity-50' : ''].join(' ')}>
                   <div className="flex items-start gap-3">
                     <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-xs font-bold text-slate-500">
                       {r.orden_cobro}
@@ -168,7 +168,7 @@ export default function ModalResponsables({ open, hijo, onClose }: Props) {
 
       <ModalAgregarResponsable
         open={agregarOpen}
-        hijoId={hijo?.id ?? 0}
+        hijoId={hijo?.id_hijo ?? 0}
         onClose={() => setAgregarOpen(false)}
         onSaved={loadResponsables}
       />

@@ -15,7 +15,7 @@ import TarjetasGuardadasBancard from './components/TarjetasGuardadasBancard'
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface HijoSaldo {
-  id: number
+  id_hijo: number
   nombre: string
   saldo_almuerzo: number
 }
@@ -116,13 +116,13 @@ export default function PagarAlmuerzo() {
     setLoading(true)
     try {
       const { data } = await api.get('/usuarios/portal/mi-hijo/')
-      const lista: HijoSaldo[] = (data.hijos ?? []).map((h: { id: number; nombre: string; saldo_almuerzo: number }) => ({
-        id: h.id, nombre: h.nombre, saldo_almuerzo: h.saldo_almuerzo,
+      const lista: HijoSaldo[] = (data.hijos ?? []).map((h: { id_hijo: number; nombre: string; saldo_almuerzo: number }) => ({
+        id_hijo: h.id_hijo, nombre: h.nombre, saldo_almuerzo: h.saldo_almuerzo,
       }))
       setHijos(lista)
 
       const preseleccionado = hijoIdParam
-        ? lista.find(h => String(h.id) === hijoIdParam)
+        ? lista.find(h => String(h.id_hijo) === hijoIdParam)
         : (lista.length === 1 ? lista[0] : undefined)
       if (preseleccionado) setHijoSeleccionado(preseleccionado)
     } catch {
@@ -148,7 +148,7 @@ export default function PagarAlmuerzo() {
     setIniciando(true)
     try {
       const { data } = await api.post('/core/bancard/iniciar-almuerzo/', {
-        hijo_id: hijoSeleccionado.id,
+        hijo_id: hijoSeleccionado.id_hijo,
         monto: montoEfectivo,
       })
       setProcessId(data.process_id)
@@ -169,7 +169,7 @@ export default function PagarAlmuerzo() {
     setIniciando(true)
     try {
       const { data } = await api.post('/core/bancard/pagar-almuerzo-con-tarjeta/', {
-        hijo_id: hijoSeleccionado.id,
+        hijo_id: hijoSeleccionado.id_hijo,
         monto: montoEfectivo,
         card_id: cardIdSeleccionado,
       })
@@ -370,12 +370,12 @@ export default function PagarAlmuerzo() {
           <div className="divide-y divide-slate-100">
             {hijos.map(h => (
               <button
-                key={h.id}
+                key={h.id_hijo}
                 type="button"
                 onClick={() => setHijoSeleccionado(h)}
                 className={[
                   'w-full flex items-center justify-between px-5 py-4 text-left transition-colors cursor-pointer',
-                  hijoSeleccionado?.id === h.id
+                  hijoSeleccionado?.id_hijo === h.id_hijo
                     ? 'bg-orange-50 border-l-4 border-orange-500'
                     : 'hover:bg-slate-50 border-l-4 border-transparent',
                 ].join(' ')}

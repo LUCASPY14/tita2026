@@ -46,14 +46,14 @@ export default function ModalHijos({ open, cliente, onClose }: Props) {
     if (!cliente) return
     setLoading(true)
     try {
-      const { data } = await api.get('/clientes/hijos/', { params: { cliente_responsable: cliente.id } })
+      const { data } = await api.get('/clientes/hijos/', { params: { cliente_responsable: cliente.id_cliente } })
       const list: Hijo[] = data.results ?? data
       setHijos(list)
       const rest: Record<number, RestriccionHijo[]> = {}
       await Promise.all(
         list.map(async (h) => {
-          const { data: rd } = await api.get('/clientes/restricciones/', { params: { hijo: h.id } })
-          rest[h.id] = rd.results ?? rd
+          const { data: rd } = await api.get('/clientes/restricciones/', { params: { hijo: h.id_hijo } })
+          rest[h.id_hijo] = rd.results ?? rd
         })
       )
       setRestricciones(rest)
@@ -78,7 +78,7 @@ export default function ModalHijos({ open, cliente, onClose }: Props) {
 
   async function toggleActivo(h: Hijo) {
     try {
-      await api.patch(`/clientes/hijos/${h.id}/`, { activo: !h.activo })
+      await api.patch(`/clientes/hijos/${h.id_hijo}/`, { activo: !h.activo })
       toast.success(h.activo ? 'Estudiante desactivado' : 'Estudiante activado')
       loadHijos()
     } catch (err) {
@@ -125,12 +125,12 @@ export default function ModalHijos({ open, cliente, onClose }: Props) {
           ) : (
             <ul className="divide-y divide-slate-100 -mx-6 px-6">
               {hijos.map((hijo) => {
-                const rests = restricciones[hijo.id] ?? []
+                const rests = restricciones[hijo.id_hijo] ?? []
                 const activeRests = rests.filter(r => r.activo)
-                const isExpanded = expandedId === hijo.id
+                const isExpanded = expandedId === hijo.id_hijo
 
                 return (
-                  <li key={hijo.id} className="py-3.5">
+                  <li key={hijo.id_hijo} className="py-3.5">
                     <div className="flex items-start gap-3">
                       <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
                         <HijoAvatar hijo={hijo} />
@@ -154,7 +154,7 @@ export default function ModalHijos({ open, cliente, onClose }: Props) {
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         {activeRests.length > 0 && (
-                          <button onClick={() => setExpandedId(isExpanded ? null : hijo.id)}
+                          <button onClick={() => setExpandedId(isExpanded ? null : hijo.id_hijo)}
                             className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
                             <AlertTriangle className="w-3 h-3" />{isExpanded ? 'Ocultar' : 'Ver'}
                           </button>
@@ -182,7 +182,7 @@ export default function ModalHijos({ open, cliente, onClose }: Props) {
                     {isExpanded && activeRests.length > 0 && (
                       <div className="mt-2.5 ml-12 space-y-1.5">
                         {activeRests.map((r) => (
-                          <div key={r.id} className="flex items-start gap-2.5 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
+                          <div key={r.id_restriccion} className="flex items-start gap-2.5 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
                             <Badge color={SEV_COLOR[r.severidad]} className="shrink-0 mt-0.5">{SEV_LABEL[r.severidad]}</Badge>
                             <div className="text-xs">
                               <p className="font-semibold text-slate-700">{r.tipo}</p>
@@ -207,7 +207,7 @@ export default function ModalHijos({ open, cliente, onClose }: Props) {
       <ModalHijo
         open={hijoModal.open}
         hijo={hijoModal.hijo}
-        clienteId={cliente?.id ?? 0}
+        clienteId={cliente?.id_cliente ?? 0}
         onClose={() => setHijoModal({ open: false, hijo: null })}
         onSaved={loadHijos}
       />

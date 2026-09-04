@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-const ADMIN = { id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
+const ADMIN = { id_usuario: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
 
 async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN) {
   // LIFO: registrar primero = prioridad más baja. El /me/ específico (segundo) gana al catch-all (primero).
@@ -19,7 +19,7 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN
   )
 
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(user.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')

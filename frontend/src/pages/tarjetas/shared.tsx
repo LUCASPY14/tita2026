@@ -54,13 +54,13 @@ export interface Tarjeta {
 }
 
 export interface ClienteBasico {
-  id: number
+  id_cliente: number
   nombre_completo: string
   ruc_ci: string
 }
 
 export interface Hijo {
-  id: number
+  id_hijo: number
   nombre: string
   apellido: string
   grado: string
@@ -68,7 +68,7 @@ export interface Hijo {
 }
 
 export interface MovimientoTarjeta {
-  id: number
+  id_movimiento_tarjeta: number
   tarjeta: string
   tipo: string
   monto: string | number
@@ -79,7 +79,7 @@ export interface MovimientoTarjeta {
 }
 
 export interface CargaSaldo {
-  id: number
+  id_carga: number
   tarjeta: string
   monto_cargado: string | number
   metodo_pago: string

@@ -18,7 +18,7 @@ export default function ModalAnular({ factura, onClose, onSaved }: Props) {
     if (!factura) return
     setAnulando(true)
     try {
-      await api.post(`/contabilidad/facturas/${factura.id}/anular/`)
+      await api.post(`/contabilidad/facturas/${factura.id_factura}/anular/`)
       toast.success('Factura anulada')
       onSaved()
       onClose()

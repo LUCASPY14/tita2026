@@ -27,7 +27,7 @@ import { exportarIngresosComedorPDF } from '../../utils/pdf'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const HIJO = { id: 1, nombre: 'Juan', apellido: 'Pérez', grado: '3° A', nombre_completo: 'Juan Pérez' }
+const HIJO = { id_hijo: 1, nombre: 'Juan', apellido: 'Pérez', grado: '3° A', nombre_completo: 'Juan Pérez' }
 
 const TARJETA_ACTIVA = {
   nro_tarjeta: 'T-001', hijo_nombre: 'Juan Pérez', hijo_grado: '3° A',

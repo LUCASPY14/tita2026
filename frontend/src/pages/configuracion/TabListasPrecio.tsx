@@ -46,7 +46,7 @@ export default function TabListasPrecio({ onDelete }: { onDelete: (t: DeleteTarg
     try {
       const payload = { ...form, fecha_vigencia: form.fecha_vigencia || null }
       if (editing) {
-        await api.put(`/productos/listas-precio/${editing.id}/`, payload)
+        await api.put(`/productos/listas-precio/${editing.id_lista_precio}/`, payload)
         toast.success('Lista de precio actualizada')
       } else {
         await api.post('/productos/listas-precio/', payload)
@@ -67,7 +67,7 @@ export default function TabListasPrecio({ onDelete }: { onDelete: (t: DeleteTarg
     if (!copiarForm.desde_lista) { toast.error('Elegí de qué lista copiar'); return }
     setCopiando(true)
     try {
-      const { data } = await api.post(`/productos/listas-precio/${copiarModal.id}/copiar-precios/`, {
+      const { data } = await api.post(`/productos/listas-precio/${copiarModal.id_lista_precio}/copiar-precios/`, {
         desde_lista: Number(copiarForm.desde_lista),
         ajuste_porcentual: Number(copiarForm.ajuste_porcentual) || 0,
       })
@@ -91,7 +91,7 @@ export default function TabListasPrecio({ onDelete }: { onDelete: (t: DeleteTarg
             <Copy className="w-3.5 h-3.5" />
           </Button>
           <Button size="sm" variant="secondary" onClick={() => open(r)}><Edit2 className="w-3.5 h-3.5" /></Button>
-          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/productos/listas-precio/${r.id}/`, label: r.nombre, reloadFn: load })}>
+          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/productos/listas-precio/${r.id_lista_precio}/`, label: r.nombre, reloadFn: load })}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -106,7 +106,7 @@ export default function TabListasPrecio({ onDelete }: { onDelete: (t: DeleteTarg
       </div>
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-1">
-          <Table columns={columns} dataSource={items} rowKey="id" loading={loading} pageSize={20} />
+          <Table columns={columns} dataSource={items} rowKey="id_lista_precio" loading={loading} pageSize={20} />
         </div>
       </div>
       <Modal open={modal} title={editing ? 'Editar Lista de Precio' : 'Nueva Lista de Precio'} onOk={save} onCancel={() => setModal(false)} okText={editing ? 'Guardar' : 'Crear'} confirmLoading={saving} width={420}>
@@ -148,8 +148,8 @@ export default function TabListasPrecio({ onDelete }: { onDelete: (t: DeleteTarg
               className={inputClass}
             >
               <option value="">Seleccionar...</option>
-              {items.filter(l => l.id !== copiarModal?.id).map(l => (
-                <option key={l.id} value={l.id}>{l.nombre}</option>
+              {items.filter(l => l.id_lista_precio !== copiarModal?.id_lista_precio).map(l => (
+                <option key={l.id_lista_precio} value={l.id_lista_precio}>{l.nombre}</option>
               ))}
             </select>
           </div>

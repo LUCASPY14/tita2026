@@ -274,7 +274,7 @@ export default function Facturacion() {
             variant="secondary"
             onClick={async () => {
               try {
-                const res = await api.get(`/contabilidad/facturas/${r.id}/pdf/`, { responseType: 'blob' })
+                const res = await api.get(`/contabilidad/facturas/${r.id_factura}/pdf/`, { responseType: 'blob' })
                 const url = URL.createObjectURL(new Blob([res.data], { type: 'text/html' }))
                 const w = window.open(url, '_blank')
                 if (w) w.onload = () => URL.revokeObjectURL(url)
@@ -529,7 +529,7 @@ export default function Facturacion() {
               <Table
                 columns={colsFacturas}
                 dataSource={facturas}
-                rowKey="id"
+                rowKey="id_factura"
                 loading={loadingFact}
                 pageSize={15}
                 page={pageFact}

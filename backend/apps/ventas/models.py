@@ -31,6 +31,7 @@ class Venta(models.Model):
         PARCIAL = "PARCIAL", "Parcial"
         PAGADO = "PAGADO", "Pagado"
 
+    id_venta = models.BigAutoField(primary_key=True)
     cliente = models.ForeignKey(
         "clientes.Cliente",
         models.PROTECT,
@@ -161,6 +162,7 @@ class Venta(models.Model):
 class DetalleVenta(models.Model):
     """Producto incluido en una venta con discriminación de IVA."""
 
+    id_detalle_venta = models.BigAutoField(primary_key=True)
     venta = models.ForeignKey(
         Venta, models.CASCADE, related_name="detalles"
     )
@@ -190,7 +192,7 @@ class DetalleVenta(models.Model):
     class Meta:
         verbose_name = "Detalle de Venta"
         verbose_name_plural = "Detalles de Venta"
-        ordering = ["id"]
+        ordering = ["id_detalle_venta"]
         unique_together = [("venta", "producto")]
         indexes = [
             models.Index(fields=["venta"], name="idx_det_venta"),
@@ -223,6 +225,7 @@ class PagoVenta(models.Model):
         RECHAZADO = "RECHAZADO", "Rechazado"
         ANULADO = "ANULADO", "Anulado"
 
+    id_pago_venta = models.BigAutoField(primary_key=True)
     cliente = models.ForeignKey(
         "clientes.Cliente",
         models.PROTECT,
@@ -339,6 +342,7 @@ class PagoVenta(models.Model):
 class AplicacionPago(models.Model):
     """Distribución de un pago entre una o más ventas."""
 
+    id_aplicacion_pago = models.BigAutoField(primary_key=True)
     pago = models.ForeignKey(
         PagoVenta, models.CASCADE, related_name="aplicaciones"
     )
@@ -352,7 +356,7 @@ class AplicacionPago(models.Model):
     class Meta:
         verbose_name = "Aplicación de Pago"
         verbose_name_plural = "Aplicaciones de Pagos"
-        ordering = ["id"]
+        ordering = ["id_aplicacion_pago"]
 
     def __str__(self):
         return f"₲{self.monto_aplicado:,.0f} → Venta #{self.venta_id}"
@@ -398,6 +402,7 @@ class NotaCredito(models.Model):
         APLICADA = "APLICADA", "Aplicada"
         ANULADA = "ANULADA", "Anulada"
 
+    id_nota_credito = models.BigAutoField(primary_key=True)
     cliente = models.ForeignKey(
         "clientes.Cliente", models.PROTECT, related_name="notas_credito"
     )
@@ -436,6 +441,7 @@ class NotaCredito(models.Model):
 class DetalleNotaCredito(models.Model):
     """Producto incluido en una nota de crédito."""
 
+    id_detalle_nc = models.BigAutoField(primary_key=True)
     nota_credito = models.ForeignKey(
         NotaCredito, models.CASCADE, related_name="detalles"
     )
@@ -465,6 +471,7 @@ class DetalleNotaCredito(models.Model):
 class CondicionVenta(models.Model):
     """Condición de venta (contado, crédito 30 días, etc.)."""
 
+    id_condicion_venta = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
     plazo_dias = models.IntegerField(default=0, help_text="Días de plazo para pago")
 

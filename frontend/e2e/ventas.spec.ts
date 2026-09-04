@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-const ADMIN = { id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
+const ADMIN = { id_usuario: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
 
 async function loginAsAdmin(page: import('@playwright/test').Page) {
   await page.route(/\/api\/v1\//, (route) =>
@@ -14,7 +14,7 @@ async function loginAsAdmin(page: import('@playwright/test').Page) {
       body: JSON.stringify({ access: 'tok', refresh: 'ref', user: ADMIN }) })
   )
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(ADMIN.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')
@@ -23,7 +23,7 @@ async function loginAsAdmin(page: import('@playwright/test').Page) {
 const VENTAS_MOCK = {
   results: [
     {
-      id: 1,
+      id_venta: 1,
       tipo: 'CONTADO',
       estado: 'ACTIVA',
       monto_total: '15000',
@@ -35,12 +35,12 @@ const VENTAS_MOCK = {
       hijo_grado: null,
       tarjeta: null,
       detalles: [
-        { id: 10, producto_nombre: 'Empanada', cantidad: '2', precio_unitario: '5000', subtotal: '10000' },
-        { id: 11, producto_nombre: 'Jugo', cantidad: '1', precio_unitario: '5000', subtotal: '5000' },
+        { id_detalle_venta: 10, producto_nombre: 'Empanada', cantidad: '2', precio_unitario: '5000', subtotal: '10000' },
+        { id_detalle_venta: 11, producto_nombre: 'Jugo', cantidad: '1', precio_unitario: '5000', subtotal: '5000' },
       ],
     },
     {
-      id: 2,
+      id_venta: 2,
       tipo: 'CREDITO',
       estado: 'ACTIVA',
       monto_total: '8500',

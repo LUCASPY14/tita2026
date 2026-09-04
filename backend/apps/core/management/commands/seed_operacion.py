@@ -514,7 +514,7 @@ class Command(BaseCommand):
         pagos = 0
         for cliente in self.clientes_credito:
             ultimo = (
-                CuentaCorrienteCliente.objects.filter(cliente=cliente).order_by("-id").first()
+                CuentaCorrienteCliente.objects.filter(cliente=cliente).order_by("-id_movimiento_cc").first()
             )
             saldo = ultimo.saldo_resultante if ultimo else Decimal("0")
             if saldo <= 0:

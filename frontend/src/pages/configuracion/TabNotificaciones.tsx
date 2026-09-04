@@ -9,7 +9,7 @@ import Table, { type Column } from '../../components/ui/Table'
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface EmailEnviado {
-  id: number
+  id_email: number
   destinatario_email: string
   destinatario_nombre: string
   asunto: string
@@ -20,7 +20,7 @@ interface EmailEnviado {
 }
 
 interface SolicitudNotificacion {
-  id: number
+  id_solicitud_notif: number
   cliente_nombre: string
   tipo: string
   mensaje: string
@@ -118,7 +118,7 @@ function SubTabEmails() {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-1">
           <Table
-            columns={columns} dataSource={emails} rowKey="id" loading={loading}
+            columns={columns} dataSource={emails} rowKey="id_email" loading={loading}
             pageSize={PAGE_SIZE} page={page} onPageChange={p => { setPage(p); load(p, estado) }} total={total}
           />
         </div>
@@ -188,9 +188,9 @@ function SubTabSolicitudes() {
     {
       title: '', key: 'acciones', width: 110,
       render: (_, r) => r.estado === 'FALLIDA' ? (
-        <Button size="sm" variant="secondary" onClick={() => reintentar(r.id)} disabled={retryingId === r.id}>
+        <Button size="sm" variant="secondary" onClick={() => reintentar(r.id_solicitud_notif)} disabled={retryingId === r.id_solicitud_notif}>
           <RotateCcw className="w-3.5 h-3.5" />
-          {retryingId === r.id ? 'Reintentando...' : 'Reintentar'}
+          {retryingId === r.id_solicitud_notif ? 'Reintentando...' : 'Reintentar'}
         </Button>
       ) : null,
     },
@@ -221,7 +221,7 @@ function SubTabSolicitudes() {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-1">
           <Table
-            columns={columns} dataSource={solicitudes} rowKey="id" loading={loading}
+            columns={columns} dataSource={solicitudes} rowKey="id_solicitud_notif" loading={loading}
             pageSize={PAGE_SIZE} page={page} onPageChange={p => { setPage(p); load(p, estado, destino) }} total={total}
           />
         </div>

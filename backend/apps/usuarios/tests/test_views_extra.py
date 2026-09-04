@@ -342,7 +342,7 @@ class TestReportePersonalInactivo:
 
         fila = next(d for d in resp.data["detalle"] if d["email"] == usuario_cajero.email)
         assert fila["dias_inactivo"] == 45
-        assert fila["usuario_id"] == usuario_cajero.id
+        assert fila["usuario_id"] == usuario_cajero.id_usuario
         assert fila["nombre"] == "Cajero Test"
 
         assert resp.data["resumen"]["total_inactivos"] >= 1

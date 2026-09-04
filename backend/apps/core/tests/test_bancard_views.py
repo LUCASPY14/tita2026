@@ -978,7 +978,7 @@ class TestBancardRetornoCC:
 
         mov = CuentaCorrienteCliente.objects.filter(
             cliente=cliente_deuda, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
-        ).latest('id')
+        ).latest('id_movimiento_cc')
         assert mov.monto == Decimal('30000')
         assert mov.origen == CuentaCorrienteCliente.Origen.ALMUERZO
 
@@ -1098,7 +1098,7 @@ class TestBancardPagarCCConTarjeta:
         assert cliente_deuda.saldo_cuenta_corriente == Decimal('50000')
         mov = CuentaCorrienteCliente.objects.filter(
             cliente=cliente_deuda, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
-        ).latest('id')
+        ).latest('id_movimiento_cc')
         assert mov.monto == Decimal('30000')
         assert mov.origen == CuentaCorrienteCliente.Origen.GENERAL
 
@@ -1851,7 +1851,7 @@ class TestBancardPagosReintentar:
         assert resp.data['accion'] == 'vinculado'
         pago_error_tarjeta.refresh_from_db()
         assert pago_error_tarjeta.estado == pago_error_tarjeta.Estado.APROBADO
-        assert pago_error_tarjeta.carga_saldo_id == credito_existente.id
+        assert pago_error_tarjeta.carga_saldo_id == credito_existente.id_carga
         tarjeta.refresh_from_db()
         # No se creó un segundo crédito — el saldo no cambió respecto al previo.
         assert tarjeta.saldo_actual == saldo_previo
@@ -1881,7 +1881,7 @@ class TestBancardPagosReintentar:
         assert resp.data['accion'] == 'vinculado'
         pago.refresh_from_db()
         assert pago.estado == pago.Estado.APROBADO
-        assert pago.recarga_almuerzo_id == recarga.id
+        assert pago.recarga_almuerzo_id == recarga.id_recarga_almuerzo
         assert RecargaSaldoAlmuerzo.objects.filter(referencia=pago.shop_process_id).count() == 1
 
     def test_cc_sin_credito_previo_acredita(self, api_admin, padre_con_deuda_cc):
@@ -1927,7 +1927,7 @@ class TestBancardPagosReintentar:
         assert resp.data['accion'] == 'vinculado'
         pago.refresh_from_db()
         assert pago.estado == pago.Estado.APROBADO
-        assert pago.movimiento_cc_id == mov.id
+        assert pago.movimiento_cc_id == mov.id_movimiento_cc
         # No se creó un segundo crédito.
         assert cliente_deuda.saldo_cuenta_corriente == Decimal('50000')
 

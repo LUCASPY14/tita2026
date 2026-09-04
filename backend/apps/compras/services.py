@@ -188,7 +188,7 @@ class CompraService:
                     CuentaCorrienteProveedor.objects
                     .filter(proveedor=proveedor)
                     .select_for_update()
-                    .order_by("-id")
+                    .order_by("-id_movimiento_ccp")
                     .first()
                 )
                 saldo_anterior = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
@@ -285,7 +285,7 @@ class CompraService:
                     CuentaCorrienteProveedor.objects
                     .filter(proveedor=compra.proveedor)
                     .select_for_update()
-                    .order_by("-id")
+                    .order_by("-id_movimiento_ccp")
                     .first()
                 )
                 saldo_anterior = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")

@@ -111,7 +111,7 @@ def _tiene_webauthn(user):
 
 def _user_data(user):
     return {
-        "id": user.id,
+        "id_usuario": user.id_usuario,
         "email": user.email,
         "nombre": user.nombre,
         "apellido": user.apellido,
@@ -215,7 +215,7 @@ def _registrar_fallo_login(email: str, ip: str) -> None:
     # Si el email supera el umbral y el usuario existe, crear BloqueoCuenta
     if email and count_email >= max_i:
         try:
-            user = Usuario.objects.only("id").get(email__iexact=email, is_active=True)
+            user = Usuario.objects.only("id_usuario").get(email__iexact=email, is_active=True)
             if not BloqueoCuenta.objects.filter(usuario=user, estado=True).exists():
                 BloqueoCuenta.objects.create(
                     usuario=user,
@@ -303,7 +303,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         # ── 2. Check BloqueoCuenta DB (cubre bloqueos manuales y persistentes) ─
         if email:
             try:
-                _check_user = Usuario.objects.only("id").get(email__iexact=email, is_active=True)
+                _check_user = Usuario.objects.only("id_usuario").get(email__iexact=email, is_active=True)
                 bloqueo = (
                     BloqueoCuenta.objects
                     .filter(usuario=_check_user, estado=True)
@@ -362,12 +362,12 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
         tiene_wa = _tiene_webauthn(user)
         if _tiene_2fa_activo(user) or tiene_wa:
-            pre_auth = signing.dumps({"user_id": user.id}, salt="2fa-pre-auth")
+            pre_auth = signing.dumps({"user_id": user.id_usuario}, salt="2fa-pre-auth")
             registrar_auditoria(
                 usuario=user, request=request,
                 operacion="LOGIN_2FA_INICIO",
                 tabla="usuarios_usuario",
-                id_registro=user.id,
+                id_registro=user.id_usuario,
                 descripcion=f"Login paso 1 OK — esperando 2FA ({user.email})",
             )
             return Response({"requires_2fa": True, "pre_auth_token": pre_auth, "tiene_webauthn": tiene_wa})
@@ -385,7 +385,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             usuario=user, request=request,
             operacion="LOGIN",
             tabla="usuarios_usuario",
-            id_registro=user.id,
+            id_registro=user.id_usuario,
             descripcion=f"Login exitoso ({user.email}) rol={user.rol}",
         )
         return Response({**serializer.validated_data, "user": _user_data(user), "session_key": session_key})
@@ -421,7 +421,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             request=self.request,
             operacion="CREAR_USUARIO",
             tabla="usuarios_usuario",
-            id_registro=usuario.id,
+            id_registro=usuario.id_usuario,
             descripcion=f"Usuario creado: {usuario.email} rol={usuario.rol}",
         )
 
@@ -435,7 +435,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             request=self.request,
             operacion="MODIFICAR_USUARIO",
             tabla="usuarios_usuario",
-            id_registro=usuario.id,
+            id_registro=usuario.id_usuario,
             descripcion=desc,
         )
 
@@ -447,7 +447,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             raise ValidationError(
                 "Solo se pueden eliminar usuarios inactivos. Desactivalo primero."
             )
-        usuario_id = instance.id
+        usuario_id = instance.id_usuario
         descripcion = f"Usuario eliminado: {instance.email} rol={instance.rol}"
         try:
             instance.delete()
@@ -468,7 +468,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     def me(self, request):
         user = request.user
         return Response({
-            'id': user.id,
+            'id_usuario': user.id_usuario,
             'email': user.email,
             'nombre': user.nombre,
             'apellido': user.apellido,
@@ -501,7 +501,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             request=request,
             operacion="RESET_PASSWORD_PORTAL",
             tabla="usuarios_usuario",
-            id_registro=usuario.id,
+            id_registro=usuario.id_usuario,
             descripcion=f"Contraseña reseteada al CI/RUC para {usuario.email}",
         )
         return Response({"detail": "Contraseña reseteada al CI/RUC del cliente."})
@@ -518,7 +518,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             request=request,
             operacion="CAMBIO_PASSWORD",
             tabla="usuarios_usuario",
-            id_registro=user.id,
+            id_registro=user.id_usuario,
             descripcion=f"Cambio de contraseña ({user.email})",
         )
         return Response({'detail': 'Contraseña actualizada correctamente.'})
@@ -593,7 +593,7 @@ class PortalMiHijoView(APIView):
             cuenta_data = None
             if cuenta:
                 cuenta_data = {
-                    "id": cuenta.id,
+                    "id_cuenta_mensual": cuenta.id_cuenta_mensual,
                     "cantidad_almuerzos": cuenta.cantidad_almuerzos,
                     "monto_total": int(cuenta.monto_total),
                     "monto_pagado": int(cuenta.monto_pagado),
@@ -615,7 +615,7 @@ class PortalMiHijoView(APIView):
             )
 
             hijos_data.append({
-                "id": hijo.id,
+                "id_hijo": hijo.id_hijo,
                 "nombre": hijo.nombre_completo,
                 "grado": hijo.grado_nombre,
                 "tarjeta": tarjeta_data,
@@ -633,7 +633,7 @@ class PortalMiHijoView(APIView):
 
         resp = Response({
             "cliente": {
-                "id": user.cliente.id,
+                "id_cliente": user.cliente.id_cliente,
                 "nombre": user.cliente.nombre_completo,
                 "email": user.cliente.email,
                 "saldo_cuenta_corriente": int(user.cliente.saldo_cuenta_corriente),
@@ -668,7 +668,7 @@ class PortalHistorialConsumos(APIView):
         anio = int(request.query_params.get("anio", date.today().year))
         mes = int(request.query_params.get("mes", date.today().month))
 
-        hijo = user.cliente.hijos.filter(id=hijo_id, activo=True).first()
+        hijo = user.cliente.hijos.filter(id_hijo=hijo_id, activo=True).first()
         if not hijo:
             return Response({"detail": "Hijo no encontrado."}, status=404)
 
@@ -685,14 +685,14 @@ class PortalHistorialConsumos(APIView):
 
         consumos = list(
             consumos_qs.values(
-                "id", "fecha_consumo", "costo_almuerzo", "ya_cobrado",
+                "id_registro_consumo", "fecha_consumo", "costo_almuerzo", "ya_cobrado",
             )
         )
 
         return Response({
             "anio": anio,
             "mes": mes,
-            "hijo": {"id": hijo.id, "nombre": hijo.nombre_completo},
+            "hijo": {"id_hijo": hijo.id_hijo, "nombre": hijo.nombre_completo},
             "consumos": consumos,
             "total": len(consumos),
             "monto_total": sum(int(c["costo_almuerzo"]) for c in consumos),
@@ -719,7 +719,7 @@ class PortalHistorialCantina(APIView):
         if not hijo_id:
             return Response({"detail": "Se requiere hijo_id."}, status=400)
 
-        hijo = user.cliente.hijos.filter(id=hijo_id, activo=True).first()
+        hijo = user.cliente.hijos.filter(id_hijo=hijo_id, activo=True).first()
         if not hijo:
             return Response({"detail": "Hijo no encontrado."}, status=404)
 
@@ -748,7 +748,7 @@ class PortalHistorialCantina(APIView):
                 for d in v.detalles.all()
             ]
             results.append({
-                "id": v.id,
+                "id_venta": v.id_venta,
                 "fecha": v.fecha.isoformat(),
                 "monto_total": int(v.monto_total),
                 "detalles": detalles,
@@ -780,7 +780,7 @@ class PortalMisFacturas(APIView):
             Factura.objects
             .filter(cliente=user.cliente, estado=Factura.Estado.EMITIDA)
             .order_by("-fecha_emision")
-            .values("id", "nro_factura", "fecha_emision", "monto_total", "iva_10", "estado")
+            .values("id_factura", "nro_factura", "fecha_emision", "monto_total", "iva_10", "estado")
         )
 
         return Response(list(facturas))
@@ -1095,7 +1095,7 @@ class TwoFALoginVerificarView(APIView):
                 usuario=user, request=request,
                 operacion="LOGIN_2FA",
                 tabla="usuarios_usuario",
-                id_registro=user.id,
+                id_registro=user.id_usuario,
                 descripcion=f"Código 2FA inválido ({user.email})",
                 resultado="FALLA",
                 mensaje_error="Código TOTP/backup incorrecto",
@@ -1110,7 +1110,7 @@ class TwoFALoginVerificarView(APIView):
             usuario=user, request=request,
             operacion="LOGIN_2FA",
             tabla="usuarios_usuario",
-            id_registro=user.id,
+            id_registro=user.id_usuario,
             descripcion=f"Login 2FA exitoso ({user.email})",
         )
         refresh = RefreshToken.for_user(user)
@@ -1152,12 +1152,12 @@ class WebAuthnRegistrarOpcionesView(APIView):
             rp_id=django_settings.WEBAUTHN_RP_ID,
             rp_name=django_settings.WEBAUTHN_RP_NAME,
             user_name=user.email,
-            user_id=str(user.id).encode(),
+            user_id=str(user.id_usuario).encode(),
             user_display_name=f"{user.nombre} {user.apellido}".strip() or user.email,
             exclude_credentials=existentes,
         )
         cache.set(
-            _webauthn_challenge_cache_key("reg", user.id),
+            _webauthn_challenge_cache_key("reg", user.id_usuario),
             webauthn.helpers.bytes_to_base64url(options.challenge),
             timeout=_WEBAUTHN_CHALLENGE_TTL,
         )
@@ -1175,7 +1175,7 @@ class WebAuthnRegistrarVerificarView(APIView):
 
     def post(self, request):
         user = request.user
-        challenge_b64 = cache.get(_webauthn_challenge_cache_key("reg", user.id))
+        challenge_b64 = cache.get(_webauthn_challenge_cache_key("reg", user.id_usuario))
         if not challenge_b64:
             return Response(
                 {"error": "El desafío expiró. Volvé a intentar."},
@@ -1195,7 +1195,7 @@ class WebAuthnRegistrarVerificarView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        cache.delete(_webauthn_challenge_cache_key("reg", user.id))
+        cache.delete(_webauthn_challenge_cache_key("reg", user.id_usuario))
 
         CredencialWebAuthn.objects.create(
             usuario=user,
@@ -1249,7 +1249,7 @@ class WebAuthnLoginOpcionesView(APIView):
             ],
         )
         cache.set(
-            _webauthn_challenge_cache_key("auth", user.id),
+            _webauthn_challenge_cache_key("auth", user.id_usuario),
             webauthn.helpers.bytes_to_base64url(options.challenge),
             timeout=_WEBAUTHN_CHALLENGE_TTL,
         )
@@ -1279,7 +1279,7 @@ class WebAuthnLoginVerificarView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        challenge_b64 = cache.get(_webauthn_challenge_cache_key("auth", user.id))
+        challenge_b64 = cache.get(_webauthn_challenge_cache_key("auth", user.id_usuario))
         if not challenge_b64 or not credential:
             return Response(
                 {"error": "El desafío expiró. Volvé a intentar."},
@@ -1306,14 +1306,14 @@ class WebAuthnLoginVerificarView(APIView):
                 usuario=user, request=request,
                 operacion="LOGIN_WEBAUTHN",
                 tabla="usuarios_usuario",
-                id_registro=user.id,
+                id_registro=user.id_usuario,
                 descripcion=f"Huella inválida ({user.email})",
                 resultado="FALLA",
                 mensaje_error="Verificación WebAuthn fallida",
             )
             return Response({"error": "No se pudo verificar la huella."}, status=status.HTTP_400_BAD_REQUEST)
 
-        cache.delete(_webauthn_challenge_cache_key("auth", user.id))
+        cache.delete(_webauthn_challenge_cache_key("auth", user.id_usuario))
         cred.sign_count = verified.new_sign_count
         cred.ultimo_uso = timezone.now()
         cred.save(update_fields=["sign_count", "ultimo_uso"])
@@ -1323,7 +1323,7 @@ class WebAuthnLoginVerificarView(APIView):
             usuario=user, request=request,
             operacion="LOGIN_WEBAUTHN",
             tabla="usuarios_usuario",
-            id_registro=user.id,
+            id_registro=user.id_usuario,
             descripcion=f"Login con huella exitoso ({user.email})",
         )
         refresh = RefreshToken.for_user(user)
@@ -1397,7 +1397,7 @@ class LogoutView(APIView):
             request=request,
             operacion="LOGOUT",
             tabla="usuarios_usuario",
-            id_registro=request.user.id,
+            id_registro=request.user.id_usuario,
             descripcion=f"Logout ({request.user.email})",
         )
         return Response({"detail": "Sesión cerrada."})
@@ -1650,7 +1650,7 @@ class ReportePersonalInactivoView(APIView):
 
         detalle_rows = list(
             inactivos_qs.order_by("ultimo_acceso")
-            .values("id", "email", "nombre", "apellido", "rol", "ultimo_acceso", "fecha_creacion")
+            .values("id_usuario", "email", "nombre", "apellido", "rol", "ultimo_acceso", "fecha_creacion")
         )
 
         detalle = []
@@ -1661,7 +1661,7 @@ class ReportePersonalInactivoView(APIView):
             d = (ahora - referencia).days
             dias_inactivos.append(d)
             detalle.append({
-                "usuario_id": row["id"],
+                "usuario_id": row["id_usuario"],
                 "nombre": f'{row["nombre"]} {row["apellido"]}'.strip(),
                 "email": row["email"],
                 "rol": row["rol"],

@@ -7,13 +7,13 @@ const RECONNECT_MS = 5_000
 const POLL_MS = 30_000
 
 export interface CumpleaneroHoy {
-  id: number
+  id_hijo: number
   nombre: string
   grado: string | null
 }
 
 export interface CumpleaneroPersonalHoy {
-  id: number
+  id_usuario: number
   nombre: string
   rol: string
 }

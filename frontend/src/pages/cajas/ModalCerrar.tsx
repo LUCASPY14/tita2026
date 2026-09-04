@@ -32,7 +32,7 @@ export default function ModalCerrar({ cierre, onClose, onSaved }: Props) {
 
   useEffect(() => {
     if (!cierre) return
-    api.get(`/contabilidad/cierres-caja/${cierre.id}/arqueo/`, { timeout: 8000 })
+    api.get(`/contabilidad/cierres-caja/${cierre.id_cierre}/arqueo/`, { timeout: 8000 })
       .then(({ data }) => setArqueoModal(data))
       .catch(() => { /* modal se abre igual, sin desglose */ })
       .finally(() => setLoadingArqueo(false))
@@ -62,7 +62,7 @@ export default function ModalCerrar({ cierre, onClose, onSaved }: Props) {
     cerrandoRef.current = true
     setCerrando(true)
     try {
-      await api.post(`/contabilidad/cierres-caja/${cierre.id}/cerrar/`, {
+      await api.post(`/contabilidad/cierres-caja/${cierre.id_cierre}/cerrar/`, {
         monto_contado_fisico: Number(montoContado) || 0,
       }, { timeout: 10000 })
       await onSaved()

@@ -65,7 +65,7 @@ export default function ModalNC({ open, clientes, productos, initialVenta, onClo
     if (!open || !initialVenta) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setClienteId(initialVenta.cliente)
-    setVentaId(initialVenta.id)
+    setVentaId(initialVenta.id_venta)
     setVentasDisponibles([initialVenta])
     setConDevolucion(true)
     prefillDetallesFromVenta(initialVenta)
@@ -125,7 +125,7 @@ export default function ModalNC({ open, clientes, productos, initialVenta, onClo
         <div>
           <label className={labelClass}>Cliente *</label>
           <Combobox
-            options={clientes.map(c => ({ value: c.id, label: c.nombre_completo }))}
+            options={clientes.map(c => ({ value: c.id_cliente, label: c.nombre_completo }))}
             value={clienteId || undefined}
             onChange={v => handleClienteChange(v as number)}
             filterLocal
@@ -141,14 +141,14 @@ export default function ModalNC({ open, clientes, productos, initialVenta, onClo
             onChange={e => {
               const id = e.target.value ? Number(e.target.value) : ''
               setVentaId(id)
-              if (conDevolucion) prefillDetallesFromVenta(ventasDisponibles.find(v => v.id === id))
+              if (conDevolucion) prefillDetallesFromVenta(ventasDisponibles.find(v => v.id_venta === id))
             }}
             disabled={!clienteId}
           >
             <option value="">Sin venta asociada</option>
             {ventasDisponibles.map(v => (
-              <option key={v.id} value={v.id}>
-                #{v.id} — {formatGs(v.monto_total)} — {formatFecha(v.fecha)}
+              <option key={v.id_venta} value={v.id_venta}>
+                #{v.id_venta} — {formatGs(v.monto_total)} — {formatFecha(v.fecha)}
               </option>
             ))}
           </select>
@@ -189,13 +189,13 @@ export default function ModalNC({ open, clientes, productos, initialVenta, onClo
                       className={`${inputClass} text-xs py-1`}
                       value={det.producto}
                       onChange={e => {
-                        const prod = productos.find(p => p.id === Number(e.target.value))
+                        const prod = productos.find(p => p.id_producto === Number(e.target.value))
                         updateDetalle(idx, 'producto', Number(e.target.value))
                         if (prod) updateDetalle(idx, 'producto_nombre', prod.descripcion)
                       }}
                     >
                       <option value={0}>Producto...</option>
-                      {productos.map(p => <option key={p.id} value={p.id}>{p.descripcion}</option>)}
+                      {productos.map(p => <option key={p.id_producto} value={p.id_producto}>{p.descripcion}</option>)}
                     </select>
                     <input
                       type="number" min={0.001} step="0.001"

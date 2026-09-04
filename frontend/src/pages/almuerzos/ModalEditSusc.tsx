@@ -25,7 +25,7 @@ export default function ModalEditSusc({ susc, planes, onClose, onSaved }: Props)
     if (!susc || !form.plan) { toast.error('Seleccioná un plan'); return }
     setSaving(true)
     try {
-      await api.patch(`/almuerzos/suscripciones/${susc.id}/`, {
+      await api.patch(`/almuerzos/suscripciones/${susc.id_suscripcion}/`, {
         plan: Number(form.plan),
         fecha_fin: form.fecha_fin || null,
       })
@@ -58,7 +58,7 @@ export default function ModalEditSusc({ susc, planes, onClose, onSaved }: Props)
           <select value={form.plan} onChange={e => setForm(f => ({ ...f, plan: e.target.value }))} className={inputClass}>
             <option value="">Seleccionar...</option>
             {planes.filter(p => p.activo).map(p => (
-              <option key={p.id} value={p.id}>{p.nombre} — {formatGs(p.precio_mensual)}/mes</option>
+              <option key={p.id_plan_almuerzo} value={p.id_plan_almuerzo}>{p.nombre} — {formatGs(p.precio_mensual)}/mes</option>
             ))}
           </select>
         </div>

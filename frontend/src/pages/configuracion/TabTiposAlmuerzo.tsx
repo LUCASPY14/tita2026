@@ -42,7 +42,7 @@ export default function TabTiposAlmuerzo({ onDelete }: { onDelete: (t: DeleteTar
     try {
       const payload = { ...form, precio_unitario: Number(form.precio_unitario) || 0 }
       if (editing) {
-        await api.put(`/almuerzos/tipos-almuerzo/${editing.id}/`, payload)
+        await api.put(`/almuerzos/tipos-almuerzo/${editing.id_tipo_almuerzo}/`, payload)
         toast.success('Tipo de almuerzo actualizado')
       } else {
         await api.post('/almuerzos/tipos-almuerzo/', payload)
@@ -66,7 +66,7 @@ export default function TabTiposAlmuerzo({ onDelete }: { onDelete: (t: DeleteTar
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Button size="sm" variant="secondary" onClick={() => open(r)}><Edit2 className="w-3.5 h-3.5" /></Button>
-          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/almuerzos/tipos-almuerzo/${r.id}/`, label: r.nombre, reloadFn: load })}>
+          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/almuerzos/tipos-almuerzo/${r.id_tipo_almuerzo}/`, label: r.nombre, reloadFn: load })}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -81,7 +81,7 @@ export default function TabTiposAlmuerzo({ onDelete }: { onDelete: (t: DeleteTar
       </div>
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-1">
-          <Table columns={columns} dataSource={items} rowKey="id" loading={loading} pageSize={20} />
+          <Table columns={columns} dataSource={items} rowKey="id_tipo_almuerzo" loading={loading} pageSize={20} />
         </div>
       </div>
       <Modal open={modal} title={editing ? 'Editar Tipo de Almuerzo' : 'Nuevo Tipo de Almuerzo'} onOk={save} onCancel={() => setModal(false)} okText={editing ? 'Guardar' : 'Crear'} confirmLoading={saving} width={440}>

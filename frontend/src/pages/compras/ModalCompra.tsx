@@ -43,7 +43,7 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
         setItems(
           editingCompra.detalles?.length
             ? editingCompra.detalles.map(d => ({
-                producto: { id: d.producto, descripcion: d.producto_nombre, precio_actual: d.costo_unitario },
+                producto: { id_producto: d.producto, descripcion: d.producto_nombre, precio_actual: d.costo_unitario },
                 cantidad: d.cantidad,
                 costo_unitario: Number(d.costo_unitario) || 0,
                 subtotal: Number(d.subtotal) || 0,
@@ -82,11 +82,11 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
   const opcionesProducto = useMemo(() => {
     const idsProveedor = new Set(listaProdProveedor.map(pp => pp.producto))
     const provProds = listaProdProveedor.map(pp => {
-      const prod = productos.find(p => p.id === pp.producto)
+      const prod = productos.find(p => p.id_producto === pp.producto)
       if (!prod) return null
-      return { value: prod.id, label: `${prod.descripcion} — ${Number(pp.precio_compra).toLocaleString('es-PY')} Gs.`, data: prod }
+      return { value: prod.id_producto, label: `${prod.descripcion} — ${Number(pp.precio_compra).toLocaleString('es-PY')} Gs.`, data: prod }
     }).filter(Boolean) as { value: number; label: string; data: Producto }[]
-    const otros = productos.filter(p => !idsProveedor.has(p.id)).map(p => ({ value: p.id, label: p.descripcion, data: p }))
+    const otros = productos.filter(p => !idsProveedor.has(p.id_producto)).map(p => ({ value: p.id_producto, label: p.descripcion, data: p }))
     return [...provProds, ...otros]
   }, [listaProdProveedor, productos])
 
@@ -97,19 +97,19 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
       if (field === 'producto' && value) {
         const prod = value as Producto
         updated.precio_venta = Number(prod.precio_actual) || 0
-        const precioConocido = preciosProveedor[prod.id]
+        const precioConocido = preciosProveedor[prod.id_producto]
         if (precioConocido) {
           updated.costo_unitario = precioConocido
           updated.subtotal = updated.cantidad * precioConocido
         } else {
           updated.costo_unitario = 0
           updated.subtotal = 0
-          api.get('/compras/detalles-compra/', { params: { producto: prod.id, page_size: 1 } })
+          api.get('/compras/detalles-compra/', { params: { producto: prod.id_producto, page_size: 1 } })
             .then(res => {
               const ultimo = res.data?.results?.[0]
               if (ultimo) {
                 setItems(current => current.map((it, idx) =>
-                  idx === index && it.producto?.id === prod.id
+                  idx === index && it.producto?.id_producto === prod.id_producto
                     ? { ...it, costo_unitario: Number(ultimo.costo_unitario) || 0, subtotal: it.cantidad * (Number(ultimo.costo_unitario) || 0) }
                     : it
                 ))
@@ -143,18 +143,18 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
         const { data } = await api.get('/productos/productos/', { params: { search: trimmed, page_size: 10, activo: true } })
         const results: Producto[] = Array.isArray(data) ? data : (data as { results: Producto[] }).results ?? []
         found = results.find(p => (p.codigo_barra && p.codigo_barra === trimmed) || (p.codigo && p.codigo === trimmed))
-        if (found) setLocalProductos(prev => prev.some(p => p.id === found!.id) ? prev : [...prev, found!])
+        if (found) setLocalProductos(prev => prev.some(p => p.id_producto === found!.id_producto) ? prev : [...prev, found!])
       } catch { /* ignorar */ }
     }
     if (!found) { toast.error(`Código no encontrado: ${trimmed}`); setBarcodeInput(''); return }
     setItems(prev => {
-      const idx = prev.findIndex(it => it.producto?.id === found!.id)
+      const idx = prev.findIndex(it => it.producto?.id_producto === found!.id_producto)
       if (idx >= 0) {
         return prev.map((it, i) =>
           i === idx ? { ...it, cantidad: it.cantidad + 1, subtotal: (it.cantidad + 1) * it.costo_unitario } : it
         )
       }
-      const precioConocido = preciosProveedor[found!.id] || 0
+      const precioConocido = preciosProveedor[found!.id_producto] || 0
       const newItem: ItemForm = {
         producto: found!,
         cantidad: 1,
@@ -179,10 +179,10 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
         proveedor: fields.proveedor_id,
         tipo_pago: fields.tipo_pago,
         nro_factura_proveedor: fields.nro_factura,
-        items: items.map(i => ({ producto: i.producto!.id, cantidad: i.cantidad, costo_unitario: i.costo_unitario })),
+        items: items.map(i => ({ producto: i.producto!.id_producto, cantidad: i.cantidad, costo_unitario: i.costo_unitario })),
       }
       if (editingCompra) {
-        await api.put(`/compras/compras/${editingCompra.id}/`, payload)
+        await api.put(`/compras/compras/${editingCompra.id_compra}/`, payload)
         toast.success('Compra actualizada')
       } else {
         await api.post('/compras/compras/', payload)
@@ -190,7 +190,7 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
       }
       const actualizaciones = items
         .filter(i => i.producto && i.precio_venta > 0)
-        .map(i => api.post(`/productos/productos/${i.producto!.id}/set-precio/`, { precio: i.precio_venta }))
+        .map(i => api.post(`/productos/productos/${i.producto!.id_producto}/set-precio/`, { precio: i.precio_venta }))
       if (actualizaciones.length > 0) {
         await Promise.allSettled(actualizaciones)
         toast.success(`Precios de venta actualizados (${actualizaciones.length} producto${actualizaciones.length > 1 ? 's' : ''})`)
@@ -210,7 +210,7 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
   return (
     <Modal
       open={open}
-      title={editingCompra ? `Editar Compra #${editingCompra.id}` : 'Nueva Compra'}
+      title={editingCompra ? `Editar Compra #${editingCompra.id_compra}` : 'Nueva Compra'}
       onOk={handleSave}
       onCancel={onClose}
       okText={editingCompra ? 'Guardar Cambios' : 'Registrar'}
@@ -222,7 +222,7 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
           <div>
             <label className={labelClass}>Proveedor *</label>
             <Combobox
-              options={proveedores.map(p => ({ value: p.id, label: p.razon_social }))}
+              options={proveedores.map(p => ({ value: p.id_proveedor, label: p.razon_social }))}
               value={proveedorId || undefined}
               onChange={v => setValue('proveedor_id', v as number)}
               filterLocal
@@ -282,7 +282,7 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
                 <div className="flex-1">
                   <Combobox
                     options={opcionesProducto}
-                    value={item.producto?.id}
+                    value={item.producto?.id_producto}
                     onChange={(_, opt) => actualizarItem(idx, 'producto', opt.data as Producto)}
                     filterLocal
                     placeholder="Producto..."

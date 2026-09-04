@@ -184,7 +184,7 @@ class Command(BaseCommand):
             defaults={"moneda": "PYG", "activo": True, "es_por_defecto": True},
         )
         prod = Producto(
-            id=1,
+            id_producto=1,
             codigo="K6-001",
             descripcion="Empanada k6",
             categoria=cat,
@@ -199,7 +199,7 @@ class Command(BaseCommand):
             lista=lista,
             precio_unitario=Decimal("5000"),
         )
-        self._reset_sequence("productos_producto")
+        self._reset_sequence("productos_producto", "id_producto")
         self.stdout.write("  Producto    : pk=1 'Empanada k6' (creado)")
         return 1
 
@@ -280,9 +280,9 @@ class Command(BaseCommand):
     # UTILIDADES
     # =========================================================================
 
-    def _reset_sequence(self, table_name):
+    def _reset_sequence(self, table_name, pk_column):
         """Sincroniza la secuencia autoincrement tras insertar con ID explícito."""
-        # table_name siempre es un literal hardcoded del mismo archivo, nunca input externo
-        sql = f"SELECT setval(pg_get_serial_sequence('{table_name}', 'id'), GREATEST(MAX(id), 1)) FROM {table_name}"  # nosec B608
+        # table_name/pk_column siempre son literales hardcoded del mismo archivo, nunca input externo
+        sql = f"SELECT setval(pg_get_serial_sequence('{table_name}', '{pk_column}'), GREATEST(MAX({pk_column}), 1)) FROM {table_name}"  # nosec B608
         with connection.cursor() as cur:
             cur.execute(sql)

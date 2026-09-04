@@ -194,7 +194,7 @@ class TestPendientesPurga:
     def test_admin_ve_lista_de_pendientes(self, api_admin, hijo_pendiente_purga, hijo_sin_foto):
         resp = api_admin.get("/api/v1/clientes/hijos/pendientes-purga/")
         assert resp.status_code == 200
-        ids = [h["id"] for h in resp.data]
+        ids = [h["id_hijo"] for h in resp.data]
         assert hijo_pendiente_purga.pk in ids
         assert hijo_sin_foto.pk not in ids
 
@@ -206,7 +206,7 @@ class TestPendientesPurga:
         hijo_pendiente_purga.datos_purgados = True
         hijo_pendiente_purga.save()
         resp = api_admin.get("/api/v1/clientes/hijos/pendientes-purga/")
-        ids = [h["id"] for h in resp.data]
+        ids = [h["id_hijo"] for h in resp.data]
         assert hijo_pendiente_purga.pk not in ids
 
 

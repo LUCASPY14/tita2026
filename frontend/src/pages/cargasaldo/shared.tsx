@@ -47,7 +47,7 @@ export interface Tarjeta {
 }
 
 export interface Movimiento {
-  id: number
+  id_movimiento_tarjeta: number
   tipo: string
   monto: string | number
   saldo_anterior: string | number
@@ -57,7 +57,7 @@ export interface Movimiento {
 }
 
 export interface CargaReciente {
-  id: number
+  id_carga: number
   monto_cargado: string | number
   metodo_pago: string
   estado: string

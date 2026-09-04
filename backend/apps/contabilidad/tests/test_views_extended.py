@@ -56,7 +56,7 @@ class TestMiCaja:
         resp = api_cajero.get("/api/v1/contabilidad/cierres-caja/mi-caja/")
         assert resp.status_code == 200
         assert resp.data is not None
-        assert resp.data["id"] == cierre_abierto.pk
+        assert resp.data["id_cierre"] == cierre_abierto.pk
         assert resp.data["estado"] == "ABIERTO"
 
     def test_requiere_autenticacion(self, api_client):
@@ -284,7 +284,7 @@ class TestDashboardResumen:
 
         assert resp.data["cumpleanosHoy"] == 1
         assert resp.data["cumpleaneros"] == [
-            {"id": hijo_cumple.id, "nombre": "Sofía García", "grado": "3er Grado"}
+            {"id_hijo": hijo_cumple.id_hijo, "nombre": "Sofía García", "grado": "3er Grado"}
         ]
 
     def test_alumno_inactivo_no_cuenta_como_cumpleanero(self, api_admin, cliente):
@@ -324,7 +324,7 @@ class TestDashboardResumen:
 
         assert resp.data["cumpleanosPersonalHoy"] == 1
         assert resp.data["cumpleanerosPersonal"] == [
-            {"id": cajero.id, "nombre": "Marta Ruiz", "rol": "CAJERO"}
+            {"id_usuario": cajero.id_usuario, "nombre": "Marta Ruiz", "rol": "CAJERO"}
         ]
 
     def test_cliente_web_no_cuenta_como_cumpleanero_personal(self, api_admin):

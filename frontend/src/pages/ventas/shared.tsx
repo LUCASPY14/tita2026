@@ -32,17 +32,17 @@ export function formatFecha(iso: string | null | undefined): string {
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 export interface ClienteOption {
-  id: number
+  id_cliente: number
   nombre_completo: string
 }
 
 export interface ProductoOption {
-  id: number
+  id_producto: number
   descripcion: string
 }
 
 export interface VentaOrigen {
-  id: number
+  id_venta: number
   fecha: string
   monto_total: string | number
   cliente: number
@@ -57,7 +57,7 @@ export interface NCDetalle {
 }
 
 export interface NotaCredito {
-  id: number
+  id_nota_credito: number
   cliente: number
   cliente_nombre: string
   venta_origen: number | null
@@ -67,7 +67,7 @@ export interface NotaCredito {
   estado: 'EMITIDA' | 'APLICADA' | 'ANULADA'
   fecha_emision: string
   fecha_creacion: string
-  detalles: { id: number; producto: number; producto_nombre: string; cantidad: string; precio_unitario: string; subtotal: string }[]
+  detalles: { id_detalle_nc: number; producto: number; producto_nombre: string; cantidad: string; precio_unitario: string; subtotal: string }[]
 }
 
 export const NC_ESTADO_COLOR: Record<string, BadgeColor> = {

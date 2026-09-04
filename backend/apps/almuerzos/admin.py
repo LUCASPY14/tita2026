@@ -101,7 +101,7 @@ class PlanAlmuerzoAdmin(admin.ModelAdmin):
 @admin.register(SuscripcionAlmuerzo)
 class SuscripcionAlmuerzoAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_suscripcion",
         "hijo_link",
         "plan_link",
         "fecha_inicio",
@@ -150,7 +150,7 @@ class SuscripcionAlmuerzoAdmin(admin.ModelAdmin):
 @admin.register(RegistroConsumoAlmuerzo)
 class RegistroConsumoAlmuerzoAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_registro_consumo",
         "hijo_link",
         "fecha_consumo",
         "tipo_almuerzo_link",
@@ -227,7 +227,7 @@ class RegistroConsumoAlmuerzoAdmin(admin.ModelAdmin):
 @admin.register(CuentaAlmuerzoMensual)
 class CuentaAlmuerzoMensualAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_cuenta_mensual",
         "hijo_link",
         "periodo",
         "cantidad_almuerzos",
@@ -313,7 +313,7 @@ class CuentaAlmuerzoMensualAdmin(admin.ModelAdmin):
 @admin.register(PagoCuentaAlmuerzo)
 class PagoCuentaAlmuerzoAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_pago_cuenta",
         "cuenta_link",
         "monto_display",
         "medio_pago",

@@ -63,7 +63,7 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
     }
     try {
       if (cliente) {
-        await api.patch(`/clientes/clientes/${cliente.id}/`, payload)
+        await api.patch(`/clientes/clientes/${cliente.id_cliente}/`, payload)
         toast.success('Cliente actualizado')
       } else {
         await api.post('/clientes/clientes/', payload)
@@ -149,7 +149,7 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
             <label className={labelClass}>Tipo de Cliente *</label>
             <select className={selectClass(!!errors.tipo_cliente)} {...register('tipo_cliente', { required: 'Seleccioná un tipo' })}>
               <option value="">Seleccionar...</option>
-              {tiposCliente.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+              {tiposCliente.map(t => <option key={t.id_tipo_cliente} value={t.id_tipo_cliente}>{t.nombre}</option>)}
             </select>
             {errors.tipo_cliente && <p className="text-xs text-red-500 mt-0.5">{errors.tipo_cliente.message}</p>}
           </div>
@@ -157,7 +157,7 @@ export default function ModalCliente({ open, cliente, tiposCliente, listasPrecio
             <label className={labelClass}>Lista de Precio *</label>
             <select className={selectClass(!!errors.lista_precio)} {...register('lista_precio', { required: 'Seleccioná una lista' })}>
               <option value="">Seleccionar...</option>
-              {listasPrecios.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+              {listasPrecios.map(l => <option key={l.id_lista_precio} value={l.id_lista_precio}>{l.nombre}</option>)}
             </select>
             {errors.lista_precio && <p className="text-xs text-red-500 mt-0.5">{errors.lista_precio.message}</p>}
           </div>

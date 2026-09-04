@@ -26,7 +26,7 @@ export default function ModalConsumo({ open, hijo, onClose }: Props) {
     if (append) { setLoadingMore(true) } else { setLoading(true) }
     try {
       const { data } = await api.get('/ventas/ventas/', {
-        params: { hijo: hijo.id, page: p, page_size: PAGE_SIZE, ordering: '-fecha', estado: 'ACTIVA' },
+        params: { hijo: hijo.id_hijo, page: p, page_size: PAGE_SIZE, ordering: '-fecha', estado: 'ACTIVA' },
       })
       setTotal(data.count ?? 0)
       setVentas(prev => append ? [...prev, ...(data.results ?? [])] : (data.results ?? []))
@@ -79,12 +79,12 @@ export default function ModalConsumo({ open, hijo, onClose }: Props) {
 
             <ul className="divide-y divide-slate-100 -mx-6 px-6">
               {ventas.map(v => {
-                const isExp = expandedId === v.id
+                const isExp = expandedId === v.id_venta
                 return (
-                  <li key={v.id} className="py-2.5">
+                  <li key={v.id_venta} className="py-2.5">
                     <button
                       type="button"
-                      onClick={() => setExpandedId(isExp ? null : v.id)}
+                      onClick={() => setExpandedId(isExp ? null : v.id_venta)}
                       className="w-full flex items-center justify-between gap-3 text-left hover:bg-slate-50 rounded-xl px-3 py-2 -mx-3 transition-colors group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -113,7 +113,7 @@ export default function ModalConsumo({ open, hijo, onClose }: Props) {
                     {isExp && (
                       <div className="mt-1.5 ml-11 bg-slate-50 rounded-xl px-3 py-2 space-y-1.5">
                         {v.detalles.map(d => (
-                          <div key={d.id} className="flex items-baseline justify-between gap-3 text-sm">
+                          <div key={d.id_detalle_venta} className="flex items-baseline justify-between gap-3 text-sm">
                             <span className="text-slate-700 min-w-0">
                               <span className="font-semibold text-slate-500 tabular-nums mr-1.5">{Math.round(Number(d.cantidad))}×</span>
                               {d.producto_nombre}

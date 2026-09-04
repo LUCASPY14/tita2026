@@ -29,7 +29,7 @@ interface Restriccion {
 }
 
 interface ConsumoHistorial {
-  id: number
+  id_registro_consumo: number
   fecha_consumo: string
   costo_almuerzo: string | number
   ya_cobrado: boolean
@@ -45,7 +45,7 @@ interface HistorialData {
 }
 
 interface CuentaMensual {
-  id: number
+  id_cuenta_mensual: number
   cantidad_almuerzos: number
   monto_total: number
   monto_pagado: number
@@ -59,7 +59,7 @@ interface TopProducto {
 }
 
 interface HijoData {
-  id: number
+  id_hijo: number
   nombre: string
   grado: string | null
   tarjeta: Tarjeta | null
@@ -71,7 +71,7 @@ interface HijoData {
 
 interface PortalData {
   cliente: {
-    id: number; nombre: string; email: string
+    id_cliente: number; nombre: string; email: string
     saldo_cuenta_corriente: number; limite_credito: number
   }
   mes: { anio: number; mes: number }
@@ -79,7 +79,7 @@ interface PortalData {
 }
 
 interface Suscripcion {
-  id: number
+  id_suscripcion: number
   plan: number
   plan_nombre: string
   estado: string
@@ -96,7 +96,7 @@ interface DetalleCantina {
 }
 
 interface VentaCantina {
-  id: number
+  id_venta: number
   fecha: string
   monto_total: number
   detalles: DetalleCantina[]
@@ -226,7 +226,7 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
         </div>
         <button
           type="button"
-          onClick={() => navigate(`/portal/carga-saldo?tipo=ALMUERZO&hijo_id=${hijo.id}`)}
+          onClick={() => navigate(`/portal/carga-saldo?tipo=ALMUERZO&hijo_id=${hijo.id_hijo}`)}
           className={[
             'mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border font-semibold text-base transition-colors cursor-pointer',
             hijo.saldo_almuerzo < 0
@@ -392,7 +392,7 @@ function HistorialTab({
             </div>
             <div className="divide-y divide-slate-100">
               {data.consumos.map(c => (
-                <div key={c.id} className="flex items-center justify-between px-4 py-3">
+                <div key={c.id_registro_consumo} className="flex items-center justify-between px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
                       <UtensilsCrossed className="w-4 h-4 text-slate-500" />
@@ -449,10 +449,10 @@ function CantinaTab({
   return (
     <div className="space-y-2">
       {ventas.map(v => (
-        <div key={v.id} className="bg-white rounded-xl border border-slate-100 overflow-hidden">
+        <div key={v.id_venta} className="bg-white rounded-xl border border-slate-100 overflow-hidden">
           <button
             type="button"
-            onClick={() => onToggle(v.id)}
+            onClick={() => onToggle(v.id_venta)}
             className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer hover:bg-slate-50 transition-colors"
           >
             <div>
@@ -461,12 +461,12 @@ function CantinaTab({
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <p className="text-sm font-semibold text-emerald-700 tabular-nums">{formatGs(v.monto_total)}</p>
-              {expandedId === v.id
+              {expandedId === v.id_venta
                 ? <ChevronUp className="w-4 h-4 text-slate-400" />
                 : <ChevronDown className="w-4 h-4 text-slate-400" />}
             </div>
           </button>
-          {expandedId === v.id && (
+          {expandedId === v.id_venta && (
             <div className="border-t border-slate-100 divide-y divide-slate-50">
               {v.detalles.map((d, i) => (
                 <div key={i} className="flex items-center justify-between px-4 py-2">
@@ -511,7 +511,7 @@ function PlanTab({ suscripciones, loading }: { suscripciones: Suscripcion[] | un
   return (
     <div className="space-y-3">
       {suscripciones.map(s => (
-        <div key={s.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div key={s.id_suscripcion} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-4 py-3 bg-green-50 border-b border-green-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CalendarCheck className="w-4 h-4 text-green-600" />
@@ -579,9 +579,9 @@ export default function PortalDashboard() {
       const { data: res } = await api.get('/usuarios/portal/mi-hijo/')
       setData(res)
       if (res.hijos.length > 0) {
-        setSelectedHijoId(res.hijos[0].id)
+        setSelectedHijoId(res.hijos[0].id_hijo)
         const init: Record<number, HijoTab> = {}
-        res.hijos.forEach((h: HijoData) => { init[h.id] = 'resumen' })
+        res.hijos.forEach((h: HijoData) => { init[h.id_hijo] = 'resumen' })
         setTabs(init)
       }
     } catch {
@@ -712,8 +712,8 @@ export default function PortalDashboard() {
     )
   }
 
-  const hijo = data.hijos.find(h => h.id === selectedHijoId) ?? data.hijos[0]
-  const tab = tabs[hijo.id] ?? 'resumen'
+  const hijo = data.hijos.find(h => h.id_hijo === selectedHijoId) ?? data.hijos[0]
+  const tab = tabs[hijo.id_hijo] ?? 'resumen'
 
   return (
     <div className="space-y-5">
@@ -793,12 +793,12 @@ export default function PortalDashboard() {
           {data.hijos.map(h => (
             <button
               type="button"
-              key={h.id}
-              onClick={() => setSelectedHijoId(h.id)}
-              aria-pressed={h.id === selectedHijoId}
+              key={h.id_hijo}
+              onClick={() => setSelectedHijoId(h.id_hijo)}
+              aria-pressed={h.id_hijo === selectedHijoId}
               className={[
                 'px-4 py-2 rounded-full text-base font-medium whitespace-nowrap transition-colors cursor-pointer shrink-0',
-                h.id === selectedHijoId
+                h.id_hijo === selectedHijoId
                   ? 'bg-green-500 text-white'
                   : 'bg-white border border-slate-200 text-slate-600 hover:border-green-300',
               ].join(' ')}
@@ -819,22 +819,22 @@ export default function PortalDashboard() {
 
         {/* Tabs */}
         <div role="tablist" className="border-b border-slate-100 px-5 flex gap-1 overflow-x-auto">
-          <TabBtn active={tab === 'resumen'} onClick={() => setTab(hijo.id, 'resumen')}>
+          <TabBtn active={tab === 'resumen'} onClick={() => setTab(hijo.id_hijo, 'resumen')}>
             Resumen
           </TabBtn>
-          <TabBtn active={tab === 'historial'} onClick={() => setTab(hijo.id, 'historial')}>
+          <TabBtn active={tab === 'historial'} onClick={() => setTab(hijo.id_hijo, 'historial')}>
             <span className="flex items-center gap-1.5">
               <History className="w-3.5 h-3.5" />
               Historial
             </span>
           </TabBtn>
-          <TabBtn active={tab === 'cantina'} onClick={() => setTab(hijo.id, 'cantina')}>
+          <TabBtn active={tab === 'cantina'} onClick={() => setTab(hijo.id_hijo, 'cantina')}>
             <span className="flex items-center gap-1.5">
               <ShoppingBag className="w-3.5 h-3.5" />
               Cantina
             </span>
           </TabBtn>
-          <TabBtn active={tab === 'plan'} onClick={() => setTab(hijo.id, 'plan')}>
+          <TabBtn active={tab === 'plan'} onClick={() => setTab(hijo.id_hijo, 'plan')}>
             <span className="flex items-center gap-1.5">
               <CalendarCheck className="w-3.5 h-3.5" />
               Almuerzos
@@ -848,34 +848,34 @@ export default function PortalDashboard() {
             <ResumenTab hijo={hijo} mes={data.mes} />
           )}
           {tab === 'historial' && (() => {
-            const mesActual = historialMes[hijo.id] ?? mesServidor
+            const mesActual = historialMes[hijo.id_hijo] ?? mesServidor
             const esMesActual = mesActual.anio === mesServidor.anio && mesActual.mes === mesServidor.mes
             return (
               <HistorialTab
-                data={historial[hijo.id] ?? null}
-                loading={loadingHistorial[hijo.id] ?? false}
+                data={historial[hijo.id_hijo] ?? null}
+                loading={loadingHistorial[hijo.id_hijo] ?? false}
                 anio={mesActual.anio}
                 mes={mesActual.mes}
                 isCurrentMonth={esMesActual}
-                onPrevMes={() => cambiarMesHistorial(hijo.id, -1)}
-                onNextMes={() => cambiarMesHistorial(hijo.id, 1)}
+                onPrevMes={() => cambiarMesHistorial(hijo.id_hijo, -1)}
+                onNextMes={() => cambiarMesHistorial(hijo.id_hijo, 1)}
               />
             )
           })()}
           {tab === 'cantina' && (
             <CantinaTab
-              ventas={cantina[hijo.id]}
-              loading={loadingCantina[hijo.id] ?? false}
-              hasMore={hasMoreCantina[hijo.id] ?? false}
-              onLoadMore={() => loadCantina(hijo.id, true)}
-              expandedId={expandedCantinaId[hijo.id] ?? null}
-              onToggle={(ventaId) => toggleCantinaRow(hijo.id, ventaId)}
+              ventas={cantina[hijo.id_hijo]}
+              loading={loadingCantina[hijo.id_hijo] ?? false}
+              hasMore={hasMoreCantina[hijo.id_hijo] ?? false}
+              onLoadMore={() => loadCantina(hijo.id_hijo, true)}
+              expandedId={expandedCantinaId[hijo.id_hijo] ?? null}
+              onToggle={(ventaId) => toggleCantinaRow(hijo.id_hijo, ventaId)}
             />
           )}
           {tab === 'plan' && (
             <PlanTab
-              suscripciones={suscripciones[hijo.id]}
-              loading={loadingPlan[hijo.id] ?? false}
+              suscripciones={suscripciones[hijo.id_hijo]}
+              loading={loadingPlan[hijo.id_hijo] ?? false}
             />
           )}
         </div>

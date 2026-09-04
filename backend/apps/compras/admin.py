@@ -100,7 +100,7 @@ class ProveedorAdmin(admin.ModelAdmin):
 @admin.register(CuentaCorrienteProveedor)
 class CuentaCorrienteProveedorAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_movimiento_ccp",
         "proveedor_link",
         "fecha",
         "tipo_badge",
@@ -113,7 +113,7 @@ class CuentaCorrienteProveedorAdmin(admin.ModelAdmin):
     readonly_fields = ["fecha_creacion", "saldo_anterior", "saldo_resultante"]
     list_select_related = ["proveedor"]
     date_hierarchy = "fecha"
-    ordering = ["-fecha", "-id"]
+    ordering = ["-fecha", "-id_movimiento_ccp"]
 
     def get_readonly_fields(self, request, obj=None):
         """Movimiento de cuenta corriente inmutable una vez creado."""
@@ -158,7 +158,7 @@ class CuentaCorrienteProveedorAdmin(admin.ModelAdmin):
 @admin.register(Compra)
 class CompraAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_compra",
         "fecha",
         "proveedor_link",
         "tipo_pago_badge",
@@ -256,7 +256,7 @@ class CompraAdmin(admin.ModelAdmin):
 @admin.register(PagoProveedor)
 class PagoProveedorAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_pago_proveedor",
         "proveedor_link",
         "monto_total_display",
         "medio_pago_link",
@@ -328,7 +328,7 @@ class PagoProveedorAdmin(admin.ModelAdmin):
 
 @admin.register(AplicacionPagoCompra)
 class AplicacionPagoCompraAdmin(admin.ModelAdmin):
-    list_display = ["id", "pago_link", "compra_link", "monto_aplicado_display"]
+    list_display = ["id_aplicacion_pago_compra", "pago_link", "compra_link", "monto_aplicado_display"]
     search_fields = ["pago__proveedor__razon_social", "pago__referencia"]
     list_select_related = ["pago", "compra"]
 
@@ -364,7 +364,7 @@ class AplicacionPagoCompraAdmin(admin.ModelAdmin):
 @admin.register(NotaCreditoProveedor)
 class NotaCreditoProveedorAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_nc_proveedor",
         "proveedor_link",
         "compra_original_link",
         "monto_total_display",
@@ -435,7 +435,7 @@ class NotaCreditoProveedorAdmin(admin.ModelAdmin):
 
 @admin.register(DetalleNotaCreditoProveedor)
 class DetalleNotaCreditoProveedorAdmin(admin.ModelAdmin):
-    list_display = ["id", "nota_credito_link", "producto_link", "cantidad", "subtotal_display"]
+    list_display = ["id_detalle_ncp", "nota_credito_link", "producto_link", "cantidad", "subtotal_display"]
     search_fields = ["nota_credito__proveedor__razon_social", "producto__descripcion"]
     list_select_related = ["nota_credito", "producto"]
 
@@ -478,7 +478,7 @@ class DetalleOrdenCompraInline(admin.TabularInline):
 
 @admin.register(OrdenCompra)
 class OrdenCompraAdmin(admin.ModelAdmin):
-    list_display = ["id", "proveedor_link", "estado_badge", "monto_total_display", "fecha_creacion"]
+    list_display = ["id_orden_compra", "proveedor_link", "estado_badge", "monto_total_display", "fecha_creacion"]
     list_filter = ["estado"]
     search_fields = ["proveedor__razon_social"]
     readonly_fields = ["fecha_creacion"]

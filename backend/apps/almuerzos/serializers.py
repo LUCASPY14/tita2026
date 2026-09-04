@@ -241,7 +241,7 @@ class DetalleMenuDiarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = DetalleMenuDiario
         fields = [
-            "id", "menu", "producto", "producto_nombre", "producto_codigo",
+            "id_detalle_menu", "menu", "producto", "producto_nombre", "producto_codigo",
             "unidad_medida", "curso", "curso_display",
             "cantidad", "es_opcional", "observaciones",
         ]

@@ -170,7 +170,7 @@ class TestHijoViewSetClienteWeb:
     def test_cliente_web_ve_solo_sus_hijos(self, api_cliente_web, hijo_fixture):
         resp = api_cliente_web.get("/api/v1/clientes/hijos/")
         assert resp.status_code == 200
-        ids = [h["id"] for h in resp.data["results"]] if "results" in resp.data else [h["id"] for h in resp.data]
+        ids = [h["id_hijo"] for h in resp.data["results"]] if "results" in resp.data else [h["id_hijo"] for h in resp.data]
         assert hijo_fixture.pk in ids
 
     def test_cliente_web_sin_cliente_ve_nada(self, api_client, db):
@@ -447,7 +447,7 @@ class TestCuentaCorrienteCreate:
         assert resp.status_code == 201
 
         mov = MovimientoCaja.objects.get(cierre=cierre, tipo=MovimientoCaja.Tipo.INGRESO)
-        assert mov.medio_pago_id == pos_debito.id
+        assert mov.medio_pago_id == pos_debito.id_medio_pago
 
     def test_ambas_categorias_sin_origen_retorna_400(self, api_cajero, cliente, usuario_cajero):
         from apps.clientes.models import CuentaCorrienteCliente

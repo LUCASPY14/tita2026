@@ -206,7 +206,7 @@ export default function Almuerzos() {
 
   const toggleMenuActivo = useCallback(async (m: MenuDiario) => {
     try {
-      await api.patch(`/almuerzos/menu/${m.id}/`, { activo: !m.activo })
+      await api.patch(`/almuerzos/menu/${m.id_menu}/`, { activo: !m.activo })
       toast.success(m.activo ? 'Menú desactivado' : 'Menú activado')
       loadMenu()
     } catch (err) {
@@ -332,13 +332,13 @@ export default function Almuerzos() {
       render: (_, r) => (
         <div className="flex gap-1.5">
           {r.estado === 'REGISTRADO' && (
-            <Button size="sm" variant="danger" onClick={() => setAnularConsumoId(r.id)}>
+            <Button size="sm" variant="danger" onClick={() => setAnularConsumoId(r.id_registro_consumo)}>
               <X className="w-3.5 h-3.5" />
               Anular
             </Button>
           )}
           {r.estado === 'ANULADO' && isAdmin && (
-            <Button size="sm" variant="danger" onClick={() => setDeleteConsumoId(r.id)}>
+            <Button size="sm" variant="danger" onClick={() => setDeleteConsumoId(r.id_registro_consumo)}>
               <Trash2 className="w-3.5 h-3.5" />
               Eliminar
             </Button>
@@ -447,10 +447,10 @@ export default function Almuerzos() {
           <Button size="sm" variant="secondary" onClick={() => setEditingSusc(r)}>
             <Edit2 className="w-3.5 h-3.5" />
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => suspenderSusc(r.id)}>
+          <Button size="sm" variant="secondary" onClick={() => suspenderSusc(r.id_suscripcion)}>
             <PauseCircle className="w-3.5 h-3.5" />
           </Button>
-          <Button size="sm" variant="danger" onClick={() => cancelarSusc(r.id)}>
+          <Button size="sm" variant="danger" onClick={() => cancelarSusc(r.id_suscripcion)}>
             <X className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -600,7 +600,7 @@ export default function Almuerzos() {
           </div>
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-1">
-              <Table columns={colsRegistros} dataSource={registros} rowKey="id" loading={loadingRegistros}
+              <Table columns={colsRegistros} dataSource={registros} rowKey="id_registro_consumo" loading={loadingRegistros}
                 pageSize={15} page={pageRegistros} onPageChange={handlePageChange} total={totalRegistros} />
             </div>
           </div>
@@ -652,7 +652,7 @@ export default function Almuerzos() {
             </div>
           </div>
           <div className="p-1">
-            <Table columns={colsCuentas} dataSource={cuentasFiltradas} rowKey="id" loading={loadingCuentas} pageSize={15} />
+            <Table columns={colsCuentas} dataSource={cuentasFiltradas} rowKey="id_cuenta_mensual" loading={loadingCuentas} pageSize={15} />
           </div>
         </div>
       )}
@@ -664,7 +664,7 @@ export default function Almuerzos() {
             <h2 className="text-sm font-semibold text-slate-800">Suscripciones de Estudiantes</h2>
           </div>
           <div className="p-1">
-            <Table columns={colsSusc} dataSource={suscripciones} rowKey="id" loading={loadingSusc} pageSize={15} />
+            <Table columns={colsSusc} dataSource={suscripciones} rowKey="id_suscripcion" loading={loadingSusc} pageSize={15} />
           </div>
         </div>
       )}
@@ -676,7 +676,7 @@ export default function Almuerzos() {
             <h2 className="text-sm font-semibold text-slate-800">Menú Diario</h2>
           </div>
           <div className="p-1">
-            <Table columns={colsMenu} dataSource={menu} rowKey="id" loading={loadingMenu} pageSize={15} />
+            <Table columns={colsMenu} dataSource={menu} rowKey="id_menu" loading={loadingMenu} pageSize={15} />
           </div>
         </div>
       )}

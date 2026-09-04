@@ -39,7 +39,7 @@ export default function TabGrados({ onDelete }: { onDelete: (t: DeleteTarget) =>
     setSaving(true)
     try {
       if (editing) {
-        await api.put(`/clientes/grados/${editing.id}/`, form)
+        await api.put(`/clientes/grados/${editing.id_grado}/`, form)
         toast.success('Grado actualizado')
       } else {
         await api.post('/clientes/grados/', form)
@@ -61,7 +61,7 @@ export default function TabGrados({ onDelete }: { onDelete: (t: DeleteTarget) =>
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Button size="sm" variant="secondary" onClick={() => open(r)}><Edit2 className="w-3.5 h-3.5" /></Button>
-          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/clientes/grados/${r.id}/`, label: r.nombre, reloadFn: load })}>
+          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/clientes/grados/${r.id_grado}/`, label: r.nombre, reloadFn: load })}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -76,7 +76,7 @@ export default function TabGrados({ onDelete }: { onDelete: (t: DeleteTarget) =>
       </div>
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-1">
-          <Table columns={columns} dataSource={items} rowKey="id" loading={loading} pageSize={20} />
+          <Table columns={columns} dataSource={items} rowKey="id_grado" loading={loading} pageSize={20} />
         </div>
       </div>
       <Modal open={modal} title={editing ? 'Editar Grado' : 'Nuevo Grado'} onOk={save} onCancel={() => setModal(false)} okText={editing ? 'Guardar' : 'Crear'} confirmLoading={saving} width={420}>

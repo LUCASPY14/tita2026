@@ -64,7 +64,7 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
       if (form.password) payload.password = form.password
 
       if (editingUser) {
-        await api.patch(`/usuarios/usuarios/${editingUser.id}/`, payload)
+        await api.patch(`/usuarios/usuarios/${editingUser.id_usuario}/`, payload)
         toast.success('Usuario actualizado')
       } else {
         await api.post('/usuarios/usuarios/', payload)

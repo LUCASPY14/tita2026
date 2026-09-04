@@ -11,7 +11,7 @@ export interface TarjetaBase {
 }
 
 export interface MovimientoTarjeta {
-  id:               number
+  id_movimiento_tarjeta: number
   tarjeta:          string
   tarjeta_nro:      string
   tipo:             string
@@ -23,7 +23,7 @@ export interface MovimientoTarjeta {
 }
 
 export interface CargaSaldo {
-  id:                 number
+  id_carga:           number
   tarjeta:            string
   cliente_origen:     number | null
   monto_cargado:      number | string

@@ -24,7 +24,7 @@ export default function ModalCuentaCorriente({ proveedor, onClose }: Props) {
 
   useEffect(() => {
     if (!proveedor) return
-    api.get('/compras/cuentas-corrientes/', { params: { proveedor: proveedor.id, page_size: 200 } })
+    api.get('/compras/cuentas-corrientes/', { params: { proveedor: proveedor.id_proveedor, page_size: 200 } })
       .then(({ data }) => setMovimientos(data.results ?? data ?? []))
       .catch(() => toast.error('Error al cargar cuenta corriente'))
       .finally(() => setLoading(false))
@@ -68,7 +68,7 @@ export default function ModalCuentaCorriente({ proveedor, onClose }: Props) {
       {loading ? (
         <div className="py-10 text-center text-slate-400 text-sm">Cargando...</div>
       ) : (
-        <Table columns={columns} dataSource={movimientos} rowKey="id" pageSize={10} />
+        <Table columns={columns} dataSource={movimientos} rowKey="id_movimiento_ccp" pageSize={10} />
       )}
       <div className="flex justify-end mt-4">
         <Button variant="secondary" onClick={onClose}>Cerrar</Button>

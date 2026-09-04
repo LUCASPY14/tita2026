@@ -14,11 +14,11 @@ vi.mock('react-hot-toast', () => ({
 
 import api from '../../../services/api'
 
-const HIJO: Hijo = { id: 1, nombre: 'Juan', apellido: 'Pérez', grado: '3° A', nombre_completo: 'Juan Pérez' }
+const HIJO: Hijo = { id_hijo: 1, nombre: 'Juan', apellido: 'Pérez', grado: '3° A', nombre_completo: 'Juan Pérez' }
 
 const PLANES: PlanAlmuerzo[] = [
-  { id: 1, nombre: 'Plan Estándar Mensual', tipo: 'SIN_LIMITE', precio_mensual: 270000, cantidad_almuerzos_mes: null, dias_semana_incluidos: [1, 2, 3, 4, 5], activo: true, es_predeterminado: true },
-  { id: 3, nombre: 'Plan Básico 20 días', tipo: 'CANTIDAD', precio_mensual: 240000, cantidad_almuerzos_mes: 20, dias_semana_incluidos: [1, 2, 3, 4, 5], activo: false, es_predeterminado: false },
+  { id_plan_almuerzo: 1, nombre: 'Plan Estándar Mensual', tipo: 'SIN_LIMITE', precio_mensual: 270000, cantidad_almuerzos_mes: null, dias_semana_incluidos: [1, 2, 3, 4, 5], activo: true, es_predeterminado: true },
+  { id_plan_almuerzo: 3, nombre: 'Plan Básico 20 días', tipo: 'CANTIDAD', precio_mensual: 240000, cantidad_almuerzos_mes: 20, dias_semana_incluidos: [1, 2, 3, 4, 5], activo: false, es_predeterminado: false },
 ]
 
 beforeEach(() => vi.clearAllMocks())
@@ -47,7 +47,7 @@ describe('ModalSuscripcion — selector de plan con predeterminado preselecciona
   it('permite elegir otro plan activo', async () => {
     const planes: PlanAlmuerzo[] = [
       ...PLANES,
-      { id: 4, nombre: 'Plan Nuevo por Cantidad', tipo: 'CANTIDAD', precio_mensual: 200000, cantidad_almuerzos_mes: 15, dias_semana_incluidos: [1, 2, 3, 4, 5], activo: true, es_predeterminado: false },
+      { id_plan_almuerzo: 4, nombre: 'Plan Nuevo por Cantidad', tipo: 'CANTIDAD', precio_mensual: 200000, cantidad_almuerzos_mes: 15, dias_semana_incluidos: [1, 2, 3, 4, 5], activo: true, es_predeterminado: false },
     ]
     vi.mocked(api.post).mockResolvedValue({ data: { id: 1 } })
     render(<ModalSuscripcion open hijos={[HIJO]} planes={planes} onClose={vi.fn()} onSaved={vi.fn()} />)

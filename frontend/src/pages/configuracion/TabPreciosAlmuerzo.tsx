@@ -9,7 +9,7 @@ import Modal from '../../components/ui/Modal'
 import { extractErrorMessage, inputClass, labelClass, type DeleteTarget } from './helpers'
 
 interface PrecioAlmuerzo {
-  id: number
+  id_precio_almuerzo: number
   precio_unitario: string | number
   fecha_inicio_vigencia: string
   fecha_fin_vigencia: string | null
@@ -87,7 +87,7 @@ export default function TabPreciosAlmuerzo({ onDelete }: { onDelete: (t: DeleteT
         activo: form.activo,
       }
       if (editing) {
-        await api.put(`/almuerzos/precios-almuerzo/${editing.id}/`, payload)
+        await api.put(`/almuerzos/precios-almuerzo/${editing.id_precio_almuerzo}/`, payload)
         toast.success('Precio actualizado')
       } else {
         await api.post('/almuerzos/precios-almuerzo/', payload)
@@ -147,7 +147,7 @@ export default function TabPreciosAlmuerzo({ onDelete }: { onDelete: (t: DeleteT
             <Edit2 className="w-3.5 h-3.5" />
           </Button>
           <Button size="sm" variant="danger" onClick={() => onDelete({
-            url: `/almuerzos/precios-almuerzo/${r.id}/`,
+            url: `/almuerzos/precios-almuerzo/${r.id_precio_almuerzo}/`,
             label: `Precio ${formatGs(r.precio_unitario)} (desde ${formatFecha(r.fecha_inicio_vigencia)})`,
             reloadFn: load,
           })}>
@@ -187,7 +187,7 @@ export default function TabPreciosAlmuerzo({ onDelete }: { onDelete: (t: DeleteT
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-1">
-          <Table columns={columns} dataSource={items} rowKey="id" loading={loading} pageSize={20} />
+          <Table columns={columns} dataSource={items} rowKey="id_precio_almuerzo" loading={loading} pageSize={20} />
         </div>
       </div>
 

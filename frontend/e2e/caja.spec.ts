@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
-const ADMIN  = { id: 1, email: 'admin@cantina.com',  nombre: 'Admin',  apellido: 'Tita', rol: 'ADMIN' }
-const CAJERO = { id: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
+const ADMIN  = { id_usuario: 1, email: 'admin@cantina.com',  nombre: 'Admin',  apellido: 'Tita', rol: 'ADMIN' }
+const CAJERO = { id_usuario: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
 
 async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN) {
   // LIFO: catch-all primero (menor prioridad), específicos después (mayor prioridad)
@@ -20,7 +20,7 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN
   )
 
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(user.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')
@@ -29,17 +29,17 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 const CAJAS_MOCK = [
-  { id: 1, nombre: 'Caja Principal', ubicacion: 'Entrada', activo: true },
-  { id: 2, nombre: 'Caja Comedor',   ubicacion: 'Comedor', activo: true },
+  { id_caja: 1, nombre: 'Caja Principal', ubicacion: 'Entrada', activo: true },
+  { id_caja: 2, nombre: 'Caja Comedor',   ubicacion: 'Comedor', activo: true },
 ]
 
 const MEDIOS_PAGO_MOCK = [
-  { id: 1, descripcion: 'Efectivo', activo: true },
-  { id: 2, descripcion: 'Tarjeta',  activo: true },
+  { id_medio_pago: 1, descripcion: 'Efectivo', activo: true },
+  { id_medio_pago: 2, descripcion: 'Tarjeta',  activo: true },
 ]
 
 const CIERRE_ABIERTO = {
-  id: 10,
+  id_cierre: 10,
   caja: 1,
   caja_nombre: 'Caja Principal',
   empleado: 2,
@@ -55,7 +55,7 @@ const CIERRE_ABIERTO = {
 
 const CIERRE_CERRADO = {
   ...CIERRE_ABIERTO,
-  id: 11,
+  id_cierre: 11,
   fecha_cierre: new Date().toISOString(),
   monto_contado_fisico: '150000',
   diferencia_efectivo: '0',

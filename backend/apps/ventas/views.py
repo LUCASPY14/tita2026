@@ -90,8 +90,8 @@ class VentaViewSet(viewsets.ModelViewSet):
             request=request,
             operacion="CREAR_VENTA",
             tabla="ventas_venta",
-            id_registro=venta.id,
-            descripcion=f"Venta #{venta.id} {venta.tipo} {venta.monto_total} Gs.",
+            id_registro=venta.id_venta,
+            descripcion=f"Venta #{venta.id_venta} {venta.tipo} {venta.monto_total} Gs.",
         )
         resp_data = VentaSerializer(venta).data
         headers = self.get_success_headers(resp_data)
@@ -114,8 +114,8 @@ class VentaViewSet(viewsets.ModelViewSet):
                 request=request,
                 operacion="ANULAR_VENTA",
                 tabla="ventas_venta",
-                id_registro=venta.id,
-                descripcion=f"Intento fallido de anular venta #{venta.id}",
+                id_registro=venta.id_venta,
+                descripcion=f"Intento fallido de anular venta #{venta.id_venta}",
                 resultado="FALLA",
                 mensaje_error=str(e),
             )
@@ -126,8 +126,8 @@ class VentaViewSet(viewsets.ModelViewSet):
             request=request,
             operacion="ANULAR_VENTA",
             tabla="ventas_venta",
-            id_registro=venta.id,
-            descripcion=f"Venta #{venta.id} anulada ({venta.monto_total} Gs.)",
+            id_registro=venta.id_venta,
+            descripcion=f"Venta #{venta.id_venta} anulada ({venta.monto_total} Gs.)",
         )
         return Response(VentaSerializer(venta).data)
 
@@ -302,7 +302,7 @@ class NotaCreditoViewSet(viewsets.ModelViewSet):
             request=request,
             operacion="EMITIR_NOTA_CREDITO",
             tabla="ventas_notacredito",
-            id_registro=nc.id,
+            id_registro=nc.id_nota_credito,
             descripcion=f"Nota de crédito #{nc.nro_nota_credito} por {nc.monto_total} Gs. cliente={nc.cliente_id}",
         )
         return Response(self.get_serializer(nc).data, status=status.HTTP_201_CREATED)
@@ -320,7 +320,7 @@ class NotaCreditoViewSet(viewsets.ModelViewSet):
                 request=request,
                 operacion="ANULAR_NOTA_CREDITO",
                 tabla="ventas_notacredito",
-                id_registro=nc.id,
+                id_registro=nc.id_nota_credito,
                 descripcion=f"Intento fallido de anular NC #{nc.nro_nota_credito}",
                 resultado="FALLA",
                 mensaje_error=str(e),
@@ -332,7 +332,7 @@ class NotaCreditoViewSet(viewsets.ModelViewSet):
             request=request,
             operacion="ANULAR_NOTA_CREDITO",
             tabla="ventas_notacredito",
-            id_registro=nc.id,
+            id_registro=nc.id_nota_credito,
             descripcion=f"NC #{nc.nro_nota_credito} anulada ({nc.monto_total} Gs.)",
         )
         return Response(self.get_serializer(nc).data)
@@ -376,7 +376,7 @@ class ReporteVentasProductoView(APIView):
                 venta__fecha__date__lte=hasta,
                 venta__estado=Venta.Estado.ACTIVA,
             )
-            .values("producto__id", "producto__descripcion", "producto__categoria__nombre")
+            .values("producto__id_producto", "producto__descripcion", "producto__categoria__nombre")
             .annotate(
                 total_cantidad=Sum("cantidad"),
                 total_monto=Sum("subtotal"),
@@ -387,7 +387,7 @@ class ReporteVentasProductoView(APIView):
 
         filas = [
             {
-                "producto_id": r["producto__id"],
+                "producto_id": r["producto__id_producto"],
                 "descripcion": r["producto__descripcion"],
                 "categoria": r["producto__categoria__nombre"] or "",
                 "total_cantidad": r["total_cantidad"] or 0,
@@ -473,9 +473,9 @@ class ReporteVentasCajeroView(APIView):
                 fecha__date__lte=hasta,
                 estado=Venta.Estado.ACTIVA,
             )
-            .values("cajero__id", "cajero__nombre", "cajero__apellido", "cajero__email")
+            .values("cajero__id_usuario", "cajero__nombre", "cajero__apellido", "cajero__email")
             .annotate(
-                cantidad_ventas=Count("id"),
+                cantidad_ventas=Count("id_venta"),
                 total_monto=Sum("monto_total"),
             )
             .order_by("-total_monto")
@@ -485,7 +485,7 @@ class ReporteVentasCajeroView(APIView):
         for r in qs:
             nombre = f"{r['cajero__nombre'] or ''} {r['cajero__apellido'] or ''}".strip()
             filas.append({
-                "cajero_id": r["cajero__id"],
+                "cajero_id": r["cajero__id_usuario"],
                 "username": r["cajero__email"] or "",
                 "nombre": nombre or r["cajero__email"] or "—",
                 "cantidad_ventas": r["cantidad_ventas"],
@@ -569,13 +569,13 @@ class ReporteMediosPagoView(APIView):
                 fecha__date__lte=hasta,
                 estado__in=["PENDIENTE", "CONCILIADO"],
             )
-            .values("medio_pago__id", "medio_pago__descripcion")
+            .values("medio_pago__id_medio_pago", "medio_pago__descripcion")
             .annotate(
-                n_pagos=Count("id"),
+                n_pagos=Count("id_pago_venta"),
                 monto_total=Sum("monto"),
-                n_conciliados=Count("id", filter=Q(estado="CONCILIADO")),
+                n_conciliados=Count("id_pago_venta", filter=Q(estado="CONCILIADO")),
                 monto_conciliado=Sum("monto", filter=Q(estado="CONCILIADO")),
-                n_pendientes=Count("id", filter=Q(estado="PENDIENTE")),
+                n_pendientes=Count("id_pago_venta", filter=Q(estado="PENDIENTE")),
                 monto_pendiente=Sum("monto", filter=Q(estado="PENDIENTE")),
             )
             .order_by("-monto_total")
@@ -583,7 +583,7 @@ class ReporteMediosPagoView(APIView):
 
         filas = [
             {
-                "medio_pago_id": r["medio_pago__id"],
+                "medio_pago_id": r["medio_pago__id_medio_pago"],
                 "descripcion": r["medio_pago__descripcion"] or "Sin medio",
                 "n_pagos": r["n_pagos"],
                 "monto_total": int(r["monto_total"] or 0),

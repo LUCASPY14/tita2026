@@ -149,7 +149,7 @@ export default function Inventario() {
 
   const colsAjustes: Column<AjusteInventario>[] = [
     {
-      title: 'ID', key: 'id', dataIndex: 'id', width: 60,
+      title: 'ID', key: 'id_ajuste', dataIndex: 'id_ajuste', width: 60,
       render: v => <span className="font-mono text-sm text-slate-500">#{v as number}</span>,
     },
     {
@@ -178,11 +178,11 @@ export default function Inventario() {
       title: '', key: 'acciones', width: 170,
       render: (_, r) => r.estado === 'PENDIENTE' ? (
         <div className="flex gap-1.5">
-          <Button size="sm" variant="primary" onClick={() => setAprobar(r.id)}>
+          <Button size="sm" variant="primary" onClick={() => setAprobar(r.id_ajuste)}>
             <CheckCircle className="w-3.5 h-3.5" />
             Aprobar
           </Button>
-          <Button size="sm" variant="danger" onClick={() => setRechazar(r.id)}>
+          <Button size="sm" variant="danger" onClick={() => setRechazar(r.id_ajuste)}>
             <XCircle className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -321,7 +321,7 @@ export default function Inventario() {
           </div>
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-1">
-              <Table columns={colsAjustes} dataSource={ajustes} rowKey="id" loading={loadingAjustes}
+              <Table columns={colsAjustes} dataSource={ajustes} rowKey="id_ajuste" loading={loadingAjustes}
                 pageSize={15} page={pageAjustes} onPageChange={p => { setPageAjustes(p); loadAjustes(filterEstado, filterTipoAjuste, p) }} total={totalAjustes} />
             </div>
           </div>
@@ -336,7 +336,7 @@ export default function Inventario() {
               <label className={labelClass}>Producto</label>
               <select value={filterProductoMov} onChange={e => setFilterProductoMov(e.target.value)} className={inputClass}>
                 <option value="">Todos</option>
-                {productos.map(p => <option key={p.id} value={p.id}>{p.descripcion}</option>)}
+                {productos.map(p => <option key={p.id_producto} value={p.id_producto}>{p.descripcion}</option>)}
               </select>
             </div>
             <div>
@@ -351,7 +351,7 @@ export default function Inventario() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-1">
               <Table
-                columns={colsMov} dataSource={movimientos} rowKey="id" loading={loadingMov}
+                columns={colsMov} dataSource={movimientos} rowKey="id_movimiento_stock" loading={loadingMov}
                 pageSize={15} page={pageMov} onPageChange={p => { setPageMov(p); loadMovimientos(filterProductoMov, filterTipoMov, p) }} total={totalMov}
                 sortKey={sortMovKey} sortDir={sortMovDir}
                 onSort={(key, dir) => { setSortMovKey(key); setSortMovDir(dir) }}

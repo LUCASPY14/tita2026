@@ -616,7 +616,7 @@ def bancard_catastro_tarjeta(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    card_id_inicial = bancard_service.proxima_tarjeta_guardada_disponible(cliente.id)
+    card_id_inicial = bancard_service.proxima_tarjeta_guardada_disponible(cliente.id_cliente)
     if card_id_inicial is None:
         return Response(
             {"detail": "Ya alcanzaste el máximo de 5 tarjetas guardadas."},
@@ -641,7 +641,7 @@ def bancard_catastro_tarjeta(request):
     for candidato in range(card_id_inicial, 6):
         resultado = bancard_service.catastro_tarjeta(
             card_id=candidato,
-            user_id=cliente.id,
+            user_id=cliente.id_cliente,
             user_cell_phone=cliente.telefono or "",
             user_mail=cliente.email or "",
             return_url=return_url,
@@ -717,7 +717,7 @@ def bancard_listar_tarjetas(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    resultado = bancard_service.listar_tarjetas(cliente.id)
+    resultado = bancard_service.listar_tarjetas(cliente.id_cliente)
     if resultado.get("status") != "success":
         return Response({"tarjetas": []})
 
@@ -751,11 +751,11 @@ def bancard_eliminar_tarjeta(request, card_id: int):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    alias_token, _ = _obtener_alias_token(cliente.id, card_id)
+    alias_token, _ = _obtener_alias_token(cliente.id_cliente, card_id)
     if alias_token is None:
         return Response({"detail": "Tarjeta no encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
-    resultado = bancard_service.eliminar_tarjeta(user_id=cliente.id, alias_token=alias_token)
+    resultado = bancard_service.eliminar_tarjeta(user_id=cliente.id_cliente, alias_token=alias_token)
     if resultado.get("status") != "success":
         return Response({"detail": "No se pudo eliminar la tarjeta."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -823,7 +823,7 @@ def bancard_pagar_con_tarjeta(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    alias_token, card_masked = _obtener_alias_token(cliente.id, card_id)
+    alias_token, card_masked = _obtener_alias_token(cliente.id_cliente, card_id)
     if alias_token is None:
         return Response(
             {"detail": "Tarjeta guardada no encontrada. Puede haber vencido — intentá agregarla de nuevo."},
@@ -1181,7 +1181,7 @@ def bancard_pagar_almuerzo_con_tarjeta(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    alias_token, card_masked = _obtener_alias_token(cliente.id, card_id)
+    alias_token, card_masked = _obtener_alias_token(cliente.id_cliente, card_id)
     if alias_token is None:
         return Response(
             {"detail": "Tarjeta guardada no encontrada. Puede haber vencido — intentá agregarla de nuevo."},
@@ -1272,7 +1272,7 @@ def bancard_pagar_cc_con_tarjeta(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    alias_token, card_masked = _obtener_alias_token(cliente.id, card_id)
+    alias_token, card_masked = _obtener_alias_token(cliente.id_cliente, card_id)
     if alias_token is None:
         return Response(
             {"detail": "Tarjeta guardada no encontrada. Puede haber vencido — intentá agregarla de nuevo."},

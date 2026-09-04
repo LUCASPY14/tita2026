@@ -1,9 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 
-const ADMIN = { id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
+const ADMIN = { id_usuario: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
 
 const MENU_HOY = {
-  id: 1,
+  id_menu: 1,
   fecha: new Date().toISOString().split('T')[0],
   tipo_almuerzo: 1,
   plato_principal: 'Milanesa con puré',
@@ -17,7 +17,7 @@ const MENU_HOY = {
 const ALMUERZOS_LIST = {
   results: [
     {
-      id: 10,
+      id_registro_consumo: 10,
       hijo_nombre: 'Sofía Torres',
       fecha_consumo: new Date().toISOString().split('T')[0],
       tipo_almuerzo_nombre: 'Almuerzo Completo',
@@ -57,7 +57,7 @@ async function loginAs(page: Page, user: typeof ADMIN) {
     })
   )
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(user.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')
@@ -124,7 +124,7 @@ test.describe('Almuerzos', () => {
 // ── Mocks adicionales ──────────────────────────────────────────────────────
 
 const CUENTA_MOCK = {
-  id: 1,
+  id_cuenta_mensual: 1,
   hijo: 1,
   hijo_nombre: 'Sofía Torres',
   anio: 2026,
@@ -137,7 +137,7 @@ const CUENTA_MOCK = {
 }
 
 const SUSCRIPCION_MOCK = {
-  id: 1,
+  id_suscripcion: 1,
   hijo: 1,
   hijo_nombre: 'Sofía Torres',
   plan: 1,
@@ -148,7 +148,7 @@ const SUSCRIPCION_MOCK = {
 }
 
 const PLAN_MOCK = {
-  id: 1,
+  id_plan_almuerzo: 1,
   nombre: 'Plan Básico',
   tipo: 'MENSUAL',
   precio_mensual: '150000',
@@ -158,7 +158,7 @@ const PLAN_MOCK = {
 }
 
 const HIJO_MOCK = {
-  id: 1,
+  id_hijo: 1,
   nombre: 'Sofía',
   apellido: 'Torres',
   grado: '2° B',

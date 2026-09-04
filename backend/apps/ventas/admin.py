@@ -58,7 +58,7 @@ class DetalleVentaInline(admin.TabularInline):
 @admin.register(Venta)
 class VentaAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_venta",
         "fecha",
         "cliente_link",
         "tipo_badge",
@@ -170,7 +170,7 @@ class VentaAdmin(admin.ModelAdmin):
 @admin.register(PagoVenta)
 class PagoVentaAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_pago_venta",
         "cliente_link",
         "venta_link",
         "monto_display",
@@ -250,7 +250,7 @@ class PagoVentaAdmin(admin.ModelAdmin):
 
 @admin.register(AplicacionPago)
 class AplicacionPagoAdmin(admin.ModelAdmin):
-    list_display = ["id", "pago_link", "venta_link", "monto_aplicado_display"]
+    list_display = ["id_aplicacion_pago", "pago_link", "venta_link", "monto_aplicado_display"]
     search_fields = ["pago__cliente__ruc_ci", "pago__referencia"]
     list_select_related = ["pago", "venta"]
 
@@ -351,7 +351,7 @@ class NotaCreditoAdmin(admin.ModelAdmin):
 
 @admin.register(DetalleNotaCredito)
 class DetalleNotaCreditoAdmin(admin.ModelAdmin):
-    list_display = ["id", "nota_credito_link", "producto_link", "cantidad", "subtotal_display"]
+    list_display = ["id_detalle_nc", "nota_credito_link", "producto_link", "cantidad", "subtotal_display"]
     search_fields = ["nota_credito__nro_nota_credito", "producto__descripcion"]
     list_select_related = ["nota_credito", "producto"]
 

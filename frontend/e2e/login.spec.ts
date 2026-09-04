@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 const ADMIN_USER = {
-  id: 1,
+  id_usuario: 1,
   email: 'admin@cantina.com',
   nombre: 'Admin',
   apellido: 'Tita',
@@ -9,7 +9,7 @@ const ADMIN_USER = {
 }
 
 const CAJERO_USER = {
-  id: 2,
+  id_usuario: 2,
   email: 'cajero@cantina.com',
   nombre: 'Cajero',
   apellido: 'Test',
@@ -52,24 +52,24 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('muestra el formulario de login', async ({ page }) => {
-  await expect(page.getByPlaceholder('tu@email.com')).toBeVisible()
+  await expect(page.getByPlaceholder('Tu CI o RUC')).toBeVisible()
   await expect(page.getByPlaceholder('••••••••')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Iniciar Sesión' })).toBeVisible()
 })
 
-test('valida email vacío', async ({ page }) => {
+test('valida CI/RUC vacío', async ({ page }) => {
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
-  await expect(page.getByText('El email es obligatorio')).toBeVisible()
+  await expect(page.getByText('El CI/RUC es obligatorio')).toBeVisible()
 })
 
-test('valida formato de email inválido', async ({ page }) => {
-  await page.getByPlaceholder('tu@email.com').fill('no-es-un-email')
+test('valida que el CI/RUC no acepte un email', async ({ page }) => {
+  await page.getByPlaceholder('Tu CI o RUC').fill('no-es-un-email@x.com')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
-  await expect(page.getByText('Ingresá un email válido')).toBeVisible()
+  await expect(page.getByText('Ingresá tu CI o RUC, no un email')).toBeVisible()
 })
 
 test('valida contraseña vacía', async ({ page }) => {
-  await page.getByPlaceholder('tu@email.com').fill('admin@cantina.com')
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await expect(page.getByText('La contraseña es obligatoria')).toBeVisible()
 })
@@ -78,10 +78,10 @@ test('muestra error con credenciales inválidas', async ({ page }) => {
   await page.route('/api/token/', (route) =>
     route.fulfill({ status: 401, contentType: 'application/json', body: '{"detail":"No active account"}' })
   )
-  await page.getByPlaceholder('tu@email.com').fill('wrong@cantina.com')
+  await page.getByPlaceholder('Tu CI o RUC').fill('9999999')
   await page.getByPlaceholder('••••••••').fill('wrongpassword')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
-  await expect(page.getByText('Email o contraseña incorrectos')).toBeVisible()
+  await expect(page.getByText('CI/RUC o contraseña incorrectos')).toBeVisible()
 })
 
 test('login exitoso como ADMIN redirige a /dashboard', async ({ page }) => {
@@ -89,7 +89,7 @@ test('login exitoso como ADMIN redirige a /dashboard', async ({ page }) => {
   await mockMe(page, ADMIN_USER)
   await mockDashboard(page)
 
-  await page.getByPlaceholder('tu@email.com').fill(ADMIN_USER.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
 
@@ -101,7 +101,7 @@ test('login exitoso como CAJERO redirige a /dashboard', async ({ page }) => {
   await mockMe(page, CAJERO_USER)
   await mockDashboard(page)
 
-  await page.getByPlaceholder('tu@email.com').fill(CAJERO_USER.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('7654321')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
 
@@ -113,7 +113,7 @@ test('Enter en el campo dispara el submit', async ({ page }) => {
   await mockMe(page, ADMIN_USER)
   await mockDashboard(page)
 
-  await page.getByPlaceholder('tu@email.com').fill(ADMIN_USER.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByPlaceholder('••••••••').press('Enter')
 

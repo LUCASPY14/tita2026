@@ -27,8 +27,8 @@ import PagarAlmuerzo from '../PagarAlmuerzo'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const HIJO_JUAN: Record<string, unknown> = { id: 1, nombre: 'Juan García', saldo_almuerzo: -150_000 }
-const HIJO_LUCIA: Record<string, unknown> = { id: 2, nombre: 'Lucía García', saldo_almuerzo: 20_000 }
+const HIJO_JUAN: Record<string, unknown> = { id_hijo: 1, nombre: 'Juan García', saldo_almuerzo: -150_000 }
+const HIJO_LUCIA: Record<string, unknown> = { id_hijo: 2, nombre: 'Lucía García', saldo_almuerzo: 20_000 }
 
 const TARJETA_GUARDADA = {
   card_id: 1, card_masked_number: '5418********0014', card_brand: 'MasterCard', expiration_date: '08/26',

@@ -75,7 +75,7 @@ function extractErrorMessage(err: unknown): string {
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface Hijo {
-  id: number
+  id_hijo: number
   nombre: string
   apellido: string
   grado: string
@@ -314,11 +314,11 @@ export default function Comedor() {
           h => h.nombre_completo === tarjeta.hijo_nombre ||
             `${h.nombre} ${h.apellido}` === tarjeta.hijo_nombre
         )
-        hijoId = match?.id
+        hijoId = match?.id_hijo
         hijoGrado = match?.grado ?? ''
         hijoFechaNacimiento = match?.fecha_nacimiento
       } else {
-        const match = hijos.find(h => h.id === hijoId)
+        const match = hijos.find(h => h.id_hijo === hijoId)
         hijoGrado = match?.grado ?? ''
         hijoFechaNacimiento = match?.fecha_nacimiento
       }

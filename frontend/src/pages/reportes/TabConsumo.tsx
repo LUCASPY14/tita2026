@@ -169,13 +169,13 @@ export default function TabConsumo() {
               </div>
               <ul className="divide-y divide-slate-100">
                 {consumos.map(v => {
-                  const isExp = expandedConsumoId === v.id
+                  const isExp = expandedConsumoId === v.id_venta
                   const alumno = v.hijo_nombre ?? v.cliente_nombre
                   return (
-                    <li key={v.id}>
+                    <li key={v.id_venta}>
                       <button
                         type="button"
-                        onClick={() => setExpandedConsumoId(isExp ? null : v.id)}
+                        onClick={() => setExpandedConsumoId(isExp ? null : v.id_venta)}
                         className="w-full flex items-center gap-4 px-5 py-3.5 text-left hover:bg-slate-50 transition-colors group"
                       >
                         <div className="w-8 h-8 rounded-full bg-green-50 border border-green-100 flex items-center justify-center shrink-0">
@@ -204,7 +204,7 @@ export default function TabConsumo() {
                       {isExp && v.detalles.length > 0 && (
                         <ul className="px-5 pb-3 ml-12 space-y-1.5">
                           {v.detalles.map(d => (
-                            <li key={d.id} className="flex items-center justify-between text-sm text-slate-600">
+                            <li key={d.id_detalle_venta} className="flex items-center justify-between text-sm text-slate-600">
                               <span>
                                 <span className="font-semibold text-slate-700 tabular-nums">{d.cantidad}×</span>
                                 {' '}{d.producto_nombre}

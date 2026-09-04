@@ -1,13 +1,13 @@
 import { test, expect, type Page } from '@playwright/test'
 
-const ADMIN = { id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
+const ADMIN = { id_usuario: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
 
 // El tab por defecto en Inventario es "Ajustes" → endpoint /inventario/ajustes/
 // Los productos aparecen en el tab "Movimientos" → endpoint /inventario/movimientos/
 const AJUSTES_LIST = {
   results: [
     {
-      id: 1,
+      id_ajuste: 1,
       tipo: 'AJUSTE_POSITIVO',
       estado: 'APROBADO',
       motivo: 'Inventario mensual',
@@ -23,7 +23,7 @@ const AJUSTES_LIST = {
 const MOVIMIENTOS_LIST = {
   results: [
     {
-      id: 100,
+      id_movimiento_stock: 100,
       producto_nombre: 'Harina 000',
       tipo: 'ENTRADA',
       motivo: 'COMPRA',
@@ -33,7 +33,7 @@ const MOVIMIENTOS_LIST = {
       observaciones: '',
     },
     {
-      id: 101,
+      id_movimiento_stock: 101,
       producto_nombre: 'Aceite Girasol',
       tipo: 'ENTRADA',
       motivo: 'COMPRA',
@@ -65,7 +65,7 @@ async function loginAs(page: Page, user: typeof ADMIN) {
     })
   )
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(user.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')

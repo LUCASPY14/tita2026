@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
-const ADMIN  = { id: 1, email: 'admin@cantina.com',  nombre: 'Admin',  apellido: 'Tita', rol: 'ADMIN' }
-const CAJERO = { id: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
+const ADMIN  = { id_usuario: 1, email: 'admin@cantina.com',  nombre: 'Admin',  apellido: 'Tita', rol: 'ADMIN' }
+const CAJERO = { id_usuario: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
 
 async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN | typeof CAJERO) {
   await page.route(/\/api\/v1\//, (route) =>
@@ -15,7 +15,7 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN
       body: JSON.stringify({ access: 'tok', refresh: 'ref', user }) })
   )
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(user.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')

@@ -21,7 +21,7 @@ export function usePushNotifications() {
       return
     }
     if (import.meta.env.DEV) return   // sin service worker ni VAPID en desarrollo
-    if (subscribedUserId.current === user.id) return
+    if (subscribedUserId.current === user.id_usuario) return
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
     if (Notification.permission === 'denied') return
 
@@ -45,7 +45,7 @@ export function usePushNotifications() {
 
         if (cancelled) return
         await api.post('/notificaciones/push-subscription/', sub.toJSON())
-        subscribedUserId.current = user.id
+        subscribedUserId.current = user.id_usuario
       } catch {
         // Push notifications are optional — fail silently
       }
@@ -56,5 +56,5 @@ export function usePushNotifications() {
     // Solo re-suscribir cuando cambia el usuario logueado, no ante cualquier
     // cambio de referencia del objeto `user` (p.ej. al refrescar su perfil).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user?.id])
+  }, [isAuthenticated, user?.id_usuario])
 }

@@ -70,7 +70,7 @@ export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTa
         dias_semana_incluidos: diasToString(form.dias_semana_incluidos),
       }
       if (editing) {
-        await api.put(`/almuerzos/planes-almuerzo/${editing.id}/`, payload)
+        await api.put(`/almuerzos/planes-almuerzo/${editing.id_plan_almuerzo}/`, payload)
         toast.success('Plan actualizado')
       } else {
         await api.post('/almuerzos/planes-almuerzo/', payload)
@@ -93,7 +93,7 @@ export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTa
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Button size="sm" variant="secondary" onClick={() => open(r)}><Edit2 className="w-3.5 h-3.5" /></Button>
-          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/almuerzos/planes-almuerzo/${r.id}/`, label: r.nombre, reloadFn: load })}>
+          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/almuerzos/planes-almuerzo/${r.id_plan_almuerzo}/`, label: r.nombre, reloadFn: load })}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -108,7 +108,7 @@ export default function TabPlanesAlmuerzo({ onDelete }: { onDelete: (t: DeleteTa
       </div>
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-1">
-          <Table columns={columns} dataSource={items} rowKey="id" loading={loading} pageSize={20} />
+          <Table columns={columns} dataSource={items} rowKey="id_plan_almuerzo" loading={loading} pageSize={20} />
         </div>
       </div>
       <Modal open={modal} title={editing ? 'Editar Plan de Almuerzo' : 'Nuevo Plan de Almuerzo'} onOk={save} onCancel={() => setModal(false)} okText={editing ? 'Guardar' : 'Crear'} confirmLoading={saving} width={480}>

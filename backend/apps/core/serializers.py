@@ -86,7 +86,7 @@ class TarjetaSerializer(serializers.ModelSerializer):
         restricciones = obj.hijo.restricciones.filter(activo=True)
         return [
             {
-                "id": r.id,
+                "id_restriccion": r.id_restriccion,
                 "tipo": r.tipo,
                 "descripcion": r.descripcion,
                 "severidad": r.severidad,

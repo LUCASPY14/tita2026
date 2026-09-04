@@ -20,7 +20,7 @@ class TestProductoSerializer:
     def test_fields_present(self, producto):
         from apps.productos.serializers import ProductoSerializer
         data = ProductoSerializer(producto).data
-        assert "id" in data
+        assert "id_producto" in data
         assert "descripcion" in data
         assert "precio_actual" in data
         assert "categoria_nombre" in data
@@ -103,5 +103,5 @@ class TestImpuestoSerializer:
         from apps.productos.serializers import ImpuestoSerializer
         imp = Impuesto.objects.create(nombre="IVA 5%", porcentaje=Decimal("5.00"), vigente_desde=date.today(), activo=True)
         data = ImpuestoSerializer(imp).data
-        for campo in ("id", "nombre", "activo"):
+        for campo in ("id_impuesto", "nombre", "activo"):
             assert campo in data, f"Campo esperado '{campo}' no encontrado"

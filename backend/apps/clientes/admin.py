@@ -91,7 +91,7 @@ class ClienteAdmin(admin.ModelAdmin):
 @admin.register(CuentaCorrienteCliente)
 class CuentaCorrienteClienteAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_movimiento_cc",
         "cliente_link",
         "fecha",
         "tipo_badge",
@@ -106,7 +106,7 @@ class CuentaCorrienteClienteAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ["fecha_creacion", "saldo_anterior", "saldo_resultante"]
     date_hierarchy = "fecha"
-    ordering = ["-fecha", "-id"]
+    ordering = ["-fecha", "-id_movimiento_cc"]
     list_select_related = ["cliente"]
 
     def has_add_permission(self, _request):

@@ -22,10 +22,10 @@ export default function ModalNCDetail({ nc, canApprove, onClose, onAnulada }: Pr
     const extraMsg = nc.tipo_nc === 'DEVOLUCION' && nc.detalles?.length
       ? '\nTambién se revertirán los movimientos de stock.'
       : ''
-    if (!confirm(`¿Anular NC #${nc.id} de ${nc.proveedor_nombre} por ${formatGs(nc.monto_total)}?\nEsto revertirá el crédito en la cuenta corriente.${extraMsg}`)) return
+    if (!confirm(`¿Anular NC #${nc.id_nc_proveedor} de ${nc.proveedor_nombre} por ${formatGs(nc.monto_total)}?\nEsto revertirá el crédito en la cuenta corriente.${extraMsg}`)) return
     setAnulando(true)
     try {
-      await api.post(`/compras/notas-credito/${nc.id}/anular/`)
+      await api.post(`/compras/notas-credito/${nc.id_nc_proveedor}/anular/`)
       toast.success('Nota de crédito anulada')
       onAnulada()
       onClose()
@@ -39,7 +39,7 @@ export default function ModalNCDetail({ nc, canApprove, onClose, onAnulada }: Pr
   return (
     <Modal
       open={!!nc}
-      title={nc ? `Nota de Crédito #${nc.id} — ${nc.proveedor_nombre}` : ''}
+      title={nc ? `Nota de Crédito #${nc.id_nc_proveedor} — ${nc.proveedor_nombre}` : ''}
       onCancel={onClose}
       width={560}
       footer={null}
@@ -81,7 +81,7 @@ export default function ModalNCDetail({ nc, canApprove, onClose, onAnulada }: Pr
                 </thead>
                 <tbody>
                   {nc.detalles.map(d => (
-                    <tr key={d.id} className="border-b border-slate-100">
+                    <tr key={d.id_detalle_ncp} className="border-b border-slate-100">
                       <td className="py-1">{d.producto_nombre}</td>
                       <td className="py-1 text-right tabular-nums">{d.cantidad}</td>
                       <td className="py-1 text-right tabular-nums">{formatGs(d.precio_unitario)}</td>

@@ -84,7 +84,7 @@ class TestCadenaMovimientos:
         )
 
         movimientos = list(
-            MovimientoTarjeta.objects.filter(tarjeta=tarjeta_activa).order_by("id")
+            MovimientoTarjeta.objects.filter(tarjeta=tarjeta_activa).order_by("id_movimiento_tarjeta")
         )
         # 1 RECARGA del fixture (saldo inicial 20k) + 2 del test = 3 total
         assert len(movimientos) == 3

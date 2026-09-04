@@ -358,7 +358,7 @@ export default function CargaSaldo() {
       key: 'accion',
       width: 110,
       render: (_, r) => r.estado === 'PENDIENTE' ? (
-        <Button size="sm" variant="primary" onClick={() => setConfirmCargaId(r.id)}>
+        <Button size="sm" variant="primary" onClick={() => setConfirmCargaId(r.id_carga)}>
           Confirmar
         </Button>
       ) : null,
@@ -795,9 +795,9 @@ export default function CargaSaldo() {
                 {loadingHistorial ? (
                   <div className="py-10 text-center text-slate-400 text-base">Cargando historial...</div>
                 ) : historialTab === 'movimientos' ? (
-                  <Table columns={colsMovimientos} dataSource={movimientos} rowKey="id" pageSize={8} />
+                  <Table columns={colsMovimientos} dataSource={movimientos} rowKey="id_movimiento_tarjeta" pageSize={8} />
                 ) : (
-                  <Table columns={colsCargas} dataSource={cargas} rowKey="id" pageSize={8} />
+                  <Table columns={colsCargas} dataSource={cargas} rowKey="id_carga" pageSize={8} />
                 )}
               </div>
             </div>

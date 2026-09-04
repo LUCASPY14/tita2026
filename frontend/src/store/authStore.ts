@@ -5,7 +5,7 @@ import api from '../services/api'
 const INACTIVITY_MS = 60 * 60 * 1000 // 60 minutes
 
 interface User {
-  id: number
+  id_usuario: number
   email: string
   nombre: string
   apellido: string

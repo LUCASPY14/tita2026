@@ -16,6 +16,7 @@ from django.db import models, transaction
 class Categoria(models.Model):
     """Categoría jerárquica para organizar productos."""
 
+    id_categoria = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100, help_text="Nombre de la categoría")
     descripcion = models.TextField(blank=True, default="")
     categoria_padre = models.ForeignKey(
@@ -50,6 +51,7 @@ class Categoria(models.Model):
 class UnidadMedida(models.Model):
     """Unidad de medida para productos (kg, litro, unidad, etc.)."""
 
+    id_unidad_medida = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=50, help_text="Nombre completo (Kilogramo, Litro)")
     abreviatura = models.CharField(max_length=10, help_text="Abreviatura (Kg, L, Un)")
     activo = models.BooleanField(default=True)
@@ -70,6 +72,7 @@ class UnidadMedida(models.Model):
 class Producto(models.Model):
     """Producto disponible en la cantina."""
 
+    id_producto = models.BigAutoField(primary_key=True)
     codigo_barra = models.CharField(
         max_length=50, unique=True, blank=True, null=True,
         help_text="Código de barras para escaneo",
@@ -161,6 +164,7 @@ class Producto(models.Model):
 class ListaPrecio(models.Model):
     """Lista de precios diferenciada (minorista, mayorista, estudiante)."""
 
+    id_lista_precio = models.BigAutoField(primary_key=True)
     nombre = models.CharField(unique=True, max_length=100)
     fecha_vigencia = models.DateField(blank=True, null=True)
     moneda = models.CharField(max_length=3, default="PYG")
@@ -198,6 +202,7 @@ class ListaPrecio(models.Model):
 class PrecioPorLista(models.Model):
     """Precio de un producto en una lista específica."""
 
+    id_precio_lista = models.BigAutoField(primary_key=True)
     producto = models.ForeignKey(
         Producto, models.CASCADE, related_name="precios"
     )
@@ -227,6 +232,7 @@ class PrecioPorLista(models.Model):
 class HistoricoPrecio(models.Model):
     """Registro de cambios de precios."""
 
+    id_historico_precio = models.BigAutoField(primary_key=True)
     producto = models.ForeignKey(
         Producto, models.CASCADE, related_name="historico_precios"
     )
@@ -263,6 +269,7 @@ class HistoricoPrecio(models.Model):
 class Impuesto(models.Model):
     """Impuesto aplicable a productos (IVA 10%, IVA 5%, Exento)."""
 
+    id_impuesto = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
     porcentaje = models.DecimalField(max_digits=5, decimal_places=2)
     vigente_desde = models.DateField()
@@ -285,6 +292,7 @@ class Impuesto(models.Model):
 class ProductoImpuesto(models.Model):
     """Relación producto-impuesto (un producto puede tener varios impuestos)."""
 
+    id_producto_impuesto = models.BigAutoField(primary_key=True)
     producto = models.ForeignKey(
         Producto, models.CASCADE, related_name="impuestos"
     )

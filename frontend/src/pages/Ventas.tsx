@@ -20,7 +20,7 @@ import {
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface DetalleVenta {
-  id: number
+  id_detalle_venta: number
   producto: number
   producto_nombre: string
   cantidad: string
@@ -29,7 +29,7 @@ interface DetalleVenta {
 }
 
 interface Venta {
-  id: number
+  id_venta: number
   fecha: string
   cliente: number | null
   cliente_nombre: string | null
@@ -46,7 +46,7 @@ interface Venta {
 }
 
 interface CajeroOption {
-  id: number
+  id_usuario: number
   nombre: string
   apellido: string
   email: string
@@ -139,10 +139,10 @@ export default function Ventas() {
   // ── Cargar clientes + productos (para el formulario de Nota de Crédito) ─────
   useEffect(() => {
     api.get('/clientes/clientes/', { params: { page_size: 500, activo: true } })
-      .then(({ data }) => setClientesOpt((data.results ?? []).map((c: { id: number; nombre_completo: string }) => ({ id: c.id, nombre_completo: c.nombre_completo }))))
+      .then(({ data }) => setClientesOpt((data.results ?? []).map((c: { id_cliente: number; nombre_completo: string }) => ({ id_cliente: c.id_cliente, nombre_completo: c.nombre_completo }))))
       .catch(() => {})
     api.get('/productos/productos/', { params: { page_size: 500, activo: true } })
-      .then(({ data }) => setProductosOpt((data.results ?? []).map((p: { id: number; descripcion: string }) => ({ id: p.id, descripcion: p.descripcion }))))
+      .then(({ data }) => setProductosOpt((data.results ?? []).map((p: { id_producto: number; descripcion: string }) => ({ id_producto: p.id_producto, descripcion: p.descripcion }))))
       .catch(() => {})
   }, [])
 
@@ -169,7 +169,7 @@ export default function Ventas() {
 
   function emitirNCDesdeVenta(v: Venta) {
     setNcInitialVenta({
-      id: v.id,
+      id_venta: v.id_venta,
       fecha: v.fecha,
       monto_total: v.monto_total,
       cliente: v.cliente ?? 0,
@@ -262,8 +262,8 @@ export default function Ventas() {
     if (!confirmAnular) return
     setAnulando(true)
     try {
-      await api.post(`/ventas/ventas/${confirmAnular.id}/anular/`)
-      toast.success(`Venta #${confirmAnular.id} anulada`)
+      await api.post(`/ventas/ventas/${confirmAnular.id_venta}/anular/`)
+      toast.success(`Venta #${confirmAnular.id_venta} anulada`)
       setConfirmAnular(null)
       fetchVentas(page)
     } catch (err) {
@@ -377,7 +377,7 @@ export default function Ventas() {
                   <select value={cajeroId} onChange={e => setCajeroId(e.target.value)} className={inputClass}>
                     <option value="">Todos</option>
                     {cajeros.map(c => (
-                      <option key={c.id} value={c.id}>
+                      <option key={c.id_usuario} value={c.id_usuario}>
                         {`${c.nombre} ${c.apellido}`.trim() || c.email}
                       </option>
                     ))}
@@ -432,17 +432,17 @@ export default function Ventas() {
         ) : (
           <ul className="divide-y divide-slate-100">
             {ventas.map(v => {
-              const isExp = expandedId === v.id
+              const isExp = expandedId === v.id_venta
               const persona = v.hijo_nombre ?? v.cliente_nombre ?? '—'
               const pendiente = (v.estado_pago === 'PENDIENTE' || v.estado_pago === 'PARCIAL') && Number(v.saldo_pendiente) > 0
 
               return (
-                <li key={v.id} className={v.estado === 'ANULADA' ? 'opacity-60' : ''}>
+                <li key={v.id_venta} className={v.estado === 'ANULADA' ? 'opacity-60' : ''}>
                   <div
                     role="button"
                     tabIndex={0}
-                    onClick={() => setExpandedId(isExp ? null : v.id)}
-                    onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setExpandedId(isExp ? null : v.id)}
+                    onClick={() => setExpandedId(isExp ? null : v.id_venta)}
+                    onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setExpandedId(isExp ? null : v.id_venta)}
                     className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-slate-50 transition-colors group cursor-pointer"
                   >
                     {/* Icono */}
@@ -509,7 +509,7 @@ export default function Ventas() {
                       ) : (
                         <ul className="space-y-1.5 mt-1">
                           {v.detalles.map(d => (
-                            <li key={d.id} className="flex items-center justify-between text-sm text-slate-600">
+                            <li key={d.id_detalle_venta} className="flex items-center justify-between text-sm text-slate-600">
                               <span>
                                 <span className="font-semibold text-slate-700 tabular-nums">{d.cantidad}×</span>
                                 {' '}{d.producto_nombre}
@@ -577,7 +577,7 @@ export default function Ventas() {
             <h2 className="text-base font-semibold text-slate-800">Notas de Crédito</h2>
           </div>
           <div className="p-1">
-            <Table columns={colsNotas} dataSource={notas} rowKey="id" loading={loadingNotas}
+            <Table columns={colsNotas} dataSource={notas} rowKey="id_nota_credito" loading={loadingNotas}
               pageSize={PAGE_SIZE} page={pageNotas} onPageChange={setPageNotas} total={totalNotas} />
           </div>
         </div>
@@ -600,7 +600,7 @@ export default function Ventas() {
               </div>
             </div>
             <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1 text-sm">
-              <p className="text-slate-500">Venta <span className="font-semibold text-slate-800">#{confirmAnular.id}</span></p>
+              <p className="text-slate-500">Venta <span className="font-semibold text-slate-800">#{confirmAnular.id_venta}</span></p>
               <p className="text-slate-500">Cliente: <span className="font-semibold text-slate-800">{confirmAnular.hijo_nombre ?? confirmAnular.cliente_nombre ?? '—'}</span></p>
               <p className="text-slate-500">Monto: <span className="font-semibold text-slate-800">{formatGs(confirmAnular.monto_total)}</span></p>
               <p className="text-slate-500">Fecha: <span className="font-semibold text-slate-800">{formatFecha(confirmAnular.fecha)}</span></p>

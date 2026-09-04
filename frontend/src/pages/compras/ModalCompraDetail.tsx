@@ -21,7 +21,7 @@ export default function ModalCompraDetail({ compra, canApprove, confirmandoEntre
   return (
     <Modal
       open={!!compra}
-      title={compra ? `Compra #${compra.id} — ${compra.proveedor_nombre}` : ''}
+      title={compra ? `Compra #${compra.id_compra} — ${compra.proveedor_nombre}` : ''}
       onCancel={onClose}
       width={680}
       footer={null}
@@ -65,7 +65,7 @@ export default function ModalCompraDetail({ compra, canApprove, confirmandoEntre
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {(compra.detalles ?? []).map(d => (
-                  <tr key={d.id}>
+                  <tr key={d.id_detalle_compra}>
                     <td className="px-4 py-2.5 text-slate-700">{d.producto_nombre}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{d.cantidad}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{formatGs(d.costo_unitario)}</td>
@@ -83,10 +83,10 @@ export default function ModalCompraDetail({ compra, canApprove, confirmandoEntre
                 <Button
                   variant="secondary"
                   onClick={() => onConfirmarEntrega(compra)}
-                  disabled={confirmandoEntrega === compra.id}
+                  disabled={confirmandoEntrega === compra.id_compra}
                 >
                   <PackageCheck className="w-4 h-4" />
-                  {confirmandoEntrega === compra.id ? 'Confirmando...' : 'Confirmar Entrega'}
+                  {confirmandoEntrega === compra.id_compra ? 'Confirmando...' : 'Confirmar Entrega'}
                 </Button>
               )}
               {canApprove && (compra.estado_pago === 'PENDIENTE' || compra.estado_pago === 'PARCIAL') && (

@@ -39,7 +39,7 @@ export default function TabUnidadesMedida({ onDelete }: { onDelete: (t: DeleteTa
     setSaving(true)
     try {
       if (editing) {
-        await api.put(`/productos/unidades-medida/${editing.id}/`, form)
+        await api.put(`/productos/unidades-medida/${editing.id_unidad_medida}/`, form)
         toast.success('Unidad actualizada')
       } else {
         await api.post('/productos/unidades-medida/', form)
@@ -59,7 +59,7 @@ export default function TabUnidadesMedida({ onDelete }: { onDelete: (t: DeleteTa
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Button size="sm" variant="secondary" onClick={() => open(r)}><Edit2 className="w-3.5 h-3.5" /></Button>
-          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/productos/unidades-medida/${r.id}/`, label: r.nombre, reloadFn: load })}>
+          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/productos/unidades-medida/${r.id_unidad_medida}/`, label: r.nombre, reloadFn: load })}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -74,7 +74,7 @@ export default function TabUnidadesMedida({ onDelete }: { onDelete: (t: DeleteTa
       </div>
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-1">
-          <Table columns={columns} dataSource={items} rowKey="id" loading={loading} pageSize={20} />
+          <Table columns={columns} dataSource={items} rowKey="id_unidad_medida" loading={loading} pageSize={20} />
         </div>
       </div>
       <Modal open={modal} title={editing ? 'Editar Unidad de Medida' : 'Nueva Unidad de Medida'} onOk={save} onCancel={() => setModal(false)} okText={editing ? 'Guardar' : 'Crear'} confirmLoading={saving} width={400}>

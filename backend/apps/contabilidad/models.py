@@ -16,6 +16,7 @@ from simple_history.models import HistoricalRecords
 class Caja(models.Model):
     """Caja registradora o punto de venta físico."""
 
+    id_caja = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=50)
     ubicacion = models.CharField(max_length=100, blank=True, null=True)
     activo = models.BooleanField(default=True)
@@ -40,6 +41,7 @@ class CierreCaja(models.Model):
         CERRADO = "CERRADO", "Cerrado"
         CONCILIADO = "CONCILIADO", "Conciliado"
 
+    id_cierre = models.BigAutoField(primary_key=True)
     caja = models.ForeignKey(
         Caja, models.PROTECT, related_name="cierres"
     )
@@ -95,6 +97,7 @@ class MovimientoCaja(models.Model):
         INGRESO = "INGRESO", "Ingreso"
         EGRESO = "EGRESO", "Egreso"
 
+    id_movimiento_caja = models.BigAutoField(primary_key=True)
     cierre = models.ForeignKey(
         CierreCaja, models.PROTECT,
         null=True, blank=True,
@@ -143,6 +146,7 @@ class Factura(models.Model):
         EMITIDA = "EMITIDA", "Emitida"
         ANULADA = "ANULADA", "Anulada"
 
+    id_factura = models.BigAutoField(primary_key=True)
     nro_factura = models.CharField(
         max_length=20, unique=True,
         help_text="Número preimpreso (ej: 001-001-0001234)",
@@ -188,6 +192,7 @@ class Factura(models.Model):
 class DatosEmpresa(models.Model):
     """Datos fiscales de la cantina para emisión de documentos."""
 
+    id_datos_empresa = models.BigAutoField(primary_key=True)
     ruc = models.CharField(max_length=20)
     razon_social = models.CharField(max_length=255)
     nombre_fantasia = models.CharField(max_length=255, blank=True, null=True)

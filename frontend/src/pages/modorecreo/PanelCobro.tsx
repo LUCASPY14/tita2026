@@ -106,11 +106,11 @@ export default function PanelCobro({
                 Prepago
               </button>
               {mediosPago.map(mp => (
-                <button key={mp.id}
-                  onClick={() => { onModoPago('MEDIO'); onMedioPagoId(mp.id) }}
+                <button key={mp.id_medio_pago}
+                  onClick={() => { onModoPago('MEDIO'); onMedioPagoId(mp.id_medio_pago) }}
                   className={[
                     'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border-2 transition-all cursor-pointer',
-                    modoPago === 'MEDIO' && medioPagoSelId === mp.id
+                    modoPago === 'MEDIO' && medioPagoSelId === mp.id_medio_pago
                       ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
                       : 'bg-white border-slate-300 text-slate-600 hover:border-emerald-300',
                   ].join(' ')}

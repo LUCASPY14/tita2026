@@ -260,11 +260,11 @@ class TestSuscripcionAlmuerzoAccesoClienteWeb:
 
     def test_cliente_web_puede_ver_la_suscripcion_de_su_hijo(self, api_cliente_web, suscripcion_activa, hijo_almuerzo):
         resp = api_cliente_web.get(
-            "/api/v1/almuerzos/suscripciones/", {"hijo": hijo_almuerzo.id, "estado": "ACTIVA"}
+            "/api/v1/almuerzos/suscripciones/", {"hijo": hijo_almuerzo.id_hijo, "estado": "ACTIVA"}
         )
         assert resp.status_code == 200
-        ids = [s["id"] for s in resp.data["results"]]
-        assert suscripcion_activa.id in ids
+        ids = [s["id_suscripcion"] for s in resp.data["results"]]
+        assert suscripcion_activa.id_suscripcion in ids
 
     def test_cliente_web_no_ve_suscripciones_de_otra_familia(
         self, api_cliente_web, suscripcion_activa, tipo_cliente, lista_precio
@@ -289,12 +289,12 @@ class TestSuscripcionAlmuerzoAccesoClienteWeb:
 
         resp = api_cliente_web.get("/api/v1/almuerzos/suscripciones/")
         assert resp.status_code == 200
-        ids = [s["id"] for s in resp.data["results"]]
-        assert otra_suscripcion.id not in ids
+        ids = [s["id_suscripcion"] for s in resp.data["results"]]
+        assert otra_suscripcion.id_suscripcion not in ids
 
     def test_cliente_web_no_puede_crear_suscripciones(self, api_cliente_web, hijo_almuerzo, plan_sin_limite):
         resp = api_cliente_web.post("/api/v1/almuerzos/suscripciones/", {
-            "hijo": hijo_almuerzo.id, "plan": plan_sin_limite.id,
+            "hijo": hijo_almuerzo.id_hijo, "plan": plan_sin_limite.id_plan_almuerzo,
             "fecha_inicio": str(date.today()),
         })
         assert resp.status_code == 403
@@ -302,8 +302,8 @@ class TestSuscripcionAlmuerzoAccesoClienteWeb:
     def test_cajero_sigue_viendo_todas_las_suscripciones(self, api_cajero, suscripcion_activa):
         resp = api_cajero.get("/api/v1/almuerzos/suscripciones/")
         assert resp.status_code == 200
-        ids = [s["id"] for s in resp.data["results"]]
-        assert suscripcion_activa.id in ids
+        ids = [s["id_suscripcion"] for s in resp.data["results"]]
+        assert suscripcion_activa.id_suscripcion in ids
 
 
 # ── PrecioAlmuerzoViewSet — precio_actual ─────────────────────────────────────
@@ -633,16 +633,16 @@ class TestCuentaMensual:
             "/api/v1/almuerzos/cuentas-mensuales/", {"estado": "PENDIENTE,PARCIAL"}
         )
         assert resp.status_code == 200
-        ids = [c["id"] for c in resp.data["results"]]
-        assert cuenta_mensual.id in ids
+        ids = [c["id_cuenta_mensual"] for c in resp.data["results"]]
+        assert cuenta_mensual.id_cuenta_mensual in ids
 
     def test_filtro_estado_un_solo_valor_sigue_funcionando(self, api_cliente_web, cuenta_mensual):
         resp = api_cliente_web.get(
             "/api/v1/almuerzos/cuentas-mensuales/", {"estado": "PAGADO"}
         )
         assert resp.status_code == 200
-        ids = [c["id"] for c in resp.data["results"]]
-        assert cuenta_mensual.id not in ids
+        ids = [c["id_cuenta_mensual"] for c in resp.data["results"]]
+        assert cuenta_mensual.id_cuenta_mensual not in ids
 
     def test_solo_admin_puede_generar(self, api_cajero):
         resp = api_cajero.post(

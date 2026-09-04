@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
-const ADMIN  = { id: 1, email: 'admin@cantina.com',  nombre: 'Admin',  apellido: 'Tita', rol: 'ADMIN' }
-const CAJERO = { id: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
+const ADMIN  = { id_usuario: 1, email: 'admin@cantina.com',  nombre: 'Admin',  apellido: 'Tita', rol: 'ADMIN' }
+const CAJERO = { id_usuario: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
 
 async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN | typeof CAJERO) {
   await page.route(/\/api\/v1\//, (route) =>
@@ -15,7 +15,7 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN
       body: JSON.stringify({ access: 'tok', refresh: 'ref', user }) })
   )
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(user.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')
@@ -42,12 +42,12 @@ const TARJETAS_MOCK = {
 const MOVIMIENTOS_MOCK = {
   results: [
     {
-      id: 10, tipo: 'RECARGA', monto: '20000',
+      id_movimiento_tarjeta: 10, tipo: 'RECARGA', monto: '20000',
       fecha: '2026-06-15T10:00:00Z', descripcion: 'Recarga manual',
       saldo_anterior: '30000', saldo_resultante: '50000',
     },
     {
-      id: 9, tipo: 'CONSUMO', monto: '5000',
+      id_movimiento_tarjeta: 9, tipo: 'CONSUMO', monto: '5000',
       fecha: '2026-06-14T12:30:00Z', descripcion: 'Venta cantina',
       saldo_anterior: '35000', saldo_resultante: '30000',
     },

@@ -34,7 +34,7 @@ class CajaAdmin(admin.ModelAdmin):
 @admin.register(CierreCaja)
 class CierreCajaAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_cierre",
         "caja_link",
         "empleado_link",
         "fecha_apertura",
@@ -110,7 +110,7 @@ class CierreCajaAdmin(admin.ModelAdmin):
 @admin.register(MovimientoCaja)
 class MovimientoCajaAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_movimiento_caja",
         "cierre_link",
         "tipo_badge",
         "monto_display",
@@ -119,7 +119,7 @@ class MovimientoCajaAdmin(admin.ModelAdmin):
         "fecha",
     ]
     list_filter = ["tipo", "medio_pago", "fecha"]
-    search_fields = ["descripcion", "venta__id"]
+    search_fields = ["descripcion", "venta__id_venta"]
     list_select_related = ["cierre", "medio_pago", "venta"]
     date_hierarchy = "fecha"
     ordering = ["-fecha"]

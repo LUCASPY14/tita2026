@@ -108,7 +108,7 @@ describe('authStore', () => {
     localStorage.setItem('refresh_token', 'ref')
     useAuthStore.setState({
       isAuthenticated: true,
-      user: { id: 1, email: 'x', nombre: 'X', apellido: 'Y', rol: 'ADMIN', debe_cambiar_contrasena: false },
+      user: { id_usuario: 1, email: 'x', nombre: 'X', apellido: 'Y', rol: 'ADMIN', debe_cambiar_contrasena: false },
     })
 
     useAuthStore.getState().logout()

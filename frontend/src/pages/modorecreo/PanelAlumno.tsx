@@ -91,7 +91,7 @@ export default function PanelAlumno({
                   </span>
                 </div>
                 {tarjeta.hijo_restricciones.map(r => (
-                  <div key={r.id} className="flex items-center gap-2">
+                  <div key={r.id_restriccion} className="flex items-center gap-2">
                     <span className="text-sm">🚫</span>
                     <span className="text-red-700 text-sm font-semibold leading-tight flex-1">{r.descripcion || r.tipo}</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
@@ -199,7 +199,7 @@ export default function PanelAlumno({
                 {clienteResultados.length > 0 && (
                   <ul className="border border-slate-200 rounded-xl overflow-hidden">
                     {clienteResultados.map(c => (
-                      <li key={c.id}>
+                      <li key={c.id_cliente}>
                         <button
                           type="button"
                           onClick={() => { onSelectCliente(c); onVentaStartTime() }}

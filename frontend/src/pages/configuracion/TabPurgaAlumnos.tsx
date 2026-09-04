@@ -8,7 +8,7 @@ import Table, { type Column } from '../../components/ui/Table'
 import { extractErrorMessage } from './helpers'
 
 interface HijoPendiente {
-  id: number
+  id_hijo: number
   nombre: string
   apellido: string
   cliente_nombre: string
@@ -46,7 +46,7 @@ export default function TabPurgaAlumnos() {
     if (!target) return
     setAprobando(true)
     try {
-      await api.post(`/clientes/hijos/${target.id}/aprobar-purga/`)
+      await api.post(`/clientes/hijos/${target.id_hijo}/aprobar-purga/`)
       toast.success('Datos del alumno anonimizados')
       setTarget(null)
       load()
@@ -92,7 +92,7 @@ export default function TabPurgaAlumnos() {
           <p className="text-sm">No hay alumnos pendientes de purga</p>
         </div>
       ) : (
-        <Table columns={columns} dataSource={pendientes} rowKey="id" loading={loading} />
+        <Table columns={columns} dataSource={pendientes} rowKey="id_hijo" loading={loading} />
       )}
 
       <Modal

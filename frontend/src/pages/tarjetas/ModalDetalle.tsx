@@ -162,7 +162,7 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
     {
       title: '', key: 'accion', width: 110,
       render: (_, r) => r.estado === 'PENDIENTE' ? (
-        <Button size="sm" variant="primary" onClick={() => { setConfirmCargaId(r.id); setConfirmFactura({ emitir: false, nro: '' }) }}>
+        <Button size="sm" variant="primary" onClick={() => { setConfirmCargaId(r.id_carga); setConfirmFactura({ emitir: false, nro: '' }) }}>
           Confirmar
         </Button>
       ) : null,
@@ -249,10 +249,10 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
                 <option value="REVERSO">Reverso</option>
               </select>
             </div>
-            <Table columns={colsMovimientos} dataSource={movimientosFiltrados} rowKey="id" pageSize={8} />
+            <Table columns={colsMovimientos} dataSource={movimientosFiltrados} rowKey="id_movimiento_tarjeta" pageSize={8} />
           </>
         ) : (
-          <Table columns={colsCargas} dataSource={cargas} rowKey="id" pageSize={8} />
+          <Table columns={colsCargas} dataSource={cargas} rowKey="id_carga" pageSize={8} />
         )}
 
         <div className="flex justify-end mt-5">

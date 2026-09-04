@@ -1,9 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 
-const ADMIN = { id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
+const ADMIN = { id_usuario: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
 
 const PROVEEDOR_MOCK = {
-  id: 1,
+  id_proveedor: 1,
   razon_social: 'Distribuidora El Sol',
   ruc: '80012345-1',
   telefono: '0981000001',
@@ -14,7 +14,7 @@ const PROVEEDOR_MOCK = {
 const COMPRAS_LIST = {
   results: [
     {
-      id: 50,
+      id_compra: 50,
       proveedor: 1,
       proveedor_nombre: 'Distribuidora El Sol',
       fecha: new Date().toISOString().split('T')[0],
@@ -23,7 +23,7 @@ const COMPRAS_LIST = {
       estado: 'REGISTRADA',
     },
     {
-      id: 49,
+      id_compra: 49,
       proveedor: 1,
       proveedor_nombre: 'Distribuidora El Sol',
       fecha: new Date(Date.now() - 86400000).toISOString().split('T')[0],
@@ -59,7 +59,7 @@ async function loginAs(page: Page, user: typeof ADMIN) {
     })
   )
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(user.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')

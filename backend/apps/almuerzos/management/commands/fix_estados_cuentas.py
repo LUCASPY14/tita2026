@@ -20,7 +20,7 @@ class Command(BaseCommand):
                 estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
             ).aggregate(
                 total=Sum("costo_almuerzo"),
-                cantidad=Count("id"),
+                cantidad=Count("id_registro_consumo"),
             )
             real_total = agg["total"] or 0
             real_cantidad = agg["cantidad"] or 0

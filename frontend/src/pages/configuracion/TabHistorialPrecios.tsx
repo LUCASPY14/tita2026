@@ -66,7 +66,7 @@ export default function TabHistorialPrecios() {
         <label className={labelClass}>Filtrar por producto</label>
         <div className="max-w-sm">
           <Combobox
-            options={productosLookup.map(p => ({ value: p.id, label: p.descripcion }))}
+            options={productosLookup.map(p => ({ value: p.id_producto, label: p.descripcion }))}
             value={productoId}
             onChange={v => { setProductoId(v as number | undefined); setPage(1) }}
             placeholder="Todos los productos..."
@@ -78,7 +78,7 @@ export default function TabHistorialPrecios() {
           <Table
             columns={columns}
             dataSource={historico}
-            rowKey="id"
+            rowKey="id_historico_precio"
             loading={loading}
             pageSize={15}
             page={page}

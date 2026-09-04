@@ -16,6 +16,7 @@ from django.utils import timezone
 class Proveedor(models.Model):
     """Proveedores de productos para la cantina."""
 
+    id_proveedor = models.BigAutoField(primary_key=True)
     ruc = models.CharField(
         unique=True, max_length=20, help_text="RUC del proveedor"
     )
@@ -43,7 +44,7 @@ class Proveedor(models.Model):
     @property
     def saldo_cuenta_corriente(self):
         """Saldo actual con el proveedor. Positivo = deuda pendiente de pago."""
-        ultimo = self.movimientos_cuenta.order_by("-id").first()
+        ultimo = self.movimientos_cuenta.order_by("-id_movimiento_ccp").first()
         return ultimo.saldo_resultante if ultimo else Decimal("0")
 
 
@@ -64,6 +65,7 @@ class CuentaCorrienteProveedor(models.Model):
         NOTA_CREDITO = "NOTA_CREDITO", "Nota de Crédito"  # Devolución
         AJUSTE = "AJUSTE", "Ajuste"        # Corrección manual
 
+    id_movimiento_ccp = models.BigAutoField(primary_key=True)
     proveedor = models.ForeignKey(
         Proveedor,
         on_delete=models.PROTECT,
@@ -118,7 +120,7 @@ class CuentaCorrienteProveedor(models.Model):
     class Meta:
         verbose_name = "Movimiento de Cuenta Corriente Proveedor"
         verbose_name_plural = "Cuentas Corrientes de Proveedores"
-        ordering = ["-fecha", "-id"]
+        ordering = ["-fecha", "-id_movimiento_ccp"]
         indexes = [
             models.Index(fields=["proveedor", "fecha"], name="idx_cc_prov_fecha"),
             models.Index(fields=["proveedor", "tipo"], name="idx_cc_prov_tipo"),
@@ -137,7 +139,7 @@ class CuentaCorrienteProveedor(models.Model):
             ultimo = (
                 CuentaCorrienteProveedor.objects
                 .filter(proveedor=self.proveedor)
-                .order_by("-id")
+                .order_by("-id_movimiento_ccp")
                 .first()
             )
             self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
@@ -171,6 +173,7 @@ class Compra(models.Model):
         PENDIENTE = "PENDIENTE", "Pendiente"
         RECIBIDA  = "RECIBIDA",  "Recibida"
 
+    id_compra = models.BigAutoField(primary_key=True)
     proveedor = models.ForeignKey(
         Proveedor, models.PROTECT, related_name="compras"
     )
@@ -249,6 +252,7 @@ class Compra(models.Model):
 class DetalleCompra(models.Model):
     """Productos incluidos en una compra."""
 
+    id_detalle_compra = models.BigAutoField(primary_key=True)
     compra = models.ForeignKey(
         Compra, models.CASCADE, related_name="detalles"
     )
@@ -287,6 +291,7 @@ class PagoProveedor(models.Model):
     class Estado(models.TextChoices):
         CONCILIADO = "CONCILIADO", "Conciliado"
 
+    id_pago_proveedor = models.BigAutoField(primary_key=True)
     proveedor = models.ForeignKey(
         Proveedor, models.PROTECT, related_name="pagos"
     )
@@ -329,6 +334,7 @@ class PagoProveedor(models.Model):
 class AplicacionPagoCompra(models.Model):
     """Relación entre un pago y las compras que cubre."""
 
+    id_aplicacion_pago_compra = models.BigAutoField(primary_key=True)
     pago = models.ForeignKey(
         PagoProveedor, models.CASCADE, related_name="aplicaciones"
     )
@@ -342,7 +348,7 @@ class AplicacionPagoCompra(models.Model):
     class Meta:
         verbose_name = "Aplicación de Pago"
         verbose_name_plural = "Aplicaciones de Pagos"
-        ordering = ["id"]
+        ordering = ["id_aplicacion_pago_compra"]
 
     def __str__(self):
         return f"₲{self.monto_aplicado:,.0f} → Compra #{self.compra_id}"
@@ -364,6 +370,7 @@ class NotaCreditoProveedor(models.Model):
         AJUSTE_PRECIO = "AJUSTE_PRECIO", "Ajuste de precio"
         DEVOLUCION = "DEVOLUCION", "Devolución de mercadería"
 
+    id_nc_proveedor = models.BigAutoField(primary_key=True)
     proveedor = models.ForeignKey(
         Proveedor, models.PROTECT, related_name="notas_credito"
     )
@@ -430,6 +437,7 @@ class OrdenCompra(models.Model):
         CONTADO = "CONTADO", "Contado"
         CREDITO = "CREDITO", "Crédito"
 
+    id_orden_compra = models.BigAutoField(primary_key=True)
     proveedor = models.ForeignKey(
         Proveedor, on_delete=models.PROTECT, related_name="ordenes_compra",
     )
@@ -487,6 +495,7 @@ class OrdenCompra(models.Model):
 class DetalleOrdenCompra(models.Model):
     """Productos incluidos en una Orden de Compra."""
 
+    id_detalle_oc = models.BigAutoField(primary_key=True)
     orden = models.ForeignKey(
         OrdenCompra, on_delete=models.CASCADE, related_name="detalles",
     )
@@ -509,6 +518,7 @@ class DetalleOrdenCompra(models.Model):
 class DetalleNotaCreditoProveedor(models.Model):
     """Productos incluidos en una nota de crédito de proveedor."""
 
+    id_detalle_ncp = models.BigAutoField(primary_key=True)
     nota_credito = models.ForeignKey(
         NotaCreditoProveedor, models.CASCADE, related_name="detalles"
     )
@@ -526,7 +536,7 @@ class DetalleNotaCreditoProveedor(models.Model):
     class Meta:
         verbose_name = "Detalle de NC de Proveedor"
         verbose_name_plural = "Detalles de NC de Proveedores"
-        ordering = ["id"]
+        ordering = ["id_detalle_ncp"]
 
     def __str__(self):
         return f"{self.producto} x {self.cantidad} (NC #{self.nota_credito_id})"
@@ -543,6 +553,7 @@ class ProductoProveedor(models.Model):
     Almacena el último precio de compra conocido para ese proveedor.
     """
 
+    id_producto_proveedor = models.BigAutoField(primary_key=True)
     proveedor = models.ForeignKey(
         Proveedor,
         on_delete=models.CASCADE,

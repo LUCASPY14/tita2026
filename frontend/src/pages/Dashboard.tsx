@@ -491,7 +491,7 @@ export default function Dashboard() {
             </p>
             <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
               {r.cumpleaneros.map(c => (
-                <li key={c.id} className="text-sm text-pink-700">
+                <li key={c.id_hijo} className="text-sm text-pink-700">
                   {c.nombre}{c.grado ? <span className="text-pink-400"> — {c.grado}</span> : null}
                 </li>
               ))}
@@ -512,7 +512,7 @@ export default function Dashboard() {
             </p>
             <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
               {r.cumpleanerosPersonal.map(c => (
-                <li key={c.id} className="text-sm text-violet-700">
+                <li key={c.id_usuario} className="text-sm text-violet-700">
                   {c.nombre}<span className="text-violet-400"> — {ROL_LABEL[c.rol] ?? c.rol}</span>
                 </li>
               ))}

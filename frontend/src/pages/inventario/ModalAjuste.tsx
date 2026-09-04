@@ -40,7 +40,7 @@ export default function ModalAjuste({ open, productos, onClose, onSaved }: Props
         tipo: form.tipo,
         motivo: form.motivo,
         detalles: form.detalles.map(d => ({
-          producto: d.producto!.id,
+          producto: d.producto!.id_producto,
           cantidad: d.cantidad,
           motivo_detalle: d.motivo_detalle,
         })),
@@ -104,8 +104,8 @@ export default function ModalAjuste({ open, productos, onClose, onSaved }: Props
               <div key={idx} className="flex gap-2 items-center bg-slate-50 rounded-xl px-3 py-2">
                 <div className="flex-1">
                   <Combobox
-                    options={productos.map(p => ({ value: p.id, label: p.descripcion, data: p }))}
-                    value={det.producto?.id}
+                    options={productos.map(p => ({ value: p.id_producto, label: p.descripcion, data: p }))}
+                    value={det.producto?.id_producto}
                     onChange={(_, opt) => actualizarDetalle(idx, 'producto', opt.data as Producto)}
                     filterLocal
                     placeholder="Producto..."

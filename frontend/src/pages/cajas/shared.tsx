@@ -36,20 +36,20 @@ export function elapsedLabel(isoApertura: string): string {
 }
 
 export interface Caja {
-  id: number
+  id_caja: number
   nombre: string
   ubicacion: string | null
   activo: boolean
 }
 
 export interface MedioPago {
-  id: number
+  id_medio_pago: number
   descripcion: string
   activo: boolean
 }
 
 export interface CierreCaja {
-  id: number
+  id_cierre: number
   caja: number
   caja_nombre: string
   caja_activo: boolean

@@ -269,7 +269,7 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             request=request,
             operacion="ANULAR_REGISTRO_ALMUERZO",
             tabla="almuerzos_registroconsumoalmuerzo",
-            id_registro=registro.id,
+            id_registro=registro.id_registro_consumo,
             descripcion=(
                 f"Consumo anulado — hijo={registro.hijo_id} "
                 f"fecha={registro.fecha_consumo} costo={registro.costo_almuerzo} Gs."
@@ -581,14 +581,14 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
                     from apps.contabilidad.services import FacturacionService
                     FacturacionService.emitir_para_origen(
                         tipo="RECARGA_ALMUERZO",
-                        origen_id=recarga.id,
+                        origen_id=recarga.id_recarga_almuerzo,
                         nro_factura=nro_factura,
                     )
             registrar_auditoria(
                 request=request,
                 operacion="RECARGA_SALDO_ALMUERZO",
                 tabla="almuerzos_recargasaldoalmuerzo",
-                id_registro=recarga.id,
+                id_registro=recarga.id_recarga_almuerzo,
                 descripcion=(
                     f"Recarga {data['monto_cargado']} Gs. en saldo de almuerzo"
                     f" de {data['hijo']} vía {metodo}"
@@ -616,7 +616,7 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
                         CuentaCorrienteCliente.objects
                         .filter(cliente=cliente)
                         .select_for_update()
-                        .order_by("-id")
+                        .order_by("-id_movimiento_cc")
                         .first()
                     )
                     saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
@@ -649,7 +649,7 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
                 request=request,
                 operacion="RECARGA_SALDO_ALMUERZO",
                 tabla="almuerzos_recargasaldoalmuerzo",
-                id_registro=recarga.id,
+                id_registro=recarga.id_recarga_almuerzo,
                 descripcion=(
                     f"Recarga {data['monto_cargado']} Gs. en saldo de almuerzo"
                     f" de {hijo} vía cuenta corriente"
@@ -664,7 +664,7 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
             request=request,
             operacion="RECARGA_SALDO_ALMUERZO_PENDIENTE",
             tabla="almuerzos_recargasaldoalmuerzo",
-            id_registro=recarga.id,
+            id_registro=recarga.id_recarga_almuerzo,
             descripcion=(
                 f"Recarga {recarga.monto_cargado} Gs. en saldo de almuerzo"
                 f" de hijo={recarga.hijo_id} vía {metodo} — PENDIENTE confirmación"
@@ -698,14 +698,14 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
                 from apps.contabilidad.services import FacturacionService
                 FacturacionService.emitir_para_origen(
                     tipo="RECARGA_ALMUERZO",
-                    origen_id=recarga_confirmada.id,
+                    origen_id=recarga_confirmada.id_recarga_almuerzo,
                     nro_factura=nro_factura,
                 )
         registrar_auditoria(
             request=request,
             operacion="CONFIRMAR_RECARGA_ALMUERZO",
             tabla="almuerzos_recargasaldoalmuerzo",
-            id_registro=recarga_confirmada.id,
+            id_registro=recarga_confirmada.id_recarga_almuerzo,
             descripcion=(
                 f"Confirmación recarga {recarga_confirmada.monto_cargado} Gs."
                 f" en saldo de almuerzo de hijo={recarga_confirmada.hijo_id}"
@@ -920,9 +920,9 @@ class ReporteConsumoGradoView(APIView):
                 "hijo__grado__orden",
             )
             .annotate(
-                n_consumos=Count("id", filter=Q(estado="REGISTRADO")),
-                n_rechazados=Count("id", filter=Q(estado="RECHAZADO")),
-                n_anulados=Count("id", filter=Q(estado="ANULADO")),
+                n_consumos=Count("id_registro_consumo", filter=Q(estado="REGISTRADO")),
+                n_rechazados=Count("id_registro_consumo", filter=Q(estado="RECHAZADO")),
+                n_anulados=Count("id_registro_consumo", filter=Q(estado="ANULADO")),
                 monto_total=Sum("costo_almuerzo", filter=Q(estado="REGISTRADO")),
             )
             .order_by("hijo__grado__nivel", "hijo__grado__orden")
@@ -951,7 +951,7 @@ class ReporteConsumoGradoView(APIView):
             .filter(estado="REGISTRADO")
             .annotate(hora=ExtractHour("hora_registro"))
             .values("hora")
-            .annotate(n=Count("id"))
+            .annotate(n=Count("id_registro_consumo"))
             .order_by("hora")
         )
         horarios = [{"hora": r["hora"], "n": r["n"]} for r in horas_qs]
@@ -1023,7 +1023,7 @@ class ReporteCobranzaAlmuerzosView(APIView):
         consumido_por_mes = {
             r["mes"]: {"n_alumnos": r["n_alumnos"], "monto_total": int(r["monto_total"] or 0)}
             for r in qs.values("mes").annotate(
-                n_alumnos=Count("id"), monto_total=Sum("monto_total"),
+                n_alumnos=Count("id_cuenta_mensual"), monto_total=Sum("monto_total"),
             )
         }
 
@@ -1046,7 +1046,7 @@ class ReporteCobranzaAlmuerzosView(APIView):
             )
         }
         por_metodo_qs = recargas_qs.values("metodo_pago").annotate(
-            total=Sum("monto_cargado"), n=Count("id"),
+            total=Sum("monto_cargado"), n=Count("id_recarga_almuerzo"),
         )
         cobrado_por_metodo = {r["metodo_pago"]: int(r["total"] or 0) for r in por_metodo_qs}
         n_recargas_por_metodo = {r["metodo_pago"]: r["n"] for r in por_metodo_qs}

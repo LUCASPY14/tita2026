@@ -75,7 +75,7 @@ export default function TabDatosEmpresa() {
     setSaving(true)
     try {
       if (empresa) {
-        await api.put(`/contabilidad/datos-empresa/${empresa.id}/`, form)
+        await api.put(`/contabilidad/datos-empresa/${empresa.id_datos_empresa}/`, form)
       } else {
         await api.post('/contabilidad/datos-empresa/', form)
       }

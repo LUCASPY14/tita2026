@@ -45,7 +45,7 @@ class Command(BaseCommand):
 
             if dry_run:
                 self.stdout.write(
-                    f"  [dry-run] Venta #{venta.id} "
+                    f"  [dry-run] Venta #{venta.id_venta} "
                     f"tarjeta={venta.tarjeta_id} -> hijo={hijo}"
                 )
             else:

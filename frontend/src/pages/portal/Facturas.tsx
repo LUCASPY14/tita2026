@@ -7,7 +7,7 @@ import Spinner from '../../components/ui/Spinner'
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface Factura {
-  id: number
+  id_factura: number
   nro_factura: string
   fecha_emision: string
   monto_total: string | number
@@ -74,7 +74,7 @@ export default function PortalFacturas() {
         ) : (
           <ul className="divide-y divide-slate-100">
             {facturas.map(f => (
-              <li key={f.id} className="flex items-center justify-between px-4 py-3.5">
+              <li key={f.id_factura} className="flex items-center justify-between px-4 py-3.5">
                 <div>
                   <p className="text-sm font-semibold text-slate-800 font-mono">{f.nro_factura}</p>
                   <p className="text-xs text-slate-400 mt-0.5">{formatFecha(f.fecha_emision)}</p>
@@ -86,12 +86,12 @@ export default function PortalFacturas() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => abrirPdf(f.id)}
-                    disabled={loadingPdf === f.id}
+                    onClick={() => abrirPdf(f.id_factura)}
+                    disabled={loadingPdf === f.id_factura}
                     className="flex items-center gap-1.5 text-xs font-medium text-green-700 border border-green-200 rounded-xl px-3 py-1.5 hover:bg-green-50 transition-colors cursor-pointer disabled:opacity-40"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    {loadingPdf === f.id ? '…' : 'PDF'}
+                    {loadingPdf === f.id_factura ? '…' : 'PDF'}
                   </button>
                 </div>
               </li>

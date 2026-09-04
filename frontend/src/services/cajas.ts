@@ -1,7 +1,7 @@
 import api from './api'
 
 export interface CierreCaja {
-  id:             number
+  id_cierre:      number
   caja:           number
   caja_nombre?:   string
   empleado:       number

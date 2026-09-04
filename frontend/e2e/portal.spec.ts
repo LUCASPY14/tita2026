@@ -3,20 +3,20 @@ import { test, expect } from '@playwright/test'
 // ─── Usuarios ─────────────────────────────────────────────────────────────────
 
 const CLIENTE_WEB = {
-  id: 10, email: 'papa@example.com', nombre: 'Carlos', apellido: 'García', rol: 'CLIENTE_WEB',
+  id_usuario: 10, email: 'papa@example.com', nombre: 'Carlos', apellido: 'García', rol: 'CLIENTE_WEB',
   debe_cambiar_contrasena: false, tiene_2fa_activo: true,
 }
 const ADMIN = {
-  id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN',
+  id_usuario: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN',
 }
 
 // ─── Mocks de datos ───────────────────────────────────────────────────────────
 
 const MI_HIJO_MOCK = {
-  cliente: { id: 10, nombre: 'Carlos García', email: 'papa@example.com' },
+  cliente: { id_cliente: 10, nombre: 'Carlos García', email: 'papa@example.com' },
   mes: { anio: 2026, mes: 6 },
   hijos: [{
-    id: 1,
+    id_hijo: 1,
     nombre: 'Lucas García',
     grado: '3° A',
     tarjeta: {
@@ -49,8 +49,8 @@ const HISTORIAL_MOCK = {
   mes: 6,
   hijo: { id: 1, nombre: 'Lucas García' },
   consumos: [
-    { id: 1, fecha_consumo: '2026-06-10', costo_almuerzo: '15000', ya_cobrado: true },
-    { id: 2, fecha_consumo: '2026-06-11', costo_almuerzo: '15000', ya_cobrado: false },
+    { id_registro_consumo: 1, fecha_consumo: '2026-06-10', costo_almuerzo: '15000', ya_cobrado: true },
+    { id_registro_consumo: 2, fecha_consumo: '2026-06-11', costo_almuerzo: '15000', ya_cobrado: false },
   ],
   total: 2,
   monto_total: 30000,
@@ -62,7 +62,7 @@ const CANTINA_MOCK = {
   next: false,
   results: [
     {
-      id: 1,
+      id_venta: 1,
       fecha: '2026-06-10T12:30:00Z',
       monto_total: 12500,
       detalles: [
@@ -501,11 +501,11 @@ test.describe('Portal — Control de acceso', () => {
 const NOTIFICACIONES_MOCK = {
   results: [
     {
-      id: 1, titulo: 'Saldo bajo', mensaje: 'El saldo de Lucas es menor a ₲5,000',
+      id_notificacion: 1, titulo: 'Saldo bajo', mensaje: 'El saldo de Lucas es menor a ₲5,000',
       leida: false, fecha: '2026-06-15T09:00:00Z', tipo: 'SALDO_BAJO',
     },
     {
-      id: 2, titulo: 'Almuerzo consumido', mensaje: 'Lucas consumió almuerzo hoy',
+      id_notificacion: 2, titulo: 'Almuerzo consumido', mensaje: 'Lucas consumió almuerzo hoy',
       leida: true, fecha: '2026-06-14T12:30:00Z', tipo: 'CONSUMO',
     },
   ],
@@ -534,7 +534,7 @@ test.describe('Portal — Notificaciones', () => {
 
 const FACTURAS_MOCK = [
   {
-    id: 1, nro_factura: '001-001-0000001',
+    id_factura: 1, nro_factura: '001-001-0000001',
     monto_total: '75000', iva_10: '6818',
     fecha_emision: '2026-06-01T00:00:00Z',
     estado: 'EMITIDA',

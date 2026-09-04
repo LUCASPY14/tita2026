@@ -14,13 +14,13 @@ vi.mock('react-hot-toast', () => ({
 
 import api from '../../../services/api'
 
-const HIJO: Hijo = { id: 1, nombre: 'Juan', apellido: 'Pérez', grado: '3° A', nombre_completo: 'Juan Pérez' }
+const HIJO: Hijo = { id_hijo: 1, nombre: 'Juan', apellido: 'Pérez', grado: '3° A', nombre_completo: 'Juan Pérez' }
 
 const TARJETA = { nro_tarjeta: 'T-001', hijo_nombre: 'Juan Pérez', saldo_actual: 50000, estado: 'ACTIVA' }
 
 const TIPOS: TipoAlmuerzo[] = [
-  { id: 1, nombre: 'Almuerzo Completo', descripcion: '', precio_unitario: 25000, incluye_plato_principal: true, incluye_postre: true, incluye_bebida: true, activo: true, es_predeterminado: true },
-  { id: 2, nombre: 'Almuerzo Simple', descripcion: '', precio_unitario: 20000, incluye_plato_principal: true, incluye_postre: false, incluye_bebida: false, activo: false, es_predeterminado: false },
+  { id_tipo_almuerzo: 1, nombre: 'Almuerzo Completo', descripcion: '', precio_unitario: 25000, incluye_plato_principal: true, incluye_postre: true, incluye_bebida: true, activo: true, es_predeterminado: true },
+  { id_tipo_almuerzo: 2, nombre: 'Almuerzo Simple', descripcion: '', precio_unitario: 20000, incluye_plato_principal: true, incluye_postre: false, incluye_bebida: false, activo: false, es_predeterminado: false },
 ]
 
 beforeEach(() => vi.clearAllMocks())

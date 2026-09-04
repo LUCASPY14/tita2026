@@ -12,7 +12,7 @@ import Badge from '../components/ui/Badge'
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface MenuDiario {
-  id: number
+  id_menu: number
   fecha: string
   plato_principal: string
   guarnicion: string
@@ -129,7 +129,7 @@ export default function MenuDiario() {
     setSaving(true)
     try {
       if (editingMenu) {
-        await api.put(`/almuerzos/menu/${editingMenu.id}/`, fields)
+        await api.put(`/almuerzos/menu/${editingMenu.id_menu}/`, fields)
         toast.success('Menú actualizado')
       } else {
         await api.post('/almuerzos/menu/', fields)
@@ -154,9 +154,9 @@ export default function MenuDiario() {
 
   // ── Toggle activo ──────────────────────────────────────────────────────────
   const toggleActivo = async (menu: MenuDiario) => {
-    setTogglingId(menu.id)
+    setTogglingId(menu.id_menu)
     try {
-      await api.patch(`/almuerzos/menu/${menu.id}/`, { activo: !menu.activo })
+      await api.patch(`/almuerzos/menu/${menu.id_menu}/`, { activo: !menu.activo })
       toast.success(menu.activo ? 'Menú archivado' : 'Menú activado')
       loadMenus(page)
       loadHoy()
@@ -212,7 +212,7 @@ export default function MenuDiario() {
             size="sm"
             variant="ghost"
             onClick={() => toggleActivo(r)}
-            disabled={togglingId === r.id}
+            disabled={togglingId === r.id_menu}
           >
             {r.activo ? t('menuDiario.archivar') : t('menuDiario.activar')}
           </Button>
@@ -279,7 +279,7 @@ export default function MenuDiario() {
           <Table
             columns={cols}
             dataSource={menus}
-            rowKey="id"
+            rowKey="id_menu"
             loading={loading}
             pageSize={15}
             page={page}

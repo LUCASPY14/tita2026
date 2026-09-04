@@ -34,7 +34,7 @@ import toast from 'react-hot-toast'
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const HIJO_BASE = {
-  id: 1,
+  id_hijo: 1,
   nombre: 'Juan García',
   grado: '3° A',
   tarjeta: { nro_tarjeta: 'T-001', saldo_actual: 75_000, estado: 'ACTIVA', en_alerta: false },
@@ -44,7 +44,7 @@ const HIJO_BASE = {
     ultimos: [] as { fecha_consumo: string; costo_almuerzo: string; ya_cobrado: boolean }[],
   },
   cuenta_mensual: null as {
-    id: number; cantidad_almuerzos: number; monto_total: number
+    id_cuenta_mensual: number; cantidad_almuerzos: number; monto_total: number
     monto_pagado: number; monto_pendiente: number; estado: string
   } | null,
   saldo_almuerzo: 0,
@@ -53,7 +53,7 @@ const HIJO_BASE = {
 
 const HIJO_CON_CUENTA = {
   ...HIJO_BASE,
-  id: 1,
+  id_hijo: 1,
   consumos_mes: {
     total: 5, cobrados: 3,
     ultimos: [] as { fecha_consumo: string; costo_almuerzo: string; ya_cobrado: boolean }[],
@@ -66,7 +66,7 @@ const HIJO_CON_CUENTA = {
 
 const HIJO2 = {
   ...HIJO_BASE,
-  id: 2,
+  id_hijo: 2,
   nombre: 'Lucía García',
   grado: '5° B',
   tarjeta: { nro_tarjeta: 'T-002', saldo_actual: 20_000, estado: 'ACTIVA', en_alerta: true },
@@ -283,7 +283,7 @@ describe('PortalDashboard — tabs', () => {
   it('tab Historial → llama historial-consumos con el mes actual y muestra los consumos', async () => {
     setupPortal({}, {
       total: 2, cobrados: 1, monto_total: 25000,
-      consumos: [{ id: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000', ya_cobrado: true }],
+      consumos: [{ id_registro_consumo: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000', ya_cobrado: true }],
     })
     renderDashboard()
     await screen.findByText('Juan García')

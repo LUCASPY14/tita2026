@@ -38,7 +38,7 @@ describe('ventasService', () => {
   })
 
   it('crear — devuelve la venta creada por el servidor', async () => {
-    const venta: Venta = { id: 42, tarjeta: 'CARD001', total: 6_000, fecha: '2026-06-18', estado: 'COMPLETADA' }
+    const venta: Venta = { id_venta: 42, tarjeta: 'CARD001', total: 6_000, fecha: '2026-06-18', estado: 'COMPLETADA' }
     vi.mocked(api.post).mockResolvedValue({ data: venta })
     const result = await ventasService.crear(PAYLOAD)
     expect(result.data).toEqual(venta)

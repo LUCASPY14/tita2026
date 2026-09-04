@@ -243,7 +243,7 @@ class Command(BaseCommand):
     def _procesar_tarjeta(self, nro_tarjeta, hijo, stats, warnings):
         existente = Tarjeta.objects.filter(pk=nro_tarjeta).first()
         if existente:
-            if existente.hijo_id == hijo.id:
+            if existente.hijo_id == hijo.id_hijo:
                 return  # ya estaba correctamente vinculada, nada que hacer
             titular = existente.hijo or existente.cliente_directo
             warnings.append(

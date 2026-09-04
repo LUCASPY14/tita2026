@@ -4,12 +4,12 @@ import type { BadgeColor } from '../../components/ui/Badge'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
-export interface TipoCliente { id: number; nombre: string; activo: boolean }
-export interface ListaPrecio { id: number; nombre: string }
-export interface Ciudad { id: number; nombre: string }
+export interface TipoCliente { id_tipo_cliente: number; nombre: string; activo: boolean }
+export interface ListaPrecio { id_lista_precio: number; nombre: string }
+export interface Ciudad { id_ciudad: number; nombre: string }
 
 export interface Cliente {
-  id: number
+  id_cliente: number
   nombres: string
   apellidos: string
   razon_social: string | null
@@ -49,10 +49,10 @@ export interface ClienteForm {
   modalidad_facturacion: 'INMEDIATA' | 'MENSUAL'
 }
 
-export interface GradoOption { id: number; nombre: string; activo: boolean }
+export interface GradoOption { id_grado: number; nombre: string; activo: boolean }
 
 export interface Hijo {
-  id: number
+  id_hijo: number
   nombre: string
   apellido: string
   fecha_nacimiento: string | null
@@ -76,7 +76,7 @@ export interface HijoForm {
 }
 
 export interface RestriccionHijo {
-  id: number
+  id_restriccion: number
   hijo: number
   tipo: string
   descripcion: string | null
@@ -86,7 +86,7 @@ export interface RestriccionHijo {
 }
 
 export interface AlumnoResponsable {
-  id: number
+  id_responsable: number
   hijo: number
   cliente: number
   cliente_nombre: string
@@ -111,7 +111,7 @@ export interface AgregarResponsableForm {
 }
 
 export interface DetalleConsumo {
-  id: number
+  id_detalle_venta: number
   producto_nombre: string
   cantidad: string
   precio_unitario: string
@@ -119,7 +119,7 @@ export interface DetalleConsumo {
 }
 
 export interface VentaConsumo {
-  id: number
+  id_venta: number
   fecha: string
   monto_total: string
   estado: string

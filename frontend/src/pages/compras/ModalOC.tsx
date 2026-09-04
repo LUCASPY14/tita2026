@@ -41,7 +41,7 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
         setOcItems(
           editingOC.detalles?.length
             ? editingOC.detalles.map(d => ({
-                producto: { id: d.producto, descripcion: d.producto_nombre, precio_actual: d.costo_unitario },
+                producto: { id_producto: d.producto, descripcion: d.producto_nombre, precio_actual: d.costo_unitario },
                 cantidad: d.cantidad,
                 costo_unitario: Number(d.costo_unitario) || 0,
                 subtotal: Number(d.subtotal) || 0,
@@ -75,11 +75,11 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
   const opcionesProducto = useMemo(() => {
     const idsProveedor = new Set(listaProdProveedor.map(pp => pp.producto))
     const provProds = listaProdProveedor.map(pp => {
-      const prod = productos.find(p => p.id === pp.producto)
+      const prod = productos.find(p => p.id_producto === pp.producto)
       if (!prod) return null
-      return { value: prod.id, label: `${prod.descripcion} — ${Number(pp.precio_compra).toLocaleString('es-PY')} Gs.`, data: prod }
+      return { value: prod.id_producto, label: `${prod.descripcion} — ${Number(pp.precio_compra).toLocaleString('es-PY')} Gs.`, data: prod }
     }).filter(Boolean) as { value: number; label: string; data: Producto }[]
-    const otros = productos.filter(p => !idsProveedor.has(p.id)).map(p => ({ value: p.id, label: p.descripcion, data: p }))
+    const otros = productos.filter(p => !idsProveedor.has(p.id_producto)).map(p => ({ value: p.id_producto, label: p.descripcion, data: p }))
     return [...provProds, ...otros]
   }, [listaProdProveedor, productos])
 
@@ -93,10 +93,10 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
         proveedor: fields.proveedor_id,
         tipo_pago: fields.tipo_pago,
         nro_factura_esperada: fields.nro_factura,
-        items: ocItems.map(i => ({ producto: i.producto!.id, cantidad: i.cantidad, costo_unitario: i.costo_unitario })),
+        items: ocItems.map(i => ({ producto: i.producto!.id_producto, cantidad: i.cantidad, costo_unitario: i.costo_unitario })),
       }
       if (editingOC) {
-        await api.put(`/compras/ordenes/${editingOC.id}/`, payload)
+        await api.put(`/compras/ordenes/${editingOC.id_orden_compra}/`, payload)
         toast.success('OC actualizada')
       } else {
         await api.post('/compras/ordenes/', payload)
@@ -117,7 +117,7 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
   return (
     <Modal
       open={open}
-      title={editingOC ? `Editar OC #${editingOC.id}` : 'Nueva Orden de Compra'}
+      title={editingOC ? `Editar OC #${editingOC.id_orden_compra}` : 'Nueva Orden de Compra'}
       onOk={handleSave}
       onCancel={onClose}
       okText={editingOC ? 'Guardar Cambios' : 'Crear OC'}
@@ -129,7 +129,7 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
           <div>
             <label className={labelClass}>Proveedor *</label>
             <Combobox
-              options={proveedores.map(p => ({ value: p.id, label: p.razon_social }))}
+              options={proveedores.map(p => ({ value: p.id_proveedor, label: p.razon_social }))}
               value={proveedorId || undefined}
               onChange={v => setValue('proveedor_id', v as number)}
               filterLocal
@@ -164,12 +164,12 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
                 <div className="flex-1">
                   <Combobox
                     options={opcionesProducto}
-                    value={item.producto?.id}
+                    value={item.producto?.id_producto}
                     onChange={(_, opt) => {
                       setOcItems(prev => prev.map((it, i) => {
                         if (i !== idx) return it
                         const p = opt.data as Producto
-                        const costo = preciosProveedor[p.id] || 0
+                        const costo = preciosProveedor[p.id_producto] || 0
                         return { ...it, producto: p, costo_unitario: costo, subtotal: it.cantidad * costo }
                       }))
                     }}

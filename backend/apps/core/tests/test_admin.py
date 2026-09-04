@@ -145,7 +145,7 @@ class TestTarjetaAdminSaveModel:
         tarjeta_con_hijo.saldo_actual = Decimal('90000')  # antes: 50000
         a.save_model(request, tarjeta_con_hijo, _FakeForm(['saldo_actual']), change=True)
 
-        mov = MovimientoTarjeta.objects.filter(tarjeta=tarjeta_con_hijo).order_by('-id').first()
+        mov = MovimientoTarjeta.objects.filter(tarjeta=tarjeta_con_hijo).order_by('-id_movimiento_tarjeta').first()
         assert mov is not None
         assert mov.tipo == MovimientoTarjeta.Tipo.AJUSTE
         assert mov.saldo_anterior == Decimal('50000')
@@ -166,7 +166,7 @@ class TestTarjetaAdminSaveModel:
         tarjeta_con_hijo.saldo_actual = Decimal('10000')  # antes: 50000
         a.save_model(request, tarjeta_con_hijo, _FakeForm(['saldo_actual']), change=True)
 
-        mov = MovimientoTarjeta.objects.filter(tarjeta=tarjeta_con_hijo).order_by('-id').first()
+        mov = MovimientoTarjeta.objects.filter(tarjeta=tarjeta_con_hijo).order_by('-id_movimiento_tarjeta').first()
         assert mov.saldo_anterior == Decimal('50000')
         assert mov.saldo_resultante == Decimal('10000')
 

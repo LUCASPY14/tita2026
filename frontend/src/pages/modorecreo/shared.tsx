@@ -78,7 +78,7 @@ export function detectInputType(value: string): 'card' | 'product' {
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 export interface Producto {
-  id: number; codigo_barra: string | null; descripcion: string
+  id_producto: number; codigo_barra: string | null; descripcion: string
   precio_actual: string; categoria_nombre: string
   stock_actual?: number | null
   unidad_medida_abreviatura?: string | null
@@ -102,7 +102,7 @@ export function formatCantidad(n: number): string {
   return n.toLocaleString('es-PY', { minimumFractionDigits: 3, maximumFractionDigits: 3 })
 }
 export interface RestriccionHijo {
-  id: number; tipo: string; descripcion: string | null
+  id_restriccion: number; tipo: string; descripcion: string | null
   severidad: 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA'; requiere_autorizacion: boolean
 }
 export interface Tarjeta {
@@ -117,11 +117,11 @@ export interface Tarjeta {
   cliente_modalidad_facturacion: 'INMEDIATA' | 'MENSUAL'
 }
 export interface ClienteBasico {
-  id: number; nombre_completo: string; ruc_ci: string
+  id_cliente: number; nombre_completo: string; ruc_ci: string
   modalidad_facturacion?: 'INMEDIATA' | 'MENSUAL'
 }
 export interface ItemCarrito { producto: Producto; cantidad: number }
-export interface MedioPagoDB { id: number; descripcion: string; activo: boolean; requiere_validacion: boolean }
+export interface MedioPagoDB { id_medio_pago: number; descripcion: string; activo: boolean; requiere_validacion: boolean }
 
 export type ModoPago = 'PREPAGO' | 'MEDIO' | 'CREDITO'
 export type Flash = 'none' | 'ok' | 'error' | 'restrict'

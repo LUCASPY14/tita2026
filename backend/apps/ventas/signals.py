@@ -19,7 +19,7 @@ def broadcast_kpi_update(sender, instance, **kwargs):
     hoy = localdate()
     ventas_hoy = Venta.objects.filter(
         fecha__date=hoy, estado=Venta.Estado.ACTIVA,
-    ).aggregate(cantidad=Count("id"), monto=Sum("monto_total"))
+    ).aggregate(cantidad=Count("id_venta"), monto=Sum("monto_total"))
 
     data = {
         "type":          "kpi_update",

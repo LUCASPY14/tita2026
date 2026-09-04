@@ -48,6 +48,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         COCINA = "COCINA", "Cocina"
         CLIENTE_WEB = "CLIENTE_WEB", "Cliente Portal Web"
 
+    id_usuario = models.BigAutoField(primary_key=True)
     email = models.EmailField(
         unique=True,
         max_length=255,

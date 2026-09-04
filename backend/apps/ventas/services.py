@@ -114,7 +114,7 @@ class VentaService:
                     CuentaCorrienteCliente.objects
                     .filter(cliente=cliente)
                     .select_for_update()
-                    .order_by("-id")
+                    .order_by("-id_movimiento_cc")
                     .first()
                 )
                 saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
@@ -467,7 +467,7 @@ class VentaService:
                     CuentaCorrienteCliente.objects
                     .filter(cliente=venta.cliente)
                     .select_for_update()
-                    .order_by("-id")
+                    .order_by("-id_movimiento_cc")
                     .first()
                 )
                 saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
@@ -567,7 +567,7 @@ class VentaService:
                 CuentaCorrienteCliente.objects
                 .filter(cliente=cliente)
                 .select_for_update()
-                .order_by("-id")
+                .order_by("-id_movimiento_cc")
                 .first()
             )
             saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
@@ -604,7 +604,7 @@ class VentaService:
                 CuentaCorrienteCliente.objects
                 .filter(cliente=nc.cliente)
                 .select_for_update()
-                .order_by("-id")
+                .order_by("-id_movimiento_cc")
                 .first()
             )
             saldo_anterior_cc = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")
@@ -682,7 +682,7 @@ class PagoService:
                 CuentaCorrienteCliente.objects
                 .filter(cliente=cliente)
                 .select_for_update()
-                .order_by("-id")
+                .order_by("-id_movimiento_cc")
                 .first()
             )
             saldo_anterior = ultimo_cc.saldo_resultante if ultimo_cc else Decimal("0")

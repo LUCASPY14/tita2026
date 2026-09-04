@@ -17,7 +17,7 @@ export interface VentaPayload {
 }
 
 export interface Venta {
-  id:           number
+  id_venta:     number
   tarjeta:      string
   total:        number
   fecha:        string

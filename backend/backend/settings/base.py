@@ -356,7 +356,7 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY,
     "ISSUER": "cantina-tita",
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "USER_ID_FIELD": "id",
+    "USER_ID_FIELD": "id_usuario",
     "USER_ID_CLAIM": "user_id",
 }
 

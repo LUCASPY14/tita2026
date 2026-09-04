@@ -117,7 +117,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
             request=self.request,
             operacion="CREAR_CLIENTE",
             tabla="clientes_cliente",
-            id_registro=cliente.id,
+            id_registro=cliente.id_cliente,
             descripcion=f"Cliente creado: {cliente.nombres} {cliente.apellidos} RUC/CI={cliente.ruc_ci}",
         )
 
@@ -127,7 +127,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
             request=self.request,
             operacion="MODIFICAR_CLIENTE",
             tabla="clientes_cliente",
-            id_registro=cliente.id,
+            id_registro=cliente.id_cliente,
             descripcion=f"Cliente modificado: {cliente.nombres} {cliente.apellidos} RUC/CI={cliente.ruc_ci}",
         )
 
@@ -140,7 +140,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 "Solo se pueden eliminar clientes inactivos. Desactivalo primero."
             )
         # instance.delete() vacía instance.pk/id — capturar antes para la auditoría.
-        cliente_id = instance.id
+        cliente_id = instance.id_cliente
         descripcion = f"Cliente eliminado: {instance.nombres} {instance.apellidos} RUC/CI={instance.ruc_ci}"
         try:
             instance.delete()
@@ -279,7 +279,7 @@ class HijoViewSet(viewsets.ModelViewSet):
             request=self.request,
             operacion="CREAR_HIJO",
             tabla="clientes_hijo",
-            id_registro=hijo.id,
+            id_registro=hijo.id_hijo,
             descripcion=f"Alumno creado: {hijo.nombre_completo} (cliente={hijo.cliente_responsable_id})",
         )
 
@@ -301,7 +301,7 @@ class HijoViewSet(viewsets.ModelViewSet):
             raise ValidationError(
                 "Solo se pueden eliminar alumnos inactivos. Desactivalo primero."
             )
-        hijo_id = instance.id
+        hijo_id = instance.id_hijo
         descripcion = f"Alumno eliminado: {instance.nombre_completo} (cliente={instance.cliente_responsable_id})"
         try:
             instance.delete()
@@ -354,7 +354,7 @@ class HijoViewSet(viewsets.ModelViewSet):
             request=self.request,
             operacion="PURGAR_DATOS_ALUMNO",
             tabla="clientes_hijo",
-            id_registro=hijo.id,
+            id_registro=hijo.id_hijo,
             descripcion=f"Datos sensibles anonimizados: {hijo.nombre_completo}",
         )
         return Response(HijoSerializer(hijo, context={"request": request}).data)
@@ -431,7 +431,7 @@ class ReporteCuentaCorrienteView(APIView):
         ultimo_mov = (
             CuentaCorrienteCliente.objects
             .filter(cliente=OuterRef("pk"))
-            .order_by("-id")
+            .order_by("-id_movimiento_cc")
             .values("saldo_resultante")[:1]
         )
         clientes_con_saldo = (
@@ -452,8 +452,8 @@ class ReporteCuentaCorrienteView(APIView):
             ultimo_saldo_cero = (
                 CuentaCorrienteCliente.objects
                 .filter(cliente=cliente, saldo_resultante__lte=0)
-                .order_by("-fecha", "-id")
-                .values("id", "fecha")
+                .order_by("-fecha", "-id_movimiento_cc")
+                .values("id_movimiento_cc", "fecha")
                 .first()
             )
             dias_atraso = 0
@@ -461,8 +461,8 @@ class ReporteCuentaCorrienteView(APIView):
                 # Primer mov con saldo > 0 DESPUÉS del último cierre
                 inicio_ciclo = (
                     CuentaCorrienteCliente.objects
-                    .filter(cliente=cliente, id__gt=ultimo_saldo_cero["id"], saldo_resultante__gt=0)
-                    .order_by("fecha", "id")
+                    .filter(cliente=cliente, id_movimiento_cc__gt=ultimo_saldo_cero["id_movimiento_cc"], saldo_resultante__gt=0)
+                    .order_by("fecha", "id_movimiento_cc")
                     .values("fecha")
                     .first()
                 )
@@ -471,7 +471,7 @@ class ReporteCuentaCorrienteView(APIView):
                 inicio_ciclo = (
                     CuentaCorrienteCliente.objects
                     .filter(cliente=cliente, saldo_resultante__gt=0)
-                    .order_by("fecha", "id")
+                    .order_by("fecha", "id_movimiento_cc")
                     .values("fecha")
                     .first()
                 )

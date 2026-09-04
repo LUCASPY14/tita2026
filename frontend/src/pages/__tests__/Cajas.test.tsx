@@ -41,7 +41,7 @@ import toast from 'react-hot-toast'
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const CIERRE_ABIERTO = {
-  id: 1, caja: 1, caja_nombre: 'Caja Principal', caja_activo: true,
+  id_cierre: 1, caja: 1, caja_nombre: 'Caja Principal', caja_activo: true,
   empleado: 1, empleado_nombre: 'Carlos López',
   fecha_apertura: '2026-07-24T08:00:00Z', fecha_cierre: null,
   monto_inicial: '500000', monto_contado_fisico: null,
@@ -50,13 +50,13 @@ const CIERRE_ABIERTO = {
 }
 
 const CIERRE_CERRADO = {
-  ...CIERRE_ABIERTO, id: 2, estado: 'CERRADO' as const,
+  ...CIERRE_ABIERTO, id_cierre: 2, estado: 'CERRADO' as const,
   fecha_cierre: '2026-07-24T16:00:00Z',
   monto_contado_fisico: '498000', diferencia_efectivo: '-2000',
 }
 
 const CIERRE_DIFERENCIA_NEGATIVA = {
-  ...CIERRE_ABIERTO, id: 3, estado: 'CERRADO' as const,
+  ...CIERRE_ABIERTO, id_cierre: 3, estado: 'CERRADO' as const,
   fecha_cierre: '2026-07-24T16:00:00Z',
   monto_contado_fisico: '490000', diferencia_efectivo: '-10000',
 }
@@ -187,7 +187,7 @@ describe('Cajas — tabla', () => {
   })
 
   it('paginación Siguiente → recarga la lista con page 2', async () => {
-    const veinte = Array.from({ length: 15 }, (_, i) => ({ ...CIERRE_ABIERTO, id: i + 1 }))
+    const veinte = Array.from({ length: 15 }, (_, i) => ({ ...CIERRE_ABIERTO, id_cierre: i + 1 }))
     mockGet({
       '/contabilidad/cierres-caja/': Promise.resolve({ data: { results: veinte, count: 20 } }),
     })

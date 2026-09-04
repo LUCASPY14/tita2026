@@ -88,7 +88,7 @@ def credencial(db, usuario_portal):
 
 def _pre_auth_token(user):
     from django.core import signing
-    return signing.dumps({"user_id": user.id}, salt="2fa-pre-auth")
+    return signing.dumps({"user_id": user.id_usuario}, salt="2fa-pre-auth")
 
 
 # ── WebAuthnRegistrarOpcionesView ──────────────────────────────────────────────
@@ -350,5 +350,5 @@ class TestFlagsTieneWebauthn:
         resp = api_admin.get("/api/v1/usuarios/usuarios/", {"rol": "CLIENTE_WEB"})
         assert resp.status_code == 200
         data = resp.data["results"] if isinstance(resp.data, dict) else resp.data
-        row = next(r for r in data if r["id"] == usuario_portal.pk)
+        row = next(r for r in data if r["id_usuario"] == usuario_portal.pk)
         assert row["tiene_webauthn"] is True

@@ -63,7 +63,7 @@ class Command(BaseCommand):
             detalle = (
                 DetalleVenta.objects
                 .filter(producto_id=pid, venta__fecha=ultima, venta__estado="ACTIVA")
-                .order_by("-id")
+                .order_by("-id_detalle_venta")
                 .values("precio_unitario")
                 .first()
             )
@@ -81,8 +81,8 @@ class Command(BaseCommand):
         self.stdout.write(f"{'Producto':<40} {'Precio':>12}  {'Fuente'}")
         self.stdout.write("-" * 65)
         for p in productos:
-            precio = precio_por_producto.get(p.id, precio_base)
-            fuente = "historial ventas" if p.id in precio_por_producto else "precio-base (sin ventas)"
+            precio = precio_por_producto.get(p.id_producto, precio_base)
+            fuente = "historial ventas" if p.id_producto in precio_por_producto else "precio-base (sin ventas)"
             self.stdout.write(f"  {p.descripcion:<38} Gs. {precio:>8,}  {fuente}")
 
         if dry_run:
@@ -108,7 +108,7 @@ class Command(BaseCommand):
             # ── 4. Cargar precios ─────────────────────────────────────────────
             creados = actualizados = sin_cambio = 0
             for p in productos:
-                precio = precio_por_producto.get(p.id, precio_base)
+                precio = precio_por_producto.get(p.id_producto, precio_base)
                 obj, was_created = PrecioPorLista.objects.get_or_create(
                     producto=p,
                     lista=lista,

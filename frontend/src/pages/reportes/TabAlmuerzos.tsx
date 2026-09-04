@@ -13,7 +13,7 @@ import {
   type AlmuerzosData, type AlmuerzoFila,
 } from './shared'
 
-interface GradoOption { id: number; nombre: string; activo: boolean }
+interface GradoOption { id_grado: number; nombre: string; activo: boolean }
 
 export default function TabAlmuerzos() {
   const hoy = new Date()
@@ -152,7 +152,7 @@ export default function TabAlmuerzos() {
           <select value={gradoAlm} onChange={e => setGradoAlm(e.target.value)} className={`${inputDateClass} w-40`}>
             <option value="">Todos</option>
             {grados.map(g => (
-              <option key={g.id} value={g.nombre}>{g.nombre}</option>
+              <option key={g.id_grado} value={g.nombre}>{g.nombre}</option>
             ))}
           </select>
         </div>

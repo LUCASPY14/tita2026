@@ -1,7 +1,7 @@
 import api from './api'
 
 export interface Hijo {
-  id:                    number
+  id_hijo:               number
   nombre:                string
   apellido:              string
   nombre_completo?:      string

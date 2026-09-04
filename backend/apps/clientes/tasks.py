@@ -39,7 +39,7 @@ def alertar_saldo_negativo_prolongado():
 
     ultimo = CuentaCorrienteCliente.objects.filter(
         cliente=OuterRef("pk")
-    ).order_by("-id")
+    ).order_by("-id_movimiento_cc")
 
     clientes_en_deuda = (
         Cliente.objects.filter(activo=True)
@@ -133,7 +133,7 @@ def resumen_mensual_deuda_clientes():
 
     ultimo = CuentaCorrienteCliente.objects.filter(
         cliente=OuterRef("pk")
-    ).order_by("-id")
+    ).order_by("-id_movimiento_cc")
 
     clientes_con_deuda = (
         Cliente.objects.filter(activo=True)

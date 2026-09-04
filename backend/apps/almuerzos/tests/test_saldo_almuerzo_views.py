@@ -218,7 +218,7 @@ class TestRecargaSaldoAlmuerzoCreate:
             format="json",
         )
         assert resp.status_code == 201
-        recarga = RecargaSaldoAlmuerzo.objects.get(pk=resp.data["id"])
+        recarga = RecargaSaldoAlmuerzo.objects.get(pk=resp.data["id_recarga_almuerzo"])
         assert recarga.factura is not None
         assert recarga.factura.nro_factura == "001-001-0000001"
 

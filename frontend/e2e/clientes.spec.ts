@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test'
 
-const ADMIN = { id: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
+const ADMIN = { id_usuario: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
 
 const CLIENTES_MOCK = {
   count: 2,
   results: [
     {
-      id: 1,
+      id_cliente: 1,
       nombres: 'María',
       apellidos: 'González',
       razon_social: null,
@@ -23,7 +23,7 @@ const CLIENTES_MOCK = {
       fecha_registro: '2026-01-01',
     },
     {
-      id: 2,
+      id_cliente: 2,
       nombres: 'Carlos',
       apellidos: 'Rodríguez',
       razon_social: null,
@@ -66,7 +66,7 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN
   )
 
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(user.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')

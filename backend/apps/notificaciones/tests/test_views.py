@@ -73,7 +73,7 @@ class TestNotificacionViewSet:
             destino=Notificacion.Destino.SISTEMA,
             titulo="Test", mensaje="Msg", leida=False,
         )
-        resp = api_cajero.patch(f"/api/v1/notificaciones/notificaciones/{notif.id}/", {"leida": True})
+        resp = api_cajero.patch(f"/api/v1/notificaciones/notificaciones/{notif.id_notificacion}/", {"leida": True})
         assert resp.status_code == 200
         notif.refresh_from_db()
         assert notif.leida is True
@@ -86,7 +86,7 @@ class TestNotificacionViewSet:
             destino=Notificacion.Destino.SISTEMA,
             titulo="Ajena", mensaje="Msg", leida=False,
         )
-        resp = api_cajero.patch(f"/api/v1/notificaciones/notificaciones/{notif.id}/", {"leida": True})
+        resp = api_cajero.patch(f"/api/v1/notificaciones/notificaciones/{notif.id_notificacion}/", {"leida": True})
         assert resp.status_code == 404
 
     def test_no_staff_no_puede_modificar_otros_campos_ademas_de_leida(self, api_cajero, usuario_cajero):
@@ -98,7 +98,7 @@ class TestNotificacionViewSet:
             titulo="Original", mensaje="Msg", leida=False,
         )
         resp = api_cajero.patch(
-            f"/api/v1/notificaciones/notificaciones/{notif.id}/",
+            f"/api/v1/notificaciones/notificaciones/{notif.id_notificacion}/",
             {"leida": True, "titulo": "Cambiado"},
         )
         assert resp.status_code == 403

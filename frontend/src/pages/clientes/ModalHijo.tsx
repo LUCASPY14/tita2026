@@ -149,7 +149,7 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
         if (form.grado) fd.append('grado', String(Number(form.grado)))
         fd.append('foto_perfil', photoFile)
         if (hijo) {
-          await api.patch(`/clientes/hijos/${hijo.id}/`, fd)
+          await api.patch(`/clientes/hijos/${hijo.id_hijo}/`, fd)
         } else {
           await api.post('/clientes/hijos/', fd)
         }
@@ -161,7 +161,7 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
           cliente_responsable: clienteId,
         }
         if (hijo) {
-          await api.patch(`/clientes/hijos/${hijo.id}/`, payload)
+          await api.patch(`/clientes/hijos/${hijo.id_hijo}/`, payload)
         } else {
           await api.post('/clientes/hijos/', payload)
         }
@@ -247,7 +247,7 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400"
             >
               <option value="">Sin grado</option>
-              {grados.map(g => <option key={g.id} value={String(g.id)}>{g.nombre}</option>)}
+              {grados.map(g => <option key={g.id_grado} value={String(g.id_grado)}>{g.nombre}</option>)}
             </select>
           </div>
           <Input label="Fecha de Nacimiento" type="date" value={form.fecha_nacimiento} onChange={setText('fecha_nacimiento')} />

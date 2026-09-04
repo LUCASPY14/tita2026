@@ -53,7 +53,7 @@ class CajaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["nombre", "ubicacion"]
-    ordering_fields = ["nombre", "id"]
+    ordering_fields = ["nombre", "id_caja"]
     ordering = ["nombre"]
 
 
@@ -90,7 +90,7 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
             request=request,
             operacion="ABRIR_CAJA",
             tabla="contabilidad_cierrecaja",
-            id_registro=cierre.id,
+            id_registro=cierre.id_cierre,
             descripcion=f"Caja '{cierre.caja}' abierta con {cierre.monto_inicial} Gs.",
         )
         out = CierreCajaSerializer(cierre)
@@ -113,7 +113,7 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
             request=request,
             operacion="CONCILIAR_CAJA",
             tabla="contabilidad_cierrecaja",
-            id_registro=cierre.id,
+            id_registro=cierre.id_cierre,
             descripcion=f"Caja '{cierre.caja}' conciliada",
         )
         return Response(CierreCajaSerializer(cierre).data)
@@ -138,7 +138,7 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
             request=request,
             operacion="CERRAR_CAJA",
             tabla="contabilidad_cierrecaja",
-            id_registro=cierre.id,
+            id_registro=cierre.id_cierre,
             descripcion=(
                 f"Caja '{cierre.caja}' cerrada — contado={monto_contado} Gs."
                 f" diferencia={cierre.diferencia_efectivo} Gs."
@@ -584,13 +584,13 @@ class ReportePeriodoView(APIView):
             estado=Venta.Estado.ACTIVA,
         )
         ventas_agg = ventas_qs.aggregate(
-            cantidad=Count("id"),
+            cantidad=Count("id_venta"),
             monto_total=Sum("monto_total"),
         )
 
         ventas_por_tipo = list(
             ventas_qs.values("tipo").annotate(
-                cantidad=Count("id"),
+                cantidad=Count("id_venta"),
                 monto=Sum("monto_total"),
             )
         )
@@ -683,12 +683,12 @@ class DashboardResumenView(APIView):
         ventas_hoy = Venta.objects.filter(
             fecha__date=hoy,
             estado=Venta.Estado.ACTIVA,
-        ).aggregate(cantidad=Count("id"), monto=Sum("monto_total"))
+        ).aggregate(cantidad=Count("id_venta"), monto=Sum("monto_total"))
 
         recargas_hoy = CargaSaldo.objects.filter(
             fecha_carga__date=hoy,
             estado=CargaSaldo.Estado.CONFIRMADA,
-        ).aggregate(cantidad=Count("id"), monto=Sum("monto_cargado"))
+        ).aggregate(cantidad=Count("id_carga"), monto=Sum("monto_cargado"))
 
         almuerzos_hoy = RegistroConsumoAlmuerzo.objects.filter(fecha_consumo=hoy).count()
 
@@ -703,7 +703,7 @@ class DashboardResumenView(APIView):
                 fecha_nacimiento__month=hoy.month,
                 fecha_nacimiento__day=hoy.day,
                 activo=True,
-            ).select_related("grado").values("id", "nombre", "apellido", "grado__nombre")
+            ).select_related("grado").values("id_hijo", "nombre", "apellido", "grado__nombre")
         )
 
         cumpleaneros_personal_hoy = list(
@@ -711,7 +711,7 @@ class DashboardResumenView(APIView):
                 fecha_nacimiento__month=hoy.month,
                 fecha_nacimiento__day=hoy.day,
                 is_active=True,
-            ).exclude(rol=Usuario.Rol.CLIENTE_WEB).values("id", "nombre", "apellido", "rol")
+            ).exclude(rol=Usuario.Rol.CLIENTE_WEB).values("id_usuario", "nombre", "apellido", "rol")
         )
 
         return Response({
@@ -727,12 +727,12 @@ class DashboardResumenView(APIView):
             "tarjetasEnAlerta": tarjetas_alerta,
             "cumpleanosHoy":    len(cumpleaneros_hoy),
             "cumpleaneros": [
-                {"id": h["id"], "nombre": f'{h["nombre"]} {h["apellido"]}', "grado": h["grado__nombre"]}
+                {"id_hijo": h["id_hijo"], "nombre": f'{h["nombre"]} {h["apellido"]}', "grado": h["grado__nombre"]}
                 for h in cumpleaneros_hoy
             ],
             "cumpleanosPersonalHoy": len(cumpleaneros_personal_hoy),
             "cumpleanerosPersonal": [
-                {"id": u["id"], "nombre": f'{u["nombre"]} {u["apellido"]}', "rol": u["rol"]}
+                {"id_usuario": u["id_usuario"], "nombre": f'{u["nombre"]} {u["apellido"]}', "rol": u["rol"]}
                 for u in cumpleaneros_personal_hoy
             ],
         })
@@ -777,7 +777,7 @@ class DashboardTendenciaView(APIView):
             .filter(fecha__date__gte=desde, fecha__date__lte=hasta, estado=Venta.Estado.ACTIVA)
             .annotate(dia=TruncDate("fecha"))
             .values("dia")
-            .annotate(cantidad=Count("id"), monto=Sum("monto_total"))
+            .annotate(cantidad=Count("id_venta"), monto=Sum("monto_total"))
             .order_by("dia")
         )
 
@@ -854,9 +854,9 @@ class ReporteDiferenciasCajaView(APIView):
                 fecha_cierre__date__lte=hasta,
                 diferencia_efectivo__isnull=False,
             )
-            .values("empleado__id", "empleado__nombre", "empleado__apellido")
+            .values("empleado__id_usuario", "empleado__nombre", "empleado__apellido")
             .annotate(
-                n_cierres=Count("id"),
+                n_cierres=Count("id_cierre"),
                 diferencia_total=Sum("diferencia_efectivo"),
                 diferencia_promedio=Avg("diferencia_efectivo"),
                 mayor_diferencia=Max("diferencia_efectivo"),
@@ -866,7 +866,7 @@ class ReporteDiferenciasCajaView(APIView):
 
         por_empleado = [
             {
-                "empleado_id": r["empleado__id"],
+                "empleado_id": r["empleado__id_usuario"],
                 "empleado": f"{r['empleado__nombre'] or ''} {r['empleado__apellido'] or ''}".strip(),
                 "n_cierres": r["n_cierres"],
                 "diferencia_total": int(r["diferencia_total"] or 0),

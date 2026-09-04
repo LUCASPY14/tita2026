@@ -52,7 +52,7 @@ export default function Compras() {
   // ── Catalog data ────────────────────────────────────────────────
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [productos, setProductos] = useState<Producto[]>([])
-  const [mediosPago, setMediosPago] = useState<{ id: number; descripcion: string }[]>([])
+  const [mediosPago, setMediosPago] = useState<{ id_medio_pago: number; descripcion: string }[]>([])
 
   // ── Compras list ────────────────────────────────────────────────
   const [compras, setCompras] = useState<Compra[]>([])
@@ -119,7 +119,7 @@ export default function Compras() {
       .then(res => setProveedores(res.data.results ?? []))
       .catch(() => toast.error('Error al cargar proveedores'))
     getProductos().then(prods => setProductos(prods as Producto[])).catch(() => toast.error('Error al cargar productos'))
-    getMediosPago().then(mp => setMediosPago(mp as { id: number; descripcion: string }[])).catch(() => toast.error('Error al cargar medios de pago'))
+    getMediosPago().then(mp => setMediosPago(mp as { id_medio_pago: number; descripcion: string }[])).catch(() => toast.error('Error al cargar medios de pago'))
   }, [getProductos, getMediosPago])
 
   // ── Load functions ───────────────────────────────────────────────
@@ -243,14 +243,14 @@ export default function Compras() {
 
   // ── Actions ──────────────────────────────────────────────────────
   const handleOCAccion = useCallback(async (oc: OrdenCompra, accion: 'submit' | 'aprobar' | 'convertir') => {
-    setAccionOCLoading(oc.id)
+    setAccionOCLoading(oc.id_orden_compra)
     try {
-      const { data } = await api.post(`/compras/ordenes/${oc.id}/${accion}/`)
+      const { data } = await api.post(`/compras/ordenes/${oc.id_orden_compra}/${accion}/`)
       const mensajes = { submit: 'OC enviada a revisión', aprobar: 'OC aprobada', convertir: 'Compra generada exitosamente' }
       toast.success(mensajes[accion])
       if (accion === 'convertir' && data.compra_id) toast.success(`Compra #${data.compra_id} creada`, { icon: '📦' })
       loadOrdenes(filterEstadoOC, pageOrdenes)
-      if (detailOC?.id === oc.id) setDetailOC(null)
+      if (detailOC?.id_orden_compra === oc.id_orden_compra) setDetailOC(null)
     } catch (err) {
       toast.error(extractErrorMessage(err))
     } finally {
@@ -259,9 +259,9 @@ export default function Compras() {
   }, [filterEstadoOC, pageOrdenes, loadOrdenes, detailOC])
 
   const handleConfirmarEntrega = useCallback(async (compra: Compra) => {
-    setConfirmandoEntrega(compra.id)
+    setConfirmandoEntrega(compra.id_compra)
     try {
-      await api.post(`/compras/compras/${compra.id}/confirmar-entrega/`)
+      await api.post(`/compras/compras/${compra.id_compra}/confirmar-entrega/`)
       toast.success('Entrega confirmada — stock actualizado')
       loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, pageCompras)
     } catch (err) {
@@ -275,8 +275,8 @@ export default function Compras() {
     if (!confirmAnularCompra) return
     setAnulandoCompra(true)
     try {
-      await api.post(`/compras/compras/${confirmAnularCompra.id}/anular/`)
-      toast.success(`Compra #${confirmAnularCompra.id} anulada`)
+      await api.post(`/compras/compras/${confirmAnularCompra.id_compra}/anular/`)
+      toast.success(`Compra #${confirmAnularCompra.id_compra} anulada`)
       setConfirmAnularCompra(null)
       loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, pageCompras)
     } catch (err) {
@@ -291,7 +291,7 @@ export default function Compras() {
   const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
   const colsCompras: Column<Compra>[] = [
-    { title: 'ID', key: 'id', dataIndex: 'id', width: 60, render: v => <span className="text-sm font-mono text-slate-500">#{v as number}</span> },
+    { title: 'ID', key: 'id', dataIndex: 'id_compra', width: 60, render: v => <span className="text-sm font-mono text-slate-500">#{v as number}</span> },
     { title: 'Proveedor', key: 'proveedor', render: (_, r) => <span className="text-base font-medium text-slate-800">{r.proveedor_nombre}</span> },
     { title: 'Fecha', key: 'fecha', render: (_, r) => <span className="text-base text-slate-600">{formatFecha(r.fecha)}</span> },
     { title: 'Total', key: 'total', render: (_, r) => <span className="tabular-nums font-semibold text-slate-800">{formatGs(r.monto_total)}</span> },
@@ -324,8 +324,8 @@ export default function Compras() {
             </Button>
           )}
           {r.tipo_pago === 'CREDITO' && r.estado_entrega === 'PENDIENTE' && (
-            <Button size="sm" variant="secondary" onClick={() => handleConfirmarEntrega(r)} disabled={confirmandoEntrega === r.id}>
-              <PackageCheck className="w-3.5 h-3.5" />{confirmandoEntrega === r.id ? '...' : 'Recibir'}
+            <Button size="sm" variant="secondary" onClick={() => handleConfirmarEntrega(r)} disabled={confirmandoEntrega === r.id_compra}>
+              <PackageCheck className="w-3.5 h-3.5" />{confirmandoEntrega === r.id_compra ? '...' : 'Recibir'}
             </Button>
           )}
           {canApprove && r.estado_pago !== 'ANULADA' && (
@@ -378,7 +378,7 @@ export default function Compras() {
   ]
 
   const colsOrdenes: Column<OrdenCompra>[] = [
-    { title: 'OC #', key: 'id', width: 65, render: (_, r) => <span className="text-sm font-mono text-slate-500">#{r.id}</span> },
+    { title: 'OC #', key: 'id', width: 65, render: (_, r) => <span className="text-sm font-mono text-slate-500">#{r.id_orden_compra}</span> },
     { title: 'Proveedor', key: 'proveedor', render: (_, r) => <span className="text-base font-medium text-slate-800">{r.proveedor_nombre}</span> },
     { title: 'Tipo', key: 'tipo', render: (_, r) => <Badge color={TIPO_PAGO_COLOR[r.tipo_pago] ?? 'default'}>{r.tipo_pago}</Badge> },
     { title: 'Total estimado', key: 'monto', render: (_, r) => <span className="tabular-nums font-semibold text-slate-800">{formatGs(r.monto_total)}</span> },
@@ -388,7 +388,7 @@ export default function Compras() {
     {
       title: '', key: 'acciones', width: 240,
       render: (_, r) => {
-        const loading = accionOCLoading === r.id
+        const loading = accionOCLoading === r.id_orden_compra
         return (
           <div className="flex items-center gap-1.5 flex-wrap">
             <Button size="sm" variant="secondary" onClick={() => setDetailOC(r)}><Eye className="w-3.5 h-3.5" />Ver</Button>
@@ -425,7 +425,7 @@ export default function Compras() {
   ]
 
   const colsNotas: Column<NotaCredito>[] = [
-    { title: 'NC #', key: 'id', render: (_, r) => <span className="text-sm font-semibold text-slate-500">#{r.id}</span> },
+    { title: 'NC #', key: 'id', render: (_, r) => <span className="text-sm font-semibold text-slate-500">#{r.id_nc_proveedor}</span> },
     { title: 'Proveedor', key: 'proveedor', render: (_, r) => <span className="text-base font-medium text-slate-800">{r.proveedor_nombre}</span> },
     { title: 'Monto', key: 'monto_total', render: (_, r) => <span className="text-base font-bold tabular-nums text-emerald-700">{formatGs(r.monto_total)}</span> },
     {
@@ -510,7 +510,7 @@ export default function Compras() {
           </div>
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-1">
-              <Table columns={colsOrdenes} dataSource={ordenes} rowKey="id" loading={loadingOrdenes}
+              <Table columns={colsOrdenes} dataSource={ordenes} rowKey="id_orden_compra" loading={loadingOrdenes}
                 pageSize={PAGE_SIZE} page={pageOrdenes} onPageChange={p => { setPageOrdenes(p); loadOrdenes(filterEstadoOC, p) }} total={totalOrdenes} />
             </div>
           </div>
@@ -531,7 +531,7 @@ export default function Compras() {
               <label className={labelClass}>Proveedor</label>
               <select value={filterProveedor} onChange={e => { setFilterProveedor(e.target.value); setPageCompras(1) }} className={`${inputClass} w-auto`}>
                 <option value="">Todos</option>
-                {proveedores.map(p => <option key={p.id} value={p.id}>{p.razon_social}</option>)}
+                {proveedores.map(p => <option key={p.id_proveedor} value={p.id_proveedor}>{p.razon_social}</option>)}
               </select>
             </div>
             <div>
@@ -562,7 +562,7 @@ export default function Compras() {
           </div>
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-1">
-              <Table columns={colsCompras} dataSource={compras} rowKey="id" loading={loadingCompras}
+              <Table columns={colsCompras} dataSource={compras} rowKey="id_compra" loading={loadingCompras}
                 pageSize={PAGE_SIZE} page={pageCompras}
                 onPageChange={p => { setPageCompras(p); loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, p) }}
                 total={totalCompras} />
@@ -587,7 +587,7 @@ export default function Compras() {
           </div>
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-1">
-              <Table columns={colsProveedores} dataSource={proveedores} rowKey="id" loading={loadingProv}
+              <Table columns={colsProveedores} dataSource={proveedores} rowKey="id_proveedor" loading={loadingProv}
                 pageSize={PAGE_SIZE} page={pageProveedores}
                 onPageChange={p => { setPageProveedores(p); loadProveedores(searchProv, p) }}
                 total={totalProveedores} />
@@ -602,7 +602,7 @@ export default function Compras() {
             <h2 className="text-base font-semibold text-slate-800">Pagos a Proveedores</h2>
           </div>
           <div className="p-1">
-            <Table columns={colsPagos} dataSource={pagos} rowKey="id" loading={loadingPagos}
+            <Table columns={colsPagos} dataSource={pagos} rowKey="id_pago_proveedor" loading={loadingPagos}
               pageSize={PAGE_SIZE} page={pagePagos} onPageChange={setPagePagos} total={totalPagos} />
           </div>
         </div>
@@ -614,7 +614,7 @@ export default function Compras() {
             <h2 className="text-base font-semibold text-slate-800">Notas de Crédito de Proveedores</h2>
           </div>
           <div className="p-1">
-            <Table columns={colsNotas} dataSource={notas} rowKey="id" loading={loadingNotas}
+            <Table columns={colsNotas} dataSource={notas} rowKey="id_nc_proveedor" loading={loadingNotas}
               pageSize={PAGE_SIZE} page={pageNotas} onPageChange={setPageNotas} total={totalNotas} />
           </div>
         </div>
@@ -668,7 +668,7 @@ export default function Compras() {
               </div>
             </div>
             <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1 text-sm">
-              <p className="text-slate-500">Compra <span className="font-semibold text-slate-800">#{confirmAnularCompra.id}</span></p>
+              <p className="text-slate-500">Compra <span className="font-semibold text-slate-800">#{confirmAnularCompra.id_compra}</span></p>
               <p className="text-slate-500">Proveedor: <span className="font-semibold text-slate-800">{confirmAnularCompra.proveedor_nombre}</span></p>
               <p className="text-slate-500">Monto: <span className="font-semibold text-slate-800">{formatGs(confirmAnularCompra.monto_total)}</span></p>
               <p className="text-slate-500">Fecha: <span className="font-semibold text-slate-800">{formatFecha(confirmAnularCompra.fecha)}</span></p>

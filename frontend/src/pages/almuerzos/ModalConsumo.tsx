@@ -25,7 +25,7 @@ export default function ModalConsumo({ open, hijos, tiposAlmuerzo, onClose, onSa
 
   const tiposActivos = tiposAlmuerzo.filter(t => t.activo)
   const predeterminado = tiposActivos.find(t => t.es_predeterminado)
-  const tipoSeleccionado = tipoAlmuerzoId ?? (predeterminado ? String(predeterminado.id) : '')
+  const tipoSeleccionado = tipoAlmuerzoId ?? (predeterminado ? String(predeterminado.id_tipo_almuerzo) : '')
 
   const buscarTarjeta = useCallback(async (nro?: string) => {
     const searchValue = nro ?? tarjetaSearch.trim()
@@ -38,7 +38,7 @@ export default function ModalConsumo({ open, hijos, tiposAlmuerzo, onClose, onSa
       if (found.estado !== 'ACTIVA') { toast.error(`Tarjeta ${found.estado}`); return }
       setTarjeta(found)
       const h = hijos.find(x => `${x.nombre} ${x.apellido}` === found.hijo_nombre || x.nombre_completo === found.hijo_nombre)
-      if (h) setHijoId(h.id)
+      if (h) setHijoId(h.id_hijo)
       toast.success(found.hijo_nombre)
     } catch {
       toast.error('Error al buscar tarjeta')
@@ -51,7 +51,7 @@ export default function ModalConsumo({ open, hijos, tiposAlmuerzo, onClose, onSa
   const handleRegistrar = useCallback(async () => {
     if (!hijoId) { toast.error('Seleccioná un estudiante'); return }
     if (!tarjeta) { toast.error('Buscá la tarjeta del estudiante'); return }
-    const h = hijos.find(x => x.id === Number(hijoId))
+    const h = hijos.find(x => x.id_hijo === Number(hijoId))
     if (h) {
       const coincide = tarjeta.hijo_nombre === `${h.nombre} ${h.apellido}` || tarjeta.hijo_nombre === h.nombre_completo
       if (!coincide) { toast.error('La tarjeta no pertenece al estudiante seleccionado'); return }
@@ -132,7 +132,7 @@ export default function ModalConsumo({ open, hijos, tiposAlmuerzo, onClose, onSa
           >
             <option value="">Seleccionar...</option>
             {hijos.map(h => (
-              <option key={h.id} value={h.id}>
+              <option key={h.id_hijo} value={h.id_hijo}>
                 {h.nombre_completo ?? `${h.nombre} ${h.apellido}`} — {h.grado}
               </option>
             ))}
@@ -149,7 +149,7 @@ export default function ModalConsumo({ open, hijos, tiposAlmuerzo, onClose, onSa
           >
             <option value="">Sin especificar</option>
             {tiposActivos.map(t => (
-              <option key={t.id} value={t.id}>{t.nombre}{t.es_predeterminado ? ' (predeterminado)' : ''} — {formatGs(t.precio_unitario)}</option>
+              <option key={t.id_tipo_almuerzo} value={t.id_tipo_almuerzo}>{t.nombre}{t.es_predeterminado ? ' (predeterminado)' : ''} — {formatGs(t.precio_unitario)}</option>
             ))}
           </select>
         </div>

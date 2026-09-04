@@ -20,7 +20,7 @@ export default function ModalConciliar({ cierre, onClose, onSaved }: Props) {
     conciliandoRef.current = true
     setConciliando(true)
     try {
-      await api.post(`/contabilidad/cierres-caja/${cierre.id}/conciliar/`, {
+      await api.post(`/contabilidad/cierres-caja/${cierre.id_cierre}/conciliar/`, {
         observaciones: obsConc,
       }, { timeout: 10000 })
       toast.success('Cierre conciliado')

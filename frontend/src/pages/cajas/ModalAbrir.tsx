@@ -17,12 +17,12 @@ const labelCls = 'block text-sm font-semibold text-slate-500 uppercase tracking-
 
 export default function ModalAbrir({ open, cajas, onClose, onSaved }: Props) {
   const primeraActiva = cajas.find(c => c.activo)
-  const [cajaSeleccionada, setCajaSeleccionada] = useState(primeraActiva ? String(primeraActiva.id) : '')
+  const [cajaSeleccionada, setCajaSeleccionada] = useState(primeraActiva ? String(primeraActiva.id_caja) : '')
   const [montoInicial, setMontoInicial] = useState('')
   const [abriendo, setAbriendo] = useState(false)
   const abriendoRef = useRef(false)
 
-  const cajaActiva = cajas.find(c => String(c.id) === cajaSeleccionada && c.activo)
+  const cajaActiva = cajas.find(c => String(c.id_caja) === cajaSeleccionada && c.activo)
 
   const handleAbrir = async () => {
     if (abriendoRef.current) return
@@ -66,7 +66,7 @@ export default function ModalAbrir({ open, cajas, onClose, onSaved }: Props) {
           >
             <option value="">Seleccionar caja...</option>
             {cajas.filter(c => c.activo).map(c => (
-              <option key={c.id} value={c.id}>{c.nombre}{c.ubicacion ? ` — ${c.ubicacion}` : ''}</option>
+              <option key={c.id_caja} value={c.id_caja}>{c.nombre}{c.ubicacion ? ` — ${c.ubicacion}` : ''}</option>
             ))}
           </select>
         </div>

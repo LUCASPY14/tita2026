@@ -17,7 +17,7 @@ import TarjetasGuardadasBancard from './components/TarjetasGuardadasBancard'
 type TipoSaldo = 'CANTINA' | 'ALMUERZO'
 
 interface HijoConTarjeta {
-  id: number
+  id_hijo: number
   nombre: string
   grado: string | null
   nro_tarjeta: string
@@ -140,11 +140,11 @@ export default function CargaSaldo() {
       const lista: HijoConTarjeta[] = (data.hijos ?? [])
         .filter((h: { tarjeta: unknown }) => h.tarjeta)
         .map((h: {
-          id: number; nombre: string; grado: string | null
+          id_hijo: number; nombre: string; grado: string | null
           tarjeta: { nro_tarjeta: string; saldo_actual: number; estado: string }
           saldo_almuerzo: number
         }) => ({
-          id: h.id,
+          id_hijo: h.id_hijo,
           nombre: h.nombre,
           grado: h.grado,
           nro_tarjeta: h.tarjeta.nro_tarjeta,
@@ -155,7 +155,7 @@ export default function CargaSaldo() {
       setHijos(lista)
 
       const preseleccionado = hijoIdParam
-        ? lista.find(h => String(h.id) === hijoIdParam)
+        ? lista.find(h => String(h.id_hijo) === hijoIdParam)
         : (lista.length === 1 ? lista[0] : undefined)
       if (preseleccionado) setHijoSeleccionado(preseleccionado)
     } catch {
@@ -188,7 +188,7 @@ export default function CargaSaldo() {
       const { data } = await api.post(
         tipoSaldo === 'ALMUERZO' ? '/core/bancard/iniciar-almuerzo/' : '/core/bancard/iniciar/',
         tipoSaldo === 'ALMUERZO'
-          ? { hijo_id: hijoSeleccionado.id, monto: montoEfectivo }
+          ? { hijo_id: hijoSeleccionado.id_hijo, monto: montoEfectivo }
           : { nro_tarjeta: hijoSeleccionado.nro_tarjeta, monto: montoEfectivo },
       )
       setProcessId(data.process_id)
@@ -211,7 +211,7 @@ export default function CargaSaldo() {
       const { data } = await api.post(
         tipoSaldo === 'ALMUERZO' ? '/core/bancard/pagar-almuerzo-con-tarjeta/' : '/core/bancard/pagar-con-tarjeta/',
         tipoSaldo === 'ALMUERZO'
-          ? { hijo_id: hijoSeleccionado.id, monto: montoEfectivo, card_id: cardIdSeleccionado }
+          ? { hijo_id: hijoSeleccionado.id_hijo, monto: montoEfectivo, card_id: cardIdSeleccionado }
           : { nro_tarjeta: hijoSeleccionado.nro_tarjeta, monto: montoEfectivo, card_id: cardIdSeleccionado },
       )
 
@@ -430,12 +430,12 @@ export default function CargaSaldo() {
           <div className="divide-y divide-slate-100">
             {hijos.map(h => (
               <button
-                key={h.id}
+                key={h.id_hijo}
                 type="button"
                 onClick={() => setHijoSeleccionado(h)}
                 className={[
                   'w-full flex items-center justify-between px-5 py-4 text-left transition-colors cursor-pointer',
-                  hijoSeleccionado?.id === h.id
+                  hijoSeleccionado?.id_hijo === h.id_hijo
                     ? 'bg-green-50 border-l-4 border-green-500'
                     : 'hover:bg-slate-50 border-l-4 border-transparent',
                 ].join(' ')}

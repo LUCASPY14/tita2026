@@ -354,6 +354,7 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": True,
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
+    "USER_ID_FIELD": "id_usuario",
 }
 
 # ==========================================

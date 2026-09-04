@@ -21,7 +21,7 @@ describe('cajasService', () => {
 
   it('getMiCaja — devuelve el dato del servidor', async () => {
     const caja: CierreCaja = {
-      id: 5,
+      id_cierre: 5,
       caja: 2,
       caja_nombre: 'Caja Principal',
       empleado: 3,

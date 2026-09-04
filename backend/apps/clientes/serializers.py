@@ -31,7 +31,7 @@ class AlumnoResponsableSerializer(serializers.ModelSerializer):
     class Meta:
         model = AlumnoResponsable
         fields = [
-            "id",
+            "id_responsable",
             "hijo",
             "cliente",
             "cliente_nombre",
@@ -67,7 +67,7 @@ class AlumnoResponsableResumenSerializer(serializers.ModelSerializer):
     class Meta:
         model = AlumnoResponsable
         fields = [
-            "id",
+            "id_responsable",
             "cliente",
             "cliente_nombre",
             "cliente_telefono",

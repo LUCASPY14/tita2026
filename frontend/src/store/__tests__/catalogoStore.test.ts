@@ -8,7 +8,7 @@ import api from '../../services/api'
 import { useCatalogoStore } from '../catalogoStore'
 
 const PRODUCTO = {
-  id: 1, descripcion: 'Agua', precio_venta: 1000, categoria: 1, activo: true, requiere_stock: true,
+  id_producto: 1, descripcion: 'Agua', precio_venta: 1000, categoria: 1, activo: true, requiere_stock: true,
 }
 const CATEGORIA = { id: 1, nombre: 'Bebidas' }
 const MEDIO = { id: 1, descripcion: 'Efectivo', activo: true }

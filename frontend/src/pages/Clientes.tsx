@@ -210,12 +210,12 @@ export default function Clientes() {
         </select>
         <select value={filterTipo} onChange={handleFilterChange(setFilterTipo)} className={selectClass}>
           <option value="">Todos los tipos</option>
-          {tiposCliente.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+          {tiposCliente.map(t => <option key={t.id_tipo_cliente} value={t.id_tipo_cliente}>{t.nombre}</option>)}
         </select>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-1">
-        <Table columns={columns} dataSource={clientes} rowKey="id" loading={loading} pageSize={PAGE_SIZE} page={page} onPageChange={setPage} total={total} />
+        <Table columns={columns} dataSource={clientes} rowKey="id_cliente" loading={loading} pageSize={PAGE_SIZE} page={page} onPageChange={setPage} total={total} />
       </div>
 
       <ModalCliente

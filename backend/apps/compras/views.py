@@ -205,8 +205,8 @@ class CompraViewSet(ExportCSVMixin, viewsets.ModelViewSet):
                 request=request,
                 operacion="ANULAR_COMPRA",
                 tabla="compras_compra",
-                id_registro=compra.id,
-                descripcion=f"Intento fallido de anular compra #{compra.id}",
+                id_registro=compra.id_compra,
+                descripcion=f"Intento fallido de anular compra #{compra.id_compra}",
                 resultado="FALLA",
                 mensaje_error=str(exc),
             )
@@ -215,15 +215,15 @@ class CompraViewSet(ExportCSVMixin, viewsets.ModelViewSet):
             request=request,
             operacion="ANULAR_COMPRA",
             tabla="compras_compra",
-            id_registro=compra.id,
-            descripcion=f"Compra #{compra.id} anulada ({compra.monto_total} Gs.)",
+            id_registro=compra.id_compra,
+            descripcion=f"Compra #{compra.id_compra} anulada ({compra.monto_total} Gs.)",
         )
         compra_data = self.get_queryset().get(pk=compra.pk)
         return Response(CompraSerializer(compra_data).data)
 
 
 class DetalleCompraViewSet(viewsets.ModelViewSet):
-    queryset = DetalleCompra.objects.select_related("compra", "producto").order_by("-compra__fecha", "-id")
+    queryset = DetalleCompra.objects.select_related("compra", "producto").order_by("-compra__fecha", "-id_detalle_compra")
     serializer_class = DetalleCompraSerializer
     permission_classes = [IsCajeroOrAdmin]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -650,15 +650,15 @@ class ReporteComprasProveedoresView(APIView):
         qs = (
             Compra.objects
             .filter(fecha__date__gte=desde, fecha__date__lte=hasta)
-            .values("proveedor__id", "proveedor__razon_social", "proveedor__ruc")
+            .values("proveedor__id_proveedor", "proveedor__razon_social", "proveedor__ruc")
             .annotate(
-                n_compras=Count("id"),
+                n_compras=Count("id_compra"),
                 monto_total=Sum("monto_total"),
-                entregadas=Count("id", filter=Q(estado_entrega="RECIBIDA")),
-                entrega_pendiente=Count("id", filter=Q(estado_entrega="PENDIENTE")),
-                pagadas=Count("id", filter=Q(estado_pago="PAGADO")),
-                pago_parcial=Count("id", filter=Q(estado_pago="PARCIAL")),
-                pago_pendiente=Count("id", filter=Q(estado_pago="PENDIENTE")),
+                entregadas=Count("id_compra", filter=Q(estado_entrega="RECIBIDA")),
+                entrega_pendiente=Count("id_compra", filter=Q(estado_entrega="PENDIENTE")),
+                pagadas=Count("id_compra", filter=Q(estado_pago="PAGADO")),
+                pago_parcial=Count("id_compra", filter=Q(estado_pago="PARCIAL")),
+                pago_pendiente=Count("id_compra", filter=Q(estado_pago="PENDIENTE")),
             )
             .order_by("-monto_total")
         )
@@ -667,7 +667,7 @@ class ReporteComprasProveedoresView(APIView):
         for r in qs:
             n = r["n_compras"] or 1
             por_proveedor.append({
-                "proveedor_id": r["proveedor__id"],
+                "proveedor_id": r["proveedor__id_proveedor"],
                 "proveedor": r["proveedor__razon_social"] or "",
                 "ruc": r["proveedor__ruc"] or "",
                 "n_compras": r["n_compras"],
@@ -685,7 +685,7 @@ class ReporteComprasProveedoresView(APIView):
             OrdenCompra.objects
             .filter(fecha_creacion__date__gte=desde, fecha_creacion__date__lte=hasta)
             .values("estado")
-            .annotate(n=Count("id"))
+            .annotate(n=Count("id_orden_compra"))
         )
         funnel = {e: 0 for e in ["BORRADOR", "PENDIENTE", "APROBADA", "RECHAZADA", "CONVERTIDA"]}
         for r in oc_qs:
@@ -841,7 +841,7 @@ class ReporteAgingProveedoresView(APIView):
         ultimo_mov = (
             CuentaCorrienteProveedor.objects
             .filter(proveedor=OuterRef("pk"))
-            .order_by("-id")
+            .order_by("-id_movimiento_ccp")
             .values("saldo_resultante")[:1]
         )
         proveedores_con_saldo = (
@@ -860,16 +860,16 @@ class ReporteAgingProveedoresView(APIView):
             ultimo_saldo_cero = (
                 CuentaCorrienteProveedor.objects
                 .filter(proveedor=proveedor, saldo_resultante__lte=0)
-                .order_by("-fecha", "-id")
-                .values("id", "fecha")
+                .order_by("-fecha", "-id_movimiento_ccp")
+                .values("id_movimiento_ccp", "fecha")
                 .first()
             )
             dias_atraso = 0
             if ultimo_saldo_cero:
                 inicio_ciclo = (
                     CuentaCorrienteProveedor.objects
-                    .filter(proveedor=proveedor, id__gt=ultimo_saldo_cero["id"], saldo_resultante__gt=0)
-                    .order_by("fecha", "id")
+                    .filter(proveedor=proveedor, id_movimiento_ccp__gt=ultimo_saldo_cero["id_movimiento_ccp"], saldo_resultante__gt=0)
+                    .order_by("fecha", "id_movimiento_ccp")
                     .values("fecha")
                     .first()
                 )
@@ -877,7 +877,7 @@ class ReporteAgingProveedoresView(APIView):
                 inicio_ciclo = (
                     CuentaCorrienteProveedor.objects
                     .filter(proveedor=proveedor, saldo_resultante__gt=0)
-                    .order_by("fecha", "id")
+                    .order_by("fecha", "id_movimiento_ccp")
                     .values("fecha")
                     .first()
                 )

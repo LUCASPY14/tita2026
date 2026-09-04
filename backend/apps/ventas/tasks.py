@@ -23,7 +23,7 @@ def generar_resumen_diario_ventas():
 
     ventas = Venta.objects.filter(fecha__date=ayer)
     total = ventas.aggregate(
-        cantidad=db_models.Count("id"),
+        cantidad=db_models.Count("id_venta"),
         monto=db_models.Sum("monto_total"),
     )
 

@@ -38,19 +38,19 @@ import toast from 'react-hot-toast'
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const HIJO = {
-  id: 1, nombre: 'Juan', grado: '3° A',
+  id_hijo: 1, nombre: 'Juan', grado: '3° A',
   tarjeta: { nro_tarjeta: 'T-001', saldo_actual: 50_000, estado: 'ACTIVA' },
   saldo_almuerzo: -15_000,
 }
 
 const HIJO2 = {
-  id: 2, nombre: 'Lucía', grado: '5° B',
+  id_hijo: 2, nombre: 'Lucía', grado: '5° B',
   tarjeta: { nro_tarjeta: 'T-002', saldo_actual: 20_000, estado: 'ACTIVA' },
   saldo_almuerzo: 5_000,
 }
 
 const HIJO_SIN_TARJETA = {
-  id: 3, nombre: 'Pedro', grado: '1° C',
+  id_hijo: 3, nombre: 'Pedro', grado: '1° C',
   tarjeta: null,
 }
 

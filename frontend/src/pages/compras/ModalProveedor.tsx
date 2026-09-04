@@ -43,7 +43,7 @@ export default function ModalProveedor({ open, editingProv, onClose, onSaved }: 
         activo: form.activo,
       }
       if (editingProv) {
-        await api.patch(`/compras/proveedores/${editingProv.id}/`, payload)
+        await api.patch(`/compras/proveedores/${editingProv.id_proveedor}/`, payload)
         toast.success('Proveedor actualizado')
       } else {
         await api.post('/compras/proveedores/', payload)

@@ -13,7 +13,7 @@ import Combobox from '../components/ui/Combobox'
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface Alergeno {
-  id: number
+  id_alergeno: number
   nombre: string
   descripcion: string | null
   severidad: string
@@ -22,7 +22,7 @@ interface Alergeno {
 }
 
 interface ProductoAlergeno {
-  id: number
+  id_producto_alergeno: number
   producto: number
   alergeno: number
   producto_nombre: string
@@ -31,7 +31,7 @@ interface ProductoAlergeno {
 }
 
 interface Producto {
-  id: number
+  id_producto: number
   descripcion: string
 }
 
@@ -113,7 +113,7 @@ export default function Alergenos() {
     setSavingAlg(true)
     try {
       if (editingAlg) {
-        await api.put(`/almuerzos/alergenos/${editingAlg.id}/`, algForm)
+        await api.put(`/almuerzos/alergenos/${editingAlg.id_alergeno}/`, algForm)
         toast.success('Alérgeno actualizado')
       } else {
         await api.post('/almuerzos/alergenos/', algForm)
@@ -205,7 +205,7 @@ export default function Alergenos() {
     {
       title: '', key: 'acc', width: 80,
       render: (_, r) => (
-        <Button size="sm" variant="ghost" onClick={() => handleDeleteAsig(r.id)}>
+        <Button size="sm" variant="ghost" onClick={() => handleDeleteAsig(r.id_producto_alergeno)}>
           {t('common.delete')}
         </Button>
       ),
@@ -249,7 +249,7 @@ export default function Alergenos() {
       {tab === 'alergenos' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-1">
-            <Table columns={colsAlg} dataSource={alergenos} rowKey="id" loading={loadingAlg}
+            <Table columns={colsAlg} dataSource={alergenos} rowKey="id_alergeno" loading={loadingAlg}
               pageSize={15} page={pageAlg} total={totalAlg}
               onPageChange={p => { setPageAlg(p); loadAlergenos(p) }} />
           </div>
@@ -260,7 +260,7 @@ export default function Alergenos() {
       {tab === 'asignacion' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-1">
-            <Table columns={colsAsig} dataSource={asignaciones} rowKey="id" loading={loadingAsig}
+            <Table columns={colsAsig} dataSource={asignaciones} rowKey="id_producto_alergeno" loading={loadingAsig}
               pageSize={15} page={pageAsig} total={totalAsig}
               onPageChange={p => { setPageAsig(p); loadAsignaciones(p) }} />
           </div>
@@ -311,7 +311,7 @@ export default function Alergenos() {
           <div>
             <label className={labelClass}>Producto *</label>
             <Combobox
-              options={productos.map(p => ({ value: p.id, label: p.descripcion }))}
+              options={productos.map(p => ({ value: p.id_producto, label: p.descripcion }))}
               value={asigForm.producto ?? undefined}
               onChange={v => setAsigForm(f => ({ ...f, producto: v as number }))}
               filterLocal placeholder="Buscar producto..."
@@ -321,7 +321,7 @@ export default function Alergenos() {
             <label className={labelClass}>Alérgeno *</label>
             <select value={asigForm.alergeno ?? ''} onChange={e => setAsigForm(f => ({ ...f, alergeno: Number(e.target.value) || null }))} className={inputClass}>
               <option value="">— Elegí un alérgeno —</option>
-              {alergenos.map(a => <option key={a.id} value={a.id}>{a.icono ? `${a.icono} ` : ''}{a.nombre}</option>)}
+              {alergenos.map(a => <option key={a.id_alergeno} value={a.id_alergeno}>{a.icono ? `${a.icono} ` : ''}{a.nombre}</option>)}
             </select>
           </div>
           <div>

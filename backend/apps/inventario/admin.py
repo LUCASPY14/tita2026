@@ -76,7 +76,7 @@ class StockAdmin(admin.ModelAdmin):
 @admin.register(MovimientoStock)
 class MovimientoStockAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_movimiento_stock",
         "producto_link",
         "tipo_badge",
         "motivo_badge",
@@ -137,7 +137,7 @@ class MovimientoStockAdmin(admin.ModelAdmin):
 @admin.register(AjusteInventario)
 class AjusteInventarioAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_ajuste",
         "tipo_badge",
         "estado_badge",
         "motivo",
@@ -203,7 +203,7 @@ class AjusteInventarioAdmin(admin.ModelAdmin):
 
 @admin.register(DetalleAjuste)
 class DetalleAjusteAdmin(admin.ModelAdmin):
-    list_display = ["id", "ajuste_link", "producto_link", "cantidad"]
+    list_display = ["id_detalle_ajuste", "ajuste_link", "producto_link", "cantidad"]
     search_fields = ["ajuste__motivo", "producto__descripcion"]
     list_select_related = ["ajuste", "producto"]
 
@@ -235,7 +235,7 @@ class DetalleAjusteAdmin(admin.ModelAdmin):
 @admin.register(CostoHistorico)
 class CostoHistoricoAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_costo_historico",
         "producto_link",
         "costo_unitario_display",
         "cantidad_comprada",

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
-const CAJERO = { id: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
-const ADMIN  = { id: 1, email: 'admin@cantina.com',  nombre: 'Admin',  apellido: 'Tita',  rol: 'ADMIN' }
+const CAJERO = { id_usuario: 2, email: 'cajero@cantina.com', nombre: 'Cajero', apellido: 'Test', rol: 'CAJERO' }
+const ADMIN  = { id_usuario: 1, email: 'admin@cantina.com',  nombre: 'Admin',  apellido: 'Tita',  rol: 'ADMIN' }
 
 async function loginAs(page: import('@playwright/test').Page, user: typeof CAJERO | typeof ADMIN) {
   // LIFO: catch-all primero (menor prioridad), específicos después (mayor prioridad)
@@ -20,7 +20,7 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof CAJER
   )
 
   await page.goto('/login')
-  await page.getByPlaceholder('tu@email.com').fill(user.email)
+  await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
   await page.getByPlaceholder('••••••••').fill('password123')
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await page.waitForURL('/dashboard')
@@ -29,13 +29,13 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof CAJER
 // ModoRecreo.tsx usa los campos: descripcion, precio_actual, categoria_nombre, codigo_barra
 const PRODUCTOS_MOCK = [
   {
-    id: 1, codigo_barra: '7890000000001',
+    id_producto: 1, codigo_barra: '7890000000001',
     descripcion: 'Empanada', precio_actual: '5000',
     categoria_nombre: 'Comida', stock_actual: 20,
     activo: true, requiere_stock: true,
   },
   {
-    id: 2, codigo_barra: '7890000000002',
+    id_producto: 2, codigo_barra: '7890000000002',
     descripcion: 'Gaseosa', precio_actual: '4000',
     categoria_nombre: 'Bebida', stock_actual: 15,
     activo: true, requiere_stock: true,
@@ -43,8 +43,8 @@ const PRODUCTOS_MOCK = [
 ]
 
 const CATEGORIAS_MOCK = [
-  { id: 1, nombre: 'Comida' },
-  { id: 2, nombre: 'Bebida' },
+  { id_categoria: 1, nombre: 'Comida' },
+  { id_categoria: 2, nombre: 'Bebida' },
 ]
 
 const CAJA_ABIERTA = {
@@ -90,7 +90,7 @@ test.describe('Modo Recreo — POS', () => {
   })
 
   test('SUPERVISOR sin acceso es redirigido a /login', async ({ page }) => {
-    const SUPERVISOR = { id: 3, email: 'sup@cantina.com', nombre: 'Sup', apellido: 'Test', rol: 'SUPERVISOR' }
+    const SUPERVISOR = { id_usuario: 3, email: 'sup@cantina.com', nombre: 'Sup', apellido: 'Test', rol: 'SUPERVISOR' }
     await loginAs(page, SUPERVISOR as typeof ADMIN)
     await page.goto('/modo-recreo')
     await expect(page).toHaveURL('/dashboard')
@@ -114,7 +114,7 @@ test.describe('Modo Recreo — flujo de venta con tarjeta', () => {
       route.fulfill({
         status: 201,
         contentType: 'application/json',
-        body: JSON.stringify({ id: 99, monto_total: 5000, estado: 'COMPLETADA' }),
+        body: JSON.stringify({ id_venta: 99, monto_total: 5000, estado: 'COMPLETADA' }),
       })
     )
 
@@ -166,7 +166,7 @@ test.describe('Modo Recreo — scan de tarjeta', () => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [TARJETA_MOCK], count: 1 }) })
     )
     await page.route(/\/api\/v1\/ventas\/ventas/, (route) =>
-      route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 99, monto_total: 5000, estado: 'COMPLETADA' }) })
+      route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id_venta: 99, monto_total: 5000, estado: 'COMPLETADA' }) })
     )
     await page.goto('/modo-recreo')
     await expect(page.getByRole('button', { name: /Empanada/ }).first()).toBeVisible({ timeout: 8000 })

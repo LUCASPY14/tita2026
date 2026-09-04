@@ -35,7 +35,7 @@ export const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 export interface Hijo {
-  id: number
+  id_hijo: number
   nombre: string
   apellido: string
   grado: string
@@ -50,7 +50,7 @@ export interface TarjetaBusqueda {
 }
 
 export interface TipoAlmuerzo {
-  id: number
+  id_tipo_almuerzo: number
   nombre: string
   descripcion: string
   precio_unitario: string | number
@@ -62,7 +62,7 @@ export interface TipoAlmuerzo {
 }
 
 export interface PlanAlmuerzo {
-  id: number
+  id_plan_almuerzo: number
   nombre: string
   tipo: string
   precio_mensual: string | number
@@ -73,7 +73,7 @@ export interface PlanAlmuerzo {
 }
 
 export interface Suscripcion {
-  id: number
+  id_suscripcion: number
   hijo: number
   hijo_nombre: string
   plan: number
@@ -84,7 +84,7 @@ export interface Suscripcion {
 }
 
 export interface MenuDiario {
-  id: number
+  id_menu: number
   fecha: string
   plato_principal: string
   guarnicion: string
@@ -95,7 +95,7 @@ export interface MenuDiario {
 }
 
 export interface RegistroConsumo {
-  id: number
+  id_registro_consumo: number
   hijo_nombre: string
   fecha_consumo: string
   tipo_almuerzo_nombre: string
@@ -105,7 +105,7 @@ export interface RegistroConsumo {
 }
 
 export interface CuentaMensual {
-  id: number
+  id_cuenta_mensual: number
   hijo: number
   hijo_nombre: string
   hijo_grado: string

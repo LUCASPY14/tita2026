@@ -39,7 +39,7 @@ export default function TabTiposCliente({ onDelete }: { onDelete: (t: DeleteTarg
     try {
       const payload = { ...form, descuento_porcentaje: Number(form.descuento_porcentaje) || 0 }
       if (editing) {
-        await api.put(`/clientes/tipos-cliente/${editing.id}/`, payload)
+        await api.put(`/clientes/tipos-cliente/${editing.id_tipo_cliente}/`, payload)
         toast.success('Tipo de cliente actualizado')
       } else {
         await api.post('/clientes/tipos-cliente/', payload)
@@ -59,7 +59,7 @@ export default function TabTiposCliente({ onDelete }: { onDelete: (t: DeleteTarg
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Button size="sm" variant="secondary" onClick={() => open(r)}><Edit2 className="w-3.5 h-3.5" /></Button>
-          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/clientes/tipos-cliente/${r.id}/`, label: r.nombre, reloadFn: load })}>
+          <Button size="sm" variant="danger" onClick={() => onDelete({ url: `/clientes/tipos-cliente/${r.id_tipo_cliente}/`, label: r.nombre, reloadFn: load })}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -74,7 +74,7 @@ export default function TabTiposCliente({ onDelete }: { onDelete: (t: DeleteTarg
       </div>
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-1">
-          <Table columns={columns} dataSource={items} rowKey="id" loading={loading} pageSize={20} />
+          <Table columns={columns} dataSource={items} rowKey="id_tipo_cliente" loading={loading} pageSize={20} />
         </div>
       </div>
       <Modal open={modal} title={editing ? 'Editar Tipo de Cliente' : 'Nuevo Tipo de Cliente'} onOk={save} onCancel={() => setModal(false)} okText={editing ? 'Guardar' : 'Crear'} confirmLoading={saving} width={420}>

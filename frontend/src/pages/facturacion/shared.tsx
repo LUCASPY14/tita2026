@@ -39,7 +39,7 @@ export interface PendienteItem {
 }
 
 export interface Factura {
-  id: number
+  id_factura: number
   nro_factura: string
   cliente: number | null
   cliente_nombre: string

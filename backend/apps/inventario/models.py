@@ -22,6 +22,7 @@ class Stock(models.Model):
     Un solo registro por producto (OneToOne).
     """
 
+    id_stock = models.BigAutoField(primary_key=True)
     producto = models.OneToOneField(
         "productos.Producto",
         models.PROTECT,
@@ -117,6 +118,7 @@ class MovimientoStock(models.Model):
         DANADO = "DANADO", "Baja por daño"
         INVENTARIO_INICIAL = "INVENTARIO_INICIAL", "Inventario inicial"
 
+    id_movimiento_stock = models.BigAutoField(primary_key=True)
     producto = models.ForeignKey(
         "productos.Producto",
         models.PROTECT,
@@ -237,6 +239,7 @@ class AjusteInventario(models.Model):
         APROBADO = "APROBADO", "Aprobado"
         RECHAZADO = "RECHAZADO", "Rechazado"
 
+    id_ajuste = models.BigAutoField(primary_key=True)
     fecha = models.DateTimeField(default=timezone.now)
     tipo = models.CharField(max_length=10, choices=TipoAjuste.choices)
     motivo = models.CharField(max_length=255, help_text="Razón del ajuste")
@@ -272,6 +275,7 @@ class AjusteInventario(models.Model):
 class DetalleAjuste(models.Model):
     """Producto incluido en un ajuste de inventario."""
 
+    id_detalle_ajuste = models.BigAutoField(primary_key=True)
     ajuste = models.ForeignKey(
         AjusteInventario, models.CASCADE, related_name="detalles"
     )
@@ -294,7 +298,7 @@ class DetalleAjuste(models.Model):
     class Meta:
         verbose_name = "Detalle de Ajuste"
         verbose_name_plural = "Detalles de Ajustes"
-        ordering = ["id"]
+        ordering = ["id_detalle_ajuste"]
         unique_together = [("ajuste", "producto")]
 
     def __str__(self):
@@ -308,6 +312,7 @@ class DetalleAjuste(models.Model):
 class CostoHistorico(models.Model):
     """Historial de costos de compra para cálculo de costo promedio."""
 
+    id_costo_historico = models.BigAutoField(primary_key=True)
     producto = models.ForeignKey(
         "productos.Producto",
         models.PROTECT,

@@ -22,7 +22,7 @@ from .models import (
 @admin.register(Notificacion)
 class NotificacionAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_notificacion",
         "usuario_link",
         "tipo_badge",
         "titulo",
@@ -83,7 +83,7 @@ class NotificacionAdmin(admin.ModelAdmin):
 @admin.register(PreferenciaNotificacion)
 class PreferenciaNotificacionAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_preferencia",
         "usuario_link",
         "tipo_notificacion",
         "email_activo",
@@ -107,7 +107,7 @@ class PreferenciaNotificacionAdmin(admin.ModelAdmin):
 @admin.register(EmailEnviado)
 class EmailEnviadoAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_email",
         "destinatario_email",
         "asunto",
         "estado_badge",
@@ -171,7 +171,7 @@ class EmailEnviadoAdmin(admin.ModelAdmin):
 @admin.register(SolicitudNotificacion)
 class SolicitudNotificacionAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_solicitud_notif",
         "cliente_link",
         "tipo",
         "destino",

@@ -105,12 +105,12 @@ export interface TarjetasData {
 export interface TendenciaPoint { fecha: string; cantidad: number; monto: number }
 
 export interface DetalleConsumoRep {
-  id: number; producto_nombre: string; cantidad: string
+  id_detalle_venta: number; producto_nombre: string; cantidad: string
   precio_unitario: string; subtotal: string
 }
 
 export interface VentaConsumoRep {
-  id: number; fecha: string; monto_total: string; tarjeta: string | null
+  id_venta: number; fecha: string; monto_total: string; tarjeta: string | null
   hijo: number | null; hijo_nombre: string | null; hijo_grado: string | null
   cliente_nombre: string; detalles: DetalleConsumoRep[]
 }

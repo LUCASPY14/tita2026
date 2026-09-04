@@ -14,6 +14,7 @@ from django.utils import timezone
 class PushSubscription(models.Model):
     """Suscripción Web Push de un usuario (por dispositivo/navegador)."""
 
+    id_push = models.BigAutoField(primary_key=True)
     usuario = models.ForeignKey(
         "usuarios.Usuario",
         models.CASCADE,
@@ -52,6 +53,7 @@ class Notificacion(models.Model):
         SISTEMA = "SISTEMA", "En sistema"
         WHATSAPP = "WHATSAPP", "WhatsApp"
 
+    id_notificacion = models.BigAutoField(primary_key=True)
     usuario = models.ForeignKey(
         "usuarios.Usuario",
         models.CASCADE,
@@ -94,6 +96,7 @@ class Notificacion(models.Model):
 class PreferenciaNotificacion(models.Model):
     """Preferencias de notificación por usuario y tipo."""
 
+    id_preferencia = models.BigAutoField(primary_key=True)
     usuario = models.ForeignKey(
         "usuarios.Usuario",
         models.CASCADE,
@@ -130,6 +133,7 @@ class EmailEnviado(models.Model):
         REBOTADO = "REBOTADO", "Rebotado"
         ERROR = "ERROR", "Error"
 
+    id_email = models.BigAutoField(primary_key=True)
     destinatario_email = models.EmailField(max_length=254)
     destinatario_nombre = models.CharField(max_length=100)
     asunto = models.CharField(max_length=200)
@@ -179,6 +183,7 @@ class SolicitudNotificacion(models.Model):
         ENVIADA = "ENVIADA", "Enviada"
         FALLIDA = "FALLIDA", "Fallida"
 
+    id_solicitud_notif = models.BigAutoField(primary_key=True)
     cliente = models.ForeignKey(
         "clientes.Cliente", models.CASCADE, related_name="solicitudes_notificacion"
     )

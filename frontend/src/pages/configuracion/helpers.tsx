@@ -69,20 +69,20 @@ export async function executeDelete(
 // ─── Shared interfaces ────────────────────────────────────────────────────────
 
 export interface Categoria {
-  id: number
+  id_categoria: number
   nombre: string
   descripcion: string
 }
 
 export interface TipoCliente {
-  id: number
+  id_tipo_cliente: number
   nombre: string
   descripcion: string
   descuento_porcentaje: number | string
 }
 
 export interface ListaPrecio {
-  id: number
+  id_lista_precio: number
   nombre: string
   fecha_vigencia: string | null
   moneda: string
@@ -91,14 +91,14 @@ export interface ListaPrecio {
 }
 
 export interface MedioPago {
-  id: number
+  id_medio_pago: number
   descripcion: string
   requiere_validacion: boolean
   activo: boolean
 }
 
 export interface Grado {
-  id: number
+  id_grado: number
   nombre: string
   nivel: number
   orden: number
@@ -107,7 +107,7 @@ export interface Grado {
 }
 
 export interface DatosEmpresa {
-  id: number
+  id_datos_empresa: number
   ruc: string
   razon_social: string
   nombre_fantasia: string
@@ -120,7 +120,7 @@ export interface DatosEmpresa {
 }
 
 export interface HistoricoPrecioItem {
-  id: number
+  id_historico_precio: number
   producto: number
   producto_nombre: string
   precio_anterior: string
@@ -130,7 +130,7 @@ export interface HistoricoPrecioItem {
 }
 
 export interface Producto {
-  id: number
+  id_producto: number
   descripcion: string
 }
 
@@ -141,7 +141,7 @@ export interface Estado2FA {
 }
 
 export interface TipoAlmuerzo {
-  id: number
+  id_tipo_almuerzo: number
   nombre: string
   descripcion: string
   precio_unitario: string | number
@@ -153,7 +153,7 @@ export interface TipoAlmuerzo {
 }
 
 export interface PlanAlmuerzo {
-  id: number
+  id_plan_almuerzo: number
   nombre: string
   tipo: 'CANTIDAD' | 'SIN_LIMITE'
   precio_mensual: string | number
@@ -164,14 +164,14 @@ export interface PlanAlmuerzo {
 }
 
 export interface UnidadMedida {
-  id: number
+  id_unidad_medida: number
   nombre: string
   abreviatura: string
   activo: boolean
 }
 
 export interface Alergeno {
-  id: number
+  id_alergeno: number
   nombre: string
   descripcion: string
   palabras_clave: string[]
@@ -181,7 +181,7 @@ export interface Alergeno {
 }
 
 export interface Impuesto {
-  id: number
+  id_impuesto: number
   nombre: string
   porcentaje: string | number
   vigente_desde: string | null

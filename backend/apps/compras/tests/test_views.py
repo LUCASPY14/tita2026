@@ -867,21 +867,21 @@ class TestNotaCreditoAnular:
         return resp.data
 
     def test_anular_nc_emitida_retorna_200_y_estado_anulada(self, api_admin, nc):
-        resp = api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        resp = api_admin.post(f"/api/v1/compras/notas-credito/{nc['id_nc_proveedor']}/anular/")
         assert resp.status_code == 200
         assert resp.data["estado"] == "ANULADA"
 
     def test_anular_nc_emitida_crea_debito_en_cc(self, api_admin, nc, proveedor):
         from apps.compras.models import CuentaCorrienteProveedor
-        api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        api_admin.post(f"/api/v1/compras/notas-credito/{nc['id_nc_proveedor']}/anular/")
         assert CuentaCorrienteProveedor.objects.filter(
             proveedor=proveedor,
             tipo=CuentaCorrienteProveedor.Tipo.DEBITO,
         ).exists()
 
     def test_anular_dos_veces_retorna_400(self, api_admin, nc):
-        api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
-        resp = api_admin.post(f"/api/v1/compras/notas-credito/{nc['id']}/anular/")
+        api_admin.post(f"/api/v1/compras/notas-credito/{nc['id_nc_proveedor']}/anular/")
+        resp = api_admin.post(f"/api/v1/compras/notas-credito/{nc['id_nc_proveedor']}/anular/")
         assert resp.status_code == 400
         assert "anulada" in resp.data["error"].lower()
 

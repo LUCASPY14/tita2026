@@ -124,7 +124,7 @@ class TestMe:
         assert resp.status_code == 200
         assert resp.data["email"] == "admin@test.com"
         assert resp.data["rol"] == "ADMIN"
-        assert "id" in resp.data
+        assert "id_usuario" in resp.data
         assert "nombre" in resp.data
         assert "apellido" in resp.data
 
@@ -214,7 +214,7 @@ class TestPortalMiHijo:
         assert "cliente" in resp.data
         assert "mes" in resp.data
         assert "hijos" in resp.data
-        assert resp.data["cliente"]["id"] == cliente.pk
+        assert resp.data["cliente"]["id_cliente"] == cliente.pk
 
     def test_sin_cliente_vinculado_retorna_400(self, api_cajero):
         resp = api_cajero.get("/api/v1/usuarios/portal/mi-hijo/")
@@ -229,7 +229,7 @@ class TestPortalMiHijo:
         assert resp.status_code == 200
         assert len(resp.data["hijos"]) == 1
         hijo_data = resp.data["hijos"][0]
-        assert hijo_data["id"] == hijo_portal.pk
+        assert hijo_data["id_hijo"] == hijo_portal.pk
         assert "tarjeta" in hijo_data
         assert "cuenta_mensual" in hijo_data
         assert "saldo_almuerzo" in hijo_data
@@ -497,7 +497,7 @@ class TestUsuarioViewSetCRUD:
         resp = api_admin.get("/api/v1/usuarios/usuarios/", {"rol": "CLIENTE_WEB"})
         assert resp.status_code == 200
         data = resp.data["results"] if isinstance(resp.data, dict) else resp.data
-        portal_row = next(r for r in data if r["id"] == usuario_portal.pk)
+        portal_row = next(r for r in data if r["id_usuario"] == usuario_portal.pk)
         assert portal_row["tiene_2fa_activo"] is True
 
 

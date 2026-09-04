@@ -15,7 +15,7 @@ import toast from 'react-hot-toast'
 import TabPurgaAlumnos from '../TabPurgaAlumnos'
 
 const PENDIENTE = {
-  id: 42,
+  id_hijo: 42,
   nombre: 'Marta',
   apellido: 'Díaz',
   cliente_nombre: 'Carlos Díaz',

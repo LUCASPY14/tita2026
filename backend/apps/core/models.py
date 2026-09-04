@@ -138,6 +138,7 @@ class MovimientoTarjeta(models.Model):
         AJUSTE = "AJUSTE", "Ajuste"
         REVERSO = "REVERSO", "Reverso"
 
+    id_movimiento_tarjeta = models.BigAutoField(primary_key=True)
     tarjeta = models.ForeignKey(
         Tarjeta,
         models.PROTECT,
@@ -173,7 +174,7 @@ class MovimientoTarjeta(models.Model):
     class Meta:
         verbose_name = "Movimiento de Tarjeta"
         verbose_name_plural = "Movimientos de Tarjetas"
-        ordering = ["-fecha", "-id"]
+        ordering = ["-fecha", "-id_movimiento_tarjeta"]
         indexes = [
             models.Index(fields=["tarjeta", "fecha"], name="idx_mov_tarj_fecha"),
             models.Index(fields=["tarjeta", "tipo"], name="idx_mov_tarj_tipo"),
@@ -192,7 +193,7 @@ class MovimientoTarjeta(models.Model):
                 ultimo = (
                     MovimientoTarjeta.objects
                     .filter(tarjeta=self.tarjeta)
-                    .order_by("-id")
+                    .order_by("-id_movimiento_tarjeta")
                     .first()
                 )
                 self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
@@ -221,6 +222,7 @@ class CargaSaldo(models.Model):
         CONFIRMADA = "CONFIRMADA", "Confirmada"
         RECHAZADA = "RECHAZADA", "Rechazada"
 
+    id_carga = models.BigAutoField(primary_key=True)
     tarjeta = models.ForeignKey(
         Tarjeta,
         models.PROTECT,
@@ -317,6 +319,7 @@ class CargaSaldo(models.Model):
 class MedioPago(models.Model):
     """Medio de pago aceptado (efectivo, POS, transferencia, QR)."""
 
+    id_medio_pago = models.BigAutoField(primary_key=True)
     descripcion = models.CharField(max_length=50, unique=True)
     requiere_validacion = models.BooleanField(default=False)
     activo = models.BooleanField(default=True)
@@ -353,6 +356,7 @@ class PagoBancard(models.Model):
         ALMUERZO = "ALMUERZO", "Pago de cuenta almuerzo"
         CC       = "CC",       "Pago de cuenta corriente"
 
+    id_pago_bancard = models.BigAutoField(primary_key=True)
     tipo = models.CharField(
         max_length=10, choices=Tipo.choices, default=Tipo.TARJETA,
     )
@@ -476,6 +480,7 @@ class SolicitudCatastroBancard(models.Model):
     guarda qué card_id se reservó para qué cliente mientras el catastro está en curso.
     """
 
+    id_solicitud_catastro = models.BigAutoField(primary_key=True)
     cliente = models.ForeignKey(
         "clientes.Cliente",
         models.CASCADE,

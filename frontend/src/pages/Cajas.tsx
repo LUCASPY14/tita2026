@@ -97,7 +97,7 @@ export default function CajaPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (miCierre?.id) loadArqueo(miCierre.id)
+    if (miCierre?.id_cierre) loadArqueo(miCierre.id_cierre)
     else setArqueo(null)
   }, [miCierre, loadArqueo])
 
@@ -120,7 +120,7 @@ export default function CajaPage() {
 
   function imprimirCierre(cierre: CierreCaja) {
     const base = api.defaults.baseURL?.replace(/\/api\/v1\/?$/, '') ?? ''
-    window.open(`${base}/api/v1/contabilidad/cierres-caja/${cierre.id}/pdf/`, '_blank')
+    window.open(`${base}/api/v1/contabilidad/cierres-caja/${cierre.id_cierre}/pdf/`, '_blank')
   }
 
   // ── Columns ───────────────────────────────────────────────────────────────
@@ -237,7 +237,7 @@ export default function CajaPage() {
                 {elapsedLabel(miCierre.fecha_apertura)}
               </span>
               <button
-                onClick={() => loadArqueo(miCierre.id)}
+                onClick={() => loadArqueo(miCierre.id_cierre)}
                 className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-green-700 hover:bg-green-100 rounded-lg transition-colors"
                 title="Actualizar arqueo"
               >
@@ -365,7 +365,7 @@ export default function CajaPage() {
         </select>
         <select value={filterCaja} onChange={e => { setFilterCaja(e.target.value); setPage(1) }} className={selectClass}>
           <option value="">Todas las cajas</option>
-          {cajas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          {cajas.map(c => <option key={c.id_caja} value={c.id_caja}>{c.nombre}</option>)}
         </select>
       </div>
 
@@ -374,7 +374,7 @@ export default function CajaPage() {
         <Table
           columns={columns}
           dataSource={cierres}
-          rowKey="id"
+          rowKey="id_cierre"
           loading={loading}
           pageSize={15}
           page={page}
@@ -404,7 +404,7 @@ export default function CajaPage() {
         miCierre={miCierre ?? null}
         mediosPago={mediosPago}
         onClose={() => setMovTipo(null)}
-        onSaved={() => { if (miCierre) loadArqueo(miCierre.id) }}
+        onSaved={() => { if (miCierre) loadArqueo(miCierre.id_cierre) }}
       />
     </div>
   )

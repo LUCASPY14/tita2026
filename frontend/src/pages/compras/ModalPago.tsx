@@ -7,7 +7,7 @@ import { extractErrorMessage, formatGs, type Compra } from './shared'
 interface Props {
   open: boolean
   compra: Compra | null
-  mediosPago: { id: number; descripcion: string }[]
+  mediosPago: { id_medio_pago: number; descripcion: string }[]
   onClose: () => void
   onSaved: () => void
 }
@@ -24,7 +24,7 @@ export default function ModalPago({ open, compra, mediosPago, onClose, onSaved }
     if (open && compra) {
       setMonto(String(Number(compra.saldo_pendiente) || ''))
       const efectivo = mediosPago.find(m => m.descripcion.toLowerCase().includes('efectivo'))
-      setMedioPago(efectivo?.id ?? mediosPago[0]?.id ?? 0)
+      setMedioPago(efectivo?.id_medio_pago ?? mediosPago[0]?.id_medio_pago ?? 0)
       setObs('')
     }
   }
@@ -35,7 +35,7 @@ export default function ModalPago({ open, compra, mediosPago, onClose, onSaved }
     setSaving(true)
     try {
       await api.post('/compras/pagos/', {
-        compra: compra!.id,
+        compra: compra!.id_compra,
         monto: montoNum,
         medio_pago: medioPago,
         observaciones: obs,
@@ -56,7 +56,7 @@ export default function ModalPago({ open, compra, mediosPago, onClose, onSaved }
   return (
     <Modal
       open={open}
-      title={`Registrar Pago — Compra #${compra?.id}`}
+      title={`Registrar Pago — Compra #${compra?.id_compra}`}
       onOk={handleSave}
       onCancel={onClose}
       okText="Registrar Pago"
@@ -86,7 +86,7 @@ export default function ModalPago({ open, compra, mediosPago, onClose, onSaved }
         <div>
           <label className={labelClass}>Medio de Pago</label>
           <select value={medioPago} onChange={e => setMedioPago(Number(e.target.value))} className={inputClass}>
-            {mediosPago.map(mp => <option key={mp.id} value={mp.id}>{mp.descripcion}</option>)}
+            {mediosPago.map(mp => <option key={mp.id_medio_pago} value={mp.id_medio_pago}>{mp.descripcion}</option>)}
           </select>
         </div>
 

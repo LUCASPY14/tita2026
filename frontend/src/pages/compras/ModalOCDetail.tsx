@@ -22,7 +22,7 @@ export default function ModalOCDetail({ oc, canApprove, accionLoading, onClose, 
   return (
     <Modal
       open={!!oc}
-      title={oc ? `OC #${oc.id} — ${oc.proveedor_nombre}` : ''}
+      title={oc ? `OC #${oc.id_orden_compra} — ${oc.proveedor_nombre}` : ''}
       onCancel={onClose}
       width={680}
       footer={null}
@@ -74,7 +74,7 @@ export default function ModalOCDetail({ oc, canApprove, accionLoading, onClose, 
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {(oc.detalles ?? []).map(d => (
-                  <tr key={d.id}>
+                  <tr key={d.id_detalle_oc}>
                     <td className="px-4 py-2.5 text-slate-700">{d.producto_nombre}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{d.cantidad}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{formatGs(d.costo_unitario)}</td>

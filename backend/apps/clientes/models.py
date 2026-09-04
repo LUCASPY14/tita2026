@@ -20,6 +20,7 @@ class Cliente(models.Model):
     Cliente (padre/tutor) que compra en la cantina.
     """
 
+    id_cliente = models.BigAutoField(primary_key=True)
     nombres = models.CharField(max_length=100, help_text="Nombres del cliente")
     apellidos = models.CharField(max_length=100, help_text="Apellidos del cliente")
     razon_social = models.CharField(
@@ -98,7 +99,7 @@ class Cliente(models.Model):
     @property
     def saldo_cuenta_corriente(self):
         """Saldo actual de la cuenta corriente. Positivo = deuda."""
-        ultimo = self.movimientos_cuenta.order_by("-id").first()
+        ultimo = self.movimientos_cuenta.order_by("-id_movimiento_cc").first()
         return ultimo.saldo_resultante if ultimo else Decimal("0")
 
     def _saldo_cc_por_origen(self, origen):
@@ -142,6 +143,7 @@ class CuentaCorrienteCliente(models.Model):
         ALMUERZO = "ALMUERZO", "Almuerzo"
         GENERAL = "GENERAL", "General"
 
+    id_movimiento_cc = models.BigAutoField(primary_key=True)
     cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
@@ -212,7 +214,7 @@ class CuentaCorrienteCliente(models.Model):
     class Meta:
         verbose_name = "Movimiento de Cuenta Corriente"
         verbose_name_plural = "Cuentas Corrientes de Clientes"
-        ordering = ["-fecha", "-id"]
+        ordering = ["-fecha", "-id_movimiento_cc"]
         indexes = [
             models.Index(fields=["cliente", "fecha"], name="idx_cc_cli_fecha"),
             models.Index(fields=["cliente", "tipo"], name="idx_cc_cli_tipo"),
@@ -231,7 +233,7 @@ class CuentaCorrienteCliente(models.Model):
                 ultimo = (
                     CuentaCorrienteCliente.objects
                     .filter(cliente_id=self.cliente_id)
-                    .order_by("-id")
+                    .order_by("-id_movimiento_cc")
                     .first()
                 )
                 self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
@@ -251,6 +253,7 @@ class CuentaCorrienteCliente(models.Model):
 class TipoCliente(models.Model):
     """Tipos de clientes (Regular, Mayorista, Estudiante, Profesor, etc.)."""
 
+    id_tipo_cliente = models.BigAutoField(primary_key=True)
     nombre = models.CharField(unique=True, max_length=50)
     activo = models.BooleanField(default=True)
 
@@ -270,6 +273,7 @@ class TipoCliente(models.Model):
 class Hijo(models.Model):
     """Hijo/estudiante asociado a un cliente (padre/tutor)."""
 
+    id_hijo = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100, help_text="Nombre del estudiante")
     apellido = models.CharField(max_length=100, help_text="Apellido del estudiante")
     fecha_nacimiento = models.DateField(blank=True, null=True)
@@ -351,6 +355,7 @@ class Hijo(models.Model):
 class Grado(models.Model):
     """Grados escolares de la institución."""
 
+    id_grado = models.BigAutoField(primary_key=True)
     nombre = models.CharField(unique=True, max_length=50)
     nivel = models.IntegerField(help_text="Nivel numérico (1-12)")
     orden = models.IntegerField(help_text="Orden de visualización")
@@ -370,6 +375,7 @@ class Grado(models.Model):
 class HistorialGrado(models.Model):
     """Historial de cambios de grado de estudiantes."""
 
+    id_historial_grado = models.BigAutoField(primary_key=True)
     hijo = models.ForeignKey(
         Hijo, models.PROTECT, related_name="historial_grados"
     )
@@ -403,6 +409,7 @@ class RestriccionHijo(models.Model):
         ALTA = "ALTA", "Alta"
         CRITICA = "CRITICA", "Crítica"
 
+    id_restriccion = models.BigAutoField(primary_key=True)
     hijo = models.ForeignKey(
         Hijo, models.PROTECT, related_name="restricciones"
     )
@@ -442,6 +449,7 @@ class AutorizacionSaldoNegativo(models.Model):
         USADA = "USADA", "Usada"
         CANCELADA = "CANCELADA", "Cancelada"
 
+    id_autorizacion = models.BigAutoField(primary_key=True)
     cliente = models.ForeignKey(
         Cliente, models.PROTECT, related_name="autorizaciones_saldo"
     )
@@ -476,6 +484,7 @@ class AutorizacionSaldoNegativo(models.Model):
 # ==============================================================================
 
 class Pais(models.Model):
+    id_pais = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
 
     class Meta:
@@ -488,6 +497,7 @@ class Pais(models.Model):
 
 
 class Ciudad(models.Model):
+    id_ciudad = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
     pais = models.ForeignKey(
         Pais,
@@ -532,6 +542,7 @@ class AlumnoResponsable(models.Model):
         TUTOR  = "TUTOR",  "Tutor/a Legal"
         OTRO   = "OTRO",   "Otro"
 
+    id_responsable = models.BigAutoField(primary_key=True)
     hijo = models.ForeignKey(
         Hijo,
         models.CASCADE,

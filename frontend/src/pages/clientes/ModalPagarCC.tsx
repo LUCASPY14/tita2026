@@ -60,7 +60,7 @@ export default function ModalPagarCC({ open, cliente, onClose, onSaved }: Props)
     try {
       const desc = `Pago CC — ${metodo}${referencia ? ` (${referencia})` : ''}`
       const { data } = await api.post('/clientes/cuentas-corrientes/', {
-        cliente: cliente!.id,
+        cliente: cliente!.id_cliente,
         monto: montoNum,
         descripcion: desc,
         medio_pago: metodo,

@@ -99,7 +99,7 @@ export default function PanelProductos({
                 const restr = isRestricto(p)
                 const bloqueado = !!restr && (restr.severidad === 'CRITICA' || restr.severidad === 'ALTA')
                 return (
-                  <button key={p.id} onClick={() => onAgregar(p)} disabled={bloqueado}
+                  <button key={p.id_producto} onClick={() => onAgregar(p)} disabled={bloqueado}
                     className={[
                       'relative flex flex-col items-center justify-center shrink-0 w-24 h-[68px] rounded-xl border-2 p-1.5 transition-all duration-100',
                       bloqueado
@@ -132,9 +132,9 @@ export default function PanelProductos({
               const meta = catMeta(p.categoria_nombre)
               const restr = isRestricto(p)
               const bloqueado = !!restr && (restr.severidad === 'CRITICA' || restr.severidad === 'ALTA')
-              const isAdded = p.id === addedProductId
+              const isAdded = p.id_producto === addedProductId
               return (
-                <button key={p.id} onClick={() => onAgregar(p)} disabled={bloqueado}
+                <button key={p.id_producto} onClick={() => onAgregar(p)} disabled={bloqueado}
                   className={[
                     'relative flex flex-col items-center justify-center text-center rounded-xl border-2 p-2 min-h-[108px] transition-all duration-100 select-none',
                     bloqueado
@@ -203,16 +203,16 @@ export default function PanelProductos({
               {carrito.map(item => {
                 const precio = getPrecio(item.producto)
                 return (
-                  <li key={item.producto.id} className="px-4 py-2 flex items-center gap-3">
+                  <li key={item.producto.id_producto} className="px-4 py-2 flex items-center gap-3">
                     <p className="text-sm text-slate-800 font-semibold flex-1 leading-tight truncate">{item.producto.descripcion}</p>
 
                     {esPorPeso(item.producto) ? (
                       <div className="flex items-center gap-1.5 shrink-0">
                         <input
-                          value={cantidadTexto[item.producto.id] ?? formatCantidad(item.cantidad)}
-                          onChange={e => setCantidadTexto(prev => ({ ...prev, [item.producto.id]: e.target.value.replace(/[^\d,.]/g, '') }))}
-                          onFocus={() => setCantidadTexto(prev => ({ ...prev, [item.producto.id]: formatCantidad(item.cantidad) }))}
-                          onBlur={e => commitCantidad(item.producto.id, e.target.value)}
+                          value={cantidadTexto[item.producto.id_producto] ?? formatCantidad(item.cantidad)}
+                          onChange={e => setCantidadTexto(prev => ({ ...prev, [item.producto.id_producto]: e.target.value.replace(/[^\d,.]/g, '') }))}
+                          onFocus={() => setCantidadTexto(prev => ({ ...prev, [item.producto.id_producto]: formatCantidad(item.cantidad) }))}
+                          onBlur={e => commitCantidad(item.producto.id_producto, e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
                           inputMode="decimal"
                           className="w-16 text-base font-black text-slate-900 tabular-nums text-center bg-slate-100 rounded-lg py-1 outline-none focus:ring-2 focus:ring-blue-400"
@@ -221,7 +221,7 @@ export default function PanelProductos({
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button onClick={() => onQuitar(item.producto.id)}
+                        <button onClick={() => onQuitar(item.producto.id_producto)}
                           className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
                           <Minus size={14} />
                         </button>
@@ -235,7 +235,7 @@ export default function PanelProductos({
 
                     <span className="text-sm font-bold text-emerald-700 tabular-nums shrink-0 w-24 text-right">{gs(precio * item.cantidad)}</span>
 
-                    <button onClick={() => onSetCarrito(p => p.filter(i => i.producto.id !== item.producto.id))}
+                    <button onClick={() => onSetCarrito(p => p.filter(i => i.producto.id_producto !== item.producto.id_producto))}
                       className="text-slate-300 hover:text-red-500 transition-colors shrink-0 p-0.5">
                       <X size={15} />
                     </button>

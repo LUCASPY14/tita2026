@@ -161,7 +161,7 @@ class TestImportarClientesUnHijo:
         run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
 
         hijo = Hijo.objects.get(nombre="Sofía")
-        assert hijo.grado_id == grado.id
+        assert hijo.grado_id == grado.id_grado
 
     def test_fecha_nacimiento_invalida_no_bloquea_la_fila(self, tmp_path, tipo_cliente, lista_precio):
         csv_path = escribir_csv(tmp_path / "in.csv", [fila_base(hijo1_fecha_nacimiento="fecha-mala")])
@@ -314,7 +314,7 @@ class TestImportarClientesTarjeta:
 
         hijo = Hijo.objects.get(nombre="Sofía")
         tarjeta = Tarjeta.objects.get(pk="T-001")
-        assert tarjeta.hijo_id == hijo.id
+        assert tarjeta.hijo_id == hijo.id_hijo
         assert tarjeta.estado == Tarjeta.Estado.ACTIVA
         assert tarjeta.saldo_actual == 0
         assert "Tarjetas vinculadas: 1" in salida
@@ -346,7 +346,7 @@ class TestImportarClientesTarjeta:
         salida = run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
 
         tarjeta = Tarjeta.objects.get(pk="T-001")
-        assert tarjeta.hijo_id == otro_hijo.id  # sin cambios
+        assert tarjeta.hijo_id == otro_hijo.id_hijo  # sin cambios
         assert "ya está registrada a nombre de" in salida
         assert "Tarjetas vinculadas: 0" in salida
 

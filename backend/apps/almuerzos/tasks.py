@@ -69,7 +69,7 @@ def cerrar_cuentas_mes_anterior():
             )
 
             totales = registros_qs.aggregate(
-                cantidad=Count("id"),
+                cantidad=Count("id_registro_consumo"),
                 monto=Sum("costo_almuerzo"),
             )
             cantidad = totales["cantidad"] or 0

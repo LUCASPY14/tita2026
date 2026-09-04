@@ -103,11 +103,11 @@ class DashboardConsumer(AsyncWebsocketConsumer):
         hoy = localdate()
         ventas_hoy = Venta.objects.filter(
             fecha__date=hoy, estado=Venta.Estado.ACTIVA,
-        ).aggregate(cantidad=Count("id"), monto=Sum("monto_total"))
+        ).aggregate(cantidad=Count("id_venta"), monto=Sum("monto_total"))
 
         recargas_hoy = CargaSaldo.objects.filter(
             fecha_carga__date=hoy, estado=CargaSaldo.Estado.CONFIRMADA,
-        ).aggregate(cantidad=Count("id"), monto=Sum("monto_cargado"))
+        ).aggregate(cantidad=Count("id_carga"), monto=Sum("monto_cargado"))
 
         almuerzos_hoy = RegistroConsumoAlmuerzo.objects.filter(fecha_consumo=hoy).count()
 
@@ -122,7 +122,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
                 fecha_nacimiento__month=hoy.month,
                 fecha_nacimiento__day=hoy.day,
                 activo=True,
-            ).select_related("grado").values("id", "nombre", "apellido", "grado__nombre")
+            ).select_related("grado").values("id_hijo", "nombre", "apellido", "grado__nombre")
         )
 
         cumpleaneros_personal_hoy = list(
@@ -130,7 +130,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
                 fecha_nacimiento__month=hoy.month,
                 fecha_nacimiento__day=hoy.day,
                 is_active=True,
-            ).exclude(rol=Usuario.Rol.CLIENTE_WEB).values("id", "nombre", "apellido", "rol")
+            ).exclude(rol=Usuario.Rol.CLIENTE_WEB).values("id_usuario", "nombre", "apellido", "rol")
         )
 
         return {
@@ -146,12 +146,12 @@ class DashboardConsumer(AsyncWebsocketConsumer):
             "tarjetasEnAlerta": tarjetas_alerta,
             "cumpleanosHoy":   len(cumpleaneros_hoy),
             "cumpleaneros": [
-                {"id": h["id"], "nombre": f'{h["nombre"]} {h["apellido"]}', "grado": h["grado__nombre"]}
+                {"id_hijo": h["id_hijo"], "nombre": f'{h["nombre"]} {h["apellido"]}', "grado": h["grado__nombre"]}
                 for h in cumpleaneros_hoy
             ],
             "cumpleanosPersonalHoy": len(cumpleaneros_personal_hoy),
             "cumpleanerosPersonal": [
-                {"id": u["id"], "nombre": f'{u["nombre"]} {u["apellido"]}', "rol": u["rol"]}
+                {"id_usuario": u["id_usuario"], "nombre": f'{u["nombre"]} {u["apellido"]}', "rol": u["rol"]}
                 for u in cumpleaneros_personal_hoy
             ],
         }

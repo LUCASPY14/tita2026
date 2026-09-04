@@ -60,7 +60,7 @@ class Command(BaseCommand):
             writer.writeheader()
             for cliente, hijos in por_cliente.items():
                 fila = {
-                    "cliente_id": cliente.id,
+                    "cliente_id": cliente.id_cliente,
                     "ruc_ci": cliente.ruc_ci,
                     "cliente_nombres": cliente.nombres,
                     "cliente_apellidos": cliente.apellidos,

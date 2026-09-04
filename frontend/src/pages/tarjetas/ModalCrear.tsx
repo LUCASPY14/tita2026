@@ -161,7 +161,7 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
             >
               <option value="">Seleccionar estudiante...</option>
               {hijos.map(h => (
-                <option key={h.id} value={h.id}>{h.nombre} {h.apellido} — {h.grado}</option>
+                <option key={h.id_hijo} value={h.id_hijo}>{h.nombre} {h.apellido} — {h.grado}</option>
               ))}
             </select>
           </div>
@@ -180,10 +180,10 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
             {clientes.length > 0 && !form.cliente_directo && (
               <ul className="border border-slate-200 rounded-xl mt-1 max-h-40 overflow-y-auto">
                 {clientes.map(c => (
-                  <li key={c.id}>
+                  <li key={c.id_cliente}>
                     <button
                       type="button"
-                      onClick={() => { setForm(f => ({ ...f, cliente_directo: c.id })); setClientesSearch(c.nombre_completo) }}
+                      onClick={() => { setForm(f => ({ ...f, cliente_directo: c.id_cliente })); setClientesSearch(c.nombre_completo) }}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 cursor-pointer"
                     >
                       <span className="font-semibold text-slate-800">{c.nombre_completo}</span>

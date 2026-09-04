@@ -191,7 +191,7 @@ class TestAnularVenta:
         ultimo_cc = (
             CuentaCorrienteCliente.objects
             .filter(cliente=cliente)
-            .order_by("-id")
+            .order_by("-id_movimiento_cc")
             .first()
         )
         assert ultimo_cc.tipo == "CREDITO"

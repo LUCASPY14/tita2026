@@ -22,7 +22,7 @@ export function formatFecha(iso: string | null | undefined): string {
   })
 }
 
-export interface Producto { id: number; descripcion: string }
+export interface Producto { id_producto: number; descripcion: string }
 
 export interface DetalleAjuste {
   producto: Producto | null
@@ -31,13 +31,13 @@ export interface DetalleAjuste {
 }
 
 export interface AjusteInventario {
-  id: number; tipo: string; estado: string; motivo: string; fecha: string
+  id_ajuste: number; tipo: string; estado: string; motivo: string; fecha: string
   usuario_nombre: string
-  detalles: { id: number; producto_nombre: string; cantidad: number; motivo_detalle: string }[]
+  detalles: { id_detalle_ajuste: number; producto_nombre: string; cantidad: number; motivo_detalle: string }[]
 }
 
 export interface MovimientoStock {
-  id: number; producto: number; producto_nombre: string; tipo: string
+  id_movimiento_stock: number; producto: number; producto_nombre: string; tipo: string
   cantidad: number; motivo: string; fecha: string; usuario_nombre?: string
 }
 

@@ -16,7 +16,7 @@ export function extractErrorMessage(err: unknown): string {
 }
 
 export interface Usuario {
-  id: number
+  id_usuario: number
   email: string
   ci_ruc: string | null
   nombre: string
@@ -28,7 +28,7 @@ export interface Usuario {
 }
 
 export interface UsuarioPortal {
-  id: number
+  id_usuario: number
   email: string
   nombre: string
   apellido: string

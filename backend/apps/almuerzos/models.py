@@ -23,6 +23,7 @@ def hora_actual():
 class PrecioAlmuerzo(models.Model):
     """Historial de precios unitarios del almuerzo con vigencia."""
 
+    id_precio_almuerzo = models.BigAutoField(primary_key=True)
     precio_unitario = models.DecimalField(
         max_digits=12, decimal_places=0,
         help_text="Precio por almuerzo en Guaraníes",
@@ -74,6 +75,7 @@ class PrecioAlmuerzo(models.Model):
 class TipoAlmuerzo(models.Model):
     """Tipo de almuerzo (plato principal, postre, bebida, etc.)."""
 
+    id_tipo_almuerzo = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
     descripcion = models.TextField(blank=True, null=True)
     precio_unitario = models.DecimalField(
@@ -117,6 +119,7 @@ class PlanAlmuerzo(models.Model):
         CANTIDAD = "CANTIDAD", "Mensual con cantidad fija"
         SIN_LIMITE = "SIN_LIMITE", "Mensual sin límite (cuenta corriente)"
 
+    id_plan_almuerzo = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
     descripcion = models.TextField(blank=True, null=True)
     tipo = models.CharField(
@@ -174,6 +177,7 @@ class SuscripcionAlmuerzo(models.Model):
         SUSPENDIDA = "SUSPENDIDA", "Suspendida"
         CANCELADA = "CANCELADA", "Cancelada"
 
+    id_suscripcion = models.BigAutoField(primary_key=True)
     hijo = models.ForeignKey(
         "clientes.Hijo", models.PROTECT, related_name="suscripciones_almuerzo"
     )
@@ -214,6 +218,7 @@ class RegistroConsumoAlmuerzo(models.Model):
         RECHAZADO = "RECHAZADO", "Rechazado"
         ANULADO = "ANULADO", "Anulado"
 
+    id_registro_consumo = models.BigAutoField(primary_key=True)
     hijo = models.ForeignKey(
         "clientes.Hijo", models.PROTECT, related_name="consumos_almuerzo"
     )
@@ -315,6 +320,7 @@ class CuentaAlmuerzoMensual(models.Model):
         ONLINE = "ONLINE", "Pago online"
         DEBITO_AUTOMATICO = "DEBITO_AUTOMATICO", "Débito automático"
 
+    id_cuenta_mensual = models.BigAutoField(primary_key=True)
     hijo = models.ForeignKey(
         "clientes.Hijo", models.PROTECT, related_name="cuentas_almuerzo"
     )
@@ -403,6 +409,7 @@ class PagoCuentaAlmuerzo(models.Model):
     lectura desde que el cobro de almuerzo se consolidó en SaldoAlmuerzo.
     """
 
+    id_pago_cuenta = models.BigAutoField(primary_key=True)
     cuenta = models.ForeignKey(
         CuentaAlmuerzoMensual, models.PROTECT, related_name="pagos"
     )
@@ -461,6 +468,7 @@ class Alergeno(models.Model):
         ALTA = "ALTA", "Alta"
         CRITICA = "CRITICA", "Crítica"
 
+    id_alergeno = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
     descripcion = models.TextField(blank=True, null=True)
     palabras_clave = models.JSONField(
@@ -493,6 +501,7 @@ class Alergeno(models.Model):
 class ProductoAlergeno(models.Model):
     """Relación producto-alérgeno."""
 
+    id_producto_alergeno = models.BigAutoField(primary_key=True)
     producto = models.ForeignKey(
         "productos.Producto", models.CASCADE, related_name="alergenos"
     )
@@ -533,6 +542,7 @@ class ProductoAlergeno(models.Model):
 class MenuDiario(models.Model):
     """Menú del día visible para padres en el portal."""
 
+    id_menu = models.BigAutoField(primary_key=True)
     fecha = models.DateField(unique=True)
     plato_principal = models.CharField(max_length=255)
     guarnicion = models.CharField(max_length=255, blank=True)
@@ -580,6 +590,7 @@ class DetalleMenuDiario(models.Model):
         BEBIDA        = "BEBIDA",        "Bebida"
         EXTRA         = "EXTRA",         "Extra"
 
+    id_detalle_menu = models.BigAutoField(primary_key=True)
     menu = models.ForeignKey(
         MenuDiario,
         models.CASCADE,
@@ -639,6 +650,7 @@ class SaldoAlmuerzo(models.Model):
     bloquea el ingreso al comedor.
     """
 
+    id_saldo_almuerzo = models.BigAutoField(primary_key=True)
     hijo = models.OneToOneField(
         "clientes.Hijo", models.PROTECT, related_name="saldo_almuerzo"
     )
@@ -662,6 +674,7 @@ class RecargaSaldoAlmuerzo(models.Model):
         CONFIRMADA = "CONFIRMADA", "Confirmada"
         RECHAZADA = "RECHAZADA", "Rechazada"
 
+    id_recarga_almuerzo = models.BigAutoField(primary_key=True)
     hijo = models.ForeignKey(
         "clientes.Hijo", models.PROTECT, related_name="recargas_almuerzo"
     )
@@ -708,6 +721,7 @@ class MovimientoSaldoAlmuerzo(models.Model):
         CONSUMO = "CONSUMO", "Consumo"
         AJUSTE = "AJUSTE", "Ajuste"
 
+    id_movimiento_almuerzo = models.BigAutoField(primary_key=True)
     saldo = models.ForeignKey(
         SaldoAlmuerzo, models.CASCADE, related_name="movimientos"
     )

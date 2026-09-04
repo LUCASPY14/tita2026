@@ -31,7 +31,7 @@ export default function ModalMovimiento({ tipo, miCierre, mediosPago, onClose, o
     if (tipo) {
       setMovTipo(tipo)
       setMovMonto('')
-      setMovMedioPago(mediosPago[0] ? String(mediosPago[0].id) : '')
+      setMovMedioPago(mediosPago[0] ? String(mediosPago[0].id_medio_pago) : '')
       setMovDesc('')
     }
   }
@@ -42,7 +42,7 @@ export default function ModalMovimiento({ tipo, miCierre, mediosPago, onClose, o
     movSavingRef.current = true
     setMovSaving(true)
     try {
-      await api.post(`/contabilidad/cierres-caja/${miCierre.id}/registrar-movimiento/`, {
+      await api.post(`/contabilidad/cierres-caja/${miCierre.id_cierre}/registrar-movimiento/`, {
         tipo: movTipo,
         monto: Number(movMonto),
         medio_pago: movMedioPago ? Number(movMedioPago) : null,
@@ -112,7 +112,7 @@ export default function ModalMovimiento({ tipo, miCierre, mediosPago, onClose, o
             className={inputCls}
           >
             <option value="">Sin especificar</option>
-            {mediosPago.map(m => <option key={m.id} value={m.id}>{m.descripcion}</option>)}
+            {mediosPago.map(m => <option key={m.id_medio_pago} value={m.id_medio_pago}>{m.descripcion}</option>)}
           </select>
         </div>
 

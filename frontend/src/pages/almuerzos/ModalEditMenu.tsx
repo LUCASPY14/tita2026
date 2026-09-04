@@ -34,7 +34,7 @@ export default function ModalEditMenu({ menu, onClose, onSaved }: Props) {
     if (!menu || !form.plato_principal) { toast.error('Ingresá el plato principal'); return }
     setSaving(true)
     try {
-      await api.put(`/almuerzos/menu/${menu.id}/`, form)
+      await api.put(`/almuerzos/menu/${menu.id_menu}/`, form)
       toast.success('Menú actualizado')
       onSaved()
       onClose()

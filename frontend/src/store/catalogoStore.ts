@@ -5,7 +5,7 @@ import api from '../services/api'
 const TTL_MS = 5 * 60 * 1000 // 5 minutos
 
 interface Producto {
-  id: number
+  id_producto: number
   descripcion: string
   precio_venta: number
   precio_actual?: string | number
@@ -19,12 +19,12 @@ interface Producto {
 }
 
 interface Categoria {
-  id: number
+  id_categoria: number
   nombre: string
 }
 
 interface MedioPago {
-  id: number
+  id_medio_pago: number
   descripcion: string
   activo: boolean
 }
@@ -150,6 +150,7 @@ export const useCatalogoStore = create<CatalogoState>()(
     }),
     {
       name: 'catalogo-cache',
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       // Solo persistir los datos, no los estados de loading
       partialize: (state) => ({

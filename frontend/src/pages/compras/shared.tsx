@@ -30,7 +30,7 @@ export function formatFecha(iso: string | null | undefined): string {
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 export interface Proveedor {
-  id: number
+  id_proveedor: number
   razon_social: string
   ruc: string
   telefono: string | null
@@ -42,7 +42,7 @@ export interface Proveedor {
 }
 
 export interface Producto {
-  id: number
+  id_producto: number
   descripcion: string
   precio_actual: string | number
   codigo_barra?: string | null
@@ -50,7 +50,7 @@ export interface Producto {
 }
 
 export interface DetalleCompra {
-  id: number
+  id_detalle_compra: number
   producto: number
   producto_nombre: string
   cantidad: number
@@ -59,7 +59,7 @@ export interface DetalleCompra {
 }
 
 export interface Compra {
-  id: number
+  id_compra: number
   proveedor: number
   proveedor_nombre: string
   fecha: string
@@ -73,7 +73,7 @@ export interface Compra {
 }
 
 export interface PagoProveedor {
-  id: number
+  id_pago_proveedor: number
   compra_id: number | null
   proveedor: number
   proveedor_nombre: string
@@ -93,7 +93,7 @@ export interface NCDetalle {
 }
 
 export interface NotaCredito {
-  id: number
+  id_nc_proveedor: number
   proveedor: number
   proveedor_nombre: string
   compra_original: number | null
@@ -104,11 +104,11 @@ export interface NotaCredito {
   estado: 'EMITIDA' | 'APLICADA' | 'ANULADA'
   fecha: string
   fecha_creacion: string
-  detalles: { id: number; producto: number; producto_nombre: string; cantidad: string; precio_unitario: string; subtotal: string }[]
+  detalles: { id_detalle_ncp: number; producto: number; producto_nombre: string; cantidad: string; precio_unitario: string; subtotal: string }[]
 }
 
 export interface CuentaCorriente {
-  id: number
+  id_movimiento_ccp: number
   tipo: string
   descripcion: string
   monto: string | number
@@ -117,7 +117,7 @@ export interface CuentaCorriente {
 }
 
 export interface ProductoProveedorRecord {
-  id: number
+  id_producto_proveedor: number
   producto: number
   producto_nombre: string
   precio_compra: number
@@ -132,7 +132,7 @@ export interface ItemForm {
 }
 
 export interface DetalleOC {
-  id: number
+  id_detalle_oc: number
   producto: number
   producto_nombre: string
   cantidad: number
@@ -141,7 +141,7 @@ export interface DetalleOC {
 }
 
 export interface OrdenCompra {
-  id: number
+  id_orden_compra: number
   proveedor: number
   proveedor_nombre: string
   estado: 'BORRADOR' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CONVERTIDA'

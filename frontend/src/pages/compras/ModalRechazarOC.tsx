@@ -25,7 +25,7 @@ export default function ModalRechazarOC({ oc, onClose, onSaved }: Props) {
     if (!m) { toast.error('Ingresá el motivo del rechazo'); return }
     setSaving(true)
     try {
-      await api.post(`/compras/ordenes/${oc!.id}/rechazar/`, { motivo: m })
+      await api.post(`/compras/ordenes/${oc!.id_orden_compra}/rechazar/`, { motivo: m })
       toast.success('OC rechazada')
       onSaved()
       onClose()
@@ -42,7 +42,7 @@ export default function ModalRechazarOC({ oc, onClose, onSaved }: Props) {
   return (
     <Modal
       open={!!oc}
-      title={`Rechazar OC #${oc?.id}`}
+      title={`Rechazar OC #${oc?.id_orden_compra}`}
       onOk={handleRechazar}
       onCancel={onClose}
       okText="Confirmar Rechazo"

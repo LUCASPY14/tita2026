@@ -44,7 +44,7 @@ def _compute_totp(secret_b32: str, timestamp: float | None = None, step: int = 3
 
 
 def _pre_auth_token(user: Usuario) -> str:
-    return signing.dumps({"user_id": user.id}, salt="2fa-pre-auth")
+    return signing.dumps({"user_id": user.id_usuario}, salt="2fa-pre-auth")
 
 
 def _expired_pre_auth_token(user: Usuario) -> str:
@@ -54,7 +54,7 @@ def _expired_pre_auth_token(user: Usuario) -> str:
     six_min_ago = time.time() - 360
     with patch("django.core.signing.time") as mock_time:
         mock_time.time.return_value = six_min_ago
-        return signing.dumps({"user_id": user.id}, salt="2fa-pre-auth")
+        return signing.dumps({"user_id": user.id_usuario}, salt="2fa-pre-auth")
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────

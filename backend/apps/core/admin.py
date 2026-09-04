@@ -118,7 +118,7 @@ class TarjetaAdmin(admin.ModelAdmin):
 @admin.register(MovimientoTarjeta)
 class MovimientoTarjetaAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_movimiento_tarjeta",
         "tarjeta_link",
         "tipo_badge",
         "monto_display",
@@ -130,7 +130,7 @@ class MovimientoTarjetaAdmin(admin.ModelAdmin):
     readonly_fields = ["fecha_creacion", "saldo_anterior", "saldo_resultante"]
     list_select_related = ["tarjeta"]
     date_hierarchy = "fecha"
-    ordering = ["-fecha", "-id"]
+    ordering = ["-fecha", "-id_movimiento_tarjeta"]
 
     def get_readonly_fields(self, request, obj=None):
         """Movimiento inmutable una vez creado."""
@@ -176,7 +176,7 @@ class MovimientoTarjetaAdmin(admin.ModelAdmin):
 @admin.register(CargaSaldo)
 class CargaSaldoAdmin(admin.ModelAdmin):
     list_display = [
-        "id",
+        "id_carga",
         "tarjeta_link",
         "cliente_origen_link",
         "monto_cargado_display",
@@ -288,7 +288,7 @@ class MedioPagoAdmin(admin.ModelAdmin):
 
 @admin.register(PagoBancard)
 class PagoBancardAdmin(admin.ModelAdmin):
-    list_display = ["id", "tipo_badge", "origen_cc", "monto_display", "estado_badge", "shop_process_id", "fecha_creacion"]
+    list_display = ["id_pago_bancard", "tipo_badge", "origen_cc", "monto_display", "estado_badge", "shop_process_id", "fecha_creacion"]
     list_filter = ["estado", "tipo"]
     search_fields = ["shop_process_id", "descripcion"]
     readonly_fields = [f.name for f in PagoBancard._meta.fields]
@@ -332,7 +332,7 @@ class PagoBancardAdmin(admin.ModelAdmin):
 
 @admin.register(SolicitudCatastroBancard)
 class SolicitudCatastroBancardAdmin(admin.ModelAdmin):
-    list_display = ["id", "cliente", "card_id", "referencia", "resuelto", "fecha_creacion"]
+    list_display = ["id_solicitud_catastro", "cliente", "card_id", "referencia", "resuelto", "fecha_creacion"]
     list_filter = ["resuelto"]
     search_fields = ["referencia", "cliente__nombres", "cliente__apellidos"]
     readonly_fields = [f.name for f in SolicitudCatastroBancard._meta.fields]

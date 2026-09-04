@@ -178,7 +178,7 @@ export default function ModoRecreo() {
         if (last) {
           setCarrito(prev => {
             if (last.cantidad <= 1) return prev.slice(0, -1)
-            return prev.map(i => i.producto.id === last.producto.id ? { ...i, cantidad: i.cantidad - 1 } : i)
+            return prev.map(i => i.producto.id_producto === last.producto.id_producto ? { ...i, cantidad: i.cantidad - 1 } : i)
           })
         }
         return
@@ -199,7 +199,7 @@ export default function ModoRecreo() {
       p.descripcion.toLowerCase().includes(prodSearch.toLowerCase()) ||
       (p.codigo_barra?.includes(prodSearch) ?? false))
     const sorted = [...list].sort(
-      (a, b) => ((salesMap[b.id] || 0) - (salesMap[a.id] || 0)) ||
+      (a, b) => ((salesMap[b.id_producto] || 0) - (salesMap[a.id_producto] || 0)) ||
                 a.descripcion.localeCompare(b.descripcion)
     )
     // eslint-disable-next-line react-hooks/refs
@@ -208,11 +208,11 @@ export default function ModoRecreo() {
   }, [productos, catFiltro, prodSearch, salesMap])
 
   const favoritos = useMemo(() =>
-    [...productos].sort((a, b) => (salesMap[b.id] || 0) - (salesMap[a.id] || 0)).slice(0, 5)
+    [...productos].sort((a, b) => (salesMap[b.id_producto] || 0) - (salesMap[a.id_producto] || 0)).slice(0, 5)
   , [productos, salesMap])
 
   const getPrecio = useCallback((p: Producto) =>
-    preciosCliente[p.id] ?? (Number(p.precio_actual) || 0)
+    preciosCliente[p.id_producto] ?? (Number(p.precio_actual) || 0)
   , [preciosCliente])
 
   const total = useMemo(() =>
@@ -265,7 +265,7 @@ export default function ModoRecreo() {
           })
           const prods: Producto[] = data.results ?? data
           const mapa: Record<number, number> = {}
-          prods.forEach(p => { mapa[p.id] = Number(p.precio_actual) || 0 })
+          prods.forEach(p => { mapa[p.id_producto] = Number(p.precio_actual) || 0 })
           setPreciosCliente(mapa)
         } catch { /* precio por defecto como fallback */ }
       }
@@ -303,33 +303,33 @@ export default function ModoRecreo() {
     }
     sfx.add()
     setCarrito(prev => {
-      const ex = prev.find(i => i.producto.id === producto.id)
-      if (ex) return prev.map(i => i.producto.id === producto.id ? { ...i, cantidad: i.cantidad + 1 } : i)
+      const ex = prev.find(i => i.producto.id_producto === producto.id_producto)
+      if (ex) return prev.map(i => i.producto.id_producto === producto.id_producto ? { ...i, cantidad: i.cantidad + 1 } : i)
       return [...prev, { producto, cantidad: 1 }]
     })
-    setAddedProductId(producto.id)
+    setAddedProductId(producto.id_producto)
     clearTimeout(addedTimer.current)
     addedTimer.current = setTimeout(() => setAddedProductId(null), 200)
   }, [isRestricto, saldoDisponible, tarjeta, total, modoPago, getPrecio])
 
   const handleQuitar = useCallback((id: number) => {
     setCarrito(prev => {
-      const item = prev.find(i => i.producto.id === id)
+      const item = prev.find(i => i.producto.id_producto === id)
       if (!item) return prev
       return item.cantidad <= 1
-        ? prev.filter(i => i.producto.id !== id)
-        : prev.map(i => i.producto.id === id ? { ...i, cantidad: i.cantidad - 1 } : i)
+        ? prev.filter(i => i.producto.id_producto !== id)
+        : prev.map(i => i.producto.id_producto === id ? { ...i, cantidad: i.cantidad - 1 } : i)
     })
   }, [])
 
   const handleSetCantidad = useCallback((id: number, cantidad: number) => {
-    const item = carrito.find(i => i.producto.id === id)
+    const item = carrito.find(i => i.producto.id_producto === id)
     if (!item) return
     if (modoPago === 'PREPAGO' && saldoDisponible !== null && !tarjeta?.permite_saldo_negativo) {
       const nuevoTotal = total - getPrecio(item.producto) * item.cantidad + getPrecio(item.producto) * cantidad
       if (nuevoTotal > saldoDisponible) { sfx.error(); toast.error('Saldo insuficiente'); return }
     }
-    setCarrito(prev => prev.map(i => i.producto.id === id ? { ...i, cantidad } : i))
+    setCarrito(prev => prev.map(i => i.producto.id_producto === id ? { ...i, cantidad } : i))
   }, [carrito, modoPago, saldoDisponible, tarjeta, total, getPrecio])
 
   const ejecutarCobro = useCallback(async () => {
@@ -339,7 +339,7 @@ export default function ModoRecreo() {
     setCobrando(true)
     const inicio = ventaStartTime.current || performance.now()
     try {
-      const clienteId = tarjeta ? tarjeta.cliente_id : clienteDirecto!.id
+      const clienteId = tarjeta ? tarjeta.cliente_id : clienteDirecto!.id_cliente
       const nombreDisplay = tarjeta
         ? (tarjeta.hijo_nombre ?? tarjeta.cliente_nombre)
         : clienteDirecto!.nombre_completo
@@ -347,7 +347,7 @@ export default function ModoRecreo() {
         cliente: clienteId,
         tipo: modoPago === 'CREDITO' ? 'CREDITO' : 'CONTADO',
         items: carrito.map(i => ({
-          producto: i.producto.id,
+          producto: i.producto.id_producto,
           cantidad: i.cantidad,
           precio_unitario: getPrecio(i.producto),
         })),
@@ -378,7 +378,7 @@ export default function ModoRecreo() {
         await ventasService.crear(payload as unknown as Parameters<typeof ventasService.crear>[0], 6000)
       }
       sfx.ok()
-      addSales(carrito.map(i => i.producto.id))
+      addSales(carrito.map(i => i.producto.id_producto))
       setSalesMap(getSalesMap())
       const tiempoMs = performance.now() - inicio
       updateDailyStats(tiempoMs)
@@ -453,8 +453,9 @@ export default function ModoRecreo() {
           return
         }
         const now = Date.now()
-        if (lastScannedProduct.current?.id === prod.id && (now - lastScannedProduct.current.time) < 1000) { /* dup */ }
-        lastScannedProduct.current = { id: prod.id, time: now }
+        const last = lastScannedProduct.current
+        if (last && last.id === prod.id_producto && (now - last.time) < 1000) { /* dup */ }
+        lastScannedProduct.current = { id: prod.id_producto, time: now }
         handleAgregarRef.current(prod)
         setTimeout(() => scannerRef.current?.focus(), 30)
       } else {
@@ -473,7 +474,7 @@ export default function ModoRecreo() {
   }[flash]
 
   const avgTime = dailyStats.count > 0 ? (dailyStats.totalTime / dailyStats.count / 1000).toFixed(1) : '—'
-  const medioPagoSeleccionado = mediosPago.find(m => m.id === medioPagoSelId) ?? null
+  const medioPagoSeleccionado = mediosPago.find(m => m.id_medio_pago === medioPagoSelId) ?? null
   const tipoVenta: 'CONTADO' | 'CREDITO' = modoPago === 'CREDITO' ? 'CREDITO' : 'CONTADO'
   const clienteModalidad: 'INMEDIATA' | 'MENSUAL' =
     tarjeta?.cliente_modalidad_facturacion ?? clienteDirecto?.modalidad_facturacion ?? 'INMEDIATA'

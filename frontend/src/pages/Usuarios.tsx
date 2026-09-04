@@ -158,9 +158,9 @@ export default function Usuarios() {
 
   const resetearPassword = useCallback(async (padre: UsuarioPortal) => {
     if (!window.confirm(`¿Resetear contraseña de ${padre.nombre_completo} al CI/RUC ${padre.cliente_ruc_ci}?`)) return
-    setResettingId(padre.id)
+    setResettingId(padre.id_usuario)
     try {
-      await api.post(`/usuarios/usuarios/${padre.id}/resetear-password/`)
+      await api.post(`/usuarios/usuarios/${padre.id_usuario}/resetear-password/`)
       toast.success(`Contraseña reseteada — el padre deberá cambiarla al ingresar`)
     } catch (err) {
       toast.error(extractErrorMessage(err))
@@ -171,7 +171,7 @@ export default function Usuarios() {
 
   const toggleActivoPadre = useCallback(async (padre: UsuarioPortal) => {
     try {
-      await api.patch(`/usuarios/usuarios/${padre.id}/`, { is_active: !padre.is_active })
+      await api.patch(`/usuarios/usuarios/${padre.id_usuario}/`, { is_active: !padre.is_active })
       toast.success(padre.is_active ? 'Acceso desactivado' : 'Acceso activado')
       loadPadres(searchPadres, pagePadres)
     } catch (err) {
@@ -183,9 +183,9 @@ export default function Usuarios() {
 
   const desactivar2FA = useCallback(async (padre: UsuarioPortal) => {
     if (!window.confirm(`¿Desactivar la verificación en dos pasos de ${padre.nombre_completo}? Va a tener que configurarla de nuevo en su próximo ingreso.`)) return
-    setDesactivando2FAId(padre.id)
+    setDesactivando2FAId(padre.id_usuario)
     try {
-      await api.post('/usuarios/2fa/desactivar/', { usuario_id: padre.id })
+      await api.post('/usuarios/2fa/desactivar/', { usuario_id: padre.id_usuario })
       toast.success('Verificación en dos pasos desactivada')
       loadPadres(searchPadres, pagePadres)
     } catch (err) {
@@ -199,9 +199,9 @@ export default function Usuarios() {
 
   const desactivarHuella = useCallback(async (padre: UsuarioPortal) => {
     if (!window.confirm(`¿Desactivar la huella/Face ID de ${padre.nombre_completo}? Va a tener que registrarla de nuevo en su próximo ingreso.`)) return
-    setDesactivandoHuellaId(padre.id)
+    setDesactivandoHuellaId(padre.id_usuario)
     try {
-      await api.post('/usuarios/webauthn/desactivar/', { usuario_id: padre.id })
+      await api.post('/usuarios/webauthn/desactivar/', { usuario_id: padre.id_usuario })
       toast.success('Huella desactivada')
       loadPadres(searchPadres, pagePadres)
     } catch (err) {
@@ -229,7 +229,7 @@ export default function Usuarios() {
   // ── Toggle activo ─────────────────────────────────────────────────
   const toggleActivo = useCallback(async (u: Usuario) => {
     try {
-      await api.patch(`/usuarios/usuarios/${u.id}/`, { is_active: !u.is_active })
+      await api.patch(`/usuarios/usuarios/${u.id_usuario}/`, { is_active: !u.is_active })
       toast.success(u.is_active ? 'Usuario desactivado' : 'Usuario activado')
       loadUsuarios(search, filterRol, page)
     } catch (err) {
@@ -430,10 +430,10 @@ export default function Usuarios() {
             size="sm"
             variant="secondary"
             onClick={() => resetearPassword(r)}
-            disabled={resettingId === r.id}
+            disabled={resettingId === r.id_usuario}
             title="Resetear contraseña al CI/RUC"
           >
-            {resettingId === r.id
+            {resettingId === r.id_usuario
               ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               : <KeyRound className="w-3.5 h-3.5" />}
             Resetear
@@ -443,10 +443,10 @@ export default function Usuarios() {
               size="sm"
               variant="secondary"
               onClick={() => desactivar2FA(r)}
-              disabled={desactivando2FAId === r.id}
+              disabled={desactivando2FAId === r.id_usuario}
               title="Desactivar verificación en dos pasos por app (si perdió el celular)"
             >
-              {desactivando2FAId === r.id
+              {desactivando2FAId === r.id_usuario
                 ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 : <ShieldOff className="w-3.5 h-3.5" />}
               2FA
@@ -457,10 +457,10 @@ export default function Usuarios() {
               size="sm"
               variant="secondary"
               onClick={() => desactivarHuella(r)}
-              disabled={desactivandoHuellaId === r.id}
+              disabled={desactivandoHuellaId === r.id_usuario}
               title="Desactivar huella/Face ID (si perdió el celular)"
             >
-              {desactivandoHuellaId === r.id
+              {desactivandoHuellaId === r.id_usuario
                 ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 : <Fingerprint className="w-3.5 h-3.5" />}
               Huella
@@ -559,7 +559,7 @@ export default function Usuarios() {
               <Table
                 columns={columns}
                 dataSource={usuarios}
-                rowKey="id"
+                rowKey="id_usuario"
                 loading={loading}
                 pageSize={15}
                 page={page}
@@ -622,7 +622,7 @@ export default function Usuarios() {
               <Table
                 columns={colsPadres}
                 dataSource={padres}
-                rowKey="id"
+                rowKey="id_usuario"
                 loading={loadingPadres}
                 pageSize={15}
                 page={pagePadres}

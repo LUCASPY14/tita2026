@@ -29,7 +29,7 @@ describe('clientesService', () => {
 
   it('getHijos — devuelve la respuesta paginada del servidor', async () => {
     const hijo: Hijo = {
-      id: 1, nombre: 'Lucas', apellido: 'García',
+      id_hijo: 1, nombre: 'Lucas', apellido: 'García',
       nombre_completo: 'Lucas García',
       grado: 3, grado_nombre: '3° A',
       cliente_responsable: 10, activo: true,

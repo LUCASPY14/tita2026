@@ -70,7 +70,7 @@ export default function ModalAgregarResponsable({ open, hijoId, onClose, onSaved
           <select className={selectClass} value={form.cliente} onChange={e => setForm(p => ({ ...p, cliente: e.target.value }))}>
             <option value="">Seleccionar cliente...</option>
             {clientes.map(c => (
-              <option key={c.id} value={c.id}>{c.apellidos}, {c.nombres} — {c.ruc_ci}</option>
+              <option key={c.id_cliente} value={c.id_cliente}>{c.apellidos}, {c.nombres} — {c.ruc_ci}</option>
             ))}
           </select>
         </div>
