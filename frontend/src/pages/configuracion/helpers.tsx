@@ -112,8 +112,8 @@ export interface DatosEmpresa {
   razon_social: string
   nombre_fantasia: string
   direccion: string
-  ciudad: string
-  pais: string
+  ciudad: number | null
+  ciudad_nombre: string
   telefono: string
   email: string
   activo: boolean

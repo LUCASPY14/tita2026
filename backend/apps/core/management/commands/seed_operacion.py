@@ -70,7 +70,6 @@ class Command(BaseCommand):
 
             self._seed_fiscal()
             self._seed_empresa()
-            self._seed_condicion_venta()
             self._seed_alergenos()
 
         # Fuera de la transacción grande: cada día/venta hace sus propios
@@ -170,8 +169,6 @@ class Command(BaseCommand):
         ProductoImpuesto.objects.all().delete()
         Impuesto.objects.all().delete()
 
-        from apps.ventas.models import CondicionVenta
-        CondicionVenta.objects.all().delete()
         DatosEmpresa.objects.all().delete()
 
         MovimientoTarjeta.objects.all().delete()
@@ -220,34 +217,23 @@ class Command(BaseCommand):
 
     def _seed_empresa(self):
         from apps.contabilidad.models import DatosEmpresa
+        from apps.clientes.models import Ciudad
 
         self.stdout.write("\n[2/9] Datos de la empresa...")
+        asuncion = Ciudad.objects.filter(nombre="Asunción").first()
         _, created = DatosEmpresa.objects.get_or_create(
             ruc="80099887-3",
             defaults={
                 "razon_social": "Cantina Tita S.R.L.",
                 "nombre_fantasia": "Cantina Tita",
                 "direccion": "Av. Mariscal López 1234",
-                "ciudad": "Asunción",
-                "pais": "Paraguay",
+                "ciudad": asuncion,
                 "telefono": "021-234567",
                 "email": "administracion@cantinatita.com",
                 "activo": True,
             },
         )
         self._log("DatosEmpresa", "Cantina Tita S.R.L.", created)
-
-    # =========================================================================
-    # CONDICIÓN DE VENTA
-    # =========================================================================
-
-    def _seed_condicion_venta(self):
-        from apps.ventas.models import CondicionVenta
-
-        self.stdout.write("\n[3/9] Condiciones de venta...")
-        CondicionVenta.objects.get_or_create(nombre="Contado", defaults={"plazo_dias": 0})
-        CondicionVenta.objects.get_or_create(nombre="Crédito 30 días", defaults={"plazo_dias": 30})
-        self.stdout.write("    CondicionVenta: Contado, Crédito 30 días")
 
     # =========================================================================
     # ALÉRGENOS
@@ -257,7 +243,7 @@ class Command(BaseCommand):
         from apps.almuerzos.models import Alergeno, ProductoAlergeno
         from apps.clientes.models import RestriccionHijo
 
-        self.stdout.write("\n[4/9] Alérgenos...")
+        self.stdout.write("\n[3/8] Alérgenos...")
 
         datos = [
             ("Lactosa", ["leche", "yogurt", "manteca"], Alergeno.Severidad.MEDIA, "🥛"),
@@ -315,7 +301,7 @@ class Command(BaseCommand):
     # =========================================================================
 
     def _preparar_deudores(self):
-        self.stdout.write("\n[5/9] Habilitando crédito para familias deudoras...")
+        self.stdout.write("\n[4/8] Habilitando crédito para familias deudoras...")
         self.clientes_credito = self.clientes_familias[:2]
         for cliente in self.clientes_credito:
             cliente.limite_credito = Decimal("800000")
@@ -329,7 +315,7 @@ class Command(BaseCommand):
     def _bump_stock_inicial(self):
         from apps.inventario.models import Stock
 
-        self.stdout.write("\n[6/9] Ajustando stock inicial...")
+        self.stdout.write("\n[5/8] Ajustando stock inicial...")
         actualizados = 0
         for producto in self.productos:
             stock, _ = Stock.objects.get_or_create(producto=producto, defaults={"cantidad": Decimal("0")})
@@ -407,7 +393,7 @@ class Command(BaseCommand):
         from apps.ventas.services import VentaService
         from apps.contabilidad.models import CierreCaja, MovimientoCaja
 
-        self.stdout.write(f"\n[7/9] Simulando {self.dias} días de operación...")
+        self.stdout.write(f"\n[6/8] Simulando {self.dias} días de operación...")
 
         hoy = date.today()
         ventas_creadas = 0
@@ -565,7 +551,7 @@ class Command(BaseCommand):
     def _liquidar_cuentas_almuerzo_pasadas(self, hoy):
         from apps.almuerzos.models import CuentaAlmuerzoMensual, PagoCuentaAlmuerzo
 
-        self.stdout.write("\n[8/9] Liquidando cuentas de almuerzo de meses cerrados...")
+        self.stdout.write("\n[7/8] Liquidando cuentas de almuerzo de meses cerrados...")
         mes_actual = (hoy.year, hoy.month)
         cuentas = CuentaAlmuerzoMensual.objects.exclude(
             anio=mes_actual[0], mes=mes_actual[1]
@@ -601,7 +587,7 @@ class Command(BaseCommand):
         from apps.compras.models import PagoProveedor, AplicacionPagoCompra, CuentaCorrienteProveedor, Compra
         from apps.core.models import MedioPago
 
-        self.stdout.write("\n[9/9] Compras históricas a proveedores...")
+        self.stdout.write("\n[8/8] Compras históricas a proveedores...")
 
         hoy = date.today()
         medio_transferencia = self.medio_transferencia or self.medio_efectivo

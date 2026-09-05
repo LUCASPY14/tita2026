@@ -6,16 +6,22 @@ Solo reglas de negocio que Django no cubre automaticamente
 from rest_framework.exceptions import ValidationError
 
 
-def validar_restricciones_alergenicas(hijo, forzar: bool = False) -> list[dict]:
+def validar_restricciones_alergenicas(hijo) -> tuple[list[dict], list[dict]]:
     """
     Verifica las restricciones activas del hijo.
-    - Severidad CRITICA + requiere_autorizacion=True → bloquea salvo forzar=True.
-    - Otras restricciones → retorna lista de advertencias para mostrar al cajero.
+    - Severidad CRITICA + requiere_autorizacion=True → bloqueante.
+    - Otras restricciones → advertencia no bloqueante.
+
+    No lanza excepción: el caller decide si bloquea (según un flag "forzar") y
+    arma la Response 400 él mismo con la lista de bloqueantes tal cual, sin
+    pasar por ValidationError — el manejador global de excepciones
+    (common.exceptions.custom_exception_handler) aplana cualquier lista de
+    diccionarios a texto plano, lo cual rompe el detalle estructurado que
+    necesita el frontend para armar el aviso de "Autorizar e ingresar".
 
     Returns:
-        list[dict]: advertencias [{tipo, severidad, descripcion}]
-    Raises:
-        ValidationError si hay restricciones CRITICA bloqueantes y forzar=False.
+        tuple[list[dict], list[dict]]: (advertencias, bloqueantes), cada una
+        con entradas {tipo, severidad, descripcion}.
     """
     from apps.clientes.models import RestriccionHijo
 
@@ -34,14 +40,7 @@ def validar_restricciones_alergenicas(hijo, forzar: bool = False) -> list[dict]:
         else:
             advertencias.append(entry)
 
-    if bloqueantes and not forzar:
-        raise ValidationError({
-            "error": "El alumno tiene restricciones críticas que requieren autorización.",
-            "restricciones": bloqueantes,
-            "hint": "Incluya 'forzar_restriccion': true para registrar de todos modos.",
-        })
-
-    return advertencias + bloqueantes
+    return advertencias, bloqueantes
 
 
 def verificar_alergenos_venta(hijo, productos: list) -> list[dict]:

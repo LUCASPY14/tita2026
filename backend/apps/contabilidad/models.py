@@ -197,8 +197,10 @@ class DatosEmpresa(models.Model):
     razon_social = models.CharField(max_length=255)
     nombre_fantasia = models.CharField(max_length=255, blank=True, null=True)
     direccion = models.CharField(max_length=255, blank=True, null=True)
-    ciudad = models.CharField(max_length=100, blank=True, null=True)
-    pais = models.CharField(max_length=100, blank=True, null=True, default="Paraguay")
+    ciudad = models.ForeignKey(
+        "clientes.Ciudad", models.SET_NULL, null=True, blank=True,
+        related_name="datos_empresa",
+    )
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(max_length=100, blank=True, null=True)
     activo = models.BooleanField(default=True)

@@ -65,6 +65,8 @@ class FacturaSerializer(serializers.ModelSerializer):
 
 
 class DatosEmpresaSerializer(serializers.ModelSerializer):
+    ciudad_nombre = serializers.CharField(source="ciudad.nombre", read_only=True, default="")
+
     class Meta:
         model = DatosEmpresa
         fields = "__all__"

@@ -93,6 +93,7 @@ interface TarjetaResult {
 }
 
 interface RestriccionBloqueante { tipo: string; severidad: string; descripcion: string }
+interface AdvertenciaAlergeno { producto: string; alergeno: string; contiene: boolean; restriccion: string; severidad: string }
 
 type ResultState = {
   tipo: 'ok'
@@ -110,6 +111,10 @@ type ResultState = {
   tipo: 'restriccion'
   nombre: string
   restricciones: RestriccionBloqueante[]
+} | {
+  tipo: 'alergeno_menu'
+  nombre: string
+  alertas: AdvertenciaAlergeno[]
 }
 
 interface PendienteAutorizacion {
@@ -420,10 +425,17 @@ export default function Comedor() {
       })
       await finalizarRegistro({ hijoId, hijoGrado, hijoFechaNacimiento, nro, tarjeta, esSegundo })
     } catch (err) {
-      const data = (err as { response?: { status?: number; data?: { error?: string; restricciones?: RestriccionBloqueante[] } } }).response
+      const data = (err as { response?: { status?: number; data?: {
+        error?: string
+        restricciones?: RestriccionBloqueante[]
+        advertencias_alergenos?: AdvertenciaAlergeno[]
+      } } }).response
       if (data?.status === 400 && data.data?.restricciones?.length && tarjeta && hijoId) {
         setPendienteAutorizacion({ hijoId, hijoGrado, hijoFechaNacimiento, nro, tarjeta, esSegundo })
         setResult({ tipo: 'restriccion', nombre: tarjeta.hijo_nombre, restricciones: data.data.restricciones })
+      } else if (data?.status === 400 && data.data?.advertencias_alergenos?.length && tarjeta && hijoId) {
+        setPendienteAutorizacion({ hijoId, hijoGrado, hijoFechaNacimiento, nro, tarjeta, esSegundo })
+        setResult({ tipo: 'alergeno_menu', nombre: tarjeta.hijo_nombre, alertas: data.data.advertencias_alergenos })
       } else {
         const msg = extractErrorMessage(err)
         setResult({ tipo: 'error', message: msg })
@@ -445,6 +457,7 @@ export default function Comedor() {
         fecha_consumo: todayISO(),
         nro_tarjeta: tarjeta.nro_tarjeta,
         forzar_restriccion: true,
+        forzar_alergenos: true,
       })
       await finalizarRegistro(pendienteAutorizacion)
       setPendienteAutorizacion(null)
@@ -628,6 +641,41 @@ export default function Comedor() {
                     <div key={i} className="bg-white border border-amber-200 rounded-xl px-4 py-2.5">
                       <p className="font-semibold text-amber-900">{r.tipo} <span className="text-amber-500 font-normal">({r.severidad})</span></p>
                       {r.descripcion && <p className="text-slate-600 text-sm">{r.descripcion}</p>}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-slate-500 text-sm mt-4">Requiere autorización de un supervisor para continuar.</p>
+                <div className="mt-5 flex items-center justify-center gap-3">
+                  <button
+                    onClick={cancelarAutorizacion}
+                    disabled={autorizando}
+                    className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={autorizarEIngresar}
+                    disabled={autorizando}
+                    className="px-5 py-2.5 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    {autorizando ? 'Autorizando…' : 'Autorizar e ingresar'}
+                  </button>
+                </div>
+              </div>
+            ) : result.tipo === 'alergeno_menu' ? (
+              <div className="w-full max-w-lg bg-amber-50 border-2 border-amber-400 rounded-3xl p-8 text-center animate-in fade-in zoom-in-95 duration-200 shadow-lg">
+                <AlertTriangle className="w-20 h-20 text-amber-500 mx-auto mb-4" />
+                <p className="text-amber-600 text-base font-bold uppercase tracking-widest mb-2">
+                  Alérgeno en el menú de hoy
+                </p>
+                <p className="text-slate-900 text-3xl font-black">{result.nombre}</p>
+                <div className="mt-4 space-y-2 text-left">
+                  {result.alertas.map((a, i) => (
+                    <div key={i} className="bg-white border border-amber-200 rounded-xl px-4 py-2.5">
+                      <p className="font-semibold text-amber-900">
+                        {a.producto} <span className="text-amber-500 font-normal">— {a.alergeno} ({a.severidad})</span>
+                      </p>
+                      <p className="text-slate-600 text-sm">Restricción registrada: {a.restriccion}</p>
                     </div>
                   ))}
                 </div>

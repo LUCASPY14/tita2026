@@ -72,28 +72,27 @@ def producto_con_alergeno(db, producto, alergeno_mani):
 @pytest.mark.django_db
 class TestValidarRestriccionesAlergenicas:
 
-    def test_restriccion_critica_bloquea(self, hijo_con_restriccion_critica):
-        from apps.almuerzos.validators import validar_restricciones_alergenicas
-        from rest_framework.exceptions import ValidationError
-
-        with pytest.raises(ValidationError, match="[Cc]ríticas"):
-            validar_restricciones_alergenicas(hijo_con_restriccion_critica)
-
-    def test_restriccion_critica_con_forzar_permite(self, hijo_con_restriccion_critica):
+    def test_restriccion_critica_va_a_bloqueantes(self, hijo_con_restriccion_critica):
+        # No lanza excepción: el caller (RegistroConsumoAlmuerzoViewSet.create /
+        # VentaViewSet) decide bloquear y arma la Response 400 directamente,
+        # para no perder la estructura al pasar por el manejador global de
+        # excepciones (ver nota en validators.py).
         from apps.almuerzos.validators import validar_restricciones_alergenicas
 
-        resultado = validar_restricciones_alergenicas(hijo_con_restriccion_critica, forzar=True)
-        assert len(resultado) >= 1
-        assert any(r["severidad"] == "CRITICA" for r in resultado)
+        advertencias, bloqueantes = validar_restricciones_alergenicas(hijo_con_restriccion_critica)
+        assert advertencias == []
+        assert len(bloqueantes) >= 1
+        assert any(r["severidad"] == "CRITICA" for r in bloqueantes)
 
-    def test_restriccion_leve_devuelve_advertencias(self, hijo_con_restriccion_leve):
+    def test_restriccion_leve_va_a_advertencias(self, hijo_con_restriccion_leve):
         from apps.almuerzos.validators import validar_restricciones_alergenicas
 
-        resultado = validar_restricciones_alergenicas(hijo_con_restriccion_leve)
-        assert len(resultado) == 1
-        assert resultado[0]["severidad"] == "MEDIA"
+        advertencias, bloqueantes = validar_restricciones_alergenicas(hijo_con_restriccion_leve)
+        assert bloqueantes == []
+        assert len(advertencias) == 1
+        assert advertencias[0]["severidad"] == "MEDIA"
 
-    def test_sin_restricciones_retorna_lista_vacia(self, db, cliente):
+    def test_sin_restricciones_retorna_listas_vacias(self, db, cliente):
         from apps.clientes.models import Hijo, Grado
         from apps.almuerzos.validators import validar_restricciones_alergenicas
 
@@ -104,7 +103,7 @@ class TestValidarRestriccionesAlergenicas:
             nombre="Sano", apellido="Test",
             cliente_responsable=cliente, grado=grado, activo=True,
         )
-        assert validar_restricciones_alergenicas(hijo) == []
+        assert validar_restricciones_alergenicas(hijo) == ([], [])
 
 
 # ── verificar_alergenos_venta ─────────────────────────────────────────────────

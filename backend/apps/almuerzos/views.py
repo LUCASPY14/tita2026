@@ -70,7 +70,11 @@ from .serializers import (
 )
 from .filters import RegistroConsumoFilter
 from .services import AlmuerzoService
-from .validators import validar_limite_registros_diarios, validar_restricciones_alergenicas
+from .validators import (
+    validar_limite_registros_diarios,
+    validar_restricciones_alergenicas,
+    verificar_alergenos_venta,
+)
 
 
 # ==============================================================================
@@ -284,11 +288,58 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        advertencias = self.perform_create(serializer)
+        hijo = serializer.validated_data.get("hijo")
+        fecha_consumo = serializer.validated_data.get("fecha_consumo")
+
+        # Restricciones alérgénicas del hijo (bloquea solo CRITICA +
+        # requiere_autorizacion). Se arma la Response 400 acá directamente
+        # (sin pasar por ValidationError) porque el manejador global de
+        # excepciones (common.exceptions.custom_exception_handler) aplana
+        # cualquier lista de diccionarios a texto plano, lo que rompe el
+        # detalle estructurado que necesita el frontend para el aviso de
+        # "Autorizar e ingresar" — mismo criterio que ya usa VentaViewSet.create().
+        forzar_restriccion = bool(request.data.get("forzar_restriccion", False))
+        advertencias, bloqueantes = validar_restricciones_alergenicas(hijo)
+        if bloqueantes and not forzar_restriccion:
+            return Response(
+                {
+                    "error": "El alumno tiene restricciones críticas que requieren autorización.",
+                    "restricciones": bloqueantes,
+                    "hint": "Incluya 'forzar_restriccion': true para registrar de todos modos.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if forzar_restriccion:
+            advertencias = advertencias + bloqueantes
+
+        # Cruzar alérgenos del menú del día contra las restricciones del hijo
+        # (mismo mecanismo que VentaViewSet.create() usa para ModoRecreo).
+        advertencias_alergenos = []
+        menu_hoy = MenuDiario.objects.filter(
+            fecha=fecha_consumo, activo=True
+        ).prefetch_related("detalles__producto").first()
+        if menu_hoy:
+            productos_menu = [d.producto for d in menu_hoy.detalles.all()]
+            if productos_menu:
+                advertencias_alergenos = verificar_alergenos_venta(hijo, productos_menu)
+                forzar_alergenos = bool(request.data.get("forzar_alergenos", False))
+                if advertencias_alergenos and not forzar_alergenos:
+                    return Response(
+                        {
+                            "error": "El menú de hoy contiene alérgenos que coinciden con restricciones del alumno.",
+                            "advertencias_alergenos": advertencias_alergenos,
+                            "hint": "Incluya 'forzar_alergenos': true para registrar de todos modos.",
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+        self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         data = dict(serializer.data)
         if advertencias:
             data["advertencias"] = advertencias
+        if advertencias_alergenos:
+            data["advertencias_alergenos"] = advertencias_alergenos
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
@@ -310,10 +361,6 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             raise ValidationError({
                 "error": f"La tarjeta está {nro_tarjeta.get_estado_display().lower()} y no puede usarse para ingresar."
             })
-
-        # Validar restricciones alérgénicas del hijo
-        forzar = self.request.data.get("forzar_restriccion", False)
-        advertencias = validar_restricciones_alergenicas(hijo, forzar=bool(forzar))
 
         # Validar limite de 2 registros por dia
         es_primer_registro = validar_limite_registros_diarios(hijo, fecha_consumo)
@@ -361,8 +408,6 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 
         if es_primer_registro:
             AlmuerzoService._notificar_ingreso_comedor(registro)
-
-        return advertencias
 
     def _asegurar_cuenta_mensual(self, hijo, fecha):
         """Crea la cuenta mensual del alumno si todavía no existe.
@@ -793,9 +838,7 @@ class DetalleMenuDiarioViewSet(viewsets.ModelViewSet):
         )
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve"):
-            return [IsStaffOrClienteWeb()]
-        return [IsAdminOrReadOnly()]
+        return [IsStaffOrClienteWeb()]
 
 
 # ==============================================================================

@@ -2,14 +2,25 @@
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { Plus, Edit, AlertCircle, ChefHat } from 'lucide-react'
+import { Plus, Edit, AlertCircle, ChefHat, Trash2, AlertTriangle } from 'lucide-react'
 import api from '../services/api'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import Table, { type Column } from '../components/ui/Table'
 import Badge from '../components/ui/Badge'
+import Combobox from '../components/ui/Combobox'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
+
+interface DetalleMenu {
+  id_detalle_menu: number
+  producto: number
+  producto_nombre: string
+  curso: string
+  curso_display: string
+  cantidad: number
+  es_opcional: boolean
+}
 
 interface MenuDiario {
   id_menu: number
@@ -20,6 +31,8 @@ interface MenuDiario {
   bebida: string
   descripcion: string
   activo: boolean
+  detalles: DetalleMenu[]
+  tiene_alergenos: boolean
 }
 
 interface MenuFormFields {
@@ -30,6 +43,29 @@ interface MenuFormFields {
   bebida: string
   descripcion: string
 }
+
+interface Producto {
+  id_producto: number
+  descripcion: string
+}
+
+interface DetalleItem {
+  producto: Producto | null
+  curso: string
+  cantidad: number
+  es_opcional: boolean
+}
+
+const CURSOS = [
+  { value: 'ENTRADA', label: 'Entrada' },
+  { value: 'PLATO_PRINCIPAL', label: 'Plato principal' },
+  { value: 'GUARNICION', label: 'Guarnición' },
+  { value: 'POSTRE', label: 'Postre' },
+  { value: 'BEBIDA', label: 'Bebida' },
+  { value: 'EXTRA', label: 'Extra' },
+]
+
+const DETALLE_ITEM_EMPTY: DetalleItem = { producto: null, curso: 'PLATO_PRINCIPAL', cantidad: 1, es_opcional: false }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,6 +92,8 @@ export default function MenuDiario() {
   const [editingMenu, setEditingMenu] = useState<MenuDiario | null>(null)
   const [saving, setSaving] = useState(false)
   const [togglingId, setTogglingId] = useState<number | null>(null)
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [detalleItems, setDetalleItems] = useState<DetalleItem[]>([])
 
   const {
     register,
@@ -91,11 +129,22 @@ export default function MenuDiario() {
     }
   }, [])
 
+  // ── Load productos (para vincular al menú) ────────────────────────────────
+  const loadProductos = useCallback(async () => {
+    try {
+      const { data } = await api.get('/productos/productos/', {
+        params: { activo: true, page_size: 200, ordering: 'descripcion' },
+      })
+      setProductos(data.results ?? data ?? [])
+    } catch { /* el picker queda vacío, no bloquea la pantalla */ }
+  }, [])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMenus(1)
     loadHoy()
-  }, [loadMenus, loadHoy])
+    loadProductos()
+  }, [loadMenus, loadHoy, loadProductos])
 
   // ── Open modal ─────────────────────────────────────────────────────────────
   const openCreate = (fecha?: string) => {
@@ -108,6 +157,7 @@ export default function MenuDiario() {
       bebida: '',
       descripcion: '',
     })
+    setDetalleItems([])
     setModalOpen(true)
   }
 
@@ -121,20 +171,53 @@ export default function MenuDiario() {
       bebida: menu.bebida,
       descripcion: menu.descripcion,
     })
+    setDetalleItems((menu.detalles ?? []).map(d => ({
+      producto: productos.find(p => p.id_producto === d.producto) ?? { id_producto: d.producto, descripcion: d.producto_nombre },
+      curso: d.curso,
+      cantidad: d.cantidad,
+      es_opcional: d.es_opcional,
+    })))
     setModalOpen(true)
   }
+
+  // ── Productos del menú ─────────────────────────────────────────────────────
+  const agregarDetalleItem = () => setDetalleItems(prev => [...prev, { ...DETALLE_ITEM_EMPTY }])
+  const quitarDetalleItem = (idx: number) => setDetalleItems(prev => prev.filter((_, i) => i !== idx))
+  const actualizarDetalleItem = (idx: number, patch: Partial<DetalleItem>) =>
+    setDetalleItems(prev => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
+
+  const sincronizarDetalles = useCallback(async (idMenu: number) => {
+    const items = detalleItems.filter(i => i.producto)
+    try {
+      if (editingMenu) {
+        const { data } = await api.get('/almuerzos/detalle-menu/', { params: { menu: idMenu, page_size: 100 } })
+        const existentes: DetalleMenu[] = data.results ?? data ?? []
+        await Promise.allSettled(existentes.map(d => api.delete(`/almuerzos/detalle-menu/${d.id_detalle_menu}/`)))
+      }
+      await Promise.allSettled(items.map(i => api.post('/almuerzos/detalle-menu/', {
+        menu: idMenu,
+        producto: i.producto!.id_producto,
+        curso: i.curso,
+        cantidad: i.cantidad,
+        es_opcional: i.es_opcional,
+      })))
+    } catch { /* el menú ya se guardó — los productos se pueden reintentar editando */ }
+  }, [detalleItems, editingMenu])
 
   // ── Save ───────────────────────────────────────────────────────────────────
   const onSubmit = handleSubmit(async (fields) => {
     setSaving(true)
     try {
+      let idMenu = editingMenu?.id_menu
       if (editingMenu) {
         await api.put(`/almuerzos/menu/${editingMenu.id_menu}/`, fields)
         toast.success('Menú actualizado')
       } else {
-        await api.post('/almuerzos/menu/', fields)
+        const { data } = await api.post('/almuerzos/menu/', fields)
+        idMenu = data.id_menu
         toast.success('Menú publicado')
       }
+      if (idMenu) await sincronizarDetalles(idMenu)
       setModalOpen(false)
       loadMenus(page)
       loadHoy()
@@ -180,7 +263,16 @@ export default function MenuDiario() {
     {
       title: t('menuDiario.colPlato'),
       key: 'plato',
-      render: (_, r) => <span className="text-sm text-slate-700">{r.plato_principal}</span>,
+      render: (_, r) => (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-700">{r.plato_principal}</span>
+          {r.tiene_alergenos && (
+            <span title="Contiene productos con alérgenos registrados">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       title: t('menuDiario.colGuarn'),
@@ -253,6 +345,11 @@ export default function MenuDiario() {
           <div className="flex items-center gap-2 mb-3">
             <ChefHat className="w-4 h-4 text-green-600" />
             <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">{t('menuDiario.menuHoy')}</p>
+            {menuHoy.tiene_alergenos && (
+              <span className="flex items-center gap-1 text-amber-600 text-xs font-semibold bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5">
+                <AlertTriangle className="w-3 h-3" /> Contiene alérgenos
+              </span>
+            )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -297,7 +394,7 @@ export default function MenuDiario() {
         onCancel={() => setModalOpen(false)}
         okText={editingMenu ? t('common.save') : t('menuDiario.publicarHoy')}
         confirmLoading={saving}
-        width={540}
+        width={640}
       >
         <div className="space-y-4">
           <div>
@@ -358,6 +455,70 @@ export default function MenuDiario() {
               className={`${inputClass} resize-none`}
               {...register('descripcion')}
             />
+          </div>
+
+          <div className="border-t border-slate-200 pt-4">
+            <div className="flex items-center justify-between mb-1">
+              <label className={`${labelClass} mb-0`}>Productos del menú</label>
+              <Button size="sm" variant="ghost" onClick={agregarDetalleItem}>
+                <Plus className="w-3.5 h-3.5" /> Agregar producto
+              </Button>
+            </div>
+            <p className="text-xs text-slate-400 mb-3">
+              Vincular productos del catálogo permite alertar automáticamente si un alumno
+              con restricciones alérgicas intenta ingresar al comedor.
+            </p>
+            {detalleItems.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">Sin productos vinculados todavía.</p>
+            ) : (
+              <div className="space-y-2">
+                {detalleItems.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Combobox
+                        options={productos.map(p => ({ value: p.id_producto, label: p.descripcion }))}
+                        value={item.producto?.id_producto}
+                        onChange={(v) => actualizarDetalleItem(idx, {
+                          producto: productos.find(p => p.id_producto === v) ?? null,
+                        })}
+                        filterLocal
+                        placeholder="Buscar producto..."
+                      />
+                    </div>
+                    <select
+                      className={`${inputClass} w-40`}
+                      value={item.curso}
+                      onChange={e => actualizarDetalleItem(idx, { curso: e.target.value })}
+                    >
+                      {CURSOS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                    <input
+                      type="number"
+                      min={0.001}
+                      step="0.001"
+                      className={`${inputClass} w-20`}
+                      value={item.cantidad}
+                      onChange={e => actualizarDetalleItem(idx, { cantidad: Number(e.target.value) || 1 })}
+                    />
+                    <label className="flex items-center gap-1 text-xs text-slate-500 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={item.es_opcional}
+                        onChange={e => actualizarDetalleItem(idx, { es_opcional: e.target.checked })}
+                      />
+                      Opcional
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => quitarDetalleItem(idx)}
+                      className="p-1.5 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </Modal>

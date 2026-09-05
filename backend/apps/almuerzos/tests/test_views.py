@@ -820,18 +820,162 @@ class TestRegistroConsumoLineasAdicionales:
         assert resp.status_code == 201
         assert "advertencias" in resp.data
 
+    def test_restriccion_critica_bloquea_con_detalle_estructurado(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo
+    ):
+        # Regresión: el bloqueo por restricción CRITICA debe llegar al frontend
+        # con "restricciones" como lista de diccionarios en el nivel superior
+        # de la respuesta (no envuelto por el manejador global de excepciones,
+        # que aplanaría cada restricción a un string ilegible) — así
+        # Comedor.tsx puede armar el aviso de "Autorizar e ingresar".
+        from apps.clientes.models import RestriccionHijo
+        RestriccionHijo.objects.create(
+            hijo=hijo_almuerzo, tipo="ALERGIA", descripcion="Maní crítico",
+            severidad=RestriccionHijo.Severidad.CRITICA, requiere_autorizacion=True, activo=True,
+        )
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {"hijo": hijo_almuerzo.pk, "fecha_consumo": str(date.today()), "nro_tarjeta": tarjeta_almuerzo.pk},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert resp.data["restricciones"][0]["tipo"] == "ALERGIA"
+        assert resp.data["restricciones"][0]["severidad"] == "CRITICA"
+
+        resp2 = api_cajero.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {
+                "hijo": hijo_almuerzo.pk, "fecha_consumo": str(date.today()),
+                "nro_tarjeta": tarjeta_almuerzo.pk, "forzar_restriccion": True,
+            },
+            format="json",
+        )
+        assert resp2.status_code == 201
+        assert resp2.data["advertencias"][0]["severidad"] == "CRITICA"
+
+
+@pytest.mark.django_db
+class TestRegistroConsumoAlergenosMenu:
+    """Cruce de alérgenos del menú del día contra las restricciones del hijo,
+    al registrar el ingreso al comedor (mismo mecanismo que Ventas/ModoRecreo)."""
+
+    def _menu_con_producto_alergenico(self, producto, usuario_admin):
+        from apps.almuerzos.models import Alergeno, MenuDiario, DetalleMenuDiario, ProductoAlergeno
+        menu = MenuDiario.objects.create(
+            fecha=date.today(),
+            plato_principal="Torta de maní",
+            activo=True,
+            creado_por=usuario_admin,
+        )
+        DetalleMenuDiario.objects.create(
+            menu=menu, producto=producto, curso="POSTRE", cantidad=1,
+        )
+        alergeno = Alergeno.objects.create(nombre="Maní", severidad=Alergeno.Severidad.ALTA)
+        ProductoAlergeno.objects.create(producto=producto, alergeno=alergeno, contiene=True)
+        return menu
+
+    def test_menu_con_alergeno_bloquea_sin_forzar(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, producto, usuario_admin
+    ):
+        from apps.clientes.models import RestriccionHijo
+        RestriccionHijo.objects.create(
+            hijo=hijo_almuerzo, tipo="ALERGIA", descripcion="Maní",
+            severidad=RestriccionHijo.Severidad.ALTA, requiere_autorizacion=False, activo=True,
+        )
+        self._menu_con_producto_alergenico(producto, usuario_admin)
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {"hijo": hijo_almuerzo.pk, "fecha_consumo": str(date.today()), "nro_tarjeta": tarjeta_almuerzo.pk},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert resp.data["advertencias_alergenos"]
+        assert resp.data["advertencias_alergenos"][0]["alergeno"] == "Maní"
+
+    def test_menu_con_alergeno_forzar_registra_ok(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, producto, usuario_admin
+    ):
+        from apps.clientes.models import RestriccionHijo
+        RestriccionHijo.objects.create(
+            hijo=hijo_almuerzo, tipo="ALERGIA", descripcion="Maní",
+            severidad=RestriccionHijo.Severidad.ALTA, requiere_autorizacion=False, activo=True,
+        )
+        self._menu_con_producto_alergenico(producto, usuario_admin)
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {
+                "hijo": hijo_almuerzo.pk, "fecha_consumo": str(date.today()),
+                "nro_tarjeta": tarjeta_almuerzo.pk, "forzar_alergenos": True,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["advertencias_alergenos"]
+
+    def test_menu_sin_detalle_no_bloquea(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, usuario_admin
+    ):
+        # Caso de hoy: un MenuDiario existe pero sin DetalleMenuDiario vinculado
+        # (texto libre) — no debe cambiar el comportamiento existente.
+        from apps.almuerzos.models import MenuDiario
+        from apps.clientes.models import RestriccionHijo
+        RestriccionHijo.objects.create(
+            hijo=hijo_almuerzo, tipo="ALERGIA", descripcion="Maní",
+            severidad=RestriccionHijo.Severidad.ALTA, requiere_autorizacion=False, activo=True,
+        )
+        MenuDiario.objects.create(
+            fecha=date.today(), plato_principal="Milanesa", activo=True, creado_por=usuario_admin,
+        )
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {"hijo": hijo_almuerzo.pk, "fecha_consumo": str(date.today()), "nro_tarjeta": tarjeta_almuerzo.pk},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert "advertencias_alergenos" not in resp.data
+
 
 @pytest.mark.django_db
 class TestDetalleMenuPermisos:
 
-    def test_create_requiere_admin(self, api_admin, menu_hoy, producto):
-        # DetalleMenuDiarioViewSet.get_permissions() → IsAdminOrReadOnly → hits line 473
+    def test_create_admin_ok(self, api_admin, menu_hoy, producto):
         resp = api_admin.post(
             "/api/v1/almuerzos/detalle-menu/",
             {"menu": menu_hoy.pk, "producto": producto.pk, "curso": "PLATO_PRINCIPAL", "es_opcional": False},
             format="json",
         )
         assert resp.status_code in (201, 400)
+
+    def test_create_cocina_ok(self, api_client, menu_hoy, producto):
+        # Cocina/Supervisor gestionan /menu-diario en el frontend — el permiso
+        # de DetalleMenuDiarioViewSet debe alinearse con MenuDiarioViewSet
+        # (IsStaffOrClienteWeb), no restringirse a ADMIN.
+        from apps.usuarios.models import Usuario
+        cocina = Usuario.objects.create_user(
+            email="cocina@test.com", password="test1234",
+            nombre="Cocina", apellido="Test", rol=Usuario.Rol.COCINA,
+        )
+        api_client.force_authenticate(user=cocina)
+        resp = api_client.post(
+            "/api/v1/almuerzos/detalle-menu/",
+            {"menu": menu_hoy.pk, "producto": producto.pk, "curso": "PLATO_PRINCIPAL", "es_opcional": False},
+            format="json",
+        )
+        assert resp.status_code in (201, 400)
+
+    def test_create_cliente_web_prohibido(self, api_client, menu_hoy, producto, cliente):
+        from apps.usuarios.models import Usuario
+        padre = Usuario.objects.create_user(
+            email="padre@test.com", password="test1234",
+            nombre="Padre", apellido="Test", rol=Usuario.Rol.CLIENTE_WEB, cliente=cliente,
+        )
+        api_client.force_authenticate(user=padre)
+        resp = api_client.post(
+            "/api/v1/almuerzos/detalle-menu/",
+            {"menu": menu_hoy.pk, "producto": producto.pk, "curso": "PLATO_PRINCIPAL", "es_opcional": False},
+            format="json",
+        )
+        assert resp.status_code == 403
 
 
 # ── RegistroConsumo destroy (admin) ───────────────────────────────────────────

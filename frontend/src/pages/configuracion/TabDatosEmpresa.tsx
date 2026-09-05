@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
+import SelectorUbicacion from '../clientes/SelectorUbicacion'
+import type { Pais, Departamento, Ciudad } from '../clientes/shared'
 import { extractErrorMessage, inputClass, labelClass, type DatosEmpresa } from './helpers'
 
 type EmpForm = {
@@ -9,8 +11,7 @@ type EmpForm = {
   razon_social: string
   nombre_fantasia: string
   direccion: string
-  ciudad: string
-  pais: string
+  ciudad: number | null
   telefono: string
   email: string
   activo: boolean
@@ -18,7 +19,7 @@ type EmpForm = {
 
 const EMPTY: EmpForm = {
   ruc: '', razon_social: '', nombre_fantasia: '', direccion: '',
-  ciudad: '', pais: 'Paraguay', telefono: '', email: '', activo: true,
+  ciudad: null, telefono: '', email: '', activo: true,
 }
 
 export default function TabDatosEmpresa() {
@@ -26,6 +27,11 @@ export default function TabDatosEmpresa() {
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState<EmpForm>(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [paises, setPaises] = useState<Pais[]>([])
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([])
+  const [ciudades, setCiudades] = useState<Ciudad[]>([])
+  const [paisId, setPaisId] = useState<number | null>(null)
+  const [departamentoId, setDepartamentoId] = useState<number | null>(null)
   const savedRef = useRef<EmpForm | null>(null)
   const formRef = useRef(form)
   // eslint-disable-next-line react-hooks/refs
@@ -34,8 +40,20 @@ export default function TabDatosEmpresa() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await api.get('/contabilidad/datos-empresa/', { params: { page_size: 1 } })
-      const emp: DatosEmpresa | null = (data.results ?? data ?? [])[0] ?? null
+      const [empRes, paisesRes, deptosRes, ciudadesRes] = await Promise.all([
+        api.get('/contabilidad/datos-empresa/', { params: { page_size: 1 } }),
+        api.get('/clientes/paises/', { params: { page_size: 200 } }),
+        api.get('/clientes/departamentos/', { params: { page_size: 200 } }),
+        api.get('/clientes/ciudades/', { params: { page_size: 200 } }),
+      ])
+      const listaPaises: Pais[] = paisesRes.data.results ?? paisesRes.data
+      const listaDeptos: Departamento[] = deptosRes.data.results ?? deptosRes.data
+      const listaCiudades: Ciudad[] = ciudadesRes.data.results ?? ciudadesRes.data
+      setPaises(listaPaises)
+      setDepartamentos(listaDeptos)
+      setCiudades(listaCiudades)
+
+      const emp: DatosEmpresa | null = (empRes.data.results ?? empRes.data ?? [])[0] ?? null
       setEmpresa(emp)
       if (emp) {
         const f: EmpForm = {
@@ -43,14 +61,19 @@ export default function TabDatosEmpresa() {
           razon_social: emp.razon_social,
           nombre_fantasia: emp.nombre_fantasia ?? '',
           direccion: emp.direccion ?? '',
-          ciudad: emp.ciudad ?? '',
-          pais: emp.pais ?? 'Paraguay',
+          ciudad: emp.ciudad,
           telefono: emp.telefono ?? '',
           email: emp.email ?? '',
           activo: emp.activo,
         }
         setForm(f)
         savedRef.current = f
+        const ciudadActual = emp.ciudad ? listaCiudades.find(c => c.id_ciudad === emp.ciudad) : undefined
+        const departamentoActual = ciudadActual
+          ? listaDeptos.find(d => d.id_departamento === ciudadActual.departamento)
+          : undefined
+        setDepartamentoId(ciudadActual?.departamento ?? null)
+        setPaisId(departamentoActual?.pais ?? null)
       }
     } catch { toast.error('Error al cargar datos de empresa') }
     finally { setLoading(false) }
@@ -113,16 +136,17 @@ export default function TabDatosEmpresa() {
             <label className={labelClass}>Dirección</label>
             <input value={form.direccion} onChange={f('direccion')} className={inputClass} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Ciudad</label>
-              <input value={form.ciudad} onChange={f('ciudad')} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>País</label>
-              <input value={form.pais} onChange={f('pais')} className={inputClass} />
-            </div>
-          </div>
+          <SelectorUbicacion
+            paises={paises}
+            departamentos={departamentos}
+            ciudades={ciudades}
+            paisId={paisId}
+            departamentoId={departamentoId}
+            ciudadId={form.ciudad}
+            onChangePais={setPaisId}
+            onChangeDepartamento={setDepartamentoId}
+            onChangeCiudad={(id) => setForm(prev => ({ ...prev, ciudad: id }))}
+          />
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Teléfono</label>
