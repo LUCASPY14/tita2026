@@ -22,10 +22,7 @@ param(
     [string]$Branch          = "main",
     [switch]$SkipBuild,
     [switch]$SkipMigrations,
-    [string]$HealthUrl       = "http://localhost/api/health/",
-    # /ready/ solo verifica DB + Redis, no Celery.
-    # Los workers no han sido reiniciados todavía cuando se hace este check.
-    [string]$BackendHealthUrl = "http://localhost/api/health/ready/"
+    [string]$HealthUrl       = "http://localhost/api/health/"
 )
 
 # "Stop" solo para cmdlets de PowerShell; los comandos nativos (git, docker)
@@ -239,10 +236,24 @@ Log "Reiniciando backend..."
 docker compose up -d --no-deps backend
 if ($LASTEXITCODE -ne 0) { Die "backend no pudo iniciar. Revisar: docker compose logs backend" }
 
-$backendOk = WaitForHttp -Url $BackendHealthUrl -MaxSeconds 90 -Label "backend"
-if (-not $backendOk) {
-    Die "El backend no respondió en 90 segundos.`n  Revisar: docker compose logs --tail=80 backend"
+# Se chequea vía el healthcheck propio de Docker (golpea localhost:8000 DENTRO
+# del contenedor), no vía nginx: nginx resuelve el hostname "backend" de su
+# upstream una sola vez al arrancar, así que después de recrear el contenedor
+# de backend, nginx todavía apunta a la IP vieja hasta que él mismo se
+# reinicia (recién más abajo) — un check HTTP por nginx acá daría timeout
+# aunque el backend nuevo ya esté sano.
+Log "Esperando healthcheck de backend (90 s máx)..."
+$backendOk = $false
+for ($i = 0; $i -lt 45; $i++) {
+    Start-Sleep -Seconds 2
+    $beState = (docker compose ps backend --format "{{.Health}}").Trim()
+    if ($beState -eq "healthy") { $backendOk = $true; break }
+    if ($i % 5 -eq 4) { Log "  Todavía esperando... ($(($i + 1) * 2)/90 s)" "DarkGray" }
 }
+if (-not $backendOk) {
+    Die "El backend no alcanzó estado healthy en 90s.`n  Revisar: docker compose logs --tail=80 backend"
+}
+Log "  Backend OK" "Green"
 
 # Workers (dependen del backend, redis y postgres — ya saludables)
 Log "Reiniciando workers (celery, celery-beat)..."
