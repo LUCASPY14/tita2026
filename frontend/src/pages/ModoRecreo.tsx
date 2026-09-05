@@ -7,6 +7,7 @@ import api from '../services/api'
 import tarjetasService from '../services/tarjetas'
 import ventasService from '../services/ventas'
 import cajasService from '../services/cajas'
+import Modal from '../components/ui/Modal'
 import { useCatalogoStore } from '../store/catalogoStore'
 import { useOfflineQueue } from '../hooks/useOfflineQueue'
 import CajaBlockedScreen from './modorecreo/CajaBlockedScreen'
@@ -91,6 +92,9 @@ export default function ModoRecreo() {
   const handleCobrarRef = useRef<() => void>(() => {})
   const handleCancelarRef = useRef<() => void>(() => {})
   const lastScannedProduct = useRef<{ id: number; time: number } | null>(null)
+
+  interface AdvertenciaAlergeno { producto: string; alergeno: string; contiene: boolean; restriccion: string; severidad: string }
+  const [alertaAlergeno, setAlertaAlergeno] = useState<AdvertenciaAlergeno[] | null>(null)
 
   useEffect(() => {
     const t = setInterval(() =>
@@ -332,7 +336,7 @@ export default function ModoRecreo() {
     setCarrito(prev => prev.map(i => i.producto.id_producto === id ? { ...i, cantidad } : i))
   }, [carrito, modoPago, saldoDisponible, tarjeta, total, getPrecio])
 
-  const ejecutarCobro = useCallback(async () => {
+  const ejecutarCobro = useCallback(async (forzarAlergenos = false) => {
     if (cobrandoRef.current || carrito.length === 0) return
     if (!tarjeta && !clienteDirecto) return
     cobrandoRef.current = true
@@ -364,6 +368,7 @@ export default function ModoRecreo() {
         payload.genera_factura_legal = true
         if (nroFacturaVenta.trim()) payload.nro_factura = nroFacturaVenta.trim()
       }
+      if (forzarAlergenos) payload.forzar_alergenos = true
       if (!navigator.onLine) {
         await enqueue({
           url:     '/api/v1/ventas/ventas/',
@@ -398,7 +403,14 @@ export default function ModoRecreo() {
         setTimeout(() => scannerRef.current?.focus(), 60)
       }, 2500)
     } catch (err) {
-      sfx.error(); toast.error(extractError(err))
+      const advertencias = (err as { response?: { status?: number; data?: { advertencias_alergenos?: AdvertenciaAlergeno[] } } })
+        ?.response
+      if (advertencias?.status === 400 && advertencias.data?.advertencias_alergenos?.length) {
+        sfx.restrict()
+        setAlertaAlergeno(advertencias.data.advertencias_alergenos)
+      } else {
+        sfx.error(); toast.error(extractError(err))
+      }
     } finally {
       cobrandoRef.current = false; setCobrando(false)
     }
@@ -632,6 +644,33 @@ export default function ModoRecreo() {
       <footer className="shrink-0 h-6 flex items-center justify-center bg-slate-800 text-slate-400 text-[11px] tracking-wide">
         © {new Date().getFullYear()} Cantina Tita — Todos los derechos reservados
       </footer>
+
+      <Modal
+        open={!!alertaAlergeno}
+        title="⚠️ Alerta de alérgeno"
+        onCancel={() => setAlertaAlergeno(null)}
+        onOk={() => { const a = alertaAlergeno; setAlertaAlergeno(null); if (a) ejecutarCobro(true) }}
+        okText="Vender igual"
+        cancelText="Cancelar"
+        confirmLoading={cobrando}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            El alumno tiene una restricción que coincide con productos de esta venta:
+          </p>
+          <ul className="space-y-2">
+            {(alertaAlergeno ?? []).map((a, i) => (
+              <li key={i} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+                <p className="font-semibold text-amber-900">{a.producto}</p>
+                <p className="text-amber-700">
+                  {a.contiene ? 'Contiene' : 'Puede tener trazas de'} <b>{a.alergeno}</b>
+                  {' — '}restricción: {a.restriccion} ({a.severidad})
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Modal>
     </div>
   )
 }

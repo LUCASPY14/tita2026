@@ -74,9 +74,18 @@ class VentaViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Pre-save: verificar alérgenos antes de crear la venta
+        # Pre-save: verificar alérgenos antes de crear la venta. Si hay algún
+        # match y no viene forzar_alergenos=true, se bloquea la venta (todavía
+        # no se creó nada) para que el cajero confirme a sabiendas.
+        # La mayoría de las ventas en ModoRecreo no mandan "hijo" explícito —
+        # viaja implícito en la tarjeta escaneada (mismo criterio que
+        # VentaService._registrar: si no hay hijo explícito pero la tarjeta
+        # es de un alumno, se usa el de la tarjeta).
         advertencias = []
         hijo = serializer.validated_data.get("hijo")
+        tarjeta = serializer.validated_data.get("tarjeta")
+        if hijo is None and tarjeta is not None and tarjeta.hijo_id:
+            hijo = tarjeta.hijo
         if hijo:
             from apps.almuerzos.validators import verificar_alergenos_venta
             from apps.productos.models import Producto
@@ -84,6 +93,17 @@ class VentaViewSet(viewsets.ModelViewSet):
             ids = [i.get("producto") for i in items if i.get("producto")]
             productos = list(Producto.objects.filter(pk__in=ids))
             advertencias = verificar_alergenos_venta(hijo, productos)
+
+        forzar = bool(request.data.get("forzar_alergenos", False))
+        if advertencias and not forzar:
+            return Response(
+                {
+                    "error": "El alumno tiene restricciones que coinciden con productos de la venta.",
+                    "advertencias_alergenos": advertencias,
+                    "hint": "Incluya 'forzar_alergenos': true para vender de todos modos.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         venta = self._registrar(serializer)
         registrar_auditoria(

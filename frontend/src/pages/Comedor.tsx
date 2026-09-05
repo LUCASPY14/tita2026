@@ -64,6 +64,7 @@ function extractErrorMessage(err: unknown): string {
   if (typeof data === 'object') {
     const d = data as Record<string, unknown>
     if (d.detail) return String(d.detail)
+    if (d.error) return String(d.error)
     if (d.non_field_errors) return String((d.non_field_errors as string[])[0])
     const first = Object.values(d)[0]
     if (Array.isArray(first)) return String(first[0])
@@ -91,6 +92,8 @@ interface TarjetaResult {
   hijo?: number
 }
 
+interface RestriccionBloqueante { tipo: string; severidad: string; descripcion: string }
+
 type ResultState = {
   tipo: 'ok'
   nombre: string
@@ -103,6 +106,19 @@ type ResultState = {
 } | {
   tipo: 'error'
   message: string
+} | {
+  tipo: 'restriccion'
+  nombre: string
+  restricciones: RestriccionBloqueante[]
+}
+
+interface PendienteAutorizacion {
+  hijoId: number
+  hijoGrado: string
+  hijoFechaNacimiento: string | null | undefined
+  nro: string
+  tarjeta: TarjetaResult
+  esSegundo: boolean
 }
 
 // Compara mes/día de una fecha "YYYY-MM-DD" contra hoy, sin líos de timezone
@@ -142,6 +158,8 @@ export default function Comedor() {
   const [scanning, setScanning] = useState(false)
   const [result, setResult] = useState<ResultState | null>(null)
   const [countdown, setCountdown] = useState<number | null>(null)
+  const [pendienteAutorizacion, setPendienteAutorizacion] = useState<PendienteAutorizacion | null>(null)
+  const [autorizando, setAutorizando] = useState(false)
   const [recientes, setRecientes] = useState<RegistroReciente[]>([])
   const [hijos, setHijos] = useState<Hijo[]>([])
   const [hijosLoading, setHijosLoading] = useState(true)
@@ -277,6 +295,48 @@ export default function Comedor() {
     }, 1000)
   }, [])
 
+  // Efectos posteriores a un registro de consumo exitoso (llamado desde el
+  // escaneo normal y desde "Autorizar e ingresar" tras forzar una restricción).
+  const finalizarRegistro = useCallback(async (ctx: PendienteAutorizacion) => {
+    const { hijoId, hijoGrado, hijoFechaNacimiento, nro, tarjeta, esSegundo } = ctx
+
+    setRegistrosHoy(prev => {
+      const next = new Map(prev)
+      const info = next.get(hijoId)
+      next.set(hijoId, { count: (info?.count ?? 0) + 1, ultimoRegistro: new Date() })
+      return next
+    })
+
+    // Saldo de almuerzo (cuenta corriente, separada de la tarjeta) — solo
+    // informativo, si falla no bloquea el registro ya confirmado.
+    let saldoAlmuerzo: number | null = null
+    try {
+      const { data: saldoRes } = await api.get('/almuerzos/saldos/', { params: { hijo: hijoId } })
+      const item = (saldoRes.results ?? saldoRes)[0]
+      if (item) saldoAlmuerzo = Number(item.saldo_actual)
+    } catch {
+      // silencioso
+    }
+
+    const hora = nowTime()
+    const entry: RegistroReciente = {
+      id: `${nro}-${Date.now()}`,
+      nombre: tarjeta.hijo_nombre,
+      grado: hijoGrado,
+      hora,
+      tarjeta: nro,
+      saldo: tarjeta.saldo_actual,
+    }
+    setResult({
+      tipo: 'ok', nombre: tarjeta.hijo_nombre, grado: hijoGrado, tarjeta: nro,
+      saldo: tarjeta.saldo_actual, saldoAlmuerzo, esSegundo,
+      esCumple: esCumpleanioHoy(hijoFechaNacimiento),
+    })
+    setRecientes(prev => [entry, ...prev].slice(0, 30))
+    startCountdown(4)
+    window.dispatchEvent(new CustomEvent('comedor:registro'))
+  }, [startCountdown])
+
   const handleScan = useCallback(async (nro: string) => {
     if (scanningRef.current || !nro) return
     if (hijosLoading) {
@@ -290,11 +350,15 @@ export default function Comedor() {
     clearInterval(countdownRef.current)
     setResult(null)
     setCountdown(null)
+    setPendienteAutorizacion(null)
+    let tarjeta: TarjetaResult | undefined
+    let hijoId: number | undefined
+    let hijoGrado = ''
+    let hijoFechaNacimiento: string | null | undefined
+    let esSegundo = false
     try {
       const { data: res } = await api.get('/core/tarjetas/', { params: { search: nro } })
-      const tarjeta: TarjetaResult | undefined = (res.results ?? []).find(
-        (t: TarjetaResult) => t.nro_tarjeta === nro
-      )
+      tarjeta = (res.results ?? []).find((t: TarjetaResult) => t.nro_tarjeta === nro)
       if (!tarjeta) {
         setResult({ tipo: 'error', message: 'Tarjeta no encontrada' })
         startCountdown(3)
@@ -306,13 +370,11 @@ export default function Comedor() {
         return
       }
       // Resolver hijo
-      let hijoId: number | undefined = tarjeta.hijo
-      let hijoGrado = ''
-      let hijoFechaNacimiento: string | null | undefined
+      hijoId = tarjeta.hijo
       if (!hijoId) {
         const match = hijos.find(
-          h => h.nombre_completo === tarjeta.hijo_nombre ||
-            `${h.nombre} ${h.apellido}` === tarjeta.hijo_nombre
+          h => h.nombre_completo === tarjeta!.hijo_nombre ||
+            `${h.nombre} ${h.apellido}` === tarjeta!.hijo_nombre
         )
         hijoId = match?.id_hijo
         hijoGrado = match?.grado ?? ''
@@ -349,59 +411,58 @@ export default function Comedor() {
           return
         }
       }
-      const esSegundo = registroPrevio?.count === 1
+      esSegundo = registroPrevio?.count === 1
 
       await api.post('/almuerzos/registros-consumo/', {
         hijo: hijoId,
         fecha_consumo: todayISO(),
         nro_tarjeta: tarjeta.nro_tarjeta,
       })
-
-      // Actualizar mapa local inmediatamente sin esperar refresh de API
-      setRegistrosHoy(prev => {
-        const next = new Map(prev)
-        const info = next.get(hijoId as number)
-        next.set(hijoId as number, { count: (info?.count ?? 0) + 1, ultimoRegistro: new Date() })
-        return next
-      })
-
-      // Saldo de almuerzo (cuenta corriente, separada de la tarjeta) — solo
-      // informativo, si falla no bloquea el registro ya confirmado.
-      let saldoAlmuerzo: number | null = null
-      try {
-        const { data: saldoRes } = await api.get('/almuerzos/saldos/', { params: { hijo: hijoId } })
-        const item = (saldoRes.results ?? saldoRes)[0]
-        if (item) saldoAlmuerzo = Number(item.saldo_actual)
-      } catch {
-        // silencioso
-      }
-
-      const hora = nowTime()
-      const entry: RegistroReciente = {
-        id: `${nro}-${Date.now()}`,
-        nombre: tarjeta.hijo_nombre,
-        grado: hijoGrado,
-        hora,
-        tarjeta: nro,
-        saldo: tarjeta.saldo_actual,
-      }
-      setResult({
-        tipo: 'ok', nombre: tarjeta.hijo_nombre, grado: hijoGrado, tarjeta: nro,
-        saldo: tarjeta.saldo_actual, saldoAlmuerzo, esSegundo,
-        esCumple: esCumpleanioHoy(hijoFechaNacimiento),
-      })
-      setRecientes(prev => [entry, ...prev].slice(0, 30))
-      startCountdown(4)
-      window.dispatchEvent(new CustomEvent('comedor:registro'))
+      await finalizarRegistro({ hijoId, hijoGrado, hijoFechaNacimiento, nro, tarjeta, esSegundo })
     } catch (err) {
-      const msg = extractErrorMessage(err)
-      setResult({ tipo: 'error', message: msg })
-      startCountdown(3)
+      const data = (err as { response?: { status?: number; data?: { error?: string; restricciones?: RestriccionBloqueante[] } } }).response
+      if (data?.status === 400 && data.data?.restricciones?.length && tarjeta && hijoId) {
+        setPendienteAutorizacion({ hijoId, hijoGrado, hijoFechaNacimiento, nro, tarjeta, esSegundo })
+        setResult({ tipo: 'restriccion', nombre: tarjeta.hijo_nombre, restricciones: data.data.restricciones })
+      } else {
+        const msg = extractErrorMessage(err)
+        setResult({ tipo: 'error', message: msg })
+        startCountdown(3)
+      }
     } finally {
       scanningRef.current = false
       setScanning(false)
     }
-  }, [hijos, hijosLoading, startCountdown, registrosHoy])
+  }, [hijos, hijosLoading, startCountdown, registrosHoy, finalizarRegistro])
+
+  const autorizarEIngresar = useCallback(async () => {
+    if (!pendienteAutorizacion || autorizando) return
+    setAutorizando(true)
+    try {
+      const { hijoId, tarjeta } = pendienteAutorizacion
+      await api.post('/almuerzos/registros-consumo/', {
+        hijo: hijoId,
+        fecha_consumo: todayISO(),
+        nro_tarjeta: tarjeta.nro_tarjeta,
+        forzar_restriccion: true,
+      })
+      await finalizarRegistro(pendienteAutorizacion)
+      setPendienteAutorizacion(null)
+    } catch (err) {
+      setResult({ tipo: 'error', message: extractErrorMessage(err) })
+      setPendienteAutorizacion(null)
+      startCountdown(3)
+    } finally {
+      setAutorizando(false)
+    }
+  }, [pendienteAutorizacion, autorizando, finalizarRegistro, startCountdown])
+
+  const cancelarAutorizacion = useCallback(() => {
+    setPendienteAutorizacion(null)
+    setResult(null)
+    setInputVal('')
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }, [])
 
   // refoco al hacer click en cualquier parte
   const handlePageClick = useCallback(() => {
@@ -554,6 +615,39 @@ export default function Comedor() {
                     Próximo en {countdown}...
                   </p>
                 )}
+              </div>
+            ) : result.tipo === 'restriccion' ? (
+              <div className="w-full max-w-lg bg-amber-50 border-2 border-amber-400 rounded-3xl p-8 text-center animate-in fade-in zoom-in-95 duration-200 shadow-lg">
+                <AlertTriangle className="w-20 h-20 text-amber-500 mx-auto mb-4" />
+                <p className="text-amber-600 text-base font-bold uppercase tracking-widest mb-2">
+                  No se puede registrar
+                </p>
+                <p className="text-slate-900 text-3xl font-black">{result.nombre}</p>
+                <div className="mt-4 space-y-2 text-left">
+                  {result.restricciones.map((r, i) => (
+                    <div key={i} className="bg-white border border-amber-200 rounded-xl px-4 py-2.5">
+                      <p className="font-semibold text-amber-900">{r.tipo} <span className="text-amber-500 font-normal">({r.severidad})</span></p>
+                      {r.descripcion && <p className="text-slate-600 text-sm">{r.descripcion}</p>}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-slate-500 text-sm mt-4">Requiere autorización de un supervisor para continuar.</p>
+                <div className="mt-5 flex items-center justify-center gap-3">
+                  <button
+                    onClick={cancelarAutorizacion}
+                    disabled={autorizando}
+                    className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={autorizarEIngresar}
+                    disabled={autorizando}
+                    className="px-5 py-2.5 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    {autorizando ? 'Autorizando…' : 'Autorizar e ingresar'}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="w-full max-w-lg bg-red-50 border-2 border-red-400 rounded-3xl p-10 text-center animate-in fade-in zoom-in-95 duration-200 shadow-lg">

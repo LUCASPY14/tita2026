@@ -284,6 +284,12 @@ def hijo_view(db, cliente):
 
 
 @pytest.fixture
+def tarjeta_de_hijo(db, hijo_view):
+    from apps.core.models import Tarjeta
+    return Tarjeta.objects.create(nro_tarjeta="TARJ-ALERG-1", hijo=hijo_view, saldo_actual=Decimal("50000"))
+
+
+@pytest.fixture
 def pago_pendiente(db, cliente, venta_activa, medio_pago_efectivo, usuario_cajero):
     from apps.ventas.models import PagoVenta
     return PagoVenta.objects.create(
@@ -320,12 +326,13 @@ class TestVentaViewSetCoberturaExtra:
             )
         assert resp.status_code == 201
 
-    def test_create_con_hijo_con_alergenos_incluye_advertencias(
+    def test_create_con_hijo_con_alergenos_bloquea_sin_forzar(
         self, api_cajero, cliente, producto, medio_pago_efectivo,
         cierre_cajero, stock_producto, hijo_view
     ):
-        """POST con hijo + alergenos → resp incluye advertencias_alergenos (líneas 84-85)."""
+        """POST con hijo + alergenos, sin forzar_alergenos → 400, no crea la venta."""
         from unittest.mock import patch
+        from apps.ventas.models import Venta
         with patch(
             "apps.almuerzos.validators.verificar_alergenos_venta",
             return_value=[{"alergeno": "Gluten"}],
@@ -342,8 +349,64 @@ class TestVentaViewSetCoberturaExtra:
                 },
                 format="json",
             )
+        assert resp.status_code == 400
+        assert resp.data["advertencias_alergenos"] == [{"alergeno": "Gluten"}]
+        assert Venta.objects.count() == 0
+
+    def test_create_con_hijo_con_alergenos_forzar_true_crea_la_venta(
+        self, api_cajero, cliente, producto, medio_pago_efectivo,
+        cierre_cajero, stock_producto, hijo_view
+    ):
+        """POST con hijo + alergenos + forzar_alergenos=true → crea la venta e incluye la advertencia en la respuesta."""
+        from unittest.mock import patch
+        with patch(
+            "apps.almuerzos.validators.verificar_alergenos_venta",
+            return_value=[{"alergeno": "Gluten"}],
+        ):
+            resp = api_cajero.post(
+                "/api/v1/ventas/ventas/",
+                {
+                    "cliente": cliente.pk,
+                    "hijo": hijo_view.pk,
+                    "tipo": "CONTADO",
+                    "medio_pago": medio_pago_efectivo.pk,
+                    "monto_total": 3000,
+                    "items": [{"producto": producto.pk, "cantidad": "1", "precio_unitario": "3000"}],
+                    "forzar_alergenos": True,
+                },
+                format="json",
+            )
         assert resp.status_code == 201
-        assert "advertencias_alergenos" in resp.data
+        assert resp.data["advertencias_alergenos"] == [{"alergeno": "Gluten"}]
+
+    def test_venta_con_tarjeta_sin_hijo_explicito_igual_verifica_alergenos(
+        self, api_cajero, cliente, producto, medio_pago_efectivo,
+        cierre_cajero, stock_producto, tarjeta_de_hijo
+    ):
+        """La mayoría de las ventas de ModoRecreo no mandan 'hijo' explícito —
+        viaja implícito en la tarjeta escaneada. El chequeo de alérgenos debe
+        igual dispararse, resolviendo el hijo desde la tarjeta."""
+        from unittest.mock import patch
+        with patch(
+            "apps.almuerzos.validators.verificar_alergenos_venta",
+            return_value=[{"alergeno": "Maní"}],
+        ) as mock_verificar:
+            resp = api_cajero.post(
+                "/api/v1/ventas/ventas/",
+                {
+                    "cliente": cliente.pk,
+                    "tarjeta": tarjeta_de_hijo.pk,
+                    "tipo": "CONTADO",
+                    "medio_pago": medio_pago_efectivo.pk,
+                    "monto_total": 3000,
+                    "items": [{"producto": producto.pk, "cantidad": "1", "precio_unitario": "3000"}],
+                },
+                format="json",
+            )
+        assert resp.status_code == 400
+        assert resp.data["advertencias_alergenos"] == [{"alergeno": "Maní"}]
+        mock_verificar.assert_called_once()
+        assert mock_verificar.call_args.args[0] == tarjeta_de_hijo.hijo
 
     def test_anular_excepcion_generica_retorna_400_con_mensaje(
         self, api_admin, venta_activa
