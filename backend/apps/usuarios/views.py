@@ -86,6 +86,7 @@ from .models import (
     IntentoLogin,
     BloqueoCuenta,
     CredencialWebAuthn,
+    PatronAcceso,
 )
 from .serializers import (
     UsuarioSerializer,
@@ -168,7 +169,67 @@ def _registrar_sesion(user, request) -> str:
     )
     user.ultimo_acceso = timezone.now()
     user.save(update_fields=["ultimo_acceso"])
+
+    if ip:
+        _verificar_actividad_sospechosa(user, ip)
+
     return session_key
+
+
+# ── Alertas de seguridad de acceso ────────────────────────────────────────────
+# patrones_acceso se llena solo (trigger trg_update_patron_acceso sobre
+# sesiones_activas, migración 0002) — acá está la lectura que le faltaba: avisar
+# al admin sin bloquear nada, dejando la decisión en sus manos.
+
+def _verificar_actividad_sospechosa(user, ip: str) -> None:
+    if user.rol != Usuario.Rol.CLIENTE_WEB:
+        # Nueva IP para una cuenta de personal que ya tenía otras IPs conocidas.
+        # Si es la primerísima vez que este usuario loguea (sin otras IPs
+        # conocidas todavía), no es una señal de nada — no se avisa.
+        tiene_otras_ips = PatronAcceso.objects.filter(usuario=user).exclude(ip_address=ip).exists()
+        if not tiene_otras_ips:
+            return
+        patron_actual = PatronAcceso.objects.filter(usuario=user, ip_address=ip).first()
+        if patron_actual and patron_actual.frecuencia_accesos == 1:
+            clave = f"alerta_seg_nueva_ip:{user.id_usuario}:{ip}"
+            if cache.get(clave) is None:
+                cache.set(clave, True, timeout=86400)
+                _notificar_admins_seguridad(
+                    titulo="Nuevo inicio de sesión desde una IP no habitual",
+                    mensaje=f"{user.email} ({user.get_rol_display()}) inició sesión desde una IP nueva: {ip}.",
+                )
+    else:
+        # Cuenta del portal de padres con sesiones activas simultáneas desde IPs
+        # distintas — la señal de riesgo real acá es credencial compartida o
+        # filtrada, no "IP nueva" (los padres entran desde el celular, casa,
+        # trabajo — toda IP sería "nueva" y sería puro ruido).
+        ips_activas = (
+            SesionActiva.objects.filter(usuario=user, activa=True)
+            .values_list("ip_address", flat=True).distinct().count()
+        )
+        if ips_activas >= 2:
+            clave = f"alerta_seg_multi_ip:{user.id_usuario}"
+            if cache.get(clave) is None:
+                cache.set(clave, True, timeout=86400)
+                _notificar_admins_seguridad(
+                    titulo="Cuenta del portal con sesiones simultáneas desde IPs distintas",
+                    mensaje=f"{user.email} tiene sesiones activas desde {ips_activas} direcciones IP distintas.",
+                )
+
+
+def _notificar_admins_seguridad(titulo: str, mensaje: str) -> None:
+    from apps.notificaciones.models import Notificacion
+    # fecha_envio explícita e idéntica para las copias de todos los admins —
+    # ReporteActividadAccesoView las agrupa con distinct(titulo, mensaje,
+    # fecha_envio), que de otro modo no las vería como la "misma" alerta
+    # (default=timezone.now se evaluaría por separado en cada create()).
+    ahora = timezone.now()
+    for admin in Usuario.objects.filter(rol=Usuario.Rol.ADMIN, is_active=True):
+        Notificacion.objects.create(
+            usuario=admin, tipo=Notificacion.Tipo.SEGURIDAD,
+            titulo=titulo, mensaje=mensaje, destino=Notificacion.Destino.SISTEMA,
+            fecha_envio=ahora,
+        )
 
 
 # ── Bloqueo automático de cuenta ──────────────────────────────────────────────
@@ -1622,6 +1683,48 @@ class ReporteIntentosLoginView(APIView):
             "top_emails": top_emails,
             "por_motivo": por_motivo,
             "tendencia": tendencia,
+        })
+
+
+class ReporteActividadAccesoView(APIView):
+    """
+    GET /api/v1/usuarios/reporte-actividad-acceso/
+    Sesiones activas ahora + historial de alertas de seguridad de acceso
+    (ver _verificar_actividad_sospechosa) — sin filtro de fecha, es estado actual.
+    """
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        from apps.notificaciones.models import Notificacion
+
+        sesiones = (
+            SesionActiva.objects.filter(activa=True)
+            .select_related("usuario")
+            .order_by("-ultima_actividad")[:200]
+        )
+        sesiones_activas = [
+            {
+                "usuario_email": s.usuario.email,
+                "usuario_nombre": s.usuario.nombre_completo,
+                "rol": s.usuario.rol,
+                "ip_address": s.ip_address,
+                "user_agent": s.user_agent,
+                "fecha_inicio": s.fecha_inicio,
+                "ultima_actividad": s.ultima_actividad,
+            }
+            for s in sesiones
+        ]
+
+        alertas_seguridad = list(
+            Notificacion.objects.filter(tipo=Notificacion.Tipo.SEGURIDAD)
+            .order_by("-fecha_envio")
+            .values("titulo", "mensaje", "fecha_envio")
+            .distinct()[:100]
+        )
+
+        return Response({
+            "sesiones_activas": sesiones_activas,
+            "alertas_seguridad": alertas_seguridad,
         })
 
 

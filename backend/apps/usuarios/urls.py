@@ -26,6 +26,7 @@ from .views import (
     ReporteAuditoriaView,
     AuditoriaOpcionesView,
     ReporteIntentosLoginView,
+    ReporteActividadAccesoView,
     ReportePersonalInactivoView,
 )
 
@@ -57,5 +58,6 @@ urlpatterns = [
     path("reporte-auditoria/", ReporteAuditoriaView.as_view(), name="reporte-auditoria"),
     path("reporte-auditoria/opciones/", AuditoriaOpcionesView.as_view(), name="reporte-auditoria-opciones"),
     path("reporte-intentos-login/", ReporteIntentosLoginView.as_view(), name="reporte-intentos-login"),
+    path("reporte-actividad-acceso/", ReporteActividadAccesoView.as_view(), name="reporte-actividad-acceso"),
     path("reporte-personal-inactivo/", ReportePersonalInactivoView.as_view(), name="reporte-personal-inactivo"),
 ]

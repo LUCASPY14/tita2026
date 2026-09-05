@@ -6,7 +6,7 @@ export type TabKey =
   | 'ventas' | 'cuenta_corriente' | 'almuerzos' | 'productos' | 'cajeros'
   | 'stock' | 'tarjetas' | 'consumo' | 'notas_credito' | 'aging_proveedores'
   | 'compras_proveedores' | 'diferencias_caja' | 'medios_pago' | 'consumo_grado'
-  | 'cobranza_almuerzos' | 'auditoria' | 'intentos_login' | 'personal_inactivo'
+  | 'cobranza_almuerzos' | 'auditoria' | 'intentos_login' | 'personal_inactivo' | 'actividad_acceso'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -257,6 +257,17 @@ export interface IntentosLoginData {
   top_emails: TopEmailRow[]
   por_motivo: IntentoPorMotivo[]
   tendencia: IntentoTendencia[]
+}
+
+export interface SesionActivaRow {
+  usuario_email: string; usuario_nombre: string; rol: string
+  ip_address: string | null; user_agent: string | null
+  fecha_inicio: string; ultima_actividad: string
+}
+export interface AlertaSeguridad { titulo: string; mensaje: string; fecha_envio: string }
+export interface ActividadAccesoData {
+  sesiones_activas: SesionActivaRow[]
+  alertas_seguridad: AlertaSeguridad[]
 }
 
 export interface PersonalPorRol { rol: string; n: number }

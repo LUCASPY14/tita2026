@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   BarChart2, Trophy, UserCheck, Users, CreditCard, ShoppingBag,
   Package, UtensilsCrossed, FileText, ShoppingCart, AlertTriangle,
-  Search, LogIn, Shield, DollarSign,
+  Search, LogIn, Shield, DollarSign, ShieldAlert,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { type TabKey } from './reportes/shared'
@@ -24,6 +24,7 @@ import TabCobranzaAlmuerzos from './reportes/TabCobranzaAlmuerzos'
 import TabAuditoria from './reportes/TabAuditoria'
 import TabIntentosLogin from './reportes/TabIntentosLogin'
 import TabPersonalInactivo from './reportes/TabPersonalInactivo'
+import TabActividadAcceso from './reportes/TabActividadAcceso'
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'ventas',              label: 'Ventas y Cierres',   icon: <BarChart2 className="w-4 h-4" /> },
@@ -44,6 +45,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'auditoria',           label: 'Auditoría',           icon: <Shield className="w-4 h-4" /> },
   { key: 'intentos_login',      label: 'Intentos Login',      icon: <LogIn className="w-4 h-4" /> },
   { key: 'personal_inactivo',   label: 'Personal Inactivo',   icon: <Search className="w-4 h-4" /> },
+  { key: 'actividad_acceso',    label: 'Actividad de Acceso', icon: <ShieldAlert className="w-4 h-4" /> },
 ]
 
 export default function Reportes() {
@@ -93,6 +95,7 @@ export default function Reportes() {
         {tab === 'auditoria'           && <TabAuditoria />}
         {tab === 'intentos_login'      && <TabIntentosLogin />}
         {tab === 'personal_inactivo'   && <TabPersonalInactivo />}
+        {tab === 'actividad_acceso'    && <TabActividadAcceso />}
       </div>
     </div>
   )

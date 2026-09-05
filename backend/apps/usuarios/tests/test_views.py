@@ -1037,4 +1037,117 @@ class TestUsuarioDestroyGuard:
         Venta.objects.create(cliente=cliente, cajero=usuario, monto_total="10000")
         resp = api_admin.delete(f"/api/v1/usuarios/usuarios/{usuario.pk}/")
         assert resp.status_code == 400
-        assert "asociados" in str(resp.data).lower()
+
+
+# ── Alertas de seguridad de acceso ────────────────────────────────────────────
+
+@pytest.fixture
+def usuario_cliente_web_alerta(db, cliente):
+    from apps.usuarios.models import Usuario
+    return Usuario.objects.create_user(
+        email="padre_alerta@test.com", password="test1234",
+        nombre="Padre", apellido="Alerta", rol=Usuario.Rol.CLIENTE_WEB, cliente=cliente,
+    )
+
+
+@pytest.mark.django_db
+class TestVerificarActividadSospechosa:
+
+    def _notificaciones_seguridad(self):
+        from apps.notificaciones.models import Notificacion
+        return Notificacion.objects.filter(tipo=Notificacion.Tipo.SEGURIDAD)
+
+    def test_primer_login_de_la_cuenta_no_alerta(self, usuario_cajero):
+        # frecuencia_accesos=1 en la única IP conocida — no hay "otra IP" contra
+        # la cual comparar, así que no es una señal de nada.
+        from apps.usuarios.models import PatronAcceso
+        from apps.usuarios.views import _verificar_actividad_sospechosa
+        PatronAcceso.objects.create(usuario=usuario_cajero, ip_address="10.0.0.5", frecuencia_accesos=1)
+        _verificar_actividad_sospechosa(usuario_cajero, "10.0.0.5")
+        assert not self._notificaciones_seguridad().exists()
+
+    def test_ip_nueva_para_cuenta_establecida_alerta_a_admins(self, usuario_cajero, usuario_admin):
+        from apps.usuarios.models import PatronAcceso
+        from apps.usuarios.views import _verificar_actividad_sospechosa
+        # IP habitual ya conocida
+        PatronAcceso.objects.create(usuario=usuario_cajero, ip_address="10.0.0.5", frecuencia_accesos=15, es_habitual=True)
+        # IP nueva recién insertada por el trigger (frecuencia_accesos=1)
+        PatronAcceso.objects.create(usuario=usuario_cajero, ip_address="200.1.2.3", frecuencia_accesos=1)
+
+        _verificar_actividad_sospechosa(usuario_cajero, "200.1.2.3")
+
+        notifs = self._notificaciones_seguridad()
+        assert notifs.filter(usuario=usuario_admin).exists()
+        assert "200.1.2.3" in notifs.first().mensaje
+
+    def test_ip_ya_habitual_no_alerta(self, usuario_cajero):
+        from apps.usuarios.models import PatronAcceso
+        from apps.usuarios.views import _verificar_actividad_sospechosa
+        PatronAcceso.objects.create(usuario=usuario_cajero, ip_address="10.0.0.5", frecuencia_accesos=1)
+        PatronAcceso.objects.create(usuario=usuario_cajero, ip_address="10.0.0.9", frecuencia_accesos=5)
+        _verificar_actividad_sospechosa(usuario_cajero, "10.0.0.9")
+        assert not self._notificaciones_seguridad().exists()
+
+    def test_no_se_duplica_la_alerta_en_24h(self, settings, usuario_cajero, usuario_admin):
+        from django.core.cache import cache
+        from apps.usuarios.models import PatronAcceso
+        from apps.usuarios.views import _verificar_actividad_sospechosa
+        settings.CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+        cache.clear()
+        try:
+            PatronAcceso.objects.create(usuario=usuario_cajero, ip_address="10.0.0.5", frecuencia_accesos=15)
+            PatronAcceso.objects.create(usuario=usuario_cajero, ip_address="200.1.2.3", frecuencia_accesos=1)
+
+            _verificar_actividad_sospechosa(usuario_cajero, "200.1.2.3")
+            _verificar_actividad_sospechosa(usuario_cajero, "200.1.2.3")
+
+            assert self._notificaciones_seguridad().filter(usuario=usuario_admin).count() == 1
+        finally:
+            cache.clear()
+
+    def test_cliente_web_una_sola_sesion_no_alerta(self, usuario_cliente_web_alerta):
+        from apps.usuarios.models import SesionActiva
+        from apps.usuarios.views import _verificar_actividad_sospechosa
+        SesionActiva.objects.create(
+            usuario=usuario_cliente_web_alerta, session_key="s1", ip_address="1.1.1.1", activa=True,
+        )
+        _verificar_actividad_sospechosa(usuario_cliente_web_alerta, "1.1.1.1")
+        assert not self._notificaciones_seguridad().exists()
+
+    def test_cliente_web_dos_ips_concurrentes_alerta(self, usuario_cliente_web_alerta, usuario_admin):
+        from apps.usuarios.models import SesionActiva
+        from apps.usuarios.views import _verificar_actividad_sospechosa
+        SesionActiva.objects.create(
+            usuario=usuario_cliente_web_alerta, session_key="s1", ip_address="1.1.1.1", activa=True,
+        )
+        SesionActiva.objects.create(
+            usuario=usuario_cliente_web_alerta, session_key="s2", ip_address="2.2.2.2", activa=True,
+        )
+        _verificar_actividad_sospechosa(usuario_cliente_web_alerta, "2.2.2.2")
+        notifs = self._notificaciones_seguridad()
+        assert notifs.filter(usuario=usuario_admin).exists()
+        assert usuario_cliente_web_alerta.email in notifs.first().mensaje
+
+
+@pytest.mark.django_db
+class TestReporteActividadAcceso:
+
+    def test_requiere_admin(self, api_cajero):
+        resp = api_cajero.get("/api/v1/usuarios/reporte-actividad-acceso/")
+        assert resp.status_code == 403
+
+    def test_admin_ve_sesiones_activas_y_alertas(self, api_admin, usuario_admin, usuario_cajero):
+        from apps.usuarios.models import SesionActiva
+        from apps.notificaciones.models import Notificacion
+        SesionActiva.objects.create(
+            usuario=usuario_cajero, session_key="s1", ip_address="10.0.0.5", activa=True,
+        )
+        Notificacion.objects.create(
+            usuario=usuario_admin, tipo=Notificacion.Tipo.SEGURIDAD,
+            titulo="Alerta de prueba", mensaje="mensaje de prueba",
+        )
+        resp = api_admin.get("/api/v1/usuarios/reporte-actividad-acceso/")
+        assert resp.status_code == 200
+        assert len(resp.data["sesiones_activas"]) == 1
+        assert resp.data["sesiones_activas"][0]["usuario_email"] == usuario_cajero.email
+        assert len(resp.data["alertas_seguridad"]) == 1

@@ -47,6 +47,7 @@ class Notificacion(models.Model):
         ALMUERZO    = "ALMUERZO",    "Cuenta de almuerzo"
         SISTEMA     = "SISTEMA",     "Alerta del sistema"
         VENTA_DEUDA = "VENTA_DEUDA", "Venta con saldo negativo"
+        SEGURIDAD   = "SEGURIDAD",   "Seguridad"
 
     class Destino(models.TextChoices):
         EMAIL = "EMAIL", "Email"

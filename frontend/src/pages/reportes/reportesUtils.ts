@@ -72,7 +72,7 @@ export const FORMA_COBRO_LABEL: Record<string, string> = {
 
 export const ROL_LABEL: Record<string, string> = {
   ADMIN: 'Administrador', SUPERVISOR: 'Supervisor', CAJERO: 'Cajero',
-  COBRADOR: 'Cobrador', COCINA: 'Cocina',
+  COBRADOR: 'Cobrador', COCINA: 'Cocina', CLIENTE_WEB: 'Portal (padre/madre)',
 }
 
 // ─── Shared CSS classes ───────────────────────────────────────────────────────
