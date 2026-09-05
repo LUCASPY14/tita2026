@@ -375,14 +375,6 @@ class PagoBancard(models.Model):
         related_name="pagos_bancard",
         help_text="Tarjeta prepago que se recargará (solo tipo TARJETA)",
     )
-    cuenta_almuerzo = models.ForeignKey(
-        "almuerzos.CuentaAlmuerzoMensual",
-        models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="pagos_bancard",
-        help_text="Histórico: cuenta mensual de almuerzo abonada (modelo anterior a la cuenta corriente)",
-    )
     hijo = models.ForeignKey(
         "clientes.Hijo",
         models.PROTECT,
@@ -466,9 +458,23 @@ class PagoBancard(models.Model):
             models.Index(fields=["tarjeta", "-fecha_creacion"]),
             models.Index(fields=["estado", "-fecha_creacion"]),
         ]
+        constraints = [
+            # Los campos de "resultado" que no corresponden al tipo deben quedar
+            # en null — no fuerza que el correcto esté cargado (sigue vacío
+            # mientras el pago está PENDIENTE), solo evita que se cargue el
+            # que no corresponde.
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(tipo="TARJETA") & models.Q(recarga_almuerzo__isnull=True) & models.Q(movimiento_cc__isnull=True))
+                    | (models.Q(tipo="ALMUERZO") & models.Q(carga_saldo__isnull=True) & models.Q(movimiento_cc__isnull=True))
+                    | (models.Q(tipo="CC") & models.Q(carga_saldo__isnull=True) & models.Q(recarga_almuerzo__isnull=True))
+                ),
+                name="pagobancard_resultado_segun_tipo",
+            ),
+        ]
 
     def __str__(self):
-        ref = self.tarjeta or self.cuenta_almuerzo or "—"
+        ref = self.tarjeta or "—"
         return f"Bancard #{self.shop_process_id} - {ref} - ₲{self.monto:,.0f} [{self.estado}]"
 
 

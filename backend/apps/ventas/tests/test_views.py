@@ -255,24 +255,6 @@ class TestNotaCreditoViewSet:
         assert resp.status_code in (401, 403)
 
 
-# ── CondicionVentaViewSet ─────────────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestCondicionVentaViewSet:
-
-    def test_list_ok(self, api_cajero):
-        resp = api_cajero.get("/api/v1/ventas/condiciones-venta/")
-        assert resp.status_code == 200
-
-    def test_create_ok(self, api_admin):
-        resp = api_admin.post(
-            "/api/v1/ventas/condiciones-venta/",
-            {"nombre": "Contado inmediato", "plazo_dias": 0},
-            format="json",
-        )
-        assert resp.status_code == 201
-
-
 # ── Cobertura adicional ───────────────────────────────────────────────────────
 
 @pytest.fixture

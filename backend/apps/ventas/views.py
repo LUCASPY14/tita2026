@@ -28,7 +28,6 @@ from .models import (
     AplicacionPago,
     NotaCredito,
     DetalleNotaCredito,
-    CondicionVenta,
 )
 from .serializers import (
     VentaSerializer,
@@ -37,7 +36,6 @@ from .serializers import (
     AplicacionPagoSerializer,
     NotaCreditoSerializer,
     DetalleNotaCreditoSerializer,
-    CondicionVentaSerializer,
 )
 
 
@@ -361,12 +359,6 @@ class NotaCreditoViewSet(viewsets.ModelViewSet):
 class DetalleNotaCreditoViewSet(viewsets.ModelViewSet):
     queryset = DetalleNotaCredito.objects.select_related("nota_credito", "producto").all()
     serializer_class = DetalleNotaCreditoSerializer
-    permission_classes = [IsCajeroOrAdmin]
-
-
-class CondicionVentaViewSet(viewsets.ModelViewSet):
-    queryset = CondicionVenta.objects.all()
-    serializer_class = CondicionVentaSerializer
     permission_classes = [IsCajeroOrAdmin]
 
 

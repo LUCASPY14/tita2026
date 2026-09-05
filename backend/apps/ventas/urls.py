@@ -8,7 +8,6 @@ from .views import (
     AplicacionPagoViewSet,
     NotaCreditoViewSet,
     DetalleNotaCreditoViewSet,
-    CondicionVentaViewSet,
     ReporteVentasProductoView,
     ReporteVentasCajeroView,
     ReporteMediosPagoView,
@@ -22,7 +21,6 @@ router.register(r"pagos", PagoVentaViewSet, basename="pagos")
 router.register(r"aplicaciones-pago", AplicacionPagoViewSet, basename="aplicaciones-pago")
 router.register(r"notas-credito", NotaCreditoViewSet, basename="notas-credito")
 router.register(r"detalles-nota-credito", DetalleNotaCreditoViewSet, basename="detalles-nota-credito")
-router.register(r"condiciones-venta", CondicionVentaViewSet, basename="condiciones-venta")
 
 urlpatterns = [
     path("", include(router.urls)),

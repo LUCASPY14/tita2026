@@ -462,23 +462,3 @@ class DetalleNotaCredito(models.Model):
 
     def __str__(self):
         return f"{self.producto} x {self.cantidad} (NC #{self.nota_credito_id})"
-
-
-# ==============================================================================
-# CONDICIÓN DE VENTA
-# ==============================================================================
-
-class CondicionVenta(models.Model):
-    """Condición de venta (contado, crédito 30 días, etc.)."""
-
-    id_condicion_venta = models.BigAutoField(primary_key=True)
-    nombre = models.CharField(max_length=100, unique=True)
-    plazo_dias = models.IntegerField(default=0, help_text="Días de plazo para pago")
-
-    class Meta:
-        verbose_name = "Condición de Venta"
-        verbose_name_plural = "Condiciones de Venta"
-        ordering = ["nombre"]
-
-    def __str__(self):
-        return self.nombre

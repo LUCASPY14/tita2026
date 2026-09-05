@@ -17,7 +17,6 @@ from .models import (
     AplicacionPago,
     NotaCredito,
     DetalleNotaCredito,
-    CondicionVenta,
 )
 
 
@@ -378,13 +377,3 @@ class DetalleNotaCreditoAdmin(admin.ModelAdmin):
     def subtotal_display(self, obj):
         return f"₲{obj.subtotal:,.0f}"
     subtotal_display.short_description = "Subtotal"
-
-
-# ==============================================================================
-# CONDICIÓN DE VENTA
-# ==============================================================================
-
-@admin.register(CondicionVenta)
-class CondicionVentaAdmin(admin.ModelAdmin):
-    list_display = ["nombre", "plazo_dias"]
-    search_fields = ["nombre"]

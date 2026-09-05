@@ -282,8 +282,3 @@ class TestOtrosModelos:
             subtotal=Decimal("5000"),
         )
         assert "NC" in str(d) or str(producto.pk) in str(d) or "x" in str(d)
-
-    def test_condicion_venta_str(self, db):
-        from apps.ventas.models import CondicionVenta
-        c = CondicionVenta.objects.create(nombre="Contado", plazo_dias=0)
-        assert "Contado" in str(c)

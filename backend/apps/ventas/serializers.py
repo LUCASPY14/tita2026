@@ -12,7 +12,6 @@ from .models import (
     AplicacionPago,
     NotaCredito,
     DetalleNotaCredito,
-    CondicionVenta,
 )
 
 
@@ -113,9 +112,3 @@ class NotaCreditoSerializer(serializers.ModelSerializer):
         model = NotaCredito
         fields = "__all__"
         read_only_fields = ["fecha_creacion"]
-
-
-class CondicionVentaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CondicionVenta
-        fields = "__all__"

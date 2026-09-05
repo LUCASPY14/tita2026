@@ -24,7 +24,6 @@ def sa_client(db):
     "/admin/ventas/aplicacionpago/",
     "/admin/ventas/notacredito/",
     "/admin/ventas/detallenotacredito/",
-    "/admin/ventas/condicionventa/",
 ])
 def test_admin_changelist_returns_200(sa_client, url):
     resp = sa_client.get(url)
