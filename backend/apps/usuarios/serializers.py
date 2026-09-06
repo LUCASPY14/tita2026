@@ -170,9 +170,15 @@ class EmpleadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Empleado
         fields = "__all__"
+        extra_kwargs = {"ci": {"allow_blank": True}}
 
     def get_usuario_id(self, obj):
         return obj.usuario.id_usuario if hasattr(obj, "usuario") else None
+
+    def validate_ci(self, value):
+        # ci es unique=True — "" no puede tratarse como valor real o el segundo
+        # empleado sin CI cargado rompe la constraint (Postgres no trata "" como NULL).
+        return value.strip() or None
 
 
 class RolSerializer(serializers.ModelSerializer):

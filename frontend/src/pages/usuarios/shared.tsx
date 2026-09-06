@@ -71,6 +71,7 @@ export interface Empleado {
   id_empleado: number
   nombre: string
   apellido: string
+  ci: string | null
   email: string | null
   telefono: string | null
   fecha_ingreso: string
@@ -87,6 +88,7 @@ export interface Empleado {
 export interface EmpleadoForm {
   nombre: string
   apellido: string
+  ci: string
   email: string
   telefono: string
   fecha_ingreso: string
@@ -135,7 +137,7 @@ export const OTORGAR_ACCESO_INITIAL: OtorgarAccesoForm = {
 }
 
 export const EMP_FORM_INITIAL: EmpleadoForm = {
-  nombre: '', apellido: '', email: '', telefono: '', fecha_ingreso: '', fecha_nacimiento: '',
+  nombre: '', apellido: '', ci: '', email: '', telefono: '', fecha_ingreso: '', fecha_nacimiento: '',
   direccion: '', ciudad: null, id_rol: '', estado: true,
 }
 

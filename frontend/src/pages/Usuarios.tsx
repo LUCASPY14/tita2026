@@ -358,6 +358,7 @@ export default function Usuarios() {
         <div>
           <p className="text-base font-medium text-slate-800">{r.nombre} {r.apellido}</p>
           <p className="text-sm text-slate-400">{r.email || '—'}</p>
+          <p className="text-xs text-slate-400">CI: {r.ci || <span className="text-red-500">sin cargar</span>}</p>
         </div>
       ),
     },

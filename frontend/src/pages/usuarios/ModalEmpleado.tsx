@@ -34,6 +34,7 @@ export default function ModalEmpleado({ open, editingEmp, roles, paises, departa
         setEmpForm({
           nombre: editingEmp.nombre,
           apellido: editingEmp.apellido,
+          ci: editingEmp.ci ?? '',
           email: editingEmp.email ?? '',
           telefono: editingEmp.telefono ?? '',
           fecha_ingreso: editingEmp.fecha_ingreso ?? '',
@@ -97,6 +98,10 @@ export default function ModalEmpleado({ open, editingEmp, roles, paises, departa
             <label className={labelClass}>Apellido *</label>
             <input value={empForm.apellido} onChange={e => setEmpForm(f => ({ ...f, apellido: e.target.value }))} placeholder="Apellido" className={inputClass} />
           </div>
+        </div>
+        <div>
+          <label className={labelClass}>CI</label>
+          <input value={empForm.ci} onChange={e => setEmpForm(f => ({ ...f, ci: e.target.value }))} placeholder="Ej: 2447330" className={inputClass} />
         </div>
         <div>
           <label className={labelClass}>Email</label>

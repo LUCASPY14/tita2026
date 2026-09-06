@@ -164,6 +164,13 @@ class Empleado(models.Model):
     id_empleado = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, help_text="Nombre(s)")
     apellido = models.CharField(max_length=100, help_text="Apellido(s)")
+    ci = models.CharField(
+        max_length=20,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="Cédula de identidad del empleado",
+    )
     fecha_ingreso = models.DateTimeField(default=timezone.now, help_text="Fecha de ingreso")
     fecha_nacimiento = models.DateField(
         null=True,

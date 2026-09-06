@@ -87,6 +87,7 @@ class UsuarioAdmin(BaseUserAdmin):
 class EmpleadoAdmin(admin.ModelAdmin):
     list_display = [
         "nombre_completo",
+        "ci",
         "email",
         "telefono",
         "rol_link",
@@ -95,7 +96,7 @@ class EmpleadoAdmin(admin.ModelAdmin):
         "fecha_nacimiento",
     ]
     list_filter = ["estado", "id_rol"]
-    search_fields = ["nombre", "apellido", "email"]
+    search_fields = ["nombre", "apellido", "email", "ci"]
     ordering = ["apellido", "nombre"]
     list_select_related = ["id_rol"]
 

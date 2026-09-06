@@ -27,7 +27,7 @@ export default function ModalOtorgarAcceso({ open, empleado, onClose, onSaved }:
   if (open !== wasOpen) {
     setWasOpen(open)
     if (open) {
-      setForm({ ...OTORGAR_ACCESO_INITIAL, email: empleado?.email ?? '' })
+      setForm({ ...OTORGAR_ACCESO_INITIAL, email: empleado?.email ?? '', ci_ruc: empleado?.ci ?? '' })
       setShowPassword(false)
     }
   }
