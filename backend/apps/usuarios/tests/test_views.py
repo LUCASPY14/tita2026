@@ -125,6 +125,76 @@ class TestLogin:
         assert resp.status_code == 200
         assert resp.data["user"]["rol"] == "CAJERO"
 
+    def test_login_emite_token_con_claim_session_key(self, api_client, usuario_cajero):
+        import jwt as pyjwt
+        resp = api_client.post(
+            "/api/token/",
+            {"email": "cajero@test.com", "password": "test1234"},
+            format="json",
+        )
+        payload = pyjwt.decode(resp.data["access"], options={"verify_signature": False})
+        assert payload["session_key"] == resp.data["session_key"]
+
+
+# ── Límite de sesiones concurrentes — hace cumplir de verdad (no solo registra) ─
+
+@pytest.mark.django_db
+class TestSesionConcurrenteInvalidaDispositivoAnterior:
+
+    def _login(self, api_client, email):
+        resp = api_client.post("/api/token/", {"email": email, "password": "test1234"}, format="json")
+        assert resp.status_code == 200
+        return resp.data["access"]
+
+    def test_segundo_login_invalida_el_access_token_del_primero(self, usuario_cajero):
+        from rest_framework.test import APIClient
+
+        pc_a = APIClient()
+        access_a = self._login(pc_a, "cajero@test.com")
+        pc_a.credentials(HTTP_AUTHORIZATION=f"Bearer {access_a}")
+        resp = pc_a.get("/api/v1/usuarios/usuarios/me/")
+        assert resp.status_code == 200
+
+        # CAJERO tiene máximo 1 sesión concurrente — este segundo login debe
+        # cerrar la sesión de la PC A.
+        pc_b = APIClient()
+        self._login(pc_b, "cajero@test.com")
+
+        resp = pc_a.get("/api/v1/usuarios/usuarios/me/")
+        assert resp.status_code == 401
+        assert resp.data["code"] == "sesion_reemplazada"
+
+    def test_segundo_login_no_afecta_al_propio_dispositivo(self, usuario_cajero):
+        pc_b = APIClient()
+        access_b = self._login(pc_b, "cajero@test.com")
+        pc_b.credentials(HTTP_AUTHORIZATION=f"Bearer {access_b}")
+        resp = pc_b.get("/api/v1/usuarios/usuarios/me/")
+        assert resp.status_code == 200
+
+    def test_admin_permite_hasta_3_sesiones_sin_invalidar(self, usuario_admin):
+        clientes = [APIClient() for _ in range(3)]
+        tokens = [self._login(c, "admin@test.com") for c in clientes]
+        for c, t in zip(clientes, tokens):
+            c.credentials(HTTP_AUTHORIZATION=f"Bearer {t}")
+            resp = c.get("/api/v1/usuarios/usuarios/me/")
+            assert resp.status_code == 200
+
+    def test_token_sin_claim_session_key_usa_fallback_anterior(self, usuario_cajero):
+        """Compatibilidad hacia atrás: tokens emitidos antes de este cambio
+        (sin el claim session_key) siguen funcionando mientras el usuario
+        tenga alguna SesionActiva activa."""
+        from apps.usuarios.models import SesionActiva
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        SesionActiva.objects.create(
+            usuario=usuario_cajero, session_key="legado-sin-claim", ip_address="127.0.0.1", activa=True,
+        )
+        token_viejo = RefreshToken.for_user(usuario_cajero).access_token
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token_viejo}")
+        resp = client.get("/api/v1/usuarios/usuarios/me/")
+        assert resp.status_code == 200
+
 
 # ── UsuarioViewSet.me (GET /api/v1/usuarios/usuarios/me/) ─────────────────────
 

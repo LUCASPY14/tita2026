@@ -176,6 +176,22 @@ def _registrar_sesion(user, request) -> str:
     return session_key
 
 
+def _emitir_tokens_con_sesion(user, session_key: str) -> dict:
+    """
+    Emite un par access/refresh con el claim `session_key` embebido, para que
+    SesionActivaJWTAuthentication pueda validar en cada request que ESTE
+    token puntual sigue perteneciendo a una sesión activa (y no solo que el
+    usuario tenga alguna sesión activa en general) — así el límite de
+    sesiones concurrentes por rol invalida de verdad al dispositivo anterior.
+    El claim se propaga automáticamente a los access tokens que se emitan
+    después vía /api/token/refresh/, porque simplejwt copia los claims del
+    refresh token al derivar el access token.
+    """
+    refresh = RefreshToken.for_user(user)
+    refresh["session_key"] = session_key
+    return {"refresh": str(refresh), "access": str(refresh.access_token)}
+
+
 # ── Alertas de seguridad de acceso ────────────────────────────────────────────
 # patrones_acceso se llena solo (trigger trg_update_patron_acceso sobre
 # sesiones_activas, migración 0002) — acá está la lectura que le faltaba: avisar
@@ -449,7 +465,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             id_registro=user.id_usuario,
             descripcion=f"Login exitoso ({user.email}) rol={user.rol}",
         )
-        return Response({**serializer.validated_data, "user": _user_data(user), "session_key": session_key})
+        tokens = _emitir_tokens_con_sesion(user, session_key)
+        return Response({**tokens, "user": _user_data(user), "session_key": session_key})
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -1174,13 +1191,8 @@ class TwoFALoginVerificarView(APIView):
             id_registro=user.id_usuario,
             descripcion=f"Login 2FA exitoso ({user.email})",
         )
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            "user": _user_data(user),
-            "session_key": session_key,
-        })
+        tokens = _emitir_tokens_con_sesion(user, session_key)
+        return Response({**tokens, "user": _user_data(user), "session_key": session_key})
 
 
 # ==============================================================================
@@ -1387,13 +1399,8 @@ class WebAuthnLoginVerificarView(APIView):
             id_registro=user.id_usuario,
             descripcion=f"Login con huella exitoso ({user.email})",
         )
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            "user": _user_data(user),
-            "session_key": session_key,
-        })
+        tokens = _emitir_tokens_con_sesion(user, session_key)
+        return Response({**tokens, "user": _user_data(user), "session_key": session_key})
 
 
 class WebAuthnDesactivarView(APIView):

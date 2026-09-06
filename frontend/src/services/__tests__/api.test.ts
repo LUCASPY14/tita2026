@@ -64,6 +64,13 @@ function makeError401(extra: Record<string, unknown> = {}) {
   }
 }
 
+function makeError401Sesion(code: string, detail: string) {
+  return {
+    config: { headers: {} as Record<string, string>, _retry: false },
+    response: { status: 401, data: { code, detail } },
+  }
+}
+
 // ─── tests ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
@@ -174,6 +181,46 @@ describe('api — response interceptor (refresh fallido)', () => {
     await expect(mocks.responseErrFn!(makeError401())).rejects.toThrow()
 
     expect(mocks.mockToastError).toHaveBeenCalledWith('Sesión expirada. Iniciá sesión nuevamente.')
+  })
+})
+
+describe('api — 401 de sesión reemplazada/expirada (sin reintentar refresh)', () => {
+  it.each(['sesion_reemplazada', 'sesion_expirada', 'sesion_no_encontrada'])(
+    'no llama a /api/token/refresh/ ante code=%s',
+    async (code) => {
+      localStorage.setItem('access_token', 'viejo')
+      localStorage.setItem('refresh_token', 'ref')
+
+      await expect(
+        mocks.responseErrFn!(makeError401Sesion(code, 'Tu sesión se cerró')),
+      ).rejects.toBeDefined()
+
+      expect(mocks.mockPost).not.toHaveBeenCalled()
+    },
+  )
+
+  it('limpia los tokens y despacha auth:logout de inmediato', async () => {
+    localStorage.setItem('access_token', 'viejo')
+    localStorage.setItem('refresh_token', 'ref')
+    const listener = vi.fn()
+    window.addEventListener('auth:logout', listener)
+
+    await expect(
+      mocks.responseErrFn!(makeError401Sesion('sesion_reemplazada', 'Tu sesión se cerró porque iniciaste sesión en otro dispositivo.')),
+    ).rejects.toBeDefined()
+
+    expect(localStorage.getItem('access_token')).toBeNull()
+    expect(localStorage.getItem('refresh_token')).toBeNull()
+    expect(listener).toHaveBeenCalledTimes(1)
+    window.removeEventListener('auth:logout', listener)
+  })
+
+  it('muestra el detail del backend en el toast', async () => {
+    await expect(
+      mocks.responseErrFn!(makeError401Sesion('sesion_reemplazada', 'Tu sesión se cerró porque iniciaste sesión en otro dispositivo.')),
+    ).rejects.toBeDefined()
+
+    expect(mocks.mockToastError).toHaveBeenCalledWith('Tu sesión se cerró porque iniciaste sesión en otro dispositivo.')
   })
 })
 

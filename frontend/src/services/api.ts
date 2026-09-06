@@ -26,10 +26,25 @@ function processQueue(error: unknown, token: string | null) {
   failedQueue = []
 }
 
+const SESION_CODES_SIN_RETRY = new Set(['sesion_reemplazada', 'sesion_expirada', 'sesion_no_encontrada'])
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
+    const code = error.response?.data?.code
+
+    // La sesión de este dispositivo ya no existe (se cerró al loguearse en
+    // otro, o expiró por inactividad) — reintentar con refresh no sirve,
+    // porque el refresh token también lleva la sesión vieja: se saca al
+    // usuario directo en vez de reintentar en loop silencioso.
+    if (error.response?.status === 401 && SESION_CODES_SIN_RETRY.has(code)) {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      toast.error(error.response.data.detail || 'Tu sesión ya no está activa. Iniciá sesión nuevamente.')
+      window.dispatchEvent(new Event('auth:logout'))
+      return Promise.reject(error)
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {

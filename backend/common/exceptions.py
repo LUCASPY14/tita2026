@@ -47,7 +47,8 @@ def custom_exception_handler(exc, context):
         normalized["field_errors"] = field_errors
     elif isinstance(exc, (AuthenticationFailed, NotAuthenticated)):
         normalized["detail"] = str(data.get("detail", "No autenticado."))
-        normalized["code"] = "not_authenticated"
+        detail_code = getattr(getattr(exc, "detail", None), "code", None)
+        normalized["code"] = detail_code or "not_authenticated"
     elif isinstance(exc, PermissionDenied):
         normalized["detail"] = str(data.get("detail", "Permiso denegado."))
         normalized["code"] = "permission_denied"
