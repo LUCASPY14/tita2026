@@ -520,7 +520,7 @@ export default function ModoRecreo() {
       {!isOnline && (
         <div className="flex items-center justify-center gap-2 bg-red-600 text-white text-sm font-bold py-1.5 px-4 shrink-0">
           <AlertTriangle size={16} />
-          SIN CONEXIÓN — los cobros están deshabilitados hasta restaurar la red
+          SIN CONEXIÓN — las ventas se guardan y se sincronizan al reconectar
         </div>
       )}
 

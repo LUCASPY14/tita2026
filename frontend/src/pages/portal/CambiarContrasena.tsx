@@ -58,16 +58,19 @@ export default function PortalCambiarContrasena() {
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Cambiar contraseña</h1>
           <p className="text-gray-500 mt-2 text-sm">
-            Hola, <span className="font-medium">{user?.nombre}</span>. Por seguridad,
-            debés elegir una contraseña personal antes de continuar.
+            {user?.debe_cambiar_contrasena ? (
+              <>Hola, <span className="font-medium">{user?.nombre}</span>. Por seguridad, debés elegir una contraseña personal antes de continuar.</>
+            ) : (
+              <>Hola, <span className="font-medium">{user?.nombre}</span>. Elegí tu nueva contraseña.</>
+            )}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Contraseña actual (tu CI/RUC)"
+            label={user?.debe_cambiar_contrasena ? 'Contraseña actual (tu CI/RUC)' : 'Contraseña actual'}
             type="password"
-            placeholder="Ingresá tu CI o RUC"
+            placeholder={user?.debe_cambiar_contrasena ? 'Ingresá tu CI o RUC' : 'Tu contraseña actual'}
             value={passwordActual}
             onChange={e => setPasswordActual(e.target.value)}
             autoComplete="current-password"
@@ -102,7 +105,16 @@ export default function PortalCambiarContrasena() {
           </Button>
         </form>
 
-        <div className="mt-4 text-center">
+        <div className="mt-4 text-center flex items-center justify-center gap-4">
+          {!user?.debe_cambiar_contrasena && (
+            <button
+              type="button"
+              onClick={() => navigate('/portal')}
+              className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
+            >
+              Volver
+            </button>
+          )}
           <button
             type="button"
             onClick={() => { logout(); navigate('/portal/login', { replace: true }) }}

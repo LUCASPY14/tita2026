@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { useNotificaciones } from '../hooks/useNotificaciones'
 import { useDatosEmpresaPublico } from '../hooks/useDatosEmpresaPublico'
 import { formatTelefonoPy } from '../utils/formatTelefonoPy'
-import { Home, Bell, LogOut, FileText, Wallet, Download, Mail, Phone } from 'lucide-react'
+import { Home, Bell, LogOut, FileText, Wallet, Download, Mail, Phone, KeyRound } from 'lucide-react'
 import LogoSinFondo from './LogoSinFondo'
 
 const navItems = [
@@ -85,6 +85,15 @@ export default function PortalLayout() {
                 <span className="hidden sm:inline">Instalar</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => navigate('/portal/cambiar-contrasena')}
+              title="Cambiar contraseña"
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Contraseña</span>
+            </button>
             <button
               type="button"
               onClick={handleLogout}
