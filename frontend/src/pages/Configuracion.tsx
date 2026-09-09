@@ -5,7 +5,7 @@ import {
   Settings, Tag, ListOrdered, CreditCard, Users,
   GraduationCap, Building2, History,
   UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent, Trash2, DollarSign,
-  MessageCircle, UserX, Bell, Wallet,
+  MessageCircle, UserX, Bell, Wallet, MapPin,
 } from 'lucide-react'
 import api from '../services/api'
 import Modal from '../components/ui/Modal'
@@ -15,6 +15,7 @@ import TabTiposCliente from './configuracion/TabTiposCliente'
 import TabListasPrecio from './configuracion/TabListasPrecio'
 import TabMediosPago from './configuracion/TabMediosPago'
 import TabCajas from './configuracion/TabCajas'
+import TabUbicaciones from './configuracion/TabUbicaciones'
 import TabGrados from './configuracion/TabGrados'
 import TabDatosEmpresa from './configuracion/TabDatosEmpresa'
 import TabHistorialPrecios from './configuracion/TabHistorialPrecios'
@@ -30,7 +31,7 @@ import TabNotificaciones from './configuracion/TabNotificaciones'
 
 type TabKey =
   | 'categorias' | 'tipos_cliente' | 'listas_precio' | 'medios_pago' | 'cajas'
-  | 'grados' | 'datos_empresa' | 'historial_precios'
+  | 'grados' | 'datos_empresa' | 'historial_precios' | 'ubicaciones'
   | 'tipos_almuerzo' | 'planes_almuerzo' | 'precios_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
   | 'whatsapp' | 'purga_alumnos' | 'notificaciones'
 
@@ -40,6 +41,7 @@ const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'listas_precio',     labelKey: 'settings.priceLists',  icon: ListOrdered },
   { key: 'medios_pago',       labelKey: 'settings.payMethods',  icon: CreditCard },
   { key: 'cajas',             labelKey: 'settings.cajas',       icon: Wallet },
+  { key: 'ubicaciones',       labelKey: 'settings.locations',   icon: MapPin },
   { key: 'grados',            labelKey: 'settings.grades',      icon: GraduationCap },
   { key: 'datos_empresa',     labelKey: 'settings.company',     icon: Building2 },
   { key: 'historial_precios', labelKey: 'settings.priceHistory',icon: History },
@@ -109,6 +111,7 @@ export default function Configuracion() {
         {tab === 'listas_precio'     && <TabListasPrecio    onDelete={confirmDelete} />}
         {tab === 'medios_pago'       && <TabMediosPago      onDelete={confirmDelete} />}
         {tab === 'cajas'             && <TabCajas           onDelete={confirmDelete} />}
+        {tab === 'ubicaciones'       && <TabUbicaciones     onDelete={confirmDelete} />}
         {tab === 'grados'            && <TabGrados          onDelete={confirmDelete} />}
         {tab === 'tipos_almuerzo'    && <TabTiposAlmuerzo   onDelete={confirmDelete} />}
         {tab === 'planes_almuerzo'   && <TabPlanesAlmuerzo  onDelete={confirmDelete} />}

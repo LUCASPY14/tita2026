@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   AlertTriangle, ArrowRightCircle, Building2, CheckCircle, ClipboardList,
-  CreditCard, DollarSign, Eye, FileText, PackageCheck,
+  CreditCard, DollarSign, Eye, FileText, Link2, PackageCheck,
   Plus, Search, Send, Truck, Undo2, XCircle,
 } from 'lucide-react'
 import api from '../services/api'
@@ -23,6 +23,7 @@ import ModalOCDetail from './compras/ModalOCDetail'
 import ModalRechazarOC from './compras/ModalRechazarOC'
 import ModalNC from './compras/ModalNC'
 import ModalNCDetail from './compras/ModalNCDetail'
+import TabProductosProveedor from './compras/TabProductosProveedor'
 import {
   extractErrorMessage, formatGs, formatFecha,
   ESTADO_PAGO_COLOR, TIPO_PAGO_COLOR, ESTADO_ENTREGA_COLOR, NC_ESTADO_COLOR, OC_ESTADO_COLOR, OC_ESTADO_LABEL,
@@ -30,7 +31,7 @@ import {
 } from './compras/shared'
 import type { Pais, Departamento, Ciudad } from './clientes/shared'
 
-type TabKey = 'compras' | 'proveedores' | 'pagos' | 'ordenes' | 'notas'
+type TabKey = 'compras' | 'proveedores' | 'vinculos' | 'pagos' | 'ordenes' | 'notas'
 
 const PAGE_SIZE = 15
 
@@ -38,6 +39,7 @@ const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'ordenes',     label: 'Órdenes',     icon: ClipboardList },
   { key: 'compras',     label: 'Compras',     icon: Truck },
   { key: 'proveedores', label: 'Proveedores', icon: Building2 },
+  { key: 'vinculos',    label: 'Productos x Proveedor', icon: Link2 },
   { key: 'pagos',       label: 'Pagos',       icon: CreditCard },
   { key: 'notas',       label: 'Notas C/C',   icon: FileText },
 ]
@@ -601,6 +603,10 @@ export default function Compras() {
             </div>
           </div>
         </>
+      )}
+
+      {tab === 'vinculos' && (
+        <TabProductosProveedor proveedores={proveedores} productos={productos} />
       )}
 
       {tab === 'pagos' && (

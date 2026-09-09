@@ -119,9 +119,12 @@ export interface CuentaCorriente {
 
 export interface ProductoProveedorRecord {
   id_producto_proveedor: number
+  proveedor: number
+  proveedor_nombre: string
   producto: number
   producto_nombre: string
   precio_compra: number
+  fecha_ultima_compra: string | null
 }
 
 export interface ItemForm {
