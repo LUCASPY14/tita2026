@@ -100,6 +100,7 @@
     "clientTypes": "Tipos de Cliente",
     "priceLists":  "Listas de Precio",
     "payMethods":  "Medios de Pago",
+    "cajas":       "Cajas",
     "grades":      "Grados",
     "company":     "Empresa",
     "priceHistory":"Hist. Precios",

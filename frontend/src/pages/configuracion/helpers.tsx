@@ -97,6 +97,13 @@ export interface MedioPago {
   activo: boolean
 }
 
+export interface Caja {
+  id_caja: number
+  nombre: string
+  ubicacion: string | null
+  activo: boolean
+}
+
 export interface Grado {
   id_grado: number
   nombre: string
