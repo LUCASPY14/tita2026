@@ -4,6 +4,23 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def convertir_ciudad_texto_a_fk(apps, schema_editor):
+    """Mapea el texto libre en DatosEmpresa.ciudad al id de Ciudad correspondiente
+    (creándola si no existe), para que el AlterField posterior a ForeignKey
+    pueda castear el valor sin perder datos reales."""
+    DatosEmpresa = apps.get_model('contabilidad', 'DatosEmpresa')
+    Ciudad = apps.get_model('clientes', 'Ciudad')
+
+    for empresa in DatosEmpresa.objects.exclude(ciudad__isnull=True).exclude(ciudad=''):
+        nombre = (empresa.ciudad or '').strip()
+        if not nombre:
+            continue
+        ciudad = Ciudad.objects.filter(nombre__iexact=nombre).first()
+        if ciudad is None:
+            ciudad = Ciudad.objects.create(nombre=nombre)
+        DatosEmpresa.objects.filter(pk=empresa.pk).update(ciudad=str(ciudad.pk))
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -12,6 +29,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(convertir_ciudad_texto_a_fk, migrations.RunPython.noop),
         migrations.RemoveField(
             model_name='datosempresa',
             name='pais',

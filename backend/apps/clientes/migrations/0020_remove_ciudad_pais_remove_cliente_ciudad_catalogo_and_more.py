@@ -4,6 +4,39 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def convertir_ciudad_texto_a_fk(apps, schema_editor):
+    """Mapea el texto libre en Cliente.ciudad / HistoricalCliente.ciudad al id de
+    Ciudad correspondiente (creándola si no existe), para que el AlterField
+    posterior a ForeignKey pueda castear el valor sin perder datos reales."""
+    Cliente = apps.get_model('clientes', 'Cliente')
+    HistoricalCliente = apps.get_model('clientes', 'HistoricalCliente')
+    Ciudad = apps.get_model('clientes', 'Ciudad')
+
+    cache = {}
+
+    def resolver_id(nombre):
+        nombre = (nombre or '').strip()
+        if not nombre:
+            return None
+        clave = nombre.lower()
+        if clave not in cache:
+            ciudad = Ciudad.objects.filter(nombre__iexact=nombre).first()
+            if ciudad is None:
+                ciudad = Ciudad.objects.create(nombre=nombre)
+            cache[clave] = ciudad.pk
+        return cache[clave]
+
+    for cliente in Cliente.objects.exclude(ciudad__isnull=True).exclude(ciudad=''):
+        id_ciudad = resolver_id(cliente.ciudad)
+        if id_ciudad is not None:
+            Cliente.objects.filter(pk=cliente.pk).update(ciudad=str(id_ciudad))
+
+    for hist in HistoricalCliente.objects.exclude(ciudad__isnull=True).exclude(ciudad=''):
+        id_ciudad = resolver_id(hist.ciudad)
+        if id_ciudad is not None:
+            HistoricalCliente.objects.filter(pk=hist.pk).update(ciudad=str(id_ciudad))
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -11,6 +44,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(convertir_ciudad_texto_a_fk, migrations.RunPython.noop),
         migrations.RemoveField(
             model_name='ciudad',
             name='pais',
