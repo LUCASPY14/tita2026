@@ -221,7 +221,18 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
 
         {webcamActive && (
           <div className="rounded-xl overflow-hidden border border-slate-200 bg-black">
-            <video ref={videoRef} autoPlay playsInline muted className="w-full max-h-60 object-cover" />
+            <div className="relative">
+              <video ref={videoRef} autoPlay playsInline muted className="w-full max-h-60 object-cover" />
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <div
+                  className="w-40 h-40 rounded-full border-2 border-white/90"
+                  style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }}
+                />
+                <p className="absolute bottom-2 text-xs font-medium text-white/90 drop-shadow">
+                  Centrá la cara dentro del círculo
+                </p>
+              </div>
+            </div>
             <div className="flex items-center justify-center gap-3 px-3 py-2 bg-slate-900">
               <button type="button" onClick={capturePhoto}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold rounded-lg transition-colors">
