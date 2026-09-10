@@ -226,3 +226,85 @@ class WAHAEstadoView(APIView):
             return Response({"ok": False, "error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as exc:
             return Response({"ok": False, "error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+
+def _waha_config():
+    """(base_url, session, headers) para llamar a la API de WAHA, o None si no está configurada."""
+    from django.conf import settings
+
+    base_url = getattr(settings, "EVOLUTION_API_URL", "").rstrip("/")
+    if not base_url:
+        return None
+    session = getattr(settings, "EVOLUTION_API_INSTANCE", "default")
+    headers = {"Content-Type": "application/json"}
+    api_key = getattr(settings, "EVOLUTION_API_KEY", "")
+    if api_key:
+        headers["X-Api-Key"] = api_key
+    return base_url, session, headers
+
+
+class WAHASesionView(APIView):
+    """
+    POST   /api/notificaciones/whatsapp-sesion/  — crea/(re)inicia la sesión.
+    DELETE /api/notificaciones/whatsapp-sesion/  — cierra sesión (logout), para reconectar con otro número.
+    """
+    permission_classes = [IsAdmin]
+
+    def post(self, request):
+        import requests as req_lib
+
+        cfg = _waha_config()
+        if not cfg:
+            return Response({"error": "EVOLUTION_API_URL no está configurada."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        base_url, session, headers = cfg
+
+        try:
+            resp = req_lib.post(f"{base_url}/api/sessions", json={"name": session, "start": True}, headers=headers, timeout=15)
+            if resp.status_code == 422:
+                # La sesión ya existe (ej. quedó parada) — solo iniciarla.
+                resp = req_lib.post(f"{base_url}/api/sessions/{session}/start", headers=headers, timeout=15)
+            resp.raise_for_status()
+            return Response({"ok": True, "waha_response": resp.json()})
+        except req_lib.RequestException as exc:
+            return Response({"ok": False, "error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+    def delete(self, request):
+        import requests as req_lib
+
+        cfg = _waha_config()
+        if not cfg:
+            return Response({"error": "EVOLUTION_API_URL no está configurada."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        base_url, session, headers = cfg
+
+        try:
+            resp = req_lib.post(f"{base_url}/api/sessions/{session}/logout", headers=headers, timeout=15)
+            resp.raise_for_status()
+            return Response({"ok": True})
+        except req_lib.RequestException as exc:
+            return Response({"ok": False, "error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+
+class WAHAQRView(APIView):
+    """
+    GET /api/notificaciones/whatsapp-qr/
+    Devuelve el PNG del código QR actual de la sesión (solo válido mientras
+    el estado es SCAN_QR_CODE). Proxy directo a WAHA — la API key nunca
+    llega al frontend.
+    """
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        import requests as req_lib
+        from django.http import HttpResponse
+
+        cfg = _waha_config()
+        if not cfg:
+            return Response({"error": "EVOLUTION_API_URL no está configurada."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        base_url, session, headers = cfg
+
+        try:
+            resp = req_lib.get(f"{base_url}/api/{session}/auth/qr", headers={k: v for k, v in headers.items() if k != "Content-Type"}, timeout=15)
+            resp.raise_for_status()
+            return HttpResponse(resp.content, content_type=resp.headers.get("content-type", "image/png"))
+        except req_lib.RequestException as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)

@@ -187,3 +187,143 @@ class TestWAHAEstadoViewPost:
         """Sin autenticación → 401."""
         resp = APIClient().post(URL, {"telefono": "595981234567"}, format="json")
         assert resp.status_code == 401
+
+
+# ── WAHASesionView (iniciar/cerrar sesión) ─────────────────────────────────────
+
+URL_SESION = "/api/v1/notificaciones/whatsapp-sesion/"
+
+
+@pytest.mark.django_db
+class TestWAHASesionViewPost:
+
+    def test_sin_url_configurada_retorna_503(self, api_admin):
+        with patch("django.conf.settings.EVOLUTION_API_URL", ""):
+            resp = api_admin.post(URL_SESION)
+        assert resp.status_code == 503
+
+    def test_crea_sesion_nueva(self, api_admin):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 201
+        mock_resp.json.return_value = {"name": "default", "status": "STARTING"}
+        mock_resp.raise_for_status.return_value = None
+        with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3001"):
+            with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
+                with patch("requests.post", return_value=mock_resp) as mock_post:
+                    resp = api_admin.post(URL_SESION)
+        assert resp.status_code == 200
+        assert resp.data["ok"] is True
+        mock_post.assert_called_once()
+
+    def test_sesion_existente_reintenta_con_start(self, api_admin):
+        """Si /api/sessions responde 422 (ya existe), reintenta con /start."""
+        mock_422 = MagicMock()
+        mock_422.status_code = 422
+        mock_started = MagicMock()
+        mock_started.status_code = 200
+        mock_started.json.return_value = {"name": "default", "status": "STARTING"}
+        mock_started.raise_for_status.return_value = None
+        with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3001"):
+            with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
+                with patch("requests.post", side_effect=[mock_422, mock_started]) as mock_post:
+                    resp = api_admin.post(URL_SESION)
+        assert resp.status_code == 200
+        assert resp.data["ok"] is True
+        assert mock_post.call_count == 2
+
+    def test_waha_error_retorna_502(self, api_admin):
+        import requests
+        with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3001"):
+            with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
+                with patch("requests.post", side_effect=requests.exceptions.ConnectionError("refused")):
+                    resp = api_admin.post(URL_SESION)
+        assert resp.status_code == 502
+        assert resp.data["ok"] is False
+
+    def test_solo_admin_puede_iniciar(self, api_cajero):
+        resp = api_cajero.post(URL_SESION)
+        assert resp.status_code == 403
+
+    def test_anonimo_recibe_401(self):
+        resp = APIClient().post(URL_SESION)
+        assert resp.status_code == 401
+
+
+@pytest.mark.django_db
+class TestWAHASesionViewDelete:
+
+    def test_sin_url_configurada_retorna_503(self, api_admin):
+        with patch("django.conf.settings.EVOLUTION_API_URL", ""):
+            resp = api_admin.delete(URL_SESION)
+        assert resp.status_code == 503
+
+    def test_cierra_sesion(self, api_admin):
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.return_value = None
+        with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3001"):
+            with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
+                with patch("requests.post", return_value=mock_resp) as mock_post:
+                    resp = api_admin.delete(URL_SESION)
+        assert resp.status_code == 200
+        assert resp.data["ok"] is True
+        mock_post.assert_called_once()
+        assert "/logout" in mock_post.call_args[0][0]
+
+    def test_waha_error_retorna_502(self, api_admin):
+        import requests
+        with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3001"):
+            with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
+                with patch("requests.post", side_effect=requests.exceptions.Timeout("timeout")):
+                    resp = api_admin.delete(URL_SESION)
+        assert resp.status_code == 502
+
+    def test_solo_admin_puede_cerrar(self, api_cajero):
+        resp = api_cajero.delete(URL_SESION)
+        assert resp.status_code == 403
+
+    def test_anonimo_recibe_401(self):
+        resp = APIClient().delete(URL_SESION)
+        assert resp.status_code == 401
+
+
+# ── WAHAQRView (imagen del código QR) ──────────────────────────────────────────
+
+URL_QR = "/api/v1/notificaciones/whatsapp-qr/"
+
+
+@pytest.mark.django_db
+class TestWAHAQRView:
+
+    def test_sin_url_configurada_retorna_503(self, api_admin):
+        with patch("django.conf.settings.EVOLUTION_API_URL", ""):
+            resp = api_admin.get(URL_QR)
+        assert resp.status_code == 503
+
+    def test_devuelve_imagen_png(self, api_admin):
+        mock_resp = MagicMock()
+        mock_resp.content = b"\x89PNG\r\n\x1a\n"
+        mock_resp.headers = {"content-type": "image/png"}
+        mock_resp.raise_for_status.return_value = None
+        with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3001"):
+            with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
+                with patch("requests.get", return_value=mock_resp):
+                    resp = api_admin.get(URL_QR)
+        assert resp.status_code == 200
+        assert resp["Content-Type"] == "image/png"
+        assert resp.content == b"\x89PNG\r\n\x1a\n"
+
+    def test_waha_error_retorna_502(self, api_admin):
+        import requests
+        with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3001"):
+            with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
+                with patch("requests.get", side_effect=requests.exceptions.Timeout("timeout")):
+                    resp = api_admin.get(URL_QR)
+        assert resp.status_code == 502
+
+    def test_solo_admin_puede_ver_qr(self, api_cajero):
+        resp = api_cajero.get(URL_QR)
+        assert resp.status_code == 403
+
+    def test_anonimo_recibe_401(self):
+        resp = APIClient().get(URL_QR)
+        assert resp.status_code == 401

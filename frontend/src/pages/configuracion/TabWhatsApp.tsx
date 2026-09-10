@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { MessageCircle, CheckCircle2, XCircle, AlertCircle, RefreshCw, Send } from 'lucide-react'
+import { MessageCircle, CheckCircle2, XCircle, AlertCircle, RefreshCw, Send, QrCode, LogOut } from 'lucide-react'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
+import { useAuthenticatedImage } from '../../hooks/useAuthenticatedImage'
 import { inputClass, labelClass } from './helpers'
 
 interface WAHAEstado {
@@ -21,14 +22,20 @@ export default function TabWhatsApp() {
   const [telefono, setTelefono] = useState('')
   const [mensajePrueba, setMensajePrueba] = useState('Hola, este es un mensaje de prueba de Cantina Tita.')
   const [enviando, setEnviando] = useState(false)
+  const [conectando, setConectando] = useState(false)
+  const [cerrandoSesion, setCerrandoSesion] = useState(false)
+  const [qrTick, setQrTick] = useState(0)
+  const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
   const cargarEstado = useCallback(async () => {
     setLoadingEstado(true)
     try {
       const { data } = await api.get<WAHAEstado>('/notificaciones/whatsapp-estado/')
       setEstado(data)
+      return data
     } catch {
       toast.error('No se pudo consultar el estado de WhatsApp')
+      return null
     } finally {
       setLoadingEstado(false)
     }
@@ -37,6 +44,54 @@ export default function TabWhatsApp() {
   // Carga de datos al montar: el setLoadingEstado(true) inicial es intencional.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargarEstado() }, [cargarEstado])
+
+  // Mientras se está esperando el escaneo del QR, refrescar estado + QR solos
+  // cada 5s (el QR de WAHA rota) — se corta apenas queda conectado.
+  useEffect(() => {
+    const esperandoQR = estado?.estado === 'SCAN_QR_CODE'
+    if (!esperandoQR) {
+      clearInterval(pollRef.current)
+      return
+    }
+    pollRef.current = setInterval(() => {
+      cargarEstado()
+      setQrTick(t => t + 1)
+    }, 5000)
+    return () => clearInterval(pollRef.current)
+  }, [estado?.estado, cargarEstado])
+
+  const conectar = async () => {
+    setConectando(true)
+    try {
+      await api.post('/notificaciones/whatsapp-sesion/')
+      toast.success('Sesión iniciada — escaneá el código QR')
+      await cargarEstado()
+      setQrTick(t => t + 1)
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string } } }
+      toast.error(e?.response?.data?.error ?? 'No se pudo iniciar la sesión de WhatsApp')
+    } finally {
+      setConectando(false)
+    }
+  }
+
+  const cerrarSesion = async () => {
+    if (!confirm('¿Cerrar la sesión de WhatsApp? Vas a tener que volver a escanear el QR con un teléfono (el mismo u otro) para reconectar.')) return
+    setCerrandoSesion(true)
+    try {
+      await api.delete('/notificaciones/whatsapp-sesion/')
+      toast.success('Sesión cerrada')
+      await cargarEstado()
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string } } }
+      toast.error(e?.response?.data?.error ?? 'No se pudo cerrar la sesión')
+    } finally {
+      setCerrandoSesion(false)
+    }
+  }
+
+  const qrUrl = estado?.estado === 'SCAN_QR_CODE' ? `/notificaciones/whatsapp-qr/?t=${qrTick}` : null
+  const qrBlobUrl = useAuthenticatedImage(qrUrl)
 
   const enviarPrueba = async () => {
     if (!telefono.trim()) {
@@ -160,17 +215,57 @@ export default function TabWhatsApp() {
               </div>
             )}
 
-            {/* Conectado pero desconectado de WA */}
-            {estado.configurado && !estado.conectado && !estado.error && (
+            {/* Conectado pero desconectado de WA — esperando iniciar sesión o escanear QR */}
+            {estado.configurado && !estado.conectado && !estado.error && estado.estado !== 'SCAN_QR_CODE' && (
               <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mt-2">
                 <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm text-amber-700 font-medium">Sesión no activa</p>
                   <p className="text-xs text-amber-600 mt-0.5">
                     WAHA está corriendo pero la sesión <strong>{estado.session}</strong> no está conectada a WhatsApp.
-                    Abrí <a href="http://localhost:3001" target="_blank" rel="noreferrer" className="underline">http://localhost:3001</a> (panel de WAHA) y escaneá el código QR con el teléfono de la cantina.
                   </p>
+                  <Button
+                    onClick={conectar}
+                    loading={conectando}
+                    size="sm"
+                    className="mt-3 flex items-center gap-1.5"
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    Conectar WhatsApp
+                  </Button>
                 </div>
+              </div>
+            )}
+
+            {/* Esperando escaneo del QR */}
+            {estado.estado === 'SCAN_QR_CODE' && (
+              <div className="flex flex-col items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-lg mt-2">
+                <p className="text-sm text-slate-600 font-medium text-center">
+                  Escaneá este código con WhatsApp en el teléfono de la cantina
+                  <br />
+                  <span className="text-xs text-slate-400 font-normal">Ajustes → Dispositivos vinculados → Vincular un dispositivo</span>
+                </p>
+                {qrBlobUrl
+                  ? <img src={qrBlobUrl} alt="Código QR de WhatsApp" className="w-56 h-56 rounded-lg border border-slate-200 bg-white p-2" />
+                  : <div className="w-56 h-56 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-xs text-slate-400">Cargando QR…</div>
+                }
+                <p className="text-xs text-slate-400">Se actualiza solo cada 5 segundos mientras no lo escanees.</p>
+              </div>
+            )}
+
+            {/* Conectado: opción de cerrar sesión para reconectar con otro número */}
+            {estado.conectado && (
+              <div className="pt-1">
+                <Button
+                  onClick={cerrarSesion}
+                  loading={cerrandoSesion}
+                  variant="secondary"
+                  size="sm"
+                  className="flex items-center gap-1.5"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Cerrar sesión
+                </Button>
               </div>
             )}
           </div>
