@@ -3,7 +3,6 @@ import toast from 'react-hot-toast'
 
 const api = axios.create({
   baseURL: '/api/v1',
-  headers: { 'Content-Type': 'application/json' },
 })
 
 api.interceptors.request.use((config) => {
