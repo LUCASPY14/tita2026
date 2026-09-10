@@ -7,6 +7,11 @@ export function extractErrorMessage(err: unknown): string {
   if (typeof data === 'string') return data
   if (typeof data === 'object') {
     const d = data as Record<string, unknown>
+    const fieldErrors = d.field_errors as Record<string, unknown> | undefined
+    if (fieldErrors && typeof fieldErrors === 'object' && Object.keys(fieldErrors).length > 0) {
+      const [field, msgs] = Object.entries(fieldErrors)[0]
+      return `${field}: ${Array.isArray(msgs) ? String(msgs[0]) : String(msgs)}`
+    }
     if (d.detail) return String(d.detail)
     const first = Object.values(d)[0]
     if (Array.isArray(first)) return String(first[0])
