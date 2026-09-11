@@ -19,6 +19,17 @@ import ModalAjuste from './inventario/ModalAjuste'
 import ModalAprobar from './inventario/ModalAprobar'
 import ModalRechazar from './inventario/ModalRechazar'
 
+// La API devuelve next/previous como URL absoluta (scheme+host que Django
+// cree que tiene). La convertimos a ruta relativa a /api/v1 para que pase
+// por la misma instancia de axios (interceptor de auth, baseURL) que el
+// resto de los pedidos, en vez de depender de que el host que arma el
+// backend coincida siempre con el origen real del frontend.
+function toApiPath(absoluteUrl: string | null | undefined): string | null {
+  if (!absoluteUrl) return null
+  const u = new URL(absoluteUrl, window.location.origin)
+  return u.pathname.replace(/^\/api\/v1/, '') + u.search
+}
+
 export default function Inventario() {
   const { t } = useTranslation()
   const [tab, setTab] = useState<TabKey>('ajustes')
@@ -42,8 +53,8 @@ export default function Inventario() {
   const [loadingMov, setLoadingMov] = useState(false)
   const [filterProductoMov, setFilterProductoMov] = useState('')
   const [filterTipoMov, setFilterTipoMov] = useState('')
-  const [pageMov, setPageMov] = useState(1)
-  const [totalMov, setTotalMov] = useState(0)
+  const [movNextUrl, setMovNextUrl] = useState<string | null>(null)
+  const [movPrevUrl, setMovPrevUrl] = useState<string | null>(null)
   const [sortMovKey, setSortMovKey] = useState('fecha')
   const [sortMovDir, setSortMovDir] = useState<'asc' | 'desc'>('desc')
   const searchTimerMov = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -86,18 +97,23 @@ export default function Inventario() {
   }, [tab, filterEstado, filterTipoAjuste, loadAjustes])
 
   // ── Load movimientos ──────────────────────────────────────────────
-  const loadMovimientos = useCallback(async (prod: string, tipo: string, p: number) => {
+  // Paginado por cursor (no por página): la tabla es de alto volumen y el
+  // backend evita a propósito un COUNT() completo — no hay "total" ni
+  // "saltar a la página N", solo Anterior/Siguiente sobre el cursor que
+  // devuelve la API (ver common/pagination.py CursorResultsSetPagination).
+  const loadMovimientos = useCallback(async (prod: string, tipo: string) => {
     const requestId = ++requestIdMovRef.current
     setLoadingMov(true)
     try {
       const ordering = sortMovDir === 'asc' ? sortMovKey : `-${sortMovKey}`
-      const params: Record<string, unknown> = { page: p, page_size: 15, ordering }
+      const params: Record<string, unknown> = { page_size: 15, ordering }
       if (prod) params.producto = prod
       if (tipo) params.tipo = tipo
       const { data } = await api.get('/inventario/movimientos/', { params })
       if (requestId !== requestIdMovRef.current) return
       setMovimientos(data.results ?? [])
-      setTotalMov(data.count ?? 0)
+      setMovNextUrl(toApiPath(data.next))
+      setMovPrevUrl(toApiPath(data.previous))
     } catch {
       if (requestId !== requestIdMovRef.current) return
       toast.error('Error al cargar movimientos')
@@ -106,12 +122,28 @@ export default function Inventario() {
     }
   }, [sortMovKey, sortMovDir])
 
+  const loadMovimientosCursor = useCallback(async (url: string) => {
+    const requestId = ++requestIdMovRef.current
+    setLoadingMov(true)
+    try {
+      const { data } = await api.get(url)
+      if (requestId !== requestIdMovRef.current) return
+      setMovimientos(data.results ?? [])
+      setMovNextUrl(toApiPath(data.next))
+      setMovPrevUrl(toApiPath(data.previous))
+    } catch {
+      if (requestId !== requestIdMovRef.current) return
+      toast.error('Error al cargar movimientos')
+    } finally {
+      if (requestId === requestIdMovRef.current) setLoadingMov(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (tab !== 'movimientos') return
     clearTimeout(searchTimerMov.current)
     searchTimerMov.current = setTimeout(() => {
-      setPageMov(1)
-      loadMovimientos(filterProductoMov, filterTipoMov, 1)
+      loadMovimientos(filterProductoMov, filterTipoMov)
     }, 300)
     return () => clearTimeout(searchTimerMov.current)
   }, [tab, filterProductoMov, filterTipoMov, loadMovimientos])
@@ -352,10 +384,31 @@ export default function Inventario() {
             <div className="p-1">
               <Table
                 columns={colsMov} dataSource={movimientos} rowKey="id_movimiento_stock" loading={loadingMov}
-                pageSize={15} page={pageMov} onPageChange={p => { setPageMov(p); loadMovimientos(filterProductoMov, filterTipoMov, p) }} total={totalMov}
+                pageSize={15}
                 sortKey={sortMovKey} sortDir={sortMovDir}
                 onSort={(key, dir) => { setSortMovKey(key); setSortMovDir(dir) }}
               />
+            </div>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+              <span className="text-xs text-slate-400">
+                Historial de alto volumen — se navega de a páginas, sin salto directo ni total.
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary" size="sm"
+                  disabled={!movPrevUrl || loadingMov}
+                  onClick={() => movPrevUrl && loadMovimientosCursor(movPrevUrl)}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="secondary" size="sm"
+                  disabled={!movNextUrl || loadingMov}
+                  onClick={() => movNextUrl && loadMovimientosCursor(movNextUrl)}
+                >
+                  Siguiente
+                </Button>
+              </div>
             </div>
           </div>
         </>
