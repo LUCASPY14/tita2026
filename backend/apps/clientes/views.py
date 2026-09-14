@@ -75,12 +75,12 @@ def _crear_usuario_portal(cliente):
         sufijo = ruc_ci_limpio.replace("-", "").replace(".", "")
         email = f"{sufijo}@portal.tita.local"
 
-    if Usuario.objects.filter(email=email).exists():
+    usuario_existente = Usuario.objects.filter(email=email).first()
+    if usuario_existente:
         # Ya existe un usuario con ese email: vincular si no tiene cliente
-        usuario = Usuario.objects.get(email=email)
-        if not usuario.cliente_id:
-            usuario.cliente = cliente
-            usuario.save(update_fields=["cliente"])
+        if not usuario_existente.cliente_id:
+            usuario_existente.cliente = cliente
+            usuario_existente.save(update_fields=["cliente"])
         return
 
     Usuario.objects.create_user(
