@@ -736,7 +736,7 @@ class PortalHistorialConsumos(APIView):
 
     def get(self, request):
         from datetime import date
-        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
 
         user = request.user
         if not user.cliente:
@@ -757,24 +757,35 @@ class PortalHistorialConsumos(APIView):
                 fecha_consumo__year=anio,
                 fecha_consumo__month=mes,
                 estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+                # El 2do/3er ingreso del mismo día no cobra (es para repetir) y
+                # es solo control interno de comedor — no le interesa al padre.
+                ya_cobrado=True,
             )
             .order_by("-fecha_consumo")
         )
 
         consumos = list(
             consumos_qs.values(
-                "id_registro_consumo", "fecha_consumo", "costo_almuerzo", "ya_cobrado",
+                "id_registro_consumo", "fecha_consumo", "costo_almuerzo",
             )
         )
+
+        # La cuenta mensual es la única con estado de pago real (PAGADO,
+        # PARCIAL, etc.) — los registros individuales no se marcan pagados
+        # uno por uno, así que un ingreso queda "Pagado" solo si la cuenta
+        # del mes ya está saldada.
+        cuenta = CuentaAlmuerzoMensual.objects.filter(hijo=hijo, anio=anio, mes=mes).first()
+        cuenta_estado = cuenta.estado if cuenta else None
 
         return Response({
             "anio": anio,
             "mes": mes,
             "hijo": {"id_hijo": hijo.id_hijo, "nombre": hijo.nombre_completo},
             "consumos": consumos,
+            "cuenta_estado": cuenta_estado,
             "total": len(consumos),
             "monto_total": sum(int(c["costo_almuerzo"]) for c in consumos),
-            "cobrados": sum(1 for c in consumos if c["ya_cobrado"]),
+            "cobrados": len(consumos) if cuenta_estado == CuentaAlmuerzoMensual.Estado.PAGADO else 0,
         })
 
 
@@ -836,6 +847,84 @@ class PortalHistorialCantina(APIView):
             "count": total,
             "next": total > offset + page_size,
             "results": results,
+        })
+
+
+class PortalHistorialRecargas(APIView):
+    """
+    GET /api/v1/usuarios/portal/historial-recargas/?hijo_id=X&page=1&page_size=15
+    Historial combinado de recargas de saldo (tarjeta de cantina + saldo de
+    almuerzo) de un hijo del padre autenticado, tageado por tipo.
+    """
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [PortalRateThrottle]
+
+    def get(self, request):
+        from apps.core.models import CargaSaldo
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+
+        user = request.user
+        if not user.cliente:
+            return Response({"detail": "Sin cliente vinculado."}, status=400)
+
+        hijo_id = request.query_params.get("hijo_id")
+        if not hijo_id:
+            return Response({"detail": "Se requiere hijo_id."}, status=400)
+
+        hijo = user.cliente.hijos.filter(id_hijo=hijo_id, activo=True).first()
+        if not hijo:
+            return Response({"detail": "Hijo no encontrado."}, status=404)
+
+        page_size = min(int(request.query_params.get("page_size", 15)), 50)
+        page = max(int(request.query_params.get("page", 1)), 1)
+        offset = (page - 1) * page_size
+        limite = offset + page_size
+
+        cargas_qs = CargaSaldo.objects.filter(tarjeta__hijo=hijo)
+        recargas_qs = RecargaSaldoAlmuerzo.objects.filter(hijo=hijo)
+
+        # El top (offset + page_size) combinado solo puede salir del top
+        # (offset + page_size) de cada fuente por separado — no hace falta
+        # traer más que eso de cada tabla para poder mezclar y ordenar bien.
+        cargas = list(
+            cargas_qs.order_by("-fecha_carga")
+            .values("id_carga", "fecha_carga", "monto_cargado", "estado", "metodo_pago")[:limite]
+        )
+        recargas = list(
+            recargas_qs.order_by("-fecha_carga")
+            .values("id_recarga_almuerzo", "fecha_carga", "monto_cargado", "estado", "metodo_pago")[:limite]
+        )
+
+        combinado = [
+            {
+                "id": f"cantina-{c['id_carga']}",
+                "tipo": "CANTINA",
+                "fecha": c["fecha_carga"].isoformat(),
+                "monto": int(c["monto_cargado"]),
+                "estado": c["estado"],
+                "metodo_pago": c["metodo_pago"],
+            }
+            for c in cargas
+        ] + [
+            {
+                "id": f"almuerzo-{r['id_recarga_almuerzo']}",
+                "tipo": "ALMUERZO",
+                "fecha": r["fecha_carga"].isoformat(),
+                "monto": int(r["monto_cargado"]),
+                "estado": r["estado"],
+                "metodo_pago": r["metodo_pago"],
+            }
+            for r in recargas
+        ]
+        combinado.sort(key=lambda x: x["fecha"], reverse=True)
+
+        total = cargas_qs.count() + recargas_qs.count()
+        pagina = combinado[offset:offset + page_size]
+
+        return Response({
+            "count": total,
+            "next": total > offset + page_size,
+            "results": pagina,
         })
 
 

@@ -32,16 +32,25 @@ interface ConsumoHistorial {
   id_registro_consumo: number
   fecha_consumo: string
   costo_almuerzo: string | number
-  ya_cobrado: boolean
 }
 
 interface HistorialData {
   anio: number
   mes: number
   consumos: ConsumoHistorial[]
+  cuenta_estado: string | null
   total: number
   monto_total: number
   cobrados: number
+}
+
+interface RecargaHistorial {
+  id: string
+  tipo: 'CANTINA' | 'ALMUERZO'
+  fecha: string
+  monto: number
+  estado: string
+  metodo_pago: string | null
 }
 
 interface CuentaMensual {
@@ -78,16 +87,6 @@ interface PortalData {
   hijos: HijoData[]
 }
 
-interface Suscripcion {
-  id_suscripcion: number
-  plan: number
-  plan_nombre: string
-  estado: string
-  fecha_inicio: string
-  fecha_fin: string | null
-  observaciones: string
-}
-
 interface DetalleCantina {
   producto_nombre: string
   cantidad: number
@@ -104,13 +103,19 @@ interface VentaCantina {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type HijoTab = 'resumen' | 'historial' | 'cantina' | 'plan'
+type HijoTab = 'resumen' | 'historial' | 'cantina' | 'almuerzos'
 
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 const SEVERIDAD_COLOR: Record<string, BadgeColor> = {
   CRITICA: 'red', ALTA: 'orange', MEDIA: 'yellow', BAJA: 'default',
+}
+
+const TIPO_RECARGA_LABEL: Record<string, string> = { CANTINA: 'Cantina', ALMUERZO: 'Almuerzo' }
+const TIPO_RECARGA_COLOR: Record<string, BadgeColor> = { CANTINA: 'blue', ALMUERZO: 'orange' }
+const ESTADO_RECARGA_COLOR: Record<string, BadgeColor> = {
+  CONFIRMADA: 'green', PENDIENTE: 'yellow', RECHAZADA: 'red',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -318,7 +323,7 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
   )
 }
 
-function HistorialTab({
+function AlmuerzosTab({
   data,
   loading,
   anio,
@@ -335,6 +340,8 @@ function HistorialTab({
   onPrevMes: () => void
   onNextMes: () => void
 }) {
+  const cuentaPagada = data?.cuenta_estado === 'PAGADO'
+
   return (
     <div className="space-y-3">
       {/* Navegador de mes */}
@@ -367,7 +374,7 @@ function HistorialTab({
       ) : !data || data.total === 0 ? (
         <div className="py-12 text-center text-slate-400">
           <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="text-base">Sin consumos registrados este mes</p>
+          <p className="text-base">Sin ingresos al comedor registrados este mes</p>
         </div>
       ) : (
         <>
@@ -388,7 +395,7 @@ function HistorialTab({
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Consumos</p>
+              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Ingresos al comedor</p>
             </div>
             <div className="divide-y divide-slate-100">
               {data.consumos.map(c => (
@@ -404,10 +411,10 @@ function HistorialTab({
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-slate-800 tabular-nums">
-                      {c.ya_cobrado ? formatGs(Number(c.costo_almuerzo)) : '—'}
+                      {formatGs(Number(c.costo_almuerzo))}
                     </p>
-                    <Badge color={c.ya_cobrado ? 'orange' : 'green'}>
-                      {c.ya_cobrado ? 'Pagado' : 'Sin cargo'}
+                    <Badge color={cuentaPagada ? 'green' : 'orange'}>
+                      {cuentaPagada ? 'Pagado' : 'Pendiente'}
                     </Badge>
                   </div>
                 </div>
@@ -415,6 +422,66 @@ function HistorialTab({
             </div>
           </div>
         </>
+      )}
+    </div>
+  )
+}
+
+function HistorialTab({
+  recargas,
+  loading,
+  hasMore,
+  onLoadMore,
+}: {
+  recargas: RecargaHistorial[] | undefined
+  loading: boolean
+  hasMore: boolean
+  onLoadMore: () => void
+}) {
+  if (loading && !recargas) return <Spinner className="mt-8" />
+
+  if (!recargas || recargas.length === 0) {
+    return (
+      <div className="py-12 text-center text-slate-400">
+        <Wallet className="w-10 h-10 mx-auto mb-3 opacity-30" />
+        <p className="text-base">Sin recargas registradas</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {recargas.map(r => (
+        <div key={r.id} className="bg-white rounded-xl border border-slate-100 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+              <Wallet className="w-4 h-4 text-slate-500" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-slate-800">Recarga</p>
+                <Badge color={TIPO_RECARGA_COLOR[r.tipo] ?? 'default'}>{TIPO_RECARGA_LABEL[r.tipo] ?? r.tipo}</Badge>
+              </div>
+              <p className="text-sm text-slate-400 truncate">
+                {formatFecha(r.fecha)}{r.metodo_pago ? ` · ${r.metodo_pago}` : ''}
+              </p>
+            </div>
+          </div>
+          <div className="text-right shrink-0 ml-2">
+            <p className="text-sm font-semibold text-emerald-700 tabular-nums">{formatGs(r.monto)}</p>
+            <Badge color={ESTADO_RECARGA_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>
+          </div>
+        </div>
+      ))}
+      {hasMore && (
+        <button
+          type="button"
+          onClick={onLoadMore}
+          disabled={loading}
+          className="w-full py-2.5 text-sm text-green-700 font-medium border border-green-200 rounded-xl hover:bg-green-50 transition-colors disabled:opacity-40 cursor-pointer"
+        >
+          {loading ? 'Cargando…' : 'Ver más'}
+        </button>
       )}
     </div>
   )
@@ -495,51 +562,6 @@ function CantinaTab({
   )
 }
 
-function PlanTab({ suscripciones, loading }: { suscripciones: Suscripcion[] | undefined; loading: boolean }) {
-  if (loading) return <Spinner className="mt-8" />
-
-  if (!suscripciones || suscripciones.length === 0) {
-    return (
-      <div className="py-12 text-center text-slate-400">
-        <CalendarCheck className="w-10 h-10 mx-auto mb-3 opacity-30" />
-        <p className="text-base">Sin plan de almuerzo activo</p>
-        <p className="text-sm mt-1">Consultá con la cantina para suscribirte</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      {suscripciones.map(s => (
-        <div key={s.id_suscripcion} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 bg-green-50 border-b border-green-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CalendarCheck className="w-4 h-4 text-green-600" />
-              <p className="text-base font-semibold text-green-800">{s.plan_nombre}</p>
-            </div>
-            <Badge color={s.estado === 'ACTIVA' ? 'green' : 'default'}>{s.estado}</Badge>
-          </div>
-          <div className="px-4 py-3 space-y-2 text-base">
-            <div className="flex justify-between">
-              <span className="text-slate-500">Inicio</span>
-              <span className="font-medium text-slate-800">{formatFecha(s.fecha_inicio)}</span>
-            </div>
-            {s.fecha_fin && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Vencimiento</span>
-                <span className="font-medium text-slate-800">{formatFecha(s.fecha_fin)}</span>
-              </div>
-            )}
-            {s.observaciones && (
-              <p className="text-sm text-slate-400 pt-1 border-t border-slate-100">{s.observaciones}</p>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function PortalDashboard() {
@@ -553,16 +575,18 @@ export default function PortalDashboard() {
   const [selectedHijoId, setSelectedHijoId] = useState<number | null>(null)
   const [tabs, setTabs] = useState<Record<number, HijoTab>>({})
 
-  // Plan tab state
-  const [suscripciones, setSuscripciones] = useState<Record<number, Suscripcion[]>>({})
-  const [loadingPlan, setLoadingPlan] = useState<Record<number, boolean>>({})
-  const planRequestedRef = useRef<Set<number>>(new Set())
+  // Historial tab state (recargas de saldo — cantina + almuerzo)
+  const [recargas, setRecargas] = useState<Record<number, RecargaHistorial[]>>({})
+  const [loadingRecargas, setLoadingRecargas] = useState<Record<number, boolean>>({})
+  const [hasMoreRecargas, setHasMoreRecargas] = useState<Record<number, boolean>>({})
+  const recargasRequestedRef = useRef<Set<number>>(new Set())
+  const pageRecargasRef = useRef<Record<number, number>>({})
 
-  // Historial tab state
+  // Almuerzos tab state (ingresos al comedor)
   const today = useMemo(() => new Date(), [])
-  const [historial, setHistorial] = useState<Record<number, HistorialData | null>>({})
-  const [loadingHistorial, setLoadingHistorial] = useState<Record<number, boolean>>({})
-  const [historialMes, setHistorialMes] = useState<Record<number, { anio: number; mes: number }>>({})
+  const [almuerzos, setAlmuerzos] = useState<Record<number, HistorialData | null>>({})
+  const [loadingAlmuerzos, setLoadingAlmuerzos] = useState<Record<number, boolean>>({})
+  const [almuerzosMes, setAlmuerzosMes] = useState<Record<number, { anio: number; mes: number }>>({})
 
   // Cantina tab state
   const [cantina, setCantina] = useState<Record<number, VentaCantina[]>>({})
@@ -595,20 +619,25 @@ export default function PortalDashboard() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargar() }, [user, cargar])
 
-  const loadPlan = useCallback(async (hijoId: number) => {
-    if (planRequestedRef.current.has(hijoId)) return
-    planRequestedRef.current.add(hijoId)
-    setLoadingPlan(prev => ({ ...prev, [hijoId]: true }))
+  const loadRecargas = useCallback(async (hijoId: number, loadMore = false) => {
+    if (!loadMore && recargasRequestedRef.current.has(hijoId)) return
+    if (!loadMore) recargasRequestedRef.current.add(hijoId)
+    const page = loadMore ? (pageRecargasRef.current[hijoId] ?? 1) + 1 : 1
+    pageRecargasRef.current[hijoId] = page
+    setLoadingRecargas(prev => ({ ...prev, [hijoId]: true }))
     try {
-      const { data: res } = await api.get('/almuerzos/suscripciones/', {
-        params: { hijo: hijoId, estado: 'ACTIVA', page_size: 10 },
+      const { data: res } = await api.get('/usuarios/portal/historial-recargas/', {
+        params: { hijo_id: hijoId, page, page_size: 15 },
       })
-      setSuscripciones(prev => ({ ...prev, [hijoId]: res.results ?? [] }))
+      setRecargas(prev => ({
+        ...prev,
+        [hijoId]: loadMore ? [...(prev[hijoId] ?? []), ...res.results] : res.results,
+      }))
+      setHasMoreRecargas(prev => ({ ...prev, [hijoId]: Boolean(res.next) }))
     } catch {
-      setSuscripciones(prev => ({ ...prev, [hijoId]: [] }))
-      planRequestedRef.current.delete(hijoId)
+      if (!loadMore) recargasRequestedRef.current.delete(hijoId)
     } finally {
-      setLoadingPlan(prev => ({ ...prev, [hijoId]: false }))
+      setLoadingRecargas(prev => ({ ...prev, [hijoId]: false }))
     }
   }, [])
 
@@ -641,17 +670,17 @@ export default function PortalDashboard() {
     }))
   }, [])
 
-  const loadHistorial = useCallback(async (hijoId: number, anio: number, mes: number) => {
-    setLoadingHistorial(prev => ({ ...prev, [hijoId]: true }))
+  const loadAlmuerzos = useCallback(async (hijoId: number, anio: number, mes: number) => {
+    setLoadingAlmuerzos(prev => ({ ...prev, [hijoId]: true }))
     try {
       const { data: res } = await api.get('/usuarios/portal/historial-consumos/', {
         params: { hijo_id: hijoId, anio, mes },
       })
-      setHistorial(prev => ({ ...prev, [hijoId]: res }))
+      setAlmuerzos(prev => ({ ...prev, [hijoId]: res }))
     } catch {
-      setHistorial(prev => ({ ...prev, [hijoId]: null }))
+      setAlmuerzos(prev => ({ ...prev, [hijoId]: null }))
     } finally {
-      setLoadingHistorial(prev => ({ ...prev, [hijoId]: false }))
+      setLoadingAlmuerzos(prev => ({ ...prev, [hijoId]: false }))
     }
   }, [])
 
@@ -664,25 +693,25 @@ export default function PortalDashboard() {
     [dataAnio, dataMes, today],
   )
 
-  const cambiarMesHistorial = useCallback((hijoId: number, delta: number) => {
-    const actual = historialMes[hijoId] ?? mesServidor
+  const cambiarMesAlmuerzos = useCallback((hijoId: number, delta: number) => {
+    const actual = almuerzosMes[hijoId] ?? mesServidor
     let { anio, mes } = actual
     mes += delta
     if (mes < 1) { mes = 12; anio -= 1 }
     if (mes > 12) { mes = 1; anio += 1 }
-    setHistorialMes(prev => ({ ...prev, [hijoId]: { anio, mes } }))
-    loadHistorial(hijoId, anio, mes)
-  }, [historialMes, loadHistorial, mesServidor])
+    setAlmuerzosMes(prev => ({ ...prev, [hijoId]: { anio, mes } }))
+    loadAlmuerzos(hijoId, anio, mes)
+  }, [almuerzosMes, loadAlmuerzos, mesServidor])
 
   const setTab = useCallback((hijoId: number, tab: HijoTab) => {
     setTabs(prev => ({ ...prev, [hijoId]: tab }))
-    if (tab === 'plan') loadPlan(hijoId)
+    if (tab === 'historial') loadRecargas(hijoId)
     if (tab === 'cantina') loadCantina(hijoId)
-    if (tab === 'historial') {
-      const actual = historialMes[hijoId] ?? mesServidor
-      loadHistorial(hijoId, actual.anio, actual.mes)
+    if (tab === 'almuerzos') {
+      const actual = almuerzosMes[hijoId] ?? mesServidor
+      loadAlmuerzos(hijoId, actual.anio, actual.mes)
     }
-  }, [loadPlan, loadCantina, loadHistorial, historialMes, mesServidor])
+  }, [loadRecargas, loadCantina, loadAlmuerzos, almuerzosMes, mesServidor])
 
   if (loading) return <Spinner className="mt-12" />
 
@@ -834,7 +863,7 @@ export default function PortalDashboard() {
               Cantina
             </span>
           </TabBtn>
-          <TabBtn active={tab === 'plan'} onClick={() => setTab(hijo.id_hijo, 'plan')}>
+          <TabBtn active={tab === 'almuerzos'} onClick={() => setTab(hijo.id_hijo, 'almuerzos')}>
             <span className="flex items-center gap-1.5">
               <CalendarCheck className="w-3.5 h-3.5" />
               Almuerzos
@@ -847,21 +876,14 @@ export default function PortalDashboard() {
           {tab === 'resumen' && (
             <ResumenTab hijo={hijo} mes={data.mes} />
           )}
-          {tab === 'historial' && (() => {
-            const mesActual = historialMes[hijo.id_hijo] ?? mesServidor
-            const esMesActual = mesActual.anio === mesServidor.anio && mesActual.mes === mesServidor.mes
-            return (
-              <HistorialTab
-                data={historial[hijo.id_hijo] ?? null}
-                loading={loadingHistorial[hijo.id_hijo] ?? false}
-                anio={mesActual.anio}
-                mes={mesActual.mes}
-                isCurrentMonth={esMesActual}
-                onPrevMes={() => cambiarMesHistorial(hijo.id_hijo, -1)}
-                onNextMes={() => cambiarMesHistorial(hijo.id_hijo, 1)}
-              />
-            )
-          })()}
+          {tab === 'historial' && (
+            <HistorialTab
+              recargas={recargas[hijo.id_hijo]}
+              loading={loadingRecargas[hijo.id_hijo] ?? false}
+              hasMore={hasMoreRecargas[hijo.id_hijo] ?? false}
+              onLoadMore={() => loadRecargas(hijo.id_hijo, true)}
+            />
+          )}
           {tab === 'cantina' && (
             <CantinaTab
               ventas={cantina[hijo.id_hijo]}
@@ -872,12 +894,21 @@ export default function PortalDashboard() {
               onToggle={(ventaId) => toggleCantinaRow(hijo.id_hijo, ventaId)}
             />
           )}
-          {tab === 'plan' && (
-            <PlanTab
-              suscripciones={suscripciones[hijo.id_hijo]}
-              loading={loadingPlan[hijo.id_hijo] ?? false}
-            />
-          )}
+          {tab === 'almuerzos' && (() => {
+            const mesActual = almuerzosMes[hijo.id_hijo] ?? mesServidor
+            const esMesActual = mesActual.anio === mesServidor.anio && mesActual.mes === mesServidor.mes
+            return (
+              <AlmuerzosTab
+                data={almuerzos[hijo.id_hijo] ?? null}
+                loading={loadingAlmuerzos[hijo.id_hijo] ?? false}
+                anio={mesActual.anio}
+                mes={mesActual.mes}
+                isCurrentMonth={esMesActual}
+                onPrevMes={() => cambiarMesAlmuerzos(hijo.id_hijo, -1)}
+                onNextMes={() => cambiarMesAlmuerzos(hijo.id_hijo, 1)}
+              />
+            )
+          })()}
         </div>
       </div>
     </div>

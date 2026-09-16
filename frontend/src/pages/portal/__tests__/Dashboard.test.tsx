@@ -81,14 +81,20 @@ const PORTAL_DATA = {
   hijos: [HIJO_CON_CUENTA],
 }
 
-function setupPortal(override: Record<string, unknown> = {}, historial: Record<string, unknown> = {}) {
+function setupPortal(
+  override: Record<string, unknown> = {},
+  historial: Record<string, unknown> = {},
+  recargas: Record<string, unknown> = {},
+) {
   vi.mocked(api.get).mockImplementation((url: string) => {
     if (url === '/usuarios/portal/mi-hijo/') return Promise.resolve({ data: { ...PORTAL_DATA, ...override } })
-    if (url === '/almuerzos/suscripciones/') return Promise.resolve({ data: { results: [] } })
     if (url === '/usuarios/portal/historial-cantina/') return Promise.resolve({ data: { results: [], next: null } })
+    if (url === '/usuarios/portal/historial-recargas/') {
+      return Promise.resolve({ data: { count: 0, next: false, results: [], ...recargas } })
+    }
     if (url === '/usuarios/portal/historial-consumos/') {
       return Promise.resolve({
-        data: { anio: 2026, mes: 7, consumos: [], total: 0, monto_total: 0, cobrados: 0, ...historial },
+        data: { anio: 2026, mes: 7, consumos: [], cuenta_estado: null, total: 0, monto_total: 0, cobrados: 0, ...historial },
       })
     }
     return Promise.resolve({ data: {} })
@@ -270,25 +276,25 @@ describe('PortalDashboard — tabs', () => {
     expect(screen.getByText('Tarjeta escolar')).toBeInTheDocument()
   })
 
-  it('tab Historial → muestra "Sin consumos" cuando total es 0', async () => {
+  it('tab Almuerzos → muestra "Sin ingresos al comedor" cuando total es 0', async () => {
     setupPortal({ hijos: [HIJO_BASE] })
     renderDashboard()
     await screen.findByText('Juan García')
 
-    await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
+    await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
 
-    await screen.findByText(/Sin consumos registrados este mes/i)
+    await screen.findByText(/Sin ingresos al comedor registrados este mes/i)
   })
 
-  it('tab Historial → llama historial-consumos con el mes actual y muestra los consumos', async () => {
+  it('tab Almuerzos → llama historial-consumos con el mes actual y muestra los consumos', async () => {
     setupPortal({}, {
       total: 2, cobrados: 1, monto_total: 25000,
-      consumos: [{ id_registro_consumo: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000', ya_cobrado: true }],
+      consumos: [{ id_registro_consumo: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000' }],
     })
     renderDashboard()
     await screen.findByText('Juan García')
 
-    await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
+    await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
 
     await waitFor(() => {
       expect(vi.mocked(api.get)).toHaveBeenCalledWith(
@@ -300,23 +306,50 @@ describe('PortalDashboard — tabs', () => {
     expect(screen.getAllByText('Gs. 25.000').length).toBeGreaterThan(0)
   })
 
-  it('tab Historial → "Mes siguiente" queda deshabilitado en el mes actual', async () => {
+  it('tab Almuerzos → un ingreso con la cuenta del mes sin pagar queda "Pendiente"', async () => {
+    setupPortal({}, {
+      total: 1, cobrados: 0, monto_total: 25000, cuenta_estado: 'PENDIENTE',
+      consumos: [{ id_registro_consumo: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000' }],
+    })
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
+
+    await screen.findByText('Pendiente')
+    expect(screen.queryByText('Pagado')).not.toBeInTheDocument()
+  })
+
+  it('tab Almuerzos → un ingreso con la cuenta del mes pagada queda "Pagado"', async () => {
+    setupPortal({}, {
+      total: 1, cobrados: 1, monto_total: 25000, cuenta_estado: 'PAGADO',
+      consumos: [{ id_registro_consumo: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000' }],
+    })
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
+
+    await screen.findByText('Pagado')
+  })
+
+  it('tab Almuerzos → "Mes siguiente" queda deshabilitado en el mes actual', async () => {
     setupPortal()
     renderDashboard()
     await screen.findByText('Juan García')
 
-    await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
+    await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
     await screen.findByLabelText('Mes siguiente')
 
     expect(screen.getByLabelText('Mes siguiente')).toBeDisabled()
   })
 
-  it('tab Historial → "Mes anterior" navega y vuelve a consultar la API', async () => {
+  it('tab Almuerzos → "Mes anterior" navega y vuelve a consultar la API', async () => {
     setupPortal()
     renderDashboard()
     await screen.findByText('Juan García')
 
-    await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
+    await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
     await screen.findByLabelText('Mes anterior')
 
     await userEvent.click(screen.getByLabelText('Mes anterior'))
@@ -328,20 +361,71 @@ describe('PortalDashboard — tabs', () => {
     )
   })
 
-  it('tab Almuerzos → llama /almuerzos/suscripciones/ con el hijo correcto', async () => {
+  it('tab Historial → muestra "Sin recargas" cuando no hay resultados', async () => {
     setupPortal()
     renderDashboard()
     await screen.findByText('Juan García')
 
-    await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
+    await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
+
+    await screen.findByText(/Sin recargas registradas/i)
+  })
+
+  it('tab Historial → llama historial-recargas con el hijo correcto y muestra recargas de cantina y almuerzo', async () => {
+    setupPortal({}, {}, {
+      count: 2, next: false,
+      results: [
+        { id: 'cantina-1', tipo: 'CANTINA', fecha: '2026-07-10T10:00:00Z', monto: 50000, estado: 'CONFIRMADA', metodo_pago: 'EFECTIVO' },
+        { id: 'almuerzo-1', tipo: 'ALMUERZO', fecha: '2026-07-05T10:00:00Z', monto: 100000, estado: 'CONFIRMADA', metodo_pago: null },
+      ],
+    })
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
 
     await waitFor(() => {
       expect(vi.mocked(api.get)).toHaveBeenCalledWith(
-        '/almuerzos/suscripciones/',
-        expect.objectContaining({ params: expect.objectContaining({ hijo: 1 }) }),
+        '/usuarios/portal/historial-recargas/',
+        expect.objectContaining({ params: expect.objectContaining({ hijo_id: 1, page: 1, page_size: 15 }) }),
       )
     })
-    await screen.findByText(/Sin plan de almuerzo activo/i)
+    await screen.findByText('Gs. 50.000')
+    // "Cantina" también es el nombre del tab, así que puede haber más de un match
+    expect(screen.getAllByText('Cantina').length).toBeGreaterThan(0)
+    expect(screen.getByText('Almuerzo')).toBeInTheDocument()
+    expect(screen.getByText('Gs. 100.000')).toBeInTheDocument()
+  })
+
+  it('tab Historial → "Ver más" pide la página siguiente', async () => {
+    let page = 0
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/usuarios/portal/mi-hijo/') return Promise.resolve({ data: PORTAL_DATA })
+      if (url === '/usuarios/portal/historial-recargas/') {
+        page += 1
+        return Promise.resolve({
+          data: {
+            count: 20, next: page < 2,
+            results: [{ id: `cantina-${page}`, tipo: 'CANTINA', fecha: '2026-07-10T10:00:00Z', monto: 50000, estado: 'CONFIRMADA', metodo_pago: null }],
+          },
+        })
+      }
+      return Promise.resolve({ data: {} })
+    })
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Historial/i }))
+    await screen.findByRole('button', { name: /Ver más/i })
+
+    await userEvent.click(screen.getByRole('button', { name: /Ver más/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.get)).toHaveBeenCalledWith(
+        '/usuarios/portal/historial-recargas/',
+        expect.objectContaining({ params: expect.objectContaining({ hijo_id: 1, page: 2, page_size: 15 }) }),
+      )
+    })
   })
 })
 

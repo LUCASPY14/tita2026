@@ -366,6 +366,106 @@ class TestPortalHistorialCantina:
         assert resp.status_code == 400
 
 
+# ── PortalHistorialRecargas ───────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestPortalHistorialRecargas:
+
+    def test_sin_hijo_id_retorna_400(self, api_portal):
+        resp = api_portal.get("/api/v1/usuarios/portal/historial-recargas/")
+        assert resp.status_code == 400
+
+    def test_hijo_no_encontrado_retorna_404(self, api_portal):
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-recargas/",
+            {"hijo_id": 99999},
+        )
+        assert resp.status_code == 404
+
+    def test_sin_cliente_falla(self, api_cajero):
+        resp = api_cajero.get(
+            "/api/v1/usuarios/portal/historial-recargas/",
+            {"hijo_id": 1},
+        )
+        assert resp.status_code == 400
+
+    def test_sin_recargas_retorna_vacio(self, api_portal, hijo_portal):
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-recargas/",
+            {"hijo_id": hijo_portal.pk},
+        )
+        assert resp.status_code == 200
+        assert resp.data["count"] == 0
+        assert resp.data["results"] == []
+        assert resp.data["next"] is False
+
+    def test_combina_cantina_y_almuerzo_ordenados_por_fecha_desc(self, api_portal, hijo_portal):
+        from datetime import datetime, timezone as dt_timezone
+        from apps.core.models import Tarjeta, CargaSaldo
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+
+        tarjeta = Tarjeta.objects.create(nro_tarjeta="T-PORTAL-1", hijo=hijo_portal)
+        CargaSaldo.objects.create(
+            tarjeta=tarjeta, monto_cargado=50_000,
+            estado=CargaSaldo.Estado.CONFIRMADA, metodo_pago="EFECTIVO",
+            fecha_carga=datetime(2026, 7, 10, tzinfo=dt_timezone.utc),
+        )
+        RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_portal, monto_cargado=100_000,
+            estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+            fecha_carga=datetime(2026, 7, 15, tzinfo=dt_timezone.utc),
+        )
+
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-recargas/",
+            {"hijo_id": hijo_portal.pk},
+        )
+        assert resp.status_code == 200
+        assert resp.data["count"] == 2
+        tipos = [r["tipo"] for r in resp.data["results"]]
+        # La recarga de almuerzo (15/jul) es más reciente que la de cantina (10/jul)
+        assert tipos == ["ALMUERZO", "CANTINA"]
+        assert resp.data["results"][0]["monto"] == 100_000
+        assert resp.data["results"][1]["monto"] == 50_000
+
+    def test_paginacion_marca_next_cuando_hay_mas_resultados(self, api_portal, hijo_portal):
+        from apps.core.models import Tarjeta, CargaSaldo
+
+        tarjeta = Tarjeta.objects.create(nro_tarjeta="T-PORTAL-2", hijo=hijo_portal)
+        for _ in range(3):
+            CargaSaldo.objects.create(
+                tarjeta=tarjeta, monto_cargado=10_000, estado=CargaSaldo.Estado.CONFIRMADA,
+            )
+
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-recargas/",
+            {"hijo_id": hijo_portal.pk, "page_size": 2},
+        )
+        assert resp.status_code == 200
+        assert resp.data["count"] == 3
+        assert len(resp.data["results"]) == 2
+        assert resp.data["next"] is True
+
+    def test_no_mezcla_recargas_de_otro_hijo(self, api_portal, hijo_portal, cliente):
+        from apps.clientes.models import Hijo
+        from apps.core.models import Tarjeta, CargaSaldo
+
+        otro_hijo = Hijo.objects.create(
+            nombre="Otro", apellido="Hijo", cliente_responsable=cliente, activo=True,
+        )
+        tarjeta_otro = Tarjeta.objects.create(nro_tarjeta="T-PORTAL-3", hijo=otro_hijo)
+        CargaSaldo.objects.create(
+            tarjeta=tarjeta_otro, monto_cargado=999_999, estado=CargaSaldo.Estado.CONFIRMADA,
+        )
+
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-recargas/",
+            {"hijo_id": hijo_portal.pk},
+        )
+        assert resp.status_code == 200
+        assert resp.data["count"] == 0
+
+
 # ── RecuperarPasswordView ─────────────────────────────────────────────────────
 
 @pytest.mark.django_db
@@ -723,6 +823,49 @@ class TestPortalHistorialConsumos:
         # hijo_id=None → hijo not found (None filter returns nothing)
         resp = api_portal.get("/api/v1/usuarios/portal/historial-consumos/")
         assert resp.status_code == 404
+
+    def test_registro_que_no_cobra_no_se_muestra_al_padre(self, api_portal, hijo_portal, usuario_cajero):
+        # El 2do/3er ingreso del mismo día (ya_cobrado=False) es "repetir" y es
+        # solo control interno de comedor — no debe llegar al portal de padres.
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_portal, fecha_consumo="2026-07-15", costo_almuerzo=25_000,
+            ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_portal, fecha_consumo="2026-07-15", costo_almuerzo=25_000,
+            ya_cobrado=False, registrado_por=usuario_cajero,
+        )
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-consumos/",
+            {"hijo_id": hijo_portal.pk, "anio": 2026, "mes": 7},
+        )
+        assert resp.status_code == 200
+        assert resp.data["total"] == 1
+        assert resp.data["monto_total"] == 25_000
+
+    def test_sin_cuenta_mensual_cuenta_estado_es_none(self, api_portal, hijo_portal):
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-consumos/",
+            {"hijo_id": hijo_portal.pk, "anio": 2026, "mes": 7},
+        )
+        assert resp.status_code == 200
+        assert resp.data["cuenta_estado"] is None
+
+    def test_con_cuenta_mensual_retorna_su_estado(self, api_portal, hijo_portal):
+        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        CuentaAlmuerzoMensual.objects.create(
+            hijo=hijo_portal, anio=2026, mes=7,
+            cantidad_almuerzos=5, monto_total=125_000,
+            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.ONLINE,
+            estado=CuentaAlmuerzoMensual.Estado.PAGADO,
+        )
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-consumos/",
+            {"hijo_id": hijo_portal.pk, "anio": 2026, "mes": 7},
+        )
+        assert resp.status_code == 200
+        assert resp.data["cuenta_estado"] == "PAGADO"
 
 
 # ── PortalMisFacturas ─────────────────────────────────────────────────────────
