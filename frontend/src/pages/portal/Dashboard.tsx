@@ -407,7 +407,7 @@ function HistorialTab({
                       {c.ya_cobrado ? formatGs(Number(c.costo_almuerzo)) : '—'}
                     </p>
                     <Badge color={c.ya_cobrado ? 'orange' : 'green'}>
-                      {c.ya_cobrado ? 'Cobrado' : 'Sin cargo'}
+                      {c.ya_cobrado ? 'Pagado' : 'Sin cargo'}
                     </Badge>
                   </div>
                 </div>

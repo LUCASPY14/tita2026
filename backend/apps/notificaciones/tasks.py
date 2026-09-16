@@ -175,6 +175,37 @@ def enviar_emails_pendientes():
 
 
 @shared_task(
+    name="apps.notificaciones.tasks.enviar_whatsapp_cliente",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
+def enviar_whatsapp_cliente(cliente_id, mensaje):
+    """
+    Envía un WhatsApp a un cliente fuera del ciclo request/response.
+
+    whatsapp_cliente() nunca debe llamarse de forma síncrona dentro de una
+    vista: con ATOMIC_REQUESTS=True la conexión a la DB queda abierta en
+    transacción durante toda la llamada, y si WAHA está lento o desconectado,
+    idle_in_transaction_session_timeout (10s en producción) mata la conexión
+    y tira 500 la operación que originó el aviso (venta, recarga, comedor).
+    Dispatchear esto con transaction.on_commit(lambda: enviar_whatsapp_cliente.delay(...))
+    desacopla el envío por completo de esa transacción.
+    """
+    from apps.clientes.models import Cliente
+
+    from apps.notificaciones.services import whatsapp_cliente
+
+    try:
+        cliente = Cliente.objects.get(pk=cliente_id)
+    except Cliente.DoesNotExist:
+        return
+    whatsapp_cliente(cliente, mensaje)
+
+
+@shared_task(
     name="apps.notificaciones.tasks.procesar_solicitudes_pendientes",
     autoretry_for=(Exception,),
     max_retries=3,

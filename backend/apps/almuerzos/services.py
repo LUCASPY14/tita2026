@@ -197,18 +197,23 @@ class AlmuerzoService:
 
     @staticmethod
     def _notificar_ingreso_comedor(registro):
-        """Avisa por WhatsApp al responsable que el hijo almorzó hoy."""
-        from apps.notificaciones.services import whatsapp_cliente
+        """Avisa por WhatsApp al responsable que el hijo almorzó hoy.
+
+        Encolado vía Celery (no síncrono): el registro de comedor no puede
+        depender de que WAHA esté conectado o responda a tiempo.
+        """
+        from apps.notificaciones.tasks import enviar_whatsapp_cliente
+        mensaje = (
+            f"{registro.hijo.nombre_completo} almorzó hoy "
+            f"{registro.fecha_consumo.strftime('%d/%m/%Y')}. "
+            f"Costo: Gs. {int(registro.costo_almuerzo):,}."
+        )
+        cliente_id = registro.hijo.cliente_responsable_id
         try:
-            whatsapp_cliente(
-                registro.hijo.cliente_responsable,
-                f"{registro.hijo.nombre_completo} almorzó hoy "
-                f"{registro.fecha_consumo.strftime('%d/%m/%Y')}. "
-                f"Costo: Gs. {int(registro.costo_almuerzo):,}."
-            )
+            transaction.on_commit(lambda: enviar_whatsapp_cliente.delay(cliente_id, mensaje))
         except Exception:
             logger.warning(
-                "WhatsApp: fallo al notificar almuerzo de %s", registro.hijo_id, exc_info=True
+                "No se pudo encolar WhatsApp de almuerzo para %s", registro.hijo_id, exc_info=True
             )
 
     @staticmethod
@@ -268,16 +273,17 @@ class AlmuerzoService:
                     medio_pago=medio_pago_obj,
                 )
 
+            from apps.notificaciones.tasks import enviar_whatsapp_cliente
+            mensaje = (
+                f"Recarga exitosa: se acreditaron Gs. {int(monto):,} al saldo de almuerzo de "
+                f"{hijo.nombre_completo}. Nuevo saldo: Gs. {int(saldo.saldo_actual):,}."
+            )
+            cliente_id = hijo.cliente_responsable_id
             try:
-                from apps.notificaciones.services import whatsapp_cliente
-                whatsapp_cliente(
-                    hijo.cliente_responsable,
-                    f"Recarga exitosa: se acreditaron Gs. {int(monto):,} al saldo de almuerzo de "
-                    f"{hijo.nombre_completo}. Nuevo saldo: Gs. {int(saldo.saldo_actual):,}.",
-                )
+                transaction.on_commit(lambda: enviar_whatsapp_cliente.delay(cliente_id, mensaje))
             except Exception:
                 logger.warning(
-                    "WhatsApp de recarga de almuerzo no enviado para hijo %s", hijo.pk, exc_info=True
+                    "No se pudo encolar WhatsApp de recarga de almuerzo para hijo %s", hijo.pk, exc_info=True
                 )
 
             return recarga
@@ -317,16 +323,17 @@ class AlmuerzoService:
                     medio_pago=medio_pago_obj,
                 )
 
+            from apps.notificaciones.tasks import enviar_whatsapp_cliente
+            mensaje = (
+                f"Recarga exitosa: se acreditaron Gs. {int(recarga.monto_cargado):,} al saldo de "
+                f"almuerzo de {recarga.hijo.nombre_completo}. Nuevo saldo: Gs. {int(saldo.saldo_actual):,}."
+            )
+            cliente_id = recarga.hijo.cliente_responsable_id
             try:
-                from apps.notificaciones.services import whatsapp_cliente
-                whatsapp_cliente(
-                    recarga.hijo.cliente_responsable,
-                    f"Recarga exitosa: se acreditaron Gs. {int(recarga.monto_cargado):,} al saldo de "
-                    f"almuerzo de {recarga.hijo.nombre_completo}. Nuevo saldo: Gs. {int(saldo.saldo_actual):,}.",
-                )
+                transaction.on_commit(lambda: enviar_whatsapp_cliente.delay(cliente_id, mensaje))
             except Exception:
                 logger.warning(
-                    "WhatsApp de confirmación de recarga de almuerzo no enviado para hijo %s",
+                    "No se pudo encolar WhatsApp de confirmación de recarga de almuerzo para hijo %s",
                     recarga.hijo_id, exc_info=True,
                 )
 

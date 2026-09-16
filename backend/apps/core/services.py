@@ -94,17 +94,17 @@ class TarjetaService:
                     medio_pago=medio_pago_obj,
                 )
 
+            from apps.notificaciones.tasks import enviar_whatsapp_cliente
+            mensaje = (
+                f"Recarga exitosa: se acreditaron Gs. {int(monto):,} a la tarjeta de "
+                f"{tarjeta.hijo.nombre_completo}. Nuevo saldo: Gs. {int(tarjeta.saldo_actual):,}."
+            )
+            cliente_id = tarjeta.hijo.cliente_responsable_id
             try:
-                from apps.notificaciones.services import whatsapp_cliente
-                cliente_resp = tarjeta.hijo.cliente_responsable
-                whatsapp_cliente(
-                    cliente_resp,
-                    f"Recarga exitosa: se acreditaron Gs. {int(monto):,} a la tarjeta de "
-                    f"{tarjeta.hijo.nombre_completo}. Nuevo saldo: Gs. {int(tarjeta.saldo_actual):,}.",
-                )
+                transaction.on_commit(lambda: enviar_whatsapp_cliente.delay(cliente_id, mensaje))
             except Exception:
                 logger.warning(
-                    "WhatsApp de recarga no enviado para tarjeta %s",
+                    "No se pudo encolar WhatsApp de recarga para tarjeta %s",
                     tarjeta.pk,
                     exc_info=True,
                 )
@@ -158,17 +158,17 @@ class TarjetaService:
                     medio_pago=medio_pago_obj,
                 )
 
+            from apps.notificaciones.tasks import enviar_whatsapp_cliente
+            mensaje = (
+                f"Recarga exitosa: se acreditaron Gs. {int(carga.monto_cargado):,} a la tarjeta de "
+                f"{tarjeta.hijo.nombre_completo}. Nuevo saldo: Gs. {int(tarjeta.saldo_actual):,}."
+            )
+            cliente_id = tarjeta.hijo.cliente_responsable_id
             try:
-                from apps.notificaciones.services import whatsapp_cliente
-                cliente_resp = tarjeta.hijo.cliente_responsable
-                whatsapp_cliente(
-                    cliente_resp,
-                    f"Recarga exitosa: se acreditaron Gs. {int(carga.monto_cargado):,} a la tarjeta de "
-                    f"{tarjeta.hijo.nombre_completo}. Nuevo saldo: Gs. {int(tarjeta.saldo_actual):,}.",
-                )
+                transaction.on_commit(lambda: enviar_whatsapp_cliente.delay(cliente_id, mensaje))
             except Exception:
                 logger.warning(
-                    "WhatsApp de confirmación no enviado para tarjeta %s",
+                    "No se pudo encolar WhatsApp de confirmación para tarjeta %s",
                     tarjeta.pk,
                     exc_info=True,
                 )

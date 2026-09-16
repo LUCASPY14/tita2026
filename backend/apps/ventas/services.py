@@ -333,10 +333,8 @@ class VentaService:
                         cliente_resp = tarjeta_bloqueada.hijo.cliente_responsable
                         usuario_portal = cliente_resp.usuario_portal
                         from apps.notificaciones.models import Notificacion
-                        from apps.notificaciones.services import (
-                            push_ws_notificacion,
-                            whatsapp_cliente,
-                        )
+                        from apps.notificaciones.services import push_ws_notificacion
+                        from apps.notificaciones.tasks import enviar_whatsapp_cliente
                         nombre_hijo = str(tarjeta_bloqueada.hijo)
                         deficit = abs(int(tarjeta_bloqueada.saldo_actual))
                         msg = (
@@ -352,7 +350,8 @@ class VentaService:
                             destino=Notificacion.Destino.SISTEMA,
                         )
                         push_ws_notificacion(notif)
-                        whatsapp_cliente(cliente_resp, msg)
+                        cliente_id = cliente_resp.pk
+                        transaction.on_commit(lambda: enviar_whatsapp_cliente.delay(cliente_id, msg))
                     except Exception:
                         logger.warning(
                             "No se pudo enviar notificación de saldo negativo para tarjeta %s",

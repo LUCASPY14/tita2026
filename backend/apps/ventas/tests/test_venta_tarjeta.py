@@ -198,11 +198,12 @@ class TestVentaNotificacionSaldoNegativo:
 
     def test_notifica_portal_cuando_saldo_negativo(
         self, cliente, usuario_cajero, producto, stock_producto,
-        tarjeta_neg, usuario_portal,
+        tarjeta_neg, usuario_portal, django_capture_on_commit_callbacks,
     ):
         from unittest.mock import patch
         with patch("apps.notificaciones.services.push_ws_notificacion") as mock_push, \
-             patch("apps.notificaciones.services.whatsapp_cliente") as mock_wa:
+             patch("apps.notificaciones.tasks.enviar_whatsapp_cliente.delay") as mock_wa, \
+             django_capture_on_commit_callbacks(execute=True):
             venta = self._venta(cliente, usuario_cajero, producto, stock_producto, tarjeta_neg)
 
         assert venta is not None
