@@ -38,10 +38,9 @@ interface HistorialData {
   anio: number
   mes: number
   consumos: ConsumoHistorial[]
-  cuenta_estado: string | null
+  saldo_almuerzo: number
   total: number
   monto_total: number
-  cobrados: number
 }
 
 interface RecargaHistorial {
@@ -340,7 +339,8 @@ function AlmuerzosTab({
   onPrevMes: () => void
   onNextMes: () => void
 }) {
-  const cuentaPagada = data?.cuenta_estado === 'PAGADO'
+  const saldo = data?.saldo_almuerzo ?? 0
+  const enDeuda = saldo < 0
 
   return (
     <div className="space-y-3">
@@ -384,13 +384,29 @@ function AlmuerzosTab({
               <p className="text-2xl font-bold text-slate-800 tabular-nums">{data.total}</p>
             </div>
             <div className="flex-1 bg-white rounded-xl border border-slate-100 px-4 py-3 text-center">
-              <p className="text-sm text-slate-500">Cobrados</p>
-              <p className="text-2xl font-bold text-emerald-700 tabular-nums">{data.cobrados}</p>
-            </div>
-            <div className="flex-1 bg-white rounded-xl border border-slate-100 px-4 py-3 text-center">
-              <p className="text-sm text-slate-500">Total</p>
+              <p className="text-sm text-slate-500">Cargado este mes</p>
               <p className="text-2xl font-bold text-orange-700 tabular-nums">{formatGs(data.monto_total)}</p>
             </div>
+          </div>
+
+          {/* El cobro real es un saldo corriente único por hijo (no por
+              almuerzo individual) — se paga desde "Recargar saldo de
+              almuerzo" en la pestaña Resumen. */}
+          <div className={[
+            'rounded-2xl border px-4 py-3 flex items-center justify-between gap-3',
+            enDeuda ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200',
+          ].join(' ')}>
+            <div>
+              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Saldo de almuerzo</p>
+              <p className={`text-xl font-bold tabular-nums ${enDeuda ? 'text-red-700' : 'text-emerald-700'}`}>
+                {formatGs(saldo)}
+              </p>
+            </div>
+            {enDeuda && (
+              <p className="text-sm text-red-600 text-right">
+                Pendiente de pago —<br />recargalo desde Resumen
+              </p>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -409,14 +425,9 @@ function AlmuerzosTab({
                       <p className="text-sm text-slate-400">{formatFecha(c.fecha_consumo)}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-800 tabular-nums">
-                      {formatGs(Number(c.costo_almuerzo))}
-                    </p>
-                    <Badge color={cuentaPagada ? 'green' : 'orange'}>
-                      {cuentaPagada ? 'Pagado' : 'Pendiente'}
-                    </Badge>
-                  </div>
+                  <p className="text-sm font-semibold text-slate-800 tabular-nums">
+                    {formatGs(Number(c.costo_almuerzo))}
+                  </p>
                 </div>
               ))}
             </div>

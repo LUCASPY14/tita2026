@@ -844,28 +844,26 @@ class TestPortalHistorialConsumos:
         assert resp.data["total"] == 1
         assert resp.data["monto_total"] == 25_000
 
-    def test_sin_cuenta_mensual_cuenta_estado_es_none(self, api_portal, hijo_portal):
+    def test_sin_saldo_almuerzo_devuelve_cero(self, api_portal, hijo_portal):
         resp = api_portal.get(
             "/api/v1/usuarios/portal/historial-consumos/",
             {"hijo_id": hijo_portal.pk, "anio": 2026, "mes": 7},
         )
         assert resp.status_code == 200
-        assert resp.data["cuenta_estado"] is None
+        assert resp.data["saldo_almuerzo"] == 0
 
-    def test_con_cuenta_mensual_retorna_su_estado(self, api_portal, hijo_portal):
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_portal, anio=2026, mes=7,
-            cantidad_almuerzos=5, monto_total=125_000,
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.ONLINE,
-            estado=CuentaAlmuerzoMensual.Estado.PAGADO,
-        )
+    def test_con_saldo_almuerzo_en_deuda_retorna_su_valor_real(self, api_portal, hijo_portal):
+        # El saldo real de deuda vive en SaldoAlmuerzo (cuenta corriente única
+        # por hijo) — no en CuentaAlmuerzoMensual, que quedó como reporte y ya
+        # no se marca "pagada" en el flujo real.
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_portal, saldo_actual=-125_000)
         resp = api_portal.get(
             "/api/v1/usuarios/portal/historial-consumos/",
             {"hijo_id": hijo_portal.pk, "anio": 2026, "mes": 7},
         )
         assert resp.status_code == 200
-        assert resp.data["cuenta_estado"] == "PAGADO"
+        assert resp.data["saldo_almuerzo"] == -125_000
 
 
 # ── PortalMisFacturas ─────────────────────────────────────────────────────────

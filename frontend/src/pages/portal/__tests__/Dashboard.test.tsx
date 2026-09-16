@@ -94,7 +94,7 @@ function setupPortal(
     }
     if (url === '/usuarios/portal/historial-consumos/') {
       return Promise.resolve({
-        data: { anio: 2026, mes: 7, consumos: [], cuenta_estado: null, total: 0, monto_total: 0, cobrados: 0, ...historial },
+        data: { anio: 2026, mes: 7, consumos: [], saldo_almuerzo: 0, total: 0, monto_total: 0, ...historial },
       })
     }
     return Promise.resolve({ data: {} })
@@ -288,7 +288,7 @@ describe('PortalDashboard — tabs', () => {
 
   it('tab Almuerzos → llama historial-consumos con el mes actual y muestra los consumos', async () => {
     setupPortal({}, {
-      total: 2, cobrados: 1, monto_total: 25000,
+      total: 2, monto_total: 25000,
       consumos: [{ id_registro_consumo: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000' }],
     })
     renderDashboard()
@@ -306,9 +306,9 @@ describe('PortalDashboard — tabs', () => {
     expect(screen.getAllByText('Gs. 25.000').length).toBeGreaterThan(0)
   })
 
-  it('tab Almuerzos → un ingreso con la cuenta del mes sin pagar queda "Pendiente"', async () => {
+  it('tab Almuerzos → con saldo de almuerzo en deuda, muestra el saldo real en rojo', async () => {
     setupPortal({}, {
-      total: 1, cobrados: 0, monto_total: 25000, cuenta_estado: 'PENDIENTE',
+      total: 1, monto_total: 25000, saldo_almuerzo: -125000,
       consumos: [{ id_registro_consumo: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000' }],
     })
     renderDashboard()
@@ -316,13 +316,13 @@ describe('PortalDashboard — tabs', () => {
 
     await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
 
-    await screen.findByText('Pendiente')
-    expect(screen.queryByText('Pagado')).not.toBeInTheDocument()
+    await screen.findByText('Gs. -125.000')
+    expect(screen.getByText(/Pendiente de pago/i)).toBeInTheDocument()
   })
 
-  it('tab Almuerzos → un ingreso con la cuenta del mes pagada queda "Pagado"', async () => {
+  it('tab Almuerzos → con saldo de almuerzo al día, no muestra aviso de deuda', async () => {
     setupPortal({}, {
-      total: 1, cobrados: 1, monto_total: 25000, cuenta_estado: 'PAGADO',
+      total: 1, monto_total: 25000, saldo_almuerzo: 0,
       consumos: [{ id_registro_consumo: 1, fecha_consumo: '2026-07-15', costo_almuerzo: '25000' }],
     })
     renderDashboard()
@@ -330,7 +330,8 @@ describe('PortalDashboard — tabs', () => {
 
     await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
 
-    await screen.findByText('Pagado')
+    await screen.findByText('Gs. 0')
+    expect(screen.queryByText(/Pendiente de pago/i)).not.toBeInTheDocument()
   })
 
   it('tab Almuerzos → "Mes siguiente" queda deshabilitado en el mes actual', async () => {

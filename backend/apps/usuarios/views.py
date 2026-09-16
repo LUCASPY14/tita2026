@@ -736,7 +736,7 @@ class PortalHistorialConsumos(APIView):
 
     def get(self, request):
         from datetime import date
-        from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo, SaldoAlmuerzo
 
         user = request.user
         if not user.cliente:
@@ -770,22 +770,21 @@ class PortalHistorialConsumos(APIView):
             )
         )
 
-        # La cuenta mensual es la única con estado de pago real (PAGADO,
-        # PARCIAL, etc.) — los registros individuales no se marcan pagados
-        # uno por uno, así que un ingreso queda "Pagado" solo si la cuenta
-        # del mes ya está saldada.
-        cuenta = CuentaAlmuerzoMensual.objects.filter(hijo=hijo, anio=anio, mes=mes).first()
-        cuenta_estado = cuenta.estado if cuenta else None
+        # El cobro de almuerzo se consolidó en SaldoAlmuerzo (cuenta corriente
+        # única por hijo, no por almuerzo individual) — CuentaAlmuerzoMensual
+        # quedó como reporte histórico y ya no se marca "pagada" en el flujo
+        # real, así que no sirve para indicar si hay deuda.
+        saldo = SaldoAlmuerzo.objects.filter(hijo=hijo).first()
+        saldo_almuerzo = int(saldo.saldo_actual) if saldo else 0
 
         return Response({
             "anio": anio,
             "mes": mes,
             "hijo": {"id_hijo": hijo.id_hijo, "nombre": hijo.nombre_completo},
             "consumos": consumos,
-            "cuenta_estado": cuenta_estado,
+            "saldo_almuerzo": saldo_almuerzo,
             "total": len(consumos),
             "monto_total": sum(int(c["costo_almuerzo"]) for c in consumos),
-            "cobrados": len(consumos) if cuenta_estado == CuentaAlmuerzoMensual.Estado.PAGADO else 0,
         })
 
 
