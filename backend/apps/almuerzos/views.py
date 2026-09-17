@@ -343,6 +343,8 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
+        from apps.clientes.models import Hijo
+
         registro_data = serializer.validated_data
         hijo = registro_data.get("hijo")
         fecha_consumo = registro_data.get("fecha_consumo")
@@ -362,9 +364,6 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 "error": f"La tarjeta está {nro_tarjeta.get_estado_display().lower()} y no puede usarse para ingresar."
             })
 
-        # Validar limite de 2 registros por dia
-        es_primer_registro = validar_limite_registros_diarios(hijo, fecha_consumo)
-
         # Validar suscripcion si se provee
         if suscripcion and suscripcion.estado != SuscripcionAlmuerzo.Estado.ACTIVA:
             raise ValidationError({
@@ -372,28 +371,40 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 "estado_suscripcion": suscripcion.estado,
             })
 
-        # Determinar costo. El almuerzo es una cuenta corriente: nunca se
-        # bloquea el registro por saldo — puede quedar negativo.
-        if es_primer_registro:
-            precio_obj = get_precio_almuerzo_activo(fecha_consumo)
-            if precio_obj:
-                costo_calculado = precio_obj.precio_unitario
-            elif tipo_almuerzo:
-                costo_calculado = tipo_almuerzo.precio_unitario
-            else:
-                raise ValidationError({
-                    "error": "No hay precio de almuerzo configurado. Configure un precio vigente primero."
-                })
-        else:
-            costo_calculado = Decimal("0")
-
         with transaction.atomic():
+            # Lock por alumno: sin esto, dos POSTs casi simultáneos para el
+            # mismo hijo (RFID rebotando, o un reintento de la cola offline
+            # cruzándose con un escaneo nuevo) podrían leer ambos "0
+            # registros hoy" antes de que cualquiera confirme el suyo, y
+            # terminar los dos cobrando un "primer" almuerzo el mismo día.
+            # El lock se toma ANTES de contar y se mantiene hasta el commit,
+            # así el segundo request espera y vuelve a contar con el primero
+            # ya confirmado.
+            Hijo.objects.select_for_update().get(pk=hijo.pk)
+
+            # Validar limite de 2 registros por dia
+            es_primer_registro = validar_limite_registros_diarios(hijo, fecha_consumo)
+
+            # Determinar costo. El almuerzo es una cuenta corriente: nunca se
+            # bloquea el registro por saldo — puede quedar negativo.
             if es_primer_registro:
+                precio_obj = get_precio_almuerzo_activo(fecha_consumo)
+                if precio_obj:
+                    costo_calculado = precio_obj.precio_unitario
+                elif tipo_almuerzo:
+                    costo_calculado = tipo_almuerzo.precio_unitario
+                else:
+                    raise ValidationError({
+                        "error": "No hay precio de almuerzo configurado. Configure un precio vigente primero."
+                    })
+
                 # Asegurar la cuenta ANTES de crear el registro: el trigger
                 # trg_sync_cuenta_almuerzo (migración 0014) sincroniza
                 # cantidad_almuerzos/monto_total al insertar, pero solo si la
                 # fila de la cuenta ya existe.
                 self._asegurar_cuenta_mensual(hijo, fecha_consumo)
+            else:
+                costo_calculado = Decimal("0")
 
             registro = serializer.save(
                 costo_almuerzo=costo_calculado,
