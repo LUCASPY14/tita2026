@@ -270,6 +270,16 @@ class RegistroConsumoAlmuerzo(models.Model):
         models.PROTECT,
         related_name="consumos_almuerzo_registrados",
     )
+    client_request_id = models.CharField(
+        max_length=64, null=True, blank=True, unique=True,
+        help_text=(
+            "UUID generado en el navegador al escanear la tarjeta. Si la "
+            "cola offline del Service Worker reintenta el mismo POST porque "
+            "perdió la respuesta (no porque la request haya fallado), este "
+            "campo permite reconocer el reintento y devolver el registro ya "
+            "creado en vez de duplicarlo."
+        ),
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -351,6 +351,20 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         nro_tarjeta = registro_data.get("nro_tarjeta")
         tipo_almuerzo = registro_data.get("tipo_almuerzo")
         suscripcion = registro_data.get("suscripcion")
+        client_request_id = registro_data.get("client_request_id")
+
+        # Idempotencia: la cola offline del Service Worker reintenta este
+        # mismo POST si perdió la respuesta de red (no si la request en sí
+        # falló) — el servidor puede haber procesado igual el intento
+        # original. Si ya existe un registro con este client_request_id,
+        # devolvemos ese en vez de crear uno nuevo.
+        if client_request_id:
+            existente = RegistroConsumoAlmuerzo.objects.filter(
+                client_request_id=client_request_id
+            ).first()
+            if existente:
+                serializer.instance = existente
+                return
 
         # Tarjeta requerida como identificacion
         if not nro_tarjeta:

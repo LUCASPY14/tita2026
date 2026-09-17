@@ -76,6 +76,14 @@ class SuscripcionAlmuerzoSerializer(serializers.ModelSerializer):
 class RegistroConsumoAlmuerzoSerializer(serializers.ModelSerializer):
     hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
     tipo_almuerzo_nombre = serializers.CharField(source="tipo_almuerzo.nombre", read_only=True)
+    # Sin validators=[]: DRF genera un UniqueValidator automático para todo
+    # campo unique=True, que rechazaría con 400 el reintento legítimo de la
+    # cola offline antes de llegar a la deduplicación de perform_create()
+    # (RegistroConsumoAlmuerzoViewSet). La unicidad real la sigue
+    # garantizando la constraint de la base de datos.
+    client_request_id = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True, max_length=64, validators=[],
+    )
 
     class Meta:
         model = RegistroConsumoAlmuerzo

@@ -422,6 +422,11 @@ export default function Comedor() {
         hijo: hijoId,
         fecha_consumo: todayISO(),
         nro_tarjeta: tarjeta.nro_tarjeta,
+        // Si la cola offline del Service Worker reintenta este mismo POST
+        // porque perdió la respuesta (no porque la request en sí haya
+        // fallado), este id le permite al backend reconocer el reintento y
+        // devolver el registro ya creado en vez de duplicarlo.
+        client_request_id: crypto.randomUUID(),
       })
       await finalizarRegistro({ hijoId, hijoGrado, hijoFechaNacimiento, nro, tarjeta, esSegundo })
     } catch (err) {
@@ -458,6 +463,7 @@ export default function Comedor() {
         nro_tarjeta: tarjeta.nro_tarjeta,
         forzar_restriccion: true,
         forzar_alergenos: true,
+        client_request_id: crypto.randomUUID(),
       })
       await finalizarRegistro(pendienteAutorizacion)
       setPendienteAutorizacion(null)

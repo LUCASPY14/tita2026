@@ -382,6 +382,41 @@ class TestRegistroConsumoCreate:
         assert resp.data["ya_cobrado"] is True
         assert resp.data["costo_almuerzo"] == "15000"
 
+    def test_client_request_id_repetido_no_duplica_el_registro(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo,
+    ):
+        # Simula el reintento de la cola offline del Service Worker: perdió
+        # la respuesta del primer POST (no la request) y reenvía el mismo
+        # body con el mismo client_request_id.
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        body = {
+            "hijo": hijo_almuerzo.pk,
+            "fecha_consumo": str(date.today()),
+            "nro_tarjeta": tarjeta_almuerzo.pk,
+            "client_request_id": "11111111-1111-1111-1111-111111111111",
+        }
+        resp1 = api_cajero.post("/api/v1/almuerzos/registros-consumo/", body, format="json")
+        resp2 = api_cajero.post("/api/v1/almuerzos/registros-consumo/", body, format="json")
+
+        assert resp1.status_code == 201
+        assert resp2.status_code == 201
+        assert resp1.data["id_registro_consumo"] == resp2.data["id_registro_consumo"]
+        assert RegistroConsumoAlmuerzo.objects.filter(hijo=hijo_almuerzo).count() == 1
+
+    def test_sin_client_request_id_sigue_funcionando_como_antes(
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo,
+    ):
+        # Compatibilidad hacia atrás: el campo es opcional, así que un
+        # request sin client_request_id (clientes viejos) crea normalmente.
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {"hijo": hijo_almuerzo.pk, "fecha_consumo": str(date.today()), "nro_tarjeta": tarjeta_almuerzo.pk},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert RegistroConsumoAlmuerzo.objects.get(pk=resp.data["id_registro_consumo"]).client_request_id is None
+
     def test_sin_precio_usa_tipo_almuerzo(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, tipo_almuerzo):
         # No hay PrecioAlmuerzo activo → usa tipo_almuerzo.precio_unitario
         resp = api_cajero.post(
